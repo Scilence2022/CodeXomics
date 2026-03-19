@@ -68,8 +68,8 @@ sample_usages:
     expected_result: 'Coordinated analysis involving sequence retrieval, BLAST search, and protein structure analysis'
 
   - user_query: 'Generate a synthetic operon with regulatory elements'
-    tool_call: "coordinate_task(task='Generate a synthetic operon with regulatory elements', agents=['sequence', 'ai_analysis'], timeout=60000)"
-    thought: 'This requires AI sequence generation and sequence analysis agents working together'
+    tool_call: "coordinate_task(task='Generate a synthetic operon with regulatory elements', agents=['sequence'], timeout=60000)"
+    thought: 'This requires sequence analysis agents working together'
     expected_result: 'Synthetic operon with promoter, genes, and terminator elements'
 
   - user_query: 'Compare two genomes and identify unique genes'
@@ -78,8 +78,8 @@ sample_usages:
     expected_result: 'Comprehensive genome comparison with unique gene identification'
 
   - user_query: 'Design a CRISPR system for gene editing'
-    tool_call: "coordinate_task(task='Design a CRISPR system for gene editing', agents=['ai_analysis', 'protein'], error_recovery=true)"
-    thought: 'This requires AI-powered CRISPR design and protein structure analysis'
+    tool_call: "coordinate_task(task='Design a CRISPR system for gene editing', agents=['protein'], error_recovery=true)"
+    thought: 'This requires protein structure analysis for CRISPR design'
     expected_result: 'Complete CRISPR system design with guide RNAs and Cas protein selection'
 
 # Tool relationships and dependencies

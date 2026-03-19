@@ -674,7 +674,7 @@ class ToolDefinitionCreator {
    * Get execution type based on category
    */
   getExecutionType(category) {
-    const serverCategories = ['protein', 'database', 'ai_analysis', 'external_apis'];
+    const serverCategories = ['protein', 'database', 'external_apis'];
     return serverCategories.includes(category) ? 'server' : 'client';
   }
 
@@ -683,7 +683,6 @@ class ToolDefinitionCreator {
    */
   getTimeout(category) {
     const timeouts = {
-      ai_analysis: 120000,
       external_apis: 120000,
       database: 30000,
       protein: 30000,
@@ -697,7 +696,7 @@ class ToolDefinitionCreator {
    * Check if category requires authentication
    */
   requiresAuth(category) {
-    return ['ai_analysis', 'external_apis'].includes(category);
+    return ['external_apis'].includes(category);
   }
 
   /**
@@ -711,7 +710,7 @@ class ToolDefinitionCreator {
    * Check if category requires network
    */
   requiresNetwork(category) {
-    return ['database', 'ai_analysis', 'external_apis', 'plugin_management'].includes(category);
+    return ['database', 'external_apis', 'plugin_management'].includes(category);
   }
 
   /**
@@ -775,17 +774,7 @@ class ToolDefinitionCreator {
           enum: ['protein_name', 'gene_name', 'uniprot_id'],
         },
       },
-      ai_analysis: {
-        sequence: {
-          type: 'string',
-          description: 'DNA sequence for analysis',
-        },
-        maxTokens: {
-          type: 'number',
-          description: 'Maximum length of generated sequence',
-          default: 1000,
-        },
-      },
+
       sequence_editing: {
         chromosome: {
           type: 'string',
@@ -855,7 +844,6 @@ class ToolDefinitionCreator {
       sequence: ['sequence'],
       protein: ['geneName'],
       database: ['query'],
-      ai_analysis: ['sequence'],
       sequence_editing: ['chromosome', 'start', 'end'],
       plugin_management: [],
       coordination: ['task'],
@@ -927,10 +915,7 @@ class ToolDefinitionCreator {
         network_error: 'Returns error if database is unavailable',
         query_error: 'Returns error if query is invalid',
       },
-      ai_analysis: {
-        api_error: 'Returns error if AI service is unavailable',
-        generation_failed: 'Returns error if generation fails',
-      },
+
       sequence_editing: {
         invalid_region: 'Returns error if region is invalid',
         clipboard_error: 'Returns error if clipboard operation fails',
@@ -977,11 +962,7 @@ class ToolDefinitionCreator {
         results: 'array - List of database entries found',
         count: 'number - Number of results',
       },
-      ai_analysis: {
-        success: 'boolean - Whether analysis was successful',
-        generated_sequence: 'string - Generated DNA sequence',
-        confidence_scores: 'array - Confidence scores for each position',
-      },
+
       sequence_editing: {
         success: 'boolean - Whether operation was successful',
         action_id: 'string - Unique identifier for this action',
