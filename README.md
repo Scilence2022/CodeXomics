@@ -35,6 +35,14 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Intelligent Tool Selection** - Dynamic tool registry with context-aware selection
 - **Benchmark Testing** - Comprehensive AI evaluation with 22+ test cases across 6 categories
 
+### 🌐 **CodeXomics MCP Server**
+
+- **Enhanced Tool Ecosystem** - Provides additional specialized tools not available in the standalone application
+- **Secure Remote Access** - Comprehensive security features for safe remote tool execution
+- **Plugin Integration** - Extends the plugin system with server-side capabilities
+- **Auto-Connection** - MCPBridge automatically connects to running MCP servers
+- **Standalone Operation** - Can be run independently for remote access
+
 ### 🧬 **Advanced Genome Visualization**
 
 - **Dynamic SVG-based GC Content/Skew** - Crisp, scalable visualization with adaptive window sizing
@@ -146,6 +154,14 @@ npm install
 
 # Run in development mode
 npm start
+
+# Start CodeXomics MCP server (standalone)
+npm run mcp-server
+# or
+npm run codexomics-mcp-server
+
+# Run with MCP server
+npm run start-with-mcp
 
 # Run with marketplace server
 npm run start-with-marketplace
@@ -427,6 +443,64 @@ Configuration files stored in: `~/.codexomics/`
 - `plugins.json` - Plugin configurations
 - `projects.json` - Project management settings
 
+### **MCP Server Configuration**
+
+- **Server URL**: Configure WebSocket endpoint for MCP server connections
+- **Auto-Connection**: Enable automatic MCP server activation
+- **Security Settings**: Configure authentication and access control
+- **Tool Discovery**: MCP servers automatically expose their tools to the application
+- **Remote Access**: Connect to MCP servers running on different machines
+
+### **Configuring CodeXomics MCP in Client Tools**
+
+To use CodeXomics MCP server in client tools, follow these steps:
+
+1. **Start the MCP Server**:
+   ```bash
+   # In CodeXomics directory
+   npm run mcp-server
+   ```
+
+2. **Configure MCP Client**:
+   Add this configuration to your MCP client settings:
+   ```json
+   {
+     "mcpServers": {
+       "CodeXomics": {
+         "url": "http://localhost:3002",
+         "transportType": "streamable-http"
+       }
+     }
+   }
+   ```
+
+3. **Connection Endpoints**:
+   - **WebSocket**: `ws://localhost:3003` (for browser connections)
+   - **HTTP/SSE**: `http://localhost:3002` (for HTTP clients)
+   - **stdio**: For MCP Client integration (recommended)
+
+4. **Using the MCP Server**:
+   - Client tools can send JSON-RPC 2.0 requests to the server
+   - The server exposes 40+ genomics tools for client use
+   - Tools include navigation, sequence analysis, protein structure, and database integration
+
+5. **Example Client Usage**:
+   ```javascript
+   // Example MCP client usage
+   const client = new MCPClient();
+   
+   // Connect to CodeXomics MCP server
+   await client.connect();
+   
+   // Execute a tool
+   const result = await client.executeTool('search_gene_by_name', {
+     geneName: 'lacZ'
+   });
+   
+   // Process the result
+   console.log('Gene found:', result);
+   ```
+
 ### **Project Structure**
 
 ```
@@ -506,6 +580,16 @@ Dynamic Tool Registry Components:
     ├── plugin_management/        # Plugin management tools (12 tools)
     ├── coordination/             # Multi-agent coordination (15 tools)
     └── external_apis/            # External API tools (12 tools)
+```
+
+### **MCP Server Architecture**
+
+```
+MCP Server Components:
+├── scripts/start-mcp-server.js   # MCP server startup script
+├── src/renderer/modules/MCPBridge.js  # Auto-connection bridge
+├── src/renderer/modules/InternalMCPServer.js  # Internal MCP server
+└── MCP Tools/                    # Server-side tools and utilities
 ```
 
 ## 🧪 Testing
@@ -592,6 +676,14 @@ npm run test:plugin-framework
 - Check if database URLs are accessible
 - Report broken links for database updates
 
+**MCP Server Issues**:
+
+- Verify MCP server is running (`npm run mcp-server`)
+- Check WebSocket connection URL in settings
+- Ensure server ports are not blocked by firewall
+- Verify server logs for error messages
+- Test connection using the MCP server status check
+
 ## 📊 Performance
 
 ### **Optimization Features**
@@ -605,11 +697,12 @@ npm run test:plugin-framework
 
 ### **System Requirements**
 
-- **RAM**: 6GB minimum, 12GB recommended (increased for plugin system)
-- **Storage**: 1GB for application, additional space for plugins and data
+- **RAM**: 6GB minimum, 12GB recommended (increased for plugin system and MCP server)
+- **Storage**: 1GB for application, additional space for plugins, data, and MCP server tools
 - **CPU**: Modern multi-core processor recommended
 - **Graphics**: Hardware acceleration supported for better performance
 - **Network**: Internet connection for AI services and database links
+- **MCP Server**: Additional 2GB RAM and 500MB storage recommended
 
 ## 🚀 Future Roadmap
 
