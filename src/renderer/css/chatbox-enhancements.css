@@ -358,6 +358,7 @@
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -495,9 +496,11 @@
   0% {
     box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
   }
+
   70% {
     box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
   }
@@ -624,4 +627,31 @@
   .metric-item {
     background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
   }
+}
+
+/* AI Assistant Icon Animation */
+@keyframes ai-color-breathe {
+  0% {
+    color: #667eea;
+    text-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+  }
+
+  33% {
+    color: #9f7aea;
+    text-shadow: 0 0 10px rgba(159, 122, 234, 0.8);
+  }
+
+  66% {
+    color: #ed64a6;
+    text-shadow: 0 0 10px rgba(237, 100, 166, 0.8);
+  }
+
+  100% {
+    color: #667eea;
+    text-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+  }
+}
+
+#toggleChatBtn.ai-processing i {
+  animation: ai-color-breathe 2.5s infinite ease-in-out;
 }

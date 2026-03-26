@@ -15627,11 +15627,11 @@ ${this.getPluginSystemInfo()}`;
   _findAnnotation(identifier, chromosome) {
     console.log(`🔍 [DEBUG] Finding annotation for identifier: ${identifier}, chromosome: ${chromosome}`);
     console.log(`🔍 [DEBUG] Current annotations structure:`, this.app.currentAnnotations);
-    
-    const chromosomes = chromosome 
+
+    const chromosomes = chromosome
       ? [chromosome]
       : Object.keys(this.app.currentAnnotations);
-    
+
     console.log(`🔍 [DEBUG] Checking chromosomes:`, chromosomes);
 
     for (const chr of chromosomes) {
@@ -15640,7 +15640,7 @@ ${this.getPluginSystemInfo()}`;
         console.log(`🔍 [DEBUG] No annotations for chromosome: ${chr}`);
         continue;
       }
-      
+
       console.log(`🔍 [DEBUG] Checking ${annotations.length} annotations for chromosome: ${chr}`);
 
       for (const annotation of annotations) {
@@ -15648,7 +15648,7 @@ ${this.getPluginSystemInfo()}`;
         const geneName = Array.isArray(qualifiers.gene) ? qualifiers.gene[0] : qualifiers.gene || '';
         const locusTag = Array.isArray(qualifiers.locus_tag) ? qualifiers.locus_tag[0] : qualifiers.locus_tag || '';
         const proteinId = Array.isArray(qualifiers.protein_id) ? qualifiers.protein_id[0] : qualifiers.protein_id || '';
-        
+
         console.log(`🔍 [DEBUG] Checking annotation: id=${annotation.id}, gene=${geneName}, locus_tag=${locusTag}, protein_id=${proteinId}`);
 
         if (identifier === annotation.id || identifier === geneName || identifier === locusTag || identifier === proteinId) {
@@ -15707,11 +15707,11 @@ ${this.getPluginSystemInfo()}`;
     }
 
     // Get the locus_tag and gene name from the found annotation to match other features
-    const targetLocusTag = Array.isArray(found.annotation.qualifiers?.locus_tag) 
-      ? found.annotation.qualifiers.locus_tag[0] 
+    const targetLocusTag = Array.isArray(found.annotation.qualifiers?.locus_tag)
+      ? found.annotation.qualifiers.locus_tag[0]
       : found.annotation.qualifiers?.locus_tag || '';
-    const targetGeneName = Array.isArray(found.annotation.qualifiers?.gene) 
-      ? found.annotation.qualifiers.gene[0] 
+    const targetGeneName = Array.isArray(found.annotation.qualifiers?.gene)
+      ? found.annotation.qualifiers.gene[0]
       : found.annotation.qualifiers?.gene || '';
 
     // Find all annotations with the same locus_tag or gene name
@@ -15728,8 +15728,8 @@ ${this.getPluginSystemInfo()}`;
         const locusTag = Array.isArray(qualifiers.locus_tag) ? qualifiers.locus_tag[0] : qualifiers.locus_tag || '';
 
         // Match by locus_tag or gene name
-        if ((targetLocusTag && locusTag === targetLocusTag) || 
-            (targetGeneName && geneName === targetGeneName)) {
+        if ((targetLocusTag && locusTag === targetLocusTag) ||
+          (targetGeneName && geneName === targetGeneName)) {
           annotationsToUpdate.push({ chromosome: chr, annotation });
         }
       }
@@ -20187,6 +20187,7 @@ ${this.getPluginSystemInfo()}`;
     const sendBtn = document.getElementById('sendChatBtn');
     const abortBtn = document.getElementById('abortChatBtn');
     const chatInput = document.getElementById('chatInput');
+    const toggleChatBtn = document.getElementById('toggleChatBtn');
 
     if (this.conversationState.isProcessing) {
       // Conversation in progress - disable send button, show abort button
@@ -20202,6 +20203,9 @@ ${this.getPluginSystemInfo()}`;
         chatInput.disabled = true;
         chatInput.placeholder = 'Conversation in progress, please wait...';
       }
+      if (toggleChatBtn) {
+        toggleChatBtn.classList.add('ai-processing');
+      }
     } else {
       // Conversation ended - restore normal state
       if (sendBtn) {
@@ -20215,6 +20219,9 @@ ${this.getPluginSystemInfo()}`;
       if (chatInput) {
         chatInput.disabled = false;
         chatInput.placeholder = 'Ask me anything about your genome data...';
+      }
+      if (toggleChatBtn) {
+        toggleChatBtn.classList.remove('ai-processing');
       }
     }
   }
