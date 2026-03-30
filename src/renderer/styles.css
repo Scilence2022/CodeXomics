@@ -4700,6 +4700,16 @@ path.svg-gene-element.selected.border-highlight text {
   }
 }
 
+/* When AI is processing, override the default robotBlink and button colors */
+.toolbar-section #toggleChatBtn.ai-processing {
+  background: transparent;
+  border: 1px solid rgba(102, 126, 234, 0.4);
+}
+
+.toolbar-section #toggleChatBtn.ai-processing i {
+  animation: ai-color-breathe 2.5s infinite ease-in-out;
+}
+
 .llm-config-modal {
   max-width: 600px;
   width: 95%;
