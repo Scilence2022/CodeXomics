@@ -11854,6 +11854,10 @@ ${this.getPluginSystemInfo()}`;
           result = await this.searchAlphaFoldByGene(parameters);
           break;
 
+        case 'search_protein_by_gene':
+          result = await this.searchProteinByGene(parameters);
+          break;
+
         case 'fetch_alphafold_structure':
           result = await this.fetchAlphaFoldStructure(parameters);
           break;
@@ -12449,7 +12453,8 @@ ${this.getPluginSystemInfo()}`;
       'open_protein_viewer',
       'fetch_protein_structure',
       'search_pdb_structures',
-      'search_pdb_structures',
+      'search_alphafold_by_gene',
+      'search_protein_by_gene',
       'get_pdb_details',
 
       // Metabolic Pathways
@@ -17597,6 +17602,13 @@ ${this.getPluginSystemInfo()}`;
       console.warn(`Failed to get PDB details for ${pdbId}:`, error.message);
       return {}; // Return empty object if details can't be fetched
     }
+  }
+
+  /**
+   * Alias for searchAlphaFoldByGene to support dynamic registry built-in tools mapping
+   */
+  async searchProteinByGene(parameters) {
+    return await this.searchAlphaFoldByGene(parameters);
   }
 
   /**
