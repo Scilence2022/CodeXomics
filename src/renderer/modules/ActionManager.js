@@ -5788,11 +5788,14 @@ class ActionManager {
   }
 
   async functionPasteSequence(params) {
-    const { chromosome, position } = params;
+    const { chromosome, position, start, end } = params;
+
+    // AI agents might provide start/end instead of position
+    const actualPosition = position || start;
 
     // Validate parameters
-    if (!chromosome || !position) {
-      throw new Error('Missing required parameters: chromosome, position');
+    if (!chromosome || !actualPosition) {
+      throw new Error('Missing required parameters: chromosome, position (or start)');
     }
 
     // Check if clipboard has content
@@ -5803,13 +5806,13 @@ class ActionManager {
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.PASTE_SEQUENCE,
-      `${chromosome}:${position}`,
-      `Paste sequence at ${chromosome}:${position}`
+      `${chromosome}:${actualPosition}`,
+      `Paste sequence at ${chromosome}:${actualPosition}`
     );
 
     action.metadata = {
       chromosome,
-      position: parseInt(position),
+      position: parseInt(actualPosition),
       source: 'function_call',
     };
 
@@ -5818,10 +5821,10 @@ class ActionManager {
     return {
       success: true,
       actionId: action.id,
-      message: `Sequence paste action created for ${chromosome}:${position}`,
+      message: `Sequence paste action created for ${chromosome}:${actualPosition}`,
       details: {
         chromosome,
-        position,
+        position: actualPosition,
         clipboardLength: this.clipboard ? this.clipboard.sequence.length : 0,
       },
     };
@@ -5871,11 +5874,14 @@ class ActionManager {
   }
 
   async functionInsertSequence(params) {
-    const { chromosome, position, sequence } = params;
+    const { chromosome, position, sequence, start } = params;
+
+    // AI agents might provide start instead of position
+    const actualPosition = position || start;
 
     // Validate parameters
-    if (!chromosome || !position || !sequence) {
-      throw new Error('Missing required parameters: chromosome, position, sequence');
+    if (!chromosome || !actualPosition || !sequence) {
+      throw new Error('Missing required parameters: chromosome, position (or start), sequence');
     }
 
     // Validate sequence
@@ -5886,13 +5892,13 @@ class ActionManager {
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.INSERT_SEQUENCE,
-      `${chromosome}:${position}`,
-      `Insert ${sequence.length}bp sequence at ${chromosome}:${position}`
+      `${chromosome}:${actualPosition}`,
+      `Insert ${sequence.length}bp sequence at ${chromosome}:${actualPosition}`
     );
 
     action.metadata = {
       chromosome,
-      position: parseInt(position),
+      position: parseInt(actualPosition),
       sequence: sequence.toUpperCase(),
       source: 'function_call',
     };
