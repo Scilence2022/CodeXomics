@@ -62,11 +62,19 @@ class LLMConfigManager {
       siliconflow: {
         name: 'SiliconFlow',
         apiKey: '',
-        model: 'Qwen/Qwen3-Next-80B-A3B-Instruct',
+        model: 'Qwen/Qwen3.5-39B-A17B',
         baseUrl: 'https://api.siliconflow.cn/v1',
         enabled: false,
         availableModels: [
           // 🤖 Qwen Series (Arranged by size: high to low)
+
+          // Qwen3.5 Series (Latest)
+          'Qwen/Qwen3.5-39B-A17B', // 39B total, 17B active
+          'Qwen/Qwen3.5-27B', // 27B
+          'Qwen/Qwen3.5-12B-A10B', // 12B total, 10B active
+          'Qwen/Qwen3.5-8B', // 8B
+          'Qwen/Qwen3.5-4B', // 4B
+          'Qwen/Qwen3.5-3B-A3B', // 3B total, 3B active
 
           // Qwen3 Coder Series (Largest - 480B)
           'Qwen/Qwen3-Coder-480B-A35B-Instruct', // 480B total, 35B active
@@ -89,7 +97,6 @@ class LLMConfigManager {
           'Qwen/QwQ-32B', // 32B (Reasoning)
           'Qwen/QwQ-32B-Preview', // 32B (Reasoning Preview)
           'Qwen/Qwen3-14B', // 14B
-          'Qwen/Qwen3-8B', // 8B
 
           // Qwen2.5 Coder Series (Legacy)
           'Qwen/Qwen2.5-Coder-32B-Instruct', // 32B (Legacy)
@@ -103,6 +110,8 @@ class LLMConfigManager {
           // DeepSeek Pro Series
           'Pro/deepseek-ai/DeepSeek-R1', // Latest R1 Pro
           'Pro/deepseek-ai/DeepSeek-V3', // V3 Pro
+          'Pro/deepseek-ai/DeepSeek-V3.2', // V3.2 Pro
+          'Pro/deepseek-ai/DeepSeek-V3.1-Terminus', // V3.1 Terminus Pro
           'Pro/THUDM/glm-4-9b-chat', // GLM Pro variant
           'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', // R1 Distilled Pro
 
@@ -121,14 +130,17 @@ class LLMConfigManager {
 
           // 🌙 Kimi Series (Moonshot AI)
 
-          'Pro/moonshotai/Kimi-K2-Instruct-0905', // Kimi K2 Pro (Latest)
+          'Pro/moonshotai/Kimi-K2.5', // Kimi K2.5 Pro (Latest)
+          'Pro/moonshotai/Kimi-K2-Instruct-0905', // Kimi K2 Pro
+          'Pro/moonshotai/Kimi-K2-Thinking', // Kimi K2 Thinking Pro
           'moonshotai/Kimi-K2-Instruct', // Kimi K2 Standard
           'moonshotai/Kimi-K2-Thinking', // Kimi K2 Thinking (Reasoning)
 
           // 🔮 GLM Series (Zhipu AI - Arranged by version and size)
 
           // GLM Latest Series
-          'Pro/zai-org/GLM-4.7', // GLM-4.7 Pro (Latest)
+          'Pro/zai-org/GLM-5', // GLM-5 Pro (Latest)
+          'Pro/zai-org/GLM-4.7', // GLM-4.7 Pro
           'zai-org/GLM-4.6V', // GLM-4.6V (Vision)
           'zai-org/GLM-4.6', // GLM-4.6
           'zai-org/GLM-4.5', // GLM-4.5
@@ -147,10 +159,16 @@ class LLMConfigManager {
           'baidu/ERNIE-4.5-300B-A47B', // 300B ERNIE (47B active)
 
           // Other Large Enterprise Models
+          'Pro/MiniMax/MiniMax-M2.5', // MiniMax M2.5 Pro (Latest)
+          'MiniMaxAI/MiniMax-M2', // MiniMax M2
+          'MiniMaxAI/MiniMax-M1-80k', // MiniMax M1 (Long Context)
           'ascend-tribe/pangu-pro-moe', // PanGu Pro MoE
           'tencent/Hunyuan-A13B-Instruct', // Hunyuan 13B
-          'MiniMaxAI/MiniMax-M2', // MiniMax M2 (Latest)
           'TeleAI/TeleChat2', // TeleChat2
+
+          // Other Models
+          'stepfun-ai/Step-5-Flash', // Step-5 Flash
+          'PaddlePaddle/PaddleOCR-VL-1.5', // PaddleOCR-VL-1.5
 
           // InternLM Series (by size)
           'internlm/internlm2_5-20b-chat', // 20B InternLM
@@ -207,7 +225,7 @@ class LLMConfigManager {
           openai: 'o3',
           google: 'gemini-3-flash-preview',
           deepseek: 'deepseek-chat',
-          siliconflow: 'Qwen/Qwen3-Next-80B-A3B-Thinking',
+          siliconflow: 'Qwen/Qwen3.5-39B-A17B',
           openrouter: 'openai/o3',
         },
       },
@@ -219,7 +237,7 @@ class LLMConfigManager {
         preferredModels: {
           openai: 'gpt-5.2',
           anthropic: 'claude-sonnet-4.5-20250929',
-          siliconflow: 'Qwen/Qwen3-Next-80B-A3B-Instruct',
+          siliconflow: 'Qwen/Qwen3.5-39B-A17B',
           google: 'gemini-3-flash-preview',
           deepseek: 'deepseek-chat',
           openrouter: 'openai/gpt-5.2',
