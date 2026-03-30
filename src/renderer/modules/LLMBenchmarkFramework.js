@@ -2798,6 +2798,7 @@ class LLMBenchmarkFramework {
           timestamp: executedCall.timestamp,
           confidence: 100, // Actual execution = 100% confidence
           actualResult: true,
+          error: executedCall.error || undefined,
         };
       }
     }
@@ -2834,6 +2835,7 @@ class LLMBenchmarkFramework {
               confidence: 100, // Actual execution = 100% confidence
               actualResult: true,
               detectionMethod: 'chatmanager_execution',
+              error: call.error || undefined,
             }));
           } else {
             // Single function call, return as single object
@@ -2847,6 +2849,7 @@ class LLMBenchmarkFramework {
               confidence: 100, // Actual execution = 100% confidence
               actualResult: true,
               detectionMethod: 'chatmanager_execution',
+              error: latestCall.error || undefined,
             };
           }
         } else {
@@ -4455,14 +4458,20 @@ class LLMBenchmarkFramework {
       return evaluation;
     }
 
-    // Handle parsing errors
+    // Handle parsing errors (or execution errors from perfectly parsed tools)
     if (actualResult.error && actualResult.error !== 'No function calls detected') {
-      console.log('❌ [Function Call Eval] Parsing error detected:', actualResult.error);
-      evaluation.errors.push(actualResult.error);
-      evaluation.success = false;
-      evaluation.score = 0; // Explicit 0 score for parsing errors
-      console.log('📋 [Function Call Eval] Final score for parsing error: 0/', evaluation.maxScore);
-      return evaluation;
+      if (actualResult.tool_name) {
+        console.log('⚠️ [Function Call Eval] Tool executed but returned error. Scoring tool selection and parameters anyway:', actualResult.error);
+        evaluation.warnings.push(`Execution error: ${actualResult.error}`);
+        // Do NOT return here. Continue to evaluate the tool name and parameters.
+      } else {
+        console.log('❌ [Function Call Eval] Parsing error detected:', actualResult.error);
+        evaluation.errors.push(actualResult.error);
+        evaluation.success = false;
+        evaluation.score = 0; // Explicit 0 score for parsing errors
+        console.log('📋 [Function Call Eval] Final score for parsing error: 0/', evaluation.maxScore);
+        return evaluation;
+      }
     }
 
     if (Array.isArray(actualResult)) {

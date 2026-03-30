@@ -5795,12 +5795,12 @@ class ActionManager {
 
     // Validate parameters
     if (!chromosome || !actualPosition) {
-      throw new Error('Missing required parameters: chromosome, position (or start)');
+      return { success: false, error: 'Missing required parameters: chromosome, position (or start)' };
     }
 
     // Check if clipboard has content
     if (!this.clipboard) {
-      throw new Error('Clipboard is empty. Please copy or cut a sequence first.');
+      return { success: false, error: 'Clipboard is empty. Please copy or cut a sequence first.' };
     }
 
     // Create action
@@ -5835,11 +5835,11 @@ class ActionManager {
 
     // Validate parameters
     if (!chromosome || !start || !end) {
-      throw new Error('Missing required parameters: chromosome, start, end');
+      return { success: false, error: 'Missing required parameters: chromosome, start, end' };
     }
 
     if (start > end) {
-      throw new Error('Start position must be less than or equal to end position');
+      return { success: false, error: 'Start position must be less than or equal to end position' };
     }
 
     // Create action
@@ -5878,28 +5878,29 @@ class ActionManager {
 
     // AI agents might provide start instead of position
     const actualPosition = position || start;
+    const actualSequence = sequence || params.newSequence;
 
     // Validate parameters
-    if (!chromosome || !actualPosition || !sequence) {
-      throw new Error('Missing required parameters: chromosome, position (or start), sequence');
+    if (!chromosome || !actualPosition || !actualSequence) {
+      return { success: false, error: 'Missing required parameters: chromosome, position (or start), sequence' };
     }
 
     // Validate sequence
-    if (!/^[ATCGN]+$/i.test(sequence)) {
-      throw new Error('Sequence contains invalid characters. Only A, T, C, G, N are allowed.');
+    if (!/^[ATCGN]+$/i.test(actualSequence)) {
+      return { success: false, error: 'Sequence contains invalid characters. Only A, T, C, G, N are allowed.' };
     }
 
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.INSERT_SEQUENCE,
       `${chromosome}:${actualPosition}`,
-      `Insert ${sequence.length}bp sequence at ${chromosome}:${actualPosition}`
+      `Insert ${actualSequence.length}bp sequence at ${chromosome}:${actualPosition}`
     );
 
     action.metadata = {
       chromosome,
       position: parseInt(actualPosition),
-      sequence: sequence.toUpperCase(),
+      sequence: actualSequence.toUpperCase(),
       source: 'function_call',
     };
 
@@ -5912,8 +5913,8 @@ class ActionManager {
       details: {
         chromosome,
         position,
-        sequenceLength: sequence.length,
-        sequence: sequence.substring(0, 50) + (sequence.length > 50 ? '...' : ''),
+        sequenceLength: actualSequence.length,
+        sequence: actualSequence.substring(0, 50) + (actualSequence.length > 50 ? '...' : ''),
       },
     };
   }
@@ -5921,25 +5922,27 @@ class ActionManager {
   async functionReplaceSequence(params) {
     const { chromosome, start, end, sequence, strand = '+' } = params;
 
+    const actualSequence = sequence || params.newSequence;
+
     // Validate parameters
-    if (!chromosome || !start || !end || !sequence) {
-      throw new Error('Missing required parameters: chromosome, start, end, sequence');
+    if (!chromosome || !start || !end || !actualSequence) {
+      return { success: false, error: 'Missing required parameters: chromosome, start, end, sequence' };
     }
 
     if (start > end) {
-      throw new Error('Start position must be less than or equal to end position');
+      return { success: false, error: 'Start position must be less than or equal to end position' };
     }
 
     // Validate sequence
-    if (!/^[ATCGN]+$/i.test(sequence)) {
-      throw new Error('Sequence contains invalid characters. Only A, T, C, G, N are allowed.');
+    if (!/^[ATCGN]+$/i.test(actualSequence)) {
+      return { success: false, error: 'Sequence contains invalid characters. Only A, T, C, G, N are allowed.' };
     }
 
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.REPLACE_SEQUENCE,
       `${chromosome}:${start}-${end}(${strand})`,
-      `Replace sequence in ${chromosome}:${start}-${end} (${strand}) with ${sequence.length}bp`
+      `Replace sequence in ${chromosome}:${start}-${end} (${strand}) with ${actualSequence.length}bp`
     );
 
     action.metadata = {
@@ -5947,7 +5950,7 @@ class ActionManager {
       start: parseInt(start),
       end: parseInt(end),
       strand,
-      sequence: sequence.toUpperCase(),
+      sequence: actualSequence.toUpperCase(),
       source: 'function_call',
     };
 
@@ -5963,8 +5966,8 @@ class ActionManager {
         end,
         strand,
         originalLength: end - start + 1,
-        newLength: sequence.length,
-        sequence: sequence.substring(0, 50) + (sequence.length > 50 ? '...' : ''),
+        newLength: actualSequence.length,
+        sequence: actualSequence.substring(0, 50) + (actualSequence.length > 50 ? '...' : ''),
       },
     };
   }
