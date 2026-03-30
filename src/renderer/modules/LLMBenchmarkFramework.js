@@ -181,6 +181,17 @@ class LLMBenchmarkFramework {
 
       console.log(`📊 [Progress Tracking] Total tests to run: ${totalTestCount}`);
 
+      // CRITICAL FIX: Initial cleanup before any suites run
+      if (this.chatManager) {
+        if (typeof this.chatManager.clearChat === 'function') {
+          this.chatManager.clearChat();
+          console.log('🧹 [Benchmark] Initial cleanup: cleared chat history before starting benchmark run');
+        }
+        if (typeof this.chatManager.clearExecutionData === 'function') {
+          this.chatManager.clearExecutionData();
+        }
+      }
+
       // Store for progress calculation
       this.totalTestCount = totalTestCount;
       this.completedTestCount = 0;
@@ -445,6 +456,17 @@ class LLMBenchmarkFramework {
 
         // Call with null testResult to indicate test is starting
         options.onTestProgress(overallTestProgress, test.id, null, suiteId);
+      }
+
+      // CRITICAL FIX: Clear chat history and previous execution data before test starts to prevent memory bloat and context contamination
+      if (this.chatManager) {
+        if (typeof this.chatManager.clearChat === 'function') {
+          this.chatManager.clearChat();
+          console.log(`🧹 [Benchmark] Cleared chat history before test ${test.id}`);
+        }
+        if (typeof this.chatManager.clearExecutionData === 'function') {
+          this.chatManager.clearExecutionData();
+        }
       }
 
       // Display test progress
@@ -815,12 +837,6 @@ class LLMBenchmarkFramework {
    */
   async executeTest(test) {
     const startTime = Date.now();
-
-    // CRITICAL FIX: Clear previous execution data to prevent contamination
-    if (this.chatManager && this.chatManager.clearExecutionData) {
-      this.chatManager.clearExecutionData();
-      console.log('🧽 [Benchmark] Cleared previous execution data to prevent test contamination');
-    }
 
     // CRITICAL FIX: Initialize Tool Execution Tracker session for benchmark test
     let benchmarkSessionId = null;
