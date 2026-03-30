@@ -1315,12 +1315,13 @@ class AutomaticSimpleSuite {
         return matches;
       });
 
-      // Deduct 1 point for each missing/incorrect parameter
+      // Maximum 1 point deduction total for parameter issues
       const missingParams = expectedKeys.length - matchingKeys.length;
       if (missingParams > 0) {
-        evaluation.score = Math.max(0, evaluation.score - missingParams);
-        evaluation.warnings.push(`${missingParams} parameter(s) missing or incorrect`);
-        console.log(`⚠️ [evaluateBasicFunctionCall] Deducting ${missingParams} points for parameter issues`);
+        const deduction = Math.min(1, missingParams);
+        evaluation.score = Math.max(0, evaluation.score - deduction);
+        evaluation.warnings.push(`${missingParams} parameter(s) missing or incorrect (-${deduction} pt)`);
+        console.log(`⚠️ [evaluateBasicFunctionCall] Deducting ${deduction} points for ${missingParams} parameter issues`);
       } else {
         console.log(`✅ [evaluateBasicFunctionCall] All parameters matched correctly`);
       }

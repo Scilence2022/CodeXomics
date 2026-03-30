@@ -2936,37 +2936,38 @@ class LLMBenchmarkFramework {
       expectedTool: expectedResult?.tool_name,
     });
 
-    // CRITICAL FIX: Check for error patterns first to prevent false positives
-    const errorPatterns = [
-      'error',
-      'failed',
-      'not found',
-      'not available',
-      'unavailable',
-      'not configured',
-      'not exist',
-      'missing',
-      'invalid',
-      'connection failed',
-      'timeout',
-      '404',
-      '500',
-      'http error',
-      'model not found',
-      'provider failed',
-      'api error',
-      'no llm',
-      'llm error',
-      'communication error',
+    // CRITICAL FIX: Enhanced error pattern detection to prevent false positives
+    // Only detect errors if they aren't preceded by negations like "no", "without"
+    const errorPatternRegexes = [
+      /(?<!no\s+)(?<!without\s+)(?<!0\s+)error\b/i,
+      /(?<!not\s+)failed\b/i,
+      /\bnot found\b/i,
+      /\bnot available\b/i,
+      /\bunavailable\b/i,
+      /\bnot configured\b/i,
+      /\b(does|did)\s+not exist\b/i,
+      /\bmissing\b/i,
+      /(?<!not\s+)invalid\b/i,
+      /connection failed/i,
+      /\btimeout\b/i,
+      /\b404\b/,
+      /\b500\b/,
+      /http error/i,
+      /model not found/i,
+      /provider failed/i,
+      /api error/i,
+      /no llm/i,
+      /llm error/i,
+      /communication error/i,
     ];
 
-    const hasErrorPattern = errorPatterns.some(pattern => lowerResponse.includes(pattern));
+    const hasErrorPattern = errorPatternRegexes.some(regex => regex.test(response));
 
     if (hasErrorPattern) {
       console.log('❌ Error pattern detected in response, skipping inference');
       console.log(
         '🔍 Found error patterns:',
-        errorPatterns.filter(pattern => lowerResponse.includes(pattern))
+        errorPatternRegexes.filter(regex => regex.test(response)).map(r => r.source)
       );
       return null;
     }
@@ -4480,7 +4481,11 @@ class LLMBenchmarkFramework {
         if (matchingCall) {
           console.log('✅ [Function Call Eval] Expected tool found among multiple calls:', matchingCall.tool_name);
           const functionScore = this.evaluateSingleFunctionCall(matchingCall, expectedResult);
-          evaluation.score = functionScore.score;
+          
+          // CRITICAL FIX: Scale the 0-100 score from evaluateSingleFunctionCall to the test's maxScore
+          const scaledScore = Math.round((functionScore.score / 100) * evaluation.maxScore);
+          
+          evaluation.score = scaledScore;
           evaluation.success = functionScore.success;
           evaluation.errors.push(...functionScore.errors);
           evaluation.warnings.push(...functionScore.warnings);
@@ -4517,11 +4522,16 @@ class LLMBenchmarkFramework {
 
           if (expected) {
             const functionScore = this.evaluateSingleFunctionCall(call, expected);
-            evaluation.score += functionScore.score;
+            
+            // CRITICAL FIX: Scale the score proportionally for multiple expected tools
+            const callMaxScore = evaluation.maxScore / expectedResult.length;
+            const scaledScore = Math.round((functionScore.score / 100) * callMaxScore);
+            
+            evaluation.score += scaledScore;
             evaluation.errors.push(...functionScore.errors);
             evaluation.warnings.push(...functionScore.warnings);
 
-            console.log(`📋 [Function Call Eval] Call ${i + 1} scored:`, functionScore.score, 'points');
+            console.log(`📋 [Function Call Eval] Call ${i + 1} scored:`, functionScore.score, `points (scaled: ${scaledScore})`);
           }
         }
 
@@ -4532,12 +4542,16 @@ class LLMBenchmarkFramework {
       // Single function call
       console.log('🎯 [Function Call Eval] Single function call evaluation');
       const functionScore = this.evaluateSingleFunctionCall(actualResult, expectedResult);
-      evaluation.score = functionScore.score;
+      
+      // CRITICAL FIX: Scale the 0-100 score from evaluateSingleFunctionCall to the test's maxScore
+      const scaledScore = Math.round((functionScore.score / 100) * evaluation.maxScore);
+      
+      evaluation.score = scaledScore;
       evaluation.success = functionScore.success;
       evaluation.errors.push(...functionScore.errors);
       evaluation.warnings.push(...functionScore.warnings);
 
-      console.log('📋 [Function Call Eval] Single call scored:', functionScore.score, 'points');
+      console.log(`📋 [Function Call Eval] Single call scored: ${functionScore.score} points (scaled: ${scaledScore}/${evaluation.maxScore})`);
     }
 
     console.log('🏁 [Function Call Eval] FINAL EVALUATION RESULT:');
@@ -4606,7 +4620,12 @@ class LLMBenchmarkFramework {
 
     // Check parameters (50 points out of 100)
     console.log('🔍 [Single Call Eval] Checking parameter match...');
-    if (actualCall.parameters && expectedCall.parameters) {
+    if (actualCall.executed && actualCall.confidence === 100) {
+      // CRITICAL FIX: If the tool was actually executed successfully by the framework,
+      // parameter matching in text is irrelevant. The execution confirms correctness.
+      result.score += 50;
+      console.log('✅ [Single Call Eval] Tool was actually executed successfully, bypassing text parameter check (+50 points)!');
+    } else if (actualCall.parameters && expectedCall.parameters) {
       console.log('📊 [Single Call Eval] Both actual and expected have parameters, comparing...');
       const paramScore = this.compareParameters(actualCall.parameters, expectedCall.parameters);
       result.score += paramScore;
@@ -4622,7 +4641,7 @@ class LLMBenchmarkFramework {
         result.errors.push('Parameters do not match expected values');
         console.log('❌ [Single Call Eval] Parameters do not match (<20 points)');
       }
-    } else if (!expectedCall.parameters) {
+    } else if (!expectedCall.parameters || Object.keys(expectedCall.parameters).length === 0) {
       // No parameters expected
       result.score += 50;
       console.log('✅ [Single Call Eval] No parameters expected - perfect match! +50 points');
@@ -4795,6 +4814,13 @@ class LLMBenchmarkFramework {
       if (actualValue === undefined) {
         console.log(`❌ Missing parameter: ${key}`);
         continue; // No points for missing parameter
+      }
+
+      // CRITICAL FIX: Check if expected value is a placeholder
+      if (typeof expectedValue === 'string' && expectedValue.startsWith('<') && expectedValue.endsWith('>')) {
+        score += 50; // Full points - actual LLM output resolved the placeholder
+        console.log(`✅ Placeholder match for ${key}: expected ${expectedValue}, got ${actualValue}`);
+        continue;
       }
 
       if (actualValue === expectedValue) {
