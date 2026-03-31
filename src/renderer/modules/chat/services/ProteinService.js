@@ -178,11 +178,21 @@ class ProteinService {
     try {
       console.log(`[ProteinService] Searching AlphaFold for ${geneName} in ${organism}`);
       
-      // Attempt UniProt search first
-      const uniprotResults = await this.searchUniProtDatabase({
-        query: `${geneName} AND organism:"${organism}"`,
+      // Attempt UniProt search first with organism-scoped query
+      // UniProt REST API v2 uses organism_name field for organism filtering
+      let uniprotResults = await this.searchUniProtDatabase({
+        query: `gene:${geneName} AND organism_name:"${organism}"`,
         limit: 5
       });
+
+      // Fallback: if organism-scoped query fails or returns nothing, try gene name only
+      if (!uniprotResults.success || !uniprotResults.results || uniprotResults.results.length === 0) {
+        console.log(`[ProteinService] Organism-scoped query returned no results, retrying with gene name only`);
+        uniprotResults = await this.searchUniProtDatabase({
+          query: `gene:${geneName}`,
+          limit: 5
+        });
+      }
 
       if (!uniprotResults.success || !uniprotResults.results || uniprotResults.results.length === 0) {
         return {
@@ -233,12 +243,19 @@ class ProteinService {
         throw new Error(`AlphaFold structure not found for ${uniprotId}`);
       }
 
+      // Retrieve the actual PDB URL from the cached API response
+      this._alphaFoldCache = this._alphaFoldCache || {};
+      const entry = this._alphaFoldCache[uniprotId];
+      const pdbUrl = entry?.pdbUrl ||
+        `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`;
+
       if (this.app.proteinStructureViewer) {
-        await this.app.proteinStructureViewer.loadAlphaFold(uniprotId);
+        await this.app.proteinStructureViewer.loadAlphaFold(uniprotId, pdbUrl);
         return {
           success: true,
           message: `AlphaFold structure ${uniprotId} loaded successfully`,
-          uniprotId
+          uniprotId,
+          pdbUrl
         };
       }
 
@@ -246,16 +263,12 @@ class ProteinService {
       if (window.viewer) {
         try {
           window.viewer.removeAllComponents();
-          
-          // Construct AlphaFold URL
-          const url = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`;
-          
-          await window.viewer.loadFile(url, { defaultRepresentation: true });
-          
+          await window.viewer.loadFile(pdbUrl, { defaultRepresentation: true });
           return {
             success: true,
             message: `Loaded AlphaFold structure ${uniprotId}`,
             uniprotId,
+            pdbUrl,
             source: 'AlphaFold DB'
           };
         } catch (nglError) {
@@ -272,12 +285,23 @@ class ProteinService {
 
   async checkAlphaFoldAvailability(uniprotId) {
     try {
-      // Fast HEAD request to check if file exists without downloading
-      const url = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`;
-      const response = await fetch(url, { method: 'HEAD' });
-      return response.ok;
+      // Use the AlphaFold EBI REST API to check availability
+      // This is more reliable than guessing the file URL version
+      const response = await fetch(
+        `https://alphafold.ebi.ac.uk/api/prediction/${uniprotId}`,
+        { headers: { 'Accept': 'application/json' } }
+      );
+      if (!response.ok) return false;
+      const data = await response.json();
+      // Cache the entry so fetchAlphaFoldStructure can reuse it
+      this._alphaFoldCache = this._alphaFoldCache || {};
+      if (Array.isArray(data) && data.length > 0) {
+        this._alphaFoldCache[uniprotId] = data[0];
+        return true;
+      }
+      return false;
     } catch (error) {
-      console.warn(`[ProteinService] AlphaFold check failed for ${uniprotId}:`, error);
+      console.warn(`[ProteinService] AlphaFold API check failed for ${uniprotId}:`, error);
       return false;
     }
   }
@@ -289,20 +313,41 @@ class ProteinService {
 
   // 3. UNIPROT / INTERPRO OPERATIONS
   async searchUniProtDatabase(parameters) {
-    const query = parameters.query || parameters.queryString;
-    const limit = parameters.limit || parameters.maxResults || 10;
-    
+    // Accept many LLM-style parameter variants and auto-build a query if needed
+    let query = parameters.query || parameters.queryString || parameters.search_query || parameters.searchQuery;
+    const limit = parameters.limit || parameters.maxResults || parameters.max_results || 10;
+
+    // Auto-build query from structured parameters if no raw query string was given
     if (!query) {
-      throw new Error('Query is required for UniProt search');
+      const parts = [];
+      const geneName = parameters.geneName || parameters.gene_name || parameters.name || parameters.gene;
+      const organism = parameters.organism || parameters.species || parameters.organism_name;
+      const accession = parameters.accession || parameters.uniprot_id || parameters.uniprotId;
+      const protein = parameters.proteinName || parameters.protein_name || parameters.protein;
+
+      if (accession) { parts.push(accession); }
+      if (geneName)  { parts.push(`gene:${geneName}`); }
+      if (protein)   { parts.push(`protein_name:${protein}`); }
+      if (organism)  { parts.push(`organism_name:"${organism}"`); }
+
+      if (parts.length > 0) {
+        query = parts.join(' AND ');
+        console.log(`[ProteinService] Auto-built UniProt query: ${query}`);
+      }
+    }
+
+    if (!query) {
+      throw new Error('Query is required for UniProt search. Provide query, gene_name, accession, or similar parameter.');
     }
 
     try {
-      const url = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(query)}&size=${limit}&fields=accession,id,protein_name,gene_names,organism_name,length`;
+      const url = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(query)}&size=${limit}&fields=accession,id,protein_name,gene_names,organism_name,length&format=json`;
       
       const response = await fetch(url);
       
       if (!response.ok) {
-        throw new Error(`UniProt API returned ${response.status}`);
+        console.warn(`[ProteinService] UniProt API returned ${response.status} for query: ${query}`);
+        return { success: false, query, count: 0, results: [], error: `UniProt API returned ${response.status}` };
       }
       
       const data = await response.json();
