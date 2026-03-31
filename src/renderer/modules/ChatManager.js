@@ -7678,6 +7678,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Handles code blocks, lists, headers, links, tables, and more
    */
   formatMessage(message) {
+    if (!message || typeof message !== 'string') {
+      return '';
+    }
     // Trim leading/trailing whitespace
     let formattedMessage = message.trim();
 
@@ -7782,7 +7785,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   convertMCPDownloadUrls(text) {
     if (!this.services || !this.services.file) {
       console.error('[ChatManager] file not initialized');
-      return;
+      return text;
     }
     return this.services.file.convertMCPDownloadUrls(text);
   }

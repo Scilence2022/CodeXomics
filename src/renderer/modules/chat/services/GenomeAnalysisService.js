@@ -1,5 +1,5 @@
 /**
- * GenomeAnalysisService - Handles sequence analysis operations extracted from ChatManager
+ * GenomeAnalysisService - Extracted from ChatManager
  */
 class GenomeAnalysisService {
   constructor(app, chatManager) {
@@ -7,352 +7,688 @@ class GenomeAnalysisService {
     this.chatManager = chatManager;
   }
 
-  // 1. SEQUENCE RETRIEVAL AND BASIC OPS
-  getSequenceSelection() {
-    if (this.app.uiManager) {
-      return this.app.uiManager.getSelection();
-    }
-    return null;
-  }
-
-  async getSequence(params) {
-    const { chromosome, start, end, strand = '+' } = params;
-
-    if (!chromosome || start === undefined || end === undefined) {
-      throw new Error('Missing required parameters: chromosome, start, end');
-    }
-
-    if (!this.app.currentSequence || !this.app.currentSequence[chromosome]) {
-      throw new Error(`Sequence not found for chromosome: ${chromosome}`);
-    }
-
-    let sequence = this.app.currentSequence[chromosome].substring(start - 1, end);
-
-    if (strand === '-') {
-      sequence = this.reverseComplement(sequence);
-    }
-
-    return {
-      success: true,
+  async sequenceStatistics(params) {
+    const {
       chromosome,
       start,
       end,
-      strand,
-      length: sequence.length,
+      include = ['basic', 'composition', 'complexity'],
       sequence,
-    };
-  }
+      sequenceType = 'dna',
+    } = params;
 
-  reverseComplement(paramsOrSequence) {
-    const sequence = typeof paramsOrSequence === 'object' ? (paramsOrSequence.sequence || paramsOrSequence.dna_sequence || paramsOrSequence.dna) : paramsOrSequence;
-    
-    if (!sequence || typeof sequence !== 'string') {
-      throw new Error('Sequence is required');
+    let inputSequence;
+
+    // If sequence is provided directly, use it
+    if (sequence) {
+      inputSequence = sequence.replace(/\s/g, '').toUpperCase();
+      // Remove stop codon if protein sequence
+      if (sequenceType === 'protein' && inputSequence.endsWith('*')) {
+        inputSequence = inputSequence.slice(0, -1);
+      }
+    } else {
+      // Use genomic region
+      const chr = chromosome || this.app.currentChromosome;
+      if (!chr) {
+        throw new Error('No chromosome specified and none currently selected');
+      }
+
+      const regionStart = start || this.app.currentPosition?.start || 0;
+      const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
+
+      inputSequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
     }
 
-    if (this.app?.stringUtils && typeof this.app.stringUtils.reverseComplement === 'function') {
-      return this.app.stringUtils.reverseComplement(sequence);
-    }
-    
-    // Fallback implementation
-    const complementMap = {
-      'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C',
-      'a': 't', 't': 'a', 'c': 'g', 'g': 'c',
-      'N': 'N', 'n': 'n'
-    };
-    
-    return sequence
-      .split('')
-      .reverse()
-      .map(char => complementMap[char] || char)
-      .join('');
-  }
+    const stats = {};
 
-  // 2. CODING AND TRANSLATION
-  async getCodingSequence(params) {
-    const locusTag = params.locusTag || params.locus_tag;
-    const geneName = params.geneName || params.gene_name;
-    
-    if (!locusTag && !geneName) {
-      throw new Error('Must provide either locusTag (locus_tag) or geneName (gene_name)');
-    }
-    
-    // Attempt to use MicrobeGenomicsFunctions
-    if (window.MicrobeFns && window.MicrobeFns.getCodingSequence) {
-      try {
-        const id = locusTag || geneName;
-        return window.MicrobeFns.getCodingSequence(id);
-      } catch (e) {
-        console.warn('MicrobeFns.getCodingSequence fallback:', e);
+    // Basic composition
+    if (include.includes('basic') || include.includes('composition')) {
+      if (sequenceType === 'protein') {
+        // Protein amino acid composition
+        const aaCounts = {};
+        const aminoAcids = [
+          'A',
+          'R',
+          'N',
+          'D',
+          'C',
+          'Q',
+          'E',
+          'G',
+          'H',
+          'I',
+          'L',
+          'K',
+          'M',
+          'F',
+          'P',
+          'S',
+          'T',
+          'W',
+          'Y',
+          'V',
+        ];
+
+        // Initialize counts
+        aminoAcids.forEach(aa => (aaCounts[aa] = 0));
+
+        // Count amino acids
+        for (const aa of inputSequence) {
+          if (aminoAcids.includes(aa)) {
+            aaCounts[aa]++;
+          }
+        }
+
+        const length = inputSequence.length;
+        const composition = { length: length };
+
+        // Calculate percentages
+        aminoAcids.forEach(aa => {
+          composition[aa] = {
+            count: aaCounts[aa],
+            percentage: ((aaCounts[aa] / length) * 100).toFixed(2),
+          };
+        });
+
+        // Add amino acid properties
+        const hydrophobic = ['A', 'V', 'I', 'L', 'M', 'F', 'W', 'Y'];
+        const charged = ['R', 'K', 'D', 'E'];
+        const polar = ['N', 'Q', 'S', 'T', 'Y'];
+        const basic = ['R', 'K', 'H'];
+        const acidic = ['D', 'E'];
+
+        const hydrophobicCount = hydrophobic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const chargedCount = charged.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const polarCount = polar.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const basicCount = basic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const acidicCount = acidic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+
+        composition.properties = {
+          hydrophobic: { count: hydrophobicCount, percentage: ((hydrophobicCount / length) * 100).toFixed(2) },
+          charged: { count: chargedCount, percentage: ((chargedCount / length) * 100).toFixed(2) },
+          polar: { count: polarCount, percentage: ((polarCount / length) * 100).toFixed(2) },
+          basic: { count: basicCount, percentage: ((basicCount / length) * 100).toFixed(2) },
+          acidic: { count: acidicCount, percentage: ((acidicCount / length) * 100).toFixed(2) },
+        };
+
+        stats.composition = composition;
+      } else {
+        // DNA nucleotide composition
+        const counts = { A: 0, T: 0, G: 0, C: 0, N: 0 };
+        for (const base of inputSequence) {
+          counts[base] = (counts[base] || 0) + 1;
+        }
+
+        const length = inputSequence.length;
+        stats.composition = {
+          length: length,
+          A: { count: counts.A, percentage: ((counts.A / length) * 100).toFixed(2) },
+          T: { count: counts.T, percentage: ((counts.T / length) * 100).toFixed(2) },
+          G: { count: counts.G, percentage: ((counts.G / length) * 100).toFixed(2) },
+          C: { count: counts.C, percentage: ((counts.C / length) * 100).toFixed(2) },
+          GC: { percentage: (((counts.G + counts.C) / length) * 100).toFixed(2) },
+          AT: { percentage: (((counts.A + counts.T) / length) * 100).toFixed(2) },
+        };
       }
     }
-    
-    // Fallback logic
-    if (this.chatManager && typeof this.chatManager.searchGeneByName === 'function') {
-      const searchResult = await this.chatManager.searchGeneByName({ name: locusTag || geneName });
-      
-      if (searchResult.found && searchResult.genes.length > 0) {
-        const gene = searchResult.genes[0];
-        return this.getSequence({
-          chromosome: gene.chromosome || searchResult.chromosome || this.app.currentChromosome,
-          start: gene.start,
-          end: gene.end,
-          strand: gene.strand
+
+    // AT/GC skew
+    if (include.includes('skew') || include.includes('at_skew') || include.includes('gc_skew')) {
+      const windowSize = Math.max(100, Math.floor(sequence.length / 50));
+      const skewData = [];
+
+      for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
+        const window = sequence.substring(i, i + windowSize);
+        const A = (window.match(/A/g) || []).length;
+        const T = (window.match(/T/g) || []).length;
+        const G = (window.match(/G/g) || []).length;
+        const C = (window.match(/C/g) || []).length;
+
+        const atSkew = (A - T) / (A + T) || 0;
+        const gcSkew = (G - C) / (G + C) || 0;
+
+        skewData.push({
+          position: regionStart + i + windowSize / 2,
+          atSkew: parseFloat(atSkew.toFixed(3)),
+          gcSkew: parseFloat(gcSkew.toFixed(3)),
         });
       }
-    }
-    
-    throw new Error(`Could not extract coding sequence for ${locusTag || geneName}`);
-  }
 
-  async translateSequence(params) {
-    const sequence = typeof params === 'string' ? params : (params.sequence || params.dna_sequence || params.dna);
-    const strand = params.strand || '+';
-    const geneticCode = params.geneticCode || params.genetic_code || 11;
-    
-    if (!sequence) {
-      throw new Error('Sequence is required for translation');
+      stats.skew = skewData.slice(0, 20); // Limit data points
     }
 
-    let seqToProcess = sequence.toUpperCase().replace(/U/g, 'T');
-    if (strand === '-') {
-      seqToProcess = this.reverseComplement(seqToProcess);
-    }
-    
-    // Use app stringUtils if available
-    if (this.app.stringUtils && this.app.stringUtils.translate) {
-      const protein = this.app.stringUtils.translate(seqToProcess);
-      return { success: true, protein_sequence: protein, length: protein.length };
-    }
-    
-    // Built-in standard genetic code fallback (NCBI code 1 / bacterial code 11 for initiation)
-    const CODON_TABLE = {
-      'TTT':'F','TTC':'F','TTA':'L','TTG':'L',
-      'CTT':'L','CTC':'L','CTA':'L','CTG':'L',
-      'ATT':'I','ATC':'I','ATA':'I','ATG':'M',
-      'GTT':'V','GTC':'V','GTA':'V','GTG':'V',
-      'TCT':'S','TCC':'S','TCA':'S','TCG':'S',
-      'CCT':'P','CCC':'P','CCA':'P','CCG':'P',
-      'ACT':'T','ACC':'T','ACA':'T','ACG':'T',
-      'GCT':'A','GCC':'A','GCA':'A','GCG':'A',
-      'TAT':'Y','TAC':'Y','TAA':'*','TAG':'*',
-      'CAT':'H','CAC':'H','CAA':'Q','CAG':'Q',
-      'AAT':'N','AAC':'N','AAA':'K','AAG':'K',
-      'GAT':'D','GAC':'D','GAA':'E','GAG':'E',
-      'TGT':'C','TGC':'C','TGA':'*','TGG':'W',
-      'CGT':'R','CGC':'R','CGA':'R','CGG':'R',
-      'AGT':'S','AGC':'S','AGA':'R','AGG':'R',
-      'GGT':'G','GGC':'G','GGA':'G','GGG':'G'
-    };
-    
-    let protein = '';
-    for (let i = 0; i + 2 < seqToProcess.length; i += 3) {
-      const codon = seqToProcess.substring(i, i + 3);
-      const aa = CODON_TABLE[codon] || 'X';
-      if (aa === '*') break; // stop at stop codon
-      protein += aa;
-    }
-    
-    return {
-      success: true,
-      protein_sequence: protein,
-      length: protein.length
-    };
-  }
+    // Complexity (low complexity regions)
+    if (include.includes('complexity')) {
+      const windowSize = 50;
+      const lowComplexityRegions = [];
 
-  // 3. ANALYSIS METRICS
-  async calculateGCContent(params) {
-    let sequence = typeof params === 'string' ? params : (params.sequence || params.dna_sequence || params.dna);
-    
-    if (!sequence && params.chromosome && params.start && params.end) {
-      const seqResult = await this.getSequence(params);
-      sequence = seqResult.sequence;
-    }
-    
-    if (!sequence) {
-      throw new Error('Must provide sequence or region coordinates');
-    }
-    
-    const gcCount = (sequence.match(/[GCgc]/g) || []).length;
-    const gcPercentage = (gcCount / sequence.length) * 100;
-    
-    return {
-      success: true,
-      length: sequence.length,
-      gc_count: gcCount,
-      gc_percentage: gcPercentage.toFixed(2)
-    };
-  }
+      for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
+        const window = sequence.substring(i, i + windowSize);
+        const uniqueBases = new Set(window).size;
+        const complexity = uniqueBases / 4; // Normalized to 0-1
 
-  async codonUsageAnalysis(params) {
-    let sequence = typeof params === 'string' ? params : (params.sequence || params.dna_sequence || params.dna);
-    
-    if (!sequence && params.chromosome && params.start && params.end) {
-      const seqResult = await this.getSequence(params);
-      sequence = seqResult.sequence;
-    }
-    
-    if (!sequence) {
-      throw new Error('Must provide sequence or region coordinates');
-    }
-    
-    sequence = sequence.toUpperCase();
-    
-    // Simple codon counting
-    const codons = {};
-    const totalCodons = Math.floor(sequence.length / 3);
-    
-    for (let i = 0; i < sequence.length - 2; i += 3) {
-      const codon = sequence.substring(i, i + 3);
-      codons[codon] = (codons[codon] || 0) + 1;
-    }
-    
-    // Calculate frequencies
-    const frequencies = {};
-    for (const [codon, count] of Object.entries(codons)) {
-      frequencies[codon] = {
-        count,
-        frequency: ((count / totalCodons) * 1000).toFixed(2) + ' per 1000' // similar to standard RSCU output
+        if (complexity < 0.6) {
+          // Low complexity threshold
+          lowComplexityRegions.push({
+            start: regionStart + i,
+            end: regionStart + i + windowSize,
+            complexity: parseFloat(complexity.toFixed(3)),
+          });
+        }
+      }
+
+      stats.complexity = {
+        lowComplexityRegions: lowComplexityRegions.length,
+        regions: lowComplexityRegions.slice(0, 10),
       };
     }
-    
+
     return {
-      success: true,
-      total_codons: totalCodons,
-      codon_usage: frequencies
+      chromosome: chr,
+      region: `${regionStart}-${regionEnd}`,
+      analysisTypes: include,
+      statistics: stats,
     };
   }
 
-  async findOpenReadingFrames(params) {
-    let sequence = typeof params === 'string' ? params : (params.sequence || params.dna_sequence || params.dna);
-    const minLength = params.minLength || params.min_length || 100; // in bp
-    const strand = params.strand || 'both'; // '+', '-', or 'both'
-    
-    if (!sequence && params.chromosome && params.start && params.end) {
-      const seqResult = await this.getSequence(params);
-      sequence = seqResult.sequence;
-    }
-    
-    if (!sequence) {
-      throw new Error('Must provide sequence or region coordinates');
+  async genomeCodonUsageAnalysis(params) {
+    const { chromosome, featureType = 'CDS', minLength = 300, maxGenes } = params;
+
+    console.log('🧬 [ChatManager] Starting genome-wide codon usage analysis:', params);
+
+    if (!this.app || !this.app.currentAnnotations) {
+      console.error('❌ [ChatManager] No genome data loaded');
+      console.error('App exists:', !!this.app);
+      console.error('currentAnnotations exists:', !!this.app?.currentAnnotations);
+      throw new Error('No genome data loaded');
     }
 
-    const orfs = [];
-    const minCodons = Math.floor(minLength / 3);
-    
-    // Standard start/stop codons (genetic code 11 default)
-    const startCodons = ['ATG', 'GTG', 'TTG'];
-    const stopCodons = ['TAA', 'TAG', 'TGA'];
-    
-    const analyzeStrand = (seq, currentStrand) => {
-      const strandOrfs = [];
-      const seqUpper = seq.toUpperCase();
-      
-      // Look in all 3 frames
-      for (let frame = 0; frame < 3; frame++) {
-        let inOrf = false;
-        let startPos = -1;
-        
-        for (let i = frame; i < seqUpper.length - 2; i += 3) {
-          const codon = seqUpper.substring(i, i + 3);
-          
-          if (!inOrf && startCodons.includes(codon)) {
-            inOrf = true;
-            startPos = i;
-          } else if (inOrf && stopCodons.includes(codon)) {
-            const length = i + 3 - startPos;
-            if (length >= minLength) {
-              strandOrfs.push({
-                start: currentStrand === '+' ? startPos + 1 : seq.length - (i + 3) + 1,
-                end: currentStrand === '+' ? i + 3 : seq.length - startPos,
-                strand: currentStrand,
-                frame: frame + 1,
-                length: length,
-                start_codon: seqUpper.substring(startPos, startPos + 3),
-                stop_codon: codon
-              });
+    // Debug: Log the current annotations structure
+    console.log('🔍 [ChatManager] currentAnnotations structure:', {
+      type: typeof this.app.currentAnnotations,
+      isArray: Array.isArray(this.app.currentAnnotations),
+      keys: Object.keys(this.app.currentAnnotations),
+      keysCount: Object.keys(this.app.currentAnnotations).length,
+      sample: Object.keys(this.app.currentAnnotations).slice(0, 3),
+    });
+
+    // Get all chromosomes to analyze
+    const chromosomes = chromosome ? [chromosome] : Object.keys(this.app.currentAnnotations);
+
+    console.log('📊 [ChatManager] Chromosomes to analyze:', {
+      requested: chromosome,
+      found: chromosomes,
+      count: chromosomes.length,
+    });
+
+    if (chromosomes.length === 0) {
+      console.error('❌ [ChatManager] No chromosomes found');
+      console.error('Available keys in currentAnnotations:', Object.keys(this.app.currentAnnotations));
+      console.error('Data structure type:', typeof this.app.currentAnnotations);
+      console.error('Is array?', Array.isArray(this.app.currentAnnotations));
+
+      // Check alternative data sources
+      if (this.app.annotations) {
+        console.log('🔍 Found alternative: app.annotations', Object.keys(this.app.annotations));
+      }
+      if (this.app.genomeData) {
+        console.log('🔍 Found alternative: app.genomeData', Object.keys(this.app.genomeData));
+      }
+
+      throw new Error(
+        'No chromosomes found in loaded genome. The genome file may not have been loaded properly or the annotation data is empty.'
+      );
+    }
+
+    // Genetic code and synonymous codon groups
+    const geneticCode = {
+      TTT: 'F',
+      TTC: 'F',
+      TTA: 'L',
+      TTG: 'L',
+      TCT: 'S',
+      TCC: 'S',
+      TCA: 'S',
+      TCG: 'S',
+      TAT: 'Y',
+      TAC: 'Y',
+      TAA: '*',
+      TAG: '*',
+      TGT: 'C',
+      TGC: 'C',
+      TGA: '*',
+      TGG: 'W',
+      CTT: 'L',
+      CTC: 'L',
+      CTA: 'L',
+      CTG: 'L',
+      CCT: 'P',
+      CCC: 'P',
+      CCA: 'P',
+      CCG: 'P',
+      CAT: 'H',
+      CAC: 'H',
+      CAA: 'Q',
+      CAG: 'Q',
+      CGT: 'R',
+      CGC: 'R',
+      CGA: 'R',
+      CGG: 'R',
+      ATT: 'I',
+      ATC: 'I',
+      ATA: 'I',
+      ATG: 'M',
+      ACT: 'T',
+      ACC: 'T',
+      ACA: 'T',
+      ACG: 'T',
+      AAT: 'N',
+      AAC: 'N',
+      AAA: 'K',
+      AAG: 'K',
+      AGT: 'S',
+      AGC: 'S',
+      AGA: 'R',
+      AGG: 'R',
+      GTT: 'V',
+      GTC: 'V',
+      GTA: 'V',
+      GTG: 'V',
+      GCT: 'A',
+      GCC: 'A',
+      GCA: 'A',
+      GCG: 'A',
+      GAT: 'D',
+      GAC: 'D',
+      GAA: 'E',
+      GAG: 'E',
+      GGT: 'G',
+      GGC: 'G',
+      GGA: 'G',
+      GGG: 'G',
+    };
+
+    const synonymousCodons = {
+      F: ['TTT', 'TTC'],
+      L: ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
+      S: ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
+      Y: ['TAT', 'TAC'],
+      C: ['TGT', 'TGC'],
+      W: ['TGG'],
+      P: ['CCT', 'CCC', 'CCA', 'CCG'],
+      H: ['CAT', 'CAC'],
+      Q: ['CAA', 'CAG'],
+      R: ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
+      I: ['ATT', 'ATC', 'ATA'],
+      M: ['ATG'],
+      T: ['ACT', 'ACC', 'ACA', 'ACG'],
+      N: ['AAT', 'AAC'],
+      K: ['AAA', 'AAG'],
+      V: ['GTT', 'GTC', 'GTA', 'GTG'],
+      A: ['GCT', 'GCC', 'GCA', 'GCG'],
+      D: ['GAT', 'GAC'],
+      E: ['GAA', 'GAG'],
+      G: ['GGT', 'GGC', 'GGA', 'GGG'],
+      '*': ['TAA', 'TAG', 'TGA'],
+    };
+
+    // Genome-wide codon counts
+    const genomeCodonCounts = {};
+    const genomeAminoAcidCounts = {};
+    let totalGenes = 0;
+    let totalCodons = 0;
+    let totalSequenceLength = 0;
+    const geneResults = [];
+
+    // Iterate through all chromosomes
+    for (const chr of chromosomes) {
+      const features = this.app.currentAnnotations[chr] || [];
+
+      // Filter for CDS features
+      const cdsFeatures = features.filter(f => f.type === featureType);
+
+      for (const feature of cdsFeatures) {
+        // Apply length filter
+        const featureLength = feature.end - feature.start + 1;
+        if (featureLength < minLength) {
+          continue;
+        }
+
+        // Apply max genes limit if specified
+        if (maxGenes && totalGenes >= maxGenes) {
+          break;
+        }
+
+        try {
+          // Get sequence for this feature
+          let featureSeq = await this.app.getSequenceForRegion(chr, feature.start, feature.end);
+
+          // Handle negative strand
+          if (feature.strand === '-') {
+            featureSeq = this.reverseComplement(featureSeq);
+          }
+
+          // Count codons in this feature
+          for (let i = 0; i < featureSeq.length - 2; i += 3) {
+            const codon = featureSeq.substring(i, i + 3);
+            const aminoAcid = geneticCode[codon];
+
+            if (aminoAcid) {
+              genomeCodonCounts[codon] = (genomeCodonCounts[codon] || 0) + 1;
+              genomeAminoAcidCounts[aminoAcid] = (genomeAminoAcidCounts[aminoAcid] || 0) + 1;
+              totalCodons++;
             }
-            inOrf = false; // reset for next ORF
+          }
+
+          totalSequenceLength += featureSeq.length;
+          totalGenes++;
+
+          geneResults.push({
+            chromosome: chr,
+            name: feature.name || feature.id,
+            locusTag: feature.locusTag,
+            start: feature.start,
+            end: feature.end,
+            length: featureLength,
+            strand: feature.strand,
+          });
+        } catch (error) {
+          console.warn(`Failed to analyze gene ${feature.name || feature.id}:`, error);
+          continue;
+        }
+      }
+
+      // Break if maxGenes reached
+      if (maxGenes && totalGenes >= maxGenes) {
+        break;
+      }
+    }
+
+    if (totalGenes === 0) {
+      throw new Error(`No ${featureType} features found matching criteria (minLength: ${minLength})`);
+    }
+
+    // Calculate genome-wide RSCU and preferences
+    const genomeRSCU = {};
+    const genomeCodonPreferences = {};
+
+    for (const [aa, codons] of Object.entries(synonymousCodons)) {
+      const aaCount = genomeAminoAcidCounts[aa] || 0;
+      if (aaCount > 0) {
+        const expectedFreq = codons.length > 1 ? aaCount / codons.length : aaCount;
+
+        genomeCodonPreferences[aa] = {
+          aminoAcid: aa,
+          totalCount: aaCount,
+          synonymousCodons: codons.length,
+          codons: [],
+          statistics: {},
+        };
+
+        // Calculate RSCU for each codon
+        for (const codon of codons) {
+          const observedCount = genomeCodonCounts[codon] || 0;
+          const rscuValue = expectedFreq > 0 ? observedCount / expectedFreq : 0;
+          genomeRSCU[codon] = rscuValue;
+
+          // Classify preference level
+          let preference = 'neutral';
+          if (codons.length > 1) {
+            if (rscuValue > 1.5) preference = 'highly preferred';
+            else if (rscuValue > 1.0) preference = 'preferred';
+            else if (rscuValue < 0.3) preference = 'highly rare';
+            else if (rscuValue < 0.6) preference = 'rare';
+          }
+
+          genomeCodonPreferences[aa].codons.push({
+            codon: codon,
+            count: observedCount,
+            percentage: aaCount > 0 ? parseFloat(((observedCount / aaCount) * 100).toFixed(2)) : 0,
+            rscu: parseFloat(rscuValue.toFixed(3)),
+            preference: preference,
+          });
+        }
+
+        // Sort codons by usage within each amino acid (descending)
+        genomeCodonPreferences[aa].codons.sort((a, b) => b.percentage - a.percentage);
+
+        // Set most and least preferred
+        if (genomeCodonPreferences[aa].codons.length > 0) {
+          genomeCodonPreferences[aa].mostPreferred = genomeCodonPreferences[aa].codons[0].codon;
+          genomeCodonPreferences[aa].leastPreferred =
+            genomeCodonPreferences[aa].codons[genomeCodonPreferences[aa].codons.length - 1].codon;
+
+          // Calculate usage statistics for multi-codon amino acids
+          if (codons.length > 1) {
+            const usagePercentages = genomeCodonPreferences[aa].codons.map(c => c.percentage);
+            const mean = usagePercentages.reduce((sum, p) => sum + p, 0) / usagePercentages.length;
+            const variance =
+              usagePercentages.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / usagePercentages.length;
+            const stdDev = Math.sqrt(variance);
+
+            // Calculate Effective Number of Codons (ENC) for this amino acid
+            // ENC = 1 / sum(p_i^2) where p_i is the proportion of each codon
+            const encValue =
+              1 /
+              genomeCodonPreferences[aa].codons.reduce((sum, c) => {
+                const proportion = c.percentage / 100;
+                return sum + proportion * proportion;
+              }, 0);
+
+            genomeCodonPreferences[aa].statistics = {
+              mean: parseFloat(mean.toFixed(2)),
+              stdDev: parseFloat(stdDev.toFixed(2)),
+              coefficientOfVariation: mean > 0 ? parseFloat(((stdDev / mean) * 100).toFixed(2)) : 0,
+              effectiveNumberOfCodons: parseFloat(encValue.toFixed(2)),
+              biasStrength: parseFloat((((codons.length - encValue) / (codons.length - 1)) * 100).toFixed(2)), // 0-100% bias strength
+            };
+          } else {
+            genomeCodonPreferences[aa].statistics = {
+              mean: 100,
+              stdDev: 0,
+              coefficientOfVariation: 0,
+              effectiveNumberOfCodons: 1,
+              biasStrength: 0, // No bias for single-codon amino acids
+            };
           }
         }
       }
-      return strandOrfs;
+    }
+
+    // Calculate overall codon usage
+    const genomeCodonUsage = Object.entries(genomeCodonCounts)
+      .map(([codon, count]) => ({
+        codon: codon,
+        aminoAcid: geneticCode[codon],
+        count: count,
+        frequency: parseFloat(((count / totalCodons) * 100).toFixed(2)),
+        rscu: genomeRSCU[codon] ? parseFloat(genomeRSCU[codon].toFixed(3)) : null,
+      }))
+      .sort((a, b) => b.frequency - a.frequency);
+
+    // Calculate GC content at different codon positions
+    const gcByPosition = { pos1: 0, pos2: 0, pos3: 0 };
+    for (const [codon, count] of Object.entries(genomeCodonCounts)) {
+      if (codon.length === 3) {
+        if (codon[0] === 'G' || codon[0] === 'C') gcByPosition.pos1 += count;
+        if (codon[1] === 'G' || codon[1] === 'C') gcByPosition.pos2 += count;
+        if (codon[2] === 'G' || codon[2] === 'C') gcByPosition.pos3 += count;
+      }
+    }
+
+    const gcContent = {
+      position1: parseFloat(((gcByPosition.pos1 / totalCodons) * 100).toFixed(2)),
+      position2: parseFloat(((gcByPosition.pos2 / totalCodons) * 100).toFixed(2)),
+      position3: parseFloat(((gcByPosition.pos3 / totalCodons) * 100).toFixed(2)),
+      overall: parseFloat(
+        (((gcByPosition.pos1 + gcByPosition.pos2 + gcByPosition.pos3) / (totalCodons * 3)) * 100).toFixed(2)
+      ),
     };
-    
-    if (strand === '+' || strand === 'both') {
-      orfs.push(...analyzeStrand(sequence, '+'));
+
+    console.log(
+      `✅ [ChatManager] Genome-wide codon usage analysis complete: ${totalGenes} genes, ${totalCodons} codons`
+    );
+
+    // Truncate analyzedGenes to prevent huge response (keep only first 20 as sample)
+    const sampleGenes = geneResults.slice(0, 20);
+
+    // Truncate codonPreferences - only include top amino acids with significant bias
+    const truncatedPreferences = {};
+    const sortedAAs = Object.entries(genomeCodonPreferences)
+      .filter(([aa]) => aa !== '*') // Exclude stop codons
+      .sort((a, b) => (b[1].statistics?.biasStrength || 0) - (a[1].statistics?.biasStrength || 0))
+      .slice(0, 10); // Top 10 amino acids with most bias
+
+    for (const [aa, pref] of sortedAAs) {
+      truncatedPreferences[aa] = pref;
     }
-    
-    if (strand === '-' || strand === 'both') {
-      const revComp = this.reverseComplement(sequence);
-      orfs.push(...analyzeStrand(revComp, '-'));
-    }
-    
-    // Sort by length descending
-    orfs.sort((a, b) => b.length - a.length);
-    
+
     return {
       success: true,
-      sequence_length: sequence.length,
-      orf_count: orfs.length,
-      min_length: minLength,
-      orfs
+      analysisType: 'genome-wide',
+      totalGenes: totalGenes,
+      totalCodons: totalCodons,
+      totalSequenceLength: totalSequenceLength,
+      chromosomes: chromosomes,
+      featureType: featureType,
+      minLength: minLength,
+      uniqueCodons: Object.keys(genomeCodonCounts).length,
+      // Only include top/bottom codons, not full array
+      mostFrequentCodons: genomeCodonUsage.slice(0, 10),
+      leastFrequentCodons: genomeCodonUsage.slice(-10).reverse(),
+      aminoAcidComposition: genomeAminoAcidCounts,
+      // Truncated preferences (top 10 by bias strength)
+      codonPreferences: truncatedPreferences,
+      gcContent: gcContent,
+      // Sample of analyzed genes (first 20 only)
+      analyzedGenesSample: sampleGenes,
+      totalGenesAnalyzed: geneResults.length,
+      note: `Showing sample of ${sampleGenes.length} genes out of ${geneResults.length} total. Full data available via ChatBox.`,
     };
   }
 
-  // 4. BROWSER/WORKSPACE INFO
-  async getGenomeInfo(params) {
-    if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
-      throw new Error('No genome loaded');
+  async aminoAcidComposition(params) {
+    const { proteinSequence, geneName } = params;
+
+    if (!proteinSequence) {
+      throw new Error('Protein sequence is required for amino acid composition analysis');
     }
-    
-    const chromosomes = Object.keys(this.app.currentSequence);
-    const summary = {
-      chromosomes: chromosomes.length,
-      total_length: 0,
-      total_annotations: 0
+
+    // Clean the sequence (remove stop codon if present)
+    let cleanSequence = proteinSequence.replace(/\s/g, '').toUpperCase();
+    if (cleanSequence.endsWith('*')) {
+      cleanSequence = cleanSequence.slice(0, -1);
+    }
+
+    // Define amino acids and their properties
+    const aminoAcids = [
+      'A',
+      'R',
+      'N',
+      'D',
+      'C',
+      'Q',
+      'E',
+      'G',
+      'H',
+      'I',
+      'L',
+      'K',
+      'M',
+      'F',
+      'P',
+      'S',
+      'T',
+      'W',
+      'Y',
+      'V',
+    ];
+    const aminoAcidNames = {
+      A: 'Alanine',
+      R: 'Arginine',
+      N: 'Asparagine',
+      D: 'Aspartic acid',
+      C: 'Cysteine',
+      Q: 'Glutamine',
+      E: 'Glutamic acid',
+      G: 'Glycine',
+      H: 'Histidine',
+      I: 'Isoleucine',
+      L: 'Leucine',
+      K: 'Lysine',
+      M: 'Methionine',
+      F: 'Phenylalanine',
+      P: 'Proline',
+      S: 'Serine',
+      T: 'Threonine',
+      W: 'Tryptophan',
+      Y: 'Tyrosine',
+      V: 'Valine',
     };
-    
-    const details = chromosomes.map(chr => {
-      const seqLen = this.app.currentSequence[chr].length;
-      const annCount = this.app.currentAnnotations?.[chr]?.length || 0;
-      
-      summary.total_length += seqLen;
-      summary.total_annotations += annCount;
-      
-      return {
-        id: chr,
-        length: seqLen,
-        annotation_count: annCount
-      };
-    });
-    
+
+    const hydrophobic = ['A', 'V', 'I', 'L', 'M', 'F', 'W', 'Y'];
+    const charged = ['R', 'K', 'D', 'E'];
+    const polar = ['N', 'Q', 'S', 'T', 'Y'];
+    const basic = ['R', 'K', 'H'];
+    const acidic = ['D', 'E'];
+    const aromatic = ['F', 'W', 'Y'];
+    const small = ['A', 'G', 'S'];
+
+    // Count amino acids
+    const aaCounts = {};
+    aminoAcids.forEach(aa => (aaCounts[aa] = 0));
+
+    for (const aa of cleanSequence) {
+      if (aminoAcids.includes(aa)) {
+        aaCounts[aa]++;
+      }
+    }
+
+    const length = cleanSequence.length;
+
+    // Calculate composition
+    const composition = aminoAcids
+      .map(aa => ({
+        aa: aa,
+        name: aminoAcidNames[aa],
+        count: aaCounts[aa],
+        percentage: ((aaCounts[aa] / length) * 100).toFixed(2),
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // Calculate property groups
+    const hydrophobicCount = hydrophobic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+    const chargedCount = charged.reduce((sum, aa) => sum + aaCounts[aa], 0);
+    const polarCount = polar.reduce((sum, aa) => sum + aaCounts[aa], 0);
+    const basicCount = basic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+    const acidicCount = acidic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+    const aromaticCount = aromatic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+    const smallCount = small.reduce((sum, aa) => sum + aaCounts[aa], 0);
+
+    const properties = {
+      hydrophobic: { count: hydrophobicCount, percentage: ((hydrophobicCount / length) * 100).toFixed(2) },
+      charged: { count: chargedCount, percentage: ((chargedCount / length) * 100).toFixed(2) },
+      polar: { count: polarCount, percentage: ((polarCount / length) * 100).toFixed(2) },
+      basic: { count: basicCount, percentage: ((basicCount / length) * 100).toFixed(2) },
+      acidic: { count: acidicCount, percentage: ((acidicCount / length) * 100).toFixed(2) },
+      aromatic: { count: aromaticCount, percentage: ((aromaticCount / length) * 100).toFixed(2) },
+      small: { count: smallCount, percentage: ((smallCount / length) * 100).toFixed(2) },
+    };
+
     return {
-      success: true,
-      summary,
-      chromosomes: details
+      gene: geneName || 'Unknown',
+      length: length,
+      composition: composition,
+      properties: properties,
+      mostAbundant: composition.slice(0, 5),
+      leastAbundant: composition
+        .filter(aa => aa.count > 0)
+        .slice(-5)
+        .reverse(),
     };
   }
 
-  checkGenomicsEnvironment() {
-    return {
-      success: true,
-      hasSequence: !!this.app.currentSequence && Object.keys(this.app.currentSequence).length > 0,
-      hasAnnotations: !!this.app.currentAnnotations && Object.keys(this.app.currentAnnotations).length > 0,
-      currentChromosome: this.app.currentChromosome || null,
-      microbeToolsAvailable: typeof window.MicrobeFns !== 'undefined'
-    };
-  }
 
-  // ALIASES for tools that use snake_case logic
-  async computeGc(params) {
-    return this.calculateGCContent(params);
-  }
-
-  async translateDna(params) {
-    return this.translateSequence(params);
-  }
 }
 
-// Make it available globally if needed by plugin system
 window.GenomeAnalysisService = GenomeAnalysisService;

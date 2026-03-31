@@ -16,9 +16,9 @@ class FileOperationService {
       // Get the MCP server base URL from MCPServerManager
       let baseUrl = 'http://localhost:3000'; // Default fallback
 
-      if (this.mcpServerManager) {
+      if (this.chatManager.mcpServerManager) {
         // Try to get Deep Gene Research server URL
-        const deepGeneServer = this.mcpServerManager.servers?.get('deep-gene-research');
+        const deepGeneServer = this.chatManager.mcpServerManager.servers?.get('deep-gene-research');
         if (deepGeneServer && deepGeneServer.url) {
           // Extract base URL from the MCP endpoint URL (e.g., http://localhost:3000/api/mcp -> http://localhost:3000)
           try {

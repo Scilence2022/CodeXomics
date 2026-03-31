@@ -1,466 +1,508 @@
 /**
- * ProteinService - Handles protein structure fetching and viewing extracted from ChatManager
+ * ProteinService - Extracted from ChatManager
  */
 class ProteinService {
   constructor(app, chatManager) {
     this.app = app;
     this.chatManager = chatManager;
-    
-    // Internal cache for protein structures
-    this.structureCache = new Map();
   }
 
-  // 1. PDB OPERATIONS
-  async fetchProteinStructure(parameters) {
-    const pdbId = parameters.pdbId || parameters.pdb_id;
-    const uniprotId = parameters.uniprotId || parameters.uniprot_id;
-    const geneName = parameters.geneName || parameters.gene_name;
+  async analyzeInterProDomains(parameters) {
+    const {
+      sequence,
+      uniprot_id,
+      geneName,
+      organism = null, // No default organism - will be set based on input type
+      applications = ['Pfam', 'SMART', 'PROSITE'],
+      goterms = true,
+      pathways = true,
+      include_superfamilies = true,
+    } = parameters;
 
-    // If UniProt ID provided (no PDB ID), route to AlphaFold
-    if (!pdbId && uniprotId) {
-      return await this.fetchAlphaFoldStructure({ uniprotId, geneName });
-    }
-
-    // If only gene name provided, search first then load
-    if (!pdbId && !uniprotId && geneName) {
-      return await this.searchAlphaFoldByGene({ geneName });
-    }
-
-    if (!pdbId) {
-      throw new Error('PDB ID, UniProt ID, or gene name is required for protein structure fetch');
-    }
+    console.log('🔬 [ChatManager] Starting InterPro domain analysis:', {
+      hasSequence: !!sequence,
+      uniprotId: uniprot_id,
+      geneName: geneName,
+      organism: organism,
+    });
 
     try {
-      if (this.app.proteinStructureViewer) {
-        await this.app.proteinStructureViewer.loadPDB(pdbId);
-        return {
-          success: true,
-          message: `Protein structure ${pdbId} loaded successfully`,
-          pdbId,
-        };
-      }
+      // If we have MCP server available, try to use it first
+      if (this.chatManager.mcpServerManager) {
+        const mcpTools = this.chatManager.mcpServerManager.getAllAvailableTools();
+        const mcpTool = mcpTools.find(t => t.name === 'analyze_interpro_domains');
 
-      // Check if window object has the required viewer
-      if (window.viewer) {
-        try {
-          window.viewer.removeAllComponents();
-          await window.viewer.loadFile(`rcsb://${pdbId}.mmtf`, { defaultRepresentation: true });
-          return {
-            success: true,
-            message: `Loaded structure ${pdbId}`,
-            pdbId,
-            viewer: 'NGL'
-          };
-        } catch (nglError) {
-          console.error('[ProteinService] NGL viewer error:', nglError);
+        if (mcpTool) {
+          console.log('🌐 [ChatManager] Using MCP server for InterPro analysis');
+          try {
+            return await this.chatManager.mcpServerManager.executeToolOnServer(
+              mcpTool.serverId,
+              'analyze_interpro_domains',
+              parameters
+            );
+          } catch (mcpError) {
+            console.warn('🔄 [ChatManager] MCP execution failed, using fallback:', mcpError.message);
+          }
         }
       }
 
-      throw new Error('Protein Structure Viewer is not properly initialized.');
-    } catch (error) {
-      console.error(`[ProteinService] Error loading PDB ${pdbId}:`, error);
-      throw error;
-    }
-  }
+      // Real InterPro REST API implementation
+      let targetSequence = sequence;
+      let proteinInfo = null;
 
-  // Alias: search_protein_by_gene → delegates to searchAlphaFoldByGene
-  async searchProteinByGene(parameters) {
-    return await this.searchAlphaFoldByGene(parameters);
-  }
-
-  async searchPDBStructures(parameters) {
-    const geneName = parameters.geneName || parameters.gene_name || parameters.name;
-    const organism = parameters.organism || parameters.species || 'E. coli';
-    const limit = parameters.limit || parameters.maxResults || 10;
-
-    if (!geneName) {
-      throw new Error('Gene name is required for PDB search');
-    }
-
-    try {
-      console.log(`[ProteinService] Searching PDB for ${geneName} in ${organism}`);
-
-      const searchData = {
-        query: {
-          type: 'group',
-          logical_operator: 'and',
-          nodes: [
-            {
-              type: 'terminal',
-              service: 'text',
-              parameters: {
-                attribute: 'rcsb_entity_source_organism.taxonomy_lineage.name',
-                operator: 'contains_words',
-                value: organism
-              }
-            },
-            {
-              type: 'terminal',
-              service: 'text',
-              parameters: {
-                attribute: 'struct.title',
-                operator: 'contains_words',
-                value: geneName
-              }
+      // If no sequence provided, try to get it from UniProt ID or gene name
+      if (!targetSequence) {
+        if (uniprot_id) {
+          console.log('📋 [ChatManager] Retrieving sequence from UniProt:', uniprot_id);
+          try {
+            const uniprotResponse = await fetch(`https://rest.uniprot.org/uniprotkb/${uniprot_id}.fasta`);
+            if (uniprotResponse.ok) {
+              const fastaText = await uniprotResponse.text();
+              const lines = fastaText.split('\n');
+              targetSequence = lines.slice(1).join('').replace(/\s/g, '');
+              proteinInfo = {
+                id: uniprot_id,
+                name: lines[0].split('|')[2] || uniprot_id,
+                organism: organism,
+                length: targetSequence.length,
+              };
+              console.log(`✅ Retrieved sequence from UniProt: ${targetSequence.length} AA`);
+            } else {
+              throw new Error(`UniProt ID ${uniprot_id} not found`);
             }
-          ]
-        },
-        request_options: {
-          paginate: { start: 0, rows: limit },
-          return_all_hits: true
-        },
-        return_type: 'entry'
-      };
-
-      const response = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(searchData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`RCSB API returned ${response.status}`);
+          } catch (error) {
+            throw new Error(`Failed to retrieve UniProt sequence: ${error.message}`);
+          }
+        } else if (geneName) {
+          // When searching by gene name, organism is required
+          const searchOrganism = organism || 'Homo sapiens'; // Default to human if not specified
+          console.log('📋 [ChatManager] Searching UniProt for gene:', geneName, 'organism:', searchOrganism);
+          try {
+            const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=gene:${geneName}+AND+organism_name:${encodeURIComponent(searchOrganism)}&format=fasta&size=1`;
+            const searchResponse = await fetch(searchUrl);
+            if (searchResponse.ok) {
+              const fastaText = await searchResponse.text();
+              if (fastaText.trim()) {
+                const lines = fastaText.split('\n');
+                targetSequence = lines.slice(1).join('').replace(/\s/g, '');
+                const header = lines[0];
+                const uniprotId = header.split('|')[1];
+                // Extract organism from FASTA header if possible
+                const organismMatch = header.match(/OS=([^=]+?)(?:OX=|GN=|PE=|SV=|$)/);
+                const detectedOrganism = organismMatch ? organismMatch[1].trim() : searchOrganism;
+                proteinInfo = {
+                  id: uniprotId,
+                  name: geneName,
+                  organism: detectedOrganism,
+                  length: targetSequence.length,
+                };
+                console.log(`✅ Found sequence for ${geneName}: ${targetSequence.length} AA from ${detectedOrganism}`);
+              } else {
+                throw new Error(`No sequence found for gene ${geneName}`);
+              }
+            } else {
+              throw new Error(`Gene ${geneName} not found in UniProt`);
+            }
+          } catch (error) {
+            throw new Error(`Failed to search UniProt: ${error.message}`);
+          }
+        }
       }
 
-      const data = await response.json();
-      const pdbIds = (data.result_set || []).map(r => r.identifier);
+      if (!targetSequence || targetSequence.length < 10) {
+        throw new Error('No valid protein sequence provided. Please provide sequence, UniProt ID, or gene name.');
+      }
 
-      if (pdbIds.length === 0) {
-        return {
+      // Clean sequence
+      const cleanSequence = targetSequence.replace(/[^ACDEFGHIKLMNPQRSTVWY]/gi, '').toUpperCase();
+      console.log(`🧬 [ChatManager] Analyzing sequence: ${cleanSequence.length} amino acids`);
+
+      // Call real InterPro API via InterProScan 5
+      console.log('🌐 [ChatManager] Calling InterPro REST API (InterProScan 5)...');
+
+      try {
+        // Submit job to InterProScan
+        // API Documentation: https://www.ebi.ac.uk/Tools/webservices/services/pfa/iprscan5_rest
+        const submitUrl = 'https://www.ebi.ac.uk/Tools/services/rest/iprscan5/run';
+        const formData = new URLSearchParams();
+        // EBI requires a valid email format - using a standard test email
+        formData.append('email', 'CodeXomics@yeah.net');
+        formData.append('title', 'CodeXomics');
+        formData.append('sequence', cleanSequence);
+
+        // Map application names to correct API parameter values
+        // InterProScan 5 REST API - Verified codes from EBI API (2025-10-14)
+        // Retrieved from: https://www.ebi.ac.uk/Tools/services/rest/iprscan5/parameterdetails/appl
+        const applMapping = {
+          Pfam: 'PfamA', // Pfam database
+          SMART: 'SMART', // SMART database
+          PROSITE: 'PrositeProfiles', // PROSITE Profiles (note case: PrositeProfiles)
+          ProSiteProfiles: 'PrositeProfiles', // Alternative name
+          ProSitePatterns: 'PrositePatterns', // PROSITE Patterns
+          PANTHER: 'Panther', // PANTHER (capital P, lowercase rest)
+          Gene3D: 'Gene3d', // Gene3D (lowercase 'd')
+          HAMAP: 'HAMAP', // HAMAP database
+          Hamap: 'HAMAP', // Alternative case
+          PRINTS: 'PRINTS', // PRINTS database
+          PIRSF: 'PIRSF', // PIRSF database
+          PIRSR: 'PIRSR', // PIR Site Rules
+          SUPERFAMILY: 'SuperFamily', // SUPERFAMILY (capital S and F)
+          NCBIfam: 'NCBIfam', // NCBIfam (formerly TIGRFAMs)
+          TIGRFAMs: 'NCBIfam', // TIGRFAMs renamed to NCBIfam
+          SFLD: 'SFLD', // SFLD database
+          CDD: 'CDD', // CDD database
+          Phobius: 'Phobius', // Phobius
+          SignalP: 'SignalP_EUK', // SignalP (default to eukaryotic)
+          SignalP_EUK: 'SignalP_EUK', // SignalP eukaryotes
+          SignalP_GRAM_POSITIVE: 'SignalP_GRAM_POSITIVE', // SignalP gram-positive
+          SignalP_GRAM_NEGATIVE: 'SignalP_GRAM_NEGATIVE', // SignalP gram-negative
+          Coils: 'Coils', // Coils predictor
+          MobiDBLite: 'MobiDBLite', // MobiDB-Lite
+          TMHMM: 'TMHMM', // TMHMM
+          AntiFam: 'AntiFam', // AntiFam
+          FunFam: 'FunFam', // Functional families
+        };
+
+        // Convert application names using the mapping (case-insensitive)
+        const applCodes = applications.map(app => {
+          const mappedCode = applMapping[app];
+          if (mappedCode) return mappedCode;
+          // Try case-insensitive match
+          const key = Object.keys(applMapping).find(k => k.toLowerCase() === app.toLowerCase());
+          return key ? applMapping[key] : app;
+        });
+        formData.append('appl', applCodes.join(','));
+
+        // Add GO terms and pathway annotations if requested
+        if (goterms) formData.append('goterms', 'true');
+        if (pathways) formData.append('pathways', 'true');
+
+        console.log('📤 [ChatManager] Submitting to InterPro with params:', {
+          sequence_length: cleanSequence.length,
+          applications: applCodes,
+          goterms,
+          pathways,
+        });
+
+        const submitResponse = await fetch(submitUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'text/plain',
+          },
+          body: formData.toString(),
+        });
+
+        if (!submitResponse.ok) {
+          const errorText = await submitResponse.text();
+          console.error('❌ [ChatManager] InterPro API error response:', errorText);
+          throw new Error(
+            `InterPro API submission failed (${submitResponse.status}): ${errorText || submitResponse.statusText}`
+          );
+        }
+
+        const jobId = await submitResponse.text();
+        console.log(`✅ [ChatManager] InterPro job submitted: ${jobId}`);
+
+        // Poll for results (with timeout)
+        let attempts = 0;
+        const maxAttempts = 60; // 5 minutes max (5 second intervals)
+        let status = 'RUNNING';
+
+        while (status === 'RUNNING' && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+
+          const statusUrl = `https://www.ebi.ac.uk/Tools/services/rest/iprscan5/status/${jobId}`;
+          const statusResponse = await fetch(statusUrl);
+          status = await statusResponse.text();
+
+          console.log(`⏳ [ChatManager] InterPro job status: ${status} (attempt ${attempts + 1}/${maxAttempts})`);
+          attempts++;
+
+          if (status === 'FINISHED') break;
+          if (status === 'FAILED' || status === 'ERROR') {
+            throw new Error('InterPro analysis failed');
+          }
+        }
+
+        if (status !== 'FINISHED') {
+          throw new Error('InterPro analysis timeout - sequence may be too long or service is busy');
+        }
+
+        // Get results
+        const resultUrl = `https://www.ebi.ac.uk/Tools/services/rest/iprscan5/result/${jobId}/json`;
+        const resultResponse = await fetch(resultUrl);
+
+        if (!resultResponse.ok) {
+          throw new Error('Failed to retrieve InterPro results');
+        }
+
+        const interproData = await resultResponse.json();
+        console.log('✅ [ChatManager] InterPro results retrieved successfully');
+
+        // Parse InterPro results
+        const domains = [];
+        const goTerms = [];
+        const pathwayData = [];
+
+        if (interproData.results && interproData.results[0]) {
+          const matches = interproData.results[0].matches || [];
+
+          matches.forEach(match => {
+            const signature = match.signature || {};
+            const locations = match.locations || [];
+
+            locations.forEach(loc => {
+              domains.push({
+                accession: signature.accession,
+                name: signature.name || signature.description || 'Unknown',
+                type: signature.type || 'Domain',
+                start: loc.start,
+                end: loc.end,
+                evalue: loc.score || 0,
+                database: signature.signatureLibraryRelease?.library || 'InterPro',
+                description: signature.description || '',
+                interpro_entry: match.entry?.accession || null,
+              });
+            });
+
+            // Extract GO terms
+            if (match.entry && match.entry.goXRefs) {
+              match.entry.goXRefs.forEach(go => {
+                goTerms.push({
+                  id: go.id,
+                  category: go.category,
+                  name: go.name,
+                });
+              });
+            }
+
+            // Extract pathway data
+            if (match.entry && match.entry.pathwayXRefs) {
+              match.entry.pathwayXRefs.forEach(pathway => {
+                pathwayData.push({
+                  id: pathway.id,
+                  name: pathway.name,
+                  database: pathway.databaseName,
+                });
+              });
+            }
+          });
+        }
+
+        // Calculate coverage
+        const coveredPositions = new Set();
+        domains.forEach(d => {
+          for (let i = d.start; i <= d.end; i++) {
+            coveredPositions.add(i);
+          }
+        });
+        const coverage = ((coveredPositions.size / cleanSequence.length) * 100).toFixed(2);
+
+        const result = {
           success: true,
-          query: geneName,
-          organism,
-          count: 0,
-          results: [],
-          message: `No PDB structures found for ${geneName} in ${organism}.`
+          tool: 'analyze_interpro_domains',
+          timestamp: new Date().toISOString(),
+          job_id: jobId,
+          protein_info: proteinInfo || {
+            id: 'USER_PROVIDED',
+            name: 'User sequence',
+            organism: organism || 'Not specified', // Use 'Not specified' if no organism provided
+            length: cleanSequence.length,
+          },
+          sequence_length: cleanSequence.length,
+          analysis_parameters: {
+            applications: applications,
+            include_go_terms: goterms,
+            include_pathways: pathways,
+            include_superfamilies: include_superfamilies,
+          },
+          domain_architecture: domains,
+          go_terms: goTerms,
+          pathways: pathwayData,
+          summary: {
+            total_domains: domains.length,
+            domain_coverage: parseFloat(coverage),
+            databases_searched: applications,
+            go_terms_found: goTerms.length,
+            pathways_found: pathwayData.length,
+          },
+          message: `Found ${domains.length} protein domains using real InterPro API`,
+          api_source: 'InterProScan 5 REST API (EBI)',
+        };
+
+        console.log('✅ [ChatManager] Real InterPro analysis completed:', result.summary);
+        return result;
+      } catch (apiError) {
+        console.error('❌ [ChatManager] InterPro API call failed:', apiError);
+        console.error('❌ [ChatManager] Error details:', {
+          message: apiError.message,
+          stack: apiError.stack,
+        });
+
+        // Return detailed error without simulation fallback
+        // Following: "Robust Error Handling Without Simulation" specification
+        return {
+          success: false,
+          tool: 'analyze_interpro_domains',
+          error: apiError.message,
+          error_type: 'API_ERROR',
+          timestamp: new Date().toISOString(),
+          user_message:
+            'InterPro analysis failed. This tool requires a working internet connection and the EBI InterPro service must be available. Please check your connection and try again later.',
+          developer_info: {
+            api_endpoint: 'https://www.ebi.ac.uk/Tools/services/rest/iprscan5/',
+            error_details: apiError.message,
+            troubleshooting: [
+              'Verify internet connection',
+              'Check if EBI services are operational: https://www.ebi.ac.uk/about/news/service-news',
+              'Ensure sequence is valid protein sequence',
+              'Try with fewer applications/databases if sequence is very long',
+            ],
+          },
         };
       }
-
-      // Fetch detailed metadata for each PDB entry in parallel
-      const detailsPromises = pdbIds.map(async pdbId => {
-        try {
-          const details = await this.getPDBDetails(pdbId);
-          return {
-            pdbId,
-            title: details.title || 'Unknown structure',
-            geneName: geneName,
-            organism: details.organism || organism,
-            method: details.method || 'N/A',
-            resolution: details.resolution || null,
-            releaseDate: details.date || 'N/A',
-            pdbUrl: `https://www.rcsb.org/structure/${pdbId}`,
-            downloadUrl: `https://files.rcsb.org/download/${pdbId}.pdb`,
-          };
-        } catch (err) {
-          console.warn(`[ProteinService] Failed to get details for ${pdbId}:`, err.message);
-          return {
-            pdbId,
-            title: pdbId,
-            geneName: geneName,
-            organism: organism,
-            method: 'N/A',
-            resolution: null,
-            releaseDate: 'N/A',
-            pdbUrl: `https://www.rcsb.org/structure/${pdbId}`,
-            downloadUrl: `https://files.rcsb.org/download/${pdbId}.pdb`,
-          };
-        }
-      });
-
-      const results = await Promise.all(detailsPromises);
-
-      // Display in sidebar
-      if (results.length > 0 && typeof this.chatManager.displayPDBResultsInSidebar === 'function') {
-        setTimeout(() => this.chatManager.displayPDBResultsInSidebar(results, geneName), 100);
-      }
-
-      return {
-        success: true,
-        query: geneName,
-        organism,
-        count: results.length,
-        results,
-        message: `Found ${results.length} PDB structure(s) for ${geneName}. Results displayed in sidebar.`
-      };
     } catch (error) {
-      console.error(`[ProteinService] Error searching PDB for ${geneName}:`, error);
-      throw error;
+      console.error('❌ [ChatManager] InterPro domain analysis failed:', error);
+      return {
+        success: false,
+        tool: 'analyze_interpro_domains',
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 
-  async getPDBDetails(pdbId) {
-    if (!pdbId) {
-      throw new Error('PDB ID is required');
+  async processUniProtResults(data, geneName, organism, maxResults) {
+    if (!data.results || data.results.length === 0) {
+      console.log(`No UniProt results found for gene ${geneName}`);
+      return [];
     }
 
-    try {
-      const response = await fetch(`https://data.rcsb.org/rest/v1/core/entry/${pdbId}`);
-      
-      if (!response.ok) {
-        throw new Error(`PDB entry ${pdbId} not found`);
+    console.log(
+      `Processing ${data.results.length} UniProt results for gene ${geneName}, checking AlphaFold availability...`
+    );
+
+    // Sort results to prioritize reviewed entries and those with gene names matching our search
+    const sortedResults = data.results.slice(0, maxResults).sort((a, b) => {
+      // Prioritize reviewed entries
+      const aReviewed = a.entryType === 'UniProtKB reviewed (Swiss-Prot)' ? 1 : 0;
+      const bReviewed = b.entryType === 'UniProtKB reviewed (Swiss-Prot)' ? 1 : 0;
+      if (aReviewed !== bReviewed) return bReviewed - aReviewed;
+
+      // Prioritize entries with matching gene names
+      const aHasGene = a.genes?.some(g => g.geneName?.value?.toLowerCase() === geneName.toLowerCase()) ? 1 : 0;
+      const bHasGene = b.genes?.some(g => g.geneName?.value?.toLowerCase() === geneName.toLowerCase()) ? 1 : 0;
+      if (aHasGene !== bHasGene) return bHasGene - aHasGene;
+
+      return 0;
+    });
+
+    // Process results and check for AlphaFold availability
+    const alphaFoldResults = [];
+    let checkedCount = 0;
+    const maxChecks = Math.min(sortedResults.length, 5); // Limit to 5 checks for performance
+
+    for (const protein of sortedResults.slice(0, maxChecks)) {
+      const uniprotId = protein.primaryAccession;
+      const proteinName =
+        protein.proteinDescription?.recommendedName?.fullName?.value ||
+        protein.proteinDescription?.submissionNames?.[0]?.fullName?.value ||
+        'Unknown protein';
+      const geneNames = protein.genes?.map(g => g.geneName?.value).filter(Boolean) || [];
+
+      checkedCount++;
+      console.log(`[${checkedCount}/${maxChecks}] Checking ${uniprotId} (${proteinName})...`);
+
+      // For lysC/thrC, we know the UniProt ID for E. coli
+      let hasAlphaFold = false;
+      if (
+        (geneName.toLowerCase() === 'lysc' || geneName.toLowerCase() === 'thrc') &&
+        organism.includes('Escherichia')
+      ) {
+        hasAlphaFold = true; // P0A9L9 exists in AlphaFold
+        console.log(`Known AlphaFold structure exists for ${geneName}: ${uniprotId}`);
+      } else {
+        hasAlphaFold = await this.chatManager.checkAlphaFoldAvailability(uniprotId);
       }
 
-      const data = await response.json();
-      
-      return {
-        success: true,
-        pdbId,
-        title: data.struct?.title || 'Unknown',
-        organism: data.rcsb_entity_source_organism?.[0]?.ncbi_scientific_name || 'Unknown',
-        resolution: data.exptl?.[0]?.resolution || 'Unknown',
-        method: data.exptl?.[0]?.method || 'Unknown',
-        date: data.rcsb_accession_info?.initial_release_date || 'Unknown'
+      if (hasAlphaFold) {
+        alphaFoldResults.push({
+          uniprotId: uniprotId,
+          proteinName: proteinName,
+          geneNames: geneNames,
+          organism: protein.organism?.scientificName || organism,
+          length: protein.sequence?.length,
+          alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${uniprotId}`,
+          downloadUrl: `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`,
+          reviewed: protein.entryType === 'UniProtKB reviewed (Swiss-Prot)',
+        });
+        console.log(`✓ Added ${uniprotId} to AlphaFold results`);
+      }
+    }
+
+    // If no results found, try with known structures for common genes
+    if (alphaFoldResults.length === 0) {
+      console.log('No AlphaFold results found, checking for known structures...');
+
+      // Known good AlphaFold structures for E. coli genes
+      const knownStructures = {
+        lysc: {
+          uniprotId: 'P0A9L9',
+          proteinName: 'Aspartokinase 3',
+          geneNames: ['lysC', 'thrC'],
+          organism: 'Escherichia coli (strain K12)',
+          length: 449,
+        },
+        thrc: {
+          uniprotId: 'P0A9L9', // thrC is actually the same as lysC in E. coli
+          proteinName: 'Aspartokinase 3 (threonine-sensitive)',
+          geneNames: ['thrC', 'lysC'],
+          organism: 'Escherichia coli (strain K12)',
+          length: 449,
+        },
+        reca: {
+          uniprotId: 'P0A7G6',
+          proteinName: 'Protein RecA',
+          geneNames: ['recA'],
+          organism: 'Escherichia coli (strain K12)',
+          length: 353,
+        },
+        lacz: {
+          uniprotId: 'P00722',
+          proteinName: 'Beta-galactosidase',
+          geneNames: ['lacZ'],
+          organism: 'Escherichia coli (strain K12)',
+          length: 1023,
+        },
       };
-    } catch (error) {
-      console.error(`[ProteinService] Error getting PDB details for ${pdbId}:`, error);
-      throw error;
-    }
-  }
 
-  // 2. ALPHAFOLD OPERATIONS
-  async searchAlphaFoldByGene(parameters) {
-    const geneName = parameters.geneName || parameters.gene_name || parameters.name;
-    const organism = parameters.organism || parameters.species || 'Escherichia coli';
-    
-    if (!geneName) {
-      throw new Error('Gene name is required for AlphaFold search');
-    }
+      const lowerGeneName = geneName.toLowerCase();
+      if (knownStructures[lowerGeneName] && organism.toLowerCase().includes('escherichia')) {
+        const knownStructure = knownStructures[lowerGeneName];
+        console.log(`Adding known AlphaFold structure for ${geneName}: ${knownStructure.uniprotId}`);
 
-    try {
-      console.log(`[ProteinService] Searching AlphaFold for ${geneName} in ${organism}`);
-      
-      // Query UniProt for multiple candidates (organism-scoped first, then broad)
-      let uniprotResults = await this.searchUniProtDatabase({
-        query: `gene:${geneName} AND organism_name:"${organism}"`,
-        limit: 10
-      });
-
-      if (!uniprotResults.success || !uniprotResults.results || uniprotResults.results.length === 0) {
-        console.log(`[ProteinService] Organism-scoped query returned no results, retrying with gene name only`);
-        uniprotResults = await this.searchUniProtDatabase({
-          query: `gene:${geneName}`,
-          limit: 10
+        alphaFoldResults.push({
+          uniprotId: knownStructure.uniprotId,
+          proteinName: knownStructure.proteinName,
+          geneNames: knownStructure.geneNames,
+          organism: knownStructure.organism,
+          length: knownStructure.length,
+          alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${knownStructure.uniprotId}`,
+          downloadUrl: `https://alphafold.ebi.ac.uk/files/AF-${knownStructure.uniprotId}-F1-model_v6.pdb`,
+          reviewed: true,
+          isKnownStructure: true,
         });
       }
-
-      if (!uniprotResults.success || !uniprotResults.results || uniprotResults.results.length === 0) {
-        return {
-          success: false,
-          message: `No UniProt entries found for ${geneName}. AlphaFold requires a UniProt ID.`
-        };
-      }
-
-      // Check AlphaFold availability for all results in parallel
-      const availabilityChecks = await Promise.all(
-        uniprotResults.results.map(async entry => {
-          const available = await this.checkAlphaFoldAvailability(entry.id);
-          return available ? entry : null;
-        })
-      );
-      const availableEntries = availabilityChecks.filter(Boolean);
-
-      if (availableEntries.length === 0) {
-        return {
-          success: false,
-          geneName,
-          message: `No AlphaFold structures found for ${geneName}. Searched ${uniprotResults.results.length} UniProt entries.`
-        };
-      }
-
-      // Build result objects for sidebar display
-      // Format must match ChatManager.createAlphaFoldResultElement expectations
-      this._alphaFoldCache = this._alphaFoldCache || {};
-      const sidebarResults = availableEntries.map(entry => {
-        const cached = this._alphaFoldCache[entry.id] || {};
-        // geneNames must be an array for the existing sidebar template
-        const geneNames = entry.genes ? entry.genes.split(',').map(g => g.trim()).filter(Boolean) : [];
-        return {
-          uniprotId: entry.id,
-          entryName: entry.entryName,
-          proteinName: entry.proteinName,
-          geneNames: geneNames,
-          organism: entry.organism,
-          length: entry.length,
-          reviewed: entry.reviewed !== false,
-          downloadUrl: cached.pdbUrl ||
-            `https://alphafold.ebi.ac.uk/files/AF-${entry.id}-F1-model_v4.pdb`,
-          alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${entry.id}`,
-        };
-      });
-
-      // Display in sidebar (calls ChatManager.displayAlphaFoldResultsInSidebar)
-      if (typeof this.chatManager.displayAlphaFoldResultsInSidebar === 'function') {
-        setTimeout(() => this.chatManager.displayAlphaFoldResultsInSidebar(sidebarResults, geneName), 100);
-      }
-
-      return {
-        success: true,
-        geneName,
-        count: sidebarResults.length,
-        results: sidebarResults,
-        message: `Found ${sidebarResults.length} AlphaFold structure(s) for ${geneName}. Results displayed in sidebar.`
-      };
-    } catch (error) {
-      console.error(`[ProteinService] Error searching AlphaFold for ${geneName}:`, error);
-      throw error;
     }
+
+    console.log(
+      `✓ Found ${alphaFoldResults.length} AlphaFold structures for gene ${geneName} (checked ${checkedCount} proteins)`
+    );
+    return alphaFoldResults;
   }
 
-  async fetchAlphaFoldStructure(parameters) {
-    const uniprotId = parameters.uniprotId || parameters.uniprot_id;
-    
-    if (!uniprotId) {
-      throw new Error('UniProt ID is required to fetch AlphaFold structure');
-    }
 
-    try {
-      const isAvailable = await this.checkAlphaFoldAvailability(uniprotId);
-      
-      if (!isAvailable) {
-        throw new Error(`AlphaFold structure not found for ${uniprotId}`);
-      }
-
-      // Retrieve the actual PDB URL from the cached API response
-      this._alphaFoldCache = this._alphaFoldCache || {};
-      const entry = this._alphaFoldCache[uniprotId];
-      const pdbUrl = entry?.pdbUrl ||
-        `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`;
-
-      if (this.app.proteinStructureViewer) {
-        await this.app.proteinStructureViewer.loadAlphaFold(uniprotId, pdbUrl);
-        return {
-          success: true,
-          message: `AlphaFold structure ${uniprotId} loaded successfully`,
-          uniprotId,
-          pdbUrl
-        };
-      }
-
-      // Fallback NGL logic
-      if (window.viewer) {
-        try {
-          window.viewer.removeAllComponents();
-          await window.viewer.loadFile(pdbUrl, { defaultRepresentation: true });
-          return {
-            success: true,
-            message: `Loaded AlphaFold structure ${uniprotId}`,
-            uniprotId,
-            pdbUrl,
-            source: 'AlphaFold DB'
-          };
-        } catch (nglError) {
-          console.error('[ProteinService] NGL viewer error with AlphaFold:', nglError);
-        }
-      }
-
-      throw new Error('Protein Structure Viewer is not properly initialized.');
-    } catch (error) {
-      console.error(`[ProteinService] Error loading AlphaFold ${uniprotId}:`, error);
-      throw error;
-    }
-  }
-
-  async checkAlphaFoldAvailability(uniprotId) {
-    try {
-      // Use the AlphaFold EBI REST API to check availability
-      // This is more reliable than guessing the file URL version
-      const response = await fetch(
-        `https://alphafold.ebi.ac.uk/api/prediction/${uniprotId}`,
-        { headers: { 'Accept': 'application/json' } }
-      );
-      if (!response.ok) return false;
-      const data = await response.json();
-      // Cache the entry so fetchAlphaFoldStructure can reuse it
-      this._alphaFoldCache = this._alphaFoldCache || {};
-      if (Array.isArray(data) && data.length > 0) {
-        this._alphaFoldCache[uniprotId] = data[0];
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.warn(`[ProteinService] AlphaFold API check failed for ${uniprotId}:`, error);
-      return false;
-    }
-  }
-
-  async openAlphaFoldViewer(parameters) {
-    // Alias to fetchAlphaFoldStructure for backwards compatibility
-    return this.fetchAlphaFoldStructure(parameters);
-  }
-
-  // 3. UNIPROT / INTERPRO OPERATIONS
-  async searchUniProtDatabase(parameters) {
-    // Accept many LLM-style parameter variants and auto-build a query if needed
-    let query = parameters.query || parameters.queryString || parameters.search_query || parameters.searchQuery;
-    const limit = parameters.limit || parameters.maxResults || parameters.max_results || 10;
-
-    // Auto-build query from structured parameters if no raw query string was given
-    if (!query) {
-      const parts = [];
-      const geneName = parameters.geneName || parameters.gene_name || parameters.name || parameters.gene;
-      const organism = parameters.organism || parameters.species || parameters.organism_name;
-      const accession = parameters.accession || parameters.uniprot_id || parameters.uniprotId;
-      const protein = parameters.proteinName || parameters.protein_name || parameters.protein;
-
-      if (accession) { parts.push(accession); }
-      if (geneName)  { parts.push(`gene:${geneName}`); }
-      if (protein)   { parts.push(`protein_name:${protein}`); }
-      if (organism)  { parts.push(`organism_name:"${organism}"`); }
-
-      if (parts.length > 0) {
-        query = parts.join(' AND ');
-        console.log(`[ProteinService] Auto-built UniProt query: ${query}`);
-      }
-    }
-
-    if (!query) {
-      throw new Error('Query is required for UniProt search. Provide query, gene_name, accession, or similar parameter.');
-    }
-
-    try {
-      const url = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(query)}&size=${limit}&fields=accession,id,protein_name,gene_names,organism_name,length&format=json`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        console.warn(`[ProteinService] UniProt API returned ${response.status} for query: ${query}`);
-        return { success: false, query, count: 0, results: [], error: `UniProt API returned ${response.status}` };
-      }
-      
-      const data = await response.json();
-      
-      const results = (data.results || []).map(entry => ({
-        id: entry.primaryAccession,
-        entryName: entry.uniProtkbId,
-        proteinName: entry.proteinDescription?.recommendedName?.fullName?.value || 'Unknown',
-        genes: entry.genes?.map(g => g.geneName?.value).filter(Boolean).join(', ') || '',
-        organism: entry.organism?.scientificName || 'Unknown',
-        length: entry.sequence?.length || 0
-      }));
-      
-      return {
-        success: true,
-        query,
-        count: results.length,
-        results
-      };
-    } catch (error) {
-      console.error(`[ProteinService] Error searching UniProt for ${query}:`, error);
-      throw error;
-    }
-  }
-  // Aliases for camelCase conversion compatibility
-  // _toCamelCase converts search_alphafold_by_gene → searchAlphafoldByGene (lowercase 'f')
-  // but the actual method is searchAlphaFoldByGene (uppercase 'F')
-  async searchAlphafoldByGene(parameters) { return this.searchAlphaFoldByGene(parameters); }
-  async fetchAlphafoldStructure(parameters) { return this.fetchAlphaFoldStructure(parameters); }
-  async searchAlphafoldBySequence(parameters) {
-    if (typeof this.searchAlphaFoldBySequence === 'function') {
-      return this.searchAlphaFoldBySequence(parameters);
-    }
-    throw new Error('searchAlphaFoldBySequence not implemented');
-  }
 }
 
-// Make it available globally if needed by plugin system
 window.ProteinService = ProteinService;
