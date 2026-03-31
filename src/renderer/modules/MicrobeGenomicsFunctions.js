@@ -551,7 +551,19 @@ class MicrobeGenomicsFunctions {
     const gb = window.genomeBrowser;
     if (!gb) throw new Error('GenomeBrowser not initialised');
 
-    const regex = typeof pattern === 'string' ? new RegExp(pattern, 'gi') : pattern;
+    // Handle case where pattern is a parameters object instead of a string
+    // This happens when _extractMGFArgs can't find a matching key and passes the whole object
+    if (pattern && typeof pattern === 'object' && !pattern.exec) {
+      // Extract chromosome from the object if not explicitly provided
+      if (!chromosome && (pattern.chromosome || pattern.chr)) {
+        chromosome = pattern.chromosome || pattern.chr;
+      }
+      // Extract pattern string from common aliases
+      pattern = pattern.pattern || pattern.motif || pattern.sequence || pattern.query || String(pattern);
+    }
+
+    // Ensure pattern is a string and create a regex
+    const regex = typeof pattern === 'string' ? new RegExp(pattern, 'gi') : (pattern && typeof pattern.exec === 'function' ? pattern : new RegExp(String(pattern), 'gi'));
     const matches = [];
 
     const chromosomes = chromosome ? [chromosome] : Object.keys(gb.currentSequence || {});

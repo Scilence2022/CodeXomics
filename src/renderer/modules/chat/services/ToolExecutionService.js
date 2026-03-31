@@ -180,7 +180,7 @@ class ToolExecutionService {
   // These methods expect individual args, not a params object
   _extractMGFArgs(toolName, parameters) {
     const argMappings = {
-      'search_sequence_motif': ['pattern', 'chromosome'],
+      'search_sequence_motif': ['pattern', 'motif', 'chromosome'],
       'search_gene_by_name': ['name'],
       'search_gene_by_locus_tag': ['locusTag', 'locus_tag', 'identifier'],
       'search_by_position': ['chromosome', 'position'],
