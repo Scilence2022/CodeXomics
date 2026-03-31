@@ -13,8 +13,21 @@ class ProteinService {
   // 1. PDB OPERATIONS
   async fetchProteinStructure(parameters) {
     const pdbId = parameters.pdbId || parameters.pdb_id;
+    const uniprotId = parameters.uniprotId || parameters.uniprot_id;
+    const geneName = parameters.geneName || parameters.gene_name;
+
+    // If UniProt ID provided (no PDB ID), route to AlphaFold
+    if (!pdbId && uniprotId) {
+      return await this.fetchAlphaFoldStructure({ uniprotId, geneName });
+    }
+
+    // If only gene name provided, search first then load
+    if (!pdbId && !uniprotId && geneName) {
+      return await this.searchAlphaFoldByGene({ geneName });
+    }
+
     if (!pdbId) {
-      throw new Error('PDB ID is required');
+      throw new Error('PDB ID, UniProt ID, or gene name is required for protein structure fetch');
     }
 
     try {
@@ -30,11 +43,8 @@ class ProteinService {
       // Check if window object has the required viewer
       if (window.viewer) {
         try {
-          // If structure is already loaded, clear it
           window.viewer.removeAllComponents();
-          
           await window.viewer.loadFile(`rcsb://${pdbId}.mmtf`, { defaultRepresentation: true });
-          
           return {
             success: true,
             message: `Loaded structure ${pdbId}`,
@@ -53,6 +63,11 @@ class ProteinService {
     }
   }
 
+  // Alias: search_protein_by_gene → delegates to searchAlphaFoldByGene
+  async searchProteinByGene(parameters) {
+    return await this.searchAlphaFoldByGene(parameters);
+  }
+
   async searchPDBStructures(parameters) {
     const geneName = parameters.geneName || parameters.gene_name || parameters.name;
     const organism = parameters.organism || parameters.species || 'E. coli';
@@ -64,42 +79,37 @@ class ProteinService {
 
     try {
       console.log(`[ProteinService] Searching PDB for ${geneName} in ${organism}`);
-      // Send message to LLM to search for PDB IDs, or perform an API call to RCSB PDB
-      // For now, return a placeholder that the LLM can interpret
-      
+
       const searchData = {
         query: {
-          type: "group",
-          logical_operator: "and",
+          type: 'group',
+          logical_operator: 'and',
           nodes: [
             {
-              type: "terminal",
-              service: "text",
+              type: 'terminal',
+              service: 'text',
               parameters: {
-                attribute: "rcsb_entity_source_organism.taxonomy_lineage.name",
-                operator: "contains_words",
+                attribute: 'rcsb_entity_source_organism.taxonomy_lineage.name',
+                operator: 'contains_words',
                 value: organism
               }
             },
             {
-              type: "terminal",
-              service: "text",
+              type: 'terminal',
+              service: 'text',
               parameters: {
-                attribute: "struct.title",
-                operator: "contains_words",
+                attribute: 'struct.title',
+                operator: 'contains_words',
                 value: geneName
               }
             }
           ]
         },
         request_options: {
-          paginate: {
-            start: 0,
-            rows: limit
-          },
+          paginate: { start: 0, rows: limit },
           return_all_hits: true
         },
-        return_type: "entry"
+        return_type: 'entry'
       };
 
       const response = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
@@ -113,13 +123,53 @@ class ProteinService {
       }
 
       const data = await response.json();
-      
-      const results = (data.result_set || []).map(r => ({
-        pdbId: r.identifier,
-        score: r.score
-      }));
+      const pdbIds = (data.result_set || []).map(r => r.identifier);
 
-      // In the real system, this would call processPDBResults and display in sidebar
+      if (pdbIds.length === 0) {
+        return {
+          success: true,
+          query: geneName,
+          organism,
+          count: 0,
+          results: [],
+          message: `No PDB structures found for ${geneName} in ${organism}.`
+        };
+      }
+
+      // Fetch detailed metadata for each PDB entry in parallel
+      const detailsPromises = pdbIds.map(async pdbId => {
+        try {
+          const details = await this.getPDBDetails(pdbId);
+          return {
+            pdbId,
+            title: details.title || 'Unknown structure',
+            geneName: geneName,
+            organism: details.organism || organism,
+            method: details.method || 'N/A',
+            resolution: details.resolution || null,
+            releaseDate: details.date || 'N/A',
+            pdbUrl: `https://www.rcsb.org/structure/${pdbId}`,
+            downloadUrl: `https://files.rcsb.org/download/${pdbId}.pdb`,
+          };
+        } catch (err) {
+          console.warn(`[ProteinService] Failed to get details for ${pdbId}:`, err.message);
+          return {
+            pdbId,
+            title: pdbId,
+            geneName: geneName,
+            organism: organism,
+            method: 'N/A',
+            resolution: null,
+            releaseDate: 'N/A',
+            pdbUrl: `https://www.rcsb.org/structure/${pdbId}`,
+            downloadUrl: `https://files.rcsb.org/download/${pdbId}.pdb`,
+          };
+        }
+      });
+
+      const results = await Promise.all(detailsPromises);
+
+      // Display in sidebar
       if (results.length > 0 && typeof this.chatManager.displayPDBResultsInSidebar === 'function') {
         setTimeout(() => this.chatManager.displayPDBResultsInSidebar(results, geneName), 100);
       }
@@ -129,7 +179,8 @@ class ProteinService {
         query: geneName,
         organism,
         count: results.length,
-        results
+        results,
+        message: `Found ${results.length} PDB structure(s) for ${geneName}. Results displayed in sidebar.`
       };
     } catch (error) {
       console.error(`[ProteinService] Error searching PDB for ${geneName}:`, error);
@@ -178,51 +229,77 @@ class ProteinService {
     try {
       console.log(`[ProteinService] Searching AlphaFold for ${geneName} in ${organism}`);
       
-      // Attempt UniProt search first with organism-scoped query
-      // UniProt REST API v2 uses organism_name field for organism filtering
+      // Query UniProt for multiple candidates (organism-scoped first, then broad)
       let uniprotResults = await this.searchUniProtDatabase({
         query: `gene:${geneName} AND organism_name:"${organism}"`,
-        limit: 5
+        limit: 10
       });
 
-      // Fallback: if organism-scoped query fails or returns nothing, try gene name only
       if (!uniprotResults.success || !uniprotResults.results || uniprotResults.results.length === 0) {
         console.log(`[ProteinService] Organism-scoped query returned no results, retrying with gene name only`);
         uniprotResults = await this.searchUniProtDatabase({
           query: `gene:${geneName}`,
-          limit: 5
+          limit: 10
         });
       }
 
       if (!uniprotResults.success || !uniprotResults.results || uniprotResults.results.length === 0) {
         return {
           success: false,
-          message: `No UniProt entries found for ${geneName} in ${organism}. AlphaFold requires a UniProt ID.`
+          message: `No UniProt entries found for ${geneName}. AlphaFold requires a UniProt ID.`
         };
       }
 
-      const topResult = uniprotResults.results[0];
-      const uniprotId = topResult.id;
+      // Check AlphaFold availability for all results in parallel
+      const availabilityChecks = await Promise.all(
+        uniprotResults.results.map(async entry => {
+          const available = await this.checkAlphaFoldAvailability(entry.id);
+          return available ? entry : null;
+        })
+      );
+      const availableEntries = availabilityChecks.filter(Boolean);
 
-      // Check AlphaFold availability
-      const isAvailable = await this.checkAlphaFoldAvailability(uniprotId);
-
-      if (isAvailable) {
-        return {
-          success: true,
-          geneName,
-          uniprotId,
-          proteinName: topResult.proteinName,
-          message: `AlphaFold structure available for ${uniprotId} (${geneName}). Use fetch_alphafold_structure to view it.`
-        };
-      } else {
+      if (availableEntries.length === 0) {
         return {
           success: false,
           geneName,
-          uniprotId,
-          message: `No AlphaFold structure available for UniProt ID ${uniprotId}`
+          message: `No AlphaFold structures found for ${geneName}. Searched ${uniprotResults.results.length} UniProt entries.`
         };
       }
+
+      // Build result objects for sidebar display
+      // Format must match ChatManager.createAlphaFoldResultElement expectations
+      this._alphaFoldCache = this._alphaFoldCache || {};
+      const sidebarResults = availableEntries.map(entry => {
+        const cached = this._alphaFoldCache[entry.id] || {};
+        // geneNames must be an array for the existing sidebar template
+        const geneNames = entry.genes ? entry.genes.split(',').map(g => g.trim()).filter(Boolean) : [];
+        return {
+          uniprotId: entry.id,
+          entryName: entry.entryName,
+          proteinName: entry.proteinName,
+          geneNames: geneNames,
+          organism: entry.organism,
+          length: entry.length,
+          reviewed: entry.reviewed !== false,
+          downloadUrl: cached.pdbUrl ||
+            `https://alphafold.ebi.ac.uk/files/AF-${entry.id}-F1-model_v4.pdb`,
+          alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${entry.id}`,
+        };
+      });
+
+      // Display in sidebar (calls ChatManager.displayAlphaFoldResultsInSidebar)
+      if (typeof this.chatManager.displayAlphaFoldResultsInSidebar === 'function') {
+        setTimeout(() => this.chatManager.displayAlphaFoldResultsInSidebar(sidebarResults, geneName), 100);
+      }
+
+      return {
+        success: true,
+        geneName,
+        count: sidebarResults.length,
+        results: sidebarResults,
+        message: `Found ${sidebarResults.length} AlphaFold structure(s) for ${geneName}. Results displayed in sidebar.`
+      };
     } catch (error) {
       console.error(`[ProteinService] Error searching AlphaFold for ${geneName}:`, error);
       throw error;
