@@ -9374,7 +9374,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async listAnnotations(params) {
-    return this.services.annotation.listAnnotations(parameters);
+    return this.services.annotation.listAnnotations(params);
   }
 
   /**
@@ -9385,38 +9385,38 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async getAnnotation(params) {
-    return this.services.annotation.getAnnotation(parameters);
+    return this.services.annotation.getAnnotation(params);
   }
 
   async updateAnnotation(params) {
-    return this.services.annotation.updateAnnotation(parameters);
+    return this.services.annotation.updateAnnotation(params);
   }
 
   async searchAnnotations(params) {
-    return this.services.annotation.searchAnnotations(parameters);
+    return this.services.annotation.searchAnnotations(params);
   }
 
   async bulkUpdateAnnotations(params) {
-    return this.services.annotation.bulkUpdateAnnotations(parameters);
+    return this.services.annotation.bulkUpdateAnnotations(params);
   }
 
   async getAnnotationHistory(params) {
-    return this.services.annotation.getAnnotationHistory(parameters);
+    return this.services.annotation.getAnnotationHistory(params);
   }
 
 
 
   // 7. ANNOTATION MANAGEMENT (CRUD)
   async editAnnotation(params) {
-    return this.services.annotation.editAnnotation(parameters);
+    return this.services.annotation.editAnnotation(params);
   }
 
   async deleteAnnotation(params) {
-    return this.services.annotation.deleteAnnotation(parameters);
+    return this.services.annotation.deleteAnnotation(params);
   }
 
   async batchCreateAnnotations(params) {
-    return this.services.annotation.batchCreateAnnotations(parameters);
+    return this.services.annotation.batchCreateAnnotations(params);
   }
 
   // 8. FILE AND DATA MANAGEMENT
