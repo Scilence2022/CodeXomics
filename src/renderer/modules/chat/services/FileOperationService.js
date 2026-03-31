@@ -77,7 +77,8 @@ class FileOperationService {
           }
         }
 
-        await this.app.fileManager.loadAnnotationFile(filePath, mergeWithExisting);
+        // Load annotation file using the generic loadFile method (fileManager has no loadAnnotationFile)
+        await this.app.fileManager.loadFile(filePath);
 
         return {
           success: true,

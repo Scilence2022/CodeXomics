@@ -450,7 +450,7 @@ class LLMContextService {
     let contextBonus = 0;
 
     // Check if no tool calls are present (conversational response)
-    const hasToolCall = this.parseToolCall(response) !== null || this.chatManager.parseMultipleToolCalls(response).length > 0;
+    const hasToolCall = this.chatManager.parseToolCall(response) !== null || this.chatManager.parseMultipleToolCalls(response).length > 0;
 
     // CRITICAL: If tool calls are present, heavily reduce completion confidence
     // Tool calls should ALWAYS take priority over completion detection
