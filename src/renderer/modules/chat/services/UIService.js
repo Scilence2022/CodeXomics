@@ -1,0 +1,1 @@
+/**\n * UIService - Extracted from ChatManager\n * Handles sidebar elements, dragging, modals, and style injection.\n */\nclass UIService {\n  constructor(app, chatManager) {\n    this.app = app;\n    this.chatManager = chatManager;\n  }\n\n\n\n}\n\nwindow.UIService = UIService;\n
