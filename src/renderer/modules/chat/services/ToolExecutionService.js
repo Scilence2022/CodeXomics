@@ -51,13 +51,33 @@ class ToolExecutionService {
       }
 
       // --- PRIORITY 3: MCP DIRECT INTERACTION STACK ---
-      // Check for specifically routed tools to specific agents
-      const routerResult = await this.chatManager._routeToolToAgent(toolName, parameters);
-      if (routerResult && routerResult.handled) {
-          return routerResult.result;
+      // Check for specifically routed tools to specific agents (Multi-Agent System)
+      if (this.chatManager.agentSystemEnabled && this.chatManager.multiAgentSystem) {
+        try {
+          const agentResult = await this.chatManager.multiAgentSystem.executeTool(toolName, parameters);
+          if (agentResult.success) {
+            return agentResult.result;
+          }
+        } catch (agentError) {
+          // Fall through
+        }
       }
 
-      // Check if it's an MCP tool globally available
+      // Special handling for known MCP tools that match their server IDs
+      const knownMcpToolServerMapping = {
+        'deep-gene-research': 'deep-gene-research',
+      };
+
+      if (knownMcpToolServerMapping[toolName] && this.chatManager.mcpServerManager) {
+        const serverId = knownMcpToolServerMapping[toolName];
+        if (this.chatManager.mcpServerManager.activeServers && this.chatManager.mcpServerManager.activeServers.has(serverId)) {
+          try {
+            return await this.chatManager.mcpServerManager.executeToolOnServer(serverId, toolName, parameters);
+          } catch (directError) {
+            console.warn(`[ToolExecutionService] Direct MCP Routing Failed for ${toolName}:`, directError.message);
+          }
+        }
+      }
       if (this.chatManager.mcpServerManager) {
         const mcpTool = this.chatManager.mcpServerManager.getAllAvailableTools().find(t => t.name === toolName);
         if (mcpTool) {
@@ -76,7 +96,40 @@ class ToolExecutionService {
         }
       }
 
-      // --- PRIORITY 5: LOCAL NATIVE FALLBACKS ---
+      // --- PRIORITY 5: ACTION MANAGER TOOLS ---
+      const actionManagerTools = {
+        'copy_sequence': true, 'action_copy_sequence': true,
+        'cut_sequence': true, 'action_cut_sequence': true,
+        'paste_sequence': true, 'action_paste_sequence': true,
+        'delete_sequence': true, 'action_delete_sequence': true,
+        'insert_sequence': true, 'action_insert_sequence': true,
+        'replace_sequence': true, 'action_replace_sequence': true,
+        'execute_actions': true, 'action_execute_actions': true,
+        'get_action_list': true, 'action_get_action_list': true,
+        'clear_actions': true, 'action_clear_actions': true,
+        'get_clipboard_content': true, 'action_get_clipboard_content': true,
+      };
+
+      if (actionManagerTools[toolName]) {
+        if (typeof this.chatManager.executeActionTool === 'function') {
+          // Strip 'action_' prefix if present to get canonical tool name
+          const canonicalName = toolName.startsWith('action_') ? toolName.substring(7) : toolName;
+          return await this.chatManager.executeActionTool(canonicalName, parameters);
+        }
+      }
+
+      // --- PRIORITY 6: MICROBE GENOMICS FUNCTIONS ---
+      if (window.MicrobeGenomicsFunctions) {
+        const mgfMethodName = this._toCamelCase(toolName);
+        if (typeof window.MicrobeGenomicsFunctions[mgfMethodName] === 'function') {
+          console.log(`[ToolExecutionService] Routing to MicrobeGenomicsFunctions.${mgfMethodName}`);
+          return await window.MicrobeGenomicsFunctions[mgfMethodName](
+            ...this._extractMGFArgs(toolName, parameters)
+          );
+        }
+      }
+
+      // --- PRIORITY 7: LOCAL NATIVE FALLBACKS ---
       // We will map any remaining ChatManager functions manually
       const camelCaseMethod = this._toCamelCase(toolName);
       if (typeof this.chatManager[camelCaseMethod] === 'function') {
@@ -100,6 +153,15 @@ class ToolExecutionService {
           break;
       }
 
+      // --- PRIORITY 8: CHATMANAGER LEGACY ROUTING FALLBACK ---
+      if (typeof this.chatManager.executeLocalTool === 'function') {
+        const localResult = await this.chatManager.executeLocalTool(toolName, parameters);
+        if (localResult !== undefined) {
+          console.log(`[ToolExecutionService] Resolved '${toolName}' via ChatManager.executeLocalTool fallback`);
+          return localResult;
+        }
+      }
+
       throw new Error(`Unknown tool: ${toolName}`);
     } catch (error) {
       console.error(`[ToolExecutionService] Error executing tool: ${toolName}`, error);
@@ -112,6 +174,52 @@ class ToolExecutionService {
     return str.replace(/([-_][a-z])/ig, ($1) => {
       return $1.toUpperCase().replace('-', '').replace('_', '');
     });
+  }
+
+  // Extract positional arguments for MicrobeGenomicsFunctions static methods
+  // These methods expect individual args, not a params object
+  _extractMGFArgs(toolName, parameters) {
+    const argMappings = {
+      'search_sequence_motif': ['pattern', 'chromosome'],
+      'search_gene_by_name': ['name'],
+      'search_gene_by_locus_tag': ['locusTag', 'locus_tag', 'identifier'],
+      'search_by_position': ['chromosome', 'position'],
+      'search_intergenic_regions': ['chromosome', 'minLength', 'min_length'],
+      'compute_gc': ['dna', 'sequence', 'dna_sequence'],
+      'reverse_complement': ['dna', 'sequence', 'dna_sequence'],
+      'translate_dna': ['dna', 'sequence', 'dna_sequence'],
+      'find_orfs': ['dna', 'sequence', 'dna_sequence'],
+      'calculate_entropy': ['sequence', 'dna', 'dna_sequence'],
+      'calc_region_gc': ['chromosome', 'start', 'end'],
+      'calculate_melting_temp': ['dna', 'sequence', 'dna_sequence'],
+      'calculate_molecular_weight': ['dna', 'sequence', 'dna_sequence'],
+      'analyze_codon_usage': ['dna', 'sequence', 'dna_sequence'],
+      'predict_promoter': ['seq', 'sequence'],
+      'predict_rbs': ['seq', 'sequence'],
+      'predict_terminator': ['seq', 'sequence'],
+      'get_coding_sequence': ['identifier', 'gene_name', 'geneName'],
+      'jump_to_gene': ['geneName', 'identifier', 'name'],
+      'delete_gene': ['geneName', 'identifier'],
+      'get_upstream_region': ['geneObj', 'length'],
+      'get_downstream_region': ['geneObj', 'length'],
+    };
+
+    const argNames = argMappings[toolName];
+    if (!argNames || !parameters) {
+      // Fallback: pass the entire parameters object as-is
+      return [parameters];
+    }
+
+    // For tools that take a single primary argument, find it from parameters
+    const args = [];
+    for (const name of argNames) {
+      if (parameters[name] !== undefined) {
+        args.push(parameters[name]);
+      }
+    }
+
+    // If we found at least one arg, return them; otherwise pass params object
+    return args.length > 0 ? args : [parameters];
   }
 }
 

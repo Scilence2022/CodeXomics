@@ -43,9 +43,15 @@ class GenomeAnalysisService {
     };
   }
 
-  reverseComplement(sequence) {
-    if (this.chatManager && typeof this.chatManager.reverseComplement === 'function') {
-      return this.chatManager.reverseComplement(sequence);
+  reverseComplement(paramsOrSequence) {
+    const sequence = typeof paramsOrSequence === 'object' ? (paramsOrSequence.sequence || paramsOrSequence.dna_sequence || paramsOrSequence.dna) : paramsOrSequence;
+    
+    if (!sequence || typeof sequence !== 'string') {
+      throw new Error('Sequence is required');
+    }
+
+    if (this.app?.stringUtils && typeof this.app.stringUtils.reverseComplement === 'function') {
+      return this.app.stringUtils.reverseComplement(sequence);
     }
     
     // Fallback implementation
@@ -64,10 +70,11 @@ class GenomeAnalysisService {
 
   // 2. CODING AND TRANSLATION
   async getCodingSequence(params) {
-    const { locusTag, geneName } = params;
+    const locusTag = params.locusTag || params.locus_tag;
+    const geneName = params.geneName || params.gene_name;
     
     if (!locusTag && !geneName) {
-      throw new Error('Must provide either locusTag or geneName');
+      throw new Error('Must provide either locusTag (locus_tag) or geneName (gene_name)');
     }
     
     // Attempt to use MicrobeGenomicsFunctions
@@ -99,33 +106,63 @@ class GenomeAnalysisService {
   }
 
   async translateSequence(params) {
-    const { sequence, strand = '+', geneticCode = 11 } = params;
+    const sequence = typeof params === 'string' ? params : (params.sequence || params.dna_sequence || params.dna);
+    const strand = params.strand || '+';
+    const geneticCode = params.geneticCode || params.genetic_code || 11;
     
     if (!sequence) {
       throw new Error('Sequence is required for translation');
     }
+
+    let seqToProcess = sequence.toUpperCase().replace(/U/g, 'T');
+    if (strand === '-') {
+      seqToProcess = this.reverseComplement(seqToProcess);
+    }
     
     // Use app stringUtils if available
     if (this.app.stringUtils && this.app.stringUtils.translate) {
-      let seqToProcess = sequence;
-      if (strand === '-') {
-        seqToProcess = this.reverseComplement(sequence);
-      }
-      
       const protein = this.app.stringUtils.translate(seqToProcess);
-      return {
-        success: true,
-        protein_sequence: protein,
-        length: protein.length
-      };
+      return { success: true, protein_sequence: protein, length: protein.length };
     }
     
-    throw new Error('Translation function not available in app environment');
+    // Built-in standard genetic code fallback (NCBI code 1 / bacterial code 11 for initiation)
+    const CODON_TABLE = {
+      'TTT':'F','TTC':'F','TTA':'L','TTG':'L',
+      'CTT':'L','CTC':'L','CTA':'L','CTG':'L',
+      'ATT':'I','ATC':'I','ATA':'I','ATG':'M',
+      'GTT':'V','GTC':'V','GTA':'V','GTG':'V',
+      'TCT':'S','TCC':'S','TCA':'S','TCG':'S',
+      'CCT':'P','CCC':'P','CCA':'P','CCG':'P',
+      'ACT':'T','ACC':'T','ACA':'T','ACG':'T',
+      'GCT':'A','GCC':'A','GCA':'A','GCG':'A',
+      'TAT':'Y','TAC':'Y','TAA':'*','TAG':'*',
+      'CAT':'H','CAC':'H','CAA':'Q','CAG':'Q',
+      'AAT':'N','AAC':'N','AAA':'K','AAG':'K',
+      'GAT':'D','GAC':'D','GAA':'E','GAG':'E',
+      'TGT':'C','TGC':'C','TGA':'*','TGG':'W',
+      'CGT':'R','CGC':'R','CGA':'R','CGG':'R',
+      'AGT':'S','AGC':'S','AGA':'R','AGG':'R',
+      'GGT':'G','GGC':'G','GGA':'G','GGG':'G'
+    };
+    
+    let protein = '';
+    for (let i = 0; i + 2 < seqToProcess.length; i += 3) {
+      const codon = seqToProcess.substring(i, i + 3);
+      const aa = CODON_TABLE[codon] || 'X';
+      if (aa === '*') break; // stop at stop codon
+      protein += aa;
+    }
+    
+    return {
+      success: true,
+      protein_sequence: protein,
+      length: protein.length
+    };
   }
 
   // 3. ANALYSIS METRICS
   async calculateGCContent(params) {
-    let sequence = params.sequence;
+    let sequence = typeof params === 'string' ? params : (params.sequence || params.dna_sequence || params.dna);
     
     if (!sequence && params.chromosome && params.start && params.end) {
       const seqResult = await this.getSequence(params);
@@ -148,7 +185,7 @@ class GenomeAnalysisService {
   }
 
   async codonUsageAnalysis(params) {
-    let sequence = params.sequence;
+    let sequence = typeof params === 'string' ? params : (params.sequence || params.dna_sequence || params.dna);
     
     if (!sequence && params.chromosome && params.start && params.end) {
       const seqResult = await this.getSequence(params);
@@ -187,7 +224,7 @@ class GenomeAnalysisService {
   }
 
   async findOpenReadingFrames(params) {
-    let sequence = params.sequence;
+    let sequence = typeof params === 'string' ? params : (params.sequence || params.dna_sequence || params.dna);
     const minLength = params.minLength || params.min_length || 100; // in bp
     const strand = params.strand || 'both'; // '+', '-', or 'both'
     
@@ -305,6 +342,15 @@ class GenomeAnalysisService {
       currentChromosome: this.app.currentChromosome || null,
       microbeToolsAvailable: typeof window.MicrobeFns !== 'undefined'
     };
+  }
+
+  // ALIASES for tools that use snake_case logic
+  async computeGc(params) {
+    return this.calculateGCContent(params);
+  }
+
+  async translateDna(params) {
+    return this.translateSequence(params);
   }
 }
 

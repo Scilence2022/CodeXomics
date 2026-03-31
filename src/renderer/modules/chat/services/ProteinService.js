@@ -327,6 +327,17 @@ class ProteinService {
       throw error;
     }
   }
+  // Aliases for camelCase conversion compatibility
+  // _toCamelCase converts search_alphafold_by_gene → searchAlphafoldByGene (lowercase 'f')
+  // but the actual method is searchAlphaFoldByGene (uppercase 'F')
+  async searchAlphafoldByGene(parameters) { return this.searchAlphaFoldByGene(parameters); }
+  async fetchAlphafoldStructure(parameters) { return this.fetchAlphaFoldStructure(parameters); }
+  async searchAlphafoldBySequence(parameters) {
+    if (typeof this.searchAlphaFoldBySequence === 'function') {
+      return this.searchAlphaFoldBySequence(parameters);
+    }
+    throw new Error('searchAlphaFoldBySequence not implemented');
+  }
 }
 
 // Make it available globally if needed by plugin system
