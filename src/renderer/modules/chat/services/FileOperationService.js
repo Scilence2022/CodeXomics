@@ -284,6 +284,122 @@ class FileOperationService {
     }
   }
 
+  async loadVariantFile(parameters = {}) {
+    try {
+      const { filePath, showFileDialog = false } = parameters;
+      if (filePath && !showFileDialog) {
+        if (!this.app?.fileManager) throw new Error('FileManager not available');
+        if (typeof require !== 'undefined') {
+          const fs = require('fs');
+          if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
+        }
+        await this.app.fileManager.loadFile(filePath);
+        return { success: true, message: `Successfully loaded variant file: ${filePath}`, filePath, fileType: 'variant' };
+      } else {
+        if (!this.app?.fileManager) throw new Error('FileManager not available');
+        this.app.fileManager.openSpecificFileType('variant');
+        return { success: true, message: 'File dialog opened for variant file selection', action: 'dialog_opened', fileType: 'variant' };
+      }
+    } catch (error) {
+      console.error('❌ [FileOperationService] loadVariantFile failed:', error);
+      return { success: false, error: error.message, fileType: 'variant' };
+    }
+  }
+
+  async loadReadsFile(parameters = {}) {
+    try {
+      const { filePath, showFileDialog = false } = parameters;
+      if (filePath && !showFileDialog) {
+        if (!this.app?.fileManager) throw new Error('FileManager not available');
+        if (typeof require !== 'undefined') {
+          const fs = require('fs');
+          if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
+        }
+        await this.app.fileManager.loadFile(filePath);
+        return { success: true, message: `Successfully loaded reads file: ${filePath}`, filePath, fileType: 'reads' };
+      } else {
+        if (!this.app?.fileManager) throw new Error('FileManager not available');
+        this.app.fileManager.openSpecificFileType('reads');
+        return { success: true, message: 'File dialog opened for reads file selection', action: 'dialog_opened', fileType: 'reads' };
+      }
+    } catch (error) {
+      console.error('❌ [FileOperationService] loadReadsFile failed:', error);
+      return { success: false, error: error.message, fileType: 'reads' };
+    }
+  }
+
+  async loadWigTracks(parameters = {}) {
+    try {
+      const { filePaths, showFileDialog = false, multiple = true } = parameters;
+      if (filePaths && !showFileDialog) {
+        if (!this.app?.fileManager) throw new Error('FileManager not available');
+        const pathsArray = Array.isArray(filePaths) ? filePaths : [filePaths];
+        if (typeof require !== 'undefined') {
+          const fs = require('fs');
+          for (const path of pathsArray) {
+            if (!fs.existsSync(path)) throw new Error(`File not found: ${path}`);
+          }
+        }
+        if (pathsArray.length > 1) await this.app.fileManager.loadMultipleWIGFiles(pathsArray);
+        else await this.app.fileManager.loadFile(pathsArray[0]);
+        return { success: true, message: `Successfully loaded ${pathsArray.length} WIG track(s)`, filePaths: pathsArray, fileType: 'wig', count: pathsArray.length };
+      } else {
+        if (!this.app?.fileManager) throw new Error('FileManager not available');
+        this.app.fileManager.openSpecificFileType('tracks');
+        return { success: true, message: 'File dialog opened for WIG tracks selection', action: 'dialog_opened', fileType: 'wig', multiple };
+      }
+    } catch (error) {
+      console.error('❌ [FileOperationService] loadWigTracks failed:', error);
+      return { success: false, error: error.message, fileType: 'wig' };
+    }
+  }
+
+  async loadOperonFile(parameters = {}) {
+    try {
+      const { filePath, showFileDialog = false, format = 'auto' } = parameters;
+      if (filePath && !showFileDialog) {
+        if (!this.app?.fileManager) throw new Error('FileManager not available');
+        if (typeof require !== 'undefined') {
+          const fs = require('fs');
+          if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
+        }
+        await this.app.fileManager.loadOperonFile(filePath);
+        return { success: true, message: `Successfully loaded operon file: ${filePath}`, filePath, fileType: 'operon', format };
+      } else {
+        if (!this.app?.fileManager) throw new Error('FileManager not available');
+        this.app.fileManager.openSpecificFileType('operon');
+        return { success: true, message: 'File dialog opened for operon file selection', action: 'dialog_opened', fileType: 'operon' };
+      }
+    } catch (error) {
+      console.error('❌ [FileOperationService] loadOperonFile failed:', error);
+      return { success: false, error: error.message, fileType: 'operon' };
+    }
+  }
+
+  async downloadInternetFile(parameters = {}) {
+    try {
+      let { url, destinationPath, filename } = parameters;
+      if (url) url = url.replace(/[`\s]/g, '');
+      console.log(`📥 [FileOperationService] Downloading file from: ${url}`);
+      if (!url) throw new Error('URL is required for download');
+
+      if (window.electronAPI?.downloadInternetFile) {
+        const result = await window.electronAPI.downloadInternetFile({ url, destinationPath, filename });
+        if (result.success) return { success: true, message: `Successfully downloaded file to: ${result.filePath}`, filePath: result.filePath, filename: result.filename, fileSize: result.fileSize, url, tool: 'download_internet_file' };
+        throw new Error(result.error || 'Download failed');
+      } else if (window.ipcRenderer) {
+        const result = await window.ipcRenderer.invoke('download-internet-file', { url, destinationPath, filename });
+        if (result.success) return { success: true, message: `Successfully downloaded file to: ${result.filePath}`, filePath: result.filePath, filename: result.filename, fileSize: result.fileSize, url, tool: 'download_internet_file' };
+        throw new Error(result.error || 'Download failed');
+      } else {
+        throw new Error('electronAPI.downloadInternetFile not available');
+      }
+    } catch (error) {
+      console.error('❌ [FileOperationService] downloadInternetFile failed:', error);
+      return { success: false, error: error.message, tool: 'download_internet_file' };
+    }
+  }
+
   // 3. MCP DOWNLOAD URL CONVERSION
   convertMCPDownloadUrls(text) {
     if (!text || typeof text !== 'string') return text;

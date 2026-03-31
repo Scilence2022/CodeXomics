@@ -828,74 +828,11 @@ class ChatManager {
    * @returns {Object} Download result
    */
   async downloadInternetFile(parameters = {}) {
-    try {
-      let { url, destinationPath, filename } = parameters;
-
-      // Strip backticks and whitespace from URL
-      if (url) {
-        url = url.replace(/[`\s]/g, '');
-      }
-
-      console.log(`📥 [ChatManager] Downloading file from: ${url}`);
-
-      if (!url) {
-        throw new Error('URL is required for download');
-      }
-
-      // Try to use electronAPI first (for windows with preload script)
-      if (window.electronAPI && window.electronAPI.downloadInternetFile) {
-        const result = await window.electronAPI.downloadInternetFile({
-          url,
-          destinationPath,
-          filename,
-        });
-
-        if (result.success) {
-          return {
-            success: true,
-            message: `Successfully downloaded file to: ${result.filePath}`,
-            filePath: result.filePath,
-            filename: result.filename,
-            fileSize: result.fileSize,
-            url: url,
-            tool: 'download_internet_file',
-          };
-        } else {
-          throw new Error(result.error || 'Download failed');
-        }
-      }
-      // Fallback: use ipcRenderer directly (for main window with nodeIntegration)
-      else if (window.ipcRenderer) {
-        const result = await window.ipcRenderer.invoke('download-internet-file', {
-          url,
-          destinationPath,
-          filename,
-        });
-
-        if (result.success) {
-          return {
-            success: true,
-            message: `Successfully downloaded file to: ${result.filePath}`,
-            filePath: result.filePath,
-            filename: result.filename,
-            fileSize: result.fileSize,
-            url: url,
-            tool: 'download_internet_file',
-          };
-        } else {
-          throw new Error(result.error || 'Download failed');
-        }
-      } else {
-        throw new Error('electronAPI.downloadInternetFile not available');
-      }
-    } catch (error) {
-      console.error('❌ [ChatManager] Error downloading file:', error);
-      return {
-        success: false,
-        error: error.message,
-        tool: 'download_internet_file',
-      };
+    if (!this.services || !this.services.file) {
+      console.error('[ChatManager] file not initialized');
+      return;
     }
+    return this.services.file.downloadInternetFile(parameters);
   }
 
   /**
