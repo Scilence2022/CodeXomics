@@ -143,7 +143,7 @@ class AutomaticComplexSuite {
         category: 'file_loading',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Load genome file "${this.buildFilePath('ECOLI.gbk')}"; Load aligned read file "${this.buildFilePath('1655_C10.sorted.bam')}"; Load variant VCF "${this.buildFilePath('1655_C10.mutations.vcf')}"; Load WIG files "${this.buildFilePath('first_sample.wig')}", "${this.buildFilePath('another_sample.wig')}"`,
+        instruction: `Load genome file "${this.buildFilePath('ECOLI.gbk')}"; Load aligned read file "${this.buildFilePath('1655_C10.sorted.bam')}"; Load variant VCF "${this.buildFilePath('1655_C10.mutations.vcf')}"; Load WIG files "${this.buildFilePath('sample.wig')}", "${this.buildFilePath('another_sample.wig')}"`,
         expectedResult: {
           tool_sequence: ['load_genome_file', 'load_reads_file', 'load_variant_file', 'load_wig_tracks'],
           parameters: [
@@ -157,7 +157,7 @@ class AutomaticComplexSuite {
               filePath: this.buildFilePath('1655_C10.mutations.vcf'),
             },
             {
-              filePaths: [this.buildFilePath('first_sample.wig'), this.buildFilePath('another_sample.wig')],
+              filePaths: [this.buildFilePath('sample.wig'), this.buildFilePath('another_sample.wig')],
             },
           ],
         },
@@ -324,7 +324,7 @@ class AutomaticComplexSuite {
         name: '1655_C10.mutations.vcf',
         patterns: ['variant file loaded successfully', '1655_C10.mutations.vcf', 'variant.*loaded', 'VCF.*loaded'],
       },
-      { name: 'first_sample.wig', patterns: ['wig.*loaded', 'first_sample.wig', 'tracks.*loaded'] },
+      { name: 'sample.wig', patterns: ['wig.*loaded', 'sample.wig', 'tracks.*loaded'] },
       { name: 'another_sample.wig', patterns: ['wig.*loaded', 'another_sample.wig', 'tracks.*loaded'] },
     ];
 
@@ -839,7 +839,7 @@ class AutomaticComplexSuite {
       'ECOLI.gbk',
       '1655_C10.sorted.bam',
       '1655_C10.mutations.vcf',
-      'first_sample.wig',
+      'sample.wig',
       'another_sample.wig',
     ];
 
@@ -848,7 +848,7 @@ class AutomaticComplexSuite {
       load_genome_file: ['ECOLI.gbk'],
       load_reads_file: ['1655_C10.sorted.bam'],
       load_variant_file: ['1655_C10.mutations.vcf'],
-      load_wig_tracks: ['first_sample.wig', 'another_sample.wig'],
+      load_wig_tracks: ['sample.wig', 'another_sample.wig'],
     };
 
     // Points per successfully loaded file
