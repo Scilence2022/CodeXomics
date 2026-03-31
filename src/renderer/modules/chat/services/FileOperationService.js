@@ -154,6 +154,112 @@ class FileOperationService {
     }
   }
 
+  async exportProteinFasta(parameters = {}) {
+    const { filename, includeGeneNames = true, translationTable = 1 } = parameters;
+    if (!this.app?.exportManager) throw new Error('Export manager not available');
+    if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
+      throw new Error('No annotation data loaded to export protein sequences');
+    }
+
+    try {
+      let proteinContent = '';
+      const chromosomes = Object.keys(this.app.currentAnnotations);
+      const processedFeatures = new Set();
+
+      chromosomes.forEach(chr => {
+        const sequence = this.app.currentSequence[chr];
+        const features = this.app.currentAnnotations[chr] || [];
+        features.forEach(feature => {
+          if (feature.type === 'CDS') {
+            const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
+            if (!processedFeatures.has(featureId)) {
+              processedFeatures.add(featureId);
+              const cdsSequence = this.app.exportManager.extractFeatureSequence(sequence, feature);
+              const proteinSequence = this.app.exportManager.translateDNA(cdsSequence);
+              const cleanProteinSequence = proteinSequence.replace(/\*+$/, '');
+              const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+              proteinContent += `>${header}\n`;
+              for (let i = 0; i < cleanProteinSequence.length; i += 80) {
+                proteinContent += cleanProteinSequence.substring(i, i + 80) + '\n';
+              }
+            }
+          }
+        });
+      });
+
+      if (!proteinContent) throw new Error('No protein-coding features found to export');
+
+      const isUserProvidedFilename = filename && filename.trim() && filename !== 'protein_sequences.fasta';
+      if (isUserProvidedFilename) {
+        await this.writeFileDirectly(proteinContent, filename, 'Protein FASTA');
+      } else {
+        await this.showExportSaveDialog(proteinContent, 'protein_sequences.fasta', 'Protein FASTA', 'text/plain');
+      }
+
+      const proteinCount = chromosomes.reduce((sum, chr) => {
+        return sum + (this.app.currentAnnotations[chr] || []).filter(f => f.type === 'CDS').length;
+      }, 0);
+
+      return {
+        success: true,
+        tool: 'export_protein_fasta',
+        exported_format: 'Protein FASTA',
+        filename: filename || 'protein_sequences.fasta',
+        total_protein_sequences: proteinCount,
+        translation_table: translationTable,
+        message: `Successfully exported ${proteinCount} protein sequences`,
+      };
+    } catch (error) {
+      throw new Error(`Protein FASTA export failed: ${error.message}`);
+    }
+  }
+
+  async exportCurrentViewFasta(parameters = {}) {
+    const { filename, includeCoordinates = true } = parameters;
+    if (!this.app?.exportManager) throw new Error('Export manager not available');
+    if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
+      throw new Error('No genome data loaded to export current view');
+    }
+
+    try {
+      const currentState = this.chatManager.getCurrentState();
+      const currentChr = currentState.currentChromosome;
+      const viewStart = currentState.currentPosition?.start || 1;
+      const viewEnd = currentState.currentPosition?.end || currentState.sequenceLength;
+
+      if (!currentChr) throw new Error('No chromosome selected for current view export');
+      const sequence = this.app.currentSequence[currentChr];
+      if (!sequence) throw new Error(`Sequence not found for chromosome: ${currentChr}`);
+
+      const viewSequence = sequence.substring(viewStart - 1, viewEnd);
+      let fastaContent = `>${currentChr}:${viewStart}-${viewEnd}\n`;
+      for (let i = 0; i < viewSequence.length; i += 80) fastaContent += viewSequence.substring(i, i + 80) + '\n';
+
+      const defaultFilename = `${currentChr}_${viewStart}-${viewEnd}.fasta`;
+      const isUserProvidedFilename = filename && filename.trim() && filename !== defaultFilename;
+      if (isUserProvidedFilename) {
+        await this.writeFileDirectly(fastaContent, filename, 'Current view FASTA');
+      } else {
+        await this.showExportSaveDialog(fastaContent, defaultFilename, 'Current view FASTA', 'text/plain');
+      }
+
+      return {
+        success: true,
+        tool: 'export_current_view_fasta',
+        exported_format: 'FASTA (Current View)',
+        filename: filename || defaultFilename,
+        chromosome: currentChr,
+        region_start: viewStart,
+        region_end: viewEnd,
+        region_length: viewEnd - viewStart + 1,
+        coordinates: `${currentChr}:${viewStart}-${viewEnd}`,
+        message: `Successfully exported current view as FASTA format`,
+      };
+    } catch (error) {
+      throw new Error(`Current view FASTA export failed: ${error.message}`);
+    }
+  }
+
   async exportGenBankFormat(parameters = {}) {
     const { filename } = parameters;
     if (!this.app?.exportManager) throw new Error('Export manager not available');

@@ -3026,7 +3026,7 @@ class ChatManager {
   }
 
   async getSequence(params) {
-    return this.services.analysis.getSequence(parameters);
+    return this.services.analysis.getSequence(params);
   }
 
   async toggleTrack(params) {

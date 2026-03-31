@@ -7,6 +7,41 @@ class ProteinService {
     this.chatManager = chatManager;
   }
 
+  async searchAlphaFoldByGene(parameters) {
+    const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
+    const organism = parameters.organism || 'Escherichia coli';
+    const maxResults = parameters.maxResults || 10;
+
+    try {
+      if (!geneName) throw new Error('Gene name is required for AlphaFold search');
+
+      const searchResults = await this.chatManager.performAlphaFoldSearch(geneName, organism, maxResults);
+
+      if (searchResults.length > 0) {
+        this.chatManager.displayAlphaFoldResultsInSidebar(searchResults, geneName);
+      }
+
+      return {
+        success: true,
+        tool: 'search_alphafold_by_gene',
+        results: searchResults,
+        count: searchResults.length,
+        timestamp: new Date().toISOString(),
+        message: searchResults.length > 0
+          ? `Found ${searchResults.length} AlphaFold structure(s) for ${geneName}. Results displayed in sidebar.`
+          : `No AlphaFold structures found for ${geneName}.`,
+      };
+    } catch (error) {
+      console.error('AlphaFold search error:', error);
+      return {
+        success: false,
+        error: error.message,
+        tool: 'search_alphafold_by_gene',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
   async analyzeInterProDomains(parameters) {
     const {
       sequence,
