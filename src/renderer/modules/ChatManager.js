@@ -112,14 +112,10 @@ class ChatManager {
 
     // DON'T load chat history here - wait for UI to be created
 
-    // Legacy MCP connection check (kept for backward compatibility)
-    this.checkAndSetupMCPConnection();
-    this.initializeUI();
-
     // Initialize working directory
     this.initializeWorkingDirectory();
 
-    // Initialize modularized services
+    // Initialize modularized services first - UI initialization depends on them
     this.services = {
       execution: new window.ToolExecutionService(this.app, this),
       file: new window.FileOperationService(this.app, this),
@@ -131,6 +127,10 @@ class ChatManager {
       context: new window.LLMContextService(this.app, this),
       ui: new window.UIService(this.app, this)
     };
+
+    // Legacy MCP connection check (kept for backward compatibility)
+    this.checkAndSetupMCPConnection();
+    this.initializeUI();
 
     // Load chat history AFTER UI is initialized
     setTimeout(() => {
