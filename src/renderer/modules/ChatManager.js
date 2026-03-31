@@ -6611,8 +6611,8 @@ ${coreTools}
       find_intergenic_regions: () => this.findIntergenicRegions(parameters),
 
       // Analysis and external tools
-      compute_gc: () => this.computeGC(parameters),
-      translate_dna: () => this.translateDNA(parameters),
+      compute_gc: () => this.executeMicrobeFunction('computeGC', parameters),
+      translate_dna: () => this.executeMicrobeFunction('translateDNA', parameters),
       reverse_complement: () => this.reverseComplement(parameters),
       codon_usage_analysis: () => this.codonUsageAnalysis(parameters),
 

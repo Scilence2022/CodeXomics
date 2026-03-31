@@ -42,6 +42,23 @@ class ProteinService {
     }
   }
 
+  async checkAlphaFoldAvailability(uniprotId) {
+    try {
+      const checkUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch(checkUrl, { method: 'HEAD', signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (response.ok) return true;
+      if (response.status === 404) return false;
+      return false;
+    } catch (error) {
+      if (error.name === 'AbortError') console.warn(`Timeout checking AlphaFold for ${uniprotId}`);
+      else console.warn(`Could not check AlphaFold for ${uniprotId}:`, error.message);
+      return false;
+    }
+  }
+
   async analyzeInterProDomains(parameters) {
     const {
       sequence,

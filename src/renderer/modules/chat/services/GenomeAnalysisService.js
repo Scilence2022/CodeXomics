@@ -7,6 +7,15 @@ class GenomeAnalysisService {
     this.chatManager = chatManager;
   }
 
+  async getSequence(params) {
+    const { chromosome, start, end } = params;
+    if (this.app && this.app.getSequenceForRegion) {
+      const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
+      return { chromosome, start, end, sequence, length: sequence.length };
+    }
+    throw new Error('Sequence retrieval not available');
+  }
+
   async sequenceStatistics(params) {
     const {
       chromosome,
