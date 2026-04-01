@@ -9335,16 +9335,25 @@ class TrackRenderer {
       this.genomeBrowser.wigTrackOrder = Object.keys(wigTracks);
     }
 
-    // Render each WIG track using the stable order
-    this.genomeBrowser.wigTrackOrder.forEach(async (trackName, index) => {
-      const wigTrack = wigTracks[trackName];
-      // Skip if track doesn't exist in data (e.g., deleted but order not updated yet)
-      if (!wigTrack) return;
-      // Skip hidden tracks
-      if (wigTrack.hidden) return;
+    // Pre-calculate track offsets for all visible tracks to avoid race conditions in async rendering
+    const visibleTrackNames = this.genomeBrowser.wigTrackOrder.filter(name => {
+      const track = wigTracks[name];
+      return track && !track.hidden;
+    });
 
-      // Get track height from settings or use default
+    const trackOffsets = {};
+    let currentOffset = 0;
+    visibleTrackNames.forEach(name => {
+      trackOffsets[name] = currentOffset;
+      const trackHeight = settings.trackHeights?.[name] || 30;
+      currentOffset += trackHeight + trackSpacing;
+    });
+
+    // Render each visible WIG track using the stable pre-calculated offsets
+    visibleTrackNames.forEach(async (trackName, index) => {
+      const wigTrack = wigTracks[trackName];
       const trackHeight = settings.trackHeights?.[trackName] || 30;
+      const trackTop = trackOffsets[trackName];
 
       let trackData = wigTrack.data[chromosome] || [];
       let visibleData = [];
@@ -9379,7 +9388,7 @@ class TrackRenderer {
           errorTrack.className = 'wig-track-error';
           errorTrack.style.cssText = `
                         position: absolute;
-                        top: ${trackOffset}px;
+                        top: ${trackTop}px;
                         left: 0;
                         right: 0;
                         height: ${trackHeight}px;
@@ -9394,7 +9403,6 @@ class TrackRenderer {
                     `;
           errorTrack.textContent = `${trackName}: Error loading data`;
           wigContainer.appendChild(errorTrack);
-          trackOffset += trackHeight + trackSpacing;
           return;
         }
       } else {
@@ -9409,7 +9417,7 @@ class TrackRenderer {
         emptyTrack.className = 'wig-track-empty';
         emptyTrack.style.cssText = `
                     position: absolute;
-                    top: ${trackOffset}px;
+                    top: ${trackTop}px;
                     left: 0;
                     right: 0;
                     height: ${trackHeight}px;
@@ -9424,7 +9432,6 @@ class TrackRenderer {
                 `;
         emptyTrack.textContent = `${trackName}: No data in this region`;
         wigContainer.appendChild(emptyTrack);
-        trackOffset += trackHeight + trackSpacing;
         return;
       }
 
@@ -9440,7 +9447,7 @@ class TrackRenderer {
       trackElement.setAttribute('data-track-name', trackName);
       trackElement.style.cssText = `
                 position: absolute;
-                top: ${trackOffset}px;
+                top: ${trackTop}px;
                 left: 0;
                 right: 0;
                 height: ${trackHeight}px;
@@ -10838,8 +10845,28 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 border-radius: 3px;
                 padding: 3px 6px;
                 font-size: 11px;
+                cursor: grab;
+                user-select: none;
+                z-index: 100;
                 ${wigTrack.hidden ? 'opacity: 0.5;' : ''}
             `;
+
+      // Prevent mousedown from bubbling to genome browser zoom/pan
+      trackItem.addEventListener('mousedown', e => {
+        e.stopPropagation();
+      });
+
+      // Add a drag handle icon
+      const dragHandle = document.createElement('span');
+      dragHandle.className = 'drag-handle';
+      dragHandle.innerHTML = '<i class="fas fa-grip-vertical"></i>';
+      dragHandle.style.cssText = `
+                margin-right: 6px;
+                color: #adb5bd;
+                cursor: grab;
+                flex-shrink: 0;
+            `;
+      trackItem.appendChild(dragHandle);
 
       const colorDot = document.createElement('div');
       colorDot.style.cssText = `
@@ -10997,6 +11024,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     e.dataTransfer.setData('text/plain', trackName);
     e.currentTarget.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
+
+    // Stop propagation to prevent genome browser from seeing this as a selection drag
+    e.stopPropagation();
 
     // Create a ghost image or just styling
     setTimeout(() => {
