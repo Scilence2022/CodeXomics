@@ -171,6 +171,7 @@ const TOOL_NAMES = {
     INSERT_SEQUENCE: 'insert_sequence',
     REPLACE_SEQUENCE: 'replace_sequence',
     GET_ACTION_LIST: 'get_action_list',
+    SHOW_ACTION_LIST: 'show_action_list',
     EXECUTE_ACTIONS: 'execute_actions',
     CLEAR_ACTIONS: 'clear_actions',
     GET_CLIPBOARD_CONTENT: 'get_clipboard_content',

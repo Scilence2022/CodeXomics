@@ -106,6 +106,7 @@ class ToolExecutionService {
         'replace_sequence': true, 'action_replace_sequence': true,
         'execute_actions': true, 'action_execute_actions': true,
         'get_action_list': true, 'action_get_action_list': true,
+        'show_action_list': true, 'action_show_action_list': true,
         'clear_actions': true, 'action_clear_actions': true,
         'get_clipboard_content': true, 'action_get_clipboard_content': true,
       };
