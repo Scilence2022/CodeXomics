@@ -101,20 +101,18 @@ class ProteinTools {
         },
       },
 
-      open_alphafold_viewer: {
-        name: 'open_alphafold_viewer',
-        description: 'Open AlphaFold 3D structure viewer with enhanced features',
+      render_protein_search_results: {
+        name: 'render_protein_search_results',
+        description: 'Render protein search results (PDB or AlphaFold) in a visualization panel in the sidebar',
         parameters: {
           type: 'object',
           properties: {
-            structureData: { type: 'string', description: 'PDB/CIF structure data' },
-            uniprotId: { type: 'string', description: 'UniProt ID' },
-            geneName: { type: 'string', description: 'Gene name for display' },
-            confidenceData: { type: 'string', description: 'AlphaFold confidence scores (PAE data)' },
-            organism: { type: 'string', description: 'Source organism' },
+            results: { type: 'array', description: 'Array of search results to display' },
+            searchType: { type: 'string', description: 'Type of search (PDB or AlphaFold)' },
+            geneName: { type: 'string', description: 'Gene name that was searched for' },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
-          required: ['structureData', 'uniprotId'],
+          required: ['results', 'searchType', 'geneName'],
         },
       },
     };
@@ -140,8 +138,8 @@ class ProteinTools {
     return await this.server.searchAlphaFoldBySequence(parameters);
   }
 
-  async openAlphaFoldViewer(parameters, clientId) {
-    return await this.server.openAlphaFoldViewer(parameters, clientId);
+  async renderProteinSearchResults(parameters, clientId) {
+    return await this.server.renderProteinSearchResults(parameters, clientId);
   }
 
   async executeClientTool(toolName, parameters, clientId) {

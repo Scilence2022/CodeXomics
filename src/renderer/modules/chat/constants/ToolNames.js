@@ -142,7 +142,7 @@ const TOOL_NAMES = {
     SEARCH_ALPHAFOLD_BY_GENE: 'search_alphafold_by_gene',
     SEARCH_PROTEIN_BY_GENE: 'search_protein_by_gene',
     FETCH_ALPHAFOLD_STRUCTURE: 'fetch_alphafold_structure',
-    OPEN_ALPHAFOLD_VIEWER: 'open_alphafold_viewer',
+    RENDER_PROTEIN_SEARCH_RESULTS: 'render_protein_search_results',
   },
 
   // === BLAST Tools ===

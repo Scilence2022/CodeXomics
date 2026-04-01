@@ -10407,7 +10407,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Open protein structure viewer
    */
   async openProteinViewer(params) {
-    let { pdbData, proteinName, pdbId } = params;
+    let { pdbData, proteinName, pdbId, uniprotId } = params;
 
     try {
       // Check if protein structure viewer is available
@@ -10415,8 +10415,29 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         throw new Error('Protein structure viewer not available');
       }
 
-      // If no pdbData provided but pdbId is available, fetch the protein structure first
-      if (!pdbData && pdbId) {
+      // If no pdbData provided but uniprotId is available, fetch AlphaFold structure
+      if (!pdbData && uniprotId) {
+        console.log('🔬 [openProteinViewer] No PDB data provided, fetching AlphaFold structure for UniProt ID:', uniprotId);
+        try {
+          const alphaFoldResult = await this.downloadAlphaFoldStructure(uniprotId, 'pdb');
+          if (alphaFoldResult && alphaFoldResult.pdbData) {
+            pdbData = alphaFoldResult.pdbData;
+            proteinName = proteinName || uniprotId;
+            console.log(
+              '🔬 [openProteinViewer] Successfully downloaded AlphaFold structure data, pdbData length:',
+              pdbData.length
+            );
+          } else {
+            console.error('🔬 [openProteinViewer] Failed to download AlphaFold data');
+            throw new Error(`Failed to download AlphaFold structure data for ${uniprotId}`);
+          }
+        } catch (fetchError) {
+          console.error('🔬 [openProteinViewer] Error during AlphaFold download:', fetchError);
+          throw new Error(`Failed to fetch AlphaFold structure for ${uniprotId}: ${fetchError.message}`);
+        }
+      }
+      // If no pdbData provided but pdbId is available, fetch the PDB structure
+      else if (!pdbData && pdbId) {
         console.log('🔬 [openProteinViewer] No PDB data provided, fetching structure for PDB ID:', pdbId);
 
         try {
@@ -10458,7 +10479,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       return {
         success: true,
         pdbId: pdbId,
-        message: `Opened 3D protein structure viewer for ${proteinName} (${pdbId})`,
+        uniprotId: uniprotId,
+        message: `Opened 3D protein structure viewer for ${proteinName} (${pdbId || uniprotId || ''})`,
       };
     } catch (error) {
       console.error('Error in openProteinViewer:', error);
@@ -10564,12 +10586,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     return this.services.protein.fetchAlphaFoldStructure(parameters);
   }
 
-  /**
-   * Open AlphaFold structure viewer
-   */
-  async openAlphaFoldViewer(parameters) {
-    return this.services.protein.openAlphaFoldViewer(parameters);
-  }
+  // Removed deprecated openAlphaFoldViewer
 
   /**
    * Search PDB database for protein structures

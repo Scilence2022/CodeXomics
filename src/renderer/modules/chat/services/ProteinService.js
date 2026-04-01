@@ -18,7 +18,11 @@ class ProteinService {
       const searchResults = await this.chatManager.performAlphaFoldSearch(geneName, organism, maxResults);
 
       if (searchResults.length > 0) {
-        this.chatManager.displayAlphaFoldResultsInSidebar(searchResults, geneName);
+        this.renderProteinSearchResults({
+          results: searchResults,
+          searchType: 'AlphaFold',
+          geneName: geneName,
+        });
       }
 
       return {
@@ -57,6 +61,212 @@ class ProteinService {
       else console.warn(`Could not check AlphaFold for ${uniprotId}:`, error.message);
       return false;
     }
+  }
+
+  /**
+   * Unified renderer for Protein search results (PDB or AlphaFold)
+   */
+  async renderProteinSearchResults(parameters) {
+    const { results, searchType, geneName } = parameters;
+    try {
+      console.log(`Displaying ${searchType} results in sidebar:`, results);
+
+      // Get or create sidebar container
+      let sidebar = document.querySelector('.protein-results-sidebar');
+      if (!sidebar) {
+        sidebar = this.createProteinSidebar();
+      }
+
+      // Clear previous results
+      const resultsContainer = sidebar.querySelector('.protein-results-list');
+      resultsContainer.innerHTML = '';
+
+      // Update header
+      const header = sidebar.querySelector('.sidebar-header h3');
+      header.textContent = `${searchType} Results for ${geneName}`;
+
+      // Add results
+      results.forEach((result, index) => {
+        const resultElement = this.createProteinResultElement(result, searchType, index);
+        resultsContainer.appendChild(resultElement);
+      });
+
+      // Show sidebar
+      sidebar.classList.add('visible');
+
+      // Add close functionality
+      const closeBtn = sidebar.querySelector('.sidebar-close');
+      if (closeBtn) {
+        closeBtn.onclick = () => {
+          sidebar.classList.remove('visible');
+        };
+      }
+
+      return {
+        success: true,
+        tool: 'render_protein_search_results',
+        message: `Successfully rendered ${results.length} ${searchType} results in the sidebar.`,
+      };
+    } catch (error) {
+      console.error(`Error displaying ${searchType} results in sidebar:`, error);
+      return {
+        success: false,
+        tool: 'render_protein_search_results',
+        error: error.message,
+      };
+    }
+  }
+
+  createProteinSidebar() {
+    // Remove existing legacy sidebars if any
+    const existingLegacyAF = document.querySelector('.alphafold-results-sidebar');
+    if (existingLegacyAF) existingLegacyAF.remove();
+    const existingLegacyPDB = document.querySelector('.pdb-results-sidebar');
+    if (existingLegacyPDB) existingLegacyPDB.remove();
+
+    const existing = document.querySelector('.protein-results-sidebar');
+    if (existing) {
+      existing.remove();
+    }
+
+    const sidebar = document.createElement('div');
+    sidebar.className = 'protein-results-sidebar';
+    sidebar.innerHTML = `
+      <div class="sidebar-header">
+          <h3>Protein Structure Results</h3>
+          <button class="sidebar-close" title="Close sidebar">
+              <i class="fas fa-times"></i>
+          </button>
+      </div>
+      <div class="sidebar-content">
+          <div class="protein-results-list"></div>
+      </div>
+    `;
+
+    // Try to ensure UI service styles are created (from chatManager)
+    if (this.chatManager && this.chatManager.services && this.chatManager.services.ui) {
+      if (typeof this.chatManager.services.ui.addAlphaFoldSidebarStyles === 'function') {
+        this.chatManager.services.ui.addAlphaFoldSidebarStyles();
+      }
+    } else {
+      // Fallback inline style injection if ui service isn't there
+      if (!document.getElementById('protein-sidebar-styles')) {
+        const style = document.createElement('style');
+        style.id = 'protein-sidebar-styles';
+        style.innerHTML = `
+          .protein-results-sidebar { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background: var(--bg-color, #fff); box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; display: flex; flex-direction: column; }
+          .protein-results-sidebar.visible { right: 0; }
+          .protein-results-sidebar .sidebar-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color, #eee); display: flex; justify-content: space-between; align-items: center; }
+          .protein-results-sidebar .sidebar-header h3 { margin: 0; font-size: 16px; }
+          .protein-results-sidebar .sidebar-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-color, #333); }
+          .protein-results-sidebar .sidebar-content { padding: 20px; overflow-y: auto; flex: 1; }
+          .protein-results-sidebar .protein-result-item { background: var(--bg-secondary, #f9f9f9); border: 1px solid var(--border-color, #eee); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+          .protein-results-sidebar .result-header { font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; }
+          .protein-results-sidebar .result-details { font-size: 13px; margin-bottom: 15px; color: var(--text-muted, #666); }
+          .protein-results-sidebar .detail-row { display: flex; margin-bottom: 4px; }
+          .protein-results-sidebar .label { font-weight: 600; min-width: 90px; }
+          .protein-results-sidebar .result-actions { display: flex; gap: 10px; }
+          .protein-results-sidebar .btn { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+          .protein-results-sidebar .btn-primary { background: var(--primary-color, #007bff); color: #fff; }
+          .protein-results-sidebar .btn-secondary { background: var(--secondary-color, #6c757d); color: #fff; }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+
+    document.body.appendChild(sidebar);
+    return sidebar;
+  }
+
+  createProteinResultElement(result, searchType, index) {
+    const isAlphaFold = searchType.toLowerCase() === 'alphafold';
+    const element = document.createElement('div');
+    element.className = 'protein-result-item';
+    
+    // Unify variables
+    const titleOrName = isAlphaFold ? result.proteinName : result.title;
+    const primaryId = isAlphaFold ? result.uniprotId : result.pdbId;
+    const structureUrl = isAlphaFold ? result.alphaFoldUrl : result.pdbUrl;
+    const urlLabel = isAlphaFold ? 'AlphaFold Page' : 'PDB Page';
+    
+    // Build specific details
+    let specificDetailsHtml = '';
+    if (isAlphaFold) {
+      specificDetailsHtml = `
+        <div class="detail-row"><span class="label">Genes:</span><span class="value">${Array.isArray(result.geneNames) ? result.geneNames.join(', ') : (result.geneNames || 'N/A')}</span></div>
+        <div class="detail-row"><span class="label">Organism:</span><span class="value">${result.organism || 'N/A'}</span></div>
+        <div class="detail-row"><span class="label">Length:</span><span class="value">${result.length || 'N/A'} AA</span></div>
+      `;
+    } else {
+      specificDetailsHtml = `
+        <div class="detail-row"><span class="label">Organism:</span><span class="value">${result.organism || 'N/A'}</span></div>
+        <div class="detail-row"><span class="label">Method:</span><span class="value">${result.method || 'N/A'}</span></div>
+        <div class="detail-row"><span class="label">Resolution:</span><span class="value">${result.resolution ? result.resolution + ' Å' : 'N/A'}</span></div>
+      `;
+    }
+
+    element.innerHTML = `
+      <div class="result-header">
+          <div class="protein-title">${titleOrName}</div>
+          <div class="protein-id">${primaryId}</div>
+      </div>
+      <div class="result-details">
+          ${specificDetailsHtml}
+      </div>
+      <div class="result-actions">
+          <button class="btn btn-primary view-structure" data-id="${primaryId}" data-name="${result.geneName || primaryId}">
+              <i class="fas fa-cube"></i> View 3D Structure
+          </button>
+          <button class="btn btn-secondary view-page-btn" data-url="${structureUrl}">
+              <i class="fas fa-external-link-alt"></i> ${urlLabel}
+          </button>
+      </div>
+    `;
+
+    // Add click handlers
+    const viewStructureBtn = element.querySelector('.view-structure');
+    const viewPageBtn = element.querySelector('.view-page-btn');
+
+    viewStructureBtn.onclick = async () => {
+      const id = viewStructureBtn.dataset.id;
+      const geneName = viewStructureBtn.dataset.name;
+
+      try {
+        viewStructureBtn.disabled = true;
+        viewStructureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+
+        const openParams = {
+          geneName: geneName,
+        };
+        
+        if (isAlphaFold) {
+          openParams.uniprotId = id;
+        } else {
+          openParams.pdbId = id;
+        }
+
+        const openResult = await this.chatManager.openProteinViewer(openParams);
+
+        if (openResult && openResult.success) {
+          console.log('Successfully opened protein structure viewer');
+        } else {
+          throw new Error(openResult?.error || 'Failed to open viewer');
+        }
+      } catch (error) {
+        console.error('Error opening viewer:', error);
+        alert(`Error loading structure: ${error.message}`);
+      } finally {
+        viewStructureBtn.disabled = false;
+        viewStructureBtn.innerHTML = '<i class="fas fa-cube"></i> View 3D Structure';
+      }
+    };
+
+    viewPageBtn.onclick = () => {
+      const url = viewPageBtn.dataset.url;
+      if (url) window.open(url, '_blank');
+    };
+
+    return element;
   }
 
   async analyzeInterProDomains(parameters) {
