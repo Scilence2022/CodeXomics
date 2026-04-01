@@ -10923,7 +10923,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
       // Add drag and drop events
       trackItem.addEventListener('dragstart', e => this.handleWIGTrackDragStart(e));
+      trackItem.addEventListener('dragenter', e => this.handleWIGTrackDragEnter(e));
       trackItem.addEventListener('dragover', e => this.handleWIGTrackDragOver(e));
+      trackItem.addEventListener('dragleave', e => this.handleWIGTrackDragLeave(e));
       trackItem.addEventListener('drop', e => this.handleWIGTrackDrop(e));
       trackItem.addEventListener('dragend', e => this.handleWIGTrackDragEnd(e));
 
@@ -11022,7 +11024,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
   handleWIGTrackDragStart(e) {
     const trackName = e.currentTarget.getAttribute('data-track-name');
     e.dataTransfer.setData('text/plain', trackName);
-    e.currentTarget.classList.add('dragging');
+    e.currentTarget.classList.add('wig-track-dragging');
     e.dataTransfer.effectAllowed = 'move';
 
     // Stop propagation to prevent genome browser from seeing this as a selection drag
@@ -11034,18 +11036,40 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }, 0);
   }
 
+  handleWIGTrackDragEnd(e) {
+    e.currentTarget.classList.remove('wig-track-dragging');
+    e.currentTarget.style.opacity = '1';
+    
+    // Remove any drag-over indicators from items
+    const items = document.querySelectorAll('.wig-track-item');
+    items.forEach(item => {
+      item.style.borderLeft = '';
+      item.style.paddingLeft = '';
+    });
+  }
+
   handleWIGTrackDragOver(e) {
     if (e.preventDefault) {
       e.preventDefault();
     }
     e.dataTransfer.dropEffect = 'move';
+    return false;
+  }
 
+  handleWIGTrackDragEnter(e) {
+    const targetItem = e.currentTarget.closest('.wig-track-item');
+    if (targetItem && !targetItem.classList.contains('wig-track-dragging')) {
+      targetItem.style.borderLeft = '2px solid #007bff';
+      targetItem.style.paddingLeft = '4px';
+    }
+  }
+
+  handleWIGTrackDragLeave(e) {
     const targetItem = e.currentTarget.closest('.wig-track-item');
     if (targetItem) {
-      targetItem.style.borderTop = '2px solid #007bff';
+      targetItem.style.borderLeft = '';
+      targetItem.style.paddingLeft = '';
     }
-
-    return false;
   }
 
   handleWIGTrackDrop(e) {
