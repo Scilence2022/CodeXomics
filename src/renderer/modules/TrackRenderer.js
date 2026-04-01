@@ -11023,6 +11023,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
   handleWIGTrackDragStart(e) {
     const trackName = e.currentTarget.getAttribute('data-track-name');
+    this._draggedWIGTrackName = trackName; // Internal tracking for reliability
     e.dataTransfer.setData('text/plain', trackName);
     e.currentTarget.classList.add('wig-track-dragging');
     e.dataTransfer.effectAllowed = 'move';
@@ -11057,8 +11058,11 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
   }
 
   handleWIGTrackDragEnter(e) {
+    e.preventDefault();
+
+    const draggedName = this._draggedWIGTrackName || e.dataTransfer.getData('text/plain');
     const targetItem = e.currentTarget.closest('.wig-track-item');
-    if (targetItem && !targetItem.classList.contains('wig-track-dragging')) {
+    if (targetItem && targetItem.getAttribute('data-track-name') !== draggedName) {
       targetItem.style.borderLeft = '2px solid #007bff';
       targetItem.style.paddingLeft = '4px';
     }
@@ -11076,20 +11080,30 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     if (e.stopPropagation) {
       e.stopPropagation();
     }
+    e.preventDefault();
 
-    const draggedName = e.dataTransfer.getData('text/plain');
-    const targetName = e.currentTarget.getAttribute('data-track-name');
+    const draggedName = this._draggedWIGTrackName || e.dataTransfer.getData('text/plain');
+    const targetItem = e.currentTarget.closest('.wig-track-item');
+    if (!targetItem) return;
+
+    const targetName = targetItem.getAttribute('data-track-name');
 
     if (draggedName && targetName && draggedName !== targetName) {
+      console.log(`[WIG Drag] Dropping ${draggedName} onto ${targetName}`);
       this.reorderWIGTracks(draggedName, targetName);
     }
+
+    // Explicitly cleanup after drop
+    targetItem.style.borderLeft = '';
+    targetItem.style.paddingLeft = '';
 
     return false;
   }
 
   handleWIGTrackDragEnd(e) {
     e.currentTarget.style.opacity = '1';
-    e.currentTarget.classList.remove('dragging');
+    e.currentTarget.classList.remove('wig-track-dragging');
+    this._draggedWIGTrackName = null; // Clear internal tracking
 
     // Remove indicators from all items
     const items = document.querySelectorAll('.wig-track-item');
@@ -11114,8 +11128,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       this.genomeBrowser.updateStatus(`Reordered WIG tracks: ${draggedName} moved to position ${targetIndex + 1}`);
 
       // Sync with TabManager if active
-      if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.onTrackOrderChanged(order);
+      if (this.genomeBrowser.tabManager && this.genomeBrowser.tabManager.onWIGTrackOrderChanged) {
+        this.genomeBrowser.tabManager.onWIGTrackOrderChanged(order);
       }
 
       this.refreshCurrentView();
