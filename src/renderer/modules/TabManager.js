@@ -74,6 +74,20 @@ class TabManager {
     // Initialize drag-and-drop functionality for track reordering
     this.initializeTrackDragAndDrop();
 
+    // Mapping between DOM class suffixes and internal track type keys
+    this._trackTypeMap = {
+      gene: 'genes',
+      gc: 'gc',
+      variant: 'variants',
+      reads: 'reads',
+      protein: 'proteins',
+      wig: 'wigTracks',
+      'sequence-line': 'sequenceLine',
+      sequence: 'sequence',
+      actions: 'actions',
+      blast: 'blast',
+    };
+
     // Force visibility of position indicators after a short delay
     setTimeout(() => {
       this.forcePositionIndicatorVisibility();
@@ -461,6 +475,7 @@ class TabManager {
         ? new Map(this.genomeBrowser.trackRenderer.headerStates)
         : new Map(),
       trackOrder: this.getTrackOrder(), // Store track display order
+      trackSizes: {}, // Store track heights per tab
 
       // History for navigation (start fresh for each tab)
       navigationHistory: [],
@@ -765,13 +780,8 @@ class TabManager {
       // Update track visibility controls in UI
       this.updateTrackVisibilityControls();
 
-      // Restore track order if saved
-      if (tabState.trackOrder && Array.isArray(tabState.trackOrder)) {
-        // Apply track order after a short delay to ensure tracks are rendered
-        setTimeout(() => {
-          this.applyTrackOrder(tabState.trackOrder);
-        }, 100);
-      }
+      // Note: Track order is now handled directly by displayGenomeView 
+      // which uses the tabState.trackOrder as its primary source of truth.
 
       // Refresh the display if there's genome data
       if (tabState.currentSequence && tabState.currentChromosome) {
@@ -999,11 +1009,14 @@ class TabManager {
     if (!tabState) return;
 
     try {
+      // Normalize track order to ensure consistent keys (e.g. 'wig' -> 'wigTracks')
+      const normalizedOrder = newOrder.map(type => this._trackTypeMap[type] || type);
+
       // Update track order immediately with the provided order
-      tabState.trackOrder = [...newOrder];
+      tabState.trackOrder = [...normalizedOrder];
       tabState.lastAccessedAt = new Date();
 
-      console.log(`Track order updated for tab ${this.activeTabId}:`, newOrder);
+      console.log(`Track order updated for tab ${this.activeTabId}:`, normalizedOrder);
 
       // Clear cache since track order changed
       if (this.cacheSettings.enabled) {
@@ -1012,6 +1025,24 @@ class TabManager {
     } catch (error) {
       console.error('Error updating track order for tab:', error);
     }
+  }
+
+  /**
+   * Called when a track is resized in the UI
+   */
+  onTrackSizeChanged(trackType, height) {
+    if (!this.activeTabId) return;
+
+    const tabState = this.tabStates.get(this.activeTabId);
+    if (!tabState) return;
+
+    // Normalize track type
+    const normalizedType = this._trackTypeMap[trackType] || trackType;
+
+    if (!tabState.trackSizes) tabState.trackSizes = {};
+    tabState.trackSizes[normalizedType] = height;
+
+    console.log(`Track size updated for tab ${this.activeTabId}: ${normalizedType} = ${height}`);
   }
 
   /**
@@ -1325,8 +1356,9 @@ class TabManager {
       for (const className of track.classList) {
         if (className.endsWith('-track') && !className.startsWith('track-')) {
           const trackType = className.replace('-track', '');
-          if (!trackOrder.includes(trackType)) {
-            trackOrder.push(trackType);
+          const normalizedType = this._trackTypeMap[trackType] || trackType;
+          if (!trackOrder.includes(normalizedType)) {
+            trackOrder.push(normalizedType);
           }
           break;
         }

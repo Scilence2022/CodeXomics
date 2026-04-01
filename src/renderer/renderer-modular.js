@@ -3561,17 +3561,22 @@ class GenomeBrowser {
         // Add the track
         browserContainer.appendChild(track.element);
 
-        // RESTORE PRESERVED HEIGHT if it exists (current session)
+        // RESTORE PRESERVED HEIGHT if it exists
         const trackContent = track.element.querySelector('.track-content');
         const typeToRestore = track.type;
-        if (trackContent && preservedHeights.has(typeToRestore)) {
-          const heightToRestore = preservedHeights.get(typeToRestore);
-          trackContent.style.height = heightToRestore;
-          console.log(`[displayGenomeView] Restored height for ${typeToRestore}: ${heightToRestore}`);
-        } else if (trackContent) {
-          console.log(
-            `[displayGenomeView] No preserved height found for ${typeToRestore}. Current height: ${trackContent.style.height}`
-          );
+        if (trackContent) {
+          if (preservedHeights.has(typeToRestore)) {
+            const heightToRestore = preservedHeights.get(typeToRestore);
+            trackContent.style.height = heightToRestore;
+            console.log(`[displayGenomeView] Restored session height for ${typeToRestore}: ${heightToRestore}`);
+          } else {
+            // Restore SAVED HEIGHT from TrackStateManager (tab-specific persistence)
+            const savedHeight = this.trackStateManager.getTrackSize(typeToRestore);
+            if (savedHeight) {
+              trackContent.style.height = savedHeight;
+              console.log(`[displayGenomeView] Restored persistent height for ${typeToRestore}: ${savedHeight}`);
+            }
+          }
         }
 
         // Make tracks draggable for reordering and add resize handle
@@ -4200,18 +4205,29 @@ class GenomeBrowser {
           gc: 'gc',
           variant: 'variants',
           reads: 'reads',
+          protein: 'proteins',
           proteins: 'proteins',
-          wig: 'wigTracks', // Add WIG tracks to order mapping
-          // Remove 'sequence' since it's now handled as bottom panel, not a regular track
+          wig: 'wigTracks',
+          'sequence-line': 'sequenceLine',
+          sequence: 'sequence',
+          actions: 'actions',
+          blast: 'blast',
         };
         const mappedType = typeMapping[trackType] || trackType;
-        newOrder.push(mappedType);
+        if (!newOrder.includes(mappedType)) {
+          newOrder.push(mappedType);
+        }
       }
     });
 
     console.log('New track order:', newOrder);
 
-    // Save the new order to track state manager
+    // Save the new order to TabManager for tab-specific persistence
+    if (this.tabManager) {
+      this.tabManager.onTrackOrderChanged(newOrder);
+    }
+
+    // Also save to track state manager (internal memory)
     this.trackStateManager.saveTrackOrder(newOrder);
 
     // Store the order preference if needed
@@ -9749,20 +9765,53 @@ class TrackStateManager {
     this.genomeBrowser = genomeBrowser;
     this.trackSizes = new Map();
     this.trackOrder = [];
+
+    // Mapping between DOM class suffixes and internal track type keys (consistent with TabManager)
+    this.trackTypeMapping = {
+      gene: 'genes',
+      gc: 'gc',
+      variant: 'variants',
+      reads: 'reads',
+      protein: 'proteins',
+      proteins: 'proteins',
+      wig: 'wigTracks',
+      'sequence-line': 'sequenceLine',
+      sequence: 'sequence',
+      actions: 'actions',
+      blast: 'blast',
+    };
+
     this.loadState();
   }
 
   // Save track size
   saveTrackSize(trackType, height) {
-    console.log(`[TrackStateManager] Saving track size: ${trackType} = ${height}`);
-    this.trackSizes.set(trackType, height);
+    const mappedType = this.trackTypeMapping[trackType] || trackType;
+    console.log(`[TrackStateManager] Saving track size: ${mappedType} (from ${trackType}) = ${height}`);
+    this.trackSizes.set(mappedType, height);
+
+    // Notify TabManager for tab-specific persistence
+    if (this.genomeBrowser.tabManager) {
+      this.genomeBrowser.tabManager.onTrackSizeChanged(mappedType, height);
+    }
+
     this.saveState();
-    console.log(`Saved track size: ${trackType} = ${height}`);
+    console.log(`Saved track size: ${mappedType} = ${height}`);
   }
 
   // Get saved track size
   getTrackSize(trackType) {
-    return this.trackSizes.get(trackType) || null;
+    const mappedType = this.trackTypeMapping[trackType] || trackType;
+
+    // Prioritize TabManager for tab-specific results
+    if (this.genomeBrowser.tabManager) {
+      const tabState = this.genomeBrowser.tabManager.getCurrentTabState();
+      if (tabState && tabState.trackSizes && tabState.trackSizes[mappedType]) {
+        return tabState.trackSizes[mappedType];
+      }
+    }
+
+    return this.trackSizes.get(mappedType) || null;
   }
 
   // Save track order
@@ -9774,27 +9823,27 @@ class TrackStateManager {
 
   // Get saved track order
   getTrackOrder() {
+    // Prioritize TabManager for tab-specific results
+    if (this.genomeBrowser.tabManager) {
+      const tabState = this.genomeBrowser.tabManager.getCurrentTabState();
+      if (tabState && tabState.trackOrder && tabState.trackOrder.length > 0) {
+        return [...tabState.trackOrder];
+      }
+    }
+
     return [...this.trackOrder];
   }
 
   // Apply saved track sizes to newly created tracks
   applyTrackSizes(container) {
     const trackElements = container.querySelectorAll('[class*="-track"]');
-    const trackTypeMapping = {
-      gene: 'genes',
-      gc: 'gc',
-      variant: 'variants',
-      reads: 'reads',
-      proteins: 'proteins',
-      wig: 'wigTracks',
-    };
 
     trackElements.forEach(element => {
       const classList = Array.from(element.classList);
       const trackClass = classList.find(cls => cls.endsWith('-track'));
       if (trackClass) {
         const trackType = trackClass.replace('-track', '');
-        const mappedType = trackTypeMapping[trackType] || trackType;
+        const mappedType = this.trackTypeMapping[trackType] || trackType;
         const savedSize = this.getTrackSize(mappedType);
 
         console.log(
@@ -9817,14 +9866,6 @@ class TrackStateManager {
     if (this.trackOrder.length === 0) return;
 
     const trackElements = Array.from(container.querySelectorAll('[class*="-track"]'));
-    const trackTypeMapping = {
-      gene: 'genes',
-      gc: 'gc',
-      variant: 'variants',
-      reads: 'reads',
-      proteins: 'proteins',
-      wig: 'wigTracks',
-    };
 
     // Create a map of current tracks by type
     const tracksByType = new Map();
@@ -9833,7 +9874,7 @@ class TrackStateManager {
       const trackClass = classList.find(cls => cls.endsWith('-track'));
       if (trackClass) {
         const trackType = trackClass.replace('-track', '');
-        const mappedType = trackTypeMapping[trackType] || trackType;
+        const mappedType = this.trackTypeMapping[trackType] || trackType;
         tracksByType.set(mappedType, element);
       }
     });
@@ -9863,6 +9904,21 @@ class TrackStateManager {
 
   // Load state from localStorage
   loadState() {
+    // If we have a TabManager, it should be the primary source of truth
+    if (this.genomeBrowser.tabManager) {
+      const tabState = this.genomeBrowser.tabManager.getCurrentTabState();
+      if (tabState) {
+        if (tabState.trackSizes) {
+          this.trackSizes = new Map(Object.entries(tabState.trackSizes));
+        }
+        if (tabState.trackOrder) {
+          this.trackOrder = [...tabState.trackOrder];
+        }
+        console.log('[TrackStateManager] Loaded state from TabManager');
+        return;
+      }
+    }
+
     try {
       const saved = localStorage.getItem('genomeViewer_trackState');
       if (saved) {
