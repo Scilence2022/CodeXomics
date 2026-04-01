@@ -748,6 +748,11 @@ class TabManager {
       this.genomeBrowser.selectedGene = tabState.selectedGene;
       this.genomeBrowser.selectedRead = tabState.selectedRead;
 
+      // Synchronize UI checkboxes with the restored visibility state
+      if (this.genomeBrowser.updateTrackVisibilityUI) {
+        this.genomeBrowser.updateTrackVisibilityUI();
+      }
+
       // Restore sidebar panel states (unique per tab)
       this.restoreSidebarPanelStates(tabState);
 
@@ -1217,6 +1222,7 @@ class TabManager {
       this.genomeBrowser.currentAnnotations = tabState.currentAnnotations;
       this.genomeBrowser.currentVariants = tabState.currentVariants;
       this.genomeBrowser.currentWIGTracks = tabState.currentWIGTracks;
+      this.genomeBrowser.wigTrackOrder = tabState.wigTrackOrder || [];
 
       // Restore sidebar state
       const sidebar = document.getElementById('sidebar');
@@ -1242,6 +1248,11 @@ class TabManager {
       if (tabState.featureVisibility) {
         this.genomeBrowser.featureVisibility = { ...tabState.featureVisibility };
         this.genomeBrowser.geneFilters = { ...tabState.featureVisibility }; // Keep in sync
+      }
+
+      // Synchronize UI checkboxes with the restored visibility state
+      if (this.genomeBrowser.updateTrackVisibilityUI) {
+        this.genomeBrowser.updateTrackVisibilityUI();
       }
 
       // Restore track renderer states

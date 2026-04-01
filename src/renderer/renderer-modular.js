@@ -250,6 +250,7 @@ class GenomeBrowser {
       sequence: true, // Bottom sequence panel
       sequenceLine: false, // Single-line sequence track
       actions: false, // Add actions track
+      wig: true, // Add WIG tracks visibility
     };
 
     // Feature type visibility
@@ -4298,6 +4299,10 @@ class GenomeBrowser {
     this.trackVisibility.sequenceLine = tracks.has('sequenceLine');
     this.trackVisibility.actions = tracks.has('actions');
     this.trackVisibility.blast = tracks.has('blast');
+    this.trackVisibility.wig = tracks.has('wigTracks');
+
+    // Use unified sync to ensure consistency across toolbar and sidebar
+    this.updateTrackVisibilityUI();
 
     // Notify TabManager of track visibility change
     if (this.tabManager) {
@@ -4381,6 +4386,11 @@ class GenomeBrowser {
     this.trackVisibility.sequence = tracks.has('sequence');
     this.trackVisibility.sequenceLine = tracks.has('sequenceLine');
     this.trackVisibility.actions = tracks.has('actions');
+    this.trackVisibility.wig = tracks.has('wigTracks');
+    this.trackVisibility.blast = tracks.has('blast');
+
+    // Use unified sync to ensure consistency across toolbar and sidebar
+    this.updateTrackVisibilityUI();
 
     // Notify TabManager of track visibility change
     if (this.tabManager) {
@@ -4392,6 +4402,56 @@ class GenomeBrowser {
     if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
       this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
     }
+  }
+
+  /**
+   * Universal method to synchronize all track checkboxes/UI with internal visibility state
+   */
+  updateTrackVisibilityUI() {
+    const tracks = this.visibleTracks;
+
+    // Mapping of internal track types to DOM IDs for both toolbar and sidebar
+    const trackMapping = {
+      genes: { toolbar: 'trackGenes', sidebar: 'sidebarTrackGenes' },
+      gc: { toolbar: 'trackGC', sidebar: 'sidebarTrackGC' },
+      variants: { toolbar: 'trackVariants', sidebar: 'sidebarTrackVariants' },
+      reads: { toolbar: 'trackReads', sidebar: 'sidebarTrackReads' },
+      wigTracks: { toolbar: 'trackWIG', sidebar: 'sidebarTrackWIG' },
+      proteins: { toolbar: 'trackProteins', sidebar: 'sidebarTrackProteins' },
+      sequence: { toolbar: 'trackSequence', sidebar: 'sidebarTrackSequence' },
+      sequenceLine: { toolbar: 'trackSequenceLine', sidebar: 'sidebarTrackSequenceLine' },
+      actions: { toolbar: 'trackActions', sidebar: 'sidebarTrackActions' },
+      blast: { toolbar: 'trackBlast', sidebar: 'sidebarTrackBlast' },
+    };
+
+    // Update all checkboxes
+    Object.entries(trackMapping).forEach(([type, ids]) => {
+      const isVisible = tracks.has(type);
+
+      // Update toolbar checkbox
+      const toolbarCheckbox = document.getElementById(ids.toolbar);
+      if (toolbarCheckbox) toolbarCheckbox.checked = isVisible;
+
+      // Update sidebar checkbox
+      const sidebarCheckbox = document.getElementById(ids.sidebar);
+      if (sidebarCheckbox) sidebarCheckbox.checked = isVisible;
+    });
+
+    // Special case for proteins if toolbar ID is different
+    const toolbarProteinsFallback = document.getElementById('toolbarTrackProteins');
+    if (toolbarProteinsFallback) toolbarProteinsFallback.checked = tracks.has('proteins');
+
+    // Ensure trackVisibility object is synchronized for TabManager/persistence
+    this.trackVisibility.genes = tracks.has('genes');
+    this.trackVisibility.gc = tracks.has('gc');
+    this.trackVisibility.variants = tracks.has('variants');
+    this.trackVisibility.reads = tracks.has('reads');
+    this.trackVisibility.wig = tracks.has('wigTracks');
+    this.trackVisibility.proteins = tracks.has('proteins');
+    this.trackVisibility.sequence = tracks.has('sequence');
+    this.trackVisibility.sequenceLine = tracks.has('sequenceLine');
+    this.trackVisibility.actions = tracks.has('actions');
+    this.trackVisibility.blast = tracks.has('blast');
   }
 
   // Helper method to programmatically enable Actions track
