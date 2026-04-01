@@ -759,7 +759,7 @@ class AutomaticSimpleSuite {
         evaluation: 'automatic',
         instruction: 'Search AlphaFold structure prediction for gene lysC.',
         expectedResult: {
-          tool_name: 'search_alphafold_by_gene',
+          tool_name: 'search_alphafold_structures',
           parameters: {
             geneName: 'lysC', // Fixed: Use correct parameter name and remove incorrect ones
           },

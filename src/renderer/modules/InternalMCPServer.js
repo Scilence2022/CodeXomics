@@ -125,6 +125,7 @@ class InternalMCPServer {
         return await this.getSequenceRegion(parameters);
 
       // Protein structure analysis
+      case 'searchAlphafoldStructures':
       case 'searchAlphafoldByGene':
         return await this.searchAlphaFoldByGene(parameters);
 

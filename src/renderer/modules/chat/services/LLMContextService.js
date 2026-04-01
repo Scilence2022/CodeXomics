@@ -1786,12 +1786,12 @@ CRITICAL: Choose the correct protein structure function based on user intent:
 
 • For AlphaFold predictions (AI-predicted structures):
   - Keywords: "AlphaFold", "predicted structure", "AI prediction", "fold prediction"
-  - Use: search_alphafold_by_gene
-  - Example: "find AlphaFold structure for lysC" → search_alphafold_by_gene
+  - Use: search_alphafold_structures
+  - Example: "find AlphaFold structure for lysC" → search_alphafold_structures
 
 • Default behavior (when unspecified):
   - If user mentions "PDB" explicitly → use search_pdb_structures
-  - If user mentions "AlphaFold" explicitly → use search_alphafold_by_gene
+  - If user mentions "AlphaFold" explicitly → use search_alphafold_structures
   - If context is unclear, prefer search_pdb_structures for experimental data
 
 ===SEQUENCE EDITING FUNCTIONS - DETAILED USAGE===
@@ -1864,7 +1864,7 @@ COMMON TASK PATTERNS:
 • **Data Export: export_fasta_sequence → export genome as FASTA, export_genbank_format → export as GenBank**
 • **Sequence Export: export_cds_fasta → export coding sequences, export_protein_fasta → export proteins**
 • **Annotation Export: export_gff_annotations → export features as GFF, export_bed_format → export as BED**
-• AlphaFold AI Predictions: search_alphafold_by_gene → open_alphafold_viewer
+• AlphaFold AI Predictions: search_alphafold_structures → open_protein_viewer
 • PDB Experimental Structures: search_pdb_structures → open_protein_viewer
 • Sequence Analysis: get_sequence → compute_gc/translate_dna
 • Navigation: jump_to_gene → navigate_to_position
@@ -1872,7 +1872,7 @@ COMMON TASK PATTERNS:
 • BLAST Search: blast_search → analyze results
 • Pathway Analysis: show_metabolic_pathway → find_pathway_genes
 • Gene Deletion: search_gene_by_name → deleteSequence → execute_actions
-• Sequence Insertion: insertSequence → execute_actions
+• Sequence Insertion: insert_sequence → execute_actions
 • Copy/Paste: copy_sequence → paste_sequence → execute_actions
 • Track Settings: get_track_settings → set_track_settings or batch_set_track_settings
 • Track Configuration: get_track_settings_schema → set_track_settings (use schema to know valid settings)
@@ -1905,7 +1905,7 @@ SEARCH FUNCTIONS GUIDE:
 - Genomic positions: search_by_position, get_nearby_features  
 - Sequence motifs: search_sequence_motif
 - PDB experimental structures: search_pdb_structures (for known PDB entries)
-- AlphaFold AI predictions: search_alphafold_by_gene (for AI-predicted structures)
+- AlphaFold AI predictions: search_alphafold_structures (for AI-predicted structures)
 
 ANALYSIS FUNCTIONS:
 - Sequence: get_coding_sequence, translate_dna, reverse_complement
@@ -2124,11 +2124,11 @@ Protein Structure Tools:
 - Display protein 3D structure: {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
 - Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
 - Search PDB proteins by gene: {"tool_name": "search_pdb_structures", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
-- Search AlphaFold by gene: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "lysC", "organism": "Escherichia coli"}}
+- Search AlphaFold by gene: {"tool_name": "search_alphafold_structures", "parameters": {"geneName": "lysC", "organism": "Escherichia coli"}}
 
 PROTEIN STRUCTURE DISAMBIGUATION:
 - For "PDB" searches or experimental structures → use search_pdb_structures
-- For "AlphaFold" or AI predictions → use search_alphafold_by_gene
+- For "AlphaFold" or AI predictions → use search_alphafold_structures
 - Example: "search PDB protein structure for lysC" → search_pdb_structures
 
 IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.
@@ -2351,11 +2351,11 @@ Protein Structure Tools:
 - Display protein 3D structure: {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
 - Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
 - Search PDB proteins by gene: {"tool_name": "search_pdb_structures", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
-- Search AlphaFold by gene: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "lysC", "organism": "Escherichia coli"}}
+- Search AlphaFold by gene: {"tool_name": "search_alphafold_structures", "parameters": {"geneName": "lysC", "organism": "Escherichia coli"}}
 
 PROTEIN STRUCTURE DISAMBIGUATION:
 - For "PDB" searches or experimental structures → use search_pdb_structures
-- For "AlphaFold" or AI predictions → use search_alphafold_by_gene
+- For "AlphaFold" or AI predictions → use search_alphafold_structures
 - Example: "search PDB protein structure for lysC" → search_pdb_structures
 
 IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.

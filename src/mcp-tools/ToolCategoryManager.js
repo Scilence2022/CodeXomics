@@ -17,7 +17,8 @@ class ToolCategoryManager {
 
       // Protein structure tools
       'fetch_protein_structure',
-      'search_pdb_structures',
+      'search_alphafold_structures',
+      'search_alphafold_by_gene',
       'fetch_alphafold_structure',
       'search_alphafold_by_sequence',
 

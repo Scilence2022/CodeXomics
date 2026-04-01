@@ -1490,7 +1490,7 @@ class ProteinStructureViewer {
         }
       }
 
-      const results = await this.requestMCPTool('search_alphafold_by_gene', {
+      const results = await this.requestMCPTool('search_alphafold_structures', {
         geneName: geneName,
         organism: organism,
         maxResults: 10,

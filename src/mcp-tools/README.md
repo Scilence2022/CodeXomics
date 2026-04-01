@@ -147,7 +147,7 @@ Tools for protein structure analysis and visualization:
 - `fetch_protein_structure` - Fetch PDB structures
 - `open_protein_viewer` - Open 3D viewer
 - `search_protein_by_gene` - Search protein by gene
-- `search_alphafold_by_gene` - Search AlphaFold by gene
+- `search_alphafold_structures` - Search AlphaFold by gene (renamed from `search_alphafold_by_gene`)
 - `fetch_alphafold_structure` - Fetch AlphaFold structure
 - `search_alphafold_by_sequence` - Search AlphaFold by sequence
 - `open_alphafold_viewer` - Open AlphaFold viewer
@@ -272,7 +272,7 @@ const result = await toolsIntegrator.executeTool('compute_gc', {
 });
 
 // Execute a protein structure tool
-const proteinResult = await toolsIntegrator.executeTool('search_alphafold_by_gene', {
+const proteinResult = await toolsIntegrator.executeTool('search_alphafold_structures', {
   geneName: 'p53',
   organism: 'Homo sapiens',
 });
