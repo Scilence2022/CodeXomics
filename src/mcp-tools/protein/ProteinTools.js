@@ -101,8 +101,8 @@ class ProteinTools {
         },
       },
 
-      render_protein_search_results: {
-        name: 'render_protein_search_results',
+      render_protein_structure_results: {
+        name: 'render_protein_structure_results',
         description: 'Render protein search results (PDB or AlphaFold) in a visualization panel in the sidebar',
         parameters: {
           type: 'object',
@@ -138,8 +138,8 @@ class ProteinTools {
     return await this.server.searchAlphaFoldBySequence(parameters);
   }
 
-  async renderProteinSearchResults(parameters, clientId) {
-    return await this.server.renderProteinSearchResults(parameters, clientId);
+  async renderProteinStructureResults(parameters, clientId) {
+    return await this.server.renderProteinStructureResults(parameters, clientId);
   }
 
   async executeClientTool(toolName, parameters, clientId) {

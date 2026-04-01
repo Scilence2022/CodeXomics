@@ -18,7 +18,7 @@ class ProteinService {
       const searchResults = await this.chatManager.performAlphaFoldSearch(geneName, organism, maxResults);
 
       if (searchResults.length > 0) {
-        this.renderProteinSearchResults({
+        this.renderProteinStructureResults({
           results: searchResults,
           searchType: 'AlphaFold',
           geneName: geneName,
@@ -64,9 +64,9 @@ class ProteinService {
   }
 
   /**
-   * Unified renderer for Protein search results (PDB or AlphaFold)
+   * Unified renderer for Protein structure search results (PDB or AlphaFold)
    */
-  async renderProteinSearchResults(parameters) {
+  async renderProteinStructureResults(parameters) {
     const { results, searchType, geneName } = parameters;
     try {
       console.log(`Displaying ${searchType} results in sidebar:`, results);
@@ -104,14 +104,14 @@ class ProteinService {
 
       return {
         success: true,
-        tool: 'render_protein_search_results',
+        tool: 'render_protein_structure_results',
         message: `Successfully rendered ${results.length} ${searchType} results in the sidebar.`,
       };
     } catch (error) {
       console.error(`Error displaying ${searchType} results in sidebar:`, error);
       return {
         success: false,
-        tool: 'render_protein_search_results',
+        tool: 'render_protein_structure_results',
         error: error.message,
       };
     }
@@ -148,11 +148,12 @@ class ProteinService {
       if (typeof this.chatManager.services.ui.addAlphaFoldSidebarStyles === 'function') {
         this.chatManager.services.ui.addAlphaFoldSidebarStyles();
       }
-    } else {
-      // Fallback inline style injection if ui service isn't there
-      if (!document.getElementById('protein-sidebar-styles')) {
-        const style = document.createElement('style');
-        style.id = 'protein-sidebar-styles';
+    }
+    
+    // Always inject protein-sidebar-styles
+    if (!document.getElementById('protein-sidebar-styles')) {
+      const style = document.createElement('style');
+      style.id = 'protein-sidebar-styles';
         style.innerHTML = `
           .protein-results-sidebar { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background: var(--bg-color, #fff); box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; display: flex; flex-direction: column; }
           .protein-results-sidebar.visible { right: 0; }
@@ -171,7 +172,6 @@ class ProteinService {
           .protein-results-sidebar .btn-secondary { background: var(--secondary-color, #6c757d); color: #fff; }
         `;
         document.head.appendChild(style);
-      }
     }
 
     document.body.appendChild(sidebar);
