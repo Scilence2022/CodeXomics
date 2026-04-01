@@ -56,8 +56,8 @@ class ProteinTools {
         },
       },
 
-      search_alphafold_by_gene: {
-        name: 'search_alphafold_by_gene',
+      search_alphafold_structures: {
+        name: 'search_alphafold_structures',
         description: 'Search AlphaFold database for protein structures by gene name',
         parameters: {
           type: 'object',
@@ -126,8 +126,8 @@ class ProteinTools {
     return await this.server.searchPDBStructures(parameters);
   }
 
-  async searchAlphaFoldByGene(parameters) {
-    return await this.server.searchAlphaFoldByGene(parameters);
+  async searchAlphaFoldStructures(parameters) {
+    return await this.server.searchAlphaFoldStructures(parameters);
   }
 
   async fetchAlphaFoldStructure(parameters) {

@@ -11,7 +11,7 @@ class ProteinService {
     this.dragOffset = { x: 0, y: 0 };
   }
 
-  async searchAlphaFoldByGene(parameters) {
+  async searchAlphaFoldStructures(parameters) {
     const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
     const organism = parameters.organism || 'Escherichia coli';
     const maxResults = parameters.maxResults || 10;
@@ -31,7 +31,7 @@ class ProteinService {
 
       return {
         success: true,
-        tool: 'search_alphafold_by_gene',
+        tool: 'search_alphafold_structures',
         results: searchResults,
         count: searchResults.length,
         timestamp: new Date().toISOString(),
@@ -44,7 +44,73 @@ class ProteinService {
       return {
         success: false,
         error: error.message,
-        tool: 'search_alphafold_by_gene',
+        tool: 'search_alphafold_structures',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  async searchPdbStructures(parameters) {
+    const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
+    const organism = parameters.organism || 'Escherichia coli';
+    const maxResults = parameters.maxResults || 10;
+
+    try {
+      if (!geneName) throw new Error('Gene name is required for PDB search');
+      console.log(`Searching PDB for gene: ${geneName}, organism: ${organism}`);
+
+      // Search RCSB PDB API
+      const searchUrl = `https://search.rcsb.org/rcsbsearch/v2/query?json=${encodeURIComponent(
+        JSON.stringify({
+          query: {
+            type: 'terminal',
+            service: 'full_text',
+            parameters: { value: `${geneName} ${organism}` },
+          },
+          return_type: 'entry',
+          request_options: { paginate: { start: 0, rows: maxResults } },
+        })
+      )}`;
+
+      const response = await fetch(searchUrl);
+      if (!response.ok) {
+        throw new Error(`PDB search failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const results = (data.result_set || []).map(entry => ({
+        pdbId: entry.identifier,
+        pdbUrl: `https://www.rcsb.org/structure/${entry.identifier}`,
+        downloadUrl: `https://files.rcsb.org/download/${entry.identifier}.pdb`,
+      }));
+
+      if (results.length > 0) {
+        this.renderProteinStructureResults({
+          results: results,
+          searchType: 'PDB',
+          geneName: geneName,
+        });
+      }
+
+      return {
+        success: true,
+        tool: 'search_pdb_structures',
+        parameters: parameters,
+        results: results,
+        count: results.length,
+        timestamp: new Date().toISOString(),
+        message:
+          results.length > 0
+            ? `Found ${results.length} PDB structure(s) for ${geneName}. Results displayed in sidebar.`
+            : `No PDB structures found for ${geneName}.`,
+      };
+    } catch (error) {
+      console.error('PDB search error:', error);
+      return {
+        success: false,
+        error: error.message,
+        tool: 'search_pdb_structures',
+        parameters: parameters,
         timestamp: new Date().toISOString(),
       };
     }
@@ -143,9 +209,8 @@ class ProteinService {
         resultsContainer.appendChild(resultElement);
       });
       
-      // Update header info
-      const header = sidebar.querySelector('.sidebar-header h3');
-      header.textContent = `Results: ${activeTab.title}`;
+      // Update tab title
+      // We no longer have a sidebar-header h3 to keep the UI clean
     } else {
       resultsContainer.innerHTML = '<div class="no-results">No active selection</div>';
     }
@@ -191,9 +256,6 @@ class ProteinService {
           <button class="sidebar-close" title="Close sidebar">
               <i class="fas fa-times"></i>
           </button>
-      </div>
-      <div class="sidebar-header">
-          <h3>Protein Structure Results</h3>
       </div>
       <div class="tab-bar-container">
           <div class="tab-bar"></div>
@@ -260,9 +322,6 @@ class ProteinService {
           .sidebar-drag-handle:hover { background: var(--bg-active, #ececeb); }
           .sidebar-drag-handle .drag-icon { font-size: 14px; flex: 1; text-align: center; margin-left: 20px; } 
 
-          .protein-results-sidebar .sidebar-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color, #eee); display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); }
-          .protein-results-sidebar .sidebar-header h3 { margin: 0; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 350px; }
-          
           .sidebar-drag-handle .sidebar-close { background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted, #999); padding: 2px 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border-radius: 4px; }
           .sidebar-drag-handle .sidebar-close:hover { color: var(--danger-color, #dc3545); background: rgba(220, 53, 69, 0.1); }
           

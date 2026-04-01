@@ -6625,10 +6625,10 @@ ${coreTools}
       virtual_digest: () => this.virtualDigest(parameters),
 
       // AlphaFold and protein structure tools
-      search_alphafold_by_gene: () => this.searchAlphaFoldByGene(parameters),
+      search_alphafold_structures: () => this.services.protein.searchAlphaFoldStructures(parameters),
+      search_alphafold_by_gene: () => this.services.protein.searchAlphaFoldStructures(parameters),
       fetch_alphafold_structure: () => this.fetchAlphaFoldStructure(parameters),
-      open_alphafold_viewer: () => this.openAlphaFoldViewer(parameters),
-      search_pdb_structures: () => this.searchPdbStructures(parameters),
+      search_pdb_structures: () => this.services.protein.searchPdbStructures(parameters),
       fetch_protein_structure: () => this.fetchProteinStructure(parameters),
       search_alphafold_by_sequence: () => this.searchAlphaFoldBySequence(parameters),
 
@@ -10576,7 +10576,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Search AlphaFold structures by gene name
    */
   async searchAlphaFoldByGene(parameters) {
-    return this.services.protein.searchAlphaFoldByGene(parameters);
+    return this.services.protein.searchAlphaFoldStructures(parameters);
   }
 
   /**
@@ -10588,65 +10588,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   // Removed deprecated openAlphaFoldViewer
 
-  /**
-   * Search PDB database for protein structures
-   */
-  async searchPdbStructures(parameters) {
-    const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
-    const organism = parameters.organism || 'Escherichia coli';
-    const maxResults = parameters.maxResults || 10;
 
-    try {
-      console.log(`Searching PDB for gene: ${geneName}, organism: ${organism}`);
-
-      // Search RCSB PDB API
-      const searchUrl = `https://search.rcsb.org/rcsbsearch/v2/query?json=${encodeURIComponent(
-        JSON.stringify({
-          query: {
-            type: 'terminal',
-            service: 'full_text',
-            parameters: { value: `${geneName} ${organism}` },
-          },
-          return_type: 'entry',
-          request_options: { paginate: { start: 0, rows: maxResults } },
-        })
-      )}`;
-
-      const response = await fetch(searchUrl);
-      if (!response.ok) {
-        throw new Error(`PDB search failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const results = (data.result_set || []).map(entry => ({
-        pdbId: entry.identifier,
-        pdbUrl: `https://www.rcsb.org/structure/${entry.identifier}`,
-        downloadUrl: `https://files.rcsb.org/download/${entry.identifier}.pdb`,
-      }));
-
-      return {
-        success: true,
-        tool: 'search_pdb_structures',
-        parameters: parameters,
-        results: results,
-        count: results.length,
-        timestamp: new Date().toISOString(),
-        message:
-          results.length > 0
-            ? `Found ${results.length} PDB structure(s) for ${geneName}`
-            : `No PDB structures found for ${geneName}`,
-      };
-    } catch (error) {
-      console.error('PDB search error:', error);
-      return {
-        success: false,
-        error: error.message,
-        tool: 'search_pdb_structures',
-        parameters: parameters,
-        timestamp: new Date().toISOString(),
-      };
-    }
-  }
 
   /**
    * Fetch protein structure data (from PDB or AlphaFold)
@@ -11276,143 +11218,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * Display PDB search results in sidebar
-   */
-  displayPDBResultsInSidebar(results, geneName) {
-    try {
-      console.log('Displaying PDB results in sidebar:', results);
-
-      // Get or create sidebar container
-      let sidebar = document.querySelector('.pdb-results-sidebar');
-      if (!sidebar) {
-        sidebar = this.createPDBSidebar();
-      }
-
-      // Clear previous results
-      const resultsContainer = sidebar.querySelector('.pdb-results-list');
-      resultsContainer.innerHTML = '';
-
-      // Update header
-      const header = sidebar.querySelector('.sidebar-header h3');
-      header.textContent = `PDB Results for ${geneName}`;
-
-      // Add results
-      results.forEach((result, index) => {
-        const resultElement = this.createPDBResultElement(result, index);
-        resultsContainer.appendChild(resultElement);
-      });
-
-      // Show sidebar
-      sidebar.classList.add('visible');
-
-      // Add close functionality
-      const closeBtn = sidebar.querySelector('.sidebar-close');
-      if (closeBtn) {
-        closeBtn.onclick = () => {
-          sidebar.classList.remove('visible');
-        };
-      }
-    } catch (error) {
-      console.error('Error displaying PDB results in sidebar:', error);
-    }
-  }
-
-  /**
-   * Create PDB sidebar container
-   */
-  createPDBSidebar() {
-    // Remove existing sidebar if any
-    const existing = document.querySelector('.pdb-results-sidebar');
-    if (existing) {
-      existing.remove();
-    }
-
-    const sidebar = document.createElement('div');
-    sidebar.className = 'pdb-results-sidebar';
-    sidebar.innerHTML = `
-            <div class="sidebar-header">
-                <h3>PDB Results</h3>
-                <button class="sidebar-close" title="Close sidebar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="sidebar-content">
-                <div class="pdb-results-list"></div>
-            </div>
-        `;
-
-    // Add styles
-    this.addPDBSidebarStyles();
-
-    // Append to body
-    document.body.appendChild(sidebar);
-
-    return sidebar;
-  }
-
-  /**
-   * Create individual PDB result element
-   */
-  createPDBResultElement(result, index) {
-    const element = document.createElement('div');
-    element.className = 'pdb-result-item';
-    element.innerHTML = `
-            <div class="result-header">
-                <div class="pdb-title">${result.title}</div>
-                <div class="pdb-id">${result.pdbId}</div>
-            </div>
-            <div class="result-details">
-                <div class="detail-row">
-                    <span class="label">Gene:</span>
-                    <span class="value">${result.geneName || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">Organism:</span>
-                    <span class="value">${result.organism || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">Method:</span>
-                    <span class="value">${result.method || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">Resolution:</span>
-                    <span class="value">${result.resolution ? result.resolution + ' Å' : 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">Release Date:</span>
-                    <span class="value">${result.releaseDate || 'N/A'}</span>
-                </div>
-                ${result.classification
-        ? `
-                <div class="detail-row">
-                    <span class="label">Classification:</span>
-                    <span class="value">${result.classification}</span>
-                </div>
-                `
-        : ''
-      }
-            </div>
-            <div class="result-actions">
-                <button class="btn btn-primary view-structure" data-pdb-id="${result.pdbId}" data-gene-name="${result.geneName || result.pdbId}">
-                    <i class="fas fa-cube"></i> View 3D Structure
-                </button>
-                <button class="btn btn-secondary view-pdb-page" data-url="${result.pdbUrl}">
-                    <i class="fas fa-external-link-alt"></i> PDB Page
-                </button>
-            </div>
-        `;
-
-    // Add click handlers
-    const viewStructureBtn = element.querySelector('.view-structure');
-    const viewPageBtn = element.querySelector('.view-pdb-page');
-
-    viewStructureBtn.onclick = async () => {
-      const pdbId = viewStructureBtn.dataset.pdbId;
-      const geneName = viewStructureBtn.dataset.geneName;
-
-      try {
-        viewStructureBtn.disabled = true;
-        viewStructureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
 
         const result = await this.openProteinViewer({
           pdbId: pdbId,
