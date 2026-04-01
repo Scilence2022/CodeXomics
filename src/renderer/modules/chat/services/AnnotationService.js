@@ -14,13 +14,22 @@ class AnnotationService {
 
   // 1. ANNOTATION SEARCH AND RETRIEVAL
   async listAnnotations(params) {
-    const { chromosome, start, end, type, limit = 100, offset = 0 } = params;
+    const { 
+      chromosome, chrom, chr: chrAlias,
+      start, begin,
+      end, stop,
+      type, limit = 100, offset = 0 
+    } = params;
+    
+    const targetChr = chromosome || chrom || chrAlias || this.app.currentChromosome;
+    const targetStart = start !== undefined ? start : (begin !== undefined ? begin : null);
+    const targetEnd = end !== undefined ? end : (stop !== undefined ? stop : null);
 
     if (!this.app.currentAnnotations) {
       throw new Error('No annotations loaded');
     }
 
-    const chr = chromosome || this.app.currentChromosome;
+    const chr = targetChr;
     const annotations = chr
       ? (this.app.currentAnnotations[chr] || [])
       : Object.values(this.app.currentAnnotations).flat();
@@ -28,9 +37,9 @@ class AnnotationService {
     let filtered = annotations;
 
     // Filter by region
-    if (start !== undefined && end !== undefined) {
+    if (targetStart !== null && targetEnd !== null) {
       filtered = filtered.filter(a =>
-        a.start <= end && a.end >= start
+        a.start <= targetEnd && a.end >= targetStart
       );
     }
 
@@ -97,7 +106,8 @@ class AnnotationService {
   }
 
   async getAnnotation(params) {
-    const { identifier, chromosome } = params;
+    const identifier = params.identifier || params.annotationId || params.gene || params.gene_name || params.geneName || params.locus_tag || params.locusTag;
+    const chromosome = params.chromosome || params.chrom || params.chr || this.app.currentChromosome;
 
     if (!this.app.currentAnnotations) {
       throw new Error('No annotations loaded');
@@ -186,7 +196,8 @@ class AnnotationService {
 
   // 2. ANNOTATION MODIFICATION
   async updateAnnotation(params) {
-    const { identifier, chromosome, updates, agent = 'mcp-agent', evidence = [] } = params;
+    const identifier = params.identifier || params.annotationId || params.gene || params.gene_name || params.geneName || params.locus_tag || params.locusTag;
+    const { chromosome, updates, agent = 'mcp-agent', evidence = [] } = params;
 
     if (!this.app.currentAnnotations) {
       throw new Error('No annotations loaded');

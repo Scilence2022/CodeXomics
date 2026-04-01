@@ -8,7 +8,7 @@ class GenomeAnalysisService {
   }
 
   async getSequence(params) {
-    const { chromosome, start, end } = params;
+    const { chromosome, start, end } = this._normalizeRegionParams(params);
     if (this.app && this.app.getSequenceForRegion) {
       const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
       return { chromosome, start, end, sequence, length: sequence.length };
@@ -18,13 +18,15 @@ class GenomeAnalysisService {
 
   async sequenceStatistics(params) {
     const {
-      chromosome,
-      start,
-      end,
       include = ['basic', 'composition', 'complexity'],
       sequence,
       sequenceType = 'dna',
     } = params;
+
+    const { chromosome, start, end } = this._normalizeRegionParams(params);
+    const chr = chromosome;
+    const regionStart = start;
+    const regionEnd = end;
 
     let inputSequence;
 
@@ -36,15 +38,6 @@ class GenomeAnalysisService {
         inputSequence = inputSequence.slice(0, -1);
       }
     } else {
-      // Use genomic region
-      const chr = chromosome || this.app.currentChromosome;
-      if (!chr) {
-        throw new Error('No chromosome specified and none currently selected');
-      }
-
-      const regionStart = start || this.app.currentPosition?.start || 0;
-      const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
-
       inputSequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
     }
 
@@ -201,7 +194,8 @@ class GenomeAnalysisService {
   }
 
   async genomeCodonUsageAnalysis(params) {
-    const { chromosome, featureType = 'CDS', minLength = 300, maxGenes } = params;
+    const { featureType = 'CDS', minLength = 300, maxGenes } = params;
+    const { chromosome } = this._normalizeRegionParams(params);
 
     console.log('🧬 [ChatManager] Starting genome-wide codon usage analysis:', params);
 
@@ -698,6 +692,51 @@ class GenomeAnalysisService {
   }
 
 
+  /**
+   * Normalize region parameters (chromosome, start, end) with aliases and fallbacks
+   */
+  _normalizeRegionParams(params) {
+    if (!params) params = {};
+
+    // 1. Extract chromosome with aliases
+    let chromosome = params.chromosome || params.chrom || params.chr || params.target;
+
+    // 2. Fallback to app state if missing
+    if (!chromosome && this.app) {
+      chromosome = this.app.currentChromosome;
+    }
+
+    if (!chromosome) {
+      throw new Error('No chromosome specified and none currently selected');
+    }
+
+    // 3. Extract start/end with aliases
+    let start = params.start !== undefined ? params.start : (params.begin !== undefined ? params.begin : null);
+    let end = params.end !== undefined ? params.end : (params.stop !== undefined ? params.stop : null);
+
+    // 4. Fallback to current browser position if positions are missing
+    if (start === null && this.app && this.app.currentPosition) {
+      start = this.app.currentPosition.start;
+    }
+    if (end === null && this.app && this.app.currentPosition) {
+      end = this.app.currentPosition.end;
+    }
+
+    // 5. Hard fallbacks to chromosome boundaries
+    if (start === null) start = 1;
+    if (end === null && this.app && this.app.currentSequence && this.app.currentSequence[chromosome]) {
+      end = this.app.currentSequence[chromosome].length;
+    } else if (end === null) {
+      // Default small region if length unknown
+      end = start + 1000;
+    }
+
+    // Ensure numeric
+    start = parseInt(start);
+    end = parseInt(end);
+
+    return { chromosome, start, end };
+  }
 }
 
 window.GenomeAnalysisService = GenomeAnalysisService;
