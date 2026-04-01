@@ -300,6 +300,7 @@ class GenomeBrowser {
 
     // User-defined features storage
     this.currentSequenceSelection = null; // Track current sequence selection
+    this.wigTrackOrder = []; // Stable order for WIG tracks
 
     // Initialize track visibility
     this.visibleTracks = new Set(['genes', 'gc', 'sequence']); // Default visible tracks (sequence = bottom panel, sequenceLine = single-line track)

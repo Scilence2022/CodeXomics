@@ -9330,8 +9330,16 @@ class TrackRenderer {
     // Use track spacing from settings or default
     const trackSpacing = settings.trackSpacing || 5;
 
-    // Render each WIG track
-    Object.entries(wigTracks).forEach(async ([trackName, wigTrack], index) => {
+    // Ensure stable track order exists
+    if (!this.genomeBrowser.wigTrackOrder) {
+      this.genomeBrowser.wigTrackOrder = Object.keys(wigTracks);
+    }
+
+    // Render each WIG track using the stable order
+    this.genomeBrowser.wigTrackOrder.forEach(async (trackName, index) => {
+      const wigTrack = wigTracks[trackName];
+      // Skip if track doesn't exist in data (e.g., deleted but order not updated yet)
+      if (!wigTrack) return;
       // Skip hidden tracks
       if (wigTrack.hidden) return;
 
@@ -10809,9 +10817,19 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             gap: 6px;
         `;
 
-    Object.entries(wigTracks).forEach(([trackName, wigTrack]) => {
+    // Ensure stable track order exists
+    if (!this.genomeBrowser.wigTrackOrder) {
+      this.genomeBrowser.wigTrackOrder = Object.keys(wigTracks);
+    }
+
+    this.genomeBrowser.wigTrackOrder.forEach(trackName => {
+      const wigTrack = wigTracks[trackName];
+      if (!wigTrack) return;
+
       const trackItem = document.createElement('div');
       trackItem.className = 'wig-track-item';
+      trackItem.setAttribute('draggable', 'true');
+      trackItem.setAttribute('data-track-name', trackName);
       trackItem.style.cssText = `
                 display: flex;
                 align-items: center;
@@ -10875,6 +10893,13 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       trackItem.appendChild(trackNameSpan);
       trackItem.appendChild(toggleBtn);
       trackItem.appendChild(removeBtn);
+
+      // Add drag and drop events
+      trackItem.addEventListener('dragstart', e => this.handleWIGTrackDragStart(e));
+      trackItem.addEventListener('dragover', e => this.handleWIGTrackDragOver(e));
+      trackItem.addEventListener('drop', e => this.handleWIGTrackDrop(e));
+      trackItem.addEventListener('dragend', e => this.handleWIGTrackDragEnd(e));
+
       tracksList.appendChild(trackItem);
     });
 
@@ -10948,9 +10973,98 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       // Confirm removal
       if (confirm(`Remove WIG track "${trackName}"? This action cannot be undone.`)) {
         delete wigTracks[trackName];
+
+        // Remove from stable order
+        if (this.genomeBrowser.wigTrackOrder) {
+          const index = this.genomeBrowser.wigTrackOrder.indexOf(trackName);
+          if (index > -1) {
+            this.genomeBrowser.wigTrackOrder.splice(index, 1);
+          }
+        }
+
         this.genomeBrowser.updateStatus(`Removed WIG track: ${trackName}`);
         this.refreshCurrentView();
       }
+    }
+  }
+
+  // ============================================================================
+  // WIG TRACK DRAG AND DROP METHODS
+  // ============================================================================
+
+  handleWIGTrackDragStart(e) {
+    const trackName = e.currentTarget.getAttribute('data-track-name');
+    e.dataTransfer.setData('text/plain', trackName);
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+
+    // Create a ghost image or just styling
+    setTimeout(() => {
+      e.currentTarget.style.opacity = '0.4';
+    }, 0);
+  }
+
+  handleWIGTrackDragOver(e) {
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+
+    const targetItem = e.currentTarget.closest('.wig-track-item');
+    if (targetItem) {
+      targetItem.style.borderTop = '2px solid #007bff';
+    }
+
+    return false;
+  }
+
+  handleWIGTrackDrop(e) {
+    if (e.stopPropagation) {
+      e.stopPropagation();
+    }
+
+    const draggedName = e.dataTransfer.getData('text/plain');
+    const targetName = e.currentTarget.getAttribute('data-track-name');
+
+    if (draggedName && targetName && draggedName !== targetName) {
+      this.reorderWIGTracks(draggedName, targetName);
+    }
+
+    return false;
+  }
+
+  handleWIGTrackDragEnd(e) {
+    e.currentTarget.style.opacity = '1';
+    e.currentTarget.classList.remove('dragging');
+
+    // Remove indicators from all items
+    const items = document.querySelectorAll('.wig-track-item');
+    items.forEach(item => {
+      item.style.borderTop = '';
+    });
+  }
+
+  reorderWIGTracks(draggedName, targetName) {
+    const order = this.genomeBrowser.wigTrackOrder;
+    if (!order) return;
+
+    const draggedIndex = order.indexOf(draggedName);
+    const targetIndex = order.indexOf(targetName);
+
+    if (draggedIndex > -1 && targetIndex > -1) {
+      // Remove from old position
+      order.splice(draggedIndex, 1);
+      // Insert at new position
+      order.splice(targetIndex, 0, draggedName);
+
+      this.genomeBrowser.updateStatus(`Reordered WIG tracks: ${draggedName} moved to position ${targetIndex + 1}`);
+
+      // Sync with TabManager if active
+      if (this.genomeBrowser.tabManager) {
+        this.genomeBrowser.tabManager.onTrackOrderChanged(order);
+      }
+
+      this.refreshCurrentView();
     }
   }
 

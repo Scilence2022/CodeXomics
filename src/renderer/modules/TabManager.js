@@ -442,6 +442,7 @@ class TabManager {
       // Reference shared managers (these are shared across all tabs)
       readsManager: this.genomeBrowser.readsManager,
       currentWIGTracks: this.genomeBrowser.currentWIGTracks || {},
+      wigTrackOrder: this.genomeBrowser.wigTrackOrder || [],
 
       // File management state (shared references to loaded files)
       loadedFiles: this.genomeBrowser.loadedFiles || [],
@@ -640,6 +641,7 @@ class TabManager {
       tabState.currentAnnotations = this.genomeBrowser.currentAnnotations;
       tabState.currentVariants = this.genomeBrowser.currentVariants;
       tabState.currentWIGTracks = this.genomeBrowser.currentWIGTracks;
+      tabState.wigTrackOrder = this.genomeBrowser.wigTrackOrder || [];
       tabState.loadedFiles = this.genomeBrowser.loadedFiles;
 
       // Save UI state (independent per tab)
@@ -693,6 +695,7 @@ class TabManager {
       this.genomeBrowser.currentAnnotations = tabState.currentAnnotations;
       this.genomeBrowser.currentVariants = tabState.currentVariants;
       this.genomeBrowser.currentWIGTracks = tabState.currentWIGTracks;
+      this.genomeBrowser.wigTrackOrder = tabState.wigTrackOrder || [];
       this.genomeBrowser.loadedFiles = tabState.loadedFiles;
 
       // Restore UI state
@@ -1091,6 +1094,7 @@ class TabManager {
           break;
         case 'wig':
           tabState.currentWIGTracks = this.genomeBrowser.currentWIGTracks;
+          tabState.wigTrackOrder = this.genomeBrowser.wigTrackOrder || [];
           break;
       }
 

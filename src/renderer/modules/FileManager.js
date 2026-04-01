@@ -2079,6 +2079,17 @@ Original error: ${error.message}`;
     // Merge new tracks with existing tracks
     this.genomeBrowser.currentWIGTracks = { ...existingWIGTracks, ...wigTracks };
 
+    // Update stable track order
+    if (!this.genomeBrowser.wigTrackOrder) {
+      this.genomeBrowser.wigTrackOrder = [];
+    }
+
+    Object.keys(wigTracks).forEach(trackName => {
+      if (!this.genomeBrowser.wigTrackOrder.includes(trackName)) {
+        this.genomeBrowser.wigTrackOrder.push(trackName);
+      }
+    });
+
     const totalTracksAfterMerge = Object.keys(this.genomeBrowser.currentWIGTracks).length;
     const newTracksCount = Object.keys(wigTracks).length;
 
@@ -2190,6 +2201,17 @@ Original error: ${error.message}`;
 
       // Merge new tracks with existing tracks
       this.genomeBrowser.currentWIGTracks = { ...existingWIGTracks, ...wigTracks };
+
+      // Update stable track order
+      if (!this.genomeBrowser.wigTrackOrder) {
+        this.genomeBrowser.wigTrackOrder = [];
+      }
+
+      Object.keys(wigTracks).forEach(trackName => {
+        if (!this.genomeBrowser.wigTrackOrder.includes(trackName)) {
+          this.genomeBrowser.wigTrackOrder.push(trackName);
+        }
+      });
 
       const totalTracksAfterMerge = Object.keys(this.genomeBrowser.currentWIGTracks).length;
       const newTracksCount = Object.keys(wigTracks).length;
