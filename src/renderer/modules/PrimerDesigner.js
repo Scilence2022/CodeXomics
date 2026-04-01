@@ -68,14 +68,35 @@ class PrimerDesigner {
 
         // Default parameters
         const targetTm = options.targetTm || 60.0;
-        const tmTolerance = options.tmTolerance || 2.0; // Allowed difference from target Tm (and between pair)
+        const baseTmTolerance = options.tmTolerance || 2.0; 
         const minLen = options.minLen || 18;
         const maxLen = options.maxLen || 25;
         const minPropSize = options.minProductSize || Math.min(seq.length, 100);
         const maxPropSize = options.maxProductSize || seq.length;
 
+        // Progressive strictness levels to ensure we find *something* if sequence is difficult
+        const strictnessLevels = [
+            { tmTol: baseTmTolerance, gcMin: 40, gcMax: 60, requireGcClamp: true, avoidHairpin: true },
+            { tmTol: baseTmTolerance + 2.0, gcMin: 35, gcMax: 65, requireGcClamp: true, avoidHairpin: true },
+            { tmTol: baseTmTolerance + 5.0, gcMin: 30, gcMax: 70, requireGcClamp: false, avoidHairpin: true },
+            { tmTol: baseTmTolerance + 10.0, gcMin: 20, gcMax: 80, requireGcClamp: false, avoidHairpin: false }
+        ];
+
+        for (const strictness of strictnessLevels) {
+            const pairs = this._findPrimerPairsWithStrictness(seq, minLen, maxLen, targetTm, minPropSize, maxPropSize, strictness);
+            if (pairs && pairs.length > 0) {
+                 // Sort by smallest Tm difference
+                 pairs.sort((a, b) => a.tmDifference - b.tmDifference);
+                 return pairs[0];
+            }
+        }
+
+        return null;
+    }
+
+    static _findPrimerPairsWithStrictness(seq, minLen, maxLen, targetTm, minPropSize, maxPropSize, strictness) {
         const pairs = [];
-        const forwardPrimers = this._findCandidatePrimers(seq.substring(0, Math.floor(seq.length / 2)), minLen, maxLen, targetTm, tmTolerance);
+        const forwardPrimers = this._findCandidatePrimers(seq.substring(0, Math.floor(seq.length / 2)), minLen, maxLen, targetTm, strictness);
 
         // For reverse primers, we look at the end of the sequence, but we need their reverse complement
         const reverseRegionStart = Math.max(0, seq.length - Math.floor(seq.length / 2));
@@ -83,7 +104,7 @@ class PrimerDesigner {
 
         // Find candidates on the reverse strand (by finding them on the forward strand and reverse complementing)
         // Note: Candidates are found 5' -> 3' on the bottom strand, which means reading the top strand right-to-left
-        const reverseCandidatesRaw = this._findCandidatePrimersRaw(reverseRegion, minLen, maxLen, targetTm, tmTolerance);
+        const reverseCandidatesRaw = this._findCandidatePrimersRaw(reverseRegion, minLen, maxLen, targetTm, strictness);
 
         const reversePrimers = reverseCandidatesRaw.map(cand => ({
             sequence: this.reverseComplement(cand.sequence),
@@ -104,7 +125,7 @@ class PrimerDesigner {
 
                 if (productSize >= minPropSize && productSize <= maxPropSize) {
                     const tmDiff = Math.abs(fp.tm - rp.tm);
-                    if (tmDiff <= tmTolerance) {
+                    if (tmDiff <= strictness.tmTol) {
                         pairs.push({
                             forward: {
                                 sequence: fp.sequence,
@@ -130,10 +151,7 @@ class PrimerDesigner {
             }
         }
 
-        // Sort by smallest Tm difference
-        pairs.sort((a, b) => a.tmDifference - b.tmDifference);
-
-        return pairs.length > 0 ? pairs[0] : null;
+        return pairs;
     }
 
     /**
@@ -212,8 +230,8 @@ class PrimerDesigner {
 
     // --- Internal Helpers ---
 
-    static _findCandidatePrimers(seq, minLen, maxLen, targetTm, tmTolerance) {
-        return this._findCandidatePrimersRaw(seq, minLen, maxLen, targetTm, tmTolerance).map(cand => ({
+    static _findCandidatePrimers(seq, minLen, maxLen, targetTm, strictness) {
+        return this._findCandidatePrimersRaw(seq, minLen, maxLen, targetTm, strictness).map(cand => ({
             sequence: seq.substring(cand.startPos, cand.startPos + cand.length),
             startPos: cand.startPos,
             length: cand.length,
@@ -222,19 +240,32 @@ class PrimerDesigner {
         }));
     }
 
-    static _findCandidatePrimersRaw(seq, minLen, maxLen, targetTm, tmTolerance) {
+    static _findCandidatePrimersRaw(seq, minLen, maxLen, targetTm, strictness) {
+        const tmTolerance = strictness.tmTol;
+        const gcMin = strictness.gcMin;
+        const gcMax = strictness.gcMax;
+        const requireGcClamp = strictness.requireGcClamp;
+        const avoidHairpin = strictness.avoidHairpin;
+
         const candidates = [];
         for (let i = 0; i <= seq.length - minLen; i++) {
             for (let len = minLen; len <= maxLen && i + len <= seq.length; len++) {
                 const subSeq = seq.substring(i, i + len);
                 const props = this.calculateProperties(subSeq);
 
-                // Basic filters: Tm near target, GC% reasonable (40-60%), ending in G or C (GC clamp)
-                if (Math.abs(props.tm - targetTm) <= tmTolerance &&
-                    props.gcContent >= 40 && props.gcContent <= 60 &&
-                    (subSeq.endsWith('G') || subSeq.endsWith('C')) &&
-                    !props.hasHairpinPotential) {
+                // Progressive filters based on strictness object
+                let pass = Math.abs(props.tm - targetTm) <= tmTolerance &&
+                           props.gcContent >= gcMin && props.gcContent <= gcMax;
+                
+                if (requireGcClamp) {
+                    pass = pass && (subSeq.endsWith('G') || subSeq.endsWith('C'));
+                }
+                
+                if (avoidHairpin) {
+                    pass = pass && !props.hasHairpinPotential;
+                }
 
+                if (pass) {
                     candidates.push({
                         startPos: i,
                         endPos: i + len,
