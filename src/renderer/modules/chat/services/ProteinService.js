@@ -5,6 +5,10 @@ class ProteinService {
   constructor(app, chatManager) {
     this.app = app;
     this.chatManager = chatManager;
+    this.tabs = [];
+    this.activeTabId = null;
+    this.isDragging = false;
+    this.dragOffset = { x: 0, y: 0 };
   }
 
   async searchAlphaFoldByGene(parameters) {
@@ -69,43 +73,26 @@ class ProteinService {
   async renderProteinStructureResults(parameters) {
     const { results, searchType, geneName } = parameters;
     try {
-      console.log(`Displaying ${searchType} results in sidebar:`, results);
+      console.log(`Adding ${searchType} results in sidebar for ${geneName}:`, results);
 
-      // Get or create sidebar container
-      let sidebar = document.querySelector('.protein-results-sidebar');
-      if (!sidebar) {
-        sidebar = this.createProteinSidebar();
-      }
+      const tabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newTab = {
+        id: tabId,
+        title: `${geneName} (${searchType})`,
+        searchType,
+        geneName,
+        results
+      };
 
-      // Clear previous results
-      const resultsContainer = sidebar.querySelector('.protein-results-list');
-      resultsContainer.innerHTML = '';
+      this.tabs.push(newTab);
+      this.activeTabId = tabId;
 
-      // Update header
-      const header = sidebar.querySelector('.sidebar-header h3');
-      header.textContent = `${searchType} Results for ${geneName}`;
-
-      // Add results
-      results.forEach((result, index) => {
-        const resultElement = this.createProteinResultElement(result, searchType, index);
-        resultsContainer.appendChild(resultElement);
-      });
-
-      // Show sidebar
-      sidebar.classList.add('visible');
-
-      // Add close functionality
-      const closeBtn = sidebar.querySelector('.sidebar-close');
-      if (closeBtn) {
-        closeBtn.onclick = () => {
-          sidebar.classList.remove('visible');
-        };
-      }
+      this.refreshSidebarUI();
 
       return {
         success: true,
         tool: 'render_protein_structure_results',
-        message: `Successfully rendered ${results.length} ${searchType} results in the sidebar.`,
+        message: `Successfully added ${results.length} ${searchType} results to the sidebar tabs.`,
       };
     } catch (error) {
       console.error(`Error displaying ${searchType} results in sidebar:`, error);
@@ -114,6 +101,73 @@ class ProteinService {
         tool: 'render_protein_structure_results',
         error: error.message,
       };
+    }
+  }
+
+  refreshSidebarUI() {
+    let sidebar = document.querySelector('.protein-results-sidebar');
+    if (!sidebar) {
+      sidebar = this.createProteinSidebar();
+    }
+
+    const tabBar = sidebar.querySelector('.tab-bar');
+    const resultsContainer = sidebar.querySelector('.protein-results-list');
+
+    // Update Tabs UI
+    tabBar.innerHTML = '';
+    this.tabs.forEach(tab => {
+      const tabButton = document.createElement('div');
+      tabButton.className = `tab-button ${tab.id === this.activeTabId ? 'active' : ''}`;
+      tabButton.innerHTML = `
+        <span class="tab-title" title="${tab.title}">${tab.title}</span>
+        <span class="tab-close" data-id="${tab.id}">&times;</span>
+      `;
+      tabButton.onclick = (e) => {
+        if (e.target.classList.contains('tab-close')) {
+          this.closeTab(tab.id);
+        } else {
+          this.activeTabId = tab.id;
+          this.refreshSidebarUI();
+        }
+      };
+      tabBar.appendChild(tabButton);
+    });
+
+    // Update Content UI
+    resultsContainer.innerHTML = '';
+    const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+    
+    if (activeTab) {
+      activeTab.results.forEach((result, index) => {
+        const resultElement = this.createProteinResultElement(result, activeTab.searchType, index);
+        resultsContainer.appendChild(resultElement);
+      });
+      
+      // Update header info
+      const header = sidebar.querySelector('.sidebar-header h3');
+      header.textContent = `Results: ${activeTab.title}`;
+    } else {
+      resultsContainer.innerHTML = '<div class="no-results">No active selection</div>';
+    }
+
+    // Show sidebar
+    sidebar.classList.add('visible');
+  }
+
+  closeTab(tabId) {
+    const index = this.tabs.findIndex(t => t.id === tabId);
+    if (index !== -1) {
+      this.tabs.splice(index, 1);
+      if (this.activeTabId === tabId) {
+        this.activeTabId = this.tabs.length > 0 ? this.tabs[this.tabs.length - 1].id : null;
+      }
+      
+      if (this.tabs.length === 0) {
+        const sidebar = document.querySelector('.protein-results-sidebar');
+        if (sidebar) sidebar.classList.remove('visible');
+      } else {
+        this.refreshSidebarUI();
+      }
     }
   }
 
@@ -132,16 +186,59 @@ class ProteinService {
     const sidebar = document.createElement('div');
     sidebar.className = 'protein-results-sidebar';
     sidebar.innerHTML = `
+      <div class="sidebar-drag-handle">
+          <i class="fas fa-grip-lines"></i>
+      </div>
       <div class="sidebar-header">
           <h3>Protein Structure Results</h3>
           <button class="sidebar-close" title="Close sidebar">
               <i class="fas fa-times"></i>
           </button>
       </div>
+      <div class="tab-bar-container">
+          <div class="tab-bar"></div>
+      </div>
       <div class="sidebar-content">
           <div class="protein-results-list"></div>
       </div>
     `;
+
+    // Implement Dragging
+    const dragHandle = sidebar.querySelector('.sidebar-drag-handle');
+    
+    dragHandle.onmousedown = (e) => {
+      this.isDragging = true;
+      sidebar.style.transition = 'none'; // Disable transition during drag
+      const rect = sidebar.getBoundingClientRect();
+      this.dragOffset.x = e.clientX - rect.left;
+      this.dragOffset.y = e.clientY - rect.top;
+      
+      document.onmousemove = (e) => {
+        if (!this.isDragging) return;
+        const x = e.clientX - this.dragOffset.x;
+        const y = e.clientY - this.dragOffset.y;
+        
+        sidebar.style.left = `${x}px`;
+        sidebar.style.top = `${y}px`;
+        sidebar.style.right = 'auto'; // Disable fixed right
+        sidebar.style.bottom = 'auto'; // Disable fixed bottom
+      };
+      
+      document.onmouseup = () => {
+        this.isDragging = false;
+        document.onmousemove = null;
+        document.onmouseup = null;
+        sidebar.style.transition = ''; // Restore transition
+      };
+    };
+
+    // Close button
+    const closeBtn = sidebar.querySelector('.sidebar-close');
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        sidebar.classList.remove('visible');
+      };
+    }
 
     // Try to ensure UI service styles are created (from chatManager)
     if (this.chatManager && this.chatManager.services && this.chatManager.services.ui) {
@@ -155,10 +252,31 @@ class ProteinService {
       const style = document.createElement('style');
       style.id = 'protein-sidebar-styles';
         style.innerHTML = `
-          .protein-results-sidebar { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background: var(--bg-color, #fff); box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; display: flex; flex-direction: column; }
-          .protein-results-sidebar.visible { right: 0; }
-          .protein-results-sidebar .sidebar-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color, #eee); display: flex; justify-content: space-between; align-items: center; }
-          .protein-results-sidebar .sidebar-header h3 { margin: 0; font-size: 16px; }
+          .protein-results-sidebar { position: fixed; top: 20px; right: 20px; width: 400px; height: calc(100vh - 40px); background: var(--bg-color, #fff); box-shadow: -2px 0 15px rgba(0,0,0,0.2); transition: right 0.3s ease, transform 0.3s ease; z-index: 1000; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color, #eee); }
+          .protein-results-sidebar:not(.visible) { display: none; }
+          
+          .sidebar-drag-handle { background: var(--bg-hover, #f5f5f5); padding: 4px 0; text-align: center; cursor: move; color: var(--text-muted, #999); border-bottom: 1px solid var(--border-color, #eee); }
+          .sidebar-drag-handle:hover { color: var(--text-color, #333); background: var(--bg-active, #ececeb); }
+
+          .protein-results-sidebar .sidebar-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color, #eee); display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); }
+          .protein-results-sidebar .sidebar-header h3 { margin: 0; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
+          .protein-results-sidebar .sidebar-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted, #999); padding: 5px; }
+          .protein-results-sidebar .sidebar-close:hover { color: var(--danger-color, #dc3545); }
+          
+          .tab-bar-container { background: var(--bg-secondary, #fafafa); border-bottom: 1px solid var(--border-color, #eee); }
+          .tab-bar { display: flex; overflow-x: auto; padding: 5px 10px 0 10px; gap: 5px; scrollbar-width: none; }
+          .tab-bar::-webkit-scrollbar { display: none; }
+          
+          .tab-button { display: flex; align-items: center; padding: 6px 12px; background: var(--bg-color, #fff); border: 1px solid var(--border-color, #eee); border-bottom: none; border-radius: 8px 8px 0 0; font-size: 12px; cursor: pointer; white-space: nowrap; max-width: 150px; color: var(--text-muted, #666); transition: all 0.2s; }
+          .tab-button.active { background: var(--primary-color, #007bff); color: #fff; border-color: var(--primary-color, #007bff); }
+          .tab-button .tab-title { overflow: hidden; text-overflow: ellipsis; }
+          .tab-button .tab-close { margin-left: 8px; font-size: 14px; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+          .tab-button .tab-close:hover { background: rgba(0,0,0,0.1); color: #fff; }
+          .tab-button.active .tab-close:hover { background: rgba(255,255,255,0.2); }
+
+          .protein-results-sidebar .sidebar-content { padding: 15px; overflow-y: auto; flex: 1; }
+          .protein-results-sidebar .protein-result-item { background: var(--bg-hover, #f8f9fa); border: 1px solid var(--border-color, #eee); border-radius: 10px; padding: 15px; margin-bottom: 12px; transition: transform 0.2s; }
+          .protein-results-sidebar .protein-result-item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
           .protein-results-sidebar .sidebar-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-color, #333); }
           .protein-results-sidebar .sidebar-content { padding: 20px; overflow-y: auto; flex: 1; }
           .protein-results-sidebar .protein-result-item { background: var(--bg-secondary, #f9f9f9); border: 1px solid var(--border-color, #eee); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
