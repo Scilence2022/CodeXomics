@@ -187,13 +187,13 @@ class ProteinService {
     sidebar.className = 'protein-results-sidebar';
     sidebar.innerHTML = `
       <div class="sidebar-drag-handle">
-          <i class="fas fa-grip-lines"></i>
-      </div>
-      <div class="sidebar-header">
-          <h3>Protein Structure Results</h3>
+          <span class="drag-icon"><i class="fas fa-grip-lines"></i></span>
           <button class="sidebar-close" title="Close sidebar">
               <i class="fas fa-times"></i>
           </button>
+      </div>
+      <div class="sidebar-header">
+          <h3>Protein Structure Results</h3>
       </div>
       <div class="tab-bar-container">
           <div class="tab-bar"></div>
@@ -207,6 +207,7 @@ class ProteinService {
     const dragHandle = sidebar.querySelector('.sidebar-drag-handle');
     
     dragHandle.onmousedown = (e) => {
+      if (e.target.closest('.sidebar-close')) return;
       this.isDragging = true;
       sidebar.style.transition = 'none'; // Disable transition during drag
       const rect = sidebar.getBoundingClientRect();
@@ -255,13 +256,15 @@ class ProteinService {
           .protein-results-sidebar { position: fixed; top: 20px; right: 20px; width: 400px; height: calc(100vh - 40px); background: var(--bg-color, #fff); box-shadow: -2px 0 15px rgba(0,0,0,0.2); transition: right 0.3s ease, transform 0.3s ease; z-index: 1000; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color, #eee); }
           .protein-results-sidebar:not(.visible) { display: none; }
           
-          .sidebar-drag-handle { background: var(--bg-hover, #f5f5f5); padding: 4px 0; text-align: center; cursor: move; color: var(--text-muted, #999); border-bottom: 1px solid var(--border-color, #eee); }
-          .sidebar-drag-handle:hover { color: var(--text-color, #333); background: var(--bg-active, #ececeb); }
+          .sidebar-drag-handle { background: var(--bg-hover, #f5f5f5); padding: 4px 10px; display: flex; align-items: center; justify-content: space-between; cursor: move; border-bottom: 1px solid var(--border-color, #eee); height: 32px; }
+          .sidebar-drag-handle:hover { background: var(--bg-active, #ececeb); }
+          .sidebar-drag-handle .drag-icon { font-size: 14px; flex: 1; text-align: center; margin-left: 20px; } 
 
           .protein-results-sidebar .sidebar-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color, #eee); display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); }
-          .protein-results-sidebar .sidebar-header h3 { margin: 0; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
-          .protein-results-sidebar .sidebar-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted, #999); padding: 5px; }
-          .protein-results-sidebar .sidebar-close:hover { color: var(--danger-color, #dc3545); }
+          .protein-results-sidebar .sidebar-header h3 { margin: 0; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 350px; }
+          
+          .sidebar-drag-handle .sidebar-close { background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted, #999); padding: 2px 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border-radius: 4px; }
+          .sidebar-drag-handle .sidebar-close:hover { color: var(--danger-color, #dc3545); background: rgba(220, 53, 69, 0.1); }
           
           .tab-bar-container { background: var(--bg-secondary, #fafafa); border-bottom: 1px solid var(--border-color, #eee); }
           .tab-bar { display: flex; overflow-x: auto; padding: 5px 10px 0 10px; gap: 5px; scrollbar-width: none; }
