@@ -17,6 +17,7 @@ Welcome to the CodeXomics documentation hub. This directory contains organized d
 
 | Document                                                           | Description                     |
 | ------------------------------------------------------------------ | ------------------------------- |
+| [AI Assistant Guidelines](Agents.md)                               | Instructions for autonomous AI coders |
 | [Developer Guide](developer-guides/DEVELOPER_GUIDE.md)             | Comprehensive development guide |
 | [Plugin Development](developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md) | Build custom plugins            |
 | [Testing Guide](developer-guides/TESTING_GUIDE.md)                 | Testing procedures              |
@@ -67,4 +68,4 @@ Welcome to the CodeXomics documentation hub. This directory contains organized d
 
 ---
 
-**CodeXomics Documentation** - v0.527beta | Last Updated: December 2025
+**CodeXomics Documentation** - v0.532beta | Last Updated: April 2026

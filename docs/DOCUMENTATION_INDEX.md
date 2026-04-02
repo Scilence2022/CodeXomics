@@ -1,6 +1,6 @@
 # CodeXomics Documentation Index
 
-**Version**: v0.529beta | **Last Updated**: January 2026
+**Version**: v0.532beta | **Last Updated**: April 2026
 
 ---
 
@@ -17,6 +17,7 @@
 
 **👨‍💻 Developers**
 
+- [AI Assistant Guidelines](Agents.md) - Context for autonomous AI agents
 - [Developer Guide](developer-guides/DEVELOPER_GUIDE.md) - Development setup
 - [Plugin Development](developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md) - Build plugins
 - [Build Instructions](developer-guides/build-instructions.md) - Compile from source

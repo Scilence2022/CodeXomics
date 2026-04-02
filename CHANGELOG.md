@@ -5,6 +5,25 @@ All notable changes to CodeXomics will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.532.0-beta] - 2026-04-02 - BETA UPDATE
+
+**🔧 Milestone: AI Assistant Guidelines & Build v0.532**
+
+### 📚 Documentation
+
+- Created `Agents.md` as a dedicated instruction set for autonomous AI coding helpers (Copilot, Cursor, etc.).
+- Integrated AI coding guidelines into `README.md` contributing rules.
+- Linked AI guidelines into developer documentation.
+
+## [0.531.0-beta] - 2026-03-31 - BETA UPDATE
+
+**🔧 Milestone: Multi-Agent System Core Improvements**
+
+### 🤖 Multi-Agent System
+
+- Enhanced agent coordination logic and tool routing.
+- Improved performance tracking and caching for agent executions.
+
 ## [0.530.0-beta] - 2026-03-04 - BETA UPDATE
 
 **🔧 Milestone: ChatBox Dock/Float Improvements and UI Fixes**

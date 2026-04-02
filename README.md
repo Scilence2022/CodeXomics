@@ -4,15 +4,15 @@
 
 ### AI-Powered Bioinformatics Analysis Platform
 
-[![Version](https://img.shields.io/badge/version-0.531beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![Version](https://img.shields.io/badge/version-0.532beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
-[![First Release](https://img.shields.io/badge/🧪%20Latest%20Beta-v0.531beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.531beta)
+[![First Release](https://img.shields.io/badge/🧪%20Latest%20Beta-v0.532beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)
 
 A modern, cross-platform bioinformatics analysis platform built with Electron, featuring **multi-agent AI collaboration**, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
 
-🧪 **[Latest Beta Release - v0.531beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.531beta)** 🧪
+🧪 **[Latest Beta Release - v0.532beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)** 🧪
 
 [Features](#-key-features) •
 [Installation](#-installation) •
@@ -28,11 +28,11 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 
 ### 🤖 **Multi-Agent AI System**
 
-- **Collaborative Intelligence** - Multiple AI agents working together for complex genomic analysis
-- **MCP Integration** - Model Context Protocol for seamless tool integration
+- **Collaborative Intelligence** - A network of 7 specialized AI agents (including Coordinator, Analysis, Data, and Navigation agents) working together for complex genomic analysis. See the [System Architecture](docs/architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md) for details.
+- **MCP Integration** - Model Context Protocol for seamless tool integration via the ExternalAgent
 - **Conversation Evolution v2** - Advanced conversation tracking and analysis system
 - **Multi-Provider Support** - OpenAI, Anthropic, Google Gemini, SiliconFlow, DeepSeek, Kimi, and local LLMs
-- **Intelligent Tool Selection** - Dynamic tool registry with context-aware selection
+- **Intelligent Tool Selection** - Dynamic routing of tool registry executions based on context relevance and agent capability
 - **Benchmark Testing** - Comprehensive AI evaluation with 22+ test cases across 6 categories
 
 ### 🌐 **CodeXomics MCP Server**
@@ -122,25 +122,25 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 
 ### **Download Pre-built Releases**
 
-Download the latest version (v0.531beta) for your platform:
+Download the latest version (v0.532beta) for your platform:
 
 #### macOS
 
-- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.531beta/CodeXomics-0.531.0-beta-x64.dmg)**: `CodeXomics-0.531.0-beta-x64.dmg`
-- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.531beta/CodeXomics-0.531.0-beta-arm64.dmg)**: `CodeXomics-0.531.0-beta-arm64.dmg`
+- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-x64.dmg)**: `CodeXomics-0.532.0-beta-x64.dmg`
+- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-arm64.dmg)**: `CodeXomics-0.532.0-beta-arm64.dmg`
 
 #### Windows
 
-- **[Installer](https://github.com/Scilence2022/CodeXomics/releases/download/v0.531beta/CodeXomics%20Setup%200.531.0-beta.exe)**: `CodeXomics Setup 0.531.0-beta.exe`
-- **[Portable](https://github.com/Scilence2022/CodeXomics/releases/download/v0.531beta/CodeXomics%200.531.0-beta.exe)**: `CodeXomics 0.531.0-beta.exe`
+- **[Installer](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics%20Setup%200.532.0-beta.exe)**: `CodeXomics Setup 0.532.0-beta.exe`
+- **[Portable](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics%200.532.0-beta.exe)**: `CodeXomics 0.532.0-beta.exe`
 
 #### Linux
 
-- **[AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.531beta/CodeXomics-0.531.0-beta.AppImage)**: `CodeXomics-0.531.0-beta.AppImage`
-- **[Debian](https://github.com/Scilence2022/CodeXomics/releases/download/v0.531beta/codexomics_0.531.0-beta_amd64.deb)**: `codexomics_0.531.0-beta_amd64.deb`
-- **[Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.531beta/codexomics_0.531.0-beta_amd64.snap)**: `codexomics_0.531.0-beta_amd64.snap`
+- **[AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta.AppImage)**: `CodeXomics-0.532.0-beta.AppImage`
+- **[Debian](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/codexomics_0.532.0-beta_amd64.deb)**: `codexomics_0.532.0-beta_amd64.deb`
+- **[Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/codexomics_0.532.0-beta_amd64.snap)**: `codexomics_0.532.0-beta_amd64.snap`
 
-**📋 All Downloads**: [GitHub Releases Page](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.531beta)
+**📋 All Downloads**: [GitHub Releases Page](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)
 
 ### **Build from Source**
 
@@ -752,6 +752,7 @@ We welcome contributions from the genomics and bioinformatics community!
 ### **Development Guidelines**
 
 - Follow existing code style and patterns
+- Review the [AI Assistant Guidelines](docs/Agents.md) if using autonomous coding tools
 - Add documentation for new features
 - Include tests for new functionality
 - Update relevant markdown documentation
@@ -790,7 +791,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**CodeXomics v0.531beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
+**CodeXomics v0.532beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
 
 Made with ❤️ by the CodeXomics Team
 

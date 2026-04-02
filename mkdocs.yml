@@ -95,6 +95,7 @@ nav:
       - FAQ: user-guides/FAQ.md
       - Troubleshooting: user-guides/TROUBLESHOOTING_GUIDE.md
   - Developer Guide:
+      - AI Assistant Guidelines: Agents.md
       - Overview: developer-guides/DEVELOPER_GUIDE.md
       - Plugin Development: developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md
       - Testing Guide: developer-guides/TESTING_GUIDE.md
