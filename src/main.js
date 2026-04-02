@@ -1,14 +1,16 @@
 const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electron');
 
-// Disable sandbox for compatibility
-// Note: GPU acceleration is required for WebGL support in 3D protein structure viewer
-app.commandLine.appendSwitch('no-sandbox');
-// GPU acceleration is intentionally enabled to support WebGL for PDB viewer
-// app.commandLine.appendSwitch('disable-gpu');
-// app.commandLine.appendSwitch('disable-software-rasterizer');
-app.commandLine.appendSwitch('disable-dev-shm-usage');
+// =============================================================================
+// GPU and WebGL fixes - matching working version configuration
+// =============================================================================
+app.commandLine.appendSwitch('ignore-gpu-blacklist');
+app.commandLine.appendSwitch('enable-webgl');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('use-angle', 'gl');
+
 const path = require('path');
 const fs = require('fs');
+
 const UnifiedMCPServer = require('./mcp-server');
 const codeXomicsRPC = require('./codexomics-rpc');
 const VERSION_INFO = require('./version');
@@ -1714,10 +1716,7 @@ function createWindow() {
       contextIsolation: false,
       enableRemoteModule: true,
       webSecurity: false,
-      allowRunningInsecureContent: true,
       cache: false,
-      partition: `persist:codexomics-${windowId}`,
-      serviceWorkers: false,
     },
     icon: path.join(__dirname, '../assets/icon.png'),
     show: false,
@@ -4311,6 +4310,8 @@ function createMCPServerMonitorWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js'),
+      // Explicitly disable sandbox to prevent /tmp access issues on Linux
+      sandbox: false,
     },
     icon: path.join(__dirname, '../assets/icon.png'),
   });
@@ -4742,6 +4743,8 @@ ipcMain.handle('openDebugTool', async (event, fileName) => {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: `Debug Tool - ${fileName}`,
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -4798,6 +4801,8 @@ function createCircosWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'Circos Genome Plotter - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -5278,6 +5283,8 @@ function createUniProtWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'Search UniProt Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5317,6 +5324,8 @@ function createInterProWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'InterPro Domain Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5356,6 +5365,8 @@ function createNCBIWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'Search NCBI Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5397,6 +5408,8 @@ function createSTRINGWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'STRING Protein Networks - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5436,6 +5449,8 @@ function createDAVIDWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'DAVID Functional Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5475,6 +5490,8 @@ function createReactomeWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'Reactome Pathway Browser - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5514,6 +5531,8 @@ function createPDBWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'PDB Structure Viewer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5553,6 +5572,8 @@ function createEvo2Window() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'NVIDIA Evo2 DNA Designer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5592,6 +5613,8 @@ function createGeneAnnotationRefineWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'Gene Annotation Refine - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5631,6 +5654,8 @@ function createBlastDownloaderWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'BLAST+ Tools Downloader - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5681,6 +5706,8 @@ function createBlastConfigWindow() {
         webSecurity: false,
 
         allowRunningInsecureContent: true,
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'Configure BLAST Tools - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -6082,6 +6109,8 @@ async function createProGenFixerWindow() {
         // Enable clipboard and keyboard functionality
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'ProGenFixer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -6267,6 +6296,8 @@ async function createDeepGeneResearchWindow(params = {}) {
         // Enable clipboard and keyboard functionality
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'Deep Gene Research - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -6501,6 +6532,8 @@ async function createChopchopWindow() {
         // Enable clipboard and keyboard functionality
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
+        // Explicitly disable sandbox to prevent /tmp access issues on Linux
+        sandbox: false,
       },
       title: 'CHOPCHOP CRISPR Toolbox - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
