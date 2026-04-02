@@ -9,10 +9,6 @@
          <lastmod>2026-04-02</lastmod>
     </url>
     <url>
-         <loc>https://scilence2022.github.io/CodeXomics/DOCUMENTATION_INDEX/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/AGENTS_AND_SMART_EXECUTION_SYSTEM_DOCUMENTATION/</loc>
          <lastmod>2026-04-02</lastmod>
     </url>
@@ -73,10 +69,6 @@
          <lastmod>2026-04-02</lastmod>
     </url>
     <url>
-         <loc>https://scilence2022.github.io/CodeXomics/developer-guides/TESTING_GUIDE/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/build-instructions/</loc>
          <lastmod>2026-04-02</lastmod>
     </url>
@@ -94,14 +86,6 @@
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/llm-context/guides/MCP_CHERRY_STUDIO_QUICKSTART/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
-         <loc>https://scilence2022.github.io/CodeXomics/proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
-         <loc>https://scilence2022.github.io/CodeXomics/proposals/INTERPRO_WORKFLOW_AND_ASYNC_TASK_MANAGEMENT/</loc>
          <lastmod>2026-04-02</lastmod>
     </url>
     <url>
@@ -137,27 +121,11 @@
          <lastmod>2026-04-02</lastmod>
     </url>
     <url>
-         <loc>https://scilence2022.github.io/CodeXomics/release-notes/RELEASE_NOTES_v0.522beta/</loc>
+         <loc>https://scilence2022.github.io/CodeXomics/release-notes/RELEASE_NOTES_v0.532beta/</loc>
          <lastmod>2026-04-02</lastmod>
     </url>
     <url>
-         <loc>https://scilence2022.github.io/CodeXomics/troubleshooting/DATABASE_PLUGINS_TEST_UI_TROUBLESHOOTING/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
-         <loc>https://scilence2022.github.io/CodeXomics/troubleshooting/DATABASE_PLUGIN_DEMO_FIX/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
-         <loc>https://scilence2022.github.io/CodeXomics/troubleshooting/DUPLICATE_INSTALLED_BADGE_FIX/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
-         <loc>https://scilence2022.github.io/CodeXomics/troubleshooting/MARKETPLACE_DETAILS_BUTTON_FIX/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
-         <loc>https://scilence2022.github.io/CodeXomics/troubleshooting/PLUGIN_DEMO_PATH_RESOLUTION_FIX/</loc>
+         <loc>https://scilence2022.github.io/CodeXomics/user-guides/AGENTS_COLLABORATION_GUIDE/</loc>
          <lastmod>2026-04-02</lastmod>
     </url>
     <url>
@@ -170,6 +138,14 @@
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/GETTING_STARTED/</loc>
+         <lastmod>2026-04-02</lastmod>
+    </url>
+    <url>
+         <loc>https://scilence2022.github.io/CodeXomics/user-guides/MCP_SERVER_GUIDE/</loc>
+         <lastmod>2026-04-02</lastmod>
+    </url>
+    <url>
+         <loc>https://scilence2022.github.io/CodeXomics/user-guides/PLUGIN_MARKETPLACE_GUIDE/</loc>
          <lastmod>2026-04-02</lastmod>
     </url>
     <url>
