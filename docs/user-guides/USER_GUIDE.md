@@ -34,7 +34,7 @@ CodeXomics is an AI-powered bioinformatics analysis platform that combines tradi
 
 ### Pre-built Binaries
 
-Download the latest version (v0.529beta) from the [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.529beta) page.
+Download the latest version (v0.532beta) from the [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta) page.
 
 #### macOS
 
@@ -814,6 +814,6 @@ A: AI provides helpful insights but should be validated. Use benchmark tests to 
 
 ---
 
-**CodeXomics v0.529beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
+**CodeXomics v0.532beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
 
 Made with ❤️ by the CodeXomics Team

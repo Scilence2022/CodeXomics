@@ -261,11 +261,11 @@ Report the issue with these details:
 
 ## Additional Resources
 
-- [Full Implementation Documentation](file:///Users/song/Github-Repos/GenomeAIStudio_1/docs/implementation-summaries/plugin/DATABASE_PLUGINS_INTERACTIVE_TEST_IMPLEMENTATION.md)
-- [Plugin System Overview](file:///Users/song/Github-Repos/GenomeAIStudio_1/docs/implementation-summaries/misc/MODERN_PLUGIN_SYSTEM_IMPLEMENTATION.md)
-- [STRING Plugin README](file:///Users/song/Github-Repos/GenomeAIStudio_1/packages/marketplace-server/marketplace-data/plugins/string-network-explorer/1.0.0/README.md)
-- [KEGG Plugin README](file:///Users/song/Github-Repos/GenomeAIStudio_1/packages/marketplace-server/marketplace-data/plugins/kegg-pathway-viewer/1.0.0/README.md)
-- [EcoCyc Plugin README](file:///Users/song/Github-Repos/GenomeAIStudio_1/packages/marketplace-server/marketplace-data/plugins/ecocyc-pathway-analyzer/1.0.0/README.md)
+- [Full Implementation Documentation](file:///Users/song/Github-Repos/CodeXomics/docs/implementation-summaries/plugin/DATABASE_PLUGINS_INTERACTIVE_TEST_IMPLEMENTATION.md)
+- [Plugin System Overview](file:///Users/song/Github-Repos/CodeXomics/docs/implementation-summaries/misc/MODERN_PLUGIN_SYSTEM_IMPLEMENTATION.md)
+- [STRING Plugin README](file:///Users/song/Github-Repos/CodeXomics/packages/marketplace-server/marketplace-data/plugins/string-network-explorer/1.0.0/README.md)
+- [KEGG Plugin README](file:///Users/song/Github-Repos/CodeXomics/packages/marketplace-server/marketplace-data/plugins/kegg-pathway-viewer/1.0.0/README.md)
+- [EcoCyc Plugin README](file:///Users/song/Github-Repos/CodeXomics/packages/marketplace-server/marketplace-data/plugins/ecocyc-pathway-analyzer/1.0.0/README.md)
 
 ---
 

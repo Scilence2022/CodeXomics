@@ -148,11 +148,11 @@ The application uses a centralized configuration system with the following struc
 
 ```javascript
 // Default configuration locations
-~/.genome-ai-studio/config.json          // Main configuration
-~/.genome-ai-studio/llm-config.json      // AI/LLM settings
-~/.genome-ai-studio/ui-preferences.json  // UI preferences
-~/.genome-ai-studio/chat-history.json    // Chat history
-~/.genome-ai-studio/app-settings.json    // Application settings
+~/.codexomics/config.json          // Main configuration
+~/.codexomics/llm-config.json      // AI/LLM settings
+~/.codexomics/ui-preferences.json  // UI preferences
+~/.codexomics/chat-history.json    // Chat history
+~/.codexomics/app-settings.json    // Application settings
 ```
 
 ### **Build Configuration**
@@ -209,7 +209,7 @@ export NODE_ENV=production
 ### **File Structure**
 
 ```
-GenomeAIStudio/
+CodeXomics/
 ├── src/
 │   ├── main/                    # Main process files
 │   │   ├── main.js             # Main Electron process
@@ -291,11 +291,11 @@ After successful build, find distribution files in:
 ```
 dist/
 ├── mac/
-│   └── Genome-AI-Studio-1.0.0.dmg
+│   └── codexomics-1.0.0.dmg
 ├── win-unpacked/
-│   └── Genome-AI-Studio-Setup-1.0.0.exe
+│   └── codexomics-Setup-1.0.0.exe
 └── linux-unpacked/
-    └── Genome-AI-Studio-1.0.0.AppImage
+    └── codexomics-1.0.0.AppImage
 ```
 
 ### **Code Signing (Production)**
@@ -392,7 +392,7 @@ sudo apt-get install build-essential libnss3-dev libgconf-2-4
 **Configuration Problems:**
 
 - Check configuration file permissions
-- Verify configuration directory exists: `~/.genome-ai-studio/`
+- Verify configuration directory exists: `~/.codexomics/`
 - Reset configuration: Delete config directory and restart
 
 **AI Integration Issues:**

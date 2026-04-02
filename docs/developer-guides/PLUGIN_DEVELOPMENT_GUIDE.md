@@ -1,6 +1,6 @@
 # Plugin Development Guide
 
-Welcome to the **CodeXomics Plugin Development Guide**! This comprehensive guide will help you create powerful plugins for the CodeXomics v0.3 beta platform.
+Welcome to the **CodeXomics Plugin Development Guide**! This comprehensive guide will help you create powerful plugins for the CodeXomics v0.532beta platform.
 
 ## 📋 Table of Contents
 
@@ -104,7 +104,7 @@ The `manifest.json` file defines your plugin:
   "homepage": "https://github.com/yourname/my-awesome-plugin",
   "keywords": ["genomics", "analysis", "visualization"],
   "engines": {
-    "genomeAiStudio": ">=0.3.0"
+    "codexomics": ">=0.532.0"
   },
   "main": "plugin.js",
   "category": "analysis",
@@ -306,7 +306,7 @@ if (typeof window !== 'undefined') {
 1. **Clone the plugin template**:
 
 ```bash
-git clone https://github.com/genome-ai-studio/plugin-template.git my-plugin
+git clone https://github.com/codexomics/plugin-template.git my-plugin
 cd my-plugin
 npm install
 ```
@@ -315,7 +315,7 @@ npm install
 
 ```bash
 # Link to local CodeXomics for testing
-npm link ../GenomeAIStudio
+npm link ../CodeXomics
 
 # Start development server
 npm run dev
@@ -352,7 +352,7 @@ module.exports = {
     libraryTarget: 'umd',
   },
   externals: {
-    'genome-ai-studio': 'GenomeAIStudio',
+    'codexomics': 'CodeXomics',
   },
   module: {
     rules: [
@@ -608,7 +608,7 @@ describe('MyAwesomePlugin', () => {
 
 ```javascript
 // test/integration/plugin-integration.test.js
-const PluginTestFramework = require('genome-ai-studio/test-framework');
+const PluginTestFramework = require('codexomics/test-framework');
 
 describe('Plugin Integration Tests', () => {
   let testFramework;
@@ -688,7 +688,7 @@ class MyAwesomePlugin {
 
 ```bash
 # Install marketplace CLI
-npm install -g genome-ai-studio-cli
+npm install -g codexomics-cli
 
 # Login to marketplace
 gai-cli login
@@ -878,22 +878,22 @@ class GenomeCircosPlugin {
 
 ### Documentation Links
 
-- [Plugin API Reference](API_DOCUMENTATION.md)
-- [Testing Framework Guide](../implementation-summaries/PLUGIN_TEST_FRAMEWORK_IMPLEMENTATION.md)
-- [Security Guidelines](SECURITY_GUIDELINES.md)
-- [UI Design Guide](UI_DESIGN_GUIDE.md)
+- Plugin API Reference
+- Testing Framework Guide
+- Security Guidelines
+- UI Design Guide
 
 ### Example Repositories
 
-- [Plugin Template](https://github.com/genome-ai-studio/plugin-template)
-- [Example Plugins](https://github.com/genome-ai-studio/example-plugins)
-- [Community Plugins](https://github.com/genome-ai-studio/community-plugins)
+- [Plugin Template](https://github.com/codexomics/plugin-template)
+- [Example Plugins](https://github.com/codexomics/example-plugins)
+- [Community Plugins](https://github.com/codexomics/community-plugins)
 
 ### Community Resources
 
-- [Plugin Developer Forum](https://forum.genome-ai-studio.com/plugins)
-- [Discord Channel](https://discord.gg/genome-ai-studio)
-- [Monthly Developer Meetups](https://meetup.com/genome-ai-studio-devs)
+- [Plugin Developer Forum](https://forum.codexomics.com/plugins)
+- [Discord Channel](https://discord.gg/codexomics)
+- [Monthly Developer Meetups](https://meetup.com/codexomics-devs)
 
 ## 📞 Support
 
@@ -902,7 +902,7 @@ class GenomeCircosPlugin {
 - **Documentation**: Check this guide and API docs
 - **GitHub Issues**: Report bugs and ask questions
 - **Community Forum**: Connect with other developers
-- **Email Support**: developer-support@genome-ai-studio.com
+- **Email Support**: developer-support@codexomics.com
 
 ### Contributing to Plugin Ecosystem
 
@@ -915,4 +915,4 @@ class GenomeCircosPlugin {
 
 **Happy plugin development!** 🚀
 
-_This guide covers CodeXomics v0.3.0-beta plugin development. For the latest updates and API changes, check the project repository._
+_This guide covers CodeXomics v0.532.0-beta plugin development. For the latest updates and API changes, check the project repository._

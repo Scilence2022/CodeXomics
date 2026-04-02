@@ -28,9 +28,9 @@
 
 | 操作系统    | 默认数据库路径                                          |
 | ----------- | ------------------------------------------------------- |
-| **Windows** | `%LOCALAPPDATA%\GenomeAIStudio\blast\db`                |
-| **macOS**   | `~/Library/Application Support/GenomeAIStudio/blast/db` |
-| **Linux**   | `~/.local/share/GenomeAIStudio/blast/db`                |
+| **Windows** | `%LOCALAPPDATA%\CodeXomics\blast\db`                |
+| **macOS**   | `~/Library/Application Support/CodeXomics/blast/db` |
+| **Linux**   | `~/.local/share/CodeXomics/blast/db`                |
 
 #### 3. 当前文件目录优先
 

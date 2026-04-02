@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you resolve common issues encountered while using **CodeXomics v0.3 beta**.
+This guide helps you resolve common issues encountered while using **CodeXomics v0.532beta**.
 
 ## 🚨 Common Installation Issues
 
@@ -19,13 +19,13 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 
    ```bash
    # macOS
-   rm -rf ~/Library/Application\ Support/genome-ai-studio
+   rm -rf ~/Library/Application\ Support/codexomics
 
    # Windows
-   del /s "%APPDATA%\genome-ai-studio"
+   del /s "%APPDATA%\codexomics"
 
    # Linux
-   rm -rf ~/.config/genome-ai-studio
+   rm -rf ~/.config/codexomics
    ```
 
 3. **Reinstall the application**:
@@ -98,7 +98,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 1. **Check plugin compatibility** with current version
 2. **Clear plugin cache**:
    ```bash
-   rm -rf ~/.genome-ai-studio/plugins
+   rm -rf ~/.codexomics/plugins
    ```
 3. **Verify plugin marketplace server** is accessible
 4. **Check plugin dependencies** are installed
@@ -213,7 +213,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 2. **Check for menu conflicts** between windows
 3. **Reset UI preferences**:
    ```bash
-   rm ~/.genome-ai-studio/ui-preferences.json
+   rm ~/.codexomics/ui-preferences.json
    ```
 
 ### Project Manager Issues
@@ -232,7 +232,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 
 3. **Clear project cache**:
    ```bash
-   rm ~/.genome-ai-studio/projects.json
+   rm ~/.codexomics/projects.json
    ```
 
 ## 🔬 Analysis Tool Issues
@@ -302,9 +302,9 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 
 **Log Locations**:
 
-- **macOS**: `~/Library/Logs/genome-ai-studio/`
-- **Windows**: `%APPDATA%\genome-ai-studio\logs\`
-- **Linux**: `~/.config/genome-ai-studio/logs/`
+- **macOS**: `~/Library/Logs/codexomics/`
+- **Windows**: `%APPDATA%\codexomics\logs\`
+- **Linux**: `~/.config/codexomics/logs/`
 
 **Key Log Files**:
 
@@ -400,7 +400,7 @@ wmic OS get TotalVisibleMemorySize,FreePhysicalMemory /format:list
 npm run test:plugins
 
 # Check plugin marketplace connectivity
-curl -I https://genome-ai-studio-marketplace.com/api/health
+curl -I https://codexomics-marketplace.com/api/health
 ```
 
 ## 📋 Quick Reference
@@ -424,4 +424,4 @@ curl -I https://genome-ai-studio-marketplace.com/api/health
 
 **Still having issues?** Contact our support team with detailed information about your problem, including system specifications and error messages.
 
-_This guide covers CodeXomics v0.3.0-beta. Check for updates to both the application and this documentation._
+_This guide covers CodeXomics v0.532.0-beta. Check for updates to both the application and this documentation._

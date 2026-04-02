@@ -110,7 +110,7 @@ curl http://localhost:3001/api/v1/stats
 ## Directory Structure
 
 ```
-GenomeAIStudio_1/
+CodeXomics/
 ├── packages/
 │   └── marketplace-server/      # Plugin Marketplace Server
 │       ├── plugin-marketplace-server.js

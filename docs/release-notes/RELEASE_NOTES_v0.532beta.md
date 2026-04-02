@@ -1,9 +1,9 @@
-# CodeXomics v0.522beta - First Beta Release
+# CodeXomics v0.532beta - First Beta Release
 
 ## 🧪 First Beta Release - AI-Enhanced Bioinformatics Platform
 
 **Release Date:** October 12, 2025  
-**Version:** 0.522.0-beta  
+**Version:** 0.532.0-beta  
 **Milestone:** First Beta Release
 
 **🔬 Introducing CodeXomics Beta**
@@ -108,7 +108,7 @@ _CodeXomics is built with modern engineering practices to ensure reliability and
 ### **Version Management**
 
 - Centralized version control with synchronization
-- Clear beta designation: **v0.522beta**
+- Clear beta designation: **v0.532beta**
 - Consistent versioning across components
 - Structured release management
 
@@ -131,28 +131,28 @@ _CodeXomics is built with modern engineering practices to ensure reliability and
 
 ## 📦 **Download & Installation**
 
-_Download CodeXomics v0.522beta for your platform and start testing the first beta release._
+_Download CodeXomics v0.532beta for your platform and start testing the first beta release._
 
 ### **macOS** 🍎
 
-- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-x64.dmg)** - CodeXomics-0.522.0-beta-x64.dmg (139 MB)
-- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-arm64.dmg)** - CodeXomics-0.522.0-beta-arm64.dmg (134 MB)
-- **[Universal Zip](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-mac.zip)** - CodeXomics-0.522.0-beta-mac.zip (133 MB)
-- **[ARM64 Zip](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-arm64-mac.zip)** - CodeXomics-0.522.0-beta-arm64-mac.zip (129 MB)
+- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-x64.dmg)** - CodeXomics-0.532.0-beta-x64.dmg (139 MB)
+- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-arm64.dmg)** - CodeXomics-0.532.0-beta-arm64.dmg (134 MB)
+- **[Universal Zip](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-mac.zip)** - CodeXomics-0.532.0-beta-mac.zip (133 MB)
+- **[ARM64 Zip](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-arm64-mac.zip)** - CodeXomics-0.532.0-beta-arm64-mac.zip (129 MB)
 - **Installation**: Open DMG and drag to Applications folder, or extract ZIP
 
 ### **Windows** 🪟
 
-- **[Installer (Recommended)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics.Setup.0.522.0-beta.exe)** - CodeXomics.Setup.0.522.0-beta.exe (209 MB)
-- **[Portable Version](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics.0.522.0-beta.exe)** - CodeXomics.0.522.0-beta.exe (208 MB)
+- **[Installer (Recommended)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics.Setup.0.532.0-beta.exe)** - CodeXomics.Setup.0.532.0-beta.exe (209 MB)
+- **[Portable Version](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics.0.532.0-beta.exe)** - CodeXomics.0.532.0-beta.exe (208 MB)
 - **Installation**: Run installer or extract portable version
 
 ### **Linux** 🐧
 
-- **[AppImage (Universal)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta.AppImage)** - CodeXomics-0.522.0-beta.AppImage (145 MB)
-- **[Debian/Ubuntu](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/codexomics_0.522.0-beta_amd64.deb)** - codexomics_0.522.0-beta_amd64.deb (94 MB)
-- **[Snap Package](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/codexomics_0.522.0-beta_amd64.snap)** - codexomics_0.522.0-beta_amd64.snap (124 MB)
-- **Installation**: `chmod +x *.AppImage && ./CodeXomics-0.522.0-beta.AppImage` or `sudo dpkg -i *.deb`
+- **[AppImage (Universal)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta.AppImage)** - CodeXomics-0.532.0-beta.AppImage (145 MB)
+- **[Debian/Ubuntu](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/codexomics_0.532.0-beta_amd64.deb)** - codexomics_0.532.0-beta_amd64.deb (94 MB)
+- **[Snap Package](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/codexomics_0.532.0-beta_amd64.snap)** - codexomics_0.532.0-beta_amd64.snap (124 MB)
+- **Installation**: `chmod +x *.AppImage && ./CodeXomics-0.532.0-beta.AppImage` or `sudo dpkg -i *.deb`
 
 ### **📋 Installation Instructions**
 
@@ -172,8 +172,8 @@ _Download CodeXomics v0.522beta for your platform and start testing the first be
 **Linux:**
 
 1. **AppImage**: Download, make executable (`chmod +x`), and run
-2. **Debian/Ubuntu**: Install with `sudo dpkg -i codexomics_0.522.0-beta_amd64.deb`
-3. **Snap**: Install with `sudo snap install codexomics_0.522.0-beta_amd64.snap --dangerous`
+2. **Debian/Ubuntu**: Install with `sudo dpkg -i codexomics_0.532.0-beta_amd64.deb`
+3. **Snap**: Install with `sudo snap install codexomics_0.532.0-beta_amd64.snap --dangerous`
 
 **Total Download Sizes:** 94-209 MB depending on platform  
 **Installation Time:** Usually < 2 minutes
@@ -213,11 +213,11 @@ _This first beta release is designed for testing, feedback, and community valida
 
 - **🏠 Main Repository:** https://github.com/Scilence2022/CodeXomics
 - **📚 Documentation Hub:** [Complete guides and references](docs/)
-- **👥 User Guide:** [742-line comprehensive manual](docs/user-guides/USER_GUIDE.md)
-- **💻 Developer Guide:** [831-line development guide](docs/developer-guides/DEVELOPER_GUIDE.md)
+- **👥 User Guide:** [742-line comprehensive manual](../user-guides/USER_GUIDE.md)
+- **💻 Developer Guide:** [831-line development guide](../developer-guides/DEVELOPER_GUIDE.md)
 - **🐛 Issue Tracker:** https://github.com/Scilence2022/CodeXomics/issues
 - **💬 Discussions:** https://github.com/Scilence2022/CodeXomics/discussions
-- **📋 Project Rules:** [Development guidelines](PROJECT_RULES.md)
+- **📋 Project Rules:** [Development guidelines](https://github.com/Scilence2022/CodeXomics/blob/main/PROJECT_RULES.md)
 
 ---
 
@@ -324,16 +324,16 @@ Development priorities will be adjusted based on:
 
 ## 🔬 **Thank You for Beta Testing!**
 
-**CodeXomics v0.522beta** aims to enhance bioinformatics research by combining artificial intelligence with traditional genomic analysis tools.
+**CodeXomics v0.532beta** aims to enhance bioinformatics research by combining artificial intelligence with traditional genomic analysis tools.
 
 _We appreciate your help in testing and improving this platform._ 🧬✨🤖
 
 ### **🚀 Quick Download**
 
-- **[macOS (Intel)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-x64.dmg)** | **[macOS (Apple Silicon)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-arm64.dmg)**
-- **[Windows (Installer)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics%20Setup%200.522.0-beta.exe)** | **[Windows (Portable)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics%200.522.0-beta.exe)**
-- **[Linux (AppImage)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta.AppImage)** | **[Linux (Debian)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/codexomics_0.522.0-beta_amd64.deb)**
+- **[macOS (Intel)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-x64.dmg)** | **[macOS (Apple Silicon)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-arm64.dmg)**
+- **[Windows (Installer)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics%20Setup%200.532.0-beta.exe)** | **[Windows (Portable)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics%200.532.0-beta.exe)**
+- **[Linux (AppImage)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta.AppImage)** | **[Linux (Debian)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/codexomics_0.532.0-beta_amd64.deb)**
 
-**[Get Started](docs/user-guides/USER_GUIDE.md)** | **[Report Issues](https://github.com/Scilence2022/CodeXomics/issues)** | **[All Downloads](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)**
+**[Get Started](../user-guides/USER_GUIDE.md)** | **[Report Issues](https://github.com/Scilence2022/CodeXomics/issues)** | **[All Downloads](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)**
 
 </div>

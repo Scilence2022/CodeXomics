@@ -17,7 +17,7 @@ Successfully reorganized the CodeXomics Plugin Marketplace Server into an npm wo
 The repository now uses npm workspaces with the following architecture:
 
 ```
-GenomeAIStudio_1/
+CodeXomics/
 ├── packages/
 │   └── marketplace-server/              # Independent marketplace server package
 │       ├── plugin-marketplace-server.js # Server implementation

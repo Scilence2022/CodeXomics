@@ -711,11 +711,11 @@ try {
 ## Related Documentation
 
 - [Full Actions System Documentation](./ACTIONS_SYSTEM_DOCUMENTATION.md)
-- [Improvement Proposal](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md)
-- [CheckpointManager Guide](./CHECKPOINT_MANAGER_GUIDE.md) _(if exists)_
-- [MCP Integration Guide](./MCP_INTEGRATION_GUIDE.md) _(if exists)_
+- Improvement Proposal
+- CheckpointManager Guide _(if exists)_
+- [MCP Integration Guide](../user-guides/MCP_SERVER_GUIDE.md) _(if exists)_
 
 ---
 
 **Last Updated**: 2025-11-03  
-**Maintainer**: GenomeAIStudio Team
+**Maintainer**: CodeXomics Team

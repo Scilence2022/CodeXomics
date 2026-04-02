@@ -15,7 +15,7 @@ You are an AI assistant with access to **CodeXomics**, a powerful bioinformatics
 1. **Start CodeXomics MCP Server**
 
    ```bash
-   cd /path/to/GenomeAIStudio_1
+   cd /path/to/CodeXomics
    npm run mcp-server
    ```
 
@@ -64,7 +64,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "CodeXomics": {
       "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/GenomeAIStudio_1/scripts/start-mcp-server.js"],
+      "args": ["/ABSOLUTE/PATH/TO/CodeXomics/scripts/start-mcp-server.js"],
       "env": {}
     }
   }

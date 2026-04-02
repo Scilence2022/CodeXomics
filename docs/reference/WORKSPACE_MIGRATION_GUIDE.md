@@ -11,7 +11,7 @@ This guide documents the migration of CodeXomics to an npm workspace structure, 
 **Before:**
 
 ```
-GenomeAIStudio_1/
+CodeXomics/
 ├── plugin-marketplace-server.js
 ├── marketplace-server-package.json
 ├── marketplace-data/
@@ -22,7 +22,7 @@ GenomeAIStudio_1/
 **After:**
 
 ```
-GenomeAIStudio_1/
+CodeXomics/
 ├── packages/
 │   └── marketplace-server/
 │       ├── plugin-marketplace-server.js
@@ -139,7 +139,7 @@ Follow the standard setup:
 
 ```bash
 git clone <repository>
-cd GenomeAIStudio_1
+cd CodeXomics
 npm install
 npm run marketplace:start  # Start marketplace
 npm start                  # Start app (in another terminal)

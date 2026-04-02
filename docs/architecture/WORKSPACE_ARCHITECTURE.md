@@ -7,7 +7,7 @@ CodeXomics uses an npm workspace structure to organize the codebase into indepen
 ## Workspace Structure
 
 ```
-GenomeAIStudio_1/
+CodeXomics/
 ├── packages/
 │   ├── marketplace-server/          # Plugin Marketplace API Server
 │   │   ├── plugin-marketplace-server.js
@@ -170,7 +170,7 @@ The workspace structure was introduced to better organize the growing codebase. 
 **Before:**
 
 ```
-GenomeAIStudio_1/
+CodeXomics/
 ├── plugin-marketplace-server.js
 ├── marketplace-server-package.json
 ├── marketplace-data/
@@ -180,7 +180,7 @@ GenomeAIStudio_1/
 **After:**
 
 ```
-GenomeAIStudio_1/
+CodeXomics/
 ├── packages/
 │   └── marketplace-server/
 │       ├── plugin-marketplace-server.js

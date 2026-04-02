@@ -6,7 +6,7 @@ We developed a comprehensive benchmark framework to systematically evaluate the 
 
 ## Benchmark Architecture
 
-The benchmark system was implemented as a modular framework integrated into the GenomeAIStudio platform, consisting of three primary components: the test execution engine, the evaluation module, and the reporting system. The test execution engine manages the interaction between test instructions and the LLM, capturing detailed execution data across multiple function calling rounds. The evaluation module implements a priority-based scoring system that assesses tool selection accuracy, parameter correctness, and task completion rates. The reporting system aggregates results and generates comprehensive performance metrics with statistical analysis.
+The benchmark system was implemented as a modular framework integrated into the CodeXomics platform, consisting of three primary components: the test execution engine, the evaluation module, and the reporting system. The test execution engine manages the interaction between test instructions and the LLM, capturing detailed execution data across multiple function calling rounds. The evaluation module implements a priority-based scoring system that assesses tool selection accuracy, parameter correctness, and task completion rates. The reporting system aggregates results and generates comprehensive performance metrics with statistical analysis.
 
 ## Test Suite Design
 

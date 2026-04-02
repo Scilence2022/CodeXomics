@@ -596,4 +596,4 @@ These diagrams illustrate:
 ---
 
 **Last Updated**: 2025-11-03  
-**Maintained By**: GenomeAIStudio Team
+**Maintained By**: CodeXomics Team

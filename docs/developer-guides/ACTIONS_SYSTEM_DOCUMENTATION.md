@@ -16,7 +16,7 @@
 
 ## System Overview
 
-The Actions System is a comprehensive sequence editing framework in GenomeAIStudio that provides **queue-based execution** of genomic sequence operations with features for:
+The Actions System is a comprehensive sequence editing framework in CodeXomics that provides **queue-based execution** of genomic sequence operations with features for:
 
 - **Non-destructive editing**: Actions are queued before execution
 - **Batch operations**: Multiple actions can be executed together

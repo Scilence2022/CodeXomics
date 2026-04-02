@@ -6,9 +6,9 @@
 
 CodeXomics is an advanced, AI-powered genome analysis platform that provides comprehensive tools for genomic visualization, analysis, and interpretation. It features an integrated plugin system, natural language AI assistant, and support for multiple genomic data formats.
 
-### What's new in v0.3 beta?
+### What's new in v0.532beta?
 
-Version 0.3 beta introduces several major enhancements:
+Version 0.532beta introduces several major enhancements:
 
 - **Complete Plugin System** with marketplace
 - **KGML Pathway Viewer** for pathway visualization
@@ -179,7 +179,7 @@ Plugins undergo validation including:
 
 ### Can I develop my own plugins?
 
-Yes! See the **[Plugin Development Guide](PLUGIN_DEVELOPMENT_GUIDE.md)** for:
+Yes! See the **[Plugin Development Guide](../developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md)** for:
 
 - Development environment setup
 - Plugin API documentation
@@ -418,9 +418,9 @@ Absolutely:
 
 **Still have questions?**
 
-- Check the **[User Manual](USER_MANUAL.md)** for detailed instructions
+- Check the **[User Manual](USER_GUIDE.md)** for detailed instructions
 - Visit our **[Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)** for technical issues
-- Browse the **[Documentation](../README.md)** for comprehensive information
+- Browse the **[Documentation](https://github.com/Scilence2022/CodeXomics#readme)** for comprehensive information
 - Contact **support** for personalized assistance
 
-_This FAQ covers CodeXomics v0.3.0-beta. For the latest information, check the project repository._
+_This FAQ covers CodeXomics v0.532.0-beta. For the latest information, check the project repository._

@@ -1,6 +1,6 @@
 # Actions System Documentation Index
 
-**Complete documentation suite for the GenomeAIStudio Actions System**
+**Complete documentation suite for the CodeXomics Actions System**
 
 ---
 
@@ -18,7 +18,7 @@ This comprehensive documentation suite covers all aspects of the Actions System,
 
 ### 1. Analysis Summary ⭐ START HERE
 
-**File**: [ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md](../ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md)  
+**File**: ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md  
 **Lines**: 484  
 **Purpose**: Executive summary and quick overview
 
@@ -135,7 +135,7 @@ This comprehensive documentation suite covers all aspects of the Actions System,
 
 ### 5. Improvement Proposal 🎯 FOR PLANNING
 
-**File**: [ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md)  
+**File**: ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md  
 **Lines**: 1,363  
 **Purpose**: Detailed improvement plan with implementation strategy
 
@@ -168,7 +168,7 @@ This comprehensive documentation suite covers all aspects of the Actions System,
 
 ### For Quick Understanding (15 minutes)
 
-1. [Analysis Summary](../ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md) - Executive summary
+1. Analysis Summary - Executive summary
 2. [Visual Diagrams](./ACTIONS_SYSTEM_DIAGRAMS.md) - Architecture diagrams
 3. [Quick Reference](./ACTIONS_QUICK_REFERENCE.md) - Quick start section
 
@@ -180,16 +180,16 @@ This comprehensive documentation suite covers all aspects of the Actions System,
 
 ### For Deep Understanding (3-4 hours)
 
-1. [Analysis Summary](../ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md) - Overview
+1. Analysis Summary - Overview
 2. [Technical Documentation](./ACTIONS_SYSTEM_DOCUMENTATION.md) - Complete
 3. [Visual Diagrams](./ACTIONS_SYSTEM_DIAGRAMS.md) - All diagrams
-4. [Improvement Proposal](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md) - Complete
+4. Improvement Proposal - Complete
 5. Source Code Review
 
 ### For Planning Implementation (2 hours)
 
-1. [Analysis Summary](../ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md) - Findings
-2. [Improvement Proposal](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md) - Complete
+1. Analysis Summary - Findings
+2. Improvement Proposal - Complete
 3. [Technical Documentation](./ACTIONS_SYSTEM_DOCUMENTATION.md) - Issues section
 
 ---
@@ -242,14 +242,14 @@ This comprehensive documentation suite covers all aspects of the Actions System,
 → [Visual Diagrams - System Architecture](./ACTIONS_SYSTEM_DIAGRAMS.md#system-architecture)
 
 **Performance Issues**:
-→ [Analysis Summary - Performance Benchmarks](../ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md#performance-benchmarks)  
-→ [Improvement Proposal - Problem 1](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md#problem-1-performance-bottleneck)
+→ Analysis Summary - Performance Benchmarks  
+→ Improvement Proposal - Problem 1
 
 **Improvement Plan**:
-→ [Improvement Proposal - Implementation Plan](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md#implementation-plan)
+→ Improvement Proposal - Implementation Plan
 
 **Testing**:
-→ [Improvement Proposal - Testing Strategy](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md#testing-strategy)
+→ Improvement Proposal - Testing Strategy
 
 **Troubleshooting**:
 → [Quick Reference - Troubleshooting](./ACTIONS_QUICK_REFERENCE.md#troubleshooting)
@@ -289,19 +289,19 @@ Check troubleshooting section first, then review error handling patterns.
 
 ### "I want to improve the system"
 
-**→ [Improvement Proposal](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md)**
+**→ Improvement Proposal**
 
 Read complete proposal for detailed implementation plan.
 
 ### "I'm onboarding to the project"
 
-**→ [Analysis Summary](../ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md)** → **[Visual Diagrams](./ACTIONS_SYSTEM_DIAGRAMS.md)** → **[Quick Reference](./ACTIONS_QUICK_REFERENCE.md)**
+**→ Analysis Summary** → **[Visual Diagrams](./ACTIONS_SYSTEM_DIAGRAMS.md)** → **[Quick Reference](./ACTIONS_QUICK_REFERENCE.md)**
 
 Start with summary for overview, then diagrams for understanding, then quick reference for coding.
 
 ### "I need to present to stakeholders"
 
-**→ [Analysis Summary](../ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md)** + **[Visual Diagrams](./ACTIONS_SYSTEM_DIAGRAMS.md)**
+**→ Analysis Summary** + **[Visual Diagrams](./ACTIONS_SYSTEM_DIAGRAMS.md)**
 
 Use summary for metrics and findings, use diagrams for visual presentation.
 
@@ -348,7 +348,7 @@ docs/
 
 ### Beginner Level
 
-1. Start: [Analysis Summary](../ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md)
+1. Start: Analysis Summary
 2. Understand: [Visual Diagrams](./ACTIONS_SYSTEM_DIAGRAMS.md)
 3. Code: [Quick Reference - Quick Start](./ACTIONS_QUICK_REFERENCE.md#quick-start)
 
@@ -361,7 +361,7 @@ docs/
 ### Advanced Level
 
 1. Analyze: [Technical Documentation](./ACTIONS_SYSTEM_DOCUMENTATION.md) - Complete
-2. Plan: [Improvement Proposal](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md)
+2. Plan: Improvement Proposal
 3. Implement: Review source code + documentation
 
 ---
@@ -443,13 +443,13 @@ When adding new content:
 → See [Technical Documentation](./ACTIONS_SYSTEM_DOCUMENTATION.md)
 
 **Implementation Plan**:
-→ See [Improvement Proposal](../proposals/ACTIONS_SYSTEM_IMPROVEMENT_PROPOSAL.md)
+→ See Improvement Proposal
 
 **Visual Understanding**:
 → See [Visual Diagrams](./ACTIONS_SYSTEM_DIAGRAMS.md)
 
 **Quick Overview**:
-→ See [Analysis Summary](../ACTIONS_SYSTEM_ANALYSIS_SUMMARY.md)
+→ See Analysis Summary
 
 ---
 

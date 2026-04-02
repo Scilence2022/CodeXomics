@@ -726,7 +726,7 @@ docs(readme): update installation instructions
    ```json
    // package.json
    {
-     "version": "0.523.0"
+     "version": "0.533.0"
    }
    ```
 
@@ -762,8 +762,8 @@ npm run build:all
 1. **Create and push tag:**
 
    ```bash
-   git tag -a v0.523 -m "Release v0.523"
-   git push origin v0.523
+   git tag -a v0.533 -m "Release v0.533"
+   git push origin v0.533
    ```
 
 2. **Create release on GitHub:**
@@ -831,7 +831,7 @@ console.error('[ModuleName]', 'Error:', error);
 - [User Guide](../user-guides/USER_GUIDE.md)
 - [API Reference](../api-docs/)
 - [Fix Summaries](../fix-summaries/)
-- [Project Rules](../../PROJECT_RULES.md)
+- [Project Rules](https://github.com/Scilence2022/CodeXomics/blob/main/PROJECT_RULES.md)
 
 ### External Resources
 
@@ -844,7 +844,7 @@ console.error('[ModuleName]', 'Error:', error);
 
 - [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
 - [GitHub Discussions](https://github.com/Scilence2022/CodeXomics/discussions)
-- [Contributing Guidelines](../../CONTRIBUTING.md)
+- [Contributing Guidelines](https://github.com/Scilence2022/CodeXomics/blob/main/CONTRIBUTING.md)
 
 ---
 
