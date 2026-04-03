@@ -97,4 +97,4 @@ CodeXomics is a modern, cross-platform bioinformatics analysis platform featurin
 
 ---
 
-_Made with ❤️ by the CodeXomics Team_
+_Developed by the CodeXomics Team_
