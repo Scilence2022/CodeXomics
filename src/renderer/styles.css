@@ -2062,6 +2062,62 @@
   gap: 16px;
 }
 
+/* Tabs System for Gene Details */
+.gene-tabs-container {
+  display: flex;
+  flex-direction: column;
+  margin-top: -8px;
+}
+
+.gene-tabs-header {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 12px;
+  overflow-x: auto;
+  gap: 4px;
+}
+
+/* Hide scrollbar for the tab header but allow scrolling */
+.gene-tabs-header::-webkit-scrollbar {
+  display: none;
+}
+.gene-tabs-header {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.gene-tab-btn {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.gene-tab-btn:hover {
+  color: var(--primary-color);
+  background: var(--bg-secondary);
+}
+
+.gene-tab-btn.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.gene-tab-content {
+  display: none;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.gene-tab-content.active {
+  display: block;
+}
+
 .gene-basic-info {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
