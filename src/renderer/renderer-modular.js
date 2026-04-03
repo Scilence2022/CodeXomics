@@ -5211,9 +5211,48 @@ class GenomeBrowser {
     return html;
   }
 
+  /**
+   * Switch between tabs in the Gene Details sidebar
+   * @param {string} tabId - The ID of the tab to switch to
+   */
+  switchGeneDetailsTab(tabId) {
+    // Update tab buttons
+    const tabButtons = document.querySelectorAll('.gene-details-tab-btn');
+    tabButtons.forEach(btn => {
+      if (btn.getAttribute('data-tab') === tabId) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Update tab panels
+    const tabPanels = document.querySelectorAll('.gene-details-tab-panel');
+    tabPanels.forEach(panel => {
+      if (panel.id === `gene-tab-${tabId}`) {
+        panel.classList.add('active');
+      } else {
+        panel.classList.remove('active');
+      }
+    });
+
+    // Store active tab
+    this.activeGeneDetailsTab = tabId;
+  }
+
   populateGeneDetails(gene, operonInfo = null) {
     const geneDetailsContent = document.getElementById('geneDetailsContent');
     if (!geneDetailsContent) return;
+
+    // Reset to Overview tab if this is a new gene
+    const geneIdForReset = gene.qualifiers?.locus_tag || gene.qualifiers?.gene || `${gene.type}_${gene.start}_${gene.end}`;
+    if (this.lastSelectedGeneIdForTab !== geneIdForReset) {
+      this.activeGeneDetailsTab = 'Overview';
+      this.lastSelectedGeneIdForTab = geneIdForReset;
+    }
+
+    // Store selected gene for context
+    this.selectedGene = { gene: gene, operonInfo: operonInfo };
 
     // Get basic gene information
     const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || 'Unknown Gene';
@@ -5232,195 +5271,269 @@ class GenomeBrowser {
 
     // Ensure enhanced citation display is available
     if (!this.enhancedCitationDisplay && window.EnhancedCitationDisplay && window.LiteratureAPIService) {
-      console.log('Initializing enhanced citation display on demand...');
       try {
         this.enhancedCitationDisplay = new EnhancedCitationDisplay(this);
         this.enhancedCitationDisplay.init();
         window.enhancedCitationDisplay = this.enhancedCitationDisplay;
-        console.log('Enhanced citation display initialized on demand');
       } catch (error) {
         console.error('Error initializing enhanced citation display on demand:', error);
       }
     }
 
-    // Create the gene details HTML
-    let html = `
-            <div class="gene-details-info">
-                <div class="gene-basic-info">
-                    <div class="gene-name">${geneName}</div>
-                    <div class="gene-type-badge">${geneType}</div>
-                    <div class="gene-position">Position: ${position}</div>
-                    <div class="gene-strand">Strand: ${strand} | Length: ${length} bp</div>
-                </div>
-        `;
+    // Categorize qualifiers into tabs
+    const categories = {
+      Overview: [],
+      Function: [],
+      Sequence: [],
+      Literature: [],
+      Resources: []
+    };
 
-    // Add operon information if available
-    if (operonInfo) {
-      html += `
-                <div class="gene-operon-info">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <div style="width: 16px; height: 16px; background: ${operonInfo.color}; border-radius: 3px; border: 2px solid rgba(0,0,0,0.3);"></div>
-                        <span style="font-weight: 600;">Operon: ${operonInfo.operonName || operonInfo.name}</span>
-                    </div>
-                </div>
-            `;
+    // Define field mappings for tabs
+    const overviewFields = ['gene', 'locus_tag', 'product', 'note', 'protein_id', 'db_xref', 'pseudo', 'codon_start', 'transl_table', 'transl_except', 'old_locus_tag', 'synonym'];
+    const functionalFields = ['go_process', 'go_function', 'go_component', 'ec_number', 'function', 'phenotype', 'regulatory_class', 'operon', 'bound_moiety', 'interaction', 'standard_name', 'description', 'ontological_term'];
+
+    if (gene.qualifiers) {
+      Object.entries(gene.qualifiers).forEach(([key, value]) => {
+        // Handle both single values and arrays
+        let valuesToDisplay = Array.isArray(value) ? value : [value];
+        valuesToDisplay = valuesToDisplay.filter(v => v != null && String(v).trim() !== '' && String(v) !== 'Unknown');
+
+        if (valuesToDisplay.length === 0) return;
+
+        const entry = { key, values: valuesToDisplay };
+        const lowerKey = key.toLowerCase();
+
+        // Specific mapping logic
+        if (functionalFields.some(f => lowerKey.includes(f))) {
+          categories.Function.push(entry);
+        } else if (overviewFields.includes(lowerKey)) {
+          categories.Overview.push(entry);
+        } else if (lowerKey === 'translation') {
+          categories.Sequence.push(entry);
+        } else {
+          // Default to Overview for any other attributes
+          categories.Overview.push(entry);
+        }
+      });
     }
 
-    // Add sequences section if we have sequence data
+    // Build the Top Header
+    let html = `
+      <div class="gene-details-info">
+        <div class="gene-basic-info" style="margin-bottom: 8px; border: none; background: transparent; padding: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="gene-name" style="font-size: 20px; color: var(--primary-color);">${geneName}</div>
+            <div class="gene-type-badge" style="margin-bottom: 0; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">${geneType}</div>
+          </div>
+          <div class="gene-position" style="font-size: 12px; margin-top: 4px; color: var(--text-secondary);">
+            <i class="fas fa-map-marker-alt"></i> ${currentChr}: ${position} (${strand})
+          </div>
+          <div class="gene-strand" style="font-size: 11px; margin-top: 2px; color: var(--text-muted);">
+            Length: ${length} bp
+          </div>
+        </div>
+    `;
+
+    // Add operon information if available (outside tabs as per user request)
+    if (operonInfo) {
+      html += `
+        <div class="gene-operon-info" style="margin-bottom: 12px; padding: 10px; background: var(--bg-secondary); border-radius: var(--radius-md); border-left: 4px solid ${operonInfo.color};">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-sitemap" style="color: ${operonInfo.color}"></i>
+            <span style="font-weight: 700; color: var(--text-primary);">Operon: ${operonInfo.operonName || operonInfo.name}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Tab Navigation
+    const currentTab = this.activeGeneDetailsTab || 'Overview';
+    html += `
+      <div class="gene-details-tabs-container">
+        <div class="gene-details-tabs">
+          <button class="gene-details-tab-btn ${currentTab === 'Overview' ? 'active' : ''}" 
+                  data-tab="Overview" 
+                  onclick="window.genomeBrowser.switchGeneDetailsTab('Overview')"
+                  title="Overview & Attributes">
+            <i class="fas fa-info-circle"></i>
+            <span>General</span>
+          </button>
+          <button class="gene-details-tab-btn ${currentTab === 'Function' ? 'active' : ''}" 
+                  data-tab="Function" 
+                  onclick="window.genomeBrowser.switchGeneDetailsTab('Function')"
+                  title="Function & Gene Ontology">
+            <i class="fas fa-brain"></i>
+            <span>Function</span>
+          </button>
+          <button class="gene-details-tab-btn ${currentTab === 'Sequence' ? 'active' : ''}" 
+                  data-tab="Sequence" 
+                  onclick="window.genomeBrowser.switchGeneDetailsTab('Sequence')"
+                  title="DNA & Protein Sequences">
+            <i class="fas fa-dna"></i>
+            <span>Sequence</span>
+          </button>
+          <button class="gene-details-tab-btn ${currentTab === 'Literature' ? 'active' : ''}" 
+                  data-tab="Literature" 
+                  onclick="window.genomeBrowser.switchGeneDetailsTab('Literature')"
+                  title="Publications & Citations">
+            <i class="fas fa-book"></i>
+            <span>Papers ${this.citationCollector.size > 0 ? `(${this.citationCollector.size})` : ''}</span>
+          </button>
+          <button class="gene-details-tab-btn ${currentTab === 'Resources' ? 'active' : ''}" 
+                  data-tab="Resources" 
+                  onclick="window.genomeBrowser.switchGeneDetailsTab('Resources')"
+                  title="Notes & Attachments">
+            <i class="fas fa-paperclip"></i>
+            <span>User</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Tab Panels Container
+    html += `<div class="gene-details-tab-panels">`;
+
+    // 1. Overview Panel
+    html += `<div id="gene-tab-Overview" class="gene-details-tab-panel ${currentTab === 'Overview' ? 'active' : ''}">`;
+    
+    // Quick Actions in Overview
+    html += `
+      <div class="gene-actions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+        <div id="deep-research-report-container" style="grid-column: span 2; display: contents;"></div>
+        <button class="btn gene-zoom-btn gene-action-btn" onclick="window.genomeBrowser.zoomToGene()" style="margin:0">
+            <i class="fas fa-search-plus"></i> Zoom
+        </button>
+        <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()" style="margin:0">
+            <i class="fas fa-edit"></i> Edit
+        </button>
+    `;
+    if (geneType === 'CDS' || geneType === 'gene') {
+      html += `
+        <button class="btn gene-search-pdb-btn gene-action-btn" onclick="window.genomeBrowser.searchPDBStructures('${geneName}')" style="margin:0" title="Search PDB">
+          <i class="fas fa-microscope"></i> PDB
+        </button>
+        <button class="btn gene-search-alphafold-btn gene-action-btn" onclick="window.genomeBrowser.searchAlphaFoldStructures('${geneName}')" style="margin:0" title="Search AlphaFold">
+          <i class="fas fa-cube"></i> AI Structure
+        </button>
+      `;
+    }
+    html += `
+        <button class="btn gene-deep-research-btn gene-action-btn" onclick="window.genomeBrowser.openDeepGeneResearch('${geneName}')" style="grid-column: span 2; margin:0; background: var(--primary-color); color: white;">
+            <i class="fas fa-rocket"></i> Deep Gene Research
+        </button>
+      </div>
+    `;
+
+    // Attributes in Overview
+    if (categories.Overview.length > 0) {
+      html += `<div class="gene-attributes">`;
+      categories.Overview.forEach(({ key, values }) => {
+        values.forEach((val, index) => {
+          const displayLabel = index === 0 ? key.replace(/_/g, ' ') : '';
+          html += `
+            <div class="gene-attribute">
+              <div class="gene-attribute-label">${displayLabel}</div>
+              <div class="gene-attribute-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(val)))}</div>
+            </div>
+          `;
+        });
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+
+    // 2. Functional Panel
+    html += `<div id="gene-tab-Function" class="gene-details-tab-panel ${currentTab === 'Function' ? 'active' : ''}">`;
+    if (categories.Function.length > 0) {
+      html += `<div class="gene-attributes">`;
+      categories.Function.forEach(({ key, values }) => {
+        values.forEach((val, index) => {
+          const displayLabel = index === 0 ? key.replace(/_/g, ' ') : '';
+          html += `
+            <div class="gene-attribute">
+              <div class="gene-attribute-label">${displayLabel}</div>
+              <div class="gene-attribute-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(val)))}</div>
+            </div>
+          `;
+        });
+      });
+      html += `</div>`;
+    } else {
+      html += `
+        <div class="no-gene-selected" style="padding: 20px; background: var(--bg-secondary); border-radius: var(--radius-md);">
+          <i class="fas fa-info-circle" style="font-size: 24px; margin-bottom: 8px; opacity: 0.5;"></i>
+          <p>No specific functional annotations (GO terms, EC numbers) found in this record.</p>
+        </div>`;
+    }
+    html += `</div>`;
+
+    // 3. Sequence Panel
+    html += `<div id="gene-tab-Sequence" class="gene-details-tab-panel ${currentTab === 'Sequence' ? 'active' : ''}">`;
     if (fullSequence) {
       html += this.createSequencesSection(gene, fullSequence, geneName, currentChr);
     }
-
-    // Add gene attributes if available
-    if (gene.qualifiers && Object.keys(gene.qualifiers).length > 0) {
-      html += `
-                <div class="gene-attributes">
-                    <h4>Attributes</h4>
-            `;
-
-      Object.entries(gene.qualifiers).forEach(([key, value]) => {
-        // Handle both single values and arrays of values
-        let valuesToDisplay = [];
-
-        if (Array.isArray(value)) {
-          // Multiple values for the same qualifier
-          valuesToDisplay = value.filter(v => {
-            const stringValue = v != null ? String(v) : '';
-            return stringValue && stringValue !== 'Unknown' && stringValue.trim() !== '';
-          });
-        } else {
-          // Single value
-          const stringValue = value != null ? String(value) : '';
-          if (stringValue && stringValue !== 'Unknown' && stringValue.trim() !== '') {
-            valuesToDisplay = [stringValue];
-          }
-        }
-
-        // Display each value
-        valuesToDisplay.forEach((val, index) => {
-          const displayLabel = index === 0 ? key.replace(/_/g, ' ') : ''; // Only show label for first occurrence
-          html += `
-                        <div class="gene-attribute">
-                            <div class="gene-attribute-label">${displayLabel}</div>
-                            <div class="gene-attribute-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(val)))}</div>
-                        </div>
-                    `;
-        });
-      });
-
-      html += `</div>`;
-    }
-
-    // Add action buttons
     html += `
-            <div class="gene-actions">
-                <!-- Container for potentially available Deep Research Report -->
-                <div id="deep-research-report-container" style="display: contents;"></div>
-                
-                <button class="btn gene-zoom-btn gene-action-btn" onclick="window.genomeBrowser.zoomToGene()">
-                    <i class="fas fa-search-plus"></i> Zoom to Gene
-                </button>
-                <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyCDSSequence()">
-                    <i class="fas fa-copy"></i> Copy CDS Sequence
-                </button>
-        `;
-
-    // Add copy translation button if it's a CDS or has translation
+      <div class="gene-actions" style="margin-top: 16px; display: flex; gap: 8px;">
+        <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyCDSSequence()" style="flex:1; margin:0">
+          <i class="fas fa-copy"></i> DNA
+        </button>
+    `;
     if (geneType === 'CDS' || (gene.qualifiers && this.getQualifierValue(gene.qualifiers, 'translation'))) {
       html += `
-                <button class="btn gene-copy-translation-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneTranslation()">
-                    <i class="fas fa-copy"></i> Copy Translation
-                </button>
-            `;
+        <button class="btn gene-copy-translation-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneTranslation()" style="flex:1; margin:0">
+          <i class="fas fa-copy"></i> Protein
+        </button>
+      `;
     }
+    html += `</div></div>`;
 
-    // Add search structure buttons for proteins/genes
-    if (geneType === 'CDS' || geneType === 'gene') {
-      html += `
-                <button class="btn gene-search-pdb-btn gene-action-btn" onclick="window.genomeBrowser.searchPDBStructures('${geneName}')" title="Search experimental structures in PDB">
-                    <i class="fas fa-microscope"></i> Search PDB
-                </button>
-                <button class="btn gene-search-alphafold-btn gene-action-btn" onclick="window.genomeBrowser.searchAlphaFoldStructures('${geneName}')" title="Search AI-predicted structures in AlphaFold">
-                    <i class="fas fa-brain"></i> Search AlphaFold
-                </button>
-            `;
-    }
+    // 4. Literature Panel
+    html += `<div id="gene-tab-Literature" class="gene-details-tab-panel ${currentTab === 'Literature' ? 'active' : ''}">`;
+    html += `<div id="gene-citations-container"></div>`;
+    html += `</div>`;
 
-    // Add Deep Gene Research button for all gene types
-    html += `
-            <button class="btn gene-deep-research-btn gene-action-btn" onclick="window.genomeBrowser.openDeepGeneResearch('${geneName}')" title="Open Deep Gene Research for this gene">
-                <i class="fas fa-search-plus"></i> Deep Gene Research
-            </button>
-        `;
-
-    // Add edit button
-    html += `
-                <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
-                    <i class="fas fa-edit"></i> Edit Annotation
-                </button>
-                <!-- Temporarily hidden: Refine Annotation button -->
-                <!-- <button class="btn gene-refine-btn gene-action-btn" onclick="window.genomeBrowser.openGeneAnnotationRefine()" title="Refine annotation using Deep Research Reports and AI analysis">
-                    <i class="fas fa-magic"></i> Refine Annotation
-                </button> -->
-            </div>
-        `;
-
-    // Add Gene Attachments section
+    // 5. Resources Panel
+    html += `<div id="gene-tab-Resources" class="gene-details-tab-panel ${currentTab === 'Resources' ? 'active' : ''}">`;
     const geneId = this.geneAttachmentsManager
       ? this.geneAttachmentsManager.getGeneIdentifier(gene)
       : gene.qualifiers?.locus_tag || gene.qualifiers?.gene || `${gene.type}_${gene.start}_${gene.end}`;
 
     if (this.geneAttachmentsManager) {
       html += this.geneAttachmentsManager.renderAttachmentsSection(geneId);
-    } else {
-      // Fallback: render a simple attachments placeholder
-      html += `
-                <div class="gene-attachments">
-                    <div class="gene-attachments-header">
-                        <h4><i class="fas fa-paperclip"></i> Attachments</h4>
-                        <button class="btn btn-sm gene-add-attachment-btn" disabled title="Attachments system not available">
-                            <i class="fas fa-plus"></i> Add
-                        </button>
-                    </div>
-                    <div class="gene-attachments-empty">
-                        <p>Attachments system initializing...</p>
-                    </div>
-                </div>
-            `;
     }
-
-    // Add Gene Notes section
     if (this.geneNotesManager) {
       html += this.geneNotesManager.renderNotesSection(geneId);
-    } else {
-      // Fallback: render a simple notes placeholder
-      html += `
-                <div class="gene-notes-section">
-                    <div class="gene-notes-header">
-                        <h4><i class="fas fa-sticky-note"></i> Notes</h4>
-                    </div>
-                    <div class="gene-notes-content">
-                        <p style="color: var(--text-muted);">Notes system initializing...</p>
-                    </div>
-                </div>
-            `;
     }
-
-    // Add unified citation list if there are any citations (in separate container)
-    const citationList = this.generateUnifiedCitationList();
-    if (citationList) {
-      html += citationList;
-    }
-
     html += `</div>`;
+
+    html += `</div>`; // Close panels container
+    html += `</div>`; // Close gene-details-info
 
     geneDetailsContent.innerHTML = html;
 
-    // Check for Deep Research Report presence and add button if exists
+    // Post-rendering tasks
+    
+    // 1. Populate Citations and update tab count
+    const citationList = this.generateUnifiedCitationList();
+    const litContainer = document.getElementById('gene-citations-container');
+    if (litContainer) {
+      litContainer.innerHTML = citationList || `
+        <div class="no-gene-selected" style="padding: 20px; background: var(--bg-secondary); border-radius: var(--radius-md);">
+          <i class="fas fa-book" style="font-size: 24px; margin-bottom: 8px; opacity: 0.5;"></i>
+          <p>No publications or unified citations found for this gene.</p>
+        </div>`;
+    }
+
+    // Update literature tab title with count
+    if (this.citationCollector.size > 0) {
+      const litTabSpan = document.querySelector('.gene-details-tab-btn[data-tab="Literature"] span');
+      if (litTabSpan) litTabSpan.textContent = `Papers (${this.citationCollector.size})`;
+    }
+
+    // 2. Check for Deep Research Report presence
     try {
       const fs = require('fs');
-      // path is already declared at top of file
-      // Use gene name or locus tag as symbol, sanitize to match ChatManager logic
       const safeSymbol = (geneName || 'Unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
       const reportPath = path.join(process.cwd(), 'reports', `Gene_${safeSymbol}_Research_Report.md`);
 
@@ -5429,50 +5542,38 @@ class GenomeBrowser {
         if (container) {
           const btn = document.createElement('button');
           btn.className = 'btn gene-action-btn';
-          btn.style.backgroundColor = '#e3f2fd'; // Light blue background
-          btn.style.color = '#1565C0'; // Darker blue text
-          btn.style.borderColor = '#90CAF9';
-          btn.style.marginBottom = '8px';
-          btn.style.width = '100%';
-          btn.style.fontWeight = '600';
+          btn.style.cssText = `
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #1565C0;
+            border: 1px solid #90CAF9;
+            margin-bottom: 12px;
+            width: 100%;
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          `;
           btn.innerHTML = '<i class="fas fa-file-alt"></i> View Research Report';
-          btn.title = `Open report: ${path.basename(reportPath)}`;
-
           btn.onclick = () => {
-            try {
-              const { shell } = require('electron');
-              shell.openPath(reportPath);
-            } catch (e) {
-              console.error('Failed to open report:', e);
-              alert('Failed to open report file.');
-            }
+             const { shell } = require('electron');
+             shell.openPath(reportPath);
           };
-
           container.appendChild(btn);
         }
       }
-    } catch (err) {
-      console.error('Error checking for gene research report:', err);
-    }
+    } catch (err) {}
 
-    // Add event listeners for expandable sections
+    // 3. Setup event listeners
     this.setupExpandableSequences();
 
-    // Load literature data if enhanced citation display is available
+    // 4. Load literature data if available
     if (this.enhancedCitationDisplay && this.citationCollector.size > 0) {
-      console.log('Loading literature data for citations...');
       this.enhancedCitationDisplay.loadLiteratureDataIfNeeded();
-    } else {
-      console.log('Enhanced citation display not available or no citations');
-      console.log('Enhanced citation display available:', !!this.enhancedCitationDisplay);
-      console.log('Citation count:', this.citationCollector.size);
     }
 
-    // Update tab manager about gene details content change
+    // 5. Update tab manager
     if (this.tabManager) {
-      const geneDetailsSection = document.getElementById('geneDetailsSection');
-      if (geneDetailsSection && geneDetailsSection.style.display !== 'none') {
-        this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
+      const section = document.getElementById('geneDetailsSection');
+      if (section && section.style.display !== 'none') {
+        this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, section.innerHTML);
       }
     }
   }
