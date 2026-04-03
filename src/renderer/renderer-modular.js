@@ -5246,6 +5246,7 @@ class GenomeBrowser {
     // Parse qualifiers to separate General, Function and Resources attributes
     let generalAttributesHtml = '';
     let functionAttributesHtml = '';
+    let pathwayAttributesHtml = '';
     let resourceAttributesHtml = '';
 
     if (gene.qualifiers && Object.keys(gene.qualifiers).length > 0) {
@@ -5274,6 +5275,8 @@ class GenomeBrowser {
           const lowerKey = key.toLowerCase();
           if (lowerKey.startsWith('go_') || lowerKey.startsWith('go ') || lowerKey === 'ontology_term' || lowerKey.includes('go process') || key === 'GO Process') {
             functionAttributesHtml += attrHtml;
+          } else if (lowerKey === 'ec_number' || lowerKey === 'ko' || lowerKey === 'kegg' || lowerKey === 'pathway') {
+            pathwayAttributesHtml += attrHtml;
           } else if (lowerKey === 'db_xref') {
             resourceAttributesHtml += attrHtml;
           } else {
@@ -5288,6 +5291,9 @@ class GenomeBrowser {
     }
     if (functionAttributesHtml) {
       functionAttributesHtml = `<div class="gene-attributes"><h4>GO Annotations</h4>${functionAttributesHtml}</div>`;
+    }
+    if (pathwayAttributesHtml) {
+      pathwayAttributesHtml = `<div class="gene-attributes"><h4>Pathway Annotations</h4>${pathwayAttributesHtml}</div>`;
     }
     if (resourceAttributesHtml) {
       resourceAttributesHtml = `<div class="gene-attributes"><h4>Database Cross-References</h4>${resourceAttributesHtml}</div>`;
@@ -5321,11 +5327,11 @@ class GenomeBrowser {
                     <i class="fas fa-edit"></i> Edit Annotation
                 </button>
                 <button class="btn gene-zoom-btn gene-action-btn" onclick="window.genomeBrowser.zoomToGene()">
-                    <i class="fas fa-search-plus"></i> Zoom to Gene
+                    <i class="fas fa-search-plus"></i> Zoom to
                 </button>
                 <div id="deep-research-report-container" style="display: contents;"></div>
-                <button class="btn gene-deep-research-btn gene-action-btn" onclick="window.genomeBrowser.openDeepGeneResearch('${geneName}')" title="Open Deep Gene Research for this gene">
-                    <i class="fas fa-search-plus"></i> Deep Gene Research
+                <button class="btn gene-deep-research-btn gene-action-btn" onclick="window.genomeBrowser.openDeepGeneResearch('${geneName}')" title="Open Deep Research for this gene">
+                    <i class="fas fa-search-plus"></i> Deep Research
                 </button>
     `;
 
@@ -5353,6 +5359,7 @@ class GenomeBrowser {
             <div class="gene-tabs-header">
                 <button class="gene-tab-btn active" data-tab="general">General</button>
                 <button class="gene-tab-btn" data-tab="go">GO</button>
+                <button class="gene-tab-btn" data-tab="pathways">Pathways</button>
                 <button class="gene-tab-btn" data-tab="sequence">Sequence</button>
                 <button class="gene-tab-btn" data-tab="notes">Notes</button>
                 <button class="gene-tab-btn" data-tab="resources">Resources</button>
@@ -5374,6 +5381,11 @@ class GenomeBrowser {
     html += `<div class="gene-tab-content" id="tab-go">`;
     html += functionAttributesHtml;
     html += `</div>`; // End GO Tab
+
+    // ---------------- Pathways Tab ----------------
+    html += `<div class="gene-tab-content" id="tab-pathways">`;
+    html += pathwayAttributesHtml;
+    html += `</div>`; // End Pathways Tab
 
     // ---------------- Sequence Tab ----------------
     html += `<div class="gene-tab-content" id="tab-sequence">`;
