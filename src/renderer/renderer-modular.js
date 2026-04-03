@@ -6471,7 +6471,7 @@ class GenomeBrowser {
             const translationLength = translation.replace(/\*/g, '').length; // Remove stop codons for length count
             html += `
                 <div class="sequence-section">
-                    <h4><i class="fas fa-atom"></i> Protein Translation (${translationLength} aa)</h4>
+                    <h4><i class="fas fa-cog"></i> Protein Translation (${translationLength} aa)</h4>
                     <div class="sequence-content">
                         <div class="sequence-display" data-sequence-type="translation">
                             <div class="sequence-preview">${this.formatProteinPreview(translation, 40)}</div>

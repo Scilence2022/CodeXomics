@@ -11097,12 +11097,14 @@ input:checked+.slider:before {
 
 .sequence-formatted .sequence-position {
   flex-shrink: 0;
-  width: 80px;
+  width: 50px;
+  background-color: var(--bg-hover, #eceef1);
+  border-radius: 4px;
+  padding: 2px 6px;
   color: var(--text-secondary);
   font-size: 10px;
   text-align: right;
   margin-right: 12px;
-  padding-top: 1px;
 }
 
 .sequence-formatted .sequence-bases {
