@@ -77,7 +77,9 @@ When you first launch CodeXomics, you'll see the welcome screen with options to:
 - **Zoom**: Use the zoom controls or mouse wheel
 - **Pan**: Drag the visualization to move around
 - **Search**: Use the search bar to find specific genes or regions
+- **Jump to**: Click segments or use the **"Zoom to"** button on selected genes
 - **Tracks**: Toggle different data tracks on and off
+- **Gene Details**: Deep-dive into results using the tabbed (General, GO, Pathways, Sequence, etc.) sidebar
 
 ## 🤖 Setting Up AI Chat (Optional)
 
@@ -167,7 +169,7 @@ Switch between different project views:
 
 2. **Explore the Genome**:
    - Navigate to different regions using the search bar
-   - Examine gene annotations and features
+   - Examine tabbed gene annotations (GO, Pathways, Sequence) in the sidebar
    - Look at GC content and skew patterns
 
 3. **Perform Analysis**:
@@ -191,7 +193,7 @@ Switch between different project views:
 
 - **Header Toolbar**: File operations, zoom controls, search
 - **Track Panel**: Genomic data visualization tracks
-- **Side Panel**: Gene details, chat interface, file browser
+- **Side Panel**: Tabbed gene details, AI chat interface, file browser
 - **Status Bar**: Current position, statistics, system status
 
 ### Keyboard Shortcuts

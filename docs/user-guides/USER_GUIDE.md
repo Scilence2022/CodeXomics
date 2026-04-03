@@ -146,7 +146,7 @@ CodeXomics includes E. coli genome and pathway data for testing.
 
 - Type gene name in search box (e.g., "lacZ")
 - Press Enter to jump to gene location
-- View detailed information in left sidebar
+- View detailed information in the tabbed **Gene Details** sidebar (Left Panel)
 
 **Ask the AI:**
 
@@ -216,6 +216,31 @@ CodeXomics includes E. coli genome and pathway data for testing.
 
 - Click eye icon to show/hide tracks
 - Right-click for track-specific options
+
+### Gene Details Sidebar
+
+The Gene Details sidebar provides a comprehensive, tabbed intelligence panel for exploring annotated genomic features. 
+
+#### Pinned Header
+The header remains static, providing immediate access to core identifiers:
+- **Gene Identifiers:** Displays the gene name, locus tag, and feature type (e.g., CDS, mRNA).
+- **Location Data:** Shows exact genomic coordinates, strand orientation, and sequence length.
+- **Operon Integration:** Displays a color-coded operon badge for genes that are part of a coordinated transcriptional unit.
+
+#### Global Actions
+These buttons are always accessible above the tabs:
+- **Edit Annotation:** Modify gene metadata or structure.
+- **Zoom to:** Center the genome viewer on the selected feature.
+- **Deep Research:** Launch advanced AI analysis for functional discovery.
+- **Search PDB / AlphaFold:** Search for 3D protein structures (experimental or AI-predicted).
+
+#### Tabbed Information Architecture
+- **General Tab:** Essential attributes, product descriptions, and unified literature citations.
+- **GO Tab:** Dedicated Gene Ontology terms for functional classification.
+- **Pathways Tab:** Metabolic context, including EC numbers, KEGG orthology (KO), and pathway maps.
+- **Sequence Tab:** High-quality rendering of DNA, CDS, and Protein sequences with line numbering.
+- **Notes Tab:** A workspace for user-defined qualitative notes.
+- **Resources Tab:** External database cross-references (`db_xref`) and project attachments.
 
 ### Project Management
 

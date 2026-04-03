@@ -60,6 +60,7 @@ CodeXomics is a modern, cross-platform bioinformatics analysis platform featurin
 
 ### 🧬 Advanced Genome Visualization
 
+- Tabbed Gene Details sidebar with 6 specialized functional domains
 - Dynamic SVG-based GC content/skew visualization
 - Interactive tracks for genes, sequences, variants, and reads
 - Multi-format support (FASTA, GenBank, GFF, VCF, BAM)

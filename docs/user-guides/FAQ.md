@@ -12,7 +12,7 @@ Version 0.532beta introduces several major enhancements:
 
 - **Complete Plugin System** with marketplace
 - **KGML Pathway Viewer** for pathway visualization
-- **Enhanced Gene Details** with 50+ database cross-references
+- **Tabbed Gene Details Intelligence** with 6 specialized tabs
 - **STRING Protein Networks** for interaction analysis
 - **Unified Version Management** system
 - **Improved Project Management** with multiple view modes
@@ -303,11 +303,12 @@ Common shortcuts:
 
 ### How do I view gene details?
 
-- **Click gene**: Gene information appears in side panel
-- **Gene details panel**: Shows comprehensive information
-- **Database links**: Cross-references to 50+ databases
-- **Sequence information**: Shows gene sequences
-- **Export options**: Export gene data
+- **Click gene**: Comprehensive analysis appears in the tabbed side panel
+- **Tabbed Intelligence**: 6 specialized tabs (General, GO, Pathways, Sequence, Notes, Resources)
+- **Global Actions**: Dedicated buttons for Zoom, Deep Research, and Structure searches
+- **Database links**: Cross-references to 50+ external databases
+- **Sequence Rendering**: High-performance display of DNA, CDS, and Protein sequences
+- **Export options**: Rapid export of specific sequence types
 
 ## ⚙️ Performance & Troubleshooting
 
