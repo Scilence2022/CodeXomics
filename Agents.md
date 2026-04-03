@@ -24,6 +24,7 @@ This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor
 ### Dynamic Tool Registry Integration
 Rather than statically defining tools inside `ChatManager.js`, CodeXomics uses a dynamic registry (`src/tools_registry/system_integration.js`).
 - **Rule**: When tasked with creating a "new AI tool", create the schema in the `src/tools_registry/` subsystem inside the correct category folder. Wire the physical execution block in the related service class (e.g. `src/renderer/modules/chat/services/`) and ensure it's exposed properly.
+- **Rule**: You must keep the built-in ChatBox tool capabilities (via `tools_registry/` descriptors) and the MCP Server schemas (via `src/mcp-tools/`) updated synchronously to ensure functional parity across both access methods.
 
 ### Internal Multi-Agent Routing
 CodeXomics runs its own internal network of specialized agents (`NavigationAgent`, `DataAgent`, `CoordinatorAgent`, etc.). 

@@ -74,6 +74,11 @@ class AnnotationTools {
                             type: 'string',
                             description: 'Chromosome name (optional, searches all if omitted).',
                         },
+                        full_details: {
+                            type: 'boolean',
+                            description: 'If true, returns the complete raw annotation object. Defaults to false.',
+                            default: false,
+                        },
                         clientId: {
                             type: 'string',
                             description: 'Browser client ID for multi-window support',

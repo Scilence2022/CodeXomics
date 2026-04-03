@@ -123,7 +123,7 @@ class AnnotationService {
       success: true,
       identifier,
       chromosome: found.chromosome,
-      annotation: {
+      annotation: params.full_details ? a : {
         id: a.id,
         type: a.type,
         start: a.start,
