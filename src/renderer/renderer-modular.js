@@ -5316,12 +5316,31 @@ class GenomeBrowser {
 
     // Add Edit Annotation button above tabs
     html += `
-            <div class="gene-actions" style="margin-bottom: 12px; margin-top: 4px;">
+            <div class="gene-actions" style="margin-bottom: 12px; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px;">
                 <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
                     <i class="fas fa-edit"></i> Edit Annotation
                 </button>
-            </div>
+                <button class="btn gene-zoom-btn gene-action-btn" onclick="window.genomeBrowser.zoomToGene()">
+                    <i class="fas fa-search-plus"></i> Zoom to Gene
+                </button>
+                <div id="deep-research-report-container" style="display: contents;"></div>
+                <button class="btn gene-deep-research-btn gene-action-btn" onclick="window.genomeBrowser.openDeepGeneResearch('${geneName}')" title="Open Deep Gene Research for this gene">
+                    <i class="fas fa-search-plus"></i> Deep Gene Research
+                </button>
     `;
+
+    if (geneType === 'CDS' || geneType === 'gene') {
+      html += `
+                <button class="btn gene-search-pdb-btn gene-action-btn" onclick="window.genomeBrowser.searchPDBStructures('${geneName}')" title="Search experimental structures in PDB">
+                    <i class="fas fa-microscope"></i> Search PDB
+                </button>
+                <button class="btn gene-search-alphafold-btn gene-action-btn" onclick="window.genomeBrowser.searchAlphaFoldStructures('${geneName}')" title="Search AI-predicted structures in AlphaFold">
+                    <i class="fas fa-brain"></i> Search AlphaFold
+                </button>
+            `;
+    }
+
+    html += `</div>`; // Close gene-actions
 
     // Calculate geneId for notes and attachments
     const geneId = this.geneAttachmentsManager
@@ -5354,24 +5373,7 @@ class GenomeBrowser {
     // ---------------- GO Tab ----------------
     html += `<div class="gene-tab-content" id="tab-go">`;
     html += functionAttributesHtml;
-    html += `<div class="gene-actions">`;
-    html += `<div id="deep-research-report-container" style="display: contents;"></div>`;
-    html += `
-            <button class="btn gene-deep-research-btn gene-action-btn" onclick="window.genomeBrowser.openDeepGeneResearch('${geneName}')" title="Open Deep Gene Research for this gene">
-                <i class="fas fa-search-plus"></i> Deep Gene Research
-            </button>
-    `;
-    if (geneType === 'CDS' || geneType === 'gene') {
-      html += `
-                <button class="btn gene-search-pdb-btn gene-action-btn" onclick="window.genomeBrowser.searchPDBStructures('${geneName}')" title="Search experimental structures in PDB">
-                    <i class="fas fa-microscope"></i> Search PDB
-                </button>
-                <button class="btn gene-search-alphafold-btn gene-action-btn" onclick="window.genomeBrowser.searchAlphaFoldStructures('${geneName}')" title="Search AI-predicted structures in AlphaFold">
-                    <i class="fas fa-brain"></i> Search AlphaFold
-                </button>
-            `;
-    }
-    html += `</div></div>`; // End Function Tab
+    html += `</div>`; // End GO Tab
 
     // ---------------- Sequence Tab ----------------
     html += `<div class="gene-tab-content" id="tab-sequence">`;
@@ -5379,9 +5381,6 @@ class GenomeBrowser {
       html += this.createSequencesSection(gene, fullSequence, geneName, currentChr);
     }
     html += `<div class="gene-actions">
-                <button class="btn gene-zoom-btn gene-action-btn" onclick="window.genomeBrowser.zoomToGene()">
-                    <i class="fas fa-search-plus"></i> Zoom to Gene
-                </button>
                 <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyCDSSequence()">
                     <i class="fas fa-copy"></i> Copy CDS Sequence
                 </button>`;
