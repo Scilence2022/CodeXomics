@@ -4408,6 +4408,10 @@ ipcMain.handle('mcp-server-start', async () => {
   }
 });
 
+ipcMain.handle('mcp-server-open-monitor', () => {
+  createMCPServerMonitorWindow();
+});
+
 ipcMain.handle('mcp-server-stop', async () => {
   try {
     // Stop Unified MCP Server if running

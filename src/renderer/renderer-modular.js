@@ -9288,6 +9288,30 @@ class GenomeBrowser {
   // MCP Server Control Methods for Built-in Server
   async initializeMCPServerStatus() {
     try {
+      // Initialize Start/Stop button
+      const processBtn = document.getElementById('mcpProcessBtn');
+      if (processBtn) {
+        processBtn.onclick = () => this.toggleMCPServer();
+      }
+
+      // Initialize Log Viewer button
+      const logsBtn = document.getElementById('mcpLogsBtn');
+      if (logsBtn) {
+        logsBtn.onclick = () => ipcRenderer.invoke('mcp-server-open-monitor');
+      }
+
+      // Initialize Connection Toggle
+      const connToggle = document.getElementById('mcpConnectionToggle');
+      if (connToggle) {
+        connToggle.onchange = (e) => {
+          if (e.target.checked) {
+            this.connectMCPServer();
+          } else {
+            this.disconnectMCPServer();
+          }
+        };
+      }
+
       await this.updateMCPServerStatus();
       this.updateInternalConnectionStatus();
 
@@ -9323,15 +9347,12 @@ class GenomeBrowser {
       }
 
       // If main process says running OR we have active connections, show as running
-      if (mainProcessResult.isRunning || hasActiveConnections) {
-        this.setMCPServerUIStatus('running', {
-          httpPort: 3000,
-          wsPort: 3001,
-          connectedClients: hasActiveConnections ? 1 : 0,
-        });
-      } else {
-        this.setMCPServerUIStatus(mainProcessResult.status, mainProcessResult);
-      }
+      const isRunning = mainProcessResult.isRunning;
+      
+      this.setMCPServerUIStatus(isRunning ? 'running' : mainProcessResult.status, {
+        ...mainProcessResult,
+        hasActiveConnections
+      });
     } catch (error) {
       console.error('Error checking MCP server status:', error);
       this.setMCPServerUIStatus('stopped');
@@ -9339,42 +9360,91 @@ class GenomeBrowser {
   }
 
   setMCPServerUIStatus(status, info = {}) {
-    const btn = document.getElementById('mcpServerTaskbarStatus'); // Changed from header button to taskbar item
+    const statusItem = document.getElementById('mcpServerTaskbarStatus');
     const statusDot = document.getElementById('mcpServerTaskbarDot');
+    const processBtn = document.getElementById('mcpProcessBtn');
+    const connToggle = document.getElementById('mcpConnectionToggle');
 
-    if (!btn || !statusDot) return;
+    if (!statusItem || !statusDot || !processBtn) return;
 
     // Remove all status classes
-    btn.classList.remove('starting', 'running', 'stopping');
-    statusDot.classList.remove('status-stopped', 'status-starting', 'status-running', 'status-stopping');
+    statusItem.classList.remove('starting', 'running', 'stopping');
+    statusDot.classList.remove('status-stopped', 'status-starting', 'status-running', 'status-stopping', 'status-offline');
+    processBtn.classList.remove('starting', 'running', 'stopping');
 
-    // Make sure click acts like the old btn click
-    btn.onclick = () => this.toggleMCPServer();
+    // Update process button icon and title
+    const processIcon = processBtn.querySelector('i');
+    
+    // Sync Toggle with actual ChatManager connection status
+    if (connToggle) {
+      connToggle.checked = info.hasActiveConnections || false;
+    }
 
     switch (status) {
       case 'stopped':
         statusDot.classList.add('status-stopped');
-        btn.classList.add('stopped');
-        btn.title = 'MCP Server: Stopped (Click to Start)';
+        statusItem.title = 'MCP Server: Stopped';
+        processBtn.title = 'Start MCP Server';
+        if (processIcon) processIcon.className = 'fas fa-play';
         break;
       case 'starting':
         statusDot.classList.add('status-starting');
-        btn.classList.add('starting');
-        btn.title = 'MCP Server: Starting...';
+        statusItem.title = 'MCP Server: Starting...';
+        processBtn.title = 'Starting...';
+        processBtn.classList.add('starting');
+        if (processIcon) processIcon.className = 'fas fa-spinner fa-spin';
         break;
       case 'running':
         const connectedText = info.connectedClients
-          ? ` (${info.connectedClients} client${info.connectedClients !== 1 ? 's' : ''})`
+          ? ` (${info.connectedClients} active connection${info.connectedClients !== 1 ? 's' : ''})`
           : '';
         statusDot.classList.add('status-running');
-        btn.classList.add('running');
-        btn.title = `MCP Server: Running${connectedText} (Click to Stop)`;
+        statusItem.title = `MCP Server: Running${connectedText}`;
+        processBtn.title = 'Stop MCP Server';
+        processBtn.classList.add('running');
+        if (processIcon) processIcon.className = 'fas fa-stop';
         break;
       case 'stopping':
         statusDot.classList.add('status-stopping');
-        btn.classList.add('stopping');
-        btn.title = 'MCP Server: Stopping...';
+        statusItem.title = 'MCP Server: Stopping...';
+        processBtn.title = 'Stopping...';
+        processBtn.classList.add('stopping');
+        if (processIcon) processIcon.className = 'fas fa-spinner fa-spin';
         break;
+      default:
+        statusDot.classList.add('status-offline');
+        statusItem.title = 'MCP Server: Offline';
+        if (processIcon) processIcon.className = 'fas fa-exclamation-triangle';
+    }
+  }
+
+  async connectMCPServer() {
+    try {
+      this.updateStatus('Connecting to CodeXomics MCP Server...');
+      if (this.chatManager) {
+        // Use standard connection setup
+        await this.chatManager.setupMCPConnection();
+        this.updateMCPServerStatus();
+      }
+    } catch (error) {
+      console.error('Failed to connect to MCP server:', error);
+      const connToggle = document.getElementById('mcpConnectionToggle');
+      if (connToggle) connToggle.checked = false;
+    }
+  }
+
+  async disconnectMCPServer() {
+    try {
+      this.updateStatus('Disconnecting from MCP Server...');
+      if (this.chatManager && this.chatManager.mcpServerManager) {
+        // Disconnect specifically from the built-in server
+        await this.chatManager.mcpServerManager.disconnectServer('genome-studio');
+        this.updateMCPServerStatus();
+      }
+    } catch (error) {
+      console.error('Failed to disconnect from MCP server:', error);
+      const connToggle = document.getElementById('mcpConnectionToggle');
+      if (connToggle) connToggle.checked = true;
     }
   }
 
@@ -9416,36 +9486,18 @@ class GenomeBrowser {
   async toggleMCPServer() {
     try {
       const statusResult = await ipcRenderer.invoke('mcp-server-status');
-
-      // Check if we have active connections through ChatManager
-      let hasActiveConnections = false;
-      if (this.chatManager?.mcpServerManager) {
-        const connectedCount = this.chatManager.mcpServerManager.getConnectedServersCount();
-        hasActiveConnections = connectedCount > 0;
-
-        // Check specifically for genome-studio server connection
-        const genomeStudioServer = this.chatManager.mcpServerManager.getServer('genome-studio');
-        const isGenomeStudioConnected =
-          genomeStudioServer && this.chatManager.mcpServerManager.activeServers.has('genome-studio');
-
-        if (isGenomeStudioConnected) {
-          hasActiveConnections = true;
-        }
-      }
-
-      const isCurrentlyRunning = statusResult.isRunning || hasActiveConnections;
+      const isCurrentlyRunning = statusResult.isRunning;
 
       if (isCurrentlyRunning) {
-        // Stop the server and disconnect clients
+        // Stop the server process
         this.setMCPServerUIStatus('stopping');
 
-        // Disconnect from ChatManager first if connected
-        if (hasActiveConnections && this.chatManager?.mcpServerManager) {
-          this.chatManager.mcpServerManager.disconnectAll();
+        // Also disconnect renderer if it was connected
+        if (this.chatManager?.mcpServerManager?.activeServers.has('genome-studio')) {
+          await this.chatManager.mcpServerManager.disconnectServer('genome-studio');
         }
 
         const result = await ipcRenderer.invoke('mcp-server-stop');
-
         if (result.success) {
           this.showNotification('MCP Server stopped successfully', 'success');
         } else {

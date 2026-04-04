@@ -859,15 +859,37 @@
             </div>
             <div class="taskbar-right">
                 <div class="connection-module">
-                    <!-- Internal App Connection -->
-                    <div class="connection-item" id="internalConnectionTaskbarStatus" title="CodeXomics Core: Connected">
-                        <i class="fas fa-network-wired"></i>
-                        <span class="status-dot status-running" id="internalConnectionTaskbarDot"></span>
+                    <div class="connection-group">
+                        <!-- macOS Toggle for Active Connection -->
+                        <div class="toggle-container" title="Active Connection to MCP Server">
+                            <label class="macos-toggle">
+                                <input type="checkbox" id="mcpConnectionToggle">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <!-- Toggle process start/stop -->
+                        <button class="taskbar-btn" id="mcpProcessBtn" title="Start/Stop MCP Server Instance">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        
+                        <!-- Log viewer -->
+                        <button class="taskbar-btn" id="mcpLogsBtn" title="View Real-time Server Logs">
+                            <i class="fas fa-terminal"></i>
+                        </button>
                     </div>
-                    <!-- MCP Server Connection -->
-                    <div class="connection-item" id="mcpServerTaskbarStatus" title="MCP Server: Stopped">
-                        <i class="fas fa-server"></i>
-                        <span class="status-dot status-stopped" id="mcpServerTaskbarDot"></span>
+
+                    <div class="status-indicators">
+                        <!-- Internal App Connection -->
+                        <div class="connection-item" id="internalConnectionTaskbarStatus" title="CodeXomics Core: Connected">
+                            <i class="fas fa-network-wired"></i>
+                            <span class="status-dot status-running" id="internalConnectionTaskbarDot"></span>
+                        </div>
+                        <!-- MCP Server Connection Status -->
+                        <div class="connection-item" id="mcpServerTaskbarStatus" title="MCP Server: Stopped">
+                            <i class="fas fa-server"></i>
+                            <span class="status-dot status-stopped" id="mcpServerTaskbarDot"></span>
+                        </div>
                     </div>
                 </div>
             </div>
