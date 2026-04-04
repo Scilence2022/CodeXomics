@@ -465,16 +465,79 @@
   animation: pulse 1.5s infinite;
 }
 
-/* Status Bar */
-.status-bar {
+/* Status Taskbar */
+.taskbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 20px;
-  background: var(--bg-tertiary);
-  border-top: 1px solid var(--border-color);
-  font-size: 14px;
-  color: var(--text-secondary);
+  padding: 4px 16px;
+  background: var(--bg-tertiary, #f8f9fa);
+  border-top: 1px solid var(--border-color, #e9ecef);
+  font-size: 11px;
+  color: var(--text-secondary, #6c757d);
+  height: 28px;
+  flex-shrink: 0;
+  z-index: 1000;
+}
+
+.taskbar-right .connection-module {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.taskbar-center {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  font-weight: 500;
+}
+
+.connection-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary, #6c757d);
+}
+
+.connection-item:hover {
+  background-color: var(--bg-hover, #e9ecef);
+  color: var(--text-primary, #212529);
+}
+
+.connection-item.running:hover {
+  color: #28a745;
+}
+
+.connection-item.stopping:hover {
+  color: #fd7e14;
+}
+
+.connection-item.starting:hover {
+  color: #ffc107;
+}
+
+.connection-item .status-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--bg-tertiary, #f8f9fa);
+  transition: all 0.3s ease;
+}
+
+.connection-item:hover .status-dot {
+  box-shadow: 0 0 6px currentColor;
 }
 
 /* Responsive Layout */

@@ -9289,10 +9289,12 @@ class GenomeBrowser {
   async initializeMCPServerStatus() {
     try {
       await this.updateMCPServerStatus();
+      this.updateInternalConnectionStatus();
 
       // Check status periodically
       setInterval(() => {
         this.updateMCPServerStatus();
+        this.updateInternalConnectionStatus();
       }, 5000); // Check every 5 seconds
     } catch (error) {
       console.error('Error initializing MCP server status:', error);
@@ -9337,55 +9339,78 @@ class GenomeBrowser {
   }
 
   setMCPServerUIStatus(status, info = {}) {
-    const btn = document.getElementById('mcpServerBtn');
-    const statusText = document.getElementById('mcpServerStatus');
-    const statusIndicator = document.getElementById('mcpStatusIndicator');
-    const statusDot = statusIndicator?.querySelector('.status-dot');
-    const statusTextElement = statusIndicator?.querySelector('.status-text');
+    const btn = document.getElementById('mcpServerTaskbarStatus'); // Changed from header button to taskbar item
+    const statusDot = document.getElementById('mcpServerTaskbarDot');
 
-    if (!btn || !statusText || !statusIndicator) return;
+    if (!btn || !statusDot) return;
 
     // Remove all status classes
     btn.classList.remove('starting', 'running', 'stopping');
-    statusDot?.classList.remove('status-stopped', 'status-starting', 'status-running', 'status-stopping');
+    statusDot.classList.remove('status-stopped', 'status-starting', 'status-running', 'status-stopping');
+
+    // Make sure click acts like the old btn click
+    btn.onclick = () => this.toggleMCPServer();
 
     switch (status) {
       case 'stopped':
-        statusText.textContent = 'Start';
-        statusTextElement.textContent = 'Stopped';
-        statusDot?.classList.add('status-stopped');
-        btn.disabled = false;
-        btn.title = 'Start Unified Claude MCP Server';
+        statusDot.classList.add('status-stopped');
+        btn.classList.add('stopped');
+        btn.title = 'MCP Server: Stopped (Click to Start)';
         break;
       case 'starting':
-        statusText.textContent = 'Starting...';
-        statusTextElement.textContent = 'Starting';
-        statusDot?.classList.add('status-starting');
+        statusDot.classList.add('status-starting');
         btn.classList.add('starting');
-        btn.disabled = true;
-        btn.title = 'Unified Claude MCP Server is starting...';
+        btn.title = 'MCP Server: Starting...';
         break;
       case 'running':
-        statusText.textContent = 'Stop';
         const connectedText = info.connectedClients
           ? ` (${info.connectedClients} client${info.connectedClients !== 1 ? 's' : ''})`
           : '';
-        statusTextElement.textContent = `Running${connectedText}`;
-        statusDot?.classList.add('status-running');
+        statusDot.classList.add('status-running');
         btn.classList.add('running');
-        btn.disabled = false;
-        const serverTypeText = info.serverType === 'unified-claude-mcp' ? 'Unified Claude MCP Server' : 'MCP Server';
-        btn.title = `Stop ${serverTypeText} (Connect MCP Client to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
+        btn.title = `MCP Server: Running${connectedText} (Click to Stop)`;
         break;
       case 'stopping':
-        statusText.textContent = 'Stopping...';
-        statusTextElement.textContent = 'Stopping';
-        statusDot?.classList.add('status-stopping');
+        statusDot.classList.add('status-stopping');
         btn.classList.add('stopping');
-        btn.disabled = true;
-        btn.title = 'Unified Claude MCP Server is stopping...';
+        btn.title = 'MCP Server: Stopping...';
         break;
     }
+  }
+
+  updateInternalConnectionStatus() {
+    const btn = document.getElementById('internalConnectionTaskbarStatus');
+    const statusDot = document.getElementById('internalConnectionTaskbarDot');
+    
+    if (!btn || !statusDot) return;
+    
+    // Check internal server connection
+    let isConnected = false;
+    if (this.internalMCPServer) {
+      isConnected = true; // Based on local instantiation
+    }
+    
+    // Remove all status classes
+    statusDot.classList.remove('status-stopped', 'status-running');
+    btn.classList.remove('running', 'stopped');
+    
+    if (isConnected) {
+      statusDot.classList.add('status-running');
+      btn.classList.add('running');
+      btn.title = 'CodeXomics Core: Connected (Double click to refresh)';
+    } else {
+      statusDot.classList.add('status-stopped');
+      btn.classList.add('stopped');
+      btn.title = 'CodeXomics Core: Disconnected';
+    }
+    
+    // Set a double click action to re-initialize if it failed
+    btn.ondblclick = () => {
+      this.updateStatus('Re-initializing Core connection...');
+      if (!this.internalMCPServer && typeof InternalMCPServer !== 'undefined') {
+        this.initializeInternalMCPServer();
+      }
+    };
   }
 
   async toggleMCPServer() {
