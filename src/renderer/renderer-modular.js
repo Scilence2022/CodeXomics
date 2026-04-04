@@ -835,8 +835,11 @@ class GenomeBrowser {
     document.getElementById('exportGenbankBtn').addEventListener('click', () => this.exportManager.exportAsGenBank());
     document.getElementById('exportCDSFastaBtn').addEventListener('click', () => this.exportManager.exportCDSAsFasta());
 
-    // MCP Server control - temporarily commented out
-    // document.getElementById('mcpServerBtn').addEventListener('click', () => this.toggleMCPServer());
+    // MCP Server control
+    const mcpServerToggle = document.getElementById('mcpServerToggle');
+    if (mcpServerToggle) {
+      mcpServerToggle.addEventListener('change', () => this.toggleMCPServer());
+    }
     document
       .getElementById('exportProteinFastaBtn')
       .addEventListener('click', () => this.exportManager.exportProteinAsFasta());
@@ -2792,6 +2795,12 @@ class GenomeBrowser {
       if (typeof VERSION_INFO !== 'undefined') {
         document.title = `${VERSION_INFO.appTitle} [${windowId}]`;
       }
+    });
+
+    // Listen for MCP Server status updates
+    ipcRenderer.on('mcp-server-status-changed', () => {
+      console.log('🔄 Received mcp-server-status-changed from main process');
+      this.updateMCPServerStatus();
     });
 
     // Handle file opened from main process
@@ -9342,48 +9351,76 @@ class GenomeBrowser {
     const statusIndicator = document.getElementById('mcpStatusIndicator');
     const statusDot = statusIndicator?.querySelector('.status-dot');
     const statusTextElement = statusIndicator?.querySelector('.status-text');
+    const toggle = document.getElementById('mcpServerToggle');
 
-    if (!btn || !statusText || !statusIndicator) return;
-
-    // Remove all status classes
-    btn.classList.remove('starting', 'running', 'stopping');
-    statusDot?.classList.remove('status-stopped', 'status-starting', 'status-running', 'status-stopping');
+    if (btn) {
+      btn.classList.remove('starting', 'running', 'stopping');
+    }
+    if (statusDot) {
+      statusDot.classList.remove('status-stopped', 'status-starting', 'status-running', 'status-stopping');
+    }
 
     switch (status) {
       case 'stopped':
-        statusText.textContent = 'Start';
-        statusTextElement.textContent = 'Stopped';
-        statusDot?.classList.add('status-stopped');
-        btn.disabled = false;
-        btn.title = 'Start Unified Claude MCP Server';
+        if (statusText) statusText.textContent = 'Start';
+        if (statusTextElement) statusTextElement.textContent = 'Stopped';
+        if (statusDot) statusDot.classList.add('status-stopped');
+        if (btn) {
+          btn.disabled = false;
+          btn.title = 'Start Unified Claude MCP Server';
+        }
+        if (toggle) {
+          toggle.checked = false;
+          toggle.disabled = false;
+          toggle.title = 'Start CodeXomics MCP Server';
+        }
         break;
       case 'starting':
-        statusText.textContent = 'Starting...';
-        statusTextElement.textContent = 'Starting';
-        statusDot?.classList.add('status-starting');
-        btn.classList.add('starting');
-        btn.disabled = true;
-        btn.title = 'Unified Claude MCP Server is starting...';
+        if (statusText) statusText.textContent = 'Starting...';
+        if (statusTextElement) statusTextElement.textContent = 'Starting';
+        if (statusDot) statusDot.classList.add('status-starting');
+        if (btn) {
+          btn.classList.add('starting');
+          btn.disabled = true;
+          btn.title = 'Unified Claude MCP Server is starting...';
+        }
+        if (toggle) {
+          toggle.disabled = true;
+          toggle.title = 'Starting MCP Server...';
+        }
         break;
       case 'running':
-        statusText.textContent = 'Stop';
+        if (statusText) statusText.textContent = 'Stop';
         const connectedText = info.connectedClients
           ? ` (${info.connectedClients} client${info.connectedClients !== 1 ? 's' : ''})`
           : '';
-        statusTextElement.textContent = `Running${connectedText}`;
-        statusDot?.classList.add('status-running');
-        btn.classList.add('running');
-        btn.disabled = false;
+        if (statusTextElement) statusTextElement.textContent = `Running${connectedText}`;
+        if (statusDot) statusDot.classList.add('status-running');
         const serverTypeText = info.serverType === 'unified-claude-mcp' ? 'Unified Claude MCP Server' : 'MCP Server';
-        btn.title = `Stop ${serverTypeText} (Connect MCP Client to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
+        if (btn) {
+          btn.classList.add('running');
+          btn.disabled = false;
+          btn.title = `Stop ${serverTypeText} (Connect MCP Client to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
+        }
+        if (toggle) {
+          toggle.checked = true;
+          toggle.disabled = false;
+          toggle.title = `Stop ${serverTypeText} (Connect MCP Client to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
+        }
         break;
       case 'stopping':
-        statusText.textContent = 'Stopping...';
-        statusTextElement.textContent = 'Stopping';
-        statusDot?.classList.add('status-stopping');
-        btn.classList.add('stopping');
-        btn.disabled = true;
-        btn.title = 'Unified Claude MCP Server is stopping...';
+        if (statusText) statusText.textContent = 'Stopping...';
+        if (statusTextElement) statusTextElement.textContent = 'Stopping';
+        if (statusDot) statusDot.classList.add('status-stopping');
+        if (btn) {
+          btn.classList.add('stopping');
+          btn.disabled = true;
+          btn.title = 'Unified Claude MCP Server is stopping...';
+        }
+        if (toggle) {
+          toggle.disabled = true;
+          toggle.title = 'Stopping MCP Server...';
+        }
         break;
     }
   }
