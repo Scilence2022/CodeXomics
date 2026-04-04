@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧬 CodeXomics
+# CodeXomics
 
 ### AI-Powered Bioinformatics Analysis Platform
 
@@ -8,317 +8,452 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
-[![First Release](https://img.shields.io/badge/🧪%20Latest%20Beta-v0.532beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)
+[![Beta](https://img.shields.io/badge/Latest%20Beta-v0.532beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)
 
-A modern, cross-platform bioinformatics analysis platform built with Electron, featuring **multi-agent AI collaboration**, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
+A cross-platform desktop bioinformatics platform built with Electron. Features a **multi-agent AI system**, a **dynamic tool registry**, MCP server integration, an extensible plugin architecture, and comprehensive genome visualization for exploring genomic, proteomic, and other omics data.
 
-🧪 **[Latest Beta Release - v0.532beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)** 🧪
+**[Latest Beta — v0.532beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)**
 
-[Features](#-key-features) •
-[Installation](#-installation) •
-[Quick Start](#-quick-start) •
-[Documentation](#-documentation) •
-[Contributing](#-contributing)
+[Features](#key-features) •
+[Installation](#installation) •
+[Quick Start](#quick-start) •
+[Architecture](#architecture) •
+[Documentation](#documentation) •
+[Contributing](#contributing)
 
 </div>
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🤖 **Multi-Agent AI System**
+### Multi-Agent AI System
 
-- **Collaborative Intelligence** - A network of 7 specialized AI agents (including Coordinator, Analysis, Data, and Navigation agents) working together for complex genomic analysis. See the [System Architecture](docs/architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md) for details.
-- **MCP Integration** - Model Context Protocol for seamless tool integration via the ExternalAgent
-- **Conversation Evolution v2** - Advanced conversation tracking and analysis system
-- **Multi-Provider Support** - OpenAI, Anthropic, Google Gemini, SiliconFlow, DeepSeek, Kimi, and local LLMs
-- **Intelligent Tool Selection** - Dynamic routing of tool registry executions based on context relevance and agent capability
-- **Benchmark Testing** - Comprehensive AI evaluation with 22+ test cases across 6 categories
+Eight specialized agents collaborate to handle complex analysis workflows:
 
-### 🌐 **CodeXomics MCP Server**
+| Agent               | Role                                                        |
+| ------------------- | ----------------------------------------------------------- |
+| `CoordinatorAgent`  | Task decomposition, workflow management, result integration |
+| `AnalysisAgent`     | Sequence, variant, and genomic region analysis              |
+| `DataAgent`         | File loading, data parsing, and format conversion           |
+| `NavigationAgent`   | Genome browser navigation and position jumping              |
+| `ExternalAgent`     | MCP server communication and external tool execution        |
+| `PluginAgent`       | Plugin discovery, invocation, and lifecycle management      |
+| `DeepResearchAgent` | Multi-source information synthesis and report generation    |
+| `AgentBase`         | Shared base class providing common agent infrastructure     |
 
-- **Enhanced Tool Ecosystem** - Provides additional specialized tools not available in the standalone application
-- **Secure Remote Access** - Comprehensive security features for safe remote tool execution
-- **Plugin Integration** - Extends the plugin system with server-side capabilities
-- **Auto-Connection** - MCPBridge automatically connects to running MCP servers
-- **Standalone Operation** - Can be run independently for remote access
+The system includes a **multi-layer `MemorySystem`** (short-term, medium-term, long-term, and semantic layers) for intelligent caching and cross-session context persistence.
 
-### 🧬 **Advanced Genome Visualization**
+### Dynamic Tool Registry
 
-- **Dynamic SVG-based GC Content/Skew** - Crisp, scalable visualization with adaptive window sizing
-- **Interactive Tracks** - Genes, sequences, variants, reads, and proteins with resizable heights
-- **Multi-format Support** - FASTA, GenBank, GFF/GTF, BED, VCF, BAM/SAM files
-- **Real-time Navigation** - Smooth zooming, panning, and position jumping
-- **User-defined Features** - Create custom annotations with sequence selection
-- **Track State Persistence** - Automatically saves and restores track sizes and order across navigation and sessions
-- **Multiple View Modes** - Grid, List, and Details views for project management
+Tools are defined as individual YAML files under `tools_registry/` and are retrieved on-demand based on user intent — they are never hardcoded into system prompts.
 
-### 🔌 **Advanced Plugin System**
+**Tool categories (90+ tools total):**
 
-- **Modular Architecture** - Complete plugin system with PluginManager, SmartExecutor, and FunctionCallsOrganizer
-- **AI Integration** - Plugins automatically callable by ChatBox LLM using JSON function calling
-- **Security Sandbox** - Safe execution environment with parameter validation
-- **Plugin Marketplace** - Built-in marketplace for discovering and installing community plugins
-- **Zero Configuration** - Seamless LLM integration for new plugins
-- **Core Plugins** - Biological Networks, Comparative Genomics, Metabolic Pathways, and more
+| Category                                | Count   | Description                                           |
+| --------------------------------------- | ------- | ----------------------------------------------------- |
+| `navigation/`                           | 12      | Browser navigation, tab management, position jumping  |
+| `coordination/`                         | 15      | Multi-agent workflow orchestration                    |
+| `sequence/`                             | 8+      | GC content, translation, ORF finding, motif search    |
+| `sequence_editing/`                     | 10      | Copy, cut, paste, insert, replace, undo               |
+| `plugin_management/`                    | 12      | Plugin install, enable, execute, validate             |
+| `external_apis/`                        | 12      | BLAST, UniProt, AlphaFold, KEGG, InterPro, EVO2       |
+| `protein/`                              | 6       | Structure fetching, AlphaFold viewer, PDB search      |
+| `database/`                             | 6       | UniProt, InterPro domain analysis                     |
+| `data_management/`                      | 4       | Annotations, region analysis, codon usage, export     |
+| `pathway/`                              | 3       | Metabolic pathways, KEGG, BLAST search                |
+| `ai_analysis/`                          | 5       | EVO2 sequence generation, CRISPR design, essentiality |
+| `annotation/`, `file_operations/`, etc. | various | Additional specialized categories                     |
 
-### 🔧 **External Tools Integration**
+Each tool definition includes a JSON Schema for parameters, sample usages for few-shot learning, relationship metadata (dependencies, conflicts, alternatives), and performance statistics.
 
-- **ProGenFixer** - Protein engineering and sequence optimization tool
-- **Deep Gene Research** - Advanced gene analysis and research platform
-- **CHOPCHOP** - CRISPR design and analysis tool
-- **Customizable Tools** - Add your own external bioinformatics tools
-- **Keyboard Shortcuts** - Quick access to frequently used tools
-- **Session Management** - Persistent tool windows and state
+### CodeXomics MCP Server
 
-### 🧪 **Benchmark Testing Interface**
+- **40+ genomics tools** exposed as a standalone MCP server (`npm run mcp-server`)
+- **Dual transport**: HTTP/SSE on port `3002`, WebSocket on port `3003`
+- **`MCPBridge`** in the renderer auto-connects to running MCP server instances
+- **`InternalMCPServer`** for in-process tool execution without network overhead
+- **`AuthenticationManager`** and **`ConnectionHealthMonitor`** for secure, reliable connections
+- Consumable from any MCP-compatible client (Claude Desktop, Cursor, etc.)
 
-- **Comprehensive AI Evaluation** - 22+ test cases across 6 genomic analysis categories
-- **Manual Test Interaction** - Interactive dialogs for human verification and scoring
-- **Triple Classification System** - Automatic/manual evaluation, simple/complex tasks, 5 task types
-- **Real-time Progress Tracking** - Live progress bars and statistics during test execution
-- **Detailed Reporting** - Export test results, LLM interactions, and performance metrics
-- **Professional Interface** - Full-screen testing environment with comprehensive configuration options
-- **Multi-Agent Testing** - Evaluate multi-agent collaboration and coordination
+### Genome Visualization
 
-### 🤖 **AI-Powered Assistant**
+- **SVG-based genome browser** with hardware-accelerated rendering
+- **Multi-track system**: genes/features, DNA sequence, GC content/skew, variants (VCF), aligned reads (BAM), protein sequences, interaction networks, KEGG pathways
+- **Interactive tracks**: resizable heights, drag-to-reorder, state persistence across sessions
+- **Canvas renderers**: `CanvasGenesRenderer`, `CanvasReadsRenderer`, `CanvasSequenceRenderer` for high-performance display of dense data
+- **Circos plotter**: circular genome visualization (`circos-plotter.html`)
+- **Real-time navigation**: smooth zooming, panning, position jumping, multi-tab support
 
-- **Natural Language Queries** - Ask questions about genes, functions, and genomic regions
-- **Dynamic Tool Registry** - Intelligent tool selection based on user intent and context
-- **Conversation Evolution** - Advanced conversation recording and analysis system
-- **Multi-Provider Support** - OpenAI, Anthropic, Google Gemini, and local LLM integration
-- **Smart Navigation** - AI can jump to genes, analyze regions, and provide insights
-- **Interactive Chat** - Persistent conversation with genomic context awareness
-- **Thinking Process** - View AI reasoning process for transparent analysis
-- **Context-Aware Tools** - Tools adapt to current genome state and user queries
+### Plugin System
 
-### 🔬 **Professional Analysis Tools**
+- **Plugin API v2.0.0** — `PluginManagerV2` backed by a VS Code-inspired **`ExtensionService`** (activation events, contribution registry, sandboxed extension host)
+- **AI-callable plugins** — `PluginFunctionCallsIntegrator` exposes plugin functions directly to LLM tool calling
+- **`SmartExecutor`** and **`FunctionCallsOrganizer`** for intelligent routing
+- **`PluginSecurityValidator`** for sandboxed, validated execution
+- **`PluginMarketplace`** with a dedicated workspace package (`packages/marketplace-server/`) for community distribution
+- **`PluginUpdateManager`**, `PluginDependencyResolver`, and `PluginResourceManager` for full lifecycle management
 
-- **KGML Pathway Viewer** - Complete KEGG pathway visualization tool with dynamic interaction
-- **STRING Protein Networks** - Protein-protein interaction network analysis
-- **Enhanced Gene Details** - Support for 50+ biological databases with automatic link detection
-- **Sequence Analysis** - GC content, translation, reverse complement operations
-- **Feature Annotation** - Create, edit, and manage genomic features interactively
-- **Multi-track Visualization** - Synchronized views across different data types
-- **Export Capabilities** - FASTA, GenBank, GFF, BED, and protein sequences
+### ChatBox & AI Assistant
 
-### 🗂️ **Project Management**
+- **`ChatManager`** orchestrates LLM interactions with dynamic tool injection from the registry
+- **Modular chat services** under `src/renderer/modules/chat/services/`:
+  - `IntentParserService` — natural language intent detection
+  - `ToolExecutionService` — tool dispatch and result handling
+  - `LLMContextService` — context window management
+  - `GenomeAnalysisService`, `AnnotationService`, `ProteinService`, `BlastService`, `FileOperationService`, `UIService`
+- **Multi-provider LLM support**: OpenAI, Anthropic, Google Gemini, SiliconFlow (Qwen, DeepSeek, Kimi, GLM, Yi), local LLMs via Ollama
+- **Draggable ChatBox** — dock to sidebar or float freely; drag to edge to dock, drag away to undock
+- **Thinking history** — view full AI reasoning chain for each response
 
-- **XML Project Format** - Save and load projects with ".prj.GAI" extension
-- **Multiple View Modes** - Grid, List, and Details views for different workflows
-- **Simple Mode** - Compact interface for streamlined workflows
-- **File Tree Integration** - Organized project structure with automatic file management
-- **Project Templates** - Pre-configured project setups for common workflows
+### Benchmark Testing System
 
-### 📊 **Enhanced User Experience**
+Four benchmark suites covering 22+ test cases across six analysis categories:
 
-- **Modular Architecture** - Clean, maintainable codebase with separated concerns
-- **Responsive Design** - Works seamlessly across different screen sizes
-- **Keyboard Shortcuts** - Efficient navigation and operation shortcuts
-- **Customizable Interface** - Adjustable track heights and panel layouts
-- **Cross-Platform** - Native performance on macOS, Windows, and Linux
+| Suite                   | Description                                               |
+| ----------------------- | --------------------------------------------------------- |
+| `AutomaticSimpleSuite`  | Automated tests for straightforward single-step tasks     |
+| `AutomaticComplexSuite` | Automated multi-step workflow validation                  |
+| `ManualSuite`           | Interactive tests requiring human scoring (0–10 per case) |
+| `ManualComplexSuite`    | Human-verified complex multi-agent workflows              |
 
-## 🚀 Installation
+Categories: navigation, sequence analysis, data loading, gene search, external database queries, and multi-step workflows. Results, LLM interactions, and performance metrics are exportable.
 
-### **Download Pre-built Releases**
+### Additional Capabilities
 
-Download the latest version (v0.532beta) for your platform:
+- **Primer Designer** — Tm, GC%, and binding site analysis (`PrimerDesigner.js`)
+- **BLAST integration** — Local BLAST installer, downloader, and manager (`BlastManager.js`)
+- **Genomic Data Downloader** — Fetch genomes and annotations from NCBI and other sources
+- **Checkpoint / Rollback** — `CheckpointManager` saves up to 50 named state snapshots with auto-save every 5 minutes
+- **Internationalization** — `I18nManager` supports English and Simplified Chinese (`zh-CN`) with runtime language switching
+- **Literature integration** — `LiteratureAPIService` for PubMed and preprint lookups
+- **Bioinformatics web tools**: KGML Pathway Viewer, STRING Protein Networks, UniProt Search, InterPro Analyzer, NCBI Browser, GO Analyzer, KEGG Analyzer, DAVID Analyzer, Reactome Browser, PDB Viewer
+- **Circos plotter** — Multi-track circular genome layout
 
-#### macOS
+---
 
-- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-x64.dmg)**: `CodeXomics-0.532.0-beta-x64.dmg`
-- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-arm64.dmg)**: `CodeXomics-0.532.0-beta-arm64.dmg`
+## Installation
 
-#### Windows
+### Pre-built Releases
 
-- **[Installer](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics%20Setup%200.532.0-beta.exe)**: `CodeXomics Setup 0.532.0-beta.exe`
-- **[Portable](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics%200.532.0-beta.exe)**: `CodeXomics 0.532.0-beta.exe`
+Download the latest release (v0.532beta):
 
-#### Linux
+**macOS**
 
-- **[AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta.AppImage)**: `CodeXomics-0.532.0-beta.AppImage`
-- **[Debian](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/codexomics_0.532.0-beta_amd64.deb)**: `codexomics_0.532.0-beta_amd64.deb`
-- **[Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/codexomics_0.532.0-beta_amd64.snap)**: `codexomics_0.532.0-beta_amd64.snap`
+- [Intel (x64) — `.dmg`](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-x64.dmg)
+- [Apple Silicon (arm64) — `.dmg`](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta-arm64.dmg)
 
-**📋 All Downloads**: [GitHub Releases Page](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)
+**Windows**
 
-### **Build from Source**
+- [Installer — `.exe`](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics%20Setup%200.532.0-beta.exe)
+- [Portable — `.exe`](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics%200.532.0-beta.exe)
 
-```bash
-# Clone the repository
-git clone https://github.com/Scilence2022/CodeXomics.git
-cd CodeXomics
+**Linux**
 
-# Install dependencies (includes workspace packages)
-npm install
+- [AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/CodeXomics-0.532.0-beta.AppImage)
+- [Debian — `.deb`](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/codexomics_0.532.0-beta_amd64.deb)
+- [Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.532beta/codexomics_0.532.0-beta_amd64.snap)
 
-# Run in development mode
-npm start
+[All downloads — GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)
 
-# Start CodeXomics MCP server (standalone)
-npm run mcp-server
-# or
-npm run codexomics-mcp-server
-
-# Run with MCP server
-npm run start-with-mcp
-
-# Run with marketplace server
-npm run start-with-marketplace
-
-# Run full stack (app + MCP + marketplace)
-npm run start-full
-
-# Build for production
-npm run build
-```
-
-> **Note**: CodeXomics uses npm workspaces for better code organization. See [WORKSPACE_QUICKSTART.md](docs/WORKSPACE_QUICKSTART.md) for detailed workspace commands.
-
-## 📖 Quick Start
-
-### **1. Install and Launch**
+### Build from Source
 
 ```bash
-# Download for your platform from releases
-# macOS: Open DMG and drag to Applications
-# Windows: Run installer or portable exe
-# Linux: Make AppImage executable or install deb/snap
-
-# Or build from source
 git clone https://github.com/Scilence2022/CodeXomics.git
 cd CodeXomics
-npm install
-npm start
+npm install          # installs root + workspace packages
+npm start            # launch in development mode
+npm run dev          # launch with DevTools open
 ```
 
-### **2. Configure AI Models**
+**Additional run modes:**
+
+```bash
+npm run mcp-server              # standalone MCP server only
+npm run start-with-mcp          # app + MCP server concurrently
+npm run start-with-marketplace  # app + plugin marketplace server
+npm run start-full              # app + MCP server + marketplace server
+
+npm run build                   # production build (all platforms)
+npm run build:mac               # macOS DMG
+npm run build:win               # Windows NSIS + portable
+npm run build:linux             # Linux AppImage + deb + snap
+```
+
+---
+
+## Quick Start
+
+### 1. Configure AI Models
 
 ```
 Options → Configure LLMs
-├── Add API keys (OpenAI, Anthropic, Google, SiliconFlow)
-├── Configure multi-agent settings
-├── Test connections
-└── Save configuration
+  ├── Add API key (OpenAI, Anthropic, Google, SiliconFlow, DeepSeek, Kimi, ...)
+  ├── Or set a local LLM base URL (e.g. http://localhost:11434/v1 for Ollama)
+  └── Test connection → Save
 ```
 
-### **3. Load Genomic Data**
+### 2. Load Genomic Data
 
 ```
 File → Load File
-├── Genome: FASTA, GenBank
-├── Annotations: GFF, GTF, BED
-├── Variants: VCF
-└── Reads: BAM, SAM
+  ├── Genome:      FASTA, GenBank (.gbk / .gb)
+  ├── Annotations: GFF, GTF, BED
+  ├── Variants:    VCF
+  └── Reads:       BAM, SAM
 ```
 
-### **4. Start Analyzing**
-
-- **Ask AI**: "Find all DNA polymerase genes"
-- **Use Tools**: Tools → ProGenFixer, KGML Viewer, STRING Networks
-- **Run Benchmarks**: Benchmark & Debug → Open Benchmark
-- **Create Projects**: File → New Project
-
-### **5. Advanced Features**
-
-- **Multi-Agent Mode**: Enable collaborative AI analysis
-- **External Tools**: Quick access via keyboard shortcuts
-- **Plugin Marketplace**: Install community plugins
-- **Conversation Evolution**: Track AI reasoning and decision-making
-
-## 🎯 Core Features
-
-### **File Format Support**
-
-| Format      | Type                 | Import | Export | Notes                           |
-| ----------- | -------------------- | ------ | ------ | ------------------------------- |
-| **FASTA**   | Genome               | ✅     | ✅     | Primary genome sequences        |
-| **GenBank** | Genome + Annotations | ✅     | ✅     | Complete genomic records        |
-| **GFF/GTF** | Annotations          | ✅     | ✅     | Gene and feature annotations    |
-| **BED**     | Regions              | ✅     | ✅     | Genomic intervals and features  |
-| **VCF**     | Variants             | ✅     | ❌     | SNPs and structural variants    |
-| **SAM/BAM** | Alignments           | ✅     | ❌     | Read mapping data               |
-| **WIG**     | Track Data           | ✅     | ✅     | Multi-track support and merging |
-| **KGML**    | Pathways             | ✅     | ✅     | KEGG pathway visualization      |
-| **PRJ.GAI** | Projects             | ✅     | ✅     | Complete project files          |
-
-### **Enhanced Database Integration**
-
-Gene Details sidebar now supports 50+ biological databases:
-
-- **Sequence Databases**: GenBank, RefSeq, UniProt
-- **Functional Annotation**: GO, InterPro, Pfam, EC numbers
-- **Literature**: PubMed, bioRxiv, DOI links, ORCID
-- **Protein Structures**: PDB, AlphaFold, CATH, SCOP
-- **Pathways**: KEGG, Reactome, MetaCyc
-- **Species-specific**: FlyBase, WormBase, SGD, MGI
-- **Chemical/Drug**: PubChem, ChEBI, ChEMBL
-
-### **AI Integration with Dynamic Tool Registry**
+### 3. Interact via AI
 
 ```
-User: "Find all DNA polymerase genes"
-AI: [Dynamically selects search tools and displays results]
-
-User: "What's the GC content of this region?"
-AI: [Selects GC analysis tools and provides statistics]
-
-User: "codon usage analysis of lacZ gene"
-AI: [Intelligently selects codon_usage_analysis tool with gene context]
-
-User: "Show me protein networks for this gene"
-AI: [Launches STRING networks tool with gene context]
-
-User: "Load the lac operon pathway"
-AI: [Opens KGML viewer with relevant pathway]
-
-User: "run benchmark tests"
-AI: [Opens comprehensive benchmark interface for AI evaluation]
+ChatBox examples:
+  "Find all DNA polymerase genes"
+  "Calculate GC content of the selected region"
+  "Design primers for lacZ"
+  "Show STRING protein network for dnaA"
+  "Load the glycolysis KEGG pathway"
+  "Run benchmark tests"
+  "Enable multi-agent mode and analyze this operon"
 ```
 
-### **Benchmark Testing System**
+### 4. Connect External MCP Clients
 
-Comprehensive AI evaluation with 22 test cases:
+Start the MCP server and add this to your client configuration:
 
-- **Navigation Tests** - Browser navigation and position jumping
-- **Analysis Tests** - Sequence analysis and GC content calculation
-- **Data Loading Tests** - File loading and parsing verification
-- **Search Tests** - Gene search and result validation
-- **External Database Tests** - API integration and data retrieval
-- **Workflow Tests** - Multi-step genomic analysis processes
+```json
+{
+  "mcpServers": {
+    "CodeXomics": {
+      "url": "http://localhost:3002",
+      "transportType": "streamable-http"
+    }
+  }
+}
+```
 
-**Manual Test Features:**
+Endpoints:
 
-- Interactive verification dialogs with step-by-step checklists
-- Flexible scoring system (0-10 points based on complexity)
-- Real-time progress tracking and detailed reporting
-- Export capabilities for test results and LLM interactions
+- HTTP/SSE: `http://localhost:3002`
+- WebSocket: `ws://localhost:3003`
 
-### **Visualization Tracks**
+---
 
-- **🧬 Genes & Features** - Annotations with directional arrows and detailed information
-- **🔤 Sequence** - DNA sequence with customizable display density
-- **📊 GC Content & Skew** - Dynamic SVG visualization with adaptive window sizing
-- **🔬 Variants** - SNPs and mutations with quality information
-- **📋 Aligned Reads** - Read coverage and alignment visualization
-- **⚗️ Proteins** - Translated sequences and protein features
-- **🔗 Networks** - Protein-protein interaction networks
-- **🛤️ Pathways** - KEGG pathway visualization with interactive elements
+## Architecture
 
-## 🔌 Plugin System
+### Source Tree
 
-### **Available Plugins**
+```
+CodeXomics/
+├── src/
+│   ├── main.js                         # Electron main process
+│   ├── preload.js                      # Context bridge / IPC
+│   ├── version.js                      # Centralized version management
+│   ├── mcp-server.js                   # MCP server entry point
+│   ├── mcp-tools/                      # MCP tool implementations
+│   │   ├── navigation/, sequence/, protein/, database/
+│   │   ├── pathway/, primer/, annotation/, track/, action/
+│   │   ├── AuthenticationManager.js
+│   │   ├── ConnectionHealthMonitor.js
+│   │   ├── ToolCategoryManager.js
+│   │   └── ToolsIntegrator.js
+│   ├── bioinformatics-tools/           # Standalone HTML tool windows
+│   │   ├── kgml-viewer.html            # KEGG pathway viewer
+│   │   ├── string-networks.html        # STRING protein networks
+│   │   ├── pdb-viewer.html             # Protein structure (NGL)
+│   │   ├── uniprot-search.html
+│   │   ├── interpro-analyzer.html
+│   │   ├── ncbi-browser.html
+│   │   ├── go-analyzer.html
+│   │   ├── kegg-analyzer.html
+│   │   ├── david-analyzer.html
+│   │   ├── reactome-browser.html
+│   │   └── gene-annotation-refine.html
+│   ├── circos-plotter.html             # Circular genome visualization
+│   ├── genomic-data-download.html      # NCBI genome downloader
+│   ├── i18n/                           # Internationalization (EN, zh-CN)
+│   └── renderer/
+│       ├── index.html
+│       ├── renderer-modular.js         # Application bootstrap
+│       ├── css/                        # Vanilla CSS stylesheets
+│       └── modules/
+│           ├── Agents/                 # Multi-agent system
+│           │   ├── AgentBase.js
+│           │   ├── CoordinatorAgent.js
+│           │   ├── AnalysisAgent.js
+│           │   ├── DataAgent.js
+│           │   ├── NavigationAgent.js
+│           │   ├── ExternalAgent.js
+│           │   ├── PluginAgent.js
+│           │   └── DeepResearchAgent.js
+│           ├── MemoryLayers/           # Multi-layer memory system
+│           │   └── ShortTermMemory.js
+│           ├── chat/                   # ChatManager service layer
+│           │   └── services/
+│           │       ├── IntentParserService.js
+│           │       ├── ToolExecutionService.js
+│           │       ├── LLMContextService.js
+│           │       ├── GenomeAnalysisService.js
+│           │       ├── AnnotationService.js
+│           │       ├── ProteinService.js
+│           │       ├── BlastService.js
+│           │       ├── FileOperationService.js
+│           │       └── UIService.js
+│           ├── core/                   # VS Code-inspired extension system
+│           │   ├── ExtensionService.js
+│           │   ├── ExtensionHost.js
+│           │   ├── ExtensionContext.js
+│           │   ├── ContributionRegistry.js
+│           │   ├── ActivationEventsService.js
+│           │   ├── CommandRegistry.js
+│           │   └── ExtensionManifest.js
+│           ├── benchmark-suites/       # AI benchmark test suites
+│           │   ├── AutomaticSimpleSuite.js
+│           │   ├── AutomaticComplexSuite.js
+│           │   ├── ManualSuite.js
+│           │   └── ManualComplexSuite.js
+│           ├── ChatManager.js          # LLM orchestration + tool injection
+│           ├── MultiAgentSystem.js     # Agent coordination & event bus
+│           ├── MemorySystem.js         # Multi-layer memory & caching
+│           ├── TrackRenderer.js        # SVG genome track renderer
+│           ├── CanvasGenesRenderer.js
+│           ├── CanvasReadsRenderer.js
+│           ├── CanvasSequenceRenderer.js
+│           ├── NavigationManager.js    # Search & genome navigation
+│           ├── FileManager.js          # File I/O & format parsing
+│           ├── ProjectManager.js       # .prj.GAI project files
+│           ├── PluginManagerV2.js      # Plugin lifecycle management
+│           ├── PluginMarketplace.js    # Plugin discovery & install
+│           ├── SmartExecutor.js        # Intelligent tool routing
+│           ├── FunctionCallsOrganizer.js
+│           ├── PluginFunctionCallsIntegrator.js
+│           ├── PluginSecurityValidator.js
+│           ├── MCPBridge.js            # Auto-connects to MCP server
+│           ├── InternalMCPServer.js    # In-process MCP execution
+│           ├── MCPServerManager.js
+│           ├── CheckpointManager.js    # State snapshots & rollback
+│           ├── I18nManager.js          # EN / zh-CN runtime switching
+│           ├── PrimerDesigner.js       # Primer Tm, GC%, binding sites
+│           ├── BlastManager.js         # Local BLAST integration
+│           ├── BenchmarkManager.js     # Benchmark orchestration
+│           ├── LiteratureAPIService.js # PubMed / preprint search
+│           └── ...                     # 100+ additional modules
+├── tools_registry/                     # Dynamic Tool Registry (YAML)
+│   ├── registry_manager.js
+│   ├── system_integration.js
+│   ├── tool_categories.yaml
+│   ├── navigation/    coordination/    sequence/    sequence_editing/
+│   ├── protein/       database/        data_management/  pathway/
+│   ├── ai_analysis/   plugin_management/ external_apis/
+│   ├── annotation/    file_operations/  file_loading/
+│   ├── primer_design/ system/           utility/
+│   └── backup/
+├── packages/
+│   ├── app/                            # Workspace app package
+│   └── marketplace-server/            # Plugin marketplace HTTP server
+├── scripts/                            # Build, version, and packaging scripts
+├── docs/                               # MkDocs documentation
+├── test/                               # Unit, integration, and plugin tests
+├── test_data/                          # Sample genomes and pathways
+└── assets/                             # Icons and static resources
+```
 
-- **Biological Networks Plugin** - Network analysis and visualization
-- **Comparative Genomics Plugin** - Multi-genome comparison tools
-- **Metabolic Pathways Plugin** - Pathway analysis and visualization
-- **Structural Genomics Plugin** - Protein structure analysis
-- **Population Genomics Plugin** - Population-level analysis tools
+### Key Design Patterns
 
-### **Plugin Development**
+**Dynamic Tool Registry** — Each tool lives in its own YAML file. `registry_manager.js` scores and retrieves only the tools relevant to the current user query, keeping LLM context windows small and accurate.
+
+**Agent-per-capability** — Complex requests are decomposed by `CoordinatorAgent` and dispatched to domain-specific agents. Results are integrated back before responding.
+
+**Service-layer ChatManager** — `ChatManager.js` delegates to focused service classes (`chat/services/`) rather than handling everything inline.
+
+**VS Code-inspired extension host** — `core/ExtensionService.js` activates plugins lazily via activation events, manages contribution points, and sandboxes plugin execution.
+
+**IPC boundary** — Renderer–main communication flows through `preload.js` context bridge; no direct Node.js calls from renderer code.
+
+---
+
+## File Format Support
+
+| Format                  | Type                 | Import | Export |
+| ----------------------- | -------------------- | ------ | ------ |
+| FASTA                   | Genome sequence      | Yes    | Yes    |
+| GenBank (`.gbk`, `.gb`) | Genome + annotations | Yes    | Yes    |
+| GFF / GTF               | Annotations          | Yes    | Yes    |
+| BED                     | Genomic intervals    | Yes    | Yes    |
+| VCF                     | Variants             | Yes    | No     |
+| SAM / BAM               | Alignments           | Yes    | No     |
+| WIG                     | Quantitative tracks  | Yes    | Yes    |
+| KGML                    | KEGG pathways        | Yes    | Yes    |
+| `.prj.GAI`              | Projects             | Yes    | Yes    |
+
+---
+
+## Configuration
+
+### AI Provider Setup
+
+```json
+// OpenAI / compatible
+{ "provider": "openai", "apiKey": "sk-...", "model": "gpt-4o", "baseURL": "https://api.openai.com/v1" }
+
+// Anthropic
+{ "provider": "anthropic", "apiKey": "sk-ant-...", "model": "claude-opus-4-5" }
+
+// Local LLM (Ollama)
+{ "provider": "local", "apiKey": "not-required", "model": "llama3", "baseURL": "http://localhost:11434/v1" }
+```
+
+### Application Config Files
+
+Stored in `~/.codexomics/`:
+
+| File                  | Purpose                     |
+| --------------------- | --------------------------- |
+| `config.json`         | Main application settings   |
+| `llm-config.json`     | AI provider configurations  |
+| `ui-preferences.json` | Interface customizations    |
+| `chat-history.json`   | Conversation history        |
+| `plugins.json`        | Plugin configurations       |
+| `projects.json`       | Project management settings |
+
+### System Requirements
+
+| Resource | Minimum                             | Recommended   |
+| -------- | ----------------------------------- | ------------- |
+| RAM      | 6 GB                                | 12 GB         |
+| Storage  | 1 GB                                | 2 GB          |
+| CPU      | Dual-core                           | Quad-core+    |
+| OS       | macOS 10.15 / Win 10 / Ubuntu 20.04 | Latest stable |
+| Network  | Required for AI services            | —             |
+
+---
+
+## Development
+
+### Testing
+
+```bash
+npm test                    # full test suite
+npm run test:plugins        # plugin system tests
+npm run test:ai-integration # AI integration tests
+npm run test:visualization  # visualization tests
+```
+
+Test structure:
+
+```
+test/
+├── unit-tests/
+├── integration-tests/
+├── fix-validation-tests/
+└── plugin-tests/
+```
+
+### Plugin Development
+
+Plugins are loaded by `PluginManagerV2` and activated through `ExtensionService`. A plugin must provide an `ExtensionManifest`-compatible descriptor and can contribute commands, tools, and UI elements via the `ContributionRegistry`.
 
 ```javascript
-// Example plugin structure
+// Minimal plugin structure
 const MyPlugin = {
   id: 'my-plugin',
   name: 'My Custom Plugin',
@@ -326,475 +461,112 @@ const MyPlugin = {
 
   functions: {
     analyzeSequence: {
-      description: 'Analyze DNA sequence',
+      description: 'Analyze a DNA sequence',
       parameters: {
         sequence: { type: 'string', required: true },
       },
       execute: async params => {
-        // Plugin logic here
         return { result: 'analysis complete' };
       },
     },
   },
 
   initialize: () => {
-    // Plugin initialization
+    /* setup */
   },
 };
 ```
 
-### **Plugin Installation**
+Refer to `src/renderer/modules/core/ExtensionService.js` and `src/renderer/modules/PluginManagerV2.js` for the full API.
 
-1. Access Plugin Marketplace from the menu
-2. Browse available plugins
-3. Click "Install" for desired plugins
-4. Plugins automatically integrate with AI assistant
+### AI Coding Assistant Guidelines
 
-## 🎮 Usage Examples
+When using autonomous AI coding tools (Copilot, Cursor, Claude, etc.) in this repository, read [`Agents.md`](Agents.md) first. It documents the architectural rules, coding conventions, IPC patterns, and the Dynamic Tool Registry integration contract that must be followed.
 
-### **Basic Navigation**
+---
 
-```bash
-# Search for genes
-Type "lacZ" in search bar → Press Enter
+## Troubleshooting
 
-# Navigate to specific position
-Type "chr1:1000-5000" in position input
+| Symptom                          | Resolution                                                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| AI assistant not responding      | Check API key in `Options → Configure LLMs`. Use "Test Connection".                                                      |
+| MCP server tools not available   | Run `npm run mcp-server`; verify ports 3002/3003 are not blocked.                                                        |
+| Plugin fails to load             | Check developer console for activation errors; verify plugin API version compatibility (`PLUGIN_API_VERSION = "2.0.0"`). |
+| KGML viewer blank                | Confirm file is valid KEGG XML; check file path accessibility.                                                           |
+| BAM tracks not visible           | Ensure BAM index (`.bai`) file is present alongside the BAM file.                                                        |
+| Performance lag on large genomes | Reduce visible track count; enable Simple Mode; close unused tool windows.                                               |
+| Project fails to load            | Verify `.prj.GAI` file integrity and that all referenced data files are accessible.                                      |
+| Language not switching           | Restart the application after changing language in settings.                                                             |
 
-# Switch view modes
-Use View menu or toolbar buttons for Grid/List/Details
-```
+---
 
-### **Advanced Tools**
+## Documentation
 
-```bash
-# Open KGML Pathway Viewer
-Tools → KGML Pathway Viewer (Ctrl+Shift+K)
+- **[User Guide](docs/user-guides/)** — Feature walkthroughs and usage instructions
+- **[Developer Guide](docs/developer-guides/)** — Setup, contribution workflow, and code conventions
+- **[Architecture](docs/architecture/)** — System design documents including Multi-Agent System specification
+- **[Reference](docs/reference/)** — API references and technical guides
+- **[Release Notes](docs/release-notes/)** — Version history
+- **[Tools Registry README](tools_registry/README.md)** — Tool definition format and registry internals
+- **[AI Coding Guidelines](Agents.md)** — Guidelines for AI coding assistants
 
-# Launch STRING Networks
-Tools → STRING Protein Networks
+---
 
-# Access Gene Details
-Click any gene to see enhanced database cross-references
-```
-
-### **Project Management**
-
-```bash
-# Create new project
-File → New Project → Choose template
-
-# Save project
-File → Save Project (saves as .prj.GAI format)
-
-# Switch view modes
-View → Grid/List/Details or use toolbar buttons
-```
-
-### **AI Interaction with Dynamic Tool Registry**
-
-```
-Enhanced Queries with Intelligent Tool Selection:
-- "Show me all ribosomal genes" → [Selects gene search tools]
-- "Analyze protein networks for this gene" → [Selects STRING network tools]
-- "codon usage analysis of lacZ gene" → [Selects codon analysis tools]
-- "Load the glycolysis pathway" → [Selects pathway visualization tools]
-- "Find genes involved in DNA repair" → [Selects gene search and analysis tools]
-- "Export the current sequence as FASTA" → [Selects sequence export tools]
-- "What databases have information on this gene?" → [Selects database search tools]
-- "Calculate GC content of this region" → [Selects GC analysis tools]
-- "Find ORFs in this sequence" → [Selects ORF prediction tools]
-- "Search for protein structures" → [Selects AlphaFold/PDB search tools]
-```
-
-## ⚙️ Configuration
-
-### **AI Assistant Setup**
-
-1. **OpenAI Configuration**:
-
-   ```json
-   {
-     "provider": "openai",
-     "apiKey": "your-api-key",
-     "model": "gpt-4",
-     "baseURL": "https://api.openai.com/v1"
-   }
-   ```
-
-2. **Local LLM Setup**:
-   ```json
-   {
-     "provider": "local",
-     "apiKey": "not-required",
-     "model": "llama3",
-     "baseURL": "http://localhost:11434/v1"
-   }
-   ```
-
-### **Application Settings**
-
-Configuration files stored in: `~/.codexomics/`
-
-- `config.json` - Main application settings
-- `llm-config.json` - AI provider configurations
-- `ui-preferences.json` - Interface customizations
-- `chat-history.json` - Conversation history
-- `plugins.json` - Plugin configurations
-- `projects.json` - Project management settings
-
-### **MCP Server Configuration**
-
-- **Server URL**: Configure WebSocket endpoint for MCP server connections
-- **Auto-Connection**: Enable automatic MCP server activation
-- **Security Settings**: Configure authentication and access control
-- **Tool Discovery**: MCP servers automatically expose their tools to the application
-- **Remote Access**: Connect to MCP servers running on different machines
-
-### **Configuring CodeXomics MCP in Client Tools**
-
-To use CodeXomics MCP server in client tools, follow these steps:
-
-1. **Start the MCP Server**:
-   ```bash
-   # In CodeXomics directory
-   npm run mcp-server
-   ```
-
-2. **Configure MCP Client**:
-   Add this configuration to your MCP client settings:
-   ```json
-   {
-     "mcpServers": {
-       "CodeXomics": {
-         "url": "http://localhost:3002",
-         "transportType": "streamable-http"
-       }
-     }
-   }
-   ```
-
-3. **Connection Endpoints**:
-   - **WebSocket**: `ws://localhost:3003` (for browser connections)
-   - **HTTP/SSE**: `http://localhost:3002` (for HTTP clients)
-   - **stdio**: For MCP Client integration (recommended)
-
-4. **Using the MCP Server**:
-   - Client tools can send JSON-RPC 2.0 requests to the server
-   - The server exposes 40+ genomics tools for client use
-   - Tools include navigation, sequence analysis, protein structure, and database integration
-
-5. **Example Client Usage**:
-   ```javascript
-   // Example MCP client usage
-   const client = new MCPClient();
-   
-   // Connect to CodeXomics MCP server
-   await client.connect();
-   
-   // Execute a tool
-   const result = await client.executeTool('search_gene_by_name', {
-     geneName: 'lacZ'
-   });
-   
-   // Process the result
-   console.log('Gene found:', result);
-   ```
-
-### **Project Structure**
-
-```
-Documents/GenomeExplorer Projects/
-├── ProjectName/
-│   ├── data/                   # Project data files
-│   ├── ProjectName.prj.GAI     # Project file
-│   └── metadata.json          # Project metadata
-```
-
-## 🛠️ Development
-
-### **Architecture Overview**
-
-```
-src/
-├── main/                       # Electron main process
-├── tools_registry/            # Dynamic Tool Registry System
-│   ├── registry_manager.js    # Core registry management
-│   ├── system_integration.js  # System integration layer
-│   ├── tool_categories.yaml   # Tool categorization metadata
-│   └── [category_dirs]/       # Tool definition directories
-│       ├── navigation/        # Navigation tools
-│       ├── sequence/          # Sequence analysis tools
-│       ├── data_management/   # Data management tools
-│       ├── protein/           # Protein analysis tools
-│       └── ...                # Other tool categories
-├── renderer/                   # Browser application
-│   ├── modules/               # Core modules
-│   │   ├── FileManager.js            # File operations
-│   │   ├── TrackRenderer.js          # Visualization engine
-│   │   ├── NavigationManager.js      # Search & navigation
-│   │   ├── ChatManager.js            # AI integration with Dynamic Tools
-│   │   ├── ProjectManager.js         # Project management
-│   │   ├── PluginManager.js          # Plugin system
-│   │   ├── ConversationEvolutionManager.js  # Conversation tracking
-│   │   └── Plugins/                  # Plugin implementations
-│   │       ├── BiologicalNetworksPlugin.js
-│   │       ├── ComparativeGenomicsPlugin.js
-│   │       └── MetabolicPathwaysPlugin.js
-│   └── renderer-modular.js    # Main application
-├── bioinformatics-tools/       # Specialized tools
-│   ├── kgml-viewer.html       # KGML pathway viewer
-│   ├── string-networks.html   # STRING networks
-│   └── protein-structures.html # Protein visualization
-└── assets/                     # Static resources
-```
-
-### **Plugin System Architecture**
-
-```
-Plugin System Components:
-├── PluginManager.js              # Core plugin management
-├── PluginFunctionCallsIntegrator.js  # LLM integration
-├── SmartExecutor.js              # Intelligent execution
-├── FunctionCallsOrganizer.js     # Function categorization
-├── PluginSecurityValidator.js    # Security validation
-└── PluginMarketplace.js          # Plugin distribution
-```
-
-### **Dynamic Tool Registry Architecture**
-
-```
-Dynamic Tool Registry Components:
-├── registry_manager.js           # Core registry management
-├── system_integration.js         # System integration layer
-├── tool_categories.yaml          # Tool categorization metadata
-└── [category_dirs]/              # Tool definition directories
-    ├── navigation/               # Navigation tools (8 tools)
-    ├── sequence/                 # Sequence analysis tools (8 tools)
-    ├── data_management/          # Data management tools (4 tools)
-    ├── protein/                  # Protein analysis tools (6 tools)
-    ├── database/                 # Database integration tools (6 tools)
-    ├── ai_analysis/              # AI analysis tools (5 tools)
-    ├── pathway/                  # Pathway analysis tools (2 tools)
-    ├── sequence_editing/         # Sequence editing tools (10 tools)
-    ├── plugin_management/        # Plugin management tools (12 tools)
-    ├── coordination/             # Multi-agent coordination (15 tools)
-    └── external_apis/            # External API tools (12 tools)
-```
-
-### **MCP Server Architecture**
-
-```
-MCP Server Components:
-├── scripts/start-mcp-server.js   # MCP server startup script
-├── src/renderer/modules/MCPBridge.js  # Auto-connection bridge
-├── src/renderer/modules/InternalMCPServer.js  # Internal MCP server
-└── MCP Tools/                    # Server-side tools and utilities
-```
-
-## 🧪 Testing
-
-### **Test Structure**
-
-```
-test/
-├── unit-tests/                 # Individual component tests
-├── integration-tests/          # Multi-component tests
-├── fix-validation-tests/       # Bug fix verification
-└── plugin-tests/              # Plugin system tests
-```
-
-### **Sample Data**
-
-The application includes enhanced sample data:
-
-- **E. coli genome** - Complete bacterial genome with annotations
-- **KGML pathways** - Example pathway files for visualization
-- **Protein networks** - STRING interaction data
-- **Test sequences** - Various sequence formats and features
-
-### **Testing Commands**
-
-```bash
-# Run all tests
-npm test
-
-# Test specific components
-npm run test:plugins
-npm run test:ai-integration
-npm run test:visualization
-
-# Test plugin system
-npm run test:plugin-framework
-```
-
-## 🔧 Troubleshooting
-
-### **Common Issues**
-
-**Plugin System Issues**:
-
-- Verify plugin installation through Plugin Marketplace
-- Check plugin compatibility with current version
-- Review plugin logs in developer console
-
-**AI Assistant not responding**:
-
-- Check API key configuration in Settings
-- Verify internet connection for cloud providers
-- Test connection using the "Test Connection" button
-
-**KGML Viewer Issues**:
-
-- Ensure KGML file is valid XML format
-- Check file permissions and accessibility
-- Verify pathway data completeness
-
-**Project Loading Problems**:
-
-- Check .prj.GAI file integrity
-- Verify project directory structure
-- Ensure all referenced files are accessible
-
-**Performance issues**:
-
-- Reduce visible track count for large genomes
-- Use Simple Mode for better performance
-- Close unused visualization tools
-
-### **Advanced Troubleshooting**
-
-**Conversation Evolution Issues**:
-
-- Check conversation recording in developer console
-- Verify storage permissions
-- Reset conversation history if needed
-
-**Database Link Issues**:
-
-- Verify internet connection for external databases
-- Check if database URLs are accessible
-- Report broken links for database updates
-
-**MCP Server Issues**:
-
-- Verify MCP server is running (`npm run mcp-server`)
-- Check WebSocket connection URL in settings
-- Ensure server ports are not blocked by firewall
-- Verify server logs for error messages
-- Test connection using the MCP server status check
-
-## 📊 Performance
-
-### **Optimization Features**
-
-- **SVG Rendering** - Hardware-accelerated graphics for smooth performance
-- **Lazy Loading** - Components load only when needed
-- **Plugin Sandboxing** - Isolated execution prevents conflicts
-- **Memory Management** - Efficient cleanup and resource management
-- **Caching** - Intelligent caching for frequently accessed data
-- **Simple Mode** - Reduced UI complexity for better performance
-
-### **System Requirements**
-
-- **RAM**: 6GB minimum, 12GB recommended (increased for plugin system and MCP server)
-- **Storage**: 1GB for application, additional space for plugins, data, and MCP server tools
-- **CPU**: Modern multi-core processor recommended
-- **Graphics**: Hardware acceleration supported for better performance
-- **Network**: Internet connection for AI services and database links
-- **MCP Server**: Additional 2GB RAM and 500MB storage recommended
-
-## 🚀 Future Roadmap
-
-### **Planned Features**
-
-- **Enhanced Plugin Marketplace** - Advanced plugin discovery and ratings
-- **Multi-genome comparison** - Compare multiple genomes side-by-side
-- **Advanced AI models** - Integration with specialized biological AI models
-- **Cloud integration** - Direct access to genomic databases
-- **Collaborative features** - Share annotations and analysis with teams
-- **Real-time collaboration** - Multi-user editing and analysis
-
-### **Long-term Vision**
-
-- **Advanced analytics** - Machine learning-powered genomic insights
-- **Mobile support** - Tablet and mobile device compatibility
-- **Distributed computing** - Large-scale analysis capabilities
-- **Integration ecosystem** - Connect with major bioinformatics platforms
-
-## 📚 Documentation
-
-- **[User Guide](docs/user-guides/)** - Comprehensive usage instructions
-- **[Developer Guide](docs/developer-guides/)** - Contribution and development setup
-- **[Architecture](docs/architecture/)** - System design documentation
-- **[Reference Guides](docs/reference/)** - Technical references and guides
-- **[Release Notes](docs/release-notes/)** - Version history and changes
-
-## 🤝 Contributing
-
-We welcome contributions from the genomics and bioinformatics community!
-
-### **How to Contribute**
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -m 'Add my feature'`
+4. Push: `git push origin feature/my-feature`
 5. Open a Pull Request
 
-### **Plugin Development**
+**Guidelines:**
 
-1. **Study existing plugins** in `src/renderer/modules/Plugins/`
-2. **Follow plugin API** specifications
-3. **Test with Plugin Test Framework**
-4. **Submit to Plugin Marketplace**
+- Vanilla JavaScript (ES6+) only — no TypeScript, no React, no CSS frameworks
+- New AI tools belong in `tools_registry/` as YAML files, not hardcoded in `ChatManager.js`
+- New capabilities for agent workflows belong in the relevant `Agents/` class
+- Wrap all IPC calls and async operations in `try/catch`; never let promises fail silently
+- Read `Agents.md` before making architectural changes
 
-### **Development Guidelines**
+---
 
-- Follow existing code style and patterns
-- Review the [AI Assistant Guidelines](docs/Agents.md) if using autonomous coding tools
-- Add documentation for new features
-- Include tests for new functionality
-- Update relevant markdown documentation
-- Test plugin compatibility
-
-## 🐛 Issues and Support
+## Issues and Support
 
 - **Bug Reports**: [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
 - **Feature Requests**: [GitHub Discussions](https://github.com/Scilence2022/CodeXomics/discussions)
 - **Email**: songlf@tib.cas.cn
 
-## 📄 License
+---
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## License
 
-## 🙏 Acknowledgments
+MIT — see [LICENSE](LICENSE) for details.
 
-- **Electron** - Cross-platform desktop app framework
-- **D3.js** - Data visualization library
-- **OpenAI/Anthropic/Google** - AI model providers
-- **SiliconFlow** - Chinese LLM integration platform
-- **KEGG** - Pathway data and visualization
-- **STRING** - Protein interaction networks
-- **AlphaFold** - Protein structure predictions
-- **ProGenFixer** - Protein engineering tools
-- **Bioinformatics Community** - Inspiration and feedback
+---
 
-## 📊 Project Stats
+## Acknowledgments
 
-![GitHub stars](https://img.shields.io/github/stars/Scilence2022/CodeXomics?style=social)
-![GitHub forks](https://img.shields.io/github/forks/Scilence2022/CodeXomics?style=social)
-![GitHub issues](https://img.shields.io/github/issues/Scilence2022/CodeXomics)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/Scilence2022/CodeXomics)
+- [Electron](https://www.electronjs.org/) — cross-platform desktop framework
+- [D3.js](https://d3js.org/) — data visualization
+- [IGV.js](https://igv.org/) — genome browser components
+- [NGL Viewer](https://nglviewer.org/) — protein structure rendering
+- [OpenAI](https://openai.com/), [Anthropic](https://anthropic.com/), [Google](https://deepmind.google/) — LLM providers
+- [SiliconFlow](https://siliconflow.cn/) — Chinese LLM integration
+- [KEGG](https://www.kegg.jp/) — pathway data
+- [STRING](https://string-db.org/) — protein interaction networks
+- [AlphaFold](https://alphafold.ebi.ac.uk/) — protein structure predictions
+- [UniProt](https://www.uniprot.org/) / [InterPro](https://www.ebi.ac.uk/interpro/) — protein databases
+- The bioinformatics community for feedback and inspiration
 
 ---
 
 <div align="center">
 
-**CodeXomics v0.532beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
+**CodeXomics v0.532beta** — Intelligent Bioinformatics Analysis with Multi-Agent AI
 
-Made with ❤️ by the CodeXomics Team
+![GitHub stars](https://img.shields.io/github/stars/Scilence2022/CodeXomics?style=social)
+![GitHub issues](https://img.shields.io/github/issues/Scilence2022/CodeXomics)
 
-[⬆ Back to Top](#-codexomics)
+[Back to Top](#codexomics)
 
 </div>
