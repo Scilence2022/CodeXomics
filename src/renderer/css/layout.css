@@ -471,13 +471,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 4px 16px;
-  background: var(--bg-tertiary, #f8f9fa);
-  border-top: 1px solid var(--border-color, #e9ecef);
+  background-color: #f8f9fa !important; /* Force visible light grey */
+  border-top: 1px solid #dee2e6;
   font-size: 11px;
-  color: var(--text-secondary, #6c757d);
+  color: #495057;
   height: 28px;
+  min-height: 28px;
   flex-shrink: 0;
   z-index: 1000;
+}
+
+.app-status-bar {
+  border-top: 1px solid var(--border-color, #e9ecef);
 }
 
 .taskbar-right .connection-module {
