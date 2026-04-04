@@ -654,6 +654,13 @@ class GenomeBrowser {
 
         window.mcpBridge = this.mcpBridge; // For debugging
         console.log('✅ MCPBridge initialized - will auto-connect to MCP server if running');
+
+        // Sync toggle state with bridge
+        const toggle = document.getElementById('mcpServerToggle');
+        if (toggle) {
+          toggle.checked = true; // Auto-start is the default behavior in MCPBridge.start()
+        }
+        this.updateMCPBridgeUI(this.mcpBridge.isConnected());
       } else {
         // MCPBridge module not loaded, load it dynamically
         const script = document.createElement('script');
@@ -665,6 +672,13 @@ class GenomeBrowser {
             this.mcpBridge.start();
             window.mcpBridge = this.mcpBridge;
             console.log('✅ MCPBridge loaded and initialized');
+
+            // Sync toggle state with bridge
+            const toggle = document.getElementById('mcpServerToggle');
+            if (toggle) {
+              toggle.checked = true;
+            }
+            this.updateMCPBridgeUI(this.mcpBridge.isConnected());
           }
         };
         script.onerror = error => {
@@ -835,11 +849,16 @@ class GenomeBrowser {
     document.getElementById('exportGenbankBtn').addEventListener('click', () => this.exportManager.exportAsGenBank());
     document.getElementById('exportCDSFastaBtn').addEventListener('click', () => this.exportManager.exportCDSAsFasta());
 
-    // MCP Server control
+    // MCP Bridge control (connection to standalone MCP server)
     const mcpServerToggle = document.getElementById('mcpServerToggle');
     if (mcpServerToggle) {
-      mcpServerToggle.addEventListener('change', () => this.toggleMCPServer());
+      mcpServerToggle.addEventListener('change', () => this.toggleMCPBridge());
     }
+
+    // Listen for MCP Bridge status changes
+    window.addEventListener('mcp-bridge-status', e => {
+      this.updateMCPBridgeUI(e.detail.connected);
+    });
     document
       .getElementById('exportProteinFastaBtn')
       .addEventListener('click', () => this.exportManager.exportProteinAsFasta());
@@ -9369,11 +9388,6 @@ class GenomeBrowser {
           btn.disabled = false;
           btn.title = 'Start Unified Claude MCP Server';
         }
-        if (toggle) {
-          toggle.checked = false;
-          toggle.disabled = false;
-          toggle.title = 'Start CodeXomics MCP Server';
-        }
         break;
       case 'starting':
         if (statusText) statusText.textContent = 'Starting...';
@@ -9383,10 +9397,6 @@ class GenomeBrowser {
           btn.classList.add('starting');
           btn.disabled = true;
           btn.title = 'Unified Claude MCP Server is starting...';
-        }
-        if (toggle) {
-          toggle.disabled = true;
-          toggle.title = 'Starting MCP Server...';
         }
         break;
       case 'running':
@@ -9402,11 +9412,6 @@ class GenomeBrowser {
           btn.disabled = false;
           btn.title = `Stop ${serverTypeText} (Connect MCP Client to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
         }
-        if (toggle) {
-          toggle.checked = true;
-          toggle.disabled = false;
-          toggle.title = `Stop ${serverTypeText} (Connect MCP Client to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
-        }
         break;
       case 'stopping':
         if (statusText) statusText.textContent = 'Stopping...';
@@ -9417,11 +9422,57 @@ class GenomeBrowser {
           btn.disabled = true;
           btn.title = 'Unified Claude MCP Server is stopping...';
         }
-        if (toggle) {
-          toggle.disabled = true;
-          toggle.title = 'Stopping MCP Server...';
-        }
         break;
+    }
+  }
+
+  async toggleMCPBridge() {
+    const toggle = document.getElementById('mcpServerToggle');
+    if (!toggle) return;
+
+    if (!this.mcpBridge) {
+      console.warn('⚠️ MCPBridge not initialized');
+      this.initializeMCPBridge();
+      return;
+    }
+
+    if (toggle.checked) {
+      console.log('🔌 Connecting MCP Bridge...');
+      this.mcpBridge.start();
+      this.showNotification('MCP Bridge connection enabled', 'info');
+    } else {
+      console.log('🔌 Disconnecting MCP Bridge...');
+      this.mcpBridge.stop();
+      this.updateMCPBridgeUI(false);
+      this.showNotification('MCP Bridge connection disabled', 'info');
+    }
+  }
+
+  updateMCPBridgeUI(connected) {
+    const dot = document.getElementById('mcpBridgeStatusDot');
+    const toggle = document.getElementById('mcpServerToggle');
+    const container = document.querySelector('.mcp-server-toggle-container');
+
+    if (dot) {
+      if (connected) {
+        dot.classList.add('connected');
+      } else {
+        dot.classList.remove('connected');
+      }
+    }
+
+    if (toggle) {
+      // Don't change checked state if it was user-initiated via toggleMCPBridge
+      // But ensure it matches if we got an external status change
+      if (connected && !toggle.checked) {
+        toggle.checked = true;
+      }
+    }
+
+    if (container) {
+      container.title = connected
+        ? 'CodeXomics MCP Bridge: CONNECTED (Tools available to third-party callers)'
+        : 'CodeXomics MCP Bridge: DISCONNECTED (Connect to enable external tools)';
     }
   }
 
