@@ -408,8 +408,9 @@ class ToolsIntegrator {
       throw new Error(`Tool '${toolName}' not found`);
     }
 
-    const required = tool.parameters.required || [];
-    const properties = tool.parameters.properties || {};
+    const schema = tool.inputSchema || tool.parameters || {};
+    const required = schema.required || [];
+    const properties = schema.properties || {};
 
     // Check required parameters
     for (const param of required) {
