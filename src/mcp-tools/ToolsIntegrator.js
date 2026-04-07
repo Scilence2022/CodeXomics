@@ -118,6 +118,9 @@ class ToolsIntegrator {
       throw new Error(`Tool '${toolName}' not found`);
     }
 
+    // Validate parameters before execution
+    this.validateToolParameters(toolName, parameters || {});
+
     // Route to appropriate tool module based on tool name
     try {
       // Navigation tools

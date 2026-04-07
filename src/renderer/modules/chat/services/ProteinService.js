@@ -943,8 +943,218 @@ class ProteinService {
     );
     return alphaFoldResults;
   }
+  async searchUniProtDatabase(parameters) {
+    const { query, searchType = 'keyword', organism, reviewedOnly = false, limit = 20, includeSequence = false } = parameters;
+    try {
+      if (!query && !organism) {
+        throw new Error('Query or organism is required for UniProt search');
+      }
 
+      let queryParts = [];
+      if (query) {
+        if (searchType === 'gene_name') queryParts.push(`(gene:${query})`);
+        else if (searchType === 'protein_name') queryParts.push(`(protein_name:${query})`);
+        else if (searchType === 'uniprot_id') queryParts.push(`(accession:${query})`);
+        else queryParts.push(`(${query})`); // keyword or default
+      }
+      
+      if (organism) {
+        queryParts.push(`(organism_name:"${organism}")`);
+      }
+      if (reviewedOnly) {
+        queryParts.push(`(reviewed:true)`);
+      }
 
+      const queryString = queryParts.join(' AND ');
+      const fields = 'accession,id,protein_name,gene_names,organism_name,length,reviewed,cc_function,cc_subcellular_location' + (includeSequence ? ',sequence' : '');
+      const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(queryString)}&fields=${fields}&size=${limit}&format=json`;
+      
+      console.log(`[ProteinService] searchUniProtDatabase: ${searchUrl}`);
+      const response = await fetch(searchUrl);
+      
+      if (!response.ok) {
+        throw new Error(`UniProt API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Prune to avoid giant context hits
+      const results = (data.results || []).map(protein => {
+        let functionDescription = '';
+        let subcellularLocation = '';
+        
+        if (protein.comments) {
+          const fn = protein.comments.find(c => c.commentType === 'FUNCTION');
+          if (fn && fn.texts && fn.texts.length > 0) functionDescription = fn.texts[0].value;
+          
+          const loc = protein.comments.find(c => c.commentType === 'SUBCELLULAR LOCATION');
+          if (loc && loc.subcellularLocations && loc.subcellularLocations.length > 0) {
+            subcellularLocation = loc.subcellularLocations.map(l => l.location.value).join(', ');
+          }
+        }
+
+        const pruned = {
+          uniprotId: protein.primaryAccession,
+          entryName: protein.uniProtkbId,
+          proteinName: protein.proteinDescription?.recommendedName?.fullName?.value || protein.proteinDescription?.submissionNames?.[0]?.fullName?.value || 'Unknown',
+          genes: (protein.genes || []).map(g => g.geneName?.value).filter(Boolean),
+          organism: protein.organism?.scientificName || 'Unknown',
+          length: protein.sequence?.length || 0,
+          reviewed: protein.entryType === 'UniProtKB reviewed (Swiss-Prot)',
+        };
+        
+        if (functionDescription) pruned.function = functionDescription.substring(0, 500);
+        if (subcellularLocation) pruned.subcellularLocation = subcellularLocation;
+        if (includeSequence && protein.sequence?.value) pruned.sequence = protein.sequence.value;
+        
+        return pruned;
+      });
+
+      return {
+        success: true,
+        tool: 'search_uniprot_database',
+        count: results.length,
+        results: results,
+      };
+    } catch (error) {
+      console.error('searchUniProtDatabase error:', error);
+      return { success: false, tool: 'search_uniprot_database', error: error.message };
+    }
+  }
+
+  async advancedUniprotSearch(parameters) {
+    const { proteinName, geneName, organism, keywords, subcellularLocation, function: fnLocation, reviewedOnly = false, limit = 20 } = parameters;
+    try {
+      let queryParts = [];
+      if (proteinName) queryParts.push(`(protein_name:"${proteinName}")`);
+      if (geneName) queryParts.push(`(gene:"${geneName}")`);
+      if (organism) queryParts.push(`(organism_name:"${organism}")`);
+      if (keywords) queryParts.push(`(keyword:"${keywords}")`);
+      if (subcellularLocation) queryParts.push(`(cc_scl_term:"${subcellularLocation}")`);
+      if (fnLocation) queryParts.push(`(cc_function:"${fnLocation}")`);
+      if (reviewedOnly) queryParts.push(`(reviewed:true)`);
+
+      if (queryParts.length === 0) {
+        throw new Error('At least one search parameter must be provided');
+      }
+
+      const queryString = queryParts.join(' AND ');
+      const fields = 'accession,protein_name,gene_names,organism_name,length,reviewed';
+      const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(queryString)}&fields=${fields}&size=${limit}&format=json`;
+      
+      console.log(`[ProteinService] advancedUniprotSearch: ${searchUrl}`);
+      const response = await fetch(searchUrl);
+      
+      if (!response.ok) {
+        throw new Error(`UniProt API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      const results = (data.results || []).map(protein => ({
+        uniprotId: protein.primaryAccession,
+        proteinName: protein.proteinDescription?.recommendedName?.fullName?.value || 'Unknown',
+        genes: (protein.genes || []).map(g => g.geneName?.value).filter(Boolean),
+        organism: protein.organism?.scientificName || 'Unknown',
+        length: protein.sequence?.length || 0,
+        reviewed: protein.entryType === 'UniProtKB reviewed (Swiss-Prot)',
+      }));
+
+      return {
+        success: true,
+        tool: 'advanced_uniprot_search',
+        count: results.length,
+        results: results,
+      };
+    } catch (error) {
+      console.error('advancedUniprotSearch error:', error);
+      return { success: false, tool: 'advanced_uniprot_search', error: error.message };
+    }
+  }
+
+  async searchInterproEntry(parameters) {
+    const { search_term, search_terms, search_type = 'any', entry_type, max_results = 20 } = parameters;
+    try {
+      let term = search_term;
+      if (!term && search_terms && search_terms.length > 0) {
+        term = search_terms.join(' ');
+      }
+      if (!term) throw new Error('search_term is required');
+
+      let searchUrl = `https://www.ebi.ac.uk/interpro/api/entry/interpro/?search=${encodeURIComponent(term)}`;
+      if (entry_type) searchUrl += `&type=${encodeURIComponent(entry_type.toLowerCase())}`;
+      searchUrl += `&page_size=${max_results}`;
+
+      console.log(`[ProteinService] searchInterproEntry: ${searchUrl}`);
+      const response = await fetch(searchUrl);
+      
+      if (!response.ok) {
+        throw new Error(`InterPro API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      const results = (data.results || []).map(entry => ({
+        interproId: entry.metadata?.accession || entry.accession,
+        name: entry.metadata?.name?.name || entry.metadata?.name || 'Unknown',
+        type: entry.metadata?.type || 'Unknown',
+        proteinCount: entry.protein_count || 0,
+        integrated: entry.metadata?.integrated || null,
+        description: entry.metadata?.description?.[0] || 'No description available',
+      }));
+
+      return {
+        success: true,
+        tool: 'search_interpro_entry',
+        count: results.length,
+        results: results,
+      };
+    } catch (error) {
+      console.error('searchInterproEntry error:', error);
+      return { success: false, tool: 'search_interpro_entry', error: error.message };
+    }
+  }
+
+  async getInterproEntryDetails(parameters) {
+    const { interproId, includeProteins = false, includeStructures = false } = parameters;
+    try {
+      if (!interproId) throw new Error('interproId is required');
+
+      const upperId = interproId.toUpperCase();
+      const searchUrl = `https://www.ebi.ac.uk/interpro/api/entry/interpro/${encodeURIComponent(upperId)}`;
+      
+      console.log(`[ProteinService] getInterproEntryDetails: ${searchUrl}`);
+      const response = await fetch(searchUrl);
+      
+      if (!response.ok) {
+        throw new Error(`InterPro API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const meta = data.metadata || data;
+      
+      const details = {
+        interproId: meta.accession,
+        name: meta.name?.name || meta.name || 'Unknown',
+        shortName: meta.name?.short || '',
+        type: meta.type || 'Unknown',
+        description: (meta.description || []).map(d => d.text).join(' '),
+        proteinCount: data.protein_count || 0,
+        goTerms: (meta.go_terms || []).map(go => ({ id: go.identifier, name: go.name, category: go.category })),
+        integratedSignatures: Object.keys(meta.member_databases || {}),
+        literature: Object.values(meta.literature || {}).map(lit => ({ pmid: lit.PMID, title: lit.title, author: lit.author }))
+      };
+
+      return {
+        success: true,
+        tool: 'get_interpro_entry_details',
+        details: details,
+      };
+    } catch (error) {
+      console.error('getInterproEntryDetails error:', error);
+      return { success: false, tool: 'get_interpro_entry_details', error: error.message };
+    }
+  }
 }
 
 window.ProteinService = ProteinService;

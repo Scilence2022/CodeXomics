@@ -6618,8 +6618,11 @@ ${coreTools}
 
       // Database tools
       analyze_interpro_domains: () => this.analyzeInterProDomains(parameters),
-      search_uniprot_database: () => this.searchUniProtDatabase(parameters),
+      search_uniprot_database: () => this.services.protein.searchUniProtDatabase(parameters),
+      advanced_uniprot_search: () => this.services.protein.advancedUniprotSearch(parameters),
       get_uniprot_entry: () => this.getUniProtEntry(parameters),
+      search_interpro_entry: () => this.services.protein.searchInterproEntry(parameters),
+      get_interpro_entry_details: () => this.services.protein.getInterproEntryDetails(parameters),
       search_pattern: () => this.searchPattern(parameters),
       find_restriction_sites: () => this.findRestrictionSites(parameters),
       virtual_digest: () => this.virtualDigest(parameters),

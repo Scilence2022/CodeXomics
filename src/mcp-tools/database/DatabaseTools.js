@@ -10,6 +10,10 @@ class DatabaseTools {
     this.server = server;
   }
 
+  async executeClientTool(toolName, parameters, clientId) {
+    return await this.server.executeToolOnClient(toolName, parameters, clientId);
+  }
+
   getTools() {
     return {
       search_uniprot_database: {
