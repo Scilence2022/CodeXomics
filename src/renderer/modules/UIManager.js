@@ -817,6 +817,12 @@ class UIManager {
     const tryUpdateStatus = () => {
       const statusElement = document.getElementById('statusText');
       if (statusElement) {
+        // Capture original text if we need to restore it
+        const originalText = statusElement.dataset.originalText || statusElement.textContent;
+        if (!statusElement.dataset.originalText && options.restore) {
+          statusElement.dataset.originalText = originalText;
+        }
+
         statusElement.textContent = message;
 
         // Handle highlighting options
@@ -834,6 +840,12 @@ class UIManager {
               statusElement.style.color = ''; // Reset to default
               statusElement.style.fontWeight = '';
               statusElement.style.transition = '';
+
+              // Restore text if requested and it hasn't been changed by something else
+              if (options.restore && statusElement.textContent === message) {
+                statusElement.textContent = originalText;
+                delete statusElement.dataset.originalText;
+              }
             }
           }, duration);
         } else {

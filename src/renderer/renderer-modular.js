@@ -4876,22 +4876,13 @@ class GenomeBrowser {
       this.showNotification(message, 'info');
     }
 
-    // Update status bar if available
-    const statusBar = document.querySelector('.status-bar');
-    if (statusBar) {
-      const statusMessage = statusBar.querySelector('.status-message') || statusBar;
-      const originalText = statusMessage.textContent;
-      statusMessage.textContent = message;
-      statusMessage.style.color = '#3b82f6';
-      statusMessage.style.fontWeight = 'bold';
-
-      // Reset after 3 seconds
-      setTimeout(() => {
-        statusMessage.textContent = originalText;
-        statusMessage.style.color = '';
-        statusMessage.style.fontWeight = '';
-      }, 3000);
-    }
+    // Update status bar using unified updateStatus method
+    this.updateStatus(message, {
+      highlight: true,
+      color: '#3b82f6',
+      duration: 3000,
+      restore: true
+    });
   }
 
   /**
