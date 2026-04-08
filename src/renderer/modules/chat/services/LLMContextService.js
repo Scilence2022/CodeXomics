@@ -1898,9 +1898,10 @@ For data export requests:
 • **"export annotations" → use export_gff_annotations for GFF or export_bed_format for BED**
 • **"export current view" → use export_current_view_fasta**
 • **IMPORTANT: Always set auto_save=true when calling export tools in automated/LLM workflows to avoid save dialog prompts that block execution**
+• **The filename parameter supports absolute paths (e.g., "/Users/user/output/genome.fasta") or relative paths (resolved against CWD). Use absolute paths when you need a specific output directory.**
 • Examples: 
-  - {"tool_name": "export_fasta_sequence", "parameters": {"auto_save": true, "filename": "genome_export.fasta"}}
-  - {"tool_name": "export_genbank_format", "parameters": {"auto_save": true, "filename": "genome.gbk"}}
+  - {"tool_name": "export_fasta_sequence", "parameters": {"auto_save": true, "filename": "/Users/user/output/genome_export.fasta"}}
+  - {"tool_name": "export_genbank_format", "parameters": {"auto_save": true, "filename": "/tmp/genome.gbk"}}
   - {"tool_name": "export_cds_fasta", "parameters": {"auto_save": true, "filename": "my_cds.fasta"}}
   - {"tool_name": "export_current_view_fasta", "parameters": {"auto_save": true}}
 

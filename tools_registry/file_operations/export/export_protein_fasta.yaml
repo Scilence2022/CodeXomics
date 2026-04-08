@@ -24,12 +24,15 @@ parameters:
   properties:
     filename:
       type: string
-      description: Output filename for the exported protein FASTA file
+      description: >-
+        Output file path for the exported protein FASTA file. Supports absolute paths
+        (e.g., "/Users/user/output/proteins.fasta") and relative paths (e.g., "proteins.fasta").
+        Relative paths are resolved against the current working directory.
       default: 'proteins.fasta'
       examples:
-        - 'all_proteins.fasta'
+        - '/Users/user/output/all_proteins.fasta'
         - 'selected_proteins.fasta'
-        - 'chromosome_proteins.fasta'
+        - '/tmp/chromosome_proteins.fasta'
     auto_save:
       type: boolean
       description: >-

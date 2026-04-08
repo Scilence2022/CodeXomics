@@ -22,12 +22,16 @@ parameters:
   properties:
     filename:
       type: string
-      description: Output filename for the exported FASTA file
+      description: >-
+        Output file path for the exported FASTA file. Supports both absolute paths
+        (e.g., "/Users/user/output/genome.fasta") and relative paths (e.g., "genome.fasta").
+        Relative paths are resolved against the current working directory.
+        When auto_save=true and no filename is provided, defaults to "genome.fasta" in the CWD.
       default: 'sequences.fasta'
       examples:
-        - 'genome_sequences.fasta'
+        - '/Users/user/output/genome_sequences.fasta'
         - 'selected_genes.fasta'
-        - 'chromosome_1.fasta'
+        - '/tmp/chromosome_1.fasta'
     auto_save:
       type: boolean
       description: >-
@@ -74,9 +78,9 @@ sample_usages:
     thought: User wants to export selected gene sequences as FASTA
     expected_result: FASTA file containing selected gene sequences
   - user_query: Auto-export genome FASTA without dialog (for LLM/agent workflows)
-    tool_call: export_fasta_sequence(filename="genome_export.fasta", auto_save=true)
+    tool_call: export_fasta_sequence(filename="/Users/user/output/genome_export.fasta", auto_save=true)
     thought: LLM/agent needs to export FASTA without any interactive dialog that would block execution
-    expected_result: FASTA file saved directly to disk without save dialog
+    expected_result: FASTA file saved directly to specified path without save dialog
 relationships:
   depends_on: []
   conflicts_with: []

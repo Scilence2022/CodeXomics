@@ -23,12 +23,15 @@ parameters:
   properties:
     filename:
       type: string
-      description: Output filename for the exported BED file
+      description: >-
+        Output file path for the exported BED file. Supports absolute paths
+        (e.g., "/Users/user/output/features.bed") and relative paths (e.g., "features.bed").
+        Relative paths are resolved against the current working directory.
       default: 'features.bed'
       examples:
-        - 'genes.bed'
+        - '/Users/user/output/genes.bed'
         - 'selected_features.bed'
-        - 'chromosome_1.bed'
+        - '/tmp/chromosome_1.bed'
     auto_save:
       type: boolean
       description: >-

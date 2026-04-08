@@ -23,12 +23,15 @@ parameters:
   properties:
     filename:
       type: string
-      description: Output filename for the exported FASTA file
+      description: >-
+        Output file path for the exported FASTA file. Supports absolute paths
+        (e.g., "/Users/user/output/view.fasta") and relative paths (e.g., "view.fasta").
+        Relative paths are resolved against the current working directory.
       default: 'current_view.fasta'
       examples:
-        - 'visible_region.fasta'
+        - '/Users/user/output/visible_region.fasta'
         - 'current_chromosome.fasta'
-        - 'view_sequences.fasta'
+        - '/tmp/view_sequences.fasta'
     auto_save:
       type: boolean
       description: >-

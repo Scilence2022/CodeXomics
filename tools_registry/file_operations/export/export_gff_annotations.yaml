@@ -23,12 +23,15 @@ parameters:
   properties:
     filename:
       type: string
-      description: Output filename for the exported GFF file
+      description: >-
+        Output file path for the exported GFF file. Supports absolute paths
+        (e.g., "/Users/user/output/annotations.gff3") and relative paths (e.g., "annotations.gff3").
+        Relative paths are resolved against the current working directory.
       default: 'annotations.gff3'
       examples:
-        - 'genome_annotations.gff3'
+        - '/Users/user/output/genome_annotations.gff3'
         - 'selected_features.gff3'
-        - 'chromosome_1.gff3'
+        - '/tmp/chromosome_1.gff3'
     auto_save:
       type: boolean
       description: >-

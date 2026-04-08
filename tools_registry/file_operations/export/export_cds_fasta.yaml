@@ -23,12 +23,15 @@ parameters:
   properties:
     filename:
       type: string
-      description: Output filename for the exported CDS FASTA file
+      description: >-
+        Output file path for the exported CDS FASTA file. Supports absolute paths
+        (e.g., "/Users/user/output/cds.fasta") and relative paths (e.g., "cds.fasta").
+        Relative paths are resolved against the current working directory.
       default: 'cds_sequences.fasta'
       examples:
-        - 'all_cds.fasta'
+        - '/Users/user/output/all_cds.fasta'
         - 'selected_cds.fasta'
-        - 'chromosome_cds.fasta'
+        - '/tmp/chromosome_cds.fasta'
     auto_save:
       type: boolean
       description: >-

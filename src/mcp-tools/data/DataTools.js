@@ -56,7 +56,7 @@ class DataTools {
             chromosome: { type: 'string', description: 'Chromosome (optional for full export)' },
             start: { type: 'number', description: 'Start position (optional)' },
             end: { type: 'number', description: 'End position (optional)' },
-            filename: { type: 'string', description: 'Output filename (optional, uses default if not specified)' },
+            filename: { type: 'string', description: 'Output file path. Supports absolute paths (e.g., "/Users/user/output/genome.fasta") and relative paths (resolved against CWD). Uses default filename if not specified.' },
             auto_save: {
               type: 'boolean',
               description: 'When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.',
