@@ -11789,36 +11789,32 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
   /**
    * Close/hide track
    */
+  /**
+   * Close/hide track (instance-aware)
+   */
   closeTrack(trackType) {
     console.log(`Closing track: ${trackType}`);
 
-    // Map trackType to checkbox IDs
-    const trackMapping = {
-      genes: 'trackGenes',
-      gc: 'trackGC',
-      variants: 'trackVariants',
-      reads: 'trackReads',
-      proteins: 'trackProteins',
-      wigTracks: 'trackWIG',
-      sequence: 'trackSequence',
-    };
+    // If it's a base track, it's in visibleTracks
+    if (this.genomeBrowser.visibleTracks.has(trackType)) {
+      this.genomeBrowser.visibleTracks.delete(trackType);
+    } else {
+      // Check if it's an instance ID (e.g., annotation_1)
+      this.genomeBrowser.visibleTracks.delete(trackType);
+    }
 
-    const checkboxId = trackMapping[trackType];
-    if (checkboxId) {
-      const checkbox = document.getElementById(checkboxId);
-      const sidebarCheckbox = document.getElementById(
-        'sidebar' + checkboxId.charAt(0).toUpperCase() + checkboxId.slice(1)
-      );
+    // Use the unified synchronization and refresh logic
+    this.genomeBrowser.updateTrackVisibilityUI();
 
-      if (checkbox) {
-        checkbox.checked = false;
-        checkbox.dispatchEvent(new Event('change'));
-      }
+    // Trigger view refresh
+    const currentChr = document.getElementById('chromosomeSelect').value;
+    if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+      this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+    }
 
-      if (sidebarCheckbox) {
-        sidebarCheckbox.checked = false;
-        sidebarCheckbox.dispatchEvent(new Event('change'));
-      }
+    // Notify TabManager
+    if (this.genomeBrowser.tabManager) {
+      this.genomeBrowser.tabManager.onTrackVisibilityChanged();
     }
   }
 

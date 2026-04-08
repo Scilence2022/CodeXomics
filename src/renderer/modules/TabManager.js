@@ -664,6 +664,7 @@ class TabManager {
 
       // Save track management state (independent per tab)
       tabState.trackVisibility = { ...this.genomeBrowser.trackVisibility };
+      tabState.visibleTracks = new Set(this.genomeBrowser.visibleTracks); // Save the entire Set including instances
       tabState.featureVisibility = this.genomeBrowser.geneFilters
         ? { ...this.genomeBrowser.geneFilters }
         : { ...this.genomeBrowser.featureVisibility };
@@ -724,11 +725,16 @@ class TabManager {
       // Restore track management state (independent per tab)
       if (tabState.trackVisibility) {
         this.genomeBrowser.trackVisibility = { ...tabState.trackVisibility };
-        // Also sync with visibleTracks
+      }
+      
+      if (tabState.visibleTracks) {
+        // Restore the entire Set (includes instances like annotation_track_1)
+        this.genomeBrowser.visibleTracks = new Set(tabState.visibleTracks);
+      } else if (tabState.trackVisibility) {
+        // Backward compatibility: build visibleTracks from trackVisibility object
         this.genomeBrowser.visibleTracks = new Set();
         Object.entries(tabState.trackVisibility).forEach(([trackType, isVisible]) => {
           if (isVisible) {
-            // Map track names to match visibleTracks naming convention
             const trackName = trackType === 'wig' ? 'wigTracks' : trackType;
             this.genomeBrowser.visibleTracks.add(trackName);
           }

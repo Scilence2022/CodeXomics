@@ -1839,6 +1839,11 @@ Original error: ${error.message}`;
     // Add the new track to the annotation tracks list
     this.genomeBrowser.annotationTracks.push(newTrack);
 
+    // Synchronize with the global visibility control system
+    if (newTrack.visible) {
+      this.genomeBrowser.visibleTracks.add(newTrack.id);
+    }
+
     // Add file to loaded files list
     this.updateLoadedFilesList();
   }

@@ -302,6 +302,7 @@ class GenomeBrowser {
     // User-defined features storage
     this.currentSequenceSelection = null; // Track current sequence selection
     this.wigTrackOrder = []; // Stable order for WIG tracks
+    this.annotationTracks = []; // List of additional annotation track instances (GFF/BED)
 
     // Initialize track visibility
     this.visibleTracks = new Set(['genes', 'gc', 'sequence']); // Default visible tracks (sequence = bottom panel, sequenceLine = single-line track)
@@ -1027,46 +1028,25 @@ class GenomeBrowser {
       this.sequenceUtils.selectChromosome(e.target.value);
     });
 
-    // Track selection (toolbar checkboxes)
-    document.getElementById('trackGenes').addEventListener('change', () => this.updateVisibleTracks());
-    document.getElementById('trackGC').addEventListener('change', () => this.updateVisibleTracks());
-    document.getElementById('trackVariants').addEventListener('change', () => this.updateVisibleTracks());
-    document.getElementById('trackReads').addEventListener('change', () => this.updateVisibleTracks());
-    document.getElementById('trackWIG').addEventListener('change', () => this.updateVisibleTracks());
-    document.getElementById('trackProteins').addEventListener('change', () => this.updateVisibleTracks());
-    document.getElementById('trackSequence').addEventListener('change', () => this.updateVisibleTracks());
-    document.getElementById('trackSequenceLine').addEventListener('change', () => this.updateVisibleTracks());
-    document.getElementById('trackActions').addEventListener('change', () => this.updateVisibleTracks());
-    document.getElementById('trackBlast').addEventListener('change', () => this.updateVisibleTracks());
+    // Track selection (toolbar checkbox container - using delegation)
+    const trackCheckboxes = document.getElementById('trackCheckboxes');
+    if (trackCheckboxes) {
+      trackCheckboxes.addEventListener('change', e => {
+        if (e.target.type === 'checkbox') {
+          this.updateVisibleTracks();
+        }
+      });
+    }
 
-    // Sidebar track controls
-    document
-      .getElementById('sidebarTrackGenes')
-      .addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-    document.getElementById('sidebarTrackGC').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-    document
-      .getElementById('sidebarTrackVariants')
-      .addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-    document
-      .getElementById('sidebarTrackReads')
-      .addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-    document.getElementById('sidebarTrackWIG').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-    document
-      .getElementById('sidebarTrackProteins')
-      .addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-    document
-      .getElementById('sidebarTrackSequence')
-      .addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-    document
-      .getElementById('sidebarTrackSequenceLine')
-      .addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-    document
-      .getElementById('sidebarTrackActions')
-      .addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-    document
-      .getElementById('sidebarTrackBlast')
-      .addEventListener('change', () => this.updateVisibleTracksFromSidebar());
-
+    // Sidebar track controls (using delegation for dynamic instances)
+    const sidebarTrackControls = document.getElementById('sidebarTrackControls');
+    if (sidebarTrackControls) {
+      sidebarTrackControls.addEventListener('change', e => {
+        if (e.target.type === 'checkbox') {
+          this.updateVisibleTracksFromSidebar();
+        }
+      });
+    }
     // Panel close buttons
     document.querySelectorAll('.close-panel-btn').forEach(btn => {
       btn.addEventListener('click', e => {
@@ -3625,6 +3605,10 @@ class GenomeBrowser {
       if (this.readsManager) {
         this.readsManager.onNavigationChange(chromosome, this.currentPosition.start, this.currentPosition.end);
       }
+
+      // Dynamically populate/update the sidebar tracks based on actual loaded tracks
+      this.populateSidebarTracks();
+      this.updateTrackVisibilityUI();
     } finally {
       // Always clear the rendering flag
       this._isRenderingView = false;
@@ -4271,6 +4255,74 @@ class GenomeBrowser {
     }
   }
 
+  /**
+   * Dynamically populate the sidebar tracks section based on current instances
+   */
+  populateSidebarTracks() {
+    const container = document.getElementById('sidebarTrackControls');
+    if (!container) return;
+
+    // Save scroll position or other UI state if needed
+    container.innerHTML = '';
+
+    // Define track instances to show
+    const instances = [];
+
+    // 1. Add base tracks
+    const baseTracks = [
+      { id: 'genes', name: 'Primary Genes & Features', category: 'genes' },
+      { id: 'gc', name: 'GC Content & Skew', category: 'gc' },
+      { id: 'variants', name: 'Primary VCF Variants', category: 'variants' },
+      { id: 'reads', name: 'Primary Aligned Reads', category: 'reads' },
+      { id: 'wigTracks', name: 'Primary WIG Tracks', category: 'wigTracks' },
+      { id: 'proteins', name: 'Proteins', category: 'proteins' },
+      { id: 'sequence', name: 'Bottom Sequence Panel', category: 'sequence' },
+      { id: 'sequenceLine', name: 'Single-line Sequence', category: 'sequenceLine' },
+      { id: 'actions', name: 'Actions Track', category: 'actions' },
+      { id: 'blast', name: 'Blast Results', category: 'blast' },
+    ];
+
+    baseTracks.forEach(track => {
+      instances.push(track);
+    });
+
+    // 2. Add extra annotation tracks (GFF/BED files)
+    if (this.annotationTracks && this.annotationTracks.length > 0) {
+      this.annotationTracks.forEach(track => {
+        instances.push({
+          id: `annotation_${track.id}`,
+          name: `Annotation: ${track.name || track.id}`,
+          category: 'genes',
+          isAnnotation: true,
+        });
+      });
+    }
+
+    // Populate container
+    instances.forEach(instance => {
+      const label = document.createElement('label');
+      label.className = 'track-control-item';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `sidebar_instance_${instance.id}`;
+      checkbox.value = instance.id;
+      checkbox.dataset.category = instance.category;
+      checkbox.checked = this.visibleTracks.has(instance.id);
+
+      const span = document.createElement('span');
+      span.textContent = instance.name;
+
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      container.appendChild(label);
+    });
+
+    if (instances.length === 0) {
+      container.innerHTML = '<div style="padding: 10px; color: #888; font-style: italic;">No tracks available</div>';
+    }
+  }
+
   // Track management methods
   updateVisibleTracks() {
     // Clear any existing timeout to debounce rapid calls
@@ -4284,76 +4336,53 @@ class GenomeBrowser {
   }
 
   _doUpdateVisibleTracks() {
-    // Get selected tracks from toolbar checkboxes
-    const tracks = new Set();
-    const trackGenes = document.getElementById('trackGenes');
-    const trackGC = document.getElementById('trackGC');
-    const trackVariants = document.getElementById('trackVariants');
-    const trackReads = document.getElementById('trackReads');
-    const trackWIG = document.getElementById('trackWIG');
-    const trackProteins = document.getElementById('trackProteins');
-    const trackSequence = document.getElementById('trackSequence');
-    const trackSequenceLine = document.getElementById('trackSequenceLine');
-    const trackActions = document.getElementById('trackActions');
-    const trackBlast = document.getElementById('trackBlast');
+    // Dropdown now handles fixed categories
+    const categoryMapping = {
+      trackGenes: 'genes',
+      trackGC: 'gc',
+      trackVariants: 'variants',
+      trackReads: 'reads',
+      trackWIG: 'wigTracks',
+      trackProteins: 'proteins',
+      trackSequence: 'sequence',
+      trackSequenceLine: 'sequenceLine',
+      trackActions: 'actions',
+      trackBlast: 'blast',
+    };
 
-    if (trackGenes && trackGenes.checked) tracks.add('genes');
-    if (trackGC && trackGC.checked) tracks.add('gc');
-    if (trackVariants && trackVariants.checked) tracks.add('variants');
-    if (trackReads && trackReads.checked) tracks.add('reads');
-    if (trackWIG && trackWIG.checked) tracks.add('wigTracks');
-    if (trackProteins && trackProteins.checked) tracks.add('proteins');
-    if (trackSequence && trackSequence.checked) tracks.add('sequence');
-    if (trackSequenceLine && trackSequenceLine.checked) tracks.add('sequenceLine');
-    if (trackActions && trackActions.checked) tracks.add('actions');
-    if (trackBlast && trackBlast.checked) tracks.add('blast');
+    const tracks = new Set(this.visibleTracks);
+
+    Object.entries(categoryMapping).forEach(([cbId, category]) => {
+      const checkbox = document.getElementById(cbId);
+      if (!checkbox) return;
+
+      const isVisible = checkbox.checked;
+
+      // When a category is toggled, update all related instances
+      if (isVisible) {
+        tracks.add(category);
+        if (category === 'genes' && this.annotationTracks) {
+          this.annotationTracks.forEach(at => tracks.add(`annotation_${at.id}`));
+        }
+      } else {
+        tracks.delete(category);
+        if (category === 'genes' && this.annotationTracks) {
+          this.annotationTracks.forEach(at => tracks.delete(`annotation_${at.id}`));
+        }
+      }
+    });
 
     this.visibleTracks = tracks;
 
-    // Sync with sidebar
-    const sidebarTrackGenes = document.getElementById('sidebarTrackGenes');
-    const sidebarTrackGC = document.getElementById('sidebarTrackGC');
-    const sidebarTrackVariants = document.getElementById('sidebarTrackVariants');
-    const sidebarTrackReads = document.getElementById('sidebarTrackReads');
-    const sidebarTrackWIG = document.getElementById('sidebarTrackWIG');
-    const sidebarTrackProteins = document.getElementById('sidebarTrackProteins');
-    const sidebarTrackSequence = document.getElementById('sidebarTrackSequence');
-    const sidebarTrackSequenceLine = document.getElementById('sidebarTrackSequenceLine');
-    const sidebarTrackActions = document.getElementById('sidebarTrackActions');
-    const sidebarTrackBlast = document.getElementById('sidebarTrackBlast');
-
-    if (sidebarTrackGenes) sidebarTrackGenes.checked = tracks.has('genes');
-    if (sidebarTrackGC) sidebarTrackGC.checked = tracks.has('gc');
-    if (sidebarTrackVariants) sidebarTrackVariants.checked = tracks.has('variants');
-    if (sidebarTrackReads) sidebarTrackReads.checked = tracks.has('reads');
-    if (sidebarTrackWIG) sidebarTrackWIG.checked = tracks.has('wigTracks');
-    if (sidebarTrackProteins) sidebarTrackProteins.checked = tracks.has('proteins');
-    if (sidebarTrackSequence) sidebarTrackSequence.checked = tracks.has('sequence');
-    if (sidebarTrackSequenceLine) sidebarTrackSequenceLine.checked = tracks.has('sequenceLine');
-    if (sidebarTrackActions) sidebarTrackActions.checked = tracks.has('actions');
-    if (sidebarTrackBlast) sidebarTrackBlast.checked = tracks.has('blast');
-
-    // Update trackVisibility object to match visibleTracks
-    this.trackVisibility.genes = tracks.has('genes');
-    this.trackVisibility.gc = tracks.has('gc');
-    this.trackVisibility.variants = tracks.has('variants');
-    this.trackVisibility.reads = tracks.has('reads');
-    this.trackVisibility.proteins = tracks.has('proteins');
-    this.trackVisibility.sequence = tracks.has('sequence');
-    this.trackVisibility.sequenceLine = tracks.has('sequenceLine');
-    this.trackVisibility.actions = tracks.has('actions');
-    this.trackVisibility.blast = tracks.has('blast');
-    this.trackVisibility.wig = tracks.has('wigTracks');
-
-    // Use unified sync to ensure consistency across toolbar and sidebar
+    // Use unified sync to ensure consistency
     this.updateTrackVisibilityUI();
 
-    // Notify TabManager of track visibility change
+    // Notify TabManager
     if (this.tabManager) {
       this.tabManager.onTrackVisibilityChanged();
     }
 
-    // Refresh the genome view if a file is loaded
+    // Refresh view
     const currentChr = document.getElementById('chromosomeSelect').value;
     if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
       this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
@@ -4372,66 +4401,19 @@ class GenomeBrowser {
   }
 
   _doUpdateVisibleTracksFromSidebar() {
-    // Get selected tracks from sidebar checkboxes
+    // Sidebar now handles dynamic instances
     const tracks = new Set();
-    const sidebarTrackGenes = document.getElementById('sidebarTrackGenes');
-    const sidebarTrackGC = document.getElementById('sidebarTrackGC');
-    const sidebarTrackVariants = document.getElementById('sidebarTrackVariants');
-    const sidebarTrackReads = document.getElementById('sidebarTrackReads');
-    const sidebarTrackWIG = document.getElementById('sidebarTrackWIG');
-    const sidebarTrackProteins = document.getElementById('sidebarTrackProteins');
-    const sidebarTrackSequence = document.getElementById('sidebarTrackSequence');
-    const sidebarTrackSequenceLine = document.getElementById('sidebarTrackSequenceLine');
-    const sidebarTrackActions = document.getElementById('sidebarTrackActions');
-    const sidebarTrackBlast = document.getElementById('sidebarTrackBlast');
-
-    if (sidebarTrackGenes && sidebarTrackGenes.checked) tracks.add('genes');
-    if (sidebarTrackGC && sidebarTrackGC.checked) tracks.add('gc');
-    if (sidebarTrackVariants && sidebarTrackVariants.checked) tracks.add('variants');
-    if (sidebarTrackReads && sidebarTrackReads.checked) tracks.add('reads');
-    if (sidebarTrackWIG && sidebarTrackWIG.checked) tracks.add('wigTracks');
-    if (sidebarTrackProteins && sidebarTrackProteins.checked) tracks.add('proteins');
-    if (sidebarTrackSequence && sidebarTrackSequence.checked) tracks.add('sequence');
-    if (sidebarTrackSequenceLine && sidebarTrackSequenceLine.checked) tracks.add('sequenceLine');
-    if (sidebarTrackActions && sidebarTrackActions.checked) tracks.add('actions');
-    if (sidebarTrackBlast && sidebarTrackBlast.checked) tracks.add('blast');
+    const container = document.getElementById('sidebarTrackControls');
+    if (container) {
+      const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        if (cb.checked) {
+          tracks.add(cb.value);
+        }
+      });
+    }
 
     this.visibleTracks = tracks;
-
-    // Sync with toolbar
-    const trackGenes = document.getElementById('trackGenes');
-    const trackGC = document.getElementById('trackGC');
-    const trackVariants = document.getElementById('trackVariants');
-    const trackReads = document.getElementById('trackReads');
-    const trackWIG = document.getElementById('trackWIG');
-    const trackProteins = document.getElementById('trackProteins');
-    const trackSequence = document.getElementById('trackSequence');
-    const trackSequenceLine = document.getElementById('trackSequenceLine');
-    const trackActions = document.getElementById('trackActions');
-    const trackBlast = document.getElementById('trackBlast');
-
-    if (trackGenes) trackGenes.checked = tracks.has('genes');
-    if (trackGC) trackGC.checked = tracks.has('gc');
-    if (trackVariants) trackVariants.checked = tracks.has('variants');
-    if (trackReads) trackReads.checked = tracks.has('reads');
-    if (trackWIG) trackWIG.checked = tracks.has('wigTracks');
-    if (trackProteins) trackProteins.checked = tracks.has('proteins');
-    if (trackSequence) trackSequence.checked = tracks.has('sequence');
-    if (trackSequenceLine) trackSequenceLine.checked = tracks.has('sequenceLine');
-    if (trackActions) trackActions.checked = tracks.has('actions');
-    if (trackBlast) trackBlast.checked = tracks.has('blast');
-
-    // Update trackVisibility object to match visibleTracks
-    this.trackVisibility.genes = tracks.has('genes');
-    this.trackVisibility.gc = tracks.has('gc');
-    this.trackVisibility.variants = tracks.has('variants');
-    this.trackVisibility.reads = tracks.has('reads');
-    this.trackVisibility.proteins = tracks.has('proteins');
-    this.trackVisibility.sequence = tracks.has('sequence');
-    this.trackVisibility.sequenceLine = tracks.has('sequenceLine');
-    this.trackVisibility.actions = tracks.has('actions');
-    this.trackVisibility.wig = tracks.has('wigTracks');
-    this.trackVisibility.blast = tracks.has('blast');
 
     // Use unified sync to ensure consistency across toolbar and sidebar
     this.updateTrackVisibilityUI();
@@ -4454,38 +4436,42 @@ class GenomeBrowser {
   updateTrackVisibilityUI() {
     const tracks = this.visibleTracks;
 
-    // Mapping of internal track types to DOM IDs for both toolbar and sidebar
-    const trackMapping = {
-      genes: { toolbar: 'trackGenes', sidebar: 'sidebarTrackGenes' },
-      gc: { toolbar: 'trackGC', sidebar: 'sidebarTrackGC' },
-      variants: { toolbar: 'trackVariants', sidebar: 'sidebarTrackVariants' },
-      reads: { toolbar: 'trackReads', sidebar: 'sidebarTrackReads' },
-      wigTracks: { toolbar: 'trackWIG', sidebar: 'sidebarTrackWIG' },
-      proteins: { toolbar: 'trackProteins', sidebar: 'sidebarTrackProteins' },
-      sequence: { toolbar: 'trackSequence', sidebar: 'sidebarTrackSequence' },
-      sequenceLine: { toolbar: 'trackSequenceLine', sidebar: 'sidebarTrackSequenceLine' },
-      actions: { toolbar: 'trackActions', sidebar: 'sidebarTrackActions' },
-      blast: { toolbar: 'trackBlast', sidebar: 'sidebarTrackBlast' },
+    // 1. Sync the dropdown category checkboxes
+    const dropdownMapping = {
+      genes: 'trackGenes',
+      gc: 'trackGC',
+      variants: 'trackVariants',
+      reads: 'trackReads',
+      wigTracks: 'trackWIG',
+      proteins: 'trackProteins',
+      sequence: 'trackSequence',
+      sequenceLine: 'trackSequenceLine',
+      actions: 'trackActions',
+      blast: 'trackBlast',
     };
 
-    // Update all checkboxes
-    Object.entries(trackMapping).forEach(([type, ids]) => {
-      const isVisible = tracks.has(type);
-
-      // Update toolbar checkbox
-      const toolbarCheckbox = document.getElementById(ids.toolbar);
-      if (toolbarCheckbox) toolbarCheckbox.checked = isVisible;
-
-      // Update sidebar checkbox
-      const sidebarCheckbox = document.getElementById(ids.sidebar);
-      if (sidebarCheckbox) sidebarCheckbox.checked = isVisible;
+    Object.entries(dropdownMapping).forEach(([trackType, cbId]) => {
+      const checkbox = document.getElementById(cbId);
+      if (checkbox) {
+        // Category should be checked if its primary track OR any of its instances are visible
+        let isVisible = tracks.has(trackType);
+        if (trackType === 'genes' && !isVisible) {
+          isVisible = this.annotationTracks && this.annotationTracks.some(at => tracks.has(`annotation_${at.id}`));
+        }
+        checkbox.checked = isVisible;
+      }
     });
 
-    // Special case for proteins if toolbar ID is different
-    const toolbarProteinsFallback = document.getElementById('toolbarTrackProteins');
-    if (toolbarProteinsFallback) toolbarProteinsFallback.checked = tracks.has('proteins');
+    // 2. Sync the dynamic sidebar instance checkboxes
+    const sidebarContainer = document.getElementById('sidebarTrackControls');
+    if (sidebarContainer) {
+      const sidebarCheckboxes = sidebarContainer.querySelectorAll('input[type="checkbox"]');
+      sidebarCheckboxes.forEach(cb => {
+        cb.checked = tracks.has(cb.value);
+      });
+    }
 
-    // Ensure trackVisibility object is synchronized for TabManager/persistence
+    // 3. Ensure trackVisibility object is synchronized for TabManager/persistence
     this.trackVisibility.genes = tracks.has('genes');
     this.trackVisibility.gc = tracks.has('gc');
     this.trackVisibility.variants = tracks.has('variants');

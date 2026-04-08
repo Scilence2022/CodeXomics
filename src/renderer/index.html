@@ -330,7 +330,36 @@
                     <span>Tracks</span>
                 </button>
                 <div class="track-checkboxes" id="trackCheckboxes" style="display: none;">
-                    <!-- Dynamically populated based on active tracks -->
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackGenes" value="genes" checked> Genes & Features
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackGC" value="gc" checked> GC Content
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackVariants" value="variants"> VCF Variants
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackReads" value="reads"> Aligned Reads
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackWIG" value="wigTracks"> WIG Tracks
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackProteins" value="proteins"> Proteins
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackSequence" value="sequence" checked> Bottom Sequence Panel
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackSequenceLine" value="sequenceLine"> Single-line Sequence Track
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackActions" value="actions"> Actions
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackBlast" value="blast"> Blast Results
+                    </label>
                 </div>
             </div>
 
@@ -561,47 +590,8 @@
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                    <div class="track-controls">
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackGenes" value="genes" checked>
-                            <span>Genes & Features Track</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackGC" value="gc" checked>
-                            <span>GC Content Track</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackVariants" value="variants">
-                            <span>VCF Variants Track</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackReads" value="reads">
-                            <span>Aligned Reads Track</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackWIG" value="wigTracks">
-                            <span>WIG Tracks</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackProteins" value="proteins">
-                            <span>Protein Track</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackSequence" value="sequence" checked>
-                            <span>Bottom Sequence Panel</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackSequenceLine" value="sequenceLine">
-                            <span>Single-line Sequence Track</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackActions" value="actions">
-                            <span>Actions Track</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackBlast" value="blast">
-                            <span>Blast Results Track</span>
-                        </label>
+                    <div class="track-controls" id="sidebarTrackControls">
+                        <!-- Dynamically populated based on active track instances -->
                     </div>
                 </div>
 
