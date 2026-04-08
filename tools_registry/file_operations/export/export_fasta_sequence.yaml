@@ -28,6 +28,13 @@ parameters:
         - 'genome_sequences.fasta'
         - 'selected_genes.fasta'
         - 'chromosome_1.fasta'
+    auto_save:
+      type: boolean
+      description: >-
+        When true, save the file directly without showing a save dialog.
+        Essential for LLM/agent automated workflows where dialog prompts block execution.
+        The file will be written to the current working directory or the path specified in filename.
+      default: false
     format:
       type: string
       description: FASTA format variant
@@ -66,6 +73,10 @@ sample_usages:
     tool_call: export_fasta_sequence(filename="selected_genes.fasta", sequence_type="selected", format="standard")
     thought: User wants to export selected gene sequences as FASTA
     expected_result: FASTA file containing selected gene sequences
+  - user_query: Auto-export genome FASTA without dialog (for LLM/agent workflows)
+    tool_call: export_fasta_sequence(filename="genome_export.fasta", auto_save=true)
+    thought: LLM/agent needs to export FASTA without any interactive dialog that would block execution
+    expected_result: FASTA file saved directly to disk without save dialog
 relationships:
   depends_on: []
   conflicts_with: []

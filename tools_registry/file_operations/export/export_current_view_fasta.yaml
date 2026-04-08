@@ -29,6 +29,12 @@ parameters:
         - 'visible_region.fasta'
         - 'current_chromosome.fasta'
         - 'view_sequences.fasta'
+    auto_save:
+      type: boolean
+      description: >-
+        When true, save the file directly without showing a save dialog.
+        Essential for LLM/agent automated workflows where dialog prompts block execution.
+      default: false
     sequence_type:
       type: string
       description: Type of sequences to export from current view

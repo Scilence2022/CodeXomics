@@ -138,7 +138,7 @@ class FileOperationService {
 
   // 2. DATA EXPORT OPERATIONS
   async exportFastaSequence(parameters = {}) {
-    const { filename } = parameters;
+    const { filename, auto_save = false } = parameters;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
       throw new Error('No genome data loaded to export');
@@ -155,11 +155,11 @@ class FileOperationService {
         }
       });
 
-      const isUserProvidedFilename = filename && filename.trim() && !['sequences.fasta', 'genome.fasta'].includes(filename);
-      if (isUserProvidedFilename) {
-        await this.writeFileDirectly(fastaContent, filename, 'FASTA sequence');
+      const outputFilename = filename || 'genome.fasta';
+      if (auto_save || (filename && filename.trim())) {
+        await this.writeFileDirectly(fastaContent, outputFilename, 'FASTA sequence');
       } else {
-        await this.showExportSaveDialog(fastaContent, 'genome.fasta', 'FASTA sequence', 'text/plain');
+        await this.showExportSaveDialog(fastaContent, outputFilename, 'FASTA sequence', 'text/plain');
       }
 
       return {
@@ -176,7 +176,7 @@ class FileOperationService {
   }
 
   async exportProteinFasta(parameters = {}) {
-    const { filename, includeGeneNames = true, translationTable = 1 } = parameters;
+    const { filename, includeGeneNames = true, translationTable = 1, auto_save = false } = parameters;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
       throw new Error('No annotation data loaded to export protein sequences');
@@ -210,11 +210,11 @@ class FileOperationService {
 
       if (!proteinContent) throw new Error('No protein-coding features found to export');
 
-      const isUserProvidedFilename = filename && filename.trim() && filename !== 'protein_sequences.fasta';
-      if (isUserProvidedFilename) {
-        await this.writeFileDirectly(proteinContent, filename, 'Protein FASTA');
+      const outputFilename = filename || 'protein_sequences.fasta';
+      if (auto_save || (filename && filename.trim())) {
+        await this.writeFileDirectly(proteinContent, outputFilename, 'Protein FASTA');
       } else {
-        await this.showExportSaveDialog(proteinContent, 'protein_sequences.fasta', 'Protein FASTA', 'text/plain');
+        await this.showExportSaveDialog(proteinContent, outputFilename, 'Protein FASTA', 'text/plain');
       }
 
       const proteinCount = chromosomes.reduce((sum, chr) => {
@@ -236,7 +236,7 @@ class FileOperationService {
   }
 
   async exportCurrentViewFasta(parameters = {}) {
-    const { filename, includeCoordinates = true } = parameters;
+    const { filename, includeCoordinates = true, auto_save = false } = parameters;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
       throw new Error('No genome data loaded to export current view');
@@ -257,11 +257,11 @@ class FileOperationService {
       for (let i = 0; i < viewSequence.length; i += 80) fastaContent += viewSequence.substring(i, i + 80) + '\n';
 
       const defaultFilename = `${currentChr}_${viewStart}-${viewEnd}.fasta`;
-      const isUserProvidedFilename = filename && filename.trim() && filename !== defaultFilename;
-      if (isUserProvidedFilename) {
-        await this.writeFileDirectly(fastaContent, filename, 'Current view FASTA');
+      const outputFilename = filename || defaultFilename;
+      if (auto_save || (filename && filename.trim())) {
+        await this.writeFileDirectly(fastaContent, outputFilename, 'Current view FASTA');
       } else {
-        await this.showExportSaveDialog(fastaContent, defaultFilename, 'Current view FASTA', 'text/plain');
+        await this.showExportSaveDialog(fastaContent, outputFilename, 'Current view FASTA', 'text/plain');
       }
 
       return {
@@ -282,7 +282,7 @@ class FileOperationService {
   }
 
   async exportGenBankFormat(parameters = {}) {
-    const { filename } = parameters;
+    const { filename, auto_save = false } = parameters;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
       throw new Error('No genome data loaded to export');
@@ -311,21 +311,21 @@ class FileOperationService {
         genbankContent += `//\n\n`;
       });
 
-      const isUserProvidedFilename = filename && filename.trim() && filename !== 'genome.gbk';
-      if (isUserProvidedFilename) {
-        await this.writeFileDirectly(genbankContent, filename, 'GenBank format');
+      const outputFilename = filename || 'genome.gbk';
+      if (auto_save || (filename && filename.trim())) {
+        await this.writeFileDirectly(genbankContent, outputFilename, 'GenBank format');
       } else {
-        await this.showExportSaveDialog(genbankContent, 'genome.gbk', 'GenBank format', 'text/plain');
+        await this.showExportSaveDialog(genbankContent, outputFilename, 'GenBank format', 'text/plain');
       }
 
-      return { success: true, tool: 'export_genbank_format', exported_format: 'GenBank', filename: filename || 'genome.gbk' };
+      return { success: true, tool: 'export_genbank_format', exported_format: 'GenBank', filename: outputFilename };
     } catch (error) {
       throw new Error(`GenBank export failed: ${error.message}`);
     }
   }
 
   async exportCdsFasta(parameters = {}) {
-    const { filename } = parameters;
+    const { filename, auto_save = false } = parameters;
     try {
       const chromosomes = Object.keys(this.app.currentSequence || {});
       let cdsContent = '';
@@ -347,11 +347,11 @@ class FileOperationService {
 
       if (cdsContent === '') throw new Error('No CDS features found to export');
 
-      const isUserProvidedFilename = filename && filename.trim() && filename !== 'cds.fasta';
-      if (isUserProvidedFilename) {
-        await this.writeFileDirectly(cdsContent, filename, 'CDS FASTA');
+      const outputFilename = filename || 'cds_sequences.fasta';
+      if (auto_save || (filename && filename.trim())) {
+        await this.writeFileDirectly(cdsContent, outputFilename, 'CDS FASTA');
       } else {
-        await this.showExportSaveDialog(cdsContent, 'cds_sequences.fasta', 'CDS FASTA', 'text/plain');
+        await this.showExportSaveDialog(cdsContent, outputFilename, 'CDS FASTA', 'text/plain');
       }
 
       return { success: true, tool: 'export_cds_fasta', exported_format: 'CDS FASTA', count: totalCDS };
@@ -361,7 +361,7 @@ class FileOperationService {
   }
 
   async exportGffAnnotations(parameters = {}) {
-    const { filename } = parameters;
+    const { filename, auto_save = false } = parameters;
     try {
       const chromosomes = Object.keys(this.app.currentAnnotations || {});
       let gffContent = '##gff-version 3\n';
@@ -373,11 +373,11 @@ class FileOperationService {
         });
       });
 
-      const isUserProvidedFilename = filename && filename.trim() && filename !== 'annotations.gff';
-      if (isUserProvidedFilename) {
-        await this.writeFileDirectly(gffContent, filename, 'GFF annotations');
+      const outputFilename = filename || 'features.gff3';
+      if (auto_save || (filename && filename.trim())) {
+        await this.writeFileDirectly(gffContent, outputFilename, 'GFF annotations');
       } else {
-        await this.showExportSaveDialog(gffContent, 'features.gff3', 'GFF annotations', 'text/plain');
+        await this.showExportSaveDialog(gffContent, outputFilename, 'GFF annotations', 'text/plain');
       }
 
       return { success: true, tool: 'export_gff_annotations', exported_format: 'GFF' };
@@ -387,7 +387,7 @@ class FileOperationService {
   }
 
   async exportBedFormat(parameters = {}) {
-    const { filename } = parameters;
+    const { filename, auto_save = false } = parameters;
     try {
       const chromosomes = Object.keys(this.app.currentAnnotations || {});
       let bedContent = '';
@@ -399,11 +399,11 @@ class FileOperationService {
         });
       });
 
-      const isUserProvidedFilename = filename && filename.trim() && filename !== 'annotations.bed';
-      if (isUserProvidedFilename) {
-        await this.writeFileDirectly(bedContent, filename, 'BED format');
+      const outputFilename = filename || 'features.bed';
+      if (auto_save || (filename && filename.trim())) {
+        await this.writeFileDirectly(bedContent, outputFilename, 'BED format');
       } else {
-        await this.showExportSaveDialog(bedContent, 'features.bed', 'BED format', 'text/plain');
+        await this.showExportSaveDialog(bedContent, outputFilename, 'BED format', 'text/plain');
       }
 
       return { success: true, tool: 'export_bed_format', exported_format: 'BED' };

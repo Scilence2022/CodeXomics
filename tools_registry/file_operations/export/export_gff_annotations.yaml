@@ -29,6 +29,12 @@ parameters:
         - 'genome_annotations.gff3'
         - 'selected_features.gff3'
         - 'chromosome_1.gff3'
+    auto_save:
+      type: boolean
+      description: >-
+        When true, save the file directly without showing a save dialog.
+        Essential for LLM/agent automated workflows where dialog prompts block execution.
+      default: false
     gff_version:
       type: string
       description: GFF format version

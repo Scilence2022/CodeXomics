@@ -30,6 +30,12 @@ parameters:
         - 'all_proteins.fasta'
         - 'selected_proteins.fasta'
         - 'chromosome_proteins.fasta'
+    auto_save:
+      type: boolean
+      description: >-
+        When true, save the file directly without showing a save dialog.
+        Essential for LLM/agent automated workflows where dialog prompts block execution.
+      default: false
     genetic_code:
       type: string
       description: Genetic code table for translation

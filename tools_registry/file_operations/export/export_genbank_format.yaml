@@ -28,6 +28,12 @@ parameters:
         - 'annotated_genome.gbk'
         - 'chromosome_1.gbk'
         - 'selected_region.gbk'
+    auto_save:
+      type: boolean
+      description: >-
+        When true, save the file directly without showing a save dialog.
+        Essential for LLM/agent automated workflows where dialog prompts block execution.
+      default: false
     include_features:
       type: boolean
       description: Include feature annotations in GenBank format

@@ -1864,7 +1864,7 @@ CHROMOSOME NAMES:
 COMMON TASK PATTERNS:
 • Gene Analysis: search_gene_by_name → get_coding_sequence → analyze features
 • **Domain Analysis: analyze_interpro_domains → protein domain identification (use geneName parameter for gene names)**
-• **Data Export: export_fasta_sequence → export genome as FASTA, export_genbank_format → export as GenBank**
+• **Data Export: export_fasta_sequence → export genome as FASTA, export_genbank_format → export as GenBank (use auto_save=true for LLM workflows)**
 • **Sequence Export: export_cds_fasta → export coding sequences, export_protein_fasta → export proteins**
 • **Annotation Export: export_gff_annotations → export features as GFF, export_bed_format → export as BED**
 • AlphaFold AI Predictions: search_alphafold_structures → open_protein_viewer
@@ -1897,11 +1897,12 @@ For data export requests:
 • **"export proteins" → use export_protein_fasta**
 • **"export annotations" → use export_gff_annotations for GFF or export_bed_format for BED**
 • **"export current view" → use export_current_view_fasta**
+• **IMPORTANT: Always set auto_save=true when calling export tools in automated/LLM workflows to avoid save dialog prompts that block execution**
 • Examples: 
-  - {"tool_name": "export_fasta_sequence", "parameters": {}}
-  - {"tool_name": "export_genbank_format", "parameters": {"includeProteinSequences": true}}
-  - {"tool_name": "export_cds_fasta", "parameters": {"filename": "my_cds.fasta"}}
-  - {"tool_name": "export_current_view_fasta", "parameters": {}}
+  - {"tool_name": "export_fasta_sequence", "parameters": {"auto_save": true, "filename": "genome_export.fasta"}}
+  - {"tool_name": "export_genbank_format", "parameters": {"auto_save": true, "filename": "genome.gbk"}}
+  - {"tool_name": "export_cds_fasta", "parameters": {"auto_save": true, "filename": "my_cds.fasta"}}
+  - {"tool_name": "export_current_view_fasta", "parameters": {"auto_save": true}}
 
 SEARCH FUNCTIONS GUIDE:
 - Gene names/products: search_gene_by_name, search_features

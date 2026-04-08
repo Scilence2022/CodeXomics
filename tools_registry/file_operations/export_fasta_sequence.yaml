@@ -22,6 +22,12 @@ parameters:
       type: string
       description: Browser client ID for multi-window support
       default: default
+    auto_save:
+      type: boolean
+      description: >-
+        When true, save the file directly without showing a save dialog.
+        Essential for LLM/agent automated workflows where dialog prompts block execution.
+      default: false
   required: []
 sample_usages:
   - user_query: Use export_fasta_sequence to analyze genomic data

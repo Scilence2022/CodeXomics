@@ -29,6 +29,12 @@ parameters:
         - 'all_cds.fasta'
         - 'selected_cds.fasta'
         - 'chromosome_cds.fasta'
+    auto_save:
+      type: boolean
+      description: >-
+        When true, save the file directly without showing a save dialog.
+        Essential for LLM/agent automated workflows where dialog prompts block execution.
+      default: false
     include_gene_names:
       type: boolean
       description: Include gene names in FASTA headers
