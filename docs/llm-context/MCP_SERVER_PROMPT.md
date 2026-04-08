@@ -97,7 +97,7 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 - `load_variant_file` - Load VCF files
 - `load_reads_file` - Load BAM/SAM files
 - `load_wig_tracks` - Load WIG/BigWig tracks
-- `export_fasta_sequence` - Export sequences
+- `export_fasta_sequence` - Export sequences (use `auto_save=true` for automated workflows)
 - `export_genbank_format` - Export as GenBank
 - `export_cds_fasta` - Export CDS sequences
 - `export_protein_fasta` - Export protein sequences

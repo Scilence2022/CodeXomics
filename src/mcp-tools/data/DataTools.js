@@ -56,6 +56,12 @@ class DataTools {
             chromosome: { type: 'string', description: 'Chromosome (optional for full export)' },
             start: { type: 'number', description: 'Start position (optional)' },
             end: { type: 'number', description: 'End position (optional)' },
+            filename: { type: 'string', description: 'Output filename (optional, uses default if not specified)' },
+            auto_save: {
+              type: 'boolean',
+              description: 'When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.',
+              default: true,
+            },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
           required: ['format'],
