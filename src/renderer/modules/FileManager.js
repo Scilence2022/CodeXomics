@@ -340,9 +340,9 @@ class FileManager {
       // Parse genes (semicolon-separated)
       const genes = genesStr
         ? genesStr
-            .split(';')
-            .map(g => g.trim())
-            .filter(g => g)
+          .split(';')
+          .map(g => g.trim())
+          .filter(g => g)
         : [];
 
       // Map confidence level to numeric score
@@ -518,7 +518,7 @@ class FileManager {
       // Check file size and warn for very large files (excluding SAM/BAM which use dynamic loading)
       const fileSizeMB = fileInfo.info.size / (1024 * 1024);
       let extension = fileInfo.info.extension.toLowerCase();
-      
+
       // Handle gzipped files - check original extension
       let isGzipped = false;
       if (extension === '.gz') {
@@ -1588,7 +1588,7 @@ Original error: ${error.message}`;
       userChoice = mergeWithExisting ? 'merge' : 'new';
     } else {
       // Fallback to original behavior if no option provided
-      userChoice = this.showAnnotationLoadDialog(featureCount);
+      userChoice = 'new';
     }
 
     if (userChoice === 'merge') {
@@ -1688,7 +1688,8 @@ Original error: ${error.message}`;
       userChoice = mergeWithExisting ? 'merge' : 'new';
     } else {
       // Fallback to original behavior if no option provided
-      userChoice = this.showAnnotationLoadDialog(featureCount);
+      userChoice = 'new';
+      // this.showAnnotationLoadDialog(featureCount);
     }
 
     if (userChoice === 'merge') {
@@ -1812,23 +1813,6 @@ Original error: ${error.message}`;
     }
   }
 
-  /**
-   * Get file type from extension
-   * @param {string} extension - File extension
-   * @returns {string} File type
-   */
-  /**
-   * Show a dialog asking user whether to merge annotations or create a new track
-   * @param {number} featureCount - Number of features in the annotation file
-   * @returns {string} User's choice: 'merge' or 'new'
-   */
-  showAnnotationLoadDialog(featureCount) {
-    const message = `Annotation file contains ${featureCount} features. How would you like to load them?`;
-    const userChoice = confirm(
-      `${message}\n\nClick OK to merge with existing Genes & Features track\nClick Cancel to create a new independent track`
-    );
-    return userChoice ? 'merge' : 'new';
-  }
 
   /**
    * Create a new annotation track with the given annotations
