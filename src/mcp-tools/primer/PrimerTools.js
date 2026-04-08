@@ -126,10 +126,7 @@ class PrimerTools {
 
     // Tools that require client UI interaction are routed here
     async executeClientTool(toolName, parameters, clientId) {
-        return await this.server.sendToClient(clientId, 'execute-client-tool', {
-            toolName,
-            parameters
-        });
+        return await this.server.executeToolOnClient(toolName, parameters, clientId);
     }
 }
 

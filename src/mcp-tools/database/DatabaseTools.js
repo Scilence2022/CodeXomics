@@ -217,7 +217,88 @@ class DatabaseTools {
   }
 
   async searchUniProtDatabase(parameters) {
-    return await this.server.searchUniProtDatabase(parameters);
+    // Server-side implementation - directly query UniProt API
+    const { query, searchType = 'keyword', organism, reviewedOnly = false, limit = 20, includeSequence = false } = parameters;
+    
+    try {
+      if (!query && !organism) {
+        throw new Error('Query or organism is required for UniProt search');
+      }
+
+      let queryParts = [];
+      if (query) {
+        if (searchType === 'gene_name') queryParts.push(`(gene:${query})`);
+        else if (searchType === 'protein_name') queryParts.push(`(protein_name:${query})`);
+        else if (searchType === 'uniprot_id') queryParts.push(`(accession:${query})`);
+        else queryParts.push(`(${query})`);
+      }
+      
+      if (organism) {
+        queryParts.push(`(organism_name:"${organism}")`);
+      }
+      if (reviewedOnly) {
+        queryParts.push(`(reviewed:true)`);
+      }
+
+      const queryString = queryParts.join(' AND ');
+      const fields = 'accession,id,protein_name,gene_names,organism_name,length,reviewed,cc_function,cc_subcellular_location' + (includeSequence ? ',sequence' : '');
+      const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(queryString)}&fields=${fields}&size=${limit}&format=json`;
+
+      
+      console.log(`[DatabaseTools] searchUniProtDatabase: ${searchUrl}`);
+      const response = await fetch(searchUrl);
+      
+      if (!response.ok) {
+        throw new Error(`UniProt API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      const results = (data.results || []).map(protein => {
+        let functionDescription = '';
+        let subcellularLocation = '';
+        
+        if (protein.comments) {
+          const fn = protein.comments.find(c => c.commentType === 'FUNCTION');
+          if (fn && fn.texts && fn.texts.length > 0) functionDescription = fn.texts[0].value;
+          
+          const loc = protein.comments.find(c => c.commentType === 'SUBCELLULAR LOCATION');
+          if (loc && loc.subcellularLocations && loc.subcellularLocations.length > 0) {
+            subcellularLocation = loc.subcellularLocations.map(l => l.location.value).join(', ');
+          }
+        }
+
+        const pruned = {
+          uniprotId: protein.primaryAccession,
+          entryName: protein.uniProtkbId,
+          proteinName: protein.proteinDescription?.recommendedName?.fullName?.value || protein.proteinDescription?.submissionNames?.[0]?.fullName?.value || 'Unknown',
+          genes: (protein.genes || []).map(g => g.geneName?.value).filter(Boolean),
+          organism: protein.organism?.scientificName || 'Unknown',
+          length: protein.sequence?.length || 0,
+          reviewed: protein.entryType === 'UniProtKB reviewed (Swiss-Prot)',
+        };
+        
+        if (functionDescription) pruned.function = functionDescription.substring(0, 500);
+        if (subcellularLocation) pruned.subcellularLocation = subcellularLocation;
+        if (includeSequence && protein.sequence?.value) pruned.sequence = protein.sequence.value;
+        
+        return pruned;
+      });
+
+      return {
+        success: true,
+        tool: 'search_uniprot_database',
+        count: results.length,
+        results: results,
+      };
+    } catch (error) {
+      console.error('searchUniProtDatabase error:', error);
+      return {
+        success: false,
+        error: error.message,
+        tool: 'search_uniprot_database',
+      };
+    }
   }
 
   async advancedUniProtSearch(parameters) {
@@ -226,6 +307,46 @@ class DatabaseTools {
 
   async getUniProtEntry(parameters) {
     return await this.server.getUniProtEntry(parameters);
+  }
+
+  async viewMarkdownFile(parameters = {}) {
+    const { filePath, title } = parameters;
+
+    console.log(`📄 [DatabaseTools] Opening markdown file: ${filePath}`);
+
+    if (!filePath) {
+      throw new Error('File path is required');
+    }
+
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      // Read the file
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File not found: ${filePath}`);
+      }
+
+      const content = fs.readFileSync(filePath, 'utf8');
+      const fileName = path.basename(filePath);
+      const windowTitle = title || fileName;
+
+      return {
+        success: true,
+        message: `Opened markdown file: ${fileName}`,
+        filePath: filePath,
+        fileName: fileName,
+        windowTitle: windowTitle,
+        tool: 'view_markdown_file',
+      };
+    } catch (error) {
+      console.error('❌ [DatabaseTools] Error opening markdown file:', error);
+      return {
+        success: false,
+        error: error.message,
+        tool: 'view_markdown_file',
+      };
+    }
   }
 
   async analyzeInterProDomains(parameters) {

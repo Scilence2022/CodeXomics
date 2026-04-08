@@ -151,11 +151,27 @@ class ToolsIntegrator {
         return await this.proteinTools.executeClientTool(toolName, parameters, clientId);
       }
 
-      // Database tools - delegate all to client (ChatManager has working implementations)
-      if (this.databaseTools.getTools()[toolName]) {
-        // All database tools (UniProt, InterPro) require client-side execution
-        // as ChatManager.searchUniProtDatabase etc. have full implementations
-        return await this.databaseTools.executeClientTool(toolName, parameters, clientId);
+      // Database tools - server-side implementations for standalone mode
+      if (toolName === 'search_uniprot_database') {
+        return await this.databaseTools.searchUniProtDatabase(parameters);
+      }
+      if (toolName === 'advanced_uniprot_search') {
+        return await this.databaseTools.advancedUniProtSearch(parameters);
+      }
+      if (toolName === 'get_uniprot_entry') {
+        return await this.databaseTools.getUniProtEntry(parameters);
+      }
+      if (toolName === 'analyze_interpro_domains') {
+        return await this.databaseTools.analyzeInterProDomains(parameters);
+      }
+      if (toolName === 'search_interpro_entry') {
+        return await this.databaseTools.searchInterProEntry(parameters);
+      }
+      if (toolName === 'get_interpro_entry_details') {
+        return await this.databaseTools.getInterProEntryDetails(parameters);
+      }
+      if (toolName === 'view_markdown_file') {
+        return await this.databaseTools.viewMarkdownFile(parameters);
       }
 
       // Data tools
@@ -291,6 +307,22 @@ class ToolsIntegrator {
       }
       if (toolName === 'switch_active_window') {
         return this.executeSwitchActiveWindow(parameters);
+      }
+
+      // Data manipulation tools
+      if (toolName === 'copy_sequence') {
+        return await this.dataTools.copySequence(parameters);
+      }
+      if (toolName === 'paste_sequence') {
+        return await this.dataTools.pasteSequence(parameters);
+      }
+      if (toolName === 'delete_sequence') {
+        return await this.dataTools.deleteSequence(parameters);
+      }
+
+      // Track settings tools - server-side
+      if (toolName === 'get_all_track_settings') {
+        return this.trackSettingsTools.getAllTrackSettings();
       }
 
       throw new Error(`Tool execution handler not found for '${toolName}'`);

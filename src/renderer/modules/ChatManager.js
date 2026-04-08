@@ -6626,6 +6626,7 @@ ${coreTools}
       search_pattern: () => this.searchPattern(parameters),
       find_restriction_sites: () => this.findRestrictionSites(parameters),
       virtual_digest: () => this.virtualDigest(parameters),
+      search_sequence_motif: () => this.searchMotif(parameters),
 
       // AlphaFold and protein structure tools
       search_alphafold_structures: () => this.services.protein.searchAlphaFoldStructures(parameters),
@@ -6700,7 +6701,26 @@ ${coreTools}
       calculate_primer_properties: () => this.primerCalculateProperties(parameters),
       design_primers: () => this.primerDesign(parameters),
       find_primer_binding_sites: () => this.primerFindBindingSites(parameters),
-      add_primer_annotation: () => this.primerAddAnnotation(parameters),
+      add_primer_annotation: async () => {
+        // Fallback implementation if Primer integration hasn't loaded
+        if (typeof this.primerAddAnnotation === 'function') {
+          return await this.primerAddAnnotation(parameters);
+        }
+        // Direct implementation using createAnnotation
+        if (!parameters.chromosome || !parameters.start || !parameters.end || !parameters.name) {
+          throw new Error('Missing required fields for annotation: chromosome, start, end, name');
+        }
+        const strand = parameters.strand === '-' ? -1 : 1;
+        return await this.createAnnotation({
+          type: 'primer',
+          name: parameters.name,
+          chromosome: parameters.chromosome,
+          start: parseInt(parameters.start),
+          end: parseInt(parameters.end),
+          strand: strand,
+          description: parameters.description || `Tm: ${parameters.tm || '?'}, GC: ${parameters.gcContent || '?'}%`
+        });
+      },
 
       // View control tools
       zoom_in: () => this.zoomIn(parameters),
@@ -8480,7 +8500,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   reverseComplement(sequence) {
-    return this.services.analysis.reverseComplement(sequence);
+    // Use local SequenceTools implementation
+    const SequenceTools = require('../mcp-tools/sequence/SequenceTools');
+    const seqTools = new SequenceTools();
+    return seqTools.reverseComplement(sequence);
   }
 
   async getCodingSequence(params) {
