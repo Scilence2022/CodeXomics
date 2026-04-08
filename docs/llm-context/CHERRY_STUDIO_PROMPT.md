@@ -128,7 +128,7 @@ You have access to **40+ specialized bioinformatics tools** organized into these
 
 ### 🧪 Protein Structure Analysis
 
-- `search_alphafold_by_gene` - Find AlphaFold structures
+- `search_alphafold_structures` - Find AlphaFold structures
 - `fetch_alphafold_structure` - Download AlphaFold PDB
 - `open_alphafold_viewer` - View 3D structure
 - `search_pdb_structures` - Search Protein Data Bank
@@ -284,7 +284,7 @@ Your response:
    → get_coding_sequence(identifier: "lacZ")
 
 5. "Checking for protein structure data..."
-   → search_alphafold_by_gene(geneName: "lacZ")
+   → search_alphafold_structures(geneName: "lacZ")
 
 6. "Analyzing protein domains..."
    → analyze_interpro_domains(uniprotId: "P00722")
@@ -339,7 +339,7 @@ User: "Show me the 3D structure of dnaA protein"
 
 Your response:
 1. "Searching AlphaFold database for dnaA..."
-   → search_alphafold_by_gene(geneName: "dnaA")
+   → search_alphafold_structures(geneName: "dnaA")
 
 2. "Found structure! Downloading PDB file..."
    → fetch_alphafold_structure(uniprotId: "P03004")

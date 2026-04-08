@@ -18,7 +18,6 @@ class ToolCategoryManager {
       // Protein structure tools
       'fetch_protein_structure',
       'search_alphafold_structures',
-      'search_alphafold_by_gene',
       'fetch_alphafold_structure',
       'search_alphafold_by_sequence',
 
@@ -63,7 +62,7 @@ class ToolCategoryManager {
       // Sequence operations (require genome data access)
       'get_coding_sequence',
       'get_sequence_region',
-      'search_alphafold_by_gene',
+      'search_alphafold_structures',
 
       // Data manipulation
       'copy_sequence',

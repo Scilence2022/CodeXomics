@@ -41,7 +41,7 @@ tools_registry/
 │   ├── fetch_protein_structure.yaml
 │   ├── open_protein_viewer.yaml
 │   ├── search_protein_by_gene.yaml
-│   ├── search_alphafold_by_gene.yaml
+│   ├── search_alphafold_structures.yaml
 │   ├── fetch_alphafold_structure.yaml
 │   └── open_alphafold_viewer.yaml
 ├── database/                           # Database Integration Tools

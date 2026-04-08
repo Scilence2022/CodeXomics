@@ -74,7 +74,7 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 
 ### 5. Protein Structure Analysis
 
-- `search_alphafold_by_gene` - Find AlphaFold structures
+- `search_alphafold_structures` - Find AlphaFold structures
 - `fetch_alphafold_structure` - Download AlphaFold PDB
 - `open_alphafold_viewer` - View 3D structure
 - `search_pdb_structures` - Search Protein Data Bank
@@ -154,7 +154,7 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 2. jump_to_gene(geneName: "lacZ")
 3. get_gene_details(identifier: "lacZ")
 4. get_coding_sequence(identifier: "lacZ")
-5. search_alphafold_by_gene(geneName: "lacZ")
+5. search_alphafold_structures(geneName: "lacZ")
 6. analyze_interpro_domains(uniprotId: "P00722")
 ```
 

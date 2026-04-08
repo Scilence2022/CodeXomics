@@ -156,8 +156,8 @@ class BuiltInToolsIntegration {
     });
 
     // Database tools - AlphaFold
-    this.builtInToolsMap.set('search_alphafold_by_gene', {
-      method: 'searchAlphaFoldByGene',
+    this.builtInToolsMap.set('search_alphafold_structures', {
+      method: 'searchAlphaFoldStructures',
       category: 'protein',
       type: 'built-in',
       priority: 1,

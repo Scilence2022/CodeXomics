@@ -1,5 +1,5 @@
-# search_alphafold_by_gene.yaml
-name: 'search_alphafold_by_gene'
+# search_alphafold_structures.yaml (formerly search_alphafold_by_gene)
+name: 'search_alphafold_structures'
 version: '1.4.0'
 description: 'Search AlphaFold database for protein structures by gene name. Returns predicted 3D structures with confidence scores and metadata.'
 category: 'protein'
@@ -62,22 +62,22 @@ parameters:
 # High-quality examples for few-shot learning
 sample_usages:
   - user_query: 'Search AlphaFold for p53 protein structure'
-    tool_call: "search_alphafold_by_gene(geneName='p53', organism='Homo sapiens', minConfidence=80)"
+    tool_call: "search_alphafold_structures(geneName='p53', organism='Homo sapiens', minConfidence=80)"
     thought: 'User wants to find the p53 protein structure with high confidence'
     expected_result: 'List of p53 structures with confidence scores and metadata'
 
   - user_query: 'Find lacZ protein structure in E. coli'
-    tool_call: "search_alphafold_by_gene(geneName='lacZ', organism='Escherichia coli', includeSequence=true)"
+    tool_call: "search_alphafold_structures(geneName='lacZ', organism='Escherichia coli', includeSequence=true)"
     thought: 'User wants lacZ structure from E. coli with sequence information'
     expected_result: 'lacZ structure with sequence and confidence data'
 
   - user_query: 'Get all high-confidence protein structures for dnaA'
-    tool_call: "search_alphafold_by_gene(geneName='dnaA', minConfidence=90, maxResults=5)"
+    tool_call: "search_alphafold_structures(geneName='dnaA', minConfidence=90, maxResults=5)"
     thought: 'User wants only high-confidence dnaA structures, limited to 5 results'
     expected_result: 'Top 5 high-confidence dnaA structures'
 
   - user_query: 'Search for protein structures with minimal output'
-    tool_call: "search_alphafold_by_gene(geneName='recA', format='minimal', maxResults=3)"
+    tool_call: "search_alphafold_structures(geneName='recA', format='minimal', maxResults=3)"
     thought: 'User wants a quick search with minimal information'
     expected_result: 'Basic recA structure information only'
 

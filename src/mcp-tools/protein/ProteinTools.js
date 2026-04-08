@@ -71,21 +71,6 @@ class ProteinTools {
         },
       },
 
-      search_alphafold_by_gene: {
-        name: 'search_alphafold_by_gene',
-        description: 'Search AlphaFold database for protein structures by gene name (deprecated, use search_alphafold_structures)',
-        parameters: {
-          type: 'object',
-          properties: {
-            geneName: { type: 'string', description: 'Gene name to search' },
-            organism: { type: 'string', description: 'Organism name (default: Homo sapiens)' },
-            maxResults: { type: 'number', description: 'Maximum number of results to return (default: 10)' },
-            clientId: { type: 'string', description: 'Browser client ID' },
-          },
-          required: ['geneName'],
-        },
-      },
-
       fetch_alphafold_structure: {
         name: 'fetch_alphafold_structure',
         description: 'Fetch AlphaFold protein structure by UniProt ID',

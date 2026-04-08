@@ -1237,7 +1237,7 @@ class ChatManager {
         tools: [
           'search_pdb_structures',
           'fetch_protein_structure',
-          'search_alphafold_by_gene',
+          'search_alphafold_structures',
           'open_alphafold_viewer',
         ],
       },
@@ -6370,7 +6370,7 @@ TOOL AVAILABILITY:
         'search_pdb_structures',
         'open_protein_viewer',
         'fetch_protein_structure',
-        'search_alphafold_by_gene',
+        'search_alphafold_structures',
         'fetch_alphafold_structure',
         'open_alphafold_viewer',
       ],
@@ -6630,7 +6630,7 @@ ${coreTools}
 
       // AlphaFold and protein structure tools
       search_alphafold_structures: () => this.services.protein.searchAlphaFoldStructures(parameters),
-      search_alphafold_by_gene: () => this.services.protein.searchAlphaFoldStructures(parameters),
+      search_alphafold_by_gene: () => this.services.protein.searchAlphaFoldStructures(parameters), // Legacy alias
       fetch_alphafold_structure: () => this.fetchAlphaFoldStructure(parameters),
       search_pdb_structures: () => this.services.protein.searchPdbStructures(parameters),
       fetch_protein_structure: () => this.fetchProteinStructure(parameters),
@@ -7515,7 +7515,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'open_protein_viewer',
       'fetch_protein_structure',
       'search_pdb_structures',
-      'search_alphafold_by_gene',
+      'search_alphafold_structures',
       'search_protein_by_gene',
       'get_pdb_details',
 

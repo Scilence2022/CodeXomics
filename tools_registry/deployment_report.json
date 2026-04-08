@@ -191,9 +191,9 @@
       "file": "open_protein_viewer.yaml"
     },
     {
-      "name": "search_alphafold_by_gene",
+      "name": "search_alphafold_structures",
       "category": "protein",
-      "file": "search_alphafold_by_gene.yaml"
+      "file": "search_alphafold_structures.yaml"
     },
     {
       "name": "search_pdb_structures",

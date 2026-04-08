@@ -668,7 +668,7 @@ class InternalMCPServer {
       return {
         success: false,
         error: error.message,
-        tool: 'search_alphafold_by_gene',
+        tool: 'search_alphafold_structures',
         parameters: parameters,
         timestamp: new Date().toISOString(),
       };

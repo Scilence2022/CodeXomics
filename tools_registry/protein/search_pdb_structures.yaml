@@ -127,7 +127,7 @@ relationships:
   depends_on: []
   conflicts_with: []
   enhances: ['open_protein_viewer', 'fetch_protein_structure']
-  alternatives: ['search_alphafold_by_gene']
+  alternatives: ['search_alphafold_structures']
   prerequisites: []
   follow_up: ['open_protein_viewer', 'fetch_protein_structure', 'analyze_protein_domains']
 
