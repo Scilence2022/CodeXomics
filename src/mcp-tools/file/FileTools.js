@@ -50,9 +50,17 @@ class FileTools {
               description: 'Open file dialog instead of using filePath',
               default: false,
             },
+            loadMode: {
+              type: 'string',
+              enum: ['merge', 'new_track'],
+              description:
+                'Loading mode: "merge" (add to existing Genes & Features track) or "new_track" (create a separate track). Defaults to "new_track" if not specified.',
+              default: 'new_track',
+            },
             mergeWithExisting: {
               type: 'boolean',
-              description: 'Merge with existing Genes & Features track instead of creating new track',
+              description:
+                'DEPRECATED: Use loadMode instead. Merge with existing Genes & Features track instead of creating new track',
               default: false,
             },
           },

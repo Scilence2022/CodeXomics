@@ -63,7 +63,27 @@ class FileOperationService {
 
   async loadAnnotationFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false, fileType = 'auto', mergeWithExisting = false } = parameters;
+      // Support both loadMode and mergeWithExisting for compatibility
+      const {
+        filePath,
+        showFileDialog = false,
+        fileType = 'auto',
+        loadMode,
+        mergeWithExisting: mergeParam
+      } = parameters;
+
+      // Determine merge strategy
+      let mergeWithExisting;
+      if (loadMode === 'merge') {
+        mergeWithExisting = true;
+      } else if (loadMode === 'new_track') {
+        mergeWithExisting = false;
+      } else if (mergeParam !== undefined) {
+        mergeWithExisting = mergeParam;
+      }
+      // If none specified, leave as undefined so FileManager can show a popup if needed (for manual usage)
+
+      const options = mergeWithExisting !== undefined ? { mergeWithExisting } : {};
 
       if (filePath && !showFileDialog) {
         if (!this.app?.fileManager) {
@@ -77,12 +97,12 @@ class FileOperationService {
           }
         }
 
-        // Load annotation file using the generic loadFile method (fileManager has no loadAnnotationFile)
-        await this.app.fileManager.loadFile(filePath);
+        // Load annotation file passing merge options
+        await this.app.fileManager.loadFile(filePath, options);
 
         return {
           success: true,
-          message: `Successfully loaded annotation file: ${filePath}`,
+          message: `Successfully loaded annotation file: ${filePath}${mergeWithExisting ? ' (Merged)' : ' (New Track)'}`,
           filePath: filePath,
           fileType: 'annotation',
           tool: 'load_annotation_file',
@@ -93,11 +113,12 @@ class FileOperationService {
           throw new Error('FileManager not available');
         }
 
-        this.app.fileManager.openSpecificFileType('annotation');
+        // Open specific file type passing merge options
+        this.app.fileManager.openSpecificFileType('annotation', options);
 
         return {
           success: true,
-          message: 'File dialog opened for annotation file selection',
+          message: `File dialog opened for annotation file selection${mergeWithExisting !== undefined ? (mergeWithExisting ? ' (Merge mode)' : ' (New Track mode)') : ''}`,
           action: 'dialog_opened',
           fileType: 'annotation',
           tool: 'load_annotation_file',
