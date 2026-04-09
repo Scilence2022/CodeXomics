@@ -220,15 +220,35 @@ class UIManager {
   }
 
   // Toggle functionality
-  toggleSidebar() {
+  // fromCheckbox: true when triggered by the mac-toggle checkbox change event
+  toggleSidebar(fromCheckbox = false) {
     const sidebar = document.getElementById('sidebar');
     const horizontalSplitter = document.getElementById('horizontalSplitter');
     const mainContent = document.querySelector('.main-content');
+    const toggleCheckbox = document.getElementById('toggleSidebar');
 
-    // Check if sidebar is currently visible (either by class or by having a width)
     const isCurrentlyVisible = !sidebar.classList.contains('collapsed') && sidebar.offsetWidth > 0;
 
-    if (isCurrentlyVisible) {
+    // Determine desired state:
+    // - From checkbox: use checkbox.checked (already toggled by browser)
+    // - Otherwise: toggle the current state
+    const shouldShow = fromCheckbox
+      ? toggleCheckbox.checked
+      : !isCurrentlyVisible;
+
+    if (shouldShow) {
+      // Show sidebar
+      sidebar.classList.remove('collapsed');
+      horizontalSplitter.classList.remove('hidden');
+      mainContent.classList.remove('sidebar-collapsed');
+
+      // Restore previous width or use default
+      const previousWidth = sidebar.dataset.previousWidth || '280px';
+      sidebar.style.width = previousWidth;
+      sidebar.style.minWidth = '';
+      sidebar.style.overflow = '';
+      sidebar.style.flex = 'none';
+    } else {
       // Hide sidebar
       sidebar.classList.add('collapsed');
       horizontalSplitter.classList.add('hidden');
@@ -245,18 +265,6 @@ class UIManager {
       sidebar.style.width = '0px';
       sidebar.style.minWidth = '0px';
       sidebar.style.overflow = 'hidden';
-    } else {
-      // Show sidebar
-      sidebar.classList.remove('collapsed');
-      horizontalSplitter.classList.remove('hidden');
-      mainContent.classList.remove('sidebar-collapsed');
-
-      // Restore previous width or use default
-      const previousWidth = sidebar.dataset.previousWidth || '280px';
-      sidebar.style.width = previousWidth;
-      sidebar.style.minWidth = '';
-      sidebar.style.overflow = '';
-      sidebar.style.flex = 'none';
     }
 
     // Update all toggle button states
@@ -373,15 +381,9 @@ class UIManager {
       }
     }
 
-    // Update toolbar toggle button
+    // Update toolbar mac-style toggle (checkbox)
     if (toggleSidebarBtn) {
-      if (isCollapsed) {
-        toggleSidebarBtn.classList.add('active');
-        toggleSidebarBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
-      } else {
-        toggleSidebarBtn.classList.remove('active');
-        toggleSidebarBtn.innerHTML = '<i class="fas fa-sidebar"></i>';
-      }
+      toggleSidebarBtn.checked = !isCollapsed;
     }
   }
 

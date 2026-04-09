@@ -1082,10 +1082,13 @@ class GenomeBrowser {
       this.uiManager.toggleTracks();
     });
 
-    // Sidebar toggle button
-    document.getElementById('toggleSidebar').addEventListener('click', () => {
-      this.uiManager.toggleSidebar();
-    });
+    // Sidebar toggle button (mac-style toggle)
+    const toggleSidebarEl = document.getElementById('toggleSidebar');
+    if (toggleSidebarEl) {
+      toggleSidebarEl.addEventListener('change', () => {
+        this.uiManager.toggleSidebar(true);
+      });
+    }
 
     // Splitter toggle button
     document.getElementById('splitterToggleBtn').addEventListener('click', () => {
