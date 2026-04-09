@@ -36,10 +36,6 @@ parameters:
         (resolved against the current working directory). If not specified, a
         default filename with timestamp will be used. Only effective when
         auto_save is true.
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
   required: []
 sample_usages:
   - user_query: Execute all pending actions and save automatically

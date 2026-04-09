@@ -86,10 +86,6 @@ parameters:
       description: Sort features by position or type
       enum: ['position', 'type', 'none']
       default: 'position'
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
   required: []
 sample_usages:
   - user_query: Export all annotations as GFF3

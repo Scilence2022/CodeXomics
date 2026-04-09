@@ -65,10 +65,6 @@ parameters:
       type: integer
       description: End position for custom range export
       minimum: 1
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
   required: []
 sample_usages:
   - user_query: Export genome as GenBank format

@@ -83,10 +83,6 @@ parameters:
       description: Minimum sequence length to include
       minimum: 1
       default: 1
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
   required: []
 sample_usages:
   - user_query: Export current view as FASTA

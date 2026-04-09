@@ -107,10 +107,6 @@ parameters:
       description: Sort features by position or name
       enum: ['position', 'name', 'none']
       default: 'position'
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
   required: []
 sample_usages:
   - user_query: Export genes as BED format

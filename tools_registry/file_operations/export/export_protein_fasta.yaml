@@ -95,10 +95,6 @@ parameters:
       minimum: 0
       maximum: 200
       default: 80
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
   required: []
 sample_usages:
   - user_query: Export all proteins as FASTA
