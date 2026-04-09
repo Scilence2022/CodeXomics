@@ -1802,7 +1802,7 @@ CRITICAL: Choose the correct protein structure function based on user intent:
 SEQUENCE EDITING WORKFLOW:
 1. Find gene location: search_gene_by_name
 2. Use appropriate editing function (deleteSequence, insertSequence, etc.)
-3. Execute all pending actions: execute_actions (ALWAYS use auto_save=true for LLM workflows)
+3. Execute all pending actions: execute_actions （ALWAYS auto_save=true）
 4. IMPORTANT: Actions are queued until execute_actions is called
 
 EDITING FUNCTIONS WITH PARAMETERS:
@@ -1838,9 +1838,8 @@ EDITING FUNCTIONS WITH PARAMETERS:
   Example: {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
 
 • execute_actions - Execute all queued sequence editing actions
-  Parameters: auto_save (boolean, default false - ALWAYS set to true for LLM workflows), filename (optional string, supports absolute/relative paths)
-  Example: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
-  Example with path: {"tool_name": "execute_actions", "parameters": {"auto_save": true, "filename": "/tmp/modified_genome.gbk"}}
+  Parameters: confirm (optional boolean, default: false)
+  Example: {"tool_name": "execute_actions", "parameters": {}}
 
 • get_action_list - View current action queue
   Parameters: status (optional: "all", "pending", "completed", "failed")
@@ -1854,8 +1853,8 @@ Method 1 - Simple gene deletion by name or locus tag:
 
 Method 2 - Manual deletion with coordinates:
 1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
-2. Use gene coordinates from result in deleteSequence
-3. {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": [gene_start], "end": [gene_end]}}
+2. Use gene coordinates from result in delete_sequence
+3. {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": [gene_start], "end": [gene_end]}}
 4. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 
 CHROMOSOME NAMES:
@@ -1876,7 +1875,7 @@ COMMON TASK PATTERNS:
 • New Tab: open_new_tab → for parallel analysis
 • BLAST Search: blast_search → analyze results
 • Pathway Analysis: show_metabolic_pathway → find_pathway_genes
-• Gene Deletion: search_gene_by_name → deleteSequence → execute_actions (auto_save=true)
+• Gene Deletion: search_gene_by_name → delete_sequence → execute_actions (auto_save=true)
 • Sequence Insertion: insert_sequence → execute_actions (auto_save=true)
 • Copy/Paste: copy_sequence → paste_sequence → execute_actions (auto_save=true)
 • Track Settings: get_track_settings → set_track_settings or batch_set_track_settings
@@ -1904,7 +1903,7 @@ For data export requests:
 • Examples: 
   - {"tool_name": "export_fasta_sequence", "parameters": {"auto_save": true, "filename": "/Users/user/output/genome_export.fasta"}}
   - {"tool_name": "export_genbank_format", "parameters": {"auto_save": true, "filename": "/tmp/genome.gbk"}}
-  - {"tool_name": "export_cds_fasta", "parameters": {"auto_save": true, "filename": "my_cds.fasta"}}
+  - {"tool_name": "export_cds_fasta", "parameters": {"auto_save": true, "filename": "/Users/user/output/my_cds.fasta"}}
   - {"tool_name": "export_current_view_fasta", "parameters": {"auto_save": true}}
 
 SEARCH FUNCTIONS GUIDE:
@@ -1919,7 +1918,7 @@ ANALYSIS FUNCTIONS:
 - Composition: compute_gc, sequence_statistics, codon_usage_analysis
 - Features: predict_promoter, predict_rbs, find_restriction_sites
 - Comparison: blast_search, compare_regions, find_similar_sequences
-- Editing: copy_sequence, cut_sequence, paste_sequence, deleteSequence, insertSequence, replace_sequence
+- Editing: copy_sequence, cut_sequence, paste_sequence, delete_sequence, insert_sequence, replace_sequence
 
 IMPORTANT PREREQUISITES:
 Before using get_coding_sequence or other gene-specific functions:
@@ -1936,7 +1935,7 @@ WORKFLOW EXAMPLES:
   
   Method 2 (Manual): 
   1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
-  2. {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": 8238, "end": 9191}}
+  2. {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 8238, "end": 9191}}
   3. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 
 • Gene Analysis Workflow:
@@ -1945,7 +1944,7 @@ WORKFLOW EXAMPLES:
   3. {"tool_name": "translate_sequence", "parameters": {"sequence": "ATGCGC..."}}
 
 • Sequence Insertion Workflow:
-  1. {"tool_name": "insertSequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGCTAT"}}
+  1. {"tool_name": "insert_sequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGCTAT"}}
   2. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 
 • Copy/Paste Workflow:
@@ -1955,8 +1954,8 @@ WORKFLOW EXAMPLES:
 
 EXAMPLES:
 • Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "thrC"}}
-• Delete gene: {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
-• Insert DNA: {"tool_name": "insertSequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGC"}}
+• Delete gene: {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
+• Insert DNA: {"tool_name": "insert_sequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGC"}}
 • Execute actions: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 • Get action list: {"tool_name": "get_action_list", "parameters": {}}
 • Copy sequence: {"tool_name": "copy_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}

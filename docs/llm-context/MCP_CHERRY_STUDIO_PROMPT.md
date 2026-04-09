@@ -74,6 +74,26 @@ You have access to **40+ specialized bioinformatics tools** organized into these
 - Virtual restriction digests
 - Pattern matching
 
+### ✂️ Sequence Editing
+
+- Copy, cut, paste sequence regions
+- Delete and insert DNA sequences
+- Replace sequence regions
+- Delete genes by name or locus tag
+- Execute all pending edits with `execute_actions` (use `auto_save=true` for LLM workflows)
+- View and manage action queue
+
+### 🔬 Primer Design
+
+- Calculate primer properties (melting temp, GC content)
+- Design PCR primer pairs
+- Find primer binding sites on genome
+
+### 🧫 Metabolic Pathways
+
+- Display metabolic pathway diagrams
+- Find genes associated with pathways
+
 ### 🤖 AI-Powered Analysis (NVIDIA Evo2)
 
 - Generate DNA sequences
@@ -249,7 +269,7 @@ Your response:
    → fetch_alphafold_structure(uniprotId: "P03004")
 
 3. "Opening the 3D structure viewer..."
-   → open_alphafold_viewer(pdbPath: "/path/to/structure.pdb")
+   → open_protein_viewer(pdbId: "P03004")
 ```
 
 ---

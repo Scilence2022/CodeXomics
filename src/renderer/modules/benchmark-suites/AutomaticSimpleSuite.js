@@ -907,7 +907,7 @@ class AutomaticSimpleSuite {
         category: 'sequence_editing',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Execute all pending sequence editing actions in the queue.',
+        instruction: `Execute all pending sequence editing actions in the queue and export the resulting gbk file to ${this.buildFilePath("exported_files/edited_genome_sequence.gbk")}`,
         expectedResult: {
           tool_name: 'execute_actions',
           parameters: {

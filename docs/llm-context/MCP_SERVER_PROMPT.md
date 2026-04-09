@@ -76,7 +76,7 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 
 - `search_alphafold_structures` - Find AlphaFold structures
 - `fetch_alphafold_structure` - Download AlphaFold PDB
-- `open_alphafold_viewer` - View 3D structure
+- `open_protein_viewer` - View 3D protein structure
 - `search_pdb_structures` - Search Protein Data Bank
 - `fetch_protein_structure` - Download PDB files
 - `search_alphafold_by_sequence` - Search by sequence
@@ -114,7 +114,32 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 - `find_restriction_sites` - Find restriction enzymes
 - `virtual_digest` - Simulate restriction digests
 
-### 9. Utility Tools
+### 9. Sequence Editing
+
+- `copy_sequence` - Copy a sequence region
+- `cut_sequence` - Cut a sequence region
+- `paste_sequence` - Paste sequence from clipboard
+- `delete_sequence` - Delete a sequence region
+- `insert_sequence` - Insert DNA at a position
+- `replace_sequence` - Replace a sequence region
+- `delete_gene` - Delete a gene by name or locus tag
+- `execute_actions` - Execute all pending edits (use `auto_save=true` for LLM workflows)
+- `get_action_list` - View current action queue
+- `clear_actions` - Clear the action queue
+
+### 10. Primer Design
+
+- `calculate_primer_properties` - Calculate primer melting temp, GC content
+- `design_primers` - Design PCR primer pairs
+- `find_primer_binding_sites` - Find primer binding locations
+- `add_primer_annotation` - Add primer display to genome track
+
+### 11. Metabolic Pathways
+
+- `show_metabolic_pathway` - Display pathway diagrams
+- `find_pathway_genes` - Find genes in a pathway
+
+### 12. Utility Tools
 
 - `ping` - Check server status
 - `list_available_tools` - Get tool catalog
@@ -177,7 +202,7 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 
 ```
 1. navigate_to_position(chromosome: "chr1", start: 10000, end: 20000)
-2. get_sequence_region(chromosome: "chr1", start: 10000, end: 20000)
+2. get_sequence(chromosome: "chr1", start: 10000, end: 20000)
 3. compute_gc(sequence: "ATCG...")
 4. translate_dna(dna: "ATG...", frame: 0)
 5. search_pattern(pattern: "GAATTC", chromosome: "chr1")

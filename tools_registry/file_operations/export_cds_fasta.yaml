@@ -1,41 +1,103 @@
 name: export_cds_fasta
 version: 1.0.0
-description: Export coding sequences (CDS) in FASTA format to specified file path
+description: Export coding sequences (CDS) in FASTA format
 category: file_operations
+subcategory: export
 keywords:
   - export
   - cds
-  - fasta
   - coding
-  - sequences
-priority: 1
+  - sequence
+  - fasta
+  - genes
+priority: 3
 execution:
   type: client
-  timeout: 15000
+  timeout: 30000
   retries: 2
   requires_auth: false
-  requires_data: false
+  requires_data: true
   requires_network: false
 parameters:
   type: object
   properties:
-    clientId:
+    filename:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
+      description: >-
+        Output file path for the exported CDS FASTA file. Supports absolute paths
+        (e.g., "/Users/user/output/cds.fasta") and relative paths (e.g., "cds.fasta").
+        Relative paths are resolved against the current working directory.
+      default: 'cds_sequences.fasta'
+      examples:
+        - '/Users/user/output/all_cds.fasta'
+        - 'selected_cds.fasta'
+        - '/tmp/chromosome_cds.fasta'
+    auto_save:
+      type: boolean
+      description: >-
+        When true, save the file directly without showing a save dialog.
+        Essential for LLM/agent automated workflows where dialog prompts block execution.
+      default: false
+    include_gene_names:
+      type: boolean
+      description: Include gene names in FASTA headers
+      default: true
+    include_locus_tags:
+      type: boolean
+      description: Include locus tags in FASTA headers
+      default: true
+    include_products:
+      type: boolean
+      description: Include product descriptions in FASTA headers
+      default: true
+    selection_type:
+      type: string
+      description: Which CDS sequences to export
+      enum: ['all', 'selected', 'current_view', 'by_gene_name', 'by_locus_tag']
+      default: 'all'
+    gene_names:
+      type: array
+      description: Specific gene names to export (when selection_type is by_gene_name)
+      items:
+        type: string
+      examples:
+        - ['lacZ', 'araA', 'trpA']
+        - ['gyrA', 'rpoB']
+    locus_tags:
+      type: array
+      description: Specific locus tags to export (when selection_type is by_locus_tag)
+      items:
+        type: string
+      examples:
+        - ['b0001', 'b0002', 'b0003']
+        - ['EC_0001', 'EC_0002']
+    wrap_length:
+      type: integer
+      description: Number of characters per line (0 = no wrapping)
+      minimum: 0
+      maximum: 200
+      default: 80
   required: []
 sample_usages:
-  - user_query: Use export_cds_fasta to analyze genomic data
-    tool_call: export_cds_fasta(parameter1='value1', parameter2='value2')
-    thought: User wants to use export_cds_fasta for export coding sequences (cds) in fasta format to specified file path
-    expected_result: Result from export_cds_fasta analysis
+  - user_query: Export all CDS sequences as FASTA
+    tool_call: export_cds_fasta(filename="all_cds.fasta", selection_type="all", include_gene_names=true)
+    thought: User wants to export all coding sequences in FASTA format
+    expected_result: FASTA file containing all CDS with gene names
+  - user_query: Export CDS for specific genes
+    tool_call: export_cds_fasta(filename="selected_genes_cds.fasta", selection_type="by_gene_name", gene_names=["lacZ", "araA"])
+    thought: User wants CDS sequences for specific genes
+    expected_result: FASTA file containing CDS for lacZ and araA genes
+  - user_query: Export CDS sequences in current view
+    tool_call: export_cds_fasta(filename="view_cds.fasta", selection_type="current_view", include_products=true)
+    thought: User wants CDS from currently visible region
+    expected_result: FASTA file with CDS from current view including product descriptions
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: []
-  alternatives: []
-  prerequisites: []
-  follow_up: []
+  enhances: ['load_genome_file']
+  alternatives: ['export_fasta_sequence', 'export_protein_fasta']
+  prerequisites: ['genome_data_loaded', 'cds_annotations']
+  follow_up: ['export_protein_fasta']
 metadata:
   usage_count: 0
   success_rate: 0
@@ -43,11 +105,32 @@ metadata:
   last_used: null
   tags:
     - file_operations
-    - core
-    - essential
+    - export
+    - cds
+    - fasta
+    - dataExport
   complexity: simple
   usage_pattern: frequent
-error_handling: {}
+error_handling:
+  no_cds_found:
+    error: 'No CDS sequences found'
+    solution: 'Load genome with CDS annotations or check selection criteria'
+    retry: false
+  invalid_gene_names:
+    error: 'Specified gene names not found'
+    solution: 'Check gene names exist in the genome annotation'
+    retry: true
+  export_failed:
+    error: 'Failed to export CDS FASTA file'
+    solution: 'Check file permissions and disk space'
+    retry: true
 returns:
-  success: boolean - Whether operation was successful
-  result: object - Operation result
+  success: 'boolean - Whether export was successful'
+  result: 'object - Export results including:
+    - filename: string - Name of exported file
+    - cdsCount: number - Number of CDS sequences exported
+    - totalLength: number - Total length of all CDS sequences
+    - fileSize: number - Size of exported file in bytes
+    - selectionType: string - Type of selection used'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

@@ -1238,7 +1238,6 @@ class ChatManager {
           'search_pdb_structures',
           'fetch_protein_structure',
           'search_alphafold_structures',
-          'open_alphafold_viewer',
         ],
       },
       file_loading: {
@@ -6372,7 +6371,6 @@ TOOL AVAILABILITY:
         'fetch_protein_structure',
         'search_alphafold_structures',
         'fetch_alphafold_structure',
-        'open_alphafold_viewer',
       ],
       'DATABASE INTEGRATION': [
         'search_uniprot_database',
@@ -11015,13 +11013,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         viewStructureBtn.disabled = true;
         viewStructureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
 
-        const result = await this.openAlphaFoldViewer({
+        const result = await this.openProteinViewer({
           uniprotId: uniprotId,
           geneName: geneName,
         });
 
         if (result.success) {
-          console.log('Successfully opened AlphaFold structure viewer');
+          console.log('Successfully opened protein structure viewer');
         } else {
           throw new Error(result.error);
         }

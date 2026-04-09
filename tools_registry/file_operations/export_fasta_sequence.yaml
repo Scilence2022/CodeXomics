@@ -1,45 +1,88 @@
 name: export_fasta_sequence
 version: 1.0.0
-description: Export genome sequences in FASTA format to specified file path
+description: Export sequences in FASTA format
 category: file_operations
+subcategory: export
 keywords:
   - export
   - fasta
   - sequence
-  - genome
-priority: 1
+  - file
+  - download
+priority: 3
 execution:
   type: client
-  timeout: 15000
+  timeout: 30000
   retries: 2
   requires_auth: false
-  requires_data: false
+  requires_data: true
   requires_network: false
 parameters:
   type: object
   properties:
-    clientId:
+    filename:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
+      description: >-
+        Output file path for the exported FASTA file. Supports both absolute paths
+        (e.g., "/Users/user/output/genome.fasta") and relative paths (e.g., "genome.fasta").
+        Relative paths are resolved against the current working directory.
+        When auto_save=true and no filename is provided, defaults to "genome.fasta" in the CWD.
+      default: 'sequences.fasta'
+      examples:
+        - '/Users/user/output/genome_sequences.fasta'
+        - 'selected_genes.fasta'
+        - '/tmp/chromosome_1.fasta'
     auto_save:
       type: boolean
       description: >-
         When true, save the file directly without showing a save dialog.
         Essential for LLM/agent automated workflows where dialog prompts block execution.
+        The file will be written to the current working directory or the path specified in filename.
       default: false
+    format:
+      type: string
+      description: FASTA format variant
+      enum: ['standard', 'wrapped', 'single_line']
+      default: 'standard'
+    include_description:
+      type: boolean
+      description: Include sequence descriptions in FASTA headers
+      default: true
+    sequence_type:
+      type: string
+      description: Type of sequences to export
+      enum: ['all', 'genes', 'cds', 'selected', 'current_view']
+      default: 'all'
+    wrap_length:
+      type: integer
+      description: Number of characters per line (0 = no wrapping)
+      minimum: 0
+      maximum: 200
+      default: 80
   required: []
 sample_usages:
-  - user_query: Use export_fasta_sequence to analyze genomic data
-    tool_call: export_fasta_sequence(parameter1='value1', parameter2='value2')
-    thought: User wants to use export_fasta_sequence for export genome sequences in fasta format to specified file path
-    expected_result: Result from export_fasta_sequence analysis
+  - user_query: Export all sequences as FASTA
+    tool_call: export_fasta_sequence(filename="genome.fasta", sequence_type="all", include_description=true)
+    thought: User wants to export all sequences in FASTA format
+    expected_result: FASTA file containing all sequences with descriptions
+  - user_query: Export current view as FASTA file
+    tool_call: export_fasta_sequence(filename="current_view.fasta", sequence_type="current_view", wrap_length=80)
+    thought: User wants to export currently visible sequences as FASTA
+    expected_result: FASTA file containing sequences from current view
+  - user_query: Export selected genes to FASTA format
+    tool_call: export_fasta_sequence(filename="selected_genes.fasta", sequence_type="selected", format="standard")
+    thought: User wants to export selected gene sequences as FASTA
+    expected_result: FASTA file containing selected gene sequences
+  - user_query: Auto-export genome FASTA without dialog (for LLM/agent workflows)
+    tool_call: export_fasta_sequence(filename="/Users/user/output/genome_export.fasta", auto_save=true)
+    thought: LLM/agent needs to export FASTA without any interactive dialog that would block execution
+    expected_result: FASTA file saved directly to specified path without save dialog
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: []
-  alternatives: []
-  prerequisites: []
+  enhances: ['load_genome_file']
+  alternatives: ['export_genbank_format', 'export_cds_fasta']
+  prerequisites: ['genome_data_loaded']
   follow_up: []
 metadata:
   usage_count: 0
@@ -48,11 +91,31 @@ metadata:
   last_used: null
   tags:
     - file_operations
-    - core
-    - essential
+    - export
+    - fasta
+    - dataExport
   complexity: simple
   usage_pattern: frequent
-error_handling: {}
+error_handling:
+  no_sequences:
+    error: 'No sequences available for export'
+    solution: 'Load genome data first or select sequences to export'
+    retry: false
+  export_failed:
+    error: 'Failed to export FASTA file'
+    solution: 'Check file permissions and disk space'
+    retry: true
+  invalid_format:
+    error: 'Invalid FASTA format specified'
+    solution: 'Use one of: standard, wrapped, single_line'
+    retry: true
 returns:
-  success: boolean - Whether operation was successful
-  result: object - Operation result
+  success: 'boolean - Whether export was successful'
+  result: 'object - Export results including:
+    - filename: string - Name of exported file
+    - sequenceCount: number - Number of sequences exported
+    - fileSize: number - Size of exported file in bytes
+    - exportType: string - Type of sequences exported
+    - format: string - FASTA format used'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

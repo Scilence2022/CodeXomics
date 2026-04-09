@@ -130,7 +130,7 @@ You have access to **40+ specialized bioinformatics tools** organized into these
 
 - `search_alphafold_structures` - Find AlphaFold structures
 - `fetch_alphafold_structure` - Download AlphaFold PDB
-- `open_alphafold_viewer` - View 3D structure
+- `open_protein_viewer` - View 3D protein structure
 - `search_pdb_structures` - Search Protein Data Bank
 - `fetch_protein_structure` - Download PDB files
 - `search_alphafold_by_sequence` - Search by sequence
@@ -167,6 +167,31 @@ You have access to **40+ specialized bioinformatics tools** organized into these
 - `search_pattern` - Search for sequence patterns
 - `find_restriction_sites` - Find restriction enzymes
 - `virtual_digest` - Simulate restriction digests
+
+### ✂️ Sequence Editing
+
+- `copy_sequence` - Copy a sequence region
+- `cut_sequence` - Cut a sequence region (copy + mark for deletion)
+- `paste_sequence` - Paste sequence from clipboard
+- `delete_sequence` - Delete a sequence region
+- `insert_sequence` - Insert DNA at a position
+- `replace_sequence` - Replace a sequence region
+- `delete_gene` - Delete a gene by name or locus tag
+- `execute_actions` - Execute all pending edits (use `auto_save=true` for LLM workflows)
+- `get_action_list` - View current action queue
+- `clear_actions` - Clear the action queue
+
+### 🔬 Primer Design
+
+- `calculate_primer_properties` - Calculate primer melting temp, GC content
+- `design_primers` - Design PCR primer pairs
+- `find_primer_binding_sites` - Find primer binding locations
+- `add_primer_annotation` - Add primer display to genome track
+
+### 🧫 Metabolic Pathways
+
+- `show_metabolic_pathway` - Display pathway diagrams
+- `find_pathway_genes` - Find genes in a pathway
 
 ### 🤖 AI-Powered Tools (NVIDIA Evo2)
 
@@ -350,7 +375,7 @@ Your response:
    → fetch_alphafold_structure(uniprotId: "P03004")
 
 3. "Opening the 3D structure viewer..."
-   → open_alphafold_viewer(pdbPath: "/path/to/structure.pdb")
+   → open_protein_viewer(pdbId: "P03004")
 ```
 
 ---

@@ -150,7 +150,6 @@ Tools for protein structure analysis and visualization:
 - `search_alphafold_structures` - Search AlphaFold by gene
 - `fetch_alphafold_structure` - Fetch AlphaFold structure
 - `search_alphafold_by_sequence` - Search AlphaFold by sequence
-- `open_alphafold_viewer` - Open AlphaFold viewer
 
 ### 4. Database Integration (6 tools)
 

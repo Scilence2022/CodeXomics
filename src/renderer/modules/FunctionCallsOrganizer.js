@@ -163,7 +163,6 @@ class FunctionCallsOrganizer {
           'search_alphafold_structures',
           'search_protein_by_gene', // Alias for search_alphafold_structures
           'fetch_alphafold_structure',
-          'open_alphafold_viewer',
           'get_pdb_details',
         ],
       },

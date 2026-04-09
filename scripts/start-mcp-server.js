@@ -91,7 +91,6 @@ const toolInfo = `📚 Available Tools (Full List):
 - search_alphafold_structures: Search AlphaFold structures by gene
 - fetch_alphafold_structure: Fetch AlphaFold structures
 - search_alphafold_by_sequence: Search AlphaFold by sequence
-- open_alphafold_viewer: Open AlphaFold structure viewer
 
 🗃️ Database Integration:
 - search_uniprot_database: Search UniProt database
