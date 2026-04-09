@@ -219,8 +219,8 @@ class TrackRenderer {
       samplingPercent.textContent = '%';
       samplingPercent.style.cssText = 'font-size: 11px; color: #888;';
 
-      // Get current sampling percentage from settings
-      const currentSettings = this.getTrackSettings('reads');
+      // Get current sampling percentage from settings (instance-specific if fileId exists)
+      const currentSettings = this.getTrackSettings('reads', fileId);
       samplingInput.value = currentSettings.samplingPercentage || 20;
 
       // Add enter key handler - only trigger on Enter key press
@@ -234,7 +234,7 @@ class TrackRenderer {
             percentage = 100;
             e.target.value = 100;
           }
-          this.updateSamplingPercentage(percentage);
+          this.updateSamplingPercentage(percentage, fileId);
           e.target.blur(); // Remove focus
         }
       });
@@ -250,10 +250,10 @@ class TrackRenderer {
           e.target.value = 100;
         }
         // Only update if value actually changed
-        const currentSettings = this.getTrackSettings('reads');
+        const currentSettings = this.getTrackSettings('reads', fileId);
         const currentPercentage = currentSettings.samplingPercentage || 20;
         if (percentage !== currentPercentage) {
-          this.updateSamplingPercentage(percentage);
+          this.updateSamplingPercentage(percentage, fileId);
         }
       });
 
@@ -296,7 +296,7 @@ class TrackRenderer {
         }
 
         presetBtn.addEventListener('click', () => {
-          this.updateSamplingPercentage(preset);
+          this.updateSamplingPercentage(preset, fileId);
         });
 
         presetBtn.addEventListener('mouseenter', () => {
@@ -491,7 +491,7 @@ class TrackRenderer {
     settingsBtn.title = 'Track Settings';
     settingsBtn.addEventListener('click', e => {
       e.stopPropagation();
-      this.openTrackSettings(trackType);
+      this.openTrackSettings(trackType, fileId);
     });
     buttonsContainer.appendChild(settingsBtn);
 
@@ -848,6 +848,9 @@ class TrackRenderer {
     track.className = 'gene-track'; // Reuse gene track styling
     track.dataset.trackId = annotationTrack.id;
 
+    // Get per-instance settings
+    const settings = this.getTrackSettings('genes', annotationTrack.id);
+
     // Create track header
     const trackHeader = this.createTrackHeader(
       annotationTrack.name,
@@ -857,7 +860,7 @@ class TrackRenderer {
     track.appendChild(trackHeader);
 
     // Create track content
-    const trackContent = this.createTrackContent(this.trackConfig.genes?.defaultHeight || 120, chromosome);
+    const trackContent = this.createTrackContent(settings.height || this.trackConfig.genes?.defaultHeight || 120, chromosome);
     track.appendChild(trackContent);
 
     // Add detailed ruler for current viewing region
@@ -884,8 +887,7 @@ class TrackRenderer {
     }
 
     // Process and render annotations with settings
-    // Use gene track settings as base, but apply custom track color
-    const settings = this.getTrackSettings('genes');
+    // Use instance-specific settings already fetched above, apply custom track color
     const customSettings = {
       ...settings,
       trackColor: annotationTrack.color,
@@ -3542,52 +3544,8 @@ class TrackRenderer {
    * Get current gene track settings for refresh operations
    */
   getGeneTrackSettings() {
-    // First check if we have saved settings from applySettingsToTrack
-    if (this.trackSettings && this.trackSettings.genes) {
-      console.log('Using saved gene track settings:', this.trackSettings.genes);
-      return this.trackSettings.genes;
-    }
-
-    // Fallback: Try to get settings from the settings modal if available
-    const settings = {};
-
-    // Check for gene height setting
-    const geneHeightInput = document.getElementById('geneHeight');
-    if (geneHeightInput) {
-      settings.geneHeight = parseInt(geneHeightInput.value) || 12;
-    }
-
-    // Check for max rows setting
-    const maxRowsInput = document.getElementById('maxRows');
-    if (maxRowsInput) {
-      settings.maxRows = parseInt(maxRowsInput.value) || 6;
-    }
-
-    // Check for font size setting
-    const fontSizeInput = document.getElementById('fontSize');
-    if (fontSizeInput) {
-      settings.fontSize = parseInt(fontSizeInput.value) || 11;
-    }
-
-    // Check for font family setting
-    const fontFamilyInput = document.getElementById('fontFamily');
-    if (fontFamilyInput) {
-      settings.fontFamily = fontFamilyInput.value || 'Arial, sans-serif';
-    }
-
-    // Default settings if no inputs found
-    const finalSettings =
-      Object.keys(settings).length > 0
-        ? settings
-        : {
-          geneHeight: 12,
-          maxRows: 6,
-          fontSize: 11,
-          fontFamily: 'Arial, sans-serif',
-        };
-
-    console.log('Using fallback gene track settings:', finalSettings);
-    return finalSettings;
+    // Delegate to the unified getTrackSettings method
+    return this.getTrackSettings('genes');
   }
 
   /**
@@ -4601,8 +4559,8 @@ class TrackRenderer {
   createSingleVariantTrack(chromosome, vcfFile) {
     const viewport = this.getCurrentViewport();
 
-    // Get variant track settings
-    const settings = this.getTrackSettings('variants');
+    // Get instance-specific variant track settings
+    const settings = this.getTrackSettings('variants', vcfFile.metadata.id);
 
     // Create track base
     const track = document.createElement('div');
@@ -4663,8 +4621,8 @@ class TrackRenderer {
   createVariantTrackContent(chromosome, vcfFile, viewport = null) {
     viewport = viewport || this.getCurrentViewport();
 
-    // Get variant track settings
-    const settings = this.getTrackSettings('variants');
+    // Get instance-specific variant track settings
+    const settings = this.getTrackSettings('variants', vcfFile.metadata.id);
 
     const trackContent = this.createTrackContent(settings.height || 80, chromosome);
 
@@ -5256,8 +5214,8 @@ class TrackRenderer {
     // Create track content
     const trackContent = this.createTrackContent(this.trackConfig.reads.defaultHeight, chromosome);
 
-    // CRITICAL FIX: Get and apply track settings for reads track content updates during zoom
-    const rawSettings = this.getTrackSettings('reads');
+    // CRITICAL FIX: Get and apply instance-specific track settings for reads track content updates during zoom
+    const rawSettings = this.getTrackSettings('reads', bamFile.metadata.id);
     const settings = JSON.parse(JSON.stringify(rawSettings));
 
     // BUGFIX: Ensure critical display settings are properly initialized
@@ -5503,8 +5461,8 @@ class TrackRenderer {
   async createSingleReadsTrack(chromosome, bamFile) {
     const viewport = this.getCurrentViewport();
 
-    // CRITICAL FIX: Get and apply track settings for single reads track
-    const rawSettings = this.getTrackSettings('reads');
+    // CRITICAL FIX: Get and apply track settings for single reads track (instance-specific)
+    const rawSettings = this.getTrackSettings('reads', bamFile.metadata.id);
     const settings = JSON.parse(JSON.stringify(rawSettings));
 
     // BUGFIX: Ensure critical display settings are properly initialized
@@ -8949,18 +8907,26 @@ class TrackRenderer {
 
       // Update settings if mapped
       if (optionKey) {
+        // Detect fileId from the track element for instance-level settings
+        const trackElement = btn.closest('.reads-track');
+        const fileId = trackElement?.dataset?.fileId || null;
+        const settingsKey = fileId ? `reads::${fileId}` : 'reads';
+
         // Get current settings or init
         if (!this.trackSettings) this.trackSettings = {};
-        if (!this.trackSettings['reads']) this.trackSettings['reads'] = {};
+        if (!this.trackSettings[settingsKey]) {
+          // Initialize with type-level defaults merged
+          this.trackSettings[settingsKey] = { ...(this.trackSettings['reads'] || {}) };
+        }
 
         // Update and save
-        this.trackSettings['reads'][optionKey] = newValue;
+        this.trackSettings[settingsKey][optionKey] = newValue;
         // Also update the legacy key if it exists to be safe
-        this.trackSettings['reads'][stateKey] = newValue;
+        this.trackSettings[settingsKey][stateKey] = newValue;
 
         // Persist settings
         if (typeof this.saveTrackSettings === 'function') {
-          this.saveTrackSettings('reads', this.trackSettings['reads']);
+          this.saveTrackSettings('reads', this.trackSettings[settingsKey], fileId);
         }
       }
 
@@ -11174,8 +11140,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
   /**
    * Open track-specific settings modal
    */
-  openTrackSettings(trackType) {
-    console.log(`Opening settings for track: ${trackType}`);
+  openTrackSettings(trackType, fileId = null) {
+    console.log(`Opening settings for track: ${trackType}${fileId ? ` (file: ${fileId})` : ''}`);
 
     // Create modal if it doesn't exist
     let modal = document.getElementById('trackSettingsModal');
@@ -11185,7 +11151,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }
 
     // Load track-specific settings
-    this.loadTrackSpecificSettings(trackType, modal);
+    this.loadTrackSpecificSettings(trackType, modal, fileId);
 
     // Show modal
     modal.classList.add('show');
@@ -12012,15 +11978,15 @@ This action cannot be undone.`;
   /**
    * Load track-specific settings content
    */
-  loadTrackSpecificSettings(trackType, modal) {
-    console.log('⚙️ loadTrackSpecificSettings called with trackType:', trackType);
+  loadTrackSpecificSettings(trackType, modal, fileId = null) {
+    console.log('⚙️ loadTrackSpecificSettings called with trackType:', trackType, 'fileId:', fileId);
 
     const titleElement = modal.querySelector('#trackSettingsTitle');
     const bodyElement = modal.querySelector('#trackSettingsBody');
     console.log('⚙️ Modal elements found - title:', !!titleElement, 'body:', !!bodyElement);
 
-    // Get current settings for this track
-    const currentSettings = this.getTrackSettings(trackType);
+    // Get current settings for this track (instance-specific if fileId provided)
+    const currentSettings = this.getTrackSettings(trackType, fileId);
     console.log('⚙️ Current settings for', trackType, ':', currentSettings);
 
     switch (trackType) {
@@ -12250,8 +12216,9 @@ This action cannot be undone.`;
         break;
     }
 
-    // Store current track type for applying settings
+    // Store current track type and file ID for applying settings
     modal.dataset.trackType = trackType;
+    modal.dataset.fileId = fileId || '';
   }
 
   /**
@@ -13072,10 +13039,27 @@ This action cannot be undone.`;
   /**
    * Get current settings for a track
    */
-  getTrackSettings(trackType) {
-    console.log(`🔍 [getTrackSettings] Getting settings for ${trackType}`);
+  /**
+   * Build the instance-level settings key.
+   * Format: 'trackType' (no fileId) or 'trackType::fileId' (with fileId).
+   */
+  _instanceSettingsKey(trackType, fileId = null) {
+    return fileId ? `${trackType}::${fileId}` : trackType;
+  }
 
-    // First check if we have saved settings from applySettingsToTrack
+  getTrackSettings(trackType, fileId = null) {
+    const instanceKey = this._instanceSettingsKey(trackType, fileId);
+    console.log(`🔍 [getTrackSettings] Getting settings for ${instanceKey}`);
+
+    // First check if we have instance-level saved settings
+    if (fileId && this.trackSettings && this.trackSettings[instanceKey]) {
+      console.log(`🔍 [getTrackSettings] Using instance-level settings for ${instanceKey}`);
+      // Merge type-level defaults with instance overrides
+      const typeDefaults = this.trackSettings[trackType] || this._getDefaultTrackSettings(trackType);
+      return { ...typeDefaults, ...this.trackSettings[instanceKey] };
+    }
+
+    // Then check if we have type-level saved settings from applySettingsToTrack
     if (this.trackSettings && this.trackSettings[trackType]) {
       console.log(`🔍 [getTrackSettings] Using saved ${trackType} track settings:`, this.trackSettings[trackType]);
       console.log(`🔍 [getTrackSettings] Saved renderingMode: ${this.trackSettings[trackType].renderingMode}`);
@@ -13088,6 +13072,13 @@ This action cannot be undone.`;
     }
 
     // Get settings from ConfigManager or default values
+    return this._getDefaultTrackSettingsWithFallback(trackType);
+  }
+
+  /**
+   * Get default track settings (inline definition)
+   */
+  _getDefaultTrackSettings(trackType) {
     const defaultSettings = {
       genes: {
         maxRows: 6,
@@ -13235,28 +13226,33 @@ This action cannot be undone.`;
       },
     };
 
-    // Try to get saved settings
+    return defaultSettings[trackType] || {};
+  }
+
+  /**
+   * Get default track settings with ConfigManager/localStorage fallback.
+   * This is the full resolution chain: defaults → persisted → merged.
+   * Used by getTrackSettings when no in-memory settings exist.
+   */
+  _getDefaultTrackSettingsWithFallback(trackType) {
+    const defaultSettings = this._getDefaultTrackSettings(trackType);
+
+    // Try to get saved settings from ConfigManager or localStorage
     let savedSettings = {};
     if (this.genomeBrowser.configManager) {
       savedSettings = this.genomeBrowser.configManager.get(`tracks.${trackType}.settings`) || {};
-      console.log(`ConfigManager retrieved settings for ${trackType}:`, savedSettings);
     } else {
       const stored = localStorage.getItem(`trackSettings_${trackType}`);
-      console.log(`LocalStorage raw data for trackSettings_${trackType}:`, stored);
       if (stored) {
         try {
           savedSettings = JSON.parse(stored);
-          console.log(`LocalStorage parsed settings for ${trackType}:`, savedSettings);
         } catch (e) {
           console.warn('Failed to parse saved track settings:', e);
         }
       }
     }
 
-    const finalSettings = { ...(defaultSettings[trackType] || {}), ...savedSettings };
-    console.log(`🔍 [getTrackSettings] Using fallback merged settings for ${trackType}:`, finalSettings);
-    console.log(`🔍 [getTrackSettings] Final renderingMode: ${finalSettings.renderingMode}`);
-    return finalSettings;
+    return { ...defaultSettings, ...savedSettings };
   }
 
   /**
@@ -13273,14 +13269,17 @@ This action cannot be undone.`;
       return;
     }
 
+    const fileId = modal.dataset.fileId || null;
+    console.log('🔧 [DEBUG] File ID:', fileId);
+
     const settings = this.collectSettingsFromModal(trackType, modal);
     console.log('🔧 [DEBUG] Collected settings:', settings);
     console.log('🔧 [DEBUG] renderingMode in settings:', settings.renderingMode);
 
-    this.saveTrackSettings(trackType, settings);
+    this.saveTrackSettings(trackType, settings, fileId);
 
     // Apply settings immediately
-    this.applySettingsToTrack(trackType, settings);
+    this.applySettingsToTrack(trackType, settings, fileId);
 
     // Close modal
     modal.classList.remove('show');
@@ -14241,36 +14240,50 @@ This action cannot be undone.`;
   /**
    * Save track settings
    */
-  saveTrackSettings(trackType, settings) {
-    console.log(`🔧 [TrackRenderer] Saving settings for ${trackType}:`, settings);
-    console.log(`🔍 [saveTrackSettings] showReference value being saved: ${settings.showReference}`);
+  saveTrackSettings(trackType, settings, fileId = null) {
+    const instanceKey = this._instanceSettingsKey(trackType, fileId);
+    console.log(`🔧 [TrackRenderer] Saving settings for ${instanceKey}:`, settings);
 
-    if (this.genomeBrowser.configManager) {
-      this.genomeBrowser.configManager.set(`tracks.${trackType}.settings`, settings);
-      this.genomeBrowser.configManager.saveConfig();
-      console.log(`🔧 [TrackRenderer] Settings saved via ConfigManager for ${trackType}`);
+    // Always save type-level settings (the base defaults)
+    if (!fileId) {
+      if (this.genomeBrowser.configManager) {
+        this.genomeBrowser.configManager.set(`tracks.${trackType}.settings`, settings);
+        this.genomeBrowser.configManager.saveConfig();
+        console.log(`🔧 [TrackRenderer] Settings saved via ConfigManager for ${trackType}`);
+      } else {
+        localStorage.setItem(`trackSettings_${trackType}`, JSON.stringify(settings));
+        console.log(`🔧 [TrackRenderer] Settings saved via localStorage for ${trackType}`);
+      }
     } else {
-      localStorage.setItem(`trackSettings_${trackType}`, JSON.stringify(settings));
-      console.log(`🔧 [TrackRenderer] Settings saved via localStorage for ${trackType}`);
+      // For instance-level settings, save with fileId qualifier
+      if (this.genomeBrowser.configManager) {
+        this.genomeBrowser.configManager.set(`tracks.${instanceKey}.settings`, settings);
+        this.genomeBrowser.configManager.saveConfig();
+        console.log(`🔧 [TrackRenderer] Instance settings saved via ConfigManager for ${instanceKey}`);
+      } else {
+        localStorage.setItem(`trackSettings_${instanceKey}`, JSON.stringify(settings));
+        console.log(`🔧 [TrackRenderer] Instance settings saved via localStorage for ${instanceKey}`);
+      }
     }
 
     // Verify the settings were saved
-    const savedSettings = this.getTrackSettings(trackType);
-    console.log(`🔧 [TrackRenderer] Verified saved settings for ${trackType}:`, savedSettings);
+    const savedSettings = this.getTrackSettings(trackType, fileId);
+    console.log(`🔧 [TrackRenderer] Verified saved settings for ${instanceKey}:`, savedSettings);
   }
 
   /**
    * Apply settings to track immediately
    */
-  applySettingsToTrack(trackType, settings) {
-    console.log(`🔧 [applySettingsToTrack] Called for ${trackType} with settings:`, settings);
+  applySettingsToTrack(trackType, settings, fileId = null) {
+    const instanceKey = this._instanceSettingsKey(trackType, fileId);
+    console.log(`🔧 [applySettingsToTrack] Called for ${instanceKey} with settings:`, settings);
     console.log(`🔧 [applySettingsToTrack] Settings renderingMode: ${settings.renderingMode}`);
 
     // Store settings for use during rendering
     if (!this.trackSettings) {
       this.trackSettings = {};
     }
-    this.trackSettings[trackType] = settings;
+    this.trackSettings[instanceKey] = settings;
 
     console.log(`🔧 [applySettingsToTrack] Stored settings for ${trackType}:`, this.trackSettings[trackType]);
     console.log(`🔧 [applySettingsToTrack] Stored renderingMode: ${this.trackSettings[trackType].renderingMode}`);
@@ -14363,12 +14376,12 @@ This action cannot be undone.`;
   /**
    * Update sampling percentage for reads track
    */
-  updateSamplingPercentage(percentage) {
-    console.log(`🎲 [TrackRenderer] Updating sampling percentage to ${percentage}%`);
+  updateSamplingPercentage(percentage, fileId = null) {
+    console.log(`🎲 [TrackRenderer] Updating sampling percentage to ${percentage}%${fileId ? ` for file ${fileId}` : ''}`);
 
     try {
-      // Get current settings
-      const currentSettings = this.getTrackSettings('reads');
+      // Get current settings (instance-specific if fileId provided)
+      const currentSettings = this.getTrackSettings('reads', fileId);
 
       // Update sampling settings
       currentSettings.samplingPercentage = percentage;
@@ -14376,7 +14389,7 @@ This action cannot be undone.`;
       currentSettings.samplingMode = 'percentage'; // Set to percentage mode
 
       // Save the updated settings
-      this.saveTrackSettings('reads', currentSettings);
+      this.saveTrackSettings('reads', currentSettings, fileId);
 
       // Sync the header UI (input and preset buttons)
       this.syncSamplingHeaderUI(percentage);

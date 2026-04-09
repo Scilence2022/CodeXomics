@@ -14,7 +14,7 @@ class TrackSettingsTools {
       get_track_settings: {
         name: 'get_track_settings',
         description:
-          'Get current settings for a specific track type (genes, reads, sequence, gc, variants, actions, blast, wigTracks, sequenceLine)',
+          'Get current settings for a specific track type. For multi-instance tracks (genes, reads, variants), provide file_id to get instance-specific settings.',
         parameters: {
           type: 'object',
           properties: {
@@ -22,6 +22,10 @@ class TrackSettingsTools {
               type: 'string',
               description: 'Type of track to get settings for',
               enum: ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'],
+            },
+            file_id: {
+              type: 'string',
+              description: 'Optional file ID for multi-instance tracks (genes, reads, variants). When provided, returns instance-specific settings merged with type defaults.',
             },
           },
           required: ['track_type'],
@@ -31,7 +35,7 @@ class TrackSettingsTools {
       // Set track settings
       set_track_settings: {
         name: 'set_track_settings',
-        description: 'Set settings for a specific track type. Only provided parameters will be updated.',
+        description: 'Set settings for a specific track type. Only provided parameters will be updated. For multi-instance tracks (genes, reads, variants), provide file_id to update instance-specific settings.',
         parameters: {
           type: 'object',
           properties: {
@@ -39,6 +43,10 @@ class TrackSettingsTools {
               type: 'string',
               description: 'Type of track to configure',
               enum: ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'],
+            },
+            file_id: {
+              type: 'string',
+              description: 'Optional file ID for multi-instance tracks. When provided, settings are saved for that specific track instance only.',
             },
             settings: {
               type: 'object',
