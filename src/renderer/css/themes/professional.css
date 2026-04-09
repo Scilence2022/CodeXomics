@@ -690,3 +690,83 @@
 [data-ui-style="professional"] .dropdown-divider {
   background: linear-gradient(to right, transparent, #b0c4c4, transparent) !important;
 }
+
+/* ===== CIRCULAR CHECKBOX OVERRIDES ===== */
+/* Track Control dropdown checkboxes */
+[data-ui-style="professional"] .track-checkbox input[type='checkbox'] {
+  border-color: #b8c0cc;
+}
+
+[data-ui-style="professional"] .track-checkbox input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.2);
+}
+
+[data-ui-style="professional"] .track-checkbox input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Feature filter checkboxes */
+[data-ui-style="professional"] .feature-checkbox input[type='checkbox'] {
+  border-color: #b8c0cc;
+}
+
+[data-ui-style="professional"] .feature-checkbox input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.2);
+}
+
+[data-ui-style="professional"] .feature-checkbox input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Sidebar track-control-item checkboxes */
+[data-ui-style="professional"] .track-control-item input[type='checkbox'] {
+  border-color: #b8c0cc;
+}
+
+[data-ui-style="professional"] .track-control-item input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.2);
+}
+
+[data-ui-style="professional"] .track-control-item input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Sidebar .track-controls checkboxes */
+[data-ui-style="professional"] .track-controls input[type='checkbox'] {
+  border-color: #b8c0cc;
+}
+
+[data-ui-style="professional"] .track-controls input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.2);
+}
+
+[data-ui-style="professional"] .track-controls input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* ===== CIRCULAR CHECKBOX - PROFESSIONAL DARK MODE ===== */
+@media (prefers-color-scheme: dark) {
+  [data-ui-style="professional"] .track-checkbox input[type='checkbox'],
+  [data-ui-style="professional"] .feature-checkbox input[type='checkbox'],
+  [data-ui-style="professional"] .track-control-item input[type='checkbox'],
+  [data-ui-style="professional"] .track-controls input[type='checkbox'] {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+  }
+
+  [data-ui-style="professional"] .track-checkbox input[type='checkbox']:checked,
+  [data-ui-style="professional"] .feature-checkbox input[type='checkbox']:checked,
+  [data-ui-style="professional"] .track-control-item input[type='checkbox']:checked,
+  [data-ui-style="professional"] .track-controls input[type='checkbox']:checked {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+}
