@@ -109,8 +109,8 @@
   appearance: none;
   -webkit-appearance: none;
   margin: 0;
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   border: 2px solid var(--border-color);
   border-radius: 50%;
   background: var(--bg-primary);
@@ -122,24 +122,12 @@
 
 .track-control-item input[type='checkbox']:hover {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .track-control-item input[type='checkbox']:checked {
   background: var(--primary-color);
   border-color: var(--primary-color);
-}
-
-.track-control-item input[type='checkbox']:checked::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: white;
 }
 
 .track-control-item input[type='checkbox']:focus-visible {

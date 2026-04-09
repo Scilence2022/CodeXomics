@@ -11707,11 +11707,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const thinkingElement = document.getElementById(`thinkingProcess_${requestId}`);
     if (thinkingElement) {
       // 移除动画和交互元素，转换为静态历史记录
-      const spinningIcon = thinkingElement.querySelector('.fa-spin');
-      if (spinningIcon) {
-        spinningIcon.classList.remove('fa-spin');
-        spinningIcon.classList.remove('fa-cog');
-        spinningIcon.classList.add('fa-check-circle');
+      // 更新 message-icon 为完成状态的对号图标
+      const messageIcon = thinkingElement.querySelector('.message-icon i');
+      if (messageIcon) {
+        messageIcon.classList.remove('fa-spin');
+        messageIcon.classList.remove('fa-cog');
+        messageIcon.classList.add('fa-check-circle');
       }
 
       // 更新头部文本表示已完成
@@ -11832,7 +11833,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     thinkingDiv.className = 'message assistant-message thinking-process';
     const thinkingId = `thinkingProcess_${currentRequestId}`;
     thinkingDiv.id = thinkingId;
-    thinkingDiv.innerHTML = `<div class="message-content"><div class="message-icon"><i class="fas fa-brain"></i></div><div class="message-text thinking-text"><div class="thinking-header"><i class="fas fa-cog fa-spin"></i><span>AI Thinking Process</span></div><div class="thinking-content">${message}</div></div></div>`;
+    thinkingDiv.innerHTML = `<div class="message-content"><div class="message-icon"><i class="fas fa-cog fa-spin"></i></div><div class="message-text thinking-text"><div class="thinking-header"><span>AI Thinking Process</span></div><div class="thinking-content">${message}</div></div></div>`;
 
     messagesContainer.appendChild(thinkingDiv);
 

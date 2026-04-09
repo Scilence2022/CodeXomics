@@ -220,8 +220,8 @@
   appearance: none;
   -webkit-appearance: none;
   margin: 0;
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   border: 2px solid var(--border-color);
   border-radius: 50%;
   background: var(--bg-primary);
@@ -240,17 +240,7 @@
   border-color: var(--primary-color);
 }
 
-.filter-option input[type='checkbox']:checked::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: white;
-}
+
 
 /* Legacy mobile responsive adjustments */
 @media (max-width: 1200px) {

@@ -4538,18 +4538,14 @@ path.svg-gene-element.selected.border-highlight text {
 .thinking-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
+  gap: 8px;  font-weight: 600;
   margin: 0 0 2px 0 !important;
   padding: 0 !important;
   color: #667eea;
   font-size: 13px;
 }
 
-.thinking-header i {
-  color: #667eea;
-  font-size: 12px;
-}
+
 
 .thinking-content {
   font-size: 12px;
@@ -4579,9 +4575,12 @@ path.svg-gene-element.selected.border-highlight text {
 
 .thinking-process.message .message-icon {
   margin-top: 2px !important;
-  width: 20px !important;
-  height: 20px !important;
-  font-size: 10px !important;
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 11px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .thinking-process.message .message-text {
