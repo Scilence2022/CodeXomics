@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="css/chatbox-markdown.css">
     <link rel="stylesheet" href="css/llm-config.css">
     <link rel="stylesheet" href="css/advanced-search.css">
+    <link rel="stylesheet" href="css/themes/professional.css">
     <link rel="stylesheet" href="styles.css">
 
     <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"> -->
@@ -2978,12 +2979,36 @@ Supported formats:
                                 <small class="help-text">Choose your preferred color scheme</small>
                             </div>
                             <div class="form-group">
+                                <label>UI Style:</label>
+                                <div class="style-preset-cards" id="stylePresetCards">
+                                    <div class="style-preset-card active" data-style="default">
+                                        <div class="style-preview-swatch default-swatch">
+                                            <i class="fas fa-wand-magic-sparkles"></i>
+                                        </div>
+                                        <div class="style-preset-info">
+                                            <div class="style-preset-name">AI Dynamic</div>
+                                            <div class="style-preset-desc">Vibrant blue-purple gradient style</div>
+                                        </div>
+                                    </div>
+                                    <div class="style-preset-card" data-style="professional">
+                                        <div class="style-preview-swatch professional-swatch">
+                                            <i class="fas fa-flask"></i>
+                                        </div>
+                                        <div class="style-preset-info">
+                                            <div class="style-preset-name">Professional</div>
+                                            <div class="style-preset-desc">Clean teal-neutral tones for scientific work</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <small class="help-text">Choose the overall interface style preset</small>
+                            </div>
+                            <div class="form-group">
                                 <label for="accentColor">Accent Color:</label>
                                 <div class="color-picker-group">
                                     <input type="color" id="accentColor" value="#667eea">
                                     <button id="resetAccentColor" class="btn btn-sm">Reset</button>
                                 </div>
-                                <small class="help-text">Customize the primary accent color</small>
+                                <small class="help-text">Customize the primary accent color (overridden by UI Style)</small>
                             </div>
                         </div>
 
@@ -4495,6 +4520,7 @@ Supported formats:
     <script src="modules/ExportManager.js"></script>
     <script src="modules/LLMConfigManager.js"></script>
     <script src="modules/MultiAgentSettingsManager.js"></script>
+    <script src="modules/ThemeManager.js"></script>
     <script src="modules/GeneralSettingsManager.js"></script>
     <script src="modules/SidecarManager.js"></script>
     <script src="modules/GeneAttachmentsManager.js"></script>

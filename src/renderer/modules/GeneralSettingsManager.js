@@ -12,6 +12,7 @@ class GeneralSettingsManager {
     this.defaultSettings = {
       // Appearance
       themeMode: 'auto',
+      uiStyle: 'default',
       accentColor: '#667eea',
       fontSize: 'medium',
       fontFamily: 'system',
@@ -231,6 +232,19 @@ class GeneralSettingsManager {
         this.applyAccentColor(defaultColor);
       });
     }
+
+    // UI Style preset cards
+    const stylePresetCards = document.querySelectorAll('.style-preset-card[data-style]');
+    stylePresetCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const styleName = card.dataset.style;
+        this.updateSetting('uiStyle', styleName);
+        this.applyUIStyle(styleName);
+        // Update card active states
+        stylePresetCards.forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+      });
+    });
 
     // Font settings
     const fontSizeSelect = document.getElementById('fontSize');
@@ -605,6 +619,12 @@ class GeneralSettingsManager {
     const themeSelect = document.getElementById('themeMode');
     if (themeSelect) themeSelect.value = this.settings.themeMode;
 
+    // UI Style preset cards
+    const stylePresetCards = document.querySelectorAll('.style-preset-card[data-style]');
+    stylePresetCards.forEach(card => {
+      card.classList.toggle('active', card.dataset.style === (this.settings.uiStyle || 'default'));
+    });
+
     // Accent color
     const accentColorInput = document.getElementById('accentColor');
     if (accentColorInput) accentColorInput.value = this.settings.accentColor;
@@ -756,6 +776,7 @@ class GeneralSettingsManager {
    */
   applySettings() {
     this.applyTheme(this.settings.themeMode);
+    this.applyUIStyle(this.settings.uiStyle || 'default');
     this.applyAccentColor(this.settings.accentColor);
     this.applyFontSize(this.settings.fontSize);
     this.applyFontFamily(this.settings.fontFamily);
@@ -782,6 +803,27 @@ class GeneralSettingsManager {
       body.classList.add('theme-dark');
     }
     // 'auto' uses system preference via CSS media queries
+
+    // Also notify ThemeManager about dark mode change
+    if (window.themeManager) {
+      const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      window.themeManager.applyDarkModeOverrides(isDark);
+    }
+  }
+
+  /**
+   * Apply UI style preset
+   */
+  applyUIStyle(styleName) {
+    if (window.themeManager) {
+      window.themeManager.applyStyle(styleName);
+    }
+
+    // Update style preset card active states
+    const stylePresetCards = document.querySelectorAll('.style-preset-card[data-style]');
+    stylePresetCards.forEach(card => {
+      card.classList.toggle('active', card.dataset.style === styleName);
+    });
   }
 
   /**

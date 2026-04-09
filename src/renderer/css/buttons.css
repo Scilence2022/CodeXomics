@@ -621,13 +621,13 @@
 
 /* Special Application Buttons */
 .btn-gradient {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #8b5cf6 100%);
+  background: var(--btn-gradient);
   color: white;
   border: none;
 }
 
 .btn-gradient:hover {
-  background: linear-gradient(135deg, var(--primary-hover) 0%, #7c3aed 100%);
+  background: var(--btn-gradient-hover);
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
 }

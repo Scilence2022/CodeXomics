@@ -9,7 +9,7 @@
 
 /* Header Layout */
 .header {
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #667eea 80%);
+  background: var(--header-gradient);
   color: white;
   padding: 1rem 2rem;
   display: flex;
@@ -119,7 +119,7 @@
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--welcome-gradient);
   color: white;
   text-align: center;
   position: absolute;

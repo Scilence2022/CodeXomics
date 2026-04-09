@@ -1,0 +1,396 @@
+/**
+ * Professional UI Style Override
+ * Overrides hardcoded blue-purple colors with professional teal-neutral tones
+ * when data-ui-style="professional" is set on the root element.
+ *
+ * Design Philosophy:
+ * - Deep teal (#0d7377) as primary accent instead of blue-violet
+ * - Warm neutral grays instead of cool slate
+ * - Subtle, understated gradients instead of vibrant ones
+ * - Higher contrast text for long reading sessions
+ * - Scientific/research aesthetic inspired by tools like SnapGene, Benchling
+ */
+
+/* ===== HEADER OVERRIDES ===== */
+[data-ui-style="professional"] .header {
+  background: var(--header-gradient);
+}
+
+/* ===== WELCOME SCREEN ===== */
+[data-ui-style="professional"] .welcome-screen {
+  background: var(--welcome-gradient);
+}
+
+[data-ui-style="professional"] .welcome-icon {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-ui-style="professional"] .version-tag {
+  color: #7dd3d3;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ===== BUTTON GRADIENT OVERRIDES ===== */
+[data-ui-style="professional"] .btn-gradient {
+  background: var(--btn-gradient);
+}
+
+[data-ui-style="professional"] .btn-gradient:hover {
+  background: var(--btn-gradient-hover);
+  box-shadow: 0 8px 25px rgba(13, 115, 119, 0.3);
+}
+
+[data-ui-style="professional"] .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(13, 115, 119, 0.3);
+}
+
+[data-ui-style="professional"] .btn:focus {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ===== TRACK BUTTON OVERRIDES ===== */
+[data-ui-style="professional"] .track-gallery-btn:hover {
+  color: #0d7377;
+  border-color: #0d7377;
+}
+
+[data-ui-style="professional"] .track-layout-btn:hover {
+  color: #1a6b5a;
+  border-color: #1a6b5a;
+}
+
+/* ===== FOCUS RING OVERRIDES ===== */
+[data-ui-style="professional"] .search-input:focus,
+[data-ui-style="professional"] .position-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style="professional"] .dropdown-toggle:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style="professional"] .select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style="professional"] ::focus-visible {
+  outline-color: var(--primary-color);
+}
+
+[data-ui-style="professional"] ::selection {
+  background: var(--selection-bg);
+}
+
+/* ===== CHATBOX OVERRIDES ===== */
+[data-ui-style="professional"] #chatboxSettingsModal .modal-header {
+  background: var(--modal-header-gradient);
+}
+
+[data-ui-style="professional"] .chat-panel .chat-header {
+  background: var(--modal-header-gradient);
+}
+
+[data-ui-style="professional"] .chat-tab.active {
+  color: var(--chat-tab-active);
+  border-bottom-color: var(--chat-tab-active);
+}
+
+[data-ui-style="professional"] .chat-user-message {
+  background: var(--chat-user-bg);
+}
+
+[data-ui-style="professional"] .chat-ai-message {
+  border-left-color: var(--chat-ai-border);
+}
+
+[data-ui-style="professional"] .chat-send-btn {
+  background: var(--chat-send-bg);
+}
+
+[data-ui-style="professional"] .chat-send-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* ===== CHATBOX MARKDOWN OVERRIDES ===== */
+[data-ui-style="professional"] .chat-markdown blockquote {
+  border-left-color: var(--accent-indigo);
+}
+
+[data-ui-style="professional"] .chat-markdown a {
+  color: var(--accent-indigo);
+}
+
+[data-ui-style="professional"] .chat-markdown code {
+  color: #0d7377;
+}
+
+[data-ui-style="professional"] .chat-markdown pre {
+  border-left-color: var(--accent-indigo);
+}
+
+[data-ui-style="professional"] .chat-markdown .code-block-header {
+  background: #0d7377;
+}
+
+/* ===== TABS OVERRIDES ===== */
+[data-ui-style="professional"] .llm-provider-tabs .tab-button.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+/* ===== MODAL OVERRIDES ===== */
+[data-ui-style="professional"] .llm-config-modal .modal-header {
+  background: var(--modal-header-gradient);
+}
+
+/* ===== ADVANCED SEARCH OVERRIDES ===== */
+[data-ui-style="professional"] .advanced-search-panel {
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="professional"] .search-type-btn.active {
+  color: #0d7377;
+}
+
+/* ===== NAVIGATION BUTTONS ===== */
+[data-ui-style="professional"] .nav-btn {
+  background: rgba(13, 115, 119, 0.9);
+}
+
+[data-ui-style="professional"] .nav-btn:hover {
+  background: rgba(9, 84, 86, 1);
+}
+
+/* ===== SIDEBAR SPLITTER ===== */
+[data-ui-style="professional"] .sidebar-splitter:focus {
+  outline-color: var(--primary-color);
+}
+
+[data-ui-style="professional"] .sidebar-splitter:focus .sidebar-splitter-handle {
+  color: var(--primary-color);
+}
+
+/* ===== STYLE PREVIEW CARDS (in Settings) ===== */
+.style-preset-card {
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-primary);
+  position: relative;
+}
+
+.style-preset-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.style-preset-card.active {
+  border-color: var(--primary-color);
+  background: rgba(13, 115, 119, 0.04);
+}
+
+.style-preset-card.active::after {
+  content: '\f00c';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  color: var(--primary-color);
+  font-size: 14px;
+}
+
+.style-preview-swatch {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+}
+
+.style-preview-swatch.default-swatch {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+}
+
+.style-preview-swatch.professional-swatch {
+  background: linear-gradient(135deg, #1a2332 0%, #0d7377 100%);
+}
+
+.style-preset-info {
+  flex: 1;
+}
+
+.style-preset-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.style-preset-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ===== PROFESSIONAL DARK MODE ENHANCEMENTS ===== */
+[data-ui-style="professional"] .gene-filter-controls {
+  background: rgba(20, 29, 43, 0.95);
+}
+
+/* ===== STATUS BAR TOGGLE ===== */
+[data-ui-style="professional"] .mac-toggle input:checked + .mac-toggle-slider {
+  background-color: #0d7377;
+}
+
+[data-ui-style="professional"] .mcp-bridge-status-dot.connected {
+  background-color: #0d7377;
+  box-shadow: 0 0 6px rgba(13, 115, 119, 0.5);
+}
+
+/* ===== ALERT COMPONENTS ===== */
+[data-ui-style="professional"] .alert.alert-primary {
+  background: rgba(13, 115, 119, 0.08);
+  color: #0d7377;
+  border-color: rgba(13, 115, 119, 0.2);
+}
+
+/* ===== PROGRESS BAR ===== */
+[data-ui-style="professional"] .progress-bar {
+  background: var(--primary-color);
+}
+
+/* ===== SPINNER ===== */
+[data-ui-style="professional"] .spinner {
+  border-top-color: var(--primary-color);
+}
+
+/* ===== BADGE ===== */
+[data-ui-style="professional"] .badge-primary {
+  background: var(--primary-color);
+}
+
+/* ===== PAGINATION ===== */
+[data-ui-style="professional"] .pagination-item.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* ===== STYLES.CSS HARDCODED COLOR OVERRIDES ===== */
+/* These target the most visible hardcoded #667eea / #8b5cf6 / #764ba2 values in styles.css */
+
+/* Chat panel header */
+[data-ui-style="professional"] .chat-panel.resizable-movable .chat-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+/* Chat panel send button */
+[data-ui-style="professional"] .chat-input-container .chat-send-btn {
+  background: var(--chat-send-bg) !important;
+}
+
+/* Chat user message bubble */
+[data-ui-style="professional"] .chat-messages .chat-user-message {
+  background: var(--chat-user-bg) !important;
+}
+
+/* Chat AI message accent */
+[data-ui-style="professional"] .chat-messages .chat-ai-message {
+  border-left-color: var(--chat-ai-border) !important;
+}
+
+/* LLM Config modal header */
+[data-ui-style="professional"] .llm-config-modal .modal-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+/* Tab active states using indigo */
+[data-ui-style="professional"] .tab.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+/* Agent badge colors */
+[data-ui-style="professional"] .agent-badge {
+  background: rgba(var(--primary-rgb), 0.1) !important;
+  color: var(--primary-color) !important;
+  border-color: rgba(var(--primary-rgb), 0.2) !important;
+}
+
+/* Code block header in chat */
+[data-ui-style="professional"] .code-block-header {
+  background: var(--primary-color) !important;
+}
+
+/* Sidebar section headers */
+[data-ui-style="professional"] .sidebar-section-title {
+  color: var(--primary-color) !important;
+}
+
+/* Plugin/extension related purple overrides */
+[data-ui-style="professional"] .plugin-badge {
+  background: var(--primary-color) !important;
+}
+
+/* Toggle active state */
+[data-ui-style="professional"] .btn-toggle.active {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Tooltip and popover borders using accent */
+[data-ui-style="professional"] .track-tooltip {
+  border-color: var(--primary-color) !important;
+}
+
+/* Gene info panel accent */
+[data-ui-style="professional"] .gene-info-header {
+  border-bottom-color: var(--primary-color) !important;
+}
+
+/* Mult-agent panel tabs */
+[data-ui-style="professional"] .agent-tab.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+/* Selection highlight in tracks */
+[data-ui-style="professional"] .gene-element.selected {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+
+/* Scroll-to-gene button */
+[data-ui-style="professional"] .scroll-to-gene-btn {
+  background: var(--primary-color) !important;
+}
+
+/* Markdown viewer accent links */
+[data-ui-style="professional"] .markdown-content a {
+  color: var(--primary-color) !important;
+}
+
+/* Search result highlight */
+[data-ui-style="professional"] .search-highlight {
+  background: rgba(var(--primary-rgb), 0.2) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Version tag in professional mode header */
+[data-ui-style="professional"] .version-tag {
+  color: #7dd3d3;
+}

@@ -49,7 +49,7 @@
 .position-input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
 }
 
 .search-btn,
@@ -156,7 +156,7 @@
 .dropdown-toggle:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
 }
 
 .dropdown-menu {
@@ -678,9 +678,9 @@
 }
 
 .alert.alert-primary {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(var(--primary-rgb), 0.1);
   color: var(--primary-color);
-  border-color: rgba(59, 130, 246, 0.2);
+  border-color: rgba(var(--primary-rgb), 0.2);
 }
 
 .alert.alert-success {

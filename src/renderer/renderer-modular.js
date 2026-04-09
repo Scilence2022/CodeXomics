@@ -419,6 +419,20 @@ class GenomeBrowser {
     console.log('⚙️ About to initialize GeneralSettingsManager...');
     try {
       this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
+
+      // Initialize ThemeManager first so GeneralSettingsManager can use it
+      try {
+        this.themeManager = new ThemeManager(this.configManager);
+        window.themeManager = this.themeManager;
+        this.themeManager.init().then(() => {
+          console.log('✅ ThemeManager initialized with style:', this.themeManager.getCurrentStyle());
+        }).catch(err => {
+          console.error('❌ ThemeManager init error:', err);
+        });
+      } catch (tmError) {
+        console.error('❌ Error creating ThemeManager:', tmError);
+      }
+
       // Initialize asynchronously and then apply global dragging setting
       this.generalSettingsManager
         .init()
