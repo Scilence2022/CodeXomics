@@ -105,29 +105,11 @@ class ProteinStructureViewer {
   }
 
   /**
-   * Add unified protein search button to the main interface
+   * Add unified protein search button to the main interface (removed)
    */
   addProteinViewerButton() {
-    const toolbar = document.querySelector('.toolbar') || document.querySelector('.navigation-controls');
-    if (!toolbar) return;
-
-    // Check if button already exists
-    if (document.getElementById('unified-protein-search-btn')) return;
-
-    // Remove old separate buttons if they exist
-    const oldProteinBtn = document.getElementById('protein-viewer-btn');
-    const oldAlphaFoldBtn = document.getElementById('alphafold-viewer-btn');
-    if (oldProteinBtn) oldProteinBtn.remove();
-    if (oldAlphaFoldBtn) oldAlphaFoldBtn.remove();
-
-    const unifiedBtn = document.createElement('button');
-    unifiedBtn.id = 'unified-protein-search-btn';
-    unifiedBtn.className = 'btn';
-    unifiedBtn.innerHTML = '<i class="fas fa-cubes"></i> Protein Structure';
-    unifiedBtn.title = 'Search Protein Structures (PDB & AlphaFold)';
-    unifiedBtn.onclick = () => this.showUnifiedProteinSearchDialog();
-
-    toolbar.appendChild(unifiedBtn);
+    // Protein Structure button removed per design decision
+    // Protein search functionality is still accessible via AI Chat
   }
 
   /**

@@ -528,6 +528,10 @@
   font-size: 14px;
 }
 
+.toolbar-section.chat-toggle-section {
+  margin-left: auto;
+}
+
 .welcome-content h2 {
   font-size: 2.5rem;
   margin-bottom: 15px;
