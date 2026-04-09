@@ -662,20 +662,32 @@ class GenomeBrowser {
    */
   initializeMCPBridge() {
     try {
+      // Restore persisted toggle state; default to false (off) if never set
+      const mcpBridgeEnabled = this.configManager
+        ? this.configManager.get('mcpBridgeEnabled', false)
+        : false;
+
       if (typeof MCPBridge !== 'undefined') {
         this.mcpBridge = new MCPBridge({ windowId: this.windowId });
         this.mcpBridge.setInternalMCPServer(this.internalMCPServer);
-        this.mcpBridge.start();
 
-        window.mcpBridge = this.mcpBridge; // For debugging
-        console.log('✅ MCPBridge initialized - will auto-connect to MCP server if running');
-
-        // Sync toggle state with bridge
+        // Sync toggle state with persisted setting
         const toggle = document.getElementById('mcpServerToggle');
         if (toggle) {
-          toggle.checked = true; // Auto-start is the default behavior in MCPBridge.start()
+          toggle.checked = mcpBridgeEnabled;
         }
-        this.updateMCPBridgeUI(this.mcpBridge.isConnected());
+
+        // Only start the bridge if it was previously enabled
+        if (mcpBridgeEnabled) {
+          this.mcpBridge.start();
+          window.mcpBridge = this.mcpBridge;
+          console.log('✅ MCPBridge initialized and started (restored from persisted state)');
+        } else {
+          window.mcpBridge = this.mcpBridge;
+          console.log('✅ MCPBridge initialized but not started (was disabled last session)');
+        }
+
+        this.updateMCPBridgeUI(mcpBridgeEnabled && this.mcpBridge.isConnected());
       } else {
         // MCPBridge module not loaded, load it dynamically
         const script = document.createElement('script');
@@ -684,16 +696,22 @@ class GenomeBrowser {
           if (typeof MCPBridge !== 'undefined') {
             this.mcpBridge = new MCPBridge({ windowId: this.windowId });
             this.mcpBridge.setInternalMCPServer(this.internalMCPServer);
-            this.mcpBridge.start();
             window.mcpBridge = this.mcpBridge;
-            console.log('✅ MCPBridge loaded and initialized');
 
-            // Sync toggle state with bridge
+            // Sync toggle state with persisted setting
             const toggle = document.getElementById('mcpServerToggle');
             if (toggle) {
-              toggle.checked = true;
+              toggle.checked = mcpBridgeEnabled;
             }
-            this.updateMCPBridgeUI(this.mcpBridge.isConnected());
+
+            if (mcpBridgeEnabled) {
+              this.mcpBridge.start();
+              console.log('✅ MCPBridge loaded and started (restored from persisted state)');
+            } else {
+              console.log('✅ MCPBridge loaded but not started (was disabled last session)');
+            }
+
+            this.updateMCPBridgeUI(mcpBridgeEnabled && this.mcpBridge.isConnected());
           }
         };
         script.onerror = error => {
@@ -9432,6 +9450,11 @@ class GenomeBrowser {
       this.updateMCPBridgeUI(false);
       this.showNotification('MCP Bridge connection disabled', 'info');
     }
+
+    // Persist the toggle state
+    if (this.configManager) {
+      this.configManager.set('mcpBridgeEnabled', toggle.checked);
+    }
   }
 
   updateMCPBridgeUI(connected) {
@@ -9452,6 +9475,10 @@ class GenomeBrowser {
       // But ensure it matches if we got an external status change
       if (connected && !toggle.checked) {
         toggle.checked = true;
+        // Persist the state change from external source
+        if (this.configManager) {
+          this.configManager.set('mcpBridgeEnabled', true);
+        }
       }
     }
 

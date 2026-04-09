@@ -138,9 +138,6 @@ class ChatManager {
 
       // Update agent system button state after UI is ready
       this.updateMultiAgentToggleButton();
-
-      // Restore MCP toggle button state from persisted settings
-      this.restoreMCPToggleState();
     }, 100);
   }
 
@@ -1751,10 +1748,8 @@ class ChatManager {
    */
   toggleMCPServerEnabled(serverId, enabled) {
     if (this.mcpServerManager) {
-      this.mcpServerManager.updateServer(serverId, { enabled, autoConnect: enabled ? true : false });
+      this.mcpServerManager.updateServer(serverId, { enabled });
       this.showNotification(`${enabled ? 'Enabled' : 'Disabled'} server ${serverId}`, 'info');
-      this.saveMCPToggleState();
-      this.updateMCPToggleButton();
     }
   }
 
@@ -1771,18 +1766,11 @@ class ChatManager {
     try {
       if (server.connected) {
         await this.mcpServerManager.disconnectFromServer(serverId);
-        // Persist disconnected state: disable autoConnect for this server
-        this.mcpServerManager.updateServer(serverId, { autoConnect: false });
         this.showNotification(`Disconnected from ${server.name}`, 'info');
       } else {
         await this.mcpServerManager.connectToServer(serverId);
-        // Persist connected state: enable autoConnect for this server and globally
-        this.mcpServerManager.updateServer(serverId, { autoConnect: true });
-        this.mcpServerManager.setGlobalAutoConnect(true);
         this.showNotification(`Connected to ${server.name}`, 'success');
       }
-      // Save the overall MCP toggle state
-      this.saveMCPToggleState();
       // Refresh the server list
       this.populateMCPServerListPopup();
     } catch (error) {
@@ -1801,15 +1789,11 @@ class ChatManager {
     // Check connection status
     let isConnected = false;
     let connectedCount = 0;
-    let hasEnabledServers = false;
 
     // Check modern MCP server manager connections
     if (this.mcpServerManager) {
       connectedCount = this.mcpServerManager.getConnectedServersCount();
       isConnected = connectedCount > 0;
-      // Also check if any servers are enabled (for persistent state display)
-      const servers = this.mcpServerManager.getServerStatus();
-      hasEnabledServers = servers.some(s => s.enabled);
     }
 
     // Also check legacy connection
@@ -1818,63 +1802,15 @@ class ChatManager {
       connectedCount = 1;
     }
 
-    // Update button state: connected takes priority, then enabled
-    const isActive = isConnected || hasEnabledServers;
-    toggleBtn.dataset.connected = isActive.toString();
+    // Update button state
+    toggleBtn.dataset.connected = isConnected.toString();
 
     // Update button title
     if (isConnected) {
       toggleBtn.title = `MCP Tools Enabled (${connectedCount} connection${connectedCount !== 1 ? 's' : ''})`;
-    } else if (hasEnabledServers) {
-      toggleBtn.title = 'MCP Tools Enabled (connecting...)';
     } else {
       toggleBtn.title = 'MCP Tools Disabled';
     }
-  }
-
-  /**
-   * Save MCP toggle button state to ConfigManager for persistence across restarts
-   */
-  saveMCPToggleState() {
-    if (!this.configManager) return;
-
-    const servers = this.mcpServerManager ? this.mcpServerManager.getServerStatus() : [];
-    const anyEnabled = servers.some(s => s.enabled);
-    const anyConnected = servers.some(s => s.connected);
-
-    this.configManager.set('mcpToggleState', {
-      active: anyEnabled || anyConnected,
-      timestamp: Date.now()
-    });
-  }
-
-  /**
-   * Restore MCP toggle button state from persisted settings on startup
-   */
-  async restoreMCPToggleState() {
-    if (!this.configManager || !this.mcpServerManager) return;
-
-    const toggleState = this.configManager.get('mcpToggleState', { active: false });
-
-    if (toggleState.active) {
-      // Enable global auto-connect so autoConnect servers will reconnect
-      this.mcpServerManager.setGlobalAutoConnect(true);
-
-      // Auto-connect to servers that have autoConnect enabled
-      const servers = this.mcpServerManager.getServerStatus();
-      for (const server of servers) {
-        if (server.enabled && server.autoConnect && server.url && server.url !== 'null') {
-          try {
-            await this.mcpServerManager.connectToServer(server.id);
-          } catch (error) {
-            console.warn(`Failed to auto-reconnect to server ${server.id}:`, error.message);
-          }
-        }
-      }
-    }
-
-    // Update the toggle button visual state
-    this.updateMCPToggleButton();
   }
 
   /**
