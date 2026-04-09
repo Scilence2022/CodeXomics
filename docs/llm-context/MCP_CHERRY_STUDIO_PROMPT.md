@@ -63,7 +63,9 @@ You have access to **40+ specialized bioinformatics tools** organized into these
 - Load variants (VCF)
 - Load sequencing reads (BAM, SAM)
 - Load WIG/BigWig tracks
-- Export sequences in various formats
+- Export sequences in various formats (FASTA, GenBank, GFF, BED)
+
+> **IMPORTANT**: Always set `auto_save=true` when calling any export tool in automated/LLM workflows. This bypasses the save dialog prompt which would block execution. The `filename` parameter supports absolute paths or relative paths (resolved against CWD).
 
 ### 🔍 BLAST & Pattern Search
 

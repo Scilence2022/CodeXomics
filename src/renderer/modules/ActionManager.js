@@ -1875,16 +1875,21 @@ class ActionManager {
       console.warn(`⚠️ [ActionManager] Found ${conflictAnalysis.conflicts.length} action conflicts`);
       this.highlightConflictingActions(conflictAnalysis.conflicts);
 
-      const shouldProceed = await this.showConflictResolutionDialog(conflictAnalysis);
-      if (!shouldProceed) {
-        this.genomeBrowser.showNotification('Action execution cancelled due to conflicts', 'warning');
-        return {
-          success: false,
-          message: 'Execution cancelled due to action conflicts',
-          executedActions: 0,
-          totalActions: this.actions.length,
-          conflicts: conflictAnalysis.conflicts,
-        };
+      // If confirm option is set (auto_save mode), auto-resolve conflicts without dialog
+      if (options.confirm) {
+        console.log(`⚡ [ActionManager] Auto-resolving conflicts (confirm=true / auto_save mode)`);
+      } else {
+        const shouldProceed = await this.showConflictResolutionDialog(conflictAnalysis);
+        if (!shouldProceed) {
+          this.genomeBrowser.showNotification('Action execution cancelled due to conflicts', 'warning');
+          return {
+            success: false,
+            message: 'Execution cancelled due to action conflicts',
+            executedActions: 0,
+            totalActions: this.actions.length,
+            conflicts: conflictAnalysis.conflicts,
+          };
+        }
       }
     }
 
@@ -2009,6 +2014,8 @@ class ActionManager {
         failedActions: 0,
         totalActions: this.actions.length,
         executionId,
+        filename: gbkResult?.filename,
+        file_path: gbkResult?.filename,
         conflicts: conflictAnalysis.conflicts || [],
       };
     } catch (error) {
@@ -2399,14 +2406,27 @@ class ActionManager {
         console.log(`📁 [ActionManager] Using current file directory as default: ${defaultDirectory}`);
       }
 
+      // Resolve saveFile path if provided (support relative paths)
+      let resolvedSaveFile = saveFile;
+      if (saveFile && typeof require !== 'undefined') {
+        const path = require('path');
+        if (!path.isAbsolute(saveFile)) {
+          const cwd = (window.chatManager && typeof window.chatManager.getCurrentWorkingDirectory === 'function')
+            ? window.chatManager.getCurrentWorkingDirectory()
+            : process.cwd();
+          resolvedSaveFile = path.resolve(cwd, saveFile);
+          console.log(`📁 [ActionManager] Resolved relative saveFile path: ${saveFile} → ${resolvedSaveFile}`);
+        }
+      }
+
       // Save the comprehensive GBK file
       const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
       const filename =
-        saveFile || (defaultDirectory ? require('path').join(defaultDirectory, baseFilename) : baseFilename);
+        resolvedSaveFile || (defaultDirectory ? require('path').join(defaultDirectory, baseFilename) : baseFilename);
 
-      if (saveFile) {
-        await this.saveTextFileToFile(genbankContent, saveFile);
-        console.log(`📁 [ActionManager] GBK file saved to: ${saveFile}`);
+      if (resolvedSaveFile) {
+        await this.saveTextFileToFile(genbankContent, resolvedSaveFile);
+        console.log(`📁 [ActionManager] GBK file saved to: ${resolvedSaveFile}`);
       } else {
         // Use Electron save dialog with default directory
         if (window.electronAPI && window.electronAPI.showSaveDialog) {
@@ -2445,6 +2465,7 @@ class ActionManager {
         success: true,
         genbankContent,
         filename,
+        file_path: filename,
       };
     } catch (error) {
       console.error('❌ [ActionManager] Error generating comprehensive GBK:', error);
@@ -5551,11 +5572,13 @@ class ActionManager {
       // Execute actions function
       executeActions: {
         name: 'executeActions',
-        description: 'Execute all pending actions',
+        description: 'Execute all pending actions and generate a modified GenBank file. Use auto_save=true for LLM/automated workflows to bypass save dialog.',
         parameters: {
           type: 'object',
           properties: {
-            confirm: { type: 'boolean', description: 'Confirm execution without user prompt', default: false },
+            auto_save: { type: 'boolean', description: 'When true, automatically save the GenBank file without showing a save dialog. Essential for LLM/automated workflows. Default is false, but LLMs should always set this to true.', default: false },
+            filename: { type: 'string', description: 'Output file path for the generated GenBank file. Supports absolute paths (e.g., "/Users/user/output/modified_genome.gbk") or relative paths (resolved against CWD). Only effective when auto_save is true.' },
+            confirm: { type: 'boolean', description: 'Confirm execution without user prompt (auto-resolves conflicts). Implied when auto_save is true.', default: false },
           },
         },
       },
@@ -6051,7 +6074,47 @@ class ActionManager {
   async functionExecuteActions(params) {
     // This method is now a simple wrapper that delegates to the actual executeAllActions
     // The actual implementation is at line ~1528
-    const result = await this.executeAllActionsInternal(params);
+    const { auto_save = false, filename } = params || {};
+
+    // Helper to get CWD from ChatManager or fallback
+    const getCWD = () => {
+      if (window.chatManager && typeof window.chatManager.getCurrentWorkingDirectory === 'function') {
+        return window.chatManager.getCurrentWorkingDirectory();
+      }
+      return process.cwd();
+    };
+
+    // Build options for executeAllActionsInternal
+    const options = {};
+
+    // If auto_save is true, set saveFile to filename (or default) to bypass save dialog
+    if (auto_save) {
+      if (filename) {
+        // Resolve relative paths against CWD
+        let resolvedPath = filename;
+        if (typeof require !== 'undefined') {
+          const path = require('path');
+          if (!path.isAbsolute(filename)) {
+            resolvedPath = path.resolve(getCWD(), filename);
+          }
+        }
+        options.saveFile = resolvedPath;
+      } else {
+        // Auto-generate a filename in CWD
+        const executionId = `execution_${Date.now()}`;
+        const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
+        if (typeof require !== 'undefined') {
+          const path = require('path');
+          options.saveFile = path.resolve(getCWD(), baseFilename);
+        } else {
+          options.saveFile = baseFilename;
+        }
+      }
+      // auto_save implies confirm=true (auto-resolve conflicts)
+      options.confirm = true;
+    }
+
+    const result = await this.executeAllActionsInternal(options);
 
     // If the result is successful, return it directly
     if (result.success) {

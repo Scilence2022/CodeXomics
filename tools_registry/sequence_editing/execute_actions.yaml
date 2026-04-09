@@ -1,12 +1,13 @@
 name: execute_actions
-version: 1.0.0
-description: Execute all pending sequence actions
+version: 1.1.0
+description: Execute all pending sequence actions and generate a modified GenBank file
 category: sequence_editing
 keywords:
   - execute
   - actions
   - pending
   - sequence
+  - auto_save
 priority: 1
 execution:
   type: client
@@ -18,30 +19,37 @@ execution:
 parameters:
   type: object
   properties:
+    auto_save:
+      type: boolean
+      description: >-
+        When true, automatically save the generated GenBank file without showing
+        a save dialog prompt. This is essential for LLM/automated workflows where
+        interactive dialogs would block execution. When false or omitted, a save
+        dialog will be shown. Default is false for backward compatibility, but
+        LLMs should always set this to true.
+      default: false
+    filename:
+      type: string
+      description: >-
+        Output file path for the generated GenBank file. Supports absolute paths
+        (e.g., "/Users/user/output/modified_genome.gbk") or relative paths
+        (resolved against the current working directory). If not specified, a
+        default filename with timestamp will be used. Only effective when
+        auto_save is true.
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
-    chromosome:
-      type: string
-      description: Chromosome identifier
-    start:
-      type: number
-      description: Start position (1-based coordinate)
-      minimum: 1
-    end:
-      type: number
-      description: End position (1-based coordinate)
-      minimum: 1
-  required:
-    - chromosome
-    - start
-    - end
+  required: []
 sample_usages:
-  - user_query: Use execute_actions to analyze genomic data
-    tool_call: execute_actions(parameter1='value1', parameter2='value2')
-    thought: User wants to use execute_actions for execute all pending sequence actions
-    expected_result: Result from execute_actions analysis
+  - user_query: Execute all pending actions and save automatically
+    tool_call: execute_actions(auto_save=true, filename="/tmp/modified_genome.gbk")
+    thought: User wants to execute actions without save dialog blocking LLM execution
+    expected_result: All pending actions executed and GBK file saved to specified path
+  - user_query: Execute pending sequence edits
+    tool_call: execute_actions(auto_save=true)
+    thought: Execute actions with auto-save to avoid dialog prompt
+    expected_result: Actions executed and file saved with default name
 relationships:
   depends_on: []
   conflicts_with: []
@@ -63,7 +71,12 @@ metadata:
 error_handling:
   invalid_region: Returns error if region is invalid
   clipboard_error: Returns error if clipboard operation fails
+  no_pending_actions: Returns success with message if no actions to execute
 returns:
   success: boolean - Whether operation was successful
-  action_id: string - Unique identifier for this action
-  sequence_length: number - Length of processed sequence
+  message: string - Result description
+  executedActions: number - Number of actions executed
+  failedActions: number - Number of failed actions
+  filename: string - Output filename
+  file_path: string - Full path to the generated GenBank file
+  executionId: string - Unique execution identifier

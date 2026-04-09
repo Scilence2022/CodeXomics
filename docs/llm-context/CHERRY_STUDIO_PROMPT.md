@@ -151,10 +151,15 @@ You have access to **40+ specialized bioinformatics tools** organized into these
 - `load_variant_file` - Load VCF files
 - `load_reads_file` - Load BAM/SAM files
 - `load_wig_tracks` - Load WIG/BigWig tracks
-- `export_fasta_sequence` - Export sequences (use `auto_save=true` for automated workflows)
+- `export_fasta_sequence` - Export sequences
 - `export_genbank_format` - Export as GenBank
 - `export_cds_fasta` - Export CDS sequences
 - `export_protein_fasta` - Export protein sequences
+- `export_current_view_fasta` - Export current view as FASTA
+- `export_gff_annotations` - Export annotations as GFF
+- `export_bed_format` - Export features as BED
+
+> **IMPORTANT**: Always set `auto_save=true` when calling any export tool in automated/LLM workflows. This bypasses the save dialog prompt which would block execution. The `filename` parameter supports absolute paths (e.g., `/Users/user/output/genome.fasta`) or relative paths (resolved against CWD).
 
 ### 🔍 BLAST & Sequence Search
 
