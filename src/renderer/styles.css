@@ -12809,6 +12809,31 @@ input:checked+.slider:before {
   min-height: 500px !important;
 }
 
+#trackSettingsModal.draggable-modal {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 10000 !important;
+  display: none;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+#trackSettingsModal.draggable-modal.show {
+  display: flex !important;
+}
+
+#trackSettingsModal.draggable-modal .modal-content {
+  position: relative !important;
+  margin: 0 !important;
+  min-width: 600px !important;
+  min-height: 400px !important;
+}
+
+#trackSettingsModal .modal-content.resizable {
+  overflow: visible !important;
+}
+
 #trackSettingsModal .modal-body {
   max-height: 600px !important;
   overflow-y: auto !important;

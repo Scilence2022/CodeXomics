@@ -11145,9 +11145,18 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
     // Create modal if it doesn't exist
     let modal = document.getElementById('trackSettingsModal');
-    if (!modal) {
+    const isNewModal = !modal;
+    if (isNewModal) {
       modal = this.createTrackSettingsModal();
       document.body.appendChild(modal);
+
+      // Initialize draggable and resizable after modal is in the DOM
+      if (window.modalDragManager) {
+        window.modalDragManager.makeDraggable('#trackSettingsModal');
+      }
+      if (window.resizableModalManager) {
+        window.resizableModalManager.makeResizable('#trackSettingsModal');
+      }
     }
 
     // Load track-specific settings
@@ -11899,9 +11908,9 @@ This action cannot be undone.`;
   createTrackSettingsModal() {
     const modal = document.createElement('div');
     modal.id = 'trackSettingsModal';
-    modal.className = 'modal';
+    modal.className = 'modal draggable-modal';
     modal.innerHTML = `
-            <div class="modal-content resizable" style="max-width: 700px;">
+            <div class="modal-content resizable resizable-modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h3 id="trackSettingsTitle"><i class="fas fa-cog"></i> Track Settings</h3>
                     <div class="modal-controls">
@@ -11956,13 +11965,8 @@ This action cannot be undone.`;
       console.error('🔧 [DEBUG] Apply button not found in modal!');
     }
 
-    // Initialize draggable and resizable using centralized managers
-    if (window.modalDragManager) {
-      window.modalDragManager.makeDraggable('#trackSettingsModal');
-    }
-    if (window.resizableModalManager) {
-      window.resizableModalManager.makeResizable('#trackSettingsModal');
-    }
+    // Note: Draggable/resizable initialization is done in openTrackSettings()
+    // after the modal is appended to the DOM
 
     // Add reset to defaults button handler
     const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
