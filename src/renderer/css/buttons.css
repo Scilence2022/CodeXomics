@@ -44,7 +44,7 @@
   background: var(--primary-hover);
   border-color: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
 }
 
 .btn-secondary {
@@ -629,7 +629,7 @@
 .btn-gradient:hover {
   background: var(--btn-gradient-hover);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 8px 25px rgba(var(--primary-rgb), 0.3);
 }
 
 .btn-glass {

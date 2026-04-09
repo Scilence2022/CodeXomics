@@ -394,3 +394,243 @@
 [data-ui-style="professional"] .version-tag {
   color: #7dd3d3;
 }
+
+/* ===== BLAST BUTTON ===== */
+[data-ui-style="professional"] #blastBtn {
+  background: var(--btn-gradient) !important;
+  box-shadow: 0 2px 8px rgba(13, 115, 119, 0.3) !important;
+}
+
+[data-ui-style="professional"] #blastBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(13, 115, 119, 0.4) !important;
+}
+
+/* ===== LOAD FILE BUTTON (uses .btn-primary) ===== */
+[data-ui-style="professional"] .header #openFileBtn,
+[data-ui-style="professional"] .header .btn-primary.dropdown-toggle {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .header #openFileBtn:hover,
+[data-ui-style="professional"] .header .btn-primary.dropdown-toggle:hover {
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(13, 115, 119, 0.3) !important;
+}
+
+/* ===== NEW CHAT BUTTON ===== */
+[data-ui-style="professional"] #newChatBtn {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] #newChatBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(13, 115, 119, 0.3) !important;
+}
+
+/* ===== CHAT SEND BUTTON ===== */
+[data-ui-style="professional"] #sendChatBtn {
+  background: var(--chat-send-bg) !important;
+}
+
+[data-ui-style="professional"] #sendChatBtn:hover {
+  background: var(--primary-hover) !important;
+}
+
+[data-ui-style="professional"] #sendChatBtn.processing {
+  background: var(--chat-send-bg) !important;
+}
+
+/* ===== CURRENT MESSAGE ONLY TOGGLE ===== */
+[data-ui-style="professional"] .toggle-label input[type="checkbox"]:checked + .toggle-slider {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .toggle-label input[type="checkbox"]:checked ~ .toggle-text {
+  color: var(--primary-color) !important;
+}
+
+/* ===== TOOLBAR TOGGLE CHAT BUTTON ===== */
+[data-ui-style="professional"] .toolbar-section #toggleChatBtn {
+  background: var(--btn-gradient) !important;
+}
+
+[data-ui-style="professional"] .toolbar-section #toggleChatBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(13, 115, 119, 0.3) !important;
+}
+
+[data-ui-style="professional"] .toolbar-section #toggleChatBtn.ai-processing {
+  border-color: rgba(13, 115, 119, 0.4) !important;
+}
+
+/* ===== CHAT HEADER (in styles.css) ===== */
+[data-ui-style="professional"] .chat-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+/* ===== CHAT INPUT FOCUS ===== */
+[data-ui-style="professional"] .chat-input-wrapper:focus-within {
+  border-color: var(--primary-color) !important;
+}
+
+/* ===== USER MESSAGE ICON ===== */
+[data-ui-style="professional"] .user-message .message-icon {
+  background: var(--primary-color) !important;
+}
+
+/* ===== THINKING PROCESS ===== */
+[data-ui-style="professional"] .thinking-process {
+  border-left-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .thinking-header {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .thinking-header i {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .thinking-process .message-icon {
+  background: var(--primary-color) !important;
+}
+
+/* ===== WELCOME BUTTONS ===== */
+[data-ui-style="professional"] .welcome-buttons .btn-primary {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .welcome-buttons .btn-secondary:hover {
+  background: var(--btn-gradient) !important;
+  color: white !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 4px 15px rgba(13, 115, 119, 0.3) !important;
+}
+
+[data-ui-style="professional"] .welcome-buttons .btn-primary:hover {
+  box-shadow: 0 4px 15px rgba(13, 115, 119, 0.4) !important;
+}
+
+/* ===== CHATBOX SETTINGS MODAL ===== */
+[data-ui-style="professional"] #chatboxSettingsModal .tab-button.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] #chatboxSettingsModal .input-full:focus,
+[data-ui-style="professional"] #chatboxSettingsModal .select:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.1) !important;
+}
+
+[data-ui-style="professional"] #chatboxSettingsModal .setting-checkbox:checked {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] #chatboxSettingsModal .btn-primary {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] #chatboxSettingsModal .btn-primary:hover {
+  background: var(--primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(13, 115, 119, 0.3) !important;
+}
+
+/* ===== LLM CONFIG ===== */
+[data-ui-style="professional"] .llm-provider-tabs .tab-button.active::after {
+  border-right-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .provider-config input:focus,
+[data-ui-style="professional"] .provider-config select:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.1) !important;
+}
+
+[data-ui-style="professional"] .provider-config .help-text a {
+  color: var(--primary-color) !important;
+}
+
+/* ===== MULTI-AGENT ACTIVATION ===== */
+[data-ui-style="professional"] .multi-agent-activation {
+  background: var(--btn-gradient) !important;
+}
+
+/* ===== DROPDOWN ICON ===== */
+[data-ui-style="professional"] .dropdown-item i {
+  color: var(--primary-color) !important;
+}
+
+/* ===== CHATBOX SETTINGS METRIC ===== */
+[data-ui-style="professional"] .metric-item {
+  background: var(--btn-gradient) !important;
+}
+
+/* ===== SLIDER VALUE ===== */
+[data-ui-style="professional"] #chatboxSettingsModal .slider-value {
+  color: var(--primary-color) !important;
+}
+
+/* ===== LLM PROVIDER TAB BOTTOM BAR ===== */
+[data-ui-style="professional"] .llm-provider-config > .tab-bar::after {
+  background: var(--primary-color) !important;
+}
+
+/* ===== NOTIFICATION INFO ===== */
+[data-ui-style="professional"] .notification-info {
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .notification-info i {
+  color: var(--primary-color) !important;
+}
+
+/* ===== CHAT NOTIFICATION ===== */
+[data-ui-style="professional"] .chat-notification.info {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* ===== CHATBOX MARKDOWN OVERRIDES ===== */
+/* Pre blocks border-left */
+[data-ui-style="professional"] .message-text pre {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+/* Links */
+[data-ui-style="professional"] .message-text a {
+  color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="professional"] .message-text a:visited {
+  color: var(--primary-hover) !important;
+}
+
+/* Blockquotes */
+[data-ui-style="professional"] .message-text blockquote {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+/* Code block copy button */
+[data-ui-style="professional"] .copy-button {
+  background: var(--primary-color) !important;
+}
+
+/* User message specific */
+[data-ui-style="professional"] .user-message .message-text pre {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="professional"] .user-message .message-text blockquote {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+/* ===== DRAGGABLE HEADER HOVER ===== */
+[data-ui-style="professional"] .draggable-header:hover {
+  background: linear-gradient(135deg, #095456 0%, #1a2332 100%) !important;
+}
