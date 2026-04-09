@@ -229,10 +229,41 @@
         transition: all 0.2s ease;
       }
 
-      .parameter-input:focus {
+      .parameter-input:focus,
+      .select-input:focus {
         outline: none;
         border-color: #10b981;
         box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+      }
+
+      .select-input {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 12px;
+        font-family: inherit;
+        background: white;
+        color: #374151;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 28px;
+      }
+
+      .select-input:hover {
+        border-color: #9ca3af;
+      }
+
+      .parameter-description {
+        font-size: 11px;
+        color: #9ca3af;
+        margin-top: 4px;
+        font-style: italic;
       }
 
       .color-input {
