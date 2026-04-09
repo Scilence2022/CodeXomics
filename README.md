@@ -4,15 +4,15 @@
 
 ### AI-Powered Bioinformatics Analysis Platform
 
-[![Version](https://img.shields.io/badge/version-0.532beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![Version](https://img.shields.io/badge/version-0.533beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
-[![Beta](https://img.shields.io/badge/Latest%20Beta-v0.532beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)
+[![Beta](https://img.shields.io/badge/Latest%20Beta-v0.533beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.533beta)
 
-A cross-platform desktop bioinformatics platform built with Electron. Features a **multi-agent AI system**, a **dynamic tool registry**, MCP server integration, an extensible plugin architecture, and comprehensive genome visualization for exploring genomic, proteomic, and other omics data.
+A cross-platform desktop bioinformatics platform built with Electron. Features a **multi-agent AI system**, a **dynamic tool registry**, MCP server integration, an extensible plugin architecture, **multi-preset UI theming**, and comprehensive genome visualization for exploring genomic, proteomic, and other omics data.
 
-**[Latest Beta — v0.532beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta)**
+**[Latest Beta — v0.533beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.533beta)**
 
 [Features](#key-features) •
 [Installation](#installation) •
@@ -121,6 +121,7 @@ Categories: navigation, sequence analysis, data loading, gene search, external d
 
 ### Additional Capabilities
 
+- **Multi-Preset UI Theming** — Switch between four interface style presets at runtime: AI Dynamic (blue-violet), Professional (deep teal), Minimal (warm amber), and Pastel (soft lavender-rose). Managed by `ThemeManager` with CSS custom properties and per-preset override files under `src/renderer/css/themes/`. Dark mode supported per preset.
 - **Primer Designer** — Tm, GC%, and binding site analysis (`PrimerDesigner.js`)
 - **BLAST integration** — Local BLAST installer, downloader, and manager (`BlastManager.js`)
 - **Genomic Data Downloader** — Fetch genomes and annotations from NCBI and other sources
@@ -275,6 +276,10 @@ CodeXomics/
 │       ├── index.html
 │       ├── renderer-modular.js         # Application bootstrap
 │       ├── css/                        # Vanilla CSS stylesheets
+│       │   └── themes/                # UI style preset overrides
+│       │       ├── professional.css   # Deep teal scientific style
+│       │       ├── minimal.css        # Warm amber minimalist style
+│       │       └── pastel.css         # Soft lavender-rose style
 │       └── modules/
 │           ├── Agents/                 # Multi-agent system
 │           │   ├── AgentBase.js
@@ -334,6 +339,7 @@ CodeXomics/
 │           ├── I18nManager.js          # EN / zh-CN runtime switching
 │           ├── PrimerDesigner.js       # Primer Tm, GC%, binding sites
 │           ├── BlastManager.js         # Local BLAST integration
+│           ├── ThemeManager.js         # Multi-preset UI style management
 │           ├── BenchmarkManager.js     # Benchmark orchestration
 │           ├── LiteratureAPIService.js # PubMed / preprint search
 │           └── ...                     # 100+ additional modules
@@ -562,7 +568,7 @@ MIT — see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**CodeXomics v0.532beta** — Intelligent Bioinformatics Analysis with Multi-Agent AI
+**CodeXomics v0.533beta** — Intelligent Bioinformatics Analysis with Multi-Agent AI
 
 ![GitHub stars](https://img.shields.io/github/stars/Scilence2022/CodeXomics?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/Scilence2022/CodeXomics)

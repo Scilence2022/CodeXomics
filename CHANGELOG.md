@@ -5,6 +5,58 @@ All notable changes to CodeXomics will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.533.0-beta] - 2026-04-09 - BETA UPDATE
+
+**🎨 Milestone: Multi-Preset UI Style System**
+
+### ✨ New Features
+
+#### **UI Style Switcher**
+
+CodeXomics now supports multiple interface style presets that can be switched at runtime via **General Settings → Appearance → UI Style**. The system uses CSS custom properties (`:root` variables) and `[data-ui-style]` attribute selectors for comprehensive theming.
+
+| Style        | Accent Color      | Description                                  |
+| ------------ | ----------------- | -------------------------------------------- |
+| AI Dynamic   | Blue-violet       | Vibrant blue-purple gradient style (default) |
+| Professional | Deep teal         | Clean teal-neutral tones for scientific work |
+| Minimal      | Warm amber        | Elegant warm-gray with amber accent          |
+| Pastel       | Soft lavender-rose | Soft lavender-rose with light airy tones    |
+
+- `ThemeManager` module manages style presets, CSS variable injection, and dark mode overrides
+- Per-preset CSS override files under `src/renderer/css/themes/` cover all hardcoded colors
+- Style preset selection UI with color preview swatches in General Settings
+- UI style preference persists across sessions via `configManager`
+- Dark mode support with per-preset dark variable overrides
+
+#### **Mac-style Toggle Switches**
+
+- Replaced the Sidebar toggle button with a Mac-style toggle switch (`label.mac-toggle` + checkbox)
+- MCP Bridge status toggle already uses the Mac-style component
+- Both toggles follow the active UI style preset color
+
+### 🐛 Bug Fixes
+
+- **Fixed Save Settings reverting UI Style colors** — `applyAccentColor()` now guards against overriding preset primary colors when a non-default UI Style is active; execution order in `applySettings()` ensures `applyUIStyle()` runs last
+- **Fixed General Settings modal footer position** — Moved `modal-footer` (Save Settings / Cancel) and resize handles inside `modal-content` so they follow drag operations
+- **Fixed buttons not following style switching** — Added comprehensive CSS overrides for BLAST, Load File, New Chat, Send, Context toggle, Add Features, and toolbar Chat buttons across all preset themes
+- **Fixed MCP Bridge toggle state persistence** — Status bar MCP toggle state now correctly saves and restores across sessions
+- **Replaced hardcoded `rgba(59,130,246)` with `var(--primary-rgb)`** in `buttons.css` so button hover shadows follow theme colors
+
+### 📚 Documentation
+
+- Added **UI Style System (Multi-Preset Theming)** section to `Agents.md` with step-by-step guide for adding new presets
+- Documented the critical `applyAccentColor` override pitfall
+
+### 🔧 Technical Details
+
+- `src/renderer/modules/ThemeManager.js` — New module: preset definitions, `applyStyle()`, `switchStyle()`, dark mode support
+- `src/renderer/css/base.css` — Added CSS variables for gradients, accents, chat colors, button gradients, focus rings
+- `src/renderer/css/themes/professional.css` — Professional theme override rules
+- `src/renderer/css/themes/minimal.css` — Minimal theme override rules
+- `src/renderer/css/themes/pastel.css` — Pastel theme override rules
+- `src/renderer/modules/GeneralSettingsManager.js` — `applyUIStyle()` syncs accentColor with preset; `applyAccentColor()` guarded for non-default styles
+- `src/renderer/renderer-modular.js` — Sidebar toggle event handler updated for checkbox `change` event
+
 ## [0.532.0-beta] - 2026-04-02 - BETA UPDATE
 
 **🔧 Milestone: AI Assistant Guidelines & Build v0.532**
