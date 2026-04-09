@@ -165,7 +165,7 @@ class BenchmarkUI {
                     padding: 30px;
                     box-shadow: 0 8px 30px rgba(0,0,0,0.25);
                     backdrop-filter: blur(10px);
-                    border: 2px solid rgba(52, 152, 219, 0.3);
+                    border: 2px solid rgba(var(--primary-rgb), 0.3);
                     pointer-events: auto;
                     z-index: inherit; /* Inherit high z-index from parent */
                 }
@@ -174,14 +174,14 @@ class BenchmarkUI {
                     text-align: center;
                     margin-bottom: 30px;
                     padding-bottom: 20px;
-                    border-bottom: 3px solid #3498db;
+                    border-bottom: 3px solid var(--primary-color);
                     position: relative;
                     cursor: pointer;
                     transition: all 0.3s ease;
                 }
 
                 .benchmark-header:hover {
-                    background: rgba(52, 152, 219, 0.05);
+                    background: rgba(var(--primary-rgb), 0.05);
                 }
 
                 .header-content {
@@ -201,7 +201,7 @@ class BenchmarkUI {
                     width: 40px;
                     height: 40px;
                     border: none;
-                    background: #3498db;
+                    background: var(--primary-color);
                     color: white;
                     border-radius: 50%;
                     cursor: pointer;
@@ -213,7 +213,7 @@ class BenchmarkUI {
                 }
 
                 .minimize-benchmark-btn:hover {
-                    background: #2980b9;
+                    background: var(--primary-hover);
                     transform: scale(1.1);
                 }
 
@@ -246,7 +246,7 @@ class BenchmarkUI {
                     background: rgba(255, 255, 255, 0.98) !important; /* More opaque for visibility */
                     z-index: 9999999 !important; /* Maintain maximum z-index */
                     position: relative !important;
-                    border: 3px solid rgba(52, 152, 219, 0.8) !important; /* Stronger border for visibility */
+                    border: 3px solid rgba(var(--primary-rgb), 0.8) !important; /* Stronger border for visibility */
                     box-shadow: 0 20px 60px rgba(0,0,0,0.4) !important; /* Stronger shadow */
                     backdrop-filter: blur(15px) !important; /* Enhanced blur effect */
                     transform: translateZ(0) !important; /* Force hardware acceleration */
@@ -279,8 +279,8 @@ class BenchmarkUI {
                     bottom: 5px;
                     left: 50%;
                     transform: translateX(-50%);
-                    background: rgba(52, 152, 219, 0.2);
-                    color: #3498db;
+                    background: rgba(var(--primary-rgb), 0.2);
+                    color: var(--primary-color);
                     padding: 2px 8px;
                     border-radius: 10px;
                     font-size: 10px;
@@ -294,7 +294,7 @@ class BenchmarkUI {
                 .benchmark-title {
                     font-size: 28px;
                     font-weight: 700;
-                    color: #2c3e50;
+                    color: var(--text-primary);
                     margin-bottom: 10px;
                     display: flex;
                     align-items: center;
@@ -304,7 +304,7 @@ class BenchmarkUI {
 
                 .benchmark-subtitle {
                     font-size: 16px;
-                    color: #6c757d;
+                    color: var(--text-secondary);
                     font-weight: 400;
                 }
 
@@ -314,11 +314,11 @@ class BenchmarkUI {
                     padding: 25px;
                     margin-bottom: 25px;
                     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-                    border: 1px solid rgba(52, 152, 219, 0.1);
+                    border: 1px solid rgba(var(--primary-rgb), 0.1);
                 }
 
                 .benchmark-section h2 {
-                    color: #2c3e50;
+                    color: var(--text-primary);
                     font-size: 20px;
                     margin-bottom: 20px;
                     display: flex;
@@ -333,7 +333,7 @@ class BenchmarkUI {
                 }
 
                 .config-group h3 {
-                    color: #34495e;
+                    color: var(--text-secondary);
                     font-size: 16px;
                     font-weight: 600;
                     margin-bottom: 15px;
@@ -354,20 +354,20 @@ class BenchmarkUI {
                     gap: 10px;
                     cursor: pointer;
                     font-size: 14px;
-                    color: #495057;
+                    color: var(--text-secondary);
                     padding: 8px;
                     border-radius: 6px;
                     transition: background 0.2s ease;
                 }
 
                 .checkbox-item:hover {
-                    background: #f8f9fa;
+                    background: var(--bg-secondary);
                 }
 
                 .checkbox-item input[type="checkbox"] {
                     width: 18px;
                     height: 18px;
-                    accent-color: #3498db;
+                    accent-color: var(--primary-color);
                 }
 
                 .form-group {
@@ -385,10 +385,11 @@ class BenchmarkUI {
 
                 select {
                     padding: 10px 12px;
-                    border: 2px solid #e1e8ed;
+                    border: 2px solid var(--border-color);
                     border-radius: 6px;
                     font-size: 14px;
-                    background: white;
+                    background: var(--bg-primary);
+                    color: var(--text-primary);
                     width: 100%;
                 }
 
@@ -425,7 +426,7 @@ class BenchmarkUI {
                 }
 
                 .btn-primary {
-                    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+                    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
                     color: white;
                 }
 
@@ -446,7 +447,7 @@ class BenchmarkUI {
                 .progress-bar {
                     width: 100%;
                     height: 12px;
-                    background: #ecf0f1;
+                    background: var(--bg-tertiary);
                     border-radius: 6px;
                     overflow: hidden;
                     margin-bottom: 15px;
@@ -454,7 +455,7 @@ class BenchmarkUI {
 
                 .progress-fill {
                     height: 100%;
-                    background: linear-gradient(90deg, #3498db 0%, #27ae60 100%);
+                    background: linear-gradient(90deg, var(--primary-color) 0%, #27ae60 100%);
                     width: 0%;
                     transition: width 0.3s ease;
                 }
@@ -470,19 +471,19 @@ class BenchmarkUI {
                     justify-content: space-between;
                     align-items: center;
                     padding: 10px 15px;
-                    background: #f8f9fa;
+                    background: var(--bg-secondary);
                     border-radius: 6px;
-                    border-left: 4px solid #3498db;
+                    border-left: 4px solid var(--primary-color);
                 }
 
                 .progress-label {
-                    color: #6c757d;
+                    color: var(--text-secondary);
                     font-weight: 500;
                     font-size: 13px;
                 }
 
                 .progress-value {
-                    color: #2c3e50;
+                    color: var(--text-primary);
                     font-weight: 700;
                     font-size: 14px;
                 }
@@ -495,23 +496,23 @@ class BenchmarkUI {
                 }
 
                 .checkbox-item span small {
-                    color: #6c757d;
+                    color: var(--text-secondary);
                     font-weight: 500;
                     font-size: 12px;
                     margin-left: 5px;
-                    background: rgba(52, 152, 219, 0.1);
+                    background: rgba(var(--primary-rgb), 0.1);
                     padding: 2px 6px;
                     border-radius: 10px;
-                    border: 1px solid rgba(52, 152, 219, 0.2);
+                    border: 1px solid rgba(var(--primary-rgb), 0.2);
                 }
 
                 .summary-card {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: var(--chat-user-bg);
                     color: white;
                     padding: 25px;
                     border-radius: 12px;
                     text-align: center;
-                    box-shadow: 0 6px 25px rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 6px 25px rgba(var(--primary-rgb), 0.3);
                 }
 
                 .summary-card h3 {
@@ -529,6 +530,25 @@ class BenchmarkUI {
                 .summary-card .unit {
                     font-size: 14px;
                     opacity: 0.8;
+                }
+
+                /* Dark mode support */
+                @media (prefers-color-scheme: dark) {
+                    .benchmark-container {
+                        background: rgba(31, 41, 55, 0.98);
+                        border-color: rgba(var(--primary-rgb), 0.4);
+                    }
+                    .benchmark-interface.collapsed .benchmark-container {
+                        background: rgba(31, 41, 55, 0.98) !important;
+                    }
+                    .benchmark-section {
+                        background: var(--bg-primary);
+                        border-color: var(--border-color);
+                    }
+                    .select {
+                        background: var(--bg-secondary);
+                        color: var(--text-primary);
+                    }
                 }
             </style>
 
@@ -607,7 +627,7 @@ class BenchmarkUI {
                             <h3>⏱️ Settings</h3>
                             <div class="form-group">
                                 <div>
-                                    <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Test Timeout:</label>
+                                    <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-weight: 500;">Test Timeout:</label>
                                     <select id="testTimeout">
                                         <option value="-1">Use Individual Test Timeouts</option>
                                         <option value="15000">15 seconds</option>
@@ -922,7 +942,7 @@ class BenchmarkUI {
                 }
                 
                 .benchmark-header:hover {
-                    background: rgba(52, 152, 219, 0.05);
+                    background: rgba(var(--primary-rgb), 0.05);
                 }
                 
                 /* Enhanced z-index during dragging to stay above main tabs */
@@ -3438,15 +3458,15 @@ class BenchmarkUI {
     // Display detailed results
     if (resultsContent) {
       resultsContent.innerHTML = `
-                <h3 style="color: #2c3e50; margin-bottom: 15px;">📋 Detailed Results</h3>
+                <h3 style="color: var(--text-primary); margin-bottom: 15px;">📋 Detailed Results</h3>
                 ${results.testSuiteResults
                   .map(
                     suite => `
-                    <div style="border: 1px solid #ddd; border-radius: 8px; margin: 15px 0; overflow: hidden;">
-                        <div style="background: #f8f9fa; padding: 20px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <div style="border: 1px solid var(--border-color); border-radius: 8px; margin: 15px 0; overflow: hidden;">
+                        <div style="background: var(--bg-secondary); padding: 20px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span>${suite.suiteName}</span>
-                                <span style="font-size: 14px; color: #6c757d;">
+                                <span style="font-size: 14px; color: var(--text-secondary);">
                                     ${((suite.stats.passedTests / suite.stats.totalTests) * 100).toFixed(1)}% pass rate | 
                                     ${Math.round((suite.duration - (suite.delayTime || 0)) / 1000)}s actual
                                     ${suite.delayTime > 0 ? ` (+${Math.round(suite.delayTime / 1000)}s delays)` : ''}
@@ -3459,7 +3479,7 @@ class BenchmarkUI {
                                 test => `
                                 <div style="padding: 12px; margin: 8px 0; border-radius: 6px; background: ${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid ${test.success ? '#28a745' : '#dc3545'};">
                                     <div style="font-weight: bold; margin-bottom: 5px;">${test.testName}</div>
-                                    <div style="font-size: 13px; color: #6c757d;">
+                                    <div style="font-size: 13px; color: var(--text-secondary);">
                                         Score: ${test.score}/${test.maxScore} | 
                                         Duration: ${test.duration}ms | 
                                         Status: ${test.status}
@@ -4421,7 +4441,7 @@ class BenchmarkUI {
                 const stats = results.overallStats;
                 resultsContent.innerHTML = \`
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                        <div style="background: #3498db; color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                        <div style="background: var(--primary-color); color: white; padding: 20px; border-radius: 8px; text-align: center;">
                             <h3>Success Rate</h3>
                             <div style="font-size: 24px; font-weight: bold;">\${stats.overallSuccessRate.toFixed(1)}%</div>
                         </div>
@@ -4436,8 +4456,8 @@ class BenchmarkUI {
                     </div>
                     <h3>Test Suite Results</h3>
                     \${results.testSuiteResults.map(suite => \`
-                        <div style="border: 1px solid #ddd; border-radius: 6px; margin: 10px 0; overflow: hidden;">
-                            <div style="background: #f8f9fa; padding: 15px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                        <div style="border: 1px solid var(--border-color); border-radius: 6px; margin: 10px 0; overflow: hidden;">
+                            <div style="background: var(--bg-secondary); padding: 15px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
                                 \${suite.suiteName} - \${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate
                             </div>
                             <div style="padding: 15px; display: none;">

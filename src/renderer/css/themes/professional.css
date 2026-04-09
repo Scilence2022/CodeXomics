@@ -566,6 +566,66 @@
   color: var(--primary-color) !important;
 }
 
+/* ===== BENCHMARK UI ===== */
+[data-ui-style="professional"] .benchmark-container {
+  border-color: rgba(13, 115, 119, 0.3) !important;
+}
+
+[data-ui-style="professional"] .benchmark-header {
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .benchmark-header:hover {
+  background: rgba(13, 115, 119, 0.05) !important;
+}
+
+[data-ui-style="professional"] .minimize-benchmark-btn {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .minimize-benchmark-btn:hover {
+  background: var(--primary-hover) !important;
+}
+
+[data-ui-style="professional"] .benchmark-interface.collapsed .benchmark-container {
+  border-color: rgba(13, 115, 119, 0.8) !important;
+}
+
+[data-ui-style="professional"] .expand-indicator {
+  background: rgba(13, 115, 119, 0.2) !important;
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .benchmark-section {
+  border-color: rgba(13, 115, 119, 0.1) !important;
+}
+
+[data-ui-style="professional"] .checkbox-item input[type="checkbox"] {
+  accent-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .btn-primary {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%) !important;
+}
+
+[data-ui-style="professional"] .progress-fill {
+  background: linear-gradient(90deg, var(--primary-color) 0%, #27ae60 100%) !important;
+}
+
+[data-ui-style="professional"] .progress-item {
+  border-left-color: var(--primary-color) !important;
+}
+
+[data-ui-style="professional"] .checkbox-item span small {
+  background: rgba(13, 115, 119, 0.1) !important;
+  border-color: rgba(13, 115, 119, 0.2) !important;
+}
+
+[data-ui-style="professional"] .summary-card {
+  background: linear-gradient(135deg, var(--primary-color) 0%, #0a5c5f 100%) !important;
+  box-shadow: 0 6px 25px rgba(13, 115, 119, 0.3) !important;
+}
+
 /* ===== CHATBOX SETTINGS METRIC ===== */
 [data-ui-style="professional"] .metric-item {
   background: var(--btn-gradient) !important;
