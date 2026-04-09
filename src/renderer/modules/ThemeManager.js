@@ -6,7 +6,7 @@
 class ThemeManager {
   constructor(configManager) {
     this.configManager = configManager;
-    this.currentStyle = 'default'; // 'default' (蓝紫色AI风) or 'professional' (专业科研风)
+    this.currentStyle = 'default'; // 'default' (蓝紫色AI风), 'professional' (专业科研风), or 'minimal' (极简琥珀风)
 
     // Available style presets
     this.stylePresets = {
@@ -141,6 +141,72 @@ class ThemeManager {
           '--border-hover': '#2d3f54',
           '--header-gradient': 'linear-gradient(135deg, #0a1018 0%, #152030 60%, #0d7377 100%)',
         }
+      },
+      minimal: {
+        name: 'Minimal',
+        description: 'Elegant warm-gray with amber accent',
+        icon: 'fa-feather',
+        variables: {
+          // Primary accent - warm amber
+          '--primary-color': '#c87d2f',
+          '--primary-hover': '#a86520',
+          '--primary-rgb': '200, 125, 47',
+
+          // Secondary / neutral
+          '--secondary-color': '#8c8c8c',
+
+          // Backgrounds - cool warm-gray
+          '--bg-primary': '#fafaf9',
+          '--bg-secondary': '#f5f4f1',
+          '--bg-tertiary': '#eceae5',
+
+          // Text - charcoal
+          '--text-primary': '#2c2c2c',
+          '--text-secondary': '#666666',
+          '--text-muted': '#999999',
+
+          // Borders - soft warm
+          '--border-color': '#e0ddd8',
+          '--border-hover': '#ccc8c0',
+
+          // Header gradient - warm charcoal to amber
+          '--header-gradient': 'linear-gradient(135deg, #3c3c3c 0%, #5a534a 60%, #c87d2f 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #3c3c3c 0%, #c87d2f 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #3c3c3c 0%, #c87d2f 100%)',
+
+          // Accent highlights
+          '--accent-indigo': '#c87d2f',
+          '--accent-purple': '#8c8c8c',
+          '--accent-violet': '#c87d2f',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #3c3c3c 0%, #c87d2f 100%)',
+          '--chat-ai-border': '#c87d2f',
+          '--chat-tab-active': '#c87d2f',
+          '--chat-send-bg': '#c87d2f',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #c87d2f 0%, #a86520 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #a86520 0%, #8c5518 100%)',
+
+          // Focus ring
+          '--focus-ring': 'rgba(200, 125, 47, 0.3)',
+          '--focus-ring-intense': 'rgba(200, 125, 47, 0.8)',
+
+          // Selection
+          '--selection-bg': '#c87d2f',
+        },
+        darkVariables: {
+          '--bg-primary': '#1c1b19',
+          '--bg-secondary': '#141311',
+          '--bg-tertiary': '#2a2824',
+          '--text-primary': '#e8e4dc',
+          '--text-secondary': '#b0a898',
+          '--text-muted': '#7a7468',
+          '--border-color': '#2a2824',
+          '--border-hover': '#3d3930',
+          '--header-gradient': 'linear-gradient(135deg, #141311 0%, #2a2520 60%, #c87d2f 100%)',
+        }
       }
     };
 
@@ -193,7 +259,7 @@ class ThemeManager {
     this.currentStyle = styleName;
 
     // Remove any previous style class from body
-    document.body.classList.remove('style-default', 'style-professional');
+    document.body.classList.remove('style-default', 'style-professional', 'style-minimal');
     document.body.classList.add(`style-${styleName}`);
 
     // Set data attribute for CSS selectors
