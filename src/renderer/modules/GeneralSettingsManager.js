@@ -776,8 +776,8 @@ class GeneralSettingsManager {
    */
   applySettings() {
     this.applyTheme(this.settings.themeMode);
-    this.applyUIStyle(this.settings.uiStyle || 'default');
     this.applyAccentColor(this.settings.accentColor);
+    this.applyUIStyle(this.settings.uiStyle || 'default');
     this.applyFontSize(this.settings.fontSize);
     this.applyFontFamily(this.settings.fontFamily);
     this.applySequenceFont(this.settings.sequenceFont);
@@ -817,6 +817,13 @@ class GeneralSettingsManager {
   applyUIStyle(styleName) {
     if (window.themeManager) {
       window.themeManager.applyStyle(styleName);
+
+      // Sync accentColor with the preset's primary color to prevent
+      // applyAccentColor from overriding the preset colors on save
+      const preset = window.themeManager.stylePresets[styleName];
+      if (preset) {
+        this.settings.accentColor = preset.variables['--primary-color'];
+      }
     }
 
     // Update style preset card active states
@@ -828,8 +835,15 @@ class GeneralSettingsManager {
 
   /**
    * Apply accent color
+   * Note: When a non-default UI Style preset is active, accent color is controlled
+   * by the preset and should not be overridden by the color picker value.
    */
   applyAccentColor(color) {
+    const currentStyle = this.settings.uiStyle || 'default';
+    if (currentStyle !== 'default') {
+      // Let the UI Style preset control primary colors; skip accent override
+      return;
+    }
     document.documentElement.style.setProperty('--primary-color', color);
     document.documentElement.style.setProperty('--primary-hover', this.adjustBrightness(color, -10));
   }
