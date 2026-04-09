@@ -1103,6 +1103,9 @@ class GenomeBrowser {
 
     // Debug Tools modal
     document.getElementById('debugToolsBtn')?.addEventListener('click', () => this.showDebugToolsModal());
+
+    // Benchmark button
+    document.getElementById('benchmarkBtn')?.addEventListener('click', () => this.openBenchmarkInterface());
   }
 
   showMCPSettingsModal() {
@@ -1257,22 +1260,11 @@ class GenomeBrowser {
     modal.innerHTML = `
             <div class="modal-content debug-tools-modal">
                 <div class="modal-header">
-                    <h2><i class="fas fa-bug"></i> Benchmark & Debug Tools</h2>
+                    <h2><i class="fas fa-bug"></i> Debug Tools</h2>
                     <button class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="debug-tools-grid">
-                        <div class="debug-tool-card">
-                            <div class="debug-tool-icon">
-                                <i class="fas fa-vial"></i>
-                            </div>
-                            <h3>LLM Benchmark Suite</h3>
-                            <p>Comprehensive testing of AI agent performance across genomic analysis tasks</p>
-                            <button class="btn btn-primary" onclick="window.genomeBrowser.openBenchmarkInterface()">
-                                Open Benchmark
-                            </button>
-                        </div>
-                        
                         <div class="debug-tool-card">
                             <div class="debug-tool-icon">
                                 <i class="fas fa-chart-line"></i>
@@ -1367,10 +1359,10 @@ class GenomeBrowser {
   }
 
   async openBenchmarkInterface() {
-    // Close the debug tools modal
-    const modal = document.getElementById('debugToolsModal');
-    if (modal) {
-      modal.classList.remove('show');
+    // Close any open options dropdown
+    const optionsMenu = document.getElementById('optionsDropdownMenu');
+    if (optionsMenu) {
+      optionsMenu.classList.remove('show');
     }
 
     try {
