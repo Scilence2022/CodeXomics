@@ -78,6 +78,12 @@ class BenchmarkUI {
       this.setupBenchmarkInterfaceHandlers();
       console.log('🎮 Event handlers setup complete');
 
+      // Restore previous results if available
+      if (this.currentResults) {
+        console.log('📊 Restoring previous benchmark results');
+        this.displayMainWindowResults(this.currentResults);
+      }
+
       // Verify interface is actually visible
       const isVisible =
         benchmarkInterface.offsetHeight > 0 &&
