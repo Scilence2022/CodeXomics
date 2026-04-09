@@ -207,6 +207,72 @@ class ThemeManager {
           '--border-hover': '#3d3930',
           '--header-gradient': 'linear-gradient(135deg, #141311 0%, #2a2520 60%, #c87d2f 100%)',
         }
+      },
+      pastel: {
+        name: 'Pastel',
+        description: 'Soft lavender-rose with light airy tones',
+        icon: 'fa-cloud',
+        variables: {
+          // Primary accent - soft rose
+          '--primary-color': '#b07fb0',
+          '--primary-hover': '#966896',
+          '--primary-rgb': '176, 127, 176',
+
+          // Secondary / neutral
+          '--secondary-color': '#9ca3af',
+
+          // Backgrounds - very light lavender-blush
+          '--bg-primary': '#faf8fc',
+          '--bg-secondary': '#f5f0f8',
+          '--bg-tertiary': '#ede6f2',
+
+          // Text - soft dark
+          '--text-primary': '#3d3245',
+          '--text-secondary': '#6b5f75',
+          '--text-muted': '#9e93a8',
+
+          // Borders - light lavender
+          '--border-color': '#e2d9ea',
+          '--border-hover': '#cec2d8',
+
+          // Header gradient - soft lavender to rose
+          '--header-gradient': 'linear-gradient(135deg, #5c4d6d 0%, #8b6f9a 50%, #b07fb0 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #6d5880 0%, #b07fb0 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #6d5880 0%, #b07fb0 100%)',
+
+          // Accent highlights
+          '--accent-indigo': '#b07fb0',
+          '--accent-purple': '#8b6f9a',
+          '--accent-violet': '#c494c4',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #6d5880 0%, #b07fb0 100%)',
+          '--chat-ai-border': '#b07fb0',
+          '--chat-tab-active': '#b07fb0',
+          '--chat-send-bg': '#b07fb0',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #b07fb0 0%, #8b6f9a 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #966896 0%, #755a84 100%)',
+
+          // Focus ring
+          '--focus-ring': 'rgba(176, 127, 176, 0.3)',
+          '--focus-ring-intense': 'rgba(176, 127, 176, 0.8)',
+
+          // Selection
+          '--selection-bg': '#b07fb0',
+        },
+        darkVariables: {
+          '--bg-primary': '#1e1828',
+          '--bg-secondary': '#16111f',
+          '--bg-tertiary': '#2a2238',
+          '--text-primary': '#e8e0f0',
+          '--text-secondary': '#b8aac8',
+          '--text-muted': '#847894',
+          '--border-color': '#2a2238',
+          '--border-hover': '#3d3350',
+          '--header-gradient': 'linear-gradient(135deg, #16111f 0%, #2a2238 60%, #b07fb0 100%)',
+        }
       }
     };
 
@@ -259,7 +325,7 @@ class ThemeManager {
     this.currentStyle = styleName;
 
     // Remove any previous style class from body
-    document.body.classList.remove('style-default', 'style-professional', 'style-minimal');
+    document.body.classList.remove('style-default', 'style-professional', 'style-minimal', 'style-pastel');
     document.body.classList.add(`style-${styleName}`);
 
     // Set data attribute for CSS selectors

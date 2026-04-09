@@ -1,0 +1,775 @@
+/**
+ * Pastel UI Style Override
+ * Overrides hardcoded blue-purple colors with soft lavender-rose tones
+ * when data-ui-style="pastel" is set on the root element.
+ *
+ * Design Philosophy:
+ * - Soft rose-lavender (#b07fb0) as primary accent
+ * - Very light lavender-blush backgrounds for an airy, dreamy feel
+ * - Gentle, non-intrusive gradients
+ * - Perfect for extended reading sessions with minimal eye strain
+ * - Inspired by Notion, Figma, and pastel design systems
+ */
+
+/* ===== HEADER OVERRIDES ===== */
+[data-ui-style="pastel"] .header {
+  background: var(--header-gradient);
+}
+
+/* ===== WELCOME SCREEN ===== */
+[data-ui-style="pastel"] .welcome-screen {
+  background: var(--welcome-gradient);
+}
+
+[data-ui-style="pastel"] .welcome-icon {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+[data-ui-style="pastel"] .version-tag {
+  color: #d8c0e0;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ===== BUTTON GRADIENT OVERRIDES ===== */
+[data-ui-style="pastel"] .btn-gradient {
+  background: var(--btn-gradient);
+}
+
+[data-ui-style="pastel"] .btn-gradient:hover {
+  background: var(--btn-gradient-hover);
+  box-shadow: 0 8px 25px rgba(176, 127, 176, 0.2);
+}
+
+[data-ui-style="pastel"] .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(176, 127, 176, 0.2);
+}
+
+[data-ui-style="pastel"] .btn:focus {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ===== TRACK BUTTON OVERRIDES ===== */
+[data-ui-style="pastel"] .track-gallery-btn:hover {
+  color: #b07fb0;
+  border-color: #b07fb0;
+}
+
+[data-ui-style="pastel"] .track-layout-btn:hover {
+  color: #8b6f9a;
+  border-color: #8b6f9a;
+}
+
+/* ===== FOCUS RING OVERRIDES ===== */
+[data-ui-style="pastel"] .search-input:focus,
+[data-ui-style="pastel"] .position-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style="pastel"] .dropdown-toggle:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style="pastel"] .select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style="pastel"] ::focus-visible {
+  outline-color: var(--primary-color);
+}
+
+[data-ui-style="pastel"] ::selection {
+  background: var(--selection-bg);
+}
+
+/* ===== CHATBOX OVERRIDES ===== */
+[data-ui-style="pastel"] #chatboxSettingsModal .modal-header {
+  background: var(--modal-header-gradient);
+}
+
+[data-ui-style="pastel"] .chat-panel .chat-header {
+  background: var(--modal-header-gradient);
+}
+
+[data-ui-style="pastel"] .chat-tab.active {
+  color: var(--chat-tab-active);
+  border-bottom-color: var(--chat-tab-active);
+}
+
+[data-ui-style="pastel"] .chat-user-message {
+  background: var(--chat-user-bg);
+}
+
+[data-ui-style="pastel"] .chat-ai-message {
+  border-left-color: var(--chat-ai-border);
+}
+
+[data-ui-style="pastel"] .chat-send-btn {
+  background: var(--chat-send-bg);
+}
+
+[data-ui-style="pastel"] .chat-send-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* ===== CHATBOX MARKDOWN OVERRIDES ===== */
+[data-ui-style="pastel"] .chat-markdown blockquote {
+  border-left-color: var(--accent-indigo);
+}
+
+[data-ui-style="pastel"] .chat-markdown a {
+  color: var(--accent-indigo);
+}
+
+[data-ui-style="pastel"] .chat-markdown code {
+  color: #966896;
+}
+
+[data-ui-style="pastel"] .chat-markdown pre {
+  border-left-color: var(--accent-indigo);
+}
+
+[data-ui-style="pastel"] .chat-markdown .code-block-header {
+  background: #8b6f9a;
+}
+
+/* ===== TABS OVERRIDES ===== */
+[data-ui-style="pastel"] .llm-provider-tabs .tab-button.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+/* ===== MODAL OVERRIDES ===== */
+[data-ui-style="pastel"] .llm-config-modal .modal-header {
+  background: var(--modal-header-gradient);
+}
+
+/* ===== ADVANCED SEARCH OVERRIDES ===== */
+[data-ui-style="pastel"] .advanced-search-panel {
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="pastel"] .search-type-btn.active {
+  color: #b07fb0;
+}
+
+/* ===== NAVIGATION BUTTONS ===== */
+[data-ui-style="pastel"] .nav-btn {
+  background: rgba(176, 127, 176, 0.85);
+}
+
+[data-ui-style="pastel"] .nav-btn:hover {
+  background: rgba(150, 104, 150, 1);
+}
+
+/* ===== SIDEBAR SPLITTER ===== */
+[data-ui-style="pastel"] .sidebar-splitter:focus {
+  outline-color: var(--primary-color);
+}
+
+[data-ui-style="pastel"] .sidebar-splitter:focus .sidebar-splitter-handle {
+  color: var(--primary-color);
+}
+
+/* ===== STYLE PREVIEW SWATCH ===== */
+.style-preview-swatch.pastel-swatch {
+  background: linear-gradient(135deg, #6d5880 0%, #b07fb0 100%);
+}
+
+/* ===== PASTEL DARK MODE ENHANCEMENTS ===== */
+[data-ui-style="pastel"] .gene-filter-controls {
+  background: rgba(30, 24, 40, 0.95);
+}
+
+/* ===== STATUS BAR TOGGLE ===== */
+[data-ui-style="pastel"] .mac-toggle input:checked + .mac-toggle-slider {
+  background-color: #b07fb0;
+}
+
+[data-ui-style="pastel"] .mcp-bridge-status-dot.connected {
+  background-color: #b07fb0;
+  box-shadow: 0 0 6px rgba(176, 127, 176, 0.5);
+}
+
+/* ===== ALERT COMPONENTS ===== */
+[data-ui-style="pastel"] .alert.alert-primary {
+  background: rgba(176, 127, 176, 0.08);
+  color: #966896;
+  border-color: rgba(176, 127, 176, 0.2);
+}
+
+/* ===== PROGRESS BAR ===== */
+[data-ui-style="pastel"] .progress-bar {
+  background: var(--primary-color);
+}
+
+/* ===== SPINNER ===== */
+[data-ui-style="pastel"] .spinner {
+  border-top-color: var(--primary-color);
+}
+
+/* ===== BADGE ===== */
+[data-ui-style="pastel"] .badge-primary {
+  background: var(--primary-color);
+}
+
+/* ===== PAGINATION ===== */
+[data-ui-style="pastel"] .pagination-item.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* ===== STYLES.CSS HARDCODED COLOR OVERRIDES ===== */
+
+/* Chat panel header */
+[data-ui-style="pastel"] .chat-panel.resizable-movable .chat-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+/* Chat panel send button */
+[data-ui-style="pastel"] .chat-input-container .chat-send-btn {
+  background: var(--chat-send-bg) !important;
+}
+
+/* Chat user message bubble */
+[data-ui-style="pastel"] .chat-messages .chat-user-message {
+  background: var(--chat-user-bg) !important;
+}
+
+/* Chat AI message accent */
+[data-ui-style="pastel"] .chat-messages .chat-ai-message {
+  border-left-color: var(--chat-ai-border) !important;
+}
+
+/* LLM Config modal header */
+[data-ui-style="pastel"] .llm-config-modal .modal-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+/* Tab active states */
+[data-ui-style="pastel"] .tab.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+/* Agent badge colors */
+[data-ui-style="pastel"] .agent-badge {
+  background: rgba(var(--primary-rgb), 0.1) !important;
+  color: var(--primary-color) !important;
+  border-color: rgba(var(--primary-rgb), 0.2) !important;
+}
+
+/* Code block header in chat */
+[data-ui-style="pastel"] .code-block-header {
+  background: var(--primary-color) !important;
+}
+
+/* Sidebar section headers */
+[data-ui-style="pastel"] .sidebar-section-title {
+  color: var(--primary-color) !important;
+}
+
+/* Plugin badge */
+[data-ui-style="pastel"] .plugin-badge {
+  background: var(--primary-color) !important;
+}
+
+/* Toggle active state */
+[data-ui-style="pastel"] .btn-toggle.active {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Tooltip border */
+[data-ui-style="pastel"] .track-tooltip {
+  border-color: var(--primary-color) !important;
+}
+
+/* Gene info panel accent */
+[data-ui-style="pastel"] .gene-info-header {
+  border-bottom-color: var(--primary-color) !important;
+}
+
+/* Multi-agent panel tabs */
+[data-ui-style="pastel"] .agent-tab.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+/* Selection highlight */
+[data-ui-style="pastel"] .gene-element.selected {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+
+/* Scroll-to-gene button */
+[data-ui-style="pastel"] .scroll-to-gene-btn {
+  background: var(--primary-color) !important;
+}
+
+/* Markdown viewer links */
+[data-ui-style="pastel"] .markdown-content a {
+  color: var(--primary-color) !important;
+}
+
+/* Search result highlight */
+[data-ui-style="pastel"] .search-highlight {
+  background: rgba(var(--primary-rgb), 0.15) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Version tag */
+[data-ui-style="pastel"] .version-tag {
+  color: #d8c0e0;
+}
+
+/* ===== BLAST BUTTON ===== */
+[data-ui-style="pastel"] #blastBtn {
+  background: var(--btn-gradient) !important;
+  box-shadow: 0 2px 8px rgba(176, 127, 176, 0.2) !important;
+}
+
+[data-ui-style="pastel"] #blastBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(176, 127, 176, 0.3) !important;
+}
+
+/* ===== LOAD FILE BUTTON ===== */
+[data-ui-style="pastel"] .header #openFileBtn,
+[data-ui-style="pastel"] .header .btn-primary.dropdown-toggle {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .header #openFileBtn:hover,
+[data-ui-style="pastel"] .header .btn-primary.dropdown-toggle:hover {
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(176, 127, 176, 0.2) !important;
+}
+
+/* ===== NEW CHAT BUTTON ===== */
+[data-ui-style="pastel"] #newChatBtn {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] #newChatBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(176, 127, 176, 0.2) !important;
+}
+
+/* ===== CHAT SEND BUTTON ===== */
+[data-ui-style="pastel"] #sendChatBtn {
+  background: var(--chat-send-bg) !important;
+}
+
+[data-ui-style="pastel"] #sendChatBtn:hover {
+  background: var(--primary-hover) !important;
+}
+
+[data-ui-style="pastel"] #sendChatBtn.processing {
+  background: var(--chat-send-bg) !important;
+}
+
+/* ===== CURRENT MESSAGE ONLY TOGGLE ===== */
+[data-ui-style="pastel"] .toggle-label input[type="checkbox"]:checked + .toggle-slider {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .toggle-label input[type="checkbox"]:checked ~ .toggle-text {
+  color: var(--primary-color) !important;
+}
+
+/* ===== TOOLBAR TOGGLE CHAT BUTTON ===== */
+[data-ui-style="pastel"] .toolbar-section #toggleChatBtn {
+  background: var(--btn-gradient) !important;
+}
+
+[data-ui-style="pastel"] .toolbar-section #toggleChatBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(176, 127, 176, 0.2) !important;
+}
+
+[data-ui-style="pastel"] .toolbar-section #toggleChatBtn.ai-processing {
+  border-color: rgba(176, 127, 176, 0.4) !important;
+}
+
+/* ===== CHAT HEADER ===== */
+[data-ui-style="pastel"] .chat-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+/* ===== CHAT INPUT FOCUS ===== */
+[data-ui-style="pastel"] .chat-input-wrapper:focus-within {
+  border-color: var(--primary-color) !important;
+}
+
+/* ===== USER MESSAGE ICON ===== */
+[data-ui-style="pastel"] .user-message .message-icon {
+  background: var(--primary-color) !important;
+}
+
+/* ===== THINKING PROCESS ===== */
+[data-ui-style="pastel"] .thinking-process {
+  border-left-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .thinking-header {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .thinking-header i {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .thinking-process .message-icon {
+  background: var(--primary-color) !important;
+}
+
+/* ===== WELCOME BUTTONS ===== */
+[data-ui-style="pastel"] .welcome-buttons .btn-primary {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .welcome-buttons .btn-secondary:hover {
+  background: var(--btn-gradient) !important;
+  color: white !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 4px 15px rgba(176, 127, 176, 0.2) !important;
+}
+
+[data-ui-style="pastel"] .welcome-buttons .btn-primary:hover {
+  box-shadow: 0 4px 15px rgba(176, 127, 176, 0.3) !important;
+}
+
+/* ===== CHATBOX SETTINGS MODAL ===== */
+[data-ui-style="pastel"] #chatboxSettingsModal .tab-button.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] #chatboxSettingsModal .input-full:focus,
+[data-ui-style="pastel"] #chatboxSettingsModal .select:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(176, 127, 176, 0.1) !important;
+}
+
+[data-ui-style="pastel"] #chatboxSettingsModal .setting-checkbox:checked {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] #chatboxSettingsModal .btn-primary {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] #chatboxSettingsModal .btn-primary:hover {
+  background: var(--primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(176, 127, 176, 0.2) !important;
+}
+
+/* ===== LLM CONFIG ===== */
+[data-ui-style="pastel"] .llm-provider-tabs .tab-button.active::after {
+  border-right-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .provider-config input:focus,
+[data-ui-style="pastel"] .provider-config select:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(176, 127, 176, 0.1) !important;
+}
+
+[data-ui-style="pastel"] .provider-config .help-text a {
+  color: var(--primary-color) !important;
+}
+
+/* ===== MULTI-AGENT ACTIVATION ===== */
+[data-ui-style="pastel"] .multi-agent-activation {
+  background: var(--btn-gradient) !important;
+}
+
+/* ===== DROPDOWN ICON ===== */
+[data-ui-style="pastel"] .dropdown-item i {
+  color: var(--primary-color) !important;
+}
+
+/* ===== BENCHMARK UI ===== */
+[data-ui-style="pastel"] .benchmark-container {
+  border-color: rgba(176, 127, 176, 0.2) !important;
+}
+
+[data-ui-style="pastel"] .benchmark-header {
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .benchmark-header:hover {
+  background: rgba(176, 127, 176, 0.04) !important;
+}
+
+[data-ui-style="pastel"] .minimize-benchmark-btn {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .minimize-benchmark-btn:hover {
+  background: var(--primary-hover) !important;
+}
+
+[data-ui-style="pastel"] .benchmark-interface.collapsed .benchmark-container {
+  border-color: rgba(176, 127, 176, 0.6) !important;
+}
+
+[data-ui-style="pastel"] .expand-indicator {
+  background: rgba(176, 127, 176, 0.12) !important;
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .benchmark-section {
+  border-color: rgba(176, 127, 176, 0.1) !important;
+}
+
+[data-ui-style="pastel"] .checkbox-item input[type="checkbox"] {
+  accent-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .btn-primary {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%) !important;
+}
+
+[data-ui-style="pastel"] .progress-fill {
+  background: linear-gradient(90deg, var(--primary-color) 0%, #c494c4 100%) !important;
+}
+
+[data-ui-style="pastel"] .progress-item {
+  border-left-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .checkbox-item span small {
+  background: rgba(176, 127, 176, 0.06) !important;
+  border-color: rgba(176, 127, 176, 0.12) !important;
+}
+
+[data-ui-style="pastel"] .summary-card {
+  background: linear-gradient(135deg, var(--primary-color) 0%, #6d5880 100%) !important;
+  box-shadow: 0 6px 25px rgba(176, 127, 176, 0.2) !important;
+}
+
+/* ===== CHATBOX SETTINGS METRIC ===== */
+[data-ui-style="pastel"] .metric-item {
+  background: var(--btn-gradient) !important;
+}
+
+/* ===== SLIDER VALUE ===== */
+[data-ui-style="pastel"] #chatboxSettingsModal .slider-value {
+  color: var(--primary-color) !important;
+}
+
+/* ===== LLM PROVIDER TAB BOTTOM BAR ===== */
+[data-ui-style="pastel"] .llm-provider-config > .tab-bar::after {
+  background: var(--primary-color) !important;
+}
+
+/* ===== NOTIFICATION INFO ===== */
+[data-ui-style="pastel"] .notification-info {
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .notification-info i {
+  color: var(--primary-color) !important;
+}
+
+/* ===== CHAT NOTIFICATION ===== */
+[data-ui-style="pastel"] .chat-notification.info {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* ===== CHATBOX MARKDOWN OVERRIDES ===== */
+[data-ui-style="pastel"] .message-text pre {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="pastel"] .message-text a {
+  color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="pastel"] .message-text a:visited {
+  color: var(--primary-hover) !important;
+}
+
+[data-ui-style="pastel"] .message-text blockquote {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="pastel"] .copy-button {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] .user-message .message-text pre {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="pastel"] .user-message .message-text blockquote {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+/* ===== DRAGGABLE HEADER HOVER ===== */
+[data-ui-style="pastel"] .draggable-header:hover {
+  background: linear-gradient(135deg, #755a84 0%, #6d5880 100%) !important;
+}
+
+/* ===== ADD FEATURES BUTTON & DROPDOWN ===== */
+[data-ui-style="pastel"] #addFeaturesBtn {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="pastel"] #addFeaturesBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(176, 127, 176, 0.2) !important;
+}
+
+[data-ui-style="pastel"] #addFeaturesBtn.active {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(176, 127, 176, 0.15) !important;
+}
+
+[data-ui-style="pastel"] .add-features-dropdown {
+  border-color: #cec2d8 !important;
+  box-shadow: 0 4px 16px rgba(176, 127, 176, 0.08) !important;
+}
+
+[data-ui-style="pastel"] .dropdown-section-title {
+  color: #3d3245 !important;
+  border-bottom-color: #e2d9ea !important;
+}
+
+[data-ui-style="pastel"] .dropdown-section-title i {
+  color: #966896 !important;
+}
+
+[data-ui-style="pastel"] .dropdown-feature-btn {
+  color: #3d3245 !important;
+}
+
+[data-ui-style="pastel"] .dropdown-feature-btn:hover {
+  background: linear-gradient(135deg, #f5f0f8, #ede6f2) !important;
+  color: #966896 !important;
+  border-color: #cec2d8 !important;
+}
+
+[data-ui-style="pastel"] .dropdown-feature-btn:active {
+  background: linear-gradient(135deg, #ede6f2, #e2d9ea) !important;
+}
+
+[data-ui-style="pastel"] .dropdown-feature-btn i {
+  color: #9e93a8 !important;
+}
+
+[data-ui-style="pastel"] .dropdown-feature-btn:hover i {
+  color: #966896 !important;
+}
+
+[data-ui-style="pastel"] .dropdown-divider {
+  background: linear-gradient(to right, transparent, #cec2d8, transparent) !important;
+}
+
+/* ===== CIRCULAR CHECKBOX OVERRIDES ===== */
+[data-ui-style="pastel"] .track-checkbox input[type='checkbox'] {
+  border-color: #cec2d8;
+}
+
+[data-ui-style="pastel"] .track-checkbox input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(176, 127, 176, 0.12);
+}
+
+[data-ui-style="pastel"] .track-checkbox input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="pastel"] .feature-checkbox input[type='checkbox'] {
+  border-color: #cec2d8;
+}
+
+[data-ui-style="pastel"] .feature-checkbox input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(176, 127, 176, 0.12);
+}
+
+[data-ui-style="pastel"] .feature-checkbox input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="pastel"] .feature-control-item input[type='checkbox'] {
+  border-color: #cec2d8;
+}
+
+[data-ui-style="pastel"] .feature-control-item input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(176, 127, 176, 0.12);
+}
+
+[data-ui-style="pastel"] .feature-control-item input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="pastel"] .track-control-item input[type='checkbox'] {
+  border-color: #cec2d8;
+}
+
+[data-ui-style="pastel"] .track-control-item input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(176, 127, 176, 0.12);
+}
+
+[data-ui-style="pastel"] .track-control-item input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="pastel"] .track-controls input[type='checkbox'] {
+  border-color: #cec2d8;
+}
+
+[data-ui-style="pastel"] .track-controls input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(176, 127, 176, 0.12);
+}
+
+[data-ui-style="pastel"] .track-controls input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* ===== PASTEL DARK MODE ===== */
+@media (prefers-color-scheme: dark) {
+  [data-ui-style="pastel"] .track-checkbox input[type='checkbox'],
+  [data-ui-style="pastel"] .feature-checkbox input[type='checkbox'],
+  [data-ui-style="pastel"] .track-control-item input[type='checkbox'],
+  [data-ui-style="pastel"] .track-controls input[type='checkbox'] {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+  }
+
+  [data-ui-style="pastel"] .track-checkbox input[type='checkbox']:checked,
+  [data-ui-style="pastel"] .feature-checkbox input[type='checkbox']:checked,
+  [data-ui-style="pastel"] .feature-control-item input[type='checkbox']:checked,
+  [data-ui-style="pastel"] .track-control-item input[type='checkbox']:checked,
+  [data-ui-style="pastel"] .track-controls input[type='checkbox']:checked {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+
+  [data-ui-style="pastel"] .feature-control-item input[type='checkbox'] {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+  }
+}
