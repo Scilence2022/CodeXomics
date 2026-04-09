@@ -12905,7 +12905,7 @@ This action cannot be undone.`;
                 <div class="form-group">
                     <label>
                         <input type="checkbox" id="readsShowMutations" ${settings.showMutations ? 'checked' : ''}>
-                        Show mutations (IGV-style)
+                        Show mutations
                     </label>
                     <div class="help-text">Display mutations as colored vertical lines on reads. Shows insertions (red), deletions (cyan), and mismatches (yellow).</div>
                 </div>

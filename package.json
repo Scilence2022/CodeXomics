@@ -81,7 +81,7 @@
     "generic-filehandle2": "^2.0.16",
     "i18next": "^25.8.0",
     "i18next-fs-backend": "^2.6.1",
-    "igv": "^2.15.8",
+
     "js-yaml": "^4.1.0",
     "marked": "^9.1.6",
     "multer": "^2.0.2",

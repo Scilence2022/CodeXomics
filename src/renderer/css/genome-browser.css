@@ -30,15 +30,6 @@
   font-style: italic;
 }
 
-/* IGV Container */
-.igv-container {
-  width: 100%;
-  height: 100%;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
 /* Enhanced Toolbar */
 .toolbar {
   background: linear-gradient(to bottom, #ffffff, #f8f9fa);

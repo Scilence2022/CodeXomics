@@ -554,7 +554,7 @@ MIT — see [LICENSE](LICENSE) for details.
 
 - [Electron](https://www.electronjs.org/) — cross-platform desktop framework
 - [D3.js](https://d3js.org/) — data visualization
-- [IGV.js](https://igv.org/) — genome browser components
+
 - [NGL Viewer](https://nglviewer.org/) — protein structure rendering
 - [OpenAI](https://openai.com/), [Anthropic](https://anthropic.com/), [Google](https://deepmind.google/) — LLM providers
 - [SiliconFlow](https://siliconflow.cn/) — Chinese LLM integration

@@ -89,7 +89,7 @@ The workspace enables independent dependency management:
 **Root Package Dependencies:**
 
 - Electron and electron-builder (app framework)
-- Bioinformatics libraries (igv.js, ngl, d3)
+- Bioinformatics libraries (ngl, d3)
 - MCP SDK (@modelcontextprotocol/sdk)
 - Application-specific dependencies
 

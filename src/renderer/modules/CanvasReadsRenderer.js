@@ -607,7 +607,7 @@ class CanvasReadsRenderer {
       this.renderMismatches(read, x, y, width);
     }
 
-    // Show mutations (IGV-style) if enabled
+    // Show mutations if enabled
     if (this.options.showMutations && read.mutations) {
       this.renderMutations(read, x, y, width);
     }

@@ -5,7 +5,7 @@ This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor
 ## 1. Project Context
 **CodeXomics** is an AI-powered bioinformatics analysis platform built as a desktop application using **Electron**. It provides genome visualization, plugin extensions, and an integrated multi-agent AI system for executing biological analysis tools.
 
-- **Stack**: Node.js, Electron, Vanilla JS (ES6+), HTML5, Vanilla CSS, and various specialized bioinformatics libraries (e.g., D3.js, IGV).
+- **Stack**: Node.js, Electron, Vanilla JS (ES6+), HTML5, Vanilla CSS, and various specialized bioinformatics libraries (e.g., D3.js).
 - **Package Manager**: npm (Workspace structure enabled in `packages/`).
 - **Main Process**: `src/main.js`
 - **Renderer Process**: `src/renderer/`
