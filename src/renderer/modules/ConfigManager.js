@@ -17,8 +17,8 @@ class ConfigManager {
       this.saveConfig();
     }, 1000);
 
-    // Initialize asynchronously
-    this.initializeConfig()
+    // Initialize asynchronously — store the promise so others can await it
+    this._initPromise = this.initializeConfig()
       .then(() => {
         this.isInitialized = true;
         console.log('ConfigManager fully initialized');
@@ -27,6 +27,14 @@ class ConfigManager {
         console.error('ConfigManager initialization failed:', error);
         this.isInitialized = true; // Mark as initialized even on error to prevent blocking
       });
+  }
+
+  /**
+   * Wait until the ConfigManager has finished loading configuration.
+   * Call this before reading settings to avoid race conditions.
+   */
+  async waitForInit() {
+    await this._initPromise;
   }
 
   /**

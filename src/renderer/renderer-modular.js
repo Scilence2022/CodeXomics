@@ -424,31 +424,33 @@ class GenomeBrowser {
       try {
         this.themeManager = new ThemeManager(this.configManager);
         window.themeManager = this.themeManager;
-        this.themeManager.init().then(() => {
-          console.log('✅ ThemeManager initialized with style:', this.themeManager.getCurrentStyle());
-        }).catch(err => {
-          console.error('❌ ThemeManager init error:', err);
-        });
       } catch (tmError) {
         console.error('❌ Error creating ThemeManager:', tmError);
       }
 
-      // Initialize asynchronously and then apply global dragging setting
-      this.generalSettingsManager
-        .init()
-        .then(() => {
-          console.log('✅ GeneralSettingsManager initialized successfully');
+      // Initialize ThemeManager then GeneralSettingsManager sequentially.
+      // Both await ConfigManager.waitForInit() internally, ensuring config is loaded.
+      // GeneralSettingsManager.applySettings() calls applyUIStyle() which needs ThemeManager ready.
+      const initSequence = async () => {
+        // 1. ThemeManager must be ready before GeneralSettingsManager applies UI style
+        if (this.themeManager) {
+          await this.themeManager.init();
+          console.log('✅ ThemeManager initialized with style:', this.themeManager.getCurrentStyle());
+        }
 
-          // Initialize global dragging setting after settings are loaded
-          this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging !== false;
+        // 2. GeneralSettingsManager loads settings and applies them (including UI style)
+        await this.generalSettingsManager.init();
+        console.log('✅ GeneralSettingsManager initialized successfully');
 
-          // Apply the setting immediately
-          this.setGlobalDragging(this.globalDraggingEnabled);
-        })
-        .catch(error => {
-          console.error('❌ Error initializing GeneralSettingsManager:', error);
-          this.globalDraggingEnabled = true; // Default to true when settings can't be loaded
-        });
+        // Initialize global dragging setting after settings are loaded
+        this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging !== false;
+        this.setGlobalDragging(this.globalDraggingEnabled);
+      };
+
+      initSequence().catch(error => {
+        console.error('❌ Error in settings initialization sequence:', error);
+        this.globalDraggingEnabled = true; // Default to true when settings can't be loaded
+      });
 
       window.generalSettingsManager = this.generalSettingsManager; // Make globally available
     } catch (error) {

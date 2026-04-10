@@ -70,6 +70,11 @@ class GeneralSettingsManager {
     if (this.isInitialized) return;
 
     try {
+      // Wait for ConfigManager to finish loading before reading settings
+      if (this.configManager?.waitForInit) {
+        await this.configManager.waitForInit();
+      }
+
       // Initialize UI elements and event handlers
       this.initializeUI();
 
