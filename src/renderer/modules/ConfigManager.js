@@ -95,6 +95,7 @@ class ConfigManager {
             ui: electronAPI_path.join(configDir, 'ui-preferences.json'),
             chat: electronAPI_path.join(configDir, 'chat-history.json'),
             app: electronAPI_path.join(configDir, 'app-settings.json'),
+            generalSettings: electronAPI_path.join(configDir, 'general-settings.json'),
             evolution: electronAPI_path.join(configDir, 'conversation-evolution-data.json'),
             blast: electronAPI_path.join(configDir, 'blast-databases.json'),
             marketplace: electronAPI_path.join(configDir, 'marketplace-settings.json'),
@@ -132,6 +133,7 @@ class ConfigManager {
                 ui: path.join(configDir, 'ui-preferences.json'),
                 chat: path.join(configDir, 'chat-history.json'),
                 app: path.join(configDir, 'app-settings.json'),
+                generalSettings: path.join(configDir, 'general-settings.json'),
                 evolution: path.join(configDir, 'conversation-evolution-data.json'),
                 blast: path.join(configDir, 'blast-databases.json'),
                 marketplace: path.join(configDir, 'marketplace-settings.json'),
@@ -372,6 +374,47 @@ class ConfigManager {
           lastUpdated: null,
         },
       },
+      generalSettings: {
+        themeMode: 'auto',
+        uiStyle: 'default',
+        accentColor: '#667eea',
+        fontSize: 'medium',
+        fontFamily: 'system',
+        sequenceFont: 'monaco',
+        compactMode: false,
+        showWelcomeScreen: true,
+        minLineSpacing: 12,
+        maxSequenceLength: 5000000,
+        renderingMode: 'adaptive',
+        maxGenesDisplay: 1000,
+        trackHeight: 'normal',
+        enableAnimations: true,
+        enableFileCache: true,
+        cacheSize: 500,
+        enableGlobalDragging: true,
+        enableWheelZoom: true,
+        wheelZoomSensitivity: 0.1,
+        wheelZoomToCursor: true,
+        wheelZoomMinRange: 100,
+        wheelZoomMaxRange: 1000000,
+        enableGCContent: true,
+        enableProteinTranslation: true,
+        enableOperonPrediction: true,
+        enableSyntaxHighlighting: true,
+        enableAutoSave: true,
+        autoSaveInterval: 300,
+        enableNotifications: true,
+        enableKeyboardShortcuts: true,
+        defaultExportFormat: 'fasta',
+        includeMetadata: true,
+        compressionLevel: 'medium',
+        autoBackup: true,
+        backupInterval: 24,
+        maxBackups: 10,
+        deepGeneResearchUrl: 'http://43.196.74.134:3000/',
+        chopchopUrl: 'https://chopchop.cbu.uib.no/',
+        progenFixerUrl: 'https://progenfixer.biodesign.ac.cn',
+      },
     };
   }
 
@@ -562,6 +605,7 @@ class ConfigManager {
         ui: this.configPath.ui,
         chat: this.configPath.chat,
         app: this.configPath.app,
+        generalSettings: this.configPath.generalSettings,
         evolution: this.configPath.evolution,
         blast: this.configPath.blast,
         marketplace: this.configPath.marketplace,
@@ -651,6 +695,16 @@ class ConfigManager {
       if (appSettings) {
         this.config.app = { ...this.config.app, ...JSON.parse(appSettings) };
         console.log('App settings loaded from localStorage');
+      }
+
+      // Load general settings (UI Style, theme, accent color, etc.)
+      const generalSettings = localStorage.getItem('generalSettings');
+      if (generalSettings) {
+        this.config.generalSettings = { ...JSON.parse(generalSettings) };
+        console.log('General settings loaded from localStorage:', {
+          uiStyle: this.config.generalSettings.uiStyle,
+          themeMode: this.config.generalSettings.themeMode,
+        });
       }
 
       // Load marketplace settings and installed plugins
@@ -911,6 +965,7 @@ class ConfigManager {
         [this.configPath.ui]: this.config.ui,
         [this.configPath.chat]: this.config.chat,
         [this.configPath.app]: this.config.app,
+        [this.configPath.generalSettings]: this.config.generalSettings,
         [this.configPath.evolution]: this.config.evolution || this.getDefaultEvolutionConfig(),
         [this.configPath.blast]: this.config.blast,
         [this.configPath.marketplace]: this.config.marketplace,
@@ -982,6 +1037,11 @@ class ConfigManager {
       // Save app settings with validation
       localStorage.setItem('appSettings', this.safeStringify(this.config.app));
 
+      // Save general settings (UI Style, theme, accent color, etc.)
+      if (this.config.generalSettings) {
+        localStorage.setItem('generalSettings', this.safeStringify(this.config.generalSettings));
+      }
+
       // Save marketplace settings and installed plugins
       localStorage.setItem('marketplaceSettings', this.safeStringify(this.config.marketplace));
 
@@ -1006,6 +1066,9 @@ class ConfigManager {
         localStorage.setItem('uiPreferences', JSON.stringify(this.config.ui || {}));
         localStorage.setItem('chatHistory', JSON.stringify([])); // Clear chat history
         localStorage.setItem('appSettings', JSON.stringify(this.config.app || {}));
+        if (this.config.generalSettings) {
+          localStorage.setItem('generalSettings', JSON.stringify(this.config.generalSettings));
+        }
         console.log('Minimal configuration saved to localStorage');
       } catch (minimalError) {
         console.error('Even minimal localStorage save failed:', minimalError);
