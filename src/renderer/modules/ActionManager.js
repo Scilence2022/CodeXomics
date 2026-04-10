@@ -6044,6 +6044,11 @@ class ActionManager {
         throw new Error('Action list modal element not found');
       }
 
+      // Reset drag position so modal re-centers on open
+      if (window.modalDragManager) {
+        window.modalDragManager.resetPosition('#actionListModal');
+      }
+
       modal.classList.add('show');
 
       // Calculate statistics

@@ -7858,10 +7858,7 @@ path.svg-gene-element.selected.border-highlight text {
 }
 
 .multi-agent-settings-modal.resizable {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  /* No transform-based centering — base .modal provides flex centering */
   min-width: 800px;
   min-height: 600px;
   max-width: 95vw;
@@ -12800,7 +12797,6 @@ input:checked+.slider:before {
   max-width: 90vw !important;
   height: auto !important;
   min-height: 500px !important;
-  margin: 0 !important;
   min-width: 600px !important;
 }
 

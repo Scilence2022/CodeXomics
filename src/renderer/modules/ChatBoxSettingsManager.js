@@ -427,8 +427,7 @@ class ChatBoxSettingsManager {
       window.modalDragManager.resetPosition('#chatboxSettingsModal');
     }
 
-    // Show modal with proper positioning
-    modal.style.display = 'block';
+    // Show modal
     modal.classList.add('show');
 
     // Initialize draggable and resizable using centralized managers

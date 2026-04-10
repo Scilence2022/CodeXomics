@@ -178,6 +178,9 @@ class ModalDragManager {
     modalContent.style.top = '';
     modalContent.style.margin = '';
     modalContent.style.transform = '';
+    modalContent.style.width = '';
+    modalContent.style.height = '';
+    modalContent.style.maxWidth = '';
   }
 
   /**

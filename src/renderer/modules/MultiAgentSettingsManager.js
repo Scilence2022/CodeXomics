@@ -522,7 +522,13 @@ class MultiAgentSettingsManager {
     this.modal = document.getElementById('multiAgentSettingsModal');
     if (this.modal) {
       this.loadSettingsToUI();
-      this.modal.style.display = 'block';
+
+      // Reset any drag inline styles so the modal re-centers on open
+      if (window.modalDragManager) {
+        window.modalDragManager.resetPosition('#multiAgentSettingsModal');
+      }
+
+      this.modal.classList.add('show');
       this.switchTab(this.currentTab);
 
       // Initialize drag and resize functionality
@@ -532,7 +538,7 @@ class MultiAgentSettingsManager {
 
   hideModal() {
     if (this.modal) {
-      this.modal.style.display = 'none';
+      this.modal.classList.remove('show');
     }
   }
 
@@ -551,133 +557,12 @@ class MultiAgentSettingsManager {
     }
 
     // Add reset to defaults button handler
-    const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
+    const resetDefaultsBtn = this.modal.querySelector('.reset-defaults-btn');
     if (resetDefaultsBtn) {
       resetDefaultsBtn.addEventListener('click', () => {
         this.resetToDefaults();
       });
     }
-
-    // Fallback drag functionality if ModalDragManager is not available
-    if (!window.ModalDragManager) {
-      this.setupFallbackDrag(modalContent);
-    }
-
-    // Fallback resize functionality if ResizableModalManager is not available
-    if (!window.ResizableModalManager) {
-      this.setupFallbackResize(modalContent);
-    }
-  }
-
-  setupFallbackDrag(modalContent) {
-    let isDragging = false;
-    let dragOffset = { x: 0, y: 0 };
-
-    const header = modalContent.querySelector('.modal-header');
-    if (!header) return;
-
-    header.style.cursor = 'move';
-
-    header.addEventListener('mousedown', e => {
-      if (e.target.closest('.modal-close')) return;
-
-      isDragging = true;
-      const rect = modalContent.getBoundingClientRect();
-      dragOffset.x = e.clientX - rect.left;
-      dragOffset.y = e.clientY - rect.top;
-
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', e => {
-      if (!isDragging) return;
-
-      const x = e.clientX - dragOffset.x;
-      const y = e.clientY - dragOffset.y;
-
-      modalContent.style.left = `${x}px`;
-      modalContent.style.top = `${y}px`;
-      modalContent.style.transform = 'none';
-    });
-
-    document.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
-  }
-
-  setupFallbackResize(modalContent) {
-    const resizeHandles = modalContent.querySelectorAll('.resize-handle');
-
-    resizeHandles.forEach(handle => {
-      let isResizing = false;
-      let startX, startY, startWidth, startHeight, startLeft, startTop;
-
-      handle.addEventListener('mousedown', e => {
-        isResizing = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        startWidth = modalContent.offsetWidth;
-        startHeight = modalContent.offsetHeight;
-        startLeft = modalContent.offsetLeft;
-        startTop = modalContent.offsetTop;
-
-        e.preventDefault();
-        e.stopPropagation();
-      });
-
-      document.addEventListener('mousemove', e => {
-        if (!isResizing) return;
-
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
-
-        const handleClass = handle.className;
-
-        if (
-          handleClass.includes('resize-handle-e') ||
-          handleClass.includes('resize-handle-ne') ||
-          handleClass.includes('resize-handle-se')
-        ) {
-          modalContent.style.width = `${startWidth + deltaX}px`;
-        }
-
-        if (
-          handleClass.includes('resize-handle-s') ||
-          handleClass.includes('resize-handle-se') ||
-          handleClass.includes('resize-handle-sw')
-        ) {
-          modalContent.style.height = `${startHeight + deltaY}px`;
-        }
-
-        if (
-          handleClass.includes('resize-handle-w') ||
-          handleClass.includes('resize-handle-nw') ||
-          handleClass.includes('resize-handle-sw')
-        ) {
-          const newWidth = startWidth - deltaX;
-          if (newWidth > 400) {
-            modalContent.style.width = `${newWidth}px`;
-            modalContent.style.left = `${startLeft + deltaX}px`;
-          }
-        }
-
-        if (
-          handleClass.includes('resize-handle-n') ||
-          handleClass.includes('resize-handle-nw') ||
-          handleClass.includes('resize-handle-ne')
-        ) {
-          const newHeight = startHeight - deltaY;
-          if (newHeight > 300) {
-            modalContent.style.height = `${newHeight}px`;
-            modalContent.style.top = `${startTop + deltaY}px`;
-          }
-        }
-      });
-
-      document.addEventListener('mouseup', () => {
-        isResizing = false;
-      });
-    });
   }
 
   switchTab(tabName) {
