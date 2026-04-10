@@ -116,10 +116,11 @@
   display: block;
 }
 
-/* Draggable modal styles - removed position fixed override to allow ModalDragManager to work */
-.draggable-modal.dragging {
+/* Draggable modal styles — visual feedback only, no positioning */
+.modal-content.dragging {
   z-index: 10001 !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: scale(1.02);
 }
 
 .draggable-header {

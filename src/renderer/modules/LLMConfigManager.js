@@ -935,6 +935,12 @@ class LLMConfigManager {
   showConfigModal() {
     this.hideOptionsDropdown();
     this.loadConfigurationToUI();
+
+    // Reset drag position so modal re-centers on open
+    if (window.modalDragManager) {
+      window.modalDragManager.resetPosition('#llmConfigModal');
+    }
+
     document.getElementById('llmConfigModal').classList.add('show');
 
     // Ensure no element has initial focus to prevent blue scrollbar

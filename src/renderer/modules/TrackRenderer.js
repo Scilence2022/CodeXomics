@@ -11159,6 +11159,11 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       }
     }
 
+    // Reset any drag inline styles so the modal re-centers on open
+    if (window.modalDragManager) {
+      window.modalDragManager.resetPosition('#trackSettingsModal');
+    }
+
     // Load track-specific settings
     this.loadTrackSpecificSettings(trackType, modal, fileId);
 
@@ -11908,7 +11913,7 @@ This action cannot be undone.`;
   createTrackSettingsModal() {
     const modal = document.createElement('div');
     modal.id = 'trackSettingsModal';
-    modal.className = 'modal draggable-modal';
+    modal.className = 'modal';
     modal.innerHTML = `
             <div class="modal-content resizable resizable-modal-content" style="max-width: 700px;">
                 <div class="modal-header">
@@ -13300,6 +13305,12 @@ This action cannot be undone.`;
       // Render canvas previews after the modal is in the DOM
       requestAnimationFrame(() => this.renderGlyphLegendPreviews(modal));
     }
+
+    // Reset any drag inline styles so the modal re-centers on open
+    if (window.modalDragManager) {
+      window.modalDragManager.resetPosition('#featureGlyphLegendModal');
+    }
+
     modal.classList.add('show');
   }
 

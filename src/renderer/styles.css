@@ -11834,14 +11834,15 @@ input:checked+.slider:before {
 }
 
 .draggable-modal {
-  position: relative;
-  transition: transform 0.2s ease;
+  /* No special positioning needed — the base .modal class already provides
+     position: fixed; display: flex; align-items: center; justify-content: center.
+     The .draggable-modal class is only used as a marker for drag/resize logic. */
 }
 
-.draggable-modal.dragging {
-  z-index: 10001;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+.modal-content.dragging {
   transform: scale(1.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 10001;
 }
 
 .draggable-header {
@@ -12684,18 +12685,14 @@ input:checked+.slider:before {
 }
 
 .draggable-modal {
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  z-index: 10000 !important;
-  transition: transform 0.2s ease;
+  /* No special positioning — base .modal provides flex centering.
+     Kept as a marker class for drag/resize identification only. */
 }
 
-.draggable-modal.dragging {
+.modal-content.dragging {
   z-index: 10001 !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
-  transform: scale(1.02) !important;
+  transform: scale(1.02);
 }
 
 .draggable-header {
@@ -12803,27 +12800,8 @@ input:checked+.slider:before {
   max-width: 90vw !important;
   height: auto !important;
   min-height: 500px !important;
-}
-
-#trackSettingsModal.draggable-modal {
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  z-index: 10000 !important;
-  display: none;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-#trackSettingsModal.draggable-modal.show {
-  display: flex !important;
-}
-
-#trackSettingsModal.draggable-modal .modal-content {
-  position: relative !important;
   margin: 0 !important;
   min-width: 600px !important;
-  min-height: 400px !important;
 }
 
 #trackSettingsModal .modal-content.resizable {
@@ -14234,15 +14212,9 @@ input:checked+.slider:before {
    DRAGGABLE AND RESIZABLE MODAL STYLES
    ===================================================== */
 
-  /* Draggable modal styling */
-  .draggable-modal {
-    position: fixed !important;
-  }
-
+  /* Draggable modal styling — marker class only, no positioning overrides */
   .draggable-modal .modal-content {
-    position: relative;
-    margin: 0;
-    transform: none;
+    /* position and transform managed by ModalDragManager during drag */
   }
 
   .draggable-header {
@@ -14400,12 +14372,7 @@ input:checked+.slider:before {
   }
 
   /* Specific styling for General Settings and Action List modals */
-  #generalSettingsModal.draggable-modal,
-  #actionListModal.draggable-modal {
-    top: 50px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
+  /* No transform-based positioning — flex centering handles it */
 
   #generalSettingsModal .modal-content,
   #actionListModal .modal-content {

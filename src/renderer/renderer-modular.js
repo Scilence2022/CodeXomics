@@ -1155,6 +1155,11 @@ class GenomeBrowser {
       // Setup modal event listeners if not already done
       this.setupMCPModalListeners();
 
+      // Reset drag position so modal re-centers on open
+      if (window.modalDragManager) {
+        window.modalDragManager.resetPosition('#mcpSettingsModal');
+      }
+
       // Show modal
       modal.classList.add('show');
     }
@@ -1224,6 +1229,11 @@ class GenomeBrowser {
         } catch (error) {
           console.error('❌ [GeneralSettings] Failed to create GeneralSettingsManager:', error);
         }
+      }
+
+      // Reset drag position so modal re-centers on open
+      if (window.modalDragManager) {
+        window.modalDragManager.resetPosition('#generalSettingsModal');
       }
 
       // Show modal

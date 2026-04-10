@@ -413,19 +413,19 @@ class ChatBoxSettingsManager {
     const resetPositionBtn = modal.querySelector('.reset-position-btn');
     if (resetPositionBtn) {
       resetPositionBtn.addEventListener('click', () => {
-        const modalContent = modal.querySelector('.modal-content');
-        if (modalContent) {
-          modalContent.style.position = 'fixed';
-          modalContent.style.transform = 'translate(-50%, -50%)';
-          modalContent.style.top = '50%';
-          modalContent.style.left = '50%';
-          modalContent.style.margin = '0';
+        if (window.modalDragManager) {
+          window.modalDragManager.resetPosition('#chatboxSettingsModal');
         }
       });
     }
 
     // Populate current settings
     this.populateSettingsForm(modal);
+
+    // Reset any drag inline styles so the modal re-centers on open
+    if (window.modalDragManager) {
+      window.modalDragManager.resetPosition('#chatboxSettingsModal');
+    }
 
     // Show modal with proper positioning
     modal.style.display = 'block';

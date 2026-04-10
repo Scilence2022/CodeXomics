@@ -1,11 +1,14 @@
 /**
  * ModalDragManager - Makes modals draggable and enhances their UX
+ *
+ * All modals use the same base .modal CSS (position: fixed; display: flex;
+ * align-items: center; justify-content: center) for centering. When dragging
+ * starts, we pin the .modal-content to its current visual position using
+ * position: fixed so it can be freely moved with the mouse.
  */
 class ModalDragManager {
   constructor() {
     this.draggedElement = null;
-    this.startX = 0;
-    this.startY = 0;
     this.offsetX = 0;
     this.offsetY = 0;
     this.isDragging = false;
@@ -15,7 +18,6 @@ class ModalDragManager {
   }
 
   initializeEventListeners() {
-    // Handle mouse events for dragging
     document.addEventListener('mousedown', e => this.handleMouseDown(e));
     document.addEventListener('mousemove', e => this.handleMouseMove(e));
     document.addEventListener('mouseup', e => this.handleMouseUp(e));
@@ -66,7 +68,6 @@ class ModalDragManager {
     const modalBody = modalContent.querySelector('.modal-body');
     if (!modalBody) return;
 
-    // Check for specific management interfaces
     const isPluginManagement = modalContent.querySelector('.plugin-management-tabs');
     const isMCPSettings = modalContent.querySelector('.mcp-servers-section');
     const isLLMConfig = modalContent.querySelector('.llm-provider-tabs');
@@ -76,7 +77,6 @@ class ModalDragManager {
       modalContent.classList.add('large');
     }
 
-    // For very content-heavy modals
     if (isPluginManagement && modalContent.querySelectorAll('.tab-content').length > 2) {
       modalContent.classList.remove('large');
       modalContent.classList.add('extra-large');
@@ -108,12 +108,17 @@ class ModalDragManager {
     this.isDragging = true;
     this.draggedElement = modalContent;
 
-    // Get current position
+    // Get current visual position
     const rect = modalContent.getBoundingClientRect();
-    this.startX = rect.left;
-    this.startY = rect.top;
-    this.offsetX = e.clientX - this.startX;
-    this.offsetY = e.clientY - this.startY;
+    this.offsetX = e.clientX - rect.left;
+    this.offsetY = e.clientY - rect.top;
+
+    // Pin the element to its current visual position using fixed positioning.
+    // This takes it out of the flex-centered flow so we can freely position it.
+    modalContent.style.position = 'fixed';
+    modalContent.style.left = `${rect.left}px`;
+    modalContent.style.top = `${rect.top}px`;
+    modalContent.style.margin = '0';
 
     // Add visual feedback
     modalContent.classList.add('dragging');
@@ -139,17 +144,14 @@ class ModalDragManager {
     const constrainedY = Math.max(0, Math.min(newY, viewportHeight - modalRect.height));
 
     // Apply position
-    this.draggedElement.style.position = 'fixed';
     this.draggedElement.style.left = `${constrainedX}px`;
     this.draggedElement.style.top = `${constrainedY}px`;
-    this.draggedElement.style.margin = '0';
-    this.draggedElement.style.transform = 'none';
   }
 
   handleMouseUp(e) {
     if (!this.isDragging) return;
 
-    // Clean up
+    // Clean up visual feedback
     if (this.draggedElement) {
       this.draggedElement.classList.remove('dragging');
     }
@@ -170,6 +172,7 @@ class ModalDragManager {
 
     if (!modalContent) return;
 
+    // Clear all drag-related inline styles so the modal re-centers via CSS
     modalContent.style.position = '';
     modalContent.style.left = '';
     modalContent.style.top = '';
@@ -201,7 +204,6 @@ class ModalDragManager {
     ];
 
     managementModals.forEach(selector => {
-      // Use setTimeout to ensure DOM is ready
       setTimeout(() => {
         this.makeDraggable(selector);
       }, 100);
@@ -226,7 +228,6 @@ class ModalDragManager {
       this.resetPosition(modalSelector);
     });
 
-    // Insert before close button
     const closeBtn = modalHeader.querySelector('.modal-close');
     if (closeBtn) {
       modalHeader.insertBefore(resetBtn, closeBtn);

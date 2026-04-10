@@ -4341,6 +4341,10 @@ class ActionManager {
     this.updateActionListUI();
     const modal = document.getElementById('actionListModal');
     if (modal) {
+      // Reset drag position so modal re-centers on open
+      if (window.modalDragManager) {
+        window.modalDragManager.resetPosition('#actionListModal');
+      }
       modal.classList.add('show');
     }
   }

@@ -2256,6 +2256,12 @@ class NavigationManager {
     const modal = document.getElementById('searchSettingsModal');
     if (modal) {
       this.loadSearchSettings();
+
+      // Reset drag position so modal re-centers on open
+      if (window.modalDragManager) {
+        window.modalDragManager.resetPosition('#searchSettingsModal');
+      }
+
       modal.classList.add('show');
 
       // Make modal draggable using ModalDragManager
