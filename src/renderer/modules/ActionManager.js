@@ -1845,6 +1845,7 @@ class ActionManager {
    * @returns {Promise<Object>} Execution result
    */
   async executeAllActionsInternal(options = {}) {
+    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 入口 | options=${JSON.stringify(options)}`);
     if (this.isExecuting) {
       this.genomeBrowser.showNotification('Actions are already executing', 'warning');
       return {
@@ -1969,12 +1970,65 @@ class ActionManager {
         writes: proxyStats.writes,
       });
 
-      // Step 5: Generate comprehensive GBK file with full history
+      // Step 5: Resolve save file path and show dialog if needed (before generating GBK)
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 调用resolveSaveFilePath前 | saveFile=${options.saveFile} | filename=${options.filename} | auto_save=${options.auto_save} | executionId=${executionId}`);
+      let resolvedSaveFile = this.resolveSaveFilePath({
+        saveFile: options.saveFile,
+        filename: options.filename,
+        auto_save: options.auto_save,
+        executionId,
+      });
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal resolveSaveFilePath返回 | resolvedSaveFile=${resolvedSaveFile}`);
+
+      // If no path resolved (no auto_save, no saveFile), show interactive dialog
+      if (!resolvedSaveFile) {
+        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal resolvedSaveFile为null → 准备弹窗`);
+        const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
+        let defaultDirectory = null;
+        const currentFile = this.genomeBrowser.fileManager?.currentFile;
+        if (currentFile && currentFile.path && typeof require !== 'undefined') {
+          const path = require('path');
+          defaultDirectory = path.dirname(currentFile.path);
+        }
+        const defaultPath = defaultDirectory
+          ? require('path').join(defaultDirectory, baseFilename)
+          : baseFilename;
+
+        if (window.electronAPI && window.electronAPI.showSaveDialog) {
+          try {
+            const dialogResult = await window.electronAPI.showSaveDialog({
+              title: 'Save Modified Genome as GenBank File',
+              defaultPath,
+              filters: [
+                { name: 'GenBank Files', extensions: ['gbk', 'gb', 'genbank'] },
+                { name: 'All Files', extensions: ['*'] },
+              ],
+            });
+            if (!dialogResult.canceled && dialogResult.filePath) {
+              resolvedSaveFile = dialogResult.filePath;
+              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 弹窗选择路径 | resolvedSaveFile=${resolvedSaveFile}`);
+            } else {
+              console.log(`⚠️ [ActionManager] Save dialog cancelled`);
+              return {
+                success: false,
+                message: 'Save dialog cancelled by user',
+                executedActions: 0,
+                totalActions: this.actions.length,
+              };
+            }
+          } catch (error) {
+            console.warn('⚠️ [ActionManager] Save dialog failed:', error);
+          }
+        }
+      }
+
+      // Step 6: Generate comprehensive GBK file with full history
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 调用generateComprehensiveGBK | resolvedSaveFile=${resolvedSaveFile}`);
       const gbkResult = await this.generateComprehensiveGBK(
         executionActionsCopy,
         executionGenomeDataProxy,
         executionId,
-        options.saveFile
+        resolvedSaveFile
       );
 
       this.genomeBrowser.showNotification(`All ${pendingActionsCopy.length} actions executed successfully`, 'success');
@@ -2360,6 +2414,7 @@ class ActionManager {
    */
   async generateComprehensiveGBK(executionActionsCopy, executionGenomeData, executionId, saveFile) {
     try {
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 入口 | saveFile=${saveFile} | executionId=${executionId}`);
       console.log(`📄 [ActionManager] Generating comprehensive GBK file with action history`);
 
       if (!this.genomeBrowser.exportManager) {
@@ -2402,69 +2457,38 @@ class ActionManager {
         options: {},
       });
 
-      // Determine default save directory from currently opened file
-      let defaultDirectory = null;
-      const currentFile = this.genomeBrowser.fileManager?.currentFile;
+      // ── Save logic ──
+      // saveFile is expected to be a fully resolved absolute path (or null).
+      // Path resolution is handled by resolveSaveFilePath() before this function is called.
+      // This function does NOT show any dialogs — it only writes to the given path.
 
-      if (currentFile && currentFile.path) {
-        const path = require('path');
-        defaultDirectory = path.dirname(currentFile.path);
-        console.log(`📁 [ActionManager] Using current file directory as default: ${defaultDirectory}`);
-      }
-
-      // Resolve saveFile path if provided (support relative paths)
-      let resolvedSaveFile = saveFile;
-      if (saveFile && typeof require !== 'undefined') {
-        const path = require('path');
-        if (!path.isAbsolute(saveFile)) {
-          const cwd = (window.chatManager && typeof window.chatManager.getCurrentWorkingDirectory === 'function')
-            ? window.chatManager.getCurrentWorkingDirectory()
-            : process.cwd();
-          resolvedSaveFile = path.resolve(cwd, saveFile);
-          console.log(`📁 [ActionManager] Resolved relative saveFile path: ${saveFile} → ${resolvedSaveFile}`);
-        }
-      }
-
-      // Save the comprehensive GBK file
       const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
-      const filename =
-        resolvedSaveFile || (defaultDirectory ? require('path').join(defaultDirectory, baseFilename) : baseFilename);
+      let finalFilePath = saveFile || baseFilename;
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 保存逻辑 | saveFile=${saveFile} | baseFilename=${baseFilename} | finalFilePath=${finalFilePath}`);
 
-      if (resolvedSaveFile) {
-
-        console.log(`📁 [ActionManager] GBK file name: ${resolvedSaveFile}`);
-        await this.saveTextFileToFile(genbankContent, resolvedSaveFile);
-        console.log(`📁 [ActionManager] GBK file saved to: ${resolvedSaveFile}`);
-      } else {
-        // Use Electron save dialog with default directory
-        if (window.electronAPI && window.electronAPI.showSaveDialog) {
-          try {
-            const result = await window.electronAPI.showSaveDialog({
-              title: 'Save Modified Genome as GenBank File',
-              defaultPath: filename, // This includes the full path if defaultDirectory exists
-              filters: [
-                { name: 'GenBank Files', extensions: ['gbk', 'gb', 'genbank'] },
-                { name: 'All Files', extensions: ['*'] },
-              ],
-            });
-
-            if (!result.canceled && result.filePath) {
-              await this.saveTextFileToFile(genbankContent, result.filePath);
-              console.log(`📁 [ActionManager] GBK file saved to: ${result.filePath}`);
-              // Update filename for return value
-              filename = result.filePath;
-            } else {
-              console.log(`⚠️ [ActionManager] Save dialog cancelled`);
-              return null;
-            }
-          } catch (error) {
-            console.warn('⚠️ [ActionManager] Electron save dialog failed, using fallback:', error);
-            this.downloadTextFile(genbankContent, baseFilename);
+      if (saveFile) {
+        // Direct write via writeFile IPC — no dialog, no prompt
+        if (window.electronAPI && window.electronAPI.writeFile) {
+          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用writeFile写入 | saveFile=${saveFile}`);
+          const result = await window.electronAPI.writeFile(saveFile, genbankContent);
+          if (result && result.success) {
+            console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK writeFile成功 | saveFile=${saveFile}`);
+          } else {
+            console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK writeFile失败 | saveFile=${saveFile} | error=${result?.error}`);
+            throw new Error(`Failed to save file to ${saveFile}: ${result?.error || 'unknown error'}`);
           }
         } else {
-          // Fallback to browser download
+          // Fallback: browser download (cannot write to specific path in browser)
+          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK writeFile不可用，fallback downloadTextFile | baseFilename=${baseFilename}`);
           this.downloadTextFile(genbankContent, baseFilename);
+          finalFilePath = baseFilename;
         }
+      } else {
+        // No saveFile provided — use browser download as fallback
+        // (Dialog interaction should be handled by the caller before reaching here)
+        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 无saveFile，fallback downloadTextFile | baseFilename=${baseFilename}`);
+        this.downloadTextFile(genbankContent, baseFilename);
+        finalFilePath = baseFilename;
       }
 
       console.log(`✅ [ActionManager] Comprehensive GBK file generated successfully`);
@@ -2472,8 +2496,8 @@ class ActionManager {
       return {
         success: true,
         genbankContent,
-        filename,
-        file_path: filename,
+        filename: finalFilePath,
+        file_path: finalFilePath,
       };
     } catch (error) {
       console.error('❌ [ActionManager] Error generating comprehensive GBK:', error);
@@ -2634,6 +2658,84 @@ class ActionManager {
   }
 
   /**
+   * Resolve the final save file path for execute_actions.
+   * Centralizes all path resolution logic so callers only deal with a final absolute path (or null).
+   *
+   * @param {Object} options
+   * @param {string|null} options.saveFile - Direct file path (highest priority)
+   * @param {string|null} options.filename - Filename or path (used when auto_save=true)
+   * @param {boolean} options.auto_save - Whether auto_save mode is enabled
+   * @param {string} options.executionId - Execution ID for generating default filename
+   * @returns {string|null} Resolved absolute file path, or null if user interaction (dialog) is needed
+   */
+  resolveSaveFilePath({ saveFile = null, filename = null, auto_save = false, executionId = null } = {}) {
+    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath 入口 | saveFile=${saveFile} | filename=${filename} | auto_save=${auto_save} | executionId=${executionId}`);
+    // Priority 1: saveFile already provided — resolve relative to absolute if needed
+    if (saveFile) {
+      if (typeof require !== 'undefined') {
+        const path = require('path');
+        if (!path.isAbsolute(saveFile)) {
+          const cwd = this._getCWD();
+          const resolved = path.resolve(cwd, saveFile);
+          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority1 相对路径→绝对路径 | saveFile=${saveFile} | cwd=${cwd} | resolved=${resolved}`);
+          return resolved;
+        }
+      }
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority1 绝对路径 | saveFile=${saveFile}`);
+      return saveFile;
+    }
+
+    // Priority 2: auto_save with filename — resolve to absolute path
+    if (auto_save && filename) {
+      if (typeof require !== 'undefined') {
+        const path = require('path');
+        if (!path.isAbsolute(filename)) {
+          const cwd = this._getCWD();
+          const resolved = path.resolve(cwd, filename);
+          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority2 相对路径→绝对路径 | filename=${filename} | cwd=${cwd} | resolved=${resolved}`);
+          return resolved;
+        }
+      }
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority2 绝对路径 | filename=${filename}`);
+      return filename;
+    }
+
+    // Priority 3: auto_save without filename — auto-generate default path in CWD
+    if (auto_save) {
+      const id = executionId || `execution_${Date.now()}`;
+      const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${id}.gbk`;
+      if (typeof require !== 'undefined') {
+        const path = require('path');
+        const resolved = path.resolve(this._getCWD(), baseFilename);
+        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority3 自动生成路径 | baseFilename=${baseFilename} | cwd=${this._getCWD()} | resolved=${resolved}`);
+        return resolved;
+      }
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority3 无require | baseFilename=${baseFilename}`);
+      return baseFilename;
+    }
+
+    // No auto_save, no saveFile, no filename → return null (caller should show dialog)
+    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath 无匹配条件 → 返回null（需要弹窗）`);
+    return null;
+  }
+
+  /**
+   * Get current working directory
+   * @returns {string}
+   * @private
+   */
+  _getCWD() {
+    if (window.chatManager && typeof window.chatManager.getCurrentWorkingDirectory === 'function') {
+      const cwd = window.chatManager.getCurrentWorkingDirectory();
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] _getCWD | source=chatManager | cwd=${cwd}`);
+      return cwd;
+    }
+    const fallback = typeof process !== 'undefined' && process.cwd ? process.cwd() : '/tmp';
+    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] _getCWD | source=fallback | cwd=${fallback}`);
+    return fallback;
+  }
+
+  /**
    * Save text content directly to a file path without showing save dialog
    * @param {string} content - File content
    * @param {string} filePath - Full file path where to save the content
@@ -2641,9 +2743,11 @@ class ActionManager {
    */
   async saveTextFileToFile(content, filePath) {
     try {
+      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 入口 | filePath=${filePath}`);
       // Use the direct file write API (no dialog) - this is the correct API for programmatic saves
       // NOTE: Do NOT use window.electronAPI.saveFile() - it always shows a save dialog!
       if (window.electronAPI && window.electronAPI.writeFile) {
+        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用writeFile | filePath=${filePath}`);
         const result = await window.electronAPI.writeFile(filePath, content);
         if (result && result.success) {
           console.log(`📁 [ActionManager] File saved successfully to: ${filePath}`);
@@ -6103,56 +6207,29 @@ class ActionManager {
   }
 
   async functionExecuteActions(params) {
-    // This method is now a simple wrapper that delegates to the actual executeAllActions
-    // The actual implementation is at line ~1528
-    const { auto_save = false, filename } = params || {};
+    // Delegate to executeAllActionsInternal with raw params.
+    // Path resolution is handled by resolveSaveFilePath() inside executeAllActionsInternal.
+    const { auto_save = false, filename, saveFile, confirm } = params || {};
 
-    // Helper to get CWD from ChatManager or fallback
-    const getCWD = () => {
-      if (window.chatManager && typeof window.chatManager.getCurrentWorkingDirectory === 'function') {
-        return window.chatManager.getCurrentWorkingDirectory();
-      }
-      return process.cwd();
-    };
+    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] functionExecuteActions 入口 | auto_save=${auto_save} | filename=${filename} | saveFile=${saveFile} | confirm=${confirm}`);
 
-    // Build options for executeAllActionsInternal
     const options = {};
-
-    // If auto_save is true, set saveFile to filename (or default) to bypass save dialog
+    if (saveFile) options.saveFile = saveFile;
+    if (filename) options.filename = filename;
     if (auto_save) {
-      if (filename) {
-        // Resolve relative paths against CWD
-        let resolvedPath = filename;
-        if (typeof require !== 'undefined') {
-          const path = require('path');
-          if (!path.isAbsolute(filename)) {
-            resolvedPath = path.resolve(getCWD(), filename);
-          }
-        }
-        options.saveFile = resolvedPath;
-      } else {
-        // Auto-generate a filename in CWD
-        const executionId = `execution_${Date.now()}`;
-        const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
-        if (typeof require !== 'undefined') {
-          const path = require('path');
-          options.saveFile = path.resolve(getCWD(), baseFilename);
-        } else {
-          options.saveFile = baseFilename;
-        }
-      }
-      // auto_save implies confirm=true (auto-resolve conflicts)
-      options.confirm = true;
+      options.auto_save = true;
+      options.confirm = true; // auto_save implies auto-resolve conflicts
     }
+    if (confirm) options.confirm = true;
+
+    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] functionExecuteActions 构建options | options=${JSON.stringify(options)}`);
 
     const result = await this.executeAllActionsInternal(options);
 
-    // If the result is successful, return it directly
     if (result.success) {
       return result;
     }
 
-    // If it failed, throw an error with the message
     throw new Error(result.message || 'Failed to execute actions');
   }
 
@@ -6257,52 +6334,15 @@ class ActionManager {
   }
 
   async executeAllActions(params) {
-    // Handle auto_save and filename parameters (similar to functionExecuteActions)
+    // Delegate to executeAllActionsInternal with raw params.
+    // Path resolution is handled by resolveSaveFilePath() inside executeAllActionsInternal.
+    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActions 入口 | params=${JSON.stringify(params)}`);
+    const options = { ...(params || {}) };
     if (params && params.auto_save) {
-      const { filename, saveFile } = params;
-
-      // Helper to get CWD
-      const getCWD = () => {
-        if (window.chatManager && typeof window.chatManager.getCurrentWorkingDirectory === 'function') {
-          return window.chatManager.getCurrentWorkingDirectory();
-        }
-        return typeof process !== 'undefined' && process.cwd ? process.cwd() : '/tmp';
-      };
-
-      const options = {};
-
-      if (saveFile) {
-        // Direct save file path
-        options.saveFile = saveFile;
-      } else if (filename) {
-        // Resolve relative paths
-        let resolvedPath = filename;
-        if (typeof require !== 'undefined') {
-          const path = require('path');
-          if (!path.isAbsolute(filename)) {
-            resolvedPath = path.resolve(getCWD(), filename);
-          }
-        }
-        options.saveFile = resolvedPath;
-      } else {
-        // Auto-generate filename
-        const executionId = `execution_${Date.now()}`;
-        const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
-        if (typeof require !== 'undefined') {
-          const path = require('path');
-          options.saveFile = path.resolve(getCWD(), baseFilename);
-        } else {
-          options.saveFile = baseFilename;
-        }
-      }
-
-      // auto_save implies confirm=true to skip conflict dialogs
-      options.confirm = true;
-      return await this.executeAllActionsInternal(options);
+      options.confirm = true; // auto_save implies auto-resolve conflicts
     }
-
-    // Pass through to internal (handles saveFile directly)
-    return await this.executeAllActionsInternal(params || {});
+    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActions 构建options | options=${JSON.stringify(options)}`);
+    return await this.executeAllActionsInternal(options);
   }
 
   async getActionList(params) {

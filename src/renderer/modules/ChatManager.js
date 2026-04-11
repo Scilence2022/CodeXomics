@@ -6970,25 +6970,10 @@ ${coreTools}
         case 'replace_sequence':
           return await window.actionManager.replaceSequence(parameters);
         case 'execute_actions':
-          // Extract options for executeAllActions
-          // Supports: auto_save (boolean), filename (string), saveFile (string - direct path)
-          const execOptions = {};
-          if (parameters) {
-            if (parameters.saveFile) {
-              // Direct save file path provided
-              execOptions.saveFile = parameters.saveFile;
-            } else if (parameters.auto_save) {
-              // auto_save=true - generate or use filename
-              execOptions.auto_save = true;
-              if (parameters.filename) {
-                execOptions.filename = parameters.filename;
-              }
-            }
-            if (parameters.confirm) {
-              execOptions.confirm = true;
-            }
-          }
-          return await window.actionManager.executeAllActions(execOptions);
+          // Pass parameters directly — path resolution is handled by
+          // resolveSaveFilePath() inside executeAllActionsInternal
+          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] ChatManager.executeActionTool execute_actions | parameters=${JSON.stringify(parameters)}`);
+          return await window.actionManager.executeAllActions(parameters);
         case 'get_action_list':
           return await window.actionManager.getActionList(parameters);
         case 'clear_actions':
