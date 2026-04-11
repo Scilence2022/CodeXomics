@@ -82,6 +82,10 @@ class ProteinService {
         pdbId: entry.identifier,
         pdbUrl: `https://www.rcsb.org/structure/${entry.identifier}`,
         downloadUrl: `https://files.rcsb.org/download/${entry.identifier}.pdb`,
+        title: entry.identifier, // Use PDB ID as title since API doesn't return title
+        organism: 'N/A', // RCSB API doesn't return organism in search results
+        method: 'N/A', // RCSB API doesn't return method in search results
+        resolution: 'N/A', // RCSB API doesn't return resolution in search results
       }));
 
       if (results.length > 0) {
@@ -364,7 +368,7 @@ class ProteinService {
     element.className = 'protein-result-item';
     
     // Unify variables
-    const titleOrName = isAlphaFold ? result.proteinName : result.title;
+    const titleOrName = isAlphaFold ? result.proteinName : `PDB Structure ${result.pdbId}`;
     const primaryId = isAlphaFold ? result.uniprotId : result.pdbId;
     const structureUrl = isAlphaFold ? result.alphaFoldUrl : result.pdbUrl;
     const urlLabel = isAlphaFold ? 'AlphaFold Page' : 'PDB Page';
