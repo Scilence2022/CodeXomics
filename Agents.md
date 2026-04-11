@@ -15,16 +15,40 @@ This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor
 - `src/renderer/modules/` – Core application logic organized as ES6 classes and modules.
   - `ChatManager.js`, `MultiAgentSystem.js` – Central orchestration for in-app AI interactions.
   - `TrackRenderer.js`, `CanvasSequenceRenderer.js` – Visualization components heavily relying on SVG/Canvas.
-- `src/tools_registry/` – **The Dynamic Tool Registry**. When adding new capabilities for the in-app AI or MCP server, register tools structurally here. Do **not** hardcode specific tool JSON descriptions directly in UI components.
+- `tools_registry/` – **The Dynamic Tool Registry** (at project root, NOT `src/tools_registry/`). When adding new capabilities for the in-app AI or MCP server, register tools structurally here. Do **not** hardcode specific tool JSON descriptions directly in UI components.
+  - `tools_registry/system_integration.js` – Core orchestrator: merges built-in, registry, MCP, and plugin tools; deduplicates by name; generates the system prompt.
+  - `tools_registry/builtin_tools_integration.js` – **Authoritative mapping** of built-in tool names to their ChatManager methods and categories (`builtInToolsMap`).
+  - `tools_registry/registry_manager.js` – Loads YAML tool definitions and generates tool lists based on query relevance.
+  - `tools_registry/<category>/` – YAML schema files per category (navigation, sequence_editing, file_operations, etc.).
 - `src/mcp-tools/` and `src/mcp-server.js` – Implementations of the Model Context Protocol (MCP) server.
 - `src/renderer/modules/Agents/` – The internal Multi-Agent System logic.
+- `src/renderer/modules/chat/services/` – Extracted service classes for tool execution (`ToolExecutionService.js`, `FileOperationService.js`, `BlastService.js`, etc.).
 - `docs/` – Markdown documentation managed by MkDocs.
 
 ## 3. Core Architectural Patterns
 ### Dynamic Tool Registry Integration
-Rather than statically defining tools inside `ChatManager.js`, CodeXomics uses a dynamic registry (`src/tools_registry/system_integration.js`).
-- **Rule**: When tasked with creating a "new AI tool", create the schema in the `src/tools_registry/` subsystem inside the correct category folder. Wire the physical execution block in the related service class (e.g. `src/renderer/modules/chat/services/`) and ensure it's exposed properly.
+Rather than statically defining tools inside `ChatManager.js`, CodeXomics uses a dynamic registry (`tools_registry/system_integration.js`). The system prompt is generated per-query by merging tools from 4 sources, deduplicating by tool name, and classifying each tool as "Directly Available (Built-in)" or "Extended".
+
+**Tool Classification Architecture:**
+
+The authoritative source for whether a tool is "Built-in" is the `builtInToolsMap` in `tools_registry/builtin_tools_integration.js`. This Map contains every tool that can execute locally in the browser via `ChatManager.executeLocalTool()` or `ToolExecutionService`. When the system prompt is generated:
+1. Tools whose names exist in `builtInToolsMap` are **always** classified as "Directly Available (Built-in)", regardless of whether they came from keyword detection, the YAML registry, or the MCP server.
+2. Tools not in `builtInToolsMap` are classified as "Extended" (e.g., third-party MCP tools, dynamic plugin tools).
+3. Deduplication ensures each tool name appears only once in the system prompt, with built-in source taking priority over registry and MCP sources.
+
+**Adding a New Tool requires ALL of these steps:**
+
+1. **Create the YAML schema** in `tools_registry/<category>/<tool_name>.yaml` – Define name, description, parameters (JSON Schema format), keywords, sample_usages, and relationships.
+2. **Add to `builtInToolsMap`** in `tools_registry/builtin_tools_integration.js` – Map the tool name to its ChatManager method name and category. This is what makes the tool show up as "Built-in" in the system prompt. Without this entry, the tool will be incorrectly classified as "Extended/External".
+3. **Add keyword matching rules** in `analyzeBuiltInToolRelevance()` (same file) – Add regex patterns so the tool is detected when users mention relevant keywords. Without this, the tool won't be included in dynamic (per-query) prompts even though it exists in the registry.
+4. **Wire the execution** in `ChatManager.executeLocalTool()` or the appropriate service class (`src/renderer/modules/chat/services/`) – Add the actual function call that performs the tool's operation.
+5. **MCP Server parity** – If the tool should also be available to external MCP clients (e.g., Claude Desktop), add the corresponding tool definition in `src/mcp-tools/` and ensure it's registered in `src/mcp-server.js`.
+
+**Critical Rules:**
 - **Rule**: You must keep the built-in ChatBox tool capabilities (via `tools_registry/` descriptors) and the MCP Server schemas (via `src/mcp-tools/`) updated synchronously to ensure functional parity across both access methods.
+- **Rule**: Never mark a tool as `is_external: true` in `analyzeBuiltInToolRelevance()` if the tool is actually a local built-in tool (exists in `ChatManager.executeLocalTool()`). All built-in tools should be detected as built-in directly.
+- **Rule**: When a tool exists in both `builtInToolsMap` and the MCP server, it will be classified as Built-in with `alsoAvailableViaMCP: true`. The system prompt will note it as "(also available via MCP)".
+- **Rule**: Built-in tool parameter descriptions are enriched from the YAML registry definitions. If the YAML file has detailed parameter schemas, those will be used in the system prompt instead of empty `{ properties: {} }`.
 
 ### Internal Multi-Agent Routing
 CodeXomics runs its own internal network of specialized agents (`NavigationAgent`, `DataAgent`, `CoordinatorAgent`, etc.). 
