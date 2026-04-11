@@ -73,58 +73,72 @@ class AutomaticSimpleSuite {
    * 在测试开始前检测并删除目标导出文件，避免判断错误
    */
   async cleanupExportFiles() {
-    const exportFiles = [
-      'exported_sequences.fasta',
-      'exported_data.gbk',
-      'exported_annotations.gff3',
-      'exported_features.bed',
-      'exported_cds.fasta',
-      'exported_proteins.fasta',
-      'exported_region.fasta',
-    ];
+    const exportedFilesDir = this.buildFilePath('exported_files');
 
     console.log('🧹 [AutomaticSimpleSuite] Starting export file cleanup...');
+    console.log(`🔍 [AutomaticSimpleSuite] Checking directory: ${exportedFilesDir}`);
 
-    for (const filename of exportFiles) {
+    // Method 1: Try Node.js fs module if available
+    if (typeof require !== 'undefined') {
+      const fs = require('fs');
       try {
-        const filePath = this.buildFilePath(filename);
-        console.log(`🔍 [AutomaticSimpleSuite] Checking if ${filePath} exists...`);
-
-        // Method 1: Try Node.js fs module if available
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-            console.log(`✅ [AutomaticSimpleSuite] Deleted existing file: ${filePath}`);
-          } else {
-            console.log(`ℹ️  [AutomaticSimpleSuite] File does not exist: ${filePath}`);
-          }
-        }
-        // Method 2: Try via ChatManager's file operations if available
-        else if (window.chatManager && window.chatManager.deleteFile) {
-          try {
-            const result = await window.chatManager.deleteFile({ filePath: filePath });
-            if (result && result.success) {
-              console.log(`✅ [AutomaticSimpleSuite] Deleted via ChatManager: ${filePath}`);
-            } else {
-              console.log(`ℹ️  [AutomaticSimpleSuite] File may not exist or delete failed: ${filePath}`);
-            }
-          } catch (error) {
-            if (error.message && error.message.includes('not found')) {
-              console.log(`ℹ️  [AutomaticSimpleSuite] File does not exist: ${filePath}`);
-            } else {
-              console.warn(`⚠️  [AutomaticSimpleSuite] Error checking/deleting ${filePath}:`, error.message);
+        // Check if directory exists
+        if (fs.existsSync(exportedFilesDir)) {
+          // Read all files in the directory
+          const files = fs.readdirSync(exportedFilesDir);
+          
+          // Delete each file
+          for (const file of files) {
+            const filePath = `${exportedFilesDir}/${file}`;
+            // Only delete files, not subdirectories
+            if (fs.statSync(filePath).isFile()) {
+              fs.unlinkSync(filePath);
+              console.log(`✅ [AutomaticSimpleSuite] Deleted file: ${filePath}`);
             }
           }
-        }
-        // Method 3: Log warning if no deletion method available
-        else {
-          console.warn(`⚠️  [AutomaticSimpleSuite] No file deletion method available for ${filePath}`);
+          console.log(`✅ [AutomaticSimpleSuite] Cleaned up ${files.length} files in ${exportedFilesDir}`);
+        } else {
+          console.log(`ℹ️  [AutomaticSimpleSuite] Directory does not exist: ${exportedFilesDir}`);
         }
       } catch (error) {
-        console.warn(`⚠️  [AutomaticSimpleSuite] Failed to cleanup ${filename}:`, error.message);
-        // Continue with other files even if one fails
+        console.warn(`⚠️  [AutomaticSimpleSuite] Error during directory cleanup: ${error.message}`);
       }
+    }
+    // Method 2: Try via ChatManager's file operations if available
+    else if (window.chatManager && window.chatManager.deleteFile) {
+      console.log(`ℹ️  [AutomaticSimpleSuite] Using ChatManager for cleanup (limited to specific files)`);
+      // Fallback to specific files if directory operations not available
+      const exportFiles = [
+        'exported_files/exported_sequences.fasta',
+        'exported_files/exported_data.gbk',
+        'exported_files/exported_annotations.gff3',
+        'exported_files/exported_features.bed',
+        'exported_files/exported_cds.fasta',
+        'exported_files/exported_proteins.fasta',
+        'exported_files/exported_region.fasta',
+      ];
+      
+      for (const filename of exportFiles) {
+        try {
+          const filePath = this.buildFilePath(filename);
+          const result = await window.chatManager.deleteFile({ filePath: filePath });
+          if (result && result.success) {
+            console.log(`✅ [AutomaticSimpleSuite] Deleted via ChatManager: ${filePath}`);
+          } else {
+            console.log(`ℹ️  [AutomaticSimpleSuite] File may not exist or delete failed: ${filePath}`);
+          }
+        } catch (error) {
+          if (error.message && error.message.includes('not found')) {
+            console.log(`ℹ️  [AutomaticSimpleSuite] File does not exist: ${filePath}`);
+          } else {
+            console.warn(`⚠️  [AutomaticSimpleSuite] Error checking/deleting ${filePath}:`, error.message);
+          }
+        }
+      }
+    }
+    // Method 3: Log warning if no deletion method available
+    else {
+      console.warn(`⚠️  [AutomaticSimpleSuite] No file deletion method available for ${exportedFilesDir}`);
     }
 
     console.log('✅ [AutomaticSimpleSuite] Export file cleanup completed');
