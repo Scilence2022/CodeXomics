@@ -3472,13 +3472,56 @@ class BenchmarkUI {
             `;
     }
 
-    // Display detailed results
+    // Display detailed results with filter options
     if (resultsContent) {
       resultsContent.innerHTML = `
-                <h3 style="color: var(--text-primary); margin-bottom: 15px;">📋 Detailed Results</h3>
-                ${results.testSuiteResults
-                  .map(
-                    suite => `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="color: var(--text-primary); margin: 0;">📋 Detailed Results</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="filterAll" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer;">All</button>
+                        <button id="filterPassed" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer;">Passed</button>
+                        <button id="filterFailed" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer;">Failed</button>
+                    </div>
+                </div>
+                <div id="filteredResults">
+                    ${this.renderFilteredResults(results, 'all')}
+                </div>
+            `;
+
+      // Add event listeners for filter buttons
+      document.getElementById('filterAll').addEventListener('click', () => {
+        document.getElementById('filteredResults').innerHTML = this.renderFilteredResults(results, 'all');
+      });
+
+      document.getElementById('filterPassed').addEventListener('click', () => {
+        document.getElementById('filteredResults').innerHTML = this.renderFilteredResults(results, 'passed');
+      });
+
+      document.getElementById('filterFailed').addEventListener('click', () => {
+        document.getElementById('filteredResults').innerHTML = this.renderFilteredResults(results, 'failed');
+      });
+    }
+  }
+
+  /**
+   * Render filtered results based on filter type
+   */
+  renderFilteredResults(results, filter) {
+    return results.testSuiteResults
+      .map(
+        suite => {
+          // Filter tests based on filter type
+          const filteredTests = suite.testResults.filter(test => {
+            if (filter === 'all') return true;
+            if (filter === 'passed') return test.success;
+            if (filter === 'failed') return !test.success;
+            return true;
+          });
+
+          // Skip suite if no tests match the filter
+          if (filteredTests.length === 0) return '';
+
+          return `
                     <div style="border: 1px solid var(--border-color); border-radius: 8px; margin: 15px 0; overflow: hidden;">
                         <div style="background: var(--bg-secondary); padding: 20px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -3491,7 +3534,7 @@ class BenchmarkUI {
                             </div>
                         </div>
                         <div style="padding: 20px; display: none;">
-                            ${suite.testResults
+                            ${filteredTests
                               .map(
                                 test => `
                                 <div style="padding: 12px; margin: 8px 0; border-radius: 6px; background: ${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid ${test.success ? '#28a745' : '#dc3545'};">
@@ -3511,11 +3554,10 @@ class BenchmarkUI {
                               .join('')}
                         </div>
                     </div>
-                `
-                  )
-                  .join('')}
-            `;
-    }
+                `;
+        }
+      )
+      .join('');
   }
 
   /**
@@ -4471,27 +4513,73 @@ class BenchmarkUI {
                             <div style="font-size: 24px; font-weight: bold;">\${Math.round(results.duration / 1000)}s</div>
                         </div>
                     </div>
-                    <h3>Test Suite Results</h3>
-                    \${results.testSuiteResults.map(suite => \`
-                        <div style="border: 1px solid var(--border-color); border-radius: 6px; margin: 10px 0; overflow: hidden;">
-                            <div style="background: var(--bg-secondary); padding: 15px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                                \${suite.suiteName} - \${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate
-                            </div>
-                            <div style="padding: 15px; display: none;">
-                                \${suite.testResults.map(test => \`
-                                    <div style="padding: 8px; margin: 5px 0; border-radius: 4px; background: \${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid \${test.success ? '#28a745' : '#dc3545'};">
-                                        <strong>\${test.testName}</strong><br>
-                                        <small>Score: \${test.score}/\${test.maxScore} | Duration: \${test.duration}ms</small>
-                                        \${test.errors.length > 0 ? \`<br><small style="color: #dc3545;">Errors: \${test.errors.join(', ')}</small>\` : ''}
-                                    </div>
-                                \`).join('')}
-                            </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>Test Suite Results</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="filterAll" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer;">All</button>
+                            <button id="filterPassed" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer;">Passed</button>
+                            <button id="filterFailed" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer;">Failed</button>
                         </div>
-                    \`).join('')}
+                    </div>
+                    <div id="filteredResults">
+                        \${this.renderFilteredResults(results, 'all')}
+                    </div>
                 \`;
+                
+                // Add event listeners for filter buttons
+                document.getElementById('filterAll').addEventListener('click', () => {
+                    document.getElementById('filteredResults').innerHTML = this.renderFilteredResults(results, 'all');
+                });
+
+                document.getElementById('filterPassed').addEventListener('click', () => {
+                    document.getElementById('filteredResults').innerHTML = this.renderFilteredResults(results, 'passed');
+                });
+
+                document.getElementById('filterFailed').addEventListener('click', () => {
+                    document.getElementById('filteredResults').innerHTML = this.renderFilteredResults(results, 'failed');
+                });
                 
                 // Enable export
                 document.getElementById('exportResults').disabled = false;
+            }
+
+            /**
+             * Render filtered results based on filter type
+             */
+            renderFilteredResults(results, filter) {
+                return results.testSuiteResults
+                    .map(
+                        suite => {
+                            // Filter tests based on filter type
+                            const filteredTests = suite.testResults.filter(test => {
+                                if (filter === 'all') return true;
+                                if (filter === 'passed') return test.success;
+                                if (filter === 'failed') return !test.success;
+                                return true;
+                            });
+
+                            // Skip suite if no tests match the filter
+                            if (filteredTests.length === 0) return '';
+
+                            return \`
+                                <div style="border: 1px solid var(--border-color); border-radius: 6px; margin: 10px 0; overflow: hidden;">
+                                    <div style="background: var(--bg-secondary); padding: 15px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                                        \${suite.suiteName} - \${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate
+                                    </div>
+                                    <div style="padding: 15px; display: none;">
+                                        \${filteredTests.map(test => \`
+                                            <div style="padding: 8px; margin: 5px 0; border-radius: 4px; background: \${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid \${test.success ? '#28a745' : '#dc3545'};">
+                                                <strong>\${test.testName}</strong><br>
+                                                <small>Score: \${test.score}/\${test.maxScore} | Duration: \${test.duration}ms</small>
+                                                \${test.errors.length > 0 ? \`<br><small style="color: #dc3545;">Errors: \${test.errors.join(', ')}</small>\` : ''}
+                                            </div>
+                                        \`).join('')}
+                                    </div>
+                                </div>
+                            \`;
+                        }
+                    )
+                    .join('');
             }
 
             showAbout() {
