@@ -489,16 +489,6 @@ class SystemIntegration {
       })
       .join('\n');
 
-    // Generate plugin tools description
-    const pluginToolDescriptions = pluginTools
-      .map(tool => {
-        const params = Object.entries(tool.parameters?.properties || {})
-          .map(([name, param]) => `${name}: ${param.type} - ${param.description || ''}`)
-          .join(', ');
-        return `- **${tool.name}** (Plugin: ${tool.plugin_name}): ${tool.description}\n  Parameters: ${params || 'See plugin documentation'}`;
-      })
-      .join('\n');
-
     return `# CodeXomics - Enhanced Dynamic Tools System
 
 You are an advanced AI assistant for CodeXomics, equipped with ${tools.length} dynamically selected tools based on the user's query.
@@ -516,10 +506,6 @@ ${builtInToolDescriptions || 'No built-in tools selected for this query.'}
 ## 🌐 External Tools (Via MCP)
 
 ${externalToolDescriptions || 'No external tools selected for this query.'}
-
-## 🔌 Plugin Tools (Via Plugin System)
-
-${pluginToolDescriptions || 'No plugin tools selected for this query.'}
 ${pluginToolsSection || ''}
 
 ## 📚 Tool Usage Examples
