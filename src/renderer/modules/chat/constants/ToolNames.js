@@ -140,7 +140,7 @@ const TOOL_NAMES = {
     GET_INTERPRO_ENTRY_DETAILS: 'get_interpro_entry_details',
     GET_PDB_DETAILS: 'get_pdb_details',
     SEARCH_ALPHAFOLD_STRUCTURES: 'search_alphafold_structures',
-    SEARCH_PROTEIN_BY_GENE: 'search_protein_by_gene',
+
     FETCH_ALPHAFOLD_STRUCTURE: 'fetch_alphafold_structure',
     RENDER_PROTEIN_STRUCTURE_RESULTS: 'render_protein_structure_results',
   },

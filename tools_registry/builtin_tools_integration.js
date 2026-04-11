@@ -185,12 +185,6 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
-    this.builtInToolsMap.set('search_protein_by_gene', {
-      method: 'searchProteinByGene',
-      category: 'protein',
-      type: 'built-in',
-      priority: 1,
-    });
 
     this.builtInToolsMap.set('search_interpro_entry', {
       method: 'searchInterProEntry',

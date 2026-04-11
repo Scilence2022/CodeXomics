@@ -161,7 +161,7 @@ class FunctionCallsOrganizer {
           'fetch_protein_structure',
           'search_pdb_structures', // New preferred name
           'search_alphafold_structures',
-          'search_protein_by_gene', // Alias for search_alphafold_structures
+
           'fetch_alphafold_structure',
           'get_pdb_details',
         ],

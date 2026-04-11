@@ -1,5 +1,5 @@
 name: insert_sequence
-version: 1.0.0
+version: 1.1.0
 description: Insert a DNA sequence at specified position
 category: sequence_editing
 keywords:
@@ -24,31 +24,42 @@ parameters:
       default: default
     chromosome:
       type: string
-      description: Chromosome identifier
+      description: Chromosome identifier (e.g., "chr1", "chromosome1")
+    position:
+      type: number
+      description: Insert position (1-based genomic coordinate)
+      minimum: 1
     start:
       type: number
-      description: Start position (1-based coordinate)
+      description: Alias for position (1-based genomic coordinate). Use 'position' instead.
       minimum: 1
-    end:
-      type: number
-      description: End position (1-based coordinate)
-      minimum: 1
+    sequence:
+      type: string
+      description: DNA sequence to insert (only A, T, C, G, N characters allowed)
+    newSequence:
+      type: string
+      description: Alias for sequence parameter. Use 'sequence' instead.
   required:
     - chromosome
-    - start
-    - end
+    - position
+    - sequence
 sample_usages:
-  - user_query: Use insert_sequence to analyze genomic data
-    tool_call: insert_sequence(parameter1='value1', parameter2='value2')
-    thought: User wants to use insert_sequence for insert a dna sequence at specified position
-    expected_result: Result from insert_sequence analysis
+  - user_query: Insert the DNA sequence ATGCGATCGATCGATCG at position 300000
+    tool_call: insert_sequence(chromosome='NC_000913.3', position=300000, sequence='ATGCGATCGATCGATCG')
+    thought: User wants to insert a specific DNA sequence at a given position
+    expected_result: Insert action created and queued for execution
+  - user_query: Insert a 17bp sequence at position 300000 on the current chromosome
+    tool_call: insert_sequence(chromosome='NC_000913.3', position=300000, sequence='ATGCGATCGATCGATCG')
+    thought: User wants to insert a sequence at a specific genomic position
+    expected_result: Insert action created successfully
 relationships:
   depends_on: []
   conflicts_with: []
   enhances: []
   alternatives: []
   prerequisites: []
-  follow_up: []
+  follow_up:
+    - execute_actions
 metadata:
   usage_count: 0
   success_rate: 0
@@ -62,8 +73,10 @@ metadata:
   usage_pattern: frequent
 error_handling:
   invalid_region: Returns error if region is invalid
+  invalid_sequence: Returns error if sequence contains non-DNA characters
   clipboard_error: Returns error if clipboard operation fails
 returns:
   success: boolean - Whether operation was successful
   action_id: string - Unique identifier for this action
-  sequence_length: number - Length of processed sequence
+  message: string - Human-readable result description
+  details: object - Contains chromosome, position, sequenceLength information

@@ -86,7 +86,7 @@ relationships:
   depends_on: []
   conflicts_with: []
   enhances: ['open_alphafold_viewer', 'fetch_alphafold_structure']
-  alternatives: ['search_protein_by_gene']
+  alternatives: []
   prerequisites: []
   follow_up: ['open_alphafold_viewer', 'fetch_alphafold_structure', 'analyze_interpro_domains']
 

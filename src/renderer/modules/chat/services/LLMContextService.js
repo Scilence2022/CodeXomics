@@ -1838,8 +1838,9 @@ EDITING FUNCTIONS WITH PARAMETERS:
   Example: {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
 
 • execute_actions - Execute all queued sequence editing actions
-  Parameters: confirm (optional boolean, default: false)
-  Example: {"tool_name": "execute_actions", "parameters": {}}
+  Parameters: auto_save (boolean, default: false - MUST be true to avoid blocking dialog), filename (optional: output path)
+  Example: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
+  Example: {"tool_name": "execute_actions", "parameters": {"auto_save": true, "filename": "/tmp/output.gbk"}}
 
 • get_action_list - View current action queue
   Parameters: status (optional: "all", "pending", "completed", "failed")

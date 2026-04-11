@@ -138,7 +138,7 @@ Tools for DNA/RNA sequence analysis and manipulation:
 - `predict_promoter` - Predict promoter regions
 - `get_coding_sequence` - Get coding sequence for gene
 
-### 3. Protein Structure (7 tools)
+### 3. Protein Structure (6 tools)
 
 **Location:** `protein/ProteinTools.js`
 
@@ -146,7 +146,6 @@ Tools for protein structure analysis and visualization:
 
 - `fetch_protein_structure` - Fetch PDB structures
 - `open_protein_viewer` - Open 3D viewer
-- `search_protein_by_gene` - Search protein by gene
 - `search_alphafold_structures` - Search AlphaFold by gene
 - `fetch_alphafold_structure` - Fetch AlphaFold structure
 - `search_alphafold_by_sequence` - Search AlphaFold by sequence

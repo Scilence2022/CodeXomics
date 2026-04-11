@@ -1,5 +1,5 @@
 name: replace_sequence
-version: 1.0.0
+version: 1.1.0
 description: Replace sequence in specified region with new sequence
 category: sequence_editing
 keywords:
@@ -24,31 +24,39 @@ parameters:
       default: default
     chromosome:
       type: string
-      description: Chromosome identifier
+      description: Chromosome identifier (e.g., "chr1", "chromosome1")
     start:
       type: number
-      description: Start position (1-based coordinate)
+      description: Start position (1-based genomic coordinate)
       minimum: 1
     end:
       type: number
-      description: End position (1-based coordinate)
+      description: End position (1-based genomic coordinate)
       minimum: 1
+    newSequence:
+      type: string
+      description: New DNA sequence to replace the existing region (only A, T, C, G, N allowed)
+    sequence:
+      type: string
+      description: Alias for newSequence. Use 'newSequence' instead.
   required:
     - chromosome
     - start
     - end
+    - newSequence
 sample_usages:
-  - user_query: Use replace_sequence to analyze genomic data
-    tool_call: replace_sequence(parameter1='value1', parameter2='value2')
-    thought: User wants to use replace_sequence for replace sequence in specified region with new sequence
-    expected_result: Result from replace_sequence analysis
+  - user_query: Replace the sequence in region 400000 to 400200 with GCTAGCTAGCTAGCTA
+    tool_call: replace_sequence(chromosome='NC_000913.3', start=400000, end=400200, newSequence='GCTAGCTAGCTAGCTA')
+    thought: User wants to replace a genomic region with a new sequence
+    expected_result: Replace action created and queued for execution
 relationships:
   depends_on: []
   conflicts_with: []
   enhances: []
   alternatives: []
   prerequisites: []
-  follow_up: []
+  follow_up:
+    - execute_actions
 metadata:
   usage_count: 0
   success_rate: 0
@@ -62,8 +70,10 @@ metadata:
   usage_pattern: frequent
 error_handling:
   invalid_region: Returns error if region is invalid
+  invalid_sequence: Returns error if newSequence contains non-DNA characters
   clipboard_error: Returns error if clipboard operation fails
 returns:
   success: boolean - Whether operation was successful
   action_id: string - Unique identifier for this action
-  sequence_length: number - Length of processed sequence
+  message: string - Human-readable result description
+  details: object - Contains chromosome, start, end, newSequenceLength information

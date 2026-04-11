@@ -6970,12 +6970,25 @@ ${coreTools}
         case 'replace_sequence':
           return await window.actionManager.replaceSequence(parameters);
         case 'execute_actions':
-          // Extract saveFile parameter if provided
-          const options = {};
-          if (parameters && parameters.saveFile) {
-            options.saveFile = parameters.saveFile;
+          // Extract options for executeAllActions
+          // Supports: auto_save (boolean), filename (string), saveFile (string - direct path)
+          const execOptions = {};
+          if (parameters) {
+            if (parameters.saveFile) {
+              // Direct save file path provided
+              execOptions.saveFile = parameters.saveFile;
+            } else if (parameters.auto_save) {
+              // auto_save=true - generate or use filename
+              execOptions.auto_save = true;
+              if (parameters.filename) {
+                execOptions.filename = parameters.filename;
+              }
+            }
+            if (parameters.confirm) {
+              execOptions.confirm = true;
+            }
           }
-          return await window.actionManager.executeAllActions(options);
+          return await window.actionManager.executeAllActions(execOptions);
         case 'get_action_list':
           return await window.actionManager.getActionList(parameters);
         case 'clear_actions':
@@ -7513,7 +7526,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'fetch_protein_structure',
       'search_pdb_structures',
       'search_alphafold_structures',
-      'search_protein_by_gene',
       'get_pdb_details',
 
       // Metabolic Pathways
@@ -10590,12 +10602,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     return this.services.protein.getPDBDetails(pdbId);
   }
 
-  /**
-   * Alias for searchAlphaFoldByGene to support dynamic registry built-in tools mapping
-   */
-  async searchProteinByGene(parameters) {
-    return await this.searchAlphaFoldByGene(parameters);
-  }
 
   /**
    * Search AlphaFold structures by gene name

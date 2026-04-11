@@ -1855,6 +1855,12 @@ class ActionManager {
       };
     }
 
+    // If saveFile is provided (programmatic execution), skip all confirmation dialogs
+    if (options.saveFile) {
+      options.confirm = true;
+      console.log(`⚡ [ActionManager] saveFile provided - auto-confirming to skip dialogs`);
+    }
+
     const pendingActions = this.actions.filter(action => action.status === this.STATUS.PENDING);
     if (pendingActions.length === 0) {
       this.genomeBrowser.showNotification('No pending actions to execute', 'info');
@@ -6217,9 +6223,13 @@ class ActionManager {
   }
 
   async insertSequence(params) {
-    // If parameters include sequence, use function method (no dialog)
-    if (params && params.sequence) {
+    // If parameters include sequence data (via sequence or newSequence), use function method (no dialog)
+    if (params && (params.sequence || params.newSequence)) {
       return await this.functionInsertSequence(params);
+    }
+    // If position is provided but no sequence, return error instead of showing modal
+    if (params && (params.position || params.start) && params.chromosome) {
+      return { success: false, error: 'Missing required parameter: sequence. Provide the DNA sequence to insert.' };
     }
     // Otherwise show modal (UI interaction)
     this.handleInsertSequence();
@@ -6231,6 +6241,51 @@ class ActionManager {
   }
 
   async executeAllActions(params) {
+    // Handle auto_save and filename parameters (similar to functionExecuteActions)
+    if (params && params.auto_save) {
+      const { filename, saveFile } = params;
+
+      // Helper to get CWD
+      const getCWD = () => {
+        if (window.chatManager && typeof window.chatManager.getCurrentWorkingDirectory === 'function') {
+          return window.chatManager.getCurrentWorkingDirectory();
+        }
+        return typeof process !== 'undefined' && process.cwd ? process.cwd() : '/tmp';
+      };
+
+      const options = {};
+
+      if (saveFile) {
+        // Direct save file path
+        options.saveFile = saveFile;
+      } else if (filename) {
+        // Resolve relative paths
+        let resolvedPath = filename;
+        if (typeof require !== 'undefined') {
+          const path = require('path');
+          if (!path.isAbsolute(filename)) {
+            resolvedPath = path.resolve(getCWD(), filename);
+          }
+        }
+        options.saveFile = resolvedPath;
+      } else {
+        // Auto-generate filename
+        const executionId = `execution_${Date.now()}`;
+        const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
+        if (typeof require !== 'undefined') {
+          const path = require('path');
+          options.saveFile = path.resolve(getCWD(), baseFilename);
+        } else {
+          options.saveFile = baseFilename;
+        }
+      }
+
+      // auto_save implies confirm=true to skip conflict dialogs
+      options.confirm = true;
+      return await this.executeAllActionsInternal(options);
+    }
+
+    // Pass through to internal (handles saveFile directly)
     return await this.executeAllActionsInternal(params || {});
   }
 

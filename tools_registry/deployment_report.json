@@ -201,11 +201,6 @@
       "file": "search_pdb_structures.yaml"
     },
     {
-      "name": "search_protein_by_gene",
-      "category": "protein",
-      "file": "search_protein_by_gene.yaml"
-    },
-    {
       "name": "advanced_uniprot_search",
       "category": "database",
       "file": "advanced_uniprot_search.yaml"

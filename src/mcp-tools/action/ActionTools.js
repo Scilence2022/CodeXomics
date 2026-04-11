@@ -119,7 +119,7 @@ class ActionTools {
 
       insert_sequence: {
         name: 'insert_sequence',
-        description: 'Insert a DNA sequence at specified position',
+        description: 'Insert a DNA sequence at specified position without user confirmation',
         parameters: {
           type: 'object',
           properties: {
@@ -131,9 +131,17 @@ class ActionTools {
               type: 'number',
               description: 'Insert position (1-based genomic coordinate)',
             },
+            start: {
+              type: 'number',
+              description: 'Alias for position (1-based genomic coordinate). Use position instead.',
+            },
             sequence: {
               type: 'string',
               description: 'DNA sequence to insert (A, T, C, G, N allowed)',
+            },
+            newSequence: {
+              type: 'string',
+              description: 'Alias for sequence parameter. Use sequence instead.',
             },
           },
           required: ['chromosome', 'position', 'sequence'],
@@ -160,7 +168,11 @@ class ActionTools {
             },
             sequence: {
               type: 'string',
-              description: 'Replacement DNA sequence (A, T, C, G, N allowed)',
+              description: 'Replacement DNA sequence (A, T, C, G, N allowed). Alias for newSequence.',
+            },
+            newSequence: {
+              type: 'string',
+              description: 'New DNA sequence to replace the existing region (A, T, C, G, N allowed). Preferred parameter name.',
             },
             strand: {
               type: 'string',
@@ -169,7 +181,7 @@ class ActionTools {
               default: '+',
             },
           },
-          required: ['chromosome', 'start', 'end', 'sequence'],
+          required: ['chromosome', 'start', 'end'],
         },
       },
 
