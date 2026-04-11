@@ -1,7 +1,7 @@
 # get_sequence.yaml
 name: 'get_sequence'
 version: '1.3.0'
-description: 'Retrieve DNA sequence for a specific genomic region. Returns the raw sequence data and basic statistics.'
+description: 'Retrieve DNA sequence for a specific genomic region. Returns the raw sequence data and basic statistics. USE THIS TOOL ONLY WHEN THE PROMPT CONTAINS THE WORD "sequence". For visualizing genomic regions, use navigate_to_position instead.'
 category: 'sequence'
 keywords: ['sequence', 'dna', 'retrieve', 'get', 'extract', 'genomic region', 'nucleotide']
 priority: 1

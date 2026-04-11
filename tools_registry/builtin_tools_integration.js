@@ -1018,11 +1018,21 @@ class BuiltInToolsIntegration {
     }
 
     // Check for navigation patterns
-    if (/\b(navigate|go\s+to|jump|position|location)\b/i.test(query)) {
+    if (/\b(navigate|go\s+to|jump|position|location|show|display|view)\b/i.test(query)) {
       relevantTools.push({
         name: 'navigate_to_position',
-        confidence: 0.8,
-        reason: 'Navigation keywords detected',
+        confidence: 0.9,
+        reason: 'Navigation or visualization keywords detected',
+      });
+    }
+    
+    // Check for genomic region visualization patterns
+    if (/\b(show|display|view).*\b(genomic|region|position|coordinate|chromosome)\b/i.test(query) || 
+        /\b(genomic|region|position|coordinate|chromosome).*\b(from|to|between)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'navigate_to_position',
+        confidence: 0.95,
+        reason: 'Genomic region visualization request detected',
       });
     }
 
@@ -1105,20 +1115,20 @@ class BuiltInToolsIntegration {
     }
 
     // Check for sequence analysis patterns
-    if (/\b(sequence|gc|content|analyze)\b/i.test(query)) {
+    if (/\b(sequence)\b/i.test(query)) {
       relevantTools.push({
         name: 'get_sequence',
-        confidence: 0.7,
-        reason: 'Sequence analysis keywords detected',
+        confidence: 0.9,
+        reason: 'Sequence keyword detected',
       });
+    }
 
-      if (/\b(gc|content)\b/i.test(query)) {
-        relevantTools.push({
-          name: 'compute_gc',
-          confidence: 0.8,
-          reason: 'GC content keywords detected',
-        });
-      }
+    if (/\b(gc|content)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'compute_gc',
+        confidence: 0.8,
+        reason: 'GC content keywords detected',
+      });
     }
 
     // Check for export patterns
