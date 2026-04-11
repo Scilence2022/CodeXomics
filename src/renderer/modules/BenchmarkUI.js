@@ -156,7 +156,6 @@ class BenchmarkUI {
                     bottom: 0;
                     background: transparent;
                     z-index: 9999999 !important; /* MAXIMUM z-index to stay above all interface elements */
-                    overflow-y: auto;
                     padding: 20px;
                     display: block !important;
                     visibility: visible !important;
@@ -174,6 +173,15 @@ class BenchmarkUI {
                     border: 2px solid rgba(var(--primary-rgb), 0.3);
                     pointer-events: auto;
                     z-index: inherit; /* Inherit high z-index from parent */
+                    max-height: calc(100vh - 40px);
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .benchmark-content {
+                    flex: 1;
+                    overflow-y: auto;
+                    margin-top: 20px;
                 }
 
                 .benchmark-header {
@@ -256,10 +264,11 @@ class BenchmarkUI {
                     box-shadow: 0 20px 60px rgba(0,0,0,0.4) !important; /* Stronger shadow */
                     backdrop-filter: blur(15px) !important; /* Enhanced blur effect */
                     transform: translateZ(0) !important; /* Force hardware acceleration */
+                    display: block !important;
                 }
 
-                /* Hide sections but keep header visible */
-                .benchmark-interface.collapsed .benchmark-section {
+                /* Hide content but keep header visible */
+                .benchmark-interface.collapsed .benchmark-content {
                     display: none !important;
                 }
 
@@ -578,179 +587,181 @@ class BenchmarkUI {
                     </div>
                 </div>
 
-                <!-- Configuration Section -->
-                <div class="benchmark-section" id="configSection">
-                    <h2>⚙️ Configuration</h2>
-                    <div class="config-grid">
-                        <div class="config-group">
-                            <h3>📋 Test Suites</h3>
-                            <div class="checkbox-grid">
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-automatic_simple" checked>
-                                    <span>⚙️ Automatic Simple Tests <small>(40 tests)</small></span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-automatic_complex">
-                                    <span>🔧 Automatic Complex Tests <small>(3 tests)</small></span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-manual_suite">
-                                    <span>👥 Manual Tests <small>(9 tests)</small></span>
-                                </label>
-                                
+                <div class="benchmark-content">
+                    <!-- Configuration Section -->
+                    <div class="benchmark-section" id="configSection">
+                        <h2>⚙️ Configuration</h2>
+                        <div class="config-grid">
+                            <div class="config-group">
+                                <h3>📋 Test Suites</h3>
+                                <div class="checkbox-grid">
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" id="suite-automatic_simple" checked>
+                                        <span>⚙️ Automatic Simple Tests <small>(40 tests)</small></span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" id="suite-automatic_complex">
+                                        <span>🔧 Automatic Complex Tests <small>(3 tests)</small></span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" id="suite-manual_suite">
+                                        <span>👥 Manual Tests <small>(9 tests)</small></span>
+                                    </label>
+                                    
+                                </div>
                             </div>
-                        </div>
-                        <div class="config-group">
-                            <h3>⚙️ Options</h3>
-                            <div class="form-group">
-                                <label class="form-item">
-                                    <input type="checkbox" id="generateReport" checked>
-                                    <span>📊 Generate Report</span>
-                                </label>
-                                <label class="form-item">
-                                    <input type="checkbox" id="includeCharts" checked>
-                                    <span>📈 Include Charts</span>
-                                </label>
-                                <label class="form-item">
-                                    <input type="checkbox" id="includeRawData">
-                                    <span>📋 Include Raw Data</span>
-                                </label>
-                                <label class="form-item">
-                                    <input type="checkbox" id="includeLLMInteractions" checked>
-                                    <span>🤖 Include LLM Interaction Details</span>
-                                </label>
-                                <label class="form-item">
-                                    <input type="checkbox" id="stopOnError">
-                                    <span>🛑 Stop on Error</span>
-                                </label>
-                                <label class="form-item">
-                                    <input type="checkbox" id="verboseLogging">
-                                    <span>📝 Verbose Logging</span>
-                                </label>
+                            <div class="config-group">
+                                <h3>⚙️ Options</h3>
+                                <div class="form-group">
+                                    <label class="form-item">
+                                        <input type="checkbox" id="generateReport" checked>
+                                        <span>📊 Generate Report</span>
+                                    </label>
+                                    <label class="form-item">
+                                        <input type="checkbox" id="includeCharts" checked>
+                                        <span>📈 Include Charts</span>
+                                    </label>
+                                    <label class="form-item">
+                                        <input type="checkbox" id="includeRawData">
+                                        <span>📋 Include Raw Data</span>
+                                    </label>
+                                    <label class="form-item">
+                                        <input type="checkbox" id="includeLLMInteractions" checked>
+                                        <span>🤖 Include LLM Interaction Details</span>
+                                    </label>
+                                    <label class="form-item">
+                                        <input type="checkbox" id="stopOnError">
+                                        <span>🛑 Stop on Error</span>
+                                    </label>
+                                    <label class="form-item">
+                                        <input type="checkbox" id="verboseLogging">
+                                        <span>📝 Verbose Logging</span>
+                                    </label>
+                                </div>
                             </div>
-                        </div>
-                        <div class="config-group">
-                            <h3>⏱️ Settings</h3>
-                            <div class="form-group">
-                                <div>
-                                    <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-weight: 500;">Test Timeout:</label>
-                                    <select id="testTimeout">
-                                        <option value="-1">Use Individual Test Timeouts</option>
-                                        <option value="15000">15 seconds</option>
-                                        <option value="30000">30 seconds</option>
-                                        <option value="60000">60 seconds</option>
-                                        <option value="120000">2 minutes</option>
-                                        <option value="180000">3 minutes</option>
-                                        <option value="240000">4 minutes</option>
-                                        <option value="300000" selected>5 minutes</option>
-                                    </select>
-                                    <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
-                                        ⏱️ Global timeout or use individual test settings
-                                    </small>
-                                </div>
-                                <div>
-                                    <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Batch Delay (Rate Limit):</label>
-                                    <select id="testDelay">
-                                        <option value="0">No delay</option>
-                                        <option value="60000" selected>1 minute</option>
-                                        <option value="120000">2 minutes</option>
-                                        <option value="180000">3 minutes</option>
-                                        <option value="240000">4 minutes</option>
-                                        <option value="300000">5 minutes</option>
-                                    </select>
-                                    <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
-                                        ⏱️ Delay every 10 tests to avoid rate limits
-                                    </small>
-                                </div>
-                                <div>
-                                    <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Concurrency:</label>
-                                    <select id="concurrency">
-                                        <option value="1" selected>Sequential</option>
-                                        <option value="2">2 parallel tests</option>
-                                        <option value="3">3 parallel tests</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">📁 Default File Directory:</label>
-                                    <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" id="defaultFileDirectory" 
-                                               value="/Users/song/Documents/Genome-AI-Studio-Projects/test_data/" 
-                                               style="flex: 1; padding: 8px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px; background: white;"
-                                               placeholder="Enter default directory path...">
-                                        <button type="button" id="browseDirectoryBtn" 
-                                                style="padding: 8px 12px; border: 2px solid #3498db; background: #3498db; color: white; border-radius: 6px; cursor: pointer; font-size: 12px;"
-                                                title="Browse for directory">
-                                            📁
-                                        </button>
+                            <div class="config-group">
+                                <h3>⏱️ Settings</h3>
+                                <div class="form-group">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-weight: 500;">Test Timeout:</label>
+                                        <select id="testTimeout">
+                                            <option value="-1">Use Individual Test Timeouts</option>
+                                            <option value="15000">15 seconds</option>
+                                            <option value="30000">30 seconds</option>
+                                            <option value="60000">60 seconds</option>
+                                            <option value="120000">2 minutes</option>
+                                            <option value="180000">3 minutes</option>
+                                            <option value="240000">4 minutes</option>
+                                            <option value="300000" selected>5 minutes</option>
+                                        </select>
+                                        <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
+                                            ⏱️ Global timeout or use individual test settings
+                                        </small>
                                     </div>
-                                    <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
-                                        💡 Default directory for file loading and export operations
-                                    </small>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Batch Delay (Rate Limit):</label>
+                                        <select id="testDelay">
+                                            <option value="0">No delay</option>
+                                            <option value="60000" selected>1 minute</option>
+                                            <option value="120000">2 minutes</option>
+                                            <option value="180000">3 minutes</option>
+                                            <option value="240000">4 minutes</option>
+                                            <option value="300000">5 minutes</option>
+                                        </select>
+                                        <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
+                                            ⏱️ Delay every 10 tests to avoid rate limits
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Concurrency:</label>
+                                        <select id="concurrency">
+                                            <option value="1" selected>Sequential</option>
+                                            <option value="2">2 parallel tests</option>
+                                            <option value="3">3 parallel tests</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">📁 Default File Directory:</label>
+                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                            <input type="text" id="defaultFileDirectory" 
+                                                   value="/Users/song/Documents/Genome-AI-Studio-Projects/test_data/" 
+                                                   style="flex: 1; padding: 8px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px; background: white;"
+                                                   placeholder="Enter default directory path...">
+                                            <button type="button" id="browseDirectoryBtn" 
+                                                    style="padding: 8px 12px; border: 2px solid #3498db; background: #3498db; color: white; border-radius: 6px; cursor: pointer; font-size: 12px;"
+                                                    title="Browse for directory">
+                                                📁
+                                            </button>
+                                        </div>
+                                        <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
+                                            💡 Default directory for file loading and export operations
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="startBenchmark">
+                                <span>▶️</span> Start Benchmark
+                            </button>
+                            <button class="btn btn-danger" id="stopBenchmark" disabled>
+                                <span>⏹️</span> Stop
+                            </button>
+                            <button class="btn btn-success" id="exportResults" disabled>
+                                <span>📊</span> Export Results
+                            </button>
+                            <button class="btn" id="exportLLMInteractions" disabled style="background: #9b59b6; color: white;">
+                                <span>🤖</span> Export LLM Interactions
+                            </button>
+                            <button class="btn" id="testManualDialog" style="background: #f39c12; color: white;" title="Test Manual Dialog System">
+                                <span>🗪</span> Test Manual Dialog
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Progress Section -->
+                    <div class="benchmark-section" id="progressSection" style="display: none;">
+                        <h2>📊 Progress</h2>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                            <div class="progress-info">
+                                <div class="progress-item">
+                                    <span class="progress-label">Current Suite:</span>
+                                    <span class="progress-value" id="currentSuite">-</span>
+                                </div>
+                                <div class="progress-item">
+                                    <span class="progress-label">Current Test:</span>
+                                    <span class="progress-value" id="currentTest">-</span>
+                                </div>
+                                <div class="progress-item">
+                                    <span class="progress-label">Completed:</span>
+                                    <span class="progress-value" id="completedTests">0</span>
+                                </div>
+                                <div class="progress-item">
+                                    <span class="progress-label">Passed:</span>
+                                    <span class="progress-value" id="passedTests">0</span>
+                                </div>
+                                <div class="progress-item">
+                                    <span class="progress-label">Failed:</span>
+                                    <span class="progress-value" id="failedTests">0</span>
+                                </div>
+                                <div class="progress-item">
+                                    <span class="progress-label">Elapsed:</span>
+                                    <span class="progress-value" id="elapsedTime">00:00</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-primary" id="startBenchmark">
-                            <span>▶️</span> Start Benchmark
-                        </button>
-                        <button class="btn btn-danger" id="stopBenchmark" disabled>
-                            <span>⏹️</span> Stop
-                        </button>
-                        <button class="btn btn-success" id="exportResults" disabled>
-                            <span>📊</span> Export Results
-                        </button>
-                        <button class="btn" id="exportLLMInteractions" disabled style="background: #9b59b6; color: white;">
-                            <span>🤖</span> Export LLM Interactions
-                        </button>
-                        <button class="btn" id="testManualDialog" style="background: #f39c12; color: white;" title="Test Manual Dialog System">
-                            <span>🗪</span> Test Manual Dialog
-                        </button>
-                    </div>
-                </div>
 
-                <!-- Progress Section -->
-                <div class="benchmark-section" id="progressSection" style="display: none;">
-                    <h2>📊 Progress</h2>
-                    <div class="progress-container">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressFill"></div>
-                        </div>
-                        <div class="progress-info">
-                            <div class="progress-item">
-                                <span class="progress-label">Current Suite:</span>
-                                <span class="progress-value" id="currentSuite">-</span>
-                            </div>
-                            <div class="progress-item">
-                                <span class="progress-label">Current Test:</span>
-                                <span class="progress-value" id="currentTest">-</span>
-                            </div>
-                            <div class="progress-item">
-                                <span class="progress-label">Completed:</span>
-                                <span class="progress-value" id="completedTests">0</span>
-                            </div>
-                            <div class="progress-item">
-                                <span class="progress-label">Passed:</span>
-                                <span class="progress-value" id="passedTests">0</span>
-                            </div>
-                            <div class="progress-item">
-                                <span class="progress-label">Failed:</span>
-                                <span class="progress-value" id="failedTests">0</span>
-                            </div>
-                            <div class="progress-item">
-                                <span class="progress-label">Elapsed:</span>
-                                <span class="progress-value" id="elapsedTime">00:00</span>
-                            </div>
-                        </div>
+                    <!-- Results Section -->
+                    <div class="benchmark-section" id="resultsSection" style="display: none;">
+                        <h2>📈 Results</h2>
+                        <div class="results-summary" id="resultsSummary"></div>
+                        <div id="resultsContent"></div>
                     </div>
-                </div>
-
-                <!-- Results Section -->
-                <div class="benchmark-section" id="resultsSection" style="display: none;">
-                    <h2>📈 Results</h2>
-                    <div class="results-summary" id="resultsSummary"></div>
-                    <div id="resultsContent"></div>
                 </div>
             </div>
         `;
