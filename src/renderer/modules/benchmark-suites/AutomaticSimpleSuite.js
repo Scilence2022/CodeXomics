@@ -333,7 +333,7 @@ class AutomaticSimpleSuite {
         category: 'navigation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Show me the genomic region from position 50000 to 75000.',
+        instruction: 'Navigate to the genomic region from position 50000 to 75000.',
         expectedResult: {
           tool_name: 'navigate_to_position',
           parameters: {

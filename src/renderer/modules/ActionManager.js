@@ -2431,6 +2431,8 @@ class ActionManager {
         resolvedSaveFile || (defaultDirectory ? require('path').join(defaultDirectory, baseFilename) : baseFilename);
 
       if (resolvedSaveFile) {
+
+        console.log(`📁 [ActionManager] GBK file name: ${resolvedSaveFile}`);
         await this.saveTextFileToFile(genbankContent, resolvedSaveFile);
         console.log(`📁 [ActionManager] GBK file saved to: ${resolvedSaveFile}`);
       } else {
@@ -2639,8 +2641,22 @@ class ActionManager {
    */
   async saveTextFileToFile(content, filePath) {
     try {
-      // Use the file system API if available (Electron environment)
+      // Use the direct file write API (no dialog) - this is the correct API for programmatic saves
+      // NOTE: Do NOT use window.electronAPI.saveFile() - it always shows a save dialog!
+      if (window.electronAPI && window.electronAPI.writeFile) {
+        const result = await window.electronAPI.writeFile(filePath, content);
+        if (result && result.success) {
+          console.log(`📁 [ActionManager] File saved successfully to: ${filePath}`);
+          return true;
+        } else {
+          console.error(`❌ [ActionManager] Failed to save file to: ${filePath}`, result?.error);
+          return false;
+        }
+      }
+
+      // Fallback: try saveFile API (shows dialog - not ideal for auto_save)
       if (window.electronAPI && window.electronAPI.saveFile) {
+        console.warn(`⚠️ [ActionManager] writeFile API not available, falling back to saveFile (may show dialog)`);
         const success = await window.electronAPI.saveFile(filePath, content);
         if (success) {
           console.log(`📁 [ActionManager] File saved successfully to: ${filePath}`);
