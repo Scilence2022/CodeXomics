@@ -2006,7 +2006,7 @@ class ActionManager {
             });
             if (!dialogResult.canceled && dialogResult.filePath) {
               resolvedSaveFile = dialogResult.filePath;
-              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 弹窗选择路径 | resolvedSaveFile=${resolvedSaveFile}`);
+              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 弹窗选择路径(electronAPI) | resolvedSaveFile=${resolvedSaveFile}`);
             } else {
               console.log(`⚠️ [ActionManager] Save dialog cancelled`);
               return {
@@ -2018,6 +2018,36 @@ class ActionManager {
             }
           } catch (error) {
             console.warn('⚠️ [ActionManager] Save dialog failed:', error);
+          }
+        } else if (typeof require !== 'undefined') {
+          // Fallback: use ipcRenderer directly (main window with nodeIntegration:true)
+          try {
+            const { ipcRenderer } = require('electron');
+            if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
+              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 使用ipcRenderer.invoke('show-save-dialog')`);
+              const dialogResult = await ipcRenderer.invoke('show-save-dialog', {
+                title: 'Save Modified Genome as GenBank File',
+                defaultPath,
+                filters: [
+                  { name: 'GenBank Files', extensions: ['gbk', 'gb', 'genbank'] },
+                  { name: 'All Files', extensions: ['*'] },
+                ],
+              });
+              if (!dialogResult.canceled && dialogResult.filePath) {
+                resolvedSaveFile = dialogResult.filePath;
+                console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 弹窗选择路径(ipcRenderer) | resolvedSaveFile=${resolvedSaveFile}`);
+              } else {
+                console.log(`⚠️ [ActionManager] Save dialog cancelled`);
+                return {
+                  success: false,
+                  message: 'Save dialog cancelled by user',
+                  executedActions: 0,
+                  totalActions: this.actions.length,
+                };
+              }
+            }
+          } catch (error) {
+            console.warn('⚠️ [ActionManager] ipcRenderer show-save-dialog failed:', error);
           }
         }
       }
@@ -2468,18 +2498,65 @@ class ActionManager {
 
       if (saveFile) {
         // Direct write via writeFile IPC — no dialog, no prompt
-        if (window.electronAPI && window.electronAPI.writeFile) {
-          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用writeFile写入 | saveFile=${saveFile}`);
-          const result = await window.electronAPI.writeFile(saveFile, genbankContent);
-          if (result && result.success) {
-            console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK writeFile成功 | saveFile=${saveFile}`);
-          } else {
-            console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK writeFile失败 | saveFile=${saveFile} | error=${result?.error}`);
-            throw new Error(`Failed to save file to ${saveFile}: ${result?.error || 'unknown error'}`);
+        // Try multiple methods: window.electronAPI.writeFile → ipcRenderer directly → Node.js fs
+        let writeSuccess = false;
+
+        // Method 1: window.electronAPI.writeFile (preload contextBridge)
+        if (!writeSuccess && window.electronAPI && window.electronAPI.writeFile) {
+          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用electronAPI.writeFile | saveFile=${saveFile}`);
+          try {
+            const result = await window.electronAPI.writeFile(saveFile, genbankContent);
+            if (result && result.success) {
+              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile成功 | saveFile=${saveFile}`);
+              writeSuccess = true;
+            } else {
+              console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile失败 | saveFile=${saveFile} | error=${result?.error}`);
+            }
+          } catch (err) {
+            console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile异常 | error=${err.message}`);
           }
-        } else {
-          // Fallback: browser download (cannot write to specific path in browser)
-          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK writeFile不可用，fallback downloadTextFile | baseFilename=${baseFilename}`);
+        }
+
+        // Method 2: ipcRenderer.invoke('write-file') directly (main window with nodeIntegration:true)
+        if (!writeSuccess && typeof require !== 'undefined') {
+          try {
+            const { ipcRenderer } = require('electron');
+            if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
+              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用ipcRenderer.invoke('write-file') | saveFile=${saveFile}`);
+              const result = await ipcRenderer.invoke('write-file', saveFile, genbankContent);
+              if (result && result.success) {
+                console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入成功 | saveFile=${saveFile}`);
+                writeSuccess = true;
+              } else {
+                console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入失败 | saveFile=${saveFile} | error=${result?.error}`);
+              }
+            }
+          } catch (err) {
+            console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入异常 | error=${err.message}`);
+          }
+        }
+
+        // Method 3: Node.js fs.writeFileSync directly (main window with nodeIntegration:true)
+        if (!writeSuccess && typeof require !== 'undefined') {
+          try {
+            const fs = require('fs');
+            const nodePath = require('path');
+            const dir = nodePath.dirname(saveFile);
+            if (!fs.existsSync(dir)) {
+              fs.mkdirSync(dir, { recursive: true });
+            }
+            console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用Node.js fs.writeFileSync | saveFile=${saveFile}`);
+            fs.writeFileSync(saveFile, genbankContent, 'utf8');
+            console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK fs.writeFileSync成功 | saveFile=${saveFile}`);
+            writeSuccess = true;
+          } catch (err) {
+            console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK fs.writeFileSync异常 | error=${err.message}`);
+          }
+        }
+
+        if (!writeSuccess) {
+          // Final fallback: browser download (cannot write to specific path)
+          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 所有写入方法不可用，fallback downloadTextFile | baseFilename=${baseFilename}`);
           this.downloadTextFile(genbankContent, baseFilename);
           finalFilePath = baseFilename;
         }
@@ -2744,23 +2821,59 @@ class ActionManager {
   async saveTextFileToFile(content, filePath) {
     try {
       console.log(`🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 入口 | filePath=${filePath}`);
-      // Use the direct file write API (no dialog) - this is the correct API for programmatic saves
-      // NOTE: Do NOT use window.electronAPI.saveFile() - it always shows a save dialog!
+
+      // Method 1: window.electronAPI.writeFile (preload contextBridge)
       if (window.electronAPI && window.electronAPI.writeFile) {
-        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用writeFile | filePath=${filePath}`);
+        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用electronAPI.writeFile | filePath=${filePath}`);
         const result = await window.electronAPI.writeFile(filePath, content);
         if (result && result.success) {
           console.log(`📁 [ActionManager] File saved successfully to: ${filePath}`);
           return true;
         } else {
-          console.error(`❌ [ActionManager] Failed to save file to: ${filePath}`, result?.error);
-          return false;
+          console.error(`❌ [ActionManager] electronAPI.writeFile failed for: ${filePath}`, result?.error);
         }
       }
 
-      // Fallback: try saveFile API (shows dialog - not ideal for auto_save)
+      // Method 2: ipcRenderer.invoke('write-file') directly (main window with nodeIntegration:true)
+      if (typeof require !== 'undefined') {
+        try {
+          const { ipcRenderer } = require('electron');
+          if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
+            console.log(`🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用ipcRenderer.invoke('write-file') | filePath=${filePath}`);
+            const result = await ipcRenderer.invoke('write-file', filePath, content);
+            if (result && result.success) {
+              console.log(`📁 [ActionManager] File saved successfully via ipcRenderer to: ${filePath}`);
+              return true;
+            } else {
+              console.error(`❌ [ActionManager] ipcRenderer write-file failed for: ${filePath}`, result?.error);
+            }
+          }
+        } catch (err) {
+          console.error(`❌ [ActionManager] ipcRenderer write-file error for: ${filePath}`, err);
+        }
+      }
+
+      // Method 3: Node.js fs.writeFileSync directly (main window with nodeIntegration:true)
+      if (typeof require !== 'undefined') {
+        try {
+          const fs = require('fs');
+          const nodePath = require('path');
+          const dir = nodePath.dirname(filePath);
+          if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+          }
+          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用Node.js fs.writeFileSync | filePath=${filePath}`);
+          fs.writeFileSync(filePath, content, 'utf8');
+          console.log(`📁 [ActionManager] File saved successfully via fs to: ${filePath}`);
+          return true;
+        } catch (err) {
+          console.error(`❌ [ActionManager] fs.writeFileSync error for: ${filePath}`, err);
+        }
+      }
+
+      // Method 4: try saveFile API (shows dialog - not ideal for auto_save)
       if (window.electronAPI && window.electronAPI.saveFile) {
-        console.warn(`⚠️ [ActionManager] writeFile API not available, falling back to saveFile (may show dialog)`);
+        console.warn(`⚠️ [ActionManager] All direct write methods unavailable, falling back to saveFile (may show dialog)`);
         const success = await window.electronAPI.saveFile(filePath, content);
         if (success) {
           console.log(`📁 [ActionManager] File saved successfully to: ${filePath}`);
@@ -2771,13 +2884,10 @@ class ActionManager {
         }
       }
 
-      // Fallback: create a temporary download and then move it
-      console.warn(`⚠️ [ActionManager] Direct file save not available, using fallback method`);
+      // Final fallback: browser download
+      console.warn(`⚠️ [ActionManager] All file save methods unavailable, using browser download`);
       const tempFilename = filePath.split('/').pop() || 'temp_file.gbk';
       this.downloadTextFile(content, tempFilename);
-
-      // Note: In a browser environment, we can't directly save to a specific path
-      // This would require server-side support or Electron's file system API
       console.warn(
         `⚠️ [ActionManager] File saved with name "${tempFilename}". Manual renaming to "${filePath}" may be required.`
       );
