@@ -352,6 +352,472 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // Navigation & View Control Tools
+    this.builtInToolsMap.set('zoom_in', {
+      method: 'zoomIn',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('zoom_out', {
+      method: 'zoomOut',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('pan_left', {
+      method: 'panLeft',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('pan_right', {
+      method: 'panRight',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('jump_to_gene', {
+      method: 'jumpToGene',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('search_gene_by_name', {
+      method: 'searchGeneByName',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('search_features', {
+      method: 'searchFeatures',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('zoom_to_gene', {
+      method: 'zoomToGene',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    // Sequence Tools
+    this.builtInToolsMap.set('translate_sequence', {
+      method: 'translateSequence',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('translate_dna', {
+      method: 'executeMicrobeFunction_translateDNA',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('reverse_complement', {
+      method: 'reverseComplement',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('search_sequence_motif', {
+      method: 'searchMotif',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_coding_sequence', {
+      method: 'getCodingSequence',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('predict_promoter', {
+      method: 'predictPromoter',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    // Sequence Editing Tools
+    this.builtInToolsMap.set('replace_sequence', {
+      method: 'executeActionTool_replace_sequence',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('delete_sequence', {
+      method: 'executeActionTool_delete_sequence',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('insert_sequence', {
+      method: 'executeActionTool_insert_sequence',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('copy_sequence', {
+      method: 'executeActionTool_copy_sequence',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('cut_sequence', {
+      method: 'executeActionTool_cut_sequence',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('paste_sequence', {
+      method: 'executeActionTool_paste_sequence',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('execute_actions', {
+      method: 'executeActionTool_execute_actions',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_action_list', {
+      method: 'executeActionTool_get_action_list',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('clear_actions', {
+      method: 'executeActionTool_clear_actions',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_clipboard_content', {
+      method: 'executeActionTool_get_clipboard_content',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    // Export Tools
+    this.builtInToolsMap.set('export_fasta_sequence', {
+      method: 'exportFastaSequence',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('export_genbank_format', {
+      method: 'exportGenBankFormat',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('export_cds_fasta', {
+      method: 'exportCDSFasta',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('export_protein_fasta', {
+      method: 'exportProteinFasta',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('export_gff_annotations', {
+      method: 'exportGFFAnnotations',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('export_bed_format', {
+      method: 'exportBEDFormat',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('export_current_view_fasta', {
+      method: 'exportCurrentViewFasta',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('export_data', {
+      method: 'exportData',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('configure_export_settings', {
+      method: 'configureExportSettings',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    // Annotation Tools
+    this.builtInToolsMap.set('create_annotation', {
+      method: 'createAnnotation',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('analyze_region', {
+      method: 'analyzeRegion',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_gene_details', {
+      method: 'getGeneDetails',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_operons', {
+      method: 'getOperons',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_nearby_features', {
+      method: 'getNearbyFeatures',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('find_intergenic_regions', {
+      method: 'findIntergenicRegions',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('list_annotations', {
+      method: 'listAnnotations',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_annotation', {
+      method: 'getAnnotation',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('update_annotation', {
+      method: 'updateAnnotation',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('delete_annotation', {
+      method: 'deleteAnnotation',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('search_annotations', {
+      method: 'searchAnnotations',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('bulk_update_annotations', {
+      method: 'bulkUpdateAnnotations',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_annotation_history', {
+      method: 'getAnnotationHistory',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    // Track & Display Tools
+    this.builtInToolsMap.set('toggle_track', {
+      method: 'toggleTrack',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('toggle_annotation_track', {
+      method: 'toggleAnnotationTrack',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_track_status', {
+      method: 'getTrackStatus',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    // Track Settings Tools
+    this.builtInToolsMap.set('get_track_settings', {
+      method: 'getTrackSettings',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('set_track_settings', {
+      method: 'setTrackSettings',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_all_track_settings', {
+      method: 'getAllTrackSettings',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('reset_track_settings', {
+      method: 'resetTrackSettings',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_track_settings_schema', {
+      method: 'getTrackSettingsSchema',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('batch_set_track_settings', {
+      method: 'batchSetTrackSettings',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    // Primer Design Tools
+    this.builtInToolsMap.set('calculate_primer_properties', {
+      method: 'primerCalculateProperties',
+      category: 'primer_design',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('design_primers', {
+      method: 'primerDesign',
+      category: 'primer_design',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('find_primer_binding_sites', {
+      method: 'primerFindBindingSites',
+      category: 'primer_design',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('add_primer_annotation', {
+      method: 'primerAddAnnotation',
+      category: 'primer_design',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    // Restriction Analysis Tools
+    this.builtInToolsMap.set('search_pattern', {
+      method: 'searchPattern',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('find_restriction_sites', {
+      method: 'findRestrictionSites',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('virtual_digest', {
+      method: 'virtualDigest',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    // Multi-window Tools
+    this.builtInToolsMap.set('list_genome_windows', {
+      method: 'listGenomeWindows',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('switch_active_window', {
+      method: 'switchActiveWindow',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    // System Tools
+    this.builtInToolsMap.set('get_chromosome_list', {
+      method: 'getChromosomeList',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
     console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
   }
 
@@ -560,16 +1026,48 @@ class BuiltInToolsIntegration {
       });
     }
 
-    // Check for annotation and function search patterns (for search_features tool)
-    if (/\b(annotation|function|features|search)\b/i.test(query)) {
-      // Note: search_features is not a built-in tool but we boost its detection
-      // by marking it as highly relevant when annotation/function keywords are present
+    // Check for zoom patterns
+    if (/\b(zoom\s*in|magnify|enlarge|focus|scale\s*up)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'zoom_in',
+        confidence: 0.9,
+        reason: 'Zoom in keywords detected',
+      });
+    }
+
+    if (/\b(zoom\s*out|zoom\s*back|zoom\s*back\s*out|shrink|broader|wider)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'zoom_out',
+        confidence: 0.9,
+        reason: 'Zoom out keywords detected',
+      });
+    }
+
+    // Check for gene navigation patterns
+    if (/\b(jump\s+to\s+gene|go\s+to\s+gene|navigate\s+to\s+gene|find\s+gene|locate\s+gene)\b/i.test(query) ||
+        /\b(gene\s+(name|location|position))\b/i.test(query)) {
+      relevantTools.push({
+        name: 'jump_to_gene',
+        confidence: 0.9,
+        reason: 'Gene navigation keywords detected',
+      });
+    }
+
+    // Check for gene search patterns
+    if (/\b(search\s+gene|find\s+gene|look\s+up\s+gene|gene\s+search)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'search_gene_by_name',
+        confidence: 0.9,
+        reason: 'Gene search keywords detected',
+      });
+    }
+
+    // Check for feature search patterns
+    if (/\b(search\s+features?|find\s+features?|annotation|function|features?\s+search)\b/i.test(query)) {
       relevantTools.push({
         name: 'search_features',
-        confidence: 0.95,
-        reason: 'Annotation/function search keywords detected - register search_features tool',
-        is_external: true, // Mark as external tool for special handling
-        category: 'navigation',
+        confidence: 0.9,
+        reason: 'Feature search keywords detected',
       });
     }
 
@@ -621,6 +1119,144 @@ class BuiltInToolsIntegration {
           reason: 'GC content keywords detected',
         });
       }
+    }
+
+    // Check for export patterns
+    if (/\b(export|save|download|write|output)\b/i.test(query)) {
+      if (/\b(fasta|fa|sequence\s+file)\b/i.test(query) && !/\b(cds|protein|coding)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'export_fasta_sequence',
+          confidence: 0.9,
+          reason: 'FASTA export keywords detected',
+        });
+      }
+      if (/\b(genbank|gbk|gb)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'export_genbank_format',
+          confidence: 0.9,
+          reason: 'GenBank export keywords detected',
+        });
+      }
+      if (/\b(gff|gff3|annotation\s+format)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'export_gff_annotations',
+          confidence: 0.9,
+          reason: 'GFF export keywords detected',
+        });
+      }
+      if (/\b(bed|bed\s+format)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'export_bed_format',
+          confidence: 0.9,
+          reason: 'BED export keywords detected',
+        });
+      }
+      if (/\b(cds|coding\s+sequence)\b/i.test(query) && /\b(fasta|export|save)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'export_cds_fasta',
+          confidence: 0.9,
+          reason: 'CDS FASTA export keywords detected',
+        });
+      }
+      if (/\b(protein|amino\s+acid|peptide)\b/i.test(query) && /\b(fasta|export|save)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'export_protein_fasta',
+          confidence: 0.9,
+          reason: 'Protein FASTA export keywords detected',
+        });
+      }
+      if (/\b(current\s+view|visible\s+region|current\s+region)\b/i.test(query) && /\b(fasta|export|save)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'export_current_view_fasta',
+          confidence: 0.9,
+          reason: 'Current view FASTA export keywords detected',
+        });
+      }
+      // Generic export pattern
+      if (!relevantTools.some(t => t.name.startsWith('export_'))) {
+        relevantTools.push({
+          name: 'export_fasta_sequence',
+          confidence: 0.7,
+          reason: 'Generic export keywords detected',
+        });
+      }
+    }
+
+    // Check for sequence editing patterns
+    if (/\b(replace|substitute|swap)\s+(sequence|region|bases?|nucleotides?)\b/i.test(query) ||
+        /\b(edit\s+sequence|modify\s+sequence|mutate)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'replace_sequence',
+        confidence: 0.9,
+        reason: 'Sequence replacement/editing keywords detected',
+      });
+    }
+
+    if (/\b(delete|remove)\s+(sequence|region|bases?|nucleotides?)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'delete_sequence',
+        confidence: 0.9,
+        reason: 'Sequence deletion keywords detected',
+      });
+    }
+
+    if (/\b(insert|add)\s+(sequence|bases?|nucleotides?)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'insert_sequence',
+        confidence: 0.9,
+        reason: 'Sequence insertion keywords detected',
+      });
+    }
+
+    // Check for track settings patterns
+    if (/\b(track\s+settings?|track\s+options?|track\s+config|configure\s+track|display\s+settings?)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'get_track_settings',
+        confidence: 0.85,
+        reason: 'Track settings keywords detected',
+      });
+    }
+
+    // Check for primer design patterns
+    if (/\b(primer|primers|pcr|amplif)\b/i.test(query)) {
+      if (/\b(design|create|generate|find)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'design_primers',
+          confidence: 0.9,
+          reason: 'Primer design keywords detected',
+        });
+      }
+      if (/\b(propert|tm|melting\s+temp|gc\s+content|length)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'calculate_primer_properties',
+          confidence: 0.9,
+          reason: 'Primer properties keywords detected',
+        });
+      }
+      if (/\b(binding\s+site|binding\s+site|specificity|anneal)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'find_primer_binding_sites',
+          confidence: 0.9,
+          reason: 'Primer binding site keywords detected',
+        });
+      }
+    }
+
+    // Check for annotation patterns
+    if (/\b(create\s+annotation|add\s+annotation|annotate)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'create_annotation',
+        confidence: 0.85,
+        reason: 'Annotation creation keywords detected',
+      });
+    }
+
+    if (/\b(analyze\s+region|region\s+analysis|features\s+in\s+region)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'analyze_region',
+        confidence: 0.85,
+        reason: 'Region analysis keywords detected',
+      });
     }
 
     // Check for database search patterns - UniProt

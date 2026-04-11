@@ -74,6 +74,7 @@ class SystemIntegration {
 
   /**
    * Generate system prompt for non-dynamic mode (emphasizing built-in tools)
+   * ENHANCED: Uses builtInToolsMap as authoritative source for classification
    */
   async generateNonDynamicSystemPrompt(context = {}) {
     try {
@@ -82,10 +83,10 @@ class SystemIntegration {
       // Get all tools from registry for comprehensive integration
       const allRegistryTools = await this.registryManager.getAllTools();
       const builtInToolsInfo = this.builtInTools.getBuiltInToolsStats();
+      const builtInToolNames = new Set(this.builtInTools.builtInToolsMap.keys());
 
       // Organize tools by category
       const toolsByCategory = {};
-      const builtInToolNames = new Set(this.builtInTools.builtInToolsMap.keys());
 
       // Add built-in tools first (highest priority)
       for (const [toolName, toolInfo] of this.builtInTools.builtInToolsMap.entries()) {
@@ -101,7 +102,7 @@ class SystemIntegration {
         });
       }
 
-      // Add registry tools (especially missing export and other tools)
+      // Add registry tools (only those NOT already in builtInToolsMap)
       for (const tool of allRegistryTools) {
         // Skip if it's already included as built-in
         if (builtInToolNames.has(tool.name)) {
@@ -223,6 +224,9 @@ class SystemIntegration {
       };
     }
   }
+  /**
+   * Generate dynamic system prompt with enhanced tool deduplication and categorization
+   */
   async generateDynamicSystemPrompt(userQuery, context = {}) {
     try {
       if (!this.integrationStatus.initialized) {
@@ -271,6 +275,7 @@ class SystemIntegration {
       }
 
       // Create built-in tool objects for high-confidence matches
+      // ENHANCED: Enrich built-in tools with full parameter definitions from YAML registry
       const relevantBuiltInTools = [];
       const externalToolHints = []; // Track external tool hints from built-in analysis
 
@@ -289,10 +294,23 @@ class SystemIntegration {
           } else {
             const builtInToolInfo = this.builtInTools.getBuiltInToolInfo(relevantTool.name);
             if (builtInToolInfo) {
-              // Create a tool object that matches the registry format
+              // Try to get full parameter definition from YAML registry
+              let fullParameters = { type: 'object', properties: {} };
+              try {
+                const yamlDef = await this.registryManager.getToolDefinition(relevantTool.name);
+                if (yamlDef && yamlDef.parameters && Object.keys(yamlDef.parameters.properties || {}).length > 0) {
+                  fullParameters = yamlDef.parameters;
+                }
+              } catch (e) {
+                // YAML definition not available, use empty parameters
+              }
+
+              // Create a tool object with full parameter info
               const builtInToolObject = {
                 name: relevantTool.name,
-                description: `Built-in ${builtInToolInfo.category} tool for ${relevantTool.reason}`,
+                description: builtInToolInfo.category
+                  ? `Built-in ${builtInToolInfo.category} tool for ${relevantTool.reason}`
+                  : `Built-in tool for ${relevantTool.reason}`,
                 category: builtInToolInfo.category,
                 execution_type: 'built-in',
                 implementation: {
@@ -302,7 +320,7 @@ class SystemIntegration {
                 confidence: relevantTool.confidence,
                 type: 'built-in',
                 priority: 1,
-                parameters: { properties: {} }, // Minimal parameter structure
+                parameters: fullParameters, // ENHANCED: Use full parameters from YAML instead of empty
               };
               relevantBuiltInTools.push(builtInToolObject);
               console.log(
@@ -333,9 +351,8 @@ class SystemIntegration {
           }
         }
       }
-      // Merge built-in tools with registry tools (built-in tools first for priority)
-      // Then add plugin tools and MCP server tools
-      // Check if MCP server manager is available from chatManagerInstance
+
+      // Get MCP server tools (these are from the internal CodeXomics MCP Server)
       let mcpServerTools = [];
       if (
         typeof window !== 'undefined' &&
@@ -361,7 +378,15 @@ class SystemIntegration {
           console.warn('⚠️ [System Integration] Failed to get MCP server tools:', error.message);
         }
       }
-      const combinedTools = [...relevantBuiltInTools, ...registryPromptData.tools, ...mcpServerTools, ...pluginTools];
+
+      // ENHANCED: Deduplicate tools by name with built-in priority
+      // Tools that are in builtInToolsMap should be treated as built-in regardless of source
+      const combinedTools = this._deduplicateAndClassifyTools(
+        relevantBuiltInTools,
+        registryPromptData.tools,
+        mcpServerTools,
+        pluginTools
+      );
 
       // Generate plugin tools prompt section
       const pluginToolsPromptSection = this.pluginBridge.generatePluginToolsPromptSection(userQuery);
@@ -376,13 +401,19 @@ class SystemIntegration {
         pluginToolsCount: pluginTools.length,
       };
 
+      // Count built-in vs extended tools
+      const builtInCount = combinedTools.filter(t => t.execution_type === 'built-in').length;
+      const extendedCount = combinedTools.filter(
+        t => t.execution_type !== 'built-in' && t.source !== 'plugin'
+      ).length;
+
       console.log(
         '🎯 [System Integration] Final tool count:',
         enhancedPromptData.totalTools,
         '(Built-in:',
-        relevantBuiltInTools.length,
-        '+ Registry:',
-        registryPromptData.tools.length,
+        builtInCount,
+        '+ Extended:',
+        extendedCount,
         '+ Plugins:',
         pluginTools.length,
         ')'
@@ -399,16 +430,16 @@ class SystemIntegration {
           systemPromptGenerated: true,
           toolSelection: {
             totalTools: enhancedPromptData.totalTools,
-            builtInTools: relevantBuiltInTools.map(t => ({
+            builtInTools: combinedTools.filter(t => t.execution_type === 'built-in').map(t => ({
               name: t.name,
               category: t.category,
               confidence: t.confidence,
               executionType: t.execution_type,
             })),
-            registryTools: registryPromptData.tools.map(t => ({
+            extendedTools: combinedTools.filter(t => t.execution_type !== 'built-in' && t.source !== 'plugin').map(t => ({
               name: t.name,
               category: t.category || 'unknown',
-              executionType: 'external',
+              executionType: t.execution_type,
             })),
           },
           context: context,
@@ -425,8 +456,8 @@ class SystemIntegration {
         systemPrompt,
         toolsUsed: enhancedPromptData.tools,
         toolCount: enhancedPromptData.totalTools,
-        builtInToolsIncluded: relevantBuiltInTools.length,
-        registryToolsIncluded: registryPromptData.tools.length,
+        builtInToolsIncluded: builtInCount,
+        registryToolsIncluded: extendedCount,
         pluginToolsIncluded: pluginTools.length,
         generationTime: Date.now(),
       };
@@ -437,19 +468,123 @@ class SystemIntegration {
   }
 
   /**
+   * Deduplicate tools by name and properly classify them.
+   * Built-in tools take priority. If a tool exists in builtInToolsMap,
+   * it is always classified as built-in regardless of its original source.
+   *
+   * Priority: built-in > registry > mcp (by original source)
+   */
+  _deduplicateAndClassifyTools(builtInTools, registryTools, mcpTools, pluginTools) {
+    const toolMap = new Map();
+    const builtInToolNames = this.builtInTools.builtInToolsMap;
+
+    // Add built-in tools first (highest priority)
+    for (const tool of builtInTools) {
+      if (!toolMap.has(tool.name)) {
+        toolMap.set(tool.name, { ...tool, execution_type: 'built-in', _source: 'builtin-detection' });
+      }
+    }
+
+    // Add registry tools - classify as built-in if they exist in builtInToolsMap
+    for (const tool of registryTools) {
+      if (!toolMap.has(tool.name)) {
+        // Check if this tool is actually a built-in tool
+        if (builtInToolNames.has(tool.name)) {
+          // It's a built-in tool that wasn't caught by keyword detection
+          // Mark it as built-in and enrich with implementation info
+          const builtInInfo = builtInToolNames.get(tool.name);
+          toolMap.set(tool.name, {
+            ...tool,
+            execution_type: 'built-in',
+            implementation: {
+              type: 'built-in',
+              method: builtInInfo.method,
+            },
+            type: 'built-in',
+            priority: 1,
+            _source: 'registry-reclassified-as-built-in',
+          });
+        } else {
+          toolMap.set(tool.name, { ...tool, _source: 'registry' });
+        }
+      } else {
+        // Tool already exists (from built-in detection) - merge parameter info if the existing one is empty
+        const existing = toolMap.get(tool.name);
+        if (
+          existing.execution_type === 'built-in' &&
+          (!existing.parameters || !existing.parameters.properties || Object.keys(existing.parameters.properties).length === 0) &&
+          tool.parameters && tool.parameters.properties && Object.keys(tool.parameters.properties).length > 0
+        ) {
+          // Enrich built-in tool with full parameter definition from registry
+          existing.parameters = tool.parameters;
+          existing.description = tool.description || existing.description;
+        }
+      }
+    }
+
+    // Add MCP tools - classify as built-in if they exist in builtInToolsMap
+    for (const tool of mcpTools) {
+      if (!toolMap.has(tool.name)) {
+        // Check if this tool is actually a built-in tool that's also exposed via MCP
+        if (builtInToolNames.has(tool.name)) {
+          const builtInInfo = builtInToolNames.get(tool.name);
+          toolMap.set(tool.name, {
+            ...tool,
+            execution_type: 'built-in',
+            implementation: {
+              type: 'built-in',
+              method: builtInInfo.method,
+            },
+            type: 'built-in',
+            priority: 1,
+            alsoAvailableViaMCP: true, // Mark that this is also available via MCP
+            _source: 'mcp-reclassified-as-built-in',
+          });
+        } else {
+          // This is a true external MCP tool (from a non-CodeXomics MCP server)
+          toolMap.set(tool.name, { ...tool, _source: 'mcp' });
+        }
+      }
+      // If tool already exists (from built-in or registry), skip MCP version entirely
+    }
+
+    // Add plugin tools - these are always separate
+    for (const tool of pluginTools) {
+      if (!toolMap.has(tool.name)) {
+        toolMap.set(tool.name, { ...tool, _source: 'plugin' });
+      }
+    }
+
+    return Array.from(toolMap.values());
+  }
+
+  /**
    * Build the complete system prompt with dynamic tools, built-in tools, and plugin integration
+   * ENHANCED: Improved categorization - tools in builtInToolsMap are always classified as built-in
    */
   buildSystemPrompt(promptData, context) {
     const { tools, toolDescriptions, sampleUsages, pluginToolsSection } = promptData;
 
-    // Separate built-in tools from external tools and plugin tools
-    const builtInTools = tools.filter(
-      tool => tool.execution_type === 'built-in' || tool.implementation?.type === 'built-in'
-    );
+    // ENHANCED: Separate tools using the authoritative builtInToolsMap
+    // Tools in builtInToolsMap are ALWAYS built-in, regardless of original source
+    const builtInToolNames = this.builtInTools.builtInToolsMap;
+
+    const builtInTools = tools.filter(tool => {
+      // Primary: explicit built-in markers from deduplication
+      if (tool.execution_type === 'built-in' || tool.implementation?.type === 'built-in') return true;
+      // Fallback: check against the authoritative builtInToolsMap
+      if (builtInToolNames.has(tool.name)) return true;
+      return false;
+    });
+
     const pluginTools = tools.filter(tool => tool.source === 'plugin');
-    const externalTools = tools.filter(
-      tool => tool.execution_type !== 'built-in' && tool.implementation?.type !== 'built-in' && tool.source !== 'plugin'
-    );
+
+    const externalTools = tools.filter(tool => {
+      if (tool.execution_type === 'built-in' || tool.implementation?.type === 'built-in') return false;
+      if (builtInToolNames.has(tool.name)) return false;
+      if (tool.source === 'plugin') return false;
+      return true;
+    });
 
     // Build detailed genome browser state information
     let genomeStateInfo = '';
@@ -467,18 +602,19 @@ class SystemIntegration {
       genomeStateInfo = '- **Genome Browser**: No genome data loaded';
     }
 
-    // Generate built-in tools section
+    // Generate built-in tools section (ENHANCED: with full parameter info)
     const builtInToolDescriptions = builtInTools
       .map(tool => {
         const params = Object.entries(tool.parameters?.properties || {})
           .map(([name, param]) => `${name}: ${param.type} - ${param.description}`)
           .join(', ');
 
-        return `- **${tool.name}** (Built-in): ${tool.description}\n  Parameters: ${params}\n  Implementation: ChatManager.${tool.implementation?.method || tool.name}`;
+        const mcpNote = tool.alsoAvailableViaMCP ? ' (also available via MCP)' : '';
+        return `- **${tool.name}** (Built-in${mcpNote}): ${tool.description}\n  Parameters: ${params || 'See tool documentation'}`;
       })
       .join('\n');
 
-    // Generate external tools section
+    // Generate extended tools section
     const externalToolDescriptions = externalTools
       .map(tool => {
         const params = Object.entries(tool.parameters?.properties || {})
@@ -497,15 +633,19 @@ You are an advanced AI assistant for CodeXomics, equipped with ${tools.length} d
 ${genomeStateInfo}
 - **Network Status**: ${context.hasNetwork ? 'Connected' : 'Offline'}
 - **Authentication**: ${context.hasAuth ? 'Authenticated' : 'Not authenticated'}
-- **Active Tools**: ${tools.length} tools available (${builtInTools.length} built-in, ${externalTools.length} external, ${pluginTools.length} plugin)
+- **Active Tools**: ${tools.length} tools available (${builtInTools.length} directly available, ${externalTools.length} extended, ${pluginTools.length} plugin)
 
-## 🔧 Built-in Tools (Directly Available)
+## 🔧 Directly Available Tools (Built-in)
+
+These tools execute directly in the browser without any external dependencies. Use them as your primary toolkit.
 
 ${builtInToolDescriptions || 'No built-in tools selected for this query.'}
 
-## 🌐 External Tools (Via MCP)
+## 🌐 Extended Tools
 
-${externalToolDescriptions || 'No external tools selected for this query.'}
+These tools provide additional capabilities. Some may require network access or external services.
+
+${externalToolDescriptions || 'No extended tools selected for this query.'}
 ${pluginToolsSection || ''}
 
 ## 📚 Tool Usage Examples
@@ -514,7 +654,7 @@ ${sampleUsages}
 
 ## 🎯 Enhanced Tool Selection Guidelines
 
-1. **Built-in Tools Priority**: Built-in tools are faster and more reliable - use them when available
+1. **Directly Available Tools Priority**: Built-in tools are faster and more reliable - always use them when available
 2. **File Loading Operations**: Use built-in file loading tools for importing data:
    - load_genome_file: For FASTA/GenBank genome files
    - load_annotation_file: For GFF/BED/GTF annotation files
@@ -565,12 +705,12 @@ ${'```'}
 ## 📊 Performance Optimization
 
 - Tools are selected based on advanced user intent analysis with file loading pattern recognition
-- Built-in tools are prioritized for better performance
+- Directly available (built-in) tools are prioritized for better performance
 - Only relevant tools are loaded to reduce context size
 - Tool usage is tracked for continuous optimization
 - Failed tools are automatically retried with fallback options
 
-Remember: You have access to the most relevant tools for the user's specific query, with built-in tools prioritized for file loading and core operations. Plugin tools extend your capabilities with specialized visualizations and analyses. Use them effectively to provide comprehensive genomic analysis and assistance.
+Remember: You have access to the most relevant tools for the user's specific query. Directly available (built-in) tools are your primary toolkit - they execute faster and more reliably. Extended tools and plugins provide additional specialized capabilities.
 
 **PLUGIN TOOL INVOCATION FORMAT**: To call a plugin tool, use the format "plugin-id.function-name", e.g., {"tool_name": "protein-interaction-network.visualize", "parameters": {...}}`;
   }
