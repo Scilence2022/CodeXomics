@@ -452,6 +452,14 @@ class LLMConfigManager {
       });
     }
 
+    // Always add Custom Model Name option for non-auto providers
+    if (selectedProvider !== 'auto') {
+      const customOption = document.createElement('option');
+      customOption.value = 'custom';
+      customOption.textContent = 'Custom Model Name';
+      modelSelect.appendChild(customOption);
+    }
+
     // Set intelligent default if model type has preferred models
     const modelTypeConfig = this.modelTypes[type];
     if (modelTypeConfig && modelTypeConfig.preferredModels && modelTypeConfig.preferredModels[selectedProvider]) {
@@ -863,6 +871,20 @@ class LLMConfigManager {
       });
     }
 
+    // Cloud provider model select change - toggle custom model name input
+    const cloudProviders = ['openai', 'anthropic', 'google', 'deepseek', 'siliconflow', 'openrouter'];
+    cloudProviders.forEach(provider => {
+      const modelSelect = document.getElementById(`${provider}Model`);
+      if (modelSelect) {
+        modelSelect.addEventListener('change', event => {
+          const otherModelGroup = document.getElementById(`${provider}ModelOtherGroup`);
+          if (otherModelGroup) {
+            otherModelGroup.style.display = event.target.value === 'other' ? 'block' : 'none';
+          }
+        });
+      }
+    });
+
     // Add event listeners for all new paste buttons
     const pasteButtonConfigs = [
       { btnId: 'pasteOpenaiApiKeyBtn', inputId: 'openaiApiKey' },
@@ -1062,7 +1084,12 @@ class LLMConfigManager {
       } else {
         const modelField = document.getElementById(`${prefix}Model`);
         if (modelField) {
-          provider.model = modelField.value;
+          if (modelField.value === 'other') {
+            const otherModelInput = document.getElementById(`${prefix}ModelOther`);
+            provider.model = otherModelInput ? otherModelInput.value : '';
+          } else {
+            provider.model = modelField.value;
+          }
         }
         const baseUrlField = document.getElementById(`${prefix}BaseUrl`);
         if (baseUrlField) {
@@ -1116,7 +1143,7 @@ class LLMConfigManager {
    * Check if a model is a known model for a given provider
    */
   isKnownModel(modelName, providerName) {
-    if (!modelName || modelName === 'auto' || modelName === 'custom') {
+    if (!modelName || modelName === 'auto' || modelName === 'custom' || modelName === 'other') {
       return true;
     }
 
@@ -1170,7 +1197,12 @@ class LLMConfigManager {
         } else {
           const modelField = document.getElementById(`${prefix}Model`);
           if (modelField) {
-            provider.model = modelField.value;
+            if (modelField.value === 'other') {
+              const otherModelInput = document.getElementById(`${prefix}ModelOther`);
+              provider.model = otherModelInput ? otherModelInput.value : '';
+            } else {
+              provider.model = modelField.value;
+            }
           }
           const baseUrlField = document.getElementById(`${prefix}BaseUrl`);
           if (baseUrlField) {
@@ -1277,7 +1309,27 @@ class LLMConfigManager {
             localModelSelect && localModelSelect.value === 'other' ? 'block' : 'none';
         }
       } else {
-        if (modelField) modelField.value = provider.model || '';
+        if (modelField) {
+          // Check if the saved model is in the dropdown options
+          let modelIsOther = true;
+          for (let i = 0; i < modelField.options.length; i++) {
+            if (modelField.options[i].value === provider.model) {
+              modelField.value = provider.model;
+              modelIsOther = false;
+              break;
+            }
+          }
+          if (modelIsOther && provider.model) {
+            modelField.value = 'other';
+            const otherModelInput = document.getElementById(`${prefix}ModelOther`);
+            if (otherModelInput) otherModelInput.value = provider.model;
+          }
+          // Show/hide the custom model group
+          const otherModelGroup = document.getElementById(`${prefix}ModelOtherGroup`);
+          if (otherModelGroup) {
+            otherModelGroup.style.display = modelField.value === 'other' ? 'block' : 'none';
+          }
+        }
         if (baseUrlField) baseUrlField.value = provider.baseUrl || '';
       }
     });
@@ -1320,7 +1372,13 @@ class LLMConfigManager {
 
       provider.apiKey = document.getElementById(`${prefix}ApiKey`).value;
 
-      provider.model = document.getElementById(`${prefix}Model`).value;
+      const modelSelect = document.getElementById(`${prefix}Model`);
+      if (modelSelect && modelSelect.value === 'other') {
+        const otherModelInput = document.getElementById(`${prefix}ModelOther`);
+        provider.model = otherModelInput ? otherModelInput.value : '';
+      } else if (modelSelect) {
+        provider.model = modelSelect.value;
+      }
       provider.baseUrl =
         document.getElementById(`${prefix}BaseUrl`)?.value || document.getElementById('localEndpoint')?.value;
 
