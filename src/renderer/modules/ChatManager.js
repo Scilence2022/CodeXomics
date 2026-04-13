@@ -2223,9 +2223,13 @@ class ChatManager {
       if (!parameters || Object.keys(parameters).length === 0) {
         // No parameters
         result = this.MicrobeFns[methodName]();
-      } else if (parameters.sequence || parameters.dna) {
-        // Single sequence parameter
-        result = this.MicrobeFns[methodName](parameters.sequence || parameters.dna);
+      } else if (parameters.sequence || parameters.dna || parameters.dna_sequence) {
+        // Single sequence parameter — extract the actual string value
+        const seq = parameters.sequence || parameters.dna || parameters.dna_sequence;
+        if (typeof seq !== 'string') {
+          throw new Error(`Expected a DNA sequence string but received ${typeof seq}. Provide a 'sequence' parameter with a string value.`);
+        }
+        result = this.MicrobeFns[methodName](seq);
       } else if (parameters.chromosome && parameters.start && parameters.end) {
         // Position-based parameters
         result = this.MicrobeFns[methodName](parameters.chromosome, parameters.start, parameters.end);

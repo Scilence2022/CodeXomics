@@ -240,7 +240,7 @@ class MultiAgentSystem {
       }
 
       // Execute through optimal agent
-      const result = await optimalAgent.executeFunction(functionName, parameters, executionContext);
+      const result = await optimalAgent.agent.executeFunction(functionName, parameters, executionContext);
 
       // Cache result if appropriate
       this.cacheResult(functionName, parameters, result);

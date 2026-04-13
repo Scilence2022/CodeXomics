@@ -176,7 +176,7 @@ class MicrobeGenomicsFunctions {
     }
 
     // Fallback to original implementation if unified module not available
-    if (!dna) return 0;
+    if (!dna || typeof dna !== 'string') return 0;
     const g = (dna.match(/G/gi) || []).length;
     const c = (dna.match(/C/gi) || []).length;
     const valid = g + c + (dna.match(/[AT]/gi) || []).length;
@@ -189,6 +189,7 @@ class MicrobeGenomicsFunctions {
    * @returns {string} Reverse complement sequence
    */
   static reverseComplement(dna) {
+    if (!dna || typeof dna !== 'string') return '';
     // Use unified sequence processing implementation
     if (window.UnifiedSequenceProcessing) {
       const result = window.UnifiedSequenceProcessing.legacyReverseComplement(dna);
@@ -212,6 +213,7 @@ class MicrobeGenomicsFunctions {
    * @returns {string} Amino acid sequence
    */
   static translateDNA(dna, frame = 0) {
+    if (!dna || typeof dna !== 'string') return '';
     // Use unified translation implementation
     if (window.UnifiedDNATranslation) {
       const result = window.UnifiedDNATranslation.legacyTranslateDNA(dna, frame);
@@ -302,6 +304,7 @@ class MicrobeGenomicsFunctions {
    * @returns {Array} Array of ORF objects {start, end, frame, sequence}
    */
   static findORFs(dna, minLength = 30) {
+    if (!dna || typeof dna !== 'string') return [];
     const orfs = [];
     const startCodons = ['ATG'];
     const stopCodons = ['TAA', 'TAG', 'TGA'];
@@ -345,6 +348,7 @@ class MicrobeGenomicsFunctions {
    * @returns {number} Shannon entropy value
    */
   static calculateEntropy(sequence) {
+    if (!sequence || typeof sequence !== 'string') return 0;
     const counts = {};
     for (const base of sequence.toUpperCase()) {
       counts[base] = (counts[base] || 0) + 1;
@@ -383,6 +387,7 @@ class MicrobeGenomicsFunctions {
    * @returns {number} Estimated melting temperature in Celsius
    */
   static calculateMeltingTemp(dna) {
+    if (!dna || typeof dna !== 'string') return 0;
     if (dna.length < 14) {
       // For short sequences, use simple formula
       const a = (dna.match(/[AT]/gi) || []).length;
@@ -401,6 +406,7 @@ class MicrobeGenomicsFunctions {
    * @returns {number} Molecular weight in Daltons
    */
   static calculateMolecularWeight(dna) {
+    if (!dna || typeof dna !== 'string') return 0;
     const weights = { A: 331.2, T: 322.2, G: 347.2, C: 307.2 };
     let weight = 0;
     for (const base of dna.toUpperCase()) {
@@ -415,6 +421,7 @@ class MicrobeGenomicsFunctions {
    * @returns {Object} Codon usage statistics
    */
   static analyzeCodonUsage(dna) {
+    if (!dna || typeof dna !== 'string') return {};
     const codonCounts = {};
     const sequence = dna.toUpperCase();
 
