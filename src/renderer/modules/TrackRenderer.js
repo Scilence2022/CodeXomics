@@ -9537,18 +9537,24 @@ class TrackRenderer {
     }
 
     // Filter actions that have position information for current chromosome
-    const chromosomeActions = actionManager.actions.filter(action => {
+    // and assign execution order numbers based on position in the full actions list
+    const chromosomeActions = [];
+    actionManager.actions.forEach((action, globalIndex) => {
       // Only show actions with position information
-      if (!action.target || !action.details) return false;
+      if (!action.target || !action.details) return;
 
       // Parse position from target (e.g., "chr1:1000-2000" or "chr1:1000-2000(+)")
       const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-      if (!positionMatch) return false;
+      if (!positionMatch) return;
 
       const actionChr = positionMatch[1];
 
       // Show all actions for current chromosome (not limited to viewport)
-      return actionChr === chromosome;
+      if (actionChr === chromosome) {
+        // Store the execution order (1-based index from full actions list)
+        action._actionOrder = globalIndex + 1;
+        chromosomeActions.push(action);
+      }
     });
 
     // Separate actions into in-view and out-of-view
@@ -9724,7 +9730,8 @@ class TrackRenderer {
             font-weight: 600;
             color: #212529;
         `;
-    actionName.textContent = `${action.type.replace('_', ' ').toUpperCase()}`;
+    const orderPrefix = action._actionOrder ? `${action._actionOrder}. ` : '';
+    actionName.textContent = `${orderPrefix}${action.type.replace('_', ' ').toUpperCase()}`;
 
     const position = document.createElement('div');
     position.style.cssText = `
@@ -10450,7 +10457,12 @@ class TrackRenderer {
       replace_sequence: 'Replace',
     };
 
-    return typeNames[action.type] || action.type;
+    const baseName = typeNames[action.type] || action.type;
+    // Prefix with execution order number if available
+    if (action._actionOrder) {
+      return `${action._actionOrder}. ${baseName}`;
+    }
+    return baseName;
   }
 
   /**
@@ -10459,9 +10471,10 @@ class TrackRenderer {
   getActionTooltip(action) {
     const typeName = this.getActionDisplayName(action);
     const statusText = action.status.charAt(0).toUpperCase() + action.status.slice(1);
+    const orderText = action._actionOrder ? `Execution Order: #${action._actionOrder}\n` : '';
 
     return `${typeName} Action (${statusText})
-Target: ${action.target}
+${orderText}Target: ${action.target}
 Details: ${action.details}
 Created: ${new Date(action.timestamp).toLocaleString()}`;
   }
