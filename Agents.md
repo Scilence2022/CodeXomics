@@ -50,6 +50,27 @@ The authoritative source for whether a tool is "Built-in" is the `builtInToolsMa
 - **Rule**: When a tool exists in both `builtInToolsMap` and the MCP server, it will be classified as Built-in with `alsoAvailableViaMCP: true`. The system prompt will note it as "(also available via MCP)".
 - **Rule**: Built-in tool parameter descriptions are enriched from the YAML registry definitions. If the YAML file has detailed parameter schemas, those will be used in the system prompt instead of empty `{ properties: {} }`.
 
+### LLM Configuration Manager
+The LLM configuration UI (`#llmConfigModal`) is managed by `src/renderer/modules/LLMConfigManager.js`. It supports multiple provider tabs (Local LLM, OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter) plus a "Model Selection" tab.
+
+**Key architectural pattern — Custom Model Name:**
+All provider tabs (including Local LLM) support a "Custom Model Name" option. The implementation follows this pattern:
+1. **HTML**: Each provider's `<select id="{provider}Model">` includes `<option value="other">Other (specify below)</option>` as the last option, followed by a hidden `<div id="{provider}ModelOtherGroup">` containing `<input id="{provider}ModelOther">`.
+2. **Event listener**: In `setupEventListeners()`, each `{provider}Model` select has a `change` listener that toggles `display` of `{provider}ModelOtherGroup` based on whether the value is `'other'`.
+3. **Save logic**: In `saveProviderInfo()` and `saveConfiguration()`, when the model select value is `'other'`, the actual model name is read from `{provider}ModelOther` input instead.
+4. **Load logic**: In `loadConfigurationToUI()`, the saved model name is checked against the dropdown options. If not found, `'other'` is selected and the custom name is populated into `{provider}ModelOther`, with the group shown.
+5. **Test Connection**: In `testConnection()`, the same `'other'` → `{provider}ModelOther` resolution is applied before making API requests.
+6. **Model Selection tab**: `updateModelTypeOptions()` appends a `Custom Model Name` option (value `'custom'`) to the dynamic model list for non-auto providers. `isKnownModel()` treats `'other'` and `'custom'` as known sentinel values.
+
+**Critical Rules for LLM Config:**
+- **Rule**: When adding a new provider tab, you MUST include the "Other (specify below)" option and `ModelOtherGroup`/`ModelOther` input, following the exact same pattern as existing providers.
+- **Rule**: The Local LLM tab uses `id="localEndpoint"` for base URL, while cloud providers use `id="{provider}BaseUrl"`. Code that reads base URL must handle this difference.
+- **Rule**: `testConnection()` does NOT work on the "Model Selection" tab (`activeTab === 'models'`). The method must guard against this case.
+- **Rule**: Each `test*()` method must include `baseUrl` fallback defaults (e.g., `'https://api.openai.com/v1'` for OpenAI) to prevent `undefined` URL concatenation.
+- **Rule**: The Anthropic `testAnthropic()` method requires the `anthropic-dangerous-direct-browser-access: 'true'` header for browser-based API calls.
+- **Rule**: The Google test method uses the `v1beta` API path (matching `sendGoogleMessage`), not `v1`.
+- **Rule**: `testLocal()` validates that the configured model exists on the local server by parsing the `/models` response; it throws a descriptive error if the model is not found.
+
 ### Internal Multi-Agent Routing
 CodeXomics runs its own internal network of specialized agents (`NavigationAgent`, `DataAgent`, `CoordinatorAgent`, etc.). 
 - **Rule**: When adding functionality that requires AI to sequentially execute logic (like navigating AND analyzing), integrate it as a capability into the relevant Agent class rather than building brittle one-off callbacks in the UI layer.

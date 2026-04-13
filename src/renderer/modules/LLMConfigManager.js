@@ -1358,20 +1358,31 @@ class LLMConfigManager {
   }
 
   async testConnection() {
-    const activeTab = document.querySelector('.tab-button.active').dataset.provider;
+    const activeTab = document.querySelector('#llmConfigModal .tab-button.active').dataset.provider;
     const testBtn = document.getElementById('testConnectionBtn');
+
+    // The "models" tab is not a provider — cannot test connection there
+    if (activeTab === 'models') {
+      this.showNotification('Please switch to a provider tab to test the connection.', 'warning');
+      return;
+    }
 
     // Update button state
     testBtn.classList.add('testing');
-    testBtn.innerHTML = '<i class="fas fa-spinner"></i> Testing...';
+    testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
 
     try {
-      // Get current form values
+      // Get current form values based on provider
       const provider = { ...this.providers[activeTab] };
-      const prefix = activeTab === 'local' ? 'local' : activeTab;
+      const prefix = activeTab;
 
-      provider.apiKey = document.getElementById(`${prefix}ApiKey`).value;
+      // Read API key from form
+      const apiKeyField = document.getElementById(`${prefix}ApiKey`);
+      if (apiKeyField) {
+        provider.apiKey = apiKeyField.value;
+      }
 
+      // Read model from form (handle "other" custom model)
       const modelSelect = document.getElementById(`${prefix}Model`);
       if (modelSelect && modelSelect.value === 'other') {
         const otherModelInput = document.getElementById(`${prefix}ModelOther`);
@@ -1379,8 +1390,27 @@ class LLMConfigManager {
       } else if (modelSelect) {
         provider.model = modelSelect.value;
       }
-      provider.baseUrl =
-        document.getElementById(`${prefix}BaseUrl`)?.value || document.getElementById('localEndpoint')?.value;
+
+      // Read base URL from form (different ID for local provider)
+      if (activeTab === 'local') {
+        provider.baseUrl = document.getElementById('localEndpoint')?.value || provider.baseUrl;
+      } else {
+        const baseUrlField = document.getElementById(`${prefix}BaseUrl`);
+        if (baseUrlField) {
+          provider.baseUrl = baseUrlField.value;
+        }
+      }
+
+      // Validate required fields before testing
+      if (activeTab !== 'local' && !provider.apiKey) {
+        throw new Error('API Key is required. Please enter your API key before testing.');
+      }
+      if (!provider.model) {
+        throw new Error('Model is required. Please select or enter a model name before testing.');
+      }
+      if (activeTab === 'local' && !provider.baseUrl) {
+        throw new Error('API Endpoint is required. Please enter the endpoint URL before testing.');
+      }
 
       // Test the connection
       const result = await this.makeTestRequest(activeTab, provider);
@@ -1433,7 +1463,8 @@ class LLMConfigManager {
   }
 
   async testOpenAI(config) {
-    const response = await fetch(`${config.baseUrl}/models`, {
+    const baseUrl = config.baseUrl || 'https://api.openai.com/v1';
+    const response = await fetch(`${baseUrl}/models`, {
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json',
@@ -1441,19 +1472,34 @@ class LLMConfigManager {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
+    }
+
+    // Validate that the configured model is accessible
+    try {
+      const data = await response.json();
+      const modelId = data?.data?.find(m => m.id === config.model);
+      if (!modelId) {
+        // Model not found in list, but API key is valid — still a success
+        console.warn(`Model "${config.model}" not found in available models list, but API key is valid.`);
+      }
+    } catch (parseError) {
+      // If we can't parse the model list, still report success since the API responded OK
     }
 
     return { success: true };
   }
 
   async testAnthropic(config) {
-    const response = await fetch(`${config.baseUrl}/v1/messages`, {
+    const baseUrl = config.baseUrl || 'https://api.anthropic.com';
+    const response = await fetch(`${baseUrl}/v1/messages`, {
       method: 'POST',
       headers: {
         'x-api-key': config.apiKey,
         'Content-Type': 'application/json',
         'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
         model: config.model,
@@ -1463,24 +1509,53 @@ class LLMConfigManager {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error?.message) {
+          errorMsg += ` - ${errorData.error.message}`;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      throw new Error(errorMsg);
     }
 
     return { success: true };
   }
 
   async testGoogle(config) {
-    const response = await fetch(`${config.baseUrl}/v1/models?key=${config.apiKey}`);
+    const baseUrl = config.baseUrl || 'https://generativelanguage.googleapis.com';
+    // Use the same v1beta API path as sendGoogleMessage
+    const apiUrl = `${baseUrl}/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: 'test' }] }],
+        generationConfig: { maxOutputTokens: 1 },
+      }),
+    });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorBody = await response.text();
+        if (errorBody) errorMsg += ` - ${errorBody}`;
+      } catch (e) {
+        // Ignore parse errors
+      }
+      throw new Error(errorMsg);
     }
 
     return { success: true };
   }
 
   async testDeepSeek(config) {
-    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    const baseUrl = config.baseUrl || 'https://api.deepseek.com/v1';
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
@@ -1488,20 +1563,30 @@ class LLMConfigManager {
       },
       body: JSON.stringify({
         model: config.model,
-        messages: [{ role: 'user', content: 'Hello, can you confirm you are working?' }],
-        max_tokens: 10,
+        messages: [{ role: 'user', content: 'test' }],
+        max_tokens: 1,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error?.message) {
+          errorMsg += ` - ${errorData.error.message}`;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      throw new Error(errorMsg);
     }
 
     return { success: true };
   }
 
   async testSiliconFlow(config) {
-    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    const baseUrl = config.baseUrl || 'https://api.siliconflow.cn/v1';
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
@@ -1509,20 +1594,32 @@ class LLMConfigManager {
       },
       body: JSON.stringify({
         model: config.model,
-        messages: [{ role: 'user', content: 'Hello, can you confirm you are working?' }],
-        max_tokens: 10,
+        messages: [{ role: 'user', content: 'test' }],
+        max_tokens: 1,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error?.message) {
+          errorMsg += ` - ${errorData.error.message}`;
+        } else if (errorData.message) {
+          errorMsg += ` - ${errorData.message}`;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      throw new Error(errorMsg);
     }
 
     return { success: true };
   }
 
   async testOpenRouter(config) {
-    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    const baseUrl = config.baseUrl || 'https://openrouter.ai/api/v1';
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
@@ -1532,20 +1629,30 @@ class LLMConfigManager {
       },
       body: JSON.stringify({
         model: config.model,
-        messages: [{ role: 'user', content: 'Hello, can you confirm you are working?' }],
-        max_tokens: 10,
+        messages: [{ role: 'user', content: 'test' }],
+        max_tokens: 1,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error?.message) {
+          errorMsg += ` - ${errorData.error.message}`;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      throw new Error(errorMsg);
     }
 
     return { success: true };
   }
 
   async testLocal(config) {
-    const response = await fetch(`${config.baseUrl}/models`, {
+    const baseUrl = config.baseUrl || 'http://localhost:11434/v1';
+    const response = await fetch(`${baseUrl}/models`, {
       headers: config.apiKey
         ? {
             Authorization: `Bearer ${config.apiKey}`,
@@ -1557,7 +1664,29 @@ class LLMConfigManager {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(
+        `HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}. ` +
+        `Make sure your local LLM server (Ollama, LMStudio, etc.) is running at ${baseUrl}`
+      );
+    }
+
+    // Validate the model exists in local server
+    try {
+      const data = await response.json();
+      const availableModels = data?.data?.map(m => m.id) || [];
+      if (availableModels.length > 0 && config.model && !availableModels.includes(config.model)) {
+        throw new Error(
+          `Model "${config.model}" not found on local server. ` +
+          `Available models: ${availableModels.slice(0, 10).join(', ')}${availableModels.length > 10 ? '...' : ''}`
+        );
+      }
+    } catch (error) {
+      // Re-throw model-not-found errors
+      if (error.message.includes('not found on local server')) {
+        throw error;
+      }
+      // If we can't parse the model list, still report success since the server responded
     }
 
     return { success: true };
