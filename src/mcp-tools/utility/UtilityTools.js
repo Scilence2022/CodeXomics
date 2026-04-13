@@ -56,6 +56,45 @@ class UtilityTools {
           required: ['filePath'],
         },
       },
+
+      toggle_settings_modal: {
+        name: 'toggle_settings_modal',
+        description:
+          "Open or close application settings modals/panels. Use this when users ask to open, close, show, hide, or toggle any settings interface such as LLM configuration, ChatBox settings, General settings, Track settings, MCP server settings, Multi-Agent settings, etc. Supported modal_name values: 'llm_config', 'chatbox_settings', 'general_settings', 'track_settings', 'mcp_settings', 'multi_agent_settings', 'tab_settings', 'search_settings', 'gene_detail_settings', 'external_tools', 'plugin_management', 'action_list', 'literature_settings'.",
+        parameters: {
+          type: 'object',
+          properties: {
+            modal_name: {
+              type: 'string',
+              description:
+                "The settings modal to toggle. Supported values: 'llm_config', 'chatbox_settings', 'general_settings', 'track_settings', 'mcp_settings', 'multi_agent_settings', 'tab_settings', 'search_settings', 'gene_detail_settings', 'external_tools', 'plugin_management', 'action_list', 'literature_settings'",
+              enum: [
+                'llm_config',
+                'chatbox_settings',
+                'general_settings',
+                'track_settings',
+                'mcp_settings',
+                'multi_agent_settings',
+                'tab_settings',
+                'search_settings',
+                'gene_detail_settings',
+                'external_tools',
+                'plugin_management',
+                'action_list',
+                'literature_settings',
+              ],
+            },
+            action: {
+              type: 'string',
+              description:
+                "Action to perform: 'open' to show the modal, 'close' to hide it, 'toggle' to switch its current state (default).",
+              enum: ['open', 'close', 'toggle'],
+              default: 'toggle',
+            },
+          },
+          required: ['modal_name'],
+        },
+      },
     };
   }
 
@@ -85,6 +124,10 @@ class UtilityTools {
 
   async view_markdown_file(params, clientId) {
     return await this.executeClientTool('view_markdown_file', params, clientId);
+  }
+
+  async toggle_settings_modal(params, clientId) {
+    return await this.executeClientTool('toggle_settings_modal', params, clientId);
   }
 }
 

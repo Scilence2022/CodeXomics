@@ -246,6 +246,8 @@ class ToolsIntegrator {
             return await this.utilityTools.download_internet_file(parameters, clientId);
           case 'view_markdown_file':
             return await this.utilityTools.view_markdown_file(parameters, clientId);
+          case 'toggle_settings_modal':
+            return await this.utilityTools.toggle_settings_modal(parameters, clientId);
           default:
             return await this.utilityTools.executeClientTool(toolName, parameters, clientId);
         }

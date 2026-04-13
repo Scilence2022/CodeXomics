@@ -818,6 +818,14 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // Settings Modal Tools
+    this.builtInToolsMap.set('toggle_settings_modal', {
+      method: 'toggleSettingsModal',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
     console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
   }
 
@@ -1224,6 +1232,18 @@ class BuiltInToolsIntegration {
         name: 'get_track_settings',
         confidence: 0.85,
         reason: 'Track settings keywords detected',
+      });
+    }
+
+    // Check for settings modal open/close/toggle patterns
+    if (/\b(open|close|show|hide|toggle|launch|display)\s+(settings?|config|preferences?|options?)\b/i.test(query) ||
+        /\b(settings?|config|preferences?)\s+(modal|panel|window|dialog)\b/i.test(query) ||
+        /\b(llm\s+config|chatbox\s+settings|general\s+settings|track\s+settings|mcp\s+settings|agent\s+settings|multi[-\s]?agent\s+settings|tab\s+settings|search\s+settings|gene\s+detail\s+settings|external\s+tools?\s+settings|plugin\s+(management|settings)|literature\s+settings)\b/i.test(query) ||
+        /\bconfigure\s+(llm|model|chat|agent|mcp|track|search|plugin)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'toggle_settings_modal',
+        confidence: 0.9,
+        reason: 'Settings modal open/close/toggle keywords detected',
       });
     }
 

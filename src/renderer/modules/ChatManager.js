@@ -6661,6 +6661,7 @@ ${coreTools}
       list_available_tools: () => this.listAvailableTools(parameters),
       download_internet_file: () => this.downloadInternetFile(parameters),
       utility_download_internet_file: () => this.downloadInternetFile(parameters),
+      utility_toggle_settings_modal: () => this.toggleSettingsModal(parameters),
 
       // Action system tools (if available)
       copy_sequence: () => this.executeActionTool('copy_sequence', parameters),
@@ -6728,6 +6729,9 @@ ${coreTools}
       // Multi-window management tools (IPC-based, no MCP server required)
       list_genome_windows: () => this.listGenomeWindows(parameters),
       switch_active_window: () => this.switchActiveWindow(parameters),
+
+      // Settings modal tools
+      toggle_settings_modal: () => this.toggleSettingsModal(parameters),
     };
 
     if (localTools[toolName]) {
@@ -6862,6 +6866,287 @@ ${coreTools}
     } catch (error) {
       console.error('[ChatManager] switchActiveWindow error:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Toggle settings modal open/close state
+   * Provides a unified interface for opening, closing, or toggling any settings modal
+   */
+  async toggleSettingsModal(parameters = {}) {
+    const { modal_name: modalName, action = 'toggle' } = parameters;
+
+    if (!modalName) {
+      return {
+        success: false,
+        error: 'modal_name parameter is required. Supported: llm_config, chatbox_settings, general_settings, track_settings, mcp_settings, multi_agent_settings, tab_settings, search_settings, gene_detail_settings, external_tools, plugin_management, action_list, literature_settings',
+      };
+    }
+
+    // Map modal names to their DOM IDs, open functions, and close functions
+    const modalRegistry = {
+      llm_config: {
+        id: 'llmConfigModal',
+        open: () => {
+          if (window.llmConfigManager) {
+            window.llmConfigManager.showConfigModal();
+          } else {
+            const modal = document.getElementById('llmConfigModal');
+            if (modal) modal.classList.add('show');
+          }
+        },
+        close: () => {
+          if (window.llmConfigManager) {
+            window.llmConfigManager.hideConfigModal();
+          } else {
+            const modal = document.getElementById('llmConfigModal');
+            if (modal) modal.classList.remove('show');
+          }
+        },
+      },
+      chatbox_settings: {
+        id: 'chatboxSettingsModal',
+        open: () => {
+          if (window.chatBoxSettingsManager) {
+            window.chatBoxSettingsManager.showSettingsModal();
+          }
+        },
+        close: () => {
+          const modal = document.getElementById('chatboxSettingsModal');
+          if (modal) {
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+          }
+        },
+      },
+      general_settings: {
+        id: 'generalSettingsModal',
+        open: () => {
+          if (window.genomeBrowser && window.genomeBrowser.showGeneralSettingsModal) {
+            window.genomeBrowser.showGeneralSettingsModal();
+          } else {
+            const modal = document.getElementById('generalSettingsModal');
+            if (modal) modal.classList.add('show');
+          }
+        },
+        close: () => {
+          const modal = document.getElementById('generalSettingsModal');
+          if (modal) modal.classList.remove('show');
+        },
+      },
+      track_settings: {
+        id: 'trackSettingsModal',
+        open: () => {
+          if (window.genomeBrowser && window.genomeBrowser.trackRenderer && window.genomeBrowser.trackRenderer.openTrackSettings) {
+            window.genomeBrowser.trackRenderer.openTrackSettings('genes');
+          }
+        },
+        close: () => {
+          const modal = document.getElementById('trackSettingsModal');
+          if (modal) modal.classList.remove('show');
+        },
+      },
+      mcp_settings: {
+        id: 'mcpSettingsModal',
+        open: () => {
+          if (window.genomeBrowser && window.genomeBrowser.showMCPSettingsModal) {
+            window.genomeBrowser.showMCPSettingsModal();
+          } else {
+            const modal = document.getElementById('mcpSettingsModal');
+            if (modal) modal.classList.add('show');
+          }
+        },
+        close: () => {
+          const modal = document.getElementById('mcpSettingsModal');
+          if (modal) modal.classList.remove('show');
+        },
+      },
+      multi_agent_settings: {
+        id: 'multiAgentSettingsModal',
+        open: () => {
+          if (window.multiAgentSettingsManager) {
+            window.multiAgentSettingsManager.showModal();
+          } else {
+            const modal = document.getElementById('multiAgentSettingsModal');
+            if (modal) modal.classList.add('show');
+          }
+        },
+        close: () => {
+          if (window.multiAgentSettingsManager) {
+            window.multiAgentSettingsManager.hideModal();
+          } else {
+            const modal = document.getElementById('multiAgentSettingsModal');
+            if (modal) modal.classList.remove('show');
+          }
+        },
+      },
+      tab_settings: {
+        id: 'tabSettingsModal',
+        open: () => {
+          if (window.genomeBrowser && window.genomeBrowser.tabManager && window.genomeBrowser.tabManager.openTabSettingsModal) {
+            window.genomeBrowser.tabManager.openTabSettingsModal();
+          } else {
+            const modal = document.getElementById('tabSettingsModal');
+            if (modal) modal.style.display = 'flex';
+          }
+        },
+        close: () => {
+          if (window.genomeBrowser && window.genomeBrowser.tabManager && window.genomeBrowser.tabManager.closeTabSettingsModal) {
+            window.genomeBrowser.tabManager.closeTabSettingsModal();
+          } else {
+            const modal = document.getElementById('tabSettingsModal');
+            if (modal) modal.style.display = 'none';
+          }
+        },
+      },
+      search_settings: {
+        id: 'searchSettingsModal',
+        open: () => {
+          if (window.genomeBrowser && window.genomeBrowser.navigationManager && window.genomeBrowser.navigationManager.showSearchSettingsModal) {
+            window.genomeBrowser.navigationManager.showSearchSettingsModal();
+          } else {
+            const modal = document.getElementById('searchSettingsModal');
+            if (modal) modal.classList.add('show');
+          }
+        },
+        close: () => {
+          const modal = document.getElementById('searchSettingsModal');
+          if (modal) modal.classList.remove('show');
+        },
+      },
+      gene_detail_settings: {
+        id: 'geneDetailSettingsModal',
+        open: () => {
+          if (window.genomeBrowser && window.genomeBrowser.showGeneDetailSettings) {
+            window.genomeBrowser.showGeneDetailSettings();
+          } else {
+            const modal = document.getElementById('geneDetailSettingsModal');
+            if (modal) modal.classList.add('show');
+          }
+        },
+        close: () => {
+          const modal = document.getElementById('geneDetailSettingsModal');
+          if (modal) modal.classList.remove('show');
+        },
+      },
+      external_tools: {
+        id: 'externalToolsModal',
+        open: () => {
+          if (window.genomeBrowser && window.genomeBrowser.showExternalToolsModal) {
+            window.genomeBrowser.showExternalToolsModal();
+          } else {
+            const modal = document.getElementById('externalToolsModal');
+            if (modal) modal.classList.add('show');
+          }
+        },
+        close: () => {
+          const modal = document.getElementById('externalToolsModal');
+          if (modal) modal.classList.remove('show');
+        },
+      },
+      plugin_management: {
+        id: 'pluginManagementModal',
+        open: () => {
+          if (window.pluginManagementUI && window.pluginManagementUI.showPluginModal) {
+            window.pluginManagementUI.showPluginModal();
+          } else {
+            const modal = document.getElementById('pluginManagementModal');
+            if (modal) modal.style.display = 'block';
+          }
+        },
+        close: () => {
+          if (window.pluginManagementUI && window.pluginManagementUI.hidePluginModal) {
+            window.pluginManagementUI.hidePluginModal();
+          } else {
+            const modal = document.getElementById('pluginManagementModal');
+            if (modal) modal.style.display = 'none';
+          }
+        },
+      },
+      action_list: {
+        id: 'actionListModal',
+        open: () => {
+          if (window.actionManager && window.actionManager.showActionList) {
+            window.actionManager.showActionList();
+          } else {
+            const modal = document.getElementById('actionListModal');
+            if (modal) modal.classList.add('show');
+          }
+        },
+        close: () => {
+          if (window.actionManager && window.actionManager.closeActionList) {
+            window.actionManager.closeActionList();
+          } else {
+            const modal = document.getElementById('actionListModal');
+            if (modal) modal.classList.remove('show');
+          }
+        },
+      },
+      literature_settings: {
+        id: 'literatureSettingsModal',
+        open: () => {
+          if (window.literatureSettings && window.literatureSettings.showModal) {
+            window.literatureSettings.showModal();
+          }
+        },
+        close: () => {
+          if (window.literatureSettings && window.literatureSettings.closeModal) {
+            window.literatureSettings.closeModal();
+          } else {
+            const modal = document.getElementById('literatureSettingsModal');
+            if (modal) modal.remove();
+          }
+        },
+      },
+    };
+
+    const entry = modalRegistry[modalName];
+    if (!entry) {
+      return {
+        success: false,
+        error: `Unknown modal: '${modalName}'. Supported: ${Object.keys(modalRegistry).join(', ')}`,
+      };
+    }
+
+    try {
+      // Determine current state and action to perform
+      const modal = document.getElementById(entry.id);
+      const isOpen = modal ? modal.classList.contains('show') || modal.style.display === 'flex' || modal.style.display === 'block' : false;
+
+      let effectiveAction = action;
+      if (action === 'toggle') {
+        effectiveAction = isOpen ? 'close' : 'open';
+      }
+
+      if (effectiveAction === 'open') {
+        entry.open();
+        return {
+          success: true,
+          message: `Opened ${modalName} settings modal`,
+          modal_name: modalName,
+          new_state: 'open',
+        };
+      } else if (effectiveAction === 'close') {
+        entry.close();
+        return {
+          success: true,
+          message: `Closed ${modalName} settings modal`,
+          modal_name: modalName,
+          new_state: 'closed',
+        };
+      } else {
+        return {
+          success: false,
+          error: `Invalid action: '${action}'. Use 'open', 'close', or 'toggle'.`,
+        };
+      }
+    } catch (error) {
+      console.error(`[ChatManager] toggleSettingsModal error:`, error);
+      return {
+        success: false,
+        error: error.message,
+        modal_name: modalName,
+      };
     }
   }
 

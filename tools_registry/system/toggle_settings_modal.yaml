@@ -1,0 +1,108 @@
+# toggle_settings_modal.yaml
+name: 'toggle_settings_modal'
+version: '1.0.0'
+description: 'Open or close application settings modals/panels. Use this when users ask to open, close, show, hide, or toggle any settings interface such as LLM configuration, ChatBox settings, General settings, Track settings, MCP server settings, Multi-Agent settings, etc.'
+category: 'system'
+keywords: ['settings', 'modal', 'open settings', 'close settings', 'configure', 'configuration', 'preferences', 'show settings', 'hide settings', 'toggle settings', 'llm config', 'chatbox settings', 'general settings', 'track settings', 'mcp settings', 'agent settings', 'tab settings', 'search settings', 'gene detail settings', 'external tools', 'plugin settings']
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    modal_name:
+      type: 'string'
+      description: "The settings modal to toggle. Supported values: 'llm_config', 'chatbox_settings', 'general_settings', 'track_settings', 'mcp_settings', 'multi_agent_settings', 'tab_settings', 'search_settings', 'gene_detail_settings', 'external_tools', 'plugin_management', 'action_list', 'literature_settings'"
+      enum:
+        - 'llm_config'
+        - 'chatbox_settings'
+        - 'general_settings'
+        - 'track_settings'
+        - 'mcp_settings'
+        - 'multi_agent_settings'
+        - 'tab_settings'
+        - 'search_settings'
+        - 'gene_detail_settings'
+        - 'external_tools'
+        - 'plugin_management'
+        - 'action_list'
+        - 'literature_settings'
+      examples: ['llm_config', 'chatbox_settings', 'general_settings', 'track_settings']
+    action:
+      type: 'string'
+      description: "Action to perform: 'open' to show the modal, 'close' to hide it, 'toggle' to switch its current state (default)."
+      enum:
+        - 'open'
+        - 'close'
+        - 'toggle'
+      default: 'toggle'
+      examples: ['open', 'close', 'toggle']
+  required: ['modal_name']
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Open the LLM configuration settings'
+    tool_call: "toggle_settings_modal(modal_name='llm_config', action='open')"
+    thought: 'User wants to open the LLM config modal'
+    expected_result: 'LLM Configuration modal opens, showing provider tabs and model selection'
+
+  - user_query: 'Close the ChatBox settings'
+    tool_call: "toggle_settings_modal(modal_name='chatbox_settings', action='close')"
+    thought: 'User wants to close the ChatBox settings modal'
+    expected_result: 'ChatBox Settings modal closes'
+
+  - user_query: 'Show me the track settings'
+    tool_call: "toggle_settings_modal(modal_name='track_settings', action='open')"
+    thought: 'User wants to see track display settings'
+    expected_result: 'Track Settings modal opens showing display options for genome tracks'
+
+  - user_query: 'Toggle MCP server settings'
+    tool_call: "toggle_settings_modal(modal_name='mcp_settings', action='toggle')"
+    thought: 'User wants to toggle the MCP settings modal visibility'
+    expected_result: 'MCP Server Settings modal toggles between open and closed states'
+
+  - user_query: 'Open general preferences'
+    tool_call: "toggle_settings_modal(modal_name='general_settings', action='open')"
+    thought: 'User asks for general preferences which maps to general settings'
+    expected_result: 'General Settings modal opens with appearance, behavior, and display tabs'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['get_track_settings', 'set_track_settings']
+  alternatives: []
+  prerequisites: []
+  follow_up: ['get_track_settings', 'set_track_settings']
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ['system', 'ui', 'settings', 'modal', 'configuration']
+  complexity: 'simple'
+  usage_pattern: 'moderate'
+
+# Error handling
+error_handling:
+  invalid_modal: 'Returns error if modal_name is not a recognized settings modal'
+  modal_not_found: 'Returns error if the modal DOM element is not available'
+  action_failed: 'Returns error if the open/close action could not be performed'
+
+# Return value specification
+returns:
+  success: 'boolean - Whether the action was performed successfully'
+  message: 'string - Status message describing what happened'
+  modal_name: 'string - The name of the modal that was toggled'
+  new_state: 'string - The new state of the modal ("open" or "closed")'
