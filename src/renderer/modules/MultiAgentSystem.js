@@ -202,6 +202,18 @@ class MultiAgentSystem {
       // Determine optimal agent for execution
       const optimalAgent = this.selectOptimalAgent(functionName, parameters, context);
 
+      // If no agent can handle this tool, return a result that signals
+      // ToolExecutionService to fall through to other priorities
+      if (!optimalAgent) {
+        return {
+          success: false,
+          result: null,
+          agent: null,
+          executionTime: performance.now() - startTime,
+          reason: `No specialized agent for ${functionName}`,
+        };
+      }
+
       // Create execution context
       const executionContext = {
         id: executionId,
@@ -273,7 +285,10 @@ class MultiAgentSystem {
     candidates.sort((a, b) => b.score - a.score);
 
     if (candidates.length === 0) {
-      throw new Error(`No agent can execute function: ${functionName}`);
+      // No specialized agent can handle this tool — return null so the caller
+      // (ToolExecutionService PRIORITY 3) can fall through to other priorities
+      console.log(`🤖 No agent found for ${functionName}, falling through to other execution paths`);
+      return null;
     }
 
     console.log(`🤖 Selected agent ${candidates[0].name} for ${functionName} (score: ${candidates[0].score})`);

@@ -72,8 +72,84 @@ All provider tabs (including Local LLM) support a "Custom Model Name" option. Th
 - **Rule**: `testLocal()` validates that the configured model exists on the local server by parsing the `/models` response; it throws a descriptive error if the model is not found.
 
 ### Internal Multi-Agent Routing
-CodeXomics runs its own internal network of specialized agents (`NavigationAgent`, `DataAgent`, `CoordinatorAgent`, etc.). 
+CodeXomics runs its own internal network of specialized agents (`NavigationAgent`, `DataAgent`, `CoordinatorAgent`, `AnalysisAgent`, `ExternalAgent`, `PluginAgent`, `DeepResearchAgent`).
+
+**Tool Execution Flow (Priority Chain):**
+
+When `ChatManager.executeToolByName()` is called, it delegates to `ToolExecutionService.execute()`, which follows this priority chain:
+
+1. **PRIORITY 1**: Agent settings tools (`update_agent_setting`, `get_agent_settings`, `toggle_agent_mode`) → `AgentSettingsManager`
+2. **PRIORITY 2**: Extracted service classes (`FileOperationService`, `AnnotationService`, `BlastService`, `ProteinService`, `GenomeAnalysisService`) — checks if the snake_case→camelCase method name exists on any service
+3. **PRIORITY 3**: Multi-Agent routing (`MultiAgentSystem.executeTool()`) — only when `agentSystemEnabled` is true
+4. **PRIORITY 4–8**: MCP tools → Plugin integrator → Action manager → MicrobeGenomicsFunctions → `ChatManager[camelCaseMethod]()` → `ChatManager.executeLocalTool()` fallback
+
+**Multi-Agent Selection (`selectOptimalAgent`):**
+- Iterates all registered agents, calling `agent.canExecute(functionName, parameters)`
+- `canExecute()` in `AgentBase` checks `this.toolMapping` first, then `this.capabilities` array
+- Agents with matching tools become candidates, scored by: historical performance + resource availability + context relevance + specialization bonus (+100 for specialized agents)
+- When no agent declares `canExecute: true`, `selectOptimalAgent` returns `null`, and `executeTool` returns `{ success: false, result: null }`
+- `ToolExecutionService` PRIORITY 3 then falls through (because `agentResult.success !== true`), allowing PRIORITY 7 (`this.chatManager[camelCaseMethod]()`) to handle it directly
+
+**Critical Architecture — toolMapping vs. builtInToolsMap:**
+
+These are **two separate registries** that must not be confused:
+
+| Registry | Location | Purpose |
+|----------|----------|---------|
+| `builtInToolsMap` | `tools_registry/builtin_tools_integration.js` | Declares all tools that exist as ChatManager methods. Used for system prompt generation and tool classification. |
+| `toolMapping` | Each Agent's `registerToolMapping()` | Declares which tools a specific agent can execute locally. Only tools in `toolMapping` pass the `canExecute()` check. |
+
+A tool can exist in `builtInToolsMap` but not in any agent's `toolMapping` (e.g., `set_working_directory`, `toggle_settings_modal`, `list_available_tools`, `download_internet_file`). These "system/utility" tools are handled by the PRIORITY 7 fallback in `ToolExecutionService`, NOT by the multi-agent system.
+
+**Infinite Recursion Trap:**
+
+Never make `CoordinatorAgent.canExecute()` return `true` for all tools and delegate to `chatManager.executeToolByName()`. This creates a cycle:
+```
+ToolExecutionService P3 → MultiAgentSystem → CoordinatorAgent → chatManager.executeToolByName() → ToolExecutionService P3 → ...
+```
+The correct approach is to let `selectOptimalAgent` return `null` when no agent handles a tool, allowing the priority chain to fall through to PRIORITY 7 (direct `ChatManager` method call).
+
+**Agent Delegation Pattern (`performExecution`):**
+
+All 7 agents override `performExecution()` with the same pattern:
+1. Try `chatManager.executeToolByName(functionName, parameters)` first
+2. Fall back to `_performLocalExecution()` (the agent's own `toolMapping`)
+
+This means when an agent IS selected (tool in its `toolMapping`), execution goes through ChatManager which re-enters `ToolExecutionService`. To avoid recursion, `ToolExecutionService` PRIORITY 3 must detect that the agent result is already resolved and not route again. The current implementation avoids this because the agent's `performExecution` calls `executeToolByName` which will NOT re-enter PRIORITY 3 when the tool is in the agent's `toolMapping` — it will be caught by PRIORITY 7 instead (since `agentSystemEnabled` check doesn't prevent re-entry, but the `success === true && result !== undefined` guard on the agent result prevents double-processing).
+
+**Agent Specialization Map (`isSpecializedAgent`):**
+
+The `MultiAgentSystem.isSpecializedAgent()` method defines which tools each agent specializes in. This map must be kept in sync with each agent's `registerToolMapping()`. Currently:
+- `NavigationAgent`: navigate_to_position, search_features, zoom_in/out, pan_left/right, get_current_state, search_gene_by_name, switch_to_tab, open_new_tab, close_tab, toggle_track, get_track_status
+- `AnalysisAgent`: get_sequence, translate_dna, reverse_complement, compute_gc, search_pattern, find_restriction_sites, virtual_digest, search_sequence_motif, analyze_region, design_primers, calculate_primer_properties
+- `DataAgent`: get_gene_details, get_operons, export_data, load_genome_file, export_fasta_sequence, export_genbank_format, search_annotations, list_annotations, get_annotation
+- `ExternalAgent`: blast_search, search_uniprot_database, advanced_uniprot_search, fetch_alphafold_structure, search_alphafold_structures, search_pdb_structures, fetch_protein_structure, analyze_interpro_domains
+- `PluginAgent`: list_plugins, execute_plugin, install_plugin, uninstall_plugin
+- `DeepResearchAgent`: deep_research, research_analysis, synthesize_information, generate_research_report
+- `CoordinatorAgent`: coordinate_task, decompose_task, integrate_results, create_workflow, execute_workflow
+
+**Critical Rules:**
 - **Rule**: When adding functionality that requires AI to sequentially execute logic (like navigating AND analyzing), integrate it as a capability into the relevant Agent class rather than building brittle one-off callbacks in the UI layer.
+- **Rule**: When adding a tool that should be routed through a specific agent, add it to BOTH the agent's `toolMapping` (in `registerToolMapping()`) AND the `isSpecializedAgent` map in `MultiAgentSystem`.
+- **Rule**: System/utility tools (category `'system'` in `builtInToolsMap`) should NOT be added to any agent's `toolMapping`. They are handled by `ToolExecutionService` PRIORITY 7 fallback.
+- **Rule**: Never make `CoordinatorAgent.canExecute()` accept all tools unconditionally — this causes infinite recursion with `ToolExecutionService` PRIORITY 3.
+- **Rule**: `ChatManager.builtInTools` may be `undefined` at runtime. Never assume `this.chatManager.builtInTools.builtInToolsMap` exists. The `builtInToolsMap` lives on the `BuiltInToolsIntegration` class instance in `tools_registry/builtin_tools_integration.js`, not on `ChatManager`.
+
+### MCP Agent Mode
+CodeXomics MCP Server supports an "agent" capability that allows external MCP clients (e.g., Claude Desktop) to use the internal multi-agent system via a `codexomics_chat` tool.
+
+**Architecture:**
+- `src/mcp-tools/utility/AgentChatTools.js` — Defines the `codexomics_chat` tool with parameters: `prompt` (required), `activate_multi_agent` (optional, enables multi-agent mode), `context` (optional)
+- `src/mcp-server.js` — Registers the tool and declares `agent` capability in `initialize` response with `modes: ['tools-only', 'single-agent', 'multi-agent']`
+- `src/renderer/modules/InternalMCPServer.js` — `handleCodexomicsChat()` method receives WebSocket messages
+- `src/renderer/renderer-modular.js` — Routes `mcp-tool-call` and `execute-tool-request` for `codexomics_chat` → `ChatManager.processAgentPrompt()`
+- `ChatManager.processAgentPrompt()` — Handles single-agent/multi-agent mode switching, builds agent context, executes LLM loop with tool calls
+
+**Key methods in ChatManager:**
+- `processAgentPrompt(params)` — Entry point: toggles agent mode, builds context, calls `_executeAgentLoop()`
+- `_buildAgentContext(params)` — Collects current genome position info (chromosome, start, end, visible tracks)
+- `_executeAgentLoop(prompt, context)` — LLM call + tool execution loop (max 10 iterations)
+- `_extractToolCallsFromResponse(response)` — Parses tool calls from LLM response (supports multiple formats)
 
 ### Styling & CSS
 - **Rule**: Use Vanilla CSS. Do **not** use TailwindCSS, Bootstrap, or any atomic CSS frameworks unless explicitly asked by the user to introduce them. The project uses standard `.css` files located in `src/renderer/css/`. Respect the existing color variables and DOM structures.
