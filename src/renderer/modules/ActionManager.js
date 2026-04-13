@@ -1718,7 +1718,14 @@ class ActionManager {
    */
   async getSequenceForRegion(chromosome, start, end, strand = '+') {
     try {
+      if (!this.genomeBrowser || !this.genomeBrowser.currentSequence) {
+        console.warn('[ActionManager] No genome data loaded');
+        return null;
+      }
+
       if (!this.genomeBrowser.currentSequence[chromosome]) {
+        const available = Object.keys(this.genomeBrowser.currentSequence);
+        console.warn(`[ActionManager] Chromosome '${chromosome}' not found. Available: ${available.join(', ')}`);
         return null;
       }
 
@@ -3544,7 +3551,14 @@ class ActionManager {
     const sequence = await this.getSequenceForRegion(chromosome, start, end, strand);
 
     if (!sequence) {
-      throw new Error('Unable to retrieve sequence for cutting');
+      const availableChromosomes = this.genomeBrowser.currentSequence
+        ? Object.keys(this.genomeBrowser.currentSequence)
+        : [];
+      throw new Error(
+        `Unable to retrieve sequence for cutting at ${chromosome}:${start}-${end}. ` +
+        `Chromosome '${chromosome}' not found in loaded genome data. ` +
+        `Available chromosomes: ${availableChromosomes.join(', ')}`
+      );
     }
 
     // Clipboard should already be set when the action was created
@@ -3888,8 +3902,14 @@ class ActionManager {
    */
   async executeInsertSequence(action, executionGenomeData = null) {
     // Support both 'position' and 'start' fields for compatibility
-    const { chromosome, position, start, insertSequence } = action.metadata;
+    // Support both 'sequence' and 'insertSequence' field names (functionInsertSequence stores 'sequence')
+    const { chromosome, position, start } = action.metadata;
+    const insertSequence = action.metadata.insertSequence || action.metadata.sequence;
     const insertPosition = position !== undefined ? position : start;
+
+    if (!insertSequence) {
+      throw new Error(`Insert sequence action missing sequence data in metadata. Available keys: ${Object.keys(action.metadata).join(', ')}`);
+    }
 
     console.log('➕ [ActionManager] Executing insert sequence action:', {
       actionId: action.id,
@@ -3922,8 +3942,14 @@ class ActionManager {
    * Execute replace sequence action
    */
   async executeReplaceSequence(action, executionGenomeData = null) {
-    const { chromosome, start, end, newSequence } = action.metadata;
+    const { chromosome, start, end } = action.metadata;
+    // Support both 'newSequence' and 'sequence' field names (functionReplaceSequence stores 'sequence')
+    const newSequence = action.metadata.newSequence || action.metadata.sequence;
     const originalLength = end - start + 1;
+
+    if (!newSequence) {
+      throw new Error(`Replace sequence action missing sequence data in metadata. Available keys: ${Object.keys(action.metadata).join(', ')}`);
+    }
 
     console.log('🔄 [ActionManager] Executing replace sequence action:', {
       actionId: action.id,
