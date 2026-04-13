@@ -427,13 +427,16 @@ class ChatBoxSettingsManager {
       window.modalDragManager.resetPosition('#chatboxSettingsModal');
     }
 
-    // Show modal
-    modal.classList.add('show');
-
-    // Initialize draggable and resizable using centralized managers
+    // Initialize draggable BEFORE showing the modal so that the 'large' size class
+    // is applied before the first render, preventing a layout flash.
     if (window.modalDragManager) {
       window.modalDragManager.makeDraggable('#chatboxSettingsModal');
     }
+
+    // Show modal (centered via CSS flex)
+    modal.classList.add('show');
+
+    // Initialize resizable after showing so getBoundingClientRect returns correct dimensions
     if (window.resizableModalManager) {
       window.resizableModalManager.makeResizable('#chatboxSettingsModal');
     }

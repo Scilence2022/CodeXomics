@@ -46,13 +46,17 @@ class ResizableModalManager {
       return;
     }
 
-    // Set initial size (1.5x width increase)
-    const baseWidth = 500; // Default modal width
-    const increasedWidth = Math.round(baseWidth * 1.5);
-    modalContent.style.width = `${increasedWidth}px`;
-    modalContent.style.maxWidth = 'none'; // Override max-width for resizable modals
+    // Only set initial dimensions on first initialization (no inline width set yet)
+    if (!modalContent.style.width) {
+      // Use the modal's current CSS-determined width as the base
+      const currentWidth = modalContent.getBoundingClientRect().width;
+      const baseWidth = currentWidth > 100 ? currentWidth : 500;
+      modalContent.style.width = `${Math.round(baseWidth)}px`;
+    }
+    // Allow free resizing beyond max-width constraints
+    modalContent.style.maxWidth = 'none';
 
-    console.log(`Made modal resizable: ${modalSelector} with initial width: ${increasedWidth}px`);
+    console.log(`Made modal resizable: ${modalSelector}`);
   }
 
   handleMouseDown(e) {
@@ -191,14 +195,11 @@ class ResizableModalManager {
 
     if (!modalContent) return;
 
-    // Reset to default size (1.5x width)
-    const baseWidth = 500;
-    const increasedWidth = Math.round(baseWidth * 1.5);
-
-    modalContent.style.width = `${increasedWidth}px`;
+    // Clear inline dimensions so CSS defaults take effect
+    modalContent.style.width = '';
     modalContent.style.height = '';
     modalContent.style.left = '';
     modalContent.style.top = '';
-    modalContent.style.maxWidth = 'none';
+    modalContent.style.maxWidth = '';
   }
 }
