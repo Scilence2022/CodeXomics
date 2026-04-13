@@ -21,8 +21,24 @@ This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor
   - `tools_registry/registry_manager.js` – Loads YAML tool definitions and generates tool lists based on query relevance.
   - `tools_registry/<category>/` – YAML schema files per category (navigation, sequence_editing, file_operations, etc.).
 - `src/mcp-tools/` and `src/mcp-server.js` – Implementations of the Model Context Protocol (MCP) server.
+  - `src/mcp-tools/ToolsIntegrator.js` – Combines all 13 tool modules via `combineAllTools()` into a unified interface: NavigationTools, SequenceTools, ProteinTools, DatabaseTools, DataTools, PathwayTools, ActionTools, UtilityTools, FileTools, TrackSettingsTools, PrimerTools, AnnotationTools, AgentChatTools. Also includes `getWindowManagementTools()` for multi-window support (list_genome_windows, switch_active_window).
+  - `src/mcp-tools/<category>/` – Individual tool modules (navigation/, sequence/, protein/, database/, data/, pathway/, action/, utility/, file/, track/, primer/, annotation/).
+  - `src/mcp-tools/utility/AgentChatTools.js` – Defines `codexomics_chat` tool for external MCP clients to use the internal multi-agent system.
 - `src/renderer/modules/Agents/` – The internal Multi-Agent System logic.
-- `src/renderer/modules/chat/services/` – Extracted service classes for tool execution (`ToolExecutionService.js`, `FileOperationService.js`, `BlastService.js`, etc.).
+- `src/renderer/modules/chat/services/` – Extracted service classes for tool execution (`ToolExecutionService.js`, `FileOperationService.js`, `BlastService.js`, `AnnotationService.js`, `ProteinService.js`, `GenomeAnalysisService.js`, `IntentParserService.js`, `UIService.js`, `LLMContextService.js`).
+- `src/renderer/modules/chat/constants/` – Centralized constants used across the chat system.
+  - `ToolNames.js` – **Authoritative registry** of all tool name constants organized by category (NAVIGATION, SEARCH, SEQUENCE, STATE, FILE_LOADING, EXPORT, ANNOTATION, PROTEIN, BLAST, PATHWAY, ACTIONS, SYSTEM, TRACK_SETTINGS). Eliminates magic strings throughout the codebase.
+  - `DefaultSettings.js` – Default configuration constants (`DEFAULT_CHAT_SETTINGS`, `DEFAULT_AGENT_SETTINGS`).
+- `src/renderer/modules/MemoryLayers/` – Memory management for agent context.
+  - `ShortTermMemory.js` – Fast temporary storage for recent function calls with TTL-based eviction.
+- `src/renderer/modules/core/` – Extension system infrastructure.
+  - `ExtensionService.js`, `ExtensionHost.js`, `ExtensionContext.js` – Extension lifecycle and sandboxed execution.
+  - `ContributionRegistry.js`, `CommandRegistry.js` – Extension contribution points and command registration.
+  - `ActivationEventsService.js` – Lazy extension activation based on events.
+  - `ExtensionManifest.js` – Manifest validation for extension packages.
+  - `Disposable.js` – Base class for lifecycle-managed resources.
+- `src/renderer/modules/export/` – Unified export functionality.
+  - `GenBankExporter.js` – Consolidated GenBank format export (replaces duplicate code across modules).
 - `docs/` – Markdown documentation managed by MkDocs.
 
 ## 3. Core Architectural Patterns
@@ -31,7 +47,7 @@ Rather than statically defining tools inside `ChatManager.js`, CodeXomics uses a
 
 **Tool Classification Architecture:**
 
-The authoritative source for whether a tool is "Built-in" is the `builtInToolsMap` in `tools_registry/builtin_tools_integration.js`. This Map contains every tool that can execute locally in the browser via `ChatManager.executeLocalTool()` or `ToolExecutionService`. When the system prompt is generated:
+The authoritative source for whether a tool is "Built-in" is the `builtInToolsMap` in `tools_registry/builtin_tools_integration.js`. This Map contains every tool that can execute locally in the browser via `ChatManager.executeLocalTool()` or `ToolExecutionService` (~70+ entries across categories: file_loading, navigation, sequence, system, database, protein, data_management, external_apis, utility, annotation, sequence_editing, file_operations, primer_design). When the system prompt is generated:
 1. Tools whose names exist in `builtInToolsMap` are **always** classified as "Directly Available (Built-in)", regardless of whether they came from keyword detection, the YAML registry, or the MCP server.
 2. Tools not in `builtInToolsMap` are classified as "Extended" (e.g., third-party MCP tools, dynamic plugin tools).
 3. Deduplication ensures each tool name appears only once in the system prompt, with built-in source taking priority over registry and MCP sources.
@@ -79,7 +95,15 @@ CodeXomics runs its own internal network of specialized agents (`NavigationAgent
 When `ChatManager.executeToolByName()` is called, it delegates to `ToolExecutionService.execute()`, which follows this priority chain:
 
 1. **PRIORITY 1**: Agent settings tools (`update_agent_setting`, `get_agent_settings`, `toggle_agent_mode`) → `AgentSettingsManager`
-2. **PRIORITY 2**: Extracted service classes (`FileOperationService`, `AnnotationService`, `BlastService`, `ProteinService`, `GenomeAnalysisService`) — checks if the snake_case→camelCase method name exists on any service
+2. **PRIORITY 2**: Extracted service classes — checks if the snake_case→camelCase method name exists on any service:
+   - `FileOperationService` – File loading, saving, import/export operations
+   - `AnnotationService` – Annotation CRUD (create, edit, delete, list, search, merge)
+   - `BlastService` – BLAST search, database management
+   - `ProteinService` – Protein structure fetching, UniProt, PDB, AlphaFold
+   - `GenomeAnalysisService` – Sequence analysis, GC content, ORF finding
+   - `IntentParserService` – Natural language intent classification for tool routing
+   - `UIService` – UI state queries, modal control, notifications
+   - `LLMContextService` – LLM context window management, message truncation
 3. **PRIORITY 3**: Multi-Agent routing (`MultiAgentSystem.executeTool()`) — only when `agentSystemEnabled` is true
 4. **PRIORITY 4–8**: MCP tools → Plugin integrator → Action manager → MicrobeGenomicsFunctions → `ChatManager[camelCaseMethod]()` → `ChatManager.executeLocalTool()` fallback
 
@@ -109,6 +133,27 @@ ToolExecutionService P3 → MultiAgentSystem → CoordinatorAgent → chatManage
 ```
 The correct approach is to let `selectOptimalAgent` return `null` when no agent handles a tool, allowing the priority chain to fall through to PRIORITY 7 (direct `ChatManager` method call).
 
+**NavigationAgent Architecture — `capabilities[]` vs `toolMapping`:**
+
+`NavigationAgent` is unique among the 7 agents: it uses the `capabilities[]` array (passed to `AgentBase` constructor) rather than `toolMapping` for `canExecute()` checks. All other agents rely on `toolMapping` registered via `registerToolMapping()`. The `canExecute()` method in `AgentBase` checks `toolMapping` first (returns `{canExecute: true}` if found), then falls back to matching entries in `capabilities[]` by `functionName` or `pattern`. Because NavigationAgent's capabilities are defined in the constructor, it also supports parameter validation via `validateParameters` and resource estimation via `estimatedTime`.
+
+**NavigationAgent localStorage Persistence:**
+
+`NavigationAgent` persists bookmarks and view states to `localStorage`:
+- `genome_browser_bookmarks` – Key for `getStoredBookmarks()`/`setStoredBookmarks()` (JSON array of bookmark objects with name, chromosome, start, end)
+- `genome_browser_view_states` – Key for `getStoredViewStates()`/`setStoredViewStates()` (JSON array of named view configurations)
+
+This is a side effect that persists across application restarts. When modifying bookmark/view state logic, be aware that existing data in `localStorage` may have stale schemas.
+
+**CoordinatorAgent WorkflowEngine:**
+
+`CoordinatorAgent` contains an embedded `WorkflowEngine` class (defined in the same file) that manages multi-step workflow execution:
+- `createWorkflow(name, steps, dependencies)` – Creates a workflow with topologically sorted steps
+- `executeWorkflow(workflowId)` – Executes steps respecting dependency order
+- `getWorkflowStatus(workflowId)` – Returns current execution state
+
+The `WorkflowEngine` maintains its own `workflows` and `executions` Maps, separate from the CoordinatorAgent's task management. Workflows are NOT persisted across sessions.
+
 **Agent Delegation Pattern (`performExecution`):**
 
 All 7 agents override `performExecution()` with the same pattern:
@@ -117,9 +162,18 @@ All 7 agents override `performExecution()` with the same pattern:
 
 This means when an agent IS selected (tool in its `toolMapping`), execution goes through ChatManager which re-enters `ToolExecutionService`. To avoid recursion, `ToolExecutionService` PRIORITY 3 must detect that the agent result is already resolved and not route again. The current implementation avoids this because the agent's `performExecution` calls `executeToolByName` which will NOT re-enter PRIORITY 3 when the tool is in the agent's `toolMapping` — it will be caught by PRIORITY 7 instead (since `agentSystemEnabled` check doesn't prevent re-entry, but the `success === true && result !== undefined` guard on the agent result prevents double-processing).
 
-**Agent Specialization Map (`isSpecializedAgent`):**
+**Agent Specialization Map (`isSpecializedAgent`) vs. `toolMapping`:**
 
-The `MultiAgentSystem.isSpecializedAgent()` method defines which tools each agent specializes in. This map must be kept in sync with each agent's `registerToolMapping()`. Currently:
+The `isSpecializedAgent()` map in `MultiAgentSystem` and each agent's `registerToolMapping()` are **two separate registries that serve different purposes**:
+
+| Registry | Scope | Purpose |
+|----------|-------|---------|
+| `isSpecializedAgent` | `MultiAgentSystem.js` | Determines which tools get the +100 specialization bonus in `selectOptimalAgent()` scoring |
+| `toolMapping` | Each Agent class | Determines which tools pass the `canExecute()` check and can actually be executed by the agent |
+
+**Critical**: `isSpecializedAgent` is a **subset** of each agent's `toolMapping`. Tools in `toolMapping` but NOT in `isSpecializedAgent` will still pass `canExecute()` (allowing the agent to be selected), but will NOT receive the +100 specialization bonus during scoring. This means two agents with the same tool in their `toolMapping` but only one in `isSpecializedAgent` will both be candidates, but the specialized one will be strongly preferred.
+
+**Full `isSpecializedAgent` map (current):**
 - `NavigationAgent`: navigate_to_position, search_features, zoom_in/out, pan_left/right, get_current_state, search_gene_by_name, switch_to_tab, open_new_tab, close_tab, toggle_track, get_track_status
 - `AnalysisAgent`: get_sequence, translate_dna, reverse_complement, compute_gc, search_pattern, find_restriction_sites, virtual_digest, search_sequence_motif, analyze_region, design_primers, calculate_primer_properties
 - `DataAgent`: get_gene_details, get_operons, export_data, load_genome_file, export_fasta_sequence, export_genbank_format, search_annotations, list_annotations, get_annotation
@@ -128,12 +182,36 @@ The `MultiAgentSystem.isSpecializedAgent()` method defines which tools each agen
 - `DeepResearchAgent`: deep_research, research_analysis, synthesize_information, generate_research_report
 - `CoordinatorAgent`: coordinate_task, decompose_task, integrate_results, create_workflow, execute_workflow
 
+**Full `toolMapping` per agent (superset, includes aliases):**
+
+- `NavigationAgent` (26 capabilities in `capabilities[]` array, no `toolMapping` entries — uses `capabilities` for `canExecute`):
+  navigate_to_position, get_current_state, get_current_region, jump_to_gene, scroll_left, scroll_right, zoom_in, zoom_out, zoom_to_gene, toggle_track, get_track_status, bookmark_position, get_bookmarks, save_view_state, navigate_to, search_features, search_gene_by_name, pan_left, pan_right, switch_to_tab, open_new_tab, close_tab, get_chromosome_list
+
+- `AnalysisAgent` (26 toolMapping entries):
+  get_sequence, translate_sequence, translate_dna, reverse_complement, calculate_gc_content, compute_gc, calc_region_gc, sequence_statistics, codon_usage_analysis, analyze_codon_usage, genome_codon_usage_analysis, calculate_entropy, calculate_melting_temp, calculate_molecular_weight, predict_promoter, predict_rbs, predict_terminator, analyze_region, compare_regions, find_similar_sequences, find_restriction_sites, virtual_digest, search_pattern, search_sequence_motif, calculate_primer_properties, design_primers, find_primer_binding_sites, add_primer_annotation, get_coding_sequence, get_upstream_region, get_downstream_region
+
+- `DataAgent` (30+ toolMapping entries):
+  get_sequence, get_sequence_data, get_gene_details, get_gene_data, get_annotation_data, get_annotation, get_track_data, export_data, export_sequence, export_region, export_gene_list, export_track_data, export_fasta_sequence, export_genbank_format, export_gff_annotations, export_bed_format, export_cds_fasta, export_protein_fasta, export_current_view_fasta, load_genome_file, load_annotation_file, load_variant_file, load_reads_file, load_wig_tracks, import_sequence, import_annotation, import_track_data, get_operons, get_nearby_features, find_intergenic_regions, search_genes, search_sequences, search_annotations, list_annotations, get_data_statistics, get_genome_summary
+
+- `ExternalAgent` (20+ toolMapping entries):
+  blast_search, blast_search_online, blast_sequence, blast_protein, search_uniprot_database, uniprot_search, advanced_uniprot_search, get_uniprot_entry, uniprot_get_protein, uniprot_get_annotation, fetch_alphafold_structure, search_alphafold_structures, alphafold_search, alphafold_get_structure, search_alphafold_by_sequence, search_pdb_structures, fetch_protein_structure, analyze_interpro_domains, search_interpro_entry, get_interpro_entry_details, interpro_search, interpro_get_domain, kegg_search, kegg_get_pathway, evo2_design, evo2_optimize
+
+- `PluginAgent` (13 toolMapping entries):
+  list_plugins, get_plugin_info, install_plugin, uninstall_plugin, enable_plugin, disable_plugin, execute_plugin, call_plugin_function, get_plugin_functions, create_plugin, validate_plugin, test_plugin, search_plugins, get_plugin_marketplace, update_plugin
+
+- `DeepResearchAgent` (4 toolMapping entries — matches `isSpecializedAgent` exactly):
+  deep_research, research_analysis, synthesize_information, generate_research_report
+
+- `CoordinatorAgent` (13 toolMapping entries):
+  coordinate_task, decompose_task, integrate_results, create_workflow, execute_workflow, get_workflow_status, assign_task_to_agent, get_agent_status, balance_load, handle_error, retry_failed_task, fallback_strategy, optimize_execution, cache_strategy, parallel_execution
+
 **Critical Rules:**
 - **Rule**: When adding functionality that requires AI to sequentially execute logic (like navigating AND analyzing), integrate it as a capability into the relevant Agent class rather than building brittle one-off callbacks in the UI layer.
-- **Rule**: When adding a tool that should be routed through a specific agent, add it to BOTH the agent's `toolMapping` (in `registerToolMapping()`) AND the `isSpecializedAgent` map in `MultiAgentSystem`.
+- **Rule**: When adding a tool that should be routed through a specific agent, add it to BOTH the agent's `toolMapping` (in `registerToolMapping()`) AND the `isSpecializedAgent` map in `MultiAgentSystem`. If the tool should get the +100 specialization bonus, it MUST be in `isSpecializedAgent`; otherwise it will only pass `canExecute()` without the bonus.
 - **Rule**: System/utility tools (category `'system'` in `builtInToolsMap`) should NOT be added to any agent's `toolMapping`. They are handled by `ToolExecutionService` PRIORITY 7 fallback.
 - **Rule**: Never make `CoordinatorAgent.canExecute()` accept all tools unconditionally — this causes infinite recursion with `ToolExecutionService` PRIORITY 3.
 - **Rule**: `ChatManager.builtInTools` may be `undefined` at runtime. Never assume `this.chatManager.builtInTools.builtInToolsMap` exists. The `builtInToolsMap` lives on the `BuiltInToolsIntegration` class instance in `tools_registry/builtin_tools_integration.js`, not on `ChatManager`.
+- **Rule**: When adding a new tool name, also add it to `ToolNames.js` (`src/renderer/modules/chat/constants/ToolNames.js`) under the appropriate category constant. This eliminates magic strings and ensures consistency across the codebase.
 
 ### MCP Agent Mode
 CodeXomics MCP Server supports an "agent" capability that allows external MCP clients (e.g., Claude Desktop) to use the internal multi-agent system via a `codexomics_chat` tool.
