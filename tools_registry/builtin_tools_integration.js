@@ -1062,8 +1062,10 @@ class BuiltInToolsIntegration {
     }
 
     // Check for gene navigation patterns
-    if (/\b(jump\s+to\s+gene|go\s+to\s+gene|navigate\s+to\s+gene|find\s+gene|locate\s+gene)\b/i.test(query) ||
-        /\b(gene\s+(name|location|position))\b/i.test(query)) {
+    // Supports intermediate words: "navigate to the gene thrA", "go to gene xyz"
+    if (/\b(jump|go|navigate|move)\s+.*?\bgene\b/i.test(query) ||
+        /\b(find|locate)\s+.*?\bgene\b/i.test(query) ||
+        /\bgene\s+(name|location|position)\b/i.test(query)) {
       relevantTools.push({
         name: 'jump_to_gene',
         confidence: 0.9,
@@ -1072,7 +1074,9 @@ class BuiltInToolsIntegration {
     }
 
     // Check for gene search patterns
-    if (/\b(search\s+gene|find\s+gene|look\s+up\s+gene|gene\s+search)\b/i.test(query)) {
+    // Supports intermediate words: "search for gene", "find the gene called X"
+    if (/\b(search|find|look\s+up|locate)\s+.*?\bgene\b/i.test(query) ||
+        /\bgene\s+search\b/i.test(query)) {
       relevantTools.push({
         name: 'search_gene_by_name',
         confidence: 0.9,
@@ -1081,7 +1085,11 @@ class BuiltInToolsIntegration {
     }
 
     // Check for feature search patterns
-    if (/\b(search\s+features?|find\s+features?|annotation|function|features?\s+search)\b/i.test(query)) {
+    // Supports intermediate words: "search for features in this region"
+    if (/\b(search|find|look\s+up)\s+.*?\bfeatures?\b/i.test(query) ||
+        /\bannotation\b/i.test(query) ||
+        /\bfunction\b/i.test(query) ||
+        /\bfeatures?\s+search\b/i.test(query)) {
       relevantTools.push({
         name: 'search_features',
         confidence: 0.9,
@@ -1090,9 +1098,11 @@ class BuiltInToolsIntegration {
     }
 
     // Check for tab management patterns
+    // Patterns support: intermediate words (e.g., "switch to the analysis tab"),
+    // plural forms (tabs/windows), and prepositions (go to, switch to)
     if (
-      /\b(switch|change|activate|select|goto)\s+(tab|window)\b/i.test(query) ||
-      /\b(tab\s+(switch|change|activate|select))\b/i.test(query)
+      /\b(switch|change|activate|select|goto|go\s+to)\s+.*?\b(tabs?|windows?)\b/i.test(query) ||
+      /\b(tabs?|windows?)\s+(switch|change|activate|select)\b/i.test(query)
     ) {
       relevantTools.push({
         name: 'switch_to_tab',
@@ -1102,7 +1112,13 @@ class BuiltInToolsIntegration {
     }
 
     // Check for new tab patterns
-    if (/\b(open|new|create)\s+(tab|window)\b/i.test(query) || /\b(new\s+tab)\b/i.test(query)) {
+    // Matches: "open a new tab", "open three new tabs", "create 2 new tabs",
+    // "new tabs for comparison", "open two tabs", "new tab"
+    if (
+      /\b(open|create)\s+.*?\b(tabs?|windows?)\b/i.test(query) ||
+      /\bnew\s+tabs?\b/i.test(query) ||
+      /\b(tabs?|windows?)\s+for\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'open_new_tab',
         confidence: 0.85,
@@ -1111,14 +1127,43 @@ class BuiltInToolsIntegration {
     }
 
     // Check for close tab patterns
+    // Matches: "close all tabs", "close the second tab", "close three tabs",
+    // "remove multiple tabs", "close tab"
     if (
-      /\b(close|remove|delete|dismiss)\s+(tab|window)\b/i.test(query) ||
-      /\b(tab\s+(close|remove|delete|dismiss))\b/i.test(query)
+      /\b(close|remove|delete|dismiss)\s+.*?\b(tabs?|windows?)\b/i.test(query) ||
+      /\b(tabs?|windows?)\s+(close|remove|delete|dismiss)\b/i.test(query)
     ) {
       relevantTools.push({
         name: 'close_tab',
         confidence: 0.85,
         reason: 'Close tab keywords detected',
+      });
+    }
+
+    // Check for pan/scroll patterns
+    // Supports: "scroll to the left", "pan to the right by 1000bp", "scroll left"
+    if (/\b(scroll|pan|move)\s+.*?\b(left|right|up|down)\b/i.test(query) ||
+        /\b(scroll|pan)\s+(left|right|up|down)\b/i.test(query)) {
+      const direction = query.match(/\b(left|right)\b/i)?.[1]?.toLowerCase();
+      if (direction === 'left') {
+        relevantTools.push({ name: 'pan_left', confidence: 0.9, reason: 'Pan/scroll left keywords detected' });
+      } else if (direction === 'right') {
+        relevantTools.push({ name: 'pan_right', confidence: 0.9, reason: 'Pan/scroll right keywords detected' });
+      } else {
+        // Up/down - add both as fallback
+        relevantTools.push({ name: 'pan_left', confidence: 0.7, reason: 'Pan/scroll direction detected' });
+        relevantTools.push({ name: 'pan_right', confidence: 0.7, reason: 'Pan/scroll direction detected' });
+      }
+    }
+
+    // Check for track toggle patterns
+    // Supports: "toggle the coverage track", "show the gc track", "hide annotation track"
+    if (/\b(toggle|show|hide|turn\s+(on|off)|enable|disable)\s+.*?\btrack\b/i.test(query) ||
+        /\btrack\s+(toggle|show|hide|visibility|on|off)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'toggle_track',
+        confidence: 0.9,
+        reason: 'Track toggle keywords detected',
       });
     }
 

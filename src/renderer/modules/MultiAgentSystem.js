@@ -784,14 +784,74 @@ class MultiAgentSystem {
    * Fixed: Only references agents that actually exist
    */
   isSpecializedAgent(agentName, functionName) {
+    // IMPORTANT: This map must be kept in sync with each agent's toolMapping/capabilities.
+    // Every tool registered in an agent's registerToolMapping() or capabilities[] should be
+    // listed here to ensure the +100 specialization bonus is applied during agent selection.
+    // Legacy aliases (explicitly marked as "// legacy alias" in registerToolMapping) are
+    // excluded since the LLM should use primary tool names.
     const specializations = {
-      NavigationAgent: ['navigate_to_position', 'search_features', 'zoom_in', 'zoom_out', 'pan_left', 'pan_right', 'get_current_state', 'search_gene_by_name', 'switch_to_tab', 'open_new_tab', 'close_tab', 'toggle_track', 'get_track_status'],
-      AnalysisAgent: ['get_sequence', 'translate_dna', 'reverse_complement', 'compute_gc', 'search_pattern', 'find_restriction_sites', 'virtual_digest', 'search_sequence_motif', 'analyze_region', 'design_primers', 'calculate_primer_properties'],
-      DataAgent: ['get_gene_details', 'get_operons', 'export_data', 'load_genome_file', 'export_fasta_sequence', 'export_genbank_format', 'search_annotations', 'list_annotations', 'get_annotation'],
-      ExternalAgent: ['blast_search', 'search_uniprot_database', 'advanced_uniprot_search', 'fetch_alphafold_structure', 'search_alphafold_structures', 'search_pdb_structures', 'fetch_protein_structure', 'analyze_interpro_domains'],
-      PluginAgent: ['list_plugins', 'execute_plugin', 'install_plugin', 'uninstall_plugin'],
-      DeepResearchAgent: ['deep_research', 'research_analysis', 'synthesize_information', 'generate_research_report'],
-      CoordinatorAgent: ['coordinate_task', 'decompose_task', 'integrate_results', 'create_workflow', 'execute_workflow'],
+      NavigationAgent: [
+        // From capabilities[] array
+        'navigate_to_position', 'get_current_state', 'get_current_region', 'jump_to_gene',
+        'scroll_left', 'scroll_right', 'zoom_in', 'zoom_out', 'zoom_to_gene',
+        'toggle_track', 'get_track_status', 'bookmark_position', 'get_bookmarks',
+        'save_view_state', 'navigate_to', 'search_features', 'search_gene_by_name',
+        'pan_left', 'pan_right', 'switch_to_tab', 'open_new_tab', 'close_tab',
+        'get_chromosome_list',
+      ],
+      AnalysisAgent: [
+        // From registerToolMapping() — excluding legacy aliases
+        'get_sequence', 'translate_sequence', 'translate_dna', 'reverse_complement',
+        'calculate_gc_content', 'compute_gc', 'calc_region_gc',
+        'sequence_statistics', 'codon_usage_analysis', 'analyze_codon_usage', 'genome_codon_usage_analysis',
+        'calculate_entropy', 'calculate_melting_temp', 'calculate_molecular_weight',
+        'predict_promoter', 'predict_rbs', 'predict_terminator',
+        'analyze_region', 'compare_regions', 'find_similar_sequences',
+        'find_restriction_sites', 'virtual_digest',
+        'search_pattern', 'search_sequence_motif',
+        'calculate_primer_properties', 'design_primers', 'find_primer_binding_sites', 'add_primer_annotation',
+        'get_coding_sequence', 'get_upstream_region', 'get_downstream_region',
+      ],
+      DataAgent: [
+        // From registerToolMapping() — excluding legacy aliases (get_sequence_data, get_gene_data, import_sequence, import_annotation, import_track_data)
+        'get_sequence', 'get_gene_details', 'get_annotation_data', 'get_annotation', 'get_track_data',
+        'export_data', 'export_sequence', 'export_region', 'export_gene_list', 'export_track_data',
+        'export_fasta_sequence', 'export_genbank_format', 'export_gff_annotations', 'export_bed_format',
+        'export_cds_fasta', 'export_protein_fasta', 'export_current_view_fasta',
+        'load_genome_file', 'load_annotation_file', 'load_variant_file', 'load_reads_file', 'load_wig_tracks',
+        'get_operons', 'get_nearby_features', 'find_intergenic_regions',
+        'search_genes', 'search_sequences', 'search_annotations', 'list_annotations',
+        'get_data_statistics', 'get_genome_summary',
+      ],
+      ExternalAgent: [
+        // From registerToolMapping() — excluding legacy aliases (blast_search_online, uniprot_search, uniprot_get_protein, uniprot_get_annotation, alphafold_search, alphafold_get_structure, search_interpro_entry, interpro_search, interpro_get_domain)
+        'blast_search', 'blast_sequence', 'blast_protein',
+        'search_uniprot_database', 'advanced_uniprot_search', 'get_uniprot_entry', 'uniprot_get_annotation',
+        'fetch_alphafold_structure', 'search_alphafold_structures', 'search_alphafold_by_sequence',
+        'search_pdb_structures', 'fetch_protein_structure',
+        'analyze_interpro_domains', 'get_interpro_entry_details',
+        'kegg_search', 'kegg_get_pathway',
+        'evo2_design', 'evo2_optimize',
+      ],
+      PluginAgent: [
+        // From registerToolMapping() — no legacy aliases
+        'list_plugins', 'get_plugin_info', 'install_plugin', 'uninstall_plugin',
+        'enable_plugin', 'disable_plugin', 'execute_plugin', 'call_plugin_function',
+        'get_plugin_functions', 'create_plugin', 'validate_plugin', 'test_plugin',
+        'search_plugins', 'get_plugin_marketplace', 'update_plugin',
+      ],
+      DeepResearchAgent: [
+        // From registerToolMapping() — matches exactly
+        'deep_research', 'research_analysis', 'synthesize_information', 'generate_research_report',
+      ],
+      CoordinatorAgent: [
+        // From registerToolMapping() — all tools listed
+        'coordinate_task', 'decompose_task', 'integrate_results',
+        'create_workflow', 'execute_workflow', 'get_workflow_status',
+        'assign_task_to_agent', 'get_agent_status', 'balance_load',
+        'handle_error', 'retry_failed_task', 'fallback_strategy',
+        'optimize_execution', 'cache_strategy', 'parallel_execution',
+      ],
     };
 
     return specializations[agentName]?.includes(functionName) || false;
