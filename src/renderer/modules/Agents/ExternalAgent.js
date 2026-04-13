@@ -27,43 +27,90 @@ class ExternalAgent extends AgentBase {
     }
 
     // 获取API管理器
-    this.apiManager = this.app.apiManager;
+    this.apiManager = this.app.apiManager || null;
     if (!this.apiManager) {
-      throw new Error('APIManager not available');
+      console.warn('⚠️ ExternalAgent: APIManager not available, some tools will rely on ChatManager fallback');
     }
 
     console.log(`🌐 ExternalAgent: External API tools initialized`);
   }
 
   /**
+   * Perform function execution with ChatManager delegation
+   */
+  async performExecution(functionName, parameters, context) {
+    const chatManager = this.multiAgentSystem.chatManager;
+
+    // Try ChatManager first (authoritative execution path)
+    if (chatManager && typeof chatManager.executeToolByName === 'function') {
+      try {
+        const result = await chatManager.executeToolByName(functionName, parameters);
+        return result;
+      } catch (error) {
+        console.warn(`ExternalAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+      }
+    }
+
+    // Fall back to local implementation
+    return await this._performLocalExecution(functionName, parameters, context);
+  }
+
+  /**
+   * Local execution fallback
+   */
+  async _performLocalExecution(functionName, parameters, context) {
+    // Check toolMapping for local implementations
+    if (this.toolMapping.has(functionName)) {
+      const toolFunction = this.toolMapping.get(functionName);
+      return await toolFunction(parameters, context);
+    }
+
+    throw new Error(`ExternalAgent: Function ${functionName} not implemented locally and ChatManager unavailable`);
+  }
+
+  /**
    * 注册工具映射
    */
   registerToolMapping() {
-    // BLAST搜索工具
+    // BLAST搜索工具 - builtInToolsMap-aligned names
     this.toolMapping.set('blast_search', this.blastSearch.bind(this));
+    this.toolMapping.set('blast_search_online', this.blastSearch.bind(this)); // alias
     this.toolMapping.set('blast_sequence', this.blastSequence.bind(this));
     this.toolMapping.set('blast_protein', this.blastProtein.bind(this));
 
-    // UniProt搜索工具
-    this.toolMapping.set('uniprot_search', this.uniprotSearch.bind(this));
-    this.toolMapping.set('uniprot_get_protein', this.uniprotGetProtein.bind(this));
+    // UniProt搜索工具 - builtInToolsMap-aligned names
+    this.toolMapping.set('search_uniprot_database', this.uniprotSearch.bind(this));
+    this.toolMapping.set('uniprot_search', this.uniprotSearch.bind(this)); // legacy alias
+    this.toolMapping.set('advanced_uniprot_search', this.advancedUniprotSearch.bind(this));
+    this.toolMapping.set('get_uniprot_entry', this.uniprotGetProtein.bind(this));
+    this.toolMapping.set('uniprot_get_protein', this.uniprotGetProtein.bind(this)); // legacy alias
     this.toolMapping.set('uniprot_get_annotation', this.uniprotGetAnnotation.bind(this));
 
-    // AlphaFold搜索工具
-    this.toolMapping.set('alphafold_search', this.alphafoldSearch.bind(this));
-    this.toolMapping.set('alphafold_get_structure', this.alphafoldGetStructure.bind(this));
+    // AlphaFold搜索工具 - builtInToolsMap-aligned names
+    this.toolMapping.set('fetch_alphafold_structure', this.alphafoldGetStructure.bind(this));
+    this.toolMapping.set('search_alphafold_structures', this.alphafoldSearch.bind(this));
+    this.toolMapping.set('alphafold_search', this.alphafoldSearch.bind(this)); // legacy alias
+    this.toolMapping.set('alphafold_get_structure', this.alphafoldGetStructure.bind(this)); // legacy alias
+    this.toolMapping.set('search_alphafold_by_sequence', this.alphafoldSearchBySequence.bind(this));
 
-    // Evo2设计工具
-    this.toolMapping.set('evo2_design', this.evo2Design.bind(this));
-    this.toolMapping.set('evo2_optimize', this.evo2Optimize.bind(this));
+    // PDB搜索工具 - builtInToolsMap-aligned names
+    this.toolMapping.set('search_pdb_structures', this.searchPdbStructures.bind(this));
+    this.toolMapping.set('fetch_protein_structure', this.fetchProteinStructure.bind(this));
 
-    // InterPro搜索工具
-    this.toolMapping.set('interpro_search', this.interproSearch.bind(this));
-    this.toolMapping.set('interpro_get_domain', this.interproGetDomain.bind(this));
+    // InterPro搜索工具 - builtInToolsMap-aligned names
+    this.toolMapping.set('analyze_interpro_domains', this.interproSearch.bind(this));
+    this.toolMapping.set('search_interpro_entry', this.interproSearch.bind(this)); // alias
+    this.toolMapping.set('get_interpro_entry_details', this.interproGetDomain.bind(this));
+    this.toolMapping.set('interpro_search', this.interproSearch.bind(this)); // legacy alias
+    this.toolMapping.set('interpro_get_domain', this.interproGetDomain.bind(this)); // legacy alias
 
     // KEGG搜索工具
     this.toolMapping.set('kegg_search', this.keggSearch.bind(this));
     this.toolMapping.set('kegg_get_pathway', this.keggGetPathway.bind(this));
+
+    // Evo2设计工具
+    this.toolMapping.set('evo2_design', this.evo2Design.bind(this));
+    this.toolMapping.set('evo2_optimize', this.evo2Optimize.bind(this));
 
     console.log(`🌐 ExternalAgent: Registered ${this.toolMapping.size} external API tools`);
   }
@@ -77,6 +124,10 @@ class ExternalAgent extends AgentBase {
 
       if (!sequence) {
         throw new Error('Sequence is required');
+      }
+
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
       }
 
       const blastResults = await this.apiManager.blastSearch(sequence, database, evalue, maxResults);
@@ -129,6 +180,10 @@ class ExternalAgent extends AgentBase {
         throw new Error('Search query is required');
       }
 
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
+      }
+
       const uniprotResults = await this.apiManager.uniprotSearch(query, format, maxResults);
 
       return {
@@ -153,6 +208,13 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
+   * 高级UniProt搜索
+   */
+  async advancedUniprotSearch(parameters, strategy) {
+    return await this.uniprotSearch(parameters, strategy);
+  }
+
+  /**
    * 获取UniProt蛋白质信息
    */
   async uniprotGetProtein(parameters, strategy) {
@@ -161,6 +223,10 @@ class ExternalAgent extends AgentBase {
 
       if (!id) {
         throw new Error('Protein ID is required');
+      }
+
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
       }
 
       const protein = await this.apiManager.uniprotGetProtein(id);
@@ -197,6 +263,10 @@ class ExternalAgent extends AgentBase {
         throw new Error('Protein ID is required');
       }
 
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
+      }
+
       const annotation = await this.apiManager.uniprotGetAnnotation(id);
 
       return {
@@ -228,6 +298,10 @@ class ExternalAgent extends AgentBase {
         throw new Error('Protein sequence or ID is required');
       }
 
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
+      }
+
       const alphafoldResults = await this.apiManager.alphafoldSearch(protein);
 
       return {
@@ -251,6 +325,13 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
+   * AlphaFold按序列搜索
+   */
+  async alphafoldSearchBySequence(parameters, strategy) {
+    return await this.alphafoldSearch(parameters, strategy);
+  }
+
+  /**
    * 获取AlphaFold结构
    */
   async alphafoldGetStructure(parameters, strategy) {
@@ -259,6 +340,10 @@ class ExternalAgent extends AgentBase {
 
       if (!id) {
         throw new Error('Structure ID is required');
+      }
+
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
       }
 
       const structure = await this.apiManager.alphafoldGetStructure(id, format);
@@ -281,6 +366,36 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
+   * 搜索PDB结构
+   */
+  async searchPdbStructures(parameters, strategy) {
+    try {
+      const { query, maxResults = 10 } = parameters;
+      if (!query) throw new Error('Search query is required');
+      if (!this.apiManager) throw new Error('APIManager not available');
+      const results = await this.apiManager.searchPdbStructures(query, maxResults);
+      return { success: true, results, count: results.length, query };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 获取蛋白质结构
+   */
+  async fetchProteinStructure(parameters, strategy) {
+    try {
+      const { id, format = 'pdb' } = parameters;
+      if (!id) throw new Error('Structure ID is required');
+      if (!this.apiManager) throw new Error('APIManager not available');
+      const structure = await this.apiManager.fetchProteinStructure(id, format);
+      return { success: true, structure };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Evo2设计
    */
   async evo2Design(parameters, strategy) {
@@ -289,6 +404,10 @@ class ExternalAgent extends AgentBase {
 
       if (!sequence || !target) {
         throw new Error('Sequence and target are required');
+      }
+
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
       }
 
       const designResult = await this.apiManager.evo2Design(sequence, target, constraints);
@@ -322,6 +441,10 @@ class ExternalAgent extends AgentBase {
         throw new Error('Sequence and objective are required');
       }
 
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
+      }
+
       const optimizationResult = await this.apiManager.evo2Optimize(sequence, objective, constraints);
 
       return {
@@ -351,6 +474,10 @@ class ExternalAgent extends AgentBase {
 
       if (!query) {
         throw new Error('Search query is required');
+      }
+
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
       }
 
       const interproResults = await this.apiManager.interproSearch(query, maxResults);
@@ -386,6 +513,10 @@ class ExternalAgent extends AgentBase {
         throw new Error('Domain ID is required');
       }
 
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
+      }
+
       const domain = await this.apiManager.interproGetDomain(id);
 
       return {
@@ -416,6 +547,10 @@ class ExternalAgent extends AgentBase {
 
       if (!query) {
         throw new Error('Search query is required');
+      }
+
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
       }
 
       const keggResults = await this.apiManager.keggSearch(query, database, maxResults);
@@ -450,6 +585,10 @@ class ExternalAgent extends AgentBase {
 
       if (!id) {
         throw new Error('Pathway ID is required');
+      }
+
+      if (!this.apiManager) {
+        throw new Error('APIManager not available');
       }
 
       const pathway = await this.apiManager.keggGetPathway(id);

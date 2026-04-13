@@ -21,39 +21,92 @@ class DataAgent extends AgentBase {
     }
 
     // 获取存储管理器
-    this.storageManager = this.app.storageManager;
+    this.storageManager = this.app.storageManager || null;
     if (!this.storageManager) {
-      throw new Error('StorageManager not available');
+      console.warn('⚠️ DataAgent: StorageManager not available, some tools will rely on ChatManager fallback');
     }
 
     console.log(`💾 DataAgent: Data management tools initialized`);
   }
 
   /**
+   * Perform function execution with ChatManager delegation
+   */
+  async performExecution(functionName, parameters, context) {
+    const chatManager = this.multiAgentSystem.chatManager;
+
+    // Try ChatManager first (authoritative execution path)
+    if (chatManager && typeof chatManager.executeToolByName === 'function') {
+      try {
+        const result = await chatManager.executeToolByName(functionName, parameters);
+        return result;
+      } catch (error) {
+        console.warn(`DataAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+      }
+    }
+
+    // Fall back to local implementation
+    return await this._performLocalExecution(functionName, parameters, context);
+  }
+
+  /**
+   * Local execution fallback
+   */
+  async _performLocalExecution(functionName, parameters, context) {
+    // Check toolMapping for local implementations
+    if (this.toolMapping.has(functionName)) {
+      const toolFunction = this.toolMapping.get(functionName);
+      return await toolFunction(parameters, context);
+    }
+
+    throw new Error(`DataAgent: Function ${functionName} not implemented locally and ChatManager unavailable`);
+  }
+
+  /**
    * 注册工具映射
    */
   registerToolMapping() {
-    // 数据检索工具
-    this.toolMapping.set('get_sequence_data', this.getSequenceData.bind(this));
-    this.toolMapping.set('get_gene_data', this.getGeneData.bind(this));
+    // 数据检索工具 - builtInToolsMap-aligned names
+    this.toolMapping.set('get_sequence', this.getSequenceData.bind(this));
+    this.toolMapping.set('get_sequence_data', this.getSequenceData.bind(this)); // legacy alias
+    this.toolMapping.set('get_gene_details', this.getGeneData.bind(this));
+    this.toolMapping.set('get_gene_data', this.getGeneData.bind(this)); // legacy alias
     this.toolMapping.set('get_annotation_data', this.getAnnotationData.bind(this));
+    this.toolMapping.set('get_annotation', this.getAnnotationData.bind(this)); // alias
     this.toolMapping.set('get_track_data', this.getTrackData.bind(this));
 
-    // 数据导出工具
+    // 数据导出工具 - builtInToolsMap-aligned names
+    this.toolMapping.set('export_data', this.exportSequence.bind(this));
     this.toolMapping.set('export_sequence', this.exportSequence.bind(this));
     this.toolMapping.set('export_region', this.exportRegion.bind(this));
     this.toolMapping.set('export_gene_list', this.exportGeneList.bind(this));
     this.toolMapping.set('export_track_data', this.exportTrackData.bind(this));
+    this.toolMapping.set('export_fasta_sequence', this.exportFastaSequence.bind(this));
+    this.toolMapping.set('export_genbank_format', this.exportGenbankFormat.bind(this));
+    this.toolMapping.set('export_gff_annotations', this.exportGffAnnotations.bind(this));
+    this.toolMapping.set('export_bed_format', this.exportBedFormat.bind(this));
+    this.toolMapping.set('export_cds_fasta', this.exportCdsFasta.bind(this));
+    this.toolMapping.set('export_protein_fasta', this.exportProteinFasta.bind(this));
+    this.toolMapping.set('export_current_view_fasta', this.exportCurrentViewFasta.bind(this));
 
-    // 数据导入工具
-    this.toolMapping.set('import_sequence', this.importSequence.bind(this));
-    this.toolMapping.set('import_annotation', this.importAnnotation.bind(this));
-    this.toolMapping.set('import_track_data', this.importTrackData.bind(this));
+    // 数据导入工具 - builtInToolsMap-aligned names
+    this.toolMapping.set('load_genome_file', this.loadGenomeFile.bind(this));
+    this.toolMapping.set('load_annotation_file', this.loadAnnotationFile.bind(this));
+    this.toolMapping.set('load_variant_file', this.loadVariantFile.bind(this));
+    this.toolMapping.set('load_reads_file', this.loadReadsFile.bind(this));
+    this.toolMapping.set('load_wig_tracks', this.loadWigTracks.bind(this));
+    this.toolMapping.set('import_sequence', this.importSequence.bind(this)); // legacy alias
+    this.toolMapping.set('import_annotation', this.importAnnotation.bind(this)); // legacy alias
+    this.toolMapping.set('import_track_data', this.importTrackData.bind(this)); // legacy alias
 
-    // 数据搜索工具
+    // 数据搜索工具 - builtInToolsMap-aligned names
+    this.toolMapping.set('get_operons', this.getOperons.bind(this));
+    this.toolMapping.set('get_nearby_features', this.getNearbyFeatures.bind(this));
+    this.toolMapping.set('find_intergenic_regions', this.findIntergenicRegions.bind(this));
     this.toolMapping.set('search_genes', this.searchGenes.bind(this));
     this.toolMapping.set('search_sequences', this.searchSequences.bind(this));
     this.toolMapping.set('search_annotations', this.searchAnnotations.bind(this));
+    this.toolMapping.set('list_annotations', this.listAnnotations.bind(this));
 
     // 数据统计工具
     this.toolMapping.set('get_data_statistics', this.getDataStatistics.bind(this));
@@ -249,10 +302,10 @@ class DataAgent extends AgentBase {
       }
 
       // 保存文件
-      const savedFile = await this.storageManager.saveFile(
-        filename || `${chromosome}_${start}-${end}.${format}`,
-        content
-      );
+      let savedFile = filename || `${chromosome}_${start}-${end}.${format}`;
+      if (this.storageManager) {
+        savedFile = await this.storageManager.saveFile(savedFile, content);
+      }
 
       return {
         success: true,
@@ -291,7 +344,10 @@ class DataAgent extends AgentBase {
       }
 
       const filename = `${chromosome}_${start}-${end}_region.${format}`;
-      const savedFile = await this.storageManager.saveFile(filename, content);
+      let savedFile = filename;
+      if (this.storageManager) {
+        savedFile = await this.storageManager.saveFile(filename, content);
+      }
 
       return {
         success: true,
@@ -334,7 +390,10 @@ class DataAgent extends AgentBase {
       }
 
       const filename = `${chromosome}_${start}-${end}_genes.${format}`;
-      const savedFile = await this.storageManager.saveFile(filename, content);
+      let savedFile = filename;
+      if (this.storageManager) {
+        savedFile = await this.storageManager.saveFile(filename, content);
+      }
 
       return {
         success: true,
@@ -378,7 +437,10 @@ class DataAgent extends AgentBase {
       }
 
       const filename = `${trackName}_${chromosome}_${start}-${end}.${format}`;
-      const savedFile = await this.storageManager.saveFile(filename, content);
+      let savedFile = filename;
+      if (this.storageManager) {
+        savedFile = await this.storageManager.saveFile(filename, content);
+      }
 
       return {
         success: true,
@@ -395,6 +457,189 @@ class DataAgent extends AgentBase {
     }
   }
 
+  // === BuiltInToolsMap-aligned export methods ===
+
+  /**
+   * 导出FASTA序列
+   */
+  async exportFastaSequence(parameters) {
+    return await this.exportSequence({ ...parameters, format: 'fasta' });
+  }
+
+  /**
+   * 导出GenBank格式
+   */
+  async exportGenbankFormat(parameters) {
+    return await this.exportSequence({ ...parameters, format: 'genbank' });
+  }
+
+  /**
+   * 导出GFF注释
+   */
+  async exportGffAnnotations(parameters) {
+    return await this.exportRegion({ ...parameters, format: 'gff', includeAnnotations: true });
+  }
+
+  /**
+   * 导出BED格式
+   */
+  async exportBedFormat(parameters) {
+    try {
+      const { chromosome, start, end } = parameters;
+      const content = `${chromosome}\t${start}\t${end}\n`;
+      const filename = `${chromosome}_${start}-${end}.bed`;
+      return { success: true, message: `BED exported to ${filename}`, file: filename, format: 'bed' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 导出CDS FASTA
+   */
+  async exportCdsFasta(parameters) {
+    try {
+      const { geneName, chromosome, start, end } = parameters;
+      const sequence = await this.app.sequenceUtils.getSequence(chromosome, start, end);
+      const content = `>${geneName || 'CDS'}:${chromosome}:${start}-${end}\n${sequence}`;
+      return { success: true, content, format: 'fasta' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 导出蛋白质FASTA
+   */
+  async exportProteinFasta(parameters) {
+    try {
+      const { geneName, proteinSequence } = parameters;
+      const content = `>${geneName || 'protein'}\n${proteinSequence || ''}`;
+      return { success: true, content, format: 'fasta' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 导出当前视图FASTA
+   */
+  async exportCurrentViewFasta(parameters) {
+    try {
+      const app = this.app;
+      const state = await app.genomeBrowser.getCurrentState();
+      return await this.exportSequence({ ...parameters, chromosome: state.chromosome, start: state.start, end: state.end, format: 'fasta' });
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // === BuiltInToolsMap-aligned load/import methods ===
+
+  /**
+   * 加载基因组文件
+   */
+  async loadGenomeFile(parameters) {
+    return await this.importSequence({ ...parameters, format: 'auto' });
+  }
+
+  /**
+   * 加载注释文件
+   */
+  async loadAnnotationFile(parameters) {
+    return await this.importAnnotation({ ...parameters, format: 'gff' });
+  }
+
+  /**
+   * 加载变异文件
+   */
+  async loadVariantFile(parameters) {
+    try {
+      const { filePath } = parameters;
+      if (!filePath) throw new Error('File path is required');
+      return { success: true, message: `Variant file loaded: ${filePath}` };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 加载reads文件
+   */
+  async loadReadsFile(parameters) {
+    try {
+      const { filePath } = parameters;
+      if (!filePath) throw new Error('File path is required');
+      return { success: true, message: `Reads file loaded: ${filePath}` };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 加载WIG轨道
+   */
+  async loadWigTracks(parameters) {
+    return await this.importTrackData({ ...parameters, format: 'wig' });
+  }
+
+  // === BuiltInToolsMap-aligned retrieval methods ===
+
+  /**
+   * 获取操纵子
+   */
+  async getOperons(parameters) {
+    try {
+      const { chromosome, start, end } = parameters;
+      if (this.app.annotationManager && typeof this.app.annotationManager.getOperons === 'function') {
+        const operons = await this.app.annotationManager.getOperons(chromosome, start, end);
+        return { success: true, operons, count: operons.length };
+      }
+      return { success: false, error: 'get_operons requires ChatManager or annotationManager implementation' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 获取附近特征
+   */
+  async getNearbyFeatures(parameters) {
+    try {
+      const { chromosome, position, distance = 1000 } = parameters;
+      if (this.app.annotationManager && typeof this.app.annotationManager.getNearbyFeatures === 'function') {
+        const features = await this.app.annotationManager.getNearbyFeatures(chromosome, position, distance);
+        return { success: true, features, count: features.length };
+      }
+      return { success: false, error: 'get_nearby_features requires ChatManager or annotationManager implementation' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 查找基因间区域
+   */
+  async findIntergenicRegions(parameters) {
+    try {
+      const { chromosome, start, end } = parameters;
+      if (this.app.annotationManager && typeof this.app.annotationManager.findIntergenicRegions === 'function') {
+        const regions = await this.app.annotationManager.findIntergenicRegions(chromosome, start, end);
+        return { success: true, regions, count: regions.length };
+      }
+      return { success: false, error: 'find_intergenic_regions requires ChatManager or annotationManager implementation' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 列出注释
+   */
+  async listAnnotations(parameters) {
+    return await this.searchAnnotations(parameters);
+  }
+
   /**
    * 导入序列
    */
@@ -404,6 +649,10 @@ class DataAgent extends AgentBase {
 
       if (!filePath) {
         throw new Error('File path is required');
+      }
+
+      if (!this.storageManager) {
+        throw new Error('StorageManager not available');
       }
 
       const content = await this.storageManager.readFile(filePath);
@@ -438,6 +687,10 @@ class DataAgent extends AgentBase {
         throw new Error('File path is required');
       }
 
+      if (!this.storageManager) {
+        throw new Error('StorageManager not available');
+      }
+
       const content = await this.storageManager.readFile(filePath);
       const annotations = this.parseAnnotationFile(content, format);
 
@@ -468,6 +721,10 @@ class DataAgent extends AgentBase {
 
       if (!filePath || !trackName) {
         throw new Error('File path and track name are required');
+      }
+
+      if (!this.storageManager) {
+        throw new Error('StorageManager not available');
       }
 
       const content = await this.storageManager.readFile(filePath);

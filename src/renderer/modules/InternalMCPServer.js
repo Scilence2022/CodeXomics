@@ -93,6 +93,10 @@ class InternalMCPServer {
     // Fallback: Direct handlers for core methods that may not be in ChatManager
     // These are kept for backward compatibility and as fallback
     switch (method) {
+      // Agent mode - codexomics_chat for MCP agent mode
+      case 'codexomicsChat':
+        return await this.handleCodexomicsChat(parameters);
+
       // Navigation methods
       case 'navigateToPosition':
         return await this.navigateToPosition(parameters);
@@ -355,6 +359,28 @@ class InternalMCPServer {
 
     console.log('🧬 [InternalMCPServer] Delegating genomeCodonUsageAnalysis to ChatManager');
     const result = await this.genomeStudio.chatManager.genomeCodonUsageAnalysis(parameters);
+    return result;
+  }
+
+  // Agent mode implementation - codexomics_chat
+  async handleCodexomicsChat(parameters) {
+    const chatManager = this.genomeStudio.chatManager || window.chatManager;
+    if (!chatManager) {
+      throw new Error('ChatManager not available for agent mode');
+    }
+
+    if (typeof chatManager.processAgentPrompt !== 'function') {
+      throw new Error('processAgentPrompt method not available - please update CodeXomics');
+    }
+
+    const result = await chatManager.processAgentPrompt(
+      parameters.prompt,
+      {
+        activateMultiAgent: parameters.activate_multi_agent || false,
+        context: parameters.context || {},
+      }
+    );
+
     return result;
   }
 

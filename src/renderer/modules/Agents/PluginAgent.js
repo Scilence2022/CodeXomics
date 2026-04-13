@@ -21,12 +21,44 @@ class PluginAgent extends AgentBase {
     }
 
     // 获取插件管理器
-    this.pluginManager = this.app.pluginManager;
+    this.pluginManager = this.app.pluginManager || null;
     if (!this.pluginManager) {
-      throw new Error('PluginManager not available');
+      console.warn('⚠️ PluginAgent: PluginManager not available, some tools will rely on ChatManager fallback');
     }
 
     console.log(`🔌 PluginAgent: Plugin management tools initialized`);
+  }
+
+  /**
+   * Perform function execution with ChatManager delegation
+   */
+  async performExecution(functionName, parameters, context) {
+    const chatManager = this.multiAgentSystem.chatManager;
+
+    // Try ChatManager first (authoritative execution path)
+    if (chatManager && typeof chatManager.executeToolByName === 'function') {
+      try {
+        const result = await chatManager.executeToolByName(functionName, parameters);
+        return result;
+      } catch (error) {
+        console.warn(`🔌 PluginAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+      }
+    }
+
+    // Fall back to local implementation
+    return await this._performLocalExecution(functionName, parameters, context);
+  }
+
+  /**
+   * Local execution fallback
+   */
+  async _performLocalExecution(functionName, parameters, context) {
+    if (this.toolMapping.has(functionName)) {
+      const toolFunction = this.toolMapping.get(functionName);
+      return await toolFunction(parameters, context);
+    }
+
+    throw new Error(`PluginAgent: Function ${functionName} not implemented locally and ChatManager unavailable`);
   }
 
   /**
@@ -66,6 +98,10 @@ class PluginAgent extends AgentBase {
     try {
       const { status = 'all' } = parameters;
 
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
+      }
+
       const plugins = await this.pluginManager.listPlugins(status);
 
       return {
@@ -99,6 +135,10 @@ class PluginAgent extends AgentBase {
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
+      }
+
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
       }
 
       const pluginInfo = await this.pluginManager.getPluginInfo(pluginId);
@@ -142,6 +182,10 @@ class PluginAgent extends AgentBase {
         throw new Error('Plugin ID is required');
       }
 
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
+      }
+
       const result = await this.pluginManager.installPlugin(pluginId, source);
 
       return {
@@ -173,6 +217,10 @@ class PluginAgent extends AgentBase {
         throw new Error('Plugin ID is required');
       }
 
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
+      }
+
       await this.pluginManager.uninstallPlugin(pluginId);
 
       return {
@@ -196,6 +244,10 @@ class PluginAgent extends AgentBase {
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
+      }
+
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
       }
 
       await this.pluginManager.enablePlugin(pluginId);
@@ -223,6 +275,10 @@ class PluginAgent extends AgentBase {
         throw new Error('Plugin ID is required');
       }
 
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
+      }
+
       await this.pluginManager.disablePlugin(pluginId);
 
       return {
@@ -246,6 +302,10 @@ class PluginAgent extends AgentBase {
 
       if (!pluginId || !functionName) {
         throw new Error('Plugin ID and function name are required');
+      }
+
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
       }
 
       const result = await this.pluginManager.executePluginFunction(pluginId, functionName, funcParams);
@@ -282,6 +342,10 @@ class PluginAgent extends AgentBase {
         throw new Error('Plugin ID is required');
       }
 
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
+      }
+
       const functions = await this.pluginManager.getPluginFunctions(pluginId);
 
       return {
@@ -313,6 +377,10 @@ class PluginAgent extends AgentBase {
 
       if (!name || !description || !author) {
         throw new Error('Name, description, and author are required');
+      }
+
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
       }
 
       const pluginTemplate = {
@@ -354,6 +422,10 @@ class PluginAgent extends AgentBase {
         throw new Error('Plugin ID is required');
       }
 
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
+      }
+
       const validationResult = await this.pluginManager.validatePlugin(pluginId);
 
       return {
@@ -383,6 +455,10 @@ class PluginAgent extends AgentBase {
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
+      }
+
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
       }
 
       const testResults = await this.pluginManager.testPlugin(pluginId, testCases);
@@ -416,6 +492,10 @@ class PluginAgent extends AgentBase {
         throw new Error('Search query is required');
       }
 
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
+      }
+
       const searchResults = await this.pluginManager.searchPlugins(query, category, maxResults);
 
       return {
@@ -447,6 +527,10 @@ class PluginAgent extends AgentBase {
   async getPluginMarketplace(parameters, strategy) {
     try {
       const { category = 'all', sortBy = 'popularity', page = 1, pageSize = 20 } = parameters;
+
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
+      }
 
       const marketplace = await this.pluginManager.getMarketplace(category, sortBy, page, pageSize);
 
@@ -486,6 +570,10 @@ class PluginAgent extends AgentBase {
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
+      }
+
+      if (!this.pluginManager) {
+        throw new Error('PluginManager not available');
       }
 
       const updateResult = await this.pluginManager.updatePlugin(pluginId, version);

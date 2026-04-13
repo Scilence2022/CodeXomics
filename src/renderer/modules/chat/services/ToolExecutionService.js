@@ -50,16 +50,18 @@ class ToolExecutionService {
         return await analysisService[this._toCamelCase(toolName)](parameters);
       }
 
-      // --- PRIORITY 3: MCP DIRECT INTERACTION STACK ---
-      // Check for specifically routed tools to specific agents (Multi-Agent System)
+      // --- PRIORITY 3: MULTI-AGENT ROUTING (when enabled) ---
       if (this.chatManager.agentSystemEnabled && this.chatManager.multiAgentSystem) {
         try {
           const agentResult = await this.chatManager.multiAgentSystem.executeTool(toolName, parameters);
-          if (agentResult.success) {
+          // Only accept the result if it's clearly successful with a defined result
+          if (agentResult && agentResult.success === true && agentResult.result !== undefined) {
             return agentResult.result;
           }
+          // If the agent couldn't handle it (success=false or no result), fall through
         } catch (agentError) {
-          // Fall through
+          console.log(`[ToolExecutionService] Multi-agent routing failed for ${toolName}: ${agentError.message}, falling through`);
+          // Fall through to other priorities
         }
       }
 

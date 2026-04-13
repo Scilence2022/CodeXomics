@@ -27,12 +27,48 @@ class CoordinatorAgent extends AgentBase {
     }
 
     // 获取记忆系统
-    this.memorySystem = this.app.memorySystem;
+    this.memorySystem = this.app.memorySystem || null;
+    if (!this.memorySystem) {
+      console.warn('⚠️ CoordinatorAgent: MemorySystem not available, some optimization features will be disabled');
+    }
 
     // 初始化工作流引擎
     this.workflowEngine = new WorkflowEngine(this);
 
     console.log(`🎯 CoordinatorAgent: Coordination tools initialized`);
+  }
+
+  /**
+   * Perform function execution with ChatManager delegation
+   */
+  async performExecution(functionName, parameters, context) {
+    const chatManager = this.multiAgentSystem.chatManager;
+
+    // Try ChatManager first (authoritative execution path)
+    if (chatManager && typeof chatManager.executeToolByName === 'function') {
+      try {
+        const result = await chatManager.executeToolByName(functionName, parameters);
+        return result;
+      } catch (error) {
+        console.warn(`CoordinatorAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+      }
+    }
+
+    // Fall back to local implementation
+    return await this._performLocalExecution(functionName, parameters, context);
+  }
+
+  /**
+   * Local execution fallback
+   */
+  async _performLocalExecution(functionName, parameters, context) {
+    // Check toolMapping for local implementations
+    if (this.toolMapping.has(functionName)) {
+      const toolFunction = this.toolMapping.get(functionName);
+      return await toolFunction(parameters, context);
+    }
+
+    throw new Error(`CoordinatorAgent: Function ${functionName} not implemented locally and ChatManager unavailable`);
   }
 
   /**
@@ -94,8 +130,12 @@ class CoordinatorAgent extends AgentBase {
       const integratedResult = await this.integrateResults(results);
 
       // 6. 记录到记忆系统
-      if (this.memorySystem) {
-        await this.memorySystem.recordToolCall('coordinate_task', parameters, integratedResult, Date.now());
+      if (this.memorySystem && typeof this.memorySystem.recordToolCall === 'function') {
+        try {
+          await this.memorySystem.recordToolCall('coordinate_task', parameters, integratedResult, Date.now());
+        } catch (err) {
+          console.warn('CoordinatorAgent: Failed to record to memory system', err);
+        }
       }
 
       return {
@@ -313,7 +353,8 @@ class CoordinatorAgent extends AgentBase {
         throw new Error('Task and agent name are required');
       }
 
-      const agent = this.multiAgentSystem.getAgent(agentName);
+      // Fix: Use agents Map directly instead of non-existent getAgent()
+      const agent = this.multiAgentSystem.agents.get(agentName) || this.multiAgentSystem.getAgent?.(agentName);
       if (!agent) {
         throw new Error(`Agent not found: ${agentName}`);
       }
@@ -348,12 +389,14 @@ class CoordinatorAgent extends AgentBase {
         throw new Error('Agent name is required');
       }
 
-      const agent = this.multiAgentSystem.getAgent(agentName);
+      // Fix: Use agents Map directly instead of non-existent getAgent()
+      const agent = this.multiAgentSystem.agents.get(agentName) || this.multiAgentSystem.getAgent?.(agentName);
       if (!agent) {
         throw new Error(`Agent not found: ${agentName}`);
       }
 
-      const status = await agent.healthCheck();
+      // Fix: Use getStatus() instead of non-existent healthCheck()
+      const status = agent.getStatus();
 
       return {
         success: true,
@@ -374,16 +417,17 @@ class CoordinatorAgent extends AgentBase {
     try {
       const { taskType } = parameters;
 
-      // 获取所有智能体状态
+      // Fix: Use agents Map directly instead of non-existent getAllAgents()
       const agentStatuses = [];
-      for (const [name, agent] of this.multiAgentSystem.getAllAgents()) {
-        const status = await agent.healthCheck();
+      for (const [name, agent] of this.multiAgentSystem.agents) {
+        // Fix: Use getStatus() instead of non-existent healthCheck()
+        const status = agent.getStatus();
         agentStatuses.push({ name, status });
       }
 
       // 选择负载最低的智能体
       const availableAgents = agentStatuses.filter(
-        agent => agent.status.initialized && agent.status.status === 'ready'
+        agent => agent.status.isActive
       );
 
       if (availableAgents.length === 0) {
@@ -534,16 +578,36 @@ class CoordinatorAgent extends AgentBase {
         throw new Error('Task is required');
       }
 
-      // 获取记忆上下文
-      const memoryContext = this.memorySystem
-        ? await this.memorySystem.retrieveMemoryContext(task.type, task.parameters, {})
-        : this.memorySystem.getEmptyMemoryContext();
+      // Fix: Wrap memorySystem calls in null checks
+      let memoryContext = {};
+      if (this.memorySystem) {
+        try {
+          memoryContext = await this.memorySystem.retrieveMemoryContext(task.type, task.parameters, {}) || {};
+        } catch (err) {
+          console.warn('CoordinatorAgent: memorySystem.retrieveMemoryContext failed', err);
+          memoryContext = {};
+        }
+      }
 
-      // 优化参数
-      const optimizedParameters = this.memorySystem.optimizeParameters(task.type, task.parameters, memoryContext);
+      let optimizedParameters = task.parameters;
+      if (this.memorySystem && typeof this.memorySystem.optimizeParameters === 'function') {
+        try {
+          optimizedParameters = this.memorySystem.optimizeParameters(task.type, task.parameters, memoryContext);
+        } catch (err) {
+          console.warn('CoordinatorAgent: memorySystem.optimizeParameters failed', err);
+          optimizedParameters = task.parameters;
+        }
+      }
 
-      // 选择执行路径
-      const executionPath = this.memorySystem.selectExecutionPath(task.type, optimizedParameters, memoryContext);
+      let executionPath = 'default';
+      if (this.memorySystem && typeof this.memorySystem.selectExecutionPath === 'function') {
+        try {
+          executionPath = this.memorySystem.selectExecutionPath(task.type, optimizedParameters, memoryContext);
+        } catch (err) {
+          console.warn('CoordinatorAgent: memorySystem.selectExecutionPath failed', err);
+          executionPath = 'default';
+        }
+      }
 
       return {
         success: true,
@@ -765,14 +829,14 @@ class CoordinatorAgent extends AgentBase {
   selectBestAgent(taskType, availableAgents) {
     // 基于任务类型和智能体能力选择最佳智能体
     const agentCapabilities = {
-      data_retrieval: ['data'],
-      sequence_processing: ['analysis'],
-      api_call: ['external'],
-      plugin_execution: ['plugin'],
-      navigation: ['navigation'],
+      data_retrieval: ['DataAgent'],
+      sequence_processing: ['AnalysisAgent'],
+      api_call: ['ExternalAgent'],
+      plugin_execution: ['PluginAgent'],
+      navigation: ['NavigationAgent'],
     };
 
-    const preferredAgents = agentCapabilities[taskType] || ['coordinator'];
+    const preferredAgents = agentCapabilities[taskType] || ['CoordinatorAgent'];
 
     for (const preferredAgent of preferredAgents) {
       const agent = availableAgents.find(a => a.name === preferredAgent);
@@ -783,7 +847,7 @@ class CoordinatorAgent extends AgentBase {
 
     // 如果没有首选智能体，选择负载最低的
     const leastLoadedAgent = availableAgents.reduce((min, agent) =>
-      agent.status.performanceStats?.totalExecutions < min.status.performanceStats?.totalExecutions ? agent : min
+      (agent.status.performanceStats?.totalExecutions || 0) < (min.status.performanceStats?.totalExecutions || 0) ? agent : min
     );
 
     return { name: leastLoadedAgent.name, reason: 'Least loaded agent' };
@@ -837,7 +901,8 @@ class CoordinatorAgent extends AgentBase {
    * 执行任务
    */
   async executeTask(task) {
-    const agent = this.multiAgentSystem.getAgent(task.agent);
+    // Fix: Use agents Map directly with fallback to getAgent()
+    const agent = this.multiAgentSystem.agents.get(task.agent) || this.multiAgentSystem.getAgent?.(task.agent);
     if (!agent) {
       throw new Error(`Agent not found: ${task.agent}`);
     }
@@ -891,6 +956,29 @@ class CoordinatorAgent extends AgentBase {
     const nonRecoverableErrors = ['permission', 'not_found', 'invalid_parameter'];
     const errorType = this.classifyError(error);
     return !nonRecoverableErrors.includes(errorType);
+  }
+
+  /**
+   * 获取缓存结果
+   */
+  getCachedResult(cacheKey) {
+    // Simple cache implementation using the agent's learning data
+    const cached = this.learningData.get(`cache_${cacheKey}`);
+    if (cached && Date.now() - cached.timestamp < cached.ttl) {
+      return cached.result;
+    }
+    return null;
+  }
+
+  /**
+   * 缓存结果
+   */
+  cacheResult(cacheKey, result, ttl) {
+    this.learningData.set(`cache_${cacheKey}`, {
+      result,
+      timestamp: Date.now(),
+      ttl,
+    });
   }
 }
 
@@ -986,11 +1074,29 @@ class WorkflowEngine {
   }
 
   /**
-   * 执行步骤
+   * 执行步骤 - Fix: Route through ChatManager instead of recursive coordinatorAgent.executeFunction
    */
   async executeStep(step, parameters) {
     const stepParameters = { ...parameters, ...step.parameters };
-    return await this.coordinatorAgent.executeFunction(step.type, stepParameters, {});
+
+    // Fix: Route through ChatManager to avoid recursive executeFunction -> performExecution loop
+    const chatManager = this.coordinatorAgent.multiAgentSystem.chatManager;
+    if (chatManager && typeof chatManager.executeToolByName === 'function') {
+      try {
+        return await chatManager.executeToolByName(step.type, stepParameters);
+      } catch (error) {
+        console.warn(`WorkflowEngine: ChatManager execution failed for step ${step.type}, trying agent system`);
+      }
+    }
+
+    // Fallback: Find the appropriate agent in the multi-agent system
+    for (const [agentName, agent] of this.coordinatorAgent.multiAgentSystem.agents) {
+      if (agent.canExecute(step.type, stepParameters).canExecute) {
+        return await agent.executeFunction(step.type, stepParameters, {});
+      }
+    }
+
+    throw new Error(`No agent can execute workflow step: ${step.type}`);
   }
 
   /**

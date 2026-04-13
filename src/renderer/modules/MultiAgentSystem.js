@@ -27,6 +27,10 @@ class MultiAgentSystem {
     this.activeWorkflows = new Map();
     this.resourceManager = null;
 
+    // Timer IDs for cleanup
+    this._perfMonitorInterval = null;
+    this._resourceMonitorInterval = null;
+
     console.log('🤖 MultiAgentSystem initializing...');
     this.initialize();
   }
@@ -82,9 +86,6 @@ class MultiAgentSystem {
       // TODO: Add these agents when their implementations are available:
       // this.registerAgent('MemoryAgent', new MemoryAgent(this));
       // this.registerAgent('OptimizationAgent', new OptimizationAgent(this));
-      // this.registerAgent('SequenceAgent', new SequenceAgent(this));
-      // this.registerAgent('ProteinAgent', new ProteinAgent(this));
-      // this.registerAgent('NetworkAgent', new NetworkAgent(this));
 
       console.log(`🤖 Registered ${this.agents.size} agents`);
     } catch (error) {
@@ -114,6 +115,20 @@ class MultiAgentSystem {
     });
 
     console.log(`🤖 Agent registered: ${name} with ${agent.getCapabilities().length} capabilities`);
+  }
+
+  /**
+   * Get agent by name
+   */
+  getAgent(name) {
+    return this.agents.get(name) || null;
+  }
+
+  /**
+   * Get all agents
+   */
+  getAllAgents() {
+    return this.agents;
   }
 
   /**
@@ -156,13 +171,13 @@ class MultiAgentSystem {
    * Setup performance monitoring
    */
   setupPerformanceMonitoring() {
-    // Monitor agent performance
-    setInterval(() => {
+    // Monitor agent performance - store interval ID for cleanup
+    this._perfMonitorInterval = setInterval(() => {
       this.updatePerformanceMetrics();
     }, 5000);
 
-    // Monitor resource usage
-    setInterval(() => {
+    // Monitor resource usage - store interval ID for cleanup
+    this._resourceMonitorInterval = setInterval(() => {
       this.updateResourceMetrics();
     }, 2000);
 
@@ -203,7 +218,13 @@ class MultiAgentSystem {
       const cachedResult = this.checkCache(functionName, parameters);
       if (cachedResult) {
         console.log(`⚡ Cache hit for ${functionName}`);
-        return this.wrapResult(cachedResult, executionContext, performance.now() - startTime);
+        return {
+          success: true,
+          result: cachedResult,
+          agent: optimalAgent.name,
+          executionTime: performance.now() - startTime,
+          cacheHit: true,
+        };
       }
 
       // Execute through optimal agent
@@ -215,7 +236,12 @@ class MultiAgentSystem {
       // Update execution metrics
       this.updateExecutionMetrics(executionContext, performance.now() - startTime, true);
 
-      return this.wrapResult(result, executionContext, performance.now() - startTime);
+      return {
+        success: true,
+        result: result,
+        agent: optimalAgent.name,
+        executionTime: performance.now() - startTime,
+      };
     } catch (error) {
       // Handle execution failure
       this.handleExecutionFailure(executionId, functionName, error);
@@ -421,23 +447,6 @@ class MultiAgentSystem {
         this.cache.delete(key);
       }
     }
-  }
-
-  /**
-   * Wrap execution result with metadata
-   */
-  wrapResult(result, context, executionTime) {
-    return {
-      success: true,
-      result,
-      metadata: {
-        executionId: context.id,
-        agent: context.agent,
-        executionTime,
-        timestamp: Date.now(),
-        cacheHit: false,
-      },
-    };
   }
 
   /**
@@ -757,14 +766,17 @@ class MultiAgentSystem {
 
   /**
    * Check if agent is specialized for function
+   * Fixed: Only references agents that actually exist
    */
   isSpecializedAgent(agentName, functionName) {
     const specializations = {
-      SequenceAgent: ['get_sequence', 'translate_dna', 'reverse_complement'],
-      ProteinAgent: ['fetch_protein_structure', 'search_pdb_structures', 'open_protein_viewer'],
-      NetworkAgent: ['build_protein_interaction_network', 'analyze_network_centrality'],
-      AnalysisAgent: ['analyze_region', 'compare_regions', 'find_similar_sequences'],
-      DataAgent: ['get_gene_details', 'get_operons', 'create_annotation'],
+      NavigationAgent: ['navigate_to_position', 'search_features', 'zoom_in', 'zoom_out', 'pan_left', 'pan_right', 'get_current_state', 'search_gene_by_name', 'switch_to_tab', 'open_new_tab', 'close_tab', 'toggle_track', 'get_track_status'],
+      AnalysisAgent: ['get_sequence', 'translate_dna', 'reverse_complement', 'compute_gc', 'search_pattern', 'find_restriction_sites', 'virtual_digest', 'search_sequence_motif', 'analyze_region', 'design_primers', 'calculate_primer_properties'],
+      DataAgent: ['get_gene_details', 'get_operons', 'export_data', 'load_genome_file', 'export_fasta_sequence', 'export_genbank_format', 'search_annotations', 'list_annotations', 'get_annotation'],
+      ExternalAgent: ['blast_search', 'search_uniprot_database', 'advanced_uniprot_search', 'fetch_alphafold_structure', 'search_alphafold_structures', 'search_pdb_structures', 'fetch_protein_structure', 'analyze_interpro_domains'],
+      PluginAgent: ['list_plugins', 'execute_plugin', 'install_plugin', 'uninstall_plugin'],
+      DeepResearchAgent: ['deep_research', 'research_analysis', 'synthesize_information', 'generate_research_report'],
+      CoordinatorAgent: ['coordinate_task', 'decompose_task', 'integrate_results', 'create_workflow', 'execute_workflow'],
     };
 
     return specializations[agentName]?.includes(functionName) || false;
@@ -823,6 +835,16 @@ class MultiAgentSystem {
    */
   async shutdown() {
     console.log('🔄 Shutting down MultiAgentSystem...');
+
+    // Clear monitoring intervals to prevent timer leaks
+    if (this._perfMonitorInterval) {
+      clearInterval(this._perfMonitorInterval);
+      this._perfMonitorInterval = null;
+    }
+    if (this._resourceMonitorInterval) {
+      clearInterval(this._resourceMonitorInterval);
+      this._resourceMonitorInterval = null;
+    }
 
     // Stop all agents
     for (const [, agent] of this.agents) {

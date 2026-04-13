@@ -15,6 +15,7 @@ const FileTools = require('./file/FileTools');
 const TrackSettingsTools = require('./track/TrackSettingsTools');
 const PrimerTools = require('./primer/PrimerTools');
 const AnnotationTools = require('./annotation/AnnotationTools');
+const AgentChatTools = require('./utility/AgentChatTools');
 
 class ToolsIntegrator {
   constructor(server) {
@@ -33,6 +34,7 @@ class ToolsIntegrator {
     this.trackSettingsTools = new TrackSettingsTools(server);
     this.primerTools = new PrimerTools(server);
     this.annotationTools = new AnnotationTools(server);
+    this.agentChatTools = new AgentChatTools(server);
 
     // Combine all tools
     this.allTools = this.combineAllTools();
@@ -52,6 +54,8 @@ class ToolsIntegrator {
       ...this.trackSettingsTools.getTools(),
       ...this.primerTools.getTools(),
       ...this.annotationTools.getTools(),
+      // Agent mode tools - send natural language prompts for autonomous AI execution
+      ...this.agentChatTools.getTools(),
       // Multi-window management tools (server-side only)
       ...this.getWindowManagementTools(),
     };
@@ -303,6 +307,11 @@ class ToolsIntegrator {
         return await this.annotationTools.executeClientTool(toolName, parameters, clientId);
       }
 
+      // Agent chat tools - delegate to client (CodeXomics App handles the LLM loop)
+      if (this.agentChatTools.getTools()[toolName]) {
+        return await this.agentChatTools.executeClientTool(toolName, parameters, clientId);
+      }
+
       // Multi-window management tools (server-side, no client delegation needed)
       if (toolName === 'list_genome_windows') {
         return this.executeListGenomeWindows();
@@ -378,6 +387,11 @@ class ToolsIntegrator {
         name: 'Annotation Management',
         description: 'Tools for reading, updating, searching, and tracking changes to genome annotations',
         tools: Object.keys(this.annotationTools.getTools()),
+      },
+      agent: {
+        name: 'Agent Mode',
+        description: 'Send natural language prompts for autonomous AI agent execution',
+        tools: Object.keys(this.agentChatTools.getTools()),
       },
     };
   }

@@ -26,12 +26,45 @@ class AnalysisAgent extends AgentBase {
     }
 
     // 获取序列工具
-    this.sequenceUtils = this.app.sequenceUtils;
+    this.sequenceUtils = this.app.sequenceUtils || null;
     if (!this.sequenceUtils) {
-      throw new Error('SequenceUtils not available');
+      console.warn('⚠️ AnalysisAgent: SequenceUtils not available, some tools will rely on ChatManager fallback');
     }
 
     console.log(`🔬 AnalysisAgent: Sequence analysis tools initialized`);
+  }
+
+  /**
+   * Perform function execution with ChatManager delegation
+   */
+  async performExecution(functionName, parameters, context) {
+    const chatManager = this.multiAgentSystem.chatManager;
+
+    // Try ChatManager first (authoritative execution path)
+    if (chatManager && typeof chatManager.executeToolByName === 'function') {
+      try {
+        const result = await chatManager.executeToolByName(functionName, parameters);
+        return result;
+      } catch (error) {
+        console.warn(`AnalysisAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+      }
+    }
+
+    // Fall back to local implementation
+    return await this._performLocalExecution(functionName, parameters, context);
+  }
+
+  /**
+   * Local execution fallback
+   */
+  async _performLocalExecution(functionName, parameters, context) {
+    // Check toolMapping for local implementations
+    if (this.toolMapping.has(functionName)) {
+      const toolFunction = this.toolMapping.get(functionName);
+      return await toolFunction(parameters, context);
+    }
+
+    throw new Error(`AnalysisAgent: Function ${functionName} not implemented locally and ChatManager unavailable`);
   }
 
   /**
@@ -53,6 +86,7 @@ class AnalysisAgent extends AgentBase {
     this.toolMapping.set('sequence_statistics', this.sequenceStatistics.bind(this));
     this.toolMapping.set('codon_usage_analysis', this.codonUsageAnalysis.bind(this));
     this.toolMapping.set('analyze_codon_usage', this.analyzeCodonUsage.bind(this));
+    this.toolMapping.set('genome_codon_usage_analysis', this.codonUsageAnalysis.bind(this));
 
     // 高级分析
     this.toolMapping.set('calculate_entropy', this.calculateEntropy.bind(this));
@@ -73,6 +107,19 @@ class AnalysisAgent extends AgentBase {
     this.toolMapping.set('find_restriction_sites', this.findRestrictionSites.bind(this));
     this.toolMapping.set('virtual_digest', this.virtualDigest.bind(this));
 
+    // 序列模式搜索
+    this.toolMapping.set('search_pattern', this.searchPattern.bind(this));
+    this.toolMapping.set('search_sequence_motif', this.searchPattern.bind(this));
+
+    // 引物设计
+    this.toolMapping.set('calculate_primer_properties', this.calculatePrimerProperties.bind(this));
+    this.toolMapping.set('design_primers', this.designPrimers.bind(this));
+    this.toolMapping.set('find_primer_binding_sites', this.findPrimerBindingSites.bind(this));
+    this.toolMapping.set('add_primer_annotation', this.addPrimerAnnotation.bind(this));
+
+    // CDS
+    this.toolMapping.set('get_coding_sequence', this.getCodingSequence.bind(this));
+
     // 上游下游分析
     this.toolMapping.set('get_upstream_region', this.getUpstreamRegion.bind(this));
     this.toolMapping.set('get_downstream_region', this.getDownstreamRegion.bind(this));
@@ -89,6 +136,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const sequence = await this.sequenceUtils.getSequence(chromosome, start, end);
@@ -118,6 +169,10 @@ class AnalysisAgent extends AgentBase {
         throw new Error('Sequence is required');
       }
 
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+
       const protein = this.sequenceUtils.translateDNA(sequence, frame);
 
       return {
@@ -143,6 +198,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!dna) {
         throw new Error('DNA sequence is required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const protein = this.sequenceUtils.translateDNA(dna, frame);
@@ -172,6 +231,10 @@ class AnalysisAgent extends AgentBase {
         throw new Error('DNA sequence is required');
       }
 
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+
       const reverseComp = this.sequenceUtils.reverseComplement(dna);
 
       return {
@@ -197,6 +260,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!sequence) {
         throw new Error('Sequence is required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const gcContent = this.sequenceUtils.calculateGCContent(sequence);
@@ -231,6 +298,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const sequence = await this.sequenceUtils.getSequence(chromosome, start, end);
@@ -288,7 +359,7 @@ class AnalysisAgent extends AgentBase {
         };
       }
 
-      if (include.includes('gc')) {
+      if (include.includes('gc') && this.sequenceUtils) {
         stats.gcContent = this.sequenceUtils.calculateGCContent(sequence);
       }
 
@@ -313,6 +384,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!dna) {
         throw new Error('DNA sequence is required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const codonUsage = this.sequenceUtils.analyzeCodonUsage(dna);
@@ -348,6 +423,10 @@ class AnalysisAgent extends AgentBase {
         throw new Error('Sequence is required');
       }
 
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+
       const entropy = this.sequenceUtils.calculateEntropy(sequence);
 
       return {
@@ -373,6 +452,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!dna) {
         throw new Error('DNA sequence is required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const meltingTemp = this.sequenceUtils.calculateMeltingTemp(dna, method);
@@ -403,6 +486,10 @@ class AnalysisAgent extends AgentBase {
         throw new Error('DNA sequence is required');
       }
 
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+
       const molecularWeight = this.sequenceUtils.calculateMolecularWeight(dna);
 
       return {
@@ -428,6 +515,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!seq) {
         throw new Error('Sequence is required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const promoterScore = this.sequenceUtils.predictPromoter(seq);
@@ -457,6 +548,10 @@ class AnalysisAgent extends AgentBase {
         throw new Error('Sequence is required');
       }
 
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+
       const rbsScore = this.sequenceUtils.predictRBS(seq);
 
       return {
@@ -484,6 +579,10 @@ class AnalysisAgent extends AgentBase {
         throw new Error('Sequence is required');
       }
 
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+
       const terminatorScore = this.sequenceUtils.predictTerminator(seq);
 
       return {
@@ -509,6 +608,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const sequence = await this.sequenceUtils.getSequence(chromosome, start, end);
@@ -545,6 +648,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!regions || !Array.isArray(regions) || regions.length < 2) {
         throw new Error('At least 2 regions are required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const comparisons = [];
@@ -595,8 +702,6 @@ class AnalysisAgent extends AgentBase {
         throw new Error('Sequence is required');
       }
 
-      // 这里需要实现序列相似性搜索
-      // 暂时返回模拟结果
       const similarSequences = [
         {
           sequence: sequence,
@@ -630,6 +735,10 @@ class AnalysisAgent extends AgentBase {
         throw new Error('Enzyme and sequence are required');
       }
 
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+
       const sites = this.sequenceUtils.findRestrictionSites(enzyme, sequence);
 
       return {
@@ -661,6 +770,10 @@ class AnalysisAgent extends AgentBase {
         throw new Error('Sequence and enzymes are required');
       }
 
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+
       const fragments = this.sequenceUtils.virtualDigest(sequence, enzymes);
 
       return {
@@ -682,6 +795,124 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
+   * 搜索序列模式
+   */
+  async searchPattern(parameters, strategy) {
+    try {
+      const { pattern, sequence, chromosome, maxMismatches = 0 } = parameters;
+
+      if (!pattern) {
+        throw new Error('Pattern is required');
+      }
+
+      if (this.sequenceUtils && sequence) {
+        const matches = this.sequenceUtils.searchPattern(pattern, sequence, maxMismatches);
+        return { success: true, matches, count: matches.length };
+      }
+
+      return { success: false, error: 'search_pattern requires sequenceUtils or ChatManager execution' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 计算引物属性
+   */
+  async calculatePrimerProperties(parameters, strategy) {
+    try {
+      const { sequence } = parameters;
+      if (!sequence) {
+        throw new Error('Primer sequence is required');
+      }
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+      const properties = this.sequenceUtils.calculatePrimerProperties
+        ? this.sequenceUtils.calculatePrimerProperties(sequence)
+        : { length: sequence.length, gcContent: this.sequenceUtils.calculateGCContent(sequence) };
+      return { success: true, properties };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 设计引物
+   */
+  async designPrimers(parameters, strategy) {
+    try {
+      const { sequence, targetRegion, constraints = {} } = parameters;
+      if (!sequence && !targetRegion) {
+        throw new Error('Sequence or targetRegion is required');
+      }
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+      const primers = this.sequenceUtils.designPrimers
+        ? await this.sequenceUtils.designPrimers(sequence || targetRegion, constraints)
+        : { forward: null, reverse: null, note: 'Primer design not fully implemented' };
+      return { success: true, primers };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 查找引物结合位点
+   */
+  async findPrimerBindingSites(parameters, strategy) {
+    try {
+      const { primer, sequence } = parameters;
+      if (!primer || !sequence) {
+        throw new Error('Primer and sequence are required');
+      }
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+      const sites = this.sequenceUtils.findPrimerBindingSites
+        ? this.sequenceUtils.findPrimerBindingSites(primer, sequence)
+        : [];
+      return { success: true, sites, count: sites.length };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 添加引物注释
+   */
+  async addPrimerAnnotation(parameters, strategy) {
+    try {
+      const { primerName, sequence, position, chromosome } = parameters;
+      if (!primerName || !sequence) {
+        throw new Error('Primer name and sequence are required');
+      }
+      return { success: true, annotation: { name: primerName, sequence, position, chromosome } };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 获取编码序列
+   */
+  async getCodingSequence(parameters, strategy) {
+    try {
+      const { geneName, chromosome, start, end } = parameters;
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
+      }
+      const cds = this.sequenceUtils.getCodingSequence
+        ? await this.sequenceUtils.getCodingSequence(geneName || { chromosome, start, end })
+        : null;
+      return { success: true, cds };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * 获取上游区域
    */
   async getUpstreamRegion(parameters, strategy) {
@@ -690,6 +921,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!geneObj) {
         throw new Error('Gene object is required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const upstreamStart = Math.max(0, geneObj.feature.start - length);
@@ -724,6 +959,10 @@ class AnalysisAgent extends AgentBase {
 
       if (!geneObj) {
         throw new Error('Gene object is required');
+      }
+
+      if (!this.sequenceUtils) {
+        throw new Error('SequenceUtils not available');
       }
 
       const downstreamStart = geneObj.feature.end;

@@ -3260,6 +3260,35 @@ class GenomeBrowser {
             });
           }
         }
+        // Check if this is a codexomics_chat agent call
+        else if (method === 'codexomics_chat') {
+          try {
+            const chatManager = window.genomeBrowser?.chatManager || window.chatManager;
+            if (!chatManager) {
+              throw new Error('ChatManager not available for agent mode');
+            }
+
+            const result = await chatManager.processAgentPrompt(
+              parameters.prompt,
+              {
+                activateMultiAgent: parameters.activate_multi_agent || false,
+                context: parameters.context || {},
+              }
+            );
+
+            ipcRenderer.send('mcp-tool-response', {
+              requestId,
+              success: result.success,
+              result,
+            });
+          } catch (error) {
+            ipcRenderer.send('mcp-tool-response', {
+              requestId,
+              success: false,
+              error: error.message,
+            });
+          }
+        }
         // Check if this is a utility function call
         else if (method && method.startsWith('utility_')) {
           const utilityFunctionName = method.substring(8); // Remove 'utility_' prefix
@@ -3326,6 +3355,20 @@ class GenomeBrowser {
       try {
         let result;
 
+        // Handle codexomics_chat agent mode
+        if (toolName === 'codexomics_chat') {
+          const chatManager = window.genomeBrowser?.chatManager || window.chatManager;
+          if (!chatManager) {
+            throw new Error('ChatManager not available for agent mode');
+          }
+          result = await chatManager.processAgentPrompt(
+            parameters.prompt,
+            {
+              activateMultiAgent: parameters.activate_multi_agent || false,
+              context: parameters.context || {},
+            }
+          );
+        }
         // Use ChatManager's tool execution system
         if (window.genomeBrowser && window.genomeBrowser.chatManager) {
           console.log('📋 [Renderer] Executing tool via ChatManager:', toolName);

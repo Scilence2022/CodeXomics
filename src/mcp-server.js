@@ -133,11 +133,16 @@ class StandardClaudeMCPServer {
             listChanged: true,
           },
           logging: {},
+          agent: {
+            supported: true,
+            modes: ['tools-only', 'single-agent', 'multi-agent'],
+            defaultMode: 'tools-only',
+          },
         },
         serverInfo: {
           name: 'codexomics',
           version: '1.0.0',
-          description: `CodeXomics MCP Server with ${tools.length} genomics tools`,
+          description: `CodeXomics MCP Server with ${tools.length} genomics tools + AI agent capabilities`,
         },
       };
 

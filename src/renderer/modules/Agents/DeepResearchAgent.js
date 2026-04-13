@@ -10,8 +10,6 @@ class DeepResearchAgent extends AgentBase {
       'research_analysis',
       'information_synthesis',
       'report_generation',
-      'multi_source_integration',
-      'research_workflow',
     ]);
 
     this.app = multiAgentSystem.app;
@@ -45,13 +43,17 @@ class DeepResearchAgent extends AgentBase {
       }
 
       // 获取MCP服务器管理器
-      this.mcpServerManager = this.app.chatManager?.mcpServerManager;
+      this.mcpServerManager = this.app.chatManager?.mcpServerManager || null;
       if (!this.mcpServerManager) {
-        throw new Error('MCP Server Manager not available');
+        console.warn('⚠️ DeepResearchAgent: MCP Server Manager not available, deep research tools will rely on ChatManager fallback');
+      } else {
+        // 检查Deep Research服务器连接（非阻塞）
+        try {
+          await this.verifyDeepResearchConnection();
+        } catch (error) {
+          console.warn(`⚠️ DeepResearchAgent: Deep Research server verification failed: ${error.message}`);
+        }
       }
-
-      // 检查Deep Research服务器连接
-      await this.verifyDeepResearchConnection();
 
       // 加载研究配置
       await this.loadResearchConfig();
@@ -59,41 +61,52 @@ class DeepResearchAgent extends AgentBase {
       console.log(`🔬 DeepResearchAgent: Deep research tools initialized`);
     } catch (error) {
       console.error(`❌ DeepResearchAgent initialization failed:`, error);
-      throw error;
+      // Don't rethrow - log warning instead to prevent multi-agent system from failing
     }
   }
 
   /**
-   * 注册工具映射
+   * Perform function execution with ChatManager delegation
+   */
+  async performExecution(functionName, parameters, context) {
+    const chatManager = this.multiAgentSystem.chatManager;
+
+    // Try ChatManager first (authoritative execution path)
+    if (chatManager && typeof chatManager.executeToolByName === 'function') {
+      try {
+        const result = await chatManager.executeToolByName(functionName, parameters);
+        return result;
+      } catch (error) {
+        console.warn(`DeepResearchAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+      }
+    }
+
+    // Fall back to local implementation
+    return await this._performLocalExecution(functionName, parameters, context);
+  }
+
+  /**
+   * Local execution fallback
+   */
+  async _performLocalExecution(functionName, parameters, context) {
+    // Check toolMapping for local implementations
+    if (this.toolMapping.has(functionName)) {
+      const toolFunction = this.toolMapping.get(functionName);
+      return await toolFunction(parameters, context);
+    }
+
+    throw new Error(`DeepResearchAgent: Function ${functionName} not implemented locally and ChatManager unavailable`);
+  }
+
+  /**
+   * 注册工具映射 - ONLY implemented tools
    */
   registerToolMapping() {
-    // 核心深度研究工具
+    // 核心深度研究工具 (IMPLEMENTED)
     this.toolMapping.set('deep_research', this.performDeepResearch.bind(this));
     this.toolMapping.set('research_analysis', this.analyzeResearchResults.bind(this));
     this.toolMapping.set('synthesize_information', this.synthesizeInformation.bind(this));
     this.toolMapping.set('generate_research_report', this.generateResearchReport.bind(this));
-
-    // 多源信息整合工具
-    this.toolMapping.set('integrate_sources', this.integrateMultipleSources.bind(this));
-    this.toolMapping.set('cross_reference', this.crossReferenceSources.bind(this));
-    this.toolMapping.set('validate_information', this.validateInformation.bind(this));
-
-    // 研究工作流工具
-    this.toolMapping.set('create_research_workflow', this.createResearchWorkflow.bind(this));
-    this.toolMapping.set('execute_research_workflow', this.executeResearchWorkflow.bind(this));
-    this.toolMapping.set('monitor_research_progress', this.monitorResearchProgress.bind(this));
-
-    // 专业研究工具
-    this.toolMapping.set('literature_review', this.performLiteratureReview.bind(this));
-    this.toolMapping.set('data_analysis', this.performDataAnalysis.bind(this));
-    this.toolMapping.set('trend_analysis', this.performTrendAnalysis.bind(this));
-    this.toolMapping.set('comparative_analysis', this.performComparativeAnalysis.bind(this));
-
-    // 研究管理工具
-    this.toolMapping.set('save_research_session', this.saveResearchSession.bind(this));
-    this.toolMapping.set('load_research_session', this.loadResearchSession.bind(this));
-    this.toolMapping.set('export_research_results', this.exportResearchResults.bind(this));
-    this.toolMapping.set('get_research_history', this.getResearchHistory.bind(this));
 
     console.log(`🔬 DeepResearchAgent: Registered ${this.toolMapping.size} deep research tools`);
   }
@@ -133,6 +146,7 @@ class DeepResearchAgent extends AgentBase {
    * 查找Deep Research服务器
    */
   findDeepResearchServer() {
+    if (!this.mcpServerManager) return null;
     for (const [serverId, server] of this.mcpServerManager.servers) {
       if (
         server.name === 'deep-research' ||
@@ -405,12 +419,7 @@ class DeepResearchAgent extends AgentBase {
         case 'comprehensive':
           analysis = await this.performComprehensiveAnalysis(researchResult);
           break;
-        case 'trend':
-          analysis = await this.performTrendAnalysis(researchResult);
-          break;
-        case 'comparative':
-          analysis = await this.performComparativeAnalysis(researchResult);
-          break;
+        case 'basic':
         default:
           analysis = await this.performBasicAnalysis(researchResult);
       }
@@ -698,7 +707,6 @@ class DeepResearchAgent extends AgentBase {
     const reportId = `report_${Date.now()}`;
     const filename = `research_report_${reportId}.${format}`;
 
-    // 这里可以集成到存储系统
     console.log(`📄 Research report saved: ${filename}`);
 
     return reportId;
@@ -711,6 +719,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   extractKeyTopics(content) {
+    if (!content || typeof content !== 'string') return [];
     // 简单的关键词提取
     const words = content.toLowerCase().split(/\s+/);
     const wordFreq = {};
@@ -727,6 +736,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   analyzeSentiment(content) {
+    if (!content || typeof content !== 'string') return 'neutral';
     // 简单的情感分析
     const positiveWords = ['good', 'excellent', 'positive', 'beneficial', 'effective'];
     const negativeWords = ['bad', 'poor', 'negative', 'harmful', 'ineffective'];
@@ -741,6 +751,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   assessComplexity(content) {
+    if (!content || typeof content !== 'string') return 'low';
     const wordCount = this.countWords(content);
     const sentenceCount = content.split(/[.!?]+/).length;
     const avgWordsPerSentence = wordCount / sentenceCount;
@@ -764,6 +775,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   extractKeyInsights(content) {
+    if (!content || typeof content !== 'string') return [];
     // 简单的关键洞察提取
     const sentences = content.split(/[.!?]+/);
     return sentences
@@ -773,11 +785,11 @@ class DeepResearchAgent extends AgentBase {
   }
 
   extractPatterns(content) {
-    // 简单的模式提取
     return ['Pattern analysis not implemented yet'];
   }
 
   extractConclusions(content) {
+    if (!content || typeof content !== 'string') return [];
     // 简单的结论提取
     const sentences = content.split(/[.!?]+/);
     return sentences
@@ -800,78 +812,12 @@ class DeepResearchAgent extends AgentBase {
     };
   }
 
-  // 其他研究方法的具体实现...
-  async performLiteratureReview(parameters, strategy) {
-    // 文献综述实现
-    return { success: true, message: 'Literature review not implemented yet' };
-  }
-
-  async performDataAnalysis(parameters, strategy) {
-    // 数据分析实现
-    return { success: true, message: 'Data analysis not implemented yet' };
-  }
-
-  async performTrendAnalysis(parameters, strategy) {
-    // 趋势分析实现
-    return { success: true, message: 'Trend analysis not implemented yet' };
-  }
-
-  async performComparativeAnalysis(parameters, strategy) {
-    // 比较分析实现
-    return { success: true, message: 'Comparative analysis not implemented yet' };
-  }
-
   async performComprehensiveAnalysis(researchResult) {
-    // 综合分析实现
-    return { success: true, message: 'Comprehensive analysis not implemented yet' };
+    return { success: true, message: 'Comprehensive analysis not fully implemented yet' };
   }
 
   async performBasicAnalysis(researchResult) {
-    // 基础分析实现
-    return { success: true, message: 'Basic analysis not implemented yet' };
-  }
-
-  // 工作流相关方法
-  async createResearchWorkflow(parameters, strategy) {
-    return { success: true, message: 'Research workflow creation not implemented yet' };
-  }
-
-  async executeResearchWorkflow(parameters, strategy) {
-    return { success: true, message: 'Research workflow execution not implemented yet' };
-  }
-
-  async monitorResearchProgress(parameters, strategy) {
-    return { success: true, message: 'Research progress monitoring not implemented yet' };
-  }
-
-  // 研究管理方法
-  async saveResearchSession(parameters, strategy) {
-    return { success: true, message: 'Research session saving not implemented yet' };
-  }
-
-  async loadResearchSession(parameters, strategy) {
-    return { success: true, message: 'Research session loading not implemented yet' };
-  }
-
-  async exportResearchResults(parameters, strategy) {
-    return { success: true, message: 'Research results export not implemented yet' };
-  }
-
-  async getResearchHistory(parameters, strategy) {
-    return { success: true, message: 'Research history retrieval not implemented yet' };
-  }
-
-  // 多源整合方法
-  async integrateMultipleSources(parameters, strategy) {
-    return { success: true, message: 'Multi-source integration not implemented yet' };
-  }
-
-  async crossReferenceSources(parameters, strategy) {
-    return { success: true, message: 'Source cross-referencing not implemented yet' };
-  }
-
-  async validateInformation(parameters, strategy) {
-    return { success: true, message: 'Information validation not implemented yet' };
+    return { success: true, message: 'Basic analysis not fully implemented yet' };
   }
 }
 

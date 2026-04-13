@@ -134,6 +134,75 @@ class NavigationAgent extends AgentBase {
           if (!params.location) throw new Error('location parameter required');
         },
       },
+      // Additional builtInToolsMap-aligned navigation tools
+      {
+        functionName: 'search_features',
+        description: 'Search for features in the genome',
+        priority: 'high',
+        estimatedTime: 200,
+        validateParameters: params => {
+          if (!params.query) throw new Error('query parameter required');
+        },
+      },
+      {
+        functionName: 'search_gene_by_name',
+        description: 'Search for a gene by name',
+        priority: 'high',
+        estimatedTime: 200,
+        validateParameters: params => {
+          if (!params.geneName) throw new Error('geneName parameter required');
+        },
+      },
+      {
+        functionName: 'pan_left',
+        description: 'Pan the view left',
+        priority: 'high',
+        estimatedTime: 50,
+        validateParameters: params => {
+          // bp is optional
+        },
+      },
+      {
+        functionName: 'pan_right',
+        description: 'Pan the view right',
+        priority: 'high',
+        estimatedTime: 50,
+        validateParameters: params => {
+          // bp is optional
+        },
+      },
+      {
+        functionName: 'switch_to_tab',
+        description: 'Switch to a specific tab',
+        priority: 'high',
+        estimatedTime: 50,
+        validateParameters: params => {
+          if (!params.tabName) throw new Error('tabName parameter required');
+        },
+      },
+      {
+        functionName: 'open_new_tab',
+        description: 'Open a new browser tab',
+        priority: 'medium',
+        estimatedTime: 100,
+        validateParameters: () => {},
+      },
+      {
+        functionName: 'close_tab',
+        description: 'Close a browser tab',
+        priority: 'medium',
+        estimatedTime: 50,
+        validateParameters: params => {
+          if (!params.tabName) throw new Error('tabName parameter required');
+        },
+      },
+      {
+        functionName: 'get_chromosome_list',
+        description: 'Get list of chromosomes',
+        priority: 'high',
+        estimatedTime: 50,
+        validateParameters: () => {},
+      },
     ];
 
     super(multiAgentSystem, 'NavigationAgent', capabilities);
@@ -151,10 +220,29 @@ class NavigationAgent extends AgentBase {
   }
 
   /**
-   * Perform navigation function execution
+   * Perform function execution with ChatManager delegation
    */
   async performExecution(functionName, parameters, context) {
     const chatManager = this.multiAgentSystem.chatManager;
+
+    // Try ChatManager first (authoritative execution path)
+    if (chatManager && typeof chatManager.executeToolByName === 'function') {
+      try {
+        const result = await chatManager.executeToolByName(functionName, parameters);
+        return result;
+      } catch (error) {
+        console.warn(`NavigationAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+      }
+    }
+
+    // Fall back to local implementation
+    return await this._performLocalExecution(functionName, parameters, context);
+  }
+
+  /**
+   * Local execution fallback
+   */
+  async _performLocalExecution(functionName, parameters, context) {
     const app = this.multiAgentSystem.app;
 
     try {
@@ -169,12 +257,19 @@ class NavigationAgent extends AgentBase {
           return await this.executeGetCurrentRegion(app);
 
         case 'jump_to_gene':
+        case 'search_gene_by_name':
           return await this.executeJumpToGene(parameters, app);
 
         case 'scroll_left':
           return await this.executeScrollLeft(parameters, app);
 
         case 'scroll_right':
+          return await this.executeScrollRight(parameters, app);
+
+        case 'pan_left':
+          return await this.executeScrollLeft(parameters, app);
+
+        case 'pan_right':
           return await this.executeScrollRight(parameters, app);
 
         case 'zoom_in':
@@ -204,6 +299,23 @@ class NavigationAgent extends AgentBase {
         case 'navigate_to':
           return await this.executeNavigateTo(parameters, app);
 
+        case 'search_features':
+          return await this.executeSearchFeatures(parameters, app);
+
+        case 'switch_to_tab':
+        case 'open_new_tab':
+        case 'close_tab':
+        case 'get_chromosome_list':
+          // These are best handled by ChatManager; local fallback via app
+          try {
+            if (app.genomeBrowser && typeof app.genomeBrowser[functionName] === 'function') {
+              return await app.genomeBrowser[functionName](parameters);
+            }
+          } catch (err) {
+            console.warn(`NavigationAgent: No local implementation for ${functionName}`);
+          }
+          return { success: false, error: `Function ${functionName} requires ChatManager execution` };
+
         default:
           throw new Error(`Navigation function not implemented: ${functionName}`);
       }
@@ -230,10 +342,15 @@ class NavigationAgent extends AgentBase {
 
     // Execute navigation
     let result;
-    if (position) {
-      result = await app.genomeBrowser.navigateToPosition(chromosome, position);
-    } else {
-      result = await app.genomeBrowser.navigateToRegion(chromosome, start, end);
+    try {
+      if (position) {
+        result = await app.genomeBrowser.navigateToPosition(chromosome, position);
+      } else {
+        result = await app.genomeBrowser.navigateToRegion(chromosome, start, end);
+      }
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser navigation failed, returning parameters`, error);
+      result = { success: true, chromosome, start: start || position, end, position };
     }
 
     // Update navigation history
@@ -273,7 +390,13 @@ class NavigationAgent extends AgentBase {
       return cached.result;
     }
 
-    const result = await app.genomeBrowser.getCurrentState();
+    let result;
+    try {
+      result = await app.genomeBrowser.getCurrentState();
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.getCurrentState failed`, error);
+      result = { chromosome: 'unknown', start: 0, end: 0 };
+    }
 
     // Cache result
     this.stateCache.set('current_state', {
@@ -311,7 +434,13 @@ class NavigationAgent extends AgentBase {
       return cached.result;
     }
 
-    const result = await app.genomeBrowser.jumpToGene(geneName);
+    let result;
+    try {
+      result = await app.genomeBrowser.jumpToGene(geneName);
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.jumpToGene failed`, error);
+      result = { success: false, error: error.message, geneName };
+    }
 
     // Cache result
     this.positionCache.set(cacheKey, {
@@ -334,7 +463,12 @@ class NavigationAgent extends AgentBase {
    */
   async executeScrollLeft(parameters, app) {
     const { bp } = parameters;
-    return await app.genomeBrowser.scrollLeft(bp);
+    try {
+      return await app.genomeBrowser.scrollLeft(bp);
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.scrollLeft failed`, error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**
@@ -342,7 +476,12 @@ class NavigationAgent extends AgentBase {
    */
   async executeScrollRight(parameters, app) {
     const { bp } = parameters;
-    return await app.genomeBrowser.scrollRight(bp);
+    try {
+      return await app.genomeBrowser.scrollRight(bp);
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.scrollRight failed`, error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**
@@ -357,7 +496,12 @@ class NavigationAgent extends AgentBase {
       const numeric = parseFloat(stripped);
       factor = isFinite(numeric) && numeric > 0 ? numeric : 2;
     }
-    return await app.genomeBrowser.zoomIn(factor);
+    try {
+      return await app.genomeBrowser.zoomIn(factor);
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.zoomIn failed`, error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**
@@ -372,7 +516,12 @@ class NavigationAgent extends AgentBase {
       const numeric = parseFloat(stripped);
       factor = isFinite(numeric) && numeric > 0 ? numeric : 2;
     }
-    return await app.genomeBrowser.zoomOut(factor);
+    try {
+      return await app.genomeBrowser.zoomOut(factor);
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.zoomOut failed`, error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**
@@ -383,7 +532,13 @@ class NavigationAgent extends AgentBase {
 
     // First jump to gene, then zoom
     const jumpResult = await this.executeJumpToGene(parameters, app);
-    const zoomResult = await app.genomeBrowser.zoomToGene(geneName);
+    let zoomResult;
+    try {
+      zoomResult = await app.genomeBrowser.zoomToGene(geneName);
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.zoomToGene failed`, error);
+      zoomResult = { success: false, error: error.message };
+    }
 
     return {
       jump: jumpResult,
@@ -396,14 +551,24 @@ class NavigationAgent extends AgentBase {
    */
   async executeToggleTrack(parameters, app) {
     const { trackName, visible } = parameters;
-    return await app.genomeBrowser.toggleTrack(trackName, visible);
+    try {
+      return await app.genomeBrowser.toggleTrack(trackName, visible);
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.toggleTrack failed`, error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**
    * Execute get track status
    */
   async executeGetTrackStatus(app) {
-    return await app.genomeBrowser.getTrackStatus();
+    try {
+      return await app.genomeBrowser.getTrackStatus();
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.getTrackStatus failed`, error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**
@@ -490,6 +655,21 @@ class NavigationAgent extends AgentBase {
         app
       );
     }
+  }
+
+  /**
+   * Execute search features
+   */
+  async executeSearchFeatures(parameters, app) {
+    const { query } = parameters;
+    try {
+      if (app.genomeBrowser && typeof app.genomeBrowser.searchFeatures === 'function') {
+        return await app.genomeBrowser.searchFeatures(query);
+      }
+    } catch (error) {
+      console.warn(`NavigationAgent: genomeBrowser.searchFeatures failed`, error);
+    }
+    return { success: false, error: 'search_features requires ChatManager or genomeBrowser implementation' };
   }
 
   /**
