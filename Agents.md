@@ -107,12 +107,41 @@ When `ChatManager.executeToolByName()` is called, it delegates to `ToolExecution
 3. **PRIORITY 3**: Multi-Agent routing (`MultiAgentSystem.executeTool()`) — only when `agentSystemEnabled` is true
 4. **PRIORITY 4–8**: MCP tools → Plugin integrator → Action manager → MicrobeGenomicsFunctions → `ChatManager[camelCaseMethod]()` → `ChatManager.executeLocalTool()` fallback
 
-**Multi-Agent Selection (`selectOptimalAgent`):**
-- Iterates all registered agents, calling `agent.canExecute(functionName, parameters)`
-- `canExecute()` in `AgentBase` checks `this.toolMapping` first, then `this.capabilities` array
-- Agents with matching tools become candidates, scored by: historical performance + resource availability + context relevance + specialization bonus (+100 for specialized agents)
-- When no agent declares `canExecute: true`, `selectOptimalAgent` returns `null`, and `executeTool` returns `{ success: false, result: null }`
-- `ToolExecutionService` PRIORITY 3 then falls through (because `agentResult.success !== true`), allowing PRIORITY 7 (`this.chatManager[camelCaseMethod]()`) to handle it directly
+**Multi-Agent Selection (`selectOptimalAgent`) — Two-Phase Process:**
+
+Selection occurs in `MultiAgentSystem.selectOptimalAgent()` (`MultiAgentSystem.js:267`). It has two phases: filtering then scoring.
+
+**Phase 1 — Filtering via `canExecute()`** (`AgentBase.js:84`):
+
+For each registered agent, `canExecute(functionName, parameters)` is called. The check follows this order:
+1. **toolMapping first**: If `this.toolMapping.has(functionName)` → check resource availability → return `{canExecute: true}` (type: `'tool_mapping'`)
+2. **capabilities fallback**: Search `this.capabilities[]` for matching `functionName` or `pattern` (regex) → validate parameters → check resources → return `{canExecute: true}` with the matched capability
+
+Only agents returning `canExecute: true` become candidates.
+
+> Note: NavigationAgent is unique — it uses `capabilities[]` exclusively, not `toolMapping`.
+
+**Phase 2 — Scoring via `calculateAgentScore()`** (`MultiAgentSystem.js:301`):
+
+Each candidate agent is scored on 4 weighted dimensions:
+
+| Dimension | Calculation | Weight Impact |
+|-----------|-------------|---------------|
+| **Historical Performance** | `(1/avgTime) × 1000 + successRate × 100` | Faster & more reliable → higher score |
+| **Resource Availability** | `getResourceAvailability() × 50` | (cpuScore + memoryScore + networkScore) / 3, range 0~1 |
+| **Context Relevance** | `calculateContextRelevance() × 200` | Learning data: similar past contexts with success (+1) or failure (−0.5) |
+| **Specialization Bonus** | `isSpecializedAgent()` → **+100 flat** | Hardcoded Agent↔tool mapping (see below) |
+
+The +100 specialization bonus is typically the **single largest scoring factor** and almost always determines the winner when multiple agents can handle the same tool.
+
+**`isSpecializedAgent()` is a subset of `toolMapping`:**
+
+A tool can be in an agent's `toolMapping` (passing `canExecute`) but NOT in `isSpecializedAgent` (no +100 bonus). This means two agents may both be candidates for a tool, but the one with the specialization bonus will strongly dominate.
+
+**Fallback when no agent is found:**
+- `selectOptimalAgent` returns `null` → `executeTool()` returns `{success: false, result: null}`
+- `ToolExecutionService` PRIORITY 3 falls through (because `agentResult.success !== true`)
+- Execution continues down to PRIORITY 7 (`this.chatManager[camelCaseMethod]()`) or PRIORITY 8 (`executeLocalTool()`)
 
 **Critical Architecture — toolMapping vs. builtInToolsMap:**
 
