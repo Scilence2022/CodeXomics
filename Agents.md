@@ -56,7 +56,11 @@ The authoritative source for whether a tool is "Built-in" is the `builtInToolsMa
 
 1. **Create the YAML schema** in `tools_registry/<category>/<tool_name>.yaml` – Define name, description, parameters (JSON Schema format), keywords, sample_usages, and relationships.
 2. **Add to `builtInToolsMap`** in `tools_registry/builtin_tools_integration.js` – Map the tool name to its ChatManager method name and category. This is what makes the tool show up as "Built-in" in the system prompt. Without this entry, the tool will be incorrectly classified as "Extended/External".
-3. **Add keyword matching rules** in `analyzeBuiltInToolRelevance()` (same file) – Add regex patterns so the tool is detected when users mention relevant keywords. Without this, the tool won't be included in dynamic (per-query) prompts even though it exists in the registry.
+3. **Add keyword matching rules** in `analyzeBuiltInToolRelevance()` (same file) – Add regex patterns so the tool is detected when users mention relevant keywords. Without this, the tool won't be included in dynamic (per-query) prompts even though it exists in the registry. **Regex guidelines:**
+   - Use `.*?` (lazy) between verb and noun to support intermediate words: `\b(open|create)\s+.*?\b(tabs?)\b` matches "open three new tabs", not just "open tab"
+   - Support plural forms: `(tabs?|windows?)` not just `(tab|window)`
+   - Support prepositions: `\b(switch|go\s+to)\s+.*?\b(tabs?)\b` matches "switch to the analysis tab"
+   - **Anti-pattern**: Never use `\b(verb)\s+(noun)\b` (strict adjacency) — it fails on natural language like "search for gene", "replace the sequence", "scroll to the left"
 4. **Wire the execution** in `ChatManager.executeLocalTool()` or the appropriate service class (`src/renderer/modules/chat/services/`) – Add the actual function call that performs the tool's operation.
 5. **MCP Server parity** – If the tool should also be available to external MCP clients (e.g., Claude Desktop), add the corresponding tool definition in `src/mcp-tools/` and ensure it's registered in `src/mcp-server.js`.
 
@@ -65,6 +69,9 @@ The authoritative source for whether a tool is "Built-in" is the `builtInToolsMa
 - **Rule**: Never mark a tool as `is_external: true` in `analyzeBuiltInToolRelevance()` if the tool is actually a local built-in tool (exists in `ChatManager.executeLocalTool()`). All built-in tools should be detected as built-in directly.
 - **Rule**: When a tool exists in both `builtInToolsMap` and the MCP server, it will be classified as Built-in with `alsoAvailableViaMCP: true`. The system prompt will note it as "(also available via MCP)".
 - **Rule**: Built-in tool parameter descriptions are enriched from the YAML registry definitions. If the YAML file has detailed parameter schemas, those will be used in the system prompt instead of empty `{ properties: {} }`.
+- **Rule**: When adding keyword matching regex in `analyzeBuiltInToolRelevance()`, always use `\s+.*?\b(noun)\b` (with lazy `.*?`) between verb and noun patterns to support natural language with intermediate words (e.g., "search for gene", "open three new tabs"). Never use strict adjacency `\s+` between verb and noun — it silently fails on real user queries.
+- **Rule**: When adding keyword matching regex, always support plural forms (`tabs?` not `tab`, `features?` not `feature`, `windows?` not `window`) to match natural language.
+- **Rule**: Every tool registered in `builtInToolsMap` that should appear in dynamic prompts MUST have a corresponding keyword detection rule in `analyzeBuiltInToolRelevance()`. Tools without detection rules are invisible to the dynamic prompt system — the LLM will never know they exist unless the non-dynamic fallback prompt is used.
 
 ### LLM Configuration Manager
 The LLM configuration UI (`#llmConfigModal`) is managed by `src/renderer/modules/LLMConfigManager.js`. It supports multiple provider tabs (Local LLM, OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter) plus a "Model Selection" tab.

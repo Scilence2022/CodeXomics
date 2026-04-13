@@ -1246,8 +1246,10 @@ class BuiltInToolsIntegration {
     }
 
     // Check for sequence editing patterns
-    if (/\b(replace|substitute|swap)\s+(sequence|region|bases?|nucleotides?)\b/i.test(query) ||
-        /\b(edit\s+sequence|modify\s+sequence|mutate)\b/i.test(query)) {
+    // Supports intermediate words: "replace the sequence at position 100", "edit the sequence here"
+    if (/\b(replace|substitute|swap)\s+.*?\b(sequence|region|bases?|nucleotides?)\b/i.test(query) ||
+        /\b(edit|modify)\s+.*?\bsequence\b/i.test(query) ||
+        /\bmutate\b/i.test(query)) {
       relevantTools.push({
         name: 'replace_sequence',
         confidence: 0.9,
@@ -1255,7 +1257,7 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(delete|remove)\s+(sequence|region|bases?|nucleotides?)\b/i.test(query)) {
+    if (/\b(delete|remove)\s+.*?\b(sequence|region|bases?|nucleotides?)\b/i.test(query)) {
       relevantTools.push({
         name: 'delete_sequence',
         confidence: 0.9,
@@ -1263,7 +1265,7 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(insert|add)\s+(sequence|bases?|nucleotides?)\b/i.test(query)) {
+    if (/\b(insert|add)\s+.*?\b(sequence|bases?|nucleotides?)\b/i.test(query)) {
       relevantTools.push({
         name: 'insert_sequence',
         confidence: 0.9,
@@ -1318,7 +1320,8 @@ class BuiltInToolsIntegration {
     }
 
     // Check for annotation patterns
-    if (/\b(create\s+annotation|add\s+annotation|annotate)\b/i.test(query)) {
+    // Supports intermediate words: "create a new annotation", "add an annotation here"
+    if (/\b(create|add|make)\s+.*?\bannotation\b/i.test(query) || /\bannotate\b/i.test(query)) {
       relevantTools.push({
         name: 'create_annotation',
         confidence: 0.85,
