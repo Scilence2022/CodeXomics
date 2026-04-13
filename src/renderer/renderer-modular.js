@@ -664,10 +664,10 @@ class GenomeBrowser {
    */
   initializeMCPBridge() {
     try {
-      // Restore persisted toggle state; default to false (off) if never set
+      // Restore persisted toggle state; default to true (on) if never set
       const mcpBridgeEnabled = this.configManager
-        ? this.configManager.get('mcpBridgeEnabled', false)
-        : false;
+        ? this.configManager.get('mcpBridgeEnabled', true)
+        : true;
 
       if (typeof MCPBridge !== 'undefined') {
         this.mcpBridge = new MCPBridge({ windowId: this.windowId });
