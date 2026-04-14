@@ -586,10 +586,13 @@ class ChatManager {
    * @param {Object} options - Execution options
    * @param {boolean} options.activateMultiAgent - Enable multi-agent coordination
    * @param {Object} options.context - Optional context (genome_name, current_region, etc.)
+   * @param {Function} options.onProgress - Optional progress callback for MCP notifications
+   *   Receives: { type: string, message: string, data?: Object }
+   *   Types: 'thinking', 'tool_call', 'tool_result', 'round_start', 'round_end', 'completion', 'error'
    * @returns {Object} Execution result with response, toolsExecuted, and mode
    */
   async processAgentPrompt(prompt, options = {}) {
-    const { activateMultiAgent = false, context = {} } = options;
+    const { activateMultiAgent = false, context = {}, onProgress = null } = options;
 
     // Save current agent state
     const previousAgentState = this.agentSystemEnabled;
@@ -611,9 +614,19 @@ class ChatManager {
       const agentContext = this._buildAgentContext(context);
       const contextualPrompt = agentContext ? `[Context]\n${agentContext}\n\n${prompt}` : prompt;
 
+      // Notify progress: starting
+      if (onProgress) {
+        onProgress({ type: 'round_start', message: `Starting agent execution`, data: { mode: activateMultiAgent ? 'multi-agent' : 'single-agent' } });
+      }
+
       // Execute via the existing sendMessage infrastructure
       // Use silent mode to avoid rendering to chat UI
-      const result = await this._executeAgentLoop(contextualPrompt);
+      const result = await this._executeAgentLoop(contextualPrompt, { onProgress });
+
+      // Notify progress: completion
+      if (onProgress) {
+        onProgress({ type: 'completion', message: `Agent execution completed`, data: { toolsExecuted: result.toolsExecuted?.length || 0, iterations: result.iterations } });
+      }
 
       return {
         success: true,
@@ -624,6 +637,12 @@ class ChatManager {
       };
     } catch (error) {
       console.error('[AgentMode] processAgentPrompt failed:', error);
+
+      // Notify progress: error
+      if (onProgress) {
+        onProgress({ type: 'error', message: `Agent execution failed: ${error.message}` });
+      }
+
       return {
         success: false,
         error: error.message,
@@ -669,8 +688,12 @@ class ChatManager {
 
   /**
    * Execute the agent loop - send prompt to LLM and handle tool calls
+   * @param {string} prompt - The prompt to send to the LLM
+   * @param {Object} options - Execution options
+   * @param {Function} options.onProgress - Optional progress callback for MCP notifications
    */
-  async _executeAgentLoop(prompt) {
+  async _executeAgentLoop(prompt, options = {}) {
+    const { onProgress = null } = options;
     const maxIterations = 15;
     const toolsExecuted = [];
     let iteration = 0;
@@ -680,6 +703,11 @@ class ChatManager {
       iteration++;
 
       try {
+        // Notify progress: thinking
+        if (onProgress) {
+          onProgress({ type: 'thinking', message: `Agent iteration ${iteration}: thinking...` });
+        }
+
         // Call the LLM with the prompt
         let llmResponse;
 
@@ -733,23 +761,39 @@ class ChatManager {
           break;
         }
 
+        // Notify progress: tool calls detected
+        if (onProgress) {
+          onProgress({ type: 'tool_call', message: `Agent requests ${toolCalls.length} tool(s): ${toolCalls.map(t => t.name).join(', ')}`, data: { tools: toolCalls.map(t => t.name) } });
+        }
+
         // Execute tool calls
         for (const toolCall of toolCalls) {
           try {
             const toolResult = await this.executeToolByName(toolCall.name, toolCall.parameters);
+            const resultSummary = typeof toolResult === 'object' ?
+              JSON.stringify(toolResult).substring(0, 500) :
+              String(toolResult).substring(0, 500);
             toolsExecuted.push({
               name: toolCall.name,
               success: true,
-              result: typeof toolResult === 'object' ?
-                JSON.stringify(toolResult).substring(0, 500) :
-                String(toolResult).substring(0, 500),
+              result: resultSummary,
             });
+
+            // Notify progress: tool result
+            if (onProgress) {
+              onProgress({ type: 'tool_result', message: `Tool ${toolCall.name} executed successfully`, data: { tool: toolCall.name, success: true } });
+            }
           } catch (toolError) {
             toolsExecuted.push({
               name: toolCall.name,
               success: false,
               error: toolError.message,
             });
+
+            // Notify progress: tool error
+            if (onProgress) {
+              onProgress({ type: 'tool_result', message: `Tool ${toolCall.name} failed: ${toolError.message}`, data: { tool: toolCall.name, success: false, error: toolError.message } });
+            }
           }
         }
 
@@ -762,6 +806,11 @@ class ChatManager {
         finalResponse = `Agent execution failed at iteration ${iteration}: ${error.message}`;
         break;
       }
+    }
+
+    // Notify progress: round end
+    if (onProgress) {
+      onProgress({ type: 'round_end', message: `Agent loop finished after ${iteration} iteration(s)`, data: { iterations: iteration, toolsExecuted: toolsExecuted.length } });
     }
 
     return {

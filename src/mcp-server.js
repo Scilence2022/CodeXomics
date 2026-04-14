@@ -42,6 +42,16 @@ class StandardClaudeMCPServer {
     this.pendingRequests = new Map();
     this.activeConnections = new Set();
 
+    // MCP Server mode: 'tools' (default) or 'agent'
+    // - 'tools': Standard MCP tool server - each tools/call maps to a specific tool
+    // - 'agent': Agent mode - all prompts are routed through ChatManager's LLM loop,
+    //           which autonomously decides which tools to call
+    this.mode = (process.env.CODEXOMICS_MCP_MODE || authConfig.mode || 'tools').toLowerCase();
+    if (!['tools', 'agent'].includes(this.mode)) {
+      console.warn(`⚠️  Unknown MCP mode '${this.mode}', defaulting to 'tools'`);
+      this.mode = 'tools';
+    }
+
     // Initialize authentication manager
     this.authManager = new AuthenticationManager({
       requireAuth: authConfig.requireAuth !== false,
@@ -136,13 +146,14 @@ class StandardClaudeMCPServer {
           agent: {
             supported: true,
             modes: ['tools-only', 'single-agent', 'multi-agent'],
-            defaultMode: 'tools-only',
+            defaultMode: this.mode === 'agent' ? 'single-agent' : 'tools-only',
+            currentMode: this.mode,
           },
         },
         serverInfo: {
           name: 'codexomics',
           version: '1.0.0',
-          description: `CodeXomics MCP Server with ${tools.length} genomics tools + AI agent capabilities`,
+          description: `CodeXomics MCP Server (${this.mode} mode) with ${tools.length} genomics tools + AI agent capabilities`,
         },
       };
 
@@ -181,18 +192,34 @@ class StandardClaudeMCPServer {
       const startTime = Date.now();
 
       try {
-        // Execute tool with 30 second timeout
-        const result = await Promise.race([
+        let result;
+
+        // Agent mode: intercept all tool calls and route through the agent
+        if (this.mode === 'agent' && toolName !== 'codexomics_chat') {
+          console.log(`🤖 [Agent Mode] Routing tool '${toolName}' through agent`);
+          // In agent mode, we still execute individual tools, but also send
+          // logging notifications to inform the MCP client about the execution flow
+          this._notifyClient('info', `Executing tool: ${toolName}`);
+        }
+
+        // Execute tool with 30 second timeout (extended to 120s for agent mode)
+        const timeout = this.mode === 'agent' ? 120000 : 30000;
+        result = await Promise.race([
           this.toolsIntegrator.executeTool(toolName, args, args?.clientId),
           new Promise((_, reject) => {
             setTimeout(() => {
-              reject(new Error(`Tool execution timeout after 30 seconds`));
-            }, 30000);
+              reject(new Error(`Tool execution timeout after ${timeout / 1000} seconds`));
+            }, timeout);
           }),
         ]);
 
         const executionTime = Date.now() - startTime;
         console.log(`✅ Tool ${toolName} executed successfully in ${executionTime}ms`);
+
+        // In agent mode, notify client about completion
+        if (this.mode === 'agent' && toolName !== 'codexomics_chat') {
+          this._notifyClient('info', `Tool ${toolName} completed in ${executionTime}ms`);
+        }
 
         return {
           content: [
@@ -1086,6 +1113,12 @@ class StandardClaudeMCPServer {
       console.log('🛑 Internal MCP Server stopped');
     });
 
+    // Listen for agent progress notifications from renderer process
+    // These are forwarded to MCP clients via sendLoggingMessage
+    ipcMain.on('mcp-agent-progress', (event, progress) => {
+      this.sendAgentProgress(progress);
+    });
+
     console.log('✅ IPC communication configured');
   }
 
@@ -1530,9 +1563,84 @@ class StandardClaudeMCPServer {
   }
 
   // Utility methods
+
+  /**
+   * Send a logging notification to the MCP client.
+   * Uses MCP SDK's sendLoggingMessage to push real-time progress info.
+   * @param {'debug'|'info'|'notice'|'warning'|'error'} level - Log level
+   * @param {string} message - Human-readable message
+   * @param {Object} [data] - Optional structured data to include
+   */
+  _notifyClient(level, message, data = null) {
+    try {
+      if (this.mcpServer && typeof this.mcpServer.sendLoggingMessage === 'function') {
+        const params = {
+          level,
+          logger: 'codexomics-agent',
+          data: data
+            ? `${message} | ${JSON.stringify(data)}`
+            : message,
+        };
+        this.mcpServer.sendLoggingMessage(params).catch(err => {
+          // Silently ignore - client may not support logging notifications
+          console.debug(`[MCP] Failed to send logging notification: ${err.message}`);
+        });
+      }
+    } catch (e) {
+      // Silently ignore - this is best-effort
+    }
+  }
+
+  /**
+   * Send agent progress notification to MCP client.
+   * Used by ChatManager during agent-mode execution to push
+   * intermediate processing information back to the MCP client.
+   *
+   * @param {Object} progress - Progress information
+   * @param {string} progress.type - Type of progress event
+   *   ('thinking', 'tool_call', 'tool_result', 'round_start', 'round_end', 'completion')
+   * @param {string} progress.message - Human-readable description
+   * @param {Object} [progress.data] - Optional structured data
+   */
+  sendAgentProgress(progress) {
+    const levelMap = {
+      thinking: 'info',
+      tool_call: 'info',
+      tool_result: 'info',
+      round_start: 'notice',
+      round_end: 'notice',
+      completion: 'notice',
+      error: 'error',
+    };
+    const level = levelMap[progress.type] || 'info';
+    this._notifyClient(level, `[Agent] ${progress.message}`, progress.data);
+  }
+
+  /**
+   * Set the MCP server mode at runtime.
+   * @param {'tools'|'agent'} mode - The mode to set
+   */
+  setMode(mode) {
+    if (!['tools', 'agent'].includes(mode)) {
+      throw new Error(`Invalid mode '${mode}'. Must be 'tools' or 'agent'.`);
+    }
+    const previousMode = this.mode;
+    this.mode = mode;
+    console.log(`🔄 MCP Server mode changed: ${previousMode} → ${mode}`);
+
+    // Notify client about mode change
+    this._notifyClient('notice', `Server mode changed to '${mode}'`, { previousMode, newMode: mode });
+
+    // Notify tools list changed since agent mode affects tool availability
+    if (this.mcpServer && typeof this.mcpServer.sendToolListChanged === 'function') {
+      this.mcpServer.sendToolListChanged().catch(() => {});
+    }
+  }
+
   getStatus() {
     return {
       isInitialized: this.isInitialized,
+      mode: this.mode,
       activeConnections: this.activeConnections.size,
       wsConnections: this.wsConnections.size,
       clientBridges: this.clientBridges.size,
@@ -1654,7 +1762,19 @@ module.exports = StandardClaudeMCPServer;
 
 // Start server if run directly
 if (require.main === module) {
+  // Parse --mode argument
+  const modeArg = process.argv.find(arg => arg.startsWith('--mode='));
+  if (modeArg) {
+    const mode = modeArg.split('=')[1];
+    if (['tools', 'agent'].includes(mode)) {
+      process.env.CODEXOMICS_MCP_MODE = mode;
+    } else {
+      console.error(`⚠️  Invalid mode '${mode}'. Use 'tools' or 'agent'. Defaulting to 'tools'.`);
+    }
+  }
+
   const server = new StandardClaudeMCPServer();
+  console.log(`🚀 Starting MCP Server in '${server.mode}' mode`);
   server.start().catch(error => {
     console.error('💥 Startup error:', error.message);
     process.exit(1);

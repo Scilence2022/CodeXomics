@@ -373,11 +373,27 @@ class InternalMCPServer {
       throw new Error('processAgentPrompt method not available - please update CodeXomics');
     }
 
+    // Create onProgress callback that sends notifications via IPC to main process
+    // This allows the MCP server to forward progress to the MCP client
+    const onProgress = (progress) => {
+      try {
+        mcpServerIpc.send('mcp-agent-progress', {
+          type: progress.type,
+          message: progress.message,
+          data: progress.data || null,
+          timestamp: Date.now(),
+        });
+      } catch (e) {
+        console.debug('[InternalMCPServer] Failed to send progress notification:', e.message);
+      }
+    };
+
     const result = await chatManager.processAgentPrompt(
       parameters.prompt,
       {
         activateMultiAgent: parameters.activate_multi_agent || false,
         context: parameters.context || {},
+        onProgress,
       }
     );
 

@@ -249,21 +249,62 @@ The `isSpecializedAgent()` map in `MultiAgentSystem` and each agent's `registerT
 - **Rule**: `ChatManager.builtInTools` may be `undefined` at runtime. Never assume `this.chatManager.builtInTools.builtInToolsMap` exists. The `builtInToolsMap` lives on the `BuiltInToolsIntegration` class instance in `tools_registry/builtin_tools_integration.js`, not on `ChatManager`.
 - **Rule**: When adding a new tool name, also add it to `ToolNames.js` (`src/renderer/modules/chat/constants/ToolNames.js`) under the appropriate category constant. This eliminates magic strings and ensures consistency across the codebase.
 
-### MCP Agent Mode
-CodeXomics MCP Server supports an "agent" capability that allows external MCP clients (e.g., Claude Desktop) to use the internal multi-agent system via a `codexomics_chat` tool.
+### MCP Server Modes (Tools / Agent)
+CodeXomics MCP Server supports two operating modes that determine how external MCP clients interact with the platform:
 
-**Architecture:**
-- `src/mcp-tools/utility/AgentChatTools.js` — Defines the `codexomics_chat` tool with parameters: `prompt` (required), `activate_multi_agent` (optional, enables multi-agent mode), `context` (optional)
-- `src/mcp-server.js` — Registers the tool and declares `agent` capability in `initialize` response with `modes: ['tools-only', 'single-agent', 'multi-agent']`
-- `src/renderer/modules/InternalMCPServer.js` — `handleCodexomicsChat()` method receives WebSocket messages
-- `src/renderer/renderer-modular.js` — Routes `mcp-tool-call` and `execute-tool-request` for `codexomics_chat` → `ChatManager.processAgentPrompt()`
-- `ChatManager.processAgentPrompt()` — Handles single-agent/multi-agent mode switching, builds agent context, executes LLM loop with tool calls
+**Mode Selection:**
+- `--mode=tools` (default): Standard MCP tool server. Each `tools/call` maps to a specific tool. All 40+ tools are exposed individually.
+- `--mode=agent`: Agent mode. Only `codexomics_chat` + window management tools are exposed. All prompts are routed through ChatManager's LLM loop, which autonomously decides which internal tools to call. Progress notifications are pushed to MCP clients via `sendLoggingMessage`.
 
-**Key methods in ChatManager:**
-- `processAgentPrompt(params)` — Entry point: toggles agent mode, builds context, calls `_executeAgentLoop()`
-- `_buildAgentContext(params)` — Collects current genome position info (chromosome, start, end, visible tracks)
-- `_executeAgentLoop(prompt, context)` — LLM call + tool execution loop (max 10 iterations)
-- `_extractToolCallsFromResponse(response)` — Parses tool calls from LLM response (supports multiple formats)
+**Mode configuration sources (priority order):**
+1. `--mode=tools|agent` command-line argument (highest priority)
+2. `CODEXOMICS_MCP_MODE` environment variable
+3. `authConfig.mode` passed to constructor
+4. Default: `'tools'`
+
+**Runtime mode switching:** `server.setMode('agent')` changes mode at runtime, triggers `sendToolListChanged()` notification to MCP clients, and sends a logging notification about the mode change.
+
+**Architecture (Tools Mode):**
+```
+MCP Client → tools/call → ToolsIntegrator.executeTool() → individual tool module → result
+```
+
+**Architecture (Agent Mode):**
+```
+MCP Client → tools/call → ToolsIntegrator._executeViaAgent()
+  → codexomics_chat → InternalMCPServer.handleCodexomicsChat()
+  → ChatManager.processAgentPrompt(prompt, { onProgress })
+  → _executeAgentLoop() → LLM decides tools → executeToolByName()
+  → onProgress → IPC 'mcp-agent-progress' → mcpServer.sendAgentProgress()
+  → _notifyClient() → mcpServer.sendLoggingMessage() → MCP Client
+```
+
+**Key files for MCP modes:**
+- `src/mcp-server.js` — `this.mode` property, `_notifyClient()`, `sendAgentProgress()`, `setMode()`, IPC listener for `mcp-agent-progress`
+- `src/mcp-tools/ToolsIntegrator.js` — `getAvailableTools()` (returns only `codexomics_chat` + window tools in agent mode), `_executeViaAgent()`, `_buildAgentPromptFromToolCall()`, `getFullToolList()`
+- `src/mcp-tools/utility/AgentChatTools.js` — `codexomics_chat` tool definition (description varies by mode)
+- `src/renderer/modules/InternalMCPServer.js` — `handleCodexomicsChat()` with `onProgress` callback sending `mcp-agent-progress` IPC
+- `src/renderer/modules/ChatManager.js` — `processAgentPrompt(prompt, { onProgress })`, `_executeAgentLoop(prompt, { onProgress })`
+- `scripts/start-mcp-server.js` — `--mode` argument parsing
+
+**Progress notification types (via `onProgress` callback):**
+
+| Type | Level | When | Data |
+|------|-------|------|------|
+| `round_start` | notice | Agent execution begins | `{ mode }` |
+| `thinking` | info | Each LLM iteration starts | `{ iteration }` |
+| `tool_call` | info | Tool calls detected in LLM response | `{ tools: [...] }` |
+| `tool_result` | info | Individual tool execution result | `{ tool, success, error? }` |
+| `round_end` | notice | Agent loop finished | `{ iterations, toolsExecuted }` |
+| `completion` | notice | Entire processAgentPrompt finishes | `{ toolsExecuted, iterations }` |
+| `error` | error | Execution failure | — |
+
+**Critical Rules:**
+- **Rule**: In agent mode, `ToolsIntegrator.getAvailableTools()` returns only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`. All other tools are hidden from MCP clients but remain accessible to the internal agent.
+- **Rule**: `_executeViaAgent()` translates structured tool calls into natural language prompts via `_buildAgentPromptFromToolCall()`. When adding new prompt templates, cover the most common tools; unknown tools get a generic fallback prompt.
+- **Rule**: The `onProgress` callback must never throw — wrap it in try/catch in `InternalMCPServer.handleCodexomicsChat()`.
+- **Rule**: Agent mode timeout is 120s (vs 30s in tools mode) because LLM inference + multi-tool execution takes longer.
+- **Rule**: `setMode()` triggers `sendToolListChanged()` so MCP clients re-fetch the tool list and see the updated availability.
 
 ### Styling & CSS
 - **Rule**: Use Vanilla CSS. Do **not** use TailwindCSS, Bootstrap, or any atomic CSS frameworks unless explicitly asked by the user to introduce them. The project uses standard `.css` files located in `src/renderer/css/`. Respect the existing color variables and DOM structures.

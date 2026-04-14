@@ -71,6 +71,9 @@ Each tool definition includes a JSON Schema for parameters, sample usages for fe
 
 - **40+ genomics tools** exposed as a standalone MCP server (`npm run mcp-server`)
 - **Dual transport**: HTTP/SSE on port `3002`, WebSocket on port `3003`
+- **Two operating modes**:
+  - **Tools mode** (default) — All 40+ tools exposed individually; MCP clients call specific tools directly
+  - **Agent mode** (`--mode=agent`) — Only `codexomics_chat` is exposed; prompts are routed through the internal AI agent which autonomously decides which tools to call. Progress notifications are pushed to MCP clients in real-time via `notifications/message`
 - **`MCPBridge`** in the renderer auto-connects to running MCP server instances
 - **`InternalMCPServer`** for in-process tool execution without network overhead
 - **`AuthenticationManager`** and **`ConnectionHealthMonitor`** for secure, reliable connections
@@ -170,7 +173,8 @@ npm run dev          # launch with DevTools open
 **Additional run modes:**
 
 ```bash
-npm run mcp-server              # standalone MCP server only
+npm run mcp-server              # standalone MCP server (tools mode)
+npm run mcp-server -- --mode=agent  # standalone MCP server (agent mode)
 npm run start-with-mcp          # app + MCP server concurrently
 npm run start-with-marketplace  # app + plugin marketplace server
 npm run start-full              # app + MCP server + marketplace server
@@ -221,6 +225,16 @@ ChatBox examples:
 
 Start the MCP server and add this to your client configuration:
 
+```bash
+# Tools mode (default) - all tools exposed individually
+npm run mcp-server
+
+# Agent mode - prompts routed through AI agent autonomously
+npm run mcp-server -- --mode=agent
+```
+
+Client configuration:
+
 ```json
 {
   "mcpServers": {
@@ -252,11 +266,11 @@ CodeXomics/
 │   ├── mcp-server.js                   # MCP server entry point
 │   ├── mcp-tools/                      # MCP tool implementations
 │   │   ├── navigation/, sequence/, protein/, database/
-│   │   ├── pathway/, primer/, annotation/, track/, action/
+│   │   ├── pathway/, primer/, annotation/, track/, action/, utility/
 │   │   ├── AuthenticationManager.js
 │   │   ├── ConnectionHealthMonitor.js
 │   │   ├── ToolCategoryManager.js
-│   │   └── ToolsIntegrator.js
+│   │   └── ToolsIntegrator.js          # Mode-aware routing (tools/agent)
 │   ├── bioinformatics-tools/           # Standalone HTML tool windows
 │   │   ├── kgml-viewer.html            # KEGG pathway viewer
 │   │   ├── string-networks.html        # STRING protein networks
@@ -366,6 +380,8 @@ CodeXomics/
 ### Key Design Patterns
 
 **Dynamic Tool Registry** — Each tool lives in its own YAML file. `registry_manager.js` scores and retrieves only the tools relevant to the current user query, keeping LLM context windows small and accurate.
+
+**MCP Dual-Mode Server** — The MCP server operates in `tools` mode (direct tool access) or `agent` mode (prompts routed through the internal AI agent). In agent mode, the `codexomics_chat` tool is the single entry point, and progress notifications are pushed to MCP clients in real-time.
 
 **Agent-per-capability** — Complex requests are decomposed by `CoordinatorAgent` and dispatched to domain-specific agents. Results are integrated back before responding.
 
@@ -497,6 +513,7 @@ When using autonomous AI coding tools (Copilot, Cursor, Claude, etc.) in this re
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | AI assistant not responding      | Check API key in `Options → Configure LLMs`. Use "Test Connection".                                                      |
 | MCP server tools not available   | Run `npm run mcp-server`; verify ports 3002/3003 are not blocked.                                                        |
+| MCP agent mode not working       | Ensure LLM is configured (`Options → Configure LLMs`). Start with `--mode=agent`. Check that `codexomics_chat` tool appears in client. |
 | Plugin fails to load             | Check developer console for activation errors; verify plugin API version compatibility (`PLUGIN_API_VERSION = "2.0.0"`). |
 | KGML viewer blank                | Confirm file is valid KEGG XML; check file path accessibility.                                                           |
 | BAM tracks not visible           | Ensure BAM index (`.bai`) file is present alongside the BAM file.                                                        |

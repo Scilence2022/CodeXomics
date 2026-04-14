@@ -38,6 +38,9 @@ class ToolsIntegrator {
 
     // Combine all tools
     this.allTools = this.combineAllTools();
+
+    // Store the full tool set separately for agent mode reference
+    this._fullToolList = null;
   }
 
   combineAllTools() {
@@ -97,9 +100,30 @@ class ToolsIntegrator {
   }
 
   getAvailableTools() {
+    const isAgentMode = this.server && this.server.mode === 'agent';
+
+    // In agent mode, expose only the codexomics_chat tool + window management tools.
+    // The AI agent inside CodeXomics handles all other tools autonomously.
+    if (isAgentMode) {
+      const agentTools = [
+        ...this.agentChatTools.getTools(),
+        ...this.getWindowManagementTools(),
+      ];
+      const result = agentTools.map(tool => {
+        if (tool.parameters && !tool.inputSchema) {
+          return { ...tool, inputSchema: tool.parameters };
+        }
+        return tool;
+      });
+      console.log(`📋 [Agent Mode] Returning ${result.length} tools (codexomics_chat + window management)`);
+      return result;
+    }
+
+    // Tools mode: return all tools (default behavior)
     const tools = Object.values(this.allTools);
 
     // Convert 'parameters' to 'inputSchema' for MCP SDK compatibility
+    console.log(`📋 [Tools Mode] Returning ${tools.length} tools (all)`);
     return tools.map(tool => {
       if (tool.parameters && !tool.inputSchema) {
         return {
@@ -111,12 +135,28 @@ class ToolsIntegrator {
     });
   }
 
+  /**
+   * Get the full list of all tools regardless of mode.
+   * Used for agent mode context - the AI agent needs to know about all available tools.
+   */
+  getFullToolList() {
+    if (!this._fullToolList) {
+      this._fullToolList = Object.values(this.allTools).map(tool => {
+        if (tool.parameters && !tool.inputSchema) {
+          return { ...tool, inputSchema: tool.parameters };
+        }
+        return tool;
+      });
+    }
+    return this._fullToolList;
+  }
+
   getToolByName(toolName) {
     return this.allTools[toolName];
   }
 
   async executeTool(toolName, parameters, clientId) {
-    console.log(`[ToolsIntegrator] executeTool called for: ${toolName}`);
+    console.log(`[ToolsIntegrator] executeTool called for: ${toolName} (mode: ${this.server?.mode || 'unknown'})`);
     const tool = this.allTools[toolName];
     if (!tool) {
       throw new Error(`Tool '${toolName}' not found`);
@@ -124,6 +164,18 @@ class ToolsIntegrator {
 
     // Validate parameters before execution
     this.validateToolParameters(toolName, parameters || {});
+
+    // In agent mode, route all non-chat, non-window-management tools through
+    // the agent (codexomics_chat). The agent will autonomously decide how to
+    // handle the request.
+    const isAgentMode = this.server && this.server.mode === 'agent';
+    const isAgentTool = toolName === 'codexomics_chat';
+    const isWindowTool = toolName === 'list_genome_windows' || toolName === 'switch_active_window';
+
+    if (isAgentMode && !isAgentTool && !isWindowTool) {
+      console.log(`🤖 [Agent Mode] Routing '${toolName}' through codexomics_chat`);
+      return await this._executeViaAgent(toolName, parameters, clientId);
+    }
 
     // Route to appropriate tool module based on tool name
     try {
@@ -341,6 +393,73 @@ class ToolsIntegrator {
       console.error(`Error executing tool '${toolName}':`, error);
       throw error;
     }
+  }
+
+  /**
+   * Execute a tool via the AI agent in agent mode.
+   * Instead of directly calling the tool, wraps the request as a natural language
+   * prompt and routes it through codexomics_chat, which invokes ChatManager's
+   * processAgentPrompt for autonomous execution.
+   *
+   * @param {string} toolName - The original tool name being requested
+   * @param {Object} parameters - The tool parameters
+   * @param {string} clientId - Client identifier
+   * @returns {Object} Agent execution result
+   */
+  async _executeViaAgent(toolName, parameters, clientId) {
+    console.log(`[ToolsIntegrator] _executeViaAgent: routing '${toolName}' through agent`);
+
+    // Build a natural language prompt from the tool call
+    const prompt = this._buildAgentPromptFromToolCall(toolName, parameters);
+
+    // Execute via codexomics_chat (which calls ChatManager.processAgentPrompt)
+    const agentParameters = {
+      prompt,
+      activate_multi_agent: false,
+      context: {
+        original_tool: toolName,
+        original_parameters: parameters,
+        routed_by_agent_mode: true,
+      },
+    };
+
+    return await this.agentChatTools.executeClientTool('codexomics_chat', agentParameters, clientId);
+  }
+
+  /**
+   * Build a natural language prompt from a tool call for agent mode routing.
+   * Translates structured tool parameters into a natural language instruction
+   * that the AI agent can understand and execute.
+   */
+  _buildAgentPromptFromToolCall(toolName, parameters) {
+    // Map of tool names to natural language prompt templates
+    const promptTemplates = {
+      navigate_to_position: (p) => `Navigate to position on chromosome ${p.chromosome || 'current'} at ${p.start ? `${p.start}-${p.end}` : `position ${p.position}`}`,
+      search_features: (p) => `Search for features matching "${p.query}"${p.featureType ? ` of type ${p.featureType}` : ''}`,
+      get_sequence: (p) => `Get the DNA sequence from ${p.chromosome || 'current chromosome'}:${p.start}-${p.end}`,
+      compute_gc: (p) => `Calculate GC content of the sequence: ${p.sequence?.substring(0, 50)}${p.sequence?.length > 50 ? '...' : ''}`,
+      search_uniprot_database: (p) => `Search UniProt database for "${p.query}"${p.searchType ? ` by ${p.searchType}` : ''}`,
+      load_genbank_file: (p) => `Load the GenBank file: ${p.file_path || p.filePath}`,
+      export_genbank: (p) => `Export the current genome as GenBank format`,
+      get_coding_sequence: (p) => `Get the coding sequence for gene ${p.identifier || p.geneName || p.gene_name}`,
+      blast_search: (p) => `Perform a ${p.blastType || 'BLAST'} search with the given sequence`,
+      zoom_in: (p) => `Zoom in by factor ${p.factor || 2}`,
+      zoom_out: (p) => `Zoom out by factor ${p.factor || 2}`,
+      jump_to_gene: (p) => `Jump to gene ${p.geneName}`,
+      search_gene_by_name: (p) => `Search for gene named "${p.name}"`,
+    };
+
+    const template = promptTemplates[toolName];
+    if (template) {
+      return template(parameters);
+    }
+
+    // Generic fallback: describe the tool call as a natural language instruction
+    const paramStr = Object.entries(parameters || {})
+      .map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`)
+      .join(', ');
+
+    return `Execute the ${toolName.replace(/_/g, ' ')} operation${paramStr ? ` with parameters: ${paramStr}` : ''}`;
   }
 
   // Tool categorization for better organization

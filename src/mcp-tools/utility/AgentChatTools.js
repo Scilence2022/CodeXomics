@@ -2,6 +2,13 @@
  * AgentChatTools - MCP tool for agent-mode interaction
  * Allows external MCP clients to send prompts to CodeXomics's AI agent
  * for autonomous execution. Supports single-agent and multi-agent modes.
+ *
+ * In agent mode (CODEXOMICS_MCP_MODE=agent), this is the PRIMARY tool
+ * exposed to MCP clients. All other tools are hidden and the agent
+ * autonomously decides which internal tools to call.
+ *
+ * In tools mode (default), this is an optional tool that MCP clients
+ * can use for complex multi-step tasks instead of calling individual tools.
  */
 
 class AgentChatTools {
@@ -10,14 +17,27 @@ class AgentChatTools {
   }
 
   getTools() {
+    const isAgentMode = this.server && this.server.mode === 'agent';
+
+    const baseDescription =
+      'Send a natural language prompt to the CodeXomics AI agent for autonomous execution. ' +
+      'The agent will analyze the request, plan appropriate tool calls, and execute them. ' +
+      'By default uses single-agent mode (fast). Set activate_multi_agent=true to enable multi-agent coordination for complex tasks.';
+
+    const agentModeDescription =
+      'PRIMARY INTERFACE: Send any bioinformatics request as a natural language prompt. ' +
+      'The CodeXomics AI agent will autonomously analyze your request, select and execute ' +
+      'the appropriate tools, and return comprehensive results. ' +
+      'This is the main way to interact with CodeXomics in agent mode. ' +
+      'You can request any bioinformatics operation: genome navigation, sequence analysis, ' +
+      'protein structure prediction, database searches, BLAST, annotation management, and more. ' +
+      'Progress notifications will be sent during execution. ' +
+      'Set activate_multi_agent=true for complex tasks requiring coordination between multiple specialists.';
+
     return {
       codexomics_chat: {
         name: 'codexomics_chat',
-        description:
-          'Send a natural language prompt to the CodeXomics AI agent for autonomous execution. ' +
-          'The agent will analyze the request, plan appropriate tool calls, and execute them. ' +
-          'Use this for complex multi-step bioinformatics tasks instead of calling individual tools manually. ' +
-          'By default uses single-agent mode (fast). Set activate_multi_agent=true to enable multi-agent coordination for complex tasks.',
+        description: isAgentMode ? agentModeDescription : baseDescription,
         inputSchema: {
           type: 'object',
           properties: {

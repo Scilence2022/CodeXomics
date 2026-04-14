@@ -5,12 +5,35 @@
  *
  * This script starts the CodeXomics MCP (Model Context Protocol) server
  * using the official Claude MCP TypeScript SDK for proper protocol compliance.
+ *
+ * Usage:
+ *   node scripts/start-mcp-server.js [--mode=tools|agent]
+ *
+ * Modes:
+ *   tools  - Standard MCP tool server (default). Each tools/call maps to a specific tool.
+ *   agent  - Agent mode. Prompts are routed through CodeXomics's AI agent (ChatManager),
+ *            which autonomously decides which tools to call. Progress notifications
+ *            are sent back to the MCP client.
  */
 
 const StandardMCPServer = require('../src/mcp-server.js');
 
+// Parse --mode argument
+const modeArg = process.argv.find(arg => arg.startsWith('--mode='));
+if (modeArg) {
+  const mode = modeArg.split('=')[1];
+  if (['tools', 'agent'].includes(mode)) {
+    process.env.CODEXOMICS_MCP_MODE = mode;
+  } else {
+    process.stderr.write(`⚠️  Invalid mode '${mode}'. Use 'tools' or 'agent'. Defaulting to 'tools'.\n`);
+  }
+}
+
+const currentMode = process.env.CODEXOMICS_MCP_MODE || 'tools';
+
 // Use stderr for all output to avoid interfering with JSON-RPC on stdout
 process.stderr.write('🧬 Starting CodeXomics MCP Server...\n');
+process.stderr.write(`📋 Mode: ${currentMode}${currentMode === 'agent' ? ' (AI agent will handle prompts autonomously)' : ' (direct tool execution)'}\n`);
 process.stderr.write('📋 Using official Claude MCP TypeScript SDK\n');
 process.stderr.write('\n');
 
