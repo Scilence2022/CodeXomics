@@ -1073,27 +1073,33 @@ class BuiltInToolsIntegration {
       });
     }
 
-    // Check for gene search patterns
-    // Supports intermediate words: "search for gene", "find the gene called X"
-    if (/\b(search|find|look\s+up|locate)\s+.*?\bgene\b/i.test(query) ||
-        /\bgene\s+search\b/i.test(query)) {
+    // Check for gene search patterns — SPECIFIC gene name/identifier lookup
+    // Matches: "search for gene lacZ", "find gene b0062", "locate the gene called dnaA"
+    // Does NOT match broad queries like "find kinase genes" (those go to search_features)
+    if (/\b(search\s+for|find|look\s+up|locate)\s+(the\s+)?gene\b/i.test(query) ||
+        /\bgene\s+(named|called|with\s+name)\b/i.test(query) ||
+        /\bgene\s+search\b/i.test(query) ||
+        /\blocus\s+tag\b/i.test(query)) {
       relevantTools.push({
         name: 'search_gene_by_name',
         confidence: 0.9,
-        reason: 'Gene search keywords detected',
+        reason: 'Specific gene name/identifier search keywords detected',
       });
     }
 
-    // Check for feature search patterns
-    // Supports intermediate words: "search for features in this region"
+    // Check for feature search patterns — BROAD search by annotation/function/type
+    // Matches: "search for features", "find all tRNA", "search kinase genes"
+    // Key distinction: "kinase genes" → search_features (functional keyword)
+    //                 "gene lacZ" → search_gene_by_name (specific identifier)
     if (/\b(search|find|look\s+up)\s+.*?\bfeatures?\b/i.test(query) ||
         /\bannotation\b/i.test(query) ||
-        /\bfunction\b/i.test(query) ||
-        /\bfeatures?\s+search\b/i.test(query)) {
+        /\b(all|every)\s+(genes?|proteins?|cds|trna|rrna)\b/i.test(query) ||
+        /\bfeatures?\s+search\b/i.test(query) ||
+        /\b(search|find)\s+.*?\b(genes?|proteins?)\s+(by|with|related\s+to|containing)\s+(function|type|annotation|activity)/i.test(query)) {
       relevantTools.push({
         name: 'search_features',
         confidence: 0.9,
-        reason: 'Feature search keywords detected',
+        reason: 'Broad feature search by function/type/annotation keywords detected',
       });
     }
 

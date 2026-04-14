@@ -1,7 +1,7 @@
 # search_gene_by_name.yaml
 name: 'search_gene_by_name'
 version: '1.1.0'
-description: 'Search for genes by name or locus tag with partial matching support. Use this as a FALLBACK when jump_to_gene fails or when you need to search with partial/fuzzy matching. For direct navigation to known genes, use jump_to_gene first.'
+description: 'Search for a SPECIFIC GENE by its name or locus tag (e.g., lacZ, b0062, dnaA). Use this when you know the gene identifier. For searching by functional annotation or feature type (e.g., "all kinase genes", "all tRNA"), use search_features instead. For direct navigation to a known gene, try jump_to_gene first.'
 category: 'navigation'
 keywords: ['search', 'gene', 'name', 'locus', 'tag', 'find', 'locate', 'gene search', 'fallback', 'partial match']
 priority: 2 # Lower priority than jump_to_gene
@@ -21,7 +21,7 @@ parameters:
   properties:
     name:
       type: 'string'
-      description: "Gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA')"
+      description: "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' — use search_features for those."
       examples: ['lacZ', 'b0062', 'araA', 'dnaA', 'rpoB']
     exact_match:
       type: 'boolean'
@@ -81,7 +81,7 @@ metadata:
   tags: ['core', 'search', 'gene', 'fallback', 'fuzzy']
   complexity: 'simple'
   usage_pattern: 'occasional' # Less frequent than jump_to_gene
-  recommendation: 'Use as fallback when jump_to_gene fails or for fuzzy searching'
+  recommendation: 'Use for specific gene lookup by name/locus tag; for broad searches by annotation/function, use search_features'
 
 # Error handling
 error_handling:

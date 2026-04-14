@@ -1,6 +1,6 @@
 name: search_features
 version: 1.0.0
-description: 'Search for genomic features (genes, CDS, tRNA, etc.) by name, type, or annotation. Use this for TEXT-BASED feature searches. For direct gene navigation, use jump_to_gene.'
+description: 'Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name — use search_gene_by_name or jump_to_gene instead.'
 category: navigation
 keywords:
   - search
@@ -23,12 +23,13 @@ parameters:
   properties:
     query:
       type: string
-      description: 'Search query for feature name, gene name, annotation, or keyword'
+      description: 'Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use search_gene_by_name for that)'
       examples:
         - 'ribosomal'
         - 'transport'
         - 'kinase'
         - 'tRNA'
+        - 'hypothetical protein'
     feature_type:
       type: string
       description: 'Filter by specific feature type (optional)'
@@ -97,7 +98,7 @@ metadata:
     - annotation
   complexity: simple
   usage_pattern: occasional
-  recommendation: 'Use for general feature searches; use jump_to_gene for specific gene navigation'
+  recommendation: 'Use for broad searches by annotation/function/type across all features; for specific gene lookup by name, use search_gene_by_name or jump_to_gene'
 error_handling:
   no_results: 'Returns empty list if no features match the search criteria'
   invalid_query: 'Returns error if search query is empty or invalid'
