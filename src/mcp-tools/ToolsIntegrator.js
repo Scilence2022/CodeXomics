@@ -106,8 +106,8 @@ class ToolsIntegrator {
     // The AI agent inside CodeXomics handles all other tools autonomously.
     if (isAgentMode) {
       const agentTools = [
-        ...this.agentChatTools.getTools(),
-        ...this.getWindowManagementTools(),
+        ...Object.values(this.agentChatTools.getTools()),
+        ...Object.values(this.getWindowManagementTools()),
       ];
       const result = agentTools.map(tool => {
         if (tool.parameters && !tool.inputSchema) {
