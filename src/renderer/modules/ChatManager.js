@@ -580,27 +580,28 @@ class ChatManager {
   /**
    * Process a prompt through the AI agent (for MCP Server remote invocation)
    * This is the bridge between MCP Server's codexomics_chat tool
-   * and the internal LLM + tool execution loop.
+   * and the internal ChatBox + LLM + tool execution loop.
+   *
+   * The prompt is executed in the ChatBox with a source marker, making the
+   * execution process visible to the user — identical to typing in ChatBox.
    *
    * @param {string} prompt - Natural language instruction
    * @param {Object} options - Execution options
    * @param {boolean} options.activateMultiAgent - Enable multi-agent coordination
-   * @param {Object} options.context - Optional context (genome_name, current_region, etc.)
    * @param {Function} options.onProgress - Optional progress callback for MCP notifications
    *   Receives: { type: string, message: string, data?: Object }
-   *   Types: 'thinking', 'tool_call', 'tool_result', 'round_start', 'round_end', 'completion', 'error'
-   * @returns {Object} Execution result with response, toolsExecuted, and mode
+   *   Types: 'round_start', 'completion', 'error'
+   * @returns {Object} Execution result with response and mode
    */
   async processAgentPrompt(prompt, options = {}) {
-    const { activateMultiAgent = false, context = {}, onProgress = null } = options;
+    const { activateMultiAgent = false, onProgress = null } = options;
 
     // Save current agent state
     const previousAgentState = this.agentSystemEnabled;
 
     try {
       // Validate LLM configuration
-      const currentConfig = this.getCurrentModelConfig ? this.getCurrentModelConfig() : null;
-      if (!currentConfig && !this.llmConfig) {
+      if (!this.llmConfigManager || !this.llmConfigManager.isConfigured()) {
         throw new Error('No LLM configured. Please set up an LLM provider in Settings > LLM Config.');
       }
 
@@ -610,31 +611,67 @@ class ChatManager {
         console.log('[AgentMode] Multi-agent mode activated for this request');
       }
 
-      // Build context-aware prompt
-      const agentContext = this._buildAgentContext(context);
-      const contextualPrompt = agentContext ? `[Context]\n${agentContext}\n\n${prompt}` : prompt;
-
       // Notify progress: starting
       if (onProgress) {
-        onProgress({ type: 'round_start', message: `Starting agent execution`, data: { mode: activateMultiAgent ? 'multi-agent' : 'single-agent' } });
+        onProgress({ type: 'round_start', message: `Starting agent execution in ChatBox`, data: { mode: activateMultiAgent ? 'multi-agent' : 'single-agent' } });
       }
 
-      // Execute via the existing sendMessage infrastructure
-      // Use silent mode to avoid rendering to chat UI
-      const result = await this._executeAgentLoop(contextualPrompt, { onProgress });
+      // Mark the prompt with MCP source so user knows where it came from
+      const markedPrompt = `🔗 **[MCP Agent]** ${prompt}`;
 
-      // Notify progress: completion
-      if (onProgress) {
-        onProgress({ type: 'completion', message: `Agent execution completed`, data: { toolsExecuted: result.toolsExecuted?.length || 0, iterations: result.iterations } });
+      // Check if ChatBox is busy — if so, wait briefly
+      if (this.conversationState.isProcessing) {
+        if (onProgress) {
+          onProgress({ type: 'error', message: 'ChatBox is busy with another request' });
+        }
+        return {
+          success: false,
+          error: 'ChatBox is busy with another request. Please wait and try again.',
+          mode: activateMultiAgent ? 'multi-agent' : 'single-agent',
+        };
       }
 
-      return {
-        success: true,
-        response: result.response,
-        toolsExecuted: result.toolsExecuted || [],
-        mode: activateMultiAgent ? 'multi-agent' : 'single-agent',
-        iterations: result.iterations || 1,
-      };
+      // Initialize conversation state (same as sendMessage)
+      this.startConversation();
+
+      // Add user message to ChatBox with MCP source marker
+      this.addMessageToChat(markedPrompt, 'user');
+
+      // Show thinking process
+      this.showThinkingProcess && this.addThinkingMessage('🔗 MCP Agent request — analyzing...');
+      this.showTypingIndicator();
+
+      try {
+        // Execute via the main sendToLLM pipeline — same as user typing in ChatBox
+        const response = await this.sendToLLM(prompt);
+
+        // Display response in ChatBox
+        this.removeTypingIndicator();
+        this.addMessageToChat(response, 'assistant');
+
+        // Notify progress: completion
+        if (onProgress) {
+          onProgress({ type: 'completion', message: `Agent execution completed in ChatBox`, data: { responseLength: response ? response.length : 0 } });
+        }
+
+        return {
+          success: true,
+          response: response,
+          mode: activateMultiAgent ? 'multi-agent' : 'single-agent',
+        };
+      } catch (llmError) {
+        this.removeTypingIndicator();
+        if (llmError.name === 'AbortError') {
+          this.addMessageToChat('MCP Agent request aborted by user.', 'assistant', false, 'warning');
+        } else {
+          this.addMessageToChat(`MCP Agent request failed: ${llmError.message}`, 'assistant', true);
+          console.error('[AgentMode] sendToLLM failed:', llmError);
+        }
+        throw llmError;
+      } finally {
+        this.endConversation();
+      }
+
     } catch (error) {
       console.error('[AgentMode] processAgentPrompt failed:', error);
 
@@ -652,207 +689,6 @@ class ChatManager {
       // Restore previous agent state
       this.agentSystemEnabled = previousAgentState;
     }
-  }
-
-  /**
-   * Build context information for agent execution
-   */
-  _buildAgentContext(context) {
-    let contextStr = '';
-
-    if (context.genome_name) {
-      contextStr += `Currently loaded genome: ${context.genome_name}\n`;
-    }
-
-    if (context.current_region) {
-      contextStr += `Currently viewing region: ${context.current_region}\n`;
-    }
-
-    // Try to get current state from the genome browser
-    try {
-      if (typeof this.getCurrentState === 'function') {
-        const currentState = this.getCurrentState();
-        if (currentState) {
-          contextStr += `Current position: ${currentState.chromosome}:${currentState.start}-${currentState.end}\n`;
-          if (!context.genome_name && currentState.genomeName) {
-            contextStr += `Loaded genome: ${currentState.genomeName}\n`;
-          }
-        }
-      }
-    } catch (e) {
-      // State not available, continue without it
-    }
-
-    return contextStr;
-  }
-
-  /**
-   * Execute the agent loop - send prompt to LLM and handle tool calls
-   * @param {string} prompt - The prompt to send to the LLM
-   * @param {Object} options - Execution options
-   * @param {Function} options.onProgress - Optional progress callback for MCP notifications
-   */
-  async _executeAgentLoop(prompt, options = {}) {
-    const { onProgress = null } = options;
-    const maxIterations = 15;
-    const toolsExecuted = [];
-    let iteration = 0;
-    let finalResponse = '';
-
-    while (iteration < maxIterations) {
-      iteration++;
-
-      try {
-        // Notify progress: thinking
-        if (onProgress) {
-          onProgress({ type: 'thinking', message: `Agent iteration ${iteration}: thinking...` });
-        }
-
-        // Call the LLM with the prompt
-        let llmResponse;
-
-        // Try using the existing sendMessage infrastructure
-        if (typeof this.sendMessage === 'function') {
-          // Create a temporary conversation context for the agent loop
-          const messages = [];
-
-          // Add system context
-          const systemPrompt = 'You are a bioinformatics AI assistant for CodeXomics. ' +
-            'Help users analyze genomes, sequences, and biological data by calling the appropriate tools. ' +
-            'When you need to perform an action, use the available tool functions. ' +
-            'Provide clear, concise results.';
-
-          messages.push({ role: 'system', content: systemPrompt });
-          messages.push({ role: 'user', content: prompt });
-
-          // Try different LLM send methods based on configuration
-          const provider = this.getCurrentProvider ? this.getCurrentProvider() : (this.llmConfig?.provider || 'openai');
-
-          if (provider === 'anthropic' && typeof this.sendAnthropicMessage === 'function') {
-            llmResponse = await this.sendAnthropicMessage(messages);
-          } else if (provider === 'google' && typeof this.sendGoogleMessage === 'function') {
-            llmResponse = await this.sendGoogleMessage(messages);
-          } else if (provider === 'deepseek' && typeof this.sendDeepSeekMessage === 'function') {
-            llmResponse = await this.sendDeepSeekMessage(messages);
-          } else if (typeof this.sendOpenAIMessage === 'function') {
-            llmResponse = await this.sendOpenAIMessage(messages);
-          } else if (typeof this.sendToLLM === 'function') {
-            llmResponse = await this.sendToLLM(messages);
-          } else {
-            throw new Error('No LLM send method available');
-          }
-        }
-
-        if (!llmResponse) {
-          finalResponse = 'No response from LLM';
-          break;
-        }
-
-        // Extract the text content from the response
-        const responseText = typeof llmResponse === 'string' ? llmResponse :
-          llmResponse.content?.[0]?.text || llmResponse.content || JSON.stringify(llmResponse);
-
-        // Try to extract tool calls from the response
-        const toolCalls = this._extractToolCallsFromResponse(llmResponse);
-
-        if (!toolCalls || toolCalls.length === 0) {
-          // No tool calls - return the text response
-          finalResponse = responseText;
-          break;
-        }
-
-        // Notify progress: tool calls detected
-        if (onProgress) {
-          onProgress({ type: 'tool_call', message: `Agent requests ${toolCalls.length} tool(s): ${toolCalls.map(t => t.name).join(', ')}`, data: { tools: toolCalls.map(t => t.name) } });
-        }
-
-        // Execute tool calls
-        for (const toolCall of toolCalls) {
-          try {
-            const toolResult = await this.executeToolByName(toolCall.name, toolCall.parameters);
-            const resultSummary = typeof toolResult === 'object' ?
-              JSON.stringify(toolResult).substring(0, 500) :
-              String(toolResult).substring(0, 500);
-            toolsExecuted.push({
-              name: toolCall.name,
-              success: true,
-              result: resultSummary,
-            });
-
-            // Notify progress: tool result
-            if (onProgress) {
-              onProgress({ type: 'tool_result', message: `Tool ${toolCall.name} executed successfully`, data: { tool: toolCall.name, success: true } });
-            }
-          } catch (toolError) {
-            toolsExecuted.push({
-              name: toolCall.name,
-              success: false,
-              error: toolError.message,
-            });
-
-            // Notify progress: tool error
-            if (onProgress) {
-              onProgress({ type: 'tool_result', message: `Tool ${toolCall.name} failed: ${toolError.message}`, data: { tool: toolCall.name, success: false, error: toolError.message } });
-            }
-          }
-        }
-
-        // After executing tools, return the text response + tool results
-        finalResponse = responseText;
-        break;
-
-      } catch (error) {
-        console.error(`[AgentMode] Iteration ${iteration} failed:`, error);
-        finalResponse = `Agent execution failed at iteration ${iteration}: ${error.message}`;
-        break;
-      }
-    }
-
-    // Notify progress: round end
-    if (onProgress) {
-      onProgress({ type: 'round_end', message: `Agent loop finished after ${iteration} iteration(s)`, data: { iterations: iteration, toolsExecuted: toolsExecuted.length } });
-    }
-
-    return {
-      response: finalResponse,
-      toolsExecuted,
-      iterations: iteration,
-    };
-  }
-
-  /**
-   * Extract tool calls from LLM response
-   */
-  _extractToolCallsFromResponse(response) {
-    if (!response) return [];
-
-    try {
-      // Try the intent service parser if available
-      if (this.services?.intent && typeof this.services.intent.parseMultipleToolCalls === 'function') {
-        const parsed = this.services.intent.parseMultipleToolCalls(response);
-        if (parsed && parsed.length > 0) {
-          return parsed.map(call => ({
-            name: call.tool_name || call.name,
-            parameters: call.parameters || call.arguments || {},
-          }));
-        }
-      }
-
-      // Try the ChatManager's own parser
-      if (typeof this.parseMultipleToolCalls === 'function') {
-        const parsed = this.parseMultipleToolCalls(response);
-        if (parsed && parsed.length > 0) {
-          return parsed.map(call => ({
-            name: call.tool_name || call.name,
-            parameters: call.parameters || call.arguments || {},
-          }));
-        }
-      }
-    } catch (e) {
-      // Parsing failed, no tool calls found
-    }
-
-    return [];
   }
 
   /**
