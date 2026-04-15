@@ -14393,24 +14393,29 @@ input:checked+.slider:before {
   }
 
   /* Tool Priority Settings Styles */
+  /* Tool Priority Settings Styles - Modernized Premium UI */
   .priority-container {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    background: #f8f9fa;
-    padding: 12px;
-    margin: 8px 0;
+    border: none;
+    border-radius: 16px;
+    background: rgba(241, 245, 249, 0.5);
+    padding: 16px;
+    margin: 12px 0;
+    backdrop-filter: blur(5px);
   }
 
   .priority-item {
     display: flex;
     align-items: center;
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 8px;
-    transition: all 0.2s ease;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: grab;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    position: relative;
+    overflow: hidden;
   }
 
   .priority-item:last-child {
@@ -14418,94 +14423,193 @@ input:checked+.slider:before {
   }
 
   .priority-item:hover {
-    border-color: #007bff;
-    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+    border-color: #3b82f6;
+    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.1), 0 4px 6px -2px rgba(59, 130, 246, 0.05);
+    transform: translateY(-2px);
   }
 
   .priority-item.dragging {
-    opacity: 0.6;
-    transform: rotate(2deg);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0.8;
+    transform: scale(1.02) rotate(1deg);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     cursor: grabbing;
+    z-index: 100;
   }
 
   .priority-drag-handle {
-    color: #6c757d;
-    font-size: 16px;
-    margin-right: 12px;
+    color: #94a3b8;
+    font-size: 18px;
+    margin-right: 16px;
     cursor: grab;
     user-select: none;
-  }
-
-  .priority-drag-handle:hover {
-    color: #007bff;
-  }
-
-  .priority-number {
-    background: #007bff;
-    color: white;
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
+    transition: color 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-    margin-right: 12px;
-    flex-shrink: 0;
+  }
+
+  .priority-item:hover .priority-drag-handle {
+    color: #3b82f6;
+  }
+
+
+
+  .section-toggle {
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
   }
 
   .priority-info {
     flex: 1;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    padding-right: 12px;
+    gap: 8px;
   }
 
   .priority-label {
     font-weight: 600;
-    color: #333;
-    font-size: 15px;
-    line-height: 1.2;
+    color: #1e293b;
+    font-size: 14px;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  .priority-separator {
+    color: #94a3b8;
+    font-size: 14px;
   }
 
   .priority-description {
-    color: #6c757d;
+    color: #64748b;
     font-size: 13px;
-    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .priority-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 12px;
+    border-left: 1px solid #f1f5f9;
+  }
+
+  .priority-arrows {
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
 
   .priority-btn {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    color: #495057;
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 10px;
     transition: all 0.2s ease;
     padding: 0;
   }
 
   .priority-btn:hover:not(:disabled) {
-    background: #007bff;
-    color: white;
-    border-color: #007bff;
+    background: #eff6ff;
+    color: #3b82f6;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+  }
+
+  .priority-btn:active:not(:disabled) {
+    transform: translateY(0);
   }
 
   .priority-btn:disabled {
-    opacity: 0.4;
+    opacity: 0.3;
     cursor: not-allowed;
+  }
+
+  /* Chatbox Settings Modal Premium Overrides */
+  #chatboxSettingsModal .modal-content {
+    border: none;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  #chatboxSettingsModal .llm-provider-tabs {
+    background: #f1f5f9;
+    padding: 8px 8px 0 8px;
+    gap: 4px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  #chatboxSettingsModal .tab-button {
+    border-radius: 8px 8px 0 0;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+    border-bottom: none;
+  }
+
+  #chatboxSettingsModal .tab-button:hover {
+    background: rgba(255, 255, 255, 0.5);
+    color: #334155;
+  }
+
+  #chatboxSettingsModal .tab-button.active {
+    background: white;
+    color: #3b82f6;
+    border-color: #e2e8f0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.02);
+  }
+
+  #chatboxSettingsModal .tab-button.active::after {
+    background: #3b82f6;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    bottom: -1px;
+  }
+
+  #chatboxSettingsModal .form-section h4 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-bottom: 20px;
+    border-left: 3px solid #3b82f6;
+    padding-left: 12px;
+    font-weight: 700;
+  }
+
+  #chatboxSettingsModal .setting-checkbox:checked {
+    background: #0d9488;
+    box-shadow: 0 0 12px rgba(13, 148, 136, 0.3);
+  }
+
+  #chatboxSettingsModal .system-prompt-textarea {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+  }
+
+  #chatboxSettingsModal .system-prompt-textarea:focus {
+    background: white;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
   }
 
   .priority-help {

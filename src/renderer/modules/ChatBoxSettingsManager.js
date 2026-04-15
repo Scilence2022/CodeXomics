@@ -891,123 +891,139 @@ class ChatBoxSettingsManager {
                                 </small>
                                 <div id="systemPromptSectionContainer" class="priority-container system-prompt-section-container">
                                     <div class="priority-item" data-type="systemInstructions" draggable="true">
-                                        <div class="priority-drag-handle">⋮⋮</div>
-                                        <span class="priority-number">1</span>
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeSystemInstructions" class="setting-checkbox" checked>
+                                        </label>
                                         <div class="priority-info">
                                             <span class="priority-label">System Instructions</span>
-                                            <span class="priority-description">Core identity, behavior definition & tool format</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Identity & behavior</span>
                                         </div>
                                         <div class="priority-controls">
-                                            <label class="section-toggle">
-                                                <input type="checkbox" id="systemPromptIncludeSystemInstructions" class="setting-checkbox" checked>
-                                            </label>
-                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
-                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="priority-item" data-type="currentContext" draggable="true">
-                                        <div class="priority-drag-handle">⋮⋮</div>
-                                        <span class="priority-number">2</span>
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeCurrentContext" class="setting-checkbox" checked>
+                                        </label>
                                         <div class="priority-info">
                                             <span class="priority-label">Current Context</span>
-                                            <span class="priority-description">CodeXomics state: chromosome, position, loaded files</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">App state (chromosome, position, files)</span>
                                         </div>
                                         <div class="priority-controls">
-                                            <label class="section-toggle">
-                                                <input type="checkbox" id="systemPromptIncludeCurrentContext" class="setting-checkbox" checked>
-                                            </label>
-                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
-                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="priority-item" data-type="dynamicTools" draggable="true">
-                                        <div class="priority-drag-handle">⋮⋮</div>
-                                        <span class="priority-number">3</span>
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeDynamicTools" class="setting-checkbox" checked>
+                                        </label>
                                         <div class="priority-info">
                                             <span class="priority-label">Dynamic Tools</span>
-                                            <span class="priority-description">Tool descriptions loaded based on current query</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Tools based on query</span>
                                         </div>
                                         <div class="priority-controls">
-                                            <label class="section-toggle">
-                                                <input type="checkbox" id="systemPromptIncludeDynamicTools" class="setting-checkbox" checked>
-                                            </label>
-                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
-                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="priority-item" data-type="toolExamples" draggable="true">
-                                        <div class="priority-drag-handle">⋮⋮</div>
-                                        <span class="priority-number">4</span>
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeToolExamples" class="setting-checkbox" checked>
+                                        </label>
                                         <div class="priority-info">
                                             <span class="priority-label">Tool Examples</span>
-                                            <span class="priority-description">Sample tool usage examples for common operations</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Sample operations</span>
                                         </div>
                                         <div class="priority-controls">
-                                            <label class="section-toggle">
-                                                <input type="checkbox" id="systemPromptIncludeToolExamples" class="setting-checkbox" checked>
-                                            </label>
-                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
-                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="priority-item" data-type="toolGuidelines" draggable="true">
-                                        <div class="priority-drag-handle">⋮⋮</div>
-                                        <span class="priority-number">5</span>
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeToolGuidelines" class="setting-checkbox" checked>
+                                        </label>
                                         <div class="priority-info">
-                                            <span class="priority-label">Tool Selection Guidelines</span>
-                                            <span class="priority-description">Rules for choosing and chaining tools</span>
+                                            <span class="priority-label">Tool Guidelines</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Rules for chaining</span>
                                         </div>
                                         <div class="priority-controls">
-                                            <label class="section-toggle">
-                                                <input type="checkbox" id="systemPromptIncludeToolGuidelines" class="setting-checkbox" checked>
-                                            </label>
-                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
-                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="priority-item" data-type="responseFormat" draggable="true">
-                                        <div class="priority-drag-handle">⋮⋮</div>
-                                        <span class="priority-number">6</span>
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeResponseFormat" class="setting-checkbox" checked>
+                                        </label>
                                         <div class="priority-info">
                                             <span class="priority-label">Response Format</span>
-                                            <span class="priority-description">JSON format specification for tool calls</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">JSON spec</span>
                                         </div>
                                         <div class="priority-controls">
-                                            <label class="section-toggle">
-                                                <input type="checkbox" id="systemPromptIncludeResponseFormat" class="setting-checkbox" checked>
-                                            </label>
-                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
-                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="priority-item" data-type="toolCategories" draggable="true">
-                                        <div class="priority-drag-handle">⋮⋮</div>
-                                        <span class="priority-number">7</span>
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeToolCategories" class="setting-checkbox" checked>
+                                        </label>
                                         <div class="priority-info">
-                                            <span class="priority-label">Tool Categories & Relationships</span>
-                                            <span class="priority-description">Category overview and tool relationships</span>
+                                            <span class="priority-label">Tool Categories</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Tool relationships</span>
                                         </div>
                                         <div class="priority-controls">
-                                            <label class="section-toggle">
-                                                <input type="checkbox" id="systemPromptIncludeToolCategories" class="setting-checkbox" checked>
-                                            </label>
-                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
-                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="priority-item" data-type="memoryContext" draggable="true">
-                                        <div class="priority-drag-handle">⋮⋮</div>
-                                        <span class="priority-number">8</span>
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeMemoryContext" class="setting-checkbox" checked>
+                                        </label>
                                         <div class="priority-info">
                                             <span class="priority-label">Memory Context</span>
-                                            <span class="priority-description">Context from the memory system for continuity</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">System continuity</span>
                                         </div>
                                         <div class="priority-controls">
-                                            <label class="section-toggle">
-                                                <input type="checkbox" id="systemPromptIncludeMemoryContext" class="setting-checkbox" checked>
-                                            </label>
-                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
-                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1074,12 +1090,11 @@ class ChatBoxSettingsManager {
                                 <div class="form-group">
                                     <label>Configure tool selection priority order:</label>
                                     <div id="toolPriorityContainer" class="priority-container">
-                                        <div class="priority-item" data-type="local" draggable="true">
+                                        <div class="priority-item" data-type="builtIn" draggable="true">
                                             <div class="priority-drag-handle">⋮⋮</div>
-                                            <span class="priority-number">1</span>
                                             <div class="priority-info">
-                                                <span class="priority-label">Local Tools</span>
-                                                <span class="priority-description">Built-in genome browser tools</span>
+                                                <span class="priority-label">Built-in Tools</span>
+                                                <span class="priority-description">Core application features (navigation, file loading)</span>
                                             </div>
                                             <div class="priority-controls">
                                                 <button type="button" class="priority-btn up" title="Move up" onclick="movePriorityUp(this)">↑</button>
@@ -1088,7 +1103,6 @@ class ChatBoxSettingsManager {
                                         </div>
                                         <div class="priority-item" data-type="genomics" draggable="true">
                                             <div class="priority-drag-handle">⋮⋮</div>
-                                            <span class="priority-number">2</span>
                                             <div class="priority-info">
                                                 <span class="priority-label">Genomics Tools</span>
                                                 <span class="priority-description">Specialized analysis tools</span>
@@ -1100,7 +1114,6 @@ class ChatBoxSettingsManager {
                                         </div>
                                         <div class="priority-item" data-type="plugins" draggable="true">
                                             <div class="priority-drag-handle">⋮⋮</div>
-                                            <span class="priority-number">3</span>
                                             <div class="priority-info">
                                                 <span class="priority-label">Plugin Tools</span>
                                                 <span class="priority-description">Third-party extensions</span>
@@ -1112,7 +1125,6 @@ class ChatBoxSettingsManager {
                                         </div>
                                         <div class="priority-item" data-type="mcp" draggable="true">
                                             <div class="priority-drag-handle">⋮⋮</div>
-                                            <span class="priority-number">4</span>
                                             <div class="priority-info">
                                                 <span class="priority-label">MCP Server Tools</span>
                                                 <span class="priority-description">External server tools</span>
@@ -1297,11 +1309,6 @@ class ChatBoxSettingsManager {
   updatePriorityNumbers(container) {
     const items = container.querySelectorAll('.priority-item');
     items.forEach((item, index) => {
-      const numberSpan = item.querySelector('.priority-number');
-      if (numberSpan) {
-        numberSpan.textContent = index + 1;
-      }
-
       // Update button states
       const upBtn = item.querySelector('.priority-btn.up');
       const downBtn = item.querySelector('.priority-btn.down');
