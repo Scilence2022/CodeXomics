@@ -640,10 +640,6 @@ class TrackRenderer {
         console.log(`🎲 Updated sampling input value to ${currentPercentage}%`);
       }
     }
-
-    // Also update preset buttons
-    const currentSettings = this.getTrackSettings('reads');
-    this.syncSamplingHeaderUI(currentSettings.samplingPercentage || 20);
   }
 
   /**
@@ -14161,6 +14157,16 @@ This action cannot be undone.`;
   saveTrackSettings(trackType, settings, fileId = null) {
     const instanceKey = this._instanceSettingsKey(trackType, fileId);
     console.log(`🔧 [TrackRenderer] Saving settings for ${instanceKey}:`, settings);
+
+    // CRITICAL: Update in-memory trackSettings so refreshViewAfterSettingsChange preserves them
+    if (!this.trackSettings) {
+      this.trackSettings = {};
+    }
+    if (fileId) {
+      this.trackSettings[instanceKey] = { ...settings };
+    } else {
+      this.trackSettings[trackType] = { ...settings };
+    }
 
     // Always save type-level settings (the base defaults)
     if (!fileId) {
