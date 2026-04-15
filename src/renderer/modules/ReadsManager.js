@@ -141,15 +141,16 @@ class ReadsManager {
    * Apply read sampling based on settings
    */
   applySampling(reads, settings = {}) {
+    // Validate and clamp settings to safe ranges
+    const threshold = Math.min(100000, Math.max(1000, parseInt(settings.samplingThreshold) || 10000));
+    const mode = settings.samplingMode === 'fixed' ? 'fixed' : 'percentage';
+    const percentage = Math.min(100, Math.max(1, parseInt(settings.samplingPercentage) || 20));
+    const fixedCount = Math.min(50000, Math.max(1000, parseInt(settings.samplingCount) || 5000));
+
     // Check if sampling is enabled and threshold is exceeded
-    if (!settings.enableSampling || reads.length <= (settings.samplingThreshold || 10000)) {
+    if (!settings.enableSampling || reads.length <= threshold) {
       return reads;
     }
-
-    const threshold = settings.samplingThreshold || 10000;
-    const mode = settings.samplingMode || 'percentage';
-    const percentage = settings.samplingPercentage || 20;
-    const fixedCount = settings.samplingCount || 5000;
 
     console.log(`🎲 [ReadsManager] Sampling activated: ${reads.length} reads exceed threshold of ${threshold}`);
 

@@ -198,123 +198,53 @@ class TrackRenderer {
       samplingLabel.textContent = 'Sample:';
       samplingLabel.style.cssText = 'font-size: 11px; color: #888;';
 
-      const samplingInput = document.createElement('input');
-      samplingInput.type = 'number';
-      samplingInput.min = '1';
-      samplingInput.max = '100';
-      samplingInput.step = '1';
+      const samplingInput = document.createElement('select');
       samplingInput.className = 'track-sampling-input';
       samplingInput.style.cssText = `
-                width: 45px;
+                width: 60px;
                 height: 20px;
-                padding: 2px 4px;
+                padding: 1px 2px;
                 border: 1px solid #ddd;
                 border-radius: 3px;
                 font-size: 11px;
-                text-align: center;
                 background: white;
+                cursor: pointer;
             `;
-
-      const samplingPercent = document.createElement('span');
-      samplingPercent.textContent = '%';
-      samplingPercent.style.cssText = 'font-size: 11px; color: #888;';
 
       // Get current sampling percentage from settings (instance-specific if fileId exists)
       const currentSettings = this.getTrackSettings('reads', fileId);
-      samplingInput.value = currentSettings.samplingPercentage || 20;
+      const currentPct = currentSettings.samplingPercentage || 20;
 
-      // Add enter key handler - only trigger on Enter key press
-      samplingInput.addEventListener('keypress', e => {
-        if (e.key === 'Enter') {
-          let percentage = parseInt(e.target.value);
-          if (isNaN(percentage) || percentage < 1) {
-            percentage = 1;
-            e.target.value = 1;
-          } else if (percentage > 100) {
-            percentage = 100;
-            e.target.value = 100;
-          }
-          this.updateSamplingPercentage(percentage, fileId);
-          e.target.blur(); // Remove focus
+      const presets = [1, 2, 5, 10, 20, 30, 50, 75, 100];
+      presets.forEach(preset => {
+        const option = document.createElement('option');
+        option.value = preset;
+        option.textContent = preset + '%';
+        if (preset === currentPct) {
+          option.selected = true;
         }
+        samplingInput.appendChild(option);
       });
 
-      // Add change handler for when user clicks away (blur event)
-      samplingInput.addEventListener('blur', e => {
-        let percentage = parseInt(e.target.value);
-        if (isNaN(percentage) || percentage < 1) {
-          percentage = 1;
-          e.target.value = 1;
-        } else if (percentage > 100) {
-          percentage = 100;
-          e.target.value = 100;
-        }
-        // Only update if value actually changed
-        const currentSettings = this.getTrackSettings('reads', fileId);
-        const currentPercentage = currentSettings.samplingPercentage || 20;
-        if (percentage !== currentPercentage) {
+      // If current percentage is not in preset list, add it as a custom option
+      if (!presets.includes(currentPct)) {
+        const customOption = document.createElement('option');
+        customOption.value = currentPct;
+        customOption.textContent = currentPct + '%';
+        customOption.selected = true;
+        samplingInput.insertBefore(customOption, samplingInput.firstChild);
+      }
+
+      // Handle selection change
+      samplingInput.addEventListener('change', e => {
+        const percentage = parseInt(e.target.value);
+        if (!isNaN(percentage)) {
           this.updateSamplingPercentage(percentage, fileId);
         }
       });
 
       samplingContainer.appendChild(samplingLabel);
       samplingContainer.appendChild(samplingInput);
-      samplingContainer.appendChild(samplingPercent);
-
-      // Add preset percentage buttons
-      const presetContainer = document.createElement('div');
-      presetContainer.className = 'track-sampling-presets';
-      presetContainer.style.cssText = `
-                display: inline-flex;
-                align-items: center;
-                margin-left: 8px;
-                gap: 3px;
-            `;
-
-      const presets = [5, 10, 20, 50, 100];
-      presets.forEach(preset => {
-        const presetBtn = document.createElement('button');
-        presetBtn.textContent = preset + '%';
-        presetBtn.className = 'track-sampling-preset-btn';
-        presetBtn.dataset.preset = preset;
-        presetBtn.style.cssText = `
-                    padding: 2px 6px;
-                    font-size: 10px;
-                    border: 1px solid #ccc;
-                    border-radius: 3px;
-                    background: #f5f5f5;
-                    color: #666;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                `;
-
-        // Highlight current preset
-        if (parseInt(samplingInput.value) === preset) {
-          presetBtn.style.background = '#4CAF50';
-          presetBtn.style.color = 'white';
-          presetBtn.style.borderColor = '#4CAF50';
-        }
-
-        presetBtn.addEventListener('click', () => {
-          this.updateSamplingPercentage(preset, fileId);
-        });
-
-        presetBtn.addEventListener('mouseenter', () => {
-          if (parseInt(samplingInput.value) !== preset) {
-            presetBtn.style.background = '#e0e0e0';
-          }
-        });
-
-        presetBtn.addEventListener('mouseleave', () => {
-          if (parseInt(samplingInput.value) !== preset) {
-            presetBtn.style.background = '#f5f5f5';
-          }
-        });
-
-        presetContainer.appendChild(presetBtn);
-      });
-
-      samplingContainer.appendChild(presetContainer);
       trackHeader.appendChild(samplingContainer);
 
       // --- Add toggle buttons for Reads track components ---
@@ -702,7 +632,11 @@ class TrackRenderer {
       const currentSettings = this.getTrackSettings('reads');
       const currentPercentage = currentSettings.samplingPercentage || 20;
       if (parseInt(samplingInput.value) !== currentPercentage) {
-        samplingInput.value = currentPercentage;
+        if (samplingInput.tagName === 'SELECT') {
+          this.syncSamplingHeaderUI(currentPercentage);
+        } else {
+          samplingInput.value = currentPercentage;
+        }
         console.log(`🎲 Updated sampling input value to ${currentPercentage}%`);
       }
     }
@@ -730,7 +664,6 @@ class TrackRenderer {
 
     const samplingLabel = trackHeader.querySelector('.track-sampling-control span:first-child');
     const samplingInput = trackHeader.querySelector('.track-sampling-input');
-    const presetContainer = trackHeader.querySelector('.track-sampling-presets');
 
     if (!isSampled) {
       // Sampling was NOT applied (reads count <= threshold) - show 100% and disable controls
@@ -745,12 +678,8 @@ class TrackRenderer {
         samplingInput.style.background = '#f0f0f0';
         samplingInput.style.cursor = 'not-allowed';
       }
-      if (presetContainer) {
-        presetContainer.style.opacity = '0.5';
-        presetContainer.style.pointerEvents = 'none';
-      }
 
-      // Update preset buttons to show 100% as active
+      // Update select to show 100% as active
       this.syncSamplingHeaderUI(100);
     } else {
       // Sampling WAS applied (reads count > threshold) - enable controls and show actual percentage
@@ -760,18 +689,12 @@ class TrackRenderer {
         samplingLabel.style.color = '#888';
       }
       if (samplingInput) {
-        samplingInput.value = currentSettings.samplingPercentage || 20;
+        // Set value via syncSamplingHeaderUI to handle custom values
+        this.syncSamplingHeaderUI(currentSettings.samplingPercentage || 20);
         samplingInput.disabled = false;
         samplingInput.style.background = 'white';
-        samplingInput.style.cursor = 'text';
+        samplingInput.style.cursor = 'pointer';
       }
-      if (presetContainer) {
-        presetContainer.style.opacity = '1';
-        presetContainer.style.pointerEvents = 'auto';
-      }
-
-      // Update preset buttons to show actual percentage as active
-      this.syncSamplingHeaderUI(currentSettings.samplingPercentage || 20);
     }
   }
 
@@ -5264,12 +5187,12 @@ class TrackRenderer {
         fileName: bamFile.metadata.name,
       });
 
-      // Update sampling display for BAM mode
-      const threshold = settings.samplingThreshold || 10000;
-      const isSampled = reads.length > threshold;
-      this.updateSamplingDisplayBasedOnReadsCount(reads.length, isSampled);
+      // Apply sampling via ReadsManager (consistent with SAM path)
+      const sampledReads = this.genomeBrowser.readsManager.applySampling(reads, settings);
+      const isSampled = sampledReads._samplingInfo !== undefined;
+      this.updateSamplingDisplayBasedOnReadsCount(sampledReads.length, isSampled);
 
-      if (reads.length === 0) {
+      if (sampledReads.length === 0) {
         // Try to provide helpful diagnostic information
         let diagnosticMessage = `No reads found in region ${chromosome}:${viewport.start}-${viewport.end}`;
 
@@ -5322,8 +5245,8 @@ class TrackRenderer {
           referenceHeight = 0;
         }
 
-        // Arrange reads into rows
-        const readRows = this.arrangeReadsInRows(reads, viewport.start, viewport.end);
+        // Arrange sampled reads into rows (use sampledReads for display, reads for coverage above)
+        const readRows = this.arrangeReadsInRows(sampledReads, viewport.start, viewport.end);
 
         // Calculate rendering parameters
         const readHeight = settings.readHeight || 4;
@@ -5548,13 +5471,12 @@ class TrackRenderer {
         fileName: bamFile.metadata.name,
       });
 
-      // Update sampling display for BAM mode
-      // In BAM mode, we check if reads count exceeds threshold to determine if sampling would be applied
-      const threshold = settings.samplingThreshold || 10000;
-      const isSampled = reads.length > threshold;
-      this.updateSamplingDisplayBasedOnReadsCount(reads.length, isSampled);
+      // Apply sampling via ReadsManager (consistent with SAM path)
+      const sampledReads = this.genomeBrowser.readsManager.applySampling(reads, settings);
+      const isSampled = sampledReads._samplingInfo !== undefined;
+      this.updateSamplingDisplayBasedOnReadsCount(sampledReads.length, isSampled);
 
-      if (reads.length === 0) {
+      if (sampledReads.length === 0) {
         // Try to provide helpful diagnostic information
         let diagnosticMessage = `No reads found in region ${chromosome}:${viewport.start}-${viewport.end}`;
 
@@ -5604,8 +5526,8 @@ class TrackRenderer {
           referenceHeight = 0;
         }
 
-        // Arrange reads in rows
-        const readRows = this.arrangeReadsInRows(reads, viewport.start, viewport.end);
+        // Arrange sampled reads in rows (use sampledReads for display, reads for coverage above)
+        const readRows = this.arrangeReadsInRows(sampledReads, viewport.start, viewport.end);
 
         // Calculate track height and spacing
         const readHeight = parseInt(settings.readHeight) || 8;
@@ -13880,12 +13802,12 @@ This action cannot be undone.`;
         settings.showSecondary = modal.querySelector('#readsShowSecondary').checked;
         settings.showSupplementary = modal.querySelector('#readsShowSupplementary').checked;
         settings.height = parseInt(modal.querySelector('#readsTrackHeight').value) || 150;
-        // Sampling settings
+        // Sampling settings (with validation/clamping)
         settings.enableSampling = modal.querySelector('#readsEnableSampling').checked;
-        settings.samplingThreshold = parseInt(modal.querySelector('#readsSamplingThreshold').value) || 10000;
+        settings.samplingThreshold = Math.min(100000, Math.max(1000, parseInt(modal.querySelector('#readsSamplingThreshold').value) || 10000));
         settings.samplingMode = modal.querySelector('#readsSamplingMode').value || 'percentage';
-        settings.samplingPercentage = parseInt(modal.querySelector('#readsSamplingPercentage').value) || 20;
-        settings.samplingCount = parseInt(modal.querySelector('#readsSamplingCount').value) || 5000;
+        settings.samplingPercentage = Math.min(100, Math.max(1, parseInt(modal.querySelector('#readsSamplingPercentage').value) || 20));
+        settings.samplingCount = Math.min(50000, Math.max(1000, parseInt(modal.querySelector('#readsSamplingCount').value) || 5000));
         settings.showSamplingInfo = modal.querySelector('#readsShowSamplingInfo').checked;
 
         // Sequence display settings
@@ -14373,6 +14295,9 @@ This action cannot be undone.`;
    * Update sampling percentage for reads track
    */
   updateSamplingPercentage(percentage, fileId = null) {
+    // Validate and clamp percentage to valid range [1, 100]
+    percentage = Math.min(100, Math.max(1, parseInt(percentage) || 20));
+
     console.log(`🎲 [TrackRenderer] Updating sampling percentage to ${percentage}%${fileId ? ` for file ${fileId}` : ''}`);
 
     try {
@@ -14415,26 +14340,26 @@ This action cannot be undone.`;
     const trackHeader = readsTrack.querySelector('.track-header');
     if (!trackHeader) return;
 
-    // Update input value
+    // Update select value
     const samplingInput = trackHeader.querySelector('.track-sampling-input');
-    if (samplingInput) {
-      samplingInput.value = percentage;
-    }
-
-    // Update preset button styles
-    const presetButtons = trackHeader.querySelectorAll('.track-sampling-preset-btn');
-    presetButtons.forEach(btn => {
-      const preset = parseInt(btn.dataset.preset);
-      if (preset === percentage) {
-        btn.style.background = '#4CAF50';
-        btn.style.color = 'white';
-        btn.style.borderColor = '#4CAF50';
+    if (samplingInput && samplingInput.tagName === 'SELECT') {
+      // Check if the percentage exists as an option
+      const existingOption = samplingInput.querySelector(`option[value="${percentage}"]`);
+      if (existingOption) {
+        samplingInput.value = percentage;
       } else {
-        btn.style.background = '#f5f5f5';
-        btn.style.color = '#666';
-        btn.style.borderColor = '#ccc';
+        // Remove any previous custom option
+        const prevCustom = samplingInput.querySelector('option[data-custom="true"]');
+        if (prevCustom) prevCustom.remove();
+        // Add custom option for this percentage
+        const customOption = document.createElement('option');
+        customOption.value = percentage;
+        customOption.textContent = percentage + '%';
+        customOption.dataset.custom = 'true';
+        customOption.selected = true;
+        samplingInput.insertBefore(customOption, samplingInput.firstChild);
       }
-    });
+    }
 
     console.log(`🎲 [TrackRenderer] Synced sampling header UI to ${percentage}%`);
   }
