@@ -9275,17 +9275,47 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const fullAnnotation = this.app.currentAnnotations[targetChromosome].find(a =>
         a.start === geneAnnotation.start &&
         a.end === geneAnnotation.end &&
-        a.type === geneAnnotation.type
+        a.type === geneAnnotation.type &&
+        a.strand === geneAnnotation.strand
       );
       if (fullAnnotation) {
         fullGene = fullAnnotation;
+      } else {
+        // Relaxed match without strand (some annotations may differ in strand encoding)
+        const relaxedMatch = this.app.currentAnnotations[targetChromosome].find(a =>
+          a.start === geneAnnotation.start &&
+          a.end === geneAnnotation.end &&
+          a.type === geneAnnotation.type
+        );
+        if (relaxedMatch) {
+          fullGene = relaxedMatch;
+        }
+      }
+    }
+
+    // If we still only have the slim version, try finding by gene name in qualifiers
+    if (fullGene === geneAnnotation || !fullGene.qualifiers || Object.keys(fullGene.qualifiers).length <= 3) {
+      if (this.app.currentAnnotations && this.app.currentAnnotations[targetChromosome]) {
+        const targetName = geneAnnotation.qualifiers?.gene || geneAnnotation.qualifiers?.locus_tag;
+        if (targetName) {
+          const nameMatch = this.app.currentAnnotations[targetChromosome].find(a => {
+            if (!a.qualifiers) return false;
+            const aGene = this.app.getQualifierValue(a.qualifiers, 'gene');
+            const aLocus = this.app.getQualifierValue(a.qualifiers, 'locus_tag');
+            return (aGene && aGene === targetName) || (aLocus && aLocus === targetName);
+          });
+          if (nameMatch) {
+            fullGene = nameMatch;
+          }
+        }
       }
     }
 
     // Navigate to the gene if it's not in the current view
     const currentStart = this.app.currentPosition?.start || 0;
     const currentEnd = this.app.currentPosition?.end || 0;
-    if (fullGene.end < currentStart || fullGene.start > currentEnd) {
+    const needNavigation = fullGene.end < currentStart || fullGene.start > currentEnd;
+    if (needNavigation) {
       // Gene is outside current view, navigate to it
       const padding = Math.max(500, Math.floor((fullGene.end - fullGene.start) * 0.2));
       await this.navigateToPosition({
@@ -9293,6 +9323,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         start: Math.max(0, fullGene.start - padding),
         end: fullGene.end + padding,
       });
+
+      // Wait for the genome view to finish rendering after navigation
+      // This ensures DOM elements for the gene are available before highlighting
+      await new Promise(resolve => setTimeout(resolve, 400));
     }
 
     // Select the gene using the genome browser's selectGene method
@@ -9328,6 +9362,18 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       } catch (e) {
         console.warn('Could not highlight gene sequence:', e.message);
       }
+    }
+
+    // If navigation occurred, re-apply gene highlighting after render
+    // (highlightSelectedGene may have missed DOM elements during navigation render)
+    if (needNavigation && typeof this.app.highlightSelectedGene === 'function') {
+      setTimeout(() => {
+        try {
+          this.app.highlightSelectedGene(fullGene);
+        } catch (e) {
+          console.warn('Could not re-highlight gene after navigation:', e.message);
+        }
+      }, 600);
     }
 
     return {
