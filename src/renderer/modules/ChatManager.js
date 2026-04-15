@@ -9329,39 +9329,21 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       await new Promise(resolve => setTimeout(resolve, 400));
     }
 
-    // Select the gene using the genome browser's selectGene method
-    if (typeof this.app.selectGene === 'function') {
-      this.app.selectGene(fullGene, bestMatch.operonInfo || null);
+    // Use the same function as user click: TrackRenderer.showGeneDetails()
+    // This ensures 100% consistent behavior with mouse-click selection
+    const operonInfo = bestMatch.operonInfo || null;
+    if (this.app.trackRenderer && typeof this.app.trackRenderer.showGeneDetails === 'function') {
+      this.app.trackRenderer.showGeneDetails(fullGene, operonInfo);
     } else {
-      // Fallback: set selectedGene directly
-      this.app.selectedGene = { gene: fullGene, operonInfo: bestMatch.operonInfo || null };
-    }
-
-    // Show gene details panel in sidebar (same as clicking a gene)
-    if (typeof this.app.showGeneDetailsPanel === 'function') {
-      try {
-        this.app.showGeneDetailsPanel();
-      } catch (e) {
-        console.warn('Could not show gene details panel:', e.message);
+      // Fallback: call the individual methods directly
+      if (typeof this.app.selectGene === 'function') {
+        this.app.selectGene(fullGene, operonInfo);
+      } else {
+        this.app.selectedGene = { gene: fullGene, operonInfo };
       }
-    }
-
-    // Populate gene details content in the sidebar
-    if (typeof this.app.populateGeneDetails === 'function') {
-      try {
-        this.app.populateGeneDetails(fullGene, bestMatch.operonInfo || null);
-      } catch (e) {
-        console.warn('Could not populate gene details:', e.message);
-      }
-    }
-
-    // Highlight the gene sequence in the sequence panel
-    if (typeof this.app.highlightGeneSequence === 'function') {
-      try {
-        this.app.highlightGeneSequence(fullGene);
-      } catch (e) {
-        console.warn('Could not highlight gene sequence:', e.message);
-      }
+      try { this.app.showGeneDetailsPanel?.(); } catch (e) { console.warn('Could not show gene details panel:', e.message); }
+      try { this.app.populateGeneDetails?.(fullGene, operonInfo); } catch (e) { console.warn('Could not populate gene details:', e.message); }
+      try { this.app.highlightGeneSequence?.(fullGene); } catch (e) { console.warn('Could not highlight gene sequence:', e.message); }
     }
 
     // If navigation occurred, re-apply gene highlighting after render
