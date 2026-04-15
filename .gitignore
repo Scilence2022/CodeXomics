@@ -289,6 +289,8 @@ css.check.results
 site/
 manuscript/
 
+.codebuddy/
+.workbuddy/
 
 docs/reports/dynamic-tool-registry-multiagent-integration-report.md
-.workbuddy/memory/MEMORY.md
+

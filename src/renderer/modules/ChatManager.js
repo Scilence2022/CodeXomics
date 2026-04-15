@@ -9303,16 +9303,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       this.app.selectedGene = { gene: fullGene, operonInfo: bestMatch.operonInfo || null };
     }
 
-    // Also highlight the gene sequence in the sequence panel
-    if (typeof this.app.highlightGeneSequence === 'function') {
+    // Show gene details panel in sidebar (same as clicking a gene)
+    if (typeof this.app.showGeneDetailsPanel === 'function') {
       try {
-        this.app.highlightGeneSequence(fullGene);
+        this.app.showGeneDetailsPanel();
       } catch (e) {
-        console.warn('Could not highlight gene sequence:', e.message);
+        console.warn('Could not show gene details panel:', e.message);
       }
     }
 
-    // Update the gene details panel in the sidebar
+    // Populate gene details content in the sidebar
     if (typeof this.app.populateGeneDetails === 'function') {
       try {
         this.app.populateGeneDetails(fullGene, bestMatch.operonInfo || null);
@@ -9321,12 +9321,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
     }
 
-    // Update tab manager about gene selection
-    if (this.app.tabManager) {
+    // Highlight the gene sequence in the sequence panel
+    if (typeof this.app.highlightGeneSequence === 'function') {
       try {
-        this.app.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, null);
+        this.app.highlightGeneSequence(fullGene);
       } catch (e) {
-        console.warn('Could not update tab manager:', e.message);
+        console.warn('Could not highlight gene sequence:', e.message);
       }
     }
 
