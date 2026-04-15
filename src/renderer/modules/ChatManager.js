@@ -9269,45 +9269,52 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
     }
 
-    // Find the full annotation object from currentAnnotations (search results have slim version)
+    // Resolve the richest annotation object for this gene.
+    // _searchGeneInChromosome stores direct references, so geneAnnotation may already
+    // be the full object. However, it might be a 'gene' type feature with minimal
+    // qualifiers (gene, locus_tag only). In GenBank files, the corresponding CDS
+    // feature carries much richer data (product, translation, note, db_xref, etc.).
+    // We always prefer CDS > mRNA > gene to match mouse-click sidebar behavior.
     let fullGene = geneAnnotation;
     if (this.app.currentAnnotations && this.app.currentAnnotations[targetChromosome]) {
-      const fullAnnotation = this.app.currentAnnotations[targetChromosome].find(a =>
-        a.start === geneAnnotation.start &&
-        a.end === geneAnnotation.end &&
-        a.type === geneAnnotation.type &&
-        a.strand === geneAnnotation.strand
-      );
-      if (fullAnnotation) {
-        fullGene = fullAnnotation;
+      const targetName = geneAnnotation.qualifiers?.gene || geneAnnotation.qualifiers?.locus_tag;
+
+      if (targetName) {
+        // Find ALL annotations sharing this gene name/locus_tag at the same locus
+        const candidates = this.app.currentAnnotations[targetChromosome].filter(a => {
+          if (!a.qualifiers) return false;
+          const aGene = this.app.getQualifierValue(a.qualifiers, 'gene');
+          const aLocus = this.app.getQualifierValue(a.qualifiers, 'locus_tag');
+          return (aGene && aGene === targetName) || (aLocus && aLocus === targetName);
+        });
+
+        if (candidates.length > 0) {
+          // Prefer CDS (richest qualifiers) > mRNA > others > gene (minimal qualifiers)
+          const typePriority = (type) => {
+            switch ((type || '').toUpperCase()) {
+              case 'CDS': return 3;
+              case 'MRNA': return 2;
+              case 'GENE': return 0;
+              default: return 1;
+            }
+          };
+          candidates.sort((a, b) => {
+            const typeDiff = typePriority(b.type) - typePriority(a.type);
+            if (typeDiff !== 0) return typeDiff;
+            // Among same type, prefer the one with more qualifiers
+            return Object.keys(b.qualifiers || {}).length - Object.keys(a.qualifiers || {}).length;
+          });
+          fullGene = candidates[0];
+        }
       } else {
-        // Relaxed match without strand (some annotations may differ in strand encoding)
-        const relaxedMatch = this.app.currentAnnotations[targetChromosome].find(a =>
+        // No gene name available — fall back to exact position match
+        const posMatch = this.app.currentAnnotations[targetChromosome].find(a =>
           a.start === geneAnnotation.start &&
           a.end === geneAnnotation.end &&
-          a.type === geneAnnotation.type
+          a.type === geneAnnotation.type &&
+          a.strand === geneAnnotation.strand
         );
-        if (relaxedMatch) {
-          fullGene = relaxedMatch;
-        }
-      }
-    }
-
-    // If we still only have the slim version, try finding by gene name in qualifiers
-    if (fullGene === geneAnnotation || !fullGene.qualifiers || Object.keys(fullGene.qualifiers).length <= 3) {
-      if (this.app.currentAnnotations && this.app.currentAnnotations[targetChromosome]) {
-        const targetName = geneAnnotation.qualifiers?.gene || geneAnnotation.qualifiers?.locus_tag;
-        if (targetName) {
-          const nameMatch = this.app.currentAnnotations[targetChromosome].find(a => {
-            if (!a.qualifiers) return false;
-            const aGene = this.app.getQualifierValue(a.qualifiers, 'gene');
-            const aLocus = this.app.getQualifierValue(a.qualifiers, 'locus_tag');
-            return (aGene && aGene === targetName) || (aLocus && aLocus === targetName);
-          });
-          if (nameMatch) {
-            fullGene = nameMatch;
-          }
-        }
+        if (posMatch) fullGene = posMatch;
       }
     }
 
@@ -9409,17 +9416,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           end: annotation.end,
           name: geneNameValue || locusTag || annotation.type,
           details: `${annotation.type}: ${product || 'No description'}`,
-          annotation: {
-            start: annotation.start,
-            end: annotation.end,
-            type: annotation.type,
-            strand: annotation.strand,
-            qualifiers: {
-              gene: geneNameValue,
-              locus_tag: locusTag,
-              product: product,
-            },
-          },
+          // Reference the full annotation object directly (not a slim copy)
+          // so that all qualifiers (translation, codon_start, etc.) are preserved
+          annotation: annotation,
           relevanceScore: relevanceScore.score,
           matchType: relevanceScore.matchType,
           matchedField: relevanceScore.matchedField,
@@ -9428,10 +9427,25 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
     });
 
+    // Prioritize CDS > mRNA > gene > other feature types when relevance scores tie.
+    // This ensures the richly-annotated CDS feature is selected rather than the
+    // minimal 'gene' feature that only carries gene name and locus_tag qualifiers.
+    const featureTypePriority = (type) => {
+      switch ((type || '').toUpperCase()) {
+        case 'CDS': return 3;
+        case 'MRNA': return 2;
+        case 'GENE': return 1;
+        default: return 0;
+      }
+    };
+
     results.sort((a, b) => {
       if (b.relevanceScore !== a.relevanceScore) {
         return b.relevanceScore - a.relevanceScore;
       }
+      // Same relevance: prefer feature types with richer annotation data
+      const typeDiff = featureTypePriority(b.annotation?.type) - featureTypePriority(a.annotation?.type);
+      if (typeDiff !== 0) return typeDiff;
       return a.position - b.position;
     });
 
