@@ -9,10 +9,10 @@ class ChatBoxSettingsManager {
       // Display settings
       showThinkingProcess: true,
       showToolCalls: true,
-      showToolCallSource: true, // 新增：显示tool call来源
-      showDetailedToolData: true, // 新增：显示详细数据展示
+      showToolCallSource: true, // Show tool call source
+      showDetailedToolData: true, // Show detailed tool data
       hideThinkingAfterConversation: false,
-      preserveThinkingHistory: true, // 新增：保留历史思考过程
+      preserveThinkingHistory: true, // Preserve thinking history
 
       // Behavior settings
       autoScrollToBottom: true,
@@ -36,11 +36,11 @@ class ChatBoxSettingsManager {
       debugMode: false,
       logToolCalls: false,
       enableAbortButton: true,
-      useOptimizedPrompt: true, // 新增：使用优化的系统提示
-      enableDynamicToolsRegistry: true, // 新增：启用Dynamic Tools Registry
+      useOptimizedPrompt: true, // Use optimized system prompt
+      enableDynamicToolsRegistry: true, // Enable Dynamic Tools Registry
 
       // Tool priority settings
-      toolPriority: ['local', 'genomics', 'plugins', 'mcp'], // 工具优先级顺序
+      toolPriority: ['local', 'genomics', 'plugins', 'mcp'], // Tool priority order
 
       // Window settings
       rememberPosition: true,
@@ -78,8 +78,8 @@ class ChatBoxSettingsManager {
 
       // Model Selection Settings
       chatboxModelType: 'auto',
-      chatboxLLMProvider: 'auto', // New: specific provider override
-      chatboxLLMModel: 'auto', // New: specific model override
+      chatboxLLMProvider: 'auto', // Specific provider override
+      chatboxLLMModel: 'auto', // Specific model override
       chatboxLLMTemperature: 0.7,
       chatboxLLMMaxTokens: 4000,
       chatboxLLMTimeout: 30,
@@ -108,14 +108,20 @@ class ChatBoxSettingsManager {
       ],
     };
 
-    this.loadSettings();
+    // Async initialization - store the promise so callers can await it
+    this._initPromise = this.loadSettings();
     this.setupEventListeners();
   }
 
   /**
    * Load settings from config manager
    */
-  loadSettings() {
+  async loadSettings() {
+    // Wait for ConfigManager to finish initializing before reading settings
+    if (this.configManager && this.configManager.waitForInit) {
+      await this.configManager.waitForInit();
+    }
+
     const savedSettings = this.configManager.get('chatboxSettings', {});
     this.settings = { ...this.settings, ...savedSettings };
 
@@ -217,37 +223,80 @@ class ChatBoxSettingsManager {
    */
   resetToDefaults() {
     const defaultSettings = {
+      // Display settings
       showThinkingProcess: true,
       showToolCalls: true,
       showToolCallSource: true,
       showDetailedToolData: true,
       hideThinkingAfterConversation: false,
+      preserveThinkingHistory: true,
+
+      // Behavior settings
       autoScrollToBottom: true,
       showTimestamps: false,
+
+      // History settings
       maxHistoryMessages: 1000,
       enableHistorySearch: true,
+
+      // Performance settings
       responseTimeout: 30000,
       typingIndicatorDelay: 500,
+
+      // UI settings
       animateThinking: true,
       compactMode: false,
       fontSize: 'medium',
       theme: 'auto',
+
+      // Advanced settings
       debugMode: false,
       logToolCalls: false,
       enableAbortButton: true,
       useOptimizedPrompt: true,
+      enableDynamicToolsRegistry: true,
+
+      // Tool priority settings
       toolPriority: ['local', 'genomics', 'plugins', 'mcp'],
+
+      // Window settings
       rememberPosition: true,
       rememberSize: true,
       startMinimized: false,
 
-      // Function Call Settings (duplicated in defaultSettings)
+      // Multi-Agent System settings
+      agentSystemEnabled: false,
+      agentAutoOptimize: true,
+      agentShowInfo: true,
+      agentMemoryEnabled: true,
+      agentCacheEnabled: true,
+
+      // Memory System settings
+      memorySystemEnabled: true,
+      memoryCacheEnabled: true,
+      memoryOptimizationEnabled: true,
+      memoryCleanupInterval: 300000,
+      memoryMaxEntries: 10000,
+
+      // Multi-Agent LLM settings
+      agentLLMProvider: 'auto',
+      agentLLMModel: 'auto',
+      agentLLMTemperature: 0.7,
+      agentLLMMaxTokens: 4000,
+      agentLLMTimeout: 30000,
+      agentLLMRetryAttempts: 3,
+      agentLLMUseSystemPrompt: true,
+      agentLLMEnableFunctionCalling: true,
+
+      // Function Call Settings
       functionCallRounds: 10,
       enableEarlyCompletion: true,
       completionThreshold: 0.7,
 
       // Model Selection Settings
       chatboxModelType: 'auto',
+      chatboxLLMProvider: 'auto',
+      chatboxLLMModel: 'auto',
       chatboxLLMTemperature: 0.7,
       chatboxLLMMaxTokens: 4000,
       chatboxLLMTimeout: 30,

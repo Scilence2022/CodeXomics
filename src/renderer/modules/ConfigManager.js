@@ -104,6 +104,7 @@ class ConfigManager {
             chat: electronAPI_path.join(configDir, 'chat-history.json'),
             app: electronAPI_path.join(configDir, 'app-settings.json'),
             generalSettings: electronAPI_path.join(configDir, 'general-settings.json'),
+            chatboxSettings: electronAPI_path.join(configDir, 'chatbox-settings.json'),
             evolution: electronAPI_path.join(configDir, 'conversation-evolution-data.json'),
             blast: electronAPI_path.join(configDir, 'blast-databases.json'),
             marketplace: electronAPI_path.join(configDir, 'marketplace-settings.json'),
@@ -142,6 +143,7 @@ class ConfigManager {
                 chat: path.join(configDir, 'chat-history.json'),
                 app: path.join(configDir, 'app-settings.json'),
                 generalSettings: path.join(configDir, 'general-settings.json'),
+                chatboxSettings: path.join(configDir, 'chatbox-settings.json'),
                 evolution: path.join(configDir, 'conversation-evolution-data.json'),
                 blast: path.join(configDir, 'blast-databases.json'),
                 marketplace: path.join(configDir, 'marketplace-settings.json'),
@@ -423,6 +425,7 @@ class ConfigManager {
         chopchopUrl: 'https://chopchop.cbu.uib.no/',
         progenFixerUrl: 'https://progenfixer.biodesign.ac.cn',
       },
+      chatboxSettings: {},
     };
   }
 
@@ -614,6 +617,7 @@ class ConfigManager {
         chat: this.configPath.chat,
         app: this.configPath.app,
         generalSettings: this.configPath.generalSettings,
+        chatboxSettings: this.configPath.chatboxSettings,
         evolution: this.configPath.evolution,
         blast: this.configPath.blast,
         marketplace: this.configPath.marketplace,
@@ -713,6 +717,13 @@ class ConfigManager {
           uiStyle: this.config.generalSettings.uiStyle,
           themeMode: this.config.generalSettings.themeMode,
         });
+      }
+
+      // Load chatbox settings
+      const chatboxSettings = localStorage.getItem('chatboxSettings');
+      if (chatboxSettings) {
+        this.config.chatboxSettings = { ...JSON.parse(chatboxSettings) };
+        console.log('ChatBox settings loaded from localStorage');
       }
 
       // Load marketplace settings and installed plugins
@@ -974,6 +985,7 @@ class ConfigManager {
         [this.configPath.chat]: this.config.chat,
         [this.configPath.app]: this.config.app,
         [this.configPath.generalSettings]: this.config.generalSettings,
+        [this.configPath.chatboxSettings]: this.config.chatboxSettings,
         [this.configPath.evolution]: this.config.evolution || this.getDefaultEvolutionConfig(),
         [this.configPath.blast]: this.config.blast,
         [this.configPath.marketplace]: this.config.marketplace,
@@ -1050,6 +1062,11 @@ class ConfigManager {
         localStorage.setItem('generalSettings', this.safeStringify(this.config.generalSettings));
       }
 
+      // Save chatbox settings
+      if (this.config.chatboxSettings && Object.keys(this.config.chatboxSettings).length > 0) {
+        localStorage.setItem('chatboxSettings', this.safeStringify(this.config.chatboxSettings));
+      }
+
       // Save marketplace settings and installed plugins
       localStorage.setItem('marketplaceSettings', this.safeStringify(this.config.marketplace));
 
@@ -1076,6 +1093,9 @@ class ConfigManager {
         localStorage.setItem('appSettings', JSON.stringify(this.config.app || {}));
         if (this.config.generalSettings) {
           localStorage.setItem('generalSettings', JSON.stringify(this.config.generalSettings));
+        }
+        if (this.config.chatboxSettings && Object.keys(this.config.chatboxSettings).length > 0) {
+          localStorage.setItem('chatboxSettings', JSON.stringify(this.config.chatboxSettings));
         }
         console.log('Minimal configuration saved to localStorage');
       } catch (minimalError) {

@@ -153,6 +153,11 @@ class ChatManager {
       if (typeof ChatBoxSettingsManager !== 'undefined') {
         this.chatBoxSettingsManager = new ChatBoxSettingsManager(this.configManager);
 
+        // Wait for async settings loading (awaits ConfigManager initialization)
+        if (this.chatBoxSettingsManager._initPromise) {
+          await this.chatBoxSettingsManager._initPromise;
+        }
+
         // Update display flags from settings
         this.updateSettingsFromManager();
 
