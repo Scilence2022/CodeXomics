@@ -3320,10 +3320,11 @@ class BenchmarkUI {
     }
 
     // Update individual test completion count ONLY when test completes (testResult is not null)
-    if (testResult && testResult.status === 'completed') {
+    // Note: runSingleTest() returns status 'passed', 'failed', 'error', or 'cancelled' — NOT 'completed'
+    if (testResult && testResult.status !== 'running') {
       this.updateIndividualTestCount(testResult);
       console.log(
-        `✅ [UI Test Complete] Test ${testId} completed with status: ${testResult.success ? 'PASS' : 'FAIL'}`
+        `✅ [UI Test Complete] Test ${testId} completed with status: ${testResult.status} (${testResult.success ? 'PASS' : 'FAIL'})`
       );
     } else if (testResult === null) {
       // Test is starting - this is when we update the current test name
