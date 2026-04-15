@@ -839,25 +839,6 @@ class LLMConfigManager {
       }
     });
 
-    // System prompt controls
-    const resetSystemPromptBtn = document.getElementById('resetSystemPrompt');
-    if (resetSystemPromptBtn) {
-      resetSystemPromptBtn.addEventListener('click', () => {
-        const systemPromptField = document.getElementById('systemPrompt');
-        if (systemPromptField) {
-          systemPromptField.value = '';
-          this.showNotification('System prompt reset to default', 'success');
-        }
-      });
-    }
-
-    const previewSystemPromptBtn = document.getElementById('previewSystemPrompt');
-    if (previewSystemPromptBtn) {
-      previewSystemPromptBtn.addEventListener('click', () => {
-        this.previewSystemPrompt();
-      });
-    }
-
     // Local model select change
     const localModelSelect = document.getElementById('localModel');
     if (localModelSelect) {
@@ -1217,17 +1198,12 @@ class LLMConfigManager {
       // Enable provider if it has valid configuration
       // No need to set a single "current provider" since we use model types now
 
-      // Get system prompt setting
-      const systemPromptField = document.getElementById('systemPrompt');
-      const systemPrompt = systemPromptField ? systemPromptField.value.trim() : '';
-
       // Save model type selection
       this.saveModelTypeSelection();
 
       if (this.configManager) {
         // Use ConfigManager if available (now with async support)
         await this.configManager.set('llm.providers', this.providers);
-        await this.configManager.set('llm.systemPrompt', systemPrompt);
         await this.configManager.set('llm.modelTypes', this.modelTypes);
         await this.configManager.saveConfig();
         console.log('Configuration saved via ConfigManager');
@@ -1333,15 +1309,6 @@ class LLMConfigManager {
         if (baseUrlField) baseUrlField.value = provider.baseUrl || '';
       }
     });
-
-    // Load system prompt setting
-    if (this.configManager) {
-      const systemPrompt = this.configManager.get('llm.systemPrompt', '');
-      const systemPromptField = document.getElementById('systemPrompt');
-      if (systemPromptField) {
-        systemPromptField.value = systemPrompt;
-      }
-    }
 
     // Load model type selection
     this.loadModelTypeSelectionToUI();

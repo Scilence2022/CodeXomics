@@ -85,6 +85,27 @@ class ChatBoxSettingsManager {
       chatboxLLMTimeout: 30,
       chatboxLLMUseSystemPrompt: true,
       chatboxLLMEnableFunctionCalling: true,
+
+      // System Prompt Configuration
+      customSystemPrompt: '', // Custom system prompt text (empty = use default)
+      systemPromptIncludeSystemInstructions: true, // Core identity & behavior definition
+      systemPromptIncludeCurrentContext: true, // CodeXomics current state (chromosome, position, etc.)
+      systemPromptIncludeDynamicTools: true, // Dynamic tool loading based on query
+      systemPromptIncludeToolExamples: true, // Tool usage examples
+      systemPromptIncludeToolGuidelines: true, // Tool selection guidelines
+      systemPromptIncludeResponseFormat: true, // Response format instructions
+      systemPromptIncludeToolCategories: true, // Tool categories & relationships
+      systemPromptIncludeMemoryContext: true, // Memory context from memory system
+      systemPromptSectionOrder: [ // Order of prompt sections
+        'systemInstructions',
+        'currentContext',
+        'dynamicTools',
+        'toolExamples',
+        'toolGuidelines',
+        'responseFormat',
+        'toolCategories',
+        'memoryContext',
+      ],
     };
 
     this.loadSettings();
@@ -97,6 +118,15 @@ class ChatBoxSettingsManager {
   loadSettings() {
     const savedSettings = this.configManager.get('chatboxSettings', {});
     this.settings = { ...this.settings, ...savedSettings };
+
+    // Backward compatibility: migrate llm.systemPrompt to chatboxSettings.customSystemPrompt
+    if (!this.settings.customSystemPrompt) {
+      const legacyPrompt = this.configManager.get('llm.systemPrompt', '');
+      if (legacyPrompt) {
+        this.settings.customSystemPrompt = legacyPrompt;
+        console.log('📦 Migrated system prompt from llm.systemPrompt to chatboxSettings.customSystemPrompt');
+      }
+    }
 
     // Sync Function Call Settings from the main LLM configuration
     const llmFunctionCallRounds = this.configManager.get('llm.functionCallRounds');
@@ -223,6 +253,27 @@ class ChatBoxSettingsManager {
       chatboxLLMTimeout: 30,
       chatboxLLMUseSystemPrompt: true,
       chatboxLLMEnableFunctionCalling: true,
+
+      // System Prompt Configuration
+      customSystemPrompt: '',
+      systemPromptIncludeSystemInstructions: true,
+      systemPromptIncludeCurrentContext: true,
+      systemPromptIncludeDynamicTools: true,
+      systemPromptIncludeToolExamples: true,
+      systemPromptIncludeToolGuidelines: true,
+      systemPromptIncludeResponseFormat: true,
+      systemPromptIncludeToolCategories: true,
+      systemPromptIncludeMemoryContext: true,
+      systemPromptSectionOrder: [
+        'systemInstructions',
+        'currentContext',
+        'dynamicTools',
+        'toolExamples',
+        'toolGuidelines',
+        'responseFormat',
+        'toolCategories',
+        'memoryContext',
+      ],
     };
 
     this.settings = { ...defaultSettings };
@@ -486,6 +537,9 @@ class ChatBoxSettingsManager {
                         </button>
                         <button class="tab-button" data-tab="memory">
                             <i class="fas fa-brain"></i> Memory
+                        </button>
+                        <button class="tab-button" data-tab="system-prompt">
+                            <i class="fas fa-robot"></i> System Prompt
                         </button>
                         <button class="tab-button" data-tab="advanced">
                             <i class="fas fa-tools"></i> Advanced
@@ -785,7 +839,189 @@ class ChatBoxSettingsManager {
                             </div>
                         </div>
                         
-                        <!-- Advanced Tab -->
+                        <!-- System Prompt Tab -->
+                        <div id="system-prompt-tab" class="tab-content">
+                            <div class="form-section">
+                                <h4>Custom System Prompt</h4>
+                                <div class="form-group">
+                                    <label for="customSystemPrompt">Custom System Prompt:</label>
+                                    <textarea id="customSystemPrompt"
+                                        placeholder="Enter your custom system prompt here... Leave empty to use the default system prompt."
+                                        class="input-full system-prompt-textarea" rows="6"></textarea>
+                                    <small class="help-text">
+                                        <strong>Advanced:</strong> Override the default system prompt with your custom instructions.
+                                        <br><strong>Variables:</strong> {{CURRENT_CHROMOSOME}}, {{CURRENT_POSITION}}, {{ANNOTATIONS_COUNT}}, {{USER_FEATURES_COUNT}}
+                                        <br><strong>Leave empty</strong> to use the default system prompt with genomics tools and context.
+                                    </small>
+                                </div>
+                                <div class="system-prompt-controls">
+                                    <button type="button" id="resetCustomSystemPrompt" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-undo"></i> Reset to Default
+                                    </button>
+                                    <button type="button" id="previewCustomSystemPrompt" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-eye"></i> Preview
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4>Prompt Mode</h4>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableDynamicToolsRegistry" class="setting-checkbox">
+                                        Enable Dynamic Tools Registry
+                                    </label>
+                                    <small class="help-text">Intelligently select tools based on user intent and context. When disabled, uses the comprehensive system prompt with all tools.</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="useOptimizedPrompt" class="setting-checkbox">
+                                        Use optimized system prompt
+                                    </label>
+                                    <small class="help-text">Use streamlined system prompt for better performance and reduced token usage (only applies when Dynamic Tools Registry is disabled)</small>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4>Prompt Section Configuration</h4>
+                                <small class="help-text" style="margin-bottom: 12px; display: block;">
+                                    Control which sections are included in the system prompt and their order. 
+                                    Drag items or use arrow buttons to reorder. Disable sections to reduce token usage.
+                                </small>
+                                <div id="systemPromptSectionContainer" class="priority-container system-prompt-section-container">
+                                    <div class="priority-item" data-type="systemInstructions" draggable="true">
+                                        <div class="priority-drag-handle">⋮⋮</div>
+                                        <span class="priority-number">1</span>
+                                        <div class="priority-info">
+                                            <span class="priority-label">System Instructions</span>
+                                            <span class="priority-description">Core identity, behavior definition & tool format</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <label class="section-toggle">
+                                                <input type="checkbox" id="systemPromptIncludeSystemInstructions" class="setting-checkbox" checked>
+                                            </label>
+                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
+                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="currentContext" draggable="true">
+                                        <div class="priority-drag-handle">⋮⋮</div>
+                                        <span class="priority-number">2</span>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Current Context</span>
+                                            <span class="priority-description">CodeXomics state: chromosome, position, loaded files</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <label class="section-toggle">
+                                                <input type="checkbox" id="systemPromptIncludeCurrentContext" class="setting-checkbox" checked>
+                                            </label>
+                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
+                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="dynamicTools" draggable="true">
+                                        <div class="priority-drag-handle">⋮⋮</div>
+                                        <span class="priority-number">3</span>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Dynamic Tools</span>
+                                            <span class="priority-description">Tool descriptions loaded based on current query</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <label class="section-toggle">
+                                                <input type="checkbox" id="systemPromptIncludeDynamicTools" class="setting-checkbox" checked>
+                                            </label>
+                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
+                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="toolExamples" draggable="true">
+                                        <div class="priority-drag-handle">⋮⋮</div>
+                                        <span class="priority-number">4</span>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Tool Examples</span>
+                                            <span class="priority-description">Sample tool usage examples for common operations</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <label class="section-toggle">
+                                                <input type="checkbox" id="systemPromptIncludeToolExamples" class="setting-checkbox" checked>
+                                            </label>
+                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
+                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="toolGuidelines" draggable="true">
+                                        <div class="priority-drag-handle">⋮⋮</div>
+                                        <span class="priority-number">5</span>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Tool Selection Guidelines</span>
+                                            <span class="priority-description">Rules for choosing and chaining tools</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <label class="section-toggle">
+                                                <input type="checkbox" id="systemPromptIncludeToolGuidelines" class="setting-checkbox" checked>
+                                            </label>
+                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
+                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="responseFormat" draggable="true">
+                                        <div class="priority-drag-handle">⋮⋮</div>
+                                        <span class="priority-number">6</span>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Response Format</span>
+                                            <span class="priority-description">JSON format specification for tool calls</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <label class="section-toggle">
+                                                <input type="checkbox" id="systemPromptIncludeResponseFormat" class="setting-checkbox" checked>
+                                            </label>
+                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
+                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="toolCategories" draggable="true">
+                                        <div class="priority-drag-handle">⋮⋮</div>
+                                        <span class="priority-number">7</span>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Tool Categories & Relationships</span>
+                                            <span class="priority-description">Category overview and tool relationships</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <label class="section-toggle">
+                                                <input type="checkbox" id="systemPromptIncludeToolCategories" class="setting-checkbox" checked>
+                                            </label>
+                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
+                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="memoryContext" draggable="true">
+                                        <div class="priority-drag-handle">⋮⋮</div>
+                                        <span class="priority-number">8</span>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Memory Context</span>
+                                            <span class="priority-description">Context from the memory system for continuity</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <label class="section-toggle">
+                                                <input type="checkbox" id="systemPromptIncludeMemoryContext" class="setting-checkbox" checked>
+                                            </label>
+                                            <button type="button" class="priority-btn up" title="Move up">↑</button>
+                                            <button type="button" class="priority-btn down" title="Move down">↓</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="priority-help">
+                                    <small class="help-text">
+                                        <strong>Tip:</strong> Disabling sections reduces token usage. Reordering changes how the AI prioritizes information.
+                                    </small>
+                                    <div class="priority-status" id="systemPromptSectionStatus">
+                                        <small>Current order will be applied to the next conversation</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div id="advanced-tab" class="tab-content">
                             <div class="form-section">
                                 <h4>Animation & Effects</h4>
@@ -830,25 +1066,6 @@ class ChatBoxSettingsManager {
                                         Start minimized
                                     </label>
                                     <small class="help-text">Start chat window in minimized state</small>
-                                </div>
-                            </div>
-                            
-                            <div class="form-section">
-                                <h4>System Prompt</h4>
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="enableDynamicToolsRegistry" class="setting-checkbox">
-                                        Enable Dynamic Tools Registry
-                                    </label>
-                                    <small class="help-text">Use intelligent tool selection based on user intent and context. When disabled, uses the traditional comprehensive system prompt.</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="useOptimizedPrompt" class="setting-checkbox">
-                                        Use optimized system prompt
-                                    </label>
-                                    <small class="help-text">Use streamlined system prompt for better performance and reduced token usage (only applies when Dynamic Tools Registry is disabled)</small>
                                 </div>
                             </div>
                             
@@ -990,6 +1207,12 @@ class ChatBoxSettingsManager {
 
     // Setup tool priority functionality
     this.setupToolPriorityHandlers(modal);
+
+    // Setup system prompt section handlers
+    this.setupSystemPromptSectionHandlers(modal);
+
+    // Setup system prompt custom controls
+    this.setupSystemPromptControls(modal);
 
     // Setup save button handler
     const saveBtn = modal.querySelector('#chatboxSaveSettingsBtn');
@@ -1151,6 +1374,285 @@ class ChatBoxSettingsManager {
   }
 
   /**
+   * Setup system prompt section handlers (drag/reorder + toggle)
+   */
+  setupSystemPromptSectionHandlers(modal) {
+    const container = modal.querySelector('#systemPromptSectionContainer');
+    if (!container) return;
+
+    // Up/down buttons
+    container.addEventListener('click', e => {
+      const btn = e.target.closest('.priority-btn');
+      if (!btn) return;
+
+      const item = btn.closest('.priority-item');
+      if (!item) return;
+
+      if (btn.classList.contains('up')) {
+        const prevItem = item.previousElementSibling;
+        if (prevItem) {
+          container.insertBefore(item, prevItem);
+          this.updatePriorityNumbers(container);
+          this.updateSystemPromptSectionStatus(container);
+        }
+      } else if (btn.classList.contains('down')) {
+        const nextItem = item.nextElementSibling;
+        if (nextItem) {
+          container.insertBefore(nextItem, item);
+          this.updatePriorityNumbers(container);
+          this.updateSystemPromptSectionStatus(container);
+        }
+      }
+    });
+
+    // Drag and drop
+    const items = container.querySelectorAll('.priority-item');
+    items.forEach(item => {
+      item.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', '');
+        item.classList.add('dragging');
+      });
+
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        this.updatePriorityNumbers(container);
+        this.updateSystemPromptSectionStatus(container);
+      });
+
+      item.addEventListener('dragover', e => {
+        e.preventDefault();
+      });
+
+      item.addEventListener('drop', e => {
+        e.preventDefault();
+        const draggingItem = container.querySelector('.dragging');
+        if (draggingItem && draggingItem !== item) {
+          const rect = item.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+
+          if (e.clientY < midY) {
+            container.insertBefore(draggingItem, item);
+          } else {
+            container.insertBefore(draggingItem, item.nextSibling);
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Update system prompt section status display
+   */
+  updateSystemPromptSectionStatus(container) {
+    const statusElement = document.querySelector('#systemPromptSectionStatus');
+    if (!statusElement) return;
+
+    const items = container.querySelectorAll('.priority-item');
+    const enabledSections = [];
+    const disabledSections = [];
+
+    items.forEach(item => {
+      const label = item.querySelector('.priority-label').textContent;
+      const toggle = item.querySelector('.section-toggle input');
+      if (toggle && toggle.checked) {
+        enabledSections.push(label);
+      } else {
+        disabledSections.push(label);
+      }
+    });
+
+    let statusHtml = '<small>';
+    if (enabledSections.length > 0) {
+      statusHtml += `<strong>Enabled:</strong> ${enabledSections.join(' → ')}`;
+    }
+    if (disabledSections.length > 0) {
+      statusHtml += `${enabledSections.length > 0 ? '<br>' : ''}<strong>Disabled:</strong> ${disabledSections.join(', ')}`;
+    }
+    statusHtml += '</small>';
+    statusElement.innerHTML = statusHtml;
+  }
+
+  /**
+   * Setup system prompt custom controls (reset + preview)
+   */
+  setupSystemPromptControls(modal) {
+    // Reset button
+    const resetBtn = modal.querySelector('#resetCustomSystemPrompt');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        const textarea = modal.querySelector('#customSystemPrompt');
+        if (textarea) {
+          textarea.value = '';
+          this.showNotification('Custom system prompt cleared', 'success');
+        }
+      });
+    }
+
+    // Preview button
+    const previewBtn = modal.querySelector('#previewCustomSystemPrompt');
+    if (previewBtn) {
+      previewBtn.addEventListener('click', () => {
+        this.previewSystemPromptConfiguration(modal);
+      });
+    }
+  }
+
+  /**
+   * Preview the current system prompt configuration
+   */
+  previewSystemPromptConfiguration(modal) {
+    const textarea = modal.querySelector('#customSystemPrompt');
+    const customPrompt = textarea ? textarea.value.trim() : '';
+
+    // Get section configuration from UI
+    const container = modal.querySelector('#systemPromptSectionContainer');
+    const sectionOrder = [];
+    const sectionToggles = {};
+
+    if (container) {
+      container.querySelectorAll('.priority-item').forEach(item => {
+        const type = item.dataset.type;
+        const toggle = item.querySelector('.section-toggle input');
+        sectionOrder.push(type);
+        sectionToggles[type] = toggle ? toggle.checked : true;
+      });
+    }
+
+    // Build preview
+    let preview = '=== System Prompt Configuration Preview ===\n\n';
+
+    if (customPrompt) {
+      preview += '[Custom System Prompt - Active]\n';
+      preview += customPrompt.substring(0, 200) + (customPrompt.length > 200 ? '...' : '') + '\n\n';
+    } else {
+      preview += '[Default System Prompt - Active]\n\n';
+    }
+
+    preview += 'Section Configuration:\n';
+    sectionOrder.forEach((section, index) => {
+      const enabled = sectionToggles[section];
+      const name = this.getSystemPromptSectionDisplayName(section);
+      preview += `  ${index + 1}. ${name}: ${enabled ? 'Enabled' : 'Disabled'}\n`;
+    });
+
+    preview += '\nOrder: ' + sectionOrder.map(s => this.getSystemPromptSectionDisplayName(s)).join(' → ');
+
+    this.showSystemPromptConfigPreview(preview);
+  }
+
+  /**
+   * Get display name for system prompt section
+   */
+  getSystemPromptSectionDisplayName(sectionKey) {
+    const displayNames = {
+      systemInstructions: 'System Instructions',
+      currentContext: 'Current Context',
+      dynamicTools: 'Dynamic Tools',
+      toolExamples: 'Tool Examples',
+      toolGuidelines: 'Tool Guidelines',
+      responseFormat: 'Response Format',
+      toolCategories: 'Tool Categories',
+      memoryContext: 'Memory Context',
+    };
+    return displayNames[sectionKey] || sectionKey;
+  }
+
+  /**
+   * Show system prompt configuration preview modal
+   */
+  showSystemPromptConfigPreview(previewContent) {
+    // Remove any existing preview modal
+    const existingModal = document.getElementById('systemPromptConfigPreviewModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    const modalHtml = `
+      <div class="modal" id="systemPromptConfigPreviewModal" style="z-index: 10001;">
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh;">
+          <div class="modal-header">
+            <h3>System Prompt Configuration Preview</h3>
+            <button class="modal-close" type="button">&times;</button>
+          </div>
+          <div class="modal-body" style="overflow-y: auto;">
+            <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 13px; line-height: 1.5; white-space: pre-wrap; color: #374151;">${previewContent}</div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn modal-close" type="button">Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const modal = document.getElementById('systemPromptConfigPreviewModal');
+    modal.classList.add('show');
+
+    const closeModal = () => {
+      if (modal && modal.parentNode) {
+        modal.remove();
+      }
+    };
+
+    modal.querySelectorAll('.modal-close').forEach(btn => {
+      btn.addEventListener('click', closeModal);
+    });
+
+    modal.addEventListener('click', e => {
+      if (e.target === modal) closeModal();
+    });
+
+    const handleEscape = e => {
+      if (e.key === 'Escape') {
+        closeModal();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+  }
+
+  /**
+   * Get current system prompt section order from UI
+   */
+  getSystemPromptSectionOrderFromUI(modal) {
+    const container = modal.querySelector('#systemPromptSectionContainer');
+    if (!container) return this.settings.systemPromptSectionOrder;
+
+    const items = container.querySelectorAll('.priority-item');
+    return Array.from(items).map(item => item.dataset.type);
+  }
+
+  /**
+   * Set system prompt section order in UI
+   */
+  setSystemPromptSectionOrderInUI(modal, order) {
+    const container = modal.querySelector('#systemPromptSectionContainer');
+    if (!container || !Array.isArray(order)) return;
+
+    const items = Array.from(container.querySelectorAll('.priority-item'));
+    const orderedItems = [];
+
+    order.forEach(type => {
+      const item = items.find(item => item.dataset.type === type);
+      if (item) orderedItems.push(item);
+    });
+
+    // Add any missing items at the end
+    items.forEach(item => {
+      if (!orderedItems.includes(item)) {
+        orderedItems.push(item);
+      }
+    });
+
+    container.innerHTML = '';
+    orderedItems.forEach(item => container.appendChild(item));
+
+    this.updatePriorityNumbers(container);
+    this.updateSystemPromptSectionStatus(container);
+  }
+
+  /**
    * Populate settings form with current values
    */
   populateSettingsForm(modal) {
@@ -1158,6 +1660,21 @@ class ChatBoxSettingsManager {
       if (key === 'toolPriority') {
         // Handle tool priority specially
         this.setToolPriorityInUI(modal, value);
+        continue;
+      }
+
+      if (key === 'systemPromptSectionOrder') {
+        // Handle system prompt section order specially
+        this.setSystemPromptSectionOrderInUI(modal, value);
+        continue;
+      }
+
+      if (key === 'customSystemPrompt') {
+        // Handle custom system prompt textarea
+        const textarea = modal.querySelector('#customSystemPrompt');
+        if (textarea) {
+          textarea.value = value || '';
+        }
         continue;
       }
 
@@ -1192,6 +1709,13 @@ class ChatBoxSettingsManager {
           element.value = value;
         }
       }
+    }
+
+    // Update system prompt section status display
+    const sectionContainer = modal.querySelector('#systemPromptSectionContainer');
+    if (sectionContainer) {
+      this.updatePriorityNumbers(sectionContainer);
+      this.updateSystemPromptSectionStatus(sectionContainer);
     }
 
     // Setup range slider event listeners
@@ -1232,6 +1756,23 @@ class ChatBoxSettingsManager {
         continue;
       }
 
+      if (key === 'systemPromptSectionOrder') {
+        // Handle system prompt section order specially
+        newSettings[key] = this.getSystemPromptSectionOrderFromUI(modal);
+        continue;
+      }
+
+      if (key === 'customSystemPrompt') {
+        // Handle custom system prompt textarea
+        const textarea = modal.querySelector('#customSystemPrompt');
+        if (textarea) {
+          newSettings[key] = textarea.value.trim();
+        } else {
+          newSettings[key] = this.settings.customSystemPrompt;
+        }
+        continue;
+      }
+
       const element = modal.querySelector(`#${key}`);
       if (element) {
         if (element.type === 'checkbox') {
@@ -1253,6 +1794,11 @@ class ChatBoxSettingsManager {
           newSettings[key] = element.value;
         }
       }
+    }
+
+    // Sync customSystemPrompt to llm.systemPrompt for backward compatibility
+    if (newSettings.customSystemPrompt !== undefined) {
+      this.configManager.set('llm.systemPrompt', newSettings.customSystemPrompt);
     }
 
     // Validate settings
@@ -1370,6 +1916,16 @@ class ChatBoxSettingsManager {
       chatboxLLMTimeout: 'LLM Timeout',
       chatboxLLMUseSystemPrompt: 'LLM System Prompt',
       chatboxLLMEnableFunctionCalling: 'LLM Function Calling',
+      customSystemPrompt: 'Custom System Prompt',
+      systemPromptIncludeSystemInstructions: 'Include System Instructions',
+      systemPromptIncludeCurrentContext: 'Include Current Context',
+      systemPromptIncludeDynamicTools: 'Include Dynamic Tools',
+      systemPromptIncludeToolExamples: 'Include Tool Examples',
+      systemPromptIncludeToolGuidelines: 'Include Tool Guidelines',
+      systemPromptIncludeResponseFormat: 'Include Response Format',
+      systemPromptIncludeToolCategories: 'Include Tool Categories',
+      systemPromptIncludeMemoryContext: 'Include Memory Context',
+      systemPromptSectionOrder: 'System Prompt Section Order',
     };
 
     return displayNames[key] || key;

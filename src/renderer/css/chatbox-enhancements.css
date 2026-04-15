@@ -656,3 +656,50 @@
 #toggleChatBtn.ai-processing i {
   animation: ai-color-breathe 2.5s infinite ease-in-out;
 }
+
+/* ===== SYSTEM PROMPT SECTION CONFIGURATION ===== */
+
+.system-prompt-textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.system-prompt-section-container .priority-item {
+  padding: 8px 12px;
+  gap: 10px;
+}
+
+.system-prompt-section-container .section-toggle {
+  display: flex;
+  align-items: center;
+  margin-right: 4px;
+}
+
+.system-prompt-section-container .section-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #22c55e;
+}
+
+.system-prompt-section-container .priority-item[data-disabled="true"] {
+  opacity: 0.5;
+}
+
+.system-prompt-section-container .priority-item .section-toggle input:not(:checked) ~ .priority-label {
+  color: #94a3b8;
+}
+
+#chatboxSettingsModal .system-prompt-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#chatboxSettingsModal .system-prompt-controls .btn {
+  font-size: 12px;
+  padding: 6px 12px;
+}

@@ -5250,7 +5250,9 @@ class ChatManager {
     }
 
     // Get user-defined system prompt
-    const userSystemPrompt = this.configManager.get('llm.systemPrompt', '');
+    // Check chatboxSettings.customSystemPrompt first, then llm.systemPrompt for backward compatibility
+    const userSystemPrompt = this.configManager.get('chatboxSettings.customSystemPrompt', '') ||
+      this.configManager.get('llm.systemPrompt', '');
 
     // Get system message format preference (optimized or complete)
     // Check both chatboxSettings and llm settings for backward compatibility
@@ -5258,6 +5260,9 @@ class ChatManager {
       'chatboxSettings.useOptimizedPrompt',
       this.configManager.get('llm.useOptimizedPrompt', true)
     );
+
+    // Get system prompt section configuration
+    const sectionConfig = this.getSystemPromptSectionConfig();
 
     // Get current user query for memory retrieval
     const currentUserQuery = this.getLastUserQuery() || '';
@@ -5268,9 +5273,12 @@ class ChatManager {
       // Choose context based on optimization setting
       const toolContext = useOptimizedPrompt ? this.getOptimizedToolContext() : this.getCompleteToolContext();
 
-      // Add memory context if memory system is enabled
-      const memoryContext = await this.getMemoryContext(currentUserQuery);
-      const memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
+      // Add memory context if enabled in section config
+      let memorySection = '';
+      if (sectionConfig.toggles.memoryContext) {
+        const memoryContext = await this.getMemoryContext(currentUserQuery);
+        memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
+      }
 
       return `${processedPrompt}\n\n${toolContext}${memorySection}`;
     }
@@ -5294,7 +5302,10 @@ class ChatManager {
 
         const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context);
         console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
-        return promptData.systemPrompt;
+
+        // Apply section configuration filtering to dynamic prompt
+        const filteredPrompt = this.applySystemPromptSectionConfig(promptData.systemPrompt, sectionConfig, currentUserQuery);
+        return filteredPrompt;
       } catch (error) {
         console.warn('Dynamic Tools Registry failed, falling back to standard system message:', error);
         console.error('Dynamic Tools Registry error details:', error.message, error.stack);
@@ -5310,19 +5321,181 @@ class ChatManager {
     }
 
     // For default system message, use optimized version by default
-    if (useOptimizedPrompt) {
-      const systemMessage = this.getOptimizedSystemMessage();
-      // Add memory context if memory system is enabled
+    // Apply section configuration
+    const baseMessage = useOptimizedPrompt ? this.getOptimizedSystemMessage() : this.getBaseSystemMessage();
+
+    // Add memory context if enabled in section config
+    let memorySection = '';
+    if (sectionConfig.toggles.memoryContext) {
       const memoryContext = await this.getMemoryContext(currentUserQuery);
-      const memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
-      return `${systemMessage}${memorySection}`;
-    } else {
-      const systemMessage = this.getBaseSystemMessage();
-      // Add memory context if memory system is enabled
-      const memoryContext = await this.getMemoryContext(currentUserQuery);
-      const memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
-      return `${systemMessage}${memorySection}`;
+      memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
     }
+
+    return `${baseMessage}${memorySection}`;
+  }
+
+  /**
+   * Get system prompt section configuration from ChatBox settings
+   * @returns {object} Section config with toggles and order
+   */
+  getSystemPromptSectionConfig() {
+    const defaultOrder = [
+      'systemInstructions', 'currentContext', 'dynamicTools', 'toolExamples',
+      'toolGuidelines', 'responseFormat', 'toolCategories', 'memoryContext',
+    ];
+    const defaultToggles = {
+      systemInstructions: true, currentContext: true, dynamicTools: true,
+      toolExamples: true, toolGuidelines: true, responseFormat: true,
+      toolCategories: true, memoryContext: true,
+    };
+
+    const order = this.configManager.get('chatboxSettings.systemPromptSectionOrder', defaultOrder);
+    const toggles = {};
+    for (const key of defaultOrder) {
+      const settingKey = `chatboxSettings.systemPromptInclude${key.charAt(0).toUpperCase() + key.slice(1)}`;
+      toggles[key] = this.configManager.get(settingKey, true);
+    }
+
+    return { order, toggles };
+  }
+
+  /**
+   * Apply section configuration to a dynamically generated system prompt.
+   * Filters out disabled sections and reorders them based on user configuration.
+   * @param {string} prompt - The original system prompt
+   * @param {object} sectionConfig - Section configuration with toggles and order
+   * @param {string} userQuery - Current user query for memory context
+   * @returns {Promise<string>} - Filtered and reordered system prompt
+   */
+  async applySystemPromptSectionConfig(prompt, sectionConfig, userQuery) {
+    const { order, toggles } = sectionConfig;
+
+    // Parse the dynamic prompt into sections by markdown headers
+    const sections = this.parseSystemPromptSections(prompt);
+
+    // Filter and reorder sections based on configuration
+    const orderedSections = [];
+    for (const sectionKey of order) {
+      if (!toggles[sectionKey]) continue; // Skip disabled sections
+
+      const sectionContent = this.mapSectionKeyToContent(sectionKey, sections);
+      if (sectionContent) {
+        orderedSections.push(sectionContent);
+      }
+    }
+
+    // Add any sections from the original prompt that weren't mapped
+    for (const [header, content] of Object.entries(sections)) {
+      const isMapped = this.mapHeaderToSectionKey(header);
+      if (!isMapped || !toggles[isMapped]) continue;
+      // Already included above
+    }
+
+    // Add memory context if enabled
+    if (toggles.memoryContext) {
+      const memoryContext = await this.getMemoryContext(userQuery);
+      if (memoryContext) {
+        orderedSections.push(`## Memory Context\n\n${memoryContext}`);
+      }
+    }
+
+    return orderedSections.join('\n\n');
+  }
+
+  /**
+   * Parse a system prompt into sections by markdown headers
+   * @param {string} prompt - The system prompt to parse
+   * @returns {object} Map of header -> content
+   */
+  parseSystemPromptSections(prompt) {
+    const sections = {};
+    const lines = prompt.split('\n');
+    let currentHeader = null;
+    let currentContent = [];
+
+    for (const line of lines) {
+      if (line.startsWith('## ')) {
+        // Save previous section
+        if (currentHeader !== null) {
+          sections[currentHeader] = currentContent.join('\n').trim();
+        }
+        currentHeader = line.replace(/^##\s+/, '').trim();
+        currentContent = [line];
+      } else if (currentHeader !== null) {
+        currentContent.push(line);
+      } else {
+        // Content before any header - treat as "header" section
+        currentContent.push(line);
+      }
+    }
+
+    // Save last section
+    if (currentHeader !== null) {
+      sections[currentHeader] = currentContent.join('\n').trim();
+    } else if (currentContent.length > 0) {
+      // No headers found, treat entire prompt as one section
+      sections['_preamble'] = currentContent.join('\n').trim();
+    }
+
+    return sections;
+  }
+
+  /**
+   * Map a section key (from config) to content from parsed sections
+   * @param {string} sectionKey - Section key from configuration
+   * @param {object} sections - Parsed sections map
+   * @returns {string|null} - Content for this section
+   */
+  mapSectionKeyToContent(sectionKey, sections) {
+    const headerMappings = {
+      systemInstructions: ['CodeXomics', 'Enhanced Dynamic Tools System', 'Comprehensive Tools System'],
+      currentContext: ['Current Context', '🧬 Current Context'],
+      dynamicTools: ['Directly Available Tools', '🔧 Directly Available Tools', 'Built-in Tools'],
+      toolExamples: ['Tool Usage Examples', '📚 Tool Usage Examples'],
+      toolGuidelines: ['Tool Selection Guidelines', '🎯 Enhanced Tool Selection Guidelines', 'Tool Usage Guidelines'],
+      responseFormat: ['Response Format', '⚡ Response Format'],
+      toolCategories: ['Tool Categories', '🔄 Tool Categories', 'Tool Categories & Relationships'],
+    };
+
+    const possibleHeaders = headerMappings[sectionKey] || [];
+    for (const header of possibleHeaders) {
+      if (sections[header]) {
+        return sections[header];
+      }
+    }
+
+    // For extended/plugin tools sections
+    if (sectionKey === 'dynamicTools') {
+      for (const [header, content] of Object.entries(sections)) {
+        if (header.includes('Extended Tools') || header.includes('🌐 Extended Tools')) {
+          return content;
+        }
+      }
+    }
+
+    // For preamble (content before any header)
+    if (sectionKey === 'systemInstructions' && sections['_preamble']) {
+      return sections['_preamble'];
+    }
+
+    return null;
+  }
+
+  /**
+   * Map a header text back to a section key
+   * @param {string} header - Header text
+   * @returns {string|null} - Section key or null
+   */
+  mapHeaderToSectionKey(header) {
+    const normalizedHeader = header.toLowerCase().replace(/[^\w\s]/g, '').trim();
+    if (normalizedHeader.includes('context')) return 'currentContext';
+    if (normalizedHeader.includes('built-in') || normalizedHeader.includes('directly available') || normalizedHeader.includes('extended tools')) return 'dynamicTools';
+    if (normalizedHeader.includes('example')) return 'toolExamples';
+    if (normalizedHeader.includes('guideline') || normalizedHeader.includes('selection')) return 'toolGuidelines';
+    if (normalizedHeader.includes('response format')) return 'responseFormat';
+    if (normalizedHeader.includes('categor') || normalizedHeader.includes('relationship')) return 'toolCategories';
+    if (normalizedHeader.includes('memory')) return 'memoryContext';
+    return 'systemInstructions'; // Default to system instructions
   }
 
   /**

@@ -21,6 +21,27 @@ const DEFAULT_CHAT_SETTINGS = {
 
   // Context mode
   contextModeEnabled: true,
+
+  // System Prompt Configuration
+  customSystemPrompt: '', // Custom system prompt (empty = use default)
+  systemPromptIncludeSystemInstructions: true,
+  systemPromptIncludeCurrentContext: true,
+  systemPromptIncludeDynamicTools: true,
+  systemPromptIncludeToolExamples: true,
+  systemPromptIncludeToolGuidelines: true,
+  systemPromptIncludeResponseFormat: true,
+  systemPromptIncludeToolCategories: true,
+  systemPromptIncludeMemoryContext: true,
+  systemPromptSectionOrder: [
+    'systemInstructions',
+    'currentContext',
+    'dynamicTools',
+    'toolExamples',
+    'toolGuidelines',
+    'responseFormat',
+    'toolCategories',
+    'memoryContext',
+  ],
 };
 
 // eslint-disable-next-line no-unused-vars
