@@ -274,37 +274,49 @@ MCP Client → tools/call → ToolsIntegrator.executeTool() → individual tool 
 MCP Client → tools/call → ToolsIntegrator._executeViaAgent()
   → codexomics_chat → InternalMCPServer.handleCodexomicsChat()
   → ChatManager.processAgentPrompt(prompt, { onProgress })
-  → _executeAgentLoop() → LLM decides tools → executeToolByName()
+  → addMessageToChat("🔗 [MCP Agent] ...")   ← visible in ChatBox with source marker
+  → sendToLLM(prompt)                         ← same pipeline as user typing in ChatBox
+  → LLM + tool execution loop (via llmConfigManager)
+  → addMessageToChat(response)                ← response visible in ChatBox
+  → return { success, response, mode }        ← result returned to MCP client
   → onProgress → IPC 'mcp-agent-progress' → mcpServer.sendAgentProgress()
   → _notifyClient() → mcpServer.sendLoggingMessage() → MCP Client
 ```
+
+**Key design principle:** `processAgentPrompt` executes prompts through the **same `sendToLLM` pipeline** as regular ChatBox input. This ensures:
+- Full tool execution loop (LLM decides tools, calls them, gets results, may call more)
+- Real tool execution (e.g., `load_genome` actually loads the file in the genome browser)
+- User visibility (thinking process, tool calls, and results appear in ChatBox)
+- LLM configuration via `llmConfigManager` (same provider/model as ChatBox)
+- Source marker `🔗 **[MCP Agent]**` distinguishes MCP-originated prompts from user-typed messages
 
 **Key files for MCP modes:**
 - `src/mcp-server.js` — `this.mode` property, `_notifyClient()`, `sendAgentProgress()`, `setMode()`, IPC listener for `mcp-agent-progress`
 - `src/mcp-tools/ToolsIntegrator.js` — `getAvailableTools()` (returns only `codexomics_chat` + window tools in agent mode), `_executeViaAgent()`, `_buildAgentPromptFromToolCall()`, `getFullToolList()`
 - `src/mcp-tools/utility/AgentChatTools.js` — `codexomics_chat` tool definition (description varies by mode)
 - `src/renderer/modules/InternalMCPServer.js` — `handleCodexomicsChat()` with `onProgress` callback sending `mcp-agent-progress` IPC
-- `src/renderer/modules/ChatManager.js` — `processAgentPrompt(prompt, { onProgress })`, `_executeAgentLoop(prompt, { onProgress })`
+- `src/renderer/modules/ChatManager.js` — `processAgentPrompt(prompt, { onProgress })` routes through `sendToLLM()` with ChatBox display and `🔗 [MCP Agent]` source marker; uses `llmConfigManager.isConfigured()` for validation and `llmConfigManager.sendMessageWithHistory()` for LLM communication
 - `scripts/start-mcp-server.js` — `--mode` argument parsing
 
 **Progress notification types (via `onProgress` callback):**
 
 | Type | Level | When | Data |
 |------|-------|------|------|
-| `round_start` | notice | Agent execution begins | `{ mode }` |
-| `thinking` | info | Each LLM iteration starts | `{ iteration }` |
-| `tool_call` | info | Tool calls detected in LLM response | `{ tools: [...] }` |
-| `tool_result` | info | Individual tool execution result | `{ tool, success, error? }` |
-| `round_end` | notice | Agent loop finished | `{ iterations, toolsExecuted }` |
-| `completion` | notice | Entire processAgentPrompt finishes | `{ toolsExecuted, iterations }` |
+| `round_start` | notice | Agent execution begins in ChatBox | `{ mode }` |
+| `completion` | notice | `sendToLLM` finishes and response displayed | `{ responseLength }` |
 | `error` | error | Execution failure | — |
+
+Note: Detailed progress (thinking, tool calls, results) is shown directly in the ChatBox UI rather than via `onProgress`, since the prompt executes through the same `sendToLLM` pipeline as user input.
 
 **Critical Rules:**
 - **Rule**: In agent mode, `ToolsIntegrator.getAvailableTools()` returns only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`. All other tools are hidden from MCP clients but remain accessible to the internal agent.
 - **Rule**: `_executeViaAgent()` translates structured tool calls into natural language prompts via `_buildAgentPromptFromToolCall()`. When adding new prompt templates, cover the most common tools; unknown tools get a generic fallback prompt.
+- **Rule**: `processAgentPrompt` must always go through `sendToLLM()` (the same pipeline as ChatBox user input). Never create a separate LLM call loop — `sendToLLM` already handles the full tool execution cycle, LLM provider routing, and context management.
+- **Rule**: `processAgentPrompt` must check `this.llmConfigManager.isConfigured()` before execution. It uses `llmConfigManager` (not legacy `this.llmConfig` or `this.getCurrentModelConfig()`) for both configuration validation and LLM communication.
 - **Rule**: The `onProgress` callback must never throw — wrap it in try/catch in `InternalMCPServer.handleCodexomicsChat()`.
 - **Rule**: Agent mode timeout is 120s (vs 30s in tools mode) because LLM inference + multi-tool execution takes longer.
 - **Rule**: `setMode()` triggers `sendToolListChanged()` so MCP clients re-fetch the tool list and see the updated availability.
+- **Rule**: When the ChatBox is busy (`conversationState.isProcessing`), `processAgentPrompt` returns `{ success: false, error: 'ChatBox is busy...' }` rather than queuing or blocking.
 
 ### Styling & CSS
 - **Rule**: Use Vanilla CSS. Do **not** use TailwindCSS, Bootstrap, or any atomic CSS frameworks unless explicitly asked by the user to introduce them. The project uses standard `.css` files located in `src/renderer/css/`. Respect the existing color variables and DOM structures.
