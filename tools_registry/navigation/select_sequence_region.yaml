@@ -1,0 +1,82 @@
+name: select_sequence_region
+version: 1.0.0
+description: Select a specific sequence region by genomic coordinates (start-end position), highlighting it in the genome view. This sets the region as the active sequence selection, useful for subsequent operations like copy, extract, or analysis.
+category: navigation
+keywords:
+  - select
+  - sequence
+  - region
+  - range
+  - highlight
+  - choose
+  - position
+  - coordinates
+  - interval
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Chromosome name (optional, defaults to current chromosome)
+    start:
+      type: number
+      description: Start position of the region to select (1-based)
+    end:
+      type: number
+      description: End position of the region to select (1-based, inclusive)
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - start
+    - end
+sample_usages:
+  - user_query: Select the region from position 1000 to 5000
+    tool_call: select_sequence_region(start=1000, end=5000)
+    thought: User wants to select/highlight a specific genomic region
+    expected_result: Region 1000-5000 is selected and highlighted in the sequence view
+  - user_query: Select sequence region 200-800 on chromosome 1
+    tool_call: select_sequence_region(start=200, end=800, chromosome='1')
+    thought: User wants to select a region with specific chromosome
+    expected_result: Region 200-800 on chromosome 1 is selected
+  - user_query: Highlight the region from 50000 to 52000
+    tool_call: select_sequence_region(start=50000, end=52000)
+    thought: User wants to highlight a genomic interval
+    expected_result: Region 50000-52000 is highlighted in the sequence view
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['navigate_to_position', 'get_sequence', 'get_sequence_selection']
+  alternatives: ['select_gene']
+  prerequisites: []
+  follow_up: ['get_sequence', 'copy_sequence', 'analyze_region', 'export_fasta_sequence']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - selection
+    - sequence
+    - region
+  complexity: simple
+  usage_pattern: moderate
+  recommendation: 'Use this to select a genomic region by coordinates for subsequent operations'
+error_handling:
+  invalid_coordinates: 'Returns error if start > end or coordinates are out of range'
+  no_genome_loaded: 'Returns error if no genome sequence is loaded'
+  chromosome_not_found: 'Returns error if specified chromosome does not exist'
+returns:
+  success: boolean - Whether the selection was successful
+  message: string - Status message
+  region: object - Selected region information (chromosome, start, end, length)

@@ -120,6 +120,35 @@ class NavigationTools {
         },
       },
 
+      select_gene: {
+        name: 'select_gene',
+        description: 'Select a specific gene by name or locus tag, highlighting it in the genome view and showing its details in the sidebar. This makes the gene the active selection for subsequent operations. Searches across all chromosomes by default.',
+        parameters: {
+          type: 'object',
+          properties: {
+            geneName: { type: 'string', description: 'Gene name or locus tag to select (e.g., "lacZ", "b0062", "dnaA")' },
+            chromosome: { type: 'string', description: 'Chromosome name (optional, searches all chromosomes if not specified)' },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+          required: ['geneName'],
+        },
+      },
+
+      select_sequence_region: {
+        name: 'select_sequence_region',
+        description: 'Select a specific sequence region by genomic coordinates (start-end position), highlighting it in the genome view. This makes the region the active selection for subsequent operations like copy, extract, or analysis.',
+        parameters: {
+          type: 'object',
+          properties: {
+            chromosome: { type: 'string', description: 'Chromosome name (optional, defaults to current chromosome)' },
+            start: { type: 'number', description: 'Start position of the region to select (1-based)' },
+            end: { type: 'number', description: 'End position of the region to select (1-based, inclusive)' },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+          required: ['start', 'end'],
+        },
+      },
+
       get_genome_info: {
         name: 'get_genome_info',
         description: 'Get comprehensive information about the loaded genome',

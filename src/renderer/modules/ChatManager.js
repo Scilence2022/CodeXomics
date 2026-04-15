@@ -6462,6 +6462,8 @@ TOOL AVAILABILITY:
         'get_current_state',
         'get_chromosome_list',
         'get_selected_gene',
+        'select_gene',
+        'select_sequence_region',
         'get_current_region_details',
         'get_sequence_selection',
         'list_genome_windows',
@@ -6722,6 +6724,8 @@ ${coreTools}
       get_gene_details: () => this.getGeneDetails(parameters),
       get_operons: () => this.getOperons(parameters),
       zoom_to_gene: () => this.zoomToGene(parameters),
+      select_gene: () => this.selectGene(parameters),
+      select_sequence_region: () => this.selectSequenceRegion(parameters),
       get_nearby_features: () => this.getNearbyFeatures(parameters),
       find_intergenic_regions: () => this.findIntergenicRegions(parameters),
 
@@ -7474,7 +7478,7 @@ AVAILABLE TOOLS SUMMARY:
 - MCP Tools: ${context.genomeBrowser.toolSources.mcp}
 
 KEY TOOLS BY CATEGORY:
-Navigation & State: navigate_to_position, get_current_state, jump_to_gene, zoom_to_gene, open_new_tab
+Navigation & State: navigate_to_position, get_current_state, jump_to_gene, zoom_to_gene, select_gene, select_sequence_region, open_new_tab
 Search & Discovery: search_features, search_gene_by_name, search_sequence_motif
 Sequence Analysis: get_sequence, translate_dna, compute_gc, reverse_complement  
 Advanced Analysis: analyze_region, predict_promoter, find_restriction_sites
@@ -7830,6 +7834,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'get_current_state',
       'get_current_region',
       'jump_to_gene',
+      'select_gene',
+      'select_sequence_region',
       'open_new_tab',
       'scroll_left',
       'scroll_right',
@@ -9190,6 +9196,314 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       zoomedRegion: `${newStart}-${newEnd}`,
       padding: padding,
       message: `Zoomed to gene ${gene.name} with ${padding}bp padding`,
+    };
+  }
+
+  /**
+   * Select a gene by name or locus tag, highlighting it in the genome view
+   */
+  async selectGene(params) {
+    const { geneName, chromosome } = params;
+
+    if (!this.app) {
+      throw new Error('Genome browser not initialized');
+    }
+
+    if (!geneName) {
+      throw new Error('Gene name is required');
+    }
+
+    // Find the gene across all chromosomes (multi-chromosome support)
+    let searchResults = [];
+    let foundChromosome = null;
+
+    if (this.app.currentAnnotations) {
+      // If a specific chromosome is requested, search only that one
+      if (chromosome && this.app.currentAnnotations[chromosome]) {
+        foundChromosome = chromosome;
+        searchResults = this._searchGeneInChromosome(geneName, chromosome);
+      } else {
+        // Search across all chromosomes
+        const allChromosomes = Object.keys(this.app.currentAnnotations);
+        for (const chr of allChromosomes) {
+          const chrResults = this._searchGeneInChromosome(geneName, chr);
+          // Tag each result with its chromosome
+          chrResults.forEach(r => { r.chromosome = chr; });
+          searchResults = searchResults.concat(chrResults);
+        }
+        // Sort by relevance across all chromosomes
+        searchResults.sort((a, b) => {
+          if (b.relevanceScore !== a.relevanceScore) {
+            return b.relevanceScore - a.relevanceScore;
+          }
+          return a.position - b.position;
+        });
+        searchResults = searchResults.slice(0, 20);
+      }
+    }
+
+    if (searchResults.length === 0) {
+      throw new Error(`Gene "${geneName}" not found. Try using search_gene_by_name to find the correct identifier.`);
+    }
+
+    // Use the best match
+    const bestMatch = searchResults[0];
+    const targetChromosome = bestMatch.chromosome || foundChromosome || this.app.currentChromosome;
+
+    // Get the full annotation object for the gene (search results use a slim 'annotation' field)
+    const geneAnnotation = bestMatch.annotation;
+    if (!geneAnnotation || geneAnnotation.start === undefined) {
+      throw new Error(`Gene "${geneName}" found but annotation data is incomplete. Try using search_gene_by_name instead.`);
+    }
+
+    // If the gene is on a different chromosome, switch to it
+    if (targetChromosome && targetChromosome !== this.app.currentChromosome) {
+      const chromosomeSelect = document.getElementById('chromosomeSelect');
+      if (chromosomeSelect) {
+        chromosomeSelect.value = targetChromosome;
+        // Trigger the change event to actually switch the chromosome
+        const event = new Event('change', { bubbles: true });
+        chromosomeSelect.dispatchEvent(event);
+        // Wait for the chromosome switch to complete
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+
+    // Find the full annotation object from currentAnnotations (search results have slim version)
+    let fullGene = geneAnnotation;
+    if (this.app.currentAnnotations && this.app.currentAnnotations[targetChromosome]) {
+      const fullAnnotation = this.app.currentAnnotations[targetChromosome].find(a =>
+        a.start === geneAnnotation.start &&
+        a.end === geneAnnotation.end &&
+        a.type === geneAnnotation.type
+      );
+      if (fullAnnotation) {
+        fullGene = fullAnnotation;
+      }
+    }
+
+    // Navigate to the gene if it's not in the current view
+    const currentStart = this.app.currentPosition?.start || 0;
+    const currentEnd = this.app.currentPosition?.end || 0;
+    if (fullGene.end < currentStart || fullGene.start > currentEnd) {
+      // Gene is outside current view, navigate to it
+      const padding = Math.max(500, Math.floor((fullGene.end - fullGene.start) * 0.2));
+      await this.navigateToPosition({
+        chromosome: targetChromosome,
+        start: Math.max(0, fullGene.start - padding),
+        end: fullGene.end + padding,
+      });
+    }
+
+    // Select the gene using the genome browser's selectGene method
+    if (typeof this.app.selectGene === 'function') {
+      this.app.selectGene(fullGene, bestMatch.operonInfo || null);
+    } else {
+      // Fallback: set selectedGene directly
+      this.app.selectedGene = { gene: fullGene, operonInfo: bestMatch.operonInfo || null };
+    }
+
+    // Also highlight the gene sequence in the sequence panel
+    if (typeof this.app.highlightGeneSequence === 'function') {
+      try {
+        this.app.highlightGeneSequence(fullGene);
+      } catch (e) {
+        console.warn('Could not highlight gene sequence:', e.message);
+      }
+    }
+
+    // Update the gene details panel in the sidebar
+    if (typeof this.app.populateGeneDetails === 'function') {
+      try {
+        this.app.populateGeneDetails(fullGene, bestMatch.operonInfo || null);
+      } catch (e) {
+        console.warn('Could not populate gene details:', e.message);
+      }
+    }
+
+    // Update tab manager about gene selection
+    if (this.app.tabManager) {
+      try {
+        this.app.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, null);
+      } catch (e) {
+        console.warn('Could not update tab manager:', e.message);
+      }
+    }
+
+    return {
+      success: true,
+      message: `Selected gene: ${fullGene.qualifiers?.gene || fullGene.qualifiers?.locus_tag || fullGene.type}`,
+      gene_info: {
+        name: fullGene.qualifiers?.gene || 'Unknown',
+        locusTag: fullGene.qualifiers?.locus_tag || 'Unknown',
+        product: fullGene.qualifiers?.product || 'Unknown',
+        start: fullGene.start,
+        end: fullGene.end,
+        length: fullGene.end - fullGene.start + 1,
+        strand: fullGene.strand === -1 ? '-' : '+',
+        type: fullGene.type || 'Unknown',
+        chromosome: targetChromosome,
+      },
+    };
+  }
+
+  /**
+   * Search for a gene in a specific chromosome (helper for multi-chromosome support)
+   */
+  _searchGeneInChromosome(geneName, chromosome) {
+    if (!this.app.currentAnnotations[chromosome]) {
+      return [];
+    }
+
+    const originalChr = document.getElementById('chromosomeSelect')?.value;
+    const annotations = this.app.currentAnnotations[chromosome];
+    const searchTerm = geneName.toLowerCase();
+    const results = [];
+
+    annotations.forEach(annotation => {
+      if (!annotation.qualifiers) return;
+
+      const geneNameValue = this.app.getQualifierValue(annotation.qualifiers, 'gene') || '';
+      const locusTag = this.app.getQualifierValue(annotation.qualifiers, 'locus_tag') || '';
+      const product = this.app.getQualifierValue(annotation.qualifiers, 'product') || '';
+
+      let relevanceScore;
+      try {
+        relevanceScore = this.calculateGeneRelevanceScore(searchTerm, geneNameValue, locusTag, product);
+      } catch (error) {
+        return;
+      }
+
+      if (relevanceScore && relevanceScore.score > 0) {
+        results.push({
+          type: 'gene',
+          position: annotation.start,
+          end: annotation.end,
+          name: geneNameValue || locusTag || annotation.type,
+          details: `${annotation.type}: ${product || 'No description'}`,
+          annotation: {
+            start: annotation.start,
+            end: annotation.end,
+            type: annotation.type,
+            strand: annotation.strand,
+            qualifiers: {
+              gene: geneNameValue,
+              locus_tag: locusTag,
+              product: product,
+            },
+          },
+          relevanceScore: relevanceScore.score,
+          matchType: relevanceScore.matchType,
+          matchedField: relevanceScore.matchedField,
+          chromosome: chromosome,
+        });
+      }
+    });
+
+    results.sort((a, b) => {
+      if (b.relevanceScore !== a.relevanceScore) {
+        return b.relevanceScore - a.relevanceScore;
+      }
+      return a.position - b.position;
+    });
+
+    return results.slice(0, 20);
+  }
+
+  /**
+   * Select a sequence region by genomic coordinates
+   */
+  async selectSequenceRegion(params) {
+    const { start, end, chromosome } = params;
+
+    if (!this.app) {
+      throw new Error('Genome browser not initialized');
+    }
+
+    if (start === undefined || end === undefined) {
+      throw new Error('Start and end positions are required');
+    }
+
+    const regionStart = parseInt(start);
+    const regionEnd = parseInt(end);
+
+    if (isNaN(regionStart) || isNaN(regionEnd)) {
+      throw new Error('Start and end positions must be valid numbers');
+    }
+
+    if (regionStart > regionEnd) {
+      throw new Error(`Invalid region: start (${regionStart}) cannot be greater than end (${regionEnd})`);
+    }
+
+    // Determine the chromosome
+    const targetChromosome = chromosome || this.app.currentChromosome;
+    if (!targetChromosome) {
+      throw new Error('No chromosome specified and no current chromosome available');
+    }
+
+    // Validate chromosome exists
+    if (this.app.currentSequence && !this.app.currentSequence[targetChromosome]) {
+      throw new Error(`Chromosome "${targetChromosome}" not found in loaded genome`);
+    }
+
+    // Validate positions are within sequence range
+    if (this.app.currentSequence && this.app.currentSequence[targetChromosome]) {
+      const seqLength = this.app.currentSequence[targetChromosome].length;
+      if (regionStart < 1 || regionEnd > seqLength) {
+        console.warn(`Region ${regionStart}-${regionEnd} extends beyond sequence length (${seqLength}), clamping`);
+      }
+    }
+
+    // Clear existing sequence selection
+    if (typeof this.app.clearSequenceSelection === 'function') {
+      this.app.clearSequenceSelection();
+    }
+
+    // Set the sequence selection
+    this.app.sequenceSelection = {
+      start: regionStart,
+      end: regionEnd,
+      active: true,
+      chromosome: targetChromosome,
+      source: 'tool', // Mark that this selection came from a tool call
+      geneName: `Region ${regionStart}-${regionEnd}`,
+    };
+
+    // Highlight the sequence in the view
+    if (typeof this.app.highlightSequenceRegion === 'function') {
+      try {
+        this.app.highlightSequenceRegion(regionStart, regionEnd);
+      } catch (e) {
+        console.warn('Could not highlight sequence region:', e.message);
+      }
+    }
+
+    // Update status
+    const selectionLength = regionEnd - regionStart + 1;
+    const statusMessage = `🔵 Region Selected: ${regionStart.toLocaleString()}-${regionEnd.toLocaleString()} (${selectionLength.toLocaleString()} bp) on ${targetChromosome}`;
+
+    if (typeof this.app.updateStatus === 'function') {
+      this.app.updateStatus(statusMessage, {
+        highlight: true,
+        color: '#3b82f6',
+        duration: 3000,
+        restore: true,
+      });
+    }
+
+    if (typeof this.app.showNotification === 'function') {
+      this.app.showNotification(statusMessage, 'info');
+    }
+
+    return {
+      success: true,
+      message: `Selected region: ${regionStart}-${regionEnd} on ${targetChromosome}`,
+      region: {
+        chromosome: targetChromosome,
+        start: regionStart,
+        end: regionEnd,
+        length: selectionLength,
+      },
     };
   }
 
@@ -12482,6 +12796,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       get_current_state: 'Navigation Agent',
       get_current_region: 'Navigation Agent',
       jump_to_gene: 'Navigation Agent',
+      select_gene: 'Navigation Agent',
+      select_sequence_region: 'Navigation Agent',
 
       // Analysis Agent - 数据分析和统计
       analyze_region: 'Analysis Agent',

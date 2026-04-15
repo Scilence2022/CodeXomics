@@ -409,6 +409,21 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // Gene/Sequence Selection Tools
+    this.builtInToolsMap.set('select_gene', {
+      method: 'selectGene',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('select_sequence_region', {
+      method: 'selectSequenceRegion',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Sequence Tools
     this.builtInToolsMap.set('translate_sequence', {
       method: 'translateSequence',
@@ -1070,6 +1085,30 @@ class BuiltInToolsIntegration {
         name: 'jump_to_gene',
         confidence: 0.9,
         reason: 'Gene navigation keywords detected',
+      });
+    }
+
+    // Check for gene/sequence selection patterns
+    // Matches: "select gene lacZ", "select the gene", "highlight gene dnaA", "choose gene thrA"
+    if (/\b(select|highlight|choose|pick|activate|set\s+selection)\s+.*?\bgene\b/i.test(query) ||
+        /\bselect\s+.*?\b(lacZ|dnaA|thrA|araA|lysC|recA|gyrA|rpoB|trpA|pyrF|leuA|ilvA|metA|cysA|serA|proA|hisA|argA|valA|alaA|glyA|pheA|tyrA|trpA)/i.test(query) ||
+        /\bgene\s+(selection|selected|highlighted|active)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'select_gene',
+        confidence: 0.9,
+        reason: 'Gene selection/highlight keywords detected',
+      });
+    }
+
+    // Check for sequence region selection patterns
+    // Matches: "select region 1000-5000", "select the sequence from position X to Y", "highlight region"
+    if (/\b(select|highlight|choose)\s+.*?\b(region|range|sequence\s+region|interval|area)\b/i.test(query) ||
+        /\b(select|highlight)\s+.*?\b(position|coordinates?)\s+.*?\b(to|until|through|-)\b/i.test(query) ||
+        /\bregion\s+(selection|selected|highlighted|active)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'select_sequence_region',
+        confidence: 0.9,
+        reason: 'Sequence region selection keywords detected',
       });
     }
 

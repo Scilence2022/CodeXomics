@@ -1,0 +1,90 @@
+name: select_gene
+version: 1.0.0
+description: Select a specific gene by name or locus tag, highlighting it in the genome view and showing its details. This sets the gene as the active selection, making it the target for subsequent operations like copy, edit, analyze, etc.
+category: navigation
+keywords:
+  - select
+  - gene
+  - highlight
+  - choose
+  - pick
+  - activate
+  - focus
+  - set selection
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    geneName:
+      type: string
+      description: Gene name or locus tag to select (e.g., 'lacZ', 'lysC', 'b0062', 'araA')
+      examples:
+        - lacZ
+        - lysC
+        - dnaA
+        - b0062
+        - araA
+    chromosome:
+      type: string
+      description: Chromosome name (optional, searches all chromosomes if not specified)
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - geneName
+sample_usages:
+  - user_query: Select gene lacZ
+    tool_call: select_gene(geneName='lacZ')
+    thought: User wants to select/highlight a specific gene
+    expected_result: Gene lacZ is selected, highlighted in the genome view, and details shown in sidebar
+  - user_query: Select the gene b0062
+    tool_call: select_gene(geneName='b0062')
+    thought: User wants to select a gene by locus tag
+    expected_result: Gene b0062 is selected and highlighted
+  - user_query: Highlight gene dnaA
+    tool_call: select_gene(geneName='dnaA')
+    thought: User wants to highlight/select a gene
+    expected_result: Gene dnaA is selected and highlighted in the genome view
+  - user_query: Choose gene thrA for analysis
+    tool_call: select_gene(geneName='thrA')
+    thought: User wants to pick a gene for subsequent operations
+    expected_result: Gene thrA is selected and becomes the active target
+  - user_query: Select gene lacZ on chromosome 2
+    tool_call: select_gene(geneName='lacZ', chromosome='2')
+    thought: User wants to select a gene on a specific chromosome
+    expected_result: Gene lacZ on chromosome 2 is selected
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['jump_to_gene', 'get_selected_gene', 'get_gene_details']
+  alternatives: ['jump_to_gene']
+  prerequisites: []
+  follow_up: ['get_sequence', 'analyze_region', 'copy_sequence', 'edit_annotation']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - selection
+    - interaction
+  complexity: simple
+  usage_pattern: frequent
+  recommendation: 'Use this to programmatically select a gene, equivalent to clicking on it in the genome view'
+error_handling:
+  gene_not_found: 'Returns error if gene name not found, suggest using search_gene_by_name first'
+  invalid_gene_name: 'Returns error if gene name is empty or invalid'
+  no_genome_loaded: 'Returns error if no genome annotations are loaded'
+returns:
+  success: boolean - Whether the selection was successful
+  message: string - Status message
+  gene_info: object - Information about the selected gene (name, locus_tag, position, strand, type, product)

@@ -14,6 +14,8 @@ const TOOL_NAMES = {
     NAVIGATE_TO: 'navigate_to',
     JUMP_TO_GENE: 'jump_to_gene',
     ZOOM_TO_GENE: 'zoom_to_gene',
+    SELECT_GENE: 'select_gene',
+    SELECT_SEQUENCE_REGION: 'select_sequence_region',
     GET_CURRENT_REGION: 'get_current_region',
     SCROLL_LEFT: 'scroll_left',
     SCROLL_RIGHT: 'scroll_right',
