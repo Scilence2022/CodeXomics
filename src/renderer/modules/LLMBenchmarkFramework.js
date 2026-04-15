@@ -2505,31 +2505,31 @@ class LLMBenchmarkFramework {
 
     console.log('⚠️ [Tool Detection] No content patterns matched, trying text-based detection...');
 
-    // Common genome browser function names to look for
-    const knownFunctions = [
-      'search_gene_by_name',
-      'search_features',
-      'search_by_position',
-      'navigate_to_position',
-      'jump_to_gene',
-      'get_gene_sequence',
-      'run_blast_search',
-      'zoom_in',
-      'zoom_out',
-      'set_zoom_level',
-      'show_gene_details',
-      'export_sequence',
-      'save_current_view',
-      'load_genome_file',
-      'switch_chromosome',
-      'toggle_track_visibility',
-      // CRITICAL: Add the missing tools that are failing
-      'get_current_state',
-      'compute_gc',
-      'reverse_complement',
-      'translate_dna',
-      'codon_usage_analysis',
+    // Fix Problem 6: Dynamic knownFunctions from builtInToolsMap instead of hardcoded list
+    // Fallback list for when ChatManager is not available
+    const DEFAULT_KNOWN_FUNCTIONS = [
+      'search_gene_by_name', 'search_features', 'search_by_position',
+      'navigate_to_position', 'jump_to_gene', 'get_gene_sequence',
+      'run_blast_search', 'zoom_in', 'zoom_out', 'set_zoom_level',
+      'show_gene_details', 'export_sequence', 'save_current_view',
+      'load_genome_file', 'switch_chromosome', 'toggle_track_visibility',
+      'get_current_state', 'compute_gc', 'reverse_complement',
+      'translate_dna', 'codon_usage_analysis',
     ];
+
+    let knownFunctions;
+    try {
+      if (window.chatManager && typeof window.chatManager.getRegisteredToolNames === 'function') {
+        knownFunctions = window.chatManager.getRegisteredToolNames();
+      } else if (window.chatManager && window.chatManager.builtInToolsMap) {
+        knownFunctions = Array.from(window.chatManager.builtInToolsMap.keys());
+      } else {
+        knownFunctions = DEFAULT_KNOWN_FUNCTIONS;
+      }
+    } catch (e) {
+      console.warn('⚠️ [Tool Detection] Failed to get dynamic tool list, using defaults:', e.message);
+      knownFunctions = DEFAULT_KNOWN_FUNCTIONS;
+    }
 
     console.log('🔍 [Tool Detection] Known functions list:', knownFunctions.length, 'functions');
 
@@ -4644,9 +4644,21 @@ class LLMBenchmarkFramework {
 
     // Check function name (50 points out of 100)
     console.log('🔍 [Single Call Eval] Checking function name match...');
+    const normalizeToolName = (name) => {
+      if (!name || typeof name !== 'string') return '';
+      let normalized = name.replace(/([a-z])([A-Z])/g, '$1_$2'); // camelCase → snake_case
+      normalized = normalized.replace(/-/g, '_'); // kebab-case → snake_case
+      return normalized.toLowerCase();
+    };
+
     if (actualCall.tool_name === expectedCall.tool_name) {
       result.score += 50;
       console.log('✅ [Single Call Eval] Function name matches! +50 points (Total:', result.score, '/100)');
+    } else if (normalizeToolName(actualCall.tool_name) === normalizeToolName(expectedCall.tool_name)) {
+      // Name matches after normalization (camelCase/kebab/snake_case variants)
+      result.score += 45;
+      result.warnings.push(`Function name matches after normalization: ${actualCall.tool_name} ≈ ${expectedCall.tool_name}`);
+      console.log('✅ [Single Call Eval] Function name matches after normalization! +45 points (Total:', result.score, '/100)');
     } else {
       result.errors.push(`Expected function ${expectedCall.tool_name}, got ${actualCall.tool_name}`);
       console.log('❌ [Single Call Eval] Function name mismatch! +0 points (Total:', result.score, '/100)');
@@ -4654,11 +4666,28 @@ class LLMBenchmarkFramework {
 
     // Check parameters (50 points out of 100)
     console.log('🔍 [Single Call Eval] Checking parameter match...');
+    // Fix Problem 5: Reduce executed bypass from full 50pts to 30+20 with critical-param check
     if (actualCall.executed && actualCall.confidence === 100) {
-      // CRITICAL FIX: If the tool was actually executed successfully by the framework,
-      // parameter matching in text is irrelevant. The execution confirms correctness.
-      result.score += 50;
-      console.log('✅ [Single Call Eval] Tool was actually executed successfully, bypassing text parameter check (+50 points)!');
+      // Tool was executed successfully, but we still validate critical parameters
+      // Base score for successful execution (reduced from 50 to 30)
+      result.score += 30;
+      console.log('✅ [Single Call Eval] Tool executed successfully (+30 points)');
+
+      // Check if critical parameters also match for bonus 20 points
+      if (actualCall.parameters && expectedCall.parameters) {
+        const hasCriticalParams = this.hasCriticalParams(actualCall.parameters, expectedCall.parameters);
+        if (hasCriticalParams) {
+          result.score += 20;
+          console.log('✅ [Single Call Eval] Critical parameters match (+20 bonus points, total +50)!');
+        } else {
+          result.warnings.push('Tool executed but critical parameters mismatch');
+          console.log('⚠️ [Single Call Eval] Tool executed but critical parameters mismatch (+30 only)');
+        }
+      } else if (!expectedCall.parameters || Object.keys(expectedCall.parameters).length === 0) {
+        // No parameters expected, give full points for execution
+        result.score += 20;
+        console.log('✅ [Single Call Eval] No parameters expected, full execution bonus (+20, total +50)!');
+      }
     } else if (actualCall.parameters && expectedCall.parameters) {
       console.log('📊 [Single Call Eval] Both actual and expected have parameters, comparing...');
       const paramScore = this.compareParameters(actualCall.parameters, expectedCall.parameters);
@@ -4822,6 +4851,71 @@ class LLMBenchmarkFramework {
   /**
    * Helper methods
    */
+
+  /**
+   * Fix Problem 5: Check if critical parameters match between actual and expected.
+   * Critical parameters are those most important for tool correctness (e.g., geneName, filePath, chromosome).
+   */
+  hasCriticalParams(actualParams, expectedParams) {
+    const criticalParamNames = [
+      'geneName', 'name', 'filePath', 'file_path', 'filePaths', 'file_paths',
+      'chromosome', 'position', 'start', 'end', 'factor',
+    ];
+    const expectedKeys = Object.keys(expectedParams);
+    const criticalKeys = expectedKeys.filter(k => criticalParamNames.includes(k));
+
+    if (criticalKeys.length === 0) {
+      // No critical params to check; consider it a pass
+      return true;
+    }
+
+    for (const key of criticalKeys) {
+      if (!(key in actualParams)) return false;
+      const expectedVal = expectedParams[key];
+      const actualVal = actualParams[key];
+      // For placeholders, accept any non-empty value
+      if (typeof expectedVal === 'string' && expectedVal.startsWith('<')) continue;
+      if (actualVal !== expectedVal) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Fix Problem 3: Calculate string similarity using Levenshtein distance.
+   * Returns a value between 0.0 (completely different) and 1.0 (identical).
+   */
+  calculateStringSimilarity(a, b) {
+    if (!a || !b) return 0;
+    const longer = a.length > b.length ? a.toLowerCase() : b.toLowerCase();
+    const shorter = a.length > b.length ? b.toLowerCase() : a.toLowerCase();
+    if (longer.length === 0) return 1.0;
+    const editDistance = this.levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  }
+
+  /**
+   * Fix Problem 3: Compute Levenshtein edit distance between two strings.
+   */
+  levenshteinDistance(a, b) {
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    return matrix[b.length][a.length];
+  }
+
   compareParameters(actual, expected) {
     if (!actual && !expected) return 50; // Both empty
     if (!actual || !expected) return 0; // One empty, one not
@@ -4865,11 +4959,21 @@ class LLMBenchmarkFramework {
         if (actualValue.toLowerCase() === expectedValue.toLowerCase()) {
           score += 45; // Nearly full points for case-insensitive match
           console.log(`✅ Case-insensitive match for ${key}: ${actualValue}`);
-        } else if (actualValue.includes(expectedValue) || expectedValue.includes(actualValue)) {
-          score += 25; // Partial points for substring match
-          console.log(`⚠️ Partial match for ${key}: ${actualValue} vs ${expectedValue}`);
         } else {
-          console.log(`❌ No match for ${key}: ${actualValue} vs ${expectedValue}`);
+          // Fix Problem 3: Use Levenshtein similarity instead of loose substring matching
+          const similarity = this.calculateStringSimilarity(actualValue, expectedValue);
+          if (similarity >= 0.8) {
+            score += 35; // High similarity
+            console.log(`✅ High similarity match for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`);
+          } else if (similarity >= 0.5) {
+            score += 20; // Moderate similarity
+            console.log(`⚠️ Moderate similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`);
+          } else if (similarity >= 0.3) {
+            score += 8; // Low similarity - minimal credit
+            console.log(`⚠️ Low similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`);
+          } else {
+            console.log(`❌ No meaningful match for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`);
+          }
         }
       } else if (typeof expectedValue === 'number' && typeof actualValue === 'number') {
         // Number comparison with tolerance

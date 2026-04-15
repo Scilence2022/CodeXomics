@@ -2,8 +2,9 @@
  * Automatic Complex Benchmark Suite - Automatic evaluation + Complex complexity tests
  * Extracted from ComprehensiveBenchmarkSuite.js for better organization
  */
-class AutomaticComplexSuite {
+class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   constructor() {
+    super();
     this.suiteName = 'Automatic Complex Tests (4)'; // Updated count after adding export workflow test
     this.suiteId = 'automatic_complex';
     this.description = 'Complex tests with automatic evaluation - Advanced genomic analysis operations';
@@ -403,205 +404,22 @@ class AutomaticComplexSuite {
   }
 
   /**
-   * Evaluator methods - shared across all suite types
+   * Evaluator methods - delegates to BenchmarkEvaluatorBase for unified logic.
+   * Fix Problem 4: Single source of truth for evaluation.
    */
   async evaluateBasicFunctionCall(actualResult, expectedResult, testResult) {
-    const evaluation = {
-      success: false,
-      score: 0,
-      maxScore: testResult.maxScore || 10, // Use test's actual maxScore, default to 10 for complex
-      errors: [],
-      warnings: [],
-    };
-
-    if (!actualResult) {
-      evaluation.errors.push('No result obtained from test execution');
-      return evaluation;
-    }
-
-    console.log(`📊 [AutomaticComplexSuite] Evaluating test result:`, {
-      testId: testResult.testId,
-      expectedTool: expectedResult.tool_name,
-      actualResult: actualResult,
-      resultType: typeof actualResult,
+    // Delegate to the base class with AutomaticComplex-specific options:
+    // - useParseDebugInfo: true (ComplexSuite PRIORITY 1 feature)
+    // - useStringFallbacks: true (PRIORITY 3-5: JSON parse, alt props, string contains)
+    // - maxParamDeduction: 2 (complex allows more deduction)
+    // - successThreshold: 0.4 (40% for complex tests)
+    // - defaultMaxScore: 10
+    return super.evaluateBasicFunctionCall(actualResult, expectedResult, testResult, {
+      defaultMaxScore: 10,
+      successThreshold: 0.4,
+      useParseDebugInfo: true,
+      maxParamDeduction: 2,
     });
-
-    // PRIORITY 0: Check Tool Execution Tracker for direct execution status
-    if (window.chatManager && window.chatManager.toolExecutionTracker) {
-      const tracker = window.chatManager.toolExecutionTracker;
-      const recentExecutions = tracker.getSessionExecutions();
-
-      console.log(`🔍 [AutomaticComplexSuite] Checking tracker for tool: ${expectedResult.tool_name}`);
-
-      // Look for recent successful execution of the expected tool
-      // Use configured benchmark timeout instead of hardcoded 30 seconds
-      const timeoutMs = (this.framework && this.framework.testTimeout) || 120000; // Default to 2 minutes
-      const relevantExecution = recentExecutions.find(
-        exec =>
-          exec.toolName === expectedResult.tool_name &&
-          exec.status === 'completed' &&
-          Date.now() - exec.startTime < timeoutMs // Within configured timeout window
-      );
-
-      if (relevantExecution) {
-        console.log(
-          `✅ [AutomaticComplexSuite] TRACKER SUCCESS: Found successful execution of '${expectedResult.tool_name}'`,
-          relevantExecution
-        );
-        evaluation.score = evaluation.maxScore; // FULL POINTS from tracker
-        evaluation.success = true;
-        evaluation.warnings.push('Awarded full points based on Tool Execution Tracker data');
-        return evaluation;
-      }
-
-      // Look for recent failed execution
-      const failedExecution = recentExecutions.find(
-        exec =>
-          exec.toolName === expectedResult.tool_name &&
-          exec.status === 'failed' &&
-          Date.now() - exec.startTime < timeoutMs // Within configured timeout window
-      );
-
-      if (failedExecution) {
-        console.log(
-          `❌ [AutomaticComplexSuite] TRACKER FAILURE: Found failed execution of '${expectedResult.tool_name}'`,
-          failedExecution
-        );
-        evaluation.errors.push(`Tool execution failed: ${failedExecution.error?.message || 'Unknown error'}`);
-        return evaluation; // Score remains 0
-      }
-    }
-
-    // Check tool name - PRIORITIZE ChatManager's parseToolCall results
-    let actualTool = null;
-
-    // PRIORITY 1: Use ChatManager's reliable parseToolCall results from testResult
-    if (
-      testResult.parseDebugInfo &&
-      testResult.parseDebugInfo.detectedTools &&
-      testResult.parseDebugInfo.detectedTools.length > 0
-    ) {
-      const detectedTools = testResult.parseDebugInfo.detectedTools;
-      console.log(`🎯 [ComplexSuite PRIORITY 1] Using ChatManager's detected tools:`, detectedTools);
-
-      // Find the first detected tool that matches our expected tool
-      const matchingTool = detectedTools.find(
-        tool =>
-          tool.tool === expectedResult.tool_name ||
-          tool.tool.toLowerCase().includes(expectedResult.tool_name.toLowerCase()) ||
-          expectedResult.tool_name.toLowerCase().includes(tool.tool.toLowerCase())
-      );
-
-      if (matchingTool) {
-        actualTool = matchingTool.tool;
-        console.log(`✅ [ComplexSuite PRIORITY 1] Found matching tool from ChatManager: '${actualTool}'`);
-      } else {
-        // If no exact match, use the first detected tool (ChatManager is usually reliable)
-        actualTool = detectedTools[0].tool;
-        console.log(`🔄 [ComplexSuite PRIORITY 1] Using first detected tool from ChatManager: '${actualTool}'`);
-      }
-    }
-
-    // PRIORITY 2: Standard extraction if no parseDebugInfo available
-    if (!actualTool) {
-      // ENHANCED: Handle multiple tool calls - check all tools in array
-      let actualTools = [];
-
-      if (Array.isArray(actualResult)) {
-        actualTools = actualResult.map(call => call?.tool_name).filter(Boolean);
-        actualTool = actualTools[0]; // Primary tool for backward compatibility
-        console.log(`🎯 [AutomaticComplexSuite] Multiple tools detected:`, actualTools);
-        console.log(
-          `🎯 [AutomaticComplexSuite] Checking if expected tool '${expectedResult.tool_name}' is in:`,
-          actualTools
-        );
-
-        // Check if expected tool is in the array
-        if (actualTools.includes(expectedResult.tool_name)) {
-          actualTool = expectedResult.tool_name; // Use the expected tool for evaluation
-          console.log(`✅ [AutomaticComplexSuite] Expected tool '${expectedResult.tool_name}' found in tool array!`);
-        }
-      } else if (actualResult && typeof actualResult === 'object') {
-        actualTool = actualResult.tool_name;
-      }
-    }
-
-    // PRIORITY 3: Fallback - Parse from string if it contains tool call JSON
-    if (!actualTool && typeof actualResult === 'string') {
-      try {
-        const jsonMatch = actualResult.match(/\{[^{}]*"tool_name"[^{}]*\}/);
-        if (jsonMatch) {
-          const parsedTool = JSON.parse(jsonMatch[0]);
-          actualTool = parsedTool.tool_name;
-          console.log(`🔄 [ComplexSuite PRIORITY 3] Extracted tool name from string JSON: '${actualTool}'`);
-        }
-      } catch (e) {
-        // JSON parsing failed, continue with other methods
-      }
-    }
-
-    // PRIORITY 4: Fallback - Check alternative property names
-    if (!actualTool && actualResult && typeof actualResult === 'object') {
-      actualTool =
-        actualResult.function_call?.name ||
-        actualResult.tool_call?.name ||
-        actualResult.function_name ||
-        actualResult.name;
-    }
-
-    // PRIORITY 5: Emergency fallback - check if expected tool name appears in string
-    if (!actualTool && typeof actualResult === 'string') {
-      const expectedToolLower = expectedResult.tool_name.toLowerCase();
-      if (actualResult.toLowerCase().includes(expectedToolLower)) {
-        actualTool = expectedResult.tool_name;
-        console.log(`🔄 [ComplexSuite PRIORITY 5] Emergency fallback: using expected tool name`);
-      }
-    }
-
-    console.log(
-      `🎯 [ComplexSuite FINAL] Extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`
-    );
-    console.log(
-      `🔍 [ComplexSuite DEBUG] parseDebugInfo available: ${!!(testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools)}`
-    );
-    if (testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools) {
-      console.log(
-        `🔍 [ComplexSuite DEBUG] ChatManager detected tools:`,
-        testResult.parseDebugInfo.detectedTools.map(t => t.tool)
-      );
-    }
-    if (actualTool === expectedResult.tool_name) {
-      evaluation.score = evaluation.maxScore; // Full points for correct tool
-    } else {
-      evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool}'`);
-      evaluation.score = 0; // No points for wrong tool
-      evaluation.success = false;
-      return evaluation;
-    }
-
-    // Check parameters - deduct points for parameter issues
-    const actualParams = Array.isArray(actualResult) ? actualResult[0]?.parameters : actualResult.parameters;
-    if (actualParams && expectedResult.parameters) {
-      const expectedKeys = Object.keys(expectedResult.parameters);
-      const matchingKeys = expectedKeys.filter(
-        key =>
-          key in actualParams &&
-          (actualParams[key] === expectedResult.parameters[key] ||
-            expectedResult.parameters[key] === '<current_chromosome>' ||
-            expectedResult.parameters[key] === '<lacZ_protein_sequence>' ||
-            expectedResult.parameters[key] === '<araA_protein_sequence>')
-      );
-
-      // Deduct 1 point for each missing/incorrect parameter (up to 2 points for complex)
-      const missingParams = expectedKeys.length - matchingKeys.length;
-      if (missingParams > 0) {
-        evaluation.score = Math.max(0, evaluation.score - Math.min(2, missingParams));
-        evaluation.warnings.push(`${missingParams} parameter(s) missing or incorrect`);
-      }
-    }
-
-    evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.4); // 40% threshold for complex tests
-    return evaluation;
   }
 
   async evaluateNavigationCall(actualResult, expectedResult, testResult) {

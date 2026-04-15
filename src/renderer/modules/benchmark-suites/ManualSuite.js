@@ -2,8 +2,9 @@
  * Manual Benchmark Suite - Manual evaluation tests (Simple + Complex)
  * Renamed from ManualSimpleSuite.js for broader scope
  */
-class ManualSuite {
+class ManualSuite extends BenchmarkEvaluatorBase {
   constructor() {
+    super();
     this.suiteName = 'Manual Tests';
     this.suiteId = 'manual_suite';
     this.description = 'Manual evaluation tests - Genomic operations requiring human verification';
@@ -253,144 +254,17 @@ class ManualSuite {
   }
 
   /**
-   * Evaluator methods - shared across all suite types
+   * Evaluator methods - delegates to BenchmarkEvaluatorBase for unified logic.
+   * Fix Problem 4: Single source of truth for evaluation.
    */
   async evaluateBasicFunctionCall(actualResult, expectedResult, testResult) {
-    const evaluation = {
-      success: false,
-      score: 0,
-      maxScore: testResult.maxScore || 5, // Use test's actual maxScore, default to 5 for simple
-      errors: [],
-      warnings: [],
-    };
-
-    if (!actualResult) {
-      evaluation.errors.push('No result obtained from test execution');
-      return evaluation;
-    }
-
-    console.log(`📊 [ManualSuite] Evaluating test result:`, {
-      testId: testResult.testId,
-      expectedTool: expectedResult.tool_name,
-      actualResult: actualResult,
-      resultType: typeof actualResult,
+    // Delegate to the base class with ManualSuite-specific options:
+    // - successThreshold: 0.6 (60% for manual tests)
+    // - defaultMaxScore: 5
+    return super.evaluateBasicFunctionCall(actualResult, expectedResult, testResult, {
+      defaultMaxScore: 5,
+      successThreshold: 0.6,
     });
-
-    // PRIORITY 0: Check Tool Execution Tracker for direct execution status
-    if (window.chatManager && window.chatManager.toolExecutionTracker) {
-      const tracker = window.chatManager.toolExecutionTracker;
-      const recentExecutions = tracker.getSessionExecutions();
-
-      console.log(`🔍 [ManualSuite] Checking tracker for tool: ${expectedResult.tool_name}`);
-
-      // Look for recent successful execution of the expected tool
-      // Use configured benchmark timeout instead of hardcoded 30 seconds
-      const timeoutMs = (this.framework && this.framework.testTimeout) || 120000; // Default to 2 minutes
-      const relevantExecution = recentExecutions.find(
-        exec =>
-          exec.toolName === expectedResult.tool_name &&
-          exec.status === 'completed' &&
-          Date.now() - exec.startTime < timeoutMs // Within configured timeout window
-      );
-
-      if (relevantExecution) {
-        console.log(
-          `✅ [ManualSuite] TRACKER SUCCESS: Found successful execution of '${expectedResult.tool_name}'`,
-          relevantExecution
-        );
-        evaluation.score = evaluation.maxScore; // FULL POINTS from tracker
-        evaluation.success = true;
-        evaluation.warnings.push('Awarded full points based on Tool Execution Tracker data');
-        return evaluation;
-      }
-
-      // Look for recent failed execution
-      const failedExecution = recentExecutions.find(
-        exec =>
-          exec.toolName === expectedResult.tool_name &&
-          exec.status === 'failed' &&
-          Date.now() - exec.startTime < timeoutMs // Within configured timeout window
-      );
-
-      if (failedExecution) {
-        console.log(
-          `❌ [ManualSuite] TRACKER FAILURE: Found failed execution of '${expectedResult.tool_name}'`,
-          failedExecution
-        );
-        evaluation.errors.push(`Tool execution failed: ${failedExecution.error?.message || 'Unknown error'}`);
-        return evaluation; // Score remains 0
-      }
-    }
-
-    // ENHANCED: Handle multiple tool calls - check all tools in array
-    let actualTools = [];
-    let actualTool = null;
-
-    if (Array.isArray(actualResult)) {
-      actualTools = actualResult.map(call => call?.tool_name).filter(Boolean);
-      actualTool = actualTools[0]; // Primary tool for backward compatibility
-      console.log(`🎯 [ManualSuite] Multiple tools detected:`, actualTools);
-      console.log(`🎯 [ManualSuite] Checking if expected tool '${expectedResult.tool_name}' is in:`, actualTools);
-
-      // Check if expected tool is in the array
-      if (actualTools.includes(expectedResult.tool_name)) {
-        actualTool = expectedResult.tool_name; // Use the expected tool for evaluation
-        console.log(`✅ [ManualSuite] Expected tool '${expectedResult.tool_name}' found in tool array!`);
-      } else {
-        console.log(`❌ [ManualSuite] Expected tool '${expectedResult.tool_name}' NOT found in tool array`);
-      }
-    } else {
-      actualTool = actualResult?.tool_name;
-      actualTools = actualTool ? [actualTool] : [];
-      console.log(`🎯 [ManualSuite] Single tool detected: '${actualTool}'`);
-    }
-
-    console.log(
-      `🎯 [ManualSuite] Final extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`
-    );
-
-    // Check if expected tool is found in the detected tools array
-    if (actualTools.includes(expectedResult.tool_name)) {
-      console.log(`✅ [ManualSuite] EXPECTED TOOL FOUND: '${expectedResult.tool_name}' detected in tools array`);
-      evaluation.score = evaluation.maxScore; // FULL POINTS for correct tool detection
-      actualTool = expectedResult.tool_name; // Set for parameter evaluation
-    } else if (actualTool === expectedResult.tool_name) {
-      console.log(`✅ [ManualSuite] Correct tool name detected: ${actualTool}`);
-      evaluation.score = evaluation.maxScore; // Full points for correct tool
-    } else {
-      console.log(`❌ [ManualSuite] Tool mismatch: expected '${expectedResult.tool_name}', got '${actualTool}'`);
-      console.log(`❌ [ManualSuite] Available tools were:`, actualTools);
-      evaluation.errors.push(
-        `Expected tool '${expectedResult.tool_name}' but got '${actualTool || 'none'}'. Available tools: [${actualTools.join(', ')}]`
-      );
-      evaluation.score = 0; // No points for wrong tool
-      evaluation.success = false;
-      return evaluation;
-    }
-
-    // Check parameters - deduct points for parameter issues
-    const actualParams = Array.isArray(actualResult) ? actualResult[0]?.parameters : actualResult.parameters;
-    if (actualParams && expectedResult.parameters) {
-      const expectedKeys = Object.keys(expectedResult.parameters);
-      const matchingKeys = expectedKeys.filter(
-        key =>
-          key in actualParams &&
-          (actualParams[key] === expectedResult.parameters[key] ||
-            expectedResult.parameters[key] === '<current_chromosome>' ||
-            expectedResult.parameters[key] === '<lacZ_protein_sequence>' ||
-            expectedResult.parameters[key] === '<araA_protein_sequence>')
-      );
-
-      // Deduct 1 point for each missing/incorrect parameter
-      const missingParams = expectedKeys.length - matchingKeys.length;
-      if (missingParams > 0) {
-        evaluation.score = Math.max(0, evaluation.score - missingParams);
-        evaluation.warnings.push(`${missingParams} parameter(s) missing or incorrect`);
-      }
-    }
-
-    evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
-    return evaluation;
   }
 
   /**
