@@ -1499,8 +1499,9 @@ class ChatBoxSettingsManager {
 
   /**
    * Preview the current system prompt configuration
+   * Generates a real system prompt using a sample query "Search DNA polymerase"
    */
-  previewSystemPromptConfiguration(modal) {
+  async previewSystemPromptConfiguration(modal) {
     const textarea = modal.querySelector('#customSystemPrompt');
     const customPrompt = textarea ? textarea.value.trim() : '';
 
@@ -1518,26 +1519,78 @@ class ChatBoxSettingsManager {
       });
     }
 
-    // Build preview
-    let preview = '=== System Prompt Configuration Preview ===\n\n';
+    // Get other relevant settings from UI
+    const dynamicToolsCheckbox = modal.querySelector('#enableDynamicToolsRegistry');
+    const optimizedPromptCheckbox = modal.querySelector('#useOptimizedPrompt');
+    const dynamicEnabled = dynamicToolsCheckbox ? dynamicToolsCheckbox.checked : true;
+    const optimizedEnabled = optimizedPromptCheckbox ? optimizedPromptCheckbox.checked : true;
 
-    if (customPrompt) {
-      preview += '[Custom System Prompt - Active]\n';
-      preview += customPrompt.substring(0, 200) + (customPrompt.length > 200 ? '...' : '') + '\n\n';
-    } else {
-      preview += '[Default System Prompt - Active]\n\n';
+    // Save current config values so we can restore them after preview
+    const savedSettings = this.configManager.get('chatboxSettings', {});
+    const savedCurrentMessage = window.chatManager ? window.chatManager.currentMessage : null;
+
+    try {
+      // Temporarily apply UI settings to configManager for buildSystemMessage
+      const previewSettings = {
+        ...savedSettings,
+        customSystemPrompt: customPrompt,
+        systemPromptSectionOrder: sectionOrder,
+        enableDynamicToolsRegistry: dynamicEnabled,
+        useOptimizedPrompt: optimizedEnabled,
+      };
+      for (const [key, value] of Object.entries(sectionToggles)) {
+        const settingKey = `systemPromptInclude${key.charAt(0).toUpperCase() + key.slice(1)}`;
+        previewSettings[settingKey] = value;
+      }
+      this.configManager.set('chatboxSettings', previewSettings);
+
+      // Set sample query for dynamic tools
+      if (window.chatManager) {
+        window.chatManager.currentMessage = 'Search DNA polymerase';
+      }
+
+      // Generate the real system prompt
+      let realPrompt = '';
+      if (window.chatManager && window.chatManager.buildSystemMessage) {
+        realPrompt = await window.chatManager.buildSystemMessage();
+      } else {
+        realPrompt = '[ChatManager not available - cannot generate preview]';
+      }
+
+      // Restore original settings
+      this.configManager.set('chatboxSettings', savedSettings);
+      if (window.chatManager) {
+        window.chatManager.currentMessage = savedCurrentMessage;
+      }
+
+      // Build the preview header with config summary
+      let preview = '=== System Prompt Preview ===\n';
+      preview += `Sample Query: "Search DNA polymerase"\n`;
+      preview += `Prompt Mode: ${dynamicEnabled ? 'Dynamic Tools Registry' : (optimizedEnabled ? 'Optimized' : 'Complete')}\n`;
+      if (customPrompt) {
+        preview += `Custom Prompt: Active (overrides default)\n`;
+      }
+      preview += '\n--- Section Configuration ---\n';
+      sectionOrder.forEach((section, index) => {
+        const enabled = sectionToggles[section];
+        const name = this.getSystemPromptSectionDisplayName(section);
+        preview += `  ${index + 1}. ${name}: ${enabled ? '✓' : '✗'}\n`;
+      });
+      preview += '\n--- Generated System Prompt ---\n\n';
+      preview += realPrompt;
+
+      this.showSystemPromptConfigPreview(preview);
+    } catch (error) {
+      // Restore settings on error
+      this.configManager.set('chatboxSettings', savedSettings);
+      if (window.chatManager) {
+        window.chatManager.currentMessage = savedCurrentMessage;
+      }
+      console.error('Preview generation failed:', error);
+      this.showSystemPromptConfigPreview(
+        `Error generating preview:\n${error.message}\n\nPlease try saving settings first and send a message to test.`
+      );
     }
-
-    preview += 'Section Configuration:\n';
-    sectionOrder.forEach((section, index) => {
-      const enabled = sectionToggles[section];
-      const name = this.getSystemPromptSectionDisplayName(section);
-      preview += `  ${index + 1}. ${name}: ${enabled ? 'Enabled' : 'Disabled'}\n`;
-    });
-
-    preview += '\nOrder: ' + sectionOrder.map(s => this.getSystemPromptSectionDisplayName(s)).join(' → ');
-
-    this.showSystemPromptConfigPreview(preview);
   }
 
   /**
@@ -1567,17 +1620,32 @@ class ChatBoxSettingsManager {
       existingModal.remove();
     }
 
+    // Estimate token count (rough: ~4 chars per token for English)
+    const charCount = previewContent.length;
+    const estimatedTokens = Math.round(charCount / 4);
+
+    const escapedContent = previewContent
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
     const modalHtml = `
       <div class="modal" id="systemPromptConfigPreviewModal" style="z-index: 10001;">
-        <div class="modal-content" style="max-width: 700px; max-height: 80vh;">
+        <div class="modal-content resizable" style="max-width: 900px; width: 85vw; max-height: 85vh;">
           <div class="modal-header">
-            <h3>System Prompt Configuration Preview</h3>
+            <h3><i class="fas fa-eye"></i> System Prompt Preview</h3>
+            <span style="font-size: 12px; color: #6b7280; margin-left: auto; margin-right: 12px;">
+              ~${charCount.toLocaleString()} chars / ~${estimatedTokens.toLocaleString()} tokens
+            </span>
             <button class="modal-close" type="button">&times;</button>
           </div>
-          <div class="modal-body" style="overflow-y: auto;">
-            <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 13px; line-height: 1.5; white-space: pre-wrap; color: #374151;">${previewContent}</div>
+          <div class="modal-body" style="overflow-y: auto; max-height: calc(85vh - 120px);">
+            <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; color: #374151;">${escapedContent}</div>
           </div>
           <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" id="copySystemPromptBtn" style="margin-right: auto;">
+              <i class="fas fa-copy"></i> Copy
+            </button>
             <button class="btn modal-close" type="button">Close</button>
           </div>
         </div>
@@ -1598,6 +1666,31 @@ class ChatBoxSettingsManager {
     modal.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', closeModal);
     });
+
+    // Copy button
+    const copyBtn = modal.querySelector('#copySystemPromptBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(previewContent).then(() => {
+          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          setTimeout(() => {
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+          }, 2000);
+        }).catch(() => {
+          // Fallback for older browsers
+          const textarea = document.createElement('textarea');
+          textarea.value = previewContent;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          setTimeout(() => {
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+          }, 2000);
+        });
+      });
+    }
 
     modal.addEventListener('click', e => {
       if (e.target === modal) closeModal();

@@ -5418,13 +5418,16 @@ class ChatManager {
         // Save previous section
         if (currentHeader !== null) {
           sections[currentHeader] = currentContent.join('\n').trim();
+        } else if (currentContent.length > 0) {
+          // Content before any ## header is the preamble (system instructions / role definition)
+          sections['_preamble'] = currentContent.join('\n').trim();
         }
         currentHeader = line.replace(/^##\s+/, '').trim();
         currentContent = [line];
       } else if (currentHeader !== null) {
         currentContent.push(line);
       } else {
-        // Content before any header - treat as "header" section
+        // Content before any header - treat as preamble
         currentContent.push(line);
       }
     }
@@ -5457,6 +5460,21 @@ class ChatManager {
       toolCategories: ['Tool Categories', '🔄 Tool Categories', 'Tool Categories & Relationships'],
     };
 
+    // For systemInstructions, combine _preamble (role definition) with any matched header content
+    if (sectionKey === 'systemInstructions') {
+      const parts = [];
+      if (sections['_preamble']) {
+        parts.push(sections['_preamble']);
+      }
+      const possibleHeaders = headerMappings[sectionKey] || [];
+      for (const header of possibleHeaders) {
+        if (sections[header]) {
+          parts.push(sections[header]);
+        }
+      }
+      return parts.length > 0 ? parts.join('\n\n') : null;
+    }
+
     const possibleHeaders = headerMappings[sectionKey] || [];
     for (const header of possibleHeaders) {
       if (sections[header]) {
@@ -5464,18 +5482,21 @@ class ChatManager {
       }
     }
 
-    // For extended/plugin tools sections
+    // For dynamicTools, combine Built-in + Extended tools sections
     if (sectionKey === 'dynamicTools') {
-      for (const [header, content] of Object.entries(sections)) {
-        if (header.includes('Extended Tools') || header.includes('🌐 Extended Tools')) {
-          return content;
+      const toolParts = [];
+      const possibleHeaders = headerMappings[sectionKey] || [];
+      for (const header of possibleHeaders) {
+        if (sections[header]) {
+          toolParts.push(sections[header]);
         }
       }
-    }
-
-    // For preamble (content before any header)
-    if (sectionKey === 'systemInstructions' && sections['_preamble']) {
-      return sections['_preamble'];
+      for (const [header, content] of Object.entries(sections)) {
+        if (header.includes('Extended Tools') || header.includes('🌐 Extended Tools')) {
+          toolParts.push(content);
+        }
+      }
+      return toolParts.length > 0 ? toolParts.join('\n\n') : null;
     }
 
     return null;
