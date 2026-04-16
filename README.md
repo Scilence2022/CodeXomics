@@ -63,7 +63,7 @@ Tools are defined as individual YAML files under `tools_registry/` and are retri
 | `data_management/`                      | 4       | Annotations, region analysis, codon usage, export     |
 | `pathway/`                              | 3       | Metabolic pathways, KEGG, BLAST search                |
 | `ai_analysis/`                          | 5       | EVO2 sequence generation, CRISPR design, essentiality |
-| `annotation/`, `file_operations/`, etc. | various | Additional specialized categories                     |
+| `annotation/`, `file_operations/`, `benchmark/`, etc. | various | Additional specialized categories                     |
 
 Each tool definition includes a JSON Schema for parameters, sample usages for few-shot learning, relationship metadata (dependencies, conflicts, alternatives), and performance statistics.
 
@@ -121,6 +121,19 @@ Four benchmark suites covering 22+ test cases across six analysis categories:
 | `ManualComplexSuite`    | Human-verified complex multi-agent workflows              |
 
 Categories: navigation, sequence analysis, data loading, gene search, external database queries, and multi-step workflows. Results, LLM interactions, and performance metrics are exportable.
+
+**8 AI-callable benchmark tools** are registered as built-in tools, allowing the in-app AI assistant to open, start, stop, pause, resume, query status, retrieve results, and export benchmark data directly from chat:
+
+| Tool                       | Description                                                       |
+| -------------------------- | ----------------------------------------------------------------- |
+| `open_benchmark`           | Open the benchmark interface                                      |
+| `start_benchmark`          | Start a benchmark run with configurable suites, timeout, options  |
+| `stop_benchmark`           | Stop the currently running benchmark                              |
+| `pause_benchmark`          | Pause the running benchmark                                       |
+| `resume_benchmark`         | Resume a paused benchmark                                         |
+| `get_benchmark_results`    | Retrieve benchmark results/history by index                       |
+| `get_benchmark_status`     | Query current benchmark status (running, paused, suite count)     |
+| `export_benchmark_results` | Export results as JSON, CSV, or HTML                              |
 
 ### Additional Capabilities
 

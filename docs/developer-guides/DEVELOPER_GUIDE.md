@@ -476,6 +476,7 @@ tools_registry/
     ├── sequence/                 # Sequence analysis
     ├── protein/                  # Protein tools
     ├── database/                 # Database queries
+    ├── benchmark/                # LLM benchmark tools
     └── ...                       # More categories
 ```
 

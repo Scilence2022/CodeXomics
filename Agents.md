@@ -27,7 +27,7 @@ This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor
 - `src/renderer/modules/Agents/` – The internal Multi-Agent System logic.
 - `src/renderer/modules/chat/services/` – Extracted service classes for tool execution (`ToolExecutionService.js`, `FileOperationService.js`, `BlastService.js`, `AnnotationService.js`, `ProteinService.js`, `GenomeAnalysisService.js`, `IntentParserService.js`, `UIService.js`, `LLMContextService.js`).
 - `src/renderer/modules/chat/constants/` – Centralized constants used across the chat system.
-  - `ToolNames.js` – **Authoritative registry** of all tool name constants organized by category (NAVIGATION, SEARCH, SEQUENCE, STATE, FILE_LOADING, EXPORT, ANNOTATION, PROTEIN, BLAST, PATHWAY, ACTIONS, SYSTEM, TRACK_SETTINGS). Eliminates magic strings throughout the codebase.
+  - `ToolNames.js` – **Authoritative registry** of all tool name constants organized by category (NAVIGATION, SEARCH, SEQUENCE, STATE, FILE_LOADING, EXPORT, ANNOTATION, PROTEIN, BLAST, PATHWAY, ACTIONS, SYSTEM, TRACK_SETTINGS, BENCHMARK). Eliminates magic strings throughout the codebase.
   - `DefaultSettings.js` – Default configuration constants (`DEFAULT_CHAT_SETTINGS`, `DEFAULT_AGENT_SETTINGS`).
 - `src/renderer/modules/MemoryLayers/` – Memory management for agent context.
   - `ShortTermMemory.js` – Fast temporary storage for recent function calls with TTL-based eviction.
@@ -47,7 +47,7 @@ Rather than statically defining tools inside `ChatManager.js`, CodeXomics uses a
 
 **Tool Classification Architecture:**
 
-The authoritative source for whether a tool is "Built-in" is the `builtInToolsMap` in `tools_registry/builtin_tools_integration.js`. This Map contains every tool that can execute locally in the browser via `ChatManager.executeLocalTool()` or `ToolExecutionService` (~70+ entries across categories: file_loading, navigation, sequence, system, database, protein, data_management, external_apis, utility, annotation, sequence_editing, file_operations, primer_design). When the system prompt is generated:
+The authoritative source for whether a tool is "Built-in" is the `builtInToolsMap` in `tools_registry/builtin_tools_integration.js`. This Map contains every tool that can execute locally in the browser via `ChatManager.executeLocalTool()` or `ToolExecutionService` (~80+ entries across categories: file_loading, navigation, sequence, system, database, protein, data_management, external_apis, utility, annotation, sequence_editing, file_operations, primer_design, benchmark). When the system prompt is generated:
 1. Tools whose names exist in `builtInToolsMap` are **always** classified as "Directly Available (Built-in)", regardless of whether they came from keyword detection, the YAML registry, or the MCP server.
 2. Tools not in `builtInToolsMap` are classified as "Extended" (e.g., third-party MCP tools, dynamic plugin tools).
 3. Deduplication ensures each tool name appears only once in the system prompt, with built-in source taking priority over registry and MCP sources.
@@ -62,7 +62,11 @@ The authoritative source for whether a tool is "Built-in" is the `builtInToolsMa
    - Support prepositions: `\b(switch|go\s+to)\s+.*?\b(tabs?)\b` matches "switch to the analysis tab"
    - **Anti-pattern**: Never use `\b(verb)\s+(noun)\b` (strict adjacency) — it fails on natural language like "search for gene", "replace the sequence", "scroll to the left"
 4. **Wire the execution** in `ChatManager.executeLocalTool()` or the appropriate service class (`src/renderer/modules/chat/services/`) – Add the actual function call that performs the tool's operation.
-5. **MCP Server parity** – If the tool should also be available to external MCP clients (e.g., Claude Desktop), add the corresponding tool definition in `src/mcp-tools/` and ensure it's registered in `src/mcp-server.js`.
+5. **Add to `ToolNames.js`** (`src/renderer/modules/chat/constants/ToolNames.js`) – Add the tool name constant under the appropriate category. This eliminates magic strings and ensures consistency.
+6. **Add to `FunctionCallsOrganizer`** (`src/renderer/modules/FunctionCallsOrganizer.js`) – Add the tool to its category mapping so the `SmartExecutor` can organize and prioritize it.
+7. **Add intent keywords** in `tools_registry/registry_manager.js` – Add the tool category to `analyzeUserIntent()` intent keywords and `getIntentKeywords()` so the YAML registry can find relevant tools.
+8. **Add category to `tool_categories.yaml`** (`tools_registry/tool_categories.yaml`) – Without this entry, the registry manager cannot locate YAML files in the category directory.
+9. **MCP Server parity** – If the tool should also be available to external MCP clients (e.g., Claude Desktop), add the corresponding tool definition in `src/mcp-tools/` and ensure it's registered in `src/mcp-server.js`.
 
 **Critical Rules:**
 - **Rule**: You must keep the built-in ChatBox tool capabilities (via `tools_registry/` descriptors) and the MCP Server schemas (via `src/mcp-tools/`) updated synchronously to ensure functional parity across both access methods.
@@ -248,6 +252,41 @@ The `isSpecializedAgent()` map in `MultiAgentSystem` and each agent's `registerT
 - **Rule**: Never make `CoordinatorAgent.canExecute()` accept all tools unconditionally — this causes infinite recursion with `ToolExecutionService` PRIORITY 3.
 - **Rule**: `ChatManager.builtInTools` may be `undefined` at runtime. Never assume `this.chatManager.builtInTools.builtInToolsMap` exists. The `builtInToolsMap` lives on the `BuiltInToolsIntegration` class instance in `tools_registry/builtin_tools_integration.js`, not on `ChatManager`.
 - **Rule**: When adding a new tool name, also add it to `ToolNames.js` (`src/renderer/modules/chat/constants/ToolNames.js`) under the appropriate category constant. This eliminates magic strings and ensures consistency across the codebase.
+
+### Benchmark Tools & On-Demand Subsystem Initialization
+
+CodeXomics includes 8 built-in benchmark tools (`open_benchmark`, `start_benchmark`, `stop_benchmark`, `pause_benchmark`, `resume_benchmark`, `get_benchmark_results`, `get_benchmark_status`, `export_benchmark_results`) registered in `builtInToolsMap` under the `benchmark` category. These tools are classified as system/utility tools (NOT in any agent's `toolMapping`) and are handled by `ToolExecutionService` PRIORITY 7 fallback.
+
+**On-Demand Initialization Pattern:**
+
+The benchmark subsystem is NOT loaded at application startup. Instead, it uses lazy initialization via `GenomeBrowser.initializeBenchmarkSystemOnDemand()` (in `renderer-modular.js`). When a benchmark tool is called before the subsystem has been loaded:
+
+1. `ChatManager._getBenchmarkManager()` checks `this.app.benchmarkManager` and `window.benchmarkManager` → returns `null` if not loaded
+2. The calling method (e.g., `startBenchmark()`) calls `this.app.initializeBenchmarkSystemOnDemand()` which:
+   - Dynamically loads benchmark module scripts (`BenchmarkStatistics.js`, `BenchmarkReportGenerator.js`, `LLMBenchmarkFramework.js`, `BenchmarkUI.js`, `BenchmarkManager.js`) into `<head>`
+   - Creates `new BenchmarkManager(this, this.chatManager, this.configManager)` on the app instance
+   - Assigns `window.benchmarkManager = this.benchmarkManager`
+   - Returns the initialized `BenchmarkManager` instance
+3. The calling method then proceeds to use the freshly initialized `BenchmarkManager`
+
+**Key architectural pattern — `startBenchmark()` UI delegation:**
+
+`startBenchmark()` does NOT call `benchmarkManager.framework.runAllBenchmarks()` directly. Instead, it:
+1. Pre-configures the UI form elements (suite checkboxes, timeout, delay, report options) via `document.getElementById()`
+2. Delegates to `BenchmarkUI.startMainWindowBenchmark()` via `setTimeout` (250ms delay for DOM readiness)
+
+This ensures the UI owns the running state, elapsed timer, progress bar, and results display. Calling `framework.runAllBenchmarks()` directly would bypass the UI's state management, causing the progress bar and timer to remain idle.
+
+**`BenchmarkManager.showBenchmarkResults()` serialization:**
+
+Results may contain non-serializable objects (e.g., plugin functions). The method uses `JSON.parse(JSON.stringify(results))` with a safe fallback that sends only summary data (`suiteId`, `stats`, `duration`) if full serialization fails. This prevents `DataCloneError` when using `window.postMessage()`.
+
+**Critical Rules:**
+- **Rule**: Benchmark tools must NOT be added to any agent's `toolMapping`. They are system/utility tools handled by `ToolExecutionService` PRIORITY 7.
+- **Rule**: Never use `typeof openBenchmarkInterface === 'function'` as a fallback — `openBenchmarkInterface` is an instance method on the `GenomeBrowser` app, not a global function. Always use `this.app.initializeBenchmarkSystemOnDemand()` instead.
+- **Rule**: When calling `_getBenchmarkManager()`, use `let` (not `const`) so the variable can be reassigned after on-demand initialization.
+- **Rule**: The benchmark YAML schemas are in `tools_registry/benchmark/` (8 files). The category must be declared in `tools_registry/tool_categories.yaml` for the registry manager to locate them.
+- **Rule**: Parameter names in ChatManager methods must be consistent — use `params` or `parameters` for both the function argument and body references, never mix them.
 
 ### MCP Server Modes (Tools / Agent)
 CodeXomics MCP Server supports two operating modes that determine how external MCP clients interact with the platform:

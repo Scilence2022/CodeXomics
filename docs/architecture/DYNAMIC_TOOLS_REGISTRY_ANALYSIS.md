@@ -34,7 +34,7 @@ CodeXomics的动态工具注册系统是一个高度灵活、可扩展的架构�
 
 ### 工具类别系统
 
-系统采用分层分类结构，将工具组织为14个主要类别：
+系统采用分层分类结构，将工具组织为15个主要类别：
 
 ```yaml
 categories:
@@ -48,6 +48,7 @@ categories:
   file_operations: # 文件操作
   pathway: # 通路与BLAST
   sequence_editing: # 序列编辑
+  benchmark: # LLM基准测试管理
   system: # 系统管理
   plugin_management: # 插件管理
   coordination: # 多智能体协调
