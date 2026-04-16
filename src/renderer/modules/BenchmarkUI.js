@@ -600,7 +600,7 @@ class BenchmarkUI {
                                         <span>⚙️ Automatic Simple Tests <small>(40 tests)</small></span>
                                     </label>
                                     <label class="checkbox-item">
-                                        <input type="checkbox" id="suite-automatic_complex">
+                                        <input type="checkbox" id="suite-automatic_complex" checked>
                                         <span>🔧 Automatic Complex Tests <small>(3 tests)</small></span>
                                     </label>
                                     <label class="checkbox-item">
@@ -3791,7 +3791,7 @@ class BenchmarkUI {
                                 <input type="checkbox" id="suite-automatic_simple" checked> ⚙️ Automatic Simple Tests
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-automatic_complex"> 🔧 Automatic Complex Tests
+                                <input type="checkbox" id="suite-automatic_complex" checked> 🔧 Automatic Complex Tests
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
                                 <input type="checkbox" id="suite-manual_suite"> 👥 Manual Tests

@@ -14442,7 +14442,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Wait for initialization
     await bm.waitForInitialization();
 
-    const suites = parameters.suites || ['automatic_simple'];
+    const suites = parameters.suites || ['automatic_simple', 'automatic_complex'];
     const timeout = parameters.timeout !== undefined ? parameters.timeout : 120000;
     const testDelay = parameters.test_delay !== undefined ? parameters.test_delay : 60000;
     const generateReport = parameters.generate_report !== undefined ? parameters.generate_report : true;

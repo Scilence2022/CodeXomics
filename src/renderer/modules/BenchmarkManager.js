@@ -343,7 +343,7 @@ class BenchmarkManager {
                             <h3>Test Suites</h3>
                             <div class="suite-checkboxes">
                                 <label><input type="checkbox" value="automatic_simple" checked> ⚙️ Automatic Simple Tests</label>
-                                <label><input type="checkbox" value="automatic_complex"> 🔧 Automatic Complex Tests</label>
+                                <label><input type="checkbox" value="automatic_complex" checked> 🔧 Automatic Complex Tests</label>
                                 <label><input type="checkbox" value="manual_simple"> 👥 Manual Simple Tests</label>
                                 <label><input type="checkbox" value="manual_complex"> 🧠 Manual Complex Tests</label>
                             </div>
