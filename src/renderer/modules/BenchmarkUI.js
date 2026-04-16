@@ -752,6 +752,14 @@ class BenchmarkUI {
                                     <span class="progress-label">Elapsed:</span>
                                     <span class="progress-value" id="elapsedTime">00:00</span>
                                 </div>
+                                <div class="progress-item">
+                                    <span class="progress-label">Provider:</span>
+                                    <span class="progress-value" id="currentProvider">-</span>
+                                </div>
+                                <div class="progress-item">
+                                    <span class="progress-label">Model:</span>
+                                    <span class="progress-value" id="currentModel">-</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2056,6 +2064,9 @@ class BenchmarkUI {
       document.getElementById('stopBenchmark').disabled = false;
       document.getElementById('progressSection').style.display = 'block';
 
+      // Display current model information
+      this.updateModelInfo();
+
       // Start elapsed time updater (every second)
       this.elapsedTimeInterval = setInterval(() => {
         const elapsedTime = document.getElementById('elapsedTime');
@@ -3253,26 +3264,11 @@ class BenchmarkUI {
       console.log(`🏆 [UI Suite Update] Current suite updated to: ${suiteId}`);
     }
 
-    // Update cumulative test counts when suite completes (suiteResult is provided)
+    // Per-test counting is already handled in updateMainWindowTestProgress via updateIndividualTestCount().
+    // Do NOT accumulate suite-level stats here to avoid double-counting.
     if (suiteResult) {
-      const completedElement = document.getElementById('completedTests');
-      const passedElement = document.getElementById('passedTests');
-      const failedElement = document.getElementById('failedTests');
-
-      const currentCompleted = parseInt(completedElement?.textContent || '0');
-      const currentPassed = parseInt(passedElement?.textContent || '0');
-      const currentFailed = parseInt(failedElement?.textContent || '0');
-
-      const newCompleted = currentCompleted + suiteResult.stats.totalTests;
-      const newPassed = currentPassed + suiteResult.stats.passedTests;
-      const newFailed = currentFailed + suiteResult.stats.failedTests;
-
-      if (completedElement) completedElement.textContent = newCompleted;
-      if (passedElement) passedElement.textContent = newPassed;
-      if (failedElement) failedElement.textContent = newFailed;
-
       console.log(
-        `✅ [UI Suite Complete] Suite ${suiteId} completed - Updated totals: ${newCompleted} completed, ${newPassed} passed, ${newFailed} failed`
+        `✅ [UI Suite Complete] Suite ${suiteId} completed - Stats: ${suiteResult.stats.totalTests} total, ${suiteResult.stats.passedTests} passed, ${suiteResult.stats.failedTests} failed`
       );
     } else {
       // Suite is starting - no stats to update yet
@@ -3387,6 +3383,8 @@ class BenchmarkUI {
     const passedTests = document.getElementById('passedTests');
     const failedTests = document.getElementById('failedTests');
     const elapsedTime = document.getElementById('elapsedTime');
+    const currentProvider = document.getElementById('currentProvider');
+    const currentModel = document.getElementById('currentModel');
 
     if (progressFill) progressFill.style.width = '0%';
     if (currentSuite) currentSuite.textContent = '-';
@@ -3395,6 +3393,8 @@ class BenchmarkUI {
     if (passedTests) passedTests.textContent = '0';
     if (failedTests) failedTests.textContent = '0';
     if (elapsedTime) elapsedTime.textContent = '00:00'; // Reset elapsed time
+    if (currentProvider) currentProvider.textContent = '-';
+    if (currentModel) currentModel.textContent = '-';
 
     // Reset percentage display
     const progressPercentage = document.getElementById('progressPercentage');
@@ -3407,6 +3407,41 @@ class BenchmarkUI {
       '🔄 [UI Reset] Progress counters reset for new benchmark run, startTime set to:',
       new Date(this.startTime).toLocaleTimeString()
     );
+  }
+
+  /**
+   * Update model information display in the benchmark progress UI
+   */
+  updateModelInfo() {
+    const providerElement = document.getElementById('currentProvider');
+    const modelElement = document.getElementById('currentModel');
+
+    try {
+      const llmConfigManager = this.framework?.chatManager?.llmConfigManager;
+      if (!llmConfigManager) {
+        if (providerElement) providerElement.textContent = 'Not configured';
+        if (modelElement) modelElement.textContent = '-';
+        return;
+      }
+
+      const providerKey = llmConfigManager.getProviderForModelType('task');
+      const modelName = llmConfigManager.getModelForModelType('task');
+
+      if (providerKey && llmConfigManager.providers[providerKey]) {
+        const providerName = llmConfigManager.providers[providerKey].name || providerKey;
+        if (providerElement) providerElement.textContent = providerName;
+      } else {
+        if (providerElement) providerElement.textContent = providerKey || 'Unknown';
+      }
+
+      if (modelElement) modelElement.textContent = modelName || 'Unknown';
+
+      console.log(`🤖 [UI Model Info] Provider: ${providerKey}, Model: ${modelName}`);
+    } catch (error) {
+      console.warn('⚠️ [UI Model Info] Failed to get model info:', error.message);
+      if (providerElement) providerElement.textContent = 'Error';
+      if (modelElement) modelElement.textContent = 'Error';
+    }
   }
 
   /**
@@ -3824,6 +3859,14 @@ class BenchmarkUI {
                     <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196f3;">
                         <span style="color: #1565c0; font-weight: 500;">Progress:</span>
                         <span id="progressPercentage" style="color: #1565c0; font-weight: 600;">0%</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #4caf50;">
+                        <span style="color: #2e7d32; font-weight: 500;">Provider:</span>
+                        <span id="currentProvider" style="color: #2e7d32; font-weight: 600;">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #4caf50;">
+                        <span style="color: #2e7d32; font-weight: 500;">Model:</span>
+                        <span id="currentModel" style="color: #2e7d32; font-weight: 600;">-</span>
                     </div>
                 </div>
             </div>
@@ -4416,6 +4459,9 @@ class BenchmarkUI {
                     
                     // Reset progress counters for new benchmark run
                     this.resetProgressCounters();
+
+                    // Display current model information
+                    this.updateModelInfo();
                     
                     this.updateStatus('running', 'Running Benchmark');
                     
@@ -4490,6 +4536,127 @@ class BenchmarkUI {
             updateTestProgress(testId) {
                 const currentTest = document.getElementById('currentTest');
                 if (currentTest) currentTest.textContent = testId || '-';
+            }
+
+            updateModelInfo() {
+                const providerElement = document.getElementById('currentProvider');
+                const modelElement = document.getElementById('currentModel');
+
+                try {
+                    const llmConfigManager = this.benchmarkManager?.framework?.chatManager?.llmConfigManager;
+                    if (!llmConfigManager) {
+                        if (providerElement) providerElement.textContent = 'Not configured';
+                        if (modelElement) modelElement.textContent = '-';
+                        return;
+                    }
+
+                    const providerKey = llmConfigManager.getProviderForModelType('task');
+                    const modelName = llmConfigManager.getModelForModelType('task');
+
+                    if (providerKey && llmConfigManager.providers[providerKey]) {
+                        const providerName = llmConfigManager.providers[providerKey].name || providerKey;
+                        if (providerElement) providerElement.textContent = providerName;
+                    } else {
+                        if (providerElement) providerElement.textContent = providerKey || 'Unknown';
+                    }
+
+                    if (modelElement) modelElement.textContent = modelName || 'Unknown';
+                } catch (error) {
+                    console.warn('Failed to get model info:', error.message);
+                    if (providerElement) providerElement.textContent = 'Error';
+                    if (modelElement) modelElement.textContent = 'Error';
+                }
+            }
+
+            resetProgressCounters() {
+                const progressFill = document.getElementById('progressFill');
+                const currentSuite = document.getElementById('currentSuite');
+                const currentTest = document.getElementById('currentTest');
+                const completedTests = document.getElementById('completedTests');
+                const passedTests = document.getElementById('passedTests');
+                const failedTests = document.getElementById('failedTests');
+                const elapsedTime = document.getElementById('elapsedTime');
+                const progressPercentage = document.getElementById('progressPercentage');
+                const currentProvider = document.getElementById('currentProvider');
+                const currentModel = document.getElementById('currentModel');
+
+                if (progressFill) progressFill.style.width = '0%';
+                if (currentSuite) currentSuite.textContent = '-';
+                if (currentTest) currentTest.textContent = '-';
+                if (completedTests) completedTests.textContent = '0';
+                if (passedTests) passedTests.textContent = '0';
+                if (failedTests) failedTests.textContent = '0';
+                if (elapsedTime) elapsedTime.textContent = '00:00';
+                if (progressPercentage) progressPercentage.textContent = '0%';
+                if (currentProvider) currentProvider.textContent = '-';
+                if (currentModel) currentModel.textContent = '-';
+
+                this.startTime = Date.now();
+            }
+
+            updateMainWindowProgress(progress, suiteId, suiteResult) {
+                const progressFill = document.getElementById('progressFill');
+                const progressPercentage = document.getElementById('progressPercentage');
+                const currentSuite = document.getElementById('currentSuite');
+
+                if (progressFill) {
+                    const percentage = Math.min(100, Math.max(0, progress * 100));
+                    progressFill.style.width = percentage + '%';
+                }
+                if (progressPercentage) {
+                    const percentage = Math.min(100, Math.max(0, progress * 100));
+                    progressPercentage.textContent = percentage.toFixed(1) + '%';
+                }
+                if (currentSuite && suiteId) {
+                    currentSuite.textContent = suiteId;
+                }
+            }
+
+            updateMainWindowTestProgress(progress, testId, testResult, suiteId) {
+                const currentTest = document.getElementById('currentTest');
+                const progressFill = document.getElementById('progressFill');
+                const progressPercentage = document.getElementById('progressPercentage');
+
+                if (currentTest && testId) {
+                    currentTest.textContent = testId;
+                }
+
+                if (progressFill && typeof progress === 'number') {
+                    const percentage = Math.min(100, Math.max(0, progress * 100));
+                    progressFill.style.width = percentage + '%';
+                }
+                if (progressPercentage && typeof progress === 'number') {
+                    const percentage = Math.min(100, Math.max(0, progress * 100));
+                    progressPercentage.textContent = percentage.toFixed(1) + '%';
+                }
+
+                // Update elapsed time
+                const elapsedTime = document.getElementById('elapsedTime');
+                if (elapsedTime && this.startTime) {
+                    const elapsed = Date.now() - this.startTime;
+                    const minutes = Math.floor(elapsed / 60000);
+                    const seconds = Math.floor((elapsed % 60000) / 1000);
+                    elapsedTime.textContent = \`\${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}\`;
+                }
+
+                // Update individual test counts
+                if (testResult && testResult.status !== 'running') {
+                    const completedElement = document.getElementById('completedTests');
+                    const passedElement = document.getElementById('passedTests');
+                    const failedElement = document.getElementById('failedTests');
+
+                    if (completedElement) {
+                        const current = parseInt(completedElement.textContent || '0');
+                        completedElement.textContent = current + 1;
+                    }
+                    if (testResult.success && passedElement) {
+                        const current = parseInt(passedElement.textContent || '0');
+                        passedElement.textContent = current + 1;
+                    } else if (!testResult.success && failedElement) {
+                        const current = parseInt(failedElement.textContent || '0');
+                        failedElement.textContent = current + 1;
+                    }
+                }
             }
 
             displayResults(results) {
