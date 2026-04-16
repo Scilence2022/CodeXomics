@@ -760,6 +760,10 @@ class BenchmarkUI {
                                     <span class="progress-label">Model:</span>
                                     <span class="progress-value" id="currentModel">-</span>
                                 </div>
+                                <div class="progress-item">
+                                    <span class="progress-label">Multi-Agent:</span>
+                                    <span class="progress-value" id="currentAgentMode">-</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3395,6 +3399,11 @@ class BenchmarkUI {
     if (elapsedTime) elapsedTime.textContent = '00:00'; // Reset elapsed time
     if (currentProvider) currentProvider.textContent = '-';
     if (currentModel) currentModel.textContent = '-';
+    const agentModeElement = document.getElementById('currentAgentMode');
+    if (agentModeElement) {
+        agentModeElement.textContent = '-';
+        agentModeElement.style.color = '#6c757d';
+    }
 
     // Reset percentage display
     const progressPercentage = document.getElementById('progressPercentage');
@@ -3415,12 +3424,16 @@ class BenchmarkUI {
   updateModelInfo() {
     const providerElement = document.getElementById('currentProvider');
     const modelElement = document.getElementById('currentModel');
+    const agentModeElement = document.getElementById('currentAgentMode');
 
     try {
-      const llmConfigManager = this.framework?.chatManager?.llmConfigManager;
+      const chatManager = this.framework?.chatManager;
+      const llmConfigManager = chatManager?.llmConfigManager;
+
       if (!llmConfigManager) {
         if (providerElement) providerElement.textContent = 'Not configured';
         if (modelElement) modelElement.textContent = '-';
+        if (agentModeElement) agentModeElement.textContent = '-';
         return;
       }
 
@@ -3436,11 +3449,19 @@ class BenchmarkUI {
 
       if (modelElement) modelElement.textContent = modelName || 'Unknown';
 
-      console.log(`🤖 [UI Model Info] Provider: ${providerKey}, Model: ${modelName}`);
+      // Update Multi-Agent status
+      if (agentModeElement) {
+        const isAgentEnabled = chatManager?.agentSystemEnabled || false;
+        agentModeElement.textContent = isAgentEnabled ? 'Enabled' : 'Disabled';
+        agentModeElement.style.color = isAgentEnabled ? '#27ae60' : '#6c757d'; // Green for enabled, gray for disabled
+      }
+
+      console.log(`🤖 [UI Model Info] Provider: ${providerKey}, Model: ${modelName}, Multi-Agent: ${chatManager?.agentSystemEnabled}`);
     } catch (error) {
       console.warn('⚠️ [UI Model Info] Failed to get model info:', error.message);
       if (providerElement) providerElement.textContent = 'Error';
       if (modelElement) modelElement.textContent = 'Error';
+      if (agentModeElement) agentModeElement.textContent = 'Error';
     }
   }
 
@@ -3867,6 +3888,10 @@ class BenchmarkUI {
                     <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #4caf50;">
                         <span style="color: #2e7d32; font-weight: 500;">Model:</span>
                         <span id="currentModel" style="color: #2e7d32; font-weight: 600;">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #4caf50;">
+                        <span style="color: #2e7d32; font-weight: 500;">Multi-Agent:</span>
+                        <span id="currentAgentMode" style="color: #2e7d32; font-weight: 600;">-</span>
                     </div>
                 </div>
             </div>
@@ -4541,12 +4566,16 @@ class BenchmarkUI {
             updateModelInfo() {
                 const providerElement = document.getElementById('currentProvider');
                 const modelElement = document.getElementById('currentModel');
+                const agentModeElement = document.getElementById('currentAgentMode');
 
                 try {
-                    const llmConfigManager = this.benchmarkManager?.framework?.chatManager?.llmConfigManager;
+                    const chatManager = this.benchmarkManager?.framework?.chatManager;
+                    const llmConfigManager = chatManager?.llmConfigManager;
+                    
                     if (!llmConfigManager) {
                         if (providerElement) providerElement.textContent = 'Not configured';
                         if (modelElement) modelElement.textContent = '-';
+                        if (agentModeElement) agentModeElement.textContent = '-';
                         return;
                     }
 
@@ -4561,10 +4590,20 @@ class BenchmarkUI {
                     }
 
                     if (modelElement) modelElement.textContent = modelName || 'Unknown';
+                    
+                    // Update Multi-Agent status
+                    if (agentModeElement) {
+                        const isAgentEnabled = chatManager?.agentSystemEnabled || false;
+                        agentModeElement.textContent = isAgentEnabled ? 'Enabled' : 'Disabled';
+                        agentModeElement.style.color = isAgentEnabled ? '#2e7d32' : '#6c757d'; // Green for enabled, gray for disabled
+                    }
+                    
+                    console.log('🤖 [UI Model Info] Provider: ' + providerKey + ', Model: ' + modelName + ', Multi-Agent: ' + chatManager?.agentSystemEnabled);
                 } catch (error) {
                     console.warn('Failed to get model info:', error.message);
                     if (providerElement) providerElement.textContent = 'Error';
                     if (modelElement) modelElement.textContent = 'Error';
+                    if (agentModeElement) agentModeElement.textContent = 'Error';
                 }
             }
 
@@ -4590,6 +4629,11 @@ class BenchmarkUI {
                 if (progressPercentage) progressPercentage.textContent = '0%';
                 if (currentProvider) currentProvider.textContent = '-';
                 if (currentModel) currentModel.textContent = '-';
+                const agentModeElement = document.getElementById('currentAgentMode');
+                if (agentModeElement) {
+                    agentModeElement.textContent = '-';
+                    agentModeElement.style.color = '#6c757d';
+                }
 
                 this.startTime = Date.now();
             }
