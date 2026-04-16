@@ -2212,6 +2212,15 @@ class ChatManager {
       console.log(`Using position ${position} with default ${defaultRange}bp range: ${start}-${end}`);
     }
 
+    // Handle start=end or start-only: center on position with ~2kb window (±1kb)
+    if (start !== undefined && (end === undefined || start === end)) {
+      const center = start;
+      const halfRange = 1000;
+      start = Math.max(1, center - halfRange);
+      end = center + halfRange;
+      console.log(`Centering on position ${center} with ±${halfRange}bp range: ${start}-${end}`);
+    }
+
     // Validate required parameters
     if (!chromosome || start === undefined || end === undefined) {
       throw new Error('Missing required parameters: chromosome and either (start, end) or position');
@@ -2322,6 +2331,16 @@ class ChatManager {
           finalEnd = position + Math.floor(defaultRange / 2);
           usedDefaultRange = true;
           console.log(`Using position ${position} with default ${defaultRange}bp range: ${finalStart}-${finalEnd}`);
+        }
+
+        // Handle start=end or start-only: center on position with ~2kb window (±1kb)
+        if (start !== undefined && (end === undefined || start === end)) {
+          const center = start;
+          const halfRange = 1000;
+          finalStart = Math.max(1, center - halfRange);
+          finalEnd = center + halfRange;
+          usedDefaultRange = true;
+          console.log(`Centering on position ${center} with ±${halfRange}bp range: ${finalStart}-${finalEnd}`);
         }
 
         if (finalStart && finalEnd) {

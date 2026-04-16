@@ -25,12 +25,12 @@ parameters:
       examples: ['chr1', 'NC_000913.3', 'U00096', 'chromosome1']
     start:
       type: 'number'
-      description: 'Start position in base pairs (1-based coordinate)'
+      description: 'Start position in base pairs (1-based). If provided without end, or if start=end, the view will center on this position with a ~2kb window (upstream 1kb, downstream 1kb).'
       minimum: 1
       examples: [1000, 50000, 1000000]
     end:
       type: 'number'
-      description: 'End position in base pairs (1-based coordinate)'
+      description: 'End position in base pairs (1-based). Optional — if omitted or equal to start, a 2kb centered window is used instead.'
       minimum: 1
       examples: [2000, 60000, 1002000]
     position:
@@ -46,6 +46,7 @@ parameters:
   anyOf:
     - required: ['start', 'end']
     - required: ['position']
+    - required: ['start']  # start-only: center on position with ±1kb window
 
 # High-quality examples for few-shot learning
 sample_usages:
@@ -68,6 +69,16 @@ sample_usages:
     tool_call: "navigate_to_position(chromosome='chr1', start=50000, end=60000)"
     thought: 'User wants to see a specific 10kb region, so I use start and end parameters'
     expected_result: 'Browser displays the 10kb region with all contained features'
+
+  - user_query: 'Navigate to position 2000000 on U00096'
+    tool_call: "navigate_to_position(chromosome='U00096', start=2000000)"
+    thought: 'User provides start position only — the view will center on 2000000 with ±1kb window (1999000-2001000)'
+    expected_result: 'Browser centers on 2000000 showing 1999000-2001000'
+
+  - user_query: 'Go to 2000000 on chromosome U00096'
+    tool_call: "navigate_to_position(chromosome='U00096', start=2000000, end=2000000)"
+    thought: 'User provides start=end — this is treated as a single-point request and will center with ±1kb window'
+    expected_result: 'Browser centers on 2000000 showing 1999000-2001000'
 
 # Tool relationships and dependencies
 relationships:
