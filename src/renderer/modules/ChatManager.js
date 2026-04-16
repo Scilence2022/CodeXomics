@@ -469,6 +469,51 @@ class ChatManager {
         ...this.agentSystemSettings,
         ...savedSettings,
       };
+
+      // Also load from multiAgentSettings (used by MultiAgentSettingsManager) for sync
+      const masSaved = this.configManager.get('multiAgentSettings', {});
+      if (masSaved && Object.keys(masSaved).length > 0) {
+        // Map multiAgentSettings keys to agentSystemSettings keys
+        if (masSaved.multiAgentSystemEnabled !== undefined) {
+          this.agentSystemSettings.enabled = masSaved.multiAgentSystemEnabled;
+        }
+        if (masSaved.multiAgentAutoOptimize !== undefined) {
+          this.agentSystemSettings.autoOptimize = masSaved.multiAgentAutoOptimize;
+        }
+        if (masSaved.multiAgentShowInfo !== undefined) {
+          this.agentSystemSettings.showAgentInfo = masSaved.multiAgentShowInfo;
+        }
+        if (masSaved.multiAgentMemoryEnabled !== undefined) {
+          this.agentSystemSettings.memoryEnabled = masSaved.multiAgentMemoryEnabled;
+        }
+        if (masSaved.multiAgentCacheEnabled !== undefined) {
+          this.agentSystemSettings.cacheEnabled = masSaved.multiAgentCacheEnabled;
+        }
+        if (masSaved.multiAgentLLMTemperature !== undefined) {
+          this.agentSystemSettings.llmTemperature = masSaved.multiAgentLLMTemperature;
+        }
+        if (masSaved.multiAgentLLMMaxTokens !== undefined) {
+          this.agentSystemSettings.llmMaxTokens = masSaved.multiAgentLLMMaxTokens;
+        }
+        if (masSaved.multiAgentLLMTimeout !== undefined) {
+          this.agentSystemSettings.llmTimeout = masSaved.multiAgentLLMTimeout;
+        }
+        if (masSaved.multiAgentLLMRetryAttempts !== undefined) {
+          this.agentSystemSettings.llmRetryAttempts = masSaved.multiAgentLLMRetryAttempts;
+        }
+        if (masSaved.multiAgentLLMUseSystemPrompt !== undefined) {
+          this.agentSystemSettings.llmUseSystemPrompt = masSaved.multiAgentLLMUseSystemPrompt;
+        }
+        if (masSaved.multiAgentLLMEnableFunctionCalling !== undefined) {
+          this.agentSystemSettings.llmEnableFunctionCalling = masSaved.multiAgentLLMEnableFunctionCalling;
+        }
+        if (masSaved.multiAgentModelType !== undefined) {
+          this.agentSystemSettings.llmProvider = masSaved.multiAgentModelType;
+        }
+      }
+
+      // Sync agentSystemEnabled from loaded settings
+      this.agentSystemEnabled = this.agentSystemSettings.enabled;
     } catch (error) {
       // Failed to load agent system settings
     }

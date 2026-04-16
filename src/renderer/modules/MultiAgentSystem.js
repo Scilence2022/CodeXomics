@@ -269,6 +269,12 @@ class MultiAgentSystem {
 
     // Evaluate each agent's capability
     for (const [agentName, agent] of this.agents) {
+      // Skip agents disabled via settings (Multi-Agent Settings Manager)
+      if (agent._enabledBySettings === false) {
+        console.log(`🤖 Skipping disabled agent ${agentName} for ${functionName}`);
+        continue;
+      }
+
       const capability = agent.canExecute(functionName, parameters);
       if (capability.canExecute) {
         const score = this.calculateAgentScore(agentName, functionName, context);

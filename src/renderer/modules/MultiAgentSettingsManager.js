@@ -362,6 +362,24 @@ class MultiAgentSettingsManager {
     try {
       const savedSettings = this.configManager.get('multiAgentSettings', {});
       this.currentSettings = { ...this.defaultSettings, ...savedSettings };
+
+      // Also sync from ChatManager's agentSystemSettings for consistency
+      if (window.chatManager && window.chatManager.agentSystemSettings) {
+        const cms = window.chatManager.agentSystemSettings;
+        // Merge ChatManager settings into our currentSettings
+        if (cms.enabled !== undefined) this.currentSettings.multiAgentSystemEnabled = cms.enabled;
+        if (cms.autoOptimize !== undefined) this.currentSettings.multiAgentAutoOptimize = cms.autoOptimize;
+        if (cms.showAgentInfo !== undefined) this.currentSettings.multiAgentShowInfo = cms.showAgentInfo;
+        if (cms.memoryEnabled !== undefined) this.currentSettings.multiAgentMemoryEnabled = cms.memoryEnabled;
+        if (cms.cacheEnabled !== undefined) this.currentSettings.multiAgentCacheEnabled = cms.cacheEnabled;
+        if (cms.llmTemperature !== undefined) this.currentSettings.multiAgentLLMTemperature = cms.llmTemperature;
+        if (cms.llmMaxTokens !== undefined) this.currentSettings.multiAgentLLMMaxTokens = cms.llmMaxTokens;
+        if (cms.llmTimeout !== undefined) this.currentSettings.multiAgentLLMTimeout = cms.llmTimeout;
+        if (cms.llmRetryAttempts !== undefined) this.currentSettings.multiAgentLLMRetryAttempts = cms.llmRetryAttempts;
+        if (cms.llmUseSystemPrompt !== undefined) this.currentSettings.multiAgentLLMUseSystemPrompt = cms.llmUseSystemPrompt;
+        if (cms.llmEnableFunctionCalling !== undefined) this.currentSettings.multiAgentLLMEnableFunctionCalling = cms.llmEnableFunctionCalling;
+      }
+
       console.log('Multi-Agent Settings loaded:', this.currentSettings);
     } catch (error) {
       console.error('Error loading multi-agent settings:', error);
@@ -382,6 +400,28 @@ class MultiAgentSettingsManager {
         window.chatManager.agentSystemEnabled = enabled;
         window.chatManager.agentSystemSettings.enabled = enabled;
         window.chatManager.updateMultiAgentToggleButton();
+      }
+
+      // Also sync to ChatManager's agentSystemSettings for persistence consistency
+      if (window.chatManager) {
+        const settings = this.currentSettings;
+        window.chatManager.agentSystemSettings = {
+          ...window.chatManager.agentSystemSettings,
+          enabled: settings.multiAgentSystemEnabled,
+          autoOptimize: settings.multiAgentAutoOptimize,
+          showAgentInfo: settings.multiAgentShowInfo,
+          memoryEnabled: settings.multiAgentMemoryEnabled,
+          cacheEnabled: settings.multiAgentCacheEnabled,
+          llmProvider: settings.multiAgentModelType || 'auto',
+          llmModel: 'auto',
+          llmTemperature: settings.multiAgentLLMTemperature,
+          llmMaxTokens: settings.multiAgentLLMMaxTokens,
+          llmTimeout: settings.multiAgentLLMTimeout,
+          llmRetryAttempts: settings.multiAgentLLMRetryAttempts || settings.multiAgentRetryAttempts,
+          llmUseSystemPrompt: settings.multiAgentLLMUseSystemPrompt,
+          llmEnableFunctionCalling: settings.multiAgentLLMEnableFunctionCalling,
+        };
+        window.chatManager.saveAgentSystemSettings();
       }
 
       console.log('Multi-Agent Settings saved and synced:', this.currentSettings);
@@ -483,6 +523,162 @@ class MultiAgentSettingsManager {
         this.refreshMetrics();
       });
     }
+
+    // Real-time change listeners for all settings
+    this.setupRealTimeChangeListeners();
+  }
+
+  /**
+   * Set up real-time change listeners so settings apply immediately
+   * without requiring explicit "Save Settings" click.
+   */
+  setupRealTimeChangeListeners() {
+    const syncSetting = (key, value) => {
+      this.currentSettings[key] = value;
+      this.saveSettings();
+    };
+
+    // System tab checkboxes
+    const systemCheckboxes = [
+      'multiAgentSystemEnabled',
+      'multiAgentAutoOptimize',
+      'multiAgentShowInfo',
+      'multiAgentMemoryEnabled',
+      'multiAgentCacheEnabled',
+    ];
+    systemCheckboxes.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => syncSetting(id, el.checked));
+      }
+    });
+
+    // System tab number inputs
+    const systemInputs = ['multiAgentMaxConcurrent', 'multiAgentTimeout', 'multiAgentRetryAttempts'];
+    systemInputs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => syncSetting(id, parseInt(el.value) || el.defaultValue));
+      }
+    });
+
+    // LLM tab
+    const llmCheckboxes = ['multiAgentLLMUseSystemPrompt', 'multiAgentLLMEnableFunctionCalling'];
+    llmCheckboxes.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => syncSetting(id, el.checked));
+      }
+    });
+
+    const llmRange = document.getElementById('multiAgentLLMTemperature');
+    if (llmRange) {
+      llmRange.addEventListener('change', () => syncSetting('multiAgentLLMTemperature', parseFloat(llmRange.value)));
+    }
+
+    const llmInputs = ['multiAgentLLMMaxTokens', 'multiAgentLLMTimeout'];
+    llmInputs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => syncSetting(id, parseInt(el.value) || el.defaultValue));
+      }
+    });
+
+    // Agent Management tab
+    const agentCheckboxes = [
+      'agentNavigationEnabled',
+      'agentAnalysisEnabled',
+      'agentDataEnabled',
+      'agentSequenceEnabled',
+      'agentProteinEnabled',
+      'agentNetworkEnabled',
+      'agentExternalEnabled',
+      'agentPluginEnabled',
+    ];
+    agentCheckboxes.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => {
+          syncSetting(id, el.checked);
+          this.syncAgentEnabledState();
+        });
+      }
+    });
+
+    // Memory System tab
+    const memoryCheckboxes = [
+      'multiAgentMemorySystemEnabled',
+      'multiAgentMemoryCacheEnabled',
+      'multiAgentMemoryOptimizationEnabled',
+    ];
+    memoryCheckboxes.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => syncSetting(id, el.checked));
+      }
+    });
+
+    const memoryInputs = [
+      'multiAgentMemoryCleanupInterval',
+      'multiAgentMemoryMaxEntries',
+      'multiAgentShortTermMaxSize',
+      'multiAgentShortTermTTL',
+      'multiAgentMediumTermMaxSize',
+      'multiAgentMediumTermTTL',
+      'multiAgentLongTermMaxSize',
+      'multiAgentLongTermTTL',
+    ];
+    memoryInputs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => syncSetting(id, parseInt(el.value) || el.defaultValue));
+      }
+    });
+
+    // Performance tab
+    const perfCheckboxes = ['multiAgentPerformanceMonitoring', 'multiAgentAutoScaling'];
+    perfCheckboxes.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => syncSetting(id, el.checked));
+      }
+    });
+
+    const perfInputs = ['multiAgentMaxConcurrentTasks', 'multiAgentTaskQueueSize'];
+    perfInputs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => syncSetting(id, parseInt(el.value) || el.defaultValue));
+      }
+    });
+  }
+
+  /**
+   * Sync agent enabled state from settings to MultiAgentSystem.
+   * When an agent is disabled in settings, prevent it from being selected.
+   */
+  syncAgentEnabledState() {
+    if (!window.chatManager || !window.chatManager.multiAgentSystem) return;
+
+    const agentNameMap = {
+      agentNavigationEnabled: 'NavigationAgent',
+      agentAnalysisEnabled: 'AnalysisAgent',
+      agentDataEnabled: 'DataAgent',
+      agentExternalEnabled: 'ExternalAgent',
+      agentPluginEnabled: 'PluginAgent',
+      agentDeepResearchEnabled: 'DeepResearchAgent',
+      agentCoordinatorEnabled: 'CoordinatorAgent',
+    };
+
+    const mas = window.chatManager.multiAgentSystem;
+
+    for (const [settingKey, agentName] of Object.entries(agentNameMap)) {
+      const enabled = this.currentSettings[settingKey] !== false;
+      const agent = mas.agents.get(agentName);
+      if (agent) {
+        agent._enabledBySettings = enabled;
+      }
+    }
   }
 
   /**
@@ -522,6 +718,9 @@ class MultiAgentSettingsManager {
     this.modal = document.getElementById('multiAgentSettingsModal');
     if (this.modal) {
       this.loadSettingsToUI();
+
+      // Apply saved agent enabled state to MultiAgentSystem
+      this.syncAgentEnabledState();
 
       // Reset any drag inline styles so the modal re-centers on open
       if (window.modalDragManager) {
@@ -922,48 +1121,6 @@ class MultiAgentSettingsManager {
           ? this.currentSettings.multiAgentModelType
           : inherited.modelType,
     };
-  }
-
-  // Reset settings to default values
-  resetToDefaults() {
-    if (
-      confirm(
-        'Are you sure you want to reset all Multi-Agent System settings to their default values? This action cannot be undone.'
-      )
-    ) {
-      // Reset to default settings
-      this.currentSettings = {
-        enabled: false,
-        agentTeamLeader: 'auto',
-        maxAgents: 3,
-        communicationProtocol: 'hierarchical',
-        taskDistribution: 'balanced',
-        conflictResolution: 'vote',
-        performanceMonitoring: true,
-        memorySharing: true,
-        knowledgeCache: true,
-        adaptiveLearning: false,
-        llmProvider: 'auto',
-        llmModel: 'auto',
-        temperature: 0.7,
-        maxTokens: 4000,
-        timeout: 30000,
-        retryAttempts: 3,
-        useSystemPrompt: true,
-        enableFunctionCalling: true,
-      };
-
-      // Update the UI
-      this.populateForm();
-
-      // Save settings
-      this.saveSettings();
-
-      // Show notification
-      if (window.chatManager) {
-        window.chatManager.showNotification('Multi-Agent System settings reset to defaults successfully!', 'success');
-      }
-    }
   }
 }
 
