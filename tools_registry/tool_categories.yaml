@@ -156,6 +156,17 @@ categories:
       - 'system_configuration'
     tools_count: 2
 
+  benchmark:
+    name: 'Benchmark Management'
+    description: 'Tools for running, controlling, and inspecting LLM benchmark tests'
+    icon: '📈'
+    priority: 2
+    color: '#00ACC1'
+    subcategories:
+      - 'benchmark_control'
+      - 'benchmark_results'
+    tools_count: 8
+
   plugin_management:
     name: 'Plugin Management'
     description: 'Tools for plugin installation, execution, and development'

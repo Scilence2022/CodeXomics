@@ -387,6 +387,7 @@ class ToolsRegistryManager {
       blast: ['blast', 'similarity', 'align', 'match', 'homolog'],
       plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace'],
       primer_design: ['primer', 'design primer', 'pcr', 'binding site', 'melting temperature', 'tm ', 'oligo', 'amplicon'],
+      benchmark: ['benchmark', 'benchmarks', 'benchmark run', 'benchmark results', 'benchmark status', 'llm benchmark', 'performance test', 'test suite'],
     };
 
     const detectedIntents = [];
@@ -730,6 +731,7 @@ class ToolsRegistryManager {
       blast: ['blast', 'similarity', 'align'],
       plugin: ['plugin', 'install', 'enable'],
       primer_design: ['primer', 'design', 'pcr', 'binding', 'tm', 'oligo', 'amplicon', 'properties'],
+      benchmark: ['benchmark', 'benchmarks', 'start', 'stop', 'pause', 'resume', 'results', 'status', 'export', 'performance', 'test suite', 'llm'],
     };
 
     return intentKeywordMap[intent] || [];

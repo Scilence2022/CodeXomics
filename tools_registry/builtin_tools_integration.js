@@ -841,6 +841,56 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // Benchmark tools
+    this.builtInToolsMap.set('open_benchmark', {
+      method: 'openBenchmark',
+      category: 'benchmark',
+      type: 'built-in',
+      priority: 1,
+    });
+    this.builtInToolsMap.set('start_benchmark', {
+      method: 'startBenchmark',
+      category: 'benchmark',
+      type: 'built-in',
+      priority: 1,
+    });
+    this.builtInToolsMap.set('stop_benchmark', {
+      method: 'stopBenchmark',
+      category: 'benchmark',
+      type: 'built-in',
+      priority: 1,
+    });
+    this.builtInToolsMap.set('pause_benchmark', {
+      method: 'pauseBenchmark',
+      category: 'benchmark',
+      type: 'built-in',
+      priority: 1,
+    });
+    this.builtInToolsMap.set('resume_benchmark', {
+      method: 'resumeBenchmark',
+      category: 'benchmark',
+      type: 'built-in',
+      priority: 1,
+    });
+    this.builtInToolsMap.set('get_benchmark_results', {
+      method: 'getBenchmarkResults',
+      category: 'benchmark',
+      type: 'built-in',
+      priority: 1,
+    });
+    this.builtInToolsMap.set('get_benchmark_status', {
+      method: 'getBenchmarkStatus',
+      category: 'benchmark',
+      type: 'built-in',
+      priority: 1,
+    });
+    this.builtInToolsMap.set('export_benchmark_results', {
+      method: 'exportBenchmarkResults',
+      category: 'benchmark',
+      type: 'built-in',
+      priority: 1,
+    });
+
     console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
   }
 
@@ -1337,6 +1387,84 @@ class BuiltInToolsIntegration {
         confidence: 0.9,
         reason: 'Settings modal open/close/toggle keywords detected',
       });
+    }
+
+    // Check for benchmark patterns
+    if (/\b(benchmark|benchmarks)\b/i.test(query)) {
+      // open_benchmark
+      if (/\b(open|show|display|launch|start|view)\s+.*?\bbenchmark\b/i.test(query) ||
+          /\bbenchmark\s+.*?\b(panel|interface|window|ui)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'open_benchmark',
+          confidence: 0.9,
+          reason: 'Benchmark interface open keywords detected',
+        });
+      }
+      // start_benchmark
+      if (/\b(start|run|execute|begin|kick\s+off)\s+.*?\bbenchmark\b/i.test(query) ||
+          /\bbenchmark\s+.*?\b(start|run|execute|begin)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'start_benchmark',
+          confidence: 0.9,
+          reason: 'Benchmark start/run keywords detected',
+        });
+      }
+      // stop_benchmark
+      if (/\b(stop|cancel|halt|abort|terminate|end)\s+.*?\bbenchmark\b/i.test(query) ||
+          /\bbenchmark\s+.*?\b(stop|cancel|halt|abort|terminate|end)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'stop_benchmark',
+          confidence: 0.9,
+          reason: 'Benchmark stop/cancel keywords detected',
+        });
+      }
+      // pause_benchmark
+      if (/\b(pause|suspend|hold|freeze)\s+.*?\bbenchmark\b/i.test(query) ||
+          /\bbenchmark\s+.*?\b(pause|suspend|hold|freeze)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'pause_benchmark',
+          confidence: 0.9,
+          reason: 'Benchmark pause keywords detected',
+        });
+      }
+      // resume_benchmark
+      if (/\b(resume|continue|unpause|restart)\s+.*?\bbenchmark\b/i.test(query) ||
+          /\bbenchmark\s+.*?\b(resume|continue|unpause)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'resume_benchmark',
+          confidence: 0.9,
+          reason: 'Benchmark resume/continue keywords detected',
+        });
+      }
+      // get_benchmark_results
+      if (/\bbenchmark\s+.*?\b(result|results|stat|stats|statistics|history|score|scores|report)\b/i.test(query) ||
+          /\b(result|results|stat|stats|statistics|history|score|scores|report)\s+.*?\bbenchmark\b/i.test(query) ||
+          /\b(get|show|view|display)\s+.*?\bbenchmark\b/i.test(query)) {
+        relevantTools.push({
+          name: 'get_benchmark_results',
+          confidence: 0.9,
+          reason: 'Benchmark results/statistics keywords detected',
+        });
+      }
+      // get_benchmark_status
+      if (/\bbenchmark\s+.*?\b(status|state|running|ready|initialized)\b/i.test(query) ||
+          /\b(status|state|check)\s+.*?\bbenchmark\b/i.test(query) ||
+          /\bis\s+.*?\bbenchmark\s+.*?\b(running|ready|available)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'get_benchmark_status',
+          confidence: 0.9,
+          reason: 'Benchmark status/state keywords detected',
+        });
+      }
+      // export_benchmark_results
+      if (/\b(export|save|download)\s+.*?\bbenchmark\b/i.test(query) ||
+          /\bbenchmark\s+.*?\b(export|save|download)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'export_benchmark_results',
+          confidence: 0.9,
+          reason: 'Benchmark export keywords detected',
+        });
+      }
     }
 
     // Check for primer design patterns

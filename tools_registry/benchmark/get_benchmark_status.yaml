@@ -1,0 +1,64 @@
+name: 'get_benchmark_status'
+description: 'Get the current status of the benchmark system, including initialization state, whether a benchmark is currently running or paused, and how many test suites are loaded.'
+version: '1.0.0'
+author: 'CodeXomics'
+category: 'benchmark'
+intent: 'benchmark_management'
+priority: 1
+keywords: ['benchmark', 'status', 'state', 'running', 'initialized', 'ready', 'check']
+aliases: ['benchmark_status', 'check_benchmark', 'benchmark_state']
+enabled: true
+
+parameters:
+  properties: {}
+
+responses:
+  success:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: true
+      initialized:
+        type: 'boolean'
+        example: true
+      frameworkReady:
+        type: 'boolean'
+        example: true
+      isRunning:
+        type: 'boolean'
+        example: false
+      isPaused:
+        type: 'boolean'
+        example: false
+      testSuitesLoaded:
+        type: 'number'
+        example: 4
+      totalRuns:
+        type: 'number'
+        example: 2
+  error:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: false
+      error:
+        type: 'string'
+        example: 'Benchmark system not available'
+
+usage_examples:
+  - description: 'Check benchmark system status'
+    input: {}
+    expected_output:
+      success: true
+      initialized: true
+      isRunning: false
+      isPaused: false
+      testSuitesLoaded: 4
+
+integration:
+  mcp_tools: false
+  dynamic_registry: true
+  builtin_tools: true
+  benchmark_framework: true

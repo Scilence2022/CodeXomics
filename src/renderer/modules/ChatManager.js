@@ -7053,6 +7053,16 @@ ${coreTools}
 
       // Settings modal tools
       toggle_settings_modal: () => this.toggleSettingsModal(parameters),
+
+      // Benchmark tools
+      open_benchmark: () => this.openBenchmark(parameters),
+      start_benchmark: () => this.startBenchmark(parameters),
+      stop_benchmark: () => this.stopBenchmark(parameters),
+      pause_benchmark: () => this.pauseBenchmark(parameters),
+      resume_benchmark: () => this.resumeBenchmark(parameters),
+      get_benchmark_results: () => this.getBenchmarkResults(parameters),
+      get_benchmark_status: () => this.getBenchmarkStatus(parameters),
+      export_benchmark_results: () => this.exportBenchmarkResults(parameters),
     };
 
     if (localTools[toolName]) {
@@ -14354,5 +14364,251 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  // ============================================================
+  // Benchmark Tools
+  // ============================================================
+
+  /**
+   * Helper to get benchmarkManager from app or window global.
+   */
+  _getBenchmarkManager() {
+    return (this.app && this.app.benchmarkManager) || window.benchmarkManager || null;
+  }
+
+  /**
+   * Open the benchmark interface.
+   */
+  async openBenchmark(_parameters = {}) {
+    const bm = this._getBenchmarkManager();
+    if (!bm) {
+      // Attempt to trigger the on-demand initialization through the app
+      if (typeof openBenchmarkInterface === 'function') {
+        openBenchmarkInterface();
+        return { success: true, message: 'Benchmark interface opening...' };
+      }
+      return { success: false, error: 'Benchmark system not available. Please open it manually from the menu.' };
+    }
+    await bm.showBenchmarkInterface();
+    return { success: true, message: 'Benchmark interface opened' };
+  }
+
+  /**
+   * Start a benchmark run with the given options.
+   */
+  async startBenchmark(parameters = {}) {
+    const bm = this._getBenchmarkManager();
+    if (!bm) {
+      // Attempt to trigger on-demand init and open the interface
+      if (typeof openBenchmarkInterface === 'function') {
+        openBenchmarkInterface();
+        return { success: true, message: 'Benchmark interface opening — please configure and start from the UI.' };
+      }
+      return { success: false, error: 'Benchmark system not available. Please open it manually from the menu.' };
+    }
+
+    // Wait for initialization
+    await bm.waitForInitialization();
+
+    const suites = parameters.suites || ['automatic_simple'];
+    const options = {
+      suites,
+      timeout: parameters.timeout !== undefined ? parameters.timeout : 120000,
+      testDelay: parameters.test_delay !== undefined ? parameters.test_delay : 60000,
+      generateReport: parameters.generate_report !== undefined ? parameters.generate_report : true,
+      includeCharts: parameters.include_charts !== undefined ? parameters.include_charts : true,
+      includeRawData: parameters.include_raw_data !== undefined ? parameters.include_raw_data : false,
+      stopOnError: parameters.stop_on_error !== undefined ? parameters.stop_on_error : false,
+    };
+
+    // Open the interface first so the user can see progress
+    try {
+      await bm.showBenchmarkInterface();
+    } catch (_e) {
+      // Non-fatal — continue even if UI open fails
+    }
+
+    // Run benchmark asynchronously so ChatManager can return immediately
+    bm.framework
+      .runAllBenchmarks(options)
+      .then(results => {
+        bm.showBenchmarkResults(results);
+        bm.showSuccess('Benchmark completed!');
+      })
+      .catch(err => {
+        console.error('[startBenchmark] Error:', err);
+        bm.showError('Benchmark failed: ' + err.message);
+      });
+
+    return {
+      success: true,
+      message: `Benchmark started with suites: ${suites.join(', ')}`,
+      suites,
+      options,
+    };
+  }
+
+  /**
+   * Stop the currently running benchmark.
+   */
+  async stopBenchmark(_parameters = {}) {
+    const bm = this._getBenchmarkManager();
+    if (!bm || !bm.framework) {
+      return { success: false, error: 'Benchmark system not available' };
+    }
+    if (!bm.framework.isRunning) {
+      return { success: false, error: 'No benchmark is currently running' };
+    }
+    bm.framework.stopBenchmark();
+    return { success: true, message: 'Benchmark stopped' };
+  }
+
+  /**
+   * Pause the currently running benchmark.
+   */
+  async pauseBenchmark(_parameters = {}) {
+    const bm = this._getBenchmarkManager();
+    if (!bm || !bm.framework) {
+      return { success: false, error: 'Benchmark system not available' };
+    }
+    if (!bm.framework.isRunning) {
+      return { success: false, error: 'No benchmark is currently running' };
+    }
+    bm.framework.pauseBenchmark();
+    return { success: true, message: 'Benchmark paused' };
+  }
+
+  /**
+   * Resume a paused benchmark.
+   */
+  async resumeBenchmark(_parameters = {}) {
+    const bm = this._getBenchmarkManager();
+    if (!bm || !bm.framework) {
+      return { success: false, error: 'Benchmark system not available' };
+    }
+    if (!bm.framework.isPaused) {
+      return { success: false, error: 'No benchmark is paused' };
+    }
+    bm.framework.resumeBenchmark();
+    return { success: true, message: 'Benchmark resumed' };
+  }
+
+  /**
+   * Get benchmark results/history.
+   */
+  async getBenchmarkResults(parameters = {}) {
+    const bm = this._getBenchmarkManager();
+    if (!bm || !bm.framework) {
+      return { success: false, error: 'Benchmark system not available' };
+    }
+
+    const history = bm.framework.getBenchmarkHistory();
+    if (!history || history.length === 0) {
+      return { success: false, error: 'No benchmark history available. Run a benchmark first.' };
+    }
+
+    // If a specific index requested
+    if (parameters.index !== undefined) {
+      const idx = parameters.index === -1 ? history.length - 1 : parameters.index;
+      const run = history[idx];
+      if (!run) {
+        return { success: false, error: `No benchmark run at index ${parameters.index}` };
+      }
+      return {
+        success: true,
+        totalRuns: history.length,
+        run: {
+          index: idx,
+          date: new Date(run.startTime).toLocaleString(),
+          duration: Math.round(run.duration / 1000),
+          successRate: run.overallStats.overallSuccessRate.toFixed(1),
+          totalTests: run.overallStats.totalTests,
+          passedTests: run.overallStats.passedTests,
+          failedTests: run.overallStats.failedTests,
+          suites: run.options && run.options.suites ? run.options.suites : [],
+        },
+      };
+    }
+
+    // Return summary statistics
+    const stats = bm.getBenchmarkStatistics();
+    return {
+      success: true,
+      totalRuns: history.length,
+      latestRun: stats ? stats.latestRun : null,
+      averageSuccessRate: stats ? Number(stats.averageSuccessRate.toFixed(1)) : null,
+      runs: history.map((run, idx) => ({
+        index: idx,
+        date: new Date(run.startTime).toLocaleString(),
+        duration: Math.round(run.duration / 1000),
+        successRate: run.overallStats.overallSuccessRate.toFixed(1),
+        totalTests: run.overallStats.totalTests,
+        passedTests: run.overallStats.passedTests,
+      })),
+    };
+  }
+
+  /**
+   * Get the current status of the benchmark system.
+   */
+  async getBenchmarkStatus(_parameters = {}) {
+    const bm = this._getBenchmarkManager();
+    if (!bm) {
+      return {
+        success: true,
+        initialized: false,
+        frameworkReady: false,
+        isRunning: false,
+        isPaused: false,
+        testSuitesLoaded: 0,
+        totalRuns: 0,
+        message: 'Benchmark system not yet initialized. Open the benchmark panel to initialize.',
+      };
+    }
+
+    const systemStatus = bm.getSystemStatus();
+    const history = bm.framework ? bm.framework.getBenchmarkHistory() : [];
+    const isRunning = !!(bm.framework && bm.framework.isRunning);
+    const isPaused = !!(bm.framework && bm.framework.isPaused);
+
+    return {
+      success: true,
+      initialized: systemStatus.initialized,
+      frameworkReady: systemStatus.frameworkReady,
+      uiReady: systemStatus.uiReady,
+      isRunning,
+      isPaused,
+      testSuitesLoaded: systemStatus.testSuitesLoaded,
+      totalRuns: history.length,
+    };
+  }
+
+  /**
+   * Export benchmark results in the specified format.
+   */
+  async exportBenchmarkResults(parameters = {}) {
+    const bm = this._getBenchmarkManager();
+    if (!bm || !bm.framework) {
+      return { success: false, error: 'Benchmark system not available' };
+    }
+
+    const history = bm.framework.getBenchmarkHistory();
+    if (!history || history.length === 0) {
+      return { success: false, error: 'No benchmark results available to export. Run a benchmark first.' };
+    }
+
+    const format = (parameters.format || 'json').toLowerCase();
+    const validFormats = ['json', 'csv', 'html'];
+    if (!validFormats.includes(format)) {
+      return { success: false, error: `Invalid format '${format}'. Supported formats: json, csv, html` };
+    }
+
+    try {
+      await bm.framework.exportResults(format);
+      return { success: true, message: `Benchmark results exported as ${format}` };
+    } catch (err) {
+      return { success: false, error: `Export failed: ${err.message}` };
+    }
   }
 }

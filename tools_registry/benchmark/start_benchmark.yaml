@@ -1,0 +1,108 @@
+name: 'start_benchmark'
+description: 'Open the benchmark interface and automatically start a benchmark run with the specified configuration. Supports selecting test suites, timeouts, and report options.'
+version: '1.0.0'
+author: 'CodeXomics'
+category: 'benchmark'
+intent: 'benchmark_management'
+priority: 1
+keywords: ['benchmark', 'start', 'run', 'execute', 'performance', 'test', 'evaluation', 'suite', 'llm', 'automatic', 'quick']
+aliases: ['run_benchmark', 'execute_benchmark', 'launch_benchmark_run']
+enabled: true
+
+parameters:
+  properties:
+    suites:
+      type: 'array'
+      items:
+        type: 'string'
+        enum: ['automatic_simple', 'automatic_complex', 'manual_suite', 'manual_complex']
+      description: 'List of test suites to run. Options: automatic_simple (15 basic tests), automatic_complex (12 multi-step tests), manual_suite (8 manual tests), manual_complex (complex manual tests). Defaults to [automatic_simple].'
+      default: ['automatic_simple']
+      example: ['automatic_simple', 'automatic_complex']
+    timeout:
+      type: 'number'
+      description: 'Global timeout per test in milliseconds. Use null for individual test timeouts. Common values: 15000 (15s), 30000 (30s), 60000 (1m), 120000 (2m, default), 300000 (5m).'
+      default: 120000
+      example: 60000
+    test_delay:
+      type: 'number'
+      description: 'Delay in milliseconds between test batches to avoid API rate limits. 0 disables delay. Default is 60000 (1 minute every 10 tests).'
+      default: 60000
+      example: 0
+    generate_report:
+      type: 'boolean'
+      description: 'Whether to generate a detailed HTML/JSON report after the run. Default true.'
+      default: true
+      example: true
+    include_charts:
+      type: 'boolean'
+      description: 'Whether to include chart data in the generated report. Default true.'
+      default: true
+      example: true
+    include_raw_data:
+      type: 'boolean'
+      description: 'Whether to include raw test response data in the report. Increases report size. Default false.'
+      default: false
+      example: false
+    stop_on_error:
+      type: 'boolean'
+      description: 'Whether to halt benchmark execution on the first test failure. Default false.'
+      default: false
+      example: false
+
+responses:
+  success:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: true
+      message:
+        type: 'string'
+        example: 'Benchmark started with suites: automatic_simple'
+      suites:
+        type: 'array'
+        example: ['automatic_simple']
+  error:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: false
+      error:
+        type: 'string'
+        example: 'Benchmark system not available or LLM not configured'
+
+usage_examples:
+  - description: 'Start a quick benchmark with default settings'
+    input:
+      suites: ['automatic_simple']
+    expected_output:
+      success: true
+      message: 'Benchmark started with suites: automatic_simple'
+
+  - description: 'Start a full benchmark with all automatic suites'
+    input:
+      suites: ['automatic_simple', 'automatic_complex']
+      timeout: 120000
+      test_delay: 30000
+      generate_report: true
+    expected_output:
+      success: true
+      message: 'Benchmark started with suites: automatic_simple, automatic_complex'
+
+  - description: 'Start a fast benchmark with no delays'
+    input:
+      suites: ['automatic_simple']
+      timeout: 30000
+      test_delay: 0
+      generate_report: false
+    expected_output:
+      success: true
+      message: 'Benchmark started with suites: automatic_simple'
+
+integration:
+  mcp_tools: false
+  dynamic_registry: true
+  builtin_tools: true
+  benchmark_framework: true

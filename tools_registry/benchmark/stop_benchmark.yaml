@@ -1,0 +1,46 @@
+name: 'stop_benchmark'
+description: 'Stop the currently running benchmark. Gracefully terminates the benchmark execution and saves any partial results collected so far.'
+version: '1.0.0'
+author: 'CodeXomics'
+category: 'benchmark'
+intent: 'benchmark_management'
+priority: 1
+keywords: ['benchmark', 'stop', 'cancel', 'halt', 'abort', 'terminate', 'end']
+aliases: ['cancel_benchmark', 'halt_benchmark', 'abort_benchmark']
+enabled: true
+
+parameters:
+  properties: {}
+
+responses:
+  success:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: true
+      message:
+        type: 'string'
+        example: 'Benchmark stopped'
+  error:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: false
+      error:
+        type: 'string'
+        example: 'No benchmark is currently running'
+
+usage_examples:
+  - description: 'Stop the running benchmark'
+    input: {}
+    expected_output:
+      success: true
+      message: 'Benchmark stopped'
+
+integration:
+  mcp_tools: false
+  dynamic_registry: true
+  builtin_tools: true
+  benchmark_framework: true

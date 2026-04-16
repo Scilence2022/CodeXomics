@@ -197,4 +197,16 @@ const TOOL_NAMES = {
     GET_TRACK_SETTINGS_SCHEMA: 'get_track_settings_schema',
     BATCH_SET_TRACK_SETTINGS: 'batch_set_track_settings',
   },
+
+  // === Benchmark Tools ===
+  BENCHMARK: {
+    OPEN_BENCHMARK: 'open_benchmark',
+    START_BENCHMARK: 'start_benchmark',
+    STOP_BENCHMARK: 'stop_benchmark',
+    PAUSE_BENCHMARK: 'pause_benchmark',
+    RESUME_BENCHMARK: 'resume_benchmark',
+    GET_BENCHMARK_RESULTS: 'get_benchmark_results',
+    GET_BENCHMARK_STATUS: 'get_benchmark_status',
+    EXPORT_BENCHMARK_RESULTS: 'export_benchmark_results',
+  },
 };

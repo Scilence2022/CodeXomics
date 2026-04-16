@@ -1,0 +1,46 @@
+name: 'open_benchmark'
+description: 'Open the LLM benchmark interface in the main window. Use this to access the benchmark UI where you can configure and run performance tests.'
+version: '1.0.0'
+author: 'CodeXomics'
+category: 'benchmark'
+intent: 'benchmark_management'
+priority: 1
+keywords: ['benchmark', 'open', 'interface', 'panel', 'performance', 'test', 'evaluation', 'llm']
+aliases: ['show_benchmark', 'launch_benchmark', 'open_benchmark_ui']
+enabled: true
+
+parameters:
+  properties: {}
+
+responses:
+  success:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: true
+      message:
+        type: 'string'
+        example: 'Benchmark interface opened'
+  error:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: false
+      error:
+        type: 'string'
+        example: 'Benchmark system not available'
+
+usage_examples:
+  - description: 'Open the benchmark interface'
+    input: {}
+    expected_output:
+      success: true
+      message: 'Benchmark interface opened'
+
+integration:
+  mcp_tools: false
+  dynamic_registry: true
+  builtin_tools: true
+  benchmark_framework: false

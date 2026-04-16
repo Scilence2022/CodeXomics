@@ -1,0 +1,46 @@
+name: 'resume_benchmark'
+description: 'Resume a paused benchmark. Continues execution from where it was paused.'
+version: '1.0.0'
+author: 'CodeXomics'
+category: 'benchmark'
+intent: 'benchmark_management'
+priority: 1
+keywords: ['benchmark', 'resume', 'continue', 'unpause', 'restart']
+aliases: ['continue_benchmark', 'unpause_benchmark']
+enabled: true
+
+parameters:
+  properties: {}
+
+responses:
+  success:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: true
+      message:
+        type: 'string'
+        example: 'Benchmark resumed'
+  error:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: false
+      error:
+        type: 'string'
+        example: 'No benchmark is paused'
+
+usage_examples:
+  - description: 'Resume a paused benchmark'
+    input: {}
+    expected_output:
+      success: true
+      message: 'Benchmark resumed'
+
+integration:
+  mcp_tools: false
+  dynamic_registry: true
+  builtin_tools: true
+  benchmark_framework: true

@@ -1,0 +1,80 @@
+name: 'get_benchmark_results'
+description: 'Get the benchmark results history. Returns statistics from all previous benchmark runs, including success rates, test counts, durations, and the latest run details.'
+version: '1.0.0'
+author: 'CodeXomics'
+category: 'benchmark'
+intent: 'benchmark_management'
+priority: 1
+keywords: ['benchmark', 'results', 'history', 'statistics', 'stats', 'performance', 'report', 'score', 'success', 'rate']
+aliases: ['benchmark_results', 'benchmark_stats', 'benchmark_history', 'get_benchmark_stats']
+enabled: true
+
+parameters:
+  properties:
+    index:
+      type: 'number'
+      description: 'Zero-based index of the specific run to retrieve (-1 for the latest run). Omit to get summary statistics for all runs.'
+      example: -1
+
+responses:
+  success:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: true
+      totalRuns:
+        type: 'number'
+        example: 3
+      latestRun:
+        type: 'object'
+        properties:
+          date:
+            type: 'string'
+            example: '4/16/2026, 10:00:00 AM'
+          duration:
+            type: 'number'
+            description: 'Duration in seconds'
+            example: 245
+          successRate:
+            type: 'string'
+            example: '85.7'
+          totalTests:
+            type: 'number'
+            example: 15
+          passedTests:
+            type: 'number'
+            example: 13
+      averageSuccessRate:
+        type: 'number'
+        example: 82.3
+  error:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: false
+      error:
+        type: 'string'
+        example: 'No benchmark history available'
+
+usage_examples:
+  - description: 'Get summary of all benchmark runs'
+    input: {}
+    expected_output:
+      success: true
+      totalRuns: 3
+      averageSuccessRate: 82.3
+
+  - description: 'Get the latest benchmark run details'
+    input:
+      index: -1
+    expected_output:
+      success: true
+      totalRuns: 3
+
+integration:
+  mcp_tools: false
+  dynamic_registry: true
+  builtin_tools: true
+  benchmark_framework: true

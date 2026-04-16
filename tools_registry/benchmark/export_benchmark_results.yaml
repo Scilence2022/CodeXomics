@@ -1,0 +1,60 @@
+name: 'export_benchmark_results'
+description: 'Export the latest benchmark results to a file. Supports JSON, CSV, and HTML formats.'
+version: '1.0.0'
+author: 'CodeXomics'
+category: 'benchmark'
+intent: 'benchmark_management'
+priority: 1
+keywords: ['benchmark', 'export', 'save', 'download', 'report', 'json', 'csv', 'html', 'results']
+aliases: ['save_benchmark_results', 'download_benchmark_report']
+enabled: true
+
+parameters:
+  properties:
+    format:
+      type: 'string'
+      enum: ['json', 'csv', 'html']
+      description: 'Export format. Options: json (structured data), csv (spreadsheet), html (human-readable report). Default is json.'
+      default: 'json'
+      example: 'json'
+
+responses:
+  success:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: true
+      message:
+        type: 'string'
+        example: 'Benchmark results exported as json'
+  error:
+    type: 'object'
+    properties:
+      success:
+        type: 'boolean'
+        example: false
+      error:
+        type: 'string'
+        example: 'No benchmark results available to export'
+
+usage_examples:
+  - description: 'Export results as JSON'
+    input:
+      format: 'json'
+    expected_output:
+      success: true
+      message: 'Benchmark results exported as json'
+
+  - description: 'Export results as HTML report'
+    input:
+      format: 'html'
+    expected_output:
+      success: true
+      message: 'Benchmark results exported as html'
+
+integration:
+  mcp_tools: false
+  dynamic_registry: true
+  builtin_tools: true
+  benchmark_framework: true
