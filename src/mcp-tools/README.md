@@ -121,7 +121,7 @@ Tools for genome browser navigation and state management:
 - `get_current_state` - Get browser state
 - `jump_to_gene` - Jump to gene by name
 - `get_genome_info` - Get genome information
-- `search_gene_by_name` - Search specific gene
+- `find_gene_by_name` - Search specific gene
 - `toggle_track` - Show/hide tracks
 
 ### 2. Sequence Analysis (7 tools)

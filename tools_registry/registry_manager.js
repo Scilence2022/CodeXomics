@@ -57,7 +57,7 @@ class ToolsRegistryManager {
     const criticalTools = [
       'navigate_to_position',
       'get_current_state',
-      'search_gene_by_name',
+      'find_gene_by_name',
       'get_sequence',
       'compute_gc',
     ];
@@ -943,7 +943,7 @@ class ToolsRegistryManager {
     const fallbackToolNames = [
       'navigate_to_position',
       'get_current_state',
-      'search_gene_by_name',
+      'find_gene_by_name',
       'get_sequence',
       'compute_gc',
     ];

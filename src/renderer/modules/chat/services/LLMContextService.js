@@ -642,7 +642,7 @@ class LLMContextService {
 
     // Check if we executed tools that typically complete tasks
     const taskCompletingTools = [
-      'search_gene_by_name',
+      'find_gene_by_name',
       'search_sequence',
       'find_feature',
       'search_feature',
@@ -821,7 +821,7 @@ class LLMContextService {
 
       // Search operations - allow with different parameters or after reasonable delay
       search: {
-        tools: ['search_gene_by_name', 'search_features', 'search_sequence_motif'],
+        tools: ['find_gene_by_name', 'search_features', 'search_sequence_motif'],
         policy: 'parameter_based',
         condition: (tool, history, results) => {
           // Allow if parameters are different
@@ -1302,7 +1302,7 @@ ${result.result.details}`;
           return `Current view export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
-      case 'search_gene_by_name':
+      case 'find_gene_by_name':
         if (result.result && result.result.length > 0) {
           const gene = result.result[0]; // Get first result
           return `Found the gene "${gene.name || gene.symbol || 'Unknown'}". Here are the details:
@@ -1668,7 +1668,7 @@ Navigation & State:
 
 Search & Discovery:
   - search_features: Search for features by text
-  - search_gene_by_name: Find specific genes
+  - find_gene_by_name: Find specific genes
   - search_motif: Find sequence motifs
   - search_by_position: Find features near position
 
@@ -1727,7 +1727,7 @@ Sequence Analysis:
   {"tool_name": "translate_dna", "parameters": {"dna": "ATGAAATAG", "frame": 0}}
 
 Search Operations:
-  {"tool_name": "search_gene_by_name", "parameters": {"name": "lacZ"}}
+  {"tool_name": "find_gene_by_name", "parameters": {"name": "lacZ"}}
   {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
   {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}
 
@@ -1800,7 +1800,7 @@ CRITICAL: Choose the correct protein structure function based on user intent:
 ===SEQUENCE EDITING FUNCTIONS - DETAILED USAGE===
 
 SEQUENCE EDITING WORKFLOW:
-1. Find gene location: search_gene_by_name
+1. Find gene location: find_gene_by_name
 2. Use appropriate editing function (deleteSequence, insertSequence, etc.)
 3. Execute all pending actions: execute_actions （ALWAYS auto_save=true）
 4. IMPORTANT: Actions are queued until execute_actions is called
@@ -1853,7 +1853,7 @@ Method 1 - Simple gene deletion by name or locus tag:
 2. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 
 Method 2 - Manual deletion with coordinates:
-1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
+1. {"tool_name": "find_gene_by_name", "parameters": {"name": "yaaJ"}}
 2. Use gene coordinates from result in delete_sequence
 3. {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": [gene_start], "end": [gene_end]}}
 4. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
@@ -1863,7 +1863,7 @@ CHROMOSOME NAMES:
 - Always use the exact chromosome name from current genome state
 
 COMMON TASK PATTERNS:
-• Gene Analysis: search_gene_by_name → get_coding_sequence → analyze features
+• Gene Analysis: find_gene_by_name → get_coding_sequence → analyze features
 • **Domain Analysis: analyze_interpro_domains → protein domain identification (use geneName parameter for gene names)**
 • **Data Export: export_fasta_sequence → export genome as FASTA, export_genbank_format → export as GenBank**
 • **Sequence Export: export_cds_fasta → export coding sequences, export_protein_fasta → export proteins**
@@ -1876,7 +1876,7 @@ COMMON TASK PATTERNS:
 • New Tab: open_new_tab → for parallel analysis
 • BLAST Search: blast_search → analyze results
 • Pathway Analysis: show_metabolic_pathway → find_pathway_genes
-• Gene Deletion: search_gene_by_name → delete_sequence → execute_actions (auto_save=true)
+• Gene Deletion: find_gene_by_name → delete_sequence → execute_actions (auto_save=true)
 • Sequence Insertion: insert_sequence → execute_actions (auto_save=true)
 • Copy/Paste: copy_sequence → paste_sequence → execute_actions (auto_save=true)
 • Track Settings: get_track_settings → set_track_settings or batch_set_track_settings
@@ -1908,7 +1908,7 @@ For data export requests:
   - {"tool_name": "export_current_view_fasta", "parameters": {"auto_save": true}}
 
 SEARCH FUNCTIONS GUIDE:
-- Gene names/products: search_gene_by_name, search_features
+- Gene names/products: find_gene_by_name, search_features
 - Genomic positions: search_by_position, get_nearby_features  
 - Sequence motifs: search_sequence_motif
 - PDB experimental structures: search_pdb_structures (for known PDB entries)
@@ -1924,7 +1924,7 @@ ANALYSIS FUNCTIONS:
 IMPORTANT PREREQUISITES:
 Before using get_coding_sequence or other gene-specific functions:
 1. Ensure genome data is loaded (GenBank/GFF files)
-2. Use search_gene_by_name to verify gene exists
+2. Use find_gene_by_name to verify gene exists
 3. Check current genome state with get_genome_info
 
 WORKFLOW EXAMPLES:
@@ -1935,12 +1935,12 @@ WORKFLOW EXAMPLES:
   2. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
   
   Method 2 (Manual): 
-  1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
+  1. {"tool_name": "find_gene_by_name", "parameters": {"name": "yaaJ"}}
   2. {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 8238, "end": 9191}}
   3. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 
 • Gene Analysis Workflow:
-  1. {"tool_name": "search_gene_by_name", "parameters": {"name": "lysC"}}
+  1. {"tool_name": "find_gene_by_name", "parameters": {"name": "lysC"}}
   2. {"tool_name": "get_coding_sequence", "parameters": {"gene_name": "lysC"}}
   3. {"tool_name": "translate_sequence", "parameters": {"sequence": "ATGCGC..."}}
 
@@ -1954,7 +1954,7 @@ WORKFLOW EXAMPLES:
   3. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 
 EXAMPLES:
-• Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "thrC"}}
+• Find gene: {"tool_name": "find_gene_by_name", "parameters": {"name": "thrC"}}
 • Delete gene: {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
 • Insert DNA: {"tool_name": "insert_sequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGC"}}
 • Execute actions: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
@@ -2111,8 +2111,8 @@ MicrobeGenomicsFunctions Examples:
 - Navigation controls: {"tool_name": "scroll_left", "parameters": {"bp": 1000}} or {"tool_name": "zoom_in", "parameters": {"factor": 2}}
 
 CRITICAL DISTINCTION - Search Functions:
-1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features' or 'search_gene_by_name'
-   - "find lacZ" → {"tool_name": "search_gene_by_name", "parameters": {"name": "lacZ"}}
+1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features' or 'find_gene_by_name'
+   - "find lacZ" → {"tool_name": "find_gene_by_name", "parameters": {"name": "lacZ"}}
    - "search DNA polymerase" → {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
 
 2. FOR POSITION-BASED SEARCHES (near coordinates): use 'get_nearby_features' or 'search_by_position'
@@ -2161,7 +2161,7 @@ Enhanced BLAST Examples:
 
 MICROBE GENOMICS POWER USER EXAMPLES:
 1. Complete Gene Analysis:
-   - Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "dnaA"}}
+   - Find gene: {"tool_name": "find_gene_by_name", "parameters": {"name": "dnaA"}}
    - Get upstream: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "result_from_above", "length": 200}}
    - Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "upstream_sequence"}}
    - Calculate GC: {"tool_name": "compute_gc", "parameters": {"sequence": "upstream_sequence"}}
@@ -2338,8 +2338,8 @@ MicrobeGenomicsFunctions Examples:
 - Navigation controls: {"tool_name": "scroll_left", "parameters": {"bp": 1000}}, {"tool_name": "zoom_in", "parameters": {"factor": 2}}, {"tool_name": "zoom_out", "parameters": {"factor": 3}}
 
 CRITICAL DISTINCTION - Search Functions:
-1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features' or 'search_gene_by_name'
-   - "find lacZ" → {"tool_name": "search_gene_by_name", "parameters": {"name": "lacZ"}}
+1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features' or 'find_gene_by_name'
+   - "find lacZ" → {"tool_name": "find_gene_by_name", "parameters": {"name": "lacZ"}}
    - "search DNA polymerase" → {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
 
 2. FOR POSITION-BASED SEARCHES (near coordinates): use 'get_nearby_features' or 'search_by_position'
@@ -2387,7 +2387,7 @@ Enhanced BLAST Examples:
 2. High-specificity DNA search: {"tool_name": "advanced_blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGG", "blastType": "blastn", "database": "nt", "filters": {"minIdentity": 98, "maxEvalue": 1e-10}}}
 MICROBE GENOMICS POWER USER EXAMPLES:
 1. Complete Gene Analysis:
-   - Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "dnaA"}}
+   - Find gene: {"tool_name": "find_gene_by_name", "parameters": {"name": "dnaA"}}
    - Get upstream: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "result_from_above", "length": 200}}
    - Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "upstream_sequence"}}
    - Calculate GC: {"tool_name": "compute_gc", "parameters": {"sequence": "upstream_sequence"}}

@@ -36,7 +36,7 @@ class ToolCategoryManager {
       // Navigation tools
       'navigate_to_position',
       'jump_to_gene',
-      'search_gene_by_name',
+      'find_gene_by_name',
       'search_features',
       'zoom_in',
       'zoom_out',

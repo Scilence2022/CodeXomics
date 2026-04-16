@@ -2508,7 +2508,7 @@ class LLMBenchmarkFramework {
     // Fix Problem 6: Dynamic knownFunctions from builtInToolsMap instead of hardcoded list
     // Fallback list for when ChatManager is not available
     const DEFAULT_KNOWN_FUNCTIONS = [
-      'search_gene_by_name', 'search_features', 'search_by_position',
+      'find_gene_by_name', 'search_features', 'search_by_position',
       'navigate_to_position', 'jump_to_gene', 'get_gene_sequence',
       'run_blast_search', 'zoom_in', 'zoom_out', 'set_zoom_level',
       'show_gene_details', 'export_sequence', 'save_current_view',
@@ -3165,7 +3165,7 @@ class LLMBenchmarkFramework {
           inferredParams.query = queryMatch[1];
         }
       } else {
-        inferredFunction = 'search_gene_by_name';
+        inferredFunction = 'find_gene_by_name';
         // Extract gene name from response
         const geneMatch = response.match(/(?:gene|locus).*?["']?([a-zA-Z0-9_-]+)["']?/i);
         if (geneMatch) {
@@ -5182,7 +5182,7 @@ class LLMBenchmarkFramework {
             msg.content &&
             (msg.content.includes(test.instruction) ||
               msg.content.includes(test.id) ||
-              msg.content.includes('search_gene_by_name') || // Based on the logs
+              msg.content.includes('find_gene_by_name') || // Based on the logs
               msg.content.includes('lacZ')) // Based on the logs
         );
 

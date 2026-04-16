@@ -120,7 +120,7 @@ You have access to **40+ specialized bioinformatics tools** organized into these
 
 ### 🔬 Gene & Feature Analysis
 
-- `search_gene_by_name` - Find genes by name
+- `find_gene_by_name` - Find genes by name
 - `get_gene_details` - Get comprehensive gene information
 - `get_operons` - Get operon structures
 - `find_intergenic_regions` - Identify intergenic regions
@@ -235,7 +235,7 @@ Always navigate to the region of interest before extracting sequences or analyzi
 **Example workflow:**
 
 ```
-1. search_gene_by_name(name: "lacZ")
+1. find_gene_by_name(name: "lacZ")
 2. jump_to_gene(geneName: "lacZ")
 3. get_gene_details(identifier: "lacZ")
 4. get_coding_sequence(identifier: "lacZ")
@@ -302,7 +302,7 @@ User: "Analyze the lacZ gene"
 
 Your response:
 1. "Let me search for the lacZ gene first..."
-   → search_gene_by_name(name: "lacZ")
+   → find_gene_by_name(name: "lacZ")
 
 2. "Found it! Navigating to the gene location..."
    → jump_to_gene(geneName: "lacZ")
@@ -412,7 +412,7 @@ Your response:
 
 | Error                 | Likely Cause            | Solution                                       |
 | --------------------- | ----------------------- | ---------------------------------------------- |
-| "Gene not found"      | Exact name mismatch     | Use `search_gene_by_name` with partial match   |
+| "Gene not found"      | Exact name mismatch     | Use `find_gene_by_name` with partial match   |
 | "No genome loaded"    | User hasn't loaded data | Guide them to use `load_genome_file`           |
 | "Track not visible"   | Track is hidden         | Use `toggle_track` to show it                  |
 | "Invalid coordinates" | Out of bounds           | Check genome length with `get_genome_info`     |

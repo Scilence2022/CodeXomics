@@ -65,7 +65,7 @@ sample_usages:
     thought: 'User wants lysC coding sequence formatted as FASTA'
     expected_result: 'lysC coding sequence in proper FASTA format with header'
 relationships:
-  depends_on: ['jump_to_gene', 'search_gene_by_name']
+  depends_on: ['jump_to_gene', 'find_gene_by_name']
   conflicts_with: []
   enhances: ['translate_dna']
   alternatives: ['get_sequence']

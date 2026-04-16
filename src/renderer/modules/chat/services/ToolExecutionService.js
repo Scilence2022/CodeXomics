@@ -184,7 +184,7 @@ class ToolExecutionService {
   _extractMGFArgs(toolName, parameters) {
     const argMappings = {
       'search_sequence_motif': ['pattern', 'motif', 'chromosome'],
-      'search_gene_by_name': ['name'],
+      'find_gene_by_name': ['name'],
       'search_gene_by_locus_tag': ['locusTag', 'locus_tag', 'identifier'],
       'search_by_position': ['chromosome', 'position'],
       'search_intergenic_regions': ['chromosome', 'minLength', 'min_length'],

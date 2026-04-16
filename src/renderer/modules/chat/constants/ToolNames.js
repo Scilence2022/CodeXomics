@@ -29,7 +29,7 @@ const TOOL_NAMES = {
   // === Search Tools ===
   SEARCH: {
     SEARCH_FEATURES: 'search_features',
-    SEARCH_GENE_BY_NAME: 'search_gene_by_name',
+    SEARCH_GENE_BY_NAME: 'find_gene_by_name',
     SEARCH_MOTIF: 'search_motif',
     SEARCH_PATTERN: 'search_pattern',
     SEARCH_BY_POSITION: 'search_by_position',

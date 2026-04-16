@@ -145,7 +145,7 @@ class NavigationAgent extends AgentBase {
         },
       },
       {
-        functionName: 'search_gene_by_name',
+        functionName: 'find_gene_by_name',
         description: 'Search for a gene by name',
         priority: 'high',
         estimatedTime: 200,
@@ -257,7 +257,7 @@ class NavigationAgent extends AgentBase {
           return await this.executeGetCurrentRegion(app);
 
         case 'jump_to_gene':
-        case 'search_gene_by_name':
+        case 'find_gene_by_name':
           return await this.executeJumpToGene(parameters, app);
 
         case 'scroll_left':

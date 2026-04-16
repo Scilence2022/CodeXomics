@@ -27,7 +27,7 @@ tools_registry/
 │   ├── get_current_state.yaml
 │   ├── jump_to_gene.yaml
 │   ├── get_genome_info.yaml
-│   ├── search_gene_by_name.yaml
+│   ├── find_gene_by_name.yaml
 │   └── toggle_track.yaml
 ├── sequence/                           # Sequence Analysis Tools
 │   ├── get_sequence.yaml

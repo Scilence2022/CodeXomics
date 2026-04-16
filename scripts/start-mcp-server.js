@@ -92,7 +92,7 @@ const toolInfo = `📚 Available Tools (Full List):
 
 🔍 Search & Discovery:
 - search_features: Search for genes and features
-- search_gene_by_name: Search for specific gene by name
+- find_gene_by_name: Search for specific gene by name
 - search_sequence_motif: Search for sequence motifs
 
 🧬 Sequence Analysis:

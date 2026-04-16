@@ -1,9 +1,9 @@
-# search_gene_by_name.yaml
-name: 'search_gene_by_name'
+# find_gene_by_name.yaml
+name: 'find_gene_by_name'
 version: '1.1.0'
 description: 'Search for a SPECIFIC GENE by its name or locus tag (e.g., lacZ, b0062, dnaA). Use this when you know the gene identifier. For searching by functional annotation or feature type (e.g., "all kinase genes", "all tRNA"), use search_features instead. For direct navigation to a known gene, try jump_to_gene first.'
 category: 'navigation'
-keywords: ['search', 'gene', 'name', 'locus', 'tag', 'find', 'locate', 'gene search', 'fallback', 'partial match']
+keywords: ['find', 'gene', 'name', 'locus', 'tag', 'search', 'locate', 'gene search', 'fallback', 'partial match']
 priority: 2 # Lower priority than jump_to_gene
 
 # Tool execution metadata
@@ -48,17 +48,17 @@ parameters:
 # High-quality examples for few-shot learning
 sample_usages:
   - user_query: "Find all genes containing 'ara'"
-    tool_call: "search_gene_by_name(name='ara', exact_match=false, navigate_to_gene=false)"
+    tool_call: "find_gene_by_name(name='ara', exact_match=false, navigate_to_gene=false)"
     thought: "User wants to search for genes with 'ara' in the name using partial matching, not direct navigation"
     expected_result: "List of all genes containing 'ara' in their name or description"
 
   - user_query: 'Search for gene lysC if jump_to_gene fails'
-    tool_call: "search_gene_by_name(name='lysC', exact_match=false, navigate_to_gene=true)"
+    tool_call: "find_gene_by_name(name='lysC', exact_match=false, navigate_to_gene=true)"
     thought: 'Fallback search for lysC gene with partial matching and navigation'
     expected_result: 'Gene lysC found using fuzzy search and browser navigates to location'
 
   - user_query: "Look for genes similar to 'lacz'"
-    tool_call: "search_gene_by_name(name='lacz', exact_match=false, case_sensitive=false)"
+    tool_call: "find_gene_by_name(name='lacz', exact_match=false, case_sensitive=false)"
     thought: 'User might have typo in gene name, use fuzzy search'
     expected_result: 'Finds lacZ and other similar genes despite case/spelling differences'
 

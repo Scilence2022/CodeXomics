@@ -388,7 +388,7 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
-    this.builtInToolsMap.set('search_gene_by_name', {
+    this.builtInToolsMap.set('find_gene_by_name', {
       method: 'searchGeneByName',
       category: 'navigation',
       type: 'built-in',
@@ -1170,16 +1170,16 @@ class BuiltInToolsIntegration {
         /\bgene\s+search\b/i.test(query) ||
         /\blocus\s+tag\b/i.test(query)) {
       relevantTools.push({
-        name: 'search_gene_by_name',
+        name: 'find_gene_by_name',
         confidence: 0.9,
-        reason: 'Specific gene name/identifier search keywords detected',
+        reason: 'Specific gene name/identifier lookup keywords detected',
       });
     }
 
     // Check for feature search patterns — BROAD search by annotation/function/type
     // Matches: "search for features", "find all tRNA", "search kinase genes"
     // Key distinction: "kinase genes" → search_features (functional keyword)
-    //                 "gene lacZ" → search_gene_by_name (specific identifier)
+    //                 "gene lacZ" → find_gene_by_name (specific identifier)
     if (/\b(search|find|look\s+up)\s+.*?\bfeatures?\b/i.test(query) ||
         /\bannotation\b/i.test(query) ||
         /\b(all|every)\s+(genes?|proteins?|cds|trna|rrna)\b/i.test(query) ||

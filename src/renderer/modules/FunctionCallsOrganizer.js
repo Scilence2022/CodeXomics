@@ -48,7 +48,7 @@ class FunctionCallsOrganizer {
           'get_gene_details',
           'get_chromosome_list',
           'search_features',
-          'search_gene_by_name',
+          'find_gene_by_name',
           'search_by_position',
           'get_nearby_features',
           'get_operons',

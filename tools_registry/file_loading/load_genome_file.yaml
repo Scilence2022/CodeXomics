@@ -74,7 +74,7 @@ sample_usages:
 relationships:
   enhances: ['get_sequence', 'navigate_to_position', 'search_features']
   prerequisites: []
-  follow_up: ['get_current_state', 'search_gene_by_name']
+  follow_up: ['get_current_state', 'find_gene_by_name']
 
 # Integration requirements
 integration_requirements: ['none']

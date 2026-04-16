@@ -81,7 +81,7 @@ metadata:
   usage_pattern: frequent
   recommendation: 'Use this to programmatically select a gene, equivalent to clicking on it in the genome view'
 error_handling:
-  gene_not_found: 'Returns error if gene name not found, suggest using search_gene_by_name first'
+  gene_not_found: 'Returns error if gene name not found, suggest using find_gene_by_name first'
   invalid_gene_name: 'Returns error if gene name is empty or invalid'
   no_genome_loaded: 'Returns error if no genome annotations are loaded'
 returns:

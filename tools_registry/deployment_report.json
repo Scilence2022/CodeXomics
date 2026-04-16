@@ -111,9 +111,9 @@
       "file": "search_features.yaml"
     },
     {
-      "name": "search_gene_by_name",
+      "name": "find_gene_by_name",
       "category": "navigation",
-      "file": "search_gene_by_name.yaml"
+      "file": "find_gene_by_name.yaml"
     },
     {
       "name": "switch_to_tab",

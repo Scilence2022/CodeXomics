@@ -1,6 +1,6 @@
 name: search_features
 version: 1.0.0
-description: 'Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name — use search_gene_by_name or jump_to_gene instead.'
+description: 'Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name — use find_gene_by_name or jump_to_gene instead.'
 category: navigation
 keywords:
   - search
@@ -23,7 +23,7 @@ parameters:
   properties:
     query:
       type: string
-      description: 'Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use search_gene_by_name for that)'
+      description: 'Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use find_gene_by_name for that)'
       examples:
         - 'ribosomal'
         - 'transport'
@@ -83,7 +83,7 @@ relationships:
   depends_on: []
   conflicts_with: []
   enhances: ['navigate_to_position']
-  alternatives: ['search_gene_by_name'] # search_gene_by_name for gene-specific searches
+  alternatives: ['find_gene_by_name'] # find_gene_by_name for gene-specific searches
   prerequisites: []
   follow_up: ['jump_to_gene', 'navigate_to_position']
 metadata:
@@ -98,7 +98,7 @@ metadata:
     - annotation
   complexity: simple
   usage_pattern: occasional
-  recommendation: 'Use for broad searches by annotation/function/type across all features; for specific gene lookup by name, use search_gene_by_name or jump_to_gene'
+  recommendation: 'Use for broad searches by annotation/function/type across all features; for specific gene lookup by name, use find_gene_by_name or jump_to_gene'
 error_handling:
   no_results: 'Returns empty list if no features match the search criteria'
   invalid_query: 'Returns error if search query is empty or invalid'

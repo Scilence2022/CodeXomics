@@ -202,7 +202,7 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         evaluation: 'manual',
         instruction: "Search for genes with locus tags starting with 'b1210'.",
         expectedResult: {
-          tool_name: 'search_gene_by_name',
+          tool_name: 'find_gene_by_name',
           parameters: {
             name: 'b1210',
             exact_match: false,

@@ -102,7 +102,7 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         instruction:
           "Find all genes with names containing 'ara' and perform integrated analysis of their chromosomal clustering.",
         expectedResult: {
-          tool_sequence: ['search_gene_by_name', 'analyze_region'],
+          tool_sequence: ['find_gene_by_name', 'analyze_region'],
           parameters: [{ name: 'ara', exact_match: false }, 'sequence_analysis_parameters'],
         },
         maxScore: 10,
@@ -193,7 +193,7 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         instruction:
           'Perform complete comparative genomics analysis: load two bacterial genomes, identify orthologs of lacZ gene, compare their codon usage patterns and assess evolutionary conservation.',
         expectedResult: {
-          tool_sequence: ['load_genome_file', 'search_gene_by_name', 'codon_usage_analysis'],
+          tool_sequence: ['load_genome_file', 'find_gene_by_name', 'codon_usage_analysis'],
           parameters: [{ filePath: '<genome_path>' }, { name: 'lacZ' }, { geneName: 'lacZ', include_statistics: true }],
         },
         maxScore: 15,

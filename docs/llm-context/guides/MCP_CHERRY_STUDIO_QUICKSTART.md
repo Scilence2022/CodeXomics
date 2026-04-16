@@ -115,7 +115,7 @@ translate it to protein, and analyze its domains"
 | ----------------------- | --------------------------------------------------------- |
 | "Server not found"      | Make sure CodeXomics is running and MCP server is started |
 | "Tool execution failed" | Check if required files are loaded (genome, annotations)  |
-| "Gene not found"        | Use `search_gene_by_name` with partial matches            |
+| "Gene not found"        | Use `find_gene_by_name` with partial matches            |
 | "Track not visible"     | Use `toggle_track` to enable the track first              |
 | "Settings not applied"  | Use `get_track_settings` to verify current configuration  |
 

@@ -1336,7 +1336,7 @@ class ChatManager {
         tools: [
           'navigate_to_position',
           'jump_to_gene',
-          'search_gene_by_name',
+          'find_gene_by_name',
           'open_new_tab',
           'zoom_in',
           'zoom_out',
@@ -5097,7 +5097,7 @@ class ChatManager {
         break;
 
       case 'search_features':
-      case 'search_gene_by_name':
+      case 'find_gene_by_name':
       case 'get_gene_details':
         // Limit gene/feature results to reasonable number
         if (sanitized.genes && Array.isArray(sanitized.genes)) {
@@ -6274,10 +6274,10 @@ class ChatManager {
   testFunctionCallParsing() {
     // Sample LLM response from user
     const sampleResponse = `<think>
-Okay, the user wants to search for the gene lacZ. Let me check the available tools. The relevant function here is search_gene_by_name, which is under the SEARCH & NAVIGATION category. The parameters needed are the name of the gene. Since the user specified "lacZ", I should use that as the parameter. I need to make sure the tool call is correctly formatted in JSON. Also, according to the priority, local tools are first, so this should be okay. No other parameters are needed, just the gene name. Let me structure the JSON accordingly.
+Okay, the user wants to search for the gene lacZ. Let me check the available tools. The relevant function here is find_gene_by_name, which is under the SEARCH & NAVIGATION category. The parameters needed are the name of the gene. Since the user specified "lacZ", I should use that as the parameter. I need to make sure the tool call is correctly formatted in JSON. Also, according to the priority, local tools are first, so this should be okay. No other parameters are needed, just the gene name. Let me structure the JSON accordingly.
 </think>
 
-{"tool_name": "search_gene_by_name", "parameters": {"name": "lacZ"}}`;
+{"tool_name": "find_gene_by_name", "parameters": {"name": "lacZ"}}`;
 
     console.log('🧪 Testing function call parsing with sample response...');
     console.log('Sample response:', sampleResponse);
@@ -6292,7 +6292,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
 
     // Expected result
     const expectedResult = {
-      tool_name: 'search_gene_by_name',
+      tool_name: 'find_gene_by_name',
       parameters: { name: 'lacZ' },
     };
 
@@ -6664,7 +6664,7 @@ TOOL AVAILABILITY:
   getCoreToolsByCategory() {
     const categories = {
       'SEARCH & NAVIGATION': [
-        'search_gene_by_name',
+        'find_gene_by_name',
         'search_features',
         'jump_to_gene',
         'navigate_to_position',
@@ -7514,7 +7514,7 @@ ${coreTools}
 
     // Tool-specific parameter extraction - MicrobeGenomicsFunctions methods expect specific arguments
     const genomicsTools = {
-      search_gene_by_name: () =>
+      find_gene_by_name: () =>
         window.MicrobeGenomicsFunctions.searchGeneByName(
           parameters.name || parameters.geneName || parameters.identifier
         ),
@@ -7671,7 +7671,7 @@ ${coreTools}
       'open_new_tab',
       // Search & Discovery
       'search_features',
-      'search_gene_by_name',
+      'find_gene_by_name',
       'search_sequence_motif',
       // Sequence Analysis
       'get_sequence',
@@ -7709,7 +7709,7 @@ AVAILABLE TOOLS SUMMARY:
 
 KEY TOOLS BY CATEGORY:
 Navigation & State: navigate_to_position, get_current_state, jump_to_gene, zoom_to_gene, select_gene, select_sequence_region, open_new_tab
-Search & Discovery: search_features, search_gene_by_name, search_sequence_motif
+Search & Discovery: search_features, find_gene_by_name, search_sequence_motif
 Sequence Analysis: get_sequence, translate_dna, compute_gc, reverse_complement  
 Advanced Analysis: analyze_region, predict_promoter, find_restriction_sites
 BLAST & External: blast_search, blast_sequence_from_region
@@ -8078,7 +8078,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // Search & Discovery
       'search_features',
-      'search_gene_by_name',
+      'find_gene_by_name',
       'search_by_position',
       'search_motif',
       'search_pattern',
@@ -9473,7 +9473,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     if (searchResults.length === 0) {
-      throw new Error(`Gene "${geneName}" not found. Try using search_gene_by_name to find the correct identifier.`);
+      throw new Error(`Gene "${geneName}" not found. Try using find_gene_by_name to find the correct identifier.`);
     }
 
     // Use the best match
@@ -9483,7 +9483,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Get the full annotation object for the gene (search results use a slim 'annotation' field)
     const geneAnnotation = bestMatch.annotation;
     if (!geneAnnotation || geneAnnotation.start === undefined) {
-      throw new Error(`Gene "${geneName}" found but annotation data is incomplete. Try using search_gene_by_name instead.`);
+      throw new Error(`Gene "${geneName}" found but annotation data is incomplete. Try using find_gene_by_name instead.`);
     }
 
     // If the gene is on a different chromosome, switch to it
@@ -13128,7 +13128,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // External Agent - 外部工具和API
       search_features: 'External Agent',
-      search_gene_by_name: 'External Agent',
+      find_gene_by_name: 'External Agent',
       search_by_position: 'External Agent',
       search_motif: 'External Agent',
       search_pattern: 'External Agent',

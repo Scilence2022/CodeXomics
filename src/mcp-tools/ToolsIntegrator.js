@@ -446,7 +446,7 @@ class ToolsIntegrator {
       zoom_in: (p) => `Zoom in by factor ${p.factor || 2}`,
       zoom_out: (p) => `Zoom out by factor ${p.factor || 2}`,
       jump_to_gene: (p) => `Jump to gene ${p.geneName}`,
-      search_gene_by_name: (p) => `Search for gene named "${p.name}"`,
+      find_gene_by_name: (p) => `Search for gene named "${p.name}"`,
     };
 
     const template = promptTemplates[toolName];

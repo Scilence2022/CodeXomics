@@ -84,11 +84,11 @@ class NavigationTools {
 
       search_features: {
         name: 'search_features',
-        description: 'Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name — use search_gene_by_name or jump_to_gene instead.',
+        description: 'Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name — use find_gene_by_name or jump_to_gene instead.',
         parameters: {
           type: 'object',
           properties: {
-            query: { type: 'string', description: 'Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use search_gene_by_name for that)' },
+            query: { type: 'string', description: 'Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use find_gene_by_name for that)' },
             featureType: { type: 'string', description: 'Type of feature to filter by (e.g., CDS, tRNA, rRNA, gene, promoter)' },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
@@ -160,8 +160,8 @@ class NavigationTools {
         },
       },
 
-      search_gene_by_name: {
-        name: 'search_gene_by_name',
+      find_gene_by_name: {
+        name: 'find_gene_by_name',
         description: 'Search for a SPECIFIC GENE by its name or locus tag (e.g., lacZ, b0062, dnaA). Use this when you know the gene identifier. For searching by functional annotation or feature type (e.g., "all kinase genes", "all tRNA"), use search_features instead.',
         parameters: {
           type: 'object',

@@ -35,7 +35,7 @@
 - `get_sequence` - 获取序列数据
 - `get_gene_details` - 获取基因详情
 - `search_features` - 搜索特征
-- `search_gene_by_name` - 按名称搜索基因
+- `find_gene_by_name` - 按名称搜索基因
 - `get_nearby_features` - 获取附近特征
 - `get_operons` - 获取操作子信息
 

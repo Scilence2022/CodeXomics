@@ -17,8 +17,8 @@ class BenchmarkEvaluatorBase {
 
   /**
    * Normalize a tool name to snake_case for comparison.
-   * Handles: searchGeneByName → search_gene_by_name,
-   *           search-gene-by-name → search_gene_by_name
+   * Handles: searchGeneByName → find_gene_by_name,
+   *           find-gene-by-name → find_gene_by_name
    */
   normalizeToolName(name) {
     if (!name || typeof name !== 'string') return '';
@@ -710,7 +710,7 @@ class BenchmarkEvaluatorBase {
     console.warn('[BenchmarkEvaluatorBase] builtInToolsMap not available, using fallback known functions list');
     this._cachedKnownFunctions = [
       // Navigation
-      'search_gene_by_name', 'search_features', 'search_by_position',
+      'find_gene_by_name', 'search_features', 'search_by_position',
       'navigate_to_position', 'jump_to_gene', 'switch_chromosome',
       'zoom_in', 'zoom_out', 'set_zoom_level',
       // Sequence

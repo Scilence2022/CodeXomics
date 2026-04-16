@@ -412,7 +412,7 @@ const smartExecutor = new SmartExecutor(chatManager);
 
 // Execute multiple tools with optimization
 const results = await smartExecutor.smartExecute('Analyze this gene and show its sequence', [
-  { tool_name: 'search_gene_by_name', parameters: { gene: 'BRCA1' } },
+  { tool_name: 'find_gene_by_name', parameters: { gene: 'BRCA1' } },
   { tool_name: 'get_sequence', parameters: {} },
   { tool_name: 'calculate_gc_content', parameters: {} },
 ]);

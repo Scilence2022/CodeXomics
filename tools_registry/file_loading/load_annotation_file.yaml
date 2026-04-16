@@ -74,7 +74,7 @@ sample_usages:
 relationships:
   depends_on: ['load_genome_file']
   enhances: ['search_features', 'get_gene_details', 'analyze_region']
-  follow_up: ['search_gene_by_name', 'get_nearby_features']
+  follow_up: ['find_gene_by_name', 'get_nearby_features']
 
 # Integration requirements
 integration_requirements: ['data']

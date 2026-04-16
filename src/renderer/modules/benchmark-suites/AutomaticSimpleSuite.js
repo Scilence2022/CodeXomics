@@ -153,12 +153,12 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       // SYSTEM SETUP TASKS - Automatic + Simple (HIGHEST PRIORITY - Must be first)
       {
         id: 'system_auto_01',
-        name: 'Set Working Directory to Test Data',
+        name: 'Set Working Directory',
         type: 'function_call',
         category: 'system_setup',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: `Set working directory to test data directory: ${this.getDefaultDirectory()}`,
+        instruction: `Set working directory to: “${this.getDefaultDirectory()}”`,
         expectedResult: {
           tool_name: 'set_working_directory',
           parameters: {
@@ -503,7 +503,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluation: 'automatic',
         instruction: 'Search for the gene lacZ by name.',
         expectedResult: {
-          tool_name: 'search_gene_by_name',
+          tool_name: 'find_gene_by_name',
           parameters: {
             name: 'lacZ',
           },
@@ -542,7 +542,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluation: 'automatic',
         instruction: 'Find the gene with locus tag b0344.',
         expectedResult: {
-          tool_name: 'search_gene_by_name',
+          tool_name: 'find_gene_by_name',
           parameters: {
             name: 'b0344',
           },

@@ -52,7 +52,7 @@ relationships:
   depends_on: []
   conflicts_with: []
   enhances: ['navigate_to_position']
-  alternatives: ['search_gene_by_name'] # Use this as fallback if gene name not found
+  alternatives: ['find_gene_by_name'] # Use this as fallback if gene name not found
   prerequisites: []
   follow_up: ['get_sequence', 'analyze_region']
 metadata:
@@ -69,7 +69,7 @@ metadata:
   usage_pattern: frequent
   recommendation: 'Use this as the PRIMARY tool for navigating to genes by name'
 error_handling:
-  gene_not_found: 'Returns error if gene name not found, suggest using search_gene_by_name as fallback'
+  gene_not_found: 'Returns error if gene name not found, suggest using find_gene_by_name as fallback'
   invalid_gene_name: 'Returns error if gene name is empty or invalid'
   no_genome_loaded: 'Returns error if no genome annotations are loaded'
 returns:

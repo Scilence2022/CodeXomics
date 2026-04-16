@@ -65,7 +65,7 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 
 ### 4. Gene & Feature Analysis
 
-- `search_gene_by_name` - Find genes by name
+- `find_gene_by_name` - Find genes by name
 - `jump_to_gene` - Navigate to a specific gene
 - `get_gene_details` - Get comprehensive gene information
 - `get_operons` - Get operon structures
@@ -164,7 +164,7 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 
 ### When Analyzing Genes:
 
-1. **Search by name** - Use `search_gene_by_name` to find gene IDs
+1. **Search by name** - Use `find_gene_by_name` to find gene IDs
 2. **Get details** - Use `get_gene_details` for comprehensive information
 3. **Extract sequences** - Use `get_coding_sequence` for CDS and protein sequences
 4. **Check structure** - Use AlphaFold tools for 3D structure analysis
@@ -180,7 +180,7 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 ### Workflow 1: Gene Analysis Pipeline
 
 ```
-1. search_gene_by_name(name: "lacZ")
+1. find_gene_by_name(name: "lacZ")
 2. jump_to_gene(geneName: "lacZ")
 3. get_gene_details(identifier: "lacZ")
 4. get_coding_sequence(identifier: "lacZ")
