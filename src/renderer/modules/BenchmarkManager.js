@@ -546,11 +546,34 @@ class BenchmarkManager {
 
     // The UI will handle displaying the results
     if (this.ui && this.ui.window && !this.ui.window.closed) {
+      // Serialize results before postMessage to avoid DataCloneError
+      // (results may contain plugin functions or other non-cloneable objects)
+      let safeData;
+      try {
+        safeData = JSON.parse(JSON.stringify(results));
+      } catch (e) {
+        console.warn('[BenchmarkManager] Failed to fully serialize results for postMessage, sending summary:', e.message);
+        safeData = {
+          startTime: results && results.startTime,
+          endTime: results && results.endTime,
+          duration: results && results.duration,
+          overallStats: results && results.overallStats,
+          testSuiteResults: results && results.testSuiteResults
+            ? results.testSuiteResults.map(sr => ({
+                suiteId: sr.suiteId,
+                stats: sr.stats,
+                duration: sr.duration,
+              }))
+            : [],
+          _truncated: true,
+        };
+      }
+
       // Send results to benchmark window
       this.ui.window.postMessage(
         {
           type: 'benchmark-results',
-          data: results,
+          data: safeData,
         },
         '*'
       );

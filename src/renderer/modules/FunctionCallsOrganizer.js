@@ -295,6 +295,22 @@ class FunctionCallsOrganizer {
         description: 'External API calls and third-party integrations',
         functions: ['blast_sequence', 'uniprot_search', 'alphafold_search', 'alphafold_get_structure', 'evo2_design'],
       },
+
+      // 类别17: 基准测试管理类 - 中等优先级，UI管理型
+      benchmarkManagement: {
+        priority: 3,
+        description: 'LLM benchmark execution, control, and results management',
+        functions: [
+          'open_benchmark',
+          'start_benchmark',
+          'stop_benchmark',
+          'pause_benchmark',
+          'resume_benchmark',
+          'get_benchmark_results',
+          'get_benchmark_status',
+          'export_benchmark_results',
+        ],
+      },
     };
 
     // 功能映射表

@@ -1391,8 +1391,17 @@ class BuiltInToolsIntegration {
 
     // Check for benchmark patterns
     if (/\b(benchmark|benchmarks)\b/i.test(query)) {
-      // open_benchmark
-      if (/\b(open|show|display|launch|start|view)\s+.*?\bbenchmark\b/i.test(query) ||
+      // start_benchmark (check FIRST — 'start' and 'run' are the primary trigger verbs)
+      if (/\b(start|run|execute|begin|kick\s+off)\s+.*?\bbenchmark\b/i.test(query) ||
+          /\bbenchmark\s+.*?\b(start|run|execute|begin)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'start_benchmark',
+          confidence: 0.95,
+          reason: 'Benchmark start/run keywords detected',
+        });
+      }
+      // open_benchmark (only 'open/show/display/launch/view' — NOT 'start/run')
+      else if (/\b(open|show|display|launch|view)\s+.*?\bbenchmark\b/i.test(query) ||
           /\bbenchmark\s+.*?\b(panel|interface|window|ui)\b/i.test(query)) {
         relevantTools.push({
           name: 'open_benchmark',
@@ -1400,13 +1409,17 @@ class BuiltInToolsIntegration {
           reason: 'Benchmark interface open keywords detected',
         });
       }
-      // start_benchmark
-      if (/\b(start|run|execute|begin|kick\s+off)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\bbenchmark\s+.*?\b(start|run|execute|begin)\b/i.test(query)) {
+      // If query contains just 'benchmark' alone (no other verb), include both open and start
+      if (/^\s*benchmark\s*$/i.test(query.trim()) || /^\s*benchmarks?\s*(please|now)?\s*$/i.test(query.trim())) {
+        relevantTools.push({
+          name: 'open_benchmark',
+          confidence: 0.85,
+          reason: 'Standalone benchmark keyword — offering interface',
+        });
         relevantTools.push({
           name: 'start_benchmark',
-          confidence: 0.9,
-          reason: 'Benchmark start/run keywords detected',
+          confidence: 0.85,
+          reason: 'Standalone benchmark keyword — offering start',
         });
       }
       // stop_benchmark
@@ -1439,7 +1452,7 @@ class BuiltInToolsIntegration {
       // get_benchmark_results
       if (/\bbenchmark\s+.*?\b(result|results|stat|stats|statistics|history|score|scores|report)\b/i.test(query) ||
           /\b(result|results|stat|stats|statistics|history|score|scores|report)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\b(get|show|view|display)\s+.*?\bbenchmark\b/i.test(query)) {
+          /\b(get|show|view|display)\s+.*?\bbenchmark\s+.*?\b(result|stat|history|score|report)\b/i.test(query)) {
         relevantTools.push({
           name: 'get_benchmark_results',
           confidence: 0.9,

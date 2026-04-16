@@ -6949,6 +6949,8 @@ ${coreTools}
       // AlphaFold and protein structure tools
       search_alphafold_structures: () => this.services.protein.searchAlphaFoldStructures(parameters),
       search_alphafold_by_gene: () => this.services.protein.searchAlphaFoldStructures(parameters), // Legacy alias
+      alphafold_search: () => this.services.protein.searchAlphaFoldStructures(parameters), // Legacy alias
+      alphafold_get_structure: () => this.fetchAlphaFoldStructure(parameters), // Legacy alias
       fetch_alphafold_structure: () => this.fetchAlphaFoldStructure(parameters),
       search_pdb_structures: () => this.services.protein.searchPdbStructures(parameters),
       fetch_protein_structure: () => this.fetchProteinStructure(parameters),
@@ -9100,15 +9102,15 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async translateSequence(params) {
-    return this.services.analysis.translateSequence(parameters);
+    return this.services.analysis.translateSequence(params);
   }
 
   async calculateGCContent(params) {
-    return this.services.analysis.calculateGCContent(parameters);
+    return this.services.analysis.calculateGCContent(params);
   }
 
   async findOpenReadingFrames(params) {
-    return this.services.analysis.findOpenReadingFrames(parameters);
+    return this.services.analysis.findOpenReadingFrames(params);
   }
 
   reverseComplement(sequence) {
@@ -9119,7 +9121,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async getCodingSequence(params) {
-    return this.services.analysis.getCodingSequence(parameters);
+    return this.services.analysis.getCodingSequence(params);
   }
 
   /**
@@ -10149,7 +10151,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async codonUsageAnalysis(params) {
-    return this.services.analysis.codonUsageAnalysis(parameters);
+    return this.services.analysis.codonUsageAnalysis(params);
   }
 
   /**
@@ -12373,15 +12375,15 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   // ====================================
 
   async blastSearch(params) {
-    return this.services.blast.blastSearch(parameters);
+    return this.services.blast.blastSearch(params);
   }
 
   async blastSequenceFromRegion(params) {
-    return this.services.blast.blastSequenceFromRegion(parameters);
+    return this.services.blast.blastSequenceFromRegion(params);
   }
 
   getBlastDatabases(params) {
-    return this.services.blast.getBlastDatabases(parameters);
+    return this.services.blast.getBlastDatabases(params);
   }
 
   // ====================================
@@ -12389,19 +12391,19 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   // ====================================
 
   async batchBlastSearch(params) {
-    return this.services.blast.batchBlastSearch(parameters);
+    return this.services.blast.batchBlastSearch(params);
   }
 
   async localBlastDatabaseInfo(params) {
-    return this.services.blast.localBlastDatabaseInfo(parameters);
+    return this.services.blast.localBlastDatabaseInfo(params);
   }
 
   async executeMCPBlastTool(toolName, params) {
-    return this.services.blast.executeMCPBlastTool(toolName, parameters);
+    return this.services.blast.executeMCPBlastTool(toolName, params);
   }
 
   async advancedBlastSearch(params) {
-    return this.services.blast.advancedBlastSearch(parameters);
+    return this.services.blast.advancedBlastSearch(params);
   }
 
   applyBlastFilters(hits, filters) {
@@ -12409,7 +12411,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async getGenomeInfo(params) {
-    return this.services.analysis.getGenomeInfo(parameters);
+    return this.services.analysis.getGenomeInfo(params);
   }
 
   calculateGCContent(sequence) {
@@ -14412,15 +14414,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     await bm.waitForInitialization();
 
     const suites = parameters.suites || ['automatic_simple'];
-    const options = {
-      suites,
-      timeout: parameters.timeout !== undefined ? parameters.timeout : 120000,
-      testDelay: parameters.test_delay !== undefined ? parameters.test_delay : 60000,
-      generateReport: parameters.generate_report !== undefined ? parameters.generate_report : true,
-      includeCharts: parameters.include_charts !== undefined ? parameters.include_charts : true,
-      includeRawData: parameters.include_raw_data !== undefined ? parameters.include_raw_data : false,
-      stopOnError: parameters.stop_on_error !== undefined ? parameters.stop_on_error : false,
-    };
+    const timeout = parameters.timeout !== undefined ? parameters.timeout : 120000;
+    const testDelay = parameters.test_delay !== undefined ? parameters.test_delay : 60000;
+    const generateReport = parameters.generate_report !== undefined ? parameters.generate_report : true;
+    const includeCharts = parameters.include_charts !== undefined ? parameters.include_charts : true;
+    const includeRawData = parameters.include_raw_data !== undefined ? parameters.include_raw_data : false;
+    const stopOnError = parameters.stop_on_error !== undefined ? parameters.stop_on_error : false;
 
     // Open the interface first so the user can see progress
     try {
@@ -14429,23 +14428,51 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // Non-fatal — continue even if UI open fails
     }
 
-    // Run benchmark asynchronously so ChatManager can return immediately
-    bm.framework
-      .runAllBenchmarks(options)
-      .then(results => {
-        bm.showBenchmarkResults(results);
-        bm.showSuccess('Benchmark completed!');
-      })
-      .catch(err => {
-        console.error('[startBenchmark] Error:', err);
-        bm.showError('Benchmark failed: ' + err.message);
-      });
+    // Pre-configure the UI form to match programmatic options, then delegate to the
+    // UI's own startMainWindowBenchmark() so it owns the running-state, timers,
+    // progress bar, and results display — avoiding the postMessage DataCloneError.
+    setTimeout(() => {
+      try {
+        // Suite checkboxes
+        const allSuiteIds = ['automatic_simple', 'automatic_complex', 'manual_suite', 'manual_complex'];
+        for (const id of allSuiteIds) {
+          const cb = document.getElementById(`suite-${id}`);
+          if (cb) cb.checked = suites.includes(id);
+        }
+        // Timeout (-1 signals individual-test timeouts)
+        const timeoutEl = document.getElementById('testTimeout');
+        if (timeoutEl) timeoutEl.value = timeout === null ? '-1' : String(timeout);
+        // Delay between batches
+        const testDelayEl = document.getElementById('testDelay');
+        if (testDelayEl) testDelayEl.value = String(testDelay);
+        // Report options
+        const reportEl = document.getElementById('generateReport');
+        if (reportEl) reportEl.checked = generateReport;
+        const chartsEl = document.getElementById('includeCharts');
+        if (chartsEl) chartsEl.checked = includeCharts;
+        const rawDataEl = document.getElementById('includeRawData');
+        if (rawDataEl) rawDataEl.checked = includeRawData;
+        const stopOnErrorEl = document.getElementById('stopOnError');
+        if (stopOnErrorEl) stopOnErrorEl.checked = stopOnError;
+
+        // Trigger via the UI so it handles running-state, elapsed timer, and results display
+        if (bm.ui && typeof bm.ui.startMainWindowBenchmark === 'function') {
+          bm.ui.startMainWindowBenchmark();
+        } else {
+          console.warn('[startBenchmark] BenchmarkUI.startMainWindowBenchmark not available — falling back to direct run');
+          bm.framework.runAllBenchmarks({
+            suites, timeout, testDelay, generateReport, includeCharts, includeRawData, stopOnError,
+          }).catch(err => console.error('[startBenchmark] Fallback run error:', err));
+        }
+      } catch (e) {
+        console.error('[startBenchmark] Failed to configure and start benchmark via UI:', e);
+      }
+    }, 250);
 
     return {
       success: true,
-      message: `Benchmark started with suites: ${suites.join(', ')}`,
+      message: `Benchmark starting with suites: ${suites.join(', ')}`,
       suites,
-      options,
     };
   }
 
