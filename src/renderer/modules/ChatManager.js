@@ -14383,14 +14383,19 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Open the benchmark interface.
    */
   async openBenchmark(_parameters = {}) {
-    const bm = this._getBenchmarkManager();
+    let bm = this._getBenchmarkManager();
     if (!bm) {
-      // Attempt to trigger the on-demand initialization through the app
-      if (typeof openBenchmarkInterface === 'function') {
-        openBenchmarkInterface();
-        return { success: true, message: 'Benchmark interface opening...' };
+      // Benchmark modules not yet loaded — initialize on demand via the app
+      if (this.app && typeof this.app.initializeBenchmarkSystemOnDemand === 'function') {
+        try {
+          bm = await this.app.initializeBenchmarkSystemOnDemand();
+        } catch (e) {
+          console.error('[openBenchmark] On-demand initialization failed:', e);
+          return { success: false, error: 'Failed to initialize benchmark system: ' + e.message };
+        }
+      } else {
+        return { success: false, error: 'Benchmark system not available. Please open it manually from the menu.' };
       }
-      return { success: false, error: 'Benchmark system not available. Please open it manually from the menu.' };
     }
     await bm.showBenchmarkInterface();
     return { success: true, message: 'Benchmark interface opened' };
@@ -14400,14 +14405,19 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Start a benchmark run with the given options.
    */
   async startBenchmark(parameters = {}) {
-    const bm = this._getBenchmarkManager();
+    let bm = this._getBenchmarkManager();
     if (!bm) {
-      // Attempt to trigger on-demand init and open the interface
-      if (typeof openBenchmarkInterface === 'function') {
-        openBenchmarkInterface();
-        return { success: true, message: 'Benchmark interface opening — please configure and start from the UI.' };
+      // Benchmark modules not yet loaded — initialize on demand via the app
+      if (this.app && typeof this.app.initializeBenchmarkSystemOnDemand === 'function') {
+        try {
+          bm = await this.app.initializeBenchmarkSystemOnDemand();
+        } catch (e) {
+          console.error('[startBenchmark] On-demand initialization failed:', e);
+          return { success: false, error: 'Failed to initialize benchmark system: ' + e.message };
+        }
+      } else {
+        return { success: false, error: 'Benchmark system not available. Please open it manually from the menu.' };
       }
-      return { success: false, error: 'Benchmark system not available. Please open it manually from the menu.' };
     }
 
     // Wait for initialization
