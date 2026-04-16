@@ -82,13 +82,63 @@ class ProteinService {
         pdbId: entry.identifier,
         pdbUrl: `https://www.rcsb.org/structure/${entry.identifier}`,
         downloadUrl: `https://files.rcsb.org/download/${entry.identifier}.pdb`,
-        title: entry.identifier, // Use PDB ID as title since API doesn't return title
-        organism: 'N/A', // RCSB API doesn't return organism in search results
-        method: 'N/A', // RCSB API doesn't return method in search results
-        resolution: 'N/A', // RCSB API doesn't return resolution in search results
+        title: entry.identifier, // Fallback title
+        organism: 'N/A', 
+        method: 'N/A', 
+        resolution: 'N/A', 
       }));
 
+      // Fetch detailed metadata via GraphQL if results found
       if (results.length > 0) {
+        try {
+          const pdbIds = results.map(r => r.pdbId);
+          const graphqlQuery = {
+            query: `{
+              entries(entry_ids: ${JSON.stringify(pdbIds)}) {
+                rcsb_id
+                struct { title }
+                rcsb_entry_info {
+                  experimental_method
+                  resolution_combined
+                }
+                polymer_entities {
+                  rcsb_entity_source_organism {
+                    scientific_name
+                  }
+                }
+              }
+            }`
+          };
+
+          const gqlResponse = await fetch('https://data.rcsb.org/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(graphqlQuery)
+          });
+
+          if (gqlResponse.ok) {
+            const gqlData = await gqlResponse.json();
+            const detailsMap = {};
+            (gqlData.data?.entries || []).forEach(entry => {
+              detailsMap[entry.rcsb_id] = entry;
+            });
+
+            // Update results with detailed data
+            results.forEach(res => {
+              const details = detailsMap[res.pdbId];
+              if (details) {
+                res.title = details.struct?.title || res.pdbId;
+                res.method = details.rcsb_entry_info?.experimental_method || 'N/A';
+                res.resolution = details.rcsb_entry_info?.resolution_combined ? 
+                  details.rcsb_entry_info.resolution_combined[0] : 'N/A';
+                res.organism = details.polymer_entities?.[0]?.rcsb_entity_source_organism?.[0]?.scientific_name || 'N/A';
+              }
+            });
+          }
+        } catch (gqlError) {
+          console.warn('PDB GraphQL fetch failed:', gqlError);
+        }
+
         this.renderProteinStructureResults({
           results: results,
           searchType: 'PDB',
@@ -261,6 +311,7 @@ class ProteinService {
               <i class="fas fa-times"></i>
           </button>
       </div>
+      <div class="sidebar-resizer"></div>
       <div class="tab-bar-container">
           <div class="tab-bar"></div>
       </div>
@@ -268,6 +319,26 @@ class ProteinService {
           <div class="protein-results-list"></div>
       </div>
     `;
+
+    // Implement Resizing
+    const resizer = sidebar.querySelector('.sidebar-resizer');
+    resizer.onmousedown = (e) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = parseInt(getComputedStyle(sidebar).width, 10);
+      
+      document.onmousemove = (e) => {
+        const width = startWidth - (e.clientX - startX);
+        if (width > 300 && width < 1000) {
+          sidebar.style.width = `${width}px`;
+        }
+      };
+      
+      document.onmouseup = () => {
+        document.onmousemove = null;
+        document.onmouseup = null;
+      };
+    };
 
     // Implement Dragging
     const dragHandle = sidebar.querySelector('.sidebar-drag-handle');
@@ -319,41 +390,56 @@ class ProteinService {
       const style = document.createElement('style');
       style.id = 'protein-sidebar-styles';
         style.innerHTML = `
-          .protein-results-sidebar { position: fixed; top: 20px; right: 20px; width: 400px; height: calc(100vh - 40px); background: var(--bg-color, #fff); box-shadow: -2px 0 15px rgba(0,0,0,0.2); transition: right 0.3s ease, transform 0.3s ease; z-index: 1000; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color, #eee); }
+          .protein-results-sidebar { position: fixed; top: 20px; right: 20px; width: 420px; min-width: 300px; height: calc(100vh - 40px); background: var(--bg-color, #fff); box-shadow: -5px 0 25px rgba(0,0,0,0.15); transition: right 0.3s ease, transform 0.3s ease; z-index: 1000; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-color, #e0e0e0); font-family: 'Inter', system-ui, -apple-system, sans-serif; }
           .protein-results-sidebar:not(.visible) { display: none; }
           
-          .sidebar-drag-handle { background: var(--bg-hover, #f5f5f5); padding: 4px 10px; display: flex; align-items: center; justify-content: space-between; cursor: move; border-bottom: 1px solid var(--border-color, #eee); height: 32px; }
-          .sidebar-drag-handle:hover { background: var(--bg-active, #ececeb); }
-          .sidebar-drag-handle .drag-icon { font-size: 14px; flex: 1; text-align: center; margin-left: 20px; } 
+          .sidebar-resizer { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; cursor: ew-resize; background: transparent; z-index: 10; transition: background 0.2s; }
+          .sidebar-resizer:hover { background: rgba(0, 128, 128, 0.3); }
 
-          .sidebar-drag-handle .sidebar-close { background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted, #999); padding: 2px 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border-radius: 4px; }
-          .sidebar-drag-handle .sidebar-close:hover { color: var(--danger-color, #dc3545); background: rgba(220, 53, 69, 0.1); }
+          .sidebar-drag-handle { background: var(--bg-hover, #f8f9fa); padding: 6px 12px; display: flex; align-items: center; justify-content: space-between; cursor: move; border-bottom: 1px solid var(--border-color, #eee); height: 38px; }
+          .sidebar-drag-handle:hover { background: var(--bg-active, #ececeb); }
+          .sidebar-drag-handle .drag-icon { font-size: 14px; flex: 1; text-align: center; margin-left: 20px; color: #adb5bd; } 
+
+          .sidebar-drag-handle .sidebar-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #adb5bd; padding: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border-radius: 6px; }
+          .sidebar-drag-handle .sidebar-close:hover { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
           
-          .tab-bar-container { background: var(--bg-secondary, #fafafa); border-bottom: 1px solid var(--border-color, #eee); }
-          .tab-bar { display: flex; overflow-x: auto; padding: 5px 10px 0 10px; gap: 5px; scrollbar-width: none; }
+          .tab-bar-container { background: #fff; border-bottom: 1px solid #f0f0f0; }
+          .tab-bar { display: flex; overflow-x: auto; padding: 8px 12px 0 12px; gap: 8px; scrollbar-width: none; }
           .tab-bar::-webkit-scrollbar { display: none; }
           
-          .tab-button { display: flex; align-items: center; padding: 6px 12px; background: var(--bg-color, #fff); border: 1px solid var(--border-color, #eee); border-bottom: none; border-radius: 8px 8px 0 0; font-size: 12px; cursor: pointer; white-space: nowrap; max-width: 150px; color: var(--text-muted, #666); transition: all 0.2s; }
-          .tab-button.active { background: var(--primary-color, #007bff); color: #fff; border-color: var(--primary-color, #007bff); }
+          .tab-button { display: flex; align-items: center; padding: 8px 16px; background: #f8f9fa; border: 1px solid #eee; border-bottom: none; border-radius: 10px 10px 0 0; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; max-width: 180px; color: #6c757d; transition: all 0.2s; position: relative; }
+          .tab-button.active { background: #008080; color: #fff; border-color: #008080; }
           .tab-button .tab-title { overflow: hidden; text-overflow: ellipsis; }
-          .tab-button .tab-close { margin-left: 8px; font-size: 14px; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
-          .tab-button .tab-close:hover { background: rgba(0,0,0,0.1); color: #fff; }
+          .tab-button .tab-close { margin-left: 10px; font-size: 16px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; border-radius: 50%; opacity: 0.7; }
+          .tab-button .tab-close:hover { background: rgba(0,0,0,0.1); opacity: 1; }
           .tab-button.active .tab-close:hover { background: rgba(255,255,255,0.2); }
 
-          .protein-results-sidebar .sidebar-content { padding: 15px; overflow-y: auto; flex: 1; }
-          .protein-results-sidebar .protein-result-item { background: var(--bg-hover, #f8f9fa); border: 1px solid var(--border-color, #eee); border-radius: 10px; padding: 15px; margin-bottom: 12px; transition: transform 0.2s; }
-          .protein-results-sidebar .protein-result-item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
-          .protein-results-sidebar .sidebar-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-color, #333); }
-          .protein-results-sidebar .sidebar-content { padding: 20px; overflow-y: auto; flex: 1; }
-          .protein-results-sidebar .protein-result-item { background: var(--bg-secondary, #f9f9f9); border: 1px solid var(--border-color, #eee); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-          .protein-results-sidebar .result-header { font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; }
-          .protein-results-sidebar .result-details { font-size: 13px; margin-bottom: 15px; color: var(--text-muted, #666); }
-          .protein-results-sidebar .detail-row { display: flex; margin-bottom: 4px; }
-          .protein-results-sidebar .label { font-weight: 600; min-width: 90px; }
-          .protein-results-sidebar .result-actions { display: flex; gap: 10px; }
-          .protein-results-sidebar .btn { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
-          .protein-results-sidebar .btn-primary { background: var(--primary-color, #007bff); color: #fff; }
-          .protein-results-sidebar .btn-secondary { background: var(--secondary-color, #6c757d); color: #fff; }
+          .protein-results-sidebar .sidebar-content { padding: 20px; overflow-y: auto; flex: 1; background: #fff; }
+          .protein-results-sidebar .protein-result-item { background: #ffffff; border: 1px solid #eef2f5; border-radius: 14px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1); }
+          .protein-results-sidebar .protein-result-item:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: #00808033; }
+          
+          .protein-results-sidebar .result-header { margin-bottom: 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+          .protein-results-sidebar .protein-title { font-weight: 700; color: #2c3e50; font-size: 15px; line-height: 1.4; flex: 1; }
+          .protein-results-sidebar .protein-id { font-family: 'Fira Code', 'Monaco', 'Consolas', monospace; font-size: 13px; font-weight: 600; color: #495057; background: #f1f3f5; padding: 4px 10px; border-radius: 6px; white-space: nowrap; align-self: flex-start; }
+          
+          .protein-results-sidebar .result-details { font-size: 13px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+          .protein-results-sidebar .detail-row { display: flex; align-items: baseline; justify-content: space-between; gap: 15px; }
+          .protein-results-sidebar .label { font-weight: 600; color: #868e96; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 80px; }
+          .protein-results-sidebar .value { color: #495057; font-weight: 500; text-align: right; line-height: 1.4; }
+          
+          .protein-results-sidebar .result-actions { display: flex; flex-direction: column; gap: 10px; }
+          .protein-results-sidebar .btn { width: 100%; padding: 10px 16px; border-radius: 10px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+          .protein-results-sidebar .btn i { font-size: 14px; }
+          
+          .protein-results-sidebar .btn-primary { background: #008080; color: #fff; box-shadow: 0 4px 12px rgba(0, 128, 128, 0.2); }
+          .protein-results-sidebar .btn-primary:hover { background: #006666; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0, 128, 128, 0.3); }
+          .protein-results-sidebar .btn-primary:active { transform: translateY(0); }
+          
+          .protein-results-sidebar .btn-secondary { background: #4b5563; color: #fff; box-shadow: 0 4px 12px rgba(75, 85, 99, 0.15); }
+          .protein-results-sidebar .btn-secondary:hover { background: #374151; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(75, 85, 99, 0.25); }
+          .protein-results-sidebar .btn-secondary:active { transform: translateY(0); }
+
+          .protein-results-sidebar .no-results { text-align: center; padding: 40px 20px; color: #adb5bd; font-style: italic; }
         `;
         document.head.appendChild(style);
     }
@@ -368,7 +454,7 @@ class ProteinService {
     element.className = 'protein-result-item';
     
     // Unify variables
-    const titleOrName = isAlphaFold ? result.proteinName : `PDB Structure ${result.pdbId}`;
+    const titleOrName = isAlphaFold ? result.proteinName : (result.title || `PDB Structure ${result.pdbId}`);
     const primaryId = isAlphaFold ? result.uniprotId : result.pdbId;
     const structureUrl = isAlphaFold ? result.alphaFoldUrl : result.pdbUrl;
     const urlLabel = isAlphaFold ? 'AlphaFold Page' : 'PDB Page';
