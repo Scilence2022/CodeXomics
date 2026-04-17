@@ -532,21 +532,74 @@ class InternalMCPServer {
     return state;
   }
 
-  async getGenomeInfo() {
-    if (!this.genomeStudio.fileManager) {
-      throw new Error('FileManager not available');
+  async getGenomeInfo(params = {}) {
+    if (!this.genomeStudio.fileManager || !this.genomeStudio.currentSequence) {
+      throw new Error('Genome data not available');
     }
+
+    const { include_statistics = true, include_annotations = true, include_chromosomes = true } = params;
+
+    const sequenceLength = Object.values(this.genomeStudio.currentSequence).reduce((acc, seq) => acc + seq.length, 0);
 
     const genomeInfo = {
       name: this.genomeStudio.fileManager.currentGenome?.name || 'Unknown',
-      length: this.genomeStudio.sequenceLength || 0,
-      chromosomes: this.genomeStudio.currentSequence ? Object.keys(this.genomeStudio.currentSequence) : [],
+      length: this.genomeStudio.sequenceLength || sequenceLength,
       loadedFiles: this.genomeStudio.loadedFiles || [],
     };
 
+    if (include_chromosomes) {
+      genomeInfo.chromosomes = Object.keys(this.genomeStudio.currentSequence);
+    }
+
+    // Comprehensive statistical counts by gene type (e.g., CDS, tRNA, rRNA)
+    if (include_annotations && this.genomeStudio.currentAnnotations) {
+      let totalFeatures = 0;
+      let featureCounts = {};
+      
+      const chromosomes = Object.keys(this.genomeStudio.currentAnnotations);
+      for (const chr of chromosomes) {
+        const features = this.genomeStudio.currentAnnotations[chr] || [];
+        totalFeatures += features.length;
+        
+        for (const feature of features) {
+          const type = feature.type || 'unknown';
+          featureCounts[type] = (featureCounts[type] || 0) + 1;
+        }
+      }
+      
+      genomeInfo.annotations = {
+        hasData: true,
+        totalFeatures,
+        featureCounts
+      };
+    } else {
+      genomeInfo.annotations = {
+        hasData: false,
+        totalFeatures: 0,
+        featureCounts: {}
+      };
+    }
+
+    // Comprehensive sequence statistics per chromosome
+    if (include_statistics) {
+       const chromosomeStats = {};
+       const chroms = Object.keys(this.genomeStudio.currentSequence);
+       for (const chr of chroms) {
+          const seq = this.genomeStudio.currentSequence[chr];
+          const gcCount = (seq.match(/[GgCc]/g) || []).length;
+          const gcPercent = Math.round((gcCount / seq.length) * 10000) / 100;
+          
+          chromosomeStats[chr] = {
+             length: seq.length,
+             gcPercent: gcPercent
+          };
+       }
+       genomeInfo.statistics = { chromosomeStats };
+    }
+
     return {
       success: true,
-      genomeInfo,
+      genomeInfo
     };
   }
 

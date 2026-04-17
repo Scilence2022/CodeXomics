@@ -218,18 +218,23 @@ class GenomeStudioRPCHandler {
     return state;
   }
 
-  async getGenomeInfo() {
+  async getGenomeInfo(params = {}) {
     if (!this.modules.fileManager) {
       throw new Error('FileManager not available');
     }
 
-    const genomeInfo = this.modules.fileManager.getGenomeInfo
-      ? this.modules.fileManager.getGenomeInfo()
-      : {
-          name: 'Unknown',
-          length: 0,
-          chromosomes: [],
-        };
+    // Delegate to the comprehensive ChatManager/GenomeAnalysisService method if available
+    const app = this.modules.fileManager.app || this.modules.navigationManager?.app;
+    if (app && app.chatManager && app.chatManager.getGenomeInfo) {
+      return await app.chatManager.getGenomeInfo(params);
+    }
+
+    // Fallback if chatManager is not available
+    const genomeInfo = {
+      name: this.modules.fileManager.currentGenome?.name || 'Unknown',
+      length: app?.sequenceLength || 0,
+      chromosomes: app?.currentSequence ? Object.keys(app.currentSequence) : [],
+    };
 
     return {
       success: true,
