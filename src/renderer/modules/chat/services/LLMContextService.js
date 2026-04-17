@@ -1921,6 +1921,12 @@ ANALYSIS FUNCTIONS:
 - Comparison: blast_search, compare_regions, find_similar_sequences
 - Editing: copy_sequence, cut_sequence, paste_sequence, delete_sequence, insert_sequence, replace_sequence
 
+SYSTEM & FILE MANAGEMENT:
+- Set working directory: set_working_directory(directory_path="/path/to/dir") — sets the default directory for file operations
+- Use home directory: set_working_directory(use_home_directory=true)
+- List all tools: list_available_tools() — shows all available tools and their categories
+- Download file: download_internet_file(url, save_path) — downloads a file from the internet
+
 IMPORTANT PREREQUISITES:
 Before using get_coding_sequence or other gene-specific functions:
 1. Ensure genome data is loaded (GenBank/GFF files)

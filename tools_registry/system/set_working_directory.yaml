@@ -1,37 +1,60 @@
 name: 'set_working_directory'
-description: 'Set the current working directory for the application. Defaults to user home directory when not set.'
-version: '1.0.0'
+description: 'Set the current working directory for the application. All file operations (load, export, save) will use this directory as the base path. Use this when the user specifies a directory path for data files.'
+version: '1.1.0'
 author: 'CodeXomics'
 category: 'system'
 intent: 'system_management'
 priority: 1
-keywords: ['directory', 'folder', 'path', 'working', 'current', 'set', 'change', 'cd']
+keywords: ['directory', 'folder', 'path', 'working', 'current', 'set', 'change', 'cd', 'working directory', 'set directory']
 aliases: ['change_directory', 'cd', 'set_dir', 'change_working_dir']
 enabled: true
 
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
 parameters:
-  anyOf:
-    - required: ['directory_path']
-    - required: ['use_home_directory']
+  type: 'object'
   properties:
     directory_path:
       type: 'string'
       description: 'The absolute or relative path to set as working directory'
-      example: '/Users/song/test-data'
+      examples: ['/Users/song/test-data', '/tmp/genome-analysis']
     use_home_directory:
       type: 'boolean'
       description: 'Set to true to use user home directory as working directory'
-      example: true
+      default: false
     create_if_missing:
       type: 'boolean'
       description: "Create the directory if it doesn't exist (default: false)"
       default: false
-      example: false
     validate_permissions:
       type: 'boolean'
       description: 'Validate read/write permissions for the directory (default: true)'
       default: true
-      example: true
+  required: ['directory_path']
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Set working directory to /Users/song/genome-data'
+    tool_call: 'set_working_directory(directory_path="/Users/song/genome-data")'
+    thought: 'User wants to change the working directory to a specific path'
+    expected_result: 'Working directory changed successfully'
+
+  - user_query: 'Change directory to /tmp/test-data/'
+    tool_call: 'set_working_directory(directory_path="/tmp/test-data/")'
+    thought: 'User wants to change to a specific directory for file operations'
+    expected_result: 'Working directory changed to /tmp/test-data/'
+
+  - user_query: 'Set working directory to home'
+    tool_call: 'set_working_directory(use_home_directory=true)'
+    thought: 'User wants to reset working directory to home'
+    expected_result: 'Working directory set to user home directory'
 
 responses:
   success:
@@ -72,43 +95,14 @@ responses:
         type: 'string'
         example: '/invalid/path'
 
-usage_examples:
-  - description: 'Set working directory to specific path'
-    input:
-      directory_path: '/Users/song/genome-data'
-    expected_output:
-      success: true
-      message: 'Working directory set to /Users/song/genome-data'
-      current_directory: '/Users/song/genome-data'
-      previous_directory: '/Users/song'
-      permissions:
-        readable: true
-        writable: true
-
-  - description: 'Set working directory to user home'
-    input:
-      use_home_directory: true
-    expected_output:
-      success: true
-      message: 'Working directory set to user home directory'
-      current_directory: '/Users/song'
-      previous_directory: '/some/previous/path'
-      permissions:
-        readable: true
-        writable: true
-
-  - description: 'Set with directory creation'
-    input:
-      directory_path: '/Users/song/new-test-dir'
-      create_if_missing: true
-    expected_output:
-      success: true
-      message: 'Working directory set to /Users/song/new-test-dir (created)'
-      current_directory: '/Users/song/new-test-dir'
-      previous_directory: '/Users/song'
-      permissions:
-        readable: true
-        writable: true
+# Related tools
+relationships:
+  - tool: 'load_genome_file'
+    relationship: 'commonly_used_before'
+    description: 'Set working directory before loading files from it'
+  - tool: 'export_fasta_sequence'
+    relationship: 'commonly_used_before'
+    description: 'Set working directory before exporting files'
 
 error_handling:
   - condition: 'Directory does not exist'

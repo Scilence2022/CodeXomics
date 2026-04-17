@@ -5522,11 +5522,11 @@ class ChatManager {
     const headerMappings = {
       systemInstructions: ['CodeXomics', 'Enhanced Dynamic Tools System', 'Comprehensive Tools System'],
       currentContext: ['Current Context', '🧬 Current Context'],
-      dynamicTools: ['Directly Available Tools', '🔧 Directly Available Tools', 'Built-in Tools'],
+      dynamicTools: ['Directly Available Tools', '🔧 Directly Available Tools', '🔧 Directly Available Tools (Built-in)', 'Built-in Tools'],
       toolExamples: ['Tool Usage Examples', '📚 Tool Usage Examples'],
       toolGuidelines: ['Tool Selection Guidelines', '🎯 Enhanced Tool Selection Guidelines', 'Tool Usage Guidelines'],
       responseFormat: ['Response Format', '⚡ Response Format'],
-      toolCategories: ['Tool Categories', '🔄 Tool Categories', 'Tool Categories & Relationships'],
+      toolCategories: ['Tool Categories', '🔄 Tool Categories', 'Tool Categories & Relationships', '🔄 Tool Categories & Relationships'],
     };
 
     // For systemInstructions, combine _preamble (role definition) with any matched header content
@@ -5545,27 +5545,31 @@ class ChatManager {
     }
 
     const possibleHeaders = headerMappings[sectionKey] || [];
-    for (const header of possibleHeaders) {
-      if (sections[header]) {
-        return sections[header];
-      }
-    }
 
-    // For dynamicTools, combine Built-in + Extended tools sections
+    // For dynamicTools, combine Built-in + Extended tools sections + Plugin tools
     if (sectionKey === 'dynamicTools') {
       const toolParts = [];
-      const possibleHeaders = headerMappings[sectionKey] || [];
+      // Collect all built-in tool sections
       for (const header of possibleHeaders) {
         if (sections[header]) {
           toolParts.push(sections[header]);
         }
       }
+      // Also collect Extended Tools and Plugin sections
       for (const [header, content] of Object.entries(sections)) {
         if (header.includes('Extended Tools') || header.includes('🌐 Extended Tools')) {
           toolParts.push(content);
         }
       }
-      return toolParts.length > 0 ? toolParts.join('\n\n') : null;
+      if (toolParts.length > 0) {
+        return toolParts.join('\n\n');
+      }
+    }
+
+    for (const header of possibleHeaders) {
+      if (sections[header]) {
+        return sections[header];
+      }
     }
 
     return null;
@@ -6798,11 +6802,17 @@ TOOL AVAILABILITY:
         'get_track_settings_schema',
         'batch_set_track_settings',
       ],
-      'PRIMER DESIGN \u0026 PCR': [
+      'PRIMER DESIGN & PCR': [
         'calculate_primer_properties',
         'design_primers',
         'find_primer_binding_sites',
         'add_primer_annotation',
+      ],
+      'SYSTEM & FILE MANAGEMENT': [
+        'set_working_directory',
+        'list_available_tools',
+        'download_internet_file',
+        'toggle_settings_modal',
       ],
     };
 
@@ -6970,6 +6980,7 @@ ${coreTools}
       open_new_tab: () => this.openNewTab(parameters),
       search_features: () => this.searchFeatures(parameters),
       get_current_state: () => this.getCurrentState(),
+      find_gene_by_name: () => this.executeMicrobeFunction('searchGeneByName', parameters),
 
       // Sequence tools
       get_sequence: () => this.getSequence(parameters),
@@ -7738,6 +7749,8 @@ ${coreTools}
       'get_genome_info',
       'export_data',
       'create_annotation',
+      // System & File Management
+      'set_working_directory',
     ];
 
     return `
@@ -7760,6 +7773,7 @@ Advanced Analysis: analyze_region, predict_promoter, find_restriction_sites
 BLAST & External: blast_search, blast_sequence_from_region
 Protein Structure: open_protein_viewer, fetch_protein_structure
 Data Management: get_genome_info, export_data, create_annotation
+System & File Management: set_working_directory, list_available_tools, download_internet_file
 
 For complete tool documentation with all ${toolCount} available tools, ask me to show all available tools.`;
   }
@@ -8213,6 +8227,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'execute_actions',
       'clear_actions',
       'get_clipboard_content',
+
+      // System & File Management
+      'set_working_directory',
+      'list_available_tools',
+      'download_internet_file',
+      'toggle_settings_modal',
     ];
 
     // Add plugin functions if available

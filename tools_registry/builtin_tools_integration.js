@@ -1018,6 +1018,26 @@ class BuiltInToolsIntegration {
       });
     }
 
+    // Check for list_available_tools patterns
+    if (/\b(list|show|display|what|available|all)\s+.*?\b(tools?|functions?|capabilities?|commands?)\b/i.test(query) ||
+        /\b(tools?|functions?|capabilities?)\s+.*?\b(list|available|all|show)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'list_available_tools',
+        confidence: 0.85,
+        reason: 'Tool listing/discovery keywords detected',
+      });
+    }
+
+    // Check for download_internet_file patterns
+    if (/\b(download|fetch|save|get)\s+.*?\b(file|url|link|internet|online|web)\b/i.test(query) ||
+        /\b(download|fetch)\s+.*?\b(from|via)\s+.*?\b(web|internet|online|url)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'download_internet_file',
+        confidence: 0.85,
+        reason: 'Internet file download keywords detected',
+      });
+    }
+
     // Check for file loading patterns
     for (const [patternName, regex] of Object.entries(patterns)) {
       if (regex.test(query)) {
