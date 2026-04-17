@@ -7054,6 +7054,7 @@ ${coreTools}
 
       // System tools
       get_chromosome_list: () => this.getChromosomeList(),
+      get_genome_info: () => this.getGenomeInfo(parameters),
       export_data: () => this.exportData(parameters),
       set_working_directory: () => this.setWorkingDirectory(parameters),
       list_available_tools: () => this.listAvailableTools(parameters),
@@ -12494,8 +12495,70 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     return this.services.blast.applyBlastFilters(hits, filters);
   }
 
-  async getGenomeInfo(params) {
-    return this.services.analysis.getGenomeInfo(params);
+  async getGenomeInfo(params = {}) {
+    const { include_statistics = true, include_annotations = true, include_chromosomes = true } = params;
+
+    if (!this.app || !this.app.currentSequence) {
+      return {
+        success: false,
+        error: 'No genome loaded',
+        genome_name: null,
+        chromosomes: [],
+        statistics: null,
+        annotations: null,
+      };
+    }
+
+    const sequences = Object.keys(this.app.currentSequence);
+    const totalLength = Object.values(this.app.currentSequence).reduce((sum, seq) => sum + seq.length, 0);
+
+    const result = {
+      success: true,
+      genome_name: this.app.currentGenomeName || this.app.loadedFiles?.[0]?.name || 'Unknown',
+      organism: this.app.organism || 'Unknown',
+      total_length: totalLength,
+      chromosome_count: sequences.length,
+    };
+
+    if (include_chromosomes) {
+      result.chromosomes = sequences.map(chr => ({
+        name: chr,
+        length: this.app.currentSequence[chr]?.length || 0,
+      }));
+    }
+
+    if (include_statistics) {
+      const annotationCount = this.app.currentAnnotations
+        ? Object.values(this.app.currentAnnotations).reduce((sum, anns) => sum + (Array.isArray(anns) ? anns.length : 0), 0)
+        : 0;
+      result.statistics = {
+        total_length: totalLength,
+        total_chromosomes: sequences.length,
+        total_annotations: annotationCount,
+        loaded_files: this.app.loadedFiles?.length || 0,
+        gc_content: this.calculateGCContent(
+          Object.values(this.app.currentSequence).join('')
+        ),
+      };
+    }
+
+    if (include_annotations) {
+      const annotationCount = this.app.currentAnnotations
+        ? Object.values(this.app.currentAnnotations).reduce((sum, anns) => sum + (Array.isArray(anns) ? anns.length : 0), 0)
+        : 0;
+      result.annotations = {
+        total_count: annotationCount,
+        types: this.app.currentAnnotations
+          ? [...new Set(
+              Object.values(this.app.currentAnnotations)
+                .flat()
+                .map(a => a.type || a.featureType || 'unknown')
+            )]
+          : [],
+      };
+    }
+
+    return result;
   }
 
   calculateGCContent(sequence) {
