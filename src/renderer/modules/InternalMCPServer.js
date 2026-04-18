@@ -24,10 +24,10 @@ class InternalMCPServer {
     this.setupIPCHandlers();
   }
 
-  // Initialize with Genome Studio instance
+  // Initialize with CodeXomics instance
   initialize(genomeStudioInstance) {
     this.genomeStudio = genomeStudioInstance;
-    console.log('🔧 Internal MCP Server initialized with Genome Studio instance');
+    console.log('🔧 Internal MCP Server initialized with CodeXomics instance');
   }
 
   // Setup IPC handlers for communication with main process MCP server
