@@ -5,7 +5,7 @@
 class ManualComplexSuite extends BenchmarkEvaluatorBase {
   constructor() {
     super();
-    this.suiteName = 'Manual Complex Tests';
+    this.suiteName = 'Manual Complex Tests (15)'; // Updated count after Phase 1-3 coverage expansion
     this.suiteId = 'manual_complex';
     this.description = 'Complex tests with manual evaluation - Advanced genomic workflows requiring human verification';
     this.framework = null;
@@ -180,6 +180,147 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateWorkflowCall.bind(this),
         manualVerification:
           'Please verify: 1) Both database searches execute successfully, 2) Results are comprehensive and relevant, 3) Data integration maintains cross-references, 4) Functional characterization is coherent, 5) Structural and functional data correlate.',
+      },
+
+      // ANNOTATION WORKFLOW TASKS - Manual + Complex
+      {
+        id: 'annot_manual_01',
+        name: 'Create and Search Annotation Workflow',
+        type: 'workflow',
+        category: 'annotation',
+        complexity: 'complex',
+        evaluation: 'manual',
+        instruction: 'Create a gene annotation named "test_workflow_gene" at position 700000 to 703000, then search for all annotations of type "gene" to verify it was created.',
+        expectedResult: {
+          tool_sequence: ['create_annotation', 'search_annotations'],
+          parameters: [
+            { start: 700000, end: 703000, name: 'test_workflow_gene', type: 'gene' },
+            { type: 'gene' },
+          ],
+        },
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 60000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+        manualVerification: 'Please verify: 1) Annotation is created at correct position, 2) Search results include the new annotation, 3) Workflow executes in correct order.',
+      },
+
+      // TRACK SETTINGS WORKFLOW - Manual + Complex
+      {
+        id: 'track_manual_01',
+        name: 'Configure and Reset Track Settings',
+        type: 'workflow',
+        category: 'track_settings',
+        complexity: 'complex',
+        evaluation: 'manual',
+        instruction: 'Get current track settings, set the annotation track height to 80 pixels, then reset all track settings to defaults.',
+        expectedResult: {
+          tool_sequence: ['get_track_settings', 'set_track_settings', 'reset_track_settings'],
+          parameters: [
+            {},
+            { trackName: 'annotation', settings: { height: 80 } },
+            {},
+          ],
+        },
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 60000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+        manualVerification: 'Please verify: 1) Track settings are retrieved, 2) Annotation track height changes to 80px, 3) Settings reset to defaults correctly.',
+      },
+
+      // PRIMER DESIGN WORKFLOW - Manual + Complex
+      {
+        id: 'primer_manual_01',
+        name: 'Design and Annotate Primers',
+        type: 'workflow',
+        category: 'primer_design',
+        complexity: 'complex',
+        evaluation: 'manual',
+        instruction: 'Design PCR primers for the lacZ gene, calculate the properties of the forward primer, then add the primer as an annotation on the genome.',
+        expectedResult: {
+          tool_sequence: ['design_primers', 'calculate_primer_properties', 'add_primer_annotation'],
+          parameters: [
+            { geneName: 'lacZ' },
+            { sequence: '<forward_primer_sequence>' },
+            { sequence: '<forward_primer_sequence>', position: '<forward_primer_start>' },
+          ],
+        },
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 60000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+        manualVerification: 'Please verify: 1) Primers are designed for lacZ, 2) Properties are calculated correctly, 3) Primer annotation appears on the genome.',
+      },
+
+      // BLAST WORKFLOW - Manual + Complex
+      {
+        id: 'blast_manual_01',
+        name: 'BLAST Create DB and Search',
+        type: 'workflow',
+        category: 'blast',
+        complexity: 'complex',
+        evaluation: 'manual',
+        instruction: 'Create a BLAST database from the current genome, then perform a local BLAST search with sequence ATGAAAGCGCTGAAAGCGCTG against it.',
+        expectedResult: {
+          tool_sequence: ['blast_create_quick_db_for_current_genome', 'blast_search_local'],
+          parameters: [
+            {},
+            { sequence: 'ATGAAAGCGCTGAAAGCGCTG' },
+          ],
+        },
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+        manualVerification: 'Please verify: 1) BLAST database is created successfully, 2) Local BLAST search runs against the new database, 3) Results include relevant hits.',
+      },
+
+      // RESTRICTION ANALYSIS WORKFLOW - Manual + Complex
+      {
+        id: 'restrict_manual_01',
+        name: 'Find Sites and Virtual Digest',
+        type: 'workflow',
+        category: 'restriction',
+        complexity: 'complex',
+        evaluation: 'manual',
+        instruction: 'Find restriction enzyme sites in the current region, then perform a virtual digest with EcoRI and BamHI enzymes.',
+        expectedResult: {
+          tool_sequence: ['find_restriction_sites', 'virtual_digest'],
+          parameters: [
+            {},
+            { enzymes: ['EcoRI', 'BamHI'] },
+          ],
+        },
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 60000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+        manualVerification: 'Please verify: 1) Restriction sites are found, 2) Virtual digest shows fragment sizes, 3) Both analyses use the same genomic context.',
+      },
+
+      // PROTEIN ANALYSIS WORKFLOW - Manual + Complex
+      {
+        id: 'protein_manual_01',
+        name: 'Comprehensive Protein Analysis',
+        type: 'workflow',
+        category: 'protein_structure',
+        complexity: 'complex',
+        evaluation: 'manual',
+        instruction: 'Search UniProt for lacZ protein from E. coli, fetch its AlphaFold structure, then analyze its InterPro domains.',
+        expectedResult: {
+          tool_sequence: ['search_uniprot_database', 'fetch_alphafold_structure', 'analyze_interpro_domains'],
+          parameters: [
+            { query: 'lacZ', organism: 'Escherichia coli' },
+            { uniprotId: '<lacZ_uniprot_id>' },
+            { geneName: 'lacZ', organism: 'Escherichia coli' },
+          ],
+        },
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+        manualVerification: 'Please verify: 1) UniProt search returns lacZ results, 2) AlphaFold structure is fetched, 3) InterPro domains are analyzed, 4) All steps form a coherent analysis.',
       },
 
       // WORKFLOW INTEGRATION TASKS - Manual + Complex

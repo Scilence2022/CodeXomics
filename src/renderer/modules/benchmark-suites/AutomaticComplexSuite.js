@@ -5,7 +5,7 @@
 class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   constructor() {
     super();
-    this.suiteName = 'Automatic Complex Tests (4)'; // Updated count after adding export workflow test
+    this.suiteName = 'Automatic Complex Tests (4)'; // Updated count after Phase 1-3 coverage expansion
     this.suiteId = 'automatic_complex';
     this.description = 'Complex tests with automatic evaluation - Advanced genomic analysis operations';
     this.framework = null;
