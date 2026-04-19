@@ -4815,7 +4815,7 @@ Active Test Suites:
 - Automatic Simple Tests (122 tests)
 - Automatic Complex Tests (4 tests)
 - Manual Tests (20 tests)
-- Manual Complex Tests (15 tests)`);
+- Manual Complex Tests (15 tests)\`);
             }
 
             downloadJSON(data, filename) {
