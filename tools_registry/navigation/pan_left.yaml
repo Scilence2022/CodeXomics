@@ -1,0 +1,97 @@
+name: pan_left
+version: 1.0.0
+description: Pan the genome view to the left by a specified amount to view upstream genomic regions
+category: navigation
+subcategory: view_control
+keywords:
+  - pan
+  - pan left
+  - scroll
+  - scroll left
+  - move
+  - move left
+  - shift
+  - shift left
+  - left
+  - upstream
+  - backward
+priority: 2
+execution:
+  type: client
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    amount:
+      type: number
+      description: Number of base pairs to pan left (default 500bp)
+      default: 500
+      minimum: 1
+      examples:
+        - 100
+        - 500
+        - 1000
+        - 5000
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: pan left
+    tool_call: pan_left(amount=500)
+    thought: User wants to pan the view to the left by default amount
+    expected_result: View shifts left by 500bp showing upstream region
+  - user_query: scroll left 1000bp
+    tool_call: pan_left(amount=1000)
+    thought: User wants to move the view left by 1000 base pairs
+    expected_result: View shifts left by 1000bp
+  - user_query: move the view upstream
+    tool_call: pan_left(amount=500)
+    thought: User wants to navigate upstream which means panning left
+    expected_result: View pans left showing upstream genomic region
+  - user_query: pan left a lot
+    tool_call: pan_left(amount=5000)
+    thought: User wants a large leftward pan
+    expected_result: View shifts left by 5000bp
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['navigate_to_position', 'jump_to_gene']
+  alternatives: ['pan_right', 'scroll_left']
+  prerequisites: ['genome_data_loaded']
+  follow_up: ['pan_right', 'zoom_in']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - view_control
+    - pan
+    - scroll
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  no_data:
+    error: 'No genome data loaded for panning'
+    solution: 'Load genome data first before panning'
+    retry: false
+  at_start:
+    error: 'Already at the beginning of the sequence'
+    solution: 'Cannot pan further left beyond the start of the genome'
+    retry: false
+returns:
+  success: 'boolean - Whether pan operation was successful'
+  result: 'object - Pan operation results including:
+    - amount: number - Actual amount panned in base pairs
+    - newRange: object - New view range after panning
+    - oldRange: object - Previous view range
+    - currentPosition: object - Current position after panning'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'
