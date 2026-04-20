@@ -1061,7 +1061,7 @@ class TrackRenderer {
           this.genomeBrowser.genomeNavigationBar.update();
         }
         if (this.genomeBrowser.tabManager) {
-          this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd);
+          this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd, { source: 'navigation' });
         }
       }
     });

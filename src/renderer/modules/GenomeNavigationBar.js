@@ -748,12 +748,13 @@ class GenomeNavigationBar {
         this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
         this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
 
-        // Update current tab title with new position (from drag/resize)
+        // Update current tab title with new position (from ruler navigation)
         if (this.genomeBrowser.tabManager) {
           this.genomeBrowser.tabManager.updateCurrentTabPosition(
             this.currentChromosome,
             this.genomeBrowser.currentPosition.start + 1,
-            this.genomeBrowser.currentPosition.end
+            this.genomeBrowser.currentPosition.end,
+            { source: 'ruler' }
           );
         }
 
@@ -898,9 +899,9 @@ class GenomeNavigationBar {
     this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
     this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
 
-    // Update current tab title with new position (from ruler navigation)
+    // Update current tab title with new position (from ruler click navigation)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd);
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd, { source: 'ruler' });
     }
 
     console.log(`GenomeNavigationBar: Navigated to position ${position}`);
@@ -920,9 +921,9 @@ class GenomeNavigationBar {
     this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
     this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
 
-    // Update current tab title with new position (from zoom)
+    // Update current tab title with new position (from ruler double-click zoom)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd);
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd, { source: 'ruler' });
     }
 
     console.log(`GenomeNavigationBar: Zoomed to position ${position} with range ${zoomRange}`);

@@ -75,9 +75,9 @@ class NavigationManager {
       // Update navigation bar
       this.genomeBrowser.genomeNavigationBar.update();
 
-      // Update current tab title with new position
+      // Update current tab title with new position (from navigation buttons)
       if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'navigation' });
       }
     }
   }
@@ -98,9 +98,9 @@ class NavigationManager {
       // Update navigation bar
       this.genomeBrowser.genomeNavigationBar.update();
 
-      // Update current tab title with new position
+      // Update current tab title with new position (from navigation buttons)
       if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'navigation' });
       }
     }
   }
@@ -122,9 +122,9 @@ class NavigationManager {
       // Update navigation bar
       this.genomeBrowser.genomeNavigationBar.update();
 
-      // Update current tab title with new position
+      // Update current tab title with new position (from zoom in)
       if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'zoom' });
       }
     }
   }
@@ -146,9 +146,9 @@ class NavigationManager {
     // Update navigation bar
     this.genomeBrowser.genomeNavigationBar.update();
 
-    // Update current tab title with new position
+    // Update current tab title with new position (from zoom out)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'zoom' });
     }
   }
 
@@ -279,9 +279,9 @@ class NavigationManager {
       this.genomeBrowser.genomeNavigationBar.update();
     }
 
-    // Update current tab title with new position
+    // Update current tab title with new position (from wheel zoom)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'zoom' });
     }
 
     // Show visual feedback
@@ -670,9 +670,9 @@ class NavigationManager {
     // Update navigation bar
     this.genomeBrowser.genomeNavigationBar.update();
 
-    // Update current tab title with new position
+    // Update current tab title with new position (from position input)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, start + 1, end);
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, start + 1, end, { source: 'navigation' });
     }
   }
 
@@ -1002,9 +1002,9 @@ class NavigationManager {
     // Highlight search matches in sequence tracks (scrolling will be triggered automatically after highlighting)
     this.highlightSearchMatches([result]);
 
-    // Update current tab title with new position
+    // Update current tab title with new position (from search)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, start + 1, end);
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, start + 1, end, { source: 'navigation' });
     }
 
     this.currentSearchIndex = index;
@@ -1371,9 +1371,9 @@ class NavigationManager {
     this.genomeBrowser.displayGenomeView(chromosome, sequence);
     this.genomeBrowser.genomeNavigationBar.update();
 
-    // Update current tab title with new position
+    // Update current tab title with new position (from drag)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, finalNewStart + 1, finalNewEnd);
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, finalNewStart + 1, finalNewEnd, { source: 'drag' });
     }
 
     // Update all detailed rulers after re-render (force update for final position)
@@ -1575,9 +1575,9 @@ class NavigationManager {
       this.genomeBrowser.displayGenomeView(chromosome, sequence);
       this.genomeBrowser.genomeNavigationBar.update();
 
-      // Update current tab title with new position
+      // Update current tab title with new position (from circular drag)
       if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd);
+        this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd, { source: 'drag' });
       }
     });
   }

@@ -830,18 +830,49 @@ class TabManager {
 
   /**
    * Update current tab title based on position (called when user navigates)
+   * @param {string} chromosome - Chromosome name
+   * @param {number} start - Start position (1-based)
+   * @param {number} end - End position
+   * @param {object} options - Optional parameters
+   * @param {string} options.source - Navigation source: 'ruler', 'zoom', 'drag', 'navigation', etc.
    */
-  updateCurrentTabPosition(chromosome, start, end) {
+  updateCurrentTabPosition(chromosome, start, end, options = {}) {
     if (!this.activeTabId) return;
 
-    // Generate position-based title
+    const { source = 'unknown' } = options;
+    const tabState = this.tabStates.get(this.activeTabId);
+    
+    // Check if current title is in gene name mode (mode 2)
+    const isGeneNameMode = tabState && tabState.title && tabState.title.startsWith('Gene: ');
+    
+    // Only override gene name titles when navigation comes from the ruler
+    // For zoom, drag, and other navigation methods, preserve the gene name
+    if (isGeneNameMode && source !== 'ruler') {
+      // Update position in state but keep the gene name title
+      if (tabState) {
+        tabState.currentChromosome = chromosome;
+        tabState.currentPosition = { start, end };
+        tabState.lastAccessedAt = new Date();
+      }
+      
+      // Still update position visualization and cache
+      this.updateTabPositionVisualization(this.activeTabId, chromosome, start, end);
+      if (this.cacheSettings.enabled) {
+        this.clearTabCache(this.activeTabId);
+      }
+      this.updateCurrentTabTrackState();
+      
+      console.log(`Preserved gene name title for tab ${this.activeTabId} during ${source} navigation`);
+      return;
+    }
+
+    // Generate position-based title (mode 1)
     const positionTitle = `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`;
 
     // Update current tab title
     this.updateTabTitle(this.activeTabId, positionTitle);
 
     // Update tab state position
-    const tabState = this.tabStates.get(this.activeTabId);
     if (tabState) {
       tabState.currentChromosome = chromosome;
       tabState.currentPosition = { start, end };
@@ -859,7 +890,7 @@ class TabManager {
     // Also update track visibility and settings in tab state
     this.updateCurrentTabTrackState();
 
-    console.log(`Updated tab ${this.activeTabId} position to: ${positionTitle}`);
+    console.log(`Updated tab ${this.activeTabId} position to: ${positionTitle} (source: ${source})`);
   }
 
   /**
@@ -1089,7 +1120,7 @@ class TabManager {
         if (firstChr) {
           const chrLength = genomeData[firstChr].length;
           const initialEnd = Math.min(1000, chrLength);
-          this.updateCurrentTabPosition(firstChr, 1, initialEnd);
+          this.updateCurrentTabPosition(firstChr, 1, initialEnd, { source: 'navigation' });
         }
       }
     }

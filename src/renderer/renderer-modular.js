@@ -7078,9 +7078,9 @@ class GenomeBrowser {
       this.updateStatistics(currentChr, this.currentSequence[currentChr]);
       this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
 
-      // Update current tab title with new position
+      // Update current tab title with new position (from gene navigation)
       if (this.tabManager) {
-        this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+        this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'navigation' });
       }
     }
   }
@@ -7122,9 +7122,9 @@ class GenomeBrowser {
       this.genomeNavigationBar.update();
     }
 
-    // Update current tab title with new position
+    // Update current tab title with new position (from zoom in)
     if (this.tabManager) {
-      this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+      this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'zoom' });
     }
 
     return {
@@ -7171,9 +7171,9 @@ class GenomeBrowser {
       this.genomeNavigationBar.update();
     }
 
-    // Update current tab title with new position
+    // Update current tab title with new position (from zoom out)
     if (this.tabManager) {
-      this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+      this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'zoom' });
     }
 
     return {
@@ -8435,9 +8435,9 @@ class GenomeBrowser {
       this.updateStatistics(currentChr, this.currentSequence[currentChr]);
       this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
 
-      // Update current tab title with new position
+      // Update current tab title with new position (from read navigation)
       if (this.tabManager) {
-        this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+        this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'navigation' });
       }
     }
   }

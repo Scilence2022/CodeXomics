@@ -2482,12 +2482,13 @@ class SequenceUtils {
     // Show sequence and annotations
     this.genomeBrowser.displayGenomeView(chromosome, sequence);
 
-    // Update current tab title with new chromosome and position
+    // Update current tab title with new chromosome and position (from chromosome switch)
     if (this.genomeBrowser.tabManager) {
       this.genomeBrowser.tabManager.updateCurrentTabPosition(
         chromosome,
         this.genomeBrowser.currentPosition.start + 1,
-        this.genomeBrowser.currentPosition.end
+        this.genomeBrowser.currentPosition.end,
+        { source: 'navigation' }
       );
     }
   }
