@@ -292,7 +292,7 @@ manuscript/
 .codebuddy/
 .workbuddy/
 .qoder/
-
+.minimax/
 
 docs/reports/dynamic-tool-registry-multiagent-integration-report.md
 
