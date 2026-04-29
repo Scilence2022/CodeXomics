@@ -8,7 +8,9 @@ class ProteinService {
     this.tabs = [];
     this.activeTabId = null;
     this.isDragging = false;
+    this.isResizing = false;
     this.dragOffset = { x: 0, y: 0 };
+    this._boundHandlers = null; // track active handlers for cleanup
   }
 
   async searchAlphaFoldStructures(parameters) {
@@ -311,7 +313,15 @@ class ProteinService {
               <i class="fas fa-times"></i>
           </button>
       </div>
-      <div class="sidebar-resizer"></div>
+      <!-- 8-direction resize handles -->
+      <div class="resize-handle resize-handle-n" data-dir="n"></div>
+      <div class="resize-handle resize-handle-s" data-dir="s"></div>
+      <div class="resize-handle resize-handle-e" data-dir="e"></div>
+      <div class="resize-handle resize-handle-w" data-dir="w"></div>
+      <div class="resize-handle resize-handle-ne" data-dir="ne"></div>
+      <div class="resize-handle resize-handle-nw" data-dir="nw"></div>
+      <div class="resize-handle resize-handle-se" data-dir="se"></div>
+      <div class="resize-handle resize-handle-sw" data-dir="sw"></div>
       <div class="tab-bar-container">
           <div class="tab-bar"></div>
       </div>
@@ -320,55 +330,212 @@ class ProteinService {
       </div>
     `;
 
-    // Implement Resizing
-    const resizer = sidebar.querySelector('.sidebar-resizer');
-    resizer.onmousedown = (e) => {
-      e.preventDefault();
-      const startX = e.clientX;
-      const startWidth = parseInt(getComputedStyle(sidebar).width, 10);
-      
-      document.onmousemove = (e) => {
-        const width = startWidth - (e.clientX - startX);
-        if (width > 300 && width < 1000) {
-          sidebar.style.width = `${width}px`;
-        }
-      };
-      
-      document.onmouseup = () => {
-        document.onmousemove = null;
-        document.onmouseup = null;
-      };
+    // Implement 8-direction Resizing (N, S, E, W, NE, NW, SE, SW)
+    const MIN_WIDTH = 300;
+    const MAX_WIDTH = 1000;
+    const MIN_HEIGHT = 300;
+    const MAX_HEIGHT = Math.max(window.innerHeight * 2, 1200);
+
+    const cursorMap = {
+      n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize',
+      ne: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize', sw: 'nesw-resize'
     };
 
-    // Implement Dragging
-    const dragHandle = sidebar.querySelector('.sidebar-drag-handle');
-    
-    dragHandle.onmousedown = (e) => {
-      if (e.target.closest('.sidebar-close')) return;
-      this.isDragging = true;
-      sidebar.style.transition = 'none'; // Disable transition during drag
+    const startResize = (dir, startX, startY) => {
+      if (this.isDragging) return; // mutual exclusion
+      this.isResizing = true;
+      this._resizeDir = dir;
+
       const rect = sidebar.getBoundingClientRect();
-      this.dragOffset.x = e.clientX - rect.left;
-      this.dragOffset.y = e.clientY - rect.top;
-      
-      document.onmousemove = (e) => {
+      this._resizeStart = {
+        x: startX, y: startY,
+        width: rect.width, height: rect.height,
+        left: rect.left, top: rect.top
+      };
+
+      // Ensure left/top are set in px for position adjustments
+      sidebar.style.left = `${rect.left}px`;
+      sidebar.style.top = `${rect.top}px`;
+      sidebar.style.right = 'auto';
+      sidebar.style.bottom = 'auto';
+      sidebar.style.transition = 'none';
+
+      // Visual feedback
+      document.body.style.cursor = cursorMap[dir] || 'default';
+      document.body.style.userSelect = 'none';
+
+      const calcResize = (clientX, clientY) => {
+        const s = this._resizeStart;
+        const dx = clientX - s.x;
+        const dy = clientY - s.y;
+        let newW = s.width, newH = s.height, newL = s.left, newT = s.top;
+
+        if (dir.includes('e')) { newW = s.width + dx; }
+        if (dir.includes('w')) { newW = s.width - dx; newL = s.left + dx; }
+        if (dir.includes('s')) { newH = s.height + dy; }
+        if (dir.includes('n')) { newH = s.height - dy; newT = s.top + dy; }
+
+        // Apply constraints
+        if (newW < MIN_WIDTH) {
+          if (dir.includes('w')) newL = s.left + (s.width - MIN_WIDTH);
+          newW = MIN_WIDTH;
+        }
+        if (newW > MAX_WIDTH) {
+          if (dir.includes('w')) newL = s.left + (s.width - MAX_WIDTH);
+          newW = MAX_WIDTH;
+        }
+        if (newH < MIN_HEIGHT) {
+          if (dir.includes('n')) newT = s.top + (s.height - MIN_HEIGHT);
+          newH = MIN_HEIGHT;
+        }
+        if (newH > MAX_HEIGHT) {
+          if (dir.includes('n')) newT = s.top + (s.height - MAX_HEIGHT);
+          newH = MAX_HEIGHT;
+        }
+
+        return { newW, newH, newL, newT };
+      };
+
+      const applyResize = (newW, newH, newL, newT) => {
+        sidebar.style.width = `${newW}px`;
+        sidebar.style.height = `${newH}px`;
+        if (dir.includes('w') || dir.includes('n')) {
+          if (dir.includes('w')) sidebar.style.left = `${newL}px`;
+          if (dir.includes('n')) sidebar.style.top = `${newT}px`;
+        }
+      };
+
+      const onMouseMove = (e) => {
+        if (!this.isResizing) return;
+        e.preventDefault();
+        const { newW, newH, newL, newT } = calcResize(e.clientX, e.clientY);
+        applyResize(newW, newH, newL, newT);
+      };
+
+      const onTouchMove = (e) => {
+        if (!this.isResizing) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        const { newW, newH, newL, newT } = calcResize(touch.clientX, touch.clientY);
+        applyResize(newW, newH, newL, newT);
+      };
+
+      const endResize = () => {
+        this.isResizing = false;
+        this._resizeDir = null;
+        this._resizeStart = null;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        sidebar.style.transition = '';
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', endResize);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', endResize);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', endResize);
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', endResize);
+    };
+
+    // Bind all 8 resize handles
+    sidebar.querySelectorAll('.resize-handle').forEach(handle => {
+      const dir = handle.dataset.dir;
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startResize(dir, e.clientX, e.clientY);
+      });
+      handle.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startResize(dir, e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: false });
+    });
+
+    // Implement Dragging (using addEventListener, with mutual exclusion, viewport clamping, and touch support)
+    const dragHandle = sidebar.querySelector('.sidebar-drag-handle');
+    const EDGE_MARGIN = 40; // keep at least 40px visible at any edge
+
+    const startDrag = (clientX, clientY) => {
+      if (this.isResizing) return; // mutual exclusion
+      if (this.isDragging) return;
+      this.isDragging = true;
+      sidebar.style.transition = 'none';
+      const rect = sidebar.getBoundingClientRect();
+      this.dragOffset.x = clientX - rect.left;
+      this.dragOffset.y = clientY - rect.top;
+
+      // Visual feedback
+      document.body.style.userSelect = 'none';
+
+      const onMouseMove = (e) => {
         if (!this.isDragging) return;
+        e.preventDefault();
         const x = e.clientX - this.dragOffset.x;
         const y = e.clientY - this.dragOffset.y;
-        
-        sidebar.style.left = `${x}px`;
-        sidebar.style.top = `${y}px`;
-        sidebar.style.right = 'auto'; // Disable fixed right
-        sidebar.style.bottom = 'auto'; // Disable fixed bottom
+
+        // Clamp to viewport: keep at least EDGE_MARGIN px visible on each side
+        const vpW = window.innerWidth;
+        const vpH = window.innerHeight;
+        const sbW = sidebar.offsetWidth;
+        const sbH = sidebar.offsetHeight;
+        const clampedX = Math.max(-(sbW - EDGE_MARGIN), Math.min(x, vpW - EDGE_MARGIN));
+        const clampedY = Math.max(-(sbH - EDGE_MARGIN), Math.min(y, vpH - EDGE_MARGIN));
+
+        sidebar.style.left = `${clampedX}px`;
+        sidebar.style.top = `${clampedY}px`;
+        sidebar.style.right = 'auto';
+        sidebar.style.bottom = 'auto';
       };
-      
-      document.onmouseup = () => {
+
+      const onTouchMove = (e) => {
+        if (!this.isDragging) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        const x = touch.clientX - this.dragOffset.x;
+        const y = touch.clientY - this.dragOffset.y;
+
+        const vpW = window.innerWidth;
+        const vpH = window.innerHeight;
+        const sbW = sidebar.offsetWidth;
+        const sbH = sidebar.offsetHeight;
+        const clampedX = Math.max(-(sbW - EDGE_MARGIN), Math.min(x, vpW - EDGE_MARGIN));
+        const clampedY = Math.max(-(sbH - EDGE_MARGIN), Math.min(y, vpH - EDGE_MARGIN));
+
+        sidebar.style.left = `${clampedX}px`;
+        sidebar.style.top = `${clampedY}px`;
+        sidebar.style.right = 'auto';
+        sidebar.style.bottom = 'auto';
+      };
+
+      const endDrag = () => {
         this.isDragging = false;
-        document.onmousemove = null;
-        document.onmouseup = null;
-        sidebar.style.transition = ''; // Restore transition
+        document.body.style.userSelect = '';
+        sidebar.style.transition = '';
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', endDrag);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', endDrag);
       };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', endDrag);
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', endDrag);
     };
+
+    dragHandle.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.sidebar-close')) return;
+      e.preventDefault();
+      startDrag(e.clientX, e.clientY);
+    });
+    dragHandle.addEventListener('touchstart', (e) => {
+      if (e.target.closest('.sidebar-close')) return;
+      e.preventDefault();
+      startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
 
     // Close button
     const closeBtn = sidebar.querySelector('.sidebar-close');
@@ -390,11 +557,23 @@ class ProteinService {
       const style = document.createElement('style');
       style.id = 'protein-sidebar-styles';
         style.innerHTML = `
-          .protein-results-sidebar { position: fixed; top: 20px; right: 20px; width: 420px; min-width: 300px; height: calc(100vh - 40px); background: var(--bg-primary); box-shadow: -5px 0 25px rgba(0,0,0,0.15); transition: right 0.3s ease, transform 0.3s ease; z-index: 1000; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-color); font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+          .protein-results-sidebar { position: fixed; top: 20px; right: 20px; width: 420px; min-width: 300px; height: calc(100vh - 40px); min-height: 300px; background: var(--bg-primary); box-shadow: -5px 0 25px rgba(0,0,0,0.15); transition: right 0.3s ease, transform 0.3s ease; z-index: 1000; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-color); font-family: 'Inter', system-ui, -apple-system, sans-serif; }
           .protein-results-sidebar:not(.visible) { display: none; }
           
-          .sidebar-resizer { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; cursor: ew-resize; background: transparent; z-index: 10; transition: background 0.2s; }
-          .sidebar-resizer:hover { background: var(--border-color); }
+          /* 8-direction resize handles */
+          .resize-handle { position: absolute; z-index: 11; background: transparent; transition: background 0.2s; }
+          .resize-handle:hover { background: rgba(100,100,100,0.12); }
+          .resize-handle:active { background: rgba(100,100,100,0.22); }
+          /* Edge handles: visible thin strip with larger invisible hit area */
+          .resize-handle-n { top: -4px; left: 14px; right: 14px; height: 10px; cursor: ns-resize; }
+          .resize-handle-s { bottom: -4px; left: 14px; right: 14px; height: 10px; cursor: ns-resize; }
+          .resize-handle-e { right: -4px; top: 14px; bottom: 14px; width: 10px; cursor: ew-resize; }
+          .resize-handle-w { left: -4px; top: 14px; bottom: 14px; width: 10px; cursor: ew-resize; }
+          /* Corner handles: larger square hit areas */
+          .resize-handle-ne { top: -4px; right: -4px; width: 14px; height: 14px; cursor: nesw-resize; }
+          .resize-handle-nw { top: -4px; left: -4px; width: 14px; height: 14px; cursor: nwse-resize; }
+          .resize-handle-se { bottom: -4px; right: -4px; width: 14px; height: 14px; cursor: nwse-resize; }
+          .resize-handle-sw { bottom: -4px; left: -4px; width: 14px; height: 14px; cursor: nesw-resize; }
 
           .sidebar-drag-handle { background: var(--bg-secondary); padding: 6px 12px; display: flex; align-items: center; justify-content: space-between; cursor: move; border-bottom: 1px solid var(--border-color); height: 38px; }
           .sidebar-drag-handle:hover { background: var(--bg-tertiary, #ececeb); }
