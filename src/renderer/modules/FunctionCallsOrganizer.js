@@ -35,6 +35,7 @@ class FunctionCallsOrganizer {
           'get_current_region',
           'open_new_tab',
           'switch_to_tab',
+          'close_tab',
           'set_working_directory',
         ],
       },
