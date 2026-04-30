@@ -9,54 +9,85 @@ class LLMConfigManager {
       openai: {
         name: 'OpenAI',
         apiKey: '',
-        model: 'gpt-4o', // Default to GPT-4o since GPT-5 requires BYOK
+        model: 'gpt-5.2',
         baseUrl: 'https://api.openai.com/v1',
         enabled: false,
         availableModels: [
-          // GPT-5 Series (Latest - 2026, requires BYOK)
-          'gpt-5.2', // Latest flagship for coding/agentic tasks
-          'gpt-5.1', // Previous GPT-5 generation
-          'gpt-5.2-codex', // Specialized for long coding tasks
+          // GPT-5.5 Series (Latest - April 2026)
+          'gpt-5.5', // Full retrain, latest flagship
+          // GPT-5.2 Series
+          'gpt-5.2-pro', // Top tier
+          'gpt-5.2', // Flagship
+          // GPT-5 Series
+          'gpt-5.1',
+          'gpt-5',
+          'gpt-5-mini',
+          'gpt-5-nano',
+          // o-Series (Reasoning)
+          'o3-pro',
+          'o3',
+          'o4-mini',
+          'o3-mini',
+          // GPT-4.1 Series (1M Context)
+          'gpt-4.1',
+          'gpt-4.1-mini',
+          'gpt-4.1-nano',
+          // GPT-4o (Legacy)
+          'gpt-4o',
+          'gpt-4o-mini',
         ],
       },
       anthropic: {
         name: 'Anthropic',
         apiKey: '',
-        model: 'claude-sonnet-4.5-20250929', // Latest Claude 4.5 Sonnet
+        model: 'claude-sonnet-4.6', // Latest Claude Sonnet 4.6
         baseUrl: 'https://api.anthropic.com',
         enabled: false,
         availableModels: [
-          // Claude 4.5 Series (Latest - 2025/2026)
-          'claude-opus-4.5-20251101', // Most intelligent, complex tasks
-          'claude-sonnet-4.5-20250929', // Balanced intelligence and speed
-          'claude-haiku-4.5-20251001', // Fast and cost-efficient
+          // Claude 4.6 Series (Latest - 2026)
+          'claude-opus-4.6', // Most intelligent
+          'claude-sonnet-4.6', // Balanced intelligence and speed
+          // Claude 4.5 Series (2025/2026)
+          'claude-opus-4.5-20251101', // Complex tasks
+          'claude-sonnet-4.5-20250929', // Balanced
+          'claude-haiku-4.5', // Fast and cost-efficient
+          // Claude 3.5 Series (Previous)
+          'claude-3-5-sonnet-20241022',
+          'claude-3-5-haiku-20241022',
         ],
       },
       // Google - Direct API access to Gemini models
       google: {
         name: 'Google',
         apiKey: '',
-        model: 'gemini-2.0-flash', // Latest stable Gemini 2.0 Flash model
+        model: 'gemini-2.5-flash-preview-05-20', // Latest Gemini 2.5 Flash
         baseUrl: 'https://generativelanguage.googleapis.com',
         enabled: false,
         availableModels: [
-          // Gemini 3.0 Series (Latest - 2026)
-          'gemini-3-flash-preview', // Latest with advanced reasoning, 1M+ tokens
-
-          // Gemini 2.0 Series (Current stable)
-          'gemini-2.0-flash', // Latest multimodal model
+          // Gemini 2.5 Series (Latest - 2025/2026)
+          'gemini-2.5-pro-preview-05-06', // Best reasoning, coding, multimodal
+          'gemini-2.5-flash-preview-05-20', // Best value, adaptive thinking
+          // Gemini 2.0 Series (Stable)
+          'gemini-2.0-flash', // Multimodal
+          'gemini-2.0-flash-exp', // Experimental
+          // Gemini 1.5 Series (Legacy)
+          'gemini-1.5-pro-latest',
+          'gemini-1.5-flash-latest',
         ],
       },
       deepseek: {
         name: 'DeepSeek',
         apiKey: '',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         baseUrl: 'https://api.deepseek.com/v1',
         enabled: false,
         availableModels: [
-          // DeepSeek Series (Latest - 2026)
-          'deepseek-chat',
-          'deepseek-chat-exp',
+          // DeepSeek V4 Series (Latest - 2026)
+          'deepseek-v4-pro', // Flagship
+          'deepseek-v4-flash', // Fast, efficient
+          // DeepSeek V3 Series (Legacy aliases)
+          'deepseek-chat', // Points to V4 Flash non-thinking (deprecated July 2026)
+          'deepseek-reasoner', // Points to V4 Flash thinking (deprecated July 2026)
         ],
       },
       siliconflow: {
@@ -179,32 +210,50 @@ class LLMConfigManager {
       openrouter: {
         name: 'OpenRouter',
         apiKey: '',
-        model: 'openai/gpt-5',
+        model: 'openai/gpt-5.2',
         baseUrl: 'https://openrouter.ai/api/v1',
         enabled: false,
         availableModels: [
-          // GPT-5 Series (Released Aug 7, 2025) - 400K context window
-          'openai/gpt-5', // Full model: $1.25/$10 per M tokens, advanced reasoning
-          'openai/gpt-5-mini', // Compact: $0.25/$2 per M tokens, lighter reasoning
-          'openai/gpt-5-nano', // Smallest: $0.05/$0.40 per M tokens, ultra-low latency
+          // OpenAI GPT-5.5/GPT-5.2 Series (Latest - 2026)
+          'openai/gpt-5.5', // Latest full retrain
+          'openai/gpt-5.2-pro', // Top tier
+          'openai/gpt-5.2', // Flagship
+          'openai/gpt-5', // $1.25/$10 per M, 400K ctx
+          'openai/gpt-5-mini', // $0.25/$2 per M, 400K ctx
+          'openai/gpt-5-nano', // $0.05/$0.40 per M, 400K ctx
 
-          // GLM 4.5/4.6 Series (Latest from Z.AI)
+          // OpenAI o-Series (Reasoning)
+          'openai/o3-pro',
+          'openai/o3',
+          'openai/o4-mini',
+          'openai/o3-mini',
+
+          // Anthropic Claude Series (Latest - 2026)
+          'anthropic/claude-opus-4.6',
+          'anthropic/claude-sonnet-4.6',
+          'anthropic/claude-sonnet-4.5-20250929',
+          'anthropic/claude-haiku-4.5',
+
+          // Google Gemini Series (Latest - 2025/2026)
+          'google/gemini-2.5-pro-preview-05-06',
+          'google/gemini-2.5-flash-preview-05-20',
+          'google/gemini-2.0-flash',
+
+          // GLM Series (Latest from Z.AI)
           'z-ai/glm-4.6', // GLM-4.6 (Latest flagship)
           'z-ai/glm-4.5', // GLM-4.5 (Previous flagship)
-          'z-ai/glm-4.5-air:free', // GLM-4.5-Air (Free, lightweight)
-          'z-ai/glm-4.5v', // GLM-4.5V (Vision capable)
+          'z-ai/glm-4.5-air:free', // GLM-4.5-Air (Free)
+          'z-ai/glm-4.5v', // GLM-4.5V (Vision)
 
-          // Google Gemini Series
-          'google/gemini-3-flash-preview', // Latest multimodal, competitive pricing
-          'google/gemini-3.0-pro',
-
-          // Anthropic Claude Series
-          'anthropic/claude-sonnet-4.5-20250929',
-          'anthropic/claude-haiku-4.5-20251001',
+          // DeepSeek Series
+          'deepseek/deepseek-v4-pro',
+          'deepseek/deepseek-v4-flash',
+          'deepseek/deepseek-chat',
+          'deepseek/deepseek-reasoner',
         ],
       },
       local: {
-        name: 'Local LLM',
+        name: 'Custom Endpoint',
         apiKey: '',
         model: 'qwen3:8b',
         baseUrl: 'http://localhost:11434/v1',
@@ -221,10 +270,10 @@ class LLMConfigManager {
         description: 'For complex reasoning and analysis tasks',
         preferredProviders: ['anthropic', 'openai', 'google', 'deepseek'],
         preferredModels: {
-          anthropic: 'claude-sonnet-4.5-20250929',
+          anthropic: 'claude-sonnet-4.6',
           openai: 'o3',
-          google: 'gemini-3-flash-preview',
-          deepseek: 'deepseek-chat',
+          google: 'gemini-2.5-pro-preview-05-06',
+          deepseek: 'deepseek-v4-pro',
           siliconflow: 'Qwen/Qwen3.5-39B-A17B',
           openrouter: 'openai/o3',
         },
@@ -236,10 +285,10 @@ class LLMConfigManager {
         preferredProviders: ['openai', 'anthropic', 'siliconflow', 'google'],
         preferredModels: {
           openai: 'gpt-5.2',
-          anthropic: 'claude-sonnet-4.5-20250929',
+          anthropic: 'claude-sonnet-4.6',
           siliconflow: 'Qwen/Qwen3.5-39B-A17B',
-          google: 'gemini-3-flash-preview',
-          deepseek: 'deepseek-chat',
+          google: 'gemini-2.5-flash-preview-05-20',
+          deepseek: 'deepseek-v4-flash',
           openrouter: 'openai/gpt-5.2',
         },
       },
@@ -250,10 +299,10 @@ class LLMConfigManager {
         preferredProviders: ['siliconflow', 'deepseek', 'openai', 'anthropic'],
         preferredModels: {
           siliconflow: 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
-          deepseek: 'deepseek-coder',
-          openai: 'gpt-5.2-codex',
-          anthropic: 'claude-sonnet-4.5-20250929',
-          openrouter: 'openai/gpt-5.2-codex',
+          deepseek: 'deepseek-v4-flash',
+          openai: 'gpt-5.2',
+          anthropic: 'claude-sonnet-4.6',
+          openrouter: 'openai/gpt-5.2',
           local: 'deepseek-r1:70b',
         },
       },
@@ -264,7 +313,7 @@ class LLMConfigManager {
         preferredProviders: ['openai', 'google'],
         preferredModels: {
           openai: 'tts-1',
-          google: 'gemini-2.0-flash',
+          google: 'gemini-2.5-flash-preview-05-20',
         },
       },
       voiceSTT: {
@@ -274,7 +323,7 @@ class LLMConfigManager {
         preferredProviders: ['openai', 'google'],
         preferredModels: {
           openai: 'whisper-1',
-          google: 'gemini-2.0-flash',
+          google: 'gemini-2.5-flash-preview-05-20',
         },
       },
       image: {
@@ -284,8 +333,8 @@ class LLMConfigManager {
         preferredProviders: ['openai', 'google', 'anthropic'],
         preferredModels: {
           openai: 'gpt-4o',
-          google: 'gemini-3-flash-preview',
-          anthropic: 'claude-sonnet-4.5-20250929',
+          google: 'gemini-2.5-pro-preview-05-06',
+          anthropic: 'claude-sonnet-4.6',
         },
       },
       multimodal: {
@@ -294,9 +343,9 @@ class LLMConfigManager {
         description: 'For processing text, images, and other media',
         preferredProviders: ['google', 'openai', 'anthropic'],
         preferredModels: {
-          google: 'gemini-3-flash-preview',
+          google: 'gemini-2.5-pro-preview-05-06',
           openai: 'gpt-4o',
-          anthropic: 'claude-sonnet-4.5-20250929',
+          anthropic: 'claude-sonnet-4.6',
         },
       },
     };
@@ -915,6 +964,32 @@ class LLMConfigManager {
         this.hideConfigModal();
       });
     });
+
+    // Configuration Profile management buttons
+    const saveLocalModelBtn = document.getElementById('saveLocalModelBtn');
+    if (saveLocalModelBtn) {
+      saveLocalModelBtn.addEventListener('click', () => {
+        this.saveLocalCustomModel();
+      });
+    }
+    const removeLocalModelBtn = document.getElementById('removeLocalModelBtn');
+    if (removeLocalModelBtn) {
+      removeLocalModelBtn.addEventListener('click', () => {
+        this.removeLocalCustomModel();
+      });
+    }
+    const localSavedModelsList = document.getElementById('localSavedModelsList');
+    if (localSavedModelsList) {
+      localSavedModelsList.addEventListener('change', () => {
+        const removeBtn = document.getElementById('removeLocalModelBtn');
+        if (removeBtn) {
+          removeBtn.style.display = localSavedModelsList.value ? 'inline-block' : 'none';
+        }
+      });
+    }
+
+    // Load saved custom models on init
+    this.refreshLocalSavedModels();
   }
 
   toggleOptionsDropdown() {
@@ -3016,5 +3091,140 @@ Current context summary:
 
     // Fallback to provider's default model
     return this.providers[providerKey].model;
+  }
+
+  // ==========================================
+  // Custom Endpoint - Saved Models Management
+  // ==========================================
+
+  /**
+   * Get saved custom models for the local/custom endpoint provider
+   */
+  getLocalSavedModels() {
+    try {
+      const data = localStorage.getItem('localCustomModels');
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('Error loading local custom models:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Persist saved custom models to localStorage
+   */
+  persistLocalSavedModels(models) {
+    try {
+      localStorage.setItem('localCustomModels', JSON.stringify(models));
+    } catch (e) {
+      console.error('Error saving local custom models:', e);
+      this.showNotification('Error saving model list: ' + e.message, 'error');
+    }
+  }
+
+  /**
+   * Refresh the "Saved Custom Models" optgroup in the local model select,
+   * and the saved models list dropdown
+   */
+  refreshLocalSavedModels() {
+    const models = this.getLocalSavedModels();
+
+    // Update the optgroup inside the main model select
+    const optgroup = document.getElementById('localSavedModelsOptgroup');
+    if (optgroup) {
+      optgroup.innerHTML = '';
+      if (models.length > 0) {
+        optgroup.style.display = '';
+        models.forEach(modelName => {
+          const option = document.createElement('option');
+          option.value = modelName;
+          option.textContent = modelName;
+          optgroup.appendChild(option);
+        });
+      } else {
+        optgroup.style.display = 'none';
+      }
+    }
+
+    // Update the separate saved models list dropdown
+    const listSelect = document.getElementById('localSavedModelsList');
+    if (listSelect) {
+      listSelect.innerHTML = '';
+      if (models.length > 0) {
+        listSelect.style.display = '';
+        models.forEach(modelName => {
+          const option = document.createElement('option');
+          option.value = modelName;
+          option.textContent = modelName;
+          listSelect.appendChild(option);
+        });
+      } else {
+        listSelect.style.display = 'none';
+      }
+    }
+
+    // Hide remove button when no selection
+    const removeBtn = document.getElementById('removeLocalModelBtn');
+    if (removeBtn) {
+      removeBtn.style.display = 'none';
+    }
+  }
+
+  /**
+   * Save the current custom model name to the saved models list
+   */
+  saveLocalCustomModel() {
+    const input = document.getElementById('localModelOther');
+    if (!input || !input.value.trim()) {
+      this.showNotification('Please enter a model name first', 'warning');
+      return;
+    }
+
+    const modelName = input.value.trim();
+    const models = this.getLocalSavedModels();
+
+    if (models.includes(modelName)) {
+      this.showNotification(`"${modelName}" is already in your saved list`, 'warning');
+      return;
+    }
+
+    models.push(modelName);
+    this.persistLocalSavedModels(models);
+    this.refreshLocalSavedModels();
+
+    // Select the newly saved model in the main dropdown
+    const localModelSelect = document.getElementById('localModel');
+    if (localModelSelect) {
+      localModelSelect.value = modelName;
+      // If not found in options (should be there now), keep "other"
+      if (localModelSelect.value !== modelName) {
+        localModelSelect.value = 'other';
+      }
+    }
+
+    this.showNotification(`Model "${modelName}" saved to list`, 'success');
+  }
+
+  /**
+   * Remove a selected model from the saved models list
+   */
+  removeLocalCustomModel() {
+    const listSelect = document.getElementById('localSavedModelsList');
+    if (!listSelect || !listSelect.value) {
+      this.showNotification('Please select a model to remove', 'warning');
+      return;
+    }
+
+    const modelName = listSelect.value;
+    if (!confirm(`Remove "${modelName}" from saved models?`)) {
+      return;
+    }
+
+    let models = this.getLocalSavedModels();
+    models = models.filter(m => m !== modelName);
+    this.persistLocalSavedModels(models);
+    this.refreshLocalSavedModels();
+
+    this.showNotification(`Model "${modelName}" removed from list`, 'success');
   }
 }

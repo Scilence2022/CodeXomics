@@ -266,7 +266,7 @@ class MultiAgentSettingsManager {
         apiKeyPrefix: 'pplx-',
       },
       local: {
-        name: 'Local LLM',
+        name: 'Custom Endpoint',
         models: {
           'qwen3:8b': 'Qwen3:8b (Latest - 5.2GB)',
           'qwen3:4b': 'Qwen3:4b (2.6GB)',

@@ -191,7 +191,7 @@ class ConfigManager {
           openai: {
             name: 'OpenAI',
             apiKey: '',
-            model: 'gpt-4o',
+            model: 'gpt-5.2',
             baseUrl: 'https://api.openai.com/v1',
             enabled: false,
             maxTokens: 4096,
@@ -200,7 +200,7 @@ class ConfigManager {
           anthropic: {
             name: 'Anthropic',
             apiKey: '',
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-sonnet-4.6',
             baseUrl: 'https://api.anthropic.com',
             enabled: false,
             maxTokens: 4096,
@@ -209,7 +209,7 @@ class ConfigManager {
           google: {
             name: 'Google',
             apiKey: '',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-flash-preview-05-20',
             baseUrl: 'https://generativelanguage.googleapis.com',
             enabled: false,
             maxTokens: 4096,
@@ -218,7 +218,7 @@ class ConfigManager {
           deepseek: {
             name: 'DeepSeek',
             apiKey: '',
-            model: 'deepseek-chat',
+            model: 'deepseek-v4-flash',
             baseUrl: 'https://api.deepseek.com/v1',
             enabled: false,
             maxTokens: 4096,
@@ -227,7 +227,7 @@ class ConfigManager {
           siliconflow: {
             name: 'SiliconFlow',
             apiKey: '',
-            model: 'Qwen/Qwen3-Next-80B-A3B-Instruct',
+            model: 'Qwen/Qwen3.5-39B-A17B',
             baseUrl: 'https://api.siliconflow.cn/v1',
             enabled: false,
             maxTokens: 4096,
@@ -236,14 +236,14 @@ class ConfigManager {
           openrouter: {
             name: 'OpenRouter',
             apiKey: '',
-            model: 'openai/gpt-4o',
+            model: 'openai/gpt-5.2',
             baseUrl: 'https://openrouter.ai/api/v1',
             enabled: false,
             maxTokens: 4096,
             temperature: 0.7,
           },
           local: {
-            name: 'Local LLM',
+            name: 'Custom Endpoint',
             apiKey: '',
             model: 'qwen3:8b',
             baseUrl: 'http://localhost:11434/v1',

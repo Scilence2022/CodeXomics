@@ -781,7 +781,7 @@ class ChatBoxSettingsManager {
                                         <option value="deepseek">DeepSeek</option>
                                         <option value="siliconflow">SiliconFlow</option>
                                         <option value="openrouter">OpenRouter</option>
-                                        <option value="local">Local LLM</option>
+                                        <option value="local">Custom Endpoint</option>
                                     </select>
                                     <small class="help-text">Override the provider for ChatBox conversations (optional)</small>
                                 </div>

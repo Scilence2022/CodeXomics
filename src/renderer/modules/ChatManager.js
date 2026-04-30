@@ -4387,7 +4387,7 @@ class ChatManager {
 
     // Check if LLM is configured
     if (!this.llmConfigManager.isConfigured()) {
-      return 'I need to be configured first. Please go to Options → Configure LLMs to set up your preferred AI provider (OpenAI, Anthropic, Google, or Local LLM).';
+      return 'I need to be configured first. Please go to Options → Configure LLMs to set up your preferred AI provider (OpenAI, Anthropic, Google, or Custom Endpoint).';
     }
 
     // Initialize execution tracking for benchmark integration

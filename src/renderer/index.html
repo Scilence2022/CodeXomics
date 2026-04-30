@@ -1193,7 +1193,7 @@
                     <button class="tab-button" data-provider="deepseek">DeepSeek</button>
                     <button class="tab-button" data-provider="siliconflow">SiliconFlow</button>
                     <button class="tab-button" data-provider="openrouter">OpenRouter</button>
-                    <button class="tab-button" data-provider="local">Local LLM</button>
+                    <button class="tab-button" data-provider="local">Custom Endpoint</button>
                     <button class="tab-button" data-provider="models">Model Selection</button>
                 </div>
 
@@ -1216,29 +1216,39 @@
                         <div class="form-group">
                             <label for="openaiModel">Default Model:</label>
                             <select id="openaiModel" class="select">
-                                <!-- GPT-5 Series (Latest - 2026) -->
-                                <optgroup label="GPT-5 Series (Latest - 2026, requires BYOK)">
-                                    <option value="gpt-5.2">GPT-5.2 (Latest - Coding/Agentic)</option>
-                                    <option value="gpt-5.1">GPT-5.1 (Previous Gen)</option>
-                                    <option value="gpt-5.2-codex">GPT-5.2-Codex (Code Specialist)</option>
+                                <!-- GPT-5.5 Series (Latest - April 2026) -->
+                                <optgroup label="GPT-5.5 Series (Latest - April 2026)">
+                                    <option value="gpt-5.5">GPT-5.5 (Latest - Full Retrain)</option>
+                                </optgroup>
+                                <!-- GPT-5.2 Series -->
+                                <optgroup label="GPT-5.2 Series">
+                                    <option value="gpt-5.2-pro">GPT-5.2 Pro (Top Tier - $21/$168 per M)</option>
+                                    <option value="gpt-5.2" selected>GPT-5.2 (Flagship - $1.75/$14 per M)</option>
+                                </optgroup>
+                                <!-- GPT-5 Series -->
+                                <optgroup label="GPT-5 Series">
+                                    <option value="gpt-5.1">GPT-5.1 ($1.25/$10 per M)</option>
+                                    <option value="gpt-5">GPT-5 ($1.25/$10 per M)</option>
+                                    <option value="gpt-5-mini">GPT-5 Mini ($0.25/$2 per M)</option>
+                                    <option value="gpt-5-nano">GPT-5 Nano ($0.05/$0.40 per M)</option>
                                 </optgroup>
                                 <!-- o-Series (Reasoning Models) -->
                                 <optgroup label="o-Series (Reasoning Models)">
-                                    <option value="o3">o3 (Latest Reasoning)</option>
-                                    <option value="o3-mini">o3-mini (Compact Reasoning)</option>
-                                    <option value="o4-mini">o4-mini (Fast Reasoning)</option>
-                                    <option value="o1">o1 (Original Reasoning)</option>
+                                    <option value="o3-pro">o3 Pro ($20/$80 per M)</option>
+                                    <option value="o3">o3 ($2/$8 per M)</option>
+                                    <option value="o4-mini">o4-mini ($1.10/$4.40 per M)</option>
+                                    <option value="o3-mini">o3-mini ($1.10/$4.40 per M)</option>
                                 </optgroup>
-                                <!-- GPT-4o Series (Current Stable) -->
-                                <optgroup label="GPT-4o Series (Current Stable)">
-                                    <option value="gpt-4o" selected>GPT-4o (Multimodal Flagship)</option>
-                                    <option value="gpt-4o-mini">GPT-4o Mini (Fast & Efficient)</option>
+                                <!-- GPT-4.1 Series (1M Context) -->
+                                <optgroup label="GPT-4.1 Series (1M Context)">
+                                    <option value="gpt-4.1">GPT-4.1 ($2/$8 per M)</option>
+                                    <option value="gpt-4.1-mini">GPT-4.1 Mini ($0.40/$1.60 per M)</option>
+                                    <option value="gpt-4.1-nano">GPT-4.1 Nano ($0.10/$0.40 per M)</option>
                                 </optgroup>
-                                <!-- GPT-4 Series (Legacy) -->
-                                <optgroup label="GPT-4 Series (Legacy)">
-                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                    <option value="gpt-4">GPT-4</option>
-                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                <!-- GPT-4o Series (Legacy) -->
+                                <optgroup label="GPT-4o Series (Legacy)">
+                                    <option value="gpt-4o">GPT-4o ($2.50/$10 per M)</option>
+                                    <option value="gpt-4o-mini">GPT-4o Mini ($0.15/$0.60 per M)</option>
                                 </optgroup>
                                 <option value="other">Other (specify below)</option>
                             </select>
@@ -1277,12 +1287,17 @@
                         <div class="form-group">
                             <label for="anthropicModel">Default Model:</label>
                             <select id="anthropicModel" class="select">
-                                <!-- Claude 4.5 Series (Latest - 2025/2026) -->
-                                <optgroup label="Claude 4.5 Series (Latest)">
-                                    <option value="claude-opus-4.5-20251101">Claude Opus 4.5 (Most Intelligent)</option>
-                                    <option value="claude-sonnet-4.5-20250929" selected>Claude Sonnet 4.5 (Balanced)
+                                <!-- Claude 4.6 Series (Latest - 2026) -->
+                                <optgroup label="Claude 4.6 Series (Latest - 2026)">
+                                    <option value="claude-opus-4.6">Claude Opus 4.6 (Most Intelligent)</option>
+                                    <option value="claude-sonnet-4.6" selected>Claude Sonnet 4.6 (Balanced)
                                     </option>
-                                    <option value="claude-haiku-4.5-20251001">Claude Haiku 4.5 (Fast)</option>
+                                </optgroup>
+                                <!-- Claude 4.5 Series (2025/2026) -->
+                                <optgroup label="Claude 4.5 Series (2025/2026)">
+                                    <option value="claude-opus-4.5-20251101">Claude Opus 4.5</option>
+                                    <option value="claude-sonnet-4.5-20250929">Claude Sonnet 4.5</option>
+                                    <option value="claude-haiku-4.5">Claude Haiku 4.5 (Fast)</option>
                                 </optgroup>
                                 <!-- Claude 3.5 Series (Previous Generation) -->
                                 <optgroup label="Claude 3.5 Series (Previous)">
@@ -1327,28 +1342,20 @@
                         <div class="form-group">
                             <label for="googleModel">Default Model:</label>
                             <select id="googleModel" class="select">
-                                <!-- Gemini 3.0 Series (Latest - 2026) -->
-                                <optgroup label="Gemini 3.0 Series (Latest)">
-                                    <option value="gemini-3-flash-preview">Gemini 3.0 Flash Preview (Latest - Advanced
-                                        Reasoning)</option>
+                                <!-- Gemini 2.5 Series (Latest - 2025/2026) -->
+                                <optgroup label="Gemini 2.5 Series (Latest - 2025/2026)">
+                                    <option value="gemini-2.5-pro-preview-05-06">Gemini 2.5 Pro Preview (Best Reasoning)</option>
+                                    <option value="gemini-2.5-flash-preview-05-20" selected>Gemini 2.5 Flash Preview (Best Value)</option>
                                 </optgroup>
-                                <!-- Gemini 2.0 Series (Current Stable) -->
-                                <optgroup label="Gemini 2.0 Series (Current Stable)">
-                                    <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash (Latest - Multimodal)
-                                    </option>
+                                <!-- Gemini 2.0 Series (Stable) -->
+                                <optgroup label="Gemini 2.0 Series (Stable)">
+                                    <option value="gemini-2.0-flash">Gemini 2.0 Flash (Multimodal)</option>
                                     <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
                                 </optgroup>
                                 <!-- Gemini 1.5 Series (Legacy) -->
                                 <optgroup label="Gemini 1.5 Series (Legacy)">
-                                    <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Latest - Large Context)
-                                    </option>
-                                    <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest - Fast)</option>
-                                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
-                                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
-                                </optgroup>
-                                <!-- Gemini 1.0 Series (Deprecated) -->
-                                <optgroup label="Gemini 1.0 Series (Deprecated)">
-                                    <option value="gemini-pro">Gemini 1.0 Pro (Legacy)</option>
+                                    <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Large Context)</option>
+                                    <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Fast)</option>
                                 </optgroup>
                                 <option value="other">Other (specify below)</option>
                             </select>
@@ -1387,9 +1394,20 @@
                         <div class="form-group">
                             <label for="deepseekModel">Default Model:</label>
                             <select id="deepseekModel" class="select">
-                                <option value="deepseek-chat">DeepSeek Chat</option>
-                                <option value="deepseek-coder">DeepSeek Coder</option>
-                                <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+                                <!-- DeepSeek V4 Series (Latest - 2026) -->
+                                <optgroup label="DeepSeek V4 Series (Latest - 2026)">
+                                    <option value="deepseek-v4-pro">DeepSeek V4 Pro (Flagship)</option>
+                                    <option value="deepseek-v4-flash" selected>DeepSeek V4 Flash (Fast)</option>
+                                </optgroup>
+                                <!-- DeepSeek V3 Series -->
+                                <optgroup label="DeepSeek V3 Series">
+                                    <option value="deepseek-chat">DeepSeek Chat (V4 Flash non-thinking)</option>
+                                    <option value="deepseek-reasoner">DeepSeek Reasoner (V4 Flash thinking)</option>
+                                </optgroup>
+                                <!-- DeepSeek Legacy -->
+                                <optgroup label="DeepSeek Legacy (Deprecated)">
+                                    <option value="deepseek-coder">DeepSeek Coder (Merged into Chat)</option>
+                                </optgroup>
                                 <option value="other">Other (specify below)</option>
                             </select>
                         </div>
@@ -1589,38 +1607,44 @@
                         <div class="form-group">
                             <label for="openrouterModel">Default Model:</label>
                             <select id="openrouterModel" class="select">
-                                <!-- OpenAI GPT-5 Series (Latest - 2025/2026) -->
-                                <optgroup label="OpenAI GPT-5 Series (Latest - 2025/2026)">
-                                    <option value="openai/gpt-5.2">GPT-5.2 (Latest - Coding/Agentic)</option>
-                                    <option value="openai/gpt-5.1">GPT-5.1 (Previous Gen)</option>
-                                    <option value="openai/gpt-5" selected>GPT-5 ($1.25/$10 per M, 400K ctx)</option>
-                                    <option value="openai/gpt-5-mini">GPT-5 Mini ($0.25/$2 per M, 400K ctx)</option>
-                                    <option value="openai/gpt-5-nano">GPT-5 Nano ($0.05/$0.40 per M, 400K ctx)</option>
+                                <!-- OpenAI GPT-5.5/GPT-5.2 Series (Latest - 2026) -->
+                                <optgroup label="OpenAI GPT-5.5/GPT-5.2 (Latest - 2026)">
+                                    <option value="openai/gpt-5.5">GPT-5.5 (Latest - Full Retrain)</option>
+                                    <option value="openai/gpt-5.2-pro">GPT-5.2 Pro (Top Tier)</option>
+                                    <option value="openai/gpt-5.2" selected>GPT-5.2 (Flagship)</option>
                                 </optgroup>
-                                <!-- OpenAI o-Series (Reasoning Models) -->
-                                <optgroup label="OpenAI o-Series (Reasoning Models)">
-                                    <option value="openai/o3">o3 (Latest Reasoning)</option>
-                                    <option value="openai/o3-mini">o3-mini (Compact Reasoning)</option>
-                                    <option value="openai/o4-mini">o4-mini (Fast Reasoning)</option>
-                                    <option value="openai/o1">o1 (Original Reasoning)</option>
+                                <!-- OpenAI GPT-5/o-Series -->
+                                <optgroup label="OpenAI GPT-5 & o-Series">
+                                    <option value="openai/gpt-5">GPT-5 ($1.25/$10 per M)</option>
+                                    <option value="openai/gpt-5-mini">GPT-5 Mini ($0.25/$2 per M)</option>
+                                    <option value="openai/gpt-5-nano">GPT-5 Nano ($0.05/$0.40 per M)</option>
+                                    <option value="openai/o3-pro">o3 Pro ($20/$80 per M)</option>
+                                    <option value="openai/o3">o3 ($2/$8 per M)</option>
+                                    <option value="openai/o4-mini">o4-mini ($1.10/$4.40 per M)</option>
+                                    <option value="openai/o3-mini">o3-mini ($1.10/$4.40 per M)</option>
                                 </optgroup>
-                                <option value="openai/gpt-4o">GPT-4o (Previous Gen)</option>
-                                <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
-                                <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
-                                <option value="openai/gpt-4">GPT-4 (Legacy)</option>
+                                <!-- OpenAI GPT-4.1/GPT-4o -->
+                                <optgroup label="OpenAI GPT-4.1/GPT-4o">
+                                    <option value="openai/gpt-4.1">GPT-4.1 (1M ctx)</option>
+                                    <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
+                                    <option value="openai/gpt-4.1-nano">GPT-4.1 Nano</option>
+                                    <option value="openai/gpt-4o">GPT-4o</option>
+                                    <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
                                 </optgroup>
 
-                                <!-- Anthropic Models (Latest) -->
-                                <optgroup label="Anthropic Models (Latest)">
-                                    <option value="anthropic/claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest -
-                                        Most Capable)</option>
-                                    <option value="anthropic/claude-3-5-haiku-20241022">Claude 3.5 Haiku (Latest - Fast)
-                                    </option>
-                                    <option value="anthropic/claude-3-opus-20240229">Claude 3 Opus (Most Capable)
-                                    </option>
-                                    <option value="anthropic/claude-3-sonnet-20240229">Claude 3 Sonnet (Balanced)
-                                    </option>
-                                    <option value="anthropic/claude-3-haiku-20240307">Claude 3 Haiku (Fast)</option>
+                                <!-- Anthropic Claude Series (Latest - 2026) -->
+                                <optgroup label="Anthropic Claude (Latest - 2026)">
+                                    <option value="anthropic/claude-opus-4.6">Claude Opus 4.6 (Most Intelligent)</option>
+                                    <option value="anthropic/claude-sonnet-4.6">Claude Sonnet 4.6 (Balanced)</option>
+                                    <option value="anthropic/claude-sonnet-4.5-20250929">Claude Sonnet 4.5</option>
+                                    <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5 (Fast)</option>
+                                </optgroup>
+
+                                <!-- Google Gemini Series (Latest - 2025/2026) -->
+                                <optgroup label="Google Gemini (Latest - 2025/2026)">
+                                    <option value="google/gemini-2.5-pro-preview-05-06">Gemini 2.5 Pro (Best Reasoning)</option>
+                                    <option value="google/gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash (Best Value)</option>
+                                    <option value="google/gemini-2.0-flash">Gemini 2.0 Flash</option>
                                 </optgroup>
 
                                 <!-- GLM Models (Z.AI) -->
@@ -1631,125 +1655,31 @@
                                     <option value="z-ai/glm-4.5v">GLM-4.5V (Vision)</option>
                                 </optgroup>
 
-                                <!-- Claude Sonnet 4 Series (Latest) -->
-                                <optgroup label="Claude Sonnet 4 Series (Latest)">
-                                    <option value="anthropic/claude-3-5-sonnet-4">Claude Sonnet 4 (Latest - Most
-                                        Advanced)</option>
-                                    <option value="anthropic/claude-3-5-sonnet-4-mini">Claude Sonnet 4 Mini (Fast &
-                                        Efficient)</option>
+                                <!-- DeepSeek Models (Latest) -->
+                                <optgroup label="DeepSeek Models (Latest)">
+                                    <option value="deepseek/deepseek-v4-pro">DeepSeek V4 Pro (Flagship)</option>
+                                    <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash (Fast)</option>
+                                    <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
+                                    <option value="deepseek/deepseek-reasoner">DeepSeek Reasoner</option>
                                 </optgroup>
 
-                                <!-- Google Gemini Series -->
-                                <optgroup label="Google Gemini 2.0 Series (Latest)">
-                                    <option value="google/gemini-2.0-flash">Gemini 2.0 Flash (Latest Multimodal)
-                                    </option>
-                                    <option value="google/gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
-                                </optgroup>
-                                <optgroup label="Google Gemini 1.5 Series">
-                                    <option value="google/gemini-1.5-pro-latest">Gemini 1.5 Pro (Latest - Large Context)
-                                    </option>
-                                    <option value="google/gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest - Fast)
-                                    </option>
-                                    <option value="google/gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
-                                    <option value="google/gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
-                                </optgroup>
-                                <optgroup label="Google Gemini 1.0 Series">
-                                    <option value="google/gemini-pro">Gemini 1.0 Pro (Legacy)</option>
+                                <!-- Meta Llama Models -->
+                                <optgroup label="Meta Llama Models">
+                                    <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B Instruct</option>
+                                    <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B Instruct</option>
+                                    <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct</option>
                                 </optgroup>
 
-                                <!-- Meta Models (Latest) -->
-                                <optgroup label="Meta Models (Latest)">
-                                    <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B Instruct (Most
-                                        Capable)</option>
-                                    <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B Instruct (Balanced)
-                                    </option>
-                                    <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct (Fast)
-                                    </option>
-                                    <option value="meta-llama/llama-3.1-1b-instruct">Llama 3.1 1B Instruct (Very Fast)
-                                    </option>
-                                </optgroup>
-
-                                <!-- Mistral Models (Latest) -->
-                                <optgroup label="Mistral Models (Latest)">
+                                <!-- Mistral Models -->
+                                <optgroup label="Mistral Models">
                                     <option value="mistralai/mistral-large-latest">Mistral Large (Latest)</option>
-                                    <option value="mistralai/mixtral-8x7b-instruct">Mixtral 8x7B Instruct (Balanced)
-                                    </option>
-                                    <option value="mistralai/mistral-7b-instruct">Mistral 7B Instruct (Fast)</option>
                                     <option value="mistralai/mistral-small-latest">Mistral Small (Latest)</option>
                                 </optgroup>
 
-                                <!-- DeepSeek Models (Latest) -->
-                                <optgroup label="DeepSeek Models (Latest)">
-                                    <option value="deepseek-ai/deepseek-chat">DeepSeek Chat (Latest)</option>
-                                    <option value="deepseek-ai/deepseek-coder">DeepSeek Coder (Code Focused)</option>
-                                    <option value="deepseek-ai/deepseek-v2.5">DeepSeek V2.5 (Legacy)</option>
-                                    <option value="deepseek-ai/deepseek-v2">DeepSeek V2 (Legacy)</option>
-                                </optgroup>
-
-                                <!-- Qwen Models (Latest) -->
-                                <optgroup label="Qwen Models (Latest)">
-                                    <option value="qwen/qwen2.5-72b-instruct">Qwen 2.5 72B Instruct (Most Capable)
-                                    </option>
-                                    <option value="qwen/qwen2.5-32b-instruct">Qwen 2.5 32B Instruct (Balanced)</option>
-                                    <option value="qwen/qwen2.5-14b-instruct">Qwen 2.5 14B Instruct (Fast)</option>
-                                    <option value="qwen/qwen2.5-7b-instruct">Qwen 2.5 7B Instruct (Very Fast)</option>
-                                    <option value="qwen/qwen2.5-coder-32b-instruct">Qwen 2.5 Coder 32B (Code Focused)
-                                    </option>
-                                    <option value="qwen/qwen2.5-coder-7b-instruct">Qwen 2.5 Coder 7B (Code Fast)
-                                    </option>
-                                </optgroup>
-
-                                <!-- Microsoft Models -->
-                                <optgroup label="Microsoft Models">
-                                    <option value="microsoft/wizardlm-2-8x22b">WizardLM 2 8x22B (Most Capable)</option>
-                                    <option value="microsoft/wizardlm-2-7b">WizardLM 2 7B (Fast)</option>
-                                    <option value="microsoft/phi-3-medium-4k-instruct">Phi-3 Medium 4K (Fast)</option>
-                                    <option value="microsoft/phi-3-small-8k-instruct">Phi-3 Small 8K (Very Fast)
-                                    </option>
-                                    <option value="microsoft/phi-3-mini-4k-instruct">Phi-3 Mini 4K (Ultra Fast)</option>
-                                </optgroup>
-
-                                <!-- Perplexity Models -->
-                                <optgroup label="Perplexity Models">
-                                    <option value="perplexity/llama-3.1-70b-instruct">Perplexity Llama 3.1 70B (Most
-                                        Capable)</option>
-                                    <option value="perplexity/llama-3.1-8b-instruct">Perplexity Llama 3.1 8B (Fast)
-                                    </option>
-                                    <option value="perplexity/llama-3.1-1b-instruct">Perplexity Llama 3.1 1B (Very Fast)
-                                    </option>
-                                </optgroup>
-
-                                <!-- Nous Research Models -->
-                                <optgroup label="Nous Research Models">
-                                    <option value="nousresearch/nous-hermes-2-mixtral-8x7b-dpo">Nous Hermes 2 Mixtral
-                                        (Balanced)</option>
-                                    <option value="nousresearch/nous-hermes-2-yi-34b">Nous Hermes 2 Yi 34B (Capable)
-                                    </option>
-                                    <option value="nousresearch/nous-hermes-2-yi-6b">Nous Hermes 2 Yi 6B (Fast)</option>
-                                </optgroup>
-
-                                <!-- Other Popular Models -->
-                                <optgroup label="Other Popular Models">
-                                    <option value="01-ai/yi-34b-chat">Yi 34B Chat (Capable)</option>
-                                    <option value="01-ai/yi-6b-chat">Yi 6B Chat (Fast)</option>
-                                    <option value="cohere/command-r-plus">Command R+ (Most Capable)</option>
-                                    <option value="cohere/command-r">Command R (Balanced)</option>
-                                    <option value="cohere/command-light">Command Light (Fast)</option>
-                                    <option value="databricks/dbrx-instruct">DBRX Instruct (Most Capable)</option>
-                                    <option value="databricks/dbrx-base">DBRX Base (Balanced)</option>
-                                    <option value="snowflake/arctic-instruct">Snowflake Arctic Instruct (Capable)
-                                    </option>
-                                    <option value="snowflake/arctic-base">Snowflake Arctic Base (Balanced)</option>
-                                </optgroup>
-
-                                <!-- Multimodal Models -->
-                                <optgroup label="Multimodal Models">
-                                    <option value="fireworks/firellava-3-8b">FireLLaVA 3 8B (Multimodal)</option>
-                                    <option value="fireworks/firellava-3-1b">FireLLaVA 3 1B (Multimodal Fast)</option>
-                                    <option value="anthropic/claude-3-5-sonnet-20241022-vision">Claude 3.5 Sonnet Vision
-                                        (Multimodal)</option>
-                                    <option value="openai/gpt-4o-mini-vision">GPT-4o Mini Vision (Multimodal)</option>
-                                    <option value="openai/gpt-4o-vision">GPT-4o Vision (Multimodal)</option>
+                                <!-- Qwen Models -->
+                                <optgroup label="Qwen Models">
+                                    <option value="qwen/qwen2.5-72b-instruct">Qwen 2.5 72B Instruct</option>
+                                    <option value="qwen/qwen2.5-coder-32b-instruct">Qwen 2.5 Coder 32B</option>
                                 </optgroup>
                                 <option value="other">Other (specify below)</option>
                             </select>
@@ -1772,13 +1702,13 @@
                         </div>
                     </div>
 
-                    <!-- Local LLM Configuration -->
+                    <!-- Custom Endpoint Configuration -->
                     <div id="local-config" class="provider-config">
                         <div class="form-group">
                             <label for="localEndpoint">API Endpoint:</label>
                             <input type="text" id="localEndpoint" placeholder="http://localhost:11434/v1"
                                 class="input-full">
-                            <small class="help-text">Local LLM endpoint (Ollama, LMStudio, etc.)</small>
+                            <small class="help-text">Custom API endpoint (Ollama, LM Studio, vLLM, remote compatible endpoints, etc.)</small>
                         </div>
                         <div class="form-group">
                             <label for="localModel">Default Model:</label>
@@ -1816,13 +1746,29 @@
                                     <option value="gemma3:27b">gemma3:27b</option>
                                 </optgroup>
 
+                                <!-- Saved Custom Models (populated dynamically) -->
+                                <optgroup label="Saved Custom Models" id="localSavedModelsOptgroup" style="display: none;">
+                                </optgroup>
+
                                 <option value="other">Other (specify below)</option>
                             </select>
                         </div>
                         <div class="form-group" id="localModelOtherGroup" style="display: none;">
                             <label for="localModelOther">Custom Model Name:</label>
-                            <input type="text" id="localModelOther" placeholder="Enter custom model name"
-                                class="input-full">
+                            <div style="display: flex; gap: 6px;">
+                                <input type="text" id="localModelOther" placeholder="Enter custom model name"
+                                    class="input-full" style="flex: 1;">
+                                <button type="button" id="saveLocalModelBtn" class="btn btn-sm btn-secondary" title="Save this model to your list">
+                                    <i class="fas fa-plus"></i> Save to List
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 8px; align-items: center;">
+                            <select id="localSavedModelsList" class="select" style="flex: 1; min-width: 120px; display: none;">
+                            </select>
+                            <button type="button" id="removeLocalModelBtn" class="btn btn-sm" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 12px; display: none;" title="Remove selected model from saved list">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                         <div class="form-group">
                             <label for="localApiKey">API Key (if required):</label>
@@ -1872,7 +1818,7 @@
                                         <option value="deepseek">DeepSeek</option>
                                         <option value="siliconflow">SiliconFlow</option>
                                         <option value="openrouter">OpenRouter</option>
-                                        <option value="local">Local LLM</option>
+                                        <option value="local">Custom Endpoint</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -1908,7 +1854,7 @@
                                         <option value="openai">OpenAI</option>
                                         <option value="google">Google (Gemini)</option>
                                         <option value="anthropic">Anthropic (Claude)</option>
-                                        <option value="local">Local LLM</option>
+                                        <option value="local">Custom Endpoint</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -1938,7 +1884,7 @@
                                         <option value="openai">OpenAI</option>
                                         <option value="google">Google (Gemini)</option>
                                         <option value="anthropic">Anthropic (Claude)</option>
-                                        <option value="local">Local LLM</option>
+                                        <option value="local">Custom Endpoint</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -1968,7 +1914,7 @@
                                         <option value="openai">OpenAI</option>
                                         <option value="google">Google (Gemini)</option>
                                         <option value="anthropic">Anthropic (Claude)</option>
-                                        <option value="local">Local LLM</option>
+                                        <option value="local">Custom Endpoint</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -1998,7 +1944,7 @@
                                         <option value="openai">OpenAI</option>
                                         <option value="google">Google (Gemini)</option>
                                         <option value="anthropic">Anthropic (Claude)</option>
-                                        <option value="local">Local LLM</option>
+                                        <option value="local">Custom Endpoint</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
