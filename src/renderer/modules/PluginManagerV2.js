@@ -620,23 +620,55 @@ class PluginManagerV2 {
 
       const functionDef = plugin.functions?.[functionName];
       if (!functionDef) {
-        // Fallback: try CommandRegistry for plugins that register commands via context.registerCommand
-        // (e.g., visualization plugins that use the command pattern instead of the functions property)
-        if (this.commandRegistry) {
-          // Try full name first (e.g., "protein-network.visualize")
+        // Fallback 1: try CommandRegistry for plugins that register commands via context.registerCommand
+        if (this.commandRegistry && this.commandRegistry._commands) {
+          // Try full command name (e.g., "protein-network.visualize")
           const fullCommandName = `${pluginId}.${functionName}`;
-          if (this.commandRegistry._commands?.has(fullCommandName)) {
+          if (this.commandRegistry._commands.has(fullCommandName)) {
             console.log(`[PluginManagerV2] Falling back to CommandRegistry for '${fullCommandName}'`);
             return await this.commandRegistry.executeCommand(fullCommandName, parameters);
           }
-          // Try with just the function name if it's a different naming convention
-          // (e.g., plugin "protein-interaction-network" registers command "protein-network.visualize")
-          for (const [cmdId] of this.commandRegistry._commands) {
+          // Search for any command ending with the function name
+          // (e.g., plugin "protein-interaction-network" registers "protein-network.visualize")
+          for (const [cmdId, cmdDef] of this.commandRegistry._commands) {
             if (cmdId.endsWith(`.${functionName}`)) {
               console.log(`[PluginManagerV2] Found matching command '${cmdId}' for function '${functionName}'`);
               return await this.commandRegistry.executeCommand(cmdId, parameters);
             }
           }
+          console.log(`[PluginManagerV2] CommandRegistry fallback: no matching command found for '${functionName}' in plugin '${pluginId}'`);
+        }
+
+        // Fallback 2: try calling method directly on the plugin instance
+        // (e.g., visualization plugins expose methods like visualizeNetwork, renderNetwork)
+        const instance = plugin._instance || plugin.instance;
+        if (instance) {
+          // Try common method name patterns
+          const methodNames = [
+            functionName,
+            // camelCase: visualize → visualizeNetwork, renderNetwork
+            functionName + 'Network',
+            functionName + 'Visualization',
+            functionName + 'Data',
+            // Specific known patterns
+            functionName === 'visualize' ? 'visualizeNetwork' : null,
+            functionName === 'renderNetwork' ? 'renderNetwork' : null,
+            functionName === 'layout' ? 'changeLayout' : null,
+          ].filter(Boolean);
+
+          for (const methodName of methodNames) {
+            if (typeof instance[methodName] === 'function') {
+              console.log(`[PluginManagerV2] Calling instance method '${methodName}' on plugin '${pluginId}'`);
+              try {
+                const result = await instance[methodName](parameters);
+                return result;
+              } catch (methodError) {
+                console.error(`[PluginManagerV2] Instance method '${methodName}' failed:`, methodError);
+                throw methodError;
+              }
+            }
+          }
+          console.log(`[PluginManagerV2] No instance method found for '${functionName}' on plugin '${pluginId}'. Checked: ${methodNames.join(', ')}`);
         }
 
         throw new Error(`Function not found: ${functionName} in plugin ${pluginId}`);
