@@ -629,46 +629,35 @@ class PluginManagerV2 {
             return await this.commandRegistry.executeCommand(fullCommandName, parameters);
           }
           // Search for any command ending with the function name
-          // (e.g., plugin "protein-interaction-network" registers "protein-network.visualize")
-          for (const [cmdId, cmdDef] of this.commandRegistry._commands) {
+          for (const [cmdId] of this.commandRegistry._commands) {
             if (cmdId.endsWith(`.${functionName}`)) {
               console.log(`[PluginManagerV2] Found matching command '${cmdId}' for function '${functionName}'`);
               return await this.commandRegistry.executeCommand(cmdId, parameters);
             }
           }
-          console.log(`[PluginManagerV2] CommandRegistry fallback: no matching command found for '${functionName}' in plugin '${pluginId}'`);
+          console.log(`[PluginManagerV2] CommandRegistry: no matching command for '${functionName}' in '${pluginId}'`);
         }
 
-        // Fallback 2: try calling method directly on the plugin instance
-        // (e.g., visualization plugins expose methods like visualizeNetwork, renderNetwork)
-        const instance = plugin._instance || plugin.instance;
-        if (instance) {
-          // Try common method name patterns
-          const methodNames = [
-            functionName,
-            // camelCase: visualize → visualizeNetwork, renderNetwork
-            functionName + 'Network',
-            functionName + 'Visualization',
-            functionName + 'Data',
-            // Specific known patterns
-            functionName === 'visualize' ? 'visualizeNetwork' : null,
-            functionName === 'renderNetwork' ? 'renderNetwork' : null,
-            functionName === 'layout' ? 'changeLayout' : null,
-          ].filter(Boolean);
+        // Fallback 2: dynamically load plugin instance and call method
+        let instance = plugin._instance || plugin.instance;
+        if (!instance) {
+          instance = await this._loadPluginInstance(pluginId, plugin);
+        }
 
+        if (instance) {
+          const methodNames = this._resolvePluginMethodNames(functionName);
           for (const methodName of methodNames) {
             if (typeof instance[methodName] === 'function') {
               console.log(`[PluginManagerV2] Calling instance method '${methodName}' on plugin '${pluginId}'`);
               try {
-                const result = await instance[methodName](parameters);
-                return result;
+                return await instance[methodName](parameters);
               } catch (methodError) {
                 console.error(`[PluginManagerV2] Instance method '${methodName}' failed:`, methodError);
                 throw methodError;
               }
             }
           }
-          console.log(`[PluginManagerV2] No instance method found for '${functionName}' on plugin '${pluginId}'. Checked: ${methodNames.join(', ')}`);
+          console.log(`[PluginManagerV2] No method found for '${functionName}'. Tried: ${methodNames.join(', ')}`);
         }
 
         throw new Error(`Function not found: ${functionName} in plugin ${pluginId}`);
@@ -1280,6 +1269,142 @@ class PluginManagerV2 {
 
     this.emitEvent('system-destroyed', { timestamp: Date.now() });
     console.log('✅ PluginManagerV2 destroyed');
+  }
+
+  /**
+   * Dynamically load and instantiate a plugin from its index.js
+   * Caches the instance on the plugin definition for reuse
+   * @private
+   */
+  async _loadPluginInstance(pluginId, plugin) {
+    // Check cache first
+    if (plugin._instance) {
+      return plugin._instance;
+    }
+
+    try {
+      const path = require('path');
+      const fs = require('fs');
+
+      // Find the plugin's index.js
+      let indexPath = null;
+
+      // Try to find project root
+      let basePath = null;
+      if (typeof __dirname !== 'undefined') {
+        let searchPath = __dirname;
+        for (let i = 0; i < 15; i++) {
+          try {
+            if (fs.existsSync(path.join(searchPath, 'package.json')) &&
+                fs.existsSync(path.join(searchPath, 'src', 'renderer', 'modules'))) {
+              basePath = searchPath;
+              break;
+            }
+          } catch (e) { /* ignore */ }
+          const parent = path.dirname(searchPath);
+          if (parent === searchPath) break;
+          searchPath = parent;
+        }
+      }
+
+      if (basePath) {
+        const version = plugin.version || '1.0.0';
+        const candidates = [
+          path.join(basePath, 'packages/marketplace-server/marketplace-data/plugins', pluginId, version, 'index.js'),
+          path.join(basePath, 'src/renderer/modules/Plugins/UserInstalled', pluginId, version, 'index.js'),
+          path.join(basePath, 'src/renderer/modules/Plugins', pluginId, version, 'index.js'),
+        ];
+
+        for (const candidate of candidates) {
+          try {
+            if (fs.existsSync(candidate)) {
+              indexPath = candidate;
+              break;
+            }
+          } catch (e) { /* ignore */ }
+        }
+      }
+
+      if (!indexPath) {
+        console.warn(`[PluginManagerV2] Cannot find index.js for plugin '${pluginId}'`);
+        return null;
+      }
+
+      console.log(`[PluginManagerV2] Loading plugin instance from: ${indexPath}`);
+
+      // Require the plugin module
+      const PluginModule = require(indexPath);
+      const PluginClass = PluginModule.default || PluginModule;
+
+      // Find the plugin class (should be the default export or the first class)
+      let instance = null;
+      if (typeof PluginClass === 'function') {
+        instance = new PluginClass();
+      } else if (typeof PluginClass === 'object' && PluginClass !== null) {
+        // Already an instance
+        instance = PluginClass;
+      }
+
+      if (instance) {
+        // Try to activate the plugin with a minimal context
+        if (typeof instance.activate === 'function') {
+          const context = {
+            subscriptions: [],
+            registerCommand: (cmdId, handler) => {
+              if (this.commandRegistry) {
+                this.commandRegistry.registerCommand(cmdId, handler, { extensionId: pluginId });
+              }
+              return { dispose: () => {} };
+            },
+            registerVisualization: () => ({ dispose: () => {} }),
+          };
+          try {
+            await instance.activate(context);
+          } catch (activateError) {
+            console.warn(`[PluginManagerV2] Plugin '${pluginId}' activate() failed:`, activateError.message);
+          }
+        }
+
+        // Cache the instance
+        plugin._instance = instance;
+        console.log(`[PluginManagerV2] Plugin '${pluginId}' instance loaded and cached`);
+        return instance;
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`[PluginManagerV2] Failed to load instance for '${pluginId}':`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Resolve possible method names for a given function name
+   * @private
+   */
+  _resolvePluginMethodNames(functionName) {
+    const names = [
+      functionName,
+      functionName + 'Network',
+      functionName + 'Visualization',
+      functionName + 'Data',
+    ];
+
+    // Specific known patterns from common plugins
+    const knownPatterns = {
+      'visualize': ['visualizeNetwork', 'visualize'],
+      'renderNetwork': ['renderNetwork', 'visualizeNetwork'],
+      'layout': ['changeLayout', 'setLayout', 'updateLayout'],
+      'search': ['searchProteins', 'search'],
+      'analyze': ['analyzeNetwork', 'analyze'],
+    };
+
+    if (knownPatterns[functionName]) {
+      names.push(...knownPatterns[functionName]);
+    }
+
+    // Deduplicate
+    return [...new Set(names)];
   }
 }
 
