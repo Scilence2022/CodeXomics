@@ -1746,8 +1746,8 @@
                                     <option value="gemma3:27b">gemma3:27b</option>
                                 </optgroup>
 
-                                <!-- Saved Custom Models (populated dynamically) -->
-                                <optgroup label="Saved Custom Models" id="localSavedModelsOptgroup" style="display: none;">
+                                <!-- Saved Configurations (populated dynamically) -->
+                                <optgroup label="Saved Configurations" id="localSavedModelsOptgroup" style="display: none;">
                                 </optgroup>
 
                                 <option value="other">Other (specify below)</option>
@@ -1755,20 +1755,8 @@
                         </div>
                         <div class="form-group" id="localModelOtherGroup" style="display: none;">
                             <label for="localModelOther">Custom Model Name:</label>
-                            <div style="display: flex; gap: 6px;">
-                                <input type="text" id="localModelOther" placeholder="Enter custom model name"
-                                    class="input-full" style="flex: 1;">
-                                <button type="button" id="saveLocalModelBtn" class="btn btn-sm btn-secondary" title="Save this model to your list">
-                                    <i class="fas fa-plus"></i> Save to List
-                                </button>
-                            </div>
-                        </div>
-                        <div class="form-group" style="display: flex; gap: 8px; align-items: center;">
-                            <select id="localSavedModelsList" class="select" style="flex: 1; min-width: 120px; display: none;">
-                            </select>
-                            <button type="button" id="removeLocalModelBtn" class="btn btn-sm" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 12px; display: none;" title="Remove selected model from saved list">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <input type="text" id="localModelOther" placeholder="Enter custom model name"
+                                class="input-full">
                         </div>
                         <div class="form-group">
                             <label for="localApiKey">API Key (if required):</label>
@@ -1786,6 +1774,27 @@
                                 <input type="checkbox" id="localStreamingSupport"> Streaming Support
                             </label>
                         </div>
+
+                        <!-- Saved Configurations -->
+                        <div class="form-group" style="border-top: 1px solid var(--border-color, #333); padding-top: 12px; margin-top: 8px;">
+                            <label style="font-weight: 600; margin-bottom: 6px; display: block;"><i class="fas fa-bookmark"></i> Saved Configurations</label>
+                            <small class="help-text" style="display: block; margin-bottom: 8px;">Save and load complete endpoint configurations (URL, model, API key, streaming).</small>
+                            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                <select id="localSavedConfigsList" class="select" style="flex: 1; min-width: 150px;">
+                                    <option value="">-- Select a saved configuration --</option>
+                                </select>
+                                <button type="button" id="loadLocalConfigBtn" class="btn btn-secondary btn-sm" title="Load selected configuration">
+                                    <i class="fas fa-upload"></i> Load
+                                </button>
+                                <button type="button" id="saveLocalConfigBtn" class="btn btn-primary btn-sm" title="Save current settings as a named configuration">
+                                    <i class="fas fa-download"></i> Save
+                                </button>
+                                <button type="button" id="deleteLocalConfigBtn" class="btn btn-sm" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 12px;" title="Delete selected configuration">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <button type="button" id="saveLocalProviderBtn" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Save Provider Info

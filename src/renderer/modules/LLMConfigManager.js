@@ -965,31 +965,28 @@ class LLMConfigManager {
       });
     });
 
-    // Configuration Profile management buttons
-    const saveLocalModelBtn = document.getElementById('saveLocalModelBtn');
-    if (saveLocalModelBtn) {
-      saveLocalModelBtn.addEventListener('click', () => {
-        this.saveLocalCustomModel();
+    // Custom Endpoint - Saved Configuration management buttons
+    const saveLocalConfigBtn = document.getElementById('saveLocalConfigBtn');
+    if (saveLocalConfigBtn) {
+      saveLocalConfigBtn.addEventListener('click', () => {
+        this.saveLocalConfig();
       });
     }
-    const removeLocalModelBtn = document.getElementById('removeLocalModelBtn');
-    if (removeLocalModelBtn) {
-      removeLocalModelBtn.addEventListener('click', () => {
-        this.removeLocalCustomModel();
+    const loadLocalConfigBtn = document.getElementById('loadLocalConfigBtn');
+    if (loadLocalConfigBtn) {
+      loadLocalConfigBtn.addEventListener('click', () => {
+        this.loadLocalConfig();
       });
     }
-    const localSavedModelsList = document.getElementById('localSavedModelsList');
-    if (localSavedModelsList) {
-      localSavedModelsList.addEventListener('change', () => {
-        const removeBtn = document.getElementById('removeLocalModelBtn');
-        if (removeBtn) {
-          removeBtn.style.display = localSavedModelsList.value ? 'inline-block' : 'none';
-        }
+    const deleteLocalConfigBtn = document.getElementById('deleteLocalConfigBtn');
+    if (deleteLocalConfigBtn) {
+      deleteLocalConfigBtn.addEventListener('click', () => {
+        this.deleteLocalConfig();
       });
     }
 
-    // Load saved custom models on init
-    this.refreshLocalSavedModels();
+    // Load saved configurations list on init
+    this.refreshLocalSavedConfigs();
   }
 
   toggleOptionsDropdown() {
@@ -3098,47 +3095,50 @@ Current context summary:
   // ==========================================
 
   /**
-   * Get saved custom models for the local/custom endpoint provider
+   * Get all saved configurations for the Custom Endpoint provider
+   * Returns an object keyed by user-defined name, each value contains:
+   * { baseUrl, model, apiKey, streamingSupport, savedAt }
    */
-  getLocalSavedModels() {
+  getLocalSavedConfigs() {
     try {
-      const data = localStorage.getItem('localCustomModels');
-      return data ? JSON.parse(data) : [];
+      const data = localStorage.getItem('localCustomConfigs');
+      return data ? JSON.parse(data) : {};
     } catch (e) {
-      console.error('Error loading local custom models:', e);
-      return [];
+      console.error('Error loading local saved configs:', e);
+      return {};
     }
   }
 
   /**
-   * Persist saved custom models to localStorage
+   * Persist saved configurations to localStorage
    */
-  persistLocalSavedModels(models) {
+  persistLocalSavedConfigs(configs) {
     try {
-      localStorage.setItem('localCustomModels', JSON.stringify(models));
+      localStorage.setItem('localCustomConfigs', JSON.stringify(configs));
     } catch (e) {
-      console.error('Error saving local custom models:', e);
-      this.showNotification('Error saving model list: ' + e.message, 'error');
+      console.error('Error saving local configs:', e);
+      this.showNotification('Error saving configuration: ' + e.message, 'error');
     }
   }
 
   /**
-   * Refresh the "Saved Custom Models" optgroup in the local model select,
-   * and the saved models list dropdown
+   * Refresh the saved configurations dropdown and the optgroup in the model select
    */
-  refreshLocalSavedModels() {
-    const models = this.getLocalSavedModels();
+  refreshLocalSavedConfigs() {
+    const configs = this.getLocalSavedConfigs();
+    const names = Object.keys(configs);
 
     // Update the optgroup inside the main model select
     const optgroup = document.getElementById('localSavedModelsOptgroup');
     if (optgroup) {
       optgroup.innerHTML = '';
-      if (models.length > 0) {
+      if (names.length > 0) {
         optgroup.style.display = '';
-        models.forEach(modelName => {
+        names.forEach(name => {
           const option = document.createElement('option');
-          option.value = modelName;
-          option.textContent = modelName;
+          option.value = configs[name].model;
+          option.textContent = `${name} (${configs[name].model})`;
+          option.dataset.configName = name;
           optgroup.appendChild(option);
         });
       } else {
@@ -3146,85 +3146,161 @@ Current context summary:
       }
     }
 
-    // Update the separate saved models list dropdown
-    const listSelect = document.getElementById('localSavedModelsList');
+    // Update the saved configurations list dropdown
+    const listSelect = document.getElementById('localSavedConfigsList');
     if (listSelect) {
-      listSelect.innerHTML = '';
-      if (models.length > 0) {
-        listSelect.style.display = '';
-        models.forEach(modelName => {
-          const option = document.createElement('option');
-          option.value = modelName;
-          option.textContent = modelName;
-          listSelect.appendChild(option);
-        });
+      listSelect.innerHTML = '<option value="">-- Select a saved configuration --</option>';
+      names.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        const cfg = configs[name];
+        const date = cfg.savedAt ? new Date(cfg.savedAt).toLocaleDateString() : '';
+        option.textContent = `${name} - ${cfg.model} @ ${cfg.baseUrl || 'default'}${date ? ` (${date})` : ''}`;
+        listSelect.appendChild(option);
+      });
+    }
+  }
+
+  /**
+   * Collect current Custom Endpoint form values into a config object
+   */
+  collectLocalConfig() {
+    const config = {};
+
+    const endpointField = document.getElementById('localEndpoint');
+    if (endpointField) config.baseUrl = endpointField.value;
+
+    const modelSelect = document.getElementById('localModel');
+    if (modelSelect) {
+      if (modelSelect.value === 'other') {
+        const otherInput = document.getElementById('localModelOther');
+        config.model = otherInput ? otherInput.value : '';
       } else {
-        listSelect.style.display = 'none';
+        config.model = modelSelect.value;
       }
     }
 
-    // Hide remove button when no selection
-    const removeBtn = document.getElementById('removeLocalModelBtn');
-    if (removeBtn) {
-      removeBtn.style.display = 'none';
+    const apiKeyField = document.getElementById('localApiKey');
+    if (apiKeyField) config.apiKey = apiKeyField.value;
+
+    const streamingField = document.getElementById('localStreamingSupport');
+    if (streamingField) config.streamingSupport = streamingField.checked;
+
+    return config;
+  }
+
+  /**
+   * Apply a saved configuration to the Custom Endpoint form fields
+   */
+  applyLocalConfig(config) {
+    const endpointField = document.getElementById('localEndpoint');
+    if (endpointField) endpointField.value = config.baseUrl || 'http://localhost:11434/v1';
+
+    const apiKeyField = document.getElementById('localApiKey');
+    if (apiKeyField) apiKeyField.value = config.apiKey || '';
+
+    const streamingField = document.getElementById('localStreamingSupport');
+    if (streamingField) streamingField.checked = !!config.streamingSupport;
+
+    // Set model: try to find it in the dropdown, otherwise use "other"
+    const modelSelect = document.getElementById('localModel');
+    const otherGroup = document.getElementById('localModelOtherGroup');
+    const otherInput = document.getElementById('localModelOther');
+
+    if (modelSelect && config.model) {
+      let found = false;
+      for (let i = 0; i < modelSelect.options.length; i++) {
+        if (modelSelect.options[i].value === config.model) {
+          modelSelect.value = config.model;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        modelSelect.value = 'other';
+        if (otherInput) otherInput.value = config.model;
+      }
+      // Show/hide the "other" input
+      if (otherGroup) {
+        otherGroup.style.display = modelSelect.value === 'other' ? 'block' : 'none';
+      }
     }
   }
 
   /**
-   * Save the current custom model name to the saved models list
+   * Save current Custom Endpoint settings as a named configuration
    */
-  saveLocalCustomModel() {
-    const input = document.getElementById('localModelOther');
-    if (!input || !input.value.trim()) {
-      this.showNotification('Please enter a model name first', 'warning');
+  saveLocalConfig() {
+    const config = this.collectLocalConfig();
+
+    if (!config.model) {
+      this.showNotification('Please select or enter a model name before saving', 'warning');
       return;
     }
 
-    const modelName = input.value.trim();
-    const models = this.getLocalSavedModels();
-
-    if (models.includes(modelName)) {
-      this.showNotification(`"${modelName}" is already in your saved list`, 'warning');
+    const name = prompt('Enter a name for this configuration:');
+    if (!name || !name.trim()) {
       return;
     }
 
-    models.push(modelName);
-    this.persistLocalSavedModels(models);
-    this.refreshLocalSavedModels();
+    const trimmedName = name.trim();
+    const configs = this.getLocalSavedConfigs();
 
-    // Select the newly saved model in the main dropdown
-    const localModelSelect = document.getElementById('localModel');
-    if (localModelSelect) {
-      localModelSelect.value = modelName;
-      // If not found in options (should be there now), keep "other"
-      if (localModelSelect.value !== modelName) {
-        localModelSelect.value = 'other';
-      }
-    }
+    config.savedAt = new Date().toISOString();
+    configs[trimmedName] = config;
+    this.persistLocalSavedConfigs(configs);
+    this.refreshLocalSavedConfigs();
 
-    this.showNotification(`Model "${modelName}" saved to list`, 'success');
+    // Select the newly saved config in the list
+    const listSelect = document.getElementById('localSavedConfigsList');
+    if (listSelect) listSelect.value = trimmedName;
+
+    this.showNotification(`Configuration "${trimmedName}" saved`, 'success');
   }
 
   /**
-   * Remove a selected model from the saved models list
+   * Load a selected configuration from the dropdown and apply it
    */
-  removeLocalCustomModel() {
-    const listSelect = document.getElementById('localSavedModelsList');
+  loadLocalConfig() {
+    const listSelect = document.getElementById('localSavedConfigsList');
     if (!listSelect || !listSelect.value) {
-      this.showNotification('Please select a model to remove', 'warning');
+      this.showNotification('Please select a configuration to load', 'warning');
       return;
     }
 
-    const modelName = listSelect.value;
-    if (!confirm(`Remove "${modelName}" from saved models?`)) {
+    const configName = listSelect.value;
+    const configs = this.getLocalSavedConfigs();
+    const config = configs[configName];
+
+    if (!config) {
+      this.showNotification(`Configuration "${configName}" not found`, 'error');
       return;
     }
 
-    let models = this.getLocalSavedModels();
-    models = models.filter(m => m !== modelName);
-    this.persistLocalSavedModels(models);
-    this.refreshLocalSavedModels();
+    this.applyLocalConfig(config);
+    this.showNotification(`Configuration "${configName}" loaded`, 'success');
+  }
 
-    this.showNotification(`Model "${modelName}" removed from list`, 'success');
+  /**
+   * Delete a selected configuration from the saved list
+   */
+  deleteLocalConfig() {
+    const listSelect = document.getElementById('localSavedConfigsList');
+    if (!listSelect || !listSelect.value) {
+      this.showNotification('Please select a configuration to delete', 'warning');
+      return;
+    }
+
+    const configName = listSelect.value;
+    if (!confirm(`Delete configuration "${configName}"?`)) {
+      return;
+    }
+
+    const configs = this.getLocalSavedConfigs();
+    delete configs[configName];
+    this.persistLocalSavedConfigs(configs);
+    this.refreshLocalSavedConfigs();
+
+    this.showNotification(`Configuration "${configName}" deleted`, 'success');
   }
 }
