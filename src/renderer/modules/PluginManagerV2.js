@@ -620,6 +620,25 @@ class PluginManagerV2 {
 
       const functionDef = plugin.functions?.[functionName];
       if (!functionDef) {
+        // Fallback: try CommandRegistry for plugins that register commands via context.registerCommand
+        // (e.g., visualization plugins that use the command pattern instead of the functions property)
+        if (this.commandRegistry) {
+          // Try full name first (e.g., "protein-network.visualize")
+          const fullCommandName = `${pluginId}.${functionName}`;
+          if (this.commandRegistry._commands?.has(fullCommandName)) {
+            console.log(`[PluginManagerV2] Falling back to CommandRegistry for '${fullCommandName}'`);
+            return await this.commandRegistry.executeCommand(fullCommandName, parameters);
+          }
+          // Try with just the function name if it's a different naming convention
+          // (e.g., plugin "protein-interaction-network" registers command "protein-network.visualize")
+          for (const [cmdId] of this.commandRegistry._commands) {
+            if (cmdId.endsWith(`.${functionName}`)) {
+              console.log(`[PluginManagerV2] Found matching command '${cmdId}' for function '${functionName}'`);
+              return await this.commandRegistry.executeCommand(cmdId, parameters);
+            }
+          }
+        }
+
         throw new Error(`Function not found: ${functionName} in plugin ${pluginId}`);
       }
 
@@ -891,6 +910,34 @@ class PluginManagerV2 {
             category: 'utility',
           },
         });
+      }
+    }
+
+    // Include visualization plugin commands registered in CommandRegistry
+    if (this.commandRegistry && this.commandRegistry._commands) {
+      for (const [pluginId, plugin] of this.pluginRegistry.visualization) {
+        const pluginCommands = this.commandRegistry._commandsByExtension?.get(pluginId);
+        if (pluginCommands) {
+          for (const cmdId of pluginCommands) {
+            const cmdDef = this.commandRegistry._commands.get(cmdId);
+            if (cmdDef) {
+              // Use the plugin's original ID as prefix (not the command's prefix)
+              // e.g., command "protein-network.visualize" → function name "protein-interaction-network.visualize"
+              const funcName = cmdId.split('.').slice(1).join('.');
+              functions.push({
+                name: `${pluginId}.${funcName}`,
+                description: cmdDef.description || `Execute ${cmdId}`,
+                parameters: cmdDef.parameters || { type: 'object', properties: {} },
+                plugin: {
+                  id: pluginId,
+                  name: plugin.name,
+                  version: plugin.version,
+                  category: 'visualization',
+                },
+              });
+            }
+          }
+        }
       }
     }
 
