@@ -7606,9 +7606,12 @@ ${coreTools}
    * Execute plugin tools
    */
   async executePluginTool(toolName, parameters) {
-    // Plugin tools would be implemented here
-    // For now, return undefined as no plugin system is implemented
-    console.log(`🔌 Plugin tools not implemented for '${toolName}'`);
+    // Delegate to PluginFunctionCallsIntegrator if available
+    if (this.pluginFunctionCallsIntegrator && this.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
+      return await this.pluginFunctionCallsIntegrator.executePluginFunction(toolName, parameters);
+    }
+
+    console.log(`🔌 Plugin tool '${toolName}' not found in PluginFunctionCallsIntegrator`);
     return undefined;
   }
 

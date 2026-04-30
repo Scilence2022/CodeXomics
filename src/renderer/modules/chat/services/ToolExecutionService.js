@@ -98,6 +98,13 @@ class ToolExecutionService {
         }
       }
 
+      // --- PRIORITY 4.5: PLUGIN FUNCTION CALLS (e.g., protein-interaction-network.visualize) ---
+      if (this.chatManager && this.chatManager.pluginFunctionCallsIntegrator &&
+          this.chatManager.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
+        console.log(`[ToolExecutionService] Routing to PluginFunctionCallsIntegrator: ${toolName}`);
+        return await this.chatManager.pluginFunctionCallsIntegrator.executePluginFunction(toolName, parameters);
+      }
+
       // --- PRIORITY 5: ACTION MANAGER TOOLS ---
       const actionManagerTools = {
         'copy_sequence': true, 'action_copy_sequence': true,
