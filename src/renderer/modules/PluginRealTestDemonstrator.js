@@ -35,21 +35,36 @@ class PluginRealTestDemonstrator {
     // Get project root path using multiple strategies
     let basePath = null;
 
-    // Strategy 1: Use __dirname (most reliable in Electron renderer with Node.js integration)
-    // __dirname for this file is: <project>/src/renderer/modules/
-    // So we need to go up 3 levels to get project root
+    // Helper: check if a directory looks like the project root
+    const isProjectRoot = (dir) => {
+      try {
+        return fs.existsSync(path.join(dir, 'package.json')) &&
+               fs.existsSync(path.join(dir, 'src', 'renderer', 'modules'));
+      } catch (e) {
+        return false;
+      }
+    };
+
+    // Strategy 1: Walk upward from __dirname until we find the project root
+    // This works for both source (src/renderer/modules/..2x..) and dist builds
     if (typeof __dirname !== 'undefined' && __dirname) {
-      const potentialRoot = path.resolve(__dirname, '..', '..', '..');
-      if (fs.existsSync(path.join(potentialRoot, 'package.json'))) {
-        basePath = potentialRoot;
+      let searchPath = __dirname;
+      for (let i = 0; i < 15; i++) {
+        if (isProjectRoot(searchPath)) {
+          basePath = searchPath;
+          break;
+        }
+        const parentPath = path.dirname(searchPath);
+        if (parentPath === searchPath) break; // Reached filesystem root
+        searchPath = parentPath;
       }
     }
 
-    // Strategy 2: Use Electron's app path if available (async call stored as property)
+    // Strategy 2: Use Electron's app path if available
     if (!basePath && typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getAppPath) {
       try {
         const appPath = window.electronAPI.getAppPath();
-        if (appPath && fs.existsSync(path.join(appPath, 'package.json'))) {
+        if (appPath && isProjectRoot(appPath)) {
           basePath = appPath;
         }
       } catch (e) {
@@ -57,36 +72,31 @@ class PluginRealTestDemonstrator {
       }
     }
 
-    // Strategy 3: Use process.cwd() and search upward for package.json
+    // Strategy 3: Use process.cwd() and search upward
     if (!basePath) {
       let searchPath = process.cwd();
-      // Search up to 10 levels up for project root
       for (let i = 0; i < 10; i++) {
-        if (fs.existsSync(path.join(searchPath, 'package.json'))) {
-          // Verify it's our project by checking for specific directories
-          if (fs.existsSync(path.join(searchPath, 'src', 'renderer', 'modules'))) {
-            basePath = searchPath;
-            break;
-          }
+        if (isProjectRoot(searchPath)) {
+          basePath = searchPath;
+          break;
         }
         const parentPath = path.dirname(searchPath);
-        if (parentPath === searchPath) break; // Reached root
+        if (parentPath === searchPath) break;
         searchPath = parentPath;
       }
     }
 
     // Strategy 4: Fallback - look for the path relative to common locations
     if (!basePath) {
+      const homeDir = process.env.HOME || '';
       const fallbackPaths = [
-        path.join(process.env.HOME || '', 'Github-Repos', 'GenomeAIStudio_1'),
-        path.join(process.env.HOME || '', 'GenomeAIStudio_1'),
+        path.join(homeDir, 'Github-Repos', 'CodeXomics'),
+        path.join(homeDir, 'Github-Repos', 'GenomeAIStudio_1'),
+        path.join(homeDir, 'GenomeAIStudio_1'),
         process.cwd(),
       ];
       for (const fallbackPath of fallbackPaths) {
-        if (
-          fs.existsSync(path.join(fallbackPath, 'package.json')) &&
-          fs.existsSync(path.join(fallbackPath, 'src', 'renderer', 'modules'))
-        ) {
+        if (isProjectRoot(fallbackPath)) {
           basePath = fallbackPath;
           break;
         }
