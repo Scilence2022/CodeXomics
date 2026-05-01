@@ -4962,7 +4962,29 @@ class GenomeBrowser {
     const genesSettings = this.trackRenderer?.getTrackSettings('genes') || {};
     const highlightEffect = genesSettings.highlightEffect || 'pulse';
 
-    // Method 1: Find gene elements by data attributes (most reliable)
+    // Canvas mode: trigger Canvas renderer re-render for selection highlight
+    // Canvas renderers draw selection state (shadow/glow) directly via their render() method,
+    // so we don't need to search for DOM elements — just tell the renderer to redraw.
+    const renderingMode = genesSettings.renderingMode || 'svg';
+    if (renderingMode === 'canvas') {
+      const canvasRenderer = this.trackRenderer?.canvasRenderers?.get('genes');
+      if (canvasRenderer && typeof canvasRenderer.render === 'function') {
+        canvasRenderer.render();
+        console.log(
+          'Highlighted gene via Canvas renderer for:',
+          gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type
+        );
+
+        // Auto-highlight sequence region if enabled
+        if (genesSettings.autoHighlightSequence) {
+          this.highlightGeneSequence(gene);
+        }
+        return; // Canvas mode handled — skip SVG/DOM logic below
+      }
+      // Canvas renderer not available yet (shouldn't happen), fall through to SVG logic
+    }
+
+    // SVG mode: find and highlight DOM/SVG gene elements
     const geneElementsByData = document.querySelectorAll(
       `[data-gene-start="${gene.start}"][data-gene-end="${gene.end}"]`
     );
@@ -5014,9 +5036,13 @@ class GenomeBrowser {
     const highlightedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
 
     if (highlightedElements.length === 0) {
-      console.warn('No gene elements found to highlight for gene:', gene);
-      // Force refresh of the gene track to ensure elements are present
-      this.refreshGeneTrackIfNeeded();
+      // In Canvas mode, it's expected that no SVG/DOM elements exist — don't trigger a full refresh.
+      // Only refresh in SVG mode where missing elements indicate a rendering issue.
+      if (renderingMode !== 'canvas') {
+        console.warn('No gene elements found to highlight for gene:', gene);
+        // Force refresh of the gene track to ensure elements are present
+        this.refreshGeneTrackIfNeeded();
+      }
     } else {
       console.log(
         `Highlighted ${highlightedElements.length} gene element(s) for gene:`,
@@ -7946,6 +7972,12 @@ class GenomeBrowser {
     selectedElements.forEach(el => {
       el.classList.remove('selected', 'border-highlight');
     });
+
+    // Canvas mode: re-render Canvas genes renderer to clear selection visual
+    const canvasRenderer = this.trackRenderer?.canvasRenderers?.get('genes');
+    if (canvasRenderer && typeof canvasRenderer.render === 'function') {
+      canvasRenderer.render();
+    }
 
     // Clear sequence highlights and selection
     this.clearSequenceHighlights();

@@ -111,6 +111,8 @@ class CanvasReadsRenderer {
             image-rendering: pixelated;
             z-index: 50;
             background: transparent;
+            opacity: 0;
+            transition: opacity 0.1s ease-out;
         `;
 
     // Get 2D context with alpha for transparency
@@ -119,20 +121,24 @@ class CanvasReadsRenderer {
     // Setup canvas container
     this.setupContainer();
 
-    // Setup canvas dimensions
-    this.setupCanvas();
-
-    // Calculate text metrics if sequences will be shown
-    if (this.options.showSequences) {
-      this.calculateTextMetrics();
-    }
-
-    // Setup resize observer for responsive updates
+    // Defer setupCanvas to next frame so the container has time to be
+    // inserted into the DOM, giving getBoundingClientRect() accurate dimensions.
     this.setupResizeObserver();
 
-    // Note: Don't render immediately in constructor - wait for explicit render() call
+    // Use requestAnimationFrame to defer initial canvas setup until the
+    // container is in the DOM and has proper layout dimensions
+    this._pendingInitialRender = requestAnimationFrame(() => {
+      this._pendingInitialRender = null;
+      this.setupCanvas();
+      // Calculate text metrics if sequences will be shown
+      if (this.options.showSequences) {
+        this.calculateTextMetrics();
+      }
+      // Fade in the canvas now that it has correct dimensions
+      this.canvas.style.opacity = '1';
+    });
 
-    console.log('✅ [CanvasReadsRenderer] Canvas reads renderer initialized successfully');
+    console.log('✅ [CanvasReadsRenderer] Canvas reads renderer initialized successfully (deferred setup)');
   }
 
   setupContainer() {
@@ -153,9 +159,31 @@ class CanvasReadsRenderer {
   }
 
   setupCanvas() {
-    // Get container dimensions
+    // Get container dimensions — try multiple strategies to get accurate width
     const containerRect = this.container.getBoundingClientRect();
-    this.canvasWidth = Math.max(containerRect.width, 800);
+    let width = containerRect.width;
+
+    // If container not in DOM yet (width = 0), try parent chain
+    if (!width || width <= 0) {
+      let parent = this.container.parentElement;
+      while (parent) {
+        const parentRect = parent.getBoundingClientRect();
+        if (parentRect.width > 0) {
+          width = parentRect.width;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+    }
+
+    // Final fallback: estimate from window width minus typical sidebar/padding
+    if (!width || width <= 0) {
+      const sidebarEl = document.querySelector('.sidebar, #sidebar, .side-panel');
+      const sidebarWidth = sidebarEl ? sidebarEl.offsetWidth : 300;
+      width = window.innerWidth - sidebarWidth - 40;
+    }
+
+    this.canvasWidth = Math.max(width, 200);
 
     // Calculate canvas height based on read rows plus reference/coverage space
     const totalRows = this.readRows.length;
@@ -185,8 +213,8 @@ class CanvasReadsRenderer {
     this.canvas.style.width = this.canvasWidth + 'px';
     this.canvas.style.height = this.canvasHeight + 'px';
 
-    // Scale context for crisp rendering on high-DPI displays
-    this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio);
+    // Reset transform before applying DPR scale to prevent accumulation
+    this.ctx.setTransform(this.devicePixelRatio, 0, 0, this.devicePixelRatio, 0, 0);
 
     // Update container height to match canvas
     this.container.style.height = this.canvasHeight + 'px';
@@ -1092,8 +1120,8 @@ class CanvasReadsRenderer {
       this.canvas.width = this.canvasWidth * this.devicePixelRatio;
       this.canvas.style.width = this.canvasWidth + 'px';
 
-      // Re-scale context for high-DPI displays
-      this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio);
+      // Re-scale context for high-DPI displays (reset first to prevent accumulation)
+      this.ctx.setTransform(this.devicePixelRatio, 0, 0, this.devicePixelRatio, 0, 0);
 
       // Update text metrics if showing sequences
       if (this.options.showSequences) {
@@ -1159,6 +1187,12 @@ class CanvasReadsRenderer {
   // Clean up resources
   destroy() {
     console.log('🧹 [CanvasReadsRenderer] Cleaning up Canvas reads renderer');
+
+    // Cancel pending initial render if any
+    if (this._pendingInitialRender) {
+      cancelAnimationFrame(this._pendingInitialRender);
+      this._pendingInitialRender = null;
+    }
 
     // Remove click event listeners
     if (this.canvas) {

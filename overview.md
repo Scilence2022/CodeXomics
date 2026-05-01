@@ -1,34 +1,44 @@
-# Configure LLMs UI Update
+# Canvas 渲染模式闪烁修复
 
-## Changes Summary
+## 问题 1：切换浏览位置时的闪烁
 
-### 1. "Local LLM" → "Custom Endpoint"
-Renamed the tab to better reflect that it supports any OpenAI-compatible endpoint (Ollama, LM Studio, vLLM, remote proxies, etc.), not just local models.
+### 根因
+Canvas 渲染器在构造函数中立即调用 `setupCanvas()` + `render()`，但此时容器（`unifiedContainer`）还未被添加到页面 DOM 中。`getBoundingClientRect()` 返回 0，fallback 到 800px。容器挂载后 ResizeObserver 触发正确宽度渲染，造成"先缩小再正常"的闪烁。
 
-**Files modified:** index.html, LLMConfigManager.js, ConfigManager.js, MultiAgentSettingsManager.js, ChatBoxSettingsManager.js, ChatManager.js
+SVG 模式无此问题，因为 SVG 使用 `width: 100%` + `viewBox` + `preserveAspectRatio="none"`，浏览器自动拉伸适配。
 
-### 2. Custom Endpoint - Saved Model List
-Added save/load functionality specifically for the Custom Endpoint tab's model list:
+### 修复
+- 用 `requestAnimationFrame` 延迟首次 `setupCanvas()` + `render()` 到下一帧
+- Canvas 初始 `opacity: 0`，渲染完成后淡入到 `opacity: 1`
+- 改进 `setupCanvas()` 宽度获取策略（父链查找 → 窗口宽度估算，替代硬编码 800px fallback）
+- 修复 `ctx.scale()` 累积 bug（改用 `ctx.setTransform()`）
 
-- **"Save to List" button** next to the custom model name input — saves the entered model name to a persistent list
-- **Saved models appear** in a "Saved Custom Models" optgroup in the main model dropdown, so they're quickly selectable
-- **Management dropdown** below the input shows all saved models with a delete button
-- Data stored in `localStorage('localCustomModels')`
+---
 
-**New methods in LLMConfigManager.js:**
-- `getLocalSavedModels()` / `persistLocalSavedModels()` — localStorage read/write
-- `refreshLocalSavedModels()` — updates both the optgroup and management dropdown
-- `saveLocalCustomModel()` — adds current custom model name to saved list
-- `removeLocalCustomModel()` — removes selected model from saved list
+## 问题 2：点击选择基因后的闪烁
 
-### 3. Model List Updates (as of 2026-04-30)
+### 根因
+Canvas 模式下点击基因 → `showGeneDetails()` → `selectGene()` → `highlightSelectedGene()`。
 
-| Provider | New Models | Default Model Change |
-|---|---|---|
-| OpenAI | GPT-5.5, GPT-5.2-pro, GPT-4.1/mini/nano, o3-pro | gpt-4o → **gpt-5.2** |
-| Anthropic | Claude Opus 4.6, Claude Sonnet 4.6, Claude Haiku 4.5 | claude-sonnet-4.5 → **claude-sonnet-4.6** |
-| Google | Gemini 2.5 Pro, Gemini 2.5 Flash | gemini-2.0-flash → **gemini-2.5-flash-preview-05-20** |
-| DeepSeek | DeepSeek V4 Pro, DeepSeek V4 Flash | deepseek-chat → **deepseek-v4-flash** |
-| OpenRouter | Full update: 5.5/5.2-pro/4.1/Claude 4.6/Gemini 2.5/DeepSeek V4 | openai/gpt-4o → **openai/gpt-5.2** |
+`highlightSelectedGene()` 用 4 种 DOM 查询方法查找 SVG/DOM 基因元素来添加 `.selected` 类。但 **Canvas 模式下根本没有 SVG/DOM 基因元素**（基因是在 `<canvas>` 上绘制的），所以全部查找不到。
 
-**Note:** DeepSeek `deepseek-chat` and `deepseek-reasoner` are deprecated (retiring 2026-07-24), now pointing to V4 Flash.
+当找不到元素时（第 5016 行），代码走到 `refreshGeneTrackIfNeeded()` → `setTimeout(() => displayGenomeView(), 100)` → **完全重建所有 track** → 闪烁。
+
+Canvas 渲染器本身已有选中高亮逻辑（`renderGene()` 中检查 `this.genomeBrowser.selectedGene` 并绘制 shadow/glow 效果），不需要 DOM 查询。
+
+### 修复
+1. **`highlightSelectedGene()` 添加 Canvas 模式分支**：检测 `renderingMode === 'canvas'`，直接调用 `canvasRenderer.render()` 触发重绘（Canvas 渲染器的 `render()` 方法已内含选中高亮逻辑），然后 `return` 跳过 SVG/DOM 查询
+2. **`clearGeneSelection()` 添加 Canvas 渲染器重绘**：清除选中后触发 Canvas 渲染器重绘以移除高亮
+3. **SVG fallback 中的 `refreshGeneTrackIfNeeded()` 添加保护**：当 `renderingMode === 'canvas'` 时不触发全量重绘（Canvas 模式下没有 SVG 元素是正常的，不是渲染异常）
+
+---
+
+## 修改文件汇总
+
+| 文件 | 修改内容 |
+|------|---------|
+| `CanvasGenesRenderer.js` | 延迟渲染、opacity 淡入、改进宽度获取、setTransform 防 scale 累积、destroy 清理 rAF |
+| `CanvasSequenceRenderer.js` | 同上（预防性修复） |
+| `CanvasReadsRenderer.js` | 同上（预防性修复） |
+| `TrackRenderer.js` | 存储 CanvasGenesRenderer 到 canvasRenderers Map、清理旧实例 |
+| `renderer-modular.js` | `highlightSelectedGene()` Canvas 模式分支、`clearGeneSelection()` Canvas 重绘、SVG fallback 保护 |
