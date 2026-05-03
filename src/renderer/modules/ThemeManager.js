@@ -65,15 +65,42 @@ class ThemeManager {
           '--selection-bg': '#3b82f6',
         },
         darkVariables: {
+          // Backgrounds - dark slate
           '--bg-primary': '#1f2937',
           '--bg-secondary': '#111827',
           '--bg-tertiary': '#374151',
+
+          // Text - light on dark
           '--text-primary': '#f9fafb',
           '--text-secondary': '#d1d5db',
           '--text-muted': '#9ca3af',
+
+          // Borders
           '--border-color': '#374151',
           '--border-hover': '#4b5563',
+
+          // Header gradients - darker versions
           '--header-gradient': 'linear-gradient(135deg, #1e293b 0%, #1e3a5f 50%, #4c1d95 80%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #1e293b 0%, #667eea 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #1e293b 0%, #667eea 100%)',
+
+          // Accent highlights - brighter for dark bg
+          '--accent-indigo': '#818cf8',
+          '--accent-purple': '#a78bfa',
+          '--accent-violet': '#a78bfa',
+
+          // Chat bubble colors - adjusted for dark
+          '--chat-user-bg': 'linear-gradient(135deg, #1e293b 0%, #667eea 100%)',
+          '--chat-ai-border': '#818cf8',
+          '--chat-tab-active': '#818cf8',
+          '--chat-send-bg': '#818cf8',
+
+          // Button gradient - brighter for dark
+          '--btn-gradient': 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+
+          // Selection
+          '--selection-bg': '#60a5fa',
         }
       },
       professional: {
@@ -131,15 +158,42 @@ class ThemeManager {
           '--selection-bg': '#0d7377',
         },
         darkVariables: {
+          // Backgrounds - dark navy
           '--bg-primary': '#141d2b',
           '--bg-secondary': '#0f1722',
           '--bg-tertiary': '#1e2a3a',
+
+          // Text
           '--text-primary': '#e2e8f0',
           '--text-secondary': '#a0b1c4',
           '--text-muted': '#6b7f94',
+
+          // Borders
           '--border-color': '#1e2a3a',
           '--border-hover': '#2d3f54',
+
+          // Header gradients
           '--header-gradient': 'linear-gradient(135deg, #0a1018 0%, #152030 60%, #0d7377 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #0a1018 0%, #0d7377 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #0a1018 0%, #0d7377 100%)',
+
+          // Accent highlights - brighter teal
+          '--accent-indigo': '#2dd4bf',
+          '--accent-purple': '#5c6b73',
+          '--accent-violet': '#2dd4bf',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #0f1722 0%, #0d7377 100%)',
+          '--chat-ai-border': '#2dd4bf',
+          '--chat-tab-active': '#2dd4bf',
+          '--chat-send-bg': '#2dd4bf',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #14b8a6 0%, #5c6b73 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #0d7377 0%, #4a5568 100%)',
+
+          // Selection
+          '--selection-bg': '#14b8a6',
         }
       },
       minimal: {
@@ -197,15 +251,42 @@ class ThemeManager {
           '--selection-bg': '#c87d2f',
         },
         darkVariables: {
+          // Backgrounds - warm dark
           '--bg-primary': '#1c1b19',
           '--bg-secondary': '#141311',
           '--bg-tertiary': '#2a2824',
+
+          // Text
           '--text-primary': '#e8e4dc',
           '--text-secondary': '#b0a898',
           '--text-muted': '#7a7468',
+
+          // Borders
           '--border-color': '#2a2824',
           '--border-hover': '#3d3930',
+
+          // Header gradients
           '--header-gradient': 'linear-gradient(135deg, #141311 0%, #2a2520 60%, #c87d2f 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #141311 0%, #c87d2f 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #141311 0%, #c87d2f 100%)',
+
+          // Accent highlights - warmer amber for dark
+          '--accent-indigo': '#d4a054',
+          '--accent-purple': '#8c8c8c',
+          '--accent-violet': '#d4a054',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #141311 0%, #c87d2f 100%)',
+          '--chat-ai-border': '#d4a054',
+          '--chat-tab-active': '#d4a054',
+          '--chat-send-bg': '#d4a054',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #d4a054 0%, #a86520 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #c87d2f 0%, #8c5518 100%)',
+
+          // Selection
+          '--selection-bg': '#d4a054',
         }
       },
       elegant: {
@@ -263,15 +344,42 @@ class ThemeManager {
           '--selection-bg': '#6b6b6b',
         },
         darkVariables: {
+          // Backgrounds - pure dark
           '--bg-primary': '#1a1a1a',
           '--bg-secondary': '#111111',
           '--bg-tertiary': '#2a2a2a',
+
+          // Text
           '--text-primary': '#f0f0f0',
           '--text-secondary': '#b0b0b0',
           '--text-muted': '#707070',
+
+          // Borders
           '--border-color': '#2a2a2a',
           '--border-hover': '#3d3d3d',
+
+          // Header gradients
           '--header-gradient': 'linear-gradient(135deg, #111111 0%, #1f1f1f 60%, #6b6b6b 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #111111 0%, #6b6b6b 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #111111 0%, #6b6b6b 100%)',
+
+          // Accent highlights - lighter silver for dark
+          '--accent-indigo': '#9e9e9e',
+          '--accent-purple': '#8c8c8c',
+          '--accent-violet': '#b0b0b0',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #111111 0%, #6b6b6b 100%)',
+          '--chat-ai-border': '#9e9e9e',
+          '--chat-tab-active': '#9e9e9e',
+          '--chat-send-bg': '#9e9e9e',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #9e9e9e 0%, #4a4a4a 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)',
+
+          // Selection
+          '--selection-bg': '#9e9e9e',
         }
       },
       midnight: {
@@ -329,15 +437,42 @@ class ThemeManager {
           '--selection-bg': '#0891b2',
         },
         darkVariables: {
+          // Backgrounds - deep navy
           '--bg-primary': '#0f172a',
           '--bg-secondary': '#1e293b',
           '--bg-tertiary': '#334155',
+
+          // Text
           '--text-primary': '#e2e8f0',
           '--text-secondary': '#94a3b8',
           '--text-muted': '#64748b',
+
+          // Borders
           '--border-color': '#1e293b',
           '--border-hover': '#475569',
+
+          // Header gradients
           '--header-gradient': 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #22d3ee 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #0f172a 0%, #22d3ee 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #0f172a 0%, #22d3ee 100%)',
+
+          // Accent highlights - brighter cyan for dark
+          '--accent-indigo': '#22d3ee',
+          '--accent-purple': '#64748b',
+          '--accent-violet': '#06b6d4',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #1e293b 0%, #22d3ee 100%)',
+          '--chat-ai-border': '#22d3ee',
+          '--chat-tab-active': '#22d3ee',
+          '--chat-send-bg': '#22d3ee',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #22d3ee 0%, #0891b2 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #06b6d4 0%, #0e7490 100%)',
+
+          // Selection
+          '--selection-bg': '#22d3ee',
         }
       },
       pastel: {
@@ -395,15 +530,42 @@ class ThemeManager {
           '--selection-bg': '#b07fb0',
         },
         darkVariables: {
+          // Backgrounds - dark purple
           '--bg-primary': '#1e1828',
           '--bg-secondary': '#16111f',
           '--bg-tertiary': '#2a2238',
+
+          // Text
           '--text-primary': '#e8e0f0',
           '--text-secondary': '#b8aac8',
           '--text-muted': '#847894',
+
+          // Borders
           '--border-color': '#2a2238',
           '--border-hover': '#3d3350',
+
+          // Header gradients
           '--header-gradient': 'linear-gradient(135deg, #16111f 0%, #2a2238 60%, #b07fb0 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #16111f 0%, #b07fb0 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #16111f 0%, #b07fb0 100%)',
+
+          // Accent highlights - brighter rose for dark
+          '--accent-indigo': '#d4a5d4',
+          '--accent-purple': '#a78bba',
+          '--accent-violet': '#e0b8e0',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #16111f 0%, #b07fb0 100%)',
+          '--chat-ai-border': '#d4a5d4',
+          '--chat-tab-active': '#d4a5d4',
+          '--chat-send-bg': '#d4a5d4',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #d4a5d4 0%, #a78bba 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #b07fb0 0%, #8b6f9a 100%)',
+
+          // Selection
+          '--selection-bg': '#d4a5d4',
         }
       }
     };

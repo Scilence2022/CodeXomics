@@ -132,7 +132,7 @@
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  background: white;
+  background: var(--bg-primary);
   font-size: 14px;
   color: #374151;
   transition: border-color 0.2s ease;

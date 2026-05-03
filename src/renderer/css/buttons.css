@@ -503,7 +503,7 @@
 /* Track Control Buttons */
 .track-btn {
   background: rgba(255, 255, 255, 0.8);
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   width: 24px;
   height: 24px;
@@ -517,7 +517,7 @@
 }
 
 .track-btn:hover {
-  background: #fff;
+  background: var(--bg-primary);
   color: #495057;
   border-color: #adb5bd;
   transform: translateY(-1px);

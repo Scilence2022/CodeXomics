@@ -18,7 +18,7 @@
   min-height: 500px;
   display: flex;
   flex-direction: column;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   overflow: hidden;
@@ -92,7 +92,7 @@
 #chatboxSettingsModal .tab-button.active {
   color: #667eea;
   border-bottom-color: #667eea;
-  background-color: white;
+  background-color: var(--bg-primary);
 }
 
 #chatboxSettingsModal .tab-button i {
@@ -144,8 +144,8 @@
   margin-top: auto;
   position: sticky;
   bottom: 0;
-  background: white;
-  border-top: 1px solid #dee2e6;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
   z-index: 10;
   display: flex;
   justify-content: space-between;
@@ -250,7 +250,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: white;
+  background: var(--bg-primary);
   top: 2px;
   left: 2px;
   transition: transform 0.2s ease;

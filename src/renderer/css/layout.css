@@ -150,7 +150,7 @@
   bottom: 20px;
   width: 350px;
   max-height: 500px;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1000;
@@ -180,7 +180,7 @@
 /* Chat Dock Splitter - Vertical resize handle */
 .chat-dock-splitter {
   width: 8px;
-  background: linear-gradient(to right, #e9ecef, #dee2e6, #e9ecef);
+  background: linear-gradient(to right, #e9ecef, var(--border-color), #e9ecef);
   cursor: col-resize;
   position: relative;
   border-left: 1px solid #ced4da;
@@ -193,7 +193,7 @@
 }
 
 .chat-dock-splitter:hover {
-  background: linear-gradient(to right, #dee2e6, #ced4da, #dee2e6);
+  background: linear-gradient(to right, var(--border-color), #ced4da, var(--border-color));
   width: 10px;
   margin: 0 -1px;
 }
@@ -309,7 +309,7 @@
 /* Sidebar Splitter - Inspired by track splitter design */
 .sidebar-splitter {
   width: 8px;
-  background: linear-gradient(to right, #e9ecef, #dee2e6, #e9ecef);
+  background: linear-gradient(to right, #e9ecef, var(--border-color), #e9ecef);
   cursor: col-resize;
   position: relative;
   border-left: 1px solid #ced4da;
@@ -322,7 +322,7 @@
 }
 
 .sidebar-splitter:hover {
-  background: linear-gradient(to right, #dee2e6, #ced4da, #dee2e6);
+  background: linear-gradient(to right, var(--border-color), #ced4da, var(--border-color));
   width: 10px;
   margin: 0 -1px;
 }
@@ -362,7 +362,7 @@
 .sidebar-splitter:focus {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
-  background: linear-gradient(to right, #dee2e6, #ced4da, #dee2e6);
+  background: linear-gradient(to right, var(--border-color), #ced4da, var(--border-color));
 }
 
 .sidebar-splitter:focus .sidebar-splitter-handle {
@@ -549,7 +549,7 @@
   width: 14px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
+  background-color: var(--bg-primary);
   transition: .3s;
   border-radius: 50%;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);

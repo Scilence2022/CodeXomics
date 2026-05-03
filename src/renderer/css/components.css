@@ -138,7 +138,7 @@
 }
 
 .dropdown-toggle {
-  background: white;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 8px 12px;
@@ -164,7 +164,7 @@
   top: 100%;
   left: 0;
   min-width: 160px;
-  background: white;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
@@ -224,12 +224,12 @@
 .tab.active {
   color: var(--primary-color);
   border-bottom-color: var(--primary-color);
-  background: white;
+  background: var(--bg-primary);
 }
 
 .tab-content {
   padding: 20px;
-  background: white;
+  background: var(--bg-primary);
 }
 
 .tab-pane {
@@ -440,7 +440,7 @@
 .pagination-item {
   padding: 8px 12px;
   border: 1px solid var(--border-color);
-  background: white;
+  background: var(--bg-primary);
   cursor: pointer;
   transition: all 0.2s;
   border-radius: var(--radius-sm);
@@ -464,7 +464,7 @@
 }
 
 .pagination-item.disabled:hover {
-  background: white;
+  background: var(--bg-primary);
   border-color: var(--border-color);
 }
 
@@ -499,7 +499,7 @@
 
 /* Card Components */
 .card {
-  background: white;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -551,7 +551,7 @@
 
 /* List Components */
 .list {
-  background: white;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -731,7 +731,7 @@
   position: fixed;
   top: 20px;
   right: 20px;
-  background: white;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);

@@ -175,8 +175,8 @@
 
 /* Variant Track Styles */
 .variant-track {
-  border-bottom: 1px solid #dee2e6;
-  background: white;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
 }
 
 .variant-element {
