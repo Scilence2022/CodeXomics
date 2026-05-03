@@ -245,6 +245,33 @@
   cursor: pointer;
 }
 
+/* Ensure white text on dark gradient modal headers */
+.llm-config-modal .modal-header {
+  background: var(--modal-header-gradient);
+  color: #ffffff;
+}
+
+.llm-config-modal .modal-header h3 {
+  color: #ffffff;
+}
+
+.llm-config-modal .modal-header .modal-close {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.llm-config-modal .modal-header .modal-close:hover {
+  color: #ffffff;
+}
+
+.llm-config-modal .modal-header .modal-controls button,
+.llm-config-modal .modal-header .reset-position-btn {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.llm-config-modal .modal-header .modal-controls button:hover,
+.llm-config-modal .modal-header .reset-position-btn:hover {
+  color: #ffffff;
+}
 
 .modal-collapse {
   background: none;
