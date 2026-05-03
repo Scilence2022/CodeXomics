@@ -1705,6 +1705,12 @@
                     <!-- Custom Endpoint Configuration -->
                     <div id="local-config" class="provider-config">
                         <div class="form-group">
+                            <label for="localConfigName">Configuration Name:</label>
+                            <input type="text" id="localConfigName" placeholder="Enter a name for this configuration"
+                                class="input-full">
+                            <small class="help-text">A name to identify this custom endpoint configuration when saving</small>
+                        </div>
+                        <div class="form-group">
                             <label for="localEndpoint">API Endpoint:</label>
                             <input type="text" id="localEndpoint" placeholder="http://localhost:11434/v1"
                                 class="input-full">
@@ -1783,8 +1789,8 @@
                                 <select id="localSavedConfigsList" class="select" style="flex: 1; min-width: 150px;">
                                     <option value="">-- Select a saved configuration --</option>
                                 </select>
-                                <button type="button" id="loadLocalConfigBtn" class="btn btn-secondary btn-sm" title="Load selected configuration">
-                                    <i class="fas fa-upload"></i> Load
+                                <button type="button" id="newLocalConfigBtn" class="btn btn-secondary btn-sm" title="Clear form for a new configuration">
+                                    <i class="fas fa-plus"></i> New
                                 </button>
                                 <button type="button" id="saveLocalConfigBtn" class="btn btn-primary btn-sm" title="Save current settings as a named configuration">
                                     <i class="fas fa-download"></i> Save

@@ -972,16 +972,28 @@ class LLMConfigManager {
         this.saveLocalConfig();
       });
     }
-    const loadLocalConfigBtn = document.getElementById('loadLocalConfigBtn');
-    if (loadLocalConfigBtn) {
-      loadLocalConfigBtn.addEventListener('click', () => {
-        this.loadLocalConfig();
-      });
-    }
     const deleteLocalConfigBtn = document.getElementById('deleteLocalConfigBtn');
     if (deleteLocalConfigBtn) {
       deleteLocalConfigBtn.addEventListener('click', () => {
         this.deleteLocalConfig();
+      });
+    }
+
+    // New configuration button - clears the form for a new entry
+    const newLocalConfigBtn = document.getElementById('newLocalConfigBtn');
+    if (newLocalConfigBtn) {
+      newLocalConfigBtn.addEventListener('click', () => {
+        this.newLocalConfig();
+      });
+    }
+
+    // When selecting a saved config from the dropdown, auto-load it
+    const localSavedConfigsList = document.getElementById('localSavedConfigsList');
+    if (localSavedConfigsList) {
+      localSavedConfigsList.addEventListener('change', () => {
+        if (localSavedConfigsList.value) {
+          this.loadLocalConfig();
+        }
       });
     }
 
@@ -3167,6 +3179,9 @@ Current context summary:
   collectLocalConfig() {
     const config = {};
 
+    const nameField = document.getElementById('localConfigName');
+    if (nameField) config.name = nameField.value.trim();
+
     const endpointField = document.getElementById('localEndpoint');
     if (endpointField) config.baseUrl = endpointField.value;
 
@@ -3193,6 +3208,9 @@ Current context summary:
    * Apply a saved configuration to the Custom Endpoint form fields
    */
   applyLocalConfig(config) {
+    const nameField = document.getElementById('localConfigName');
+    if (nameField) nameField.value = config.name || '';
+
     const endpointField = document.getElementById('localEndpoint');
     if (endpointField) endpointField.value = config.baseUrl || 'http://localhost:11434/v1';
 
@@ -3238,24 +3256,67 @@ Current context summary:
       return;
     }
 
-    const name = prompt('Enter a name for this configuration:');
-    if (!name || !name.trim()) {
+    const name = config.name;
+    if (!name) {
+      this.showNotification('Please enter a configuration name before saving', 'warning');
       return;
     }
 
-    const trimmedName = name.trim();
     const configs = this.getLocalSavedConfigs();
 
+    // Check for overwrite
+    if (configs[name]) {
+      if (!confirm(`Configuration "${name}" already exists. Overwrite?`)) {
+        return;
+      }
+    }
+
     config.savedAt = new Date().toISOString();
-    configs[trimmedName] = config;
+    configs[name] = config;
     this.persistLocalSavedConfigs(configs);
     this.refreshLocalSavedConfigs();
 
     // Select the newly saved config in the list
     const listSelect = document.getElementById('localSavedConfigsList');
-    if (listSelect) listSelect.value = trimmedName;
+    if (listSelect) listSelect.value = name;
 
-    this.showNotification(`Configuration "${trimmedName}" saved`, 'success');
+    this.showNotification(`Configuration "${name}" saved`, 'success');
+  }
+
+  /**
+   * Clear the Custom Endpoint form for creating a new configuration
+   */
+  newLocalConfig() {
+    // Clear all form fields
+    const nameField = document.getElementById('localConfigName');
+    if (nameField) nameField.value = '';
+
+    const endpointField = document.getElementById('localEndpoint');
+    if (endpointField) endpointField.value = 'http://localhost:11434/v1';
+
+    const modelSelect = document.getElementById('localModel');
+    if (modelSelect) modelSelect.value = 'qwen3:8b';
+
+    const otherGroup = document.getElementById('localModelOtherGroup');
+    if (otherGroup) otherGroup.style.display = 'none';
+
+    const otherInput = document.getElementById('localModelOther');
+    if (otherInput) otherInput.value = '';
+
+    const apiKeyField = document.getElementById('localApiKey');
+    if (apiKeyField) apiKeyField.value = '';
+
+    const streamingField = document.getElementById('localStreamingSupport');
+    if (streamingField) streamingField.checked = true;
+
+    // Deselect in the saved configs dropdown
+    const listSelect = document.getElementById('localSavedConfigsList');
+    if (listSelect) listSelect.value = '';
+
+    // Focus on the name field for immediate input
+    if (nameField) nameField.focus();
+
+    this.showNotification('Form cleared — enter a name and configure your new endpoint', 'info');
   }
 
   /**
@@ -3270,11 +3331,16 @@ Current context summary:
 
     const configName = listSelect.value;
     const configs = this.getLocalSavedConfigs();
-    const config = configs[configName];
+    let config = configs[configName];
 
     if (!config) {
       this.showNotification(`Configuration "${configName}" not found`, 'error');
       return;
+    }
+
+    // Ensure the name field is present (backward compatibility for old data)
+    if (!config.name) {
+      config.name = configName;
     }
 
     this.applyLocalConfig(config);
