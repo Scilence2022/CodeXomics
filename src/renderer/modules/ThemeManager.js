@@ -274,6 +274,72 @@ class ThemeManager {
           '--header-gradient': 'linear-gradient(135deg, #111111 0%, #1f1f1f 60%, #6b6b6b 100%)',
         }
       },
+      midnight: {
+        name: 'Midnight',
+        description: 'Deep navy with icy cyan-blue accents',
+        icon: 'fa-snowflake',
+        variables: {
+          // Primary accent - icy cyan-blue
+          '--primary-color': '#22d3ee',
+          '--primary-hover': '#06b6d4',
+          '--primary-rgb': '34, 211, 238',
+
+          // Secondary / neutral
+          '--secondary-color': '#64748b',
+
+          // Backgrounds - deep navy black
+          '--bg-primary': '#0f172a',
+          '--bg-secondary': '#1e293b',
+          '--bg-tertiary': '#334155',
+
+          // Text - cool white on dark
+          '--text-primary': '#e2e8f0',
+          '--text-secondary': '#94a3b8',
+          '--text-muted': '#64748b',
+
+          // Borders - slate dark
+          '--border-color': '#1e293b',
+          '--border-hover': '#475569',
+
+          // Header gradient - midnight to cyan
+          '--header-gradient': 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #22d3ee 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #0f172a 0%, #22d3ee 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #0f172a 0%, #22d3ee 100%)',
+
+          // Accent highlights
+          '--accent-indigo': '#22d3ee',
+          '--accent-purple': '#64748b',
+          '--accent-violet': '#06b6d4',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #1e293b 0%, #22d3ee 100%)',
+          '--chat-ai-border': '#22d3ee',
+          '--chat-tab-active': '#22d3ee',
+          '--chat-send-bg': '#22d3ee',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #22d3ee 0%, #0891b2 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #06b6d4 0%, #0e7490 100%)',
+
+          // Focus ring
+          '--focus-ring': 'rgba(34, 211, 238, 0.3)',
+          '--focus-ring-intense': 'rgba(34, 211, 238, 0.8)',
+
+          // Selection
+          '--selection-bg': '#22d3ee',
+        },
+        darkVariables: {
+          '--bg-primary': '#0f172a',
+          '--bg-secondary': '#1e293b',
+          '--bg-tertiary': '#334155',
+          '--text-primary': '#e2e8f0',
+          '--text-secondary': '#94a3b8',
+          '--text-muted': '#64748b',
+          '--border-color': '#1e293b',
+          '--border-hover': '#475569',
+          '--header-gradient': 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #22d3ee 100%)',
+        }
+      },
       pastel: {
         name: 'Pastel',
         description: 'Soft lavender-rose with light airy tones',
@@ -396,7 +462,7 @@ class ThemeManager {
     this.currentStyle = styleName;
 
     // Remove any previous style class from body
-    document.body.classList.remove('style-default', 'style-professional', 'style-minimal', 'style-pastel', 'style-elegant');
+    document.body.classList.remove('style-default', 'style-professional', 'style-minimal', 'style-pastel', 'style-elegant', 'style-midnight');
     document.body.classList.add(`style-${styleName}`);
 
     // Set data attribute for CSS selectors
