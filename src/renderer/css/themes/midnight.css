@@ -4,10 +4,11 @@
  * when data-ui-style="midnight" is set on the root element.
  *
  * Design Philosophy:
- * - Icy cyan (#22d3ee) as primary accent on deep navy backgrounds
- * - Tailwind Slate palette (#0f172a / #1e293b / #334155)
- * - Cool white text (#e2e8f0) for comfortable readability
- * - Dark-first: looks best in dark mode, forces dark in light mode
+ * - Teal-cyan (#0891b2) as primary accent — darker cyan for light mode readability
+ * - Brighter cyan (#22d3ee) reserved for dark mode highlights
+ * - Cool icy light backgrounds (#f8fafc / #f1f5f9 / #e2e8f0) in light mode
+ * - Deep navy slate (#0f172a / #1e293b / #334155) in dark mode
+ * - Deep navy header gradients that transition to cyan
  * - Inspired by polar night, aurora borealis, deep ocean bioluminescence
  */
 
@@ -28,8 +29,8 @@
 
 [data-ui-style="midnight"] .version-tag {
   color: #22d3ee;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ===== BUTTON GRADIENT OVERRIDES ===== */
@@ -39,11 +40,11 @@
 
 [data-ui-style="midnight"] .btn-gradient:hover {
   background: var(--btn-gradient-hover);
-  box-shadow: 0 8px 25px rgba(34, 211, 238, 0.2);
+  box-shadow: 0 8px 25px rgba(8, 145, 178, 0.2);
 }
 
 [data-ui-style="midnight"] .btn-primary:hover {
-  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2);
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.2);
 }
 
 [data-ui-style="midnight"] .btn:focus {
@@ -52,13 +53,13 @@
 
 /* ===== TRACK BUTTON OVERRIDES ===== */
 [data-ui-style="midnight"] .track-gallery-btn:hover {
-  color: #22d3ee;
-  border-color: #22d3ee;
+  color: #0891b2;
+  border-color: #0891b2;
 }
 
 [data-ui-style="midnight"] .track-layout-btn:hover {
-  color: #06b6d4;
-  border-color: #06b6d4;
+  color: #0e7490;
+  border-color: #0e7490;
 }
 
 /* ===== FOCUS RING OVERRIDES ===== */
@@ -126,7 +127,7 @@
 }
 
 [data-ui-style="midnight"] .chat-markdown code {
-  color: #22d3ee;
+  color: #0891b2;
 }
 
 [data-ui-style="midnight"] .chat-markdown pre {
@@ -134,7 +135,7 @@
 }
 
 [data-ui-style="midnight"] .chat-markdown .code-block-header {
-  background: #22d3ee;
+  background: #0891b2;
 }
 
 /* ===== TABS OVERRIDES ===== */
@@ -154,16 +155,16 @@
 }
 
 [data-ui-style="midnight"] .search-type-btn.active {
-  color: #22d3ee;
+  color: #0891b2;
 }
 
 /* ===== NAVIGATION BUTTONS ===== */
 [data-ui-style="midnight"] .nav-btn {
-  background: rgba(34, 211, 238, 0.85);
+  background: rgba(8, 145, 178, 0.85);
 }
 
 [data-ui-style="midnight"] .nav-btn:hover {
-  background: rgba(6, 182, 212, 1);
+  background: rgba(14, 116, 144, 1);
 }
 
 /* ===== SIDEBAR SPLITTER ===== */
@@ -187,19 +188,19 @@
 
 /* ===== STATUS BAR TOGGLE ===== */
 [data-ui-style="midnight"] .mac-toggle input:checked + .mac-toggle-slider {
-  background-color: #22d3ee;
+  background-color: #0891b2;
 }
 
 [data-ui-style="midnight"] .mcp-bridge-status-dot.connected {
-  background-color: #22d3ee;
-  box-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+  background-color: #0891b2;
+  box-shadow: 0 0 6px rgba(8, 145, 178, 0.5);
 }
 
 /* ===== ALERT COMPONENTS ===== */
 [data-ui-style="midnight"] .alert.alert-primary {
-  background: rgba(34, 211, 238, 0.08);
-  color: #22d3ee;
-  border-color: rgba(34, 211, 238, 0.2);
+  background: rgba(8, 145, 178, 0.08);
+  color: #0891b2;
+  border-color: rgba(8, 145, 178, 0.2);
 }
 
 /* ===== PROGRESS BAR ===== */
@@ -330,12 +331,12 @@
 /* ===== BLAST BUTTON ===== */
 [data-ui-style="midnight"] #blastBtn {
   background: var(--btn-gradient) !important;
-  box-shadow: 0 2px 8px rgba(34, 211, 238, 0.2) !important;
+  box-shadow: 0 2px 8px rgba(8, 145, 178, 0.2) !important;
 }
 
 [data-ui-style="midnight"] #blastBtn:hover {
   background: var(--btn-gradient-hover) !important;
-  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.3) !important;
 }
 
 /* ===== LOAD FILE BUTTON ===== */
@@ -349,7 +350,7 @@
 [data-ui-style="midnight"] .header .btn-primary.dropdown-toggle:hover {
   background: var(--primary-hover) !important;
   border-color: var(--primary-hover) !important;
-  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.2) !important;
 }
 
 /* ===== NEW CHAT BUTTON ===== */
@@ -360,7 +361,7 @@
 
 [data-ui-style="midnight"] #newChatBtn:hover {
   background: var(--btn-gradient-hover) !important;
-  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.2) !important;
 }
 
 /* ===== CHAT SEND BUTTON ===== */
@@ -392,11 +393,11 @@
 
 [data-ui-style="midnight"] .toolbar-section #toggleChatBtn:hover {
   background: var(--btn-gradient-hover) !important;
-  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.2) !important;
 }
 
 [data-ui-style="midnight"] .toolbar-section #toggleChatBtn.ai-processing {
-  border-color: rgba(34, 211, 238, 0.4) !important;
+  border-color: rgba(8, 145, 178, 0.4) !important;
 }
 
 /* ===== CHAT HEADER ===== */
@@ -441,11 +442,11 @@
   background: var(--btn-gradient) !important;
   color: white !important;
   border-color: var(--primary-color) !important;
-  box-shadow: 0 4px 15px rgba(34, 211, 238, 0.2) !important;
+  box-shadow: 0 4px 15px rgba(8, 145, 178, 0.2) !important;
 }
 
 [data-ui-style="midnight"] .welcome-buttons .btn-primary:hover {
-  box-shadow: 0 4px 15px rgba(34, 211, 238, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(8, 145, 178, 0.3) !important;
 }
 
 /* ===== CHATBOX SETTINGS MODAL ===== */
@@ -457,7 +458,7 @@
 [data-ui-style="midnight"] #chatboxSettingsModal .input-full:focus,
 [data-ui-style="midnight"] #chatboxSettingsModal .select:focus {
   border-color: var(--primary-color) !important;
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1) !important;
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1) !important;
 }
 
 [data-ui-style="midnight"] #chatboxSettingsModal .setting-checkbox:checked {
@@ -470,7 +471,7 @@
 
 [data-ui-style="midnight"] #chatboxSettingsModal .btn-primary:hover {
   background: var(--primary-hover) !important;
-  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.2) !important;
 }
 
 /* ===== LLM CONFIG ===== */
@@ -481,7 +482,7 @@
 [data-ui-style="midnight"] .provider-config input:focus,
 [data-ui-style="midnight"] .provider-config select:focus {
   border-color: var(--primary-color) !important;
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1) !important;
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1) !important;
 }
 
 [data-ui-style="midnight"] .provider-config .help-text a {
@@ -500,7 +501,7 @@
 
 /* ===== BENCHMARK UI ===== */
 [data-ui-style="midnight"] .benchmark-container {
-  border-color: rgba(34, 211, 238, 0.25) !important;
+  border-color: rgba(8, 145, 178, 0.25) !important;
 }
 
 [data-ui-style="midnight"] .benchmark-header {
@@ -508,7 +509,7 @@
 }
 
 [data-ui-style="midnight"] .benchmark-header:hover {
-  background: rgba(34, 211, 238, 0.05) !important;
+  background: rgba(8, 145, 178, 0.05) !important;
 }
 
 [data-ui-style="midnight"] .minimize-benchmark-btn {
@@ -520,16 +521,16 @@
 }
 
 [data-ui-style="midnight"] .benchmark-interface.collapsed .benchmark-container {
-  border-color: rgba(34, 211, 238, 0.7) !important;
+  border-color: rgba(8, 145, 178, 0.7) !important;
 }
 
 [data-ui-style="midnight"] .expand-indicator {
-  background: rgba(34, 211, 238, 0.15) !important;
+  background: rgba(8, 145, 178, 0.15) !important;
   color: var(--primary-color) !important;
 }
 
 [data-ui-style="midnight"] .benchmark-section {
-  border-color: rgba(34, 211, 238, 0.1) !important;
+  border-color: rgba(8, 145, 178, 0.1) !important;
 }
 
 [data-ui-style="midnight"] .checkbox-item input[type="checkbox"] {
@@ -541,7 +542,7 @@
 }
 
 [data-ui-style="midnight"] .progress-fill {
-  background: linear-gradient(90deg, var(--primary-color) 0%, #67e8f9 100%) !important;
+  background: linear-gradient(90deg, var(--primary-color) 0%, #06b6d4 100%) !important;
 }
 
 [data-ui-style="midnight"] .progress-item {
@@ -549,13 +550,13 @@
 }
 
 [data-ui-style="midnight"] .checkbox-item span small {
-  background: rgba(34, 211, 238, 0.08) !important;
-  border-color: rgba(34, 211, 238, 0.15) !important;
+  background: rgba(8, 145, 178, 0.08) !important;
+  border-color: rgba(8, 145, 178, 0.15) !important;
 }
 
 [data-ui-style="midnight"] .summary-card {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #0e7490 100%) !important;
-  box-shadow: 0 6px 25px rgba(34, 211, 238, 0.2) !important;
+  background: linear-gradient(135deg, var(--primary-color) 0%, #155e75 100%) !important;
+  box-shadow: 0 6px 25px rgba(8, 145, 178, 0.2) !important;
 }
 
 /* ===== CHATBOX SETTINGS METRIC ===== */
@@ -619,7 +620,7 @@
 
 /* ===== DRAGGABLE HEADER HOVER ===== */
 [data-ui-style="midnight"] .draggable-header:hover {
-  background: linear-gradient(135deg, #06b6d4 0%, #1e293b 100%) !important;
+  background: linear-gradient(135deg, #0e7490 0%, #1e293b 100%) !important;
 }
 
 /* ===== ADD FEATURES BUTTON & DROPDOWN ===== */
@@ -630,62 +631,62 @@
 
 [data-ui-style="midnight"] #addFeaturesBtn:hover {
   background: var(--btn-gradient-hover) !important;
-  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.2) !important;
 }
 
 [data-ui-style="midnight"] #addFeaturesBtn.active {
   background: var(--btn-gradient-hover) !important;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(34, 211, 238, 0.2) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(8, 145, 178, 0.2) !important;
 }
 
 [data-ui-style="midnight"] .add-features-dropdown {
-  border-color: #475569 !important;
-  box-shadow: 0 4px 16px rgba(34, 211, 238, 0.08) !important;
+  border-color: #94a3b8 !important;
+  box-shadow: 0 4px 16px rgba(8, 145, 178, 0.08) !important;
 }
 
 [data-ui-style="midnight"] .dropdown-section-title {
-  color: #e2e8f0 !important;
-  border-bottom-color: #334155 !important;
+  color: #0f172a !important;
+  border-bottom-color: #e2e8f0 !important;
 }
 
 [data-ui-style="midnight"] .dropdown-section-title i {
-  color: #22d3ee !important;
+  color: #0891b2 !important;
 }
 
 [data-ui-style="midnight"] .dropdown-feature-btn {
-  color: #94a3b8 !important;
+  color: #475569 !important;
 }
 
 [data-ui-style="midnight"] .dropdown-feature-btn:hover {
-  background: linear-gradient(135deg, #1e293b, #334155) !important;
-  color: #22d3ee !important;
-  border-color: #475569 !important;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0) !important;
+  color: #0891b2 !important;
+  border-color: #94a3b8 !important;
 }
 
 [data-ui-style="midnight"] .dropdown-feature-btn:active {
-  background: linear-gradient(135deg, #334155, #475569) !important;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1) !important;
 }
 
 [data-ui-style="midnight"] .dropdown-feature-btn i {
-  color: #64748b !important;
+  color: #94a3b8 !important;
 }
 
 [data-ui-style="midnight"] .dropdown-feature-btn:hover i {
-  color: #22d3ee !important;
+  color: #0891b2 !important;
 }
 
 [data-ui-style="midnight"] .dropdown-divider {
-  background: linear-gradient(to right, transparent, #475569, transparent) !important;
+  background: linear-gradient(to right, transparent, #cbd5e1, transparent) !important;
 }
 
 /* ===== CIRCULAR CHECKBOX OVERRIDES ===== */
 [data-ui-style="midnight"] .track-checkbox input[type='checkbox'] {
-  border-color: #475569;
+  border-color: #cbd5e1;
 }
 
 [data-ui-style="midnight"] .track-checkbox input[type='checkbox']:hover {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.15);
 }
 
 [data-ui-style="midnight"] .track-checkbox input[type='checkbox']:checked {
@@ -694,12 +695,12 @@
 }
 
 [data-ui-style="midnight"] .feature-checkbox input[type='checkbox'] {
-  border-color: #475569;
+  border-color: #cbd5e1;
 }
 
 [data-ui-style="midnight"] .feature-checkbox input[type='checkbox']:hover {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.15);
 }
 
 [data-ui-style="midnight"] .feature-checkbox input[type='checkbox']:checked {
@@ -708,12 +709,12 @@
 }
 
 [data-ui-style="midnight"] .feature-control-item input[type='checkbox'] {
-  border-color: #475569;
+  border-color: #cbd5e1;
 }
 
 [data-ui-style="midnight"] .feature-control-item input[type='checkbox']:hover {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.15);
 }
 
 [data-ui-style="midnight"] .feature-control-item input[type='checkbox']:checked {
@@ -722,12 +723,12 @@
 }
 
 [data-ui-style="midnight"] .track-control-item input[type='checkbox'] {
-  border-color: #475569;
+  border-color: #cbd5e1;
 }
 
 [data-ui-style="midnight"] .track-control-item input[type='checkbox']:hover {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.15);
 }
 
 [data-ui-style="midnight"] .track-control-item input[type='checkbox']:checked {
@@ -736,12 +737,12 @@
 }
 
 [data-ui-style="midnight"] .track-controls input[type='checkbox'] {
-  border-color: #475569;
+  border-color: #cbd5e1;
 }
 
 [data-ui-style="midnight"] .track-controls input[type='checkbox']:hover {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.15);
 }
 
 [data-ui-style="midnight"] .track-controls input[type='checkbox']:checked {
@@ -774,299 +775,128 @@
   }
 }
 
-/* ===== MIDNIGHT-SPECIFIC: FORCE DARK BASE IN LIGHT MODE ===== */
-[data-ui-style="midnight"] .sidebar {
-  background: var(--bg-secondary);
-}
+/* ===== MIDNIGHT DARK MODE OVERRIDES ===== */
+/* These rules activate when the system is in dark mode to complement
+   the CSS variables set by darkVariables in ThemeManager */
 
-[data-ui-style="midnight"] .modal-content {
-  background: var(--bg-primary);
-  border-color: var(--border-color);
-}
+@media (prefers-color-scheme: dark) {
+  [data-ui-style="midnight"] .chat-markdown code {
+    color: #22d3ee;
+  }
 
-[data-ui-style="midnight"] .modal-body {
-  background: var(--bg-primary);
-}
+  [data-ui-style="midnight"] .chat-markdown .code-block-header {
+    background: #22d3ee;
+  }
 
-[data-ui-style="midnight"] .modal-footer {
-  background: var(--bg-secondary);
-  border-top-color: var(--border-color);
-}
+  [data-ui-style="midnight"] .version-tag {
+    color: #22d3ee;
+  }
 
-[data-ui-style="midnight"] .form-group label {
-  color: var(--text-primary);
-}
+  [data-ui-style="midnight"] .btn-gradient:hover {
+    box-shadow: 0 8px 25px rgba(34, 211, 238, 0.2);
+  }
 
-[data-ui-style="midnight"] .input-full,
-[data-ui-style="midnight"] .select,
-[data-ui-style="midnight"] input[type="text"],
-[data-ui-style="midnight"] input[type="number"],
-[data-ui-style="midnight"] textarea {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
+  [data-ui-style="midnight"] .track-gallery-btn:hover {
+    color: #22d3ee;
+    border-color: #22d3ee;
+  }
 
-[data-ui-style="midnight"] .input-full:focus,
-[data-ui-style="midnight"] .select:focus,
-[data-ui-style="midnight"] input[type="text"]:focus,
-[data-ui-style="midnight"] input[type="number"]:focus,
-[data-ui-style="midnight"] textarea:focus {
-  border-color: var(--primary-color);
-}
+  [data-ui-style="midnight"] .track-layout-btn:hover {
+    color: #06b6d4;
+    border-color: #06b6d4;
+  }
 
-[data-ui-style="midnight"] .help-text {
-  color: var(--text-muted);
-}
+  [data-ui-style="midnight"] .search-type-btn.active {
+    color: #22d3ee;
+  }
 
-[data-ui-style="midnight"] .btn {
-  color: var(--text-primary);
-}
+  [data-ui-style="midnight"] .nav-btn {
+    background: rgba(34, 211, 238, 0.85);
+  }
 
-[data-ui-style="midnight"] .btn-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
+  [data-ui-style="midnight"] .nav-btn:hover {
+    background: rgba(6, 182, 212, 1);
+  }
 
-[data-ui-style="midnight"] .btn-secondary:hover {
-  background: var(--border-hover);
-  border-color: var(--primary-color);
-}
+  [data-ui-style="midnight"] .mac-toggle input:checked + .mac-toggle-slider {
+    background-color: #22d3ee;
+  }
 
-[data-ui-style="midnight"] .dropdown-menu {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-}
+  [data-ui-style="midnight"] .mcp-bridge-status-dot.connected {
+    background-color: #22d3ee;
+    box-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+  }
 
-[data-ui-style="midnight"] .dropdown-item {
-  color: var(--text-primary);
-}
+  [data-ui-style="midnight"] .alert.alert-primary {
+    background: rgba(34, 211, 238, 0.08);
+    color: #22d3ee;
+    border-color: rgba(34, 211, 238, 0.2);
+  }
 
-[data-ui-style="midnight"] .dropdown-item:hover {
-  background: var(--bg-tertiary);
-  color: var(--primary-color);
-}
+  [data-ui-style="midnight"] .dropdown-section-title {
+    color: #e2e8f0 !important;
+    border-bottom-color: #334155 !important;
+  }
 
-[data-ui-style="midnight"] .chat-messages {
-  background: var(--bg-primary);
-}
+  [data-ui-style="midnight"] .dropdown-section-title i {
+    color: #22d3ee !important;
+  }
 
-[data-ui-style="midnight"] .chat-ai-message {
-  background: var(--bg-secondary);
-}
+  [data-ui-style="midnight"] .dropdown-feature-btn {
+    color: #94a3b8 !important;
+  }
 
-[data-ui-style="midnight"] .chat-input-container {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-}
+  [data-ui-style="midnight"] .dropdown-feature-btn:hover {
+    background: linear-gradient(135deg, #1e293b, #334155) !important;
+    color: #22d3ee !important;
+    border-color: #475569 !important;
+  }
 
-[data-ui-style="midnight"] .chat-input {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
+  [data-ui-style="midnight"] .dropdown-feature-btn i {
+    color: #64748b !important;
+  }
 
-[data-ui-style="midnight"] .chat-tab {
-  color: var(--text-secondary);
-}
+  [data-ui-style="midnight"] .dropdown-feature-btn:hover i {
+    color: #22d3ee !important;
+  }
 
-[data-ui-style="midnight"] .chat-markdown {
-  color: var(--text-primary);
-}
+  [data-ui-style="midnight"] .add-features-dropdown {
+    border-color: #475569 !important;
+  }
 
-[data-ui-style="midnight"] .chat-markdown code {
-  background: var(--bg-tertiary);
-  color: #22d3ee;
-}
+  [data-ui-style="midnight"] .dropdown-divider {
+    background: linear-gradient(to right, transparent, #475569, transparent) !important;
+  }
 
-[data-ui-style="midnight"] .chat-markdown pre {
-  background: var(--bg-tertiary);
-}
+  [data-ui-style="midnight"] .modal-close {
+    color: var(--text-muted);
+  }
 
-[data-ui-style="midnight"] .provider-config {
-  background: var(--bg-primary);
-}
+  [data-ui-style="midnight"] .modal-close:hover {
+    color: var(--text-primary);
+  }
 
-[data-ui-style="midnight"] .provider-config input,
-[data-ui-style="midnight"] .provider-config select {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
+  [data-ui-style="midnight"] .mac-toggle-slider {
+    background: var(--bg-tertiary);
+  }
 
-[data-ui-style="midnight"] .provider-config .help-text {
-  color: var(--text-muted);
-}
+  [data-ui-style="midnight"] .gene-filter-controls {
+    background: rgba(15, 23, 42, 0.95);
+  }
 
-[data-ui-style="midnight"] .tab-button {
-  color: var(--text-secondary);
-}
+  [data-ui-style="midnight"] .benchmark-container {
+    background: var(--bg-secondary);
+  }
 
-[data-ui-style="midnight"] .tab-bar {
-  border-bottom-color: var(--border-color);
-}
+  [data-ui-style="midnight"] .benchmark-header {
+    color: var(--text-primary);
+  }
 
-[data-ui-style="midnight"] .llm-provider-config > .tab-bar::after {
-  background: var(--border-color);
-}
+  [data-ui-style="midnight"] .badge-primary {
+    color: #0f172a;
+  }
 
-[data-ui-style="midnight"] .setting-group {
-  border-color: var(--border-color);
-}
-
-[data-ui-style="midnight"] .setting-row {
-  border-bottom-color: var(--border-color);
-}
-
-[data-ui-style="midnight"] .setting-label {
-  color: var(--text-primary);
-}
-
-[data-ui-style="midnight"] .setting-description {
-  color: var(--text-muted);
-}
-
-[data-ui-style="midnight"] .toggle-slider {
-  background: var(--bg-tertiary);
-}
-
-[data-ui-style="midnight"] .track-controls {
-  background: var(--bg-secondary);
-}
-
-[data-ui-style="midnight"] .gene-info-panel {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-[data-ui-style="midnight"] .plugin-card {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-[data-ui-style="midnight"] .metric-item {
-  color: #0f172a;
-}
-
-[data-ui-style="midnight"] .slider-value {
-  color: var(--primary-color);
-}
-
-[data-ui-style="midnight"] .notification-info {
-  background: rgba(34, 211, 238, 0.05);
-}
-
-[data-ui-style="midnight"] .alert {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-[data-ui-style="midnight"] .chat-notification {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-[data-ui-style="midnight"] .multi-agent-activation {
-  color: #0f172a;
-}
-
-[data-ui-style="midnight"] .mcp-settings-container {
-  background: var(--bg-primary);
-}
-
-[data-ui-style="midnight"] .mcp-server-card {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-[data-ui-style="midnight"] .resize-handle {
-  background: rgba(34, 211, 238, 0.15);
-}
-
-[data-ui-style="midnight"] .resize-handle:active {
-  background: rgba(34, 211, 238, 0.25);
-}
-
-[data-ui-style="midnight"] .search-input {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
-
-[data-ui-style="midnight"] .position-input {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
-
-[data-ui-style="midnight"] .sidebar-splitter {
-  background: var(--border-color);
-}
-
-[data-ui-style="midnight"] .sidebar-splitter:hover {
-  background: var(--primary-color);
-}
-
-[data-ui-style="midnight"] .sidebar-section-title {
-  color: var(--primary-color);
-}
-
-[data-ui-style="midnight"] .track-tooltip {
-  background: var(--bg-secondary);
-  border-color: var(--primary-color);
-  color: var(--text-primary);
-}
-
-[data-ui-style="midnight"] .gene-filter-controls {
-  background: var(--bg-secondary);
-}
-
-[data-ui-style="midnight"] .benchmark-container {
-  background: var(--bg-secondary);
-}
-
-[data-ui-style="midnight"] .benchmark-header {
-  color: var(--text-primary);
-}
-
-[data-ui-style="midnight"] .expand-indicator {
-  color: var(--primary-color);
-}
-
-[data-ui-style="midnight"] .progress-bar {
-  background: var(--bg-tertiary);
-}
-
-[data-ui-style="midnight"] .spinner {
-  border-color: var(--border-color);
-  border-top-color: var(--primary-color);
-}
-
-[data-ui-style="midnight"] .badge-primary {
-  color: #0f172a;
-}
-
-[data-ui-style="midnight"] .pagination-item {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
-
-[data-ui-style="midnight"] .pagination-item.active {
-  color: #0f172a;
-}
-
-/* ===== MODAL CLOSE BUTTON DARK OVERRIDE ===== */
-[data-ui-style="midnight"] .modal-close {
-  color: var(--text-muted);
-}
-
-[data-ui-style="midnight"] .modal-close:hover {
-  color: var(--text-primary);
-}
-
-/* ===== MAC TOGGLE DARK OVERRIDE ===== */
-[data-ui-style="midnight"] .mac-toggle-slider {
-  background: var(--bg-tertiary);
+  [data-ui-style="midnight"] .pagination-item.active {
+    color: #0f172a;
+  }
 }
