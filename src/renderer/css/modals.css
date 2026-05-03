@@ -205,7 +205,6 @@
 }
 
 .modal-header.draggable-handle:hover {
-  background: rgba(0, 0, 0, 0.05);
 }
 
 .modal-header.draggable-handle::before {

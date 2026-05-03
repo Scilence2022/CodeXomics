@@ -618,11 +618,6 @@
   border-left-color: var(--accent-indigo) !important;
 }
 
-/* ===== DRAGGABLE HEADER HOVER ===== */
-[data-ui-style="midnight"] .draggable-header:hover {
-  background: linear-gradient(135deg, #0e7490 0%, #1e293b 100%) !important;
-}
-
 /* ===== ADD FEATURES BUTTON & DROPDOWN ===== */
 [data-ui-style="midnight"] #addFeaturesBtn {
   background: var(--btn-gradient) !important;

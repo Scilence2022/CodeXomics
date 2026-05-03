@@ -360,7 +360,6 @@
 }
 
 .modal-header.draggable-handle:hover {
-  background: rgba(0, 0, 0, 0.05);
 }
 
 .modal-header.draggable-handle::before {
@@ -11875,7 +11874,6 @@ input:checked+.slider:before {
 }
 
 .draggable-header:hover {
-  background: linear-gradient(135deg, #5a67d8 0%, #6b7db8 100%);
 }
 
 .mcp-toggle-btn {
@@ -12725,7 +12723,6 @@ input:checked+.slider:before {
 }
 
 .draggable-header:hover {
-  background-color: #f8f9fa !important;
 }
 
 .resizable-modal-content {
@@ -14247,7 +14244,6 @@ input:checked+.slider:before {
   }
 
   .draggable-header:hover {
-    background-color: rgba(0, 0, 0, 0.05);
   }
 
   .dragging {
