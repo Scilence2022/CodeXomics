@@ -841,6 +841,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('switch_ui_style', {
+      method: 'switchUIStyle',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Benchmark tools
     this.builtInToolsMap.set('open_benchmark', {
       method: 'openBenchmark',
@@ -1406,6 +1413,19 @@ class BuiltInToolsIntegration {
         name: 'toggle_settings_modal',
         confidence: 0.9,
         reason: 'Settings modal open/close/toggle keywords detected',
+      });
+    }
+
+    // Check for UI style / theme switching patterns
+    if (/\b(switch|change|set|apply|activate|use)\s+.*?\b(ui\s*style|style|theme|appearance|color\s*scheme|visual\s*style|look\s*and\s*feel)\b/i.test(query) ||
+        /\b(ui\s*style|theme|appearance)\s+.*?\b(switch|change|set|apply|activate|toggle)\b/i.test(query) ||
+        /\b(switch\s+style|change\s+style|switch\s+theme|change\s+theme|switch\s+ui|change\s+ui)\b/i.test(query) ||
+        /\b(dark\s*mode|light\s*mode|toggle\s*dark|toggle\s*light|enable\s*dark|enable\s*light|turn\s+on\s+dark|turn\s+off\s+dark)\b/i.test(query) ||
+        /\b(ai\s*dynamic|professional\s*style|minimal\s*style|elegant\s*style|midnight\s*style|pastel\s*style)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'switch_ui_style',
+        confidence: 0.95,
+        reason: 'UI style/theme switching keywords detected',
       });
     }
 

@@ -7560,6 +7560,100 @@ ${coreTools}
   }
 
   /**
+   * Switch UI style / theme
+   * Changes the application's visual style preset and/or dark/light mode
+   */
+  async switchUIStyle(parameters = {}) {
+    const { style_name: styleName, dark_mode: darkMode } = parameters;
+    const themeManager = window.themeManager;
+    const generalSettingsManager = window.generalSettingsManager;
+
+    if (!themeManager) {
+      return {
+        success: false,
+        error: 'ThemeManager is not available',
+      };
+    }
+
+    const availableStyles = themeManager.getAvailableStyles().map(s => s.id);
+    const results = [];
+
+    try {
+      // Apply style preset if specified
+      if (styleName) {
+        if (!availableStyles.includes(styleName)) {
+          return {
+            success: false,
+            error: `Unknown style: '${styleName}'`,
+            available_styles: availableStyles,
+            message: `Available styles: ${availableStyles.join(', ')}`,
+          };
+        }
+        await themeManager.switchStyle(styleName);
+        results.push(`Style switched to '${styleName}'`);
+
+        // Also sync GeneralSettingsManager
+        if (generalSettingsManager) {
+          generalSettingsManager.settings.uiStyle = styleName;
+          const preset = themeManager.stylePresets[styleName];
+          if (preset) {
+            generalSettingsManager.settings.accentColor = preset.variables['--primary-color'];
+          }
+        }
+      }
+
+      // Apply dark/light mode if specified
+      if (darkMode) {
+        let targetIsDark;
+        if (darkMode === 'dark') {
+          targetIsDark = true;
+        } else if (darkMode === 'light') {
+          targetIsDark = false;
+        } else if (darkMode === 'toggle') {
+          targetIsDark = !themeManager.isDarkMode();
+        }
+
+        if (targetIsDark !== undefined) {
+          const themeMode = targetIsDark ? 'dark' : 'light';
+          if (generalSettingsManager) {
+            generalSettingsManager.settings.themeMode = themeMode;
+            generalSettingsManager.applyTheme(themeMode);
+          } else {
+            themeManager.applyDarkModeOverrides(targetIsDark);
+          }
+          results.push(`Dark mode ${targetIsDark ? 'enabled' : 'disabled'}`);
+        }
+      }
+
+      // If neither specified, just return current state
+      if (!styleName && !darkMode) {
+        const currentStyle = themeManager.getCurrentStyle();
+        const isDark = themeManager.isDarkMode();
+        return {
+          success: true,
+          message: `Current UI style: '${currentStyle}' (${isDark ? 'dark' : 'light'} mode)`,
+          style_name: currentStyle,
+          dark_mode: isDark,
+          available_styles: availableStyles,
+        };
+      }
+
+      return {
+        success: true,
+        message: results.join('. ') || 'UI style updated',
+        style_name: themeManager.getCurrentStyle(),
+        dark_mode: themeManager.isDarkMode(),
+      };
+    } catch (error) {
+      console.error(`[ChatManager] switchUIStyle error:`, error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
    * Execute genomics tools (specialized analysis functions)
    */
   async executeGenomicsTool(toolName, parameters) {
