@@ -58,12 +58,13 @@ class CanvasGenesRenderer {
             top: 0;
             left: 0;
             width: 100%;
-            width: 100%;
             height: 100%;
             display: block;
             image-rendering: crisp-edges;
             z-index: 10;
             pointer-events: auto;
+            opacity: 0;
+            transition: opacity 0.1s ease-out;
         `;
 
     // Get 2D context
@@ -72,19 +73,25 @@ class CanvasGenesRenderer {
     // Setup canvas container
     this.setupContainer();
 
-    // Setup canvas dimensions
-    this.setupCanvas();
-
-    // Render initial view
-    this.render();
-
-    // Setup resize observer
+    // Defer setupCanvas + render to next frame so the container has time
+    // to be inserted into the DOM, giving getBoundingClientRect() accurate dimensions.
+    // Without this, the container is not yet in the DOM during constructor,
+    // so getBoundingClientRect() returns 0 and we fall back to 800px,
+    // causing a visible "shrink then expand" flash on navigation.
+    this.setupInteractionHandlers();
     this.setupResizeObserver();
 
-    // Setup interaction handlers
-    this.setupInteractionHandlers();
+    // Use requestAnimationFrame to defer initial render until the container
+    // is in the DOM and has proper layout dimensions
+    this._pendingInitialRender = requestAnimationFrame(() => {
+      this._pendingInitialRender = null;
+      this.setupCanvas();
+      this.render();
+      // Fade in the canvas now that it has correct dimensions
+      this.canvas.style.opacity = '1';
+    });
 
-    console.log('✅ [CanvasGenesRenderer] Initialized successfully');
+    console.log('✅ [CanvasGenesRenderer] Initialized successfully (deferred render)');
   }
 
   setupContainer() {
@@ -95,9 +102,32 @@ class CanvasGenesRenderer {
   }
 
   setupCanvas() {
-    // Measure container
+    // Measure container — try multiple strategies to get an accurate width
+    // 1. Direct container rect (works when container is in DOM)
     const rect = this.container.getBoundingClientRect();
-    this.canvasWidth = rect.width || 800; // Fallback width
+    let width = rect.width;
+
+    // 2. If container not in DOM yet (width = 0), try parent chain
+    if (!width || width <= 0) {
+      let parent = this.container.parentElement;
+      while (parent) {
+        const parentRect = parent.getBoundingClientRect();
+        if (parentRect.width > 0) {
+          width = parentRect.width;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+    }
+
+    // 3. Final fallback: estimate from window width minus typical sidebar/padding
+    if (!width || width <= 0) {
+      const sidebarEl = document.querySelector('.sidebar, #sidebar, .side-panel');
+      const sidebarWidth = sidebarEl ? sidebarEl.offsetWidth : 300;
+      width = window.innerWidth - sidebarWidth - 40;
+    }
+
+    this.canvasWidth = Math.max(width, 200); // Minimum reasonable width
 
     // Height provided by layout
     const contentHeight = this.layout.totalHeight - this.layout.rulerHeight;
@@ -111,8 +141,8 @@ class CanvasGenesRenderer {
     this.canvas.style.width = `${this.canvasWidth}px`;
     this.canvas.style.height = `${this.canvasHeight}px`;
 
-    // Scale context
-    this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio);
+    // Reset transform before applying DPR scale to prevent accumulation
+    this.ctx.setTransform(this.devicePixelRatio, 0, 0, this.devicePixelRatio, 0, 0);
   }
 
   setupInteractionHandlers() {
@@ -799,6 +829,10 @@ class CanvasGenesRenderer {
   }
 
   destroy() {
+    if (this._pendingInitialRender) {
+      cancelAnimationFrame(this._pendingInitialRender);
+      this._pendingInitialRender = null;
+    }
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
     }

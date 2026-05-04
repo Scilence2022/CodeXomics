@@ -24,10 +24,10 @@ class InternalMCPServer {
     this.setupIPCHandlers();
   }
 
-  // Initialize with Genome Studio instance
+  // Initialize with CodeXomics instance
   initialize(genomeStudioInstance) {
     this.genomeStudio = genomeStudioInstance;
-    console.log('🔧 Internal MCP Server initialized with Genome Studio instance');
+    console.log('🔧 Internal MCP Server initialized with CodeXomics instance');
   }
 
   // Setup IPC handlers for communication with main process MCP server
@@ -71,10 +71,11 @@ class InternalMCPServer {
 
     // First, try to delegate to ChatManager for comprehensive tool support
     // ChatManager.executeToolWithPriority() handles 70+ tools with priority routing
-    if (this.genomeStudio.chatManager) {
+    const chatManager = this.genomeStudio.chatManager || window.chatManager;
+    if (chatManager) {
       try {
         console.log(`📡 [InternalMCPServer] Delegating '${toolName}' to ChatManager`);
-        const result = await this.genomeStudio.chatManager.executeToolWithPriority(toolName, parameters);
+        const result = await chatManager.executeToolWithPriority(toolName, parameters);
         if (result !== undefined) {
           console.log(`✅ [InternalMCPServer] Tool '${toolName}' executed via ChatManager`);
           return {
@@ -83,11 +84,15 @@ class InternalMCPServer {
             executedVia: 'ChatManager',
           };
         }
+        // ChatManager returned undefined — tool not found in any priority category
+        console.warn(`⚠️ [InternalMCPServer] ChatManager returned undefined for '${toolName}' — tool not found in any priority category`);
       } catch (error) {
         console.warn(`⚠️ [InternalMCPServer] ChatManager execution failed for '${toolName}':`, error.message);
         // Rethrow the original error instead of falling through
         throw error;
       }
+    } else {
+      console.warn(`⚠️ [InternalMCPServer] ChatManager not available on genomeStudio (chatManager=${this.genomeStudio.chatManager}, window.chatManager=${window.chatManager})`);
     }
 
     // Fallback: Direct handlers for core methods that may not be in ChatManager
@@ -168,12 +173,45 @@ class InternalMCPServer {
       case 'switchActiveWindow':
         return await this.focusGenomeWindowViaIPC(parameters);
 
+      // File loading tools — delegate to ChatManager method directly
+      // These are needed as fallback when executeToolWithPriority returns undefined
+      case 'loadGenomeFile':
+        return await this._delegateToChatManager('loadGenomeFile', parameters);
+      case 'loadAnnotationFile':
+        return await this._delegateToChatManager('loadAnnotationFile', parameters);
+      case 'loadVariantFile':
+        return await this._delegateToChatManager('loadVariantFile', parameters);
+      case 'loadReadsFile':
+        return await this._delegateToChatManager('loadReadsFile', parameters);
+      case 'loadWigTracks':
+        return await this._delegateToChatManager('loadWigTracks', parameters);
+      case 'loadOperonFile':
+        return await this._delegateToChatManager('loadOperonFile', parameters);
+
       default:
-        // If method is not found in fallback handlers, try snake_case version
-        // This handles cases where the method name format doesn't match
-        console.warn(`⚠️ [InternalMCPServer] Method '${method}' not found in fallback handlers`);
+        // Last resort: try to call the method directly on ChatManager by camelCase name
+        // This handles tools that exist in ChatManager but are not in the switch or
+        // were missed by executeToolWithPriority
+        if (chatManager && typeof chatManager[method] === 'function') {
+          console.log(`🔄 [InternalMCPServer] Last-resort: calling chatManager.${method}() directly`);
+          try {
+            const result = await chatManager[method](parameters);
+            return {
+              success: true,
+              result,
+              executedVia: 'ChatManager-direct',
+            };
+          } catch (directError) {
+            throw new Error(
+              `Method '${method}' (tool '${toolName}') exists on ChatManager but execution failed: ${directError.message}`
+            );
+          }
+        }
+
+        console.warn(`⚠️ [InternalMCPServer] Method '${method}' not found in fallback handlers or ChatManager`);
         throw new Error(
-          `Unknown method: ${method}. Tool '${toolName}' was not found in ChatManager or fallback handlers.`
+          `Unknown method: ${method}. Tool '${toolName}' was not found in ChatManager or fallback handlers. ` +
+          `ChatManager available: ${!!chatManager}, genomeStudio.chatManager: ${!!this.genomeStudio.chatManager}`
         );
     }
   }
@@ -796,6 +834,31 @@ class InternalMCPServer {
     } catch (error) {
       console.error('[InternalMCPServer] focusGenomeWindowViaIPC error:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Delegate a method call to ChatManager directly.
+   * Used as fallback when executeToolWithPriority returns undefined.
+   */
+  async _delegateToChatManager(methodName, parameters) {
+    const chatManager = this.genomeStudio.chatManager || window.chatManager;
+    if (!chatManager) {
+      throw new Error(`ChatManager not available for method '${methodName}'`);
+    }
+    if (typeof chatManager[methodName] !== 'function') {
+      throw new Error(`ChatManager does not have method '${methodName}'`);
+    }
+    try {
+      const result = await chatManager[methodName](parameters);
+      return {
+        success: true,
+        result,
+        executedVia: 'ChatManager-direct',
+      };
+    } catch (error) {
+      console.error(`❌ [InternalMCPServer] chatManager.${methodName}() failed:`, error);
+      throw error;
     }
   }
 

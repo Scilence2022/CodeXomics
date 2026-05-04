@@ -5,7 +5,7 @@
 class ManualSuite extends BenchmarkEvaluatorBase {
   constructor() {
     super();
-    this.suiteName = 'Manual Tests';
+    this.suiteName = 'Manual Tests (20)'; // Updated count after Phase 1-3 coverage expansion
     this.suiteId = 'manual_suite';
     this.description = 'Manual evaluation tests - Genomic operations requiring human verification';
     this.framework = null;
@@ -213,6 +213,228 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
         manualVerification: 'Please verify: 1) Search identifies genes with locus tags b1210 etc.;',
+      },
+
+      // ANNOTATION MANAGEMENT TASKS - Manual + Simple
+      {
+        id: 'annot_manual_01',
+        name: 'Create Gene Annotation',
+        type: 'function_call',
+        category: 'annotation',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Create a gene annotation named "my_custom_gene" of type "gene" at position 600000 to 602000 on the current chromosome.',
+        expectedResult: {
+          tool_name: 'create_annotation',
+          parameters: {
+            start: 600000,
+            end: 602000,
+            name: 'my_custom_gene',
+            type: 'gene',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) New annotation appears on the genome browser at the correct position, 2) Annotation name and type are correct in the sidebar.',
+      },
+      {
+        id: 'annot_manual_02',
+        name: 'Search Annotations by Type',
+        type: 'function_call',
+        category: 'annotation',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Search for all annotations of type "CDS" in the current genome.',
+        expectedResult: {
+          tool_name: 'search_annotations',
+          parameters: {
+            type: 'CDS',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) Search returns CDS annotations correctly, 2) Results are relevant and complete.',
+      },
+
+      // TRACK CONTROL TASKS - Manual + Simple
+      {
+        id: 'track_manual_01',
+        name: 'Toggle GC Track',
+        type: 'function_call',
+        category: 'track_control',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Toggle the GC content track visibility.',
+        expectedResult: {
+          tool_name: 'toggle_track',
+          parameters: {
+            trackName: 'gc_content',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) GC content track appears or disappears in the browser, 2) Track toggle is responsive.',
+      },
+
+      // PROTEIN STRUCTURE TASKS - Manual + Simple
+      {
+        id: 'protein_manual_01',
+        name: 'Open AlphaFold Viewer',
+        type: 'function_call',
+        category: 'protein_structure',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Open the AlphaFold 3D structure viewer for gene lacZ.',
+        expectedResult: {
+          tool_name: 'open_alphafold_viewer',
+          parameters: {
+            geneName: 'lacZ',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) AlphaFold 3D structure viewer opens, 2) Protein structure renders correctly.',
+      },
+
+      // GENE ANALYSIS TASKS - Manual + Simple
+      {
+        id: 'gene_manual_01',
+        name: 'Get Gene Details for lacZ',
+        type: 'function_call',
+        category: 'gene_analysis',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Get detailed information about the lacZ gene including its product, function, and genomic context.',
+        expectedResult: {
+          tool_name: 'get_gene_details',
+          parameters: {
+            geneName: 'lacZ',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) Gene details are displayed correctly, 2) Information includes product, function, and genomic context.',
+      },
+      {
+        id: 'gene_manual_02',
+        name: 'Find Intergenic Regions',
+        type: 'function_call',
+        category: 'gene_analysis',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Find intergenic regions in the current genomic view.',
+        expectedResult: {
+          tool_name: 'find_intergenic_regions',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) Intergenic regions are identified, 2) Region boundaries match gene annotations.',
+      },
+
+      // PRIMER DESIGN TASKS - Manual + Simple
+      {
+        id: 'primer_manual_01',
+        name: 'Design Primers for lacZ',
+        type: 'function_call',
+        category: 'primer_design',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Design PCR primers for the lacZ gene with melting temperature around 60°C.',
+        expectedResult: {
+          tool_name: 'design_primers',
+          parameters: {
+            geneName: 'lacZ',
+            targetTm: 60,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) Primer sequences are generated, 2) Melting temperatures are near 60°C, 3) Primer properties are reasonable.',
+      },
+
+      // RESTRICTION ANALYSIS TASKS - Manual + Simple
+      {
+        id: 'restrict_manual_01',
+        name: 'Find Restriction Sites',
+        type: 'function_call',
+        category: 'restriction',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Find restriction enzyme recognition sites in the region around the lacZ gene.',
+        expectedResult: {
+          tool_name: 'find_restriction_sites',
+          parameters: {
+            geneName: 'lacZ',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) Restriction sites are found and listed, 2) Enzyme names and cut positions are correct.',
+      },
+
+      // BLAST TASKS - Manual + Simple
+      {
+        id: 'blast_manual_01',
+        name: 'BLAST Search with Parameters',
+        type: 'function_call',
+        category: 'blast',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Perform a BLAST search online with the sequence ATGAAAGCGCTGAAAGCGCTG using blastn program against the nr database with e-value threshold 0.001.',
+        expectedResult: {
+          tool_name: 'blast_search_online',
+          parameters: {
+            sequence: 'ATGAAAGCGCTGAAAGCGCTG',
+            program: 'blastn',
+            database: 'nr',
+            evalue: 0.001,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) BLAST search executes successfully, 2) Results include relevant hits with e-values below threshold.',
+      },
+
+      // DATABASE INTEGRATION TASKS - Manual + Simple
+      {
+        id: 'db_manual_01',
+        name: 'Analyze InterPro Domains for lacZ',
+        type: 'function_call',
+        category: 'database',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Analyze InterPro protein domains for the lacZ gene from Escherichia coli.',
+        expectedResult: {
+          tool_name: 'analyze_interpro_domains',
+          parameters: {
+            geneName: 'lacZ',
+            organism: 'Escherichia coli',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) InterPro domain analysis executes, 2) Domain families and functional sites are identified.',
       },
 
       // COMPLEX NAVIGATION WORKFLOW - Manual + Complex

@@ -1,0 +1,770 @@
+/**
+ * Elegant Gray UI Style Override
+ * Overrides hardcoded colors with sophisticated monochrome silver tones
+ * when data-ui-style="elegant" is set on the root element.
+ *
+ * Design Philosophy:
+ * - Cool silver (#6b6b6b) as primary accent instead of blue-violet
+ * - Crisp gray backgrounds with subtle blue undertones
+ * - Near-black text for maximum contrast and readability
+ * - Minimal gradients, restrained elegance
+ * - Inspired by high-end editorial design, monochrome photography aesthetics
+ */
+
+/* ===== HEADER OVERRIDES ===== */
+[data-ui-style="elegant"] .header {
+  background: var(--header-gradient);
+}
+
+/* ===== WELCOME SCREEN ===== */
+[data-ui-style="elegant"] .welcome-screen {
+  background: var(--welcome-gradient);
+}
+
+[data-ui-style="elegant"] .welcome-icon {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-ui-style="elegant"] .version-tag {
+  color: #c0c0c0;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ===== BUTTON GRADIENT OVERRIDES ===== */
+[data-ui-style="elegant"] .btn-gradient {
+  background: var(--btn-gradient);
+}
+
+[data-ui-style="elegant"] .btn-gradient:hover {
+  background: var(--btn-gradient-hover);
+  box-shadow: 0 8px 25px rgba(107, 107, 107, 0.25);
+}
+
+[data-ui-style="elegant"] .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(107, 107, 107, 0.25);
+}
+
+[data-ui-style="elegant"] .btn:focus {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ===== TRACK BUTTON OVERRIDES ===== */
+[data-ui-style="elegant"] .track-gallery-btn:hover {
+  color: #6b6b6b;
+  border-color: #6b6b6b;
+}
+
+[data-ui-style="elegant"] .track-layout-btn:hover {
+  color: #4a4a4a;
+  border-color: #4a4a4a;
+}
+
+/* ===== FOCUS RING OVERRIDES ===== */
+[data-ui-style="elegant"] .search-input:focus,
+[data-ui-style="elegant"] .position-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style="elegant"] .dropdown-toggle:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style="elegant"] .select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style="elegant"] ::focus-visible {
+  outline-color: var(--primary-color);
+}
+
+[data-ui-style="elegant"] ::selection {
+  background: var(--selection-bg);
+}
+
+/* ===== CHATBOX OVERRIDES ===== */
+[data-ui-style="elegant"] #chatboxSettingsModal .modal-header {
+  background: var(--modal-header-gradient);
+}
+
+[data-ui-style="elegant"] .chat-panel .chat-header {
+  background: var(--modal-header-gradient);
+}
+
+[data-ui-style="elegant"] .chat-tab.active {
+  color: var(--chat-tab-active);
+  border-bottom-color: var(--chat-tab-active);
+}
+
+[data-ui-style="elegant"] .chat-user-message {
+  background: var(--chat-user-bg);
+}
+
+[data-ui-style="elegant"] .chat-ai-message {
+  border-left-color: var(--chat-ai-border);
+}
+
+[data-ui-style="elegant"] .chat-send-btn {
+  background: var(--chat-send-bg);
+}
+
+[data-ui-style="elegant"] .chat-send-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* ===== CHATBOX MARKDOWN OVERRIDES ===== */
+[data-ui-style="elegant"] .chat-markdown blockquote {
+  border-left-color: var(--accent-indigo);
+}
+
+[data-ui-style="elegant"] .chat-markdown a {
+  color: var(--accent-indigo);
+}
+
+[data-ui-style="elegant"] .chat-markdown code {
+  color: #4a4a4a;
+}
+
+[data-ui-style="elegant"] .chat-markdown pre {
+  border-left-color: var(--accent-indigo);
+}
+
+[data-ui-style="elegant"] .chat-markdown .code-block-header {
+  background: #6b6b6b;
+}
+
+/* ===== TABS OVERRIDES ===== */
+[data-ui-style="elegant"] .llm-provider-tabs .tab-button.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+/* ===== MODAL OVERRIDES ===== */
+[data-ui-style="elegant"] .llm-config-modal .modal-header {
+  background: var(--modal-header-gradient);
+}
+
+/* ===== ADVANCED SEARCH OVERRIDES ===== */
+[data-ui-style="elegant"] .advanced-search-panel {
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="elegant"] .search-type-btn.active {
+  color: #6b6b6b;
+}
+
+/* ===== NAVIGATION BUTTONS ===== */
+[data-ui-style="elegant"] .nav-btn {
+  background: rgba(107, 107, 107, 0.85);
+}
+
+[data-ui-style="elegant"] .nav-btn:hover {
+  background: rgba(74, 74, 74, 1);
+}
+
+/* ===== SIDEBAR SPLITTER ===== */
+[data-ui-style="elegant"] .sidebar-splitter:focus {
+  outline-color: var(--primary-color);
+}
+
+[data-ui-style="elegant"] .sidebar-splitter:focus .sidebar-splitter-handle {
+  color: var(--primary-color);
+}
+
+/* ===== STYLE PREVIEW SWATCH ===== */
+.style-preview-swatch.elegant-swatch {
+  background: linear-gradient(135deg, #1a1a1a 0%, #6b6b6b 100%);
+}
+
+/* ===== ELEGANT DARK MODE ENHANCEMENTS ===== */
+[data-ui-style="elegant"] .gene-filter-controls {
+  background: rgba(26, 26, 26, 0.95);
+}
+
+/* ===== STATUS BAR TOGGLE ===== */
+[data-ui-style="elegant"] .mac-toggle input:checked + .mac-toggle-slider {
+  background-color: #6b6b6b;
+}
+
+[data-ui-style="elegant"] .mcp-bridge-status-dot.connected {
+  background-color: #6b6b6b;
+  box-shadow: 0 0 6px rgba(107, 107, 107, 0.5);
+}
+
+/* ===== ALERT COMPONENTS ===== */
+[data-ui-style="elegant"] .alert.alert-primary {
+  background: rgba(107, 107, 107, 0.08);
+  color: #6b6b6b;
+  border-color: rgba(107, 107, 107, 0.2);
+}
+
+/* ===== PROGRESS BAR ===== */
+[data-ui-style="elegant"] .progress-bar {
+  background: var(--primary-color);
+}
+
+/* ===== SPINNER ===== */
+[data-ui-style="elegant"] .spinner {
+  border-top-color: var(--primary-color);
+}
+
+/* ===== BADGE ===== */
+[data-ui-style="elegant"] .badge-primary {
+  background: var(--primary-color);
+}
+
+/* ===== PAGINATION ===== */
+[data-ui-style="elegant"] .pagination-item.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* ===== STYLES.CSS HARDCODED COLOR OVERRIDES ===== */
+
+/* Chat panel header */
+[data-ui-style="elegant"] .chat-panel.resizable-movable .chat-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+/* Chat panel send button */
+[data-ui-style="elegant"] .chat-input-container .chat-send-btn {
+  background: var(--chat-send-bg) !important;
+}
+
+/* Chat user message bubble */
+[data-ui-style="elegant"] .chat-messages .chat-user-message {
+  background: var(--chat-user-bg) !important;
+}
+
+/* Chat AI message accent */
+[data-ui-style="elegant"] .chat-messages .chat-ai-message {
+  border-left-color: var(--chat-ai-border) !important;
+}
+
+/* LLM Config modal header */
+[data-ui-style="elegant"] .llm-config-modal .modal-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+/* Tab active states */
+[data-ui-style="elegant"] .tab.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+/* Agent badge colors */
+[data-ui-style="elegant"] .agent-badge {
+  background: rgba(var(--primary-rgb), 0.1) !important;
+  color: var(--primary-color) !important;
+  border-color: rgba(var(--primary-rgb), 0.2) !important;
+}
+
+/* Code block header in chat */
+[data-ui-style="elegant"] .code-block-header {
+  background: var(--primary-color) !important;
+}
+
+/* Sidebar section headers */
+[data-ui-style="elegant"] .sidebar-section-title {
+  color: var(--primary-color) !important;
+}
+
+/* Plugin badge */
+[data-ui-style="elegant"] .plugin-badge {
+  background: var(--primary-color) !important;
+}
+
+/* Toggle active state */
+[data-ui-style="elegant"] .btn-toggle.active {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Tooltip border */
+[data-ui-style="elegant"] .track-tooltip {
+  border-color: var(--primary-color) !important;
+}
+
+/* Gene info panel accent */
+[data-ui-style="elegant"] .gene-info-header {
+  border-bottom-color: var(--primary-color) !important;
+}
+
+/* Multi-agent panel tabs */
+[data-ui-style="elegant"] .agent-tab.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+/* Selection highlight */
+[data-ui-style="elegant"] .gene-element.selected {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+
+/* Scroll-to-gene button */
+[data-ui-style="elegant"] .scroll-to-gene-btn {
+  background: var(--primary-color) !important;
+}
+
+/* Markdown viewer links */
+[data-ui-style="elegant"] .markdown-content a {
+  color: var(--primary-color) !important;
+}
+
+/* Search result highlight */
+[data-ui-style="elegant"] .search-highlight {
+  background: rgba(var(--primary-rgb), 0.2) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Version tag */
+[data-ui-style="elegant"] .version-tag {
+  color: #c0c0c0;
+}
+
+/* ===== BLAST BUTTON ===== */
+[data-ui-style="elegant"] #blastBtn {
+  background: var(--btn-gradient) !important;
+  box-shadow: 0 2px 8px rgba(107, 107, 107, 0.25) !important;
+}
+
+[data-ui-style="elegant"] #blastBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(107, 107, 107, 0.35) !important;
+}
+
+/* ===== LOAD FILE BUTTON ===== */
+[data-ui-style="elegant"] .header #openFileBtn,
+[data-ui-style="elegant"] .header .btn-primary.dropdown-toggle {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .header #openFileBtn:hover,
+[data-ui-style="elegant"] .header .btn-primary.dropdown-toggle:hover {
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(107, 107, 107, 0.25) !important;
+}
+
+/* ===== NEW CHAT BUTTON ===== */
+[data-ui-style="elegant"] #newChatBtn {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] #newChatBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(107, 107, 107, 0.25) !important;
+}
+
+/* ===== CHAT SEND BUTTON ===== */
+[data-ui-style="elegant"] #sendChatBtn {
+  background: var(--chat-send-bg) !important;
+}
+
+[data-ui-style="elegant"] #sendChatBtn:hover {
+  background: var(--primary-hover) !important;
+}
+
+[data-ui-style="elegant"] #sendChatBtn.processing {
+  background: var(--chat-send-bg) !important;
+}
+
+/* ===== CURRENT MESSAGE ONLY TOGGLE ===== */
+[data-ui-style="elegant"] .toggle-label input[type="checkbox"]:checked + .toggle-slider {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .toggle-label input[type="checkbox"]:checked ~ .toggle-text {
+  color: var(--primary-color) !important;
+}
+
+/* ===== TOOLBAR TOGGLE CHAT BUTTON ===== */
+[data-ui-style="elegant"] .toolbar-section #toggleChatBtn {
+  background: var(--btn-gradient) !important;
+}
+
+[data-ui-style="elegant"] .toolbar-section #toggleChatBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(107, 107, 107, 0.25) !important;
+}
+
+[data-ui-style="elegant"] .toolbar-section #toggleChatBtn.ai-processing {
+  border-color: rgba(107, 107, 107, 0.4) !important;
+}
+
+/* ===== CHAT HEADER ===== */
+[data-ui-style="elegant"] .chat-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+/* ===== CHAT INPUT FOCUS ===== */
+[data-ui-style="elegant"] .chat-input-wrapper:focus-within {
+  border-color: var(--primary-color) !important;
+}
+
+/* ===== USER MESSAGE ICON ===== */
+[data-ui-style="elegant"] .user-message .message-icon {
+  background: var(--primary-color) !important;
+}
+
+/* ===== THINKING PROCESS ===== */
+[data-ui-style="elegant"] .thinking-process {
+  border-left-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .thinking-header {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .thinking-header i {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .thinking-process .message-icon {
+  background: var(--primary-color) !important;
+}
+
+/* ===== WELCOME BUTTONS ===== */
+[data-ui-style="elegant"] .welcome-buttons .btn-primary {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .welcome-buttons .btn-secondary:hover {
+  background: var(--btn-gradient) !important;
+  color: white !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 4px 15px rgba(107, 107, 107, 0.25) !important;
+}
+
+[data-ui-style="elegant"] .welcome-buttons .btn-primary:hover {
+  box-shadow: 0 4px 15px rgba(107, 107, 107, 0.35) !important;
+}
+
+/* ===== CHATBOX SETTINGS MODAL ===== */
+[data-ui-style="elegant"] #chatboxSettingsModal .tab-button.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] #chatboxSettingsModal .input-full:focus,
+[data-ui-style="elegant"] #chatboxSettingsModal .select:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(107, 107, 107, 0.1) !important;
+}
+
+[data-ui-style="elegant"] #chatboxSettingsModal .setting-checkbox:checked {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] #chatboxSettingsModal .btn-primary {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] #chatboxSettingsModal .btn-primary:hover {
+  background: var(--primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(107, 107, 107, 0.25) !important;
+}
+
+/* ===== LLM CONFIG ===== */
+[data-ui-style="elegant"] .llm-provider-tabs .tab-button.active::after {
+  border-right-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .provider-config input:focus,
+[data-ui-style="elegant"] .provider-config select:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(107, 107, 107, 0.1) !important;
+}
+
+[data-ui-style="elegant"] .provider-config .help-text a {
+  color: var(--primary-color) !important;
+}
+
+/* ===== MULTI-AGENT ACTIVATION ===== */
+[data-ui-style="elegant"] .multi-agent-activation {
+  background: var(--btn-gradient) !important;
+}
+
+/* ===== DROPDOWN ICON ===== */
+[data-ui-style="elegant"] .dropdown-item i {
+  color: var(--primary-color) !important;
+}
+
+/* ===== BENCHMARK UI ===== */
+[data-ui-style="elegant"] .benchmark-container {
+  border-color: rgba(107, 107, 107, 0.25) !important;
+}
+
+[data-ui-style="elegant"] .benchmark-header {
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .benchmark-header:hover {
+  background: rgba(107, 107, 107, 0.05) !important;
+}
+
+[data-ui-style="elegant"] .minimize-benchmark-btn {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .minimize-benchmark-btn:hover {
+  background: var(--primary-hover) !important;
+}
+
+[data-ui-style="elegant"] .benchmark-interface.collapsed .benchmark-container {
+  border-color: rgba(107, 107, 107, 0.7) !important;
+}
+
+[data-ui-style="elegant"] .expand-indicator {
+  background: rgba(107, 107, 107, 0.15) !important;
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .benchmark-section {
+  border-color: rgba(107, 107, 107, 0.1) !important;
+}
+
+[data-ui-style="elegant"] .checkbox-item input[type="checkbox"] {
+  accent-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .btn-primary {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%) !important;
+}
+
+[data-ui-style="elegant"] .progress-fill {
+  background: linear-gradient(90deg, var(--primary-color) 0%, #8c8c8c 100%) !important;
+}
+
+[data-ui-style="elegant"] .progress-item {
+  border-left-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .checkbox-item span small {
+  background: rgba(107, 107, 107, 0.08) !important;
+  border-color: rgba(107, 107, 107, 0.15) !important;
+}
+
+[data-ui-style="elegant"] .summary-card {
+  background: linear-gradient(135deg, var(--primary-color) 0%, #3a3a3a 100%) !important;
+  box-shadow: 0 6px 25px rgba(107, 107, 107, 0.25) !important;
+}
+
+/* ===== CHATBOX SETTINGS METRIC ===== */
+[data-ui-style="elegant"] .metric-item {
+  background: var(--btn-gradient) !important;
+}
+
+/* ===== SLIDER VALUE ===== */
+[data-ui-style="elegant"] #chatboxSettingsModal .slider-value {
+  color: var(--primary-color) !important;
+}
+
+/* ===== LLM PROVIDER TAB BOTTOM BAR ===== */
+[data-ui-style="elegant"] .llm-provider-config > .tab-bar::after {
+  background: var(--primary-color) !important;
+}
+
+/* ===== NOTIFICATION INFO ===== */
+[data-ui-style="elegant"] .notification-info {
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .notification-info i {
+  color: var(--primary-color) !important;
+}
+
+/* ===== CHAT NOTIFICATION ===== */
+[data-ui-style="elegant"] .chat-notification.info {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* ===== CHATBOX MARKDOWN OVERRIDES ===== */
+[data-ui-style="elegant"] .message-text pre {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="elegant"] .message-text a {
+  color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="elegant"] .message-text a:visited {
+  color: var(--primary-hover) !important;
+}
+
+[data-ui-style="elegant"] .message-text blockquote {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="elegant"] .copy-button {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] .user-message .message-text pre {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+[data-ui-style="elegant"] .user-message .message-text blockquote {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+/* ===== ADD FEATURES BUTTON & DROPDOWN ===== */
+[data-ui-style="elegant"] #addFeaturesBtn {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style="elegant"] #addFeaturesBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(107, 107, 107, 0.25) !important;
+}
+
+[data-ui-style="elegant"] #addFeaturesBtn.active {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(107, 107, 107, 0.2) !important;
+}
+
+[data-ui-style="elegant"] .add-features-dropdown {
+  border-color: #c0c0c0 !important;
+  box-shadow: 0 4px 16px rgba(107, 107, 107, 0.1) !important;
+}
+
+[data-ui-style="elegant"] .dropdown-section-title {
+  color: #1a1a1a !important;
+  border-bottom-color: #dcdcdc !important;
+}
+
+[data-ui-style="elegant"] .dropdown-section-title i {
+  color: #6b6b6b !important;
+}
+
+[data-ui-style="elegant"] .dropdown-feature-btn {
+  color: #3a3a3a !important;
+}
+
+[data-ui-style="elegant"] .dropdown-feature-btn:hover {
+  background: linear-gradient(135deg, #f2f2f3, #e8e8e9) !important;
+  color: #4a4a4a !important;
+  border-color: #c0c0c0 !important;
+}
+
+[data-ui-style="elegant"] .dropdown-feature-btn:active {
+  background: linear-gradient(135deg, #e8e8e9, #dcdcdc) !important;
+}
+
+[data-ui-style="elegant"] .dropdown-feature-btn i {
+  color: #8c8c8c !important;
+}
+
+[data-ui-style="elegant"] .dropdown-feature-btn:hover i {
+  color: #6b6b6b !important;
+}
+
+[data-ui-style="elegant"] .dropdown-divider {
+  background: linear-gradient(to right, transparent, #c0c0c0, transparent) !important;
+}
+
+/* ===== CIRCULAR CHECKBOX OVERRIDES ===== */
+[data-ui-style="elegant"] .track-checkbox input[type='checkbox'] {
+  border-color: #c0c0c0;
+}
+
+[data-ui-style="elegant"] .track-checkbox input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(107, 107, 107, 0.15);
+}
+
+[data-ui-style="elegant"] .track-checkbox input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="elegant"] .feature-checkbox input[type='checkbox'] {
+  border-color: #c0c0c0;
+}
+
+[data-ui-style="elegant"] .feature-checkbox input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(107, 107, 107, 0.15);
+}
+
+[data-ui-style="elegant"] .feature-checkbox input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="elegant"] .feature-control-item input[type='checkbox'] {
+  border-color: #c0c0c0;
+}
+
+[data-ui-style="elegant"] .feature-control-item input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(107, 107, 107, 0.15);
+}
+
+[data-ui-style="elegant"] .feature-control-item input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="elegant"] .track-control-item input[type='checkbox'] {
+  border-color: #c0c0c0;
+}
+
+[data-ui-style="elegant"] .track-control-item input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(107, 107, 107, 0.15);
+}
+
+[data-ui-style="elegant"] .track-control-item input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-ui-style="elegant"] .track-controls input[type='checkbox'] {
+  border-color: #c0c0c0;
+}
+
+[data-ui-style="elegant"] .track-controls input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(107, 107, 107, 0.15);
+}
+
+[data-ui-style="elegant"] .track-controls input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* ===== ELEGANT DARK MODE ===== */
+@media (prefers-color-scheme: dark) {
+  [data-ui-style="elegant"] .track-checkbox input[type='checkbox'],
+  [data-ui-style="elegant"] .feature-checkbox input[type='checkbox'],
+  [data-ui-style="elegant"] .track-control-item input[type='checkbox'],
+  [data-ui-style="elegant"] .track-controls input[type='checkbox'] {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+  }
+
+  [data-ui-style="elegant"] .track-checkbox input[type='checkbox']:checked,
+  [data-ui-style="elegant"] .feature-checkbox input[type='checkbox']:checked,
+  [data-ui-style="elegant"] .feature-control-item input[type='checkbox']:checked,
+  [data-ui-style="elegant"] .track-control-item input[type='checkbox']:checked,
+  [data-ui-style="elegant"] .track-controls input[type='checkbox']:checked {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+
+  [data-ui-style="elegant"] .feature-control-item input[type='checkbox'] {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+  }
+}

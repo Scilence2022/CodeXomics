@@ -98,6 +98,52 @@ class ToolExecutionService {
         }
       }
 
+      // --- PRIORITY 4.5: PLUGIN FUNCTION CALLS (e.g., protein-interaction-network.visualize) ---
+      // Plugin tools use dot-notation: "plugin-id.function-name"
+      if (toolName.includes('.')) {
+        // Try PluginFunctionCallsIntegrator first
+        if (this.chatManager && this.chatManager.pluginFunctionCallsIntegrator) {
+          if (this.chatManager.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
+            console.log(`[ToolExecutionService] Routing to PluginFunctionCallsIntegrator: ${toolName}`);
+            return await this.chatManager.pluginFunctionCallsIntegrator.executePluginFunction(toolName, parameters);
+          } else {
+            // Tool has plugin format but isn't in the integrator map - try PluginManager directly
+            console.log(`[ToolExecutionService] Plugin tool '${toolName}' not in integrator map, trying PluginManager.executeFunctionByName`);
+            if (this.chatManager.pluginManager && typeof this.chatManager.pluginManager.executeFunctionByName === 'function') {
+              try {
+                const result = await this.chatManager.pluginManager.executeFunctionByName(toolName, parameters);
+                if (result !== undefined) {
+                  return result;
+                }
+              } catch (e) {
+                console.warn(`[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`, e.message);
+              }
+            }
+          }
+        } else {
+          // No integrator but tool name looks like a plugin - try PluginManager directly
+          console.log(`[ToolExecutionService] No PluginFunctionCallsIntegrator, trying PluginManager for '${toolName}'`);
+          if (this.chatManager && this.chatManager.pluginManager && typeof this.chatManager.pluginManager.executeFunctionByName === 'function') {
+            try {
+              const result = await this.chatManager.pluginManager.executeFunctionByName(toolName, parameters);
+              if (result !== undefined) {
+                return result;
+              }
+            } catch (e) {
+              console.warn(`[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`, e.message);
+            }
+          }
+        }
+
+        // If we reach here, the plugin tool was advertised but has no executable implementation
+        console.warn(`[ToolExecutionService] Plugin tool '${toolName}' was not found. The plugin may not be installed or the function is not registered.`);
+        return {
+          success: false,
+          error: `Plugin tool '${toolName}' is not available. The required plugin may not be installed or the function is not registered. Please check your installed plugins.`,
+          toolName: toolName,
+        };
+      }
+
       // --- PRIORITY 5: ACTION MANAGER TOOLS ---
       const actionManagerTools = {
         'copy_sequence': true, 'action_copy_sequence': true,

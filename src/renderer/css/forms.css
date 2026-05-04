@@ -51,7 +51,7 @@
   font-size: 14px;
   font-family: inherit;
   transition: all 0.2s ease;
-  background: white;
+  background: var(--bg-primary);
 }
 
 .form-input:focus,
@@ -331,7 +331,7 @@ small.form-help {
   left: 0;
   height: 18px;
   width: 18px;
-  background: white;
+  background: var(--bg-primary);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-sm);
   transition: all 0.2s ease;
@@ -396,7 +396,7 @@ small.form-help {
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background: white;
+  background: var(--bg-primary);
   transition: 0.3s ease;
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);

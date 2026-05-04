@@ -136,6 +136,9 @@ class BenchmarkUI {
     // Setup window event handlers
     this.setupWindowEventHandlers();
 
+    // Dynamically update suite test counts from framework
+    this.updateDynamicSuiteCounts(this.window.document);
+
     console.log('🧪 Benchmark runner window opened (fallback mode)');
   }
 
@@ -597,15 +600,19 @@ class BenchmarkUI {
                                 <div class="checkbox-grid">
                                     <label class="checkbox-item">
                                         <input type="checkbox" id="suite-automatic_simple" checked>
-                                        <span>⚙️ Automatic Simple Tests <small>(40 tests)</small></span>
+                                        <span>⚙️ Automatic Simple Tests <small id="count-automatic_simple">(122 tests)</small></span>
                                     </label>
                                     <label class="checkbox-item">
                                         <input type="checkbox" id="suite-automatic_complex" checked>
-                                        <span>🔧 Automatic Complex Tests <small>(3 tests)</small></span>
+                                        <span>🔧 Automatic Complex Tests <small id="count-automatic_complex">(4 tests)</small></span>
                                     </label>
                                     <label class="checkbox-item">
                                         <input type="checkbox" id="suite-manual_suite">
-                                        <span>👥 Manual Tests <small>(9 tests)</small></span>
+                                        <span>👥 Manual Tests <small id="count-manual_suite">(20 tests)</small></span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" id="suite-manual_complex">
+                                        <span>🧠 Manual Complex Tests <small id="count-manual_complex">(15 tests)</small></span>
                                     </label>
                                     
                                 </div>
@@ -3788,16 +3795,16 @@ class BenchmarkUI {
                         <h3 style="color: #34495e; font-size: 14px; margin-bottom: 12px;">Test Suites</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-automatic_simple" checked> ⚙️ Automatic Simple Tests
+                                <input type="checkbox" id="suite-automatic_simple" checked> ⚙️ Automatic Simple Tests <small id="count-automatic_simple">(122 tests)</small>
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-automatic_complex" checked> 🔧 Automatic Complex Tests
+                                <input type="checkbox" id="suite-automatic_complex" checked> 🔧 Automatic Complex Tests <small id="count-automatic_complex">(4 tests)</small>
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-manual_suite"> 👥 Manual Tests
+                                <input type="checkbox" id="suite-manual_suite"> 👥 Manual Tests <small id="count-manual_suite">(20 tests)</small>
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-manual_complex"> 🧠 Manual Complex Tests
+                                <input type="checkbox" id="suite-manual_complex"> 🧠 Manual Complex Tests <small id="count-manual_complex">(15 tests)</small>
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
                                 <input type="checkbox" id="suite-comprehensive_genomic"> 📋 Comprehensive Tests
@@ -4799,17 +4806,16 @@ class BenchmarkUI {
 
 Comprehensive testing framework for LLM instruction following capabilities.
 
-• 5 active test suites
-• 50+ individual tests
+• 4 active test suites
+• 161 individual tests
 • Advanced statistical analysis
 • Professional reporting
 
 Active Test Suites:
-- Automatic Simple Tests (41 tests)
-- Automatic Complex Tests (2 tests) 
-- Manual Simple Tests (8 tests)
-- Manual Complex Tests (3 tests)
-- Comprehensive Genomic Tests (20+ tests)\`);
+- Automatic Simple Tests (122 tests)
+- Automatic Complex Tests (4 tests)
+- Manual Tests (20 tests)
+- Manual Complex Tests (15 tests)\`);
             }
 
             downloadJSON(data, filename) {
@@ -4913,6 +4919,38 @@ Active Test Suites:
   onBenchmarkComplete(results) {
     this.currentResults = results;
     console.log('Benchmark completed:', results);
+  }
+
+  /**
+   * Dynamically update suite test counts from the framework's actual suite data
+   * This ensures the UI always shows accurate counts even when suites are expanded
+   */
+  updateDynamicSuiteCounts(doc = document) {
+    if (!this.framework || !this.framework.testSuites || this.framework.testSuites.size === 0) {
+      console.log('📋 [UI] Framework suites not yet loaded, will update counts when available');
+      // Retry after a short delay to allow suites to initialize
+      setTimeout(() => this.updateDynamicSuiteCounts(doc), 1000);
+      return;
+    }
+
+    const suiteCountMap = {
+      'automatic_simple': { id: 'count-automatic_simple', defaultCount: 122 },
+      'automatic_complex': { id: 'count-automatic_complex', defaultCount: 4 },
+      'manual_suite': { id: 'count-manual_suite', defaultCount: 20 },
+      'manual_complex': { id: 'count-manual_complex', defaultCount: 15 },
+    };
+
+    for (const [suiteId, config] of Object.entries(suiteCountMap)) {
+      const suite = this.framework.testSuites.get(suiteId);
+      if (suite) {
+        const count = suite.getTestCount();
+        const element = doc.getElementById(config.id);
+        if (element) {
+          element.textContent = `(${count} tests)`;
+          console.log(`📋 [UI] Updated ${suiteId} count to ${count}`);
+        }
+      }
+    }
   }
 
   /**

@@ -9,54 +9,85 @@ class LLMConfigManager {
       openai: {
         name: 'OpenAI',
         apiKey: '',
-        model: 'gpt-4o', // Default to GPT-4o since GPT-5 requires BYOK
+        model: 'gpt-5.2',
         baseUrl: 'https://api.openai.com/v1',
         enabled: false,
         availableModels: [
-          // GPT-5 Series (Latest - 2026, requires BYOK)
-          'gpt-5.2', // Latest flagship for coding/agentic tasks
-          'gpt-5.1', // Previous GPT-5 generation
-          'gpt-5.2-codex', // Specialized for long coding tasks
+          // GPT-5.5 Series (Latest - April 2026)
+          'gpt-5.5', // Full retrain, latest flagship
+          // GPT-5.2 Series
+          'gpt-5.2-pro', // Top tier
+          'gpt-5.2', // Flagship
+          // GPT-5 Series
+          'gpt-5.1',
+          'gpt-5',
+          'gpt-5-mini',
+          'gpt-5-nano',
+          // o-Series (Reasoning)
+          'o3-pro',
+          'o3',
+          'o4-mini',
+          'o3-mini',
+          // GPT-4.1 Series (1M Context)
+          'gpt-4.1',
+          'gpt-4.1-mini',
+          'gpt-4.1-nano',
+          // GPT-4o (Legacy)
+          'gpt-4o',
+          'gpt-4o-mini',
         ],
       },
       anthropic: {
         name: 'Anthropic',
         apiKey: '',
-        model: 'claude-sonnet-4.5-20250929', // Latest Claude 4.5 Sonnet
+        model: 'claude-sonnet-4.6', // Latest Claude Sonnet 4.6
         baseUrl: 'https://api.anthropic.com',
         enabled: false,
         availableModels: [
-          // Claude 4.5 Series (Latest - 2025/2026)
-          'claude-opus-4.5-20251101', // Most intelligent, complex tasks
-          'claude-sonnet-4.5-20250929', // Balanced intelligence and speed
-          'claude-haiku-4.5-20251001', // Fast and cost-efficient
+          // Claude 4.6 Series (Latest - 2026)
+          'claude-opus-4.6', // Most intelligent
+          'claude-sonnet-4.6', // Balanced intelligence and speed
+          // Claude 4.5 Series (2025/2026)
+          'claude-opus-4.5-20251101', // Complex tasks
+          'claude-sonnet-4.5-20250929', // Balanced
+          'claude-haiku-4.5', // Fast and cost-efficient
+          // Claude 3.5 Series (Previous)
+          'claude-3-5-sonnet-20241022',
+          'claude-3-5-haiku-20241022',
         ],
       },
       // Google - Direct API access to Gemini models
       google: {
         name: 'Google',
         apiKey: '',
-        model: 'gemini-2.0-flash', // Latest stable Gemini 2.0 Flash model
+        model: 'gemini-2.5-flash-preview-05-20', // Latest Gemini 2.5 Flash
         baseUrl: 'https://generativelanguage.googleapis.com',
         enabled: false,
         availableModels: [
-          // Gemini 3.0 Series (Latest - 2026)
-          'gemini-3-flash-preview', // Latest with advanced reasoning, 1M+ tokens
-
-          // Gemini 2.0 Series (Current stable)
-          'gemini-2.0-flash', // Latest multimodal model
+          // Gemini 2.5 Series (Latest - 2025/2026)
+          'gemini-2.5-pro-preview-05-06', // Best reasoning, coding, multimodal
+          'gemini-2.5-flash-preview-05-20', // Best value, adaptive thinking
+          // Gemini 2.0 Series (Stable)
+          'gemini-2.0-flash', // Multimodal
+          'gemini-2.0-flash-exp', // Experimental
+          // Gemini 1.5 Series (Legacy)
+          'gemini-1.5-pro-latest',
+          'gemini-1.5-flash-latest',
         ],
       },
       deepseek: {
         name: 'DeepSeek',
         apiKey: '',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         baseUrl: 'https://api.deepseek.com/v1',
         enabled: false,
         availableModels: [
-          // DeepSeek Series (Latest - 2026)
-          'deepseek-chat',
-          'deepseek-chat-exp',
+          // DeepSeek V4 Series (Latest - 2026)
+          'deepseek-v4-pro', // Flagship
+          'deepseek-v4-flash', // Fast, efficient
+          // DeepSeek V3 Series (Legacy aliases)
+          'deepseek-chat', // Points to V4 Flash non-thinking (deprecated July 2026)
+          'deepseek-reasoner', // Points to V4 Flash thinking (deprecated July 2026)
         ],
       },
       siliconflow: {
@@ -179,32 +210,50 @@ class LLMConfigManager {
       openrouter: {
         name: 'OpenRouter',
         apiKey: '',
-        model: 'openai/gpt-5',
+        model: 'openai/gpt-5.2',
         baseUrl: 'https://openrouter.ai/api/v1',
         enabled: false,
         availableModels: [
-          // GPT-5 Series (Released Aug 7, 2025) - 400K context window
-          'openai/gpt-5', // Full model: $1.25/$10 per M tokens, advanced reasoning
-          'openai/gpt-5-mini', // Compact: $0.25/$2 per M tokens, lighter reasoning
-          'openai/gpt-5-nano', // Smallest: $0.05/$0.40 per M tokens, ultra-low latency
+          // OpenAI GPT-5.5/GPT-5.2 Series (Latest - 2026)
+          'openai/gpt-5.5', // Latest full retrain
+          'openai/gpt-5.2-pro', // Top tier
+          'openai/gpt-5.2', // Flagship
+          'openai/gpt-5', // $1.25/$10 per M, 400K ctx
+          'openai/gpt-5-mini', // $0.25/$2 per M, 400K ctx
+          'openai/gpt-5-nano', // $0.05/$0.40 per M, 400K ctx
 
-          // GLM 4.5/4.6 Series (Latest from Z.AI)
+          // OpenAI o-Series (Reasoning)
+          'openai/o3-pro',
+          'openai/o3',
+          'openai/o4-mini',
+          'openai/o3-mini',
+
+          // Anthropic Claude Series (Latest - 2026)
+          'anthropic/claude-opus-4.6',
+          'anthropic/claude-sonnet-4.6',
+          'anthropic/claude-sonnet-4.5-20250929',
+          'anthropic/claude-haiku-4.5',
+
+          // Google Gemini Series (Latest - 2025/2026)
+          'google/gemini-2.5-pro-preview-05-06',
+          'google/gemini-2.5-flash-preview-05-20',
+          'google/gemini-2.0-flash',
+
+          // GLM Series (Latest from Z.AI)
           'z-ai/glm-4.6', // GLM-4.6 (Latest flagship)
           'z-ai/glm-4.5', // GLM-4.5 (Previous flagship)
-          'z-ai/glm-4.5-air:free', // GLM-4.5-Air (Free, lightweight)
-          'z-ai/glm-4.5v', // GLM-4.5V (Vision capable)
+          'z-ai/glm-4.5-air:free', // GLM-4.5-Air (Free)
+          'z-ai/glm-4.5v', // GLM-4.5V (Vision)
 
-          // Google Gemini Series
-          'google/gemini-3-flash-preview', // Latest multimodal, competitive pricing
-          'google/gemini-3.0-pro',
-
-          // Anthropic Claude Series
-          'anthropic/claude-sonnet-4.5-20250929',
-          'anthropic/claude-haiku-4.5-20251001',
+          // DeepSeek Series
+          'deepseek/deepseek-v4-pro',
+          'deepseek/deepseek-v4-flash',
+          'deepseek/deepseek-chat',
+          'deepseek/deepseek-reasoner',
         ],
       },
       local: {
-        name: 'Local LLM',
+        name: 'Custom Endpoint',
         apiKey: '',
         model: 'qwen3:8b',
         baseUrl: 'http://localhost:11434/v1',
@@ -221,10 +270,10 @@ class LLMConfigManager {
         description: 'For complex reasoning and analysis tasks',
         preferredProviders: ['anthropic', 'openai', 'google', 'deepseek'],
         preferredModels: {
-          anthropic: 'claude-sonnet-4.5-20250929',
+          anthropic: 'claude-sonnet-4.6',
           openai: 'o3',
-          google: 'gemini-3-flash-preview',
-          deepseek: 'deepseek-chat',
+          google: 'gemini-2.5-pro-preview-05-06',
+          deepseek: 'deepseek-v4-pro',
           siliconflow: 'Qwen/Qwen3.5-39B-A17B',
           openrouter: 'openai/o3',
         },
@@ -236,10 +285,10 @@ class LLMConfigManager {
         preferredProviders: ['openai', 'anthropic', 'siliconflow', 'google'],
         preferredModels: {
           openai: 'gpt-5.2',
-          anthropic: 'claude-sonnet-4.5-20250929',
+          anthropic: 'claude-sonnet-4.6',
           siliconflow: 'Qwen/Qwen3.5-39B-A17B',
-          google: 'gemini-3-flash-preview',
-          deepseek: 'deepseek-chat',
+          google: 'gemini-2.5-flash-preview-05-20',
+          deepseek: 'deepseek-v4-flash',
           openrouter: 'openai/gpt-5.2',
         },
       },
@@ -250,10 +299,10 @@ class LLMConfigManager {
         preferredProviders: ['siliconflow', 'deepseek', 'openai', 'anthropic'],
         preferredModels: {
           siliconflow: 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
-          deepseek: 'deepseek-coder',
-          openai: 'gpt-5.2-codex',
-          anthropic: 'claude-sonnet-4.5-20250929',
-          openrouter: 'openai/gpt-5.2-codex',
+          deepseek: 'deepseek-v4-flash',
+          openai: 'gpt-5.2',
+          anthropic: 'claude-sonnet-4.6',
+          openrouter: 'openai/gpt-5.2',
           local: 'deepseek-r1:70b',
         },
       },
@@ -264,7 +313,7 @@ class LLMConfigManager {
         preferredProviders: ['openai', 'google'],
         preferredModels: {
           openai: 'tts-1',
-          google: 'gemini-2.0-flash',
+          google: 'gemini-2.5-flash-preview-05-20',
         },
       },
       voiceSTT: {
@@ -274,7 +323,7 @@ class LLMConfigManager {
         preferredProviders: ['openai', 'google'],
         preferredModels: {
           openai: 'whisper-1',
-          google: 'gemini-2.0-flash',
+          google: 'gemini-2.5-flash-preview-05-20',
         },
       },
       image: {
@@ -284,8 +333,8 @@ class LLMConfigManager {
         preferredProviders: ['openai', 'google', 'anthropic'],
         preferredModels: {
           openai: 'gpt-4o',
-          google: 'gemini-3-flash-preview',
-          anthropic: 'claude-sonnet-4.5-20250929',
+          google: 'gemini-2.5-pro-preview-05-06',
+          anthropic: 'claude-sonnet-4.6',
         },
       },
       multimodal: {
@@ -294,9 +343,9 @@ class LLMConfigManager {
         description: 'For processing text, images, and other media',
         preferredProviders: ['google', 'openai', 'anthropic'],
         preferredModels: {
-          google: 'gemini-3-flash-preview',
+          google: 'gemini-2.5-pro-preview-05-06',
           openai: 'gpt-4o',
-          anthropic: 'claude-sonnet-4.5-20250929',
+          anthropic: 'claude-sonnet-4.6',
         },
       },
     };
@@ -915,6 +964,41 @@ class LLMConfigManager {
         this.hideConfigModal();
       });
     });
+
+    // Custom Endpoint - Saved Configuration management buttons
+    const saveLocalConfigBtn = document.getElementById('saveLocalConfigBtn');
+    if (saveLocalConfigBtn) {
+      saveLocalConfigBtn.addEventListener('click', () => {
+        this.saveLocalConfig();
+      });
+    }
+    const deleteLocalConfigBtn = document.getElementById('deleteLocalConfigBtn');
+    if (deleteLocalConfigBtn) {
+      deleteLocalConfigBtn.addEventListener('click', () => {
+        this.deleteLocalConfig();
+      });
+    }
+
+    // New configuration button - clears the form for a new entry
+    const newLocalConfigBtn = document.getElementById('newLocalConfigBtn');
+    if (newLocalConfigBtn) {
+      newLocalConfigBtn.addEventListener('click', () => {
+        this.newLocalConfig();
+      });
+    }
+
+    // When selecting a saved config from the dropdown, auto-load it
+    const localSavedConfigsList = document.getElementById('localSavedConfigsList');
+    if (localSavedConfigsList) {
+      localSavedConfigsList.addEventListener('change', () => {
+        if (localSavedConfigsList.value) {
+          this.loadLocalConfig();
+        }
+      });
+    }
+
+    // Load saved configurations list on init
+    this.refreshLocalSavedConfigs();
   }
 
   toggleOptionsDropdown() {
@@ -3016,5 +3100,273 @@ Current context summary:
 
     // Fallback to provider's default model
     return this.providers[providerKey].model;
+  }
+
+  // ==========================================
+  // Custom Endpoint - Saved Models Management
+  // ==========================================
+
+  /**
+   * Get all saved configurations for the Custom Endpoint provider
+   * Returns an object keyed by user-defined name, each value contains:
+   * { baseUrl, model, apiKey, streamingSupport, savedAt }
+   */
+  getLocalSavedConfigs() {
+    try {
+      const data = localStorage.getItem('localCustomConfigs');
+      return data ? JSON.parse(data) : {};
+    } catch (e) {
+      console.error('Error loading local saved configs:', e);
+      return {};
+    }
+  }
+
+  /**
+   * Persist saved configurations to localStorage
+   */
+  persistLocalSavedConfigs(configs) {
+    try {
+      localStorage.setItem('localCustomConfigs', JSON.stringify(configs));
+    } catch (e) {
+      console.error('Error saving local configs:', e);
+      this.showNotification('Error saving configuration: ' + e.message, 'error');
+    }
+  }
+
+  /**
+   * Refresh the saved configurations dropdown and the optgroup in the model select
+   */
+  refreshLocalSavedConfigs() {
+    const configs = this.getLocalSavedConfigs();
+    const names = Object.keys(configs);
+
+    // Update the optgroup inside the main model select
+    const optgroup = document.getElementById('localSavedModelsOptgroup');
+    if (optgroup) {
+      optgroup.innerHTML = '';
+      if (names.length > 0) {
+        optgroup.style.display = '';
+        names.forEach(name => {
+          const option = document.createElement('option');
+          option.value = configs[name].model;
+          option.textContent = `${name} (${configs[name].model})`;
+          option.dataset.configName = name;
+          optgroup.appendChild(option);
+        });
+      } else {
+        optgroup.style.display = 'none';
+      }
+    }
+
+    // Update the saved configurations list dropdown
+    const listSelect = document.getElementById('localSavedConfigsList');
+    if (listSelect) {
+      listSelect.innerHTML = '<option value="">-- Select a saved configuration --</option>';
+      names.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        const cfg = configs[name];
+        const date = cfg.savedAt ? new Date(cfg.savedAt).toLocaleDateString() : '';
+        option.textContent = `${name} - ${cfg.model} @ ${cfg.baseUrl || 'default'}${date ? ` (${date})` : ''}`;
+        listSelect.appendChild(option);
+      });
+    }
+  }
+
+  /**
+   * Collect current Custom Endpoint form values into a config object
+   */
+  collectLocalConfig() {
+    const config = {};
+
+    const nameField = document.getElementById('localConfigName');
+    if (nameField) config.name = nameField.value.trim();
+
+    const endpointField = document.getElementById('localEndpoint');
+    if (endpointField) config.baseUrl = endpointField.value;
+
+    const modelSelect = document.getElementById('localModel');
+    if (modelSelect) {
+      if (modelSelect.value === 'other') {
+        const otherInput = document.getElementById('localModelOther');
+        config.model = otherInput ? otherInput.value : '';
+      } else {
+        config.model = modelSelect.value;
+      }
+    }
+
+    const apiKeyField = document.getElementById('localApiKey');
+    if (apiKeyField) config.apiKey = apiKeyField.value;
+
+    const streamingField = document.getElementById('localStreamingSupport');
+    if (streamingField) config.streamingSupport = streamingField.checked;
+
+    return config;
+  }
+
+  /**
+   * Apply a saved configuration to the Custom Endpoint form fields
+   */
+  applyLocalConfig(config) {
+    const nameField = document.getElementById('localConfigName');
+    if (nameField) nameField.value = config.name || '';
+
+    const endpointField = document.getElementById('localEndpoint');
+    if (endpointField) endpointField.value = config.baseUrl || 'http://localhost:11434/v1';
+
+    const apiKeyField = document.getElementById('localApiKey');
+    if (apiKeyField) apiKeyField.value = config.apiKey || '';
+
+    const streamingField = document.getElementById('localStreamingSupport');
+    if (streamingField) streamingField.checked = !!config.streamingSupport;
+
+    // Set model: try to find it in the dropdown, otherwise use "other"
+    const modelSelect = document.getElementById('localModel');
+    const otherGroup = document.getElementById('localModelOtherGroup');
+    const otherInput = document.getElementById('localModelOther');
+
+    if (modelSelect && config.model) {
+      let found = false;
+      for (let i = 0; i < modelSelect.options.length; i++) {
+        if (modelSelect.options[i].value === config.model) {
+          modelSelect.value = config.model;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        modelSelect.value = 'other';
+        if (otherInput) otherInput.value = config.model;
+      }
+      // Show/hide the "other" input
+      if (otherGroup) {
+        otherGroup.style.display = modelSelect.value === 'other' ? 'block' : 'none';
+      }
+    }
+  }
+
+  /**
+   * Save current Custom Endpoint settings as a named configuration
+   */
+  saveLocalConfig() {
+    const config = this.collectLocalConfig();
+
+    if (!config.model) {
+      this.showNotification('Please select or enter a model name before saving', 'warning');
+      return;
+    }
+
+    const name = config.name;
+    if (!name) {
+      this.showNotification('Please enter a configuration name before saving', 'warning');
+      return;
+    }
+
+    const configs = this.getLocalSavedConfigs();
+
+    // Check for overwrite
+    if (configs[name]) {
+      if (!confirm(`Configuration "${name}" already exists. Overwrite?`)) {
+        return;
+      }
+    }
+
+    config.savedAt = new Date().toISOString();
+    configs[name] = config;
+    this.persistLocalSavedConfigs(configs);
+    this.refreshLocalSavedConfigs();
+
+    // Select the newly saved config in the list
+    const listSelect = document.getElementById('localSavedConfigsList');
+    if (listSelect) listSelect.value = name;
+
+    this.showNotification(`Configuration "${name}" saved`, 'success');
+  }
+
+  /**
+   * Clear the Custom Endpoint form for creating a new configuration
+   */
+  newLocalConfig() {
+    // Clear all form fields
+    const nameField = document.getElementById('localConfigName');
+    if (nameField) nameField.value = '';
+
+    const endpointField = document.getElementById('localEndpoint');
+    if (endpointField) endpointField.value = 'http://localhost:11434/v1';
+
+    const modelSelect = document.getElementById('localModel');
+    if (modelSelect) modelSelect.value = 'qwen3:8b';
+
+    const otherGroup = document.getElementById('localModelOtherGroup');
+    if (otherGroup) otherGroup.style.display = 'none';
+
+    const otherInput = document.getElementById('localModelOther');
+    if (otherInput) otherInput.value = '';
+
+    const apiKeyField = document.getElementById('localApiKey');
+    if (apiKeyField) apiKeyField.value = '';
+
+    const streamingField = document.getElementById('localStreamingSupport');
+    if (streamingField) streamingField.checked = true;
+
+    // Deselect in the saved configs dropdown
+    const listSelect = document.getElementById('localSavedConfigsList');
+    if (listSelect) listSelect.value = '';
+
+    // Focus on the name field for immediate input
+    if (nameField) nameField.focus();
+
+    this.showNotification('Form cleared — enter a name and configure your new endpoint', 'info');
+  }
+
+  /**
+   * Load a selected configuration from the dropdown and apply it
+   */
+  loadLocalConfig() {
+    const listSelect = document.getElementById('localSavedConfigsList');
+    if (!listSelect || !listSelect.value) {
+      this.showNotification('Please select a configuration to load', 'warning');
+      return;
+    }
+
+    const configName = listSelect.value;
+    const configs = this.getLocalSavedConfigs();
+    let config = configs[configName];
+
+    if (!config) {
+      this.showNotification(`Configuration "${configName}" not found`, 'error');
+      return;
+    }
+
+    // Ensure the name field is present (backward compatibility for old data)
+    if (!config.name) {
+      config.name = configName;
+    }
+
+    this.applyLocalConfig(config);
+    this.showNotification(`Configuration "${configName}" loaded`, 'success');
+  }
+
+  /**
+   * Delete a selected configuration from the saved list
+   */
+  deleteLocalConfig() {
+    const listSelect = document.getElementById('localSavedConfigsList');
+    if (!listSelect || !listSelect.value) {
+      this.showNotification('Please select a configuration to delete', 'warning');
+      return;
+    }
+
+    const configName = listSelect.value;
+    if (!confirm(`Delete configuration "${configName}"?`)) {
+      return;
+    }
+
+    const configs = this.getLocalSavedConfigs();
+    delete configs[configName];
+    this.persistLocalSavedConfigs(configs);
+    this.refreshLocalSavedConfigs();
+
+    this.showNotification(`Configuration "${configName}" deleted`, 'success');
   }
 }

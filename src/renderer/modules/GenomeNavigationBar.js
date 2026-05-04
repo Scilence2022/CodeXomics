@@ -467,19 +467,22 @@ class GenomeNavigationBar {
   }
 
   drawResizeHandles(startX, endX) {
-    const handleHeight = this.height;
+    const halfH = this.height / 2;
+    const hw = this.handleWidth;
 
-    // Left handle
+    // Left handle: top half only — easier to distinguish from right handle at small ranges
     this.ctx.fillStyle = '#3b82f6';
-    this.ctx.fillRect(startX - this.handleWidth / 2, 0, this.handleWidth, handleHeight);
-
-    // Right handle
-    this.ctx.fillRect(endX - this.handleWidth / 2, 0, this.handleWidth, handleHeight);
-
-    // Handle highlights for better visibility
+    this.ctx.fillRect(startX - hw / 2, 0, hw, halfH);
+    // Highlight
     this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    this.ctx.fillRect(startX - this.handleWidth / 2 + 1, 2, this.handleWidth - 2, handleHeight - 4);
-    this.ctx.fillRect(endX - this.handleWidth / 2 + 1, 2, this.handleWidth - 2, handleHeight - 4);
+    this.ctx.fillRect(startX - hw / 2 + 1, 2, hw - 2, halfH - 4);
+
+    // Right handle: bottom half only
+    this.ctx.fillStyle = '#3b82f6';
+    this.ctx.fillRect(endX - hw / 2, halfH, hw, halfH);
+    // Highlight
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    this.ctx.fillRect(endX - hw / 2 + 1, halfH + 2, hw - 2, halfH - 4);
   }
 
   /**
@@ -537,21 +540,30 @@ class GenomeNavigationBar {
     this.ctx.fillText(`${length.toLocaleString()} bp`, startX + selectionWidth / 2, 15);
   }
 
-  getInteractionType(x) {
+  getInteractionType(x, y) {
     if (!this.genomeBrowser.currentPosition) return 'none';
 
     const width = this.canvas.width / (window.devicePixelRatio || 1);
     const scale = width / this.sequenceLength;
+    const halfH = this.height / 2;
 
     const range = this.tempRange || this.genomeBrowser.currentPosition;
     const startX = range.start * scale;
     const endX = range.end * scale;
 
-    // Check for resize handles
-    if (Math.abs(x - startX) <= this.handleWidth / 2) {
+    // Check for resize handles (left=top half, right=bottom half)
+    if (Math.abs(x - startX) <= this.handleWidth / 2 && y <= halfH) {
       return 'resize-left';
     }
-    if (Math.abs(x - endX) <= this.handleWidth / 2) {
+    if (Math.abs(x - endX) <= this.handleWidth / 2 && y > halfH) {
+      return 'resize-right';
+    }
+
+    // Fallback: check full-height handles for easier targeting when range is wide enough
+    if (Math.abs(x - startX) <= this.handleWidth / 2 && y > halfH) {
+      return 'resize-left';
+    }
+    if (Math.abs(x - endX) <= this.handleWidth / 2 && y <= halfH) {
       return 'resize-right';
     }
 
@@ -580,7 +592,8 @@ class GenomeNavigationBar {
   handleMouseDown(e) {
     const rect = this.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const interactionType = this.getInteractionType(x);
+    const y = e.clientY - rect.top;
+    const interactionType = this.getInteractionType(x, y);
 
     if (this.selectionMode) {
       // Handle sequence selection mode
@@ -632,6 +645,7 @@ class GenomeNavigationBar {
   handleMouseMove(e) {
     const rect = this.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     if (this.isSelecting && this.selectionStart !== null) {
       // Handle sequence selection mode
@@ -689,7 +703,7 @@ class GenomeNavigationBar {
       this.showRangeTooltip(e, this.tempRange.start, this.tempRange.end);
     } else {
       // Update cursor based on hover state
-      const interactionType = this.getInteractionType(x);
+      const interactionType = this.getInteractionType(x, y);
       this.updateCursor(interactionType);
 
       // Add CSS classes for hover states
@@ -748,12 +762,13 @@ class GenomeNavigationBar {
         this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
         this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
 
-        // Update current tab title with new position (from drag/resize)
+        // Update current tab title with new position (from ruler navigation)
         if (this.genomeBrowser.tabManager) {
           this.genomeBrowser.tabManager.updateCurrentTabPosition(
             this.currentChromosome,
             this.genomeBrowser.currentPosition.start + 1,
-            this.genomeBrowser.currentPosition.end
+            this.genomeBrowser.currentPosition.end,
+            { source: 'ruler' }
           );
         }
 
@@ -775,7 +790,8 @@ class GenomeNavigationBar {
       // Update cursor
       const rect = this.canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
-      const interactionType = this.getInteractionType(x);
+      const y = e.clientY - rect.top;
+      const interactionType = this.getInteractionType(x, y);
       this.updateCursor(interactionType);
 
       this.draw();
@@ -898,9 +914,9 @@ class GenomeNavigationBar {
     this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
     this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
 
-    // Update current tab title with new position (from ruler navigation)
+    // Update current tab title with new position (from ruler click navigation)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd);
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd, { source: 'ruler' });
     }
 
     console.log(`GenomeNavigationBar: Navigated to position ${position}`);
@@ -920,9 +936,9 @@ class GenomeNavigationBar {
     this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
     this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
 
-    // Update current tab title with new position (from zoom)
+    // Update current tab title with new position (from ruler double-click zoom)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd);
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd, { source: 'ruler' });
     }
 
     console.log(`GenomeNavigationBar: Zoomed to position ${position} with range ${zoomRange}`);

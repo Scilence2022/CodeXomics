@@ -7002,7 +7002,7 @@ class BlastManager {
           this.app.genomeBrowser.genomeNavigationBar.update();
         }
         if (this.app.genomeBrowser.tabManager) {
-          this.app.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd);
+          this.app.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd, { source: 'navigation' });
         }
       }
     }

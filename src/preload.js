@@ -183,7 +183,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // MCP Server APIs
   invoke: (channel, ...args) => {
-    const validChannels = ['mcp-server-start', 'mcp-server-stop', 'mcp-server-status'];
+    const validChannels = ['mcp-server-start', 'mcp-server-stop', 'mcp-server-status', 'broadcast-theme-to-pm', 'request-current-theme'];
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);
     }
@@ -271,6 +271,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         'tool-menu-action',
         'mcp-server-status-update',
         'mcp-server-status-changed',
+        'sync-theme',
       ];
 
       if (validChannels.includes(channel)) {

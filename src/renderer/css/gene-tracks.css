@@ -19,7 +19,7 @@
   justify-content: space-between;
   align-items: center;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--border-color);
   padding: 4px 12px;
   /* Reduced from 8px to 4px to minimize vertical spacing */
   font-size: 14px;
@@ -367,7 +367,7 @@ svg {
   position: absolute;
   top: 100%;
   left: 0;
-  background: white;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
@@ -428,7 +428,7 @@ svg {
   position: absolute;
   top: 100%;
   left: 0;
-  background: white;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);

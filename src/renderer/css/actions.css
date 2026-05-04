@@ -58,7 +58,7 @@
 
 /* Action List Container */
 .action-list-container {
-  background: white;
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   overflow: hidden;
@@ -263,7 +263,7 @@
 
 /* Checkpoint Controls */
 .checkpoint-controls {
-  background: white;
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   padding: 20px;
   box-shadow: var(--shadow-md);
@@ -421,7 +421,7 @@
   position: fixed;
   top: 80px;
   right: 20px;
-  background: white;
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: 20px;

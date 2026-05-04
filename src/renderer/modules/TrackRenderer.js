@@ -1061,7 +1061,7 @@ class TrackRenderer {
           this.genomeBrowser.genomeNavigationBar.update();
         }
         if (this.genomeBrowser.tabManager) {
-          this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd);
+          this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd, { source: 'navigation' });
         }
       }
     });
@@ -1443,6 +1443,9 @@ class TrackRenderer {
     // Ensure container is empty or properly set up
     container.innerHTML = '';
 
+    // Clean up any previous genes canvas renderer
+    this.cleanupCanvasRenderer('genes');
+
     // We can instantiate the CanvasGenesRenderer directly
     // It handles its own canvas creation and lifecycle
     const renderer = new CanvasGenesRenderer(
@@ -1455,9 +1458,8 @@ class TrackRenderer {
       this.genomeBrowser
     );
 
-    // Store reference if needed for cleanup, though in this architecture
-    // the renderer is often recreated with the track content
-    // We could store it in a map using the track or container ID if we wanted to reuse it more aggressively
+    // Store reference for cleanup and updates
+    this.canvasRenderers.set('genes', renderer);
   }
 
   /**

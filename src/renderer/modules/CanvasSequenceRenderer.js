@@ -219,6 +219,8 @@ class CanvasSequenceRenderer {
             display: block;
             image-rendering: crisp-edges;
             image-rendering: pixelated;
+            opacity: 0;
+            transition: opacity 0.1s ease-out;
         `;
 
     // Get 2D context with alpha for transparency
@@ -230,16 +232,21 @@ class CanvasSequenceRenderer {
     // Calculate optimal sizing
     this.calculateMetrics();
 
-    // Setup canvas dimensions
-    this.setupCanvas();
-
-    // Render initial sequence
-    this.render();
-
-    // Setup resize observer for responsive updates
+    // Defer setupCanvas + render to next frame so the container has time
+    // to be inserted into the DOM, giving getBoundingClientRect() accurate dimensions.
     this.setupResizeObserver();
 
-    console.log('✅ [CanvasSequenceRenderer] Canvas renderer initialized successfully');
+    // Use requestAnimationFrame to defer initial render until the container
+    // is in the DOM and has proper layout dimensions
+    this._pendingInitialRender = requestAnimationFrame(() => {
+      this._pendingInitialRender = null;
+      this.setupCanvas();
+      this.render();
+      // Fade in the canvas now that it has correct dimensions
+      this.canvas.style.opacity = '1';
+    });
+
+    console.log('✅ [CanvasSequenceRenderer] Canvas renderer initialized successfully (deferred render)');
   }
 
   setupContainer() {
@@ -306,9 +313,31 @@ class CanvasSequenceRenderer {
   }
 
   setupCanvas() {
-    // Get container dimensions
+    // Get container dimensions — try multiple strategies to get accurate width
     const containerRect = this.container.getBoundingClientRect();
-    this.canvasWidth = Math.max(containerRect.width, 800);
+    let width = containerRect.width;
+
+    // If container not in DOM yet (width = 0), try parent chain
+    if (!width || width <= 0) {
+      let parent = this.container.parentElement;
+      while (parent) {
+        const parentRect = parent.getBoundingClientRect();
+        if (parentRect.width > 0) {
+          width = parentRect.width;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+    }
+
+    // Final fallback: estimate from window width minus typical sidebar/padding
+    if (!width || width <= 0) {
+      const sidebarEl = document.querySelector('.sidebar, #sidebar, .side-panel');
+      const sidebarWidth = sidebarEl ? sidebarEl.offsetWidth : 300;
+      width = window.innerWidth - sidebarWidth - 40;
+    }
+
+    this.canvasWidth = Math.max(width, 200);
 
     // Calculate adaptive height
     if (this.options.adaptiveHeight) {
@@ -338,8 +367,8 @@ class CanvasSequenceRenderer {
     this.canvas.style.width = this.canvasWidth + 'px';
     this.canvas.style.height = this.canvasHeight + 'px';
 
-    // Scale context for crisp rendering on high-DPI displays
-    this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio);
+    // Reset transform before applying DPR scale to prevent accumulation
+    this.ctx.setTransform(this.devicePixelRatio, 0, 0, this.devicePixelRatio, 0, 0);
 
     // Update container height to match canvas
     this.container.style.height = this.canvasHeight + 'px';
@@ -659,6 +688,12 @@ class CanvasSequenceRenderer {
   // Clean up resources
   destroy() {
     console.log('🧹 [CanvasSequenceRenderer] Cleaning up Canvas renderer');
+
+    // Cancel pending initial render if any
+    if (this._pendingInitialRender) {
+      cancelAnimationFrame(this._pendingInitialRender);
+      this._pendingInitialRender = null;
+    }
 
     // Remove resize observer/handler
     if (this.resizeObserver) {

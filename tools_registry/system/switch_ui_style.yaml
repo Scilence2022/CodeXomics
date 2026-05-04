@@ -1,0 +1,111 @@
+# switch_ui_style.yaml
+name: 'switch_ui_style'
+version: '1.0.0'
+description: "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 6 preset styles and dark/light mode toggle."
+category: 'system'
+keywords: ['ui style', 'theme', 'style', 'appearance', 'dark mode', 'light mode', 'color scheme', 'visual style', 'switch style', 'change theme', 'change appearance', 'switch theme', 'toggle dark', 'toggle light', 'ui style', 'look and feel']
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    style_name:
+      type: 'string'
+      description: "The UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (dark navy with cyan-blue), 'pastel' (soft pastel colors). If not provided, only toggles dark mode."
+      enum:
+        - 'default'
+        - 'professional'
+        - 'minimal'
+        - 'elegant'
+        - 'midnight'
+        - 'pastel'
+      examples: ['default', 'professional', 'midnight']
+    dark_mode:
+      type: 'string'
+      description: "Set dark/light mode. 'dark' enables dark mode, 'light' enables light mode, 'toggle' switches between them. If not provided, the current mode is preserved when changing style."
+      enum:
+        - 'dark'
+        - 'light'
+        - 'toggle'
+      examples: ['dark', 'light', 'toggle']
+  required: []
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Switch UI style'
+    tool_call: "switch_ui_style(style_name='default')"
+    thought: 'User wants to switch the UI style, applying the default AI Dynamic theme'
+    expected_result: 'UI switches to AI Dynamic style with vibrant blue-purple gradients'
+
+  - user_query: 'Switch to Professional theme'
+    tool_call: "switch_ui_style(style_name='professional')"
+    thought: 'User wants the Professional style with deep teal colors'
+    expected_result: 'UI switches to Professional style with clean, muted scientific tones'
+
+  - user_query: 'Enable dark mode'
+    tool_call: "switch_ui_style(dark_mode='dark')"
+    thought: 'User wants to enable dark mode without changing the current style'
+    expected_result: 'Dark mode is enabled, background colors become dark while preserving the current style'
+
+  - user_query: 'Turn on light mode'
+    tool_call: "switch_ui_style(dark_mode='light')"
+    thought: 'User wants to switch to light mode'
+    expected_result: 'Light mode is enabled with the current style preset'
+
+  - user_query: 'Use Midnight style in dark mode'
+    tool_call: "switch_ui_style(style_name='midnight', dark_mode='dark')"
+    thought: 'User wants both the Midnight style and dark mode'
+    expected_result: 'UI switches to Midnight style with dark navy background and icy cyan-blue accents in dark mode'
+
+  - user_query: 'Toggle dark mode'
+    tool_call: "switch_ui_style(dark_mode='toggle')"
+    thought: 'User wants to toggle between dark and light mode'
+    expected_result: 'Dark mode is toggled - if currently light, switches to dark, and vice versa'
+
+  - user_query: 'Change the appearance to Pastel'
+    tool_call: "switch_ui_style(style_name='pastel')"
+    thought: 'User wants to apply the Pastel style'
+    expected_result: 'UI switches to Pastel style with soft, muted colors'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['toggle_settings_modal']
+  alternatives: ['toggle_settings_modal']
+  prerequisites: []
+  follow_up: ['toggle_settings_modal']
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ['system', 'ui', 'style', 'theme', 'appearance', 'dark mode']
+  complexity: 'simple'
+  usage_pattern: 'moderate'
+
+# Error handling
+error_handling:
+  invalid_style: 'Returns error with list of available styles if style_name is not recognized'
+  no_theme_manager: 'Returns error if ThemeManager is not available'
+  action_failed: 'Returns error if the style switch could not be performed'
+
+# Return value specification
+returns:
+  success: 'boolean - Whether the style switch was performed successfully'
+  message: 'string - Status message describing what happened'
+  style_name: 'string - The style preset that was applied'
+  dark_mode: 'boolean - Whether dark mode is now active'
+  available_styles: 'array - List of available style preset names (returned when style_name is invalid)'

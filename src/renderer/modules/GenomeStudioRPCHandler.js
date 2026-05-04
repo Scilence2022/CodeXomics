@@ -1,5 +1,5 @@
 /**
- * Genome Studio RPC Handler
+ * CodeXomics RPC Handler
  *
  * This module handles RPC calls from the MCP server and provides direct access
  * to CodeXomics functionality without WebSocket overhead.

@@ -409,6 +409,57 @@ CodeXomics supports multiple UI style presets (AI Dynamic, Professional, Minimal
 
 **Critical pitfall – `applyAccentColor` override:** When `GeneralSettingsManager.saveAllSettings()` calls `applySettings()`, it executes `applyAccentColor()` which can override the preset's `--primary-color` with the saved `accentColor` value (defaulting to `#667eea`). The `applyAccentColor()` method includes a guard that skips the override when the current UI Style is not `'default'`. The `applySettings()` method also ensures `applyUIStyle()` runs **after** `applyAccentColor()` so the preset variables always win. When adding a new preset, **do not** remove these safeguards.
 
+### Tab Manager and Navigation Source Pattern
+The tab title system in `src/renderer/modules/TabManager.js` supports two naming modes for genome browser tabs:
+- **Mode 1 (Position-based)**: `Chromosome:start-end` (e.g., `NC_000913:1,234-5,678`)
+- **Mode 2 (Gene-based)**: `Gene: <name>` (e.g., `Gene: lacZ`)
+
+**Navigation Source Tracking:**
+The `updateCurrentTabPosition(chromosome, start, end, options)` method accepts an `options.source` parameter to track where the navigation originated. This enables conditional UI state updates that respect user intent:
+
+```javascript
+// Source values and their semantics:
+tabManager.updateCurrentTabPosition(chr, start, end, { source: 'ruler' });      // Navigation ruler (click/drag/double-click)
+tabManager.updateCurrentTabPosition(chr, start, end, { source: 'zoom' });       // Zoom in/out buttons or mouse wheel
+tabManager.updateCurrentTabPosition(chr, start, end, { source: 'drag' });       // Drag to pan the genome view
+tabManager.updateCurrentTabPosition(chr, start, end, { source: 'navigation' }); // Navigation buttons, search, gene jumps, chromosome switch
+```
+
+**Critical Behavior Rule:**
+- When a tab title is in **Mode 2 (gene name)**, it is **preserved** during `zoom`, `drag`, and `navigation` sources
+- The title **only switches to Mode 1** when `source === 'ruler'` (explicit position-based navigation)
+- This prevents accidental loss of gene context when users zoom or pan while exploring a specific gene
+
+**Implementation Pattern:**
+```javascript
+updateCurrentTabPosition(chromosome, start, end, options = {}) {
+  const { source = 'unknown' } = options;
+  const tabState = this.tabStates.get(this.activeTabId);
+  const isGeneNameMode = tabState && tabState.title && tabState.title.startsWith('Gene: ');
+  
+  // Preserve gene name titles unless navigation comes from ruler
+  if (isGeneNameMode && source !== 'ruler') {
+    // Update position state but keep the gene name title
+    if (tabState) {
+      tabState.currentChromosome = chromosome;
+      tabState.currentPosition = { start, end };
+    }
+    this.updateTabPositionVisualization(this.activeTabId, chromosome, start, end);
+    return; // Title preserved
+  }
+  
+  // Otherwise, update to position-based title (Mode 1)
+  const positionTitle = `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`;
+  this.updateTabTitle(this.activeTabId, positionTitle);
+}
+```
+
+**Critical Rules for Tab Title Updates:**
+- **Rule**: When modifying any navigation, zoom, or drag functionality, you MUST pass the appropriate `source` parameter to `updateCurrentTabPosition()`
+- **Rule**: Never call `updateCurrentTabPosition()` without the options object — always include `{ source: '...' }` for traceability
+- **Rule**: The navigation ruler (`GenomeNavigationBar.js`) is the ONLY interaction that should use `{ source: 'ruler' }` — this is the explicit position-based navigation intent
+- **Rule**: When adding new navigation methods, determine the appropriate source based on user intent: position-focused → `'ruler'`, exploration-focused → preserve current mode
+
 ## 4. Coding Conventions
 1. **Vanilla JavaScript**: The project defaults to vanilla JavaScript (ES6+). It does not use TypeScript or React. Utilize standard ES6 classes and modular imports. Use native DOM manipulation or D3.js for visual updates.
 2. **Robust IPC and Error Handling**: When making IPC calls or network requests, always wrap in `try/catch`. Bubble errors up sequentially so the UI can provide user-facing error dialogs. Do not let promises fail silently.
