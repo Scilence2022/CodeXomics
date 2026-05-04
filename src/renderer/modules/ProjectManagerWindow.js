@@ -391,7 +391,7 @@ class ProjectManagerWindow {
 
     if (this.projects.size === 0) {
       html = `
-                <div style="padding: 20px; text-align: center; color: #6c757d;">
+                <div style="padding: 20px; text-align: center; color: var(--pm-text-secondary);">
                     <div style="font-size: 2em; margin-bottom: 10px;">📂</div>
                     <div>No projects found</div>
                     <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()" style="margin-top: 10px; font-size: 12px;">
@@ -505,7 +505,7 @@ class ProjectManagerWindow {
         // 显示文件
         folderFiles.forEach(file => {
           const fileType = this.detectFileType(file.name);
-          const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+          const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: 'var(--pm-text-secondary)' };
           const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
           const fileIndent = (level + 1) * baseIndent;
 
@@ -527,7 +527,7 @@ class ProjectManagerWindow {
                             <div class="tree-item-content" 
                                  onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
                                  ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')">
-                                <div class="tree-icon file-icon" style="background-color: ${typeConfig.color}; color: white; font-size: ${fontSize}; width: ${iconSize}; height: ${iconSize}; border-radius: 3px; display: flex; align-items: center; justify-content: center;">${typeConfig.icon}</div>
+                                <div class="tree-icon file-icon" style="background-color: ${typeConfig.color}; color: var(--pm-on-accent); font-size: ${fontSize}; width: ${iconSize}; height: ${iconSize}; border-radius: 3px; display: flex; align-items: center; justify-content: center;">${typeConfig.icon}</div>
                                 <span class="tree-label" title="${file.name}">${file.name}</span>
                                 <div class="tree-file-size">${this.formatFileSize(file.size || 0)}</div>
                                 <div class="tree-actions">
@@ -985,7 +985,7 @@ class ProjectManagerWindow {
    */
   generateFileCardHTML(file) {
     const fileType = this.detectFileType(file.name);
-    const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+    const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: 'var(--pm-text-secondary)' };
     const isSelected = this.selectedFiles.has(file.id);
     const isDeleted = file.fileExists === false; // Check if file was marked as deleted
 
@@ -995,12 +995,12 @@ class ProjectManagerWindow {
                  onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
                  ondblclick="projectManagerWindow.showFilePreview('${file.id}')"
                  oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')">
-                <div class="file-icon" style="background-color: ${isDeleted ? '#dc3545' : typeConfig.color}">
+                <div class="file-icon" style="background-color: ${isDeleted ? 'var(--pm-danger)' : typeConfig.color}">
                     ${isDeleted ? '⚠️' : typeConfig.icon}
                 </div>
                 <div class="file-info">
                     <div class="file-name" title="${file.name}${isDeleted ? ' (File not found on disk)' : ''}">
-                        ${file.name}${isDeleted ? ' <span style="color: #dc3545; font-size: 0.8em;">(Missing)</span>' : ''}
+                        ${file.name}${isDeleted ? ' <span style="color: var(--pm-danger); font-size: 0.8em;">(Missing)</span>' : ''}
                     </div>
                     <div class="file-details">
                         <span class="file-size">${this.formatFileSize(file.size)}</span>
@@ -1976,8 +1976,8 @@ class ProjectManagerWindow {
             top: 20px;
             right: 20px;
             padding: 12px 20px;
-            background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
-            color: white;
+            background: ${type === 'error' ? 'var(--pm-danger)' : type === 'success' ? 'var(--pm-success)' : 'var(--pm-active)'};
+            color: var(--pm-on-accent);
             border-radius: 6px;
             z-index: 10000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -2521,7 +2521,7 @@ class ProjectManagerWindow {
     let html = '';
     filteredFiles.forEach(file => {
       const fileType = this.detectFileType(file.name);
-      const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+      const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: 'var(--pm-text-secondary)' };
       const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
 
       html += `
@@ -2593,7 +2593,7 @@ class ProjectManagerWindow {
 
     filteredFiles.forEach(file => {
       const fileType = this.detectFileType(file.name);
-      const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+      const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: 'var(--pm-text-secondary)' };
       const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
       const isDeleted = file.fileExists === false;
 
@@ -2605,7 +2605,7 @@ class ProjectManagerWindow {
                     oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
                     data-file-id="${file.id}">
                     <td>
-                        <div class="file-icon-small" style="background-color: ${isDeleted ? '#dc3545' : typeConfig.color}">
+                        <div class="file-icon-small" style="background-color: ${isDeleted ? 'var(--pm-danger)' : typeConfig.color}">
                             ${isDeleted ? '⚠️' : typeConfig.icon}
                         </div>
                     </td>

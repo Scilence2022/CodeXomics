@@ -4278,6 +4278,36 @@ ipcMain.handle('send-to-main-window', async (event, channel, data) => {
   }
 });
 
+// Theme sync: forward theme data from main renderer to Project Manager window
+ipcMain.handle('broadcast-theme-to-pm', async (event, themeData) => {
+  try {
+    const pmWindow = BrowserWindow.getAllWindows().find(
+      win => win.getTitle().includes('Project Manager') && !win.isDestroyed()
+    );
+    if (pmWindow) {
+      pmWindow.webContents.send('sync-theme', themeData);
+      return { success: true };
+    }
+    return { success: false, error: 'PM window not found' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Theme sync: PM window requests current theme on load
+ipcMain.handle('request-current-theme', async () => {
+  try {
+    // Forward the request to main window, which has ThemeManager
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('request-theme-for-pm');
+      return { success: true };
+    }
+    return { success: false, error: 'Main window not found' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle opening debug tools
 ipcMain.handle('openDebugTool', async (event, fileName) => {
   try {
@@ -6857,6 +6887,13 @@ function createProjectManagerWindow() {
         console.log('Setting Project Manager menu after window ready');
         Menu.setApplicationMenu(projectManagerMenu);
       }, 500);
+
+      // Request current theme from main window and forward to PM
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('request-theme-for-pm');
+        }
+      }, 300);
     });
 
     // Handle window closed - revert to main menu

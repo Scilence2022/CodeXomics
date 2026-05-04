@@ -333,7 +333,7 @@ class ProjectManager {
     let html = '';
 
     if (this.projects.size === 0) {
-      html = '<div style="padding: 20px; text-align: center; color: #6c757d;">No projects found</div>';
+      html = '<div style="padding: 20px; text-align: center; color: var(--pm-text-secondary);">No projects found</div>';
     } else {
       this.projects.forEach((project, projectId) => {
         const isActive = this.currentProject && this.currentProject.id === projectId;
@@ -1600,7 +1600,7 @@ class ProjectManager {
     const hasChanges = this.currentProject && this.currentProject.hasUnsavedChanges;
 
     if (hasChanges) {
-      saveBtn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)';
+      saveBtn.style.background = 'var(--pm-save-unsaved-gradient)';
       saveBtn.style.boxShadow = '0 4px 15px rgba(255, 107, 107, 0.4)';
       saveBtn.innerHTML = saveBtn.innerHTML.includes('💾') ? '💾 Save *' : 'Save *';
       saveBtn.title = 'Save project - You have unsaved changes';
@@ -1608,7 +1608,7 @@ class ProjectManager {
       // 添加脉冲动画
       saveBtn.style.animation = 'pulse 2s infinite';
     } else {
-      saveBtn.style.background = 'linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%)';
+      saveBtn.style.background = 'var(--pm-save-saved-gradient)';
       saveBtn.style.boxShadow = '0 4px 15px rgba(54, 209, 220, 0.4)';
       saveBtn.innerHTML = saveBtn.innerHTML.includes('💾') ? '💾 Save' : 'Save';
       saveBtn.title = 'Save current project';

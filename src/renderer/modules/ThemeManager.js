@@ -688,6 +688,11 @@ class ThemeManager {
         root.style.setProperty(key, value);
       });
     }
+
+    // Dispatch event so other windows (e.g., Project Manager) can sync
+    window.dispatchEvent(new CustomEvent('uiStyleChanged', {
+      detail: { style: this.currentStyle, preset: preset, isDark: isDark }
+    }));
   }
 
   /**

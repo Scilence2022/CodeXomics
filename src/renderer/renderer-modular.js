@@ -3411,6 +3411,44 @@ class GenomeBrowser {
         this.showNotification(`${title}: ${message}`, type);
       }
     });
+
+    // Theme sync: respond to PM window requesting current theme
+    ipcRenderer.on('request-theme-for-pm', () => {
+      const themeManager = window.themeManager;
+      if (themeManager) {
+        const style = themeManager.getCurrentStyle();
+        const preset = themeManager.stylePresets[style];
+        const isDark = themeManager.isDarkMode();
+        const themeData = {
+          style: style,
+          variables: preset.variables,
+          darkVariables: preset.darkVariables || {},
+          isDark: isDark,
+        };
+        // Send to PM window via IPC (use ipcRenderer directly - main window has nodeIntegration:true)
+        ipcRenderer.invoke('broadcast-theme-to-pm', themeData).catch(err => {
+          console.warn('[ThemeSync] Failed to broadcast theme to PM:', err.message);
+        });
+      }
+    });
+
+    // Listen for style changes and broadcast to PM window
+    window.addEventListener('uiStyleChanged', (event) => {
+      const { style, preset } = event.detail;
+      const themeManager = window.themeManager;
+      // Prefer isDark from event detail (set by applyDarkModeOverrides), fallback to ThemeManager
+      const isDark = event.detail.isDark !== undefined ? event.detail.isDark : (themeManager ? themeManager.isDarkMode() : false);
+      const themeData = {
+        style: style,
+        variables: preset.variables,
+        darkVariables: preset.darkVariables || {},
+        isDark: isDark,
+      };
+      // Use ipcRenderer directly - main window has nodeIntegration:true, no preload.js
+      ipcRenderer.invoke('broadcast-theme-to-pm', themeData).catch(err => {
+        console.warn('[ThemeSync] Failed to broadcast theme to PM:', err.message);
+      });
+    });
   }
 
   // Refresh the current view (used by TabManager for state restoration)
