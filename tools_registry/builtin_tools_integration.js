@@ -842,7 +842,7 @@ class BuiltInToolsIntegration {
     });
 
     this.builtInToolsMap.set('switch_ui_style', {
-      method: 'switchUIStyle',
+      method: 'switchUiStyle',
       category: 'system',
       type: 'built-in',
       priority: 1,

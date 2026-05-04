@@ -37,6 +37,8 @@ class FunctionCallsOrganizer {
           'switch_to_tab',
           'close_tab',
           'set_working_directory',
+          'toggle_settings_modal',
+          'switch_ui_style',
         ],
       },
 

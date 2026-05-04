@@ -7563,7 +7563,7 @@ ${coreTools}
    * Switch UI style / theme
    * Changes the application's visual style preset and/or dark/light mode
    */
-  async switchUIStyle(parameters = {}) {
+  async switchUiStyle(parameters = {}) {
     const { style_name: styleName, dark_mode: darkMode } = parameters;
     const themeManager = window.themeManager;
     const generalSettingsManager = window.generalSettingsManager;
@@ -7645,7 +7645,7 @@ ${coreTools}
         dark_mode: themeManager.isDarkMode(),
       };
     } catch (error) {
-      console.error(`[ChatManager] switchUIStyle error:`, error);
+      console.error(`[ChatManager] switchUiStyle error:`, error);
       return {
         success: false,
         error: error.message,
