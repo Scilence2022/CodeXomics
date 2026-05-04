@@ -1,4 +1,4 @@
-# CodeXomics AI Assistant Guidelines (`Agents.md`)
+# CodeXomics AI Assistant Guidelines (`Agents.md`) - v0.6beta
 
 This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor, Gemini, Claude) operating within the CodeXomics repository. It provides critical context, structural rules, and architectural guidelines necessary for making accurate, stable modifications to the codebase. Provide this file as context when bootstrapping a new session.
 

@@ -62,7 +62,25 @@ class LLMBenchmarkFramework {
     this.registerTestSuite('manual_suite', new ManualSuite());
     this.registerTestSuite('manual_complex', new ManualComplexSuite());
 
+    // Update suite names with actual test counts
+    this.updateSuiteNamesWithCounts();
+
     console.log(`✅ Initialized ${this.testSuites.size} test suites with ${this.getTotalTestCount()} total tests`);
+  }
+
+  /**
+   * Update suite names to include actual test counts
+   * Strips any existing count suffix before appending the current count
+   */
+  updateSuiteNamesWithCounts() {
+    for (const [id, suite] of this.testSuites.entries()) {
+      if (suite.suiteName) {
+        const count = suite.getTestCount();
+        // Remove any existing count suffix like " (122)" or " (4)"
+        const baseName = suite.suiteName.replace(/\s*\(\d+\)\s*$/, '').trim();
+        suite.suiteName = `${baseName} (${count})`;
+      }
+    }
   }
 
   /**

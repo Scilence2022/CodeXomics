@@ -5,7 +5,7 @@
 class ManualSuite extends BenchmarkEvaluatorBase {
   constructor() {
     super();
-    this.suiteName = 'Manual Tests (20)'; // Updated count after Phase 1-3 coverage expansion
+    this.suiteName = 'Manual Tests'; // Count will be added dynamically
     this.suiteId = 'manual_suite';
     this.description = 'Manual evaluation tests - Genomic operations requiring human verification';
     this.framework = null;

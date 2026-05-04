@@ -5,6 +5,15 @@ All notable changes to CodeXomics will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0-beta] - 2026-05-04 - BETA UPDATE
+
+**🔧 Milestone: Version Update to v0.6beta**
+
+### ✅ Changes
+
+- Updated version to v0.6beta
+- Updated Agents.md to v0.6beta
+
 ## [0.533.0-beta] - 2026-04-09 - BETA UPDATE
 
 **🎨 Milestone: Multi-Preset UI Style System**

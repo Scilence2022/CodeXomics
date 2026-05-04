@@ -4,15 +4,15 @@
 
 ### AI-Powered Bioinformatics Analysis Platform
 
-[![Version](https://img.shields.io/badge/version-0.533beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![Version](https://img.shields.io/badge/version-0.6beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
-[![Beta](https://img.shields.io/badge/Latest%20Beta-v0.533beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.533beta)
+[![Beta](https://img.shields.io/badge/Latest%20Beta-v0.6beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.6beta)
 
 A cross-platform desktop bioinformatics platform built with Electron. Features a **multi-agent AI system**, a **dynamic tool registry**, MCP server integration, an extensible plugin architecture, **multi-preset UI theming**, and comprehensive genome visualization for exploring genomic, proteomic, and other omics data.
 
-**[Latest Beta — v0.533beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.533beta)**
+**[Latest Beta — v0.6beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.6beta)**
 
 [Features](#key-features) •
 [Installation](#installation) •

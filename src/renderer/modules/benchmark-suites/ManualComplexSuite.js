@@ -5,7 +5,7 @@
 class ManualComplexSuite extends BenchmarkEvaluatorBase {
   constructor() {
     super();
-    this.suiteName = 'Manual Complex Tests (15)'; // Updated count after Phase 1-3 coverage expansion
+    this.suiteName = 'Manual Complex Tests'; // Count will be added dynamically
     this.suiteId = 'manual_complex';
     this.description = 'Complex tests with manual evaluation - Advanced genomic workflows requiring human verification';
     this.framework = null;

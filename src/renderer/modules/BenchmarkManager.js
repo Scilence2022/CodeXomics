@@ -254,6 +254,39 @@ class BenchmarkManager {
     // Create custom benchmark dialog
     const dialog = this.createCustomBenchmarkDialog();
     dialog.style.display = 'block';
+    
+    // Update test counts dynamically
+    this.updateDialogSuiteCounts();
+  }
+
+  /**
+   * Update dialog suite counts dynamically from framework
+   */
+  updateDialogSuiteCounts() {
+    if (!this.framework || !this.framework.testSuites || this.framework.testSuites.size === 0) {
+      // Retry after suites are loaded
+      setTimeout(() => this.updateDialogSuiteCounts(), 500);
+      return;
+    }
+
+    const suiteCountMap = {
+      'automatic_simple': 'dialog-count-automatic_simple',
+      'automatic_complex': 'dialog-count-automatic_complex',
+      'manual_suite': 'dialog-count-manual_suite',
+      'manual_complex': 'dialog-count-manual_complex',
+    };
+
+    for (const [suiteId, elementId] of Object.entries(suiteCountMap)) {
+      const suite = this.framework.testSuites.get(suiteId);
+      if (suite) {
+        const count = suite.getTestCount();
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.textContent = `(${count} tests)`;
+          console.log(`📋 [Dialog] Updated ${suiteId} count to ${count}`);
+        }
+      }
+    }
   }
 
   /**
@@ -342,10 +375,10 @@ class BenchmarkManager {
                         <div class="config-section">
                             <h3>Test Suites</h3>
                             <div class="suite-checkboxes">
-                                <label><input type="checkbox" value="automatic_simple" checked> ⚙️ Automatic Simple Tests (122 tests)</label>
-                                <label><input type="checkbox" value="automatic_complex" checked> 🔧 Automatic Complex Tests (4 tests)</label>
-                                <label><input type="checkbox" value="manual_simple"> 👥 Manual Tests (20 tests)</label>
-                                <label><input type="checkbox" value="manual_complex"> 🧠 Manual Complex Tests (15 tests)</label>
+                                <label><input type="checkbox" value="automatic_simple" checked> ⚙️ Automatic Simple Tests <span id="dialog-count-automatic_simple">(... tests)</span></label>
+                                <label><input type="checkbox" value="automatic_complex" checked> 🔧 Automatic Complex Tests <span id="dialog-count-automatic_complex">(... tests)</span></label>
+                                <label><input type="checkbox" value="manual_suite"> 👥 Manual Tests <span id="dialog-count-manual_suite">(... tests)</span></label>
+                                <label><input type="checkbox" value="manual_complex"> 🧠 Manual Complex Tests <span id="dialog-count-manual_complex">(... tests)</span></label>
                             </div>
                         </div>
                         <div class="config-section">
