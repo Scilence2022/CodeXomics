@@ -532,14 +532,16 @@ class ManualSuite extends BenchmarkEvaluatorBase {
       toolResults = [actualResult];
     }
     // Check if executionData has functionCalls array
-    else if (testResult.llmInteractionData?.response?.actualExecutionData?.functionCalls) {
-      const functionCalls = testResult.llmInteractionData.response.actualExecutionData.functionCalls;
+    // NOTE: actualExecutionData was removed for memory optimization;
+    // use interactionData.response.functionCalls instead
+    else if (testResult.llmInteractionData?.response?.functionCalls) {
+      const functionCalls = testResult.llmInteractionData.response.functionCalls;
       toolResults = functionCalls.map(call => ({
         tool_name: call.tool_name,
         parameters: call.parameters,
         round: call.round,
       }));
-      console.log(`🔧 [ManualSuite] Extracted ${toolResults.length} tools from executionData`);
+      console.log(`🔧 [ManualSuite] Extracted ${toolResults.length} tools from functionCalls`);
     }
     // Fallback: check detailedLogs for round information
     else if (testResult.detailedLogs?.toolCallHistory?.toolCallRounds) {

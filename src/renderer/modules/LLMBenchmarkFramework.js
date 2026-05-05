@@ -16,12 +16,12 @@ class LLMBenchmarkFramework {
     this.statisticsEngine = new BenchmarkStatistics();
     this.reportGenerator = new BenchmarkReportGenerator();
 
-    // MEMORY SAFETY: Add memory monitoring
+    // MEMORY OPTIMIZATION: Add memory monitoring with tighter thresholds
     this.memoryMonitor = {
-      maxMemoryUsage: 500 * 1024 * 1024, // 500MB limit
-      warningThreshold: 400 * 1024 * 1024, // 400MB warning
+      maxMemoryUsage: 500 * 1024 * 1024, // 500MB limit (unchanged)
+      warningThreshold: 300 * 1024 * 1024, // 300MB warning (reduced from 400MB for earlier detection)
       lastCheck: Date.now(),
-      checkInterval: 5000, // Check every 5 seconds
+      checkInterval: 10000, // Check every 10 seconds (increased from 5s — less overhead)
       enabled: true,
     };
 
@@ -208,6 +208,14 @@ class LLMBenchmarkFramework {
         if (typeof this.chatManager.clearExecutionData === 'function') {
           this.chatManager.clearExecutionData();
         }
+        // MEMORY OPTIMIZATION: Clear Evolution events accumulated from previous runs
+        if (this.chatManager.currentConversationData && this.chatManager.currentConversationData.events) {
+          this.chatManager.currentConversationData.events.length = 0;
+        }
+        // MEMORY OPTIMIZATION: Clear stale thinking process DOM elements
+        try {
+          document.querySelectorAll('[id^="thinkingProcess_"]').forEach(el => el.remove());
+        } catch (e) { /* ignore */ }
       }
 
       // Store for progress calculation
@@ -485,13 +493,44 @@ class LLMBenchmarkFramework {
         if (typeof this.chatManager.clearExecutionData === 'function') {
           this.chatManager.clearExecutionData();
         }
+        // MEMORY OPTIMIZATION: Clear Evolution data that accumulates per test.
+        // Each addThinkingMessage() call adds to currentConversationData.events,
+        // which is never cleared by clearChat() and grows unboundedly.
+        if (this.chatManager.currentConversationData && this.chatManager.currentConversationData.events) {
+          this.chatManager.currentConversationData.events.length = 0;
+          console.log(`🧹 [Benchmark] Cleared Evolution events before test ${test.id}`);
+        }
+        // MEMORY OPTIMIZATION: Remove stale thinking process DOM elements.
+        // addThinkingMessage() creates DOM nodes that are never cleaned up between tests.
+        try {
+          const staleThinking = document.querySelectorAll('[id^="thinkingProcess_"]');
+          staleThinking.forEach(el => el.remove());
+          if (staleThinking.length > 0) {
+            console.log(`🧹 [Benchmark] Removed ${staleThinking.length} stale thinking DOM elements before test ${test.id}`);
+          }
+        } catch (domError) {
+          // Ignore DOM errors in non-browser contexts
+        }
       }
 
       // Display test progress
       this.displayTestProgress(test, i + 1, filteredTests.length);
 
       const testResult = await this.runSingleTest(test, suiteId);
-      results.testResults.push(testResult);
+
+      // MEMORY OPTIMIZATION: Slim down the test result before storing it in the array.
+      // The full llmInteractionData can be 5-15MB per test (logs, prompts, execution data).
+      // After evaluation, we only need the scoring-relevant fields in the stored result.
+      const slimResult = this.slimDownTestResult(testResult);
+      results.testResults.push(slimResult);
+
+      // MEMORY OPTIMIZATION: Clear the full result reference immediately
+      // This allows GC to reclaim the large llmInteractionData sooner
+      if (testResult !== slimResult) {
+        testResult.llmInteractionData = null;
+        testResult.detailedLogs = null;
+        testResult.llmResponse = null;
+      }
 
       // Update test progress AFTER completion with result
       if (options.onTestProgress) {
@@ -506,10 +545,13 @@ class LLMBenchmarkFramework {
         options.onTestProgress(overallTestProgress, test.id, testResult, suiteId);
       }
 
-      // Memory management: Force garbage collection every 5 tests
-      if (i % 5 === 0 && global.gc) {
-        global.gc();
-        console.log(`🧹 Memory cleanup performed after test ${i + 1}`);
+      // MEMORY OPTIMIZATION: Force garbage collection every 5 tests AND check memory
+      if (i % 5 === 0) {
+        this.checkMemoryUsage();
+        if (global.gc) {
+          global.gc();
+          console.log(`🧹 Memory cleanup performed after test ${i + 1}`);
+        }
       }
 
       // Add configurable delay every 10 tests to prevent rate limiting
@@ -1271,13 +1313,22 @@ class LLMBenchmarkFramework {
         interactionData.request.model = 'unknown';
       }
 
-      // Capture system prompt and context
-      interactionData.request.systemPrompt = await this.captureSystemPrompt();
+      // MEMORY OPTIMIZATION: Truncate system prompt to preview instead of storing full text.
+      // The system prompt can be 50-200KB (includes all tool registry definitions).
+      // For diagnostics we only need the first few KB to verify what was sent.
+      const MAX_SYSTEM_PROMPT_STORE = 2048; // 2KB preview
+      const capturedSystemPrompt = await this.captureSystemPrompt();
+      interactionData.request.systemPrompt =
+        capturedSystemPrompt && capturedSystemPrompt.length > MAX_SYSTEM_PROMPT_STORE
+          ? capturedSystemPrompt.substring(0, MAX_SYSTEM_PROMPT_STORE) + `...[TRUNCATED: ${capturedSystemPrompt.length} chars total]`
+          : capturedSystemPrompt;
+      interactionData.request.systemPromptLength = capturedSystemPrompt ? capturedSystemPrompt.length : 0;
       interactionData.request.contextLength = this.getChatContextLength();
       interactionData.request.availableTools = this.getAvailableTools();
 
-      // Build full prompt for logging
-      interactionData.request.fullPrompt = await this.buildFullPrompt(instruction);
+      // MEMORY OPTIMIZATION: Removed fullPrompt storage — it's just systemPrompt + instruction,
+      // both of which are already stored separately. Building and storing it again is pure duplication.
+      interactionData.request.fullPrompt = null;
 
       // Display detailed test process as a simulated tester
       this.displayTestProcess(instruction, options);
@@ -1286,11 +1337,12 @@ class LLMBenchmarkFramework {
       this.displayLLMProcessingDetails(instruction, options);
 
       // ENHANCED: Capture detailed LLM interaction by hooking into ChatManager's internal logging
-      // MEMORY SAFETY: Add limits to prevent memory crashes
+      // MEMORY OPTIMIZATION: Drastically reduced limits to prevent 2GB+ memory bloat
+      // Root cause: 160 tests × 1000 logs × 10KB/log + duplicated args = ~2.3GB
       const originalConsoleLog = console.log;
       const capturedLogs = [];
-      const MAX_CAPTURED_LOGS = 1000; // Limit to prevent memory overflow
-      const MAX_LOG_SIZE = 10000; // Max characters per log entry
+      const MAX_CAPTURED_LOGS = 200; // Reduced from 1000 — extracted summaries replace raw logs
+      const MAX_LOG_SIZE = 1000; // Reduced from 10000 — only need key info for extraction
 
       // Store captured logs in instance for access by other methods
       this.capturedLogs = capturedLogs;
@@ -1309,8 +1361,8 @@ class LLMBenchmarkFramework {
             if (typeof arg === 'object' && arg !== null) {
               try {
                 // Use safe JSON stringify to avoid circular references
-                const jsonString = JSON.stringify(arg, this.getCircularReplacer(), 2);
-                // MEMORY SAFETY: Truncate large objects
+                const jsonString = JSON.stringify(arg, this.getCircularReplacer());
+                // MEMORY OPTIMIZATION: Truncate aggressively
                 return jsonString.length > MAX_LOG_SIZE
                   ? jsonString.substring(0, MAX_LOG_SIZE) + '...[TRUNCATED]'
                   : jsonString;
@@ -1319,18 +1371,20 @@ class LLMBenchmarkFramework {
               }
             }
             const stringArg = String(arg);
-            // MEMORY SAFETY: Truncate large strings
+            // MEMORY OPTIMIZATION: Truncate aggressively
             return stringArg.length > MAX_LOG_SIZE
               ? stringArg.substring(0, MAX_LOG_SIZE) + '...[TRUNCATED]'
               : stringArg;
           })
           .join(' ');
 
+        // MEMORY OPTIMIZATION: Removed `args: this.sanitizeArgsForStorage(args)` —
+        // the stringified `message` field already contains all the data; storing
+        // parsed args again doubles memory per log entry with zero additional value.
         capturedLogs.push({
           timestamp: new Date().toISOString(),
           level: 'log',
           message: logString,
-          args: this.sanitizeArgsForStorage(args),
         });
 
         // Still call original console.log
@@ -1398,9 +1452,16 @@ class LLMBenchmarkFramework {
         // Display detailed response processing
         this.displayResponseProcessing(response, interactionData);
 
-        // Capture detailed response data
-        interactionData.response.rawResponse = response;
-        interactionData.response.processedResponse = this.processResponse(response);
+        // MEMORY OPTIMIZATION: Truncate large response data instead of storing full copies
+        // rawResponse and processedResponse are often 10-50KB each, and both contain
+        // essentially the same content. Store a truncated preview + length for diagnostics.
+        const MAX_RESPONSE_STORE_SIZE = 2048; // 2KB preview is sufficient for diagnostics
+        interactionData.response.rawResponse =
+          response && response.length > MAX_RESPONSE_STORE_SIZE
+            ? response.substring(0, MAX_RESPONSE_STORE_SIZE) + `...[TRUNCATED: ${response.length} chars total]`
+            : response;
+        interactionData.response.rawResponseLength = response ? response.length : 0;
+        interactionData.response.processedResponse = null; // Removed — redundant with rawResponse
 
         // ENHANCED: Get actual function call execution data from ChatManager
         const executionData = this.chatManager.getLastExecutionData();
@@ -1414,11 +1475,25 @@ class LLMBenchmarkFramework {
             detectionMethod: 'actual_execution',
           }));
 
+          // MEMORY OPTIMIZATION: Store only summary data, not the full executionData object.
+          // The full executionData can contain large tool output (e.g. genome sequences)
+          // which is already available via ChatManager.getLastExecutionData() if needed.
           interactionData.response.functionCalls = functionCallsWithConfidence;
-          interactionData.response.toolExecutions = executionData.toolResults || [];
+          // Store only summary of tool results (success/failure), not full output
+          interactionData.response.toolExecutions = (executionData.toolResults || []).map(r => ({
+            tool_name: r.tool_name,
+            success: r.success,
+            executionTime: r.executionTime,
+            // Truncate large result data to first 200 chars
+            resultPreview: typeof r.result === 'string'
+              ? r.result.substring(0, 200) + (r.result.length > 200 ? '...[TRUNCATED]' : '')
+              : (r.result ? JSON.stringify(r.result).substring(0, 200) + '...[TRUNCATED]' : null),
+          }));
           interactionData.response.executionRounds = executionData.rounds || 0;
           interactionData.response.totalExecutionTime = executionData.totalExecutionTime || 0;
-          interactionData.response.actualExecutionData = executionData;
+          // Removed: interactionData.response.actualExecutionData = executionData;
+          // This was storing the entire execution object (including full tool output) per test.
+          // If the full data is needed later, it can be reconstructed from the summary.
 
           // Display detailed tool execution information using addThinkingMessage
           if (executionData.functionCalls && executionData.functionCalls.length > 0) {
@@ -1469,12 +1544,15 @@ class LLMBenchmarkFramework {
           );
         }
 
-        // CRITICAL ENHANCEMENT: Capture all the detailed ChatManager logs
-        interactionData.detailedLogs = {
+        // MEMORY OPTIMIZATION: Extract structured data from logs, then DISCARD raw logs.
+        // Previously, `logs: capturedLogs` stored the full array AND all 6 extracted sub-objects
+        // contained overlapping data — effectively 7× duplication of the same information.
+        // Now we extract what we need and null out the raw array.
+        const extractedData = {
           totalLogs: capturedLogs.length,
-          logs: capturedLogs,
+          logs: null, // Raw logs discarded after extraction — use extracted fields instead
 
-          // Extract specific information from logs
+          // Extract specific information from logs (these ARE the useful data)
           llmRawResponse: this.extractLLMRawResponseFromLogs(capturedLogs),
           thinkingProcess: this.extractThinkingProcessFromLogs(capturedLogs),
           toolCallHistory: this.extractToolCallHistoryFromLogs(capturedLogs),
@@ -1482,6 +1560,12 @@ class LLMBenchmarkFramework {
           parseDebugInfo: this.extractParseDebugInfoFromLogs(capturedLogs),
           functionCallRounds: this.extractFunctionCallRoundsFromLogs(capturedLogs),
         };
+
+        interactionData.detailedLogs = extractedData;
+
+        // Clear capturedLogs immediately — data has been extracted into detailedLogs
+        capturedLogs.length = 0;
+        this.capturedLogs = null;
 
         // SONG'S CRITICAL FIX: If toolCallHistory has no tools but executionData has function calls,
         // construct toolCallHistory from executionData directly
@@ -1581,7 +1665,7 @@ class LLMBenchmarkFramework {
             `📉 Interaction Data Captured: <br>` +
             `&nbsp;&nbsp;&nbsp;• Raw Response Length: ${response ? response.length : 0} characters<br>` +
             `&nbsp;&nbsp;&nbsp;• Detailed Logs: ${interactionData?.detailedLogs?.totalLogs || 0} entries<br>` +
-            `&nbsp;&nbsp;&nbsp;• Execution Rounds: ${interactionData?.response?.actualExecutionData?.rounds || 0}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Execution Rounds: ${interactionData?.response?.executionRounds || 0}<br>` +
             `&nbsp;&nbsp;&nbsp;• Memory Usage: ${this.getMemoryUsage()} MB<br><br>` +
             `✅ Status: Analysis complete - Ready for scoring evaluation`
         );
@@ -2100,7 +2184,7 @@ class LLMBenchmarkFramework {
     const functionCalls = interactionData?.response?.functionCalls || [];
     const toolResults = interactionData?.response?.toolExecutions || [];
     const responseTime = interactionData?.response?.responseTime || 0;
-    const actualExecutionData = interactionData?.response?.actualExecutionData;
+    const executionRounds = interactionData?.response?.executionRounds || 0;
 
     this.chatManager.updateThinkingMessage(
       `<br><br>📈 COMPREHENSIVE ANALYSIS COMPLETE<br>` +
@@ -2119,7 +2203,7 @@ class LLMBenchmarkFramework {
         `📉 Interaction Data Captured:<br>` +
         `&nbsp;&nbsp;&nbsp;• Raw Response Length: ${response ? response.length : 0} chars<br>` +
         `&nbsp;&nbsp;&nbsp;• Detailed Logs: ${interactionData?.detailedLogs?.totalLogs || 0} entries<br>` +
-        `&nbsp;&nbsp;&nbsp;• Execution Rounds: ${actualExecutionData?.rounds || 0}<br>` +
+        `&nbsp;&nbsp;&nbsp;• Execution Rounds: ${executionRounds}<br>` +
         `&nbsp;&nbsp;&nbsp;• Memory Usage: ${this.getMemoryUsage()} MB<br><br>` +
         `✅ Status: Analysis complete - Ready for scoring evaluation`
     );
@@ -5408,11 +5492,13 @@ class LLMBenchmarkFramework {
     console.log('🧹 [Memory Monitor] Starting memory cleanup...');
 
     try {
-      // Clear old benchmark results if too many
-      if (this.benchmarkResults.length > 50) {
-        const toRemove = this.benchmarkResults.length - 50;
+      // MEMORY OPTIMIZATION: Reduce benchmark results retention from 50 to 5.
+      // Each run result now contains slimmed test results, but even so,
+      // keeping 50 full runs is excessive. 5 recent runs is plenty for comparison.
+      if (this.benchmarkResults.length > 5) {
+        const toRemove = this.benchmarkResults.length - 5;
         this.benchmarkResults.splice(0, toRemove);
-        console.log(`🧹 [Memory Monitor] Removed ${toRemove} old benchmark results`);
+        console.log(`🧹 [Memory Monitor] Removed ${toRemove} old benchmark results (keeping 5 most recent)`);
       }
 
       // Clear test suites if they have accumulated data
@@ -5426,6 +5512,33 @@ class LLMBenchmarkFramework {
         }
       });
 
+      // MEMORY OPTIMIZATION: Clear instance-level capturedLogs reference
+      if (this.capturedLogs) {
+        this.capturedLogs.length = 0;
+        this.capturedLogs = null;
+      }
+
+      // MEMORY OPTIMIZATION: Clear ChatManager Evolution data to free accumulated events
+      if (this.chatManager) {
+        if (this.chatManager.currentConversationData && this.chatManager.currentConversationData.events) {
+          const eventCount = this.chatManager.currentConversationData.events.length;
+          this.chatManager.currentConversationData.events.length = 0;
+          if (eventCount > 0) {
+            console.log(`🧹 [Memory Monitor] Cleared ${eventCount} ChatManager Evolution events`);
+          }
+        }
+        // Clear stale thinking process DOM elements
+        try {
+          const staleThinking = document.querySelectorAll('[id^="thinkingProcess_"]');
+          staleThinking.forEach(el => el.remove());
+          if (staleThinking.length > 0) {
+            console.log(`🧹 [Memory Monitor] Removed ${staleThinking.length} stale thinking DOM elements`);
+          }
+        } catch (domError) {
+          // Ignore DOM errors
+        }
+      }
+
       // Force garbage collection hint
       if (typeof gc === 'function') {
         gc();
@@ -5436,6 +5549,78 @@ class LLMBenchmarkFramework {
     } catch (error) {
       console.error('❌ [Memory Monitor] Memory cleanup failed:', error);
     }
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Slim down test result to retain only scoring-relevant data.
+   * The full llmInteractionData (5-15MB per test) is not needed after evaluation.
+   * We keep a lightweight summary for report generation and diagnostics.
+   */
+  slimDownTestResult(result) {
+    if (!result) return result;
+
+    // Build a slim copy with only the fields needed for reporting/scoring
+    const slim = {
+      testId: result.testId,
+      testName: result.testName,
+      suiteId: result.suiteId,
+      startTime: result.startTime,
+      endTime: result.endTime,
+      duration: result.duration,
+      status: result.status,
+      success: result.success,
+      score: result.score,
+      maxScore: result.maxScore,
+      errors: result.errors || [],
+      warnings: result.warnings || [],
+      metrics: result.metrics || {},
+      // Keep actualResult for scoring verification (it's small — just tool_name + params)
+      actualResult: result.actualResult ? {
+        tool_name: result.actualResult.tool_name,
+        parameters: result.actualResult.parameters,
+        confidence: result.actualResult.confidence,
+        detectionMethod: result.actualResult.detectionMethod,
+        functionCalls: result.actualResult.functionCalls
+          ? result.actualResult.functionCalls.map(c => ({
+              tool_name: c.tool_name,
+              confidence: c.confidence,
+              detectionMethod: c.detectionMethod,
+            }))
+          : undefined,
+      } : null,
+      expectedResult: result.expectedResult,
+    };
+
+    // Replace the massive llmInteractionData with a lightweight summary
+    if (result.llmInteractionData) {
+      const data = result.llmInteractionData;
+      slim.llmInteractionDataSummary = {
+        testId: data.testId,
+        testName: data.testName,
+        // Request summary (no full prompts)
+        requestProvider: data.request?.provider,
+        requestModel: data.request?.model,
+        requestSystemPromptLength: data.request?.systemPromptLength,
+        requestContextLength: data.request?.contextLength,
+        // Response summary
+        responseTime: data.response?.responseTime,
+        responseRawLength: data.response?.rawResponseLength,
+        executionRounds: data.response?.executionRounds,
+        totalExecutionTime: data.response?.totalExecutionTime,
+        tokenUsage: data.response?.tokenUsage,
+        functionCallCount: data.response?.functionCalls?.length || 0,
+        toolExecutionCount: data.response?.toolExecutions?.length || 0,
+        // Analysis summary
+        analysisIsError: data.analysis?.isError,
+        analysisErrorType: data.analysis?.errorType,
+        analysisConfidence: data.analysis?.confidence,
+        // Detailed logs summary (counts only, not the full data)
+        detailedLogsTotalLogs: data.detailedLogs?.totalLogs || 0,
+        toolCallRounds: data.detailedLogs?.toolCallHistory?.toolCallRounds || [],
+      };
+    }
+
+    return slim;
   }
 
   /**
