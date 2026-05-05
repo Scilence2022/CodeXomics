@@ -52,6 +52,75 @@ class ProteinService {
     }
   }
 
+  /**
+   * Fetch AlphaFold structure data by UniProt ID
+   * Downloads the PDB format structure from AlphaFold EBI and returns structured data.
+   */
+  async fetchAlphaFoldStructure(parameters) {
+    const uniprotId = parameters.uniprotId || parameters.uniprot_id;
+    const format = parameters.format || 'pdb';
+
+    try {
+      if (!uniprotId) throw new Error('UniProt ID is required for AlphaFold structure fetch');
+
+      console.log(`[ProteinService] Fetching AlphaFold structure for UniProt: ${uniprotId}, format: ${format}`);
+
+      // Download from AlphaFold EBI
+      const downloadUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.${format}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+      const response = await fetch(downloadUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return {
+            success: false,
+            tool: 'fetch_alphafold_structure',
+            error: `No AlphaFold structure found for UniProt ID ${uniprotId}`,
+            uniprotId: uniprotId,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        throw new Error(`AlphaFold API returned HTTP ${response.status}`);
+      }
+
+      const pdbData = await response.text();
+
+      if (!pdbData || pdbData.trim().length === 0) {
+        return {
+          success: false,
+          tool: 'fetch_alphafold_structure',
+          error: `Empty structure data received for UniProt ID ${uniprotId}`,
+          uniprotId: uniprotId,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      return {
+        success: true,
+        tool: 'fetch_alphafold_structure',
+        uniprotId: uniprotId,
+        pdbData: pdbData,
+        format: format,
+        dataLength: pdbData.length,
+        downloadUrl: downloadUrl,
+        timestamp: new Date().toISOString(),
+        message: `Successfully fetched AlphaFold structure for ${uniprotId} (${pdbData.length} chars)`,
+      };
+    } catch (error) {
+      console.error('[ProteinService] fetchAlphaFoldStructure error:', error);
+      return {
+        success: false,
+        tool: 'fetch_alphafold_structure',
+        error: error.message,
+        uniprotId: uniprotId,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
   async searchPdbStructures(parameters) {
     const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
     const organism = parameters.organism || 'Escherichia coli';

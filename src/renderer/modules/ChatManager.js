@@ -11581,12 +11581,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Open protein structure viewer
    */
   async openProteinViewer(params) {
-    let { pdbData, proteinName, pdbId, uniprotId } = params;
+    let { pdbData, proteinName, pdbId, uniprotId, geneName } = params;
 
     try {
       // Check if protein structure viewer is available
       if (!window.proteinStructureViewer || !window.proteinStructureViewer.openStructureViewer) {
-        throw new Error('Protein structure viewer not available');
+        return {
+          success: false,
+          error: 'Protein structure viewer not available. Please ensure the protein viewer module is loaded.',
+          message: 'Cannot open protein viewer: viewer module not found.',
+        };
       }
 
       // If no pdbData provided but uniprotId is available, fetch AlphaFold structure
@@ -11602,16 +11606,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
               pdbData.length
             );
           } else {
-            console.error('🔬 [openProteinViewer] Failed to download AlphaFold data');
-            throw new Error(`Failed to download AlphaFold structure data for ${uniprotId}`);
+            console.warn('🔬 [openProteinViewer] Failed to download AlphaFold data for', uniprotId);
           }
         } catch (fetchError) {
-          console.error('🔬 [openProteinViewer] Error during AlphaFold download:', fetchError);
-          throw new Error(`Failed to fetch AlphaFold structure for ${uniprotId}: ${fetchError.message}`);
+          console.warn('🔬 [openProteinViewer] AlphaFold download failed:', fetchError.message);
         }
       }
       // If no pdbData provided but pdbId is available, fetch the PDB structure
-      else if (!pdbData && pdbId) {
+      if (!pdbData && pdbId) {
         console.log('🔬 [openProteinViewer] No PDB data provided, fetching structure for PDB ID:', pdbId);
 
         try {
@@ -11627,20 +11629,38 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
               pdbData.length
             );
           } else {
-            console.error('🔬 [openProteinViewer] Failed to download PDB data');
-            throw new Error(`Failed to download protein structure data for ${pdbId}`);
+            console.warn('🔬 [openProteinViewer] Failed to download PDB data for', pdbId);
           }
         } catch (fetchError) {
-          console.error('🔬 [openProteinViewer] Error during PDB download:', fetchError);
-          console.error('🔬 [openProteinViewer] fetchError.message:', fetchError.message);
-          console.error('🔬 [openProteinViewer] fetchError.stack:', fetchError.stack);
-          throw new Error(`Failed to fetch protein structure for ${pdbId}: ${fetchError.message}`);
+          console.warn('🔬 [openProteinViewer] PDB download failed:', fetchError.message);
         }
       }
 
       // Validate that we now have the required data
+      // If no structure data could be obtained, return a graceful failure instead of throwing
       if (!pdbData) {
-        throw new Error('No protein structure data available');
+        const identifier = pdbId || uniprotId || geneName || 'unknown';
+        const attemptedSources = [];
+        if (uniprotId) attemptedSources.push('AlphaFold');
+        if (pdbId) attemptedSources.push('RCSB PDB');
+
+        return {
+          success: false,
+          error: `No protein structure data available for ${identifier}`,
+          pdbId: pdbId,
+          uniprotId: uniprotId,
+          geneName: geneName,
+          attemptedSources: attemptedSources,
+          message: `Could not retrieve protein structure for ${identifier}.` +
+            (attemptedSources.length > 0
+              ? ` Attempted sources: ${attemptedSources.join(', ')}. This may be due to network issues, the structure not being available in the database, or an invalid identifier.`
+              : ' No structure source (PDB ID or UniProt ID) was provided.'),
+          suggestions: [
+            'Verify the PDB ID or UniProt ID is correct',
+            'Check your internet connection',
+            'Try searching for the structure first using search_alphafold_structures or search_pdb_structures',
+          ],
+        };
       }
 
       if (!proteinName) {
@@ -11658,7 +11678,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       };
     } catch (error) {
       console.error('Error in openProteinViewer:', error);
-      throw new Error(`Failed to open protein viewer: ${error.message}`);
+      // Return structured error instead of throwing — allows tool chain to continue gracefully
+      return {
+        success: false,
+        error: error.message,
+        message: `Failed to open protein viewer: ${error.message}`,
+      };
     }
   }
 
