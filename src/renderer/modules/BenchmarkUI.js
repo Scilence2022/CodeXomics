@@ -10,6 +10,37 @@ class BenchmarkUI {
     this.manualTestLock = false; // Prevent concurrent manual tests
     this.manualTestResults = {};
     this.setupEventHandlers();
+    this._registerGlobalHandlers();
+  }
+
+  /**
+   * Register global event handlers for on-demand disk data loading.
+   * The "Load Full Details from Disk" button calls window.__benchmarkLoadDiskData,
+   * which reads the persisted JSON file and replaces the summary panel with the
+   * full interaction display.
+   */
+  _registerGlobalHandlers() {
+    if (window.__benchmarkLoadDiskData) return; // already registered
+    window.__benchmarkLoadDiskData = async (diskPath, elementId) => {
+      const container = document.getElementById(elementId);
+      if (!container) return;
+      try {
+        container.innerHTML = '<div style="padding: 15px; text-align: center; color: #7f8c8d;">⏳ Loading from disk...</div>';
+        const framework = window.benchmarkFramework || this.framework;
+        if (!framework || typeof framework.loadInteractionDataFromDisk !== 'function') {
+          container.innerHTML = '<div style="padding: 15px; color: #e74c3c;">❌ Framework not available for disk loading</div>';
+          return;
+        }
+        const data = await framework.loadInteractionDataFromDisk(diskPath);
+        if (!data) {
+          container.innerHTML = '<div style="padding: 15px; color: #e74c3c;">❌ Failed to load data — file may have been cleaned up</div>';
+          return;
+        }
+        container.outerHTML = this._renderFullInteractionDisplay(data);
+      } catch (err) {
+        container.innerHTML = `<div style="padding: 15px; color: #e74c3c;">❌ Error loading from disk: ${err.message}</div>`;
+      }
+    };
   }
 
   /**
@@ -2382,6 +2413,39 @@ class BenchmarkUI {
                   status: test.status,
                 },
               });
+            } else if (test.llmInteractionDataSummary) {
+              // Secondary source: summary from slim results (full data persisted to disk)
+              interactions.push({
+                testId: test.llmInteractionDataSummary.testId,
+                testName: test.llmInteractionDataSummary.testName,
+                request: {
+                  provider: test.llmInteractionDataSummary.requestProvider,
+                  model: test.llmInteractionDataSummary.requestModel,
+                  systemPromptLength: test.llmInteractionDataSummary.requestSystemPromptLength,
+                  contextLength: test.llmInteractionDataSummary.requestContextLength,
+                },
+                response: {
+                  responseTime: test.llmInteractionDataSummary.responseTime,
+                  executionRounds: test.llmInteractionDataSummary.executionRounds,
+                  tokenUsage: test.llmInteractionDataSummary.tokenUsage,
+                  _summaryOnly: true,
+                  _diskPath: test.llmInteractionDataSummary.diskPath,
+                },
+                analysis: {
+                  isError: test.llmInteractionDataSummary.analysisIsError,
+                  errorType: test.llmInteractionDataSummary.analysisErrorType,
+                  confidence: test.llmInteractionDataSummary.analysisConfidence,
+                },
+                testInfo: {
+                  testId: test.testId,
+                  testName: test.testName,
+                  suiteId: test.suiteId,
+                  score: test.score,
+                  success: test.success,
+                  duration: test.duration,
+                  status: test.status,
+                },
+              });
             } else {
               // Fallback: construct interaction data from available test fields
               const reconstructedInteraction = this.reconstructLLMInteractionFromTest(test);
@@ -2794,13 +2858,32 @@ class BenchmarkUI {
 
   /**
    * Generate detailed LLM interaction display for test results
+   * Supports: full llmInteractionData, on-disk persisted data, or summary-only display
    */
   generateLLMInteractionDisplay(testResult) {
-    if (!testResult.llmInteractionData) {
-      return '<div class="llm-interaction-missing">❌ No LLM interaction data available</div>';
+    // Case 1: Full interaction data available in memory (pre-slim or restored)
+    if (testResult.llmInteractionData) {
+      return this._renderFullInteractionDisplay(testResult.llmInteractionData);
     }
 
-    const interaction = testResult.llmInteractionData;
+    // Case 2: Summary available (slim result) — show summary + disk load button
+    if (testResult.llmInteractionDataSummary) {
+      return this._renderSummaryInteractionDisplay(testResult);
+    }
+
+    // Case 3: Try fallback reconstruction from test result fields
+    const reconstructed = this.reconstructLLMInteractionFromTest(testResult);
+    if (reconstructed) {
+      return this._renderFullInteractionDisplay(reconstructed);
+    }
+
+    return '<div class="llm-interaction-missing">❌ No LLM interaction data available</div>';
+  }
+
+  /**
+   * Render full LLM interaction display from complete interaction data object
+   */
+  _renderFullInteractionDisplay(interaction) {
     const requestData = interaction.request || {};
     const responseData = interaction.response || {};
     const analysisData = interaction.analysis || {};
@@ -2928,6 +3011,89 @@ class BenchmarkUI {
                             }
                         </div>
                     </div>
+                </div>
+            </div>
+        `;
+  }
+
+  /**
+   * Render summary LLM interaction display from llmInteractionDataSummary.
+   * Shows key metrics at a glance with a button to load full details from disk.
+   */
+  _renderSummaryInteractionDisplay(testResult) {
+    const s = testResult.llmInteractionDataSummary;
+    const diskPath = s.diskPath;
+    const hasDiskData = !!diskPath;
+    const uniqueId = `llm-detail-${testResult.testId || Date.now()}`;
+
+    return `
+            <div class="llm-interaction-details" id="${uniqueId}" style="border: 1px solid #ddd; border-radius: 8px; margin: 10px 0; background: #f9f9f9;">
+                <div class="interaction-header" style="background: #34495e; color: white; padding: 10px; border-radius: 8px 8px 0 0;">
+                    <h4 style="margin: 0; font-size: 14px;">🤖 LLM Interaction Summary</h4>
+                    <div style="font-size: 11px; opacity: 0.8;">
+                        Provider: ${s.requestProvider || 'N/A'} | Model: ${s.requestModel || 'N/A'} | Response: ${s.responseTime || 0}ms
+                    </div>
+                </div>
+
+                <div class="interaction-content" style="padding: 15px;">
+                    <!-- Quick Stats Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                        <div style="text-align: center; padding: 8px; background: white; border-radius: 4px; border-left: 3px solid #3498db;">
+                            <div style="font-size: 14px; font-weight: bold;">${s.requestProvider || 'N/A'}</div>
+                            <div style="font-size: 11px; color: #7f8c8d;">Provider</div>
+                        </div>
+                        <div style="text-align: center; padding: 8px; background: white; border-radius: 4px; border-left: 3px solid #2ecc71;">
+                            <div style="font-size: 14px; font-weight: bold;">${s.requestModel || 'N/A'}</div>
+                            <div style="font-size: 11px; color: #7f8c8d;">Model</div>
+                        </div>
+                        <div style="text-align: center; padding: 8px; background: white; border-radius: 4px; border-left: 3px solid #e67e22;">
+                            <div style="font-size: 14px; font-weight: bold;">${s.responseTime || 0}ms</div>
+                            <div style="font-size: 11px; color: #7f8c8d;">Response Time</div>
+                        </div>
+                        <div style="text-align: center; padding: 8px; background: white; border-radius: 4px; border-left: 3px solid #9b59b6;">
+                            <div style="font-size: 14px; font-weight: bold;">${s.functionCallCount || 0}</div>
+                            <div style="font-size: 11px; color: #7f8c8d;">Function Calls</div>
+                        </div>
+                        <div style="text-align: center; padding: 8px; background: white; border-radius: 4px; border-left: 3px solid #1abc9c;">
+                            <div style="font-size: 14px; font-weight: bold;">${s.executionRounds || 0}</div>
+                            <div style="font-size: 11px; color: #7f8c8d;">Execution Rounds</div>
+                        </div>
+                        <div style="text-align: center; padding: 8px; background: white; border-radius: 4px; border-left: 3px solid ${s.analysisIsError ? '#e74c3c' : '#27ae60'};">
+                            <div style="font-size: 14px; font-weight: bold;">${s.analysisIsError ? '❌ Error' : '✅ OK'}</div>
+                            <div style="font-size: 11px; color: #7f8c8d;">Status</div>
+                        </div>
+                    </div>
+
+                    <!-- Token Usage -->
+                    ${s.tokenUsage ? `
+                    <div style="background: white; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;">
+                        <strong>Token Usage:</strong> Prompt: ${s.tokenUsage.promptTokens || 0}, Completion: ${s.tokenUsage.completionTokens || 0}, Total: ${s.tokenUsage.totalTokens || 0}
+                    </div>` : ''}
+
+                    <!-- Tool Call Rounds -->
+                    ${s.toolCallRounds && s.toolCallRounds.length > 0 ? `
+                    <details style="margin-top: 10px;">
+                        <summary style="cursor: pointer; font-weight: bold; color: #2980b9;">🔄 Tool Call Rounds (${s.toolCallRounds.length})</summary>
+                        <pre style="background: white; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${JSON.stringify(s.toolCallRounds, null, 2)}</pre>
+                    </details>` : ''}
+
+                    <!-- Confidence -->
+                    ${s.analysisConfidence != null ? `
+                    <div style="background: white; padding: 8px; border-radius: 4px; margin-top: 10px; font-size: 12px;">
+                        <strong>Confidence:</strong> <span style="color: ${BenchmarkUI.getConfidenceColor(s.analysisConfidence)}; font-weight: bold;">${s.analysisConfidence.toFixed(1)}</span>
+                    </div>` : ''}
+
+                    <!-- Load Full Details from Disk -->
+                    ${hasDiskData ? `
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                        <button onclick="window.__benchmarkLoadDiskData('${diskPath}', '${uniqueId}')" style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            📂 Load Full Details from Disk
+                        </button>
+                        <span style="font-size: 10px; color: #95a5a6; margin-left: 8px;">Data persisted to: ${diskPath}</span>
+                    </div>` : `
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 11px; color: #95a5a6;">
+                        ℹ️ Full interaction data was not persisted to disk (write failed or unavailable)
+                    </div>`}
                 </div>
             </div>
         `;
@@ -4146,6 +4312,39 @@ class BenchmarkUI {
                                             status: test.status
                                         }
                                     });
+                                } else if (test.llmInteractionDataSummary) {
+                                    // Secondary source: summary from slim results
+                                    interactions.push({
+                                        testId: test.llmInteractionDataSummary.testId,
+                                        testName: test.llmInteractionDataSummary.testName,
+                                        request: {
+                                            provider: test.llmInteractionDataSummary.requestProvider,
+                                            model: test.llmInteractionDataSummary.requestModel,
+                                            systemPromptLength: test.llmInteractionDataSummary.requestSystemPromptLength,
+                                            contextLength: test.llmInteractionDataSummary.requestContextLength,
+                                        },
+                                        response: {
+                                            responseTime: test.llmInteractionDataSummary.responseTime,
+                                            executionRounds: test.llmInteractionDataSummary.executionRounds,
+                                            tokenUsage: test.llmInteractionDataSummary.tokenUsage,
+                                            _summaryOnly: true,
+                                            _diskPath: test.llmInteractionDataSummary.diskPath,
+                                        },
+                                        analysis: {
+                                            isError: test.llmInteractionDataSummary.analysisIsError,
+                                            errorType: test.llmInteractionDataSummary.analysisErrorType,
+                                            confidence: test.llmInteractionDataSummary.analysisConfidence,
+                                        },
+                                        testInfo: {
+                                            testId: test.testId,
+                                            testName: test.testName,
+                                            suiteId: test.suiteId,
+                                            score: test.score,
+                                            success: test.success,
+                                            duration: test.duration,
+                                            status: test.status
+                                        }
+                                    });
                                 } else {
                                     // Fallback: construct interaction data from available test fields
                                     const reconstructedInteraction = this.reconstructLLMInteractionFromTest(test);
@@ -4887,6 +5086,11 @@ class BenchmarkUI {
    * Setup main window event handlers
    */
   setupEventHandlers() {
+    // Make framework available on main window for disk data loading
+    if (this.framework && !window.benchmarkFramework) {
+      window.benchmarkFramework = this.framework;
+    }
+
     // Listen for benchmark events
     window.addEventListener('benchmark-complete', event => {
       this.onBenchmarkComplete(event.detail);

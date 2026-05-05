@@ -5553,13 +5553,14 @@ class LLMBenchmarkFramework {
 
   /**
    * MEMORY OPTIMIZATION: Slim down test result to retain only scoring-relevant data.
-   * The full llmInteractionData (5-15MB per test) is not needed after evaluation.
-   * We keep a lightweight summary for report generation and diagnostics.
+   * The full llmInteractionData (5-15MB per test) is persisted to disk via IPC,
+   * and only a lightweight summary + disk reference is kept in memory.
+   * The UI can load detailed data on demand from disk when the user expands a test.
    */
   slimDownTestResult(result) {
     if (!result) return result;
 
-    // Build a slim copy with only the fields needed for reporting/scoring
+    // Build a slim copy with fields needed for reporting/scoring AND UI fallback reconstruction
     const slim = {
       testId: result.testId,
       testName: result.testName,
@@ -5589,6 +5590,13 @@ class LLMBenchmarkFramework {
           : undefined,
       } : null,
       expectedResult: result.expectedResult,
+      // Preserve fields needed by BenchmarkUI.reconstructLLMInteractionFromTest fallback
+      llmResponse: result.llmResponse
+        ? (result.llmResponse.length > 500
+            ? result.llmResponse.substring(0, 500) + '...[TRUNCATED]'
+            : result.llmResponse)
+        : null,
+      details: result.details ? { instruction: result.details.instruction } : null,
     };
 
     // Replace the massive llmInteractionData with a lightweight summary
@@ -5618,9 +5626,89 @@ class LLMBenchmarkFramework {
         detailedLogsTotalLogs: data.detailedLogs?.totalLogs || 0,
         toolCallRounds: data.detailedLogs?.toolCallHistory?.toolCallRounds || [],
       };
+
+      // Persist full interaction data to disk for on-demand retrieval
+      const diskPath = this.persistInteractionDataToDisk(result.testId, result.suiteId, data);
+      if (diskPath) {
+        slim.llmInteractionDataSummary.diskPath = diskPath;
+      }
     }
 
     return slim;
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Persist full LLM interaction data to disk via IPC.
+   * This allows the UI to load detailed data on demand instead of keeping
+   * 5-15MB per test in memory. Data is stored in the app's temp directory.
+   */
+  persistInteractionDataToDisk(testId, suiteId, interactionData) {
+    try {
+      const path = require('path');
+      const os = require('os');
+
+      // Use a dedicated benchmark-data directory in the system temp folder
+      const benchmarkDir = path.join(os.tmpdir(), 'codexomics-benchmark-data');
+      const filename = `interaction_${suiteId}_${testId}_${Date.now()}.json`;
+      const filePath = path.join(benchmarkDir, filename);
+
+      const jsonContent = JSON.stringify(interactionData);
+
+      // Try Electron IPC first (renderer process), then fs directly
+      if (window.electronAPI?.writeFile) {
+        // Ensure directory exists before writing
+        const ensureDir = window.electronAPI.ensureDirectory;
+        const writeOp = (ensureDir
+          ? ensureDir(benchmarkDir).then(() => window.electronAPI.writeFile(filePath, jsonContent))
+          : window.electronAPI.writeFile(filePath, jsonContent)
+        );
+        writeOp.then(() => {
+          console.log(`💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`);
+        }).catch(err => {
+          console.warn(`[Benchmark] Failed to persist interaction data via IPC: ${err.message}`);
+        });
+        return filePath;
+      } else {
+        // Fallback: use fs directly (works in main process or Node.js context)
+        try {
+          const fs = require('fs');
+          if (!fs.existsSync(benchmarkDir)) {
+            fs.mkdirSync(benchmarkDir, { recursive: true });
+          }
+          fs.writeFileSync(filePath, jsonContent, 'utf8');
+          console.log(`💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`);
+          return filePath;
+        } catch (fsError) {
+          console.warn(`[Benchmark] Failed to persist interaction data via fs: ${fsError.message}`);
+          return null;
+        }
+      }
+    } catch (error) {
+      console.warn(`[Benchmark] Failed to persist interaction data for ${testId}: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Load full LLM interaction data from disk on demand.
+   * Called by the UI when the user expands a test's detailed results.
+   */
+  async loadInteractionDataFromDisk(diskPath) {
+    if (!diskPath) return null;
+
+    try {
+      if (window.electronAPI?.readFile) {
+        const content = await window.electronAPI.readFile(diskPath);
+        return JSON.parse(content);
+      } else {
+        const fs = require('fs').promises;
+        const content = await fs.readFile(diskPath, 'utf8');
+        return JSON.parse(content);
+      }
+    } catch (error) {
+      console.warn(`[Benchmark] Failed to load interaction data from ${diskPath}: ${error.message}`);
+      return null;
+    }
   }
 
   /**
