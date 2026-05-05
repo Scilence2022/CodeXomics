@@ -1085,22 +1085,7 @@ class ProteinStructureViewer {
   handleMCPMessage(data) {
     if (data.type === 'open_protein_viewer') {
       this.openStructureViewer(data.pdbData, data.proteinName, data.pdbId);
-    } else if (data.type === 'open-alphafold-viewer') {
-      this.openAlphaFoldViewer(data.data);
     }
-  }
-
-  /**
-   * Open AlphaFold structure viewer
-   */
-  openAlphaFoldViewer(alphaFoldData) {
-    const { structureData, uniprotId, geneName, confidenceData, organism } = alphaFoldData;
-
-    console.log('Opening AlphaFold viewer for:', { uniprotId, geneName, organism });
-
-    // Use the existing structure viewer but with AlphaFold branding
-    const proteinName = `${geneName} (AlphaFold - ${organism})`;
-    this.openStructureViewer(structureData, proteinName, uniprotId);
   }
 
   /**

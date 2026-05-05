@@ -42,7 +42,6 @@ tools_registry/
 │   ├── open_protein_viewer.yaml
 │   ├── search_alphafold_structures.yaml
 │   ├── fetch_alphafold_structure.yaml
-│   └── open_alphafold_viewer.yaml
 ├── database/                           # Database Integration Tools
 │   ├── search_uniprot_database.yaml
 │   ├── advanced_uniprot_search.yaml

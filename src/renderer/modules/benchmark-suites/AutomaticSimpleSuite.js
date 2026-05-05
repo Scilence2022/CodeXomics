@@ -1206,7 +1206,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluation: 'automatic',
         instruction: 'Open the AlphaFold 3D structure viewer for gene lacZ.',
         expectedResult: {
-          tool_name: 'open_alphafold_viewer',
+          tool_name: 'open_protein_viewer',
           parameters: {
             geneName: 'lacZ',
           },

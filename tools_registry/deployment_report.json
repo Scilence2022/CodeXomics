@@ -181,11 +181,6 @@
       "file": "fetch_protein_structure.yaml"
     },
     {
-      "name": "open_alphafold_viewer",
-      "category": "protein",
-      "file": "open_alphafold_viewer.yaml"
-    },
-    {
       "name": "open_protein_viewer",
       "category": "protein",
       "file": "open_protein_viewer.yaml"

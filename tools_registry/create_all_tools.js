@@ -113,12 +113,6 @@ class ToolDefinitionCreator {
         keywords: ['fetch', 'alphafold', 'structure', 'uniprot'],
         priority: 1,
       },
-      open_alphafold_viewer: {
-        category: 'protein',
-        description: 'Open AlphaFold 3D structure viewer with enhanced features',
-        keywords: ['open', 'alphafold', 'viewer', '3d', 'structure'],
-        priority: 1,
-      },
 
       // Database Integration Tools
       search_uniprot_database: {

@@ -11754,10 +11754,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     return this.services.protein.fetchAlphaFoldStructure(parameters);
   }
 
-  // Removed deprecated openAlphaFoldViewer
-
-
-
   /**
    * Fetch protein structure data (from PDB or AlphaFold)
    */

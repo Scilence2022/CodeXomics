@@ -85,10 +85,10 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ['open_alphafold_viewer', 'fetch_alphafold_structure']
+  enhances: ['open_protein_viewer', 'fetch_alphafold_structure']
   alternatives: []
   prerequisites: []
-  follow_up: ['open_alphafold_viewer', 'fetch_alphafold_structure', 'analyze_interpro_domains']
+  follow_up: ['open_protein_viewer', 'fetch_alphafold_structure', 'analyze_interpro_domains']
 
 # Performance and usage statistics
 metadata:

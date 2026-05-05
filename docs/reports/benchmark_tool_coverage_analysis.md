@@ -104,7 +104,7 @@
 
 #### Protein Structure (3 tools)
 12. `fetch_alphafold_structure` — Fetch AlphaFold 3D structure
-13. `open_alphafold_viewer` — Open 3D structure viewer
+13. `open_protein_viewer` — Open 3D structure viewer
 14. `get_uniprot_entry` — Get UniProt protein details
 
 #### Gene/Region Analysis (4 tools)
@@ -340,7 +340,7 @@
 **Missing Tools**:
 - `search_uniprot_database`, `advanced_uniprot_search`, `get_uniprot_entry`
 - `analyze_interpro_domains`, `search_interpro_entry`, `get_interpro_entry_details`
-- `fetch_alphafold_structure`, `open_alphafold_viewer`
+- `fetch_alphafold_structure`, `open_protein_viewer`
 
 **Why Important**: Protein structure and function queries are complex and require the LLM to understand biological context (e.g., "fetch AlphaFold structure for lacZ" requires gene→UniProt→AlphaFold resolution).
 

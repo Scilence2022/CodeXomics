@@ -137,7 +137,6 @@ const methodsToPatch = {
   'searchAlphaFoldByGene': 'return this.services.protein.searchAlphaFoldByGene(parameters);',
   'fetchAlphaFoldStructure': 'return this.services.protein.fetchAlphaFoldStructure(parameters);',
   'checkAlphaFoldAvailability': 'return this.services.protein.checkAlphaFoldAvailability(uniprotId);',
-  'openAlphaFoldViewer': 'return this.services.protein.openAlphaFoldViewer(parameters);',
   'searchUniProtDatabase': 'return this.services.protein.searchUniProtDatabase(parameters);',
 
   // BlastService

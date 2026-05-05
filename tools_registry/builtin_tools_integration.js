@@ -170,12 +170,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
-    this.builtInToolsMap.set('open_alphafold_viewer', {
-      method: 'openAlphaFoldViewer',
+    this.builtInToolsMap.set('open_protein_viewer', {
+      method: 'openProteinViewer',
       category: 'protein',
       type: 'built-in',
       priority: 1,
     });
+
 
     // Database tools - PDB
     this.builtInToolsMap.set('search_pdb_structures', {
@@ -1654,6 +1655,17 @@ class BuiltInToolsIntegration {
           reason: 'Domain query pattern detected',
         });
       }
+    }
+
+    // Check for protein structure viewer patterns
+    // Matches: "open protein viewer", "open alphafold viewer", "show 3D structure", "visualize protein structure"
+    if (/\b(open|show|display|launch|visualize|view)\s+.*?\b(protein\s+viewer|alphafold\s+viewer|3[dD]\s+structure|structure\s+viewer)\b/i.test(query) ||
+        /\b(protein|alphafold)\s+.*?\b(viewer|3[dD]|visualization)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'open_protein_viewer',
+        confidence: 0.9,
+        reason: 'Protein structure viewer keywords detected',
+      });
     }
 
     return relevantTools;
