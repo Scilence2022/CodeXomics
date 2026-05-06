@@ -109,6 +109,12 @@ class BenchmarkUI {
       this.setupBenchmarkInterfaceHandlers();
       console.log('🎮 Event handlers setup complete');
 
+      // Make benchmark interface resizable
+      if (window.resizableModalManager) {
+        window.resizableModalManager.makeResizable('#benchmarkInterface');
+        console.log('📐 Benchmark interface registered with ResizableModalManager');
+      }
+
       // Dynamically update suite test counts from framework
       // Retry multiple times to ensure suites are loaded
       this.updateDynamicSuiteCounts(document);
@@ -206,6 +212,8 @@ class BenchmarkUI {
                 }
 
                 .benchmark-container {
+                    position: relative; /* REQUIRED for absolute resize handles */
+                    width: 90%;
                     max-width: 1400px;
                     margin: 0 auto;
                     background: rgba(255, 255, 255, 0.98);
@@ -247,8 +255,9 @@ class BenchmarkUI {
 
                 .header-controls {
                     position: absolute;
-                    top: 10px;
-                    right: 10px;
+                    top: 50%;
+                    right: 20px;
+                    transform: translateY(-50%);
                     display: flex;
                     gap: 8px;
                     z-index: 10;
@@ -297,18 +306,21 @@ class BenchmarkUI {
                
 
                 .benchmark-interface.collapsed .benchmark-container {
-                    height: 80px;
-                    padding: 20px 30px;
-                    
-                    background: rgba(255, 255, 255, 0.98) !important; /* More opaque for visibility */
-                    z-index: 9999999 !important; /* Maintain maximum z-index */
-                    position: relative !important;
-                    border: 3px solid rgba(var(--primary-rgb), 0.8) !important; /* Stronger border for visibility */
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.4) !important; /* Stronger shadow */
-                    backdrop-filter: blur(15px) !important; /* Enhanced blur effect */
-                    transform: translateZ(0) !important; /* Force hardware acceleration */
-                    display: block !important;
-                }
+                     height: 60px !important;
+                     min-height: 60px !important;
+                     max-width: 1400px !important;
+                     padding: 10px 30px !important;
+                     box-sizing: border-box !important;
+                     
+                     background: rgba(255, 255, 255, 0.98) !important; /* More opaque for visibility */
+                     z-index: 9999999 !important; /* Maintain maximum z-index */
+                     position: relative !important;
+                     border: 3px solid rgba(var(--primary-rgb), 0.8) !important; /* Stronger border for visibility */
+                     box-shadow: 0 20px 60px rgba(0,0,0,0.4) !important; /* Stronger shadow */
+                     backdrop-filter: blur(15px) !important; /* Enhanced blur effect */
+                     transform: translateZ(0) !important; /* Force hardware acceleration */
+                     display: block !important;
+                 }
 
                 /* Hide content but keep header visible */
                 .benchmark-interface.collapsed .benchmark-content {
@@ -610,7 +622,7 @@ class BenchmarkUI {
                 }
             </style>
 
-            <div class="benchmark-container">
+            <div class="benchmark-container modal-content resizable">
                 <div class="benchmark-header" id="benchmarkHeader">
                     <div class="header-content">
                         <h1 class="benchmark-title">
@@ -822,6 +834,16 @@ class BenchmarkUI {
                         <div id="resultsContent"></div>
                     </div>
                 </div>
+                
+                <!-- Resize handles -->
+                <div class="resize-handle resize-handle-n"></div>
+                <div class="resize-handle resize-handle-s"></div>
+                <div class="resize-handle resize-handle-e"></div>
+                <div class="resize-handle resize-handle-w"></div>
+                <div class="resize-handle resize-handle-ne"></div>
+                <div class="resize-handle resize-handle-nw"></div>
+                <div class="resize-handle resize-handle-se"></div>
+                <div class="resize-handle resize-handle-sw"></div>
             </div>
         `;
 
