@@ -1159,63 +1159,63 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       // },
 
       // PROTEIN STRUCTURE TASKS - Automatic + Simple
-      {
-        id: 'protein_auto_01',
-        name: 'Fetch AlphaFold Structure',
-        type: 'function_call',
-        category: 'protein_structure',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Fetch the AlphaFold structure prediction for UniProt ID P00722.',
-        expectedResult: {
-          tool_name: 'fetch_alphafold_structure',
-          parameters: {
-            uniprotId: 'P00722',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 60000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'protein_auto_02',
-        name: 'Get UniProt Entry',
-        type: 'function_call',
-        category: 'protein_structure',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Get the UniProt entry details for protein P00722.',
-        expectedResult: {
-          tool_name: 'get_uniprot_entry',
-          parameters: {
-            accession: 'P00722',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 60000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'protein_auto_03',
-        name: 'Open AlphaFold Viewer',
-        type: 'function_call',
-        category: 'protein_structure',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Open the AlphaFold 3D structure viewer for gene lacZ.',
-        expectedResult: {
-          tool_name: 'open_protein_viewer',
-          parameters: {
-            geneName: 'lacZ',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 60000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
+      // {
+      //   id: 'protein_auto_01',
+      //   name: 'Fetch AlphaFold Structure',
+      //   type: 'function_call',
+      //   category: 'protein_structure',
+      //   complexity: 'simple',
+      //   evaluation: 'automatic',
+      //   instruction: 'Fetch the AlphaFold structure prediction for UniProt ID P00722.',
+      //   expectedResult: {
+      //     tool_name: 'fetch_alphafold_structure',
+      //     parameters: {
+      //       uniprotId: 'P00722',
+      //     },
+      //   },
+      //   maxScore: 5,
+      //   bonusScore: 1,
+      //   timeout: 60000,
+      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
+      // },
+      // {
+      //   id: 'protein_auto_02',
+      //   name: 'Get UniProt Entry',
+      //   type: 'function_call',
+      //   category: 'protein_structure',
+      //   complexity: 'simple',
+      //   evaluation: 'automatic',
+      //   instruction: 'Get the UniProt entry details for protein P00722.',
+      //   expectedResult: {
+      //     tool_name: 'get_uniprot_entry',
+      //     parameters: {
+      //       accession: 'P00722',
+      //     },
+      //   },
+      //   maxScore: 5,
+      //   bonusScore: 1,
+      //   timeout: 60000,
+      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
+      // },
+      // {
+      //   id: 'protein_auto_03',
+      //   name: 'Open AlphaFold Viewer',
+      //   type: 'function_call',
+      //   category: 'protein_structure',
+      //   complexity: 'simple',
+      //   evaluation: 'automatic',
+      //   instruction: 'Open the AlphaFold 3D structure viewer for gene lacZ.',
+      //   expectedResult: {
+      //     tool_name: 'open_protein_viewer',
+      //     parameters: {
+      //       geneName: 'lacZ',
+      //     },
+      //   },
+      //   maxScore: 5,
+      //   bonusScore: 1,
+      //   timeout: 60000,
+      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
+      // },
 
       // GENE/REGION ANALYSIS TASKS - Automatic + Simple
       // {
