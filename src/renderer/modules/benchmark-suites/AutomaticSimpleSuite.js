@@ -1497,91 +1497,9 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      // {
-      //   id: 'sys_auto_03',
-      //   name: 'List Genome Windows',
-      //   type: 'function_call',
-      //   category: 'system',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'List all open genome browser windows.',
-      //   expectedResult: {
-      //     tool_name: 'list_genome_windows',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-
-      // DATA EXPORT/IMPORT EXTENSION TASKS - Automatic + Simple
-      // {
-      //   id: 'export_auto_08',
-      //   name: 'Export Data Generic',
-      //   type: 'function_call',
-      //   category: 'file_export',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Export the current genome data.',
-      //   expectedResult: {
-      //     tool_name: 'export_data',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'export_auto_09',
-      //   name: 'Configure Export Settings',
-      //   type: 'function_call',
-      //   category: 'file_export',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Configure export settings to include sequence data and annotations.',
-      //   expectedResult: {
-      //     tool_name: 'configure_export_settings',
-      //     parameters: {
-      //       includeSequence: true,
-      //       includeAnnotations: true,
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-
-      // =====================================================================
-      // PHASE 2: HIGH PRIORITY TOOLS — BLAST, Database, Primer, Restriction, Track Settings
-      // =====================================================================
-
-      // BLAST TASKS - Automatic + Simple
+ 
       {
         id: 'blast_auto_01',
-        name: 'BLAST Search Online',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Perform an online BLAST search with the sequence ATGAAAGCGCTGAAAGCGCTG against the nr database using blastn.',
-        expectedResult: {
-          tool_name: 'blast_search_online',
-          parameters: {
-            sequence: 'ATGAAAGCGCTGAAAGCGCTG',
-            program: 'blastn',
-            database: 'nr',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 60000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'blast_auto_02',
         name: 'BLAST Search Local',
         type: 'function_call',
         category: 'blast',
@@ -1600,7 +1518,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
-        id: 'blast_auto_03',
+        id: 'blast_auto_02',
         name: 'Create BLAST Database',
         type: 'function_call',
         category: 'blast',
@@ -1617,7 +1535,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
-        id: 'blast_auto_04',
+        id: 'blast_auto_03',
         name: 'List BLAST Databases',
         type: 'function_call',
         category: 'blast',
@@ -1634,7 +1552,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
-        id: 'blast_auto_05',
+        id: 'blast_auto_04',
         name: 'Filter BLAST Results',
         type: 'function_call',
         category: 'blast',
@@ -1653,7 +1571,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
-        id: 'blast_auto_06',
+        id: 'blast_auto_05',
         name: 'BLAST Get Installation Status',
         type: 'function_call',
         category: 'blast',
@@ -1670,87 +1588,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-      // DATABASE INTEGRATION TASKS - Automatic + Simple
-      // {
-      //   id: 'db_auto_01',
-      //   name: 'Search UniProt Database',
-      //   type: 'function_call',
-      //   category: 'database',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Search UniProt database for beta-galactosidase from Escherichia coli.',
-      //   expectedResult: {
-      //     tool_name: 'search_uniprot_database',
-      //     parameters: {
-      //       query: 'beta-galactosidase',
-      //       organism: 'Escherichia coli',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 60000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'db_auto_02',
-      //   name: 'Advanced UniProt Search',
-      //   type: 'function_call',
-      //   category: 'database',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Perform an advanced UniProt search for reviewed proteins with keyword "kinase" in Escherichia coli.',
-      //   expectedResult: {
-      //     tool_name: 'advanced_uniprot_search',
-      //     parameters: {
-      //       keyword: 'kinase',
-      //       organism: 'Escherichia coli',
-      //       reviewed: true,
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 60000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'db_auto_03',
-      //   name: 'Analyze InterPro Domains',
-      //   type: 'function_call',
-      //   category: 'database',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Analyze InterPro protein domains for gene lacZ from Escherichia coli.',
-      //   expectedResult: {
-      //     tool_name: 'analyze_interpro_domains',
-      //     parameters: {
-      //       geneName: 'lacZ',
-      //       organism: 'Escherichia coli',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 60000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'db_auto_04',
-      //   name: 'Search InterPro Entry',
-      //   type: 'function_call',
-      //   category: 'database',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Search InterPro for domain families related to "kinase".',
-      //   expectedResult: {
-      //     tool_name: 'search_interpro_entry',
-      //     parameters: {
-      //       query: 'kinase',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 60000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+ 
 
       // PRIMER DESIGN TASKS - Automatic + Simple
       {
@@ -1811,24 +1649,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-      // RESTRICTION ANALYSIS TASKS - Automatic + Simple
-      // {
-      //   id: 'restrict_auto_01',
-      //   name: 'Find Restriction Sites',
-      //   type: 'function_call',
-      //   category: 'restriction',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Find restriction enzyme recognition sites in the current genomic region.',
-      //   expectedResult: {
-      //     tool_name: 'find_restriction_sites',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+     
       {
         id: 'restrict_auto_02',
         name: 'Virtual Digest',
@@ -1886,28 +1707,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      // {
-      //   id: 'track_settings_auto_02',
-      //   name: 'Set Track Settings',
-      //   type: 'function_call',
-      //   category: 'track_settings',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Set the annotation track height to 50 pixels.',
-      //   expectedResult: {
-      //     tool_name: 'set_track_settings',
-      //     parameters: {
-      //       trackName: 'annotation',
-      //       settings: {
-      //         height: 50,
-      //       },
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+     
       {
         id: 'track_settings_auto_03',
         name: 'Get All Track Settings',
@@ -1925,23 +1725,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      // {
-      //   id: 'track_settings_auto_04',
-      //   name: 'Reset Track Settings',
-      //   type: 'function_call',
-      //   category: 'track_settings',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Reset all track settings to their default values.',
-      //   expectedResult: {
-      //     tool_name: 'reset_track_settings',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+
       {
         id: 'track_settings_auto_05',
         name: 'Get Track Settings Schema',
@@ -1960,62 +1744,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-      // =====================================================================
-      // PHASE 3: COMPLETE COVERAGE — Benchmark Self-Test, Utility, Specialized
-      // =====================================================================
-
-      // BENCHMARK SELF-TEST TASKS - Automatic + Simple
-      // {
-      //   id: 'bench_auto_01',
-      //   name: 'Open Benchmark Interface',
-      //   type: 'function_call',
-      //   category: 'benchmark',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Open the benchmark testing interface.',
-      //   expectedResult: {
-      //     tool_name: 'open_benchmark',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'bench_auto_02',
-      //   name: 'Get Benchmark Status',
-      //   type: 'function_call',
-      //   category: 'benchmark',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Get the current status of the benchmark system.',
-      //   expectedResult: {
-      //     tool_name: 'get_benchmark_status',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'bench_auto_03',
-      //   name: 'Get Benchmark Results',
-      //   type: 'function_call',
-      //   category: 'benchmark',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Get the results from the most recent benchmark run.',
-      //   expectedResult: {
-      //     tool_name: 'get_benchmark_results',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+ 
 
       // UTILITY TASKS - Automatic + Simple
       {
@@ -2057,68 +1786,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-      // ADVANCED ANNOTATION TASKS - Automatic + Simple
-      // {
-      //   id: 'annot_auto_07',
-      //   name: 'Bulk Update Annotations',
-      //   type: 'function_call',
-      //   category: 'annotation',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Bulk update all annotations of type CDS to add the qualifier note="auto-annotated".',
-      //   expectedResult: {
-      //     tool_name: 'bulk_update_annotations',
-      //     parameters: {
-      //       type: 'CDS',
-      //       qualifier: 'note',
-      //       value: 'auto-annotated',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'annot_auto_08',
-      //   name: 'Get Annotation History',
-      //   type: 'function_call',
-      //   category: 'annotation',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Get the edit history for the annotation named lacZ.',
-      //   expectedResult: {
-      //     tool_name: 'get_annotation_history',
-      //     parameters: {
-      //       name: 'lacZ',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-
-      // MULTI-WINDOW TASKS - Automatic + Simple
-      // {
-      //   id: 'window_auto_01',
-      //   name: 'Switch Active Window',
-      //   type: 'function_call',
-      //   category: 'navigation',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Switch to the first genome browser window.',
-      //   expectedResult: {
-      //     tool_name: 'switch_active_window',
-      //     parameters: {
-      //       windowIndex: 0,
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+ 
 
       // SYSTEM SETTINGS TASKS - Automatic + Simple
       {
@@ -2160,27 +1828,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-      // PRIMER ANNOTATION TASKS - Automatic + Simple
-      // {
-      //   id: 'primer_auto_04',
-      //   name: 'Add Primer Annotation',
-      //   type: 'function_call',
-      //   category: 'primer_design',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Add a primer annotation for the sequence ATGAAAGCGCTGAAAGCGCTGAAAG at position 500000.',
-      //   expectedResult: {
-      //     tool_name: 'add_primer_annotation',
-      //     parameters: {
-      //       sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAG',
-      //       position: 500000,
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+ 
 
       // BLAST ADDITIONAL TASKS - Automatic + Simple
       {
@@ -2200,69 +1848,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      // {
-      //   id: 'blast_auto_08',
-      //   name: 'Detect Sequence Type',
-      //   type: 'function_call',
-      //   category: 'blast',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Detect whether the sequence ATGAAAGCGCTGAAAGCGCTG is DNA or protein.',
-      //   expectedResult: {
-      //     tool_name: 'blast_detect_sequence_type',
-      //     parameters: {
-      //       sequence: 'ATGAAAGCGCTGAAAGCGCTG',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
 
-      // INTERPRO DETAIL TASKS - Automatic + Simple
-      // {
-      //   id: 'db_auto_05',
-      //   name: 'Get InterPro Entry Details',
-      //   type: 'function_call',
-      //   category: 'database',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Get detailed information about InterPro entry IPR000679.',
-      //   expectedResult: {
-      //     tool_name: 'get_interpro_entry_details',
-      //     parameters: {
-      //       entryId: 'IPR000679',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 60000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-
-      // BATCH TRACK SETTINGS TASKS - Automatic + Simple
-      // {
-      //   id: 'track_settings_auto_06',
-      //   name: 'Batch Set Track Settings',
-      //   type: 'function_call',
-      //   category: 'track_settings',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Batch set the height of all tracks to 40 pixels.',
-      //   expectedResult: {
-      //     tool_name: 'batch_set_track_settings',
-      //     parameters: {
-      //       settings: {
-      //         height: 40,
-      //       },
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
 
       // CLIPBOARD CONTENT TASKS - Automatic + Simple
       {
@@ -2307,23 +1893,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 60000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      // {
-      //   id: 'blast_auto_11',
-      //   name: 'Create BLAST Database Explicit',
-      //   type: 'function_call',
-      //   category: 'blast',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Create a new BLAST database from a FASTA file.',
-      //   expectedResult: {
-      //     tool_name: 'blast_create_database',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 60000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+ 
       {
         id: 'blast_auto_12',
         name: 'Create BLAST DB from Genome',
@@ -2358,146 +1928,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 60000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      // {
-      //   id: 'blast_auto_14',
-      //   name: 'Delete BLAST Database',
-      //   type: 'function_call',
-      //   category: 'blast',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Delete a BLAST database from the local system.',
-      //   expectedResult: {
-      //     tool_name: 'blast_delete_database',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'blast_auto_15',
-      //   name: 'Export BLAST Results',
-      //   type: 'function_call',
-      //   category: 'blast',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Export the current BLAST search results to a file.',
-      //   expectedResult: {
-      //     tool_name: 'blast_export_results',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'blast_auto_16',
-      //   name: 'Validate BLAST Database',
-      //   type: 'function_call',
-      //   category: 'blast',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Validate the integrity of BLAST databases on the system.',
-      //   expectedResult: {
-      //     tool_name: 'blast_validate_database',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-
-      // // BENCHMARK CONTROL TASKS - Automatic + Simple
-      // {
-      //   id: 'bench_auto_04',
-      //   name: 'Start Benchmark',
-      //   type: 'function_call',
-      //   category: 'benchmark',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Start the LLM instruction following benchmark with default settings.',
-      //   expectedResult: {
-      //     tool_name: 'start_benchmark',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'bench_auto_05',
-      //   name: 'Stop Benchmark',
-      //   type: 'function_call',
-      //   category: 'benchmark',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Stop the currently running benchmark.',
-      //   expectedResult: {
-      //     tool_name: 'stop_benchmark',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'bench_auto_06',
-      //   name: 'Pause Benchmark',
-      //   type: 'function_call',
-      //   category: 'benchmark',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Pause the currently running benchmark.',
-      //   expectedResult: {
-      //     tool_name: 'pause_benchmark',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'bench_auto_07',
-      //   name: 'Resume Benchmark',
-      //   type: 'function_call',
-      //   category: 'benchmark',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Resume the paused benchmark.',
-      //   expectedResult: {
-      //     tool_name: 'resume_benchmark',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'bench_auto_08',
-      //   name: 'Export Benchmark Results',
-      //   type: 'function_call',
-      //   category: 'benchmark',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Export the benchmark results in JSON format.',
-      //   expectedResult: {
-      //     tool_name: 'export_benchmark_results',
-      //     parameters: {
-      //       format: 'json',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 0,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+ 
 
       // CLOSE TAB TASKS - Automatic + Simple
       {
