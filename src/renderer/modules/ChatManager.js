@@ -5197,6 +5197,53 @@ class ChatManager {
           }
         }
         break;
+
+      case 'get_track_settings_schema': {
+        // Schema is large (~14KB). Compact each track to name + setting keys with
+        // type and default only — removes verbose descriptions to fit context budget.
+        if (sanitized.schema && typeof sanitized.schema === 'object') {
+          const compact = {};
+          for (const [trackType, trackDef] of Object.entries(sanitized.schema)) {
+            if (!trackDef || typeof trackDef !== 'object') continue;
+            compact[trackType] = { description: trackDef.description, settings: {} };
+            const settings = trackDef.settings || {};
+            for (const [key, meta] of Object.entries(settings)) {
+              compact[trackType].settings[key] = {
+                type: meta.type,
+                default: meta.default,
+                ...(meta.enum ? { enum: meta.enum } : {}),
+              };
+            }
+          }
+          sanitized.schema = compact;
+          sanitized._schemaNormalized = 'Descriptions stripped to reduce context size. Use get_track_settings for live values.';
+        }
+        break;
+      }
+
+      case 'get_all_track_settings': {
+        // Keep only the most useful fields per track; skip deep nested objects.
+        if (sanitized.settings && typeof sanitized.settings === 'object') {
+          const KEY_FIELDS = ['height', 'renderingMode', 'layoutMode', 'colorMode', 'fontSize',
+            'maxRows', 'showCoverage', 'showIndicators', 'contentColor', 'lineWidth',
+            'defaultTrackHeight', 'trackSpacing', 'resultHeight', 'resultSpacing',
+            'showRuler', 'adaptiveHeight', 'error', '_note'];
+          const compact = {};
+          for (const [trackType, trackSettings] of Object.entries(sanitized.settings)) {
+            if (!trackSettings || typeof trackSettings !== 'object') {
+              compact[trackType] = trackSettings;
+              continue;
+            }
+            compact[trackType] = {};
+            for (const field of KEY_FIELDS) {
+              if (field in trackSettings) compact[trackType][field] = trackSettings[field];
+            }
+          }
+          sanitized.settings = compact;
+          sanitized._settingsNormalized = 'Only key fields shown. Use get_track_settings with a specific track_type for full details.';
+        }
+        break;
+      }
     }
 
     // ─── General sanitization for any result ─────────────────────────────
@@ -14717,10 +14764,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Get all track settings
    */
   async getAllTrackSettings(parameters = {}) {
-    if (!this.genomeBrowser?.trackRenderer) {
-      throw new Error('TrackRenderer not available');
-    }
-
     const trackTypes = [
       'genes',
       'reads',
@@ -14733,10 +14776,27 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'sequenceLine',
     ];
     const allSettings = {};
+    const trackRenderer = this.genomeBrowser?.trackRenderer;
+
+    if (!trackRenderer) {
+      // TrackRenderer not yet initialized — return a minimal summary so the LLM
+      // still receives a useful (non-error) response during benchmark / early load.
+      console.warn('[getAllTrackSettings] TrackRenderer not available — returning defaults');
+      for (const trackType of trackTypes) {
+        allSettings[trackType] = { _note: 'TrackRenderer not available; showing defaults only', height: undefined };
+      }
+      return {
+        success: true,
+        settings: allSettings,
+        track_count: trackTypes.length,
+        note: 'TrackRenderer not yet initialized. Values shown are placeholders; load a genome file first.',
+        timestamp: new Date().toISOString(),
+      };
+    }
 
     for (const trackType of trackTypes) {
       try {
-        allSettings[trackType] = this.genomeBrowser.trackRenderer.getTrackSettings(trackType);
+        allSettings[trackType] = trackRenderer.getTrackSettings(trackType);
       } catch (error) {
         console.warn(`Failed to get settings for ${trackType}:`, error.message);
         allSettings[trackType] = { error: error.message };

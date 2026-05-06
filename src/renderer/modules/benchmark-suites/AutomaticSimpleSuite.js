@@ -71,78 +71,27 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
 
   /**
    * Clean up target export files before tests to prevent false positives
-   * 在测试开始前检测并删除目标导出文件，避免判断错误
    */
   async cleanupExportFiles() {
     const exportedFilesDir = this.buildFilePath('exported_files');
 
-    console.log('🧹 [AutomaticSimpleSuite] Starting export file cleanup...');
-    console.log(`🔍 [AutomaticSimpleSuite] Checking directory: ${exportedFilesDir}`);
+    if (typeof require === 'undefined') return;
 
-    // Method 1: Try Node.js fs module if available
-    if (typeof require !== 'undefined') {
-      const fs = require('fs');
-      try {
-        // Check if directory exists
-        if (fs.existsSync(exportedFilesDir)) {
-          // Read all files in the directory
-          const files = fs.readdirSync(exportedFilesDir);
-          
-          // Delete each file
-          for (const file of files) {
-            const filePath = `${exportedFilesDir}/${file}`;
-            // Only delete files, not subdirectories
-            if (fs.statSync(filePath).isFile()) {
-              fs.unlinkSync(filePath);
-              console.log(`✅ [AutomaticSimpleSuite] Deleted file: ${filePath}`);
-            }
-          }
-          console.log(`✅ [AutomaticSimpleSuite] Cleaned up ${files.length} files in ${exportedFilesDir}`);
-        } else {
-          console.log(`ℹ️  [AutomaticSimpleSuite] Directory does not exist: ${exportedFilesDir}`);
-        }
-      } catch (error) {
-        console.warn(`⚠️  [AutomaticSimpleSuite] Error during directory cleanup: ${error.message}`);
-      }
-    }
-    // Method 2: Try via ChatManager's file operations if available
-    else if (window.chatManager && window.chatManager.deleteFile) {
-      console.log(`ℹ️  [AutomaticSimpleSuite] Using ChatManager for cleanup (limited to specific files)`);
-      // Fallback to specific files if directory operations not available
-      const exportFiles = [
-        'exported_files/exported_sequences.fasta',
-        'exported_files/exported_data.gbk',
-        'exported_files/exported_annotations.gff3',
-        'exported_files/exported_features.bed',
-        'exported_files/exported_cds.fasta',
-        'exported_files/exported_proteins.fasta',
-        'exported_files/exported_region.fasta',
-      ];
-      
-      for (const filename of exportFiles) {
-        try {
-          const filePath = this.buildFilePath(filename);
-          const result = await window.chatManager.deleteFile({ filePath: filePath });
-          if (result && result.success) {
-            console.log(`✅ [AutomaticSimpleSuite] Deleted via ChatManager: ${filePath}`);
-          } else {
-            console.log(`ℹ️  [AutomaticSimpleSuite] File may not exist or delete failed: ${filePath}`);
-          }
-        } catch (error) {
-          if (error.message && error.message.includes('not found')) {
-            console.log(`ℹ️  [AutomaticSimpleSuite] File does not exist: ${filePath}`);
-          } else {
-            console.warn(`⚠️  [AutomaticSimpleSuite] Error checking/deleting ${filePath}:`, error.message);
-          }
+    const fs = require('fs');
+    try {
+      if (!fs.existsSync(exportedFilesDir)) return;
+
+      const files = fs.readdirSync(exportedFilesDir);
+      for (const file of files) {
+        const filePath = `${exportedFilesDir}/${file}`;
+        if (fs.statSync(filePath).isFile()) {
+          fs.unlinkSync(filePath);
         }
       }
+      console.log(`🧹 Cleaned up ${files.length} export files`);
+    } catch (error) {
+      console.warn(`⚠️ Export cleanup error: ${error.message}`);
     }
-    // Method 3: Log warning if no deletion method available
-    else {
-      console.warn(`⚠️  [AutomaticSimpleSuite] No file deletion method available for ${exportedFilesDir}`);
-    }
-
-    console.log('✅ [AutomaticSimpleSuite] Export file cleanup completed');
   }
 
   /**
@@ -1138,25 +1087,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      // {
-      //   id: 'track_auto_03',
-      //   name: 'Toggle Annotation Track',
-      //   type: 'function_call',
-      //   category: 'track_control',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Toggle the annotation track visibility on.',
-      //   expectedResult: {
-      //     tool_name: 'toggle_annotation_track',
-      //     parameters: {
-      //       visible: true,
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+ 
 
       // PROTEIN STRUCTURE TASKS - Automatic + Simple
       // {
@@ -1754,11 +1685,11 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'utility',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Download a file from the URL https://example.com/genome.fasta to the working directory.',
+        instruction: 'Download a file from the URL https://ftp.ncbi.nlm.nih.gov/genomes/README_change_notice.txt to the working directory.',
         expectedResult: {
           tool_name: 'download_internet_file',
           parameters: {
-            url: 'https://example.com/genome.fasta',
+            url: 'https://ftp.ncbi.nlm.nih.gov/genomes/README_change_notice.txt',
           },
         },
         maxScore: 5,
