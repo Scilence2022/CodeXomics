@@ -1704,7 +1704,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'utility',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'View the README.md file in the markdown viewer.',
+        instruction: `View the ${this.buildFilePath('README.md')} file in the markdown viewer.`,
         expectedResult: {
           tool_name: 'view_markdown_file',
           parameters: {

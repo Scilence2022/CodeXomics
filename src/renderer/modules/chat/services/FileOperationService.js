@@ -521,6 +521,13 @@ class FileOperationService {
       console.log(`📥 [FileOperationService] Downloading file from: ${url}`);
       if (!url) throw new Error('URL is required for download');
 
+      // If no explicit destination was given, use the user-configured working directory
+      // so the file lands where set_working_directory points, not the system Downloads folder.
+      if (!destinationPath) {
+        destinationPath = this.getCurrentWorkingDirectory();
+        console.log(`📥 [FileOperationService] No destinationPath given; using working directory: ${destinationPath}`);
+      }
+
       if (window.electronAPI?.downloadInternetFile) {
         const result = await window.electronAPI.downloadInternetFile({ url, destinationPath, filename });
         if (result.success) return { success: true, message: `Successfully downloaded file to: ${result.filePath}`, filePath: result.filePath, filename: result.filename, fileSize: result.fileSize, url, tool: 'download_internet_file' };

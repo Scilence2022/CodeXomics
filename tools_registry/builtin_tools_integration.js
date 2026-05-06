@@ -1046,6 +1046,19 @@ class BuiltInToolsIntegration {
       });
     }
 
+    // Check for view_markdown_file patterns
+    // Matches: "view the markdown file", "open README.md", "show/display/read the .md file",
+    //          "open the guide markdown", "view documentation file"
+    if (/\b(view|open|show|display|read|render)\s+.*?\b(markdown|\.md\b|readme)/i.test(query) ||
+        /\b(markdown|\.md\b)\s+.*?\b(view|open|show|display|read|render|file)\b/i.test(query) ||
+        /\b(view|open|show|display|read)\s+.*?\bmarkdown\b/i.test(query)) {
+      relevantTools.push({
+        name: 'view_markdown_file',
+        confidence: 0.9,
+        reason: 'Markdown file viewing keywords detected',
+      });
+    }
+
     // Check for file loading patterns
     for (const [patternName, regex] of Object.entries(patterns)) {
       if (regex.test(query)) {

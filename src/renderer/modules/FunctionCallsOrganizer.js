@@ -45,6 +45,9 @@ class FunctionCallsOrganizer {
           'reset_track_settings',
           'get_track_settings_schema',
           'batch_set_track_settings',
+          'download_internet_file',
+          'view_markdown_file',
+          'list_available_tools',
         ],
       },
 

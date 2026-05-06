@@ -1016,27 +1016,22 @@ class ChatManager {
         throw new Error('File path is required');
       }
 
-      // Call the Electron API to open the markdown viewer
-      if (window.electronAPI && window.electronAPI.openMarkdownViewer) {
-        const result = await window.electronAPI.openMarkdownViewer({
-          filePath,
-          title,
-        });
+      // Main renderer window uses nodeIntegration:true / contextIsolation:false (no preload),
+      // so window.electronAPI is undefined here. Use require('electron').ipcRenderer directly.
+      const { ipcRenderer } = require('electron');
+      const result = await ipcRenderer.invoke('open-markdown-viewer', { filePath, title });
 
-        if (result.success) {
-          return {
-            success: true,
-            message: `Opened markdown viewer for: ${result.fileName}`,
-            filePath: result.filePath,
-            fileName: result.fileName,
-            windowTitle: result.windowTitle,
-            tool: 'view_markdown_file',
-          };
-        } else {
-          throw new Error(result.error || 'Failed to open markdown viewer');
-        }
+      if (result.success) {
+        return {
+          success: true,
+          message: `Opened markdown viewer for: ${result.fileName}`,
+          filePath: result.filePath,
+          fileName: result.fileName,
+          windowTitle: result.windowTitle,
+          tool: 'view_markdown_file',
+        };
       } else {
-        throw new Error('electronAPI.openMarkdownViewer not available');
+        throw new Error(result.error || 'Failed to open markdown viewer');
       }
     } catch (error) {
       console.error('❌ [ChatManager] Error opening markdown viewer:', error);
