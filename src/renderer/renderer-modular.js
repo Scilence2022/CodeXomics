@@ -3534,8 +3534,17 @@ class GenomeBrowser {
         break;
 
       default:
-        console.warn(`Unknown track type: ${trackType}`);
-        return;
+        if (trackType.startsWith('annotation_')) {
+          const trackId = trackType.substring(11);
+          const annotationTrack = this.annotationTracks?.find(t => t.id === trackId);
+          if (annotationTrack && annotationTrack.visible) {
+            trackElement = this.trackRenderer.createAnnotationTrack(chromosome, annotationTrack);
+          }
+        } else {
+          console.warn(`Unknown track type: ${trackType}`);
+          return;
+        }
+        break;
     }
 
     if (trackElement) {
@@ -3675,7 +3684,7 @@ class GenomeBrowser {
       // Create separate tracks for each annotation track
       if (this.annotationTracks && this.annotationTracks.length > 0) {
         for (const annotationTrack of this.annotationTracks) {
-          if (annotationTrack.visible) {
+          if (annotationTrack.visible && !currentTabOrder.includes(`annotation_${annotationTrack.id}`)) {
             const trackElement = this.trackRenderer.createAnnotationTrack(chromosome, annotationTrack);
             if (trackElement) {
               tracksToShow.push({ element: trackElement, type: `annotation_${annotationTrack.id}` });

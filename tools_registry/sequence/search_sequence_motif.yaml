@@ -36,7 +36,7 @@ parameters:
     strand:
       type: string
       enum: ['+', '-', 'both']
-      description: 'Strand to search on. Use \'both\' to search both forward and reverse complement strands.'
+      description: "Strand to search on. Use 'both' to search both forward and reverse complement strands."
       default: 'both'
     max_mismatches:
       type: number

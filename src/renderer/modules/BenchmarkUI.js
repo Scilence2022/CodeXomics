@@ -650,23 +650,34 @@ class BenchmarkUI {
                             <div class="config-group">
                                 <h3>📋 Test Suites</h3>
                                 <div class="checkbox-grid">
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" id="suite-automatic_simple" checked>
-                                        <span>⚙️ Automatic Simple Tests <small id="count-automatic_simple">(... tests)</small></span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" id="suite-automatic_complex" checked>
-                                        <span>🔧 Automatic Complex Tests <small id="count-automatic_complex">(... tests)</small></span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" id="suite-manual_suite">
-                                        <span>👥 Manual Tests <small id="count-manual_suite">(... tests)</small></span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" id="suite-manual_complex">
-                                        <span>🧠 Manual Complex Tests <small id="count-manual_complex">(... tests)</small></span>
-                                    </label>
-                                    
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <label class="checkbox-item" style="flex: 1;">
+                                            <input type="checkbox" id="suite-automatic_simple" checked>
+                                            <span>⚙️ Automatic Simple Tests <small id="count-automatic_simple">(... tests)</small></span>
+                                        </label>
+                                        <button type="button" class="configure-tests-btn" data-suite="automatic_simple" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 16px; transition: transform 0.2s;" title="Configure specific tests">⚙️</button>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <label class="checkbox-item" style="flex: 1;">
+                                            <input type="checkbox" id="suite-automatic_complex" checked>
+                                            <span>🔧 Automatic Complex Tests <small id="count-automatic_complex">(... tests)</small></span>
+                                        </label>
+                                        <button type="button" class="configure-tests-btn" data-suite="automatic_complex" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 16px; transition: transform 0.2s;" title="Configure specific tests">⚙️</button>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <label class="checkbox-item" style="flex: 1;">
+                                            <input type="checkbox" id="suite-manual_suite">
+                                            <span>👥 Manual Tests <small id="count-manual_suite">(... tests)</small></span>
+                                        </label>
+                                        <button type="button" class="configure-tests-btn" data-suite="manual_suite" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 16px; transition: transform 0.2s;" title="Configure specific tests">⚙️</button>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <label class="checkbox-item" style="flex: 1;">
+                                            <input type="checkbox" id="suite-manual_complex">
+                                            <span>🧠 Manual Complex Tests <small id="count-manual_complex">(... tests)</small></span>
+                                        </label>
+                                        <button type="button" class="configure-tests-btn" data-suite="manual_complex" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 16px; transition: transform 0.2s;" title="Configure specific tests">⚙️</button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="config-group">
@@ -845,6 +856,28 @@ class BenchmarkUI {
                 <div class="resize-handle resize-handle-se"></div>
                 <div class="resize-handle resize-handle-sw"></div>
             </div>
+
+            <!-- Test Selection Modal -->
+            <div id="testSelectionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 99999999; align-items: center; justify-content: center;">
+                <div style="background: white; border-radius: 12px; width: 80%; max-width: 800px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3); pointer-events: auto;">
+                    <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="margin: 0; font-size: 20px; color: #333;" id="testSelectionTitle">Select Tests</h2>
+                        <button id="closeTestSelectionBtn" type="button" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+                    </div>
+                    <div style="padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; gap: 10px; background: #f9f9f9;">
+                        <button id="selectAllTestsBtn" type="button" class="btn btn-primary" style="padding: 6px 12px; font-size: 13px; margin: 0;">Select All</button>
+                        <button id="deselectAllTestsBtn" type="button" class="btn btn-danger" style="padding: 6px 12px; font-size: 13px; margin: 0;">Deselect All</button>
+                        <div style="flex: 1;"></div>
+                        <span id="testSelectionCount" style="font-size: 13px; color: #666; align-self: center;">0 selected</span>
+                    </div>
+                    <div id="testSelectionList" style="padding: 20px; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;">
+                        <!-- Checkboxes injected here -->
+                    </div>
+                    <div style="padding: 20px; border-top: 1px solid #eee; text-align: right; background: #f9f9f9; border-radius: 0 0 12px 12px;">
+                        <button id="saveTestSelectionBtn" type="button" class="btn btn-success" style="margin: 0;">Save Selection</button>
+                    </div>
+                </div>
+            </div>
         `;
 
     return benchmarkInterface;
@@ -939,9 +972,126 @@ class BenchmarkUI {
     // Initialize default directory field
     this.initializeDefaultDirectory();
 
+    // Setup Test Selection modal handlers
+    this.setupTestSelectionHandlers();
+
     // Mark handlers as setup to prevent duplicates
     this.handlersSetup = true;
     console.log('✅ Event handlers setup complete (no duplicates)');
+  }
+
+  /**
+   * Setup handlers for individual test selection modal
+   */
+  setupTestSelectionHandlers() {
+    this.selectedTests = this.selectedTests || {};
+    
+    // Add click event for configure buttons
+    document.querySelectorAll('.configure-tests-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const suiteId = btn.getAttribute('data-suite');
+        this.openTestSelectionModal(suiteId);
+      });
+    });
+
+    // Close button
+    document.getElementById('closeTestSelectionBtn')?.addEventListener('click', () => {
+      document.getElementById('testSelectionModal').style.display = 'none';
+    });
+
+    // Select All / Deselect All
+    document.getElementById('selectAllTestsBtn')?.addEventListener('click', () => {
+      document.querySelectorAll('#testSelectionList input[type="checkbox"]').forEach(cb => cb.checked = true);
+      this.updateTestSelectionCount();
+    });
+    document.getElementById('deselectAllTestsBtn')?.addEventListener('click', () => {
+      document.querySelectorAll('#testSelectionList input[type="checkbox"]').forEach(cb => cb.checked = false);
+      this.updateTestSelectionCount();
+    });
+
+    // Save button
+    document.getElementById('saveTestSelectionBtn')?.addEventListener('click', () => {
+      const suiteId = document.getElementById('testSelectionModal').getAttribute('data-current-suite');
+      if (suiteId) {
+        const checkboxes = Array.from(document.querySelectorAll('#testSelectionList input[type="checkbox"]'));
+        const allChecked = checkboxes.every(cb => cb.checked);
+        
+        if (allChecked) {
+           delete this.selectedTests[suiteId]; // Use default
+        } else {
+           this.selectedTests[suiteId] = checkboxes.filter(cb => cb.checked).map(cb => cb.value);
+        }
+        
+        // Update count text
+        const total = checkboxes.length;
+        const selected = this.selectedTests[suiteId] ? this.selectedTests[suiteId].length : total;
+        const countSpan = document.getElementById(`count-${suiteId}`);
+        if (countSpan) {
+           countSpan.textContent = `(${selected}/${total} tests)`;
+        }
+      }
+      document.getElementById('testSelectionModal').style.display = 'none';
+    });
+  }
+
+  updateTestSelectionCount() {
+    const total = document.querySelectorAll('#testSelectionList input[type="checkbox"]').length;
+    const selected = document.querySelectorAll('#testSelectionList input[type="checkbox"]:checked').length;
+    const countSpan = document.getElementById('testSelectionCount');
+    if (countSpan) {
+      countSpan.textContent = `${selected} selected`;
+    }
+  }
+
+  openTestSelectionModal(suiteId) {
+    const modal = document.getElementById('testSelectionModal');
+    const title = document.getElementById('testSelectionTitle');
+    const list = document.getElementById('testSelectionList');
+    
+    if (!modal || !title || !list || !this.framework || !this.framework.testSuites) return;
+    
+    const suite = this.framework.testSuites.get(suiteId);
+    if (!suite) return;
+    
+    modal.setAttribute('data-current-suite', suiteId);
+    const suiteNameMap = {
+      'automatic_simple': 'Automatic Simple Tests',
+      'automatic_complex': 'Automatic Complex Tests',
+      'manual_suite': 'Manual Tests',
+      'manual_complex': 'Manual Complex Tests'
+    };
+    title.textContent = `Select Tests - ${suiteNameMap[suiteId] || suiteId}`;
+    
+    // Generate checkboxes
+    const tests = suite.getTests();
+    const currentSelection = this.selectedTests[suiteId];
+    
+    list.innerHTML = '';
+    tests.forEach(test => {
+      const isChecked = currentSelection ? currentSelection.includes(test.id) : true;
+      const desc = test.description || test.name || test.id;
+      
+      const item = document.createElement('label');
+      item.style.cssText = 'display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding: 8px; background: white; border: 1px solid #eee; border-radius: 6px;';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = test.id;
+      checkbox.checked = isChecked;
+      checkbox.style.marginTop = '4px';
+      checkbox.addEventListener('change', () => this.updateTestSelectionCount());
+      
+      const textDiv = document.createElement('div');
+      textDiv.innerHTML = `<strong style="display: block; font-size: 13px;">${test.id}</strong><span style="font-size: 11px; color: #666;">${desc}</span>`;
+      
+      item.appendChild(checkbox);
+      item.appendChild(textDiv);
+      list.appendChild(item);
+    });
+    
+    this.updateTestSelectionCount();
+    modal.style.display = 'flex';
   }
 
   /**
@@ -3400,10 +3550,26 @@ class BenchmarkUI {
       selectedSuites.push(cb.id.replace('suite-', ''));
     });
 
+    let allSelectedTests = null;
+    if (this.selectedTests && Object.keys(this.selectedTests).length > 0) {
+       allSelectedTests = [];
+       selectedSuites.forEach(suiteId => {
+          if (this.selectedTests[suiteId]) {
+             allSelectedTests.push(...this.selectedTests[suiteId]);
+          } else {
+             const suite = this.framework?.testSuites?.get(suiteId);
+             if (suite) {
+               allSelectedTests.push(...suite.getTests().map(t => t.id));
+             }
+          }
+       });
+    }
+
     const timeoutValue = parseInt(document.getElementById('testTimeout').value);
 
     const config = {
       suites: selectedSuites,
+      tests: allSelectedTests,
       generateReport: document.getElementById('generateReport').checked,
       includeCharts: document.getElementById('includeCharts').checked,
       includeRawData: document.getElementById('includeRawData')?.checked || false,

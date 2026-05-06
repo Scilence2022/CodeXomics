@@ -194,7 +194,12 @@ class LLMBenchmarkFramework {
         if (options.suites && !options.suites.includes(suiteId)) {
           continue; // Skip if specific suites requested and this isn't one
         }
-        totalTestCount += testSuite.getTestCount();
+        
+        let suiteTests = testSuite.getTests();
+        if (options.tests) {
+          suiteTests = suiteTests.filter(test => options.tests.includes(test.id));
+        }
+        totalTestCount += suiteTests.length;
       }
 
       console.log(`📊 [Progress Tracking] Total tests to run: ${totalTestCount}`);

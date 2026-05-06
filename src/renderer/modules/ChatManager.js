@@ -4895,7 +4895,7 @@ class ChatManager {
               // IMPORTANT: Sanitize results before sending to LLM to prevent context overflow
               const successMessages = successfulResults.map(result => {
                 const sanitizedResult = this.sanitizeResultForLLM(result.result, result.tool);
-                const sanitizedStr = JSON.stringify(sanitizedResult);
+                const sanitizedStr = JSON.stringify(sanitizedResult) || 'null';
                 // Log warning if sanitized result is still large (helps identify tools needing better sanitization)
                 if (sanitizedStr.length > 10000) {
                   console.warn(
