@@ -67,15 +67,21 @@ class SequenceTools {
 
       search_sequence_motif: {
         name: 'search_sequence_motif',
-        description: 'Search for sequence motifs in the genome',
+        description: 'Search for sequence motifs in the genome. Supports exact matches, IUPAC ambiguity codes (N,R,Y,S,W,K,M,B,D,H,V), regular expressions, and mismatch tolerance.',
         parameters: {
           type: 'object',
           properties: {
-            pattern: { type: 'string', description: 'Sequence motif pattern' },
-            chromosome: { type: 'string', description: 'Chromosome to search (optional)' },
+            motif: { type: 'string', description: 'Motif pattern to search for (supports IUPAC codes: N=any, R=A/G, Y=C/T, etc.)' },
+            pattern: { type: 'string', description: 'Alternative to motif - regex pattern or IUPAC motif string' },
+            chromosome: { type: 'string', description: 'Chromosome to search in (optional, searches current view if not specified)' },
+            start: { type: 'number', description: 'Start position for search region (optional)' },
+            end: { type: 'number', description: 'End position for search region (optional)' },
+            strand: { type: 'string', enum: ['+', '-', 'both'], description: 'Strand to search on', default: 'both' },
+            max_mismatches: { type: 'number', description: 'Maximum allowed mismatches (0 for exact match)', minimum: 0, default: 0 },
+            case_sensitive: { type: 'boolean', description: 'Whether search should be case sensitive', default: false },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
-          required: ['pattern'],
+          required: ['motif'],
         },
       },
 

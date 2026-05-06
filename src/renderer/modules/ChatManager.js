@@ -10002,60 +10002,211 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   // NEW COMPREHENSIVE GENOMICS FUNCTION CALLS
   // ========================================
 
+  // IUPAC ambiguity code map for motif expansion
+  static IUPAC_CODES = {
+    A: 'A', C: 'C', G: 'G', T: 'T',
+    R: '[AG]', Y: '[CT]', S: '[GC]', W: '[AT]',
+    K: '[GT]', M: '[AC]', B: '[CGT]', D: '[AGT]',
+    H: '[ACT]', V: '[ACG]', N: '[ACGT]',
+  };
+
+  // IUPAC complement map for reverse complementing IUPAC motifs
+  static IUPAC_COMPLEMENT = {
+    A: 'T', T: 'A', G: 'C', C: 'G',
+    R: 'Y', Y: 'R', S: 'S', W: 'W',
+    K: 'M', M: 'K', B: 'V', D: 'H',
+    H: 'D', V: 'B', N: 'N',
+  };
+
+  /**
+   * Reverse complement a motif string with IUPAC code support.
+   * Unlike this.reverseComplement() which only handles ACGTN,
+   * this method correctly complements all IUPAC ambiguity codes.
+   * @param {string} motif - Motif string (may contain IUPAC codes)
+   * @returns {string} Reverse-complemented motif
+   */
+  _reverseComplementIUPAC(motif) {
+    return motif.toUpperCase().split('').reverse()
+      .map(b => ChatManager.IUPAC_COMPLEMENT[b] || b)
+      .join('');
+  }
+
+  /**
+   * Expand IUPAC ambiguity codes in a motif to a regex pattern string.
+   * If the motif contains no IUPAC codes beyond ACGT, returns null (use exact match).
+   * @param {string} motif - Motif possibly containing IUPAC codes
+   * @returns {string|null} Expanded regex pattern string, or null if no IUPAC codes present
+   */
+  _expandIUPACToRegex(motif) {
+    const pureBases = /^[ACGTacgt]+$/;
+    if (pureBases.test(motif)) return null;
+
+    let regex = '';
+    let hasAmbiguity = false;
+    for (const ch of motif.toUpperCase()) {
+      const expanded = ChatManager.IUPAC_CODES[ch];
+      if (expanded && expanded !== ch) {
+        hasAmbiguity = true;
+        regex += expanded;
+      } else if (expanded) {
+        regex += expanded;
+      } else {
+        regex += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }
+    }
+    return hasAmbiguity ? regex : null;
+  }
+
   // 1. MOTIF AND PATTERN SEARCHING
   async searchMotif(params) {
-    const { pattern, chromosome, start, end, allowMismatches = 0 } = params;
+    const {
+      pattern,
+      motif,
+      chromosome,
+      start,
+      end,
+      strand = 'both',
+      max_mismatches = 0,
+      allowMismatches,
+      case_sensitive = false,
+    } = params;
+
+    // Normalize: accept both 'pattern' and 'motif' parameter names
+    const motifPattern = (motif || pattern || '').toUpperCase();
+    const maxMismatches = allowMismatches ?? max_mismatches ?? 0;
+
+    if (!motifPattern) {
+      return { success: false, error: 'Motif pattern is required (use "motif" or "pattern" parameter)' };
+    }
 
     const chr = chromosome || this.app.currentChromosome;
     if (!chr) {
-      throw new Error('No chromosome specified and none currently selected');
+      return { success: false, error: 'No chromosome specified and none currently selected' };
     }
 
     const regionStart = start || this.app.currentPosition?.start || 0;
-    const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
+    const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence?.[chr]?.length || 0;
 
     const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
-    const motifPattern = pattern.toUpperCase();
+    if (!sequence || sequence.length === 0) {
+      return { success: false, error: 'No sequence data available for the specified region' };
+    }
+
+    const searchSeq = case_sensitive ? sequence : sequence.toUpperCase();
     const matches = [];
+    const maxResults = 500;
 
-    // Search for exact matches and with mismatches
-    for (let i = 0; i <= sequence.length - motifPattern.length; i++) {
-      const subsequence = sequence.substring(i, i + motifPattern.length);
-      const mismatches = this.countMismatches(subsequence, motifPattern);
+    // Decide search strategy: regex (for IUPAC or mismatches=0) vs brute-force (for mismatches>0 without IUPAC)
+    const iupacRegex = this._expandIUPACToRegex(motifPattern);
 
-      if (mismatches <= allowMismatches) {
-        matches.push({
-          position: regionStart + i,
-          sequence: subsequence,
-          mismatches: mismatches,
-          strand: '+',
-        });
+    if (maxMismatches === 0) {
+      // ---- Fast regex path (exact / IUPAC) ----
+      const regexPattern = iupacRegex || motifPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const flags = case_sensitive ? 'g' : 'gi';
+      const regex = new RegExp(regexPattern, flags);
+
+      // Forward strand
+      if (strand === '+' || strand === 'both') {
+        regex.lastIndex = 0;
+        let m;
+        while ((m = regex.exec(searchSeq)) !== null && matches.length < maxResults) {
+          matches.push({
+            position: regionStart + m.index + 1,  // 1-based
+            end: regionStart + m.index + m[0].length,
+            sequence: m[0],
+            strand: '+',
+            mismatches: 0,
+          });
+          if (m[0].length === 0) regex.lastIndex++;  // zero-length match guard
+        }
+      }
+
+      // Reverse strand
+      if (strand === '-' || strand === 'both') {
+        const rcMotif = this._reverseComplementIUPAC(motifPattern);
+        const rcRegexStr = iupacRegex
+          ? this._expandIUPACToRegex(rcMotif) || rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          : rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rcRegex = new RegExp(rcRegexStr, flags);
+        const rcSeq = this.reverseComplement(searchSeq);
+        rcRegex.lastIndex = 0;
+        let m;
+        while ((m = rcRegex.exec(rcSeq)) !== null && matches.length < maxResults) {
+          // Map position from reverse-complement space back to forward coordinates
+          const fwdPos = searchSeq.length - m.index - m[0].length;
+          matches.push({
+            position: regionStart + fwdPos + 1,  // 1-based
+            end: regionStart + fwdPos + m[0].length,
+            sequence: m[0],
+            strand: '-',
+            mismatches: 0,
+          });
+          if (m[0].length === 0) rcRegex.lastIndex++;
+        }
+      }
+    } else {
+      // ---- Mismatch-tolerant path (brute-force with early exit) ----
+      const motifLen = motifPattern.length;
+
+      // Forward strand
+      if (strand === '+' || strand === 'both') {
+        for (let i = 0; i <= searchSeq.length - motifLen && matches.length < maxResults; i++) {
+          const sub = searchSeq.substring(i, i + motifLen);
+          const mm = this.countMismatches(sub, motifPattern);
+          if (mm <= maxMismatches) {
+            matches.push({
+              position: regionStart + i + 1,  // 1-based
+              end: regionStart + i + motifLen,
+              sequence: sub,
+              strand: '+',
+              mismatches: mm,
+            });
+          }
+        }
+      }
+
+      // Reverse strand
+      if (strand === '-' || strand === 'both') {
+        const rcMotif = this._reverseComplementIUPAC(motifPattern);
+        const rcMotifLen = rcMotif.length;
+        for (let i = 0; i <= searchSeq.length - rcMotifLen && matches.length < maxResults; i++) {
+          const sub = searchSeq.substring(i, i + rcMotifLen);
+          const mm = this.countMismatches(sub, rcMotif);
+          if (mm <= maxMismatches) {
+            matches.push({
+              position: regionStart + i + 1,
+              end: regionStart + i + rcMotifLen,
+              sequence: sub,
+              strand: '-',
+              mismatches: mm,
+            });
+          }
+        }
       }
     }
 
-    // Search reverse complement
-    const reverseComplement = this.reverseComplement(motifPattern);
-    for (let i = 0; i <= sequence.length - reverseComplement.length; i++) {
-      const subsequence = sequence.substring(i, i + reverseComplement.length);
-      const mismatches = this.countMismatches(subsequence, reverseComplement);
+    // Sort by position
+    matches.sort((a, b) => a.position - b.position);
 
-      if (mismatches <= allowMismatches) {
-        matches.push({
-          position: regionStart + i,
-          sequence: subsequence,
-          mismatches: mismatches,
-          strand: '-',
-        });
-      }
-    }
+    // Compute summary statistics
+    const fwdCount = matches.filter(m => m.strand === '+').length;
+    const revCount = matches.filter(m => m.strand === '-').length;
+    const regionLen = regionEnd - regionStart;
+    const density = regionLen > 0 ? (matches.length / regionLen * 1000).toFixed(3) : 0;
 
     return {
-      pattern: pattern,
+      success: true,
+      motif: motifPattern,
       chromosome: chr,
-      searchRegion: `${regionStart}-${regionEnd}`,
-      allowedMismatches: allowMismatches,
-      matchesFound: matches.length,
-      matches: matches.slice(0, 50), // Limit to first 50 matches
+      searchRegion: { start: regionStart, end: regionEnd, length: regionLen },
+      strandSearched: strand,
+      allowedMismatches: maxMismatches,
+      iupacExpanded: iupacRegex !== null,
+      totalMatches: matches.length,
+      forwardMatches: fwdCount,
+      reverseMatches: revCount,
+      densityPerKb: parseFloat(density),
+      matches: matches.slice(0, maxResults),
     };
   }
 

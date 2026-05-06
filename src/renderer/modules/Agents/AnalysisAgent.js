@@ -795,22 +795,58 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 搜索序列模式
+   * 搜索序列模式 (search_sequence_motif / search_pattern)
    */
   async searchPattern(parameters, strategy) {
     try {
-      const { pattern, sequence, chromosome, maxMismatches = 0 } = parameters;
+      const {
+        pattern,
+        motif,
+        sequence,
+        chromosome,
+        start,
+        end,
+        strand = 'both',
+        maxMismatches = 0,
+        max_mismatches,
+        case_sensitive = false,
+      } = parameters;
 
-      if (!pattern) {
-        throw new Error('Pattern is required');
+      const motifPattern = motif || pattern;
+      const maxMM = max_mismatches ?? maxMismatches ?? 0;
+
+      if (!motifPattern) {
+        throw new Error('Pattern/motif is required');
       }
 
+      // If a raw sequence string is provided, search within it directly
       if (this.sequenceUtils && sequence) {
-        const matches = this.sequenceUtils.searchPattern(pattern, sequence, maxMismatches);
-        return { success: true, matches, count: matches.length };
+        const matches = this.sequenceUtils.searchPattern(motifPattern, sequence, maxMM);
+        return {
+          success: true,
+          motif: motifPattern,
+          matches,
+          totalMatches: matches.length,
+        };
       }
 
-      return { success: false, error: 'search_pattern requires sequenceUtils or ChatManager execution' };
+      // Otherwise delegate to ChatManager.searchMotif which can access genome data
+      if (this.chatManager && typeof this.chatManager.searchMotif === 'function') {
+        return await this.chatManager.searchMotif({
+          pattern: motifPattern,
+          chromosome,
+          start,
+          end,
+          strand,
+          max_mismatches: maxMM,
+          case_sensitive,
+        });
+      }
+
+      return {
+        success: false,
+        error: 'search_sequence_motif requires a sequence string, genome data via ChatManager, or sequenceUtils',
+      };
     } catch (error) {
       return { success: false, error: error.message };
     }

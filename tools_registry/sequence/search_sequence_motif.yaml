@@ -1,12 +1,12 @@
 name: search_sequence_motif
-version: 1.1.0
-description: 'Search for specific sequence motifs or patterns within genomic regions. Supports exact matches, IUPAC ambiguity codes, and regular expressions.'
+version: 2.0.0
+description: 'Search for specific sequence motifs or patterns within genomic regions. Supports exact matches, IUPAC ambiguity codes (N=any, R=A/G, Y=C/T, S=G/C, W=A/T, K=G/T, M=A/C, B=not A, D=not C, H=not G, V=not T), regular expressions, and mismatch tolerance.'
 category: sequence
-keywords: ['motif', 'pattern', 'search', 'sequence', 'binding site', 'regulatory element']
+keywords: ['motif', 'pattern', 'search', 'sequence', 'binding site', 'regulatory element', 'IUPAC', 'ambiguity']
 priority: 1
 execution:
   type: client
-  timeout: 15000
+  timeout: 30000
   retries: 2
   requires_auth: false
   requires_data: true
@@ -16,33 +16,36 @@ parameters:
   properties:
     motif:
       type: string
-      description: 'Motif pattern to search for (supports IUPAC codes: N=any, R=A/G, Y=C/T, etc.)'
-      examples: ['TATAAA', 'GGATCC', 'NNNATGNN', 'CANNTG']
+      description: 'Motif pattern to search for. Supports IUPAC ambiguity codes: N=any base, R=A/G, Y=C/T, S=G/C, W=A/T, K=G/T, M=A/C, B=CGT, D=AGT, H=ACT, V=ACG. Also accepts regex patterns.'
+      examples: ['TATAAA', 'GGATCC', 'NNNATGNN', 'CANNTG', 'GA[AT]TC']
+    pattern:
+      type: string
+      description: 'Alternative to motif - regex pattern or IUPAC motif string. If both motif and pattern are provided, motif takes priority.'
     chromosome:
       type: string
       description: 'Chromosome to search in (optional, searches current view if not specified)'
       examples: ['chr1', 'NC_000913.3', 'U00096']
     start:
       type: number
-      description: 'Start position for search region (optional)'
+      description: 'Start position for search region, 1-based (optional, defaults to current view start)'
       minimum: 1
     end:
       type: number
-      description: 'End position for search region (optional)'
+      description: 'End position for search region (optional, defaults to current view end or chromosome length)'
       minimum: 1
     strand:
       type: string
       enum: ['+', '-', 'both']
-      description: 'Strand to search on'
+      description: 'Strand to search on. Use \'both\' to search both forward and reverse complement strands.'
       default: 'both'
     max_mismatches:
       type: number
-      description: 'Maximum allowed mismatches (0 for exact match)'
+      description: 'Maximum allowed mismatches per match. 0 = exact match only. Higher values allow fuzzy matching but use slower brute-force algorithm.'
       minimum: 0
       default: 0
     case_sensitive:
       type: boolean
-      description: 'Whether search should be case sensitive'
+      description: 'Whether the search should be case-sensitive. Most genomic sequences are uppercase; keep false for typical use.'
       default: false
     clientId:
       type: string
@@ -53,24 +56,34 @@ sample_usages:
   - user_query: 'Find all TATA box sequences in this region'
     tool_call: "search_sequence_motif(motif='TATAAA', chromosome='chr1', start=1000, end=50000)"
     thought: 'User wants to find TATA box promoter elements in a specific genomic region'
-    expected_result: 'List of TATA box positions with exact coordinates and strand information'
+    expected_result: 'List of TATA box positions with exact coordinates, strand information, and match count per strand'
 
   - user_query: 'Search for EcoRI restriction sites'
     tool_call: "search_sequence_motif(motif='GAATTC', strand='both', max_mismatches=0)"
     thought: 'User wants to find EcoRI cut sites on both strands with exact matches'
-    expected_result: 'All EcoRI recognition sequences with cutting positions'
+    expected_result: 'All EcoRI recognition sequences with positions on forward and reverse strands'
 
   - user_query: 'Find E-box binding sites with some variation'
     tool_call: "search_sequence_motif(motif='CANNTG', max_mismatches=1, case_sensitive=false)"
     thought: 'User wants to find E-box motifs with IUPAC codes allowing for some variation'
-    expected_result: 'E-box sequences with positions, allowing for single nucleotide variations'
+    expected_result: 'E-box sequences with positions, IUPAC expansion noted, allowing single nucleotide variations'
+
+  - user_query: 'Search for Shine-Dalgarno sequences on the forward strand only'
+    tool_call: "search_sequence_motif(motif='AGGAGG', strand='+')"
+    thought: 'User wants to find ribosome binding sites on the forward strand'
+    expected_result: 'Shine-Dalgarno motif positions on forward strand with density per kb'
+
+  - user_query: 'Find promoter -10 element with up to 1 mismatch'
+    tool_call: "search_sequence_motif(motif='TATAAT', max_mismatches=1, strand='both')"
+    thought: 'User wants to find -10 promoter elements allowing for sequence variation'
+    expected_result: '-10 element positions with mismatch count per match'
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: []
-  alternatives: []
+  enhances: [find_restriction_sites, predict_promoter, predict_rbs]
+  alternatives: [search_features, find_gene_by_name]
   prerequisites: []
-  follow_up: []
+  follow_up: [navigate_to_position, zoom_to_gene]
 metadata:
   usage_count: 0
   success_rate: 0
@@ -80,16 +93,24 @@ metadata:
     - sequence
     - core
     - essential
+    - IUPAC
   complexity: simple
   usage_pattern: frequent
 error_handling:
-  invalid_sequence: Returns error if sequence is invalid
-  empty_sequence: Returns error if sequence is empty
+  invalid_sequence: Returns error with success=false if sequence is invalid
+  empty_sequence: Returns error with success=false if no sequence data available
+  invalid_motif: Returns error with success=false if motif pattern is empty
+  regex_error: Falls back to literal string search if regex pattern is invalid
 returns:
   success: 'boolean - Whether motif search was successful'
-  matches: 'array - List of motif matches with positions, sequences, and strands'
-  motif_searched: 'string - The motif pattern that was searched'
-  total_matches: 'number - Total number of matches found'
-  search_region: 'object - Chromosome, start, and end positions searched'
-  strand_searched: 'string - Which strand(s) were searched'
-  parameters_used: 'object - Search parameters applied (mismatches, case sensitivity)'
+  motif: 'string - The motif pattern that was searched (uppercase)'
+  chromosome: 'string - Chromosome searched'
+  searchRegion: 'object - Start, end, and length of the searched region'
+  strandSearched: 'string - Which strand(s) were searched (+, -, or both)'
+  iupacExpanded: 'boolean - Whether IUPAC codes were expanded to regex'
+  allowedMismatches: 'number - Mismatch tolerance used'
+  totalMatches: 'number - Total number of matches found'
+  forwardMatches: 'number - Matches on forward strand'
+  reverseMatches: 'number - Matches on reverse strand'
+  densityPerKb: 'number - Match density per kilobase'
+  matches: 'array - List of motif matches, each with position (1-based), end, sequence, strand, and mismatches'

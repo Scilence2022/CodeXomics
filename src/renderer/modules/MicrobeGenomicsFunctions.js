@@ -549,47 +549,228 @@ class MicrobeGenomicsFunctions {
   }
 
   /**
-   * Search for sequence motif/pattern
-   * @param {string} pattern - RegExp pattern or string to search
-   * @param {string} chromosome - Target chromosome (optional)
-   * @returns {Array} Array of match objects
+   * IUPAC ambiguity code map for motif expansion
    */
-  static searchSequenceMotif(pattern, chromosome = null) {
+  static IUPAC_CODES = {
+    A: 'A', C: 'C', G: 'G', T: 'T',
+    R: '[AG]', Y: '[CT]', S: '[GC]', W: '[AT]',
+    K: '[GT]', M: '[AC]', B: '[CGT]', D: '[AGT]',
+    H: '[ACT]', V: '[ACG]', N: '[ACGT]',
+  };
+
+  /**
+   * Expand IUPAC ambiguity codes in a motif to a regex pattern string.
+   * Returns null if the motif is pure ACGT (no ambiguity codes).
+   */
+  static _expandIUPACToRegex(motif) {
+    const pureBases = /^[ACGTacgt]+$/;
+    if (pureBases.test(motif)) return null;
+
+    let regex = '';
+    let hasAmbiguity = false;
+    for (const ch of motif.toUpperCase()) {
+      const expanded = MicrobeGenomicsFunctions.IUPAC_CODES[ch];
+      if (expanded && expanded !== ch) {
+        hasAmbiguity = true;
+        regex += expanded;
+      } else if (expanded) {
+        regex += expanded;
+      } else {
+        regex += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }
+    }
+    return hasAmbiguity ? regex : null;
+  }
+
+  /**
+   * Reverse complement a DNA sequence (supports IUPAC codes)
+   */
+  static _reverseComplement(seq) {
+    const complement = {
+      A: 'T', T: 'A', G: 'C', C: 'G',
+      R: 'Y', Y: 'R', S: 'S', W: 'W',
+      K: 'M', M: 'K', B: 'V', D: 'H',
+      H: 'D', V: 'B', N: 'N',
+    };
+    return seq.toUpperCase().split('').reverse().map(b => complement[b] || b).join('');
+  }
+
+  /**
+   * Search for sequence motif/pattern with full feature support
+   * @param {string|object} pattern - RegExp pattern, IUPAC motif string, or parameters object
+   * @param {string} [chromosome] - Target chromosome (optional)
+   * @param {number} [start] - Start position of search region (0-based, optional)
+   * @param {number} [end] - End position of search region (0-based exclusive, optional)
+   * @param {string} [strand='both'] - Strand to search: '+', '-', or 'both'
+   * @param {number} [maxMismatches=0] - Maximum allowed mismatches
+   * @param {boolean} [caseSensitive=false] - Case-sensitive search
+   * @returns {Object} Search result with matches and summary
+   */
+  static searchSequenceMotif(pattern, chromosome = null, start = null, end = null, strand = 'both', maxMismatches = 0, caseSensitive = false) {
     const gb = window.genomeBrowser;
     if (!gb) throw new Error('GenomeBrowser not initialised');
 
     // Handle case where pattern is a parameters object instead of a string
-    // This happens when _extractMGFArgs can't find a matching key and passes the whole object
     if (pattern && typeof pattern === 'object' && !pattern.exec) {
-      // Extract chromosome from the object if not explicitly provided
       if (!chromosome && (pattern.chromosome || pattern.chr)) {
         chromosome = pattern.chromosome || pattern.chr;
       }
-      // Extract pattern string from common aliases
+      if (start === null && pattern.start !== undefined) start = pattern.start;
+      if (end === null && pattern.end !== undefined) end = pattern.end;
+      if (strand === 'both' && pattern.strand) strand = pattern.strand;
+      if (maxMismatches === 0 && pattern.maxMismatches !== undefined) maxMismatches = pattern.maxMismatches;
+      if (maxMismatches === 0 && pattern.max_mismatches !== undefined) maxMismatches = pattern.max_mismatches;
+      if (!caseSensitive && pattern.caseSensitive !== undefined) caseSensitive = pattern.caseSensitive;
+      if (!caseSensitive && pattern.case_sensitive !== undefined) caseSensitive = pattern.case_sensitive;
       pattern = pattern.pattern || pattern.motif || pattern.sequence || pattern.query || String(pattern);
     }
 
-    // Ensure pattern is a string and create a regex
-    const regex = typeof pattern === 'string' ? new RegExp(pattern, 'gi') : (pattern && typeof pattern.exec === 'function' ? pattern : new RegExp(String(pattern), 'gi'));
-    const matches = [];
+    if (!pattern || (typeof pattern !== 'string' && typeof pattern.exec !== 'function')) {
+      throw new Error('A valid motif pattern string is required');
+    }
+
+    const motifStr = typeof pattern === 'string' ? pattern.toUpperCase() : String(pattern).toUpperCase();
+    const iupacRegex = MicrobeGenomicsFunctions._expandIUPACToRegex(motifStr);
 
     const chromosomes = chromosome ? [chromosome] : Object.keys(gb.currentSequence || {});
+    const allMatches = [];
+    const maxResults = 500;
 
     for (const chr of chromosomes) {
-      const seq = gb.currentSequence[chr];
-      if (!seq) continue;
+      let fullSeq = gb.currentSequence[chr];
+      if (!fullSeq) continue;
 
-      let match;
-      while ((match = regex.exec(seq)) !== null) {
-        matches.push({
-          chromosome: chr,
-          start: match.index + 1,
-          end: match.index + match[0].length,
-          sequence: match[0],
-        });
+      // Apply region bounds
+      const seqStart = start != null ? start : 0;
+      const seqEnd = end != null ? end : fullSeq.length;
+      const seq = (caseSensitive ? fullSeq : fullSeq.toUpperCase()).substring(seqStart, seqEnd);
+      const regionLen = seqEnd - seqStart;
+
+      if (maxMismatches === 0) {
+        // ---- Fast regex path ----
+        const regexPattern = iupacRegex || motifStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const flags = caseSensitive ? 'g' : 'gi';
+        const regex = new RegExp(regexPattern, flags);
+
+        // Forward strand
+        if (strand === '+' || strand === 'both') {
+          regex.lastIndex = 0;
+          let m;
+          while ((m = regex.exec(seq)) !== null && allMatches.length < maxResults) {
+            allMatches.push({
+              chromosome: chr,
+              position: seqStart + m.index + 1,  // 1-based
+              end: seqStart + m.index + m[0].length,
+              sequence: m[0],
+              strand: '+',
+              mismatches: 0,
+            });
+            if (m[0].length === 0) regex.lastIndex++;
+          }
+        }
+
+        // Reverse strand
+        if (strand === '-' || strand === 'both') {
+          const rcMotif = MicrobeGenomicsFunctions._reverseComplement(motifStr);
+          const rcRegexStr = iupacRegex
+            ? MicrobeGenomicsFunctions._expandIUPACToRegex(rcMotif) || rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            : rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const rcRegex = new RegExp(rcRegexStr, flags);
+          const rcSeq = MicrobeGenomicsFunctions._reverseComplement(seq);
+          rcRegex.lastIndex = 0;
+          let m;
+          while ((m = rcRegex.exec(rcSeq)) !== null && allMatches.length < maxResults) {
+            const fwdPos = seq.length - m.index - m[0].length;
+            allMatches.push({
+              chromosome: chr,
+              position: seqStart + fwdPos + 1,
+              end: seqStart + fwdPos + m[0].length,
+              sequence: m[0],
+              strand: '-',
+              mismatches: 0,
+            });
+            if (m[0].length === 0) rcRegex.lastIndex++;
+          }
+        }
+      } else {
+        // ---- Mismatch-tolerant brute-force path ----
+        const motifLen = motifStr.length;
+
+        if (strand === '+' || strand === 'both') {
+          for (let i = 0; i <= seq.length - motifLen && allMatches.length < maxResults; i++) {
+            const sub = seq.substring(i, i + motifLen);
+            const mm = MicrobeGenomicsFunctions._countMismatches(sub, motifStr);
+            if (mm <= maxMismatches) {
+              allMatches.push({
+                chromosome: chr,
+                position: seqStart + i + 1,
+                end: seqStart + i + motifLen,
+                sequence: sub,
+                strand: '+',
+                mismatches: mm,
+              });
+            }
+          }
+        }
+
+        if (strand === '-' || strand === 'both') {
+          const rcMotif = MicrobeGenomicsFunctions._reverseComplement(motifStr);
+          const rcLen = rcMotif.length;
+          for (let i = 0; i <= seq.length - rcLen && allMatches.length < maxResults; i++) {
+            const sub = seq.substring(i, i + rcLen);
+            const mm = MicrobeGenomicsFunctions._countMismatches(sub, rcMotif);
+            if (mm <= maxMismatches) {
+              allMatches.push({
+                chromosome: chr,
+                position: seqStart + i + 1,
+                end: seqStart + i + rcLen,
+                sequence: sub,
+                strand: '-',
+                mismatches: mm,
+              });
+            }
+          }
+        }
       }
     }
-    return matches;
+
+    // Sort by chromosome then position
+    allMatches.sort((a, b) => a.chromosome.localeCompare(b.chromosome) || a.position - b.position);
+
+    // Compute summary
+    const fwdCount = allMatches.filter(m => m.strand === '+').length;
+    const revCount = allMatches.filter(m => m.strand === '-').length;
+    const totalRegionLen = chromosomes.reduce((sum, chr) => {
+      const s = start != null ? start : 0;
+      const e = end != null ? end : (gb.currentSequence[chr]?.length || 0);
+      return sum + (e - s);
+    }, 0);
+    const density = totalRegionLen > 0 ? (allMatches.length / totalRegionLen * 1000).toFixed(3) : 0;
+
+    return {
+      success: true,
+      motif: motifStr,
+      iupacExpanded: iupacRegex !== null,
+      strandSearched: strand,
+      allowedMismatches: maxMismatches,
+      totalMatches: allMatches.length,
+      forwardMatches: fwdCount,
+      reverseMatches: revCount,
+      densityPerKb: parseFloat(density),
+      matches: allMatches.slice(0, maxResults),
+    };
+  }
+
+  /**
+   * Count mismatches between two equal-length sequences
+   */
+  static _countMismatches(seq1, seq2) {
+    if (seq1.length !== seq2.length) return Infinity;
+    let mm = 0;
+    for (let i = 0; i < seq1.length; i++) {
+      if (seq1[i] !== seq2[i]) mm++;
+    }
+    return mm;
   }
 
   /**

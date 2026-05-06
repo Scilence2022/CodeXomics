@@ -71,7 +71,20 @@ const PluginImplementations = {
   },
 
   async findMotifs(params) {
-    const { chromosome, start, end, motif, strand = 'both' } = params;
+    const {
+      chromosome,
+      start,
+      end,
+      motif,
+      pattern,
+      strand = 'both',
+      max_mismatches = 0,
+      maxMismatches,
+      case_sensitive = false,
+    } = params;
+
+    const motifPattern = (motif || pattern || '').toUpperCase();
+    const maxMM = maxMismatches ?? max_mismatches ?? 0;
 
     try {
       // Get sequence data
@@ -83,50 +96,116 @@ const PluginImplementations = {
         throw new Error('Unable to retrieve sequence data');
       }
 
+      const searchSeq = case_sensitive ? sequence : sequence.toUpperCase();
       const results = [];
-      const regex = new RegExp(motif, 'gi');
+      const maxResults = 500;
 
-      // Search forward strand
-      if (strand === '+' || strand === 'both') {
-        let match;
-        while ((match = regex.exec(sequence)) !== null) {
-          results.push({
-            position: start + match.index,
-            end: start + match.index + match[0].length,
-            strand: '+',
-            sequence: match[0],
-            motif: motif,
-            score: this.calculateMotifScore(match[0], motif),
-          });
+      // Expand IUPAC codes if present
+      const iupacRegex = this._expandIUPACToRegex(motifPattern);
+
+      if (maxMM === 0) {
+        // ---- Fast regex path ----
+        const regexPattern = iupacRegex || motifPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const flags = case_sensitive ? 'g' : 'gi';
+        const regex = new RegExp(regexPattern, flags);
+
+        // Search forward strand
+        if (strand === '+' || strand === 'both') {
+          regex.lastIndex = 0;
+          let match;
+          while ((match = regex.exec(searchSeq)) !== null && results.length < maxResults) {
+            results.push({
+              position: start + match.index + 1,  // 1-based
+              end: start + match.index + match[0].length,
+              strand: '+',
+              sequence: match[0],
+              motif: motifPattern,
+              score: this.calculateMotifScore(match[0], motifPattern),
+              mismatches: 0,
+            });
+            if (match[0].length === 0) regex.lastIndex++;
+          }
+        }
+
+        // Search reverse strand
+        if (strand === '-' || strand === 'both') {
+          const rcMotif = this._reverseComplementIUPAC(motifPattern);
+          const rcRegexStr = iupacRegex
+            ? this._expandIUPACToRegex(rcMotif) || rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            : rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const rcRegex = new RegExp(rcRegexStr, flags);
+          const revComp = this.reverseComplement(searchSeq);
+          rcRegex.lastIndex = 0;
+          let match;
+          while ((match = rcRegex.exec(revComp)) !== null && results.length < maxResults) {
+            const fwdPos = searchSeq.length - match.index - match[0].length;
+            results.push({
+              position: start + fwdPos + 1,
+              end: start + fwdPos + match[0].length,
+              strand: '-',
+              sequence: match[0],
+              motif: motifPattern,
+              score: this.calculateMotifScore(match[0], motifPattern),
+              mismatches: 0,
+            });
+            if (match[0].length === 0) rcRegex.lastIndex++;
+          }
+        }
+      } else {
+        // ---- Mismatch-tolerant brute-force path ----
+        const motifLen = motifPattern.length;
+
+        if (strand === '+' || strand === 'both') {
+          for (let i = 0; i <= searchSeq.length - motifLen && results.length < maxResults; i++) {
+            const sub = searchSeq.substring(i, i + motifLen);
+            const mm = this._countMismatches(sub, motifPattern);
+            if (mm <= maxMM) {
+              results.push({
+                position: start + i + 1,
+                end: start + i + motifLen,
+                strand: '+',
+                sequence: sub,
+                motif: motifPattern,
+                score: 1 - (mm / motifLen),
+                mismatches: mm,
+              });
+            }
+          }
+        }
+
+        if (strand === '-' || strand === 'both') {
+          const rcMotif = this._reverseComplementIUPAC(motifPattern);
+          const rcLen = rcMotif.length;
+          for (let i = 0; i <= searchSeq.length - rcLen && results.length < maxResults; i++) {
+            const sub = searchSeq.substring(i, i + rcLen);
+            const mm = this._countMismatches(sub, rcMotif);
+            if (mm <= maxMM) {
+              results.push({
+                position: start + i + 1,
+                end: start + i + rcLen,
+                strand: '-',
+                sequence: sub,
+                motif: motifPattern,
+                score: 1 - (mm / rcLen),
+                mismatches: mm,
+              });
+            }
+          }
         }
       }
 
-      // Search reverse strand
-      if (strand === '-' || strand === 'both') {
-        const revComp = this.reverseComplement(sequence);
-        regex.lastIndex = 0;
-        let match;
-        while ((match = regex.exec(revComp)) !== null) {
-          results.push({
-            position: end - match.index - match[0].length,
-            end: end - match.index,
-            strand: '-',
-            sequence: match[0],
-            motif: motif,
-            score: this.calculateMotifScore(match[0], motif),
-          });
-        }
-      }
-
+      const regionLen = (end - start) || 1;
       return {
         chromosome,
         start,
         end,
-        motif,
+        motif: motifPattern,
+        iupacExpanded: iupacRegex !== null,
         strand,
+        allowedMismatches: maxMM,
         matches: results,
         totalMatches: results.length,
-        density: (results.length / (end - start)) * 1000, // matches per kb
+        density: (results.length / regionLen) * 1000, // matches per kb
         summary: this.summarizeMotifMatches(results),
       };
     } catch (error) {
@@ -603,8 +682,72 @@ const PluginImplementations = {
   },
 
   calculateMotifScore(sequence, motif) {
-    // Simple scoring based on exact matches
-    return sequence.toLowerCase() === motif.toLowerCase() ? 1.0 : 0.5;
+    // Score based on match quality: exact = 1.0, IUPAC-ambiguous = 0.8, partial = proportion
+    if (sequence.toUpperCase() === motif.toUpperCase()) return 1.0;
+    // For IUPAC-expanded matches, the regex matched but the literal strings differ
+    // Score based on positional agreement
+    let matches = 0;
+    for (let i = 0; i < sequence.length; i++) {
+      if (sequence[i].toUpperCase() === motif[i].toUpperCase()) matches++;
+    }
+    return sequence.length > 0 ? matches / sequence.length : 0;
+  },
+
+  /**
+   * Expand IUPAC ambiguity codes in a motif to a regex pattern string.
+   * Returns null if the motif is pure ACGT (no ambiguity codes).
+   */
+  _expandIUPACToRegex(motif) {
+    const iupacCodes = {
+      A: 'A', C: 'C', G: 'G', T: 'T',
+      R: '[AG]', Y: '[CT]', S: '[GC]', W: '[AT]',
+      K: '[GT]', M: '[AC]', B: '[CGT]', D: '[AGT]',
+      H: '[ACT]', V: '[ACG]', N: '[ACGT]',
+    };
+    const pureBases = /^[ACGTacgt]+$/;
+    if (pureBases.test(motif)) return null;
+
+    let regex = '';
+    let hasAmbiguity = false;
+    for (const ch of motif.toUpperCase()) {
+      const expanded = iupacCodes[ch];
+      if (expanded && expanded !== ch) {
+        hasAmbiguity = true;
+        regex += expanded;
+      } else if (expanded) {
+        regex += expanded;
+      } else {
+        regex += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }
+    }
+    return hasAmbiguity ? regex : null;
+  },
+
+  /**
+   * Reverse complement a motif string with IUPAC code support.
+   */
+  _reverseComplementIUPAC(motif) {
+    const iupacComplement = {
+      A: 'T', T: 'A', G: 'C', C: 'G',
+      R: 'Y', Y: 'R', S: 'S', W: 'W',
+      K: 'M', M: 'K', B: 'V', D: 'H',
+      H: 'D', V: 'B', N: 'N',
+    };
+    return motif.toUpperCase().split('').reverse()
+      .map(b => iupacComplement[b] || b)
+      .join('');
+  },
+
+  /**
+   * Count mismatches between two equal-length sequences
+   */
+  _countMismatches(seq1, seq2) {
+    if (seq1.length !== seq2.length) return Infinity;
+    let mm = 0;
+    for (let i = 0; i < seq1.length; i++) {
+      if (seq1[i] !== seq2[i]) mm++;
+    }
+    return mm;
   },
 
   summarizeMotifMatches(matches) {
