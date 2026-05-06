@@ -4895,7 +4895,15 @@ class ChatManager {
               // IMPORTANT: Sanitize results before sending to LLM to prevent context overflow
               const successMessages = successfulResults.map(result => {
                 const sanitizedResult = this.sanitizeResultForLLM(result.result, result.tool);
-                return `${result.tool} executed successfully: ${JSON.stringify(sanitizedResult)}`;
+                const sanitizedStr = JSON.stringify(sanitizedResult);
+                // Log warning if sanitized result is still large (helps identify tools needing better sanitization)
+                if (sanitizedStr.length > 10000) {
+                  console.warn(
+                    `⚠️ [Context Overflow Risk] Sanitized result for "${result.tool}" is still large: ` +
+                    `${(sanitizedStr.length / 1024).toFixed(1)}KB. Consider adding tool-specific sanitization rules.`
+                  );
+                }
+                return `${result.tool} executed successfully: ${sanitizedStr}`;
               });
               conversationHistory.push({
                 role: 'system',
@@ -5104,8 +5112,26 @@ class ChatManager {
     // Create a shallow copy to avoid modifying the original
     const sanitized = { ...result };
 
-    // Tool-specific sanitization rules
+    // ─── Tool-specific sanitization rules ───────────────────────────────
+
     switch (toolName) {
+      case 'fetch_alphafold_structure':
+      case 'fetch_protein_structure':
+        // These tools may return large PDB/structure data that must NEVER
+        // be included in LLM context (100KB–1MB per structure).
+        // Layer 1 (ProteinService) should already exclude pdbData via _dataRef,
+        // but this is a defense-in-depth safety net.
+        if (sanitized.pdbData || sanitized.pdb_data) {
+          const dataField = sanitized.pdbData ? 'pdbData' : 'pdb_data';
+          const dataLength = (sanitized[dataField] || '').length;
+          delete sanitized[dataField];
+          sanitized._pdbDataOmitted = {
+            length: dataLength,
+            note: 'Full PDB data omitted to prevent context overflow. Use downloadUrl or _dataRef to access.',
+          };
+        }
+        break;
+
       case 'genome_codon_usage_analysis':
         // Keep summary statistics but remove large gene list
         if (sanitized.analyzedGenes && Array.isArray(sanitized.analyzedGenes)) {
@@ -5173,15 +5199,47 @@ class ChatManager {
         break;
     }
 
-    // General sanitization for any result
-    // Truncate very long sequence strings
-    if (sanitized.sequence && typeof sanitized.sequence === 'string' && sanitized.sequence.length > 1000) {
-      sanitized.sequence =
-        sanitized.sequence.substring(0, 500) +
-        '...[truncated]...' +
-        sanitized.sequence.substring(sanitized.sequence.length - 500);
-      sanitized.sequenceLength = sanitized.sequence.length;
+    // ─── General sanitization for any result ─────────────────────────────
+
+    // Truncate known sequence-like string fields
+    const sequenceFields = ['sequence', 'codingSequence', 'proteinSequence', 'coding_sequence', 'protein_sequence'];
+    for (const field of sequenceFields) {
+      if (sanitized[field] && typeof sanitized[field] === 'string' && sanitized[field].length > 1000) {
+        const originalLength = sanitized[field].length;
+        sanitized[field] =
+          sanitized[field].substring(0, 500) +
+          '...[truncated]...' +
+          sanitized[field].substring(sanitized[field].length - 500);
+        sanitized[`${field}Length`] = originalLength;
+      }
     }
+
+    // Remove pdbData/pdb_data from ANY tool result (defense-in-depth)
+    for (const pdbField of ['pdbData', 'pdb_data']) {
+      if (sanitized[pdbField] && typeof sanitized[pdbField] === 'string') {
+        const len = sanitized[pdbField].length;
+        delete sanitized[pdbField];
+        if (!sanitized._pdbDataOmitted) {
+          sanitized._pdbDataOmitted = {
+            length: len,
+            note: 'PDB data omitted to prevent context overflow.',
+          };
+        }
+      }
+    }
+
+    // General large-string guard: truncate any string field > 5000 chars
+    const LARGE_STRING_THRESHOLD = 5000;
+    Object.keys(sanitized).forEach(key => {
+      if (typeof sanitized[key] === 'string' && sanitized[key].length > LARGE_STRING_THRESHOLD) {
+        const originalLength = sanitized[key].length;
+        sanitized[key] =
+          sanitized[key].substring(0, 2000) +
+          `\n...[truncated ${originalLength - 4000} chars]...\n` +
+          sanitized[key].substring(sanitized[key].length - 2000);
+        sanitized[`_${key}_originalLength`] = originalLength;
+      }
+    });
 
     // Limit any large arrays not caught by specific rules
     Object.keys(sanitized).forEach(key => {
@@ -5191,6 +5249,52 @@ class ChatManager {
         sanitized[`${key}_truncated`] = `Array truncated from ${originalLength} to 50 items`;
       }
     });
+
+    // ─── Total size budget check ─────────────────────────────────────────
+    // After all field-level sanitization, check if the total serialized size
+    // exceeds the budget. If so, aggressively truncate the largest string fields.
+    const MAX_RESULT_SIZE_BYTES = 50 * 1024; // 50KB budget per tool result
+    try {
+      let serialized = JSON.stringify(sanitized);
+      if (serialized.length > MAX_RESULT_SIZE_BYTES) {
+        console.warn(
+          `[sanitizeResultForLLM] Result for "${toolName}" exceeds ${MAX_RESULT_SIZE_BYTES / 1024}KB budget ` +
+          `(${(serialized.length / 1024).toFixed(1)}KB). Applying aggressive truncation.`
+        );
+
+        // Find all string fields sorted by length (largest first)
+        const stringFields = Object.keys(sanitized)
+          .filter(k => typeof sanitized[k] === 'string' && sanitized[k].length > 200)
+          .sort((a, b) => sanitized[b].length - sanitized[a].length);
+
+        for (const field of stringFields) {
+          if (serialized.length <= MAX_RESULT_SIZE_BYTES) break;
+          const originalLength = sanitized[field].length;
+          sanitized[field] = sanitized[field].substring(0, 200) +
+            `\n...[aggressively truncated from ${originalLength} chars to fit context budget]...\n`;
+          sanitized[`_${field}_originalLength`] = originalLength;
+          serialized = JSON.stringify(sanitized);
+        }
+
+        // If still over budget after string truncation, convert large objects to summaries
+        if (serialized.length > MAX_RESULT_SIZE_BYTES) {
+          const objectFields = Object.keys(sanitized)
+            .filter(k => typeof sanitized[k] === 'object' && sanitized[k] !== null)
+            .sort((a, b) => JSON.stringify(sanitized[b]).length - JSON.stringify(sanitized[a]).length);
+
+          for (const field of objectFields) {
+            if (serialized.length <= MAX_RESULT_SIZE_BYTES) break;
+            const fieldSize = JSON.stringify(sanitized[field]).length;
+            if (fieldSize > 500) {
+              sanitized[field] = { _truncated: true, originalSize: fieldSize, note: 'Object truncated to fit context budget' };
+              serialized = JSON.stringify(sanitized);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[sanitizeResultForLLM] Error during size budget check:', e);
+    }
 
     return sanitized;
   }
@@ -11732,7 +11836,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Open protein structure viewer
    */
   async openProteinViewer(params) {
-    let { pdbData, proteinName, pdbId, uniprotId, geneName } = params;
+    let { pdbData, proteinName, pdbId, uniprotId, geneName, _dataRef } = params;
 
     try {
       // Check if protein structure viewer is available
@@ -11742,6 +11846,18 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           error: 'Protein structure viewer not available. Please ensure the protein viewer module is loaded.',
           message: 'Cannot open protein viewer: viewer module not found.',
         };
+      }
+
+      // If a _dataRef is provided, try to retrieve cached structure data first
+      if (!pdbData && _dataRef && this.services && this.services.protein) {
+        const cachedData = this.services.protein.getCachedStructureData(_dataRef);
+        if (cachedData) {
+          pdbData = cachedData;
+          proteinName = proteinName || pdbId || uniprotId || geneName || 'Cached Structure';
+          console.log('🔬 [openProteinViewer] Retrieved structure data from cache via _dataRef:', _dataRef);
+        } else {
+          console.warn('🔬 [openProteinViewer] _dataRef cache miss, will try download fallback:', _dataRef);
+        }
       }
 
       // If no pdbData provided but uniprotId is available, fetch AlphaFold structure
@@ -11934,35 +12050,39 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Fetch protein structure data (from PDB or AlphaFold)
    */
   async fetchProteinStructure(parameters) {
+    // Delegate to ProteinService which caches PDB data to prevent LLM context overflow.
+    // The ProteinService version returns metadata + _dataRef instead of raw pdbData.
+    if (this.services && this.services.protein) {
+      return this.services.protein.fetchProteinStructure(parameters);
+    }
+
+    // Fallback: minimal metadata-only implementation if ProteinService is unavailable
     const pdbId = parameters.pdbId || parameters.pdb_id;
     const uniprotId = parameters.uniprotId || parameters.uniprot_id;
-    const geneName = parameters.geneName || parameters.gene_name;
 
     try {
-      console.log(`Fetching protein structure: PDB=${pdbId}, UniProt=${uniprotId}, gene=${geneName}`);
-
-      // If PDB ID provided, fetch from RCSB
       if (pdbId) {
         const pdbUrl = `https://files.rcsb.org/download/${pdbId}.pdb`;
         const response = await fetch(pdbUrl);
         if (!response.ok) {
           throw new Error(`Failed to fetch PDB structure ${pdbId}: ${response.status}`);
         }
+        // Don't return raw data — just confirm fetch succeeded
         const pdbData = await response.text();
-
         return {
           success: true,
           tool: 'fetch_protein_structure',
           pdbId: pdbId,
-          pdbData: pdbData,
           source: 'RCSB PDB',
+          dataLength: pdbData.length,
+          downloadUrl: pdbUrl,
           timestamp: new Date().toISOString(),
+          message: `Successfully fetched PDB structure for ${pdbId} (${pdbData.length} chars).`,
         };
       }
 
-      // If UniProt ID provided, fetch from AlphaFold
       if (uniprotId) {
-        return await this.fetchAlphaFoldStructure({ uniprotId, geneName });
+        return await this.fetchAlphaFoldStructure({ uniprotId, geneName: parameters.geneName || parameters.gene_name });
       }
 
       throw new Error('Either pdbId or uniprotId must be provided');

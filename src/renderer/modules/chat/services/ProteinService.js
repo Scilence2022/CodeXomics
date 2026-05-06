@@ -11,6 +11,12 @@ class ProteinService {
     this.isResizing = false;
     this.dragOffset = { x: 0, y: 0 };
     this._boundHandlers = null; // track active handlers for cleanup
+
+    // Cache for large structure data (PDB, etc.) to prevent LLM context overflow
+    // Data is stored here and referenced by key in tool results instead of
+    // embedding raw data in the result object that gets sent to the LLM.
+    this._structureDataCache = new Map();
+    this._structureDataCacheMaxSize = 20; // max cached entries
   }
 
   async searchAlphaFoldStructures(parameters) {
@@ -98,16 +104,24 @@ class ProteinService {
         };
       }
 
+      // Store PDB data in cache instead of returning it directly.
+      // This prevents the raw structure data (often 100KB-1MB) from being
+      // included in conversation history sent to the LLM, which would cause
+      // token overflow. Consumers that need the raw data (e.g., protein viewer)
+      // should retrieve it via getCachedStructureData() using the _dataRef key.
+      const cacheKey = `alphafold_${uniprotId}_${Date.now()}`;
+      this._cacheStructureData(cacheKey, pdbData);
+
       return {
         success: true,
         tool: 'fetch_alphafold_structure',
         uniprotId: uniprotId,
-        pdbData: pdbData,
         format: format,
         dataLength: pdbData.length,
         downloadUrl: downloadUrl,
+        _dataRef: cacheKey,
         timestamp: new Date().toISOString(),
-        message: `Successfully fetched AlphaFold structure for ${uniprotId} (${pdbData.length} chars)`,
+        message: `Successfully fetched AlphaFold structure for ${uniprotId} (${pdbData.length} chars). Use _dataRef or downloadUrl to access the structure data.`,
       };
     } catch (error) {
       console.error('[ProteinService] fetchAlphaFoldStructure error:', error);
@@ -116,6 +130,118 @@ class ProteinService {
         tool: 'fetch_alphafold_structure',
         error: error.message,
         uniprotId: uniprotId,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
+   * Store structure data in the internal cache.
+   * Evicts the oldest entry when the cache exceeds _structureDataCacheMaxSize.
+   * @param {string} key - Cache key
+   * @param {string} data - Raw structure data (PDB text, etc.)
+   */
+  _cacheStructureData(key, data) {
+    // Evict oldest if at capacity
+    if (this._structureDataCache.size >= this._structureDataCacheMaxSize) {
+      const oldestKey = this._structureDataCache.keys().next().value;
+      this._structureDataCache.delete(oldestKey);
+      console.log(`[ProteinService] Cache evicted oldest entry: ${oldestKey}`);
+    }
+    this._structureDataCache.set(key, data);
+    console.log(`[ProteinService] Cached structure data: ${key} (${data.length} chars, ${this._structureDataCache.size}/${this._structureDataCacheMaxSize} entries)`);
+  }
+
+  /**
+   * Retrieve cached structure data by reference key.
+   * @param {string} refKey - The _dataRef key returned from fetch methods
+   * @returns {string|null} Raw structure data, or null if not found/expired
+   */
+  getCachedStructureData(refKey) {
+    const data = this._structureDataCache.get(refKey);
+    if (data) {
+      console.log(`[ProteinService] Cache hit for: ${refKey} (${data.length} chars)`);
+    } else {
+      console.warn(`[ProteinService] Cache miss for: ${refKey}`);
+    }
+    return data || null;
+  }
+
+  /**
+   * Clear all cached structure data to free memory.
+   */
+  clearStructureDataCache() {
+    const size = this._structureDataCache.size;
+    this._structureDataCache.clear();
+    console.log(`[ProteinService] Cleared structure data cache (${size} entries removed)`);
+  }
+
+  /**
+   * Fetch protein structure from PDB database by PDB ID, or from AlphaFold by UniProt ID.
+   * Returns metadata + _dataRef instead of raw PDB data to prevent LLM context overflow.
+   */
+  async fetchProteinStructure(parameters) {
+    const pdbId = parameters.pdbId || parameters.pdb_id;
+    const uniprotId = parameters.uniprotId || parameters.uniprot_id;
+    const geneName = parameters.geneName || parameters.gene_name;
+
+    try {
+      console.log(`[ProteinService] Fetching protein structure: PDB=${pdbId}, UniProt=${uniprotId}, gene=${geneName}`);
+
+      // If PDB ID provided, fetch from RCSB
+      if (pdbId) {
+        const pdbUrl = `https://files.rcsb.org/download/${pdbId}.pdb`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const response = await fetch(pdbUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDB structure ${pdbId}: ${response.status}`);
+        }
+        const pdbData = await response.text();
+
+        if (!pdbData || pdbData.trim().length === 0) {
+          return {
+            success: false,
+            tool: 'fetch_protein_structure',
+            error: `Empty structure data received for PDB ID ${pdbId}`,
+            pdbId: pdbId,
+            timestamp: new Date().toISOString(),
+          };
+        }
+
+        // Store in cache instead of returning raw data
+        const cacheKey = `pdb_${pdbId}_${Date.now()}`;
+        this._cacheStructureData(cacheKey, pdbData);
+
+        return {
+          success: true,
+          tool: 'fetch_protein_structure',
+          pdbId: pdbId,
+          source: 'RCSB PDB',
+          dataLength: pdbData.length,
+          downloadUrl: pdbUrl,
+          _dataRef: cacheKey,
+          timestamp: new Date().toISOString(),
+          message: `Successfully fetched PDB structure for ${pdbId} (${pdbData.length} chars). Use _dataRef or downloadUrl to access the structure data.`,
+        };
+      }
+
+      // If UniProt ID provided, delegate to AlphaFold fetch (which already uses cache)
+      if (uniprotId) {
+        return await this.fetchAlphaFoldStructure({ uniprotId, geneName });
+      }
+
+      throw new Error('Either pdbId or uniprotId must be provided');
+    } catch (error) {
+      console.error('[ProteinService] fetchProteinStructure error:', error);
+      return {
+        success: false,
+        error: error.message,
+        tool: 'fetch_protein_structure',
+        parameters: parameters,
         timestamp: new Date().toISOString(),
       };
     }
