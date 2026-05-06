@@ -653,14 +653,14 @@ class BenchmarkUI {
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <label class="checkbox-item" style="flex: 1;">
                                             <input type="checkbox" id="suite-automatic_simple" checked>
-                                            <span>⚙️ Automatic Simple Tests <small id="count-automatic_simple">(... tests)</small></span>
+                                            <span>Automatic Simple Tests <small id="count-automatic_simple">(... tests)</small></span>
                                         </label>
                                         <button type="button" class="configure-tests-btn" data-suite="automatic_simple" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 16px; transition: transform 0.2s;" title="Configure specific tests">⚙️</button>
                                     </div>
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <label class="checkbox-item" style="flex: 1;">
                                             <input type="checkbox" id="suite-automatic_complex" checked>
-                                            <span>🔧 Automatic Complex Tests <small id="count-automatic_complex">(... tests)</small></span>
+                                            <span>Automatic Complex Tests <small id="count-automatic_complex">(... tests)</small></span>
                                         </label>
                                         <button type="button" class="configure-tests-btn" data-suite="automatic_complex" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 16px; transition: transform 0.2s;" title="Configure specific tests">⚙️</button>
                                     </div>
