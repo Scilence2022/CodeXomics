@@ -1,0 +1,14 @@
+name: 'blast_get_installation_status'
+description: 'Checks whether local BLAST+ command-line tools are installed, configured, and accessible on the host system.'
+parameters:
+  type: 'object'
+  properties: {}
+keywords:
+  - 'blast installed'
+  - 'blast status'
+  - 'is blast available'
+  - 'check blast'
+  - 'blast installation'
+sample_usages:
+  - 'Check if BLAST is installed on my system.'
+  - 'Is local BLAST available?'

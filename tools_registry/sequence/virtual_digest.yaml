@@ -1,0 +1,24 @@
+name: 'virtual_digest'
+description: 'Performs an in-silico restriction digest of a chromosome or sequence using one or more restriction enzymes to calculate fragment positions and sizes.'
+parameters:
+  type: 'object'
+  properties:
+    enzymes:
+      type: 'array'
+      items:
+        type: 'string'
+      description: 'Array of restriction enzyme names to include in the digestion (e.g. ["EcoRI", "HindIII"]).'
+    chromosome:
+      type: 'string'
+      description: 'The chromosome to digest (defaults to the currently loaded chromosome).'
+  required:
+    - 'enzymes'
+keywords:
+  - 'virtual digest'
+  - 'restriction digest'
+  - 'digest genome'
+  - 'simulate digestion'
+  - 'restriction fragments'
+sample_usages:
+  - 'Perform a virtual restriction digest with EcoRI and HindIII.'
+  - 'Simulate digestion of the sequence with BamHI.'

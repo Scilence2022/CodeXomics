@@ -1,0 +1,68 @@
+name: reset_track_settings
+version: 1.0.0
+description: 'Reset track settings to default values'
+category: navigation
+keywords:
+  - track
+  - settings
+  - config
+  - options
+  - reset_track_settings
+  - reset
+  - defaults
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    track_type:
+      type: string
+      description: 'Type of track to reset (or "all" to reset all tracks)'
+      enum:
+        - 'genes'
+        - 'reads'
+        - 'sequence'
+        - 'gc'
+        - 'variants'
+        - 'actions'
+        - 'blast'
+        - 'wigTracks'
+        - 'sequenceLine'
+        - 'all'
+  required:
+    - track_type
+sample_usages:
+  - user_query: 'Reset genes track to default'
+    tool_call: "reset_track_settings(track_type='genes')"
+    thought: 'User wants to restore default settings for the genes track'
+    expected_result: 'Genes track configuration reset'
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - track_settings
+    - defaults
+  complexity: simple
+  usage_pattern: occasional
+  recommendation: 'Use to restore standard defaults for browser tracks'
+error_handling:
+  invalid_track_type: 'Returns error if track_type is not recognized'
+returns:
+  success: boolean
+  message: string

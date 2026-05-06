@@ -1397,11 +1397,37 @@ class BuiltInToolsIntegration {
     }
 
     // Check for track settings patterns
-    if (/\b(track\s+settings?|track\s+options?|track\s+config|configure\s+track|display\s+settings?)\b/i.test(query)) {
+    if (/\b(track\s+settings?|track\s+options?|track\s+config|configure\s+track|display\s+settings?|track\s+styling?)\b/i.test(query) ||
+        /\b(configure|set|change|adjust|update|reset|get|show|view|retrieve)\s+.*?\b(track\s+settings?|track\s+options?|track\s+configs?)\b/i.test(query)) {
       relevantTools.push({
         name: 'get_track_settings',
         confidence: 0.85,
         reason: 'Track settings keywords detected',
+      });
+      relevantTools.push({
+        name: 'set_track_settings',
+        confidence: 0.85,
+        reason: 'Track settings configuration keywords detected',
+      });
+      relevantTools.push({
+        name: 'get_all_track_settings',
+        confidence: 0.8,
+        reason: 'Track settings query keywords detected',
+      });
+      relevantTools.push({
+        name: 'reset_track_settings',
+        confidence: 0.8,
+        reason: 'Track settings reset keywords detected',
+      });
+      relevantTools.push({
+        name: 'get_track_settings_schema',
+        confidence: 0.8,
+        reason: 'Track settings schema query keywords detected',
+      });
+      relevantTools.push({
+        name: 'batch_set_track_settings',
+        confidence: 0.8,
+        reason: 'Batch track settings configuration keywords detected',
       });
     }
 
@@ -1522,7 +1548,7 @@ class BuiltInToolsIntegration {
     }
 
     // Check for primer design patterns
-    if (/\b(primer|primers|pcr|amplif)\b/i.test(query)) {
+    if (/\b(primers?|pcr|amplif\w*)\b/i.test(query)) {
       if (/\b(design|create|generate|find)\b/i.test(query)) {
         relevantTools.push({
           name: 'design_primers',
@@ -1530,14 +1556,14 @@ class BuiltInToolsIntegration {
           reason: 'Primer design keywords detected',
         });
       }
-      if (/\b(propert|tm|melting\s+temp|gc\s+content|length)\b/i.test(query)) {
+      if (/\b(propert(y|ies)|tm|melting|gc|length|weight|stability|structure)\b/i.test(query)) {
         relevantTools.push({
           name: 'calculate_primer_properties',
           confidence: 0.9,
           reason: 'Primer properties keywords detected',
         });
       }
-      if (/\b(binding\s+site|binding\s+site|specificity|anneal)\b/i.test(query)) {
+      if (/\b(binding\s+sites?|anneal\w*|specificity|target|match)\b/i.test(query)) {
         relevantTools.push({
           name: 'find_primer_binding_sites',
           confidence: 0.9,
@@ -1665,6 +1691,105 @@ class BuiltInToolsIntegration {
         name: 'open_protein_viewer',
         confidence: 0.9,
         reason: 'Protein structure viewer keywords detected',
+      });
+    }
+
+    // Check for BLAST patterns
+    if (/\b(blast|alignment|align|sequence\s+search|homology)\b/i.test(query)) {
+      if (/\b(online|web|remote|internet|ncbi)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'blast_search_online',
+          confidence: 0.95,
+          reason: 'Online BLAST keywords detected',
+        });
+      } else if (/\b(local|offline|server|host)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'blast_search_local',
+          confidence: 0.95,
+          reason: 'Local BLAST keywords detected',
+        });
+      } else if (/\b(create|make|build|generate|setup)\s+.*?\b(db|database)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'blast_create_quick_db_for_current_genome',
+          confidence: 0.9,
+          reason: 'Create BLAST database keywords detected',
+        });
+      } else if (/\b(list|show|view|get|available)\s+.*?\b(dbs|databases)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'blast_list_databases',
+          confidence: 0.95,
+          reason: 'List BLAST databases keywords detected',
+        });
+      } else if (/\b(filter|limit|restrict)\s+.*?\b(results|hits|alignments)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'blast_filter_results',
+          confidence: 0.9,
+          reason: 'Filter BLAST results keywords detected',
+        });
+      } else if (/\b(status|install|available|configured|check)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'blast_get_installation_status',
+          confidence: 0.9,
+          reason: 'Check BLAST installation status keywords detected',
+        });
+      } else {
+        // Broad default BLAST triggers
+        relevantTools.push({
+          name: 'blast_search_online',
+          confidence: 0.8,
+          reason: 'Broad BLAST keywords detected (defaulting to online search)',
+        });
+        relevantTools.push({
+          name: 'blast_search_local',
+          confidence: 0.8,
+          reason: 'Broad BLAST keywords detected (defaulting to local search)',
+        });
+        relevantTools.push({
+          name: 'blast_create_quick_db_for_current_genome',
+          confidence: 0.75,
+          reason: 'Broad BLAST keywords detected (offering database creation)',
+        });
+        relevantTools.push({
+          name: 'blast_list_databases',
+          confidence: 0.75,
+          reason: 'Broad BLAST keywords detected (offering database list)',
+        });
+        relevantTools.push({
+          name: 'blast_get_installation_status',
+          confidence: 0.7,
+          reason: 'Broad BLAST keywords detected (offering installation check)',
+        });
+      }
+    }
+
+    // Check for restriction analysis / pattern search patterns
+    if (/\b(restriction|enzyme|digest|cut|recognition\s+site|cleave)\b/i.test(query)) {
+      if (/\b(digest|simulate|virtual|run|perform)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'virtual_digest',
+          confidence: 0.95,
+          reason: 'Virtual restriction digest keywords detected',
+        });
+      } else {
+        relevantTools.push({
+          name: 'find_restriction_sites',
+          confidence: 0.95,
+          reason: 'Restriction site mapping keywords detected',
+        });
+        relevantTools.push({
+          name: 'virtual_digest',
+          confidence: 0.85,
+          reason: 'Restriction enzyme digest simulation keywords detected',
+        });
+      }
+    }
+
+    if (/\b(search|find|locate|match)\s+.*?\b(pattern|motif|sequence|regex|regular\s+expression|string)\b/i.test(query) ||
+        /\b(pattern|motif|regex)\s+.*?\b(search|find|locate|match)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'search_pattern',
+        confidence: 0.85,
+        reason: 'Sequence pattern or motif search keywords detected',
       });
     }
 

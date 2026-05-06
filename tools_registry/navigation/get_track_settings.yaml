@@ -1,0 +1,59 @@
+name: get_track_settings
+version: 1.0.0
+description: 'Get current settings for a specific track type in the genome browser (genes, reads, sequence, gc, variants, actions, blast, wigTracks, sequenceLine). For multi-instance tracks, provide file_id to get instance-specific settings.'
+category: navigation
+keywords:
+  - track
+  - settings
+  - config
+  - options
+  - get_track_settings
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    track_type:
+      type: string
+      description: 'Type of track to get settings for'
+      enum: ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine']
+    file_id:
+      type: string
+      description: 'Optional file ID for multi-instance tracks (genes, reads, variants). When provided, returns instance-specific settings merged with type defaults.'
+  required:
+    - track_type
+sample_usages:
+  - user_query: 'Get track settings for the genes track'
+    tool_call: "get_track_settings(track_type='genes')"
+    thought: 'User wants to retrieve current settings for the genes track'
+    expected_result: 'Genes track settings returned'
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['get_all_track_settings']
+  alternatives: []
+  prerequisites: []
+  follow_up: ['set_track_settings']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - track_settings
+    - configure
+  complexity: simple
+  usage_pattern: common
+  recommendation: 'Use to query configuration of a specific browser track'
+error_handling:
+  invalid_track_type: 'Returns error if track_type is not recognized'
+returns:
+  success: boolean
+  settings: object

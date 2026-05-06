@@ -1,0 +1,49 @@
+name: get_all_track_settings
+version: 1.0.0
+description: 'Get current settings for all track types in the genome browser'
+category: navigation
+keywords:
+  - track
+  - settings
+  - config
+  - options
+  - get_all_track_settings
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties: {}
+sample_usages:
+  - user_query: 'Get all track configurations'
+    tool_call: "get_all_track_settings()"
+    thought: 'User wants to inspect settings of all tracks'
+    expected_result: 'Object containing all track settings returned'
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: ['batch_set_track_settings']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - track_settings
+    - configure
+  complexity: simple
+  usage_pattern: occasional
+  recommendation: 'Use to retrieve the configurations of all tracks at once'
+error_handling: {}
+returns:
+  success: boolean
+  settings: object

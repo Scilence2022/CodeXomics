@@ -1,0 +1,50 @@
+name: get_track_settings_schema
+version: 1.0.0
+description: 'Get the complete schema of available settings for all track types'
+category: navigation
+keywords:
+  - track
+  - settings
+  - config
+  - options
+  - get_track_settings_schema
+  - schema
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties: {}
+sample_usages:
+  - user_query: 'What settings can I change on tracks?'
+    tool_call: "get_track_settings_schema()"
+    thought: 'User is asking about the available fields and limits of track settings'
+    expected_result: 'Full JSON schema of settings for all tracks'
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['set_track_settings']
+  alternatives: []
+  prerequisites: []
+  follow_up: ['set_track_settings']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - track_settings
+    - schema
+  complexity: simple
+  usage_pattern: occasional
+  recommendation: 'Use to learn what settings are available to configure for each track'
+error_handling: {}
+returns:
+  success: boolean
+  schema: object

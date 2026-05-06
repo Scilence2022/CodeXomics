@@ -1,0 +1,56 @@
+name: batch_set_track_settings
+version: 1.0.0
+description: 'Set settings for multiple tracks in a single operation'
+category: navigation
+keywords:
+  - track
+  - settings
+  - config
+  - options
+  - batch_set_track_settings
+  - batch
+  - configure
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    settings_map:
+      type: object
+      description: 'Map of track_type -> settings object (e.g., {"genes": {"height": 150}, "gc": {"lineWidth": 3}})'
+  required:
+    - settings_map
+sample_usages:
+  - user_query: 'Configure genes track height to 120 and gc line width to 3'
+    tool_call: "batch_set_track_settings(settings_map={'genes': {'height': 120}, 'gc': {'lineWidth': 3}})"
+    thought: 'User wants to modify settings for multiple tracks simultaneously'
+    expected_result: 'Both tracks configurations updated'
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - track_settings
+    - batch
+  complexity: moderate
+  usage_pattern: occasional
+  recommendation: 'Use to apply bulk configurations to multiple tracks at once'
+error_handling: {}
+returns:
+  success: boolean
+  settings: object

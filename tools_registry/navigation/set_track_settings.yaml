@@ -1,0 +1,64 @@
+name: set_track_settings
+version: 1.0.0
+description: 'Set settings for a specific track type in the genome browser (genes, reads, sequence, gc, variants, actions, blast, wigTracks, sequenceLine). Only provided parameters will be updated. For multi-instance tracks, provide file_id to update instance-specific settings.'
+category: navigation
+keywords:
+  - track
+  - settings
+  - config
+  - options
+  - set_track_settings
+  - configure
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    track_type:
+      type: string
+      description: 'Type of track to configure'
+      enum: ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine']
+    file_id:
+      type: string
+      description: 'Optional file ID for multi-instance tracks. When provided, settings are saved for that specific track instance only.'
+    settings:
+      type: object
+      description: 'Settings object with parameters to update (e.g., renderingMode, height, colors, font sizes)'
+  required:
+    - track_type
+    - settings
+sample_usages:
+  - user_query: 'Set genes track height to 150 pixels'
+    tool_call: "set_track_settings(track_type='genes', settings={'height': 150})"
+    thought: 'User wants to set track height for genes track to 150'
+    expected_result: 'Genes track height updated to 150'
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['get_track_settings']
+  alternatives: []
+  prerequisites: ['get_track_settings']
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - track_settings
+    - configure
+  complexity: moderate
+  usage_pattern: common
+  recommendation: 'Use to modify browser track configurations dynamically'
+error_handling:
+  invalid_track_type: 'Returns error if track_type is not recognized'
+returns:
+  success: boolean
+  settings: object

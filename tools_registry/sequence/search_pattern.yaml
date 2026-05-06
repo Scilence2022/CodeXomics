@@ -1,0 +1,31 @@
+name: 'search_pattern'
+description: 'Searches for a regular expression or nucleotide pattern across a specified genomic region.'
+parameters:
+  type: 'object'
+  properties:
+    regex:
+      type: 'string'
+      description: 'The regular expression or sequence motif pattern to search for (e.g., GAATTC).'
+    chromosome:
+      type: 'string'
+      description: 'The chromosome or sequence ID to search (defaults to current active chromosome).'
+    start:
+      type: 'integer'
+      description: 'Start coordinate of the search window (1-based, defaults to 0 or current start).'
+    end:
+      type: 'integer'
+      description: 'End coordinate of the search window (1-based, defaults to end of sequence or current end).'
+    description:
+      type: 'string'
+      description: 'A brief description of what this pattern represents.'
+  required:
+    - 'regex'
+keywords:
+  - 'search sequence pattern'
+  - 'find motif'
+  - 'pattern match'
+  - 'search motif regex'
+  - 'motif search'
+sample_usages:
+  - 'Search for the pattern GAATTC in the active region.'
+  - 'Find matches of regex ATG[A-Z]{3} on chr1.'
