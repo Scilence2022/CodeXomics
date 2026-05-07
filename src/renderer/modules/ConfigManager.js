@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * ConfigManager - Comprehensive configuration management for the CodeXomics
  * Handles LLM settings, UI preferences, chat history, and app configurations

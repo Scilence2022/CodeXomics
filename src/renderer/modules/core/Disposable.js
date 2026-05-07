@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Disposable - Core resource management pattern inspired by VS Code Extension API
  *

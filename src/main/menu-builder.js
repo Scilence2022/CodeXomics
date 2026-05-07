@@ -1,4 +1,5 @@
 'use strict';
+// @ts-check
 
 const { Menu, dialog, app, BrowserWindow } = require('electron');
 const i18n = require('../i18n/i18n-main');

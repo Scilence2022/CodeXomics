@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * MultiFileManager - Manages multiple BAM/SAM and VCF files simultaneously
  * Provides file-specific track management, naming, and memory cleanup
