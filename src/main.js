@@ -4440,6 +4440,15 @@ ipcMain.handle('broadcast-theme-to-pm', async (event, themeData) => {
       sent = true;
     }
 
+    // Also forward to Circos Genome Plotter window
+    const circosWindow = BrowserWindow.getAllWindows().find(
+      win => win.getTitle().includes('Circos Genome Plotter') && !win.isDestroyed()
+    );
+    if (circosWindow) {
+      circosWindow.webContents.send('sync-theme', themeData);
+      sent = true;
+    }
+
     return { success: sent };
   } catch (error) {
     return { success: false, error: error.message };
