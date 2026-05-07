@@ -39,6 +39,12 @@
 - **Configured**: commitlint (conventional commits)
 - **Added scripts**: `test`, `test:watch`, `test:coverage` in package.json
 
+### P0-5: Remove Duplicate Locale Files ✅
+- **Deleted**: `src/renderer/locales/` (10 files — en + zh-CN × 5 namespaces)
+- **Modified**: `I18nManager.js` — now reads from shared `src/locales/` via `fs.readFileSync()` with `__dirname`-based path resolution (`../../locales` from `modules/`)
+- **Modified**: `i18n-main.js` — fixed `getLocalesPath()` to always use `__dirname`-based path (removed broken `process.resourcesPath` branch that was never configured in `extraResources`)
+- **Synced**: `en/menu.json` mcpSettings label matched to "External MCP Servers" (earlier rename was only applied to one copy)
+
 ## Test Results
 ```
  Test Files  6 passed (6)
