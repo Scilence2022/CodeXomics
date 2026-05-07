@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * BlastService - Handles BLAST operations extracted from ChatManager
  */

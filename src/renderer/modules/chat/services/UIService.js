@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * UIService - Extracted from ChatManager
  */

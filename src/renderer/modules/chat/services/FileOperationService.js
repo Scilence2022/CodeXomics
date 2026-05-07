@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * FileOperationService - Handles all file loading, saving, and export operations
  */

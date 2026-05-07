@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * GenomeAnalysisService - Extracted from ChatManager
  */

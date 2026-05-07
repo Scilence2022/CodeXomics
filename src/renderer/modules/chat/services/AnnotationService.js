@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * AnnotationService - Handles annotation-related operations extracted from ChatManager
  */

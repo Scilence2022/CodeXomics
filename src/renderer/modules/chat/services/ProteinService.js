@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * ProteinService - Extracted from ChatManager
  */

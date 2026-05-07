@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * ToolExecutionService - Tool routing logic extracted from ChatManager
  */

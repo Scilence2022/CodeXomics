@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * IntentParserService - Extracted from ChatManager
  */
