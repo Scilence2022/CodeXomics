@@ -860,7 +860,7 @@ class BenchmarkUI {
             <!-- Test Selection Modal -->
             <div id="testSelectionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 99999999; align-items: center; justify-content: center;">
                 <div class="modal-content resizable" style="background: white; border-radius: 12px; width: 80%; max-width: 800px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3); pointer-events: auto; position: relative;">
-                    <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="modal-header">
                         <h2 style="margin: 0; font-size: 20px; color: #333;" id="testSelectionTitle">Select Tests</h2>
                         <button id="closeTestSelectionBtn" type="button" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
                     </div>
@@ -985,7 +985,10 @@ class BenchmarkUI {
     // Setup Test Selection modal handlers
     this.setupTestSelectionHandlers();
 
-    // Make Test Selection Modal resizable
+    // Make Test Selection Modal resizable and draggable
+    if (window.modalDragManager) {
+      window.modalDragManager.makeDraggable('#testSelectionModal');
+    }
     if (window.resizableModalManager) {
       window.resizableModalManager.makeResizable('#testSelectionModal');
       console.log('📐 Test Selection Modal registered with ResizableModalManager');
