@@ -809,6 +809,11 @@ class GeneralSettingsManager {
     }
     // 'auto' uses system preference via CSS media queries
 
+    // Persist theme mode hint for the inline early-style script in index.html
+    try {
+      localStorage.setItem('_themeHint', theme || 'auto');
+    } catch (_) {}
+
     // Also notify ThemeManager about dark mode change
     if (window.themeManager) {
       const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);

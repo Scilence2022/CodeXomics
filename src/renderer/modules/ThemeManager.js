@@ -8,6 +8,17 @@ class ThemeManager {
     this.configManager = configManager;
     this.currentStyle = 'default'; // 'default' (蓝紫色AI风), 'professional' (专业科研风), or 'minimal' (极简琥珀风)
 
+    // The early style application (flash-of-default prevention) is handled by
+    // the inline <script> in index.html which reads _uiStyleHint from localStorage
+    // and applies CSS custom properties before any external scripts load.
+    // Check if the inline script already set a style so we stay in sync.
+    try {
+      var hint = localStorage.getItem('_uiStyleHint');
+      if (hint && hint !== 'default') {
+        this.currentStyle = hint;
+      }
+    } catch (_) {}
+
     // Available style presets
     this.stylePresets = {
       default: {
@@ -585,8 +596,15 @@ class ThemeManager {
         await this.configManager.waitForInit();
       }
 
+      const styleBeforeLoad = this.currentStyle;
       await this.loadStyle();
+
+      // Always call applyStyle() to ensure CSS custom properties are set.
+      // The constructor applied body class / data-attribute eagerly to prevent
+      // a flash, but the full CSS variable overrides require the presets map
+      // which is now available.
       this.applyStyle(this.currentStyle);
+
       this.isInitialized = true;
       console.log(`✅ [ThemeManager] Initialized with style: ${this.currentStyle}`);
     } catch (error) {
@@ -643,6 +661,18 @@ class ThemeManager {
       });
     }
 
+    // Persist style hint to localStorage so the inline script in index.html can
+    // apply it synchronously on the next launch, eliminating the flash of default style.
+    try {
+      localStorage.setItem('_uiStyleHint', styleName);
+      // Also persist the current theme mode so the inline script can determine
+      // dark/light mode without waiting for ConfigManager
+      const themeMode = this.configManager?.get('generalSettings.themeMode', 'auto');
+      localStorage.setItem('_themeHint', themeMode || 'auto');
+    } catch (_) {
+      // Ignore if localStorage is unavailable
+    }
+
     // Update accent color input if it exists
     const accentColorInput = document.getElementById('accentColor');
     if (accentColorInput) {
@@ -688,6 +718,12 @@ class ThemeManager {
         root.style.setProperty(key, value);
       });
     }
+
+    // Persist theme mode hint for the inline early-style script
+    try {
+      const themeMode = this.configManager?.get('generalSettings.themeMode', 'auto');
+      localStorage.setItem('_themeHint', themeMode || 'auto');
+    } catch (_) {}
 
     // Dispatch event so other windows (e.g., Project Manager) can sync
     window.dispatchEvent(new CustomEvent('uiStyleChanged', {
