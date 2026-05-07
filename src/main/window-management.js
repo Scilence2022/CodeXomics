@@ -69,10 +69,11 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true,
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
       webSecurity: false,
+      preload: path.join(__dirname, 'preload.js'),
       cache: false,
     },
     icon: path.join(__dirname, '../assets/icon.png'),
@@ -219,7 +220,7 @@ function createCircosWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -283,7 +284,7 @@ function createKEGGWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -322,7 +323,7 @@ function createGOWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -361,7 +362,7 @@ function createUniProtWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -402,7 +403,7 @@ function createInterProWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -443,7 +444,7 @@ function createNCBIWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -486,7 +487,7 @@ function createSTRINGWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -527,7 +528,7 @@ function createDAVIDWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -568,7 +569,7 @@ function createReactomeWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -609,7 +610,7 @@ function createPDBWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -651,7 +652,7 @@ function createGeneAnnotationRefineWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -692,7 +693,7 @@ function createBlastDownloaderWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -744,7 +745,7 @@ function createBlastConfigWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -839,8 +840,8 @@ async function createProGenFixerWindow() {
       minWidth: 1000,
       minHeight: 700,
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
+        nodeIntegration: true,
+        contextIsolation: false,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
         // Enable clipboard and keyboard functionality
@@ -1026,8 +1027,8 @@ async function createDeepGeneResearchWindow(params = {}) {
       minWidth: 1200,
       minHeight: 800,
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
+        nodeIntegration: true,
+        contextIsolation: false,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
         // Enable clipboard and keyboard functionality
@@ -1262,8 +1263,8 @@ async function createChopchopWindow() {
       minWidth: 1000,
       minHeight: 700,
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
+        nodeIntegration: true,
+        contextIsolation: false,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
         // Enable clipboard and keyboard functionality
@@ -1392,8 +1393,8 @@ async function createCustomExternalToolWindow(toolData) {
       minWidth: 1000,
       minHeight: 700,
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
+        nodeIntegration: true,
+        contextIsolation: false,
         enableRemoteModule: false,
         webSecurity: false,
 
@@ -2015,8 +2016,8 @@ function createProjectManagerWindow() {
       height: 800,
       minHeight: 600,
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
+        nodeIntegration: true,
+        contextIsolation: false,
         enableRemoteModule: false,
         preload: path.join(__dirname, 'preload.js'),
       },
@@ -2119,8 +2120,8 @@ function createGenomicDownloadWindow(downloadType) {
       minWidth: 900,
       minHeight: 600,
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
+        nodeIntegration: true,
+        contextIsolation: false,
         preload: path.join(__dirname, 'preload.js'),
       },
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -2545,7 +2546,7 @@ function openTestFile(filename) {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
+        enableRemoteModule: false,
       },
       title: `Test: ${filename}`,
       icon: path.join(__dirname, 'assets', 'icon.png'),
