@@ -4713,6 +4713,10 @@ Supported formats:
     <!-- Security: DOMPurify for HTML sanitization (loaded before app modules) -->
     <script src="../../node_modules/dompurify/dist/purify.cjs.js"></script>
     <script src="modules/security/SanitizeService.js"></script>
+    <!-- Core infrastructure modules (DI container, error handling, notifications) -->
+    <script src="modules/core/ServiceContainer.js"></script>
+    <script src="modules/core/NotificationService.js"></script>
+    <script src="modules/core/ErrorHandler.js"></script>
     <!-- Application modules -->
     <script src="modules/ConfigManager.js"></script>
     <script src="modules/I18nManager.js"></script>

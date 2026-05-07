@@ -2,6 +2,24 @@ console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 const path = require('path');
 
+// Toast notification helper — replaces alert() with non-blocking notifications
+// Uses NotificationService if available, falls back to alert
+const notify = (function() {
+  let _ns = null;
+  return function(message, type = 'warn') {
+    if (!_ns && typeof NotificationService !== 'undefined') {
+      _ns = new NotificationService();
+      window._notificationService = _ns;
+    }
+    if (_ns) {
+      _ns.toast(message, type);
+    } else {
+      // Fallback: use alert for critical messages only
+      if (type === 'error') alert(message);
+    }
+  };
+})();
+
 // Force reload - timestamp: 2025-05-31 15:01
 
 // Load Smart Execution System modules early
@@ -1405,7 +1423,7 @@ class GenomeBrowser {
       await benchmarkManager.showBenchmarkInterface();
     } catch (error) {
       console.error('❌ Failed to open benchmark interface:', error);
-      alert('Failed to open benchmark interface. Please check the console for details.');
+      notify('Failed to open benchmark interface. Please check the console for details.', 'error');
     }
   }
 
@@ -1428,7 +1446,7 @@ class GenomeBrowser {
 
     // Unknown tool type
     console.error('Unknown debug tool:', toolType);
-    alert('Unknown debug tool: ' + toolType);
+    notify('Unknown debug tool: ' + toolType, 'warn');
   }
 
   openPerformanceMonitor() {
@@ -1446,9 +1464,10 @@ class GenomeBrowser {
     );
 
     // Show alert with basic performance info
-    alert(
+    notify(
       `Performance Monitor\n\nMemory Usage: ${performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB' : 'Not available'
-      }\n\nCheck console for detailed information.`
+      }\n\nCheck console for detailed information.`,
+      'info'
     );
   }
 
@@ -1464,7 +1483,7 @@ class GenomeBrowser {
       readsManager: !!this.readsManager,
     });
 
-    alert('Console Logger activated!\n\nCheck the browser console for detailed logging information.');
+    notify('Console Logger activated!\n\nCheck the browser console for detailed logging information.', 'info');
   }
 
   setupMCPModalListeners() {
@@ -1644,12 +1663,12 @@ class GenomeBrowser {
 
     // Validate settings
     if (!mcpSettings.serverUrl) {
-      alert('Please enter a valid MCP server URL');
+      notify('Please enter a valid MCP server URL');
       return;
     }
 
     if (mcpSettings.reconnectDelay < 1 || mcpSettings.reconnectDelay > 60) {
-      alert('Reconnection delay must be between 1 and 60 seconds');
+      notify('Reconnection delay must be between 1 and 60 seconds');
       return;
     }
 
@@ -2238,7 +2257,7 @@ class GenomeBrowser {
   exportJsonServers(format = 'mcpServers') {
     const mcpManager = this.chatManager?.mcpServerManager;
     if (!mcpManager) {
-      alert('MCP Server Manager not available');
+      notify('MCP Server Manager not available');
       return;
     }
 
@@ -2549,17 +2568,17 @@ class GenomeBrowser {
 
     // Validate
     if (!serverData.name) {
-      alert('Please enter a server name');
+      notify('Please enter a server name');
       return;
     }
     if (!serverData.url) {
-      alert('Please enter a server URL');
+      notify('Please enter a server URL');
       return;
     }
 
     const mcpManager = this.chatManager?.mcpServerManager;
     if (!mcpManager) {
-      alert('MCPServerManager not available');
+      notify('MCPServerManager not available');
       return;
     }
 
@@ -2581,7 +2600,7 @@ class GenomeBrowser {
 
       this.updateStatus(serverId ? 'Server updated successfully' : 'Server added successfully');
     } catch (error) {
-      alert(`Error saving server: ${error.message}`);
+      notify(`Error saving server: ${error.message}`);
     }
   }
 
@@ -2598,7 +2617,7 @@ class GenomeBrowser {
       this.updateMCPConnectionStatus();
       this.updateStatus(`Server ${server.enabled ? 'disabled' : 'enabled'}`);
     } catch (error) {
-      alert(`Error toggling server: ${error.message}`);
+      notify(`Error toggling server: ${error.message}`);
     }
   }
 
@@ -2616,7 +2635,7 @@ class GenomeBrowser {
         this.updateMCPConnectionStatus();
         this.updateStatus('Server removed successfully');
       } catch (error) {
-        alert(`Error removing server: ${error.message}`);
+        notify(`Error removing server: ${error.message}`);
       }
     }
   }
@@ -5637,7 +5656,7 @@ class GenomeBrowser {
               shell.openPath(reportPath);
             } catch (e) {
               console.error('Failed to open report:', e);
-              alert('Failed to open report file.');
+              notify('Failed to open report file.');
             }
           };
 
@@ -6876,7 +6895,7 @@ class GenomeBrowser {
         break;
 
       default:
-        alert('Unknown sequence type');
+        notify('Unknown sequence type');
         return;
     }
 
@@ -8221,7 +8240,7 @@ class GenomeBrowser {
 
       // Validate required fields
       if (geneStart <= 0 || geneEnd <= 0 || geneStart >= geneEnd) {
-        alert('Please enter valid start and end positions (start must be less than end and both must be positive)');
+        notify('Please enter valid start and end positions (start must be less than end and both must be positive)');
         return null;
       }
 
@@ -8249,7 +8268,7 @@ class GenomeBrowser {
       };
     } catch (error) {
       console.error('Error collecting form data:', error);
-      alert('Error collecting form data. Please check your inputs.');
+      notify('Error collecting form data. Please check your inputs.');
       return null;
     }
   }
@@ -8855,22 +8874,22 @@ class GenomeBrowser {
 
     // Validation
     if (!featureName) {
-      alert('Please enter a feature name');
+      notify('Please enter a feature name');
       return;
     }
 
     if (!chromosome) {
-      alert('Please select a chromosome');
+      notify('Please select a chromosome');
       return;
     }
 
     if (isNaN(start) || isNaN(end) || start < 1 || end < 1) {
-      alert('Please enter valid start and end positions');
+      notify('Please enter valid start and end positions');
       return;
     }
 
     if (start > end) {
-      alert('Start position must be less than or equal to end position');
+      notify('Start position must be less than or equal to end position');
       return;
     }
 
@@ -8878,7 +8897,7 @@ class GenomeBrowser {
     if (this.currentSequence[chromosome]) {
       const seqLength = this.currentSequence[chromosome].length;
       if (end > seqLength) {
-        alert(`End position (${end}) exceeds sequence length (${seqLength})`);
+        notify(`End position (${end}) exceeds sequence length (${seqLength})`);
         return;
       }
     }
@@ -8923,7 +8942,7 @@ class GenomeBrowser {
       this.sequenceUtils.displayEnhancedSequence(chromosome, this.currentSequence[chromosome]);
     }
 
-    alert(`Added ${featureType} "${featureName}" to ${chromosome}:${start}-${end}`);
+    notify(`Added ${featureType} "${featureName}" to ${chromosome}:${start}-${end}`);
   }
 
   initializeSequenceSelection() {
