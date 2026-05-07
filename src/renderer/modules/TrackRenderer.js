@@ -11082,19 +11082,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     if (isNewModal) {
       modal = this.createTrackSettingsModal();
       document.body.appendChild(modal);
-
-      // Initialize draggable and resizable after modal is in the DOM
-      if (window.modalDragManager) {
-        window.modalDragManager.makeDraggable('#trackSettingsModal');
-      }
-      if (window.resizableModalManager) {
-        window.resizableModalManager.makeResizable('#trackSettingsModal');
-      }
-    }
-
-    // Reset any drag inline styles so the modal re-centers on open
-    if (window.modalDragManager) {
-      window.modalDragManager.resetPosition('#trackSettingsModal');
     }
 
     // Load track-specific settings
@@ -11841,20 +11828,17 @@ This action cannot be undone.`;
   }
 
   /**
-   * Create track settings modal with draggable and resizable functionality
+   * Create track settings modal
    */
   createTrackSettingsModal() {
     const modal = document.createElement('div');
     modal.id = 'trackSettingsModal';
     modal.className = 'modal';
     modal.innerHTML = `
-            <div class="modal-content resizable resizable-modal-content" style="max-width: 700px;">
+            <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h3 id="trackSettingsTitle"><i class="fas fa-cog"></i> Track Settings</h3>
                     <div class="modal-controls">
-                        <button class="reset-position-btn" title="Reset Position">
-                            <i class="fas fa-crosshairs"></i>
-                        </button>
                         <button class="reset-defaults-btn" title="Reset to Defaults">
                             <i class="fas fa-undo"></i>
                         </button>
@@ -11868,15 +11852,6 @@ This action cannot be undone.`;
                     <button class="btn btn-secondary modal-close">Cancel</button>
                     <button class="btn btn-primary" id="applyTrackSettings">Apply</button>
                 </div>
-                <!-- Resize handles -->
-                <div class="resize-handle resize-handle-n"></div>
-                <div class="resize-handle resize-handle-s"></div>
-                <div class="resize-handle resize-handle-e"></div>
-                <div class="resize-handle resize-handle-w"></div>
-                <div class="resize-handle resize-handle-ne"></div>
-                <div class="resize-handle resize-handle-nw"></div>
-                <div class="resize-handle resize-handle-se"></div>
-                <div class="resize-handle resize-handle-sw"></div>
             </div>
         `;
 
@@ -11902,9 +11877,6 @@ This action cannot be undone.`;
     } else {
       console.error('🔧 [DEBUG] Apply button not found in modal!');
     }
-
-    // Note: Draggable/resizable initialization is done in openTrackSettings()
-    // after the modal is appended to the DOM
 
     // Add reset to defaults button handler
     const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');

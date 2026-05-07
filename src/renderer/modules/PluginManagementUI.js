@@ -650,7 +650,15 @@ class PluginManagementUI {
   async showPluginModal() {
     const modal = document.getElementById('pluginManagementModal');
     if (modal) {
-      modal.style.display = 'block';
+      // Clear any potential inline style display
+      modal.style.display = '';
+
+      // Reset any drag inline styles so the modal re-centers on open
+      if (window.modalDragManager) {
+        window.modalDragManager.resetPosition('#pluginManagementModal');
+      }
+
+      modal.classList.add('show');
 
       // Before refreshing, ensure marketplace has restored installed plugins
       await this.ensureMarketplacePluginsRestored();
@@ -720,7 +728,8 @@ class PluginManagementUI {
   hidePluginModal() {
     const modal = document.getElementById('pluginManagementModal');
     if (modal) {
-      modal.style.display = 'none';
+      modal.classList.remove('show');
+      modal.style.display = '';
     }
   }
 

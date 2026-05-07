@@ -7606,7 +7606,13 @@ ${coreTools}
             window.pluginManagementUI.showPluginModal();
           } else {
             const modal = document.getElementById('pluginManagementModal');
-            if (modal) modal.style.display = 'block';
+            if (modal) {
+              modal.style.display = '';
+              if (window.modalDragManager) {
+                window.modalDragManager.resetPosition('#pluginManagementModal');
+              }
+              modal.classList.add('show');
+            }
           }
         },
         close: () => {
@@ -7614,7 +7620,10 @@ ${coreTools}
             window.pluginManagementUI.hidePluginModal();
           } else {
             const modal = document.getElementById('pluginManagementModal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+              modal.classList.remove('show');
+              modal.style.display = '';
+            }
           }
         },
       },
