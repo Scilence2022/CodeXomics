@@ -8,11 +8,11 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
-[![Beta](https://img.shields.io/badge/Latest%20Beta-v0.6beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.6beta)
+[![Beta](https://img.shields.io/badge/Latest%20Beta-v0.7beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.7beta)
 
 A cross-platform desktop bioinformatics platform built with Electron. Features a **multi-agent AI system**, a **dynamic tool registry**, MCP server integration, an extensible plugin architecture, **multi-preset UI theming**, and comprehensive genome visualization for exploring genomic, proteomic, and other omics data.
 
-**[Latest Beta — v0.6beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.6beta)**
+**[Latest Beta — v0.7beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.7beta)**
 
 [Features](#key-features) •
 [Installation](#installation) •
@@ -50,19 +50,19 @@ Tools are defined as individual YAML files under `tools_registry/` and are retri
 
 **Tool categories (90+ tools total):**
 
-| Category                                | Count   | Description                                           |
-| --------------------------------------- | ------- | ----------------------------------------------------- |
-| `navigation/`                           | 12      | Browser navigation, tab management, position jumping  |
-| `coordination/`                         | 15      | Multi-agent workflow orchestration                    |
-| `sequence/`                             | 8+      | GC content, translation, ORF finding, motif search    |
-| `sequence_editing/`                     | 10      | Copy, cut, paste, insert, replace, undo               |
-| `plugin_management/`                    | 12      | Plugin install, enable, execute, validate             |
-| `external_apis/`                        | 12      | BLAST, UniProt, AlphaFold, KEGG, InterPro, EVO2       |
-| `protein/`                              | 6       | Structure fetching, AlphaFold viewer, PDB search      |
-| `database/`                             | 6       | UniProt, InterPro domain analysis                     |
-| `data_management/`                      | 4       | Annotations, region analysis, codon usage, export     |
-| `pathway/`                              | 3       | Metabolic pathways, KEGG, BLAST search                |
-| `ai_analysis/`                          | 5       | EVO2 sequence generation, CRISPR design, essentiality |
+| Category                                              | Count   | Description                                           |
+| ----------------------------------------------------- | ------- | ----------------------------------------------------- |
+| `navigation/`                                         | 12      | Browser navigation, tab management, position jumping  |
+| `coordination/`                                       | 15      | Multi-agent workflow orchestration                    |
+| `sequence/`                                           | 8+      | GC content, translation, ORF finding, motif search    |
+| `sequence_editing/`                                   | 10      | Copy, cut, paste, insert, replace, undo               |
+| `plugin_management/`                                  | 12      | Plugin install, enable, execute, validate             |
+| `external_apis/`                                      | 12      | BLAST, UniProt, AlphaFold, KEGG, InterPro, EVO2       |
+| `protein/`                                            | 6       | Structure fetching, AlphaFold viewer, PDB search      |
+| `database/`                                           | 6       | UniProt, InterPro domain analysis                     |
+| `data_management/`                                    | 4       | Annotations, region analysis, codon usage, export     |
+| `pathway/`                                            | 3       | Metabolic pathways, KEGG, BLAST search                |
+| `ai_analysis/`                                        | 5       | EVO2 sequence generation, CRISPR design, essentiality |
 | `annotation/`, `file_operations/`, `benchmark/`, etc. | various | Additional specialized categories                     |
 
 Each tool definition includes a JSON Schema for parameters, sample usages for few-shot learning, relationship metadata (dependencies, conflicts, alternatives), and performance statistics.
@@ -124,16 +124,16 @@ Categories: navigation, sequence analysis, data loading, gene search, external d
 
 **8 AI-callable benchmark tools** are registered as built-in tools, allowing the in-app AI assistant to open, start, stop, pause, resume, query status, retrieve results, and export benchmark data directly from chat:
 
-| Tool                       | Description                                                       |
-| -------------------------- | ----------------------------------------------------------------- |
-| `open_benchmark`           | Open the benchmark interface                                      |
-| `start_benchmark`          | Start a benchmark run with configurable suites, timeout, options  |
-| `stop_benchmark`           | Stop the currently running benchmark                              |
-| `pause_benchmark`          | Pause the running benchmark                                       |
-| `resume_benchmark`         | Resume a paused benchmark                                         |
-| `get_benchmark_results`    | Retrieve benchmark results/history by index                       |
-| `get_benchmark_status`     | Query current benchmark status (running, paused, suite count)     |
-| `export_benchmark_results` | Export results as JSON, CSV, or HTML                              |
+| Tool                       | Description                                                      |
+| -------------------------- | ---------------------------------------------------------------- |
+| `open_benchmark`           | Open the benchmark interface                                     |
+| `start_benchmark`          | Start a benchmark run with configurable suites, timeout, options |
+| `stop_benchmark`           | Stop the currently running benchmark                             |
+| `pause_benchmark`          | Pause the running benchmark                                      |
+| `resume_benchmark`         | Resume a paused benchmark                                        |
+| `get_benchmark_results`    | Retrieve benchmark results/history by index                      |
+| `get_benchmark_status`     | Query current benchmark status (running, paused, suite count)    |
+| `export_benchmark_results` | Export results as JSON, CSV, or HTML                             |
 
 ### Additional Capabilities
 
@@ -522,17 +522,17 @@ When using autonomous AI coding tools (Copilot, Cursor, Claude, etc.) in this re
 
 ## Troubleshooting
 
-| Symptom                          | Resolution                                                                                                               |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| AI assistant not responding      | Check API key in `Options → Configure LLMs`. Use "Test Connection".                                                      |
-| MCP server tools not available   | Run `npm run mcp-server`; verify ports 3002/3003 are not blocked.                                                        |
+| Symptom                          | Resolution                                                                                                                             |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| AI assistant not responding      | Check API key in `Options → Configure LLMs`. Use "Test Connection".                                                                    |
+| MCP server tools not available   | Run `npm run mcp-server`; verify ports 3002/3003 are not blocked.                                                                      |
 | MCP agent mode not working       | Ensure LLM is configured (`Options → Configure LLMs`). Start with `--mode=agent`. Check that `codexomics_chat` tool appears in client. |
-| Plugin fails to load             | Check developer console for activation errors; verify plugin API version compatibility (`PLUGIN_API_VERSION = "2.0.0"`). |
-| KGML viewer blank                | Confirm file is valid KEGG XML; check file path accessibility.                                                           |
-| BAM tracks not visible           | Ensure BAM index (`.bai`) file is present alongside the BAM file.                                                        |
-| Performance lag on large genomes | Reduce visible track count; enable Simple Mode; close unused tool windows.                                               |
-| Project fails to load            | Verify `.prj.GAI` file integrity and that all referenced data files are accessible.                                      |
-| Language not switching           | Restart the application after changing language in settings.                                                             |
+| Plugin fails to load             | Check developer console for activation errors; verify plugin API version compatibility (`PLUGIN_API_VERSION = "2.0.0"`).               |
+| KGML viewer blank                | Confirm file is valid KEGG XML; check file path accessibility.                                                                         |
+| BAM tracks not visible           | Ensure BAM index (`.bai`) file is present alongside the BAM file.                                                                      |
+| Performance lag on large genomes | Reduce visible track count; enable Simple Mode; close unused tool windows.                                                             |
+| Project fails to load            | Verify `.prj.GAI` file integrity and that all referenced data files are accessible.                                                    |
+| Language not switching           | Restart the application after changing language in settings.                                                                           |
 
 ---
 

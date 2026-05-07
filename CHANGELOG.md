@@ -5,6 +5,15 @@ All notable changes to CodeXomics will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0-beta] - 2026-05-08 - BETA UPDATE
+
+**🔧 Milestone: Version Update to v0.7beta**
+
+### ✅ Changes
+
+- Updated version to v0.7beta
+- Updated Agents.md to v0.7beta
+
 ## [0.6.0-beta] - 2026-05-04 - BETA UPDATE
 
 **🔧 Milestone: Version Update to v0.6beta**
@@ -24,12 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 CodeXomics now supports multiple interface style presets that can be switched at runtime via **General Settings → Appearance → UI Style**. The system uses CSS custom properties (`:root` variables) and `[data-ui-style]` attribute selectors for comprehensive theming.
 
-| Style        | Accent Color      | Description                                  |
-| ------------ | ----------------- | -------------------------------------------- |
-| AI Dynamic   | Blue-violet       | Vibrant blue-purple gradient style (default) |
-| Professional | Deep teal         | Clean teal-neutral tones for scientific work |
-| Minimal      | Warm amber        | Elegant warm-gray with amber accent          |
-| Pastel       | Soft lavender-rose | Soft lavender-rose with light airy tones    |
+| Style        | Accent Color       | Description                                  |
+| ------------ | ------------------ | -------------------------------------------- |
+| AI Dynamic   | Blue-violet        | Vibrant blue-purple gradient style (default) |
+| Professional | Deep teal          | Clean teal-neutral tones for scientific work |
+| Minimal      | Warm amber         | Elegant warm-gray with amber accent          |
+| Pastel       | Soft lavender-rose | Soft lavender-rose with light airy tones     |
 
 - `ThemeManager` module manages style presets, CSS variable injection, and dark mode overrides
 - Per-preset CSS override files under `src/renderer/css/themes/` cover all hardcoded colors

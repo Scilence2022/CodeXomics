@@ -1,8 +1,9 @@
-# CodeXomics AI Assistant Guidelines (`Agents.md`) - v0.6beta
+# CodeXomics AI Assistant Guidelines (`Agents.md`) - v0.7beta
 
 This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor, Gemini, Claude) operating within the CodeXomics repository. It provides critical context, structural rules, and architectural guidelines necessary for making accurate, stable modifications to the codebase. Provide this file as context when bootstrapping a new session.
 
 ## 1. Project Context
+
 **CodeXomics** is an AI-powered bioinformatics analysis platform built as a desktop application using **Electron**. It provides genome visualization, plugin extensions, and an integrated multi-agent AI system for executing biological analysis tools.
 
 - **Stack**: Node.js, Electron, Vanilla JS (ES6+), HTML5, Vanilla CSS, and various specialized bioinformatics libraries (e.g., D3.js).
@@ -11,6 +12,7 @@ This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor
 - **Renderer Process**: `src/renderer/`
 
 ## 2. Directory Structure & Where to Work
+
 - `src/main.js` – Electron main process entry point. Keep logic minimal here; use IPC paths (`ipcMain`/`ipcRenderer`) to communicate with the renderer process safely.
 - `src/renderer/modules/` – Core application logic organized as ES6 classes and modules.
   - `ChatManager.js`, `MultiAgentSystem.js` – Central orchestration for in-app AI interactions.
@@ -57,12 +59,15 @@ This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor
 - `docs/` – Markdown documentation managed by MkDocs.
 
 ## 3. Core Architectural Patterns
+
 ### Dynamic Tool Registry Integration
+
 Rather than statically defining tools inside `ChatManager.js`, CodeXomics uses a dynamic registry (`tools_registry/system_integration.js`). The system prompt is generated per-query by merging tools from 4 sources, deduplicating by tool name, and classifying each tool as "Directly Available (Built-in)" or "Extended".
 
 **Tool Classification Architecture:**
 
 The authoritative source for whether a tool is "Built-in" is the `builtInToolsMap` in `tools_registry/builtin_tools_integration.js`. This Map contains every tool that can execute locally in the browser via `ChatManager.executeLocalTool()` or `ToolExecutionService` (~80+ entries across categories: file_loading, navigation, sequence, system, database, protein, data_management, external_apis, utility, annotation, sequence_editing, file_operations, primer_design, benchmark). When the system prompt is generated:
+
 1. Tools whose names exist in `builtInToolsMap` are **always** classified as "Directly Available (Built-in)", regardless of whether they came from keyword detection, the YAML registry, or the MCP server.
 2. Tools not in `builtInToolsMap` are classified as "Extended" (e.g., third-party MCP tools, dynamic plugin tools).
 3. Deduplication ensures each tool name appears only once in the system prompt, with built-in source taking priority over registry and MCP sources.
@@ -84,6 +89,7 @@ The authoritative source for whether a tool is "Built-in" is the `builtInToolsMa
 9. **MCP Server parity** – If the tool should also be available to external MCP clients (e.g., Claude Desktop), add the corresponding tool definition in `src/mcp-tools/` and ensure it's registered in `src/mcp-server.js`.
 
 **Critical Rules:**
+
 - **Rule**: You must keep the built-in ChatBox tool capabilities (via `tools_registry/` descriptors) and the MCP Server schemas (via `src/mcp-tools/`) updated synchronously to ensure functional parity across both access methods.
 - **Rule**: Never mark a tool as `is_external: true` in `analyzeBuiltInToolRelevance()` if the tool is actually a local built-in tool (exists in `ChatManager.executeLocalTool()`). All built-in tools should be detected as built-in directly.
 - **Rule**: When a tool exists in both `builtInToolsMap` and the MCP server, it will be classified as Built-in with `alsoAvailableViaMCP: true`. The system prompt will note it as "(also available via MCP)".
@@ -93,10 +99,12 @@ The authoritative source for whether a tool is "Built-in" is the `builtInToolsMa
 - **Rule**: Every tool registered in `builtInToolsMap` that should appear in dynamic prompts MUST have a corresponding keyword detection rule in `analyzeBuiltInToolRelevance()`. Tools without detection rules are invisible to the dynamic prompt system — the LLM will never know they exist unless the non-dynamic fallback prompt is used.
 
 ### LLM Configuration Manager
+
 The LLM configuration UI (`#llmConfigModal`) is managed by `src/renderer/modules/LLMConfigManager.js`. It supports multiple provider tabs (Local LLM, OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter) plus a "Model Selection" tab.
 
 **Key architectural pattern — Custom Model Name:**
 All provider tabs (including Local LLM) support a "Custom Model Name" option. The implementation follows this pattern:
+
 1. **HTML**: Each provider's `<select id="{provider}Model">` includes `<option value="other">Other (specify below)</option>` as the last option, followed by a hidden `<div id="{provider}ModelOtherGroup">` containing `<input id="{provider}ModelOther">`.
 2. **Event listener**: In `setupEventListeners()`, each `{provider}Model` select has a `change` listener that toggles `display` of `{provider}ModelOtherGroup` based on whether the value is `'other'`.
 3. **Save logic**: In `saveProviderInfo()` and `saveConfiguration()`, when the model select value is `'other'`, the actual model name is read from `{provider}ModelOther` input instead.
@@ -105,6 +113,7 @@ All provider tabs (including Local LLM) support a "Custom Model Name" option. Th
 6. **Model Selection tab**: `updateModelTypeOptions()` appends a `Custom Model Name` option (value `'custom'`) to the dynamic model list for non-auto providers. `isKnownModel()` treats `'other'` and `'custom'` as known sentinel values.
 
 **Critical Rules for LLM Config:**
+
 - **Rule**: When adding a new provider tab, you MUST include the "Other (specify below)" option and `ModelOtherGroup`/`ModelOther` input, following the exact same pattern as existing providers.
 - **Rule**: The Local LLM tab uses `id="localEndpoint"` for base URL, while cloud providers use `id="{provider}BaseUrl"`. Code that reads base URL must handle this difference.
 - **Rule**: `testConnection()` does NOT work on the "Model Selection" tab (`activeTab === 'models'`). The method must guard against this case.
@@ -114,6 +123,7 @@ All provider tabs (including Local LLM) support a "Custom Model Name" option. Th
 - **Rule**: `testLocal()` validates that the configured model exists on the local server by parsing the `/models` response; it throws a descriptive error if the model is not found.
 
 ### Internal Multi-Agent Routing
+
 CodeXomics runs its own internal network of specialized agents (`NavigationAgent`, `DataAgent`, `CoordinatorAgent`, `AnalysisAgent`, `ExternalAgent`, `PluginAgent`, `DeepResearchAgent`).
 
 **Tool Execution Flow (Priority Chain):**
@@ -140,6 +150,7 @@ Selection occurs in `MultiAgentSystem.selectOptimalAgent()` (`MultiAgentSystem.j
 **Phase 1 — Filtering via `canExecute()`** (`AgentBase.js:84`):
 
 For each registered agent, `canExecute(functionName, parameters)` is called. The check follows this order:
+
 1. **toolMapping first**: If `this.toolMapping.has(functionName)` → check resource availability → return `{canExecute: true}` (type: `'tool_mapping'`)
 2. **capabilities fallback**: Search `this.capabilities[]` for matching `functionName` or `pattern` (regex) → validate parameters → check resources → return `{canExecute: true}` with the matched capability
 
@@ -151,12 +162,12 @@ Only agents returning `canExecute: true` become candidates.
 
 Each candidate agent is scored on 4 weighted dimensions:
 
-| Dimension | Calculation | Weight Impact |
-|-----------|-------------|---------------|
-| **Historical Performance** | `(1/avgTime) × 1000 + successRate × 100` | Faster & more reliable → higher score |
-| **Resource Availability** | `getResourceAvailability() × 50` | (cpuScore + memoryScore + networkScore) / 3, range 0~1 |
-| **Context Relevance** | `calculateContextRelevance() × 200` | Learning data: similar past contexts with success (+1) or failure (−0.5) |
-| **Specialization Bonus** | `isSpecializedAgent()` → **+100 flat** | Hardcoded Agent↔tool mapping (see below) |
+| Dimension                  | Calculation                              | Weight Impact                                                            |
+| -------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| **Historical Performance** | `(1/avgTime) × 1000 + successRate × 100` | Faster & more reliable → higher score                                    |
+| **Resource Availability**  | `getResourceAvailability() × 50`         | (cpuScore + memoryScore + networkScore) / 3, range 0~1                   |
+| **Context Relevance**      | `calculateContextRelevance() × 200`      | Learning data: similar past contexts with success (+1) or failure (−0.5) |
+| **Specialization Bonus**   | `isSpecializedAgent()` → **+100 flat**   | Hardcoded Agent↔tool mapping (see below)                                 |
 
 The +100 specialization bonus is typically the **single largest scoring factor** and almost always determines the winner when multiple agents can handle the same tool.
 
@@ -165,6 +176,7 @@ The +100 specialization bonus is typically the **single largest scoring factor**
 A tool can be in an agent's `toolMapping` (passing `canExecute`) but NOT in `isSpecializedAgent` (no +100 bonus). This means two agents may both be candidates for a tool, but the one with the specialization bonus will strongly dominate.
 
 **Fallback when no agent is found:**
+
 - `selectOptimalAgent` returns `null` → `executeTool()` returns `{success: false, result: null}`
 - `ToolExecutionService` PRIORITY 3 falls through (because `agentResult.success !== true`)
 - Execution continues down to PRIORITY 7 (`this.chatManager[camelCaseMethod]()`) or PRIORITY 8 (`executeLocalTool()`)
@@ -173,19 +185,21 @@ A tool can be in an agent's `toolMapping` (passing `canExecute`) but NOT in `isS
 
 These are **two separate registries** that must not be confused:
 
-| Registry | Location | Purpose |
-|----------|----------|---------|
-| `builtInToolsMap` | `tools_registry/builtin_tools_integration.js` | Declares all tools that exist as ChatManager methods. Used for system prompt generation and tool classification. |
-| `toolMapping` | Each Agent's `registerToolMapping()` | Declares which tools a specific agent can execute locally. Only tools in `toolMapping` pass the `canExecute()` check. |
+| Registry          | Location                                      | Purpose                                                                                                               |
+| ----------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `builtInToolsMap` | `tools_registry/builtin_tools_integration.js` | Declares all tools that exist as ChatManager methods. Used for system prompt generation and tool classification.      |
+| `toolMapping`     | Each Agent's `registerToolMapping()`          | Declares which tools a specific agent can execute locally. Only tools in `toolMapping` pass the `canExecute()` check. |
 
 A tool can exist in `builtInToolsMap` but not in any agent's `toolMapping` (e.g., `set_working_directory`, `toggle_settings_modal`, `list_available_tools`, `download_internet_file`). These "system/utility" tools are handled by the PRIORITY 7 fallback in `ToolExecutionService`, NOT by the multi-agent system.
 
 **Infinite Recursion Trap:**
 
 Never make `CoordinatorAgent.canExecute()` return `true` for all tools and delegate to `chatManager.executeToolByName()`. This creates a cycle:
+
 ```
 ToolExecutionService P3 → MultiAgentSystem → CoordinatorAgent → chatManager.executeToolByName() → ToolExecutionService P3 → ...
 ```
+
 The correct approach is to let `selectOptimalAgent` return `null` when no agent handles a tool, allowing the priority chain to fall through to PRIORITY 7 (direct `ChatManager` method call).
 
 **NavigationAgent Architecture — `capabilities[]` vs `toolMapping`:**
@@ -195,6 +209,7 @@ The correct approach is to let `selectOptimalAgent` return `null` when no agent 
 **NavigationAgent localStorage Persistence:**
 
 `NavigationAgent` persists bookmarks and view states to `localStorage`:
+
 - `genome_browser_bookmarks` – Key for `getStoredBookmarks()`/`setStoredBookmarks()` (JSON array of bookmark objects with name, chromosome, start, end)
 - `genome_browser_view_states` – Key for `getStoredViewStates()`/`setStoredViewStates()` (JSON array of named view configurations)
 
@@ -203,6 +218,7 @@ This is a side effect that persists across application restarts. When modifying 
 **CoordinatorAgent WorkflowEngine:**
 
 `CoordinatorAgent` contains an embedded `WorkflowEngine` class (defined in the same file) that manages multi-step workflow execution:
+
 - `createWorkflow(name, steps, dependencies)` – Creates a workflow with topologically sorted steps
 - `executeWorkflow(workflowId)` – Executes steps respecting dependency order
 - `getWorkflowStatus(workflowId)` – Returns current execution state
@@ -212,6 +228,7 @@ The `WorkflowEngine` maintains its own `workflows` and `executions` Maps, separa
 **Agent Delegation Pattern (`performExecution`):**
 
 All 7 agents override `performExecution()` with the same pattern:
+
 1. Try `chatManager.executeToolByName(functionName, parameters)` first
 2. Fall back to `_performLocalExecution()` (the agent's own `toolMapping`)
 
@@ -221,14 +238,15 @@ This means when an agent IS selected (tool in its `toolMapping`), execution goes
 
 The `isSpecializedAgent()` map in `MultiAgentSystem` and each agent's `registerToolMapping()` are **two separate registries that serve different purposes**:
 
-| Registry | Scope | Purpose |
-|----------|-------|---------|
-| `isSpecializedAgent` | `MultiAgentSystem.js` | Determines which tools get the +100 specialization bonus in `selectOptimalAgent()` scoring |
-| `toolMapping` | Each Agent class | Determines which tools pass the `canExecute()` check and can actually be executed by the agent |
+| Registry             | Scope                 | Purpose                                                                                        |
+| -------------------- | --------------------- | ---------------------------------------------------------------------------------------------- |
+| `isSpecializedAgent` | `MultiAgentSystem.js` | Determines which tools get the +100 specialization bonus in `selectOptimalAgent()` scoring     |
+| `toolMapping`        | Each Agent class      | Determines which tools pass the `canExecute()` check and can actually be executed by the agent |
 
 **Critical**: `isSpecializedAgent` should be a **superset-aligned** mapping of each agent's `toolMapping`/`capabilities`. Every tool name registered in an agent's `registerToolMapping()` or `capabilities[]` array MUST also appear in `isSpecializedAgent` — the only exception is tool names explicitly marked as `// legacy alias` in the code (these are redundant names bound to the same method, and the LLM should use the primary name). If a tool is in `toolMapping` but NOT in `isSpecializedAgent`, the agent will still pass `canExecute()` and be selected as a candidate, but will NOT receive the +100 specialization bonus, potentially losing the agent selection to another agent with a weaker claim but different scoring advantages.
 
 **Full `isSpecializedAgent` map (current — synced with toolMapping/capabilities, excluding legacy aliases):**
+
 - `NavigationAgent` (23 capabilities): navigate_to_position, get_current_state, get_current_region, jump_to_gene, scroll_left, scroll_right, zoom_in, zoom_out, zoom_to_gene, toggle_track, get_track_status, bookmark_position, get_bookmarks, save_view_state, navigate_to, search_features, find_gene_by_name, pan_left, pan_right, switch_to_tab, open_new_tab, close_tab, get_chromosome_list
 - `AnalysisAgent` (28 tools): get_sequence, translate_sequence, translate_dna, reverse_complement, calculate_gc_content, compute_gc, calc_region_gc, sequence_statistics, codon_usage_analysis, analyze_codon_usage, genome_codon_usage_analysis, calculate_entropy, calculate_melting_temp, calculate_molecular_weight, predict_promoter, predict_rbs, predict_terminator, analyze_region, compare_regions, find_similar_sequences, find_restriction_sites, virtual_digest, search_pattern, search_sequence_motif, calculate_primer_properties, design_primers, find_primer_binding_sites, add_primer_annotation, get_coding_sequence, get_upstream_region, get_downstream_region
 - `DataAgent` (31 tools, excluding 5 legacy aliases): get_sequence, get_gene_details, get_annotation_data, get_annotation, get_track_data, export_data, export_sequence, export_region, export_gene_list, export_track_data, export_fasta_sequence, export_genbank_format, export_gff_annotations, export_bed_format, export_cds_fasta, export_protein_fasta, export_current_view_fasta, load_genome_file, load_annotation_file, load_variant_file, load_reads_file, load_wig_tracks, get_operons, get_nearby_features, find_intergenic_regions, search_genes, search_sequences, search_annotations, list_annotations, get_data_statistics, get_genome_summary
@@ -261,6 +279,7 @@ The `isSpecializedAgent()` map in `MultiAgentSystem` and each agent's `registerT
   coordinate_task, decompose_task, integrate_results, create_workflow, execute_workflow, get_workflow_status, assign_task_to_agent, get_agent_status, balance_load, handle_error, retry_failed_task, fallback_strategy, optimize_execution, cache_strategy, parallel_execution
 
 **Critical Rules:**
+
 - **Rule**: When adding functionality that requires AI to sequentially execute logic (like navigating AND analyzing), integrate it as a capability into the relevant Agent class rather than building brittle one-off callbacks in the UI layer.
 - **Rule**: When adding a tool that should be routed through a specific agent, add it to BOTH the agent's `toolMapping` (in `registerToolMapping()`) AND the `isSpecializedAgent` map in `MultiAgentSystem`. If the tool should get the +100 specialization bonus, it MUST be in `isSpecializedAgent`; otherwise it will only pass `canExecute()` without the bonus.
 - **Rule**: System/utility tools (category `'system'` in `builtInToolsMap`) should NOT be added to any agent's `toolMapping`. They are handled by `ToolExecutionService` PRIORITY 7 fallback.
@@ -287,6 +306,7 @@ The benchmark subsystem is NOT loaded at application startup. Instead, it uses l
 **Key architectural pattern — `startBenchmark()` UI delegation:**
 
 `startBenchmark()` does NOT call `benchmarkManager.framework.runAllBenchmarks()` directly. Instead, it:
+
 1. Pre-configures the UI form elements (suite checkboxes, timeout, delay, report options) via `document.getElementById()`
 2. Delegates to `BenchmarkUI.startMainWindowBenchmark()` via `setTimeout` (250ms delay for DOM readiness)
 
@@ -297,6 +317,7 @@ This ensures the UI owns the running state, elapsed timer, progress bar, and res
 Results may contain non-serializable objects (e.g., plugin functions). The method uses `JSON.parse(JSON.stringify(results))` with a safe fallback that sends only summary data (`suiteId`, `stats`, `duration`) if full serialization fails. This prevents `DataCloneError` when using `window.postMessage()`.
 
 **Critical Rules:**
+
 - **Rule**: Benchmark tools must NOT be added to any agent's `toolMapping`. They are system/utility tools handled by `ToolExecutionService` PRIORITY 7.
 - **Rule**: Never use `typeof openBenchmarkInterface === 'function'` as a fallback — `openBenchmarkInterface` is an instance method on the `GenomeBrowser` app, not a global function. Always use `this.app.initializeBenchmarkSystemOnDemand()` instead.
 - **Rule**: When calling `_getBenchmarkManager()`, use `let` (not `const`) so the variable can be reassigned after on-demand initialization.
@@ -304,13 +325,16 @@ Results may contain non-serializable objects (e.g., plugin functions). The metho
 - **Rule**: Parameter names in ChatManager methods must be consistent — use `params` or `parameters` for both the function argument and body references, never mix them.
 
 ### MCP Server Modes (Tools / Agent)
+
 CodeXomics MCP Server supports two operating modes that determine how external MCP clients interact with the platform:
 
 **Mode Selection:**
+
 - `--mode=tools` (default): Standard MCP tool server. Each `tools/call` maps to a specific tool. All 40+ tools are exposed individually.
 - `--mode=agent`: Agent mode. Only `codexomics_chat` + window management tools are exposed. All prompts are routed through ChatManager's LLM loop, which autonomously decides which internal tools to call. Progress notifications are pushed to MCP clients via `sendLoggingMessage`.
 
 **Mode configuration sources (priority order):**
+
 1. `--mode=tools|agent` command-line argument (highest priority)
 2. `CODEXOMICS_MCP_MODE` environment variable
 3. `authConfig.mode` passed to constructor
@@ -319,11 +343,13 @@ CodeXomics MCP Server supports two operating modes that determine how external M
 **Runtime mode switching:** `server.setMode('agent')` changes mode at runtime, triggers `sendToolListChanged()` notification to MCP clients, and sends a logging notification about the mode change.
 
 **Architecture (Tools Mode):**
+
 ```
 MCP Client → tools/call → ToolsIntegrator.executeTool() → individual tool module → result
 ```
 
 **Architecture (Agent Mode):**
+
 ```
 MCP Client → tools/call → ToolsIntegrator._executeViaAgent()
   → codexomics_chat → InternalMCPServer.handleCodexomicsChat()
@@ -338,6 +364,7 @@ MCP Client → tools/call → ToolsIntegrator._executeViaAgent()
 ```
 
 **Key design principle:** `processAgentPrompt` executes prompts through the **same `sendToLLM` pipeline** as regular ChatBox input. This ensures:
+
 - Full tool execution loop (LLM decides tools, calls them, gets results, may call more)
 - Real tool execution (e.g., `load_genome` actually loads the file in the genome browser)
 - User visibility (thinking process, tool calls, and results appear in ChatBox)
@@ -345,6 +372,7 @@ MCP Client → tools/call → ToolsIntegrator._executeViaAgent()
 - Source marker `🔗 **[MCP Agent]**` distinguishes MCP-originated prompts from user-typed messages
 
 **Key files for MCP modes:**
+
 - `src/mcp-server.js` — `this.mode` property, `_notifyClient()`, `sendAgentProgress()`, `setMode()`, IPC listener for `mcp-agent-progress`
 - `src/mcp-tools/ToolsIntegrator.js` — `getAvailableTools()` (returns only `codexomics_chat` + window tools in agent mode), `_executeViaAgent()`, `_buildAgentPromptFromToolCall()`, `getFullToolList()`
 - `src/mcp-tools/utility/AgentChatTools.js` — `codexomics_chat` tool definition (description varies by mode)
@@ -354,15 +382,16 @@ MCP Client → tools/call → ToolsIntegrator._executeViaAgent()
 
 **Progress notification types (via `onProgress` callback):**
 
-| Type | Level | When | Data |
-|------|-------|------|------|
-| `round_start` | notice | Agent execution begins in ChatBox | `{ mode }` |
-| `completion` | notice | `sendToLLM` finishes and response displayed | `{ responseLength }` |
-| `error` | error | Execution failure | — |
+| Type          | Level  | When                                        | Data                 |
+| ------------- | ------ | ------------------------------------------- | -------------------- |
+| `round_start` | notice | Agent execution begins in ChatBox           | `{ mode }`           |
+| `completion`  | notice | `sendToLLM` finishes and response displayed | `{ responseLength }` |
+| `error`       | error  | Execution failure                           | —                    |
 
 Note: Detailed progress (thinking, tool calls, results) is shown directly in the ChatBox UI rather than via `onProgress`, since the prompt executes through the same `sendToLLM` pipeline as user input.
 
 **Critical Rules:**
+
 - **Rule**: In agent mode, `ToolsIntegrator.getAvailableTools()` returns only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`. All other tools are hidden from MCP clients but remain accessible to the internal agent.
 - **Rule**: `_executeViaAgent()` translates structured tool calls into natural language prompts via `_buildAgentPromptFromToolCall()`. When adding new prompt templates, cover the most common tools; unknown tools get a generic fallback prompt.
 - **Rule**: `processAgentPrompt` must always go through `sendToLLM()` (the same pipeline as ChatBox user input). Never create a separate LLM call loop — `sendToLLM` already handles the full tool execution cycle, LLM provider routing, and context management.
@@ -373,12 +402,15 @@ Note: Detailed progress (thinking, tool calls, results) is shown directly in the
 - **Rule**: When the ChatBox is busy (`conversationState.isProcessing`), `processAgentPrompt` returns `{ success: false, error: 'ChatBox is busy...' }` rather than queuing or blocking.
 
 ### Styling & CSS
+
 - **Rule**: Use Vanilla CSS. Do **not** use TailwindCSS, Bootstrap, or any atomic CSS frameworks unless explicitly asked by the user to introduce them. The project uses standard `.css` files located in `src/renderer/css/`. Respect the existing color variables and DOM structures.
 
 ### UI Style System (Multi-Preset Theming)
+
 CodeXomics supports multiple UI style presets (AI Dynamic, Professional, Minimal, Pastel) that can be switched at runtime via `ThemeManager`. The system uses CSS custom properties (`:root` variables) as the primary theming mechanism, with `[data-ui-style="<preset>"]` attribute selectors for overriding hardcoded colors in `styles.css`.
 
 **Key files involved:**
+
 - `src/renderer/modules/ThemeManager.js` – Preset definitions (CSS variables for each style), apply/switch logic, dark mode overrides
 - `src/renderer/css/base.css` – Default CSS custom property definitions (`:root`)
 - `src/renderer/css/themes/<preset>.css` – Per-preset override rules using `[data-ui-style]` selectors
@@ -406,6 +438,7 @@ CodeXomics supports multiple UI style presets (AI Dynamic, Professional, Minimal
    - `.style-preview-swatch.<preset>-swatch` for the settings UI color preview
 
 3. **Add preset card in `src/renderer/index.html`** – Inside `#stylePresetCards`, add:
+
    ```html
    <div class="style-preset-card" data-style="<preset>">
        <div class="style-preview-swatch <preset>-swatch">
@@ -425,7 +458,9 @@ CodeXomics supports multiple UI style presets (AI Dynamic, Professional, Minimal
 **Critical pitfall – `applyAccentColor` override:** When `GeneralSettingsManager.saveAllSettings()` calls `applySettings()`, it executes `applyAccentColor()` which can override the preset's `--primary-color` with the saved `accentColor` value (defaulting to `#667eea`). The `applyAccentColor()` method includes a guard that skips the override when the current UI Style is not `'default'`. The `applySettings()` method also ensures `applyUIStyle()` runs **after** `applyAccentColor()` so the preset variables always win. When adding a new preset, **do not** remove these safeguards.
 
 ### Tab Manager and Navigation Source Pattern
+
 The tab title system in `src/renderer/modules/TabManager.js` supports two naming modes for genome browser tabs:
+
 - **Mode 1 (Position-based)**: `Chromosome:start-end` (e.g., `NC_000913:1,234-5,678`)
 - **Mode 2 (Gene-based)**: `Gene: <name>` (e.g., `Gene: lacZ`)
 
@@ -434,24 +469,26 @@ The `updateCurrentTabPosition(chromosome, start, end, options)` method accepts a
 
 ```javascript
 // Source values and their semantics:
-tabManager.updateCurrentTabPosition(chr, start, end, { source: 'ruler' });      // Navigation ruler (click/drag/double-click)
-tabManager.updateCurrentTabPosition(chr, start, end, { source: 'zoom' });       // Zoom in/out buttons or mouse wheel
-tabManager.updateCurrentTabPosition(chr, start, end, { source: 'drag' });       // Drag to pan the genome view
+tabManager.updateCurrentTabPosition(chr, start, end, { source: 'ruler' }); // Navigation ruler (click/drag/double-click)
+tabManager.updateCurrentTabPosition(chr, start, end, { source: 'zoom' }); // Zoom in/out buttons or mouse wheel
+tabManager.updateCurrentTabPosition(chr, start, end, { source: 'drag' }); // Drag to pan the genome view
 tabManager.updateCurrentTabPosition(chr, start, end, { source: 'navigation' }); // Navigation buttons, search, gene jumps, chromosome switch
 ```
 
 **Critical Behavior Rule:**
+
 - When a tab title is in **Mode 2 (gene name)**, it is **preserved** during `zoom`, `drag`, and `navigation` sources
 - The title **only switches to Mode 1** when `source === 'ruler'` (explicit position-based navigation)
 - This prevents accidental loss of gene context when users zoom or pan while exploring a specific gene
 
 **Implementation Pattern:**
+
 ```javascript
 updateCurrentTabPosition(chromosome, start, end, options = {}) {
   const { source = 'unknown' } = options;
   const tabState = this.tabStates.get(this.activeTabId);
   const isGeneNameMode = tabState && tabState.title && tabState.title.startsWith('Gene: ');
-  
+
   // Preserve gene name titles unless navigation comes from ruler
   if (isGeneNameMode && source !== 'ruler') {
     // Update position state but keep the gene name title
@@ -462,7 +499,7 @@ updateCurrentTabPosition(chromosome, start, end, options = {}) {
     this.updateTabPositionVisualization(this.activeTabId, chromosome, start, end);
     return; // Title preserved
   }
-  
+
   // Otherwise, update to position-based title (Mode 1)
   const positionTitle = `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`;
   this.updateTabTitle(this.activeTabId, positionTitle);
@@ -470,25 +507,30 @@ updateCurrentTabPosition(chromosome, start, end, options = {}) {
 ```
 
 **Critical Rules for Tab Title Updates:**
+
 - **Rule**: When modifying any navigation, zoom, or drag functionality, you MUST pass the appropriate `source` parameter to `updateCurrentTabPosition()`
 - **Rule**: Never call `updateCurrentTabPosition()` without the options object — always include `{ source: '...' }` for traceability
 - **Rule**: The navigation ruler (`GenomeNavigationBar.js`) is the ONLY interaction that should use `{ source: 'ruler' }` — this is the explicit position-based navigation intent
 - **Rule**: When adding new navigation methods, determine the appropriate source based on user intent: position-focused → `'ruler'`, exploration-focused → preserve current mode
 
 ## 4. Coding Conventions
+
 1. **Vanilla JavaScript**: The project defaults to vanilla JavaScript (ES6+). It does not use TypeScript or React. Utilize standard ES6 classes and modular imports. Use native DOM manipulation or D3.js for visual updates.
 2. **Robust IPC and Error Handling**: When making IPC calls or network requests, always wrap in `try/catch`. Bubble errors up sequentially so the UI can provide user-facing error dialogs. Do not let promises fail silently.
 3. **No Code Placeholders**: If the user asks for a feature or bug fix, provide fully working, drop-in replacement code. Do not leave `// TODO: implement logic here`.
-4. **File Operations**: Always use `fs.promises` internally. Handle cross-platform paths carefully using Node's `path` module. 
+4. **File Operations**: Always use `fs.promises` internally. Handle cross-platform paths carefully using Node's `path` module.
 
 ## 5. Build and Execution Commands
+
 When modifying logic and testing functionality, rely on these defined npm scripts:
+
 - `npm start` - Starts the electron app in development mode.
 - `npm run dev` - Starts the electron app with developer tools immediately active.
 - `npm run mcp-server` - Starts the standalone CodeXomics MCP Server.
 - `npm test` - Runs the existing testing suite.
 
 ## 6. Important Editing Reminders
+
 - You MUST maintain strict adherence to semantic versioning patterns in `package.json` and `CHANGELOG.md` upon modification.
 - Do not modify `package-lock.json` manually; run `npm install` if a dependency is added to `package.json`.
 - When generating markdown artifacts or tables, maintain standard GitHub Flavored Markdown (GFM).
