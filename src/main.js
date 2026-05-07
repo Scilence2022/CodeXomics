@@ -267,6 +267,8 @@ function buildModuleDeps() {
     createMenu: mb.createMenu,
     createCircosPlotterMenu: mb.createCircosPlotterMenu,
     createToolWindowMenu: mb.createToolWindowMenu,
+    createProjectManagerMenu: mb.createProjectManagerMenu,
+    createDeepGeneResearchMenu: mb.createDeepGeneResearchMenu,
     updateMCPServerMenu: mcp.updateMCPServerMenu,
 
     // MCP lifecycle
@@ -276,6 +278,12 @@ function buildModuleDeps() {
     loadMCPServerSettings: mcp.loadMCPServerSettings,
     saveMCPServerSettings: mcp.saveMCPServerSettings,
     checkPortAvailable: mcp.checkPortAvailable,
+
+    // RPC interface
+    codeXomicsRPC,
+
+    // File queue
+    processFileQueue,
 
     // Other
     analyzerPendingData: new Map(),

@@ -83,7 +83,7 @@ function createWindow() {
   console.log(`📋 [createMainWindow] Window ${windowId} registered in registry`);
 
   // Load the app
-  mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
+  mainWindow.loadFile(path.join(__dirname, '..', 'renderer/index.html'));
 
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
@@ -235,7 +235,7 @@ function createCircosWindow() {
       show: false,
     });
 
-    const circosPath = path.join(__dirname, 'circos-plotter.html');
+    const circosPath = path.join(__dirname, '..', 'circos-plotter.html');
 
     // Load the Circos plotter HTML
     circosWindow.loadFile(circosPath);
@@ -277,342 +277,10 @@ function createCircosWindow() {
   }
 }
 
-// Handle genome data requests from Circos Plotter
-ipcMain.handle('get-circos-genome-data', async event => {
-  try {
-    // Get the sender window (Circos window)
-    const senderWindow = BrowserWindow.fromWebContents(event.sender);
-
-    // Get main window data
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      const result = await mainWindow.webContents.executeJavaScript(`
-        (function() {
-          if (window.genomeBrowser) {
-            const genomeData = {
-              currentSequence: window.genomeBrowser.currentSequence || {},
-              currentAnnotations: window.genomeBrowser.currentAnnotations || {},
-              currentPosition: window.genomeBrowser.currentPosition || null,
-              currentChromosome: window.genomeBrowser.currentChromosome || null,
-              sequenceLength: window.genomeBrowser.sequenceLength || 0,
-              loadedFiles: window.genomeBrowser.loadedFiles || [],
-              visibleTracks: window.genomeBrowser.visibleTracks || [],
-              operons: window.genomeBrowser.operons || []
-            };
-            
-            // Convert sequence data to Circos format
-            const chromosomes = [];
-            const genes = [];
-            const links = [];
-            
-            // Debug logging
-            console.log('Circos data extraction - currentSequence keys:', Object.keys(genomeData.currentSequence));
-            console.log('Circos data extraction - currentAnnotations keys:', Object.keys(genomeData.currentAnnotations));
-            console.log('Circos data extraction - currentAnnotations sample:', genomeData.currentAnnotations[Object.keys(genomeData.currentAnnotations)[0]]?.slice(0, 3));
-            
-            // Process each chromosome/sequence
-            Object.keys(genomeData.currentSequence).forEach((chrName, index) => {
-              const sequence = genomeData.currentSequence[chrName];
-              const length = sequence.length;
-              
-              // Add chromosome data
-              chromosomes.push({
-                id: chrName,
-                name: chrName,  // Add explicit name for lookup consistency
-                label: chrName,
-                size: length,
-                length: length,  // Also add length for compatibility
-                start: 0,
-                end: length
-              });
-              
-              // Process annotations for this chromosome
-              if (genomeData.currentAnnotations[chrName]) {
-                const annotations = genomeData.currentAnnotations[chrName];
-                
-                // Process all annotations (genes and other features are mixed in the array)
-                if (Array.isArray(annotations)) {
-                  annotations.forEach(annotation => {
-                    // Skip source features as they cover the entire genome and obscure other genes
-                    if (annotation.type === 'source') {
-                      console.log('Skipping source feature:', annotation);
-                      return;
-                    }
-                    
-                    // Extract gene information from qualifiers
-                    const geneName = annotation.qualifiers?.gene || annotation.qualifiers?.locus_tag || 'Unknown';
-                    const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || \`feature_\${genes.length}\`;
-                    const product = annotation.qualifiers?.product || annotation.qualifiers?.note || 'Unknown function';
-                    
-                    // Determine feature type - keep original types for better classification
-                    let featureType = annotation.type || 'other';
-                    
-                    // Debug: Log original annotation type
-                    if (genes.length < 20) { // Only log first 20 for debugging
-                      console.log('Annotation type:', annotation.type, '-> Feature type:', featureType);
-                    }
-                    
-                    // Only map general types, keep specific types like tRNA, rRNA as-is
-                    if (featureType === 'gene' || featureType === 'CDS' || featureType === 'mRNA') {
-                      featureType = 'protein_coding';
-                    } else if (featureType === 'ncRNA') {
-                      featureType = 'non_coding';
-                    } else if (featureType === 'pseudogene') {
-                      featureType = 'pseudogene';
-                    } else if (featureType === 'regulatory' || featureType === 'promoter' || featureType === 'terminator') {
-                      featureType = 'regulatory';
-                    }
-                    // Keep tRNA, rRNA, and other specific types as-is for proper classification
-                    
-                    // Convert strand from -1/1 to +/- format
-                    const strand = annotation.strand === -1 ? '-' : '+';
-                    
-                    // Validate gene coordinates
-                    const start = parseInt(annotation.start) || 0;
-                    const end = parseInt(annotation.end) || start + 1000;
-                    
-                    if (start >= 0 && end > start) {
-                      genes.push({
-                        id: locusTag,
-                        name: geneName,
-                        chromosome: chrName,
-                        start: start,
-                        end: end,
-                        strand: strand,
-                        type: featureType,
-                        description: product,
-                        qualifiers: annotation.qualifiers || {}
-                      });
-                    } else {
-                      console.warn('Skipping gene with invalid coordinates:', {
-                        name: geneName,
-                        start: annotation.start,
-                        end: annotation.end,
-                        chromosome: chrName
-                      });
-                    }
-                  });
-                }
-              }
-            });
-            
-            // If no genes found, generate some test genes for visualization
-            if (genes.length === 0 && chromosomes.length > 0) {
-              console.log('No genes found in annotations, generating test genes for visualization');
-              chromosomes.forEach((chr, chrIndex) => {
-                const numTestGenes = Math.min(20, Math.floor(chr.size / 50000)); // 1 gene per 50kb
-                for (let i = 0; i < numTestGenes; i++) {
-                  const start = Math.floor(Math.random() * (chr.size - 1000));
-                  const end = start + Math.floor(Math.random() * 2000) + 500;
-                  const geneTypes = ['protein_coding', 'non_coding', 'pseudogene', 'regulatory'];
-                  const geneType = geneTypes[Math.floor(Math.random() * geneTypes.length)];
-                  
-                  // Validate test gene coordinates
-                  if (start >= 0 && end > start && end <= chr.size) {
-                    genes.push({
-                      id: \`test_gene_\${chrIndex}_\${i}\`,
-                      name: \`Test Gene \${i + 1}\`,
-                      chromosome: chr.id,
-                      start: start,
-                      end: end,
-                      strand: Math.random() > 0.5 ? '+' : '-',
-                      type: geneType,
-                      description: \`Test \${geneType} gene for visualization\`,
-                      qualifiers: {}
-                    });
-                  }
-                }
-              });
-            }
-            
-            return {
-              success: true,
-              data: {
-                chromosomes: chromosomes,
-                genes: genes,
-                links: links,
-                metadata: {
-                  totalChromosomes: chromosomes.length,
-                  totalGenes: genes.length,
-                  totalLength: chromosomes.reduce((sum, chr) => sum + chr.size, 0),
-                  source: 'GenomeExplorer',
-                  timestamp: new Date().toISOString()
-                }
-              },
-              originalData: genomeData
-            };
-          }
-          return { success: false, error: 'No genome data loaded' };
-        })()
-      `);
-      return result;
-    }
-    return { success: false, error: 'Main window not available' };
-  } catch (error) {
-    console.error('Error getting Circos genome data:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-// Handle navigation requests from Circos Plotter
-ipcMain.handle('navigate-to-chromosome', async (event, chromosomeName) => {
-  try {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      await mainWindow.webContents.executeJavaScript(`
-        (function() {
-          if (window.genomeBrowser && document.getElementById('chromosomeSelect')) {
-            const select = document.getElementById('chromosomeSelect');
-            const option = Array.from(select.options).find(opt => 
-              opt.value === '${chromosomeName}' || 
-              opt.text.includes('${chromosomeName}')
-            );
-            if (option) {
-              select.value = option.value;
-              select.dispatchEvent(new Event('change'));
-              return true;
-            }
-          }
-          return false;
-        })()
-      `);
-      return { success: true };
-    }
-    return { success: false, error: 'Main window not available' };
-  } catch (error) {
-    console.error('Error navigating to chromosome:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('navigate-to-gene', async (event, geneData) => {
-  try {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      await mainWindow.webContents.executeJavaScript(`
-        (function() {
-          if (window.genomeBrowser) {
-            // First navigate to the chromosome
-            const select = document.getElementById('chromosomeSelect');
-            if (select) {
-              const option = Array.from(select.options).find(opt => 
-                opt.value === '${geneData.chromosome}' || 
-                opt.text.includes('${geneData.chromosome}')
-              );
-              if (option) {
-                select.value = option.value;
-                select.dispatchEvent(new Event('change'));
-              }
-            }
-            
-            // Then navigate to the gene position
-            setTimeout(() => {
-              if (window.genomeBrowser.navigateToPosition) {
-                window.genomeBrowser.navigateToPosition(${geneData.start}, ${geneData.end});
-              } else if (window.genomeBrowser.setPosition) {
-                window.genomeBrowser.setPosition(${geneData.start}, ${geneData.end});
-              }
-            }, 500);
-            
-            return true;
-          }
-          return false;
-        })()
-      `);
-      return { success: true };
-    }
-    return { success: false, error: 'Main window not available' };
-  } catch (error) {
-    console.error('Error navigating to gene:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-// Handle gene sequence requests
-ipcMain.handle('get-gene-sequence', async (event, geneName) => {
-  try {
-    const senderWindow = BrowserWindow.fromWebContents(event.sender);
-
-    if (senderWindow && senderWindow.mainWindow) {
-      const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
-        (async function() {
-          if (window.genomeBrowser && '${geneName}') {
-            const annotations = window.genomeBrowser.currentAnnotations || {};
-            const sequences = window.genomeBrowser.currentSequence || {};
-            
-            // Search for gene in annotations
-            for (const [chromosome, chrAnnotations] of Object.entries(annotations)) {
-              if (chrAnnotations && chrAnnotations.length) {
-                const gene = chrAnnotations.find(g => 
-                  g.name === '${geneName}' || 
-                  g.gene === '${geneName}' || 
-                  g.locus_tag === '${geneName}' ||
-                  (g.name && g.name.toLowerCase() === '${geneName}'.toLowerCase()) ||
-                  (g.gene && g.gene.toLowerCase() === '${geneName}'.toLowerCase())
-                );
-                
-                if (gene && sequences[chromosome]) {
-                  const sequence = sequences[chromosome].substring(gene.start - 1, gene.end);
-                  return {
-                    sequence: sequence,
-                    chromosome: chromosome,
-                    start: gene.start,
-                    end: gene.end,
-                    geneName: gene.name || gene.gene || '${geneName}',
-                    strand: gene.strand || '+',
-                    source: 'gene_annotation'
-                  };
-                }
-              }
-            }
-            
-            return null;
-          }
-          return null;
-        })()
-      `);
-      return result;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error getting gene sequence:', error);
-    return null;
-  }
-});
-
-// Handle region sequence requests
-ipcMain.handle('get-region-sequence', async (event, chromosome, start, end) => {
-  try {
-    const senderWindow = BrowserWindow.fromWebContents(event.sender);
-
-    if (senderWindow && senderWindow.mainWindow) {
-      const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
-        (function() {
-          if (window.genomeBrowser) {
-            const sequences = window.genomeBrowser.currentSequence || {};
-            
-            if (sequences['${chromosome}']) {
-              const sequence = sequences['${chromosome}'].substring(${start} - 1, ${end});
-              return {
-                sequence: sequence,
-                chromosome: '${chromosome}',
-                start: ${start},
-                end: ${end},
-                source: 'genomic_region'
-              };
-            }
-          }
-          return null;
-        })()
-      `);
-      return result;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error getting region sequence:', error);
-    return null;
-  }
-});
+// NOTE: Circos-related IPC handlers (get-circos-genome-data, navigate-to-chromosome,
+// navigate-to-gene, get-gene-sequence, get-region-sequence) have been moved to
+// src/main/ipc-handlers.js (Section 11) to avoid duplicate registration errors.
+// See: https://github.com/electron/electron/blob/main/docs/api/ipc-main.md#ipcmainhandlechannel-listener
 
 // ========== BIOLOGICAL DATABASES TOOLS ==========
 
@@ -638,7 +306,7 @@ function createKEGGWindow() {
       show: false,
     });
 
-    keggWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/kegg-analyzer.html'));
+    keggWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/kegg-analyzer.html'));
 
     keggWindow.once('ready-to-show', () => {
       keggWindow.show();
@@ -678,7 +346,7 @@ function createGOWindow() {
       show: false,
     });
 
-    goWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/go-analyzer.html'));
+    goWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/go-analyzer.html'));
 
     goWindow.once('ready-to-show', () => {
       goWindow.show();
@@ -720,7 +388,7 @@ function createUniProtWindow() {
       show: false,
     });
 
-    uniprotWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/uniprot-search.html'));
+    uniprotWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/uniprot-search.html'));
 
     uniprotWindow.once('ready-to-show', () => {
       uniprotWindow.show();
@@ -762,7 +430,7 @@ function createInterProWindow() {
       show: false,
     });
 
-    interproWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/interpro-analyzer.html'));
+    interproWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/interpro-analyzer.html'));
 
     interproWindow.once('ready-to-show', () => {
       interproWindow.show();
@@ -804,7 +472,7 @@ function createNCBIWindow() {
       show: false,
     });
 
-    ncbiWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/ncbi-browser.html'));
+    ncbiWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/ncbi-browser.html'));
 
     ncbiWindow.once('ready-to-show', () => {
       ncbiWindow.show();
@@ -848,7 +516,7 @@ function createSTRINGWindow() {
       show: false,
     });
 
-    stringWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/string-networks.html'));
+    stringWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/string-networks.html'));
 
     stringWindow.once('ready-to-show', () => {
       stringWindow.show();
@@ -890,7 +558,7 @@ function createDAVIDWindow() {
       show: false,
     });
 
-    davidWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/david-analyzer.html'));
+    davidWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/david-analyzer.html'));
 
     davidWindow.once('ready-to-show', () => {
       davidWindow.show();
@@ -932,7 +600,7 @@ function createReactomeWindow() {
       show: false,
     });
 
-    reactomeWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/reactome-browser.html'));
+    reactomeWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/reactome-browser.html'));
 
     reactomeWindow.once('ready-to-show', () => {
       reactomeWindow.show();
@@ -974,7 +642,7 @@ function createPDBWindow() {
       show: false,
     });
 
-    pdbWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/pdb-viewer.html'));
+    pdbWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/pdb-viewer.html'));
 
     pdbWindow.once('ready-to-show', () => {
       pdbWindow.show();
@@ -1017,7 +685,7 @@ function createGeneAnnotationRefineWindow() {
       show: false,
     });
 
-    geneAnnotationRefineWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/gene-annotation-refine.html'));
+    geneAnnotationRefineWindow.loadFile(path.join(__dirname, '..', 'bioinformatics-tools/gene-annotation-refine.html'));
 
     geneAnnotationRefineWindow.once('ready-to-show', () => {
       geneAnnotationRefineWindow.show();
@@ -1062,7 +730,7 @@ function createBlastDownloaderWindow() {
       maximizable: true,
     });
 
-    blastDownloaderWindow.loadFile(path.join(__dirname, 'blast-downloader.html'));
+    blastDownloaderWindow.loadFile(path.join(__dirname, '..', 'blast-downloader.html'));
 
     blastDownloaderWindow.once('ready-to-show', () => {
       blastDownloaderWindow.show();
@@ -1115,7 +783,7 @@ function createBlastConfigWindow() {
       maximizable: false,
     });
 
-    blastConfigWindow.loadFile(path.join(__dirname, 'blast-config.html'));
+    blastConfigWindow.loadFile(path.join(__dirname, '..', 'blast-config.html'));
 
     blastConfigWindow.once('ready-to-show', () => {
       blastConfigWindow.show();
@@ -2058,7 +1726,7 @@ function createProjectManagerWindow() {
         nodeIntegration: false,
         contextIsolation: true,
         enableRemoteModule: false,
-        preload: path.join(__dirname, 'preload.js'),
+        preload: path.join(__dirname, '..', 'preload.js'),
       },
       title: 'Project Manager - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -2104,7 +1772,7 @@ function createProjectManagerWindow() {
     });
 
     // Load the project manager HTML
-    const projectManagerPath = path.join(__dirname, 'project-manager.html');
+    const projectManagerPath = path.join(__dirname, '..', 'project-manager.html');
 
     if (fs.existsSync(projectManagerPath)) {
       projectManagerWindow.loadFile(projectManagerPath);
@@ -2502,7 +2170,7 @@ function openTestFile(filename) {
         enableRemoteModule: true,
       },
       title: `Test: ${filename}`,
-      icon: path.join(__dirname, 'assets', 'icon.png'),
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     });
 
     // Load the test file
