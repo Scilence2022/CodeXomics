@@ -30,9 +30,6 @@ let codeXomicsRPC;
 let processFileQueue;
 let updateMCPServerMenu;
 
-// Self-referencing for getCustomExternalToolsMenuItems
-let createCustomExternalToolWindow;
-
 function setWindowMgmtDependencies(deps) {
   if (deps.mainWindow !== undefined) mainWindow = deps.mainWindow;
   if (deps.currentActiveWindow !== undefined) currentActiveWindow = deps.currentActiveWindow;
@@ -55,7 +52,6 @@ function setWindowMgmtDependencies(deps) {
   if (deps.codeXomicsRPC !== undefined) codeXomicsRPC = deps.codeXomicsRPC;
   if (deps.processFileQueue !== undefined) processFileQueue = deps.processFileQueue;
   if (deps.updateMCPServerMenu !== undefined) updateMCPServerMenu = deps.updateMCPServerMenu;
-  if (deps.createCustomExternalToolWindow !== undefined) createCustomExternalToolWindow = deps.createCustomExternalToolWindow;
 }
 
 function createWindow() {
@@ -69,11 +65,10 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      enableRemoteModule: false,
+      nodeIntegration: true,
+      contextIsolation: false,
+      enableRemoteModule: true,
       webSecurity: false,
-      preload: path.join(__dirname, 'preload.js'),
       cache: false,
     },
     icon: path.join(__dirname, '../assets/icon.png'),
@@ -142,6 +137,7 @@ function createWindow() {
 }
 
 // Helper function to get the current active main window
+
 function getCurrentMainWindow() {
   // First try to use the tracked current active window
   if (
@@ -167,6 +163,7 @@ function getCurrentMainWindow() {
 }
 
 // Helper function to safely send message to current main window
+
 function sendToCurrentMainWindow(channel, ...args) {
   const currentWindow = getCurrentMainWindow();
   if (currentWindow && !currentWindow.isDestroyed()) {
@@ -177,6 +174,7 @@ function sendToCurrentMainWindow(channel, ...args) {
 }
 
 // Helper function to generate custom external tools menu items
+
 function getCustomExternalToolsMenuItems() {
   const customTools = global.customExternalTools || [];
   const menuItems = [];
@@ -209,6 +207,9 @@ function getCustomExternalToolsMenuItems() {
 
   return menuItems;
 }
+
+// Create menu
+
 function createCircosWindow() {
   try {
     // Create new window for the Circos genome plotter
@@ -220,7 +221,7 @@ function createCircosWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -274,6 +275,347 @@ function createCircosWindow() {
   }
 }
 
+// Handle genome data requests from Circos Plotter
+ipcMain.handle('get-circos-genome-data', async event => {
+  try {
+    // Get the sender window (Circos window)
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+
+    // Get main window data
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const result = await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.genomeBrowser) {
+            const genomeData = {
+              currentSequence: window.genomeBrowser.currentSequence || {},
+              currentAnnotations: window.genomeBrowser.currentAnnotations || {},
+              currentPosition: window.genomeBrowser.currentPosition || null,
+              currentChromosome: window.genomeBrowser.currentChromosome || null,
+              sequenceLength: window.genomeBrowser.sequenceLength || 0,
+              loadedFiles: window.genomeBrowser.loadedFiles || [],
+              visibleTracks: window.genomeBrowser.visibleTracks || [],
+              operons: window.genomeBrowser.operons || []
+            };
+            
+            // Convert sequence data to Circos format
+            const chromosomes = [];
+            const genes = [];
+            const links = [];
+            
+            // Debug logging
+            console.log('Circos data extraction - currentSequence keys:', Object.keys(genomeData.currentSequence));
+            console.log('Circos data extraction - currentAnnotations keys:', Object.keys(genomeData.currentAnnotations));
+            console.log('Circos data extraction - currentAnnotations sample:', genomeData.currentAnnotations[Object.keys(genomeData.currentAnnotations)[0]]?.slice(0, 3));
+            
+            // Process each chromosome/sequence
+            Object.keys(genomeData.currentSequence).forEach((chrName, index) => {
+              const sequence = genomeData.currentSequence[chrName];
+              const length = sequence.length;
+              
+              // Add chromosome data
+              chromosomes.push({
+                id: chrName,
+                name: chrName,  // Add explicit name for lookup consistency
+                label: chrName,
+                size: length,
+                length: length,  // Also add length for compatibility
+                start: 0,
+                end: length
+              });
+              
+              // Process annotations for this chromosome
+              if (genomeData.currentAnnotations[chrName]) {
+                const annotations = genomeData.currentAnnotations[chrName];
+                
+                // Process all annotations (genes and other features are mixed in the array)
+                if (Array.isArray(annotations)) {
+                  annotations.forEach(annotation => {
+                    // Skip source features as they cover the entire genome and obscure other genes
+                    if (annotation.type === 'source') {
+                      console.log('Skipping source feature:', annotation);
+                      return;
+                    }
+                    
+                    // Extract gene information from qualifiers
+                    const geneName = annotation.qualifiers?.gene || annotation.qualifiers?.locus_tag || 'Unknown';
+                    const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || \`feature_\${genes.length}\`;
+                    const product = annotation.qualifiers?.product || annotation.qualifiers?.note || 'Unknown function';
+                    
+                    // Determine feature type - keep original types for better classification
+                    let featureType = annotation.type || 'other';
+                    
+                    // Debug: Log original annotation type
+                    if (genes.length < 20) { // Only log first 20 for debugging
+                      console.log('Annotation type:', annotation.type, '-> Feature type:', featureType);
+                    }
+                    
+                    // Only map general types, keep specific types like tRNA, rRNA as-is
+                    if (featureType === 'gene' || featureType === 'CDS' || featureType === 'mRNA') {
+                      featureType = 'protein_coding';
+                    } else if (featureType === 'ncRNA') {
+                      featureType = 'non_coding';
+                    } else if (featureType === 'pseudogene') {
+                      featureType = 'pseudogene';
+                    } else if (featureType === 'regulatory' || featureType === 'promoter' || featureType === 'terminator') {
+                      featureType = 'regulatory';
+                    }
+                    // Keep tRNA, rRNA, and other specific types as-is for proper classification
+                    
+                    // Convert strand from -1/1 to +/- format
+                    const strand = annotation.strand === -1 ? '-' : '+';
+                    
+                    // Validate gene coordinates
+                    const start = parseInt(annotation.start) || 0;
+                    const end = parseInt(annotation.end) || start + 1000;
+                    
+                    if (start >= 0 && end > start) {
+                      genes.push({
+                        id: locusTag,
+                        name: geneName,
+                        chromosome: chrName,
+                        start: start,
+                        end: end,
+                        strand: strand,
+                        type: featureType,
+                        description: product,
+                        qualifiers: annotation.qualifiers || {}
+                      });
+                    } else {
+                      console.warn('Skipping gene with invalid coordinates:', {
+                        name: geneName,
+                        start: annotation.start,
+                        end: annotation.end,
+                        chromosome: chrName
+                      });
+                    }
+                  });
+                }
+              }
+            });
+            
+            // If no genes found, generate some test genes for visualization
+            if (genes.length === 0 && chromosomes.length > 0) {
+              console.log('No genes found in annotations, generating test genes for visualization');
+              chromosomes.forEach((chr, chrIndex) => {
+                const numTestGenes = Math.min(20, Math.floor(chr.size / 50000)); // 1 gene per 50kb
+                for (let i = 0; i < numTestGenes; i++) {
+                  const start = Math.floor(Math.random() * (chr.size - 1000));
+                  const end = start + Math.floor(Math.random() * 2000) + 500;
+                  const geneTypes = ['protein_coding', 'non_coding', 'pseudogene', 'regulatory'];
+                  const geneType = geneTypes[Math.floor(Math.random() * geneTypes.length)];
+                  
+                  // Validate test gene coordinates
+                  if (start >= 0 && end > start && end <= chr.size) {
+                    genes.push({
+                      id: \`test_gene_\${chrIndex}_\${i}\`,
+                      name: \`Test Gene \${i + 1}\`,
+                      chromosome: chr.id,
+                      start: start,
+                      end: end,
+                      strand: Math.random() > 0.5 ? '+' : '-',
+                      type: geneType,
+                      description: \`Test \${geneType} gene for visualization\`,
+                      qualifiers: {}
+                    });
+                  }
+                }
+              });
+            }
+            
+            return {
+              success: true,
+              data: {
+                chromosomes: chromosomes,
+                genes: genes,
+                links: links,
+                metadata: {
+                  totalChromosomes: chromosomes.length,
+                  totalGenes: genes.length,
+                  totalLength: chromosomes.reduce((sum, chr) => sum + chr.size, 0),
+                  source: 'GenomeExplorer',
+                  timestamp: new Date().toISOString()
+                }
+              },
+              originalData: genomeData
+            };
+          }
+          return { success: false, error: 'No genome data loaded' };
+        })()
+      `);
+      return result;
+    }
+    return { success: false, error: 'Main window not available' };
+  } catch (error) {
+    console.error('Error getting Circos genome data:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle navigation requests from Circos Plotter
+ipcMain.handle('navigate-to-chromosome', async (event, chromosomeName) => {
+  try {
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.genomeBrowser && document.getElementById('chromosomeSelect')) {
+            const select = document.getElementById('chromosomeSelect');
+            const option = Array.from(select.options).find(opt => 
+              opt.value === '${chromosomeName}' || 
+              opt.text.includes('${chromosomeName}')
+            );
+            if (option) {
+              select.value = option.value;
+              select.dispatchEvent(new Event('change'));
+              return true;
+            }
+          }
+          return false;
+        })()
+      `);
+      return { success: true };
+    }
+    return { success: false, error: 'Main window not available' };
+  } catch (error) {
+    console.error('Error navigating to chromosome:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('navigate-to-gene', async (event, geneData) => {
+  try {
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.genomeBrowser) {
+            // First navigate to the chromosome
+            const select = document.getElementById('chromosomeSelect');
+            if (select) {
+              const option = Array.from(select.options).find(opt => 
+                opt.value === '${geneData.chromosome}' || 
+                opt.text.includes('${geneData.chromosome}')
+              );
+              if (option) {
+                select.value = option.value;
+                select.dispatchEvent(new Event('change'));
+              }
+            }
+            
+            // Then navigate to the gene position
+            setTimeout(() => {
+              if (window.genomeBrowser.navigateToPosition) {
+                window.genomeBrowser.navigateToPosition(${geneData.start}, ${geneData.end});
+              } else if (window.genomeBrowser.setPosition) {
+                window.genomeBrowser.setPosition(${geneData.start}, ${geneData.end});
+              }
+            }, 500);
+            
+            return true;
+          }
+          return false;
+        })()
+      `);
+      return { success: true };
+    }
+    return { success: false, error: 'Main window not available' };
+  } catch (error) {
+    console.error('Error navigating to gene:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle gene sequence requests
+ipcMain.handle('get-gene-sequence', async (event, geneName) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+
+    if (senderWindow && senderWindow.mainWindow) {
+      const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
+        (async function() {
+          if (window.genomeBrowser && '${geneName}') {
+            const annotations = window.genomeBrowser.currentAnnotations || {};
+            const sequences = window.genomeBrowser.currentSequence || {};
+            
+            // Search for gene in annotations
+            for (const [chromosome, chrAnnotations] of Object.entries(annotations)) {
+              if (chrAnnotations && chrAnnotations.length) {
+                const gene = chrAnnotations.find(g => 
+                  g.name === '${geneName}' || 
+                  g.gene === '${geneName}' || 
+                  g.locus_tag === '${geneName}' ||
+                  (g.name && g.name.toLowerCase() === '${geneName}'.toLowerCase()) ||
+                  (g.gene && g.gene.toLowerCase() === '${geneName}'.toLowerCase())
+                );
+                
+                if (gene && sequences[chromosome]) {
+                  const sequence = sequences[chromosome].substring(gene.start - 1, gene.end);
+                  return {
+                    sequence: sequence,
+                    chromosome: chromosome,
+                    start: gene.start,
+                    end: gene.end,
+                    geneName: gene.name || gene.gene || '${geneName}',
+                    strand: gene.strand || '+',
+                    source: 'gene_annotation'
+                  };
+                }
+              }
+            }
+            
+            return null;
+          }
+          return null;
+        })()
+      `);
+      return result;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting gene sequence:', error);
+    return null;
+  }
+});
+
+// Handle region sequence requests
+ipcMain.handle('get-region-sequence', async (event, chromosome, start, end) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+
+    if (senderWindow && senderWindow.mainWindow) {
+      const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.genomeBrowser) {
+            const sequences = window.genomeBrowser.currentSequence || {};
+            
+            if (sequences['${chromosome}']) {
+              const sequence = sequences['${chromosome}'].substring(${start} - 1, ${end});
+              return {
+                sequence: sequence,
+                chromosome: '${chromosome}',
+                start: ${start},
+                end: ${end},
+                source: 'genomic_region'
+              };
+            }
+          }
+          return null;
+        })()
+      `);
+      return result;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting region sequence:', error);
+    return null;
+  }
+});
+
+// ========== BIOLOGICAL DATABASES TOOLS ==========
+
+// Create KEGG Pathway Analysis Window
+
 function createKEGGWindow() {
   try {
     const keggWindow = new BrowserWindow({
@@ -284,7 +626,7 @@ function createKEGGWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -312,6 +654,7 @@ function createKEGGWindow() {
   }
 }
 
+// Create Gene Ontology (GO) Analysis Window
 
 function createGOWindow() {
   try {
@@ -323,7 +666,7 @@ function createGOWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -351,6 +694,7 @@ function createGOWindow() {
   }
 }
 
+// Create UniProt Database Search Window
 
 function createUniProtWindow() {
   try {
@@ -362,7 +706,7 @@ function createUniProtWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -392,6 +736,7 @@ function createUniProtWindow() {
   }
 }
 
+// Create InterPro Domain Analysis Window
 
 function createInterProWindow() {
   try {
@@ -403,7 +748,7 @@ function createInterProWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -433,6 +778,7 @@ function createInterProWindow() {
   }
 }
 
+// Create NCBI Database Browser Window
 
 function createNCBIWindow() {
   try {
@@ -444,7 +790,7 @@ function createNCBIWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -476,6 +822,7 @@ function createNCBIWindow() {
 
 // ========== ANALYSIS TOOLS ==========
 
+// Create STRING Protein Networks Window
 
 function createSTRINGWindow() {
   try {
@@ -487,7 +834,7 @@ function createSTRINGWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -517,6 +864,7 @@ function createSTRINGWindow() {
   }
 }
 
+// Create DAVID Functional Analysis Window
 
 function createDAVIDWindow() {
   try {
@@ -528,7 +876,7 @@ function createDAVIDWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -558,6 +906,7 @@ function createDAVIDWindow() {
   }
 }
 
+// Create Reactome Pathway Browser Window
 
 function createReactomeWindow() {
   try {
@@ -569,7 +918,7 @@ function createReactomeWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -599,6 +948,7 @@ function createReactomeWindow() {
   }
 }
 
+// Create PDB Structure Viewer Window
 
 function createPDBWindow() {
   try {
@@ -610,7 +960,7 @@ function createPDBWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -641,6 +991,7 @@ function createPDBWindow() {
 }
 
 
+// Create Gene Annotation Refine Window
 
 function createGeneAnnotationRefineWindow() {
   try {
@@ -652,7 +1003,7 @@ function createGeneAnnotationRefineWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -682,6 +1033,7 @@ function createGeneAnnotationRefineWindow() {
   }
 }
 
+// Create BLAST+ Downloader Window
 
 function createBlastDownloaderWindow() {
   try {
@@ -693,7 +1045,7 @@ function createBlastDownloaderWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -734,6 +1086,7 @@ function createBlastDownloaderWindow() {
   }
 }
 
+// Create BLAST Configuration Window
 
 function createBlastConfigWindow() {
   try {
@@ -745,7 +1098,7 @@ function createBlastConfigWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
         webSecurity: false,
 
         allowRunningInsecureContent: true,
@@ -786,6 +1139,7 @@ function createBlastConfigWindow() {
   }
 }
 
+// Create specialized menu for Deep Gene Research window
 
 async function createProGenFixerWindow() {
   try {
@@ -840,8 +1194,8 @@ async function createProGenFixerWindow() {
       minWidth: 1000,
       minHeight: 700,
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
+        nodeIntegration: false,
+        contextIsolation: true,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
         // Enable clipboard and keyboard functionality
@@ -958,6 +1312,7 @@ async function createProGenFixerWindow() {
       `Failed to create ProGenFixer window: ${error.message}\n\nPlease check if the service is accessible at https://progenfixer.biodesign.ac.cn`
     );
   }
+}
 
 async function createDeepGeneResearchWindow(params = {}) {
   try {
@@ -1027,8 +1382,8 @@ async function createDeepGeneResearchWindow(params = {}) {
       minWidth: 1200,
       minHeight: 800,
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
+        nodeIntegration: false,
+        contextIsolation: true,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
         // Enable clipboard and keyboard functionality
@@ -1209,6 +1564,7 @@ async function createDeepGeneResearchWindow(params = {}) {
   }
 }
 
+// Create CHOPCHOP CRISPR Toolbox window
 
 async function createChopchopWindow() {
   try {
@@ -1263,8 +1619,8 @@ async function createChopchopWindow() {
       minWidth: 1000,
       minHeight: 700,
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
+        nodeIntegration: false,
+        contextIsolation: true,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
         // Enable clipboard and keyboard functionality
@@ -1375,6 +1731,7 @@ async function createChopchopWindow() {
   }
 }
 
+// Create custom external tool window
 
 async function createCustomExternalToolWindow(toolData) {
   try {
@@ -1393,8 +1750,8 @@ async function createCustomExternalToolWindow(toolData) {
       minWidth: 1000,
       minHeight: 700,
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
+        nodeIntegration: false,
+        contextIsolation: true,
         enableRemoteModule: false,
         webSecurity: false,
 
@@ -1677,326 +2034,6 @@ ipcMain.on('deep-gene-research-menu-action', (event, action) => {
 });
 
 // Helper functions for user notifications
-function showSettingsWarning(title, message) {
-  const mainWindow = getCurrentMainWindow();
-  if (mainWindow && mainWindow.webContents) {
-    mainWindow.webContents.send('show-notification', {
-      type: 'warning',
-      title: title,
-      message: message,
-      duration: 5000,
-    });
-  }
-}
-
-function showSettingsError(title, message) {
-  const mainWindow = getCurrentMainWindow();
-  if (mainWindow && mainWindow.webContents) {
-    mainWindow.webContents.send('show-notification', {
-      type: 'error',
-      title: title,
-      message: message,
-      duration: 8000,
-    });
-  }
-}
-
-// General Settings IPC handlers
-ipcMain.handle('get-general-settings', async () => {
-  try {
-    // Get the main window to access GeneralSettingsManager
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      const settings = await mainWindow.webContents.executeJavaScript(`
-        if (window.genomeBrowser && window.genomeBrowser.generalSettingsManager) {
-          window.genomeBrowser.generalSettingsManager.getSettings();
-        } else {
-          Promise.resolve({});
-        }
-      `);
-      return settings;
-    }
-    return {};
-  } catch (error) {
-    console.error('Error getting general settings:', error);
-    return {};
-  }
-});
-
-// Evo2 configuration IPC handlers
-ipcMain.handle('evo2-get-config', async () => {
-  try {
-    // Get the main window to access ConfigManager
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      const config = await mainWindow.webContents.executeJavaScript(`
-        if (window.genomeBrowser && window.genomeBrowser.configManager) {
-          window.genomeBrowser.configManager.getEvo2Config();
-        } else {
-          Promise.resolve({});
-        }
-      `);
-      return config;
-    }
-    return {};
-  } catch (error) {
-    console.error('Error getting Evo2 config:', error);
-    return {};
-  }
-});
-
-ipcMain.handle('evo2-set-config', async (event, config) => {
-  try {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      await mainWindow.webContents.executeJavaScript(`
-        if (window.genomeBrowser && window.genomeBrowser.configManager) {
-          window.genomeBrowser.configManager.setEvo2Config(${JSON.stringify(config)});
-        }
-      `);
-      return { success: true };
-    }
-    return { success: false, error: 'Main window not available' };
-  } catch (error) {
-    console.error('Error setting Evo2 config:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('evo2-get-api-key', async () => {
-  try {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      const apiKey = await mainWindow.webContents.executeJavaScript(`
-        if (window.genomeBrowser && window.genomeBrowser.configManager) {
-          window.genomeBrowser.configManager.getEvo2ApiKey();
-        } else {
-          Promise.resolve('');
-        }
-      `);
-      return apiKey;
-    }
-    return '';
-  } catch (error) {
-    console.error('Error getting Evo2 API key:', error);
-    return '';
-  }
-});
-
-ipcMain.handle('evo2-set-api-key', async (event, apiKey) => {
-  try {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      await mainWindow.webContents.executeJavaScript(`
-        if (window.genomeBrowser && window.genomeBrowser.configManager) {
-          window.genomeBrowser.configManager.setEvo2ApiKey('${apiKey}');
-        }
-      `);
-      return { success: true };
-    }
-    return { success: false, error: 'Main window not available' };
-  } catch (error) {
-    console.error('Error setting Evo2 API key:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('evo2-get-analysis-history', async () => {
-  try {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      const history = await mainWindow.webContents.executeJavaScript(`
-        if (window.genomeBrowser && window.genomeBrowser.configManager) {
-          window.genomeBrowser.configManager.getEvo2AnalysisHistory();
-        } else {
-          Promise.resolve([]);
-        }
-      `);
-      return history;
-    }
-    return [];
-  } catch (error) {
-    console.error('Error getting Evo2 analysis history:', error);
-    return [];
-  }
-});
-
-ipcMain.handle('evo2-set-analysis-history', async (event, history) => {
-  try {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      await mainWindow.webContents.executeJavaScript(`
-        if (window.genomeBrowser && window.genomeBrowser.configManager) {
-          window.genomeBrowser.configManager.setEvo2AnalysisHistory(${JSON.stringify(history)});
-        }
-      `);
-      return { success: true };
-    }
-    return { success: false, error: 'Main window not available' };
-  } catch (error) {
-    console.error('Error setting Evo2 analysis history:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-// IPC handler for BLAST installation check
-ipcMain.on('check-blast-installation', event => {
-  console.log('IPC: Checking BLAST installation...');
-  const { exec } = require('child_process');
-  const path = require('path');
-  const fs = require('fs');
-  const os = require('os');
-
-  // Function to check BLAST+ at specific path
-  function checkBlastAtPath(blastPath) {
-    return new Promise(resolve => {
-      const command = `"${blastPath}" -version`;
-      console.log('Checking BLAST at:', command);
-
-      exec(command, (error, stdout, stderr) => {
-        if (error) {
-          resolve({ found: false, error: error.message });
-        } else {
-          const versionMatch = stdout.match(/blastn: ([\d.]+)/);
-          const version = versionMatch ? versionMatch[1] : 'Unknown version';
-          resolve({
-            found: true,
-            version: version,
-            path: blastPath,
-            output: stdout,
-          });
-        }
-      });
-    });
-  }
-
-  // Function to find BLAST+ executable
-  async function findBlastExecutable() {
-    const homeDir = os.homedir();
-    const commonPaths = [
-      '/usr/local/bin/blastn',
-      '/usr/bin/blastn',
-      '/opt/homebrew/bin/blastn',
-      '/usr/local/blast+/bin/blastn',
-      path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'),
-      path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'),
-      path.join(homeDir, '.local', 'bin', 'blastn'),
-      '/opt/blast+/bin/blastn',
-    ];
-
-    // First try direct command execution (for PATH-based installations)
-    try {
-      const result = await checkBlastAtPath('blastn');
-      if (result.found) {
-        return result;
-      }
-    } catch (error) {
-      console.log('Direct blastn command failed, trying specific paths...');
-    }
-
-    // Try specific paths
-    for (const blastPath of commonPaths) {
-      try {
-        if (fs.existsSync(blastPath)) {
-          const result = await checkBlastAtPath(blastPath);
-          if (result.found) {
-            return result;
-          }
-        }
-      } catch (error) {
-        continue;
-      }
-    }
-
-    return { found: false, error: 'BLAST+ not found in any common locations' };
-  }
-
-  // Execute the search
-  findBlastExecutable()
-    .then(result => {
-      if (result.found) {
-        event.sender.send('blast-check-result', {
-          installed: true,
-          message: `BLAST+ installed successfully (version ${result.version})`,
-          version: result.version,
-          path: result.path,
-          output: result.output,
-        });
-      } else {
-        event.sender.send('blast-check-result', {
-          installed: false,
-          message: 'BLAST+ not found or not installed',
-          error: result.error,
-        });
-      }
-    })
-    .catch(error => {
-      event.sender.send('blast-check-result', {
-        installed: false,
-        message: 'Error checking BLAST+ installation',
-        error: error.message,
-      });
-    });
-});
-
-// IPC handler for system requirements check
-ipcMain.on('system-requirements-check', event => {
-  console.log('IPC: Checking system requirements...');
-  const os = require('os');
-  const { exec } = require('child_process');
-
-  const systemInfo = {
-    platform: os.platform(),
-    arch: os.arch(),
-    release: os.release(),
-    nodeVersion: process.version,
-    totalMemory: (os.totalmem() / 1024 ** 3).toFixed(2) + ' GB',
-    freeMemory: (os.freemem() / 1024 ** 3).toFixed(2) + ' GB',
-    cpus: os.cpus().length,
-  };
-
-  // Check disk space
-  exec('df -h /', (error, stdout, stderr) => {
-    if (!error && stdout) {
-      const lines = stdout.split('\n');
-      if (lines.length > 1) {
-        const diskInfo = lines[1].split(/\s+/);
-        systemInfo.diskSpace = {
-          total: diskInfo[1],
-          used: diskInfo[2],
-          available: diskInfo[3],
-          usage: diskInfo[4],
-        };
-      }
-    }
-
-    event.sender.send('system-requirements-result', {
-      systemInfo: systemInfo,
-      requirements: {
-        minimumMemory: '4 GB',
-        recommendedMemory: '8 GB',
-        minimumDiskSpace: '1 GB',
-        supportedPlatforms: ['Windows', 'macOS', 'Linux'],
-      },
-      status: {
-        memoryOk: parseFloat(systemInfo.totalMemory) >= 4,
-        platformSupported: ['win32', 'darwin', 'linux'].includes(os.platform()),
-      },
-    });
-  });
-});
-
-// IPC handler for focusing main window
-ipcMain.on('focus-main-window', () => {
-  console.log('IPC: Focusing main window...');
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.focus();
-    mainWindow.show();
-  }
-});
-
-// ========== PROJECT MANAGER WINDOW ==========
-
 
 function createProjectManagerWindow() {
   try {
@@ -2016,8 +2053,8 @@ function createProjectManagerWindow() {
       height: 800,
       minHeight: 600,
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
+        nodeIntegration: false,
+        contextIsolation: true,
         enableRemoteModule: false,
         preload: path.join(__dirname, 'preload.js'),
       },
@@ -2110,102 +2147,7 @@ function createProjectManagerWindow() {
   }
 }
 
-function createGenomicDownloadWindow(downloadType) {
-  try {
-    console.log(`Creating Genomic Download window for: ${downloadType}`);
-
-    const downloadWindow = new BrowserWindow({
-      width: 1200,
-      height: 800,
-      minWidth: 900,
-      minHeight: 600,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        preload: path.join(__dirname, 'preload.js'),
-      },
-      icon: path.join(__dirname, '../assets/icon.png'),
-      title: `Download Genomic Data - ${downloadType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
-      show: false,
-    });
-
-    // Set menu for the download window - fix the menu creation
-    createToolWindowMenu(downloadWindow, 'Genomic Data Download');
-
-    // Create the genomic download HTML file path
-    const downloadHtmlPath = path.join(__dirname, 'genomic-data-download.html');
-
-    // Check if the file exists, if not create it
-    if (!fs.existsSync(downloadHtmlPath)) {
-      console.log('Creating genomic-data-download.html file...');
-      createGenomicDownloadHTML(downloadHtmlPath);
-    }
-
-    downloadWindow.loadFile(downloadHtmlPath);
-
-    downloadWindow.once('ready-to-show', () => {
-      downloadWindow.show();
-      // Send download type
-      downloadWindow.webContents.send('set-download-type', downloadType);
-
-      // Try to get project info from Project Manager window first, then fallback to current active project
-      const projectManagerWindows = BrowserWindow.getAllWindows().filter(window =>
-        window.getTitle().includes('Project Manager')
-      );
-
-      if (projectManagerWindows.length > 0) {
-        console.log('🔍 Found Project Manager window, requesting current project info...');
-        // Request current project info from Project Manager
-        projectManagerWindows[0].webContents.send('request-current-project-for-download');
-
-        // Track if we received a response
-        let responseReceived = false;
-
-        // Listen for project info response
-        const handleProjectInfo = (event, projectInfo) => {
-          console.log('📥 Received project info from Project Manager:', projectInfo);
-          responseReceived = true;
-          // Update the global current active project
-          if (projectInfo) {
-            setActiveProject(projectInfo);
-          }
-          downloadWindow.webContents.send('set-active-project', projectInfo);
-          // Remove the listener after receiving the response
-          ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
-        };
-
-        ipcMain.on('project-manager-current-project-response', handleProjectInfo);
-
-        // Fallback timeout - if no response in 1 second, use current active project
-        setTimeout(() => {
-          if (!responseReceived) {
-            ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
-            const fallbackProject = getCurrentProjectInfo();
-            console.log('⏰ Using fallback project info:', fallbackProject);
-            downloadWindow.webContents.send('set-active-project', fallbackProject);
-          } else {
-            console.log('✅ Project info already received from Project Manager, skipping fallback');
-          }
-        }, 1000);
-      } else {
-        // No Project Manager window found, use current active project
-        const currentProject = getCurrentProjectInfo();
-        console.log('📂 Using current active project:', currentProject);
-        downloadWindow.webContents.send('set-active-project', currentProject);
-      }
-    });
-
-    downloadWindow.on('closed', () => {
-      console.log('Genomic Download window closed');
-    });
-
-    console.log('Genomic Download window created successfully');
-    return downloadWindow;
-  } catch (error) {
-    console.error('Failed to create Genomic Download window:', error);
-  }
-}
-
+// Create Project Manager specific menu system
 
 function getDisplayWorkArea() {
   const { screen } = require('electron');
@@ -2216,6 +2158,7 @@ function getDisplayWorkArea() {
 /**
  * 获取主窗口和Project Manager窗口
  */
+
 function getMainWindows() {
   const allWindows = BrowserWindow.getAllWindows();
 
@@ -2231,6 +2174,7 @@ function getMainWindows() {
 /**
  * 最优布局：主窗口右侧75%，Project Manager左侧25%
  */
+
 function arrangeWindowsOptimal() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
 
@@ -2287,6 +2231,7 @@ function arrangeWindowsOptimal() {
 /**
  * 并排布局：50% + 50%
  */
+
 function arrangeWindowsSideBySide() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
 
@@ -2332,6 +2277,7 @@ function arrangeWindowsSideBySide() {
 /**
  * 主窗口聚焦模式：主窗口占85%，Project Manager占15%
  */
+
 function arrangeMainWindowFocus() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
 
@@ -2364,6 +2310,7 @@ function arrangeMainWindowFocus() {
 /**
  * Project Manager聚焦模式：Project Manager占60%，主窗口占40%
  */
+
 function arrangeProjectManagerFocus() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
 
@@ -2409,6 +2356,7 @@ function arrangeProjectManagerFocus() {
 /**
  * 垂直堆叠布局
  */
+
 function arrangeWindowsVertical() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
 
@@ -2454,6 +2402,7 @@ function arrangeWindowsVertical() {
 /**
  * 层叠布局
  */
+
 function arrangeWindowsCascade() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
 
@@ -2489,6 +2438,7 @@ function arrangeWindowsCascade() {
 /**
  * 重置到默认位置
  */
+
 function resetWindowPositions() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
 
@@ -2520,6 +2470,7 @@ function resetWindowPositions() {
 /**
  * Open test file in a new window
  */
+
 function openTestFile(filename) {
   try {
     const currentWindow = getCurrentMainWindow();
@@ -2546,7 +2497,7 @@ function openTestFile(filename) {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: false,
+        enableRemoteModule: true,
       },
       title: `Test: ${filename}`,
       icon: path.join(__dirname, 'assets', 'icon.png'),
@@ -2577,6 +2528,8 @@ function openTestFile(filename) {
     console.error('Error opening test file:', error);
     dialog.showErrorBox('Error', `Failed to open test file "${filename}": ${error.message}`);
   }
+}
+
 
 module.exports = {
   createWindow,
@@ -2601,7 +2554,6 @@ module.exports = {
   createChopchopWindow,
   createCustomExternalToolWindow,
   createProjectManagerWindow,
-  createGenomicDownloadWindow,
   getDisplayWorkArea,
   getMainWindows,
   arrangeWindowsOptimal,
@@ -2612,5 +2564,5 @@ module.exports = {
   arrangeWindowsCascade,
   resetWindowPositions,
   openTestFile,
-  setWindowMgmtDependencies,
+  setWindowMgmtDependencies
 };

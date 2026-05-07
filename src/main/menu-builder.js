@@ -11,7 +11,6 @@ let toolMenuTemplates;
 let currentActiveWindow;
 
 // External function references (set by main module via setMenuDependencies)
-let createMenu;
 let createProjectManagerWindow;
 let createCircosWindow;
 let createKEGGWindow;
@@ -2792,7 +2791,6 @@ function setMenuDependencies(deps) {
   if (deps.arrangeWindowsVertical !== undefined) arrangeWindowsVertical = deps.arrangeWindowsVertical;
   if (deps.arrangeWindowsCascade !== undefined) arrangeWindowsCascade = deps.arrangeWindowsCascade;
   if (deps.resetWindowPositions !== undefined) resetWindowPositions = deps.resetWindowPositions;
-  if (deps.createMenu !== undefined) createMenu = deps.createMenu;
 }
 
 module.exports = {
