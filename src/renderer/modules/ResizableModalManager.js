@@ -83,6 +83,21 @@ class ResizableModalManager {
     this.startLeft = rect.left;
     this.startTop = rect.top;
 
+    // Pin the element to its current visual position using fixed positioning.
+    // This takes it out of any flex-centered flow (e.g. parent has display: flex; align-items: center; justify-content: center;)
+    // so resizing one side does not cause the other side to expand/shrink simultaneously.
+    const currentPosition = window.getComputedStyle(modalContent).position;
+    if (currentPosition !== 'fixed' && currentPosition !== 'absolute') {
+      modalContent.style.position = 'fixed';
+      modalContent.style.left = `${rect.left}px`;
+      modalContent.style.top = `${rect.top}px`;
+      modalContent.style.margin = '0';
+    } else {
+      // Even if already fixed/absolute, make sure left and top are explicitly set
+      if (!modalContent.style.left) modalContent.style.left = `${rect.left}px`;
+      if (!modalContent.style.top) modalContent.style.top = `${rect.top}px`;
+    }
+
     // Add visual feedback
     modalContent.style.transition = 'none';
     document.body.style.cursor = handle.style.cursor;
@@ -195,11 +210,13 @@ class ResizableModalManager {
 
     if (!modalContent) return;
 
-    // Clear inline dimensions so CSS defaults take effect
+    // Clear inline dimensions and positioning so CSS defaults take effect
     modalContent.style.width = '';
     modalContent.style.height = '';
     modalContent.style.left = '';
     modalContent.style.top = '';
     modalContent.style.maxWidth = '';
+    modalContent.style.position = '';
+    modalContent.style.margin = '';
   }
 }
