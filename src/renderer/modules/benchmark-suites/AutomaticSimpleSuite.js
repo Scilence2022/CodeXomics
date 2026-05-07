@@ -101,7 +101,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
     return [
       // SYSTEM SETUP TASKS - Automatic + Simple (HIGHEST PRIORITY - Must be first)
       {
-        id: 'system_auto_01',
+        id: 'sys_auto_01',
         name: 'Set Working Directory',
         type: 'function_call',
         category: 'system_setup',
@@ -119,6 +119,28 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 15000,
         evaluator: this.evaluateWorkingDirectoryCall.bind(this),
       },
+
+
+      // SYSTEM/UTILITY TASKS - Automatic + Simple
+      {
+        id: 'sys_auto_02',
+        name: 'List Available Tools',
+        type: 'function_call',
+        category: 'system',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'List all available tools in the CodeXomics system.',
+        expectedResult: {
+          tool_name: 'list_available_tools',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+
+
       // DATA LOADING TASKS - Automatic + Simple (FIRST - Data must be loaded before other tests)
       {
         id: 'load_auto_01',
@@ -235,6 +257,44 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateFileLoadingCall.bind(this),
       },
 
+
+            // FILE LOADING EXTENSION TASKS - Automatic + Simple
+      {
+        id: 'load_auto_07',
+        name: 'Get Loaded Files List',
+        type: 'function_call',
+        category: 'file_loading',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'List all currently loaded files in the genome browser.',
+        expectedResult: {
+          tool_name: 'get_loaded_files_list',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 0,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+
+      {
+        id: 'load_auto_08',
+        name: 'Get Chromosome List',
+        type: 'function_call',
+        category: 'system',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'List all chromosomes in the currently loaded genome.',
+        expectedResult: {
+          tool_name: 'get_chromosome_list',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+
       // NAVIGATION TASKS - Automatic + Simple
       {
         id: 'nav_auto_01',
@@ -314,6 +374,140 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
+
+            // ZOOM/NAVIGATION EXTENSION TASKS - Automatic + Simple
+      {
+        id: 'nav_auto_05',
+        name: 'Zoom In',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Zoom in the genome browser view by 2x.',
+        expectedResult: {
+          tool_name: 'zoom_in',
+          parameters: {
+            factor: 2,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'nav_auto_06',
+        name: 'Zoom Out',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Zoom out the genome browser view by 2x.',
+        expectedResult: {
+          tool_name: 'zoom_out',
+          parameters: {
+            factor: 2,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'nav_auto_07',
+        name: 'Pan Left',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Pan the genome browser view to the left.',
+        expectedResult: {
+          tool_name: 'pan_left',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'nav_auto_08',
+        name: 'Pan Right',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Pan the genome browser view to the right.',
+        expectedResult: {
+          tool_name: 'pan_right',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'nav_auto_09',
+        name: 'Zoom to Gene',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Zoom to fit the lacZ gene in the genome browser view.',
+        expectedResult: {
+          tool_name: 'zoom_to_gene',
+          parameters: {
+            geneName: 'lacZ',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'nav_auto_10',
+        name: 'Select Gene',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Select and highlight the gene lacZ in the genome browser.',
+        expectedResult: {
+          tool_name: 'select_gene',
+          parameters: {
+            geneName: 'lacZ',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'nav_auto_11',
+        name: 'Select Sequence Region',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Select the sequence region from position 100000 to 105000 on the current chromosome.',
+        expectedResult: {
+          tool_name: 'select_sequence_region',
+          parameters: {
+            start: 100000,
+            end: 105000,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+
+
 
       // ANALYSIS TASKS - Automatic + Simple
       {
@@ -675,7 +869,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
 
       // UI INTERACTION TASKS - Automatic + Simple
       {
-        id: 'ui_auto_01',
+        id: 'tab_auto_01',
         name: 'Open New Tab',
         type: 'function_call',
         category: 'ui_interaction',
@@ -690,6 +884,25 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         bonusScore: 0,
         timeout: 30000,
         evaluator: this.evaluateTabOpeningCall.bind(this),
+      },
+
+                  // CLOSE TAB TASKS - Automatic + Simple
+      {
+        id: 'tab_auto_02',
+        name: 'Close Tab',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Close the current tab in the genome browser.',
+        expectedResult: {
+          tool_name: 'close_tab',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 0,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
       // EXTERNAL DATABASE TASKS - Automatic + Simple
@@ -927,6 +1140,26 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
+
+       // CLIPBOARD CONTENT TASKS - Automatic + Simple
+      {
+        id: 'edit_auto_10',
+        name: 'Get Clipboard Content',
+        type: 'function_call',
+        category: 'sequence_editing',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Get the current content of the sequence clipboard.',
+        expectedResult: {
+          tool_name: 'get_clipboard_content',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 0,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      
       // =====================================================================
       // PHASE 1: CRITICAL PRIORITY TOOLS — Annotation, Track, Protein, Gene, System
       // =====================================================================
@@ -1050,6 +1283,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
+
       // TRACK CONTROL TASKS - Automatic + Simple
       {
         id: 'track_auto_01',
@@ -1132,278 +1366,17 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
     
 
-      // ZOOM/NAVIGATION EXTENSION TASKS - Automatic + Simple
-      {
-        id: 'nav_auto_05',
-        name: 'Zoom In',
-        type: 'function_call',
-        category: 'navigation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Zoom in the genome browser view by 2x.',
-        expectedResult: {
-          tool_name: 'zoom_in',
-          parameters: {
-            factor: 2,
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'nav_auto_06',
-        name: 'Zoom Out',
-        type: 'function_call',
-        category: 'navigation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Zoom out the genome browser view by 2x.',
-        expectedResult: {
-          tool_name: 'zoom_out',
-          parameters: {
-            factor: 2,
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'nav_auto_07',
-        name: 'Pan Left',
-        type: 'function_call',
-        category: 'navigation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Pan the genome browser view to the left.',
-        expectedResult: {
-          tool_name: 'pan_left',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'nav_auto_08',
-        name: 'Pan Right',
-        type: 'function_call',
-        category: 'navigation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Pan the genome browser view to the right.',
-        expectedResult: {
-          tool_name: 'pan_right',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'nav_auto_09',
-        name: 'Zoom to Gene',
-        type: 'function_call',
-        category: 'navigation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Zoom to fit the lacZ gene in the genome browser view.',
-        expectedResult: {
-          tool_name: 'zoom_to_gene',
-          parameters: {
-            geneName: 'lacZ',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'nav_auto_10',
-        name: 'Select Gene',
-        type: 'function_call',
-        category: 'navigation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Select and highlight the gene lacZ in the genome browser.',
-        expectedResult: {
-          tool_name: 'select_gene',
-          parameters: {
-            geneName: 'lacZ',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'nav_auto_11',
-        name: 'Select Sequence Region',
-        type: 'function_call',
-        category: 'navigation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Select the sequence region from position 100000 to 105000 on the current chromosome.',
-        expectedResult: {
-          tool_name: 'select_sequence_region',
-          parameters: {
-            start: 100000,
-            end: 105000,
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
 
-      // SYSTEM/UTILITY TASKS - Automatic + Simple
-      {
-        id: 'sys_auto_01',
-        name: 'List Available Tools',
-        type: 'function_call',
-        category: 'system',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'List all available tools in the CodeXomics system.',
-        expectedResult: {
-          tool_name: 'list_available_tools',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'sys_auto_02',
-        name: 'Get Chromosome List',
-        type: 'function_call',
-        category: 'system',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'List all chromosomes in the currently loaded genome.',
-        expectedResult: {
-          tool_name: 'get_chromosome_list',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
+
+
  
 
 
-      // PRIMER DESIGN TASKS - Automatic + Simple
-      {
-        id: 'primer_auto_01',
-        name: 'Design Primers',
-        type: 'function_call',
-        category: 'primer_design',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Design PCR primers for the lacZ gene with default parameters.',
-        expectedResult: {
-          tool_name: 'design_primers',
-          parameters: {
-            geneName: 'lacZ',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'primer_auto_02',
-        name: 'Calculate Primer Properties',
-        type: 'function_call',
-        category: 'primer_design',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Calculate properties for primer sequence ATGAAAGCGCTGAAAGCGCTGAAAG.',
-        expectedResult: {
-          tool_name: 'calculate_primer_properties',
-          parameters: {
-            sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAG',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'primer_auto_03',
-        name: 'Find Primer Binding Sites',
-        type: 'function_call',
-        category: 'primer_design',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Find binding sites for primer ATGAAAGCGCTGAAAGCGCTGAAAG on the current genome.',
-        expectedResult: {
-          tool_name: 'find_primer_binding_sites',
-          parameters: {
-            sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAG',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
 
-     
-      {
-        id: 'restrict_auto_02',
-        name: 'Virtual Digest',
-        type: 'function_call',
-        category: 'restriction',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Perform a virtual restriction digest with EcoRI and HindIII enzymes.',
-        expectedResult: {
-          tool_name: 'virtual_digest',
-          parameters: {
-            enzymes: ['EcoRI', 'HindIII'],
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'restrict_auto_03',
-        name: 'Search Pattern',
-        type: 'function_call',
-        category: 'restriction',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Search for the pattern GAATTC in the current genomic region.',
-        expectedResult: {
-          tool_name: 'search_pattern',
-          parameters: {
-            pattern: 'GAATTC',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
 
       // TRACK SETTINGS TASKS - Automatic + Simple
       {
-        id: 'track_settings_auto_01',
+        id: 'settings_auto_01',
         name: 'Get Track Settings',
         type: 'function_call',
         category: 'track_settings',
@@ -1421,7 +1394,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
      
       {
-        id: 'track_settings_auto_03',
+        id: 'settings_auto_02',
         name: 'Get All Track Settings',
         type: 'function_call',
         category: 'track_settings',
@@ -1439,7 +1412,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
 
       {
-        id: 'track_settings_auto_05',
+        id: 'settings_auto_03',
         name: 'Get Track Settings Schema',
         type: 'function_call',
         category: 'track_settings',
@@ -1456,7 +1429,26 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
- 
+       // SYSTEM SETTINGS TASKS - Automatic + Simple
+      {
+        id: 'settings_auto_04',
+        name: 'Toggle Settings Modal',
+        type: 'function_call',
+        category: 'system',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Open the settings modal.',
+        expectedResult: {
+          tool_name: 'toggle_settings_modal',
+          parameters: {
+            action: 'open',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 0,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
 
       // UTILITY TASKS - Automatic + Simple
       {
@@ -1500,45 +1492,9 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
 
  
 
-      // SYSTEM SETTINGS TASKS - Automatic + Simple
-      {
-        id: 'settings_auto_01',
-        name: 'Toggle Settings Modal',
-        type: 'function_call',
-        category: 'system',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Open the settings modal.',
-        expectedResult: {
-          tool_name: 'toggle_settings_modal',
-          parameters: {
-            action: 'open',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 0,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
 
-      // FILE LOADING EXTENSION TASKS - Automatic + Simple
-      {
-        id: 'load_auto_07',
-        name: 'Get Loaded Files List',
-        type: 'function_call',
-        category: 'file_loading',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'List all currently loaded files in the genome browser.',
-        expectedResult: {
-          tool_name: 'get_loaded_files_list',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 0,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
+
+
 
  
 
@@ -1654,26 +1610,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
 
 
-      // CLIPBOARD CONTENT TASKS - Automatic + Simple
-      {
-        id: 'edit_auto_10',
-        name: 'Get Clipboard Content',
-        type: 'function_call',
-        category: 'sequence_editing',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Get the current content of the sequence clipboard.',
-        expectedResult: {
-          tool_name: 'get_clipboard_content',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 0,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-
-      // =====================================================================
+    // =====================================================================
       // REMAINING TOOLS — BLAST Advanced, Benchmark Control, Close Tab, Analyze Region
       // =====================================================================
 
@@ -1732,48 +1669,90 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 60000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
- 
 
-      // CLOSE TAB TASKS - Automatic + Simple
+      // PRIMER DESIGN TASKS - Automatic + Simple
       {
-        id: 'tab_auto_01',
-        name: 'Close Tab',
+        id: 'primer_auto_01',
+        name: 'Design Primers',
         type: 'function_call',
-        category: 'navigation',
+        category: 'primer_design',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Close the current tab in the genome browser.',
+        instruction: 'Design PCR primers for the lacZ gene with default parameters.',
         expectedResult: {
-          tool_name: 'close_tab',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 0,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-
-      // ANALYZE REGION TASKS - Automatic + Simple
-      {
-        id: 'annot_auto_09',
-        name: 'Analyze Genomic Region',
-        type: 'function_call',
-        category: 'annotation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Analyze the genomic region from position 100000 to 110000 for features, GC content, and annotation density.',
-        expectedResult: {
-          tool_name: 'analyze_region',
+          tool_name: 'design_primers',
           parameters: {
-            start: 100000,
-            end: 110000,
+            geneName: 'lacZ',
           },
         },
         maxScore: 5,
-        bonusScore: 0,
+        bonusScore: 1,
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
+      {
+        id: 'primer_auto_02',
+        name: 'Calculate Primer Properties',
+        type: 'function_call',
+        category: 'primer_design',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Calculate properties for primer sequence ATGAAAGCGCTGAAAGCGCTGAAAG.',
+        expectedResult: {
+          tool_name: 'calculate_primer_properties',
+          parameters: {
+            sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAG',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'primer_auto_03',
+        name: 'Find Primer Binding Sites',
+        type: 'function_call',
+        category: 'primer_design',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Find binding sites for primer ATGAAAGCGCTGAAAGCGCTGAAAG on the current genome.',
+        expectedResult: {
+          tool_name: 'find_primer_binding_sites',
+          parameters: {
+            sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAG',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+
+     
+      {
+        id: 'restrict_auto_01',
+        name: 'Virtual Digest',
+        type: 'function_call',
+        category: 'restriction',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Perform a virtual restriction digest with EcoRI and HindIII enzymes.',
+        expectedResult: {
+          tool_name: 'virtual_digest',
+          parameters: {
+            enzymes: ['EcoRI', 'HindIII'],
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+
+
+
+
     ];
   }
 
