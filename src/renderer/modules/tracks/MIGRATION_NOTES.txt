@@ -1,0 +1,183 @@
+================================================================================
+MIGRATION NOTES: GeneShapeCreators Extraction from TrackRenderer.js
+================================================================================
+
+Date: 2026-05-08
+Source: /src/renderer/modules/TrackRenderer.js
+Target: /src/renderer/modules/tracks/GeneShapeCreators.js
+
+================================================================================
+1. EXTRACTED LINES
+================================================================================
+
+The following lines (and their corresponding functions) were extracted from
+TrackRenderer.js into GeneShapeCreators.js:
+
+  Line Range    | Function Name              | TrackRenderer Dependency
+  --------------+----------------------------+--------------------------
+  1669-1693     | createSVGGeneGradient      | self.lightenColor()
+  1695-1730     | createSpecializedGradients | None (pure SVG)
+  1732-1862     | createSVGGeneShape         | self.darkenColor()
+  1864-1881     | shouldUseSpecializedShape  | None (pure logic)
+  1883-1995     | createSpecializedGeneShape | Delegates to type shapes
+  1997-2112     | createPromoterShape        | None (pure SVG)
+  2114-2191     | createTerminatorShape      | None (pure SVG)
+  2193-2238     | createRegulatoryShape      | self.darkenColor()
+  2240-2322     | createRepeatShape          | None (pure SVG)
+  2324-2471     | createTRNAShape            | None (pure SVG)
+  2473-2609     | createRRNAShape            | None (pure SVG)
+  2611-2674     | createMRNAShape            | self.darkenColor()
+  2676-2787     | createCommentShape         | self.darkenColor()
+  2789-2856     | createJaggedTrianglePath   | None (pure SVG path)
+  2858-2926     | createJaggedArrowPath      | None (pure SVG path)
+  2928-2956     | createJaggedPromoterPath   | None (pure SVG path)
+  2958-2990     | createJaggedTerminatorPath | None (pure SVG path)
+  2992-3016     | createJaggedRegulatoryPath | None (pure SVG path)
+  3018-3042     | createJaggedRepeatPath     | None (pure SVG path)
+  3044-3068     | createJaggedRNAPath        | None (pure SVG path)
+  3070-3095     | createJaggedCommentPath    | None (pure SVG path)
+  3097-3158     | createSVGGeneText          | self.genomeBrowser.getQualifierValue()
+  3160-3205     | updateSVGTextForResize     | None (DOM manipulation)
+  3207-3288     | addSVGGeneInteraction      | self.genomeBrowser, self.getCurrentViewport(),
+               |                            | self.showGeneDetails(), self.showGeneContextMenu()
+
+================================================================================
+2. IMPORT PATH
+================================================================================
+
+In TrackRenderer.js, add the following import at the top of the file
+(before the class definition):
+
+    const GeneShapeCreators = require('./tracks/GeneShapeCreators');
+
+================================================================================
+3. METHOD SIGNATURE CHANGES
+================================================================================
+
+All functions are now STATIC methods of the `GeneShapeCreators` class.
+Methods that require TrackRenderer instance state accept `self` (the
+TrackRenderer instance) as the first parameter.
+
+Methods WITH `self` parameter (need TrackRenderer instance):
+------------------------------------------------------------
+  GeneShapeCreators.createSVGGeneGradient(self, defs, gradientId, baseColor)
+  GeneShapeCreators.createSVGGeneShape(self, gene, width, height, gradientId,
+                                        operonInfo, isLeftTruncated, isRightTruncated, strokeWidth)
+  GeneShapeCreators.createSpecializedGeneShape(self, gene, width, height,
+                                                gradientId, operonInfo,
+                                                isLeftTruncated, isRightTruncated, strokeWidth)
+  GeneShapeCreators.createRegulatoryShape(self, width, height, gradientId,
+                                           operonInfo, isLeftTruncated,
+                                           isRightTruncated, isForward, strokeWidth)
+  GeneShapeCreators.createMRNAShape(self, width, height, gradientId, operonInfo,
+                                     isLeftTruncated, isRightTruncated, isForward, strokeWidth)
+  GeneShapeCreators.createCommentShape(self, width, height, gradientId, operonInfo,
+                                        isLeftTruncated, isRightTruncated, isForward, strokeWidth)
+  GeneShapeCreators.createSVGGeneText(self, gene, width, height, settings)
+  GeneShapeCreators.addSVGGeneInteraction(self, geneGroup, gene, operons, operonInfo, rowIndex)
+
+Methods WITHOUT `self` parameter (pure SVG / logic):
+-----------------------------------------------------
+  GeneShapeCreators.createSpecializedGradients(defs)
+  GeneShapeCreators.shouldUseSpecializedShape(geneType)
+  GeneShapeCreators.createPromoterShape(width, height, gradientId, operonInfo,
+                                         isLeftTruncated, isRightTruncated, isForward, strokeWidth)
+  GeneShapeCreators.createTerminatorShape(width, height, gradientId, operonInfo,
+                                           isLeftTruncated, isRightTruncated, isForward, strokeWidth)
+  GeneShapeCreators.createRepeatShape(width, height, gradientId, operonInfo,
+                                       isLeftTruncated, isRightTruncated, isForward, strokeWidth)
+  GeneShapeCreators.createTRNAShape(width, height, gradientId, operonInfo,
+                                     isLeftTruncated, isRightTruncated, isForward, strokeWidth)
+  GeneShapeCreators.createRRNAShape(width, height, gradientId, operonInfo,
+                                     isLeftTruncated, isRightTruncated, isForward, strokeWidth)
+  GeneShapeCreators.createJaggedTrianglePath(width, height, isLeftJagged, isRightJagged, isForward)
+  GeneShapeCreators.createJaggedArrowPath(width, height, arrowSize, isLeftJagged, isRightJagged, isForward)
+  GeneShapeCreators.createJaggedPromoterPath(width, height, isLeftJagged, isRightJagged, isForward)
+  GeneShapeCreators.createJaggedTerminatorPath(width, height, isLeftJagged, isRightJagged)
+  GeneShapeCreators.createJaggedRegulatoryPath(width, height, isLeftJagged, isRightJagged)
+  GeneShapeCreators.createJaggedRepeatPath(width, height, isLeftJagged, isRightJagged)
+  GeneShapeCreators.createJaggedRNAPath(width, height, isLeftJagged, isRightJagged)
+  GeneShapeCreators.createJaggedCommentPath(width, height, isLeftJagged, isRightJagged)
+  GeneShapeCreators.updateSVGTextForResize(svgContainer, containerWidth)
+
+================================================================================
+4. CALL SITE CHANGES IN TrackRenderer.js
+================================================================================
+
+All `this.<method>(...)` calls must be replaced with
+`GeneShapeCreators.<method>(this, ...)` or `GeneShapeCreators.<method>(...)`:
+
+LINE 1510:
+  OLD: this.createSpecializedGradients(defs);
+  NEW: GeneShapeCreators.createSpecializedGradients(defs);
+
+LINE 1607:
+  OLD: const isSpecialized = this.shouldUseSpecializedShape(geneType);
+  NEW: const isSpecialized = GeneShapeCreators.shouldUseSpecializedShape(geneType);
+
+LINE 1640:
+  OLD: const gradient = this.createSVGGeneGradient(defs, gradientId, operonInfo.color);
+  NEW: const gradient = GeneShapeCreators.createSVGGeneGradient(this, defs, gradientId, operonInfo.color);
+
+LINE 1643:
+  OLD: const geneShape = this.createSVGGeneShape(gene, elementWidth, ...)
+  NEW: const geneShape = GeneShapeCreators.createSVGGeneShape(this, gene, elementWidth, ...)
+
+LINE 1657:
+  OLD: const geneText = this.createSVGGeneText(gene, elementWidth, elementHeight, settings);
+  NEW: const geneText = GeneShapeCreators.createSVGGeneText(this, gene, elementWidth, elementHeight, settings);
+
+LINE 1664:
+  OLD: this.addSVGGeneInteraction(geneGroup, gene, operons, operonInfo, rowIndex);
+  NEW: GeneShapeCreators.addSVGGeneInteraction(this, geneGroup, gene, operons, operonInfo, rowIndex);
+
+LINES 13460, 13609:
+  OLD: this.createSpecializedGradients(defs);
+  NEW: GeneShapeCreators.createSpecializedGradients(defs);
+
+LINE 13488:
+  OLD: if (this.shouldUseSpecializedShape(geneType))
+  NEW: if (GeneShapeCreators.shouldUseSpecializedShape(geneType))
+
+LINE 13489:
+  OLD: const shape = this.createSpecializedGeneShape(gene, ...)
+  NEW: const shape = GeneShapeCreators.createSpecializedGeneShape(this, gene, ...)
+
+LINE 13504:
+  OLD: const shape = this.createSVGGeneShape(gene, ...)
+  NEW: const shape = GeneShapeCreators.createSVGGeneShape(this, gene, ...)
+
+LINE 13650:
+  OLD: const shape = this.createSVGGeneShape(mockGene, ...)
+  NEW: const shape = GeneShapeCreators.createSVGGeneShape(this, mockGene, ...)
+
+LINE 14530:
+  OLD: this.updateSVGTextForResize(svgContainer, containerWidth);
+  NEW: GeneShapeCreators.updateSVGTextForResize(svgContainer, containerWidth);
+
+================================================================================
+5. EXTRACTED LINES TO REMOVE FROM TrackRenderer.js
+================================================================================
+
+Delete lines 1669-3288 (the entire block of extracted functions).
+This includes all 24 functions listed in Section 1 above.
+
+================================================================================
+6. EXTERNAL DEPENDENCIES
+================================================================================
+
+CanvasGenesRenderer.js (line 673) has its OWN copy of shouldUseSpecializedShape.
+No changes needed -- it does NOT depend on TrackRenderer for this function.
+
+================================================================================
+7. NOTES
+================================================================================
+
+- The SVG_NS constant ('http://www.w3.org/2000/svg') is now defined in
+  GeneShapeCreators.js to avoid external dependencies.
+- All SVG path generation logic is preserved EXACTLY as it was in
+  TrackRenderer.js.
+- The `self` parameter naming convention is used consistently to indicate
+  the TrackRenderer instance reference, distinguishing it from `this` which
+  refers to the GeneShapeCreators class in internal static calls.
+- No changes were made to TrackRenderer.js -- the original file is untouched.
