@@ -13204,16 +13204,21 @@ This action cannot be undone.`;
    */
   openFeatureGlyphLegend() {
     let modal = document.getElementById('featureGlyphLegendModal');
-    if (!modal) {
+    const isNewModal = !modal;
+    if (isNewModal) {
       modal = this.createFeatureGlyphLegendModal();
       document.body.appendChild(modal);
+
+      // Initialize draggable and resizable after modal is in the DOM
+      if (window.modalDragManager) {
+        window.modalDragManager.makeDraggable('#featureGlyphLegendModal');
+      }
+      if (window.resizableModalManager) {
+        window.resizableModalManager.makeResizable('#featureGlyphLegendModal');
+      }
+
       // Render canvas previews after the modal is in the DOM
       requestAnimationFrame(() => this.renderGlyphLegendPreviews(modal));
-    }
-
-    // Reset any drag inline styles so the modal re-centers on open
-    if (window.modalDragManager) {
-      window.modalDragManager.resetPosition('#featureGlyphLegendModal');
     }
 
     modal.classList.add('show');
@@ -13310,7 +13315,7 @@ This action cannot be undone.`;
     ];
 
     modal.innerHTML = `
-      <div class="modal-content resizable" style="max-width: 950px; max-height: 85vh;">
+      <div class="modal-content resizable" style="max-width: 1900px; width: 95vw; max-height: 85vh;">
         <div class="modal-header">
           <h3 id="featureGlyphLegendTitle">
             <i class="fas fa-shapes"></i> Feature Glyph Legend
@@ -13323,7 +13328,7 @@ This action cannot be undone.`;
           <div style="margin-bottom: 20px; color: var(--text-secondary); font-size: 14px;">
             <p>Reference guide showing how each feature type is rendered in the Genes &amp; Features track. Previews are generated using the same rendering engine as the actual track.</p>
           </div>
-          <div id="glyphLegendGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+          <div id="glyphLegendGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px;">
             ${entries
               .map(
                 entry => `
@@ -13372,6 +13377,15 @@ This action cannot be undone.`;
         <div class="modal-footer">
           <button class="btn btn-secondary modal-close">Close</button>
         </div>
+        <!-- Resize handles -->
+        <div class="resize-handle resize-handle-n"></div>
+        <div class="resize-handle resize-handle-s"></div>
+        <div class="resize-handle resize-handle-e"></div>
+        <div class="resize-handle resize-handle-w"></div>
+        <div class="resize-handle resize-handle-ne"></div>
+        <div class="resize-handle resize-handle-nw"></div>
+        <div class="resize-handle resize-handle-se"></div>
+        <div class="resize-handle resize-handle-sw"></div>
       </div>
     `;
 
@@ -13397,14 +13411,6 @@ This action cannot be undone.`;
         item.style.boxShadow = '';
       }
     });
-
-    // Drag and resize
-    if (window.modalDragManager) {
-      window.modalDragManager.makeDraggable('#featureGlyphLegendModal');
-    }
-    if (window.resizableModalManager) {
-      window.resizableModalManager.makeResizable('#featureGlyphLegendModal');
-    }
 
     return modal;
   }
@@ -13438,7 +13444,7 @@ This action cannot be undone.`;
   createGlyphCanvas(type, strand) {
     const previewWidth = 220;
     const previewHeight = 50;
-    const geneWidth = type === 'regulatory' ? 50 : 120;
+    const geneWidth = (type === 'regulatory' || type === 'repeat_region') ? 50 : 120;
     const geneHeight = 14;
 
     // Create SVG that matches what the track actually renders
