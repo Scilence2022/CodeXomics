@@ -160,15 +160,23 @@ class PluginManagerV2 {
 
       // 5. Initialize Plugin Marketplace
       if (this.options.enableMarketplace !== false) {
-        this.marketplace = new PluginMarketplace(this, this.configManager, {
-          enableSecurityValidation: this.options.enableSecurityValidation,
-          enableDependencyResolution: this.options.enableDependencyResolution,
-          enableAutoUpdates: this.options.enableAutoUpdates,
-        });
-        // Wait for marketplace async initialization to complete
-        // This ensures installed plugins are restored before system-initialized event
-        await this.marketplace.waitForInitialization();
-        console.log('✅ PluginMarketplace initialized and plugins restored');
+        const MarketplaceClass = (typeof PluginMarketplace !== 'undefined')
+          ? PluginMarketplace
+          : (typeof window !== 'undefined' ? window.PluginMarketplace : undefined);
+
+        if (MarketplaceClass) {
+          this.marketplace = new MarketplaceClass(this, this.configManager, {
+            enableSecurityValidation: this.options.enableSecurityValidation,
+            enableDependencyResolution: this.options.enableDependencyResolution,
+            enableAutoUpdates: this.options.enableAutoUpdates,
+          });
+          // Wait for marketplace async initialization to complete
+          // This ensures installed plugins are restored before system-initialized event
+          await this.marketplace.waitForInitialization();
+          console.log('✅ PluginMarketplace initialized and plugins restored');
+        } else {
+          console.warn('⚠️ PluginMarketplace class not available, marketplace disabled');
+        }
       }
 
       // 6. Load and register built-in plugins

@@ -210,13 +210,17 @@ ipcMain.handle('getProjectDirectoryName', async () => {
 
 function buildModuleDeps() {
   return {
-    // Core state
+    // Core state (values captured at call time — use getters for mutable state below)
     mainWindow,
     currentActiveWindow,
-    unifiedMCPServer,
-    unifiedServerStatus,
     fileOpenQueue,
     toolMenuTemplates,
+
+    // Mutable state getters (always return live value when called)
+    getUnifiedMCPServer: () => unifiedMCPServer,
+    setUnifiedMCPServer: (v) => { unifiedMCPServer = v; },
+    getUnifiedServerStatus: () => unifiedServerStatus,
+    setUnifiedServerStatus: (v) => { unifiedServerStatus = v; },
 
     // Constants
     APP_NAME,

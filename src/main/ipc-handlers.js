@@ -19,8 +19,10 @@ const fs = require('fs');
  * @param {BrowserWindow} deps.mainWindow - Main BrowserWindow instance
  * @param {Map} deps.windowRegistry - Window registry for multi-window support
  * @param {Map} deps.pendingRegistrations - Pending window registrations
- * @param {Object} deps.unifiedMCPServer - Unified MCP server reference (get/set accessor)
- * @param {string} deps.unifiedServerStatus - Current MCP server status
+ * @param {Function} deps.getUnifiedMCPServer - Getter for unified MCP server reference
+ * @param {Function} deps.setUnifiedMCPServer - Setter for unified MCP server reference
+ * @param {Function} deps.getUnifiedServerStatus - Getter for current MCP server status
+ * @param {Function} deps.setUnifiedServerStatus - Setter for current MCP server status
  * @param {Map} deps.toolMenuTemplates - Tool menu templates
  * @param {BrowserWindow} deps.currentActiveWindow - Currently active window
  * @param {Array} deps.fileOpenQueue - Queue for file opening
@@ -66,8 +68,10 @@ function registerIpcHandlers(deps) {
     mainWindow,
     windowRegistry,
     pendingRegistrations,
-    unifiedMCPServer,
-    unifiedServerStatus,
+    getUnifiedMCPServer,
+    setUnifiedMCPServer,
+    getUnifiedServerStatus,
+    setUnifiedServerStatus,
     toolMenuTemplates,
     currentActiveWindow,
     fileOpenQueue,
@@ -143,8 +147,9 @@ function registerIpcHandlers(deps) {
   ipcMain.on('tool-response', (event, response) => {
     console.log('[Main] Received tool response from renderer:', response);
     // Forward the response back to MCP server
-    if (unifiedMCPServer && unifiedMCPServer.handleToolResponse) {
-      unifiedMCPServer.handleToolResponse(response);
+    const _mcpServer = getUnifiedMCPServer();
+    if (_mcpServer && _mcpServer.handleToolResponse) {
+      _mcpServer.handleToolResponse(response);
     }
   });
 
@@ -1520,7 +1525,7 @@ function registerIpcHandlers(deps) {
       const settings = loadMCPServerSettings();
 
       // Check if Unified MCP Server is already running
-      if (unifiedServerStatus === 'running') {
+      if (getUnifiedServerStatus() === 'running') {
         return {
           success: true,
           message: 'Unified Claude MCP Server is already running',
@@ -1531,18 +1536,18 @@ function registerIpcHandlers(deps) {
         };
       }
 
-      if (unifiedServerStatus === 'starting') {
+      if (getUnifiedServerStatus() === 'starting') {
         return { success: false, message: 'Unified Claude MCP Server is already starting', status: 'starting' };
       }
 
-      unifiedServerStatus = 'starting';
+      setUnifiedServerStatus('starting');
 
       // Pre-flight port check
       const httpCheck = await checkPortAvailable(settings.httpPort);
       const wsCheck = await checkPortAvailable(settings.wsPort);
 
       if (!httpCheck.available) {
-        unifiedServerStatus = 'stopped';
+        setUnifiedServerStatus('stopped');
         return {
           success: false,
           message: `HTTP port ${settings.httpPort} is already in use. Please change the port in Settings or free the port.`,
@@ -1552,7 +1557,7 @@ function registerIpcHandlers(deps) {
         };
       }
       if (!wsCheck.available) {
-        unifiedServerStatus = 'stopped';
+        setUnifiedServerStatus('stopped');
         return {
           success: false,
           message: `WebSocket port ${settings.wsPort} is already in use. Please change the port in Settings or free the port.`,
@@ -1564,40 +1569,41 @@ function registerIpcHandlers(deps) {
 
       try {
         // Create Unified Claude MCP server with configurable ports
-        unifiedMCPServer.value = new (require('../mcp/UnifiedMCPServer'))(settings.httpPort, settings.wsPort, mainWindow);
+        const server = new (require('../mcp/UnifiedMCPServer'))(settings.httpPort, settings.wsPort, mainWindow);
+        setUnifiedMCPServer(server);
 
         // Forward server log events to the Manager window
-        unifiedMCPServer.value.on('log', logEntry => {
+        server.on('log', logEntry => {
           if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
             mcpServerManagerWindow.webContents.send('mcp-server-log', logEntry);
           }
         });
 
         // Forward client connection events
-        unifiedMCPServer.value.on('client-connected', data => {
+        server.on('client-connected', data => {
           if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
             mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
           }
         });
-        unifiedMCPServer.value.on('client-disconnected', data => {
+        server.on('client-disconnected', data => {
           if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
             mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
           }
         });
 
         // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
-        unifiedMCPServer.value.setMainWindowRegistry(windowRegistry);
+        server.setMainWindowRegistry(windowRegistry);
 
         // Start the server
-        await unifiedMCPServer.value.start();
+        await server.start();
 
-        unifiedServerStatus = 'running';
+        setUnifiedServerStatus('running');
         console.log(`Unified Claude MCP Server started successfully on ports ${settings.httpPort} (HTTP) and ${settings.wsPort} (WebSocket)`);
 
         // Multi-window support: Also populate the server's local IPC registry for routing
         for (const [windowId, info] of windowRegistry.entries()) {
           if (info.window && !info.window.isDestroyed()) {
-            unifiedMCPServer.value.registerWindow(windowId, info.window);
+            server.registerWindow(windowId, info.window);
             console.log(`[MCP Server] Registered existing window for IPC routing: ${windowId}`);
           }
         }
@@ -1611,12 +1617,13 @@ function registerIpcHandlers(deps) {
           wsPort: settings.wsPort,
         };
       } catch (error) {
-        unifiedServerStatus = 'stopped';
+        setUnifiedServerStatus('stopped');
         // Clean up the server instance
-        if (unifiedMCPServer.value) {
-          try { await unifiedMCPServer.value.stop(); } catch (e) { /* ignore */ }
+        const currentServer = getUnifiedMCPServer();
+        if (currentServer) {
+          try { await currentServer.stop(); } catch (e) { /* ignore */ }
         }
-        unifiedMCPServer.value = null;
+        setUnifiedMCPServer(null);
         console.error('Failed to start Unified Claude MCP Server:', error);
 
         const msg = error.message || '';
@@ -1638,7 +1645,7 @@ function registerIpcHandlers(deps) {
         };
       }
     } catch (error) {
-      unifiedServerStatus = 'stopped';
+      setUnifiedServerStatus('stopped');
       return { success: false, message: error.message, status: 'stopped' };
     }
   });
@@ -1646,15 +1653,16 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('mcp-server-stop', async () => {
     try {
       // Stop Unified MCP Server if running
-      if (unifiedServerStatus === 'running') {
-        unifiedServerStatus = 'stopping';
+      if (getUnifiedServerStatus() === 'running') {
+        setUnifiedServerStatus('stopping');
 
-        if (unifiedMCPServer.value) {
-          await unifiedMCPServer.value.stop();
-          unifiedMCPServer.value = null;
+        const currentServer = getUnifiedMCPServer();
+        if (currentServer) {
+          await currentServer.stop();
+          setUnifiedMCPServer(null);
         }
 
-        unifiedServerStatus = 'stopped';
+        setUnifiedServerStatus('stopped');
         console.log('Unified Claude MCP Server stopped successfully');
 
         return {
@@ -1665,31 +1673,33 @@ function registerIpcHandlers(deps) {
         };
       }
 
-      if (unifiedServerStatus === 'stopped') {
+      if (getUnifiedServerStatus() === 'stopped') {
         return { success: true, message: 'Unified Claude MCP Server is already stopped', status: 'stopped' };
       }
 
-      if (unifiedServerStatus === 'stopping') {
+      if (getUnifiedServerStatus() === 'stopping') {
         return { success: false, message: 'Unified Claude MCP Server is already stopping', status: 'stopping' };
       }
 
       return { success: true, message: 'No MCP Server is running', status: 'stopped' };
     } catch (error) {
-      unifiedServerStatus = 'stopped';
+      setUnifiedServerStatus('stopped');
       return { success: false, message: error.message, status: 'stopped' };
     }
   });
 
   ipcMain.handle('mcp-server-status', async () => {
     const settings = loadMCPServerSettings();
+    const status = getUnifiedServerStatus();
+    const server = getUnifiedMCPServer();
     // Return Unified Claude MCP Server status
     return {
-      status: unifiedServerStatus,
-      isRunning: unifiedServerStatus === 'running',
-      serverType: unifiedServerStatus === 'running' ? 'unified-claude-mcp' : 'none',
-      httpPort: unifiedServerStatus === 'running' ? settings.httpPort : null,
-      wsPort: unifiedServerStatus === 'running' ? settings.wsPort : null,
-      connectedClients: unifiedMCPServer.value ? unifiedMCPServer.value.getConnectedClientsCount() : 0,
+      status: status,
+      isRunning: status === 'running',
+      serverType: status === 'running' ? 'unified-claude-mcp' : 'none',
+      httpPort: status === 'running' ? settings.httpPort : null,
+      wsPort: status === 'running' ? settings.wsPort : null,
+      connectedClients: server ? server.getConnectedClientsCount() : 0,
     };
   });
 
