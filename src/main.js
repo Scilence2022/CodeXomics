@@ -10582,3 +10582,60 @@ ipcMain.on('open-progenfixer-window', () => {
   console.log('IPC: Opening ProGenFixer window...');
   createProGenFixerWindow();
 });
+
+// =============================================================================
+// P1: Application Infrastructure IPC Handlers
+// Added for contextIsolation migration and security hardening
+// =============================================================================
+
+// Locale data — serves shared src/locales/ to renderer (replaces fs-based loading)
+ipcMain.handle('get-locale-data', async (event, language, namespace) => {
+  try {
+    const localePath = path.join(__dirname, 'locales', language, `${namespace}.json`);
+    if (!fs.existsSync(localePath)) {
+      return { success: false, error: `Locale file not found: ${localePath}` };
+    }
+    const content = fs.readFileSync(localePath, 'utf-8');
+    return { success: true, data: JSON.parse(content) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// List available locale languages
+ipcMain.handle('get-locale-languages', async () => {
+  try {
+    const localePath = path.join(__dirname, 'locales');
+    if (!fs.existsSync(localePath)) {
+      return { success: false, error: 'Locales directory not found' };
+    }
+    const entries = fs.readdirSync(localePath, { withFileTypes: true });
+    const languages = entries
+      .filter(e => e.isDirectory())
+      .map(e => e.name);
+    return { success: true, data: languages };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Application paths for renderer (replaces __dirname in renderer during contextIsolation)
+ipcMain.handle('get-app-paths', async () => {
+  try {
+    return {
+      success: true,
+      data: {
+        appPath: app.getAppPath(),
+        userData: app.getPath('userData'),
+        documents: app.getPath('documents'),
+        home: require('os').homedir(),
+        resourcesPath: process.resourcesPath || path.join(__dirname, '..'),
+        localesPath: path.join(__dirname, 'locales'),
+        pluginsPath: path.join(app.getPath('userData'), 'plugins'),
+        toolsRegistryPath: path.join(__dirname, '..', 'tools_registry'),
+      },
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
