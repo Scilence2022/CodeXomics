@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeXomics MCP Server Manager</title>
+    <style>
+      /* ===== CSS Custom Properties (Theme-aware) ===== */
+      :root {
+        /* Default dark values (fallback) */
+        --mcp-bg: #0d1117;
+        --mcp-bg-surface: #161b22;
+        --mcp-bg-elevated: #21262d;
+        --mcp-bg-hover: #30363d;
+        --mcp-text: #c9d1d9;
+        --mcp-text-bright: #f0f6fc;
+        --mcp-text-muted: #8b949e;
+        --mcp-text-dim: #6e7681;
+        --mcp-border: #30363d;
+        --mcp-border-light: #21262d;
+        --mcp-accent: #58a6ff;
+        --mcp-accent-rgb: 88, 166, 255;
+        --mcp-success: #238636;
+        --mcp-success-bright: #3fb950;
+        --mcp-success-rgb: 35, 134, 54;
+        --mcp-danger: #da3633;
+        --mcp-danger-bright: #f85149;
+        --mcp-danger-rgb: 248, 81, 73;
+        --mcp-warning: #9e6a03;
+        --mcp-warning-bright: #d29922;
+        --mcp-warning-rgb: 210, 153, 34;
+        --mcp-scrollbar-bg: #0d1117;
+        --mcp-scrollbar-thumb: #30363d;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: var(--mcp-bg);
+        color: var(--mcp-text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        background: var(--mcp-bg-surface);
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--mcp-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header h1 {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--mcp-text-bright);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .header-icon {
+        font-size: 24px;
+      }
+
+      .status-badge {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 1px solid transparent;
+      }
+
+      .status-badge.running {
+        background: var(--mcp-success);
+        color: #fff;
+        border-color: var(--mcp-success-bright);
+      }
+
+      .status-badge.stopped {
+        background: var(--mcp-danger);
+        color: #fff;
+        border-color: var(--mcp-danger-bright);
+      }
+
+      .status-badge.starting {
+        background: var(--mcp-warning);
+        color: #fff;
+        border-color: var(--mcp-warning-bright);
+      }
+
+      .status-badge.stopping {
+        background: #bc4c00;
+        color: #fff;
+        border-color: #e16f24;
+      }
+
+      .main-content {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .control-panel {
+        background: var(--mcp-bg-surface);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid var(--mcp-border);
+      }
+
+      .control-panel h2 {
+        font-size: 14px;
+        margin-bottom: 16px;
+        color: var(--mcp-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-primary {
+        background: var(--mcp-success);
+        color: #fff;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        background: var(--mcp-success-bright);
+      }
+
+      .btn-danger {
+        background: var(--mcp-danger);
+        color: #fff;
+      }
+
+      .btn-danger:hover:not(:disabled) {
+        background: var(--mcp-danger-bright);
+      }
+
+      .btn-secondary {
+        background: var(--mcp-bg-elevated);
+        color: var(--mcp-text);
+        border: 1px solid var(--mcp-border);
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: var(--mcp-bg-hover);
+        border-color: var(--mcp-text-muted);
+      }
+
+      /* ===== Settings Panel ===== */
+      .settings-panel {
+        background: var(--mcp-bg-surface);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid var(--mcp-border);
+      }
+
+      .settings-panel h2 {
+        font-size: 14px;
+        margin-bottom: 16px;
+        color: var(--mcp-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .settings-content {
+        overflow: hidden;
+        transition: max-height 0.3s ease, opacity 0.3s ease;
+      }
+
+      .settings-content.collapsed {
+        max-height: 0;
+        opacity: 0;
+      }
+
+      .settings-content.expanded {
+        max-height: 500px;
+        opacity: 1;
+      }
+
+      .settings-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+
+      @media (max-width: 600px) {
+        .settings-form {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .form-group label {
+        font-size: 12px;
+        color: var(--mcp-text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+
+      .form-group input {
+        padding: 10px 14px;
+        background: var(--mcp-bg);
+        border: 1px solid var(--mcp-border);
+        border-radius: 6px;
+        color: var(--mcp-text-bright);
+        font-size: 14px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+
+      .form-group input:focus {
+        border-color: var(--mcp-accent);
+      }
+
+      .form-hint {
+        font-size: 11px;
+        color: var(--mcp-text-dim);
+      }
+
+      .settings-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 4px;
+      }
+
+      .settings-message {
+        font-size: 12px;
+        padding: 6px 0;
+        min-height: 20px;
+      }
+
+      .settings-message.success {
+        color: var(--mcp-success-bright);
+      }
+
+      .settings-message.error {
+        color: var(--mcp-danger-bright);
+      }
+
+      .settings-message.warning {
+        color: var(--mcp-warning-bright);
+      }
+
+      .port-conflict-banner {
+        grid-column: 1 / -1;
+        background: rgba(var(--mcp-danger-rgb), 0.12);
+        border: 1px solid var(--mcp-danger);
+        border-radius: 8px;
+        padding: 12px 16px;
+        color: var(--mcp-danger-bright);
+        font-size: 13px;
+        display: none;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .port-conflict-banner.visible {
+        display: flex;
+      }
+
+      .restart-hint {
+        grid-column: 1 / -1;
+        font-size: 11px;
+        color: var(--mcp-warning-bright);
+        font-style: italic;
+        display: none;
+      }
+
+      .restart-hint.visible {
+        display: block;
+      }
+
+      /* ===== Stats Row ===== */
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+
+      @media (max-width: 900px) {
+        .stats-row {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 500px) {
+        .stats-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .stat-item {
+        background: var(--mcp-bg-surface);
+        padding: 16px;
+        border-radius: 10px;
+        border: 1px solid var(--mcp-border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: border-color 0.2s;
+      }
+
+      .stat-item:hover {
+        border-color: var(--mcp-accent);
+      }
+
+      .stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        background: var(--mcp-bg-elevated);
+      }
+
+      .stat-icon.http {
+        background: rgba(var(--mcp-accent-rgb), 0.15);
+      }
+
+      .stat-icon.ws {
+        background: rgba(var(--mcp-warning-rgb), 0.15);
+      }
+
+      .stat-icon.clients {
+        background: rgba(var(--mcp-success-rgb), 0.15);
+      }
+
+      .stat-icon.uptime {
+        background: rgba(var(--mcp-warning-rgb), 0.15);
+      }
+
+      .stat-item .content {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .stat-item .label {
+        font-size: 11px;
+        color: var(--mcp-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
+
+      .stat-item .value {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--mcp-text-bright);
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      @media (max-width: 768px) {
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .info-card {
+        background: var(--mcp-bg-surface);
+        border-radius: 10px;
+        padding: 16px;
+        border: 1px solid var(--mcp-border);
+        border-left: 3px solid var(--mcp-accent);
+        transition: transform 0.2s, border-color 0.2s;
+      }
+
+      .info-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--mcp-accent);
+      }
+
+      .info-card h3 {
+        font-size: 11px;
+        color: var(--mcp-text-muted);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+      }
+
+      .info-card .value {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--mcp-text-bright);
+        margin-bottom: 4px;
+      }
+
+      .info-card .sub-value {
+        font-size: 12px;
+        color: var(--mcp-text-dim);
+      }
+
+      .connection-list {
+        background: var(--mcp-bg-surface);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid var(--mcp-border);
+        flex: 1;
+        min-height: 200px;
+      }
+
+      .connection-list h2 {
+        font-size: 14px;
+        margin-bottom: 16px;
+        color: var(--mcp-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+      }
+
+      .connection-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: var(--mcp-bg);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        border: 1px solid var(--mcp-border-light);
+        transition: border-color 0.2s;
+      }
+
+      .connection-item:hover {
+        border-color: var(--mcp-border);
+      }
+
+      .connection-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .connection-info {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .connection-name {
+        font-weight: 500;
+        color: var(--mcp-text-bright);
+        font-size: 14px;
+      }
+
+      .connection-detail {
+        font-size: 12px;
+        color: var(--mcp-text-dim);
+        margin-top: 2px;
+      }
+
+      .connection-status {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .connection-status.connected {
+        background: rgba(var(--mcp-success-rgb), 0.2);
+        color: var(--mcp-success-bright);
+      }
+
+      .connection-status.disconnected {
+        background: rgba(var(--mcp-text-dim), 0.2);
+        color: var(--mcp-text-muted);
+      }
+
+      .log-panel {
+        background: var(--mcp-bg-surface);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid var(--mcp-border);
+        display: flex;
+        flex-direction: column;
+        min-height: 280px;
+      }
+
+      .log-panel h2 {
+        font-size: 14px;
+        margin-bottom: 16px;
+        color: var(--mcp-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .log-container {
+        background: var(--mcp-bg);
+        border-radius: 8px;
+        padding: 12px;
+        flex: 1;
+        overflow-y: auto;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        border: 1px solid var(--mcp-border-light);
+      }
+
+      .log-entry {
+        margin-bottom: 6px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: rgba(var(--mcp-accent-rgb), 0.02);
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .log-entry:hover {
+        background: rgba(var(--mcp-accent-rgb), 0.04);
+      }
+
+      .log-entry .timestamp {
+        color: var(--mcp-text-dim);
+        white-space: nowrap;
+        font-size: 11px;
+      }
+
+      .log-entry .level {
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        min-width: 50px;
+        text-align: center;
+      }
+
+      .log-entry .level.info {
+        background: rgba(var(--mcp-accent-rgb), 0.15);
+        color: var(--mcp-accent);
+      }
+
+      .log-entry .level.success {
+        background: rgba(var(--mcp-success-rgb), 0.15);
+        color: var(--mcp-success-bright);
+      }
+
+      .log-entry .level.error {
+        background: rgba(var(--mcp-danger-rgb), 0.15);
+        color: var(--mcp-danger-bright);
+      }
+
+      .log-entry .level.warning {
+        background: rgba(var(--mcp-warning-rgb), 0.15);
+        color: var(--mcp-warning-bright);
+      }
+
+      .log-entry .level.debug {
+        background: rgba(var(--mcp-text-dim), 0.15);
+        color: var(--mcp-text-muted);
+      }
+
+      .log-entry .message {
+        color: var(--mcp-text);
+        flex: 1;
+        word-break: break-word;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 48px 20px;
+        color: var(--mcp-text-dim);
+      }
+
+      .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      .empty-state p {
+        margin: 0;
+      }
+
+      .empty-state p:first-of-type {
+        font-size: 14px;
+        color: var(--mcp-text-muted);
+        margin-bottom: 8px;
+      }
+
+      .empty-state p:last-of-type {
+        font-size: 12px;
+        color: var(--mcp-text-dim);
+      }
+
+      .clear-logs-btn {
+        background: transparent;
+        border: 1px solid var(--mcp-border);
+        color: var(--mcp-text-muted);
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+
+      .clear-logs-btn:hover {
+        background: var(--mcp-bg-elevated);
+        border-color: var(--mcp-text-muted);
+        color: var(--mcp-text-bright);
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--mcp-scrollbar-bg);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--mcp-scrollbar-thumb);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #484f58;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1><span class="header-icon">🛰️</span> MCP Server Manager</h1>
+      <span id="status-badge" class="status-badge stopped">Stopped</span>
+    </div>
+
+    <div class="main-content">
+      <!-- Control Panel -->
+      <div class="control-panel">
+        <h2>Server Controls</h2>
+        <div class="button-group">
+          <button id="start-btn" class="btn btn-primary"><span>▶</span> Start Server</button>
+          <button id="stop-btn" class="btn btn-danger" disabled><span>⏹</span> Stop Server</button>
+          <button id="refresh-btn" class="btn btn-secondary"><span>⟳</span> Refresh Status</button>
+        </div>
+      </div>
+
+      <!-- Settings Panel -->
+      <div class="settings-panel">
+        <h2>
+          Server Settings
+          <button id="toggle-settings-btn" class="btn btn-secondary" style="padding:6px 14px;font-size:12px;">Configure</button>
+        </h2>
+        <div id="settings-content" class="settings-content collapsed">
+          <div class="settings-form">
+            <div class="form-group">
+              <label for="setting-http-port">HTTP Port</label>
+              <input type="number" id="setting-http-port" min="1024" max="65535" value="3002" />
+              <span class="form-hint">SSE endpoint (default: 3002)</span>
+            </div>
+            <div class="form-group">
+              <label for="setting-ws-port">WebSocket Port</label>
+              <input type="number" id="setting-ws-port" min="1024" max="65535" value="3003" />
+              <span class="form-hint">WebSocket server (default: 3003)</span>
+            </div>
+            <div id="port-conflict-banner" class="port-conflict-banner">
+              <span>⚠️</span>
+              <span id="port-conflict-message">Port conflict detected</span>
+            </div>
+            <div id="restart-hint" class="restart-hint">
+              ⚡ Settings saved. Restart the server to apply changes.
+            </div>
+            <div class="settings-actions">
+              <button id="save-settings-btn" class="btn btn-primary" style="padding:8px 16px;font-size:12px;">Save Settings</button>
+              <button id="check-ports-btn" class="btn btn-secondary" style="padding:8px 16px;font-size:12px;">Check Ports</button>
+              <button id="reset-settings-btn" class="btn btn-secondary" style="padding:8px 16px;font-size:12px;">Reset Defaults</button>
+            </div>
+            <div id="settings-message" class="settings-message"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-icon http">🌐</div>
+          <div class="content">
+            <span class="label">HTTP Port</span>
+            <span id="http-port" class="value">-</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon ws">🔌</div>
+          <div class="content">
+            <span class="label">WebSocket Port</span>
+            <span id="ws-port" class="value">-</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon clients">👥</div>
+          <div class="content">
+            <span class="label">Connected Clients</span>
+            <span id="client-count" class="value">0</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon uptime">⏱️</div>
+          <div class="content">
+            <span class="label">Uptime</span>
+            <span id="uptime" class="value">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Server Info -->
+      <div class="info-grid">
+        <div class="info-card">
+          <h3>Server Type</h3>
+          <div class="value">Unified Claude MCP</div>
+          <div class="sub-value">Multi-protocol support</div>
+        </div>
+        <div class="info-card">
+          <h3>Protocol Version</h3>
+          <div class="value">2024-11-05</div>
+          <div class="sub-value">Model Context Protocol</div>
+        </div>
+        <div class="info-card">
+          <h3>Transport</h3>
+          <div class="value">HTTP + WebSocket</div>
+          <div class="sub-value">Dual transport mode</div>
+        </div>
+      </div>
+
+      <!-- Connection List -->
+      <div class="connection-list">
+        <h2>Active Connections</h2>
+        <div id="connections-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">📡</div>
+            <p>No active connections</p>
+            <p>Start the server to accept connections</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log Panel -->
+      <div class="log-panel">
+        <h2>
+          Server Logs
+          <button id="clear-logs-btn" class="clear-logs-btn">Clear Logs</button>
+        </h2>
+        <div id="log-container" class="log-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <p>No logs yet</p>
+            <p>Server activity will appear here</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // State
+      let serverStatus = 'stopped';
+      let startTime = null;
+      let logs = [];
+      let currentSettings = { httpPort: 3002, wsPort: 3003 };
+
+      // DOM Elements
+      const statusBadge = document.getElementById('status-badge');
+      const startBtn = document.getElementById('start-btn');
+      const stopBtn = document.getElementById('stop-btn');
+      const refreshBtn = document.getElementById('refresh-btn');
+      const httpPortEl = document.getElementById('http-port');
+      const wsPortEl = document.getElementById('ws-port');
+      const clientCountEl = document.getElementById('client-count');
+      const uptimeEl = document.getElementById('uptime');
+      const logContainer = document.getElementById('log-container');
+      const connectionsContainer = document.getElementById('connections-container');
+      const clearLogsBtn = document.getElementById('clear-logs-btn');
+      const toggleSettingsBtn = document.getElementById('toggle-settings-btn');
+      const settingsContent = document.getElementById('settings-content');
+      const httpPortInput = document.getElementById('setting-http-port');
+      const wsPortInput = document.getElementById('setting-ws-port');
+      const saveSettingsBtn = document.getElementById('save-settings-btn');
+      const checkPortsBtn = document.getElementById('check-ports-btn');
+      const resetSettingsBtn = document.getElementById('reset-settings-btn');
+      const settingsMessage = document.getElementById('settings-message');
+      const portConflictBanner = document.getElementById('port-conflict-banner');
+      const portConflictMessage = document.getElementById('port-conflict-message');
+      const restartHint = document.getElementById('restart-hint');
+
+      // Helper functions
+      function updateStatus(status, data = {}) {
+        serverStatus = status;
+
+        statusBadge.className = `status-badge ${status}`;
+        statusBadge.textContent = status;
+
+        startBtn.disabled = status !== 'stopped';
+        stopBtn.disabled = status !== 'running';
+
+        if (data.httpPort) {
+          httpPortEl.textContent = data.httpPort;
+        } else {
+          httpPortEl.textContent = '-';
+        }
+
+        if (data.wsPort) {
+          wsPortEl.textContent = data.wsPort;
+        } else {
+          wsPortEl.textContent = '-';
+        }
+
+        if (data.connectedClients !== undefined) {
+          clientCountEl.textContent = data.connectedClients;
+          updateConnectionsList(data.connectedClients);
+        }
+
+        if (status === 'running' && !startTime) {
+          startTime = Date.now();
+        } else if (status !== 'running') {
+          startTime = null;
+          uptimeEl.textContent = '-';
+        }
+      }
+
+      function updateConnectionsList(count) {
+        if (count === 0) {
+          connectionsContainer.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">📡</div>
+              <p>No active connections</p>
+              <p>Start the server to accept connections</p>
+            </div>`;
+          return;
+        }
+
+        let html = '';
+        for (let i = 0; i < count; i++) {
+          html += `
+            <div class="connection-item">
+              <div class="connection-info">
+                <span class="connection-name">Client ${i + 1}</span>
+                <span class="connection-detail">WebSocket • Connected ${new Date().toLocaleTimeString()}</span>
+              </div>
+              <span class="connection-status connected">Connected</span>
+            </div>`;
+        }
+        connectionsContainer.innerHTML = html;
+      }
+
+      function addLog(level, message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = { timestamp, level, message };
+        logs.push(logEntry);
+
+        // Keep only last 200 logs
+        if (logs.length > 200) {
+          logs = logs.slice(-200);
+        }
+
+        renderLogs();
+      }
+
+      function renderLogs() {
+        if (logs.length === 0) {
+          logContainer.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">📝</div>
+              <p>No logs yet</p>
+              <p>Server activity will appear here</p>
+            </div>`;
+          return;
+        }
+
+        logContainer.innerHTML = logs
+          .map(log => `
+            <div class="log-entry">
+              <span class="timestamp">${log.timestamp}</span>
+              <span class="level ${log.level}">${log.level}</span>
+              <span class="message">${log.message}</span>
+            </div>`)
+          .join('');
+
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+
+      function updateUptime() {
+        if (startTime && serverStatus === 'running') {
+          const elapsed = Date.now() - startTime;
+          const seconds = Math.floor(elapsed / 1000);
+          const minutes = Math.floor(seconds / 60);
+          const hours = Math.floor(minutes / 60);
+
+          if (hours > 0) {
+            uptimeEl.textContent = `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+          } else if (minutes > 0) {
+            uptimeEl.textContent = `${minutes}m ${seconds % 60}s`;
+          } else {
+            uptimeEl.textContent = `${seconds}s`;
+          }
+        }
+      }
+
+      function showSettingsMessage(msg, type) {
+        settingsMessage.textContent = msg;
+        settingsMessage.className = `settings-message ${type}`;
+        setTimeout(() => {
+          settingsMessage.textContent = '';
+          settingsMessage.className = 'settings-message';
+        }, 4000);
+      }
+
+      function showPortConflict(port, type) {
+        portConflictMessage.textContent = `Port ${port} (${type}) is already in use. Please change it in settings or free the port.`;
+        portConflictBanner.classList.add('visible');
+      }
+
+      function hidePortConflict() {
+        portConflictBanner.classList.remove('visible');
+      }
+
+      // ===== Settings Panel =====
+      toggleSettingsBtn.addEventListener('click', () => {
+        const isCollapsed = settingsContent.classList.contains('collapsed');
+        settingsContent.classList.toggle('collapsed', !isCollapsed);
+        settingsContent.classList.toggle('expanded', isCollapsed);
+        toggleSettingsBtn.textContent = isCollapsed ? 'Collapse' : 'Configure';
+      });
+
+      async function loadSettings() {
+        try {
+          const settings = await window.electronAPI.invoke('mcp-server-get-settings');
+          if (settings) {
+            currentSettings = settings;
+            httpPortInput.value = settings.httpPort;
+            wsPortInput.value = settings.wsPort;
+          }
+        } catch (e) {
+          // Settings IPC not available yet - use defaults
+        }
+      }
+
+      saveSettingsBtn.addEventListener('click', async () => {
+        const httpPort = parseInt(httpPortInput.value, 10);
+        const wsPort = parseInt(wsPortInput.value, 10);
+        hidePortConflict();
+
+        const result = await window.electronAPI.invoke('mcp-server-save-settings', { httpPort, wsPort });
+        if (result.success) {
+          currentSettings = { httpPort, wsPort };
+          showSettingsMessage('Settings saved.', 'success');
+          restartHint.classList.add('visible');
+          setTimeout(() => restartHint.classList.remove('visible'), 5000);
+        } else {
+          showSettingsMessage(result.error, 'error');
+        }
+      });
+
+      checkPortsBtn.addEventListener('click', async () => {
+        const httpPort = parseInt(httpPortInput.value, 10);
+        const wsPort = parseInt(wsPortInput.value, 10);
+        hidePortConflict();
+        showSettingsMessage('Checking ports...', 'warning');
+
+        const httpCheck = await window.electronAPI.invoke('mcp-server-check-port', httpPort);
+        const wsCheck = await window.electronAPI.invoke('mcp-server-check-port', wsPort);
+
+        if (httpCheck.available && wsCheck.available) {
+          showSettingsMessage('Both ports are available.', 'success');
+        } else {
+          let msg = [];
+          if (!httpCheck.available) msg.push(`HTTP port ${httpPort} is in use`);
+          if (!wsCheck.available) msg.push(`WS port ${wsPort} is in use`);
+          showSettingsMessage(msg.join('. ') + '. Please change ports.', 'error');
+        }
+      });
+
+      resetSettingsBtn.addEventListener('click', async () => {
+        const result = await window.electronAPI.invoke('mcp-server-save-settings', { httpPort: 3002, wsPort: 3003 });
+        if (result.success) {
+          httpPortInput.value = 3002;
+          wsPortInput.value = 3003;
+          currentSettings = { httpPort: 3002, wsPort: 3003 };
+          showSettingsMessage('Settings reset to defaults.', 'success');
+          restartHint.classList.add('visible');
+          setTimeout(() => restartHint.classList.remove('visible'), 5000);
+        }
+      });
+
+      // ===== Server Controls =====
+      startBtn.addEventListener('click', async () => {
+        addLog('info', 'Starting MCP server...');
+        hidePortConflict();
+        try {
+          const result = await window.electronAPI.invoke('mcp-server-start');
+          if (result.success) {
+            addLog('success', result.message);
+            updateStatus('running', result);
+          } else {
+            addLog('error', result.message);
+            updateStatus(result.status || 'stopped');
+            if (result.conflictPort) {
+              showPortConflict(result.conflictPort, result.conflictType);
+            }
+          }
+        } catch (error) {
+          addLog('error', `Failed to start server: ${error.message}`);
+        }
+      });
+
+      stopBtn.addEventListener('click', async () => {
+        addLog('info', 'Stopping MCP server...');
+        try {
+          const result = await window.electronAPI.invoke('mcp-server-stop');
+          if (result.success) {
+            addLog('success', result.message);
+            updateStatus(result.status || 'stopped');
+          } else {
+            addLog('error', result.message);
+          }
+        } catch (error) {
+          addLog('error', `Failed to stop server: ${error.message}`);
+        }
+      });
+
+      refreshBtn.addEventListener('click', async () => {
+        try {
+          const status = await window.electronAPI.invoke('mcp-server-status');
+          updateStatus(status.status, status);
+          addLog('info', `Server status: ${status.status}`);
+        } catch (error) {
+          addLog('error', `Failed to get status: ${error.message}`);
+        }
+      });
+
+      clearLogsBtn.addEventListener('click', () => {
+        logs = [];
+        renderLogs();
+      });
+
+      // ===== Real-time Log Streaming from Server =====
+      if (window.electronAPI && window.electronAPI.on) {
+        window.electronAPI.on('mcp-server-log', (logEntry) => {
+          addLog(logEntry.level || 'info', logEntry.message || '');
+        });
+
+        window.electronAPI.on('mcp-server-client-update', (data) => {
+          // Refresh status to update client count
+          refreshBtn.click();
+        });
+      }
+
+      // ===== Status Listeners =====
+      window.electronAPI.on('mcp-server-status-update', data => {
+        updateStatus(data.status, data);
+      });
+
+      window.electronAPI.on('mcp-server-status-changed', data => {
+        updateStatus(data.status, data);
+      });
+
+      // ===== Theme Integration =====
+      function applyThemeVariables(themeData) {
+        const root = document.documentElement;
+        const vars = themeData.isDark && themeData.darkVariables
+          ? { ...themeData.variables, ...themeData.darkVariables }
+          : themeData.variables;
+        const isDark = !!themeData.isDark;
+
+        const directMap = {
+          '--bg-primary': '--mcp-bg',
+          '--bg-secondary': '--mcp-bg-surface',
+          '--bg-tertiary': '--mcp-bg-elevated',
+          '--text-primary': '--mcp-text-bright',
+          '--text-secondary': '--mcp-text',
+          '--text-muted': '--mcp-text-muted',
+          '--border-color': '--mcp-border',
+          '--accent-indigo': '--mcp-accent',
+        };
+
+        Object.entries(directMap).forEach(([themeVar, mcpVar]) => {
+          if (vars[themeVar]) {
+            root.style.setProperty(mcpVar, vars[themeVar]);
+          }
+        });
+
+        // Derive colors that don't have direct mappings
+        if (vars['--accent-indigo']) {
+          const accent = vars['--accent-indigo'];
+          root.style.setProperty('--mcp-accent', accent);
+          // Parse hex to rgb for rgba() usage
+          const hex = accent.replace('#', '');
+          if (hex.length === 6) {
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            root.style.setProperty('--mcp-accent-rgb', `${r}, ${g}, ${b}`);
+          }
+        }
+
+        // Adjust surface colors for light/dark
+        if (!isDark) {
+          if (vars['--bg-tertiary']) root.style.setProperty('--mcp-bg-hover', vars['--bg-tertiary']);
+          if (vars['--text-muted']) root.style.setProperty('--mcp-text-dim', vars['--text-muted']);
+          if (vars['--border-color']) {
+            root.style.setProperty('--mcp-border-light', vars['--border-color']);
+          }
+        }
+
+        // Success/danger colors from theme if available
+        if (vars['--success-color']) root.style.setProperty('--mcp-success-bright', vars['--success-color']);
+        if (vars['--danger-color']) root.style.setProperty('--mcp-danger-bright', vars['--danger-color']);
+
+        // Update scrollbar
+        root.style.setProperty('--mcp-scrollbar-bg', vars['--bg-primary'] || '#0d1117');
+        root.style.setProperty('--mcp-scrollbar-thumb', vars['--border-color'] || '#30363d');
+
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-ui-style', themeData.style);
+      }
+
+      // Listen for theme sync from main process
+      if (window.electronAPI && window.electronAPI.ipcRenderer) {
+        window.electronAPI.ipcRenderer.on('sync-theme', (event, themeData) => {
+          applyThemeVariables(themeData);
+        });
+      }
+
+      // ===== Uptime Counter =====
+      setInterval(updateUptime, 1000);
+
+      // ===== Initialization =====
+      window.addEventListener('DOMContentLoaded', async () => {
+        addLog('info', 'MCP Server Manager initialized');
+        try {
+          const status = await window.electronAPI.invoke('mcp-server-status');
+          updateStatus(status.status, status);
+        } catch (error) {
+          addLog('error', `Failed to get initial status: ${error.message}`);
+        }
+        loadSettings();
+
+        // Request initial theme
+        if (window.electronAPI && window.electronAPI.invoke) {
+          window.electronAPI.invoke('request-current-theme').catch(() => {});
+        }
+      });
+    </script>
+  </body>
+</html>

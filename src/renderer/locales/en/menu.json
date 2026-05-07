@@ -121,7 +121,7 @@
     "configureLLM": "Configure LLMs",
     "multiAgentSettings": "Multi-Agent Settings",
     "configureSearch": "Configure Search",
-    "mcpSettings": "MCP Server Settings",
+    "mcpSettings": "External MCP Servers",
     "generalSettings": "General Settings",
     "benchmarkDebug": "Benchmark & Debug Tools"
   },

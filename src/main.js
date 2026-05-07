@@ -10,6 +10,7 @@ app.commandLine.appendSwitch('use-angle', 'gl');
 
 const path = require('path');
 const fs = require('fs');
+const net = require('net');
 
 const UnifiedMCPServer = require('./mcp-server');
 const codeXomicsRPC = require('./codexomics-rpc');
@@ -1780,6 +1781,7 @@ function createMenu() {
         {
           label: 'KEGG Pathway Enrichment Analysis',
           accelerator: 'CmdOrCtrl+Shift+K',
+          enabled: false,
           click: () => {
             createKEGGWindow();
           },
@@ -1787,6 +1789,7 @@ function createMenu() {
         {
           label: 'Gene Ontology (GO) Analyzer',
           accelerator: 'CmdOrCtrl+Alt+G',
+          enabled: false,
           click: () => {
             createGOWindow();
           },
@@ -1794,6 +1797,7 @@ function createMenu() {
         {
           label: 'InterPro Domain Analysis',
           accelerator: 'CmdOrCtrl+Shift+I',
+          enabled: false,
           click: () => {
             createInterProWindow();
           },
@@ -1845,40 +1849,11 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'CodeXomics MCP Server',
-          submenu: [
-            {
-              label: 'Start CodeXomics MCP Server',
-              id: 'start-mcp-server',
-              enabled: unifiedServerStatus === 'stopped',
-              click: async () => {
-                await startUnifiedMCPServer();
-                updateMCPServerMenu();
-              },
-            },
-            {
-              label: 'Stop CodeXomics MCP Server',
-              id: 'stop-mcp-server',
-              enabled: unifiedServerStatus === 'running',
-              click: async () => {
-                await stopUnifiedMCPServer();
-                updateMCPServerMenu();
-              },
-            },
-            { type: 'separator' },
-            {
-              label: `Status: ${unifiedServerStatus}`,
-              id: 'mcp-server-status',
-              enabled: false,
-            },
-            {
-              label: 'CodeXomics MCP Server Monitor',
-              accelerator: 'CmdOrCtrl+Alt+M',
-              click: () => {
-                createMCPServerMonitorWindow();
-              },
-            },
-          ],
+          label: 'CodeXomics MCP Server Manager',
+          accelerator: 'CmdOrCtrl+Alt+M',
+          click: () => {
+            createMCPServerManagerWindow();
+          },
         },
         { type: 'separator' },
         {
@@ -1913,7 +1888,7 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'MCP Server Settings',
+          label: 'External MCP Servers',
           click: () => {
             sendToCurrentMainWindow('mcp-settings');
           },
@@ -3712,8 +3687,8 @@ ipcMain.handle('show-directory-dialog', async (event, options = {}) => {
   }
 });
 
-// MCP Server Management Functions
-let mcpServerMonitorWindow = null;
+// External MCP Servers Functions
+let mcpServerManagerWindow = null;
 
 async function startUnifiedMCPServer() {
   try {
@@ -3729,8 +3704,55 @@ async function startUnifiedMCPServer() {
 
     unifiedServerStatus = 'starting';
 
-    // Create Unified Claude MCP server with ports 3002 and 3003, and main window
-    unifiedMCPServer = new UnifiedMCPServer(3002, 3003, mainWindow);
+    // Load settings and check for port conflicts
+    const settings = loadMCPServerSettings();
+
+    // Pre-flight port check
+    const httpCheck = await checkPortAvailable(settings.httpPort);
+    const wsCheck = await checkPortAvailable(settings.wsPort);
+
+    if (!httpCheck.available) {
+      unifiedServerStatus = 'stopped';
+      return {
+        success: false,
+        message: `HTTP port ${settings.httpPort} is already in use. Please change the port in Settings or free the port.`,
+        status: 'stopped',
+        conflictPort: settings.httpPort,
+        conflictType: 'http',
+      };
+    }
+    if (!wsCheck.available) {
+      unifiedServerStatus = 'stopped';
+      return {
+        success: false,
+        message: `WebSocket port ${settings.wsPort} is already in use. Please change the port in Settings or free the port.`,
+        status: 'stopped',
+        conflictPort: settings.wsPort,
+        conflictType: 'ws',
+      };
+    }
+
+    // Create Unified Claude MCP server with configurable ports
+    unifiedMCPServer = new UnifiedMCPServer(settings.httpPort, settings.wsPort, mainWindow);
+
+    // Forward server log events to the Manager window
+    unifiedMCPServer.on('log', logEntry => {
+      if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
+        mcpServerManagerWindow.webContents.send('mcp-server-log', logEntry);
+      }
+    });
+
+    // Forward client connection events to the Manager window
+    unifiedMCPServer.on('client-connected', data => {
+      if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
+        mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
+      }
+    });
+    unifiedMCPServer.on('client-disconnected', data => {
+      if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
+        mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
+      }
+    });
 
     // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
     unifiedMCPServer.setMainWindowRegistry(windowRegistry);
@@ -3739,7 +3761,7 @@ async function startUnifiedMCPServer() {
     await unifiedMCPServer.start();
 
     unifiedServerStatus = 'running';
-    console.log('Unified Claude MCP Server started successfully on ports 3002 (HTTP) and 3003 (WebSocket)');
+    console.log(`Unified Claude MCP Server started successfully on ports ${settings.httpPort} (HTTP) and ${settings.wsPort} (WebSocket)`);
 
     // Start periodic window cleanup to handle any windows that weren't properly unregistered
     startWindowCleanupInterval();
@@ -3752,17 +3774,39 @@ async function startUnifiedMCPServer() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('mcp-server-status-changed', {
         status: 'running',
-        httpPort: 3002,
-        wsPort: 3003,
+        httpPort: settings.httpPort,
+        wsPort: settings.wsPort,
       });
     }
 
     return { success: true, status: 'running' };
   } catch (error) {
     unifiedServerStatus = 'stopped';
+    // Clean up the server instance
+    if (unifiedMCPServer) {
+      try { await unifiedMCPServer.stop(); } catch (e) { /* ignore stop errors */ }
+    }
     unifiedMCPServer = null;
     console.error('Failed to start Unified Claude MCP Server:', error);
-    return { success: false, status: 'stopped', error: error.message };
+
+    // Parse EADDRINUSE errors to provide conflict info
+    const msg = error.message || '';
+    let conflictPort = null;
+    let conflictType = null;
+    if (msg.includes('HTTP port') && msg.includes('already in use')) {
+      conflictPort = settings.httpPort;
+      conflictType = 'http';
+    } else if (msg.includes('WebSocket port') && msg.includes('already in use')) {
+      conflictPort = settings.wsPort;
+      conflictType = 'ws';
+    }
+
+    return {
+      success: false,
+      status: 'stopped',
+      message: msg,
+      ...(conflictPort ? { conflictPort, conflictType } : {}),
+    };
   }
 }
 
@@ -3808,69 +3852,94 @@ async function stopUnifiedMCPServer() {
 }
 
 function updateMCPServerMenu() {
-  // Update the menu to reflect current server status
-  const menu = Menu.getApplicationMenu();
-  if (!menu) return;
-
-  const toolsMenu = menu.items.find(item => item.label === 'Tools');
-  if (!toolsMenu || !toolsMenu.submenu) return;
-
-  const mcpServerMenu = toolsMenu.submenu.items.find(item => item.label === 'MCP Server');
-  if (!mcpServerMenu || !mcpServerMenu.submenu) return;
-
-  // Update menu items
-  mcpServerMenu.submenu.items.forEach(item => {
-    if (item.id === 'start-mcp-server') {
-      item.enabled = unifiedServerStatus === 'stopped';
-    } else if (item.id === 'stop-mcp-server') {
-      item.enabled = unifiedServerStatus === 'running';
-    } else if (item.id === 'mcp-server-status') {
-      item.label = `Status: ${unifiedServerStatus}`;
-    }
-  });
-
-  // Refresh the menu
-  Menu.setApplicationMenu(menu);
+  // Menu items previously updated here (start/stop/status) have been removed.
+  // The CodeXomics MCP Server Manager is now a standalone menu item under Tools.
+  // This function is kept as a no-op for backward compatibility with IPC handlers.
 }
 
-function createMCPServerMonitorWindow() {
-  if (mcpServerMonitorWindow && !mcpServerMonitorWindow.isDestroyed()) {
-    mcpServerMonitorWindow.focus();
+// ===== MCP Server Settings =====
+const MCP_SETTINGS_DEFAULTS = { httpPort: 3002, wsPort: 3003 };
+
+function loadMCPServerSettings() {
+  const settingsPath = path.join(app.getPath('userData'), 'mcp-server-settings.json');
+  try {
+    if (fs.existsSync(settingsPath)) {
+      const data = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      return { ...MCP_SETTINGS_DEFAULTS, ...data };
+    }
+  } catch (e) {
+    console.error('Failed to load MCP server settings:', e);
+  }
+  return { ...MCP_SETTINGS_DEFAULTS };
+}
+
+function saveMCPServerSettings(settings) {
+  const settingsPath = path.join(app.getPath('userData'), 'mcp-server-settings.json');
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+}
+
+// ===== Port Conflict Detection =====
+function checkPortAvailable(port) {
+  return new Promise(resolve => {
+    const server = net.createServer();
+    server.once('error', err => {
+      if (err.code === 'EADDRINUSE') {
+        resolve({ available: false, port });
+      } else {
+        resolve({ available: false, port, error: err.message });
+      }
+    });
+    server.once('listening', () => {
+      server.close();
+      resolve({ available: true, port });
+    });
+    server.listen(port, '127.0.0.1');
+  });
+}
+
+function createMCPServerManagerWindow() {
+  if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
+    mcpServerManagerWindow.focus();
     return;
   }
 
-  mcpServerMonitorWindow = new BrowserWindow({
+  mcpServerManagerWindow = new BrowserWindow({
     width: 900,
-    height: 700,
-    title: 'MCP Server Monitor',
+    height: 750,
+    title: 'CodeXomics MCP Server Manager',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js'),
-      // Explicitly disable sandbox to prevent /tmp access issues on Linux
       sandbox: false,
     },
     icon: path.join(__dirname, '../assets/icon.png'),
   });
 
-  // Load the MCP Server Monitor HTML
-  mcpServerMonitorWindow.loadFile(path.join(__dirname, 'mcp-server-monitor.html'));
+  // Load the MCP Server Manager HTML
+  mcpServerManagerWindow.loadFile(path.join(__dirname, 'mcp-server-manager.html'));
 
   // Handle window closed
-  mcpServerMonitorWindow.on('closed', () => {
-    mcpServerMonitorWindow = null;
+  mcpServerManagerWindow.on('closed', () => {
+    mcpServerManagerWindow = null;
   });
 
-  // Send initial status
-  mcpServerMonitorWindow.webContents.on('did-finish-load', () => {
-    mcpServerMonitorWindow.webContents.send('mcp-server-status-update', {
+  // Send initial status and request theme
+  mcpServerManagerWindow.webContents.on('did-finish-load', () => {
+    const settings = loadMCPServerSettings();
+    mcpServerManagerWindow.webContents.send('mcp-server-status-update', {
       status: unifiedServerStatus,
       isRunning: unifiedServerStatus === 'running',
-      httpPort: unifiedServerStatus === 'running' ? 3002 : null,
-      wsPort: unifiedServerStatus === 'running' ? 3003 : null,
+      httpPort: unifiedServerStatus === 'running' ? settings.httpPort : null,
+      wsPort: unifiedServerStatus === 'running' ? settings.wsPort : null,
       connectedClients: unifiedMCPServer ? unifiedMCPServer.getConnectedClientsCount() : 0,
     });
+
+    // Request current theme from main renderer
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('request-theme-for-pm');
+    }
   });
 }
 
@@ -3882,6 +3951,8 @@ ipcMain.on('mcp-server-status-changed', () => {
 // Add Unified MCP Server IPC handlers
 ipcMain.handle('mcp-server-start', async () => {
   try {
+    const settings = loadMCPServerSettings();
+
     // Check if Unified MCP Server is already running
     if (unifiedServerStatus === 'running') {
       return {
@@ -3889,8 +3960,8 @@ ipcMain.handle('mcp-server-start', async () => {
         message: 'Unified Claude MCP Server is already running',
         status: 'running',
         serverType: 'unified-claude-mcp',
-        httpPort: 3002,
-        wsPort: 3003,
+        httpPort: settings.httpPort,
+        wsPort: settings.wsPort,
       };
     }
 
@@ -3900,9 +3971,53 @@ ipcMain.handle('mcp-server-start', async () => {
 
     unifiedServerStatus = 'starting';
 
+    // Pre-flight port check
+    const httpCheck = await checkPortAvailable(settings.httpPort);
+    const wsCheck = await checkPortAvailable(settings.wsPort);
+
+    if (!httpCheck.available) {
+      unifiedServerStatus = 'stopped';
+      return {
+        success: false,
+        message: `HTTP port ${settings.httpPort} is already in use. Please change the port in Settings or free the port.`,
+        status: 'stopped',
+        conflictPort: settings.httpPort,
+        conflictType: 'http',
+      };
+    }
+    if (!wsCheck.available) {
+      unifiedServerStatus = 'stopped';
+      return {
+        success: false,
+        message: `WebSocket port ${settings.wsPort} is already in use. Please change the port in Settings or free the port.`,
+        status: 'stopped',
+        conflictPort: settings.wsPort,
+        conflictType: 'ws',
+      };
+    }
+
     try {
-      // Create Unified Claude MCP server with ports 3002 and 3003, and main window
-      unifiedMCPServer = new UnifiedMCPServer(3002, 3003, mainWindow);
+      // Create Unified Claude MCP server with configurable ports
+      unifiedMCPServer = new UnifiedMCPServer(settings.httpPort, settings.wsPort, mainWindow);
+
+      // Forward server log events to the Manager window
+      unifiedMCPServer.on('log', logEntry => {
+        if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
+          mcpServerManagerWindow.webContents.send('mcp-server-log', logEntry);
+        }
+      });
+
+      // Forward client connection events
+      unifiedMCPServer.on('client-connected', data => {
+        if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
+          mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
+        }
+      });
+      unifiedMCPServer.on('client-disconnected', data => {
+        if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
+          mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
+        }
+      });
 
       // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
       unifiedMCPServer.setMainWindowRegistry(windowRegistry);
@@ -3911,7 +4026,7 @@ ipcMain.handle('mcp-server-start', async () => {
       await unifiedMCPServer.start();
 
       unifiedServerStatus = 'running';
-      console.log('Unified Claude MCP Server started successfully on ports 3002 (HTTP) and 3003 (WebSocket)');
+      console.log(`Unified Claude MCP Server started successfully on ports ${settings.httpPort} (HTTP) and ${settings.wsPort} (WebSocket)`);
 
       // Multi-window support: Also populate the server's local IPC registry for routing
       for (const [windowId, info] of windowRegistry.entries()) {
@@ -3926,18 +4041,34 @@ ipcMain.handle('mcp-server-start', async () => {
         message: 'Unified Claude MCP Server started successfully',
         status: 'running',
         serverType: 'unified-claude-mcp',
-        httpPort: 3002,
-        wsPort: 3003,
+        httpPort: settings.httpPort,
+        wsPort: settings.wsPort,
       };
     } catch (error) {
       unifiedServerStatus = 'stopped';
-      unifiedMCPServer = null; // Clear the server instance on failure
+      // Clean up the server instance
+      if (unifiedMCPServer) {
+        try { await unifiedMCPServer.stop(); } catch (e) { /* ignore */ }
+      }
+      unifiedMCPServer = null;
       console.error('Failed to start Unified Claude MCP Server:', error);
+
+      const msg = error.message || '';
+      let conflictPort = null;
+      let conflictType = null;
+      if (msg.includes('HTTP port') && msg.includes('already in use')) {
+        conflictPort = settings.httpPort;
+        conflictType = 'http';
+      } else if ((msg.includes('WebSocket port') || msg.includes('WS port')) && msg.includes('already in use')) {
+        conflictPort = settings.wsPort;
+        conflictType = 'ws';
+      }
 
       return {
         success: false,
-        message: `Failed to start Unified Claude MCP Server: ${error.message}`,
+        message: msg || `Failed to start Unified Claude MCP Server: ${error.message}`,
         status: 'stopped',
+        ...(conflictPort ? { conflictPort, conflictType } : {}),
       };
     }
   } catch (error) {
@@ -3984,15 +4115,41 @@ ipcMain.handle('mcp-server-stop', async () => {
 });
 
 ipcMain.handle('mcp-server-status', async () => {
+  const settings = loadMCPServerSettings();
   // Return Unified Claude MCP Server status
   return {
     status: unifiedServerStatus,
     isRunning: unifiedServerStatus === 'running',
     serverType: unifiedServerStatus === 'running' ? 'unified-claude-mcp' : 'none',
-    httpPort: unifiedServerStatus === 'running' ? 3002 : null,
-    wsPort: unifiedServerStatus === 'running' ? 3003 : null,
+    httpPort: unifiedServerStatus === 'running' ? settings.httpPort : null,
+    wsPort: unifiedServerStatus === 'running' ? settings.wsPort : null,
     connectedClients: unifiedMCPServer ? unifiedMCPServer.getConnectedClientsCount() : 0,
   };
+});
+
+// MCP Server Settings IPC handlers
+ipcMain.handle('mcp-server-get-settings', async () => {
+  return loadMCPServerSettings();
+});
+
+ipcMain.handle('mcp-server-save-settings', async (event, settings) => {
+  const httpPort = parseInt(settings.httpPort, 10);
+  const wsPort = parseInt(settings.wsPort, 10);
+  if (isNaN(httpPort) || httpPort < 1024 || httpPort > 65535) {
+    return { success: false, error: 'HTTP port must be between 1024 and 65535' };
+  }
+  if (isNaN(wsPort) || wsPort < 1024 || wsPort > 65535) {
+    return { success: false, error: 'WebSocket port must be between 1024 and 65535' };
+  }
+  if (httpPort === wsPort) {
+    return { success: false, error: 'HTTP and WebSocket ports must be different' };
+  }
+  saveMCPServerSettings({ httpPort, wsPort });
+  return { success: true };
+});
+
+ipcMain.handle('mcp-server-check-port', async (event, port) => {
+  return checkPortAvailable(parseInt(port, 10));
 });
 
 // Multi-window genome support: IPC handlers for window registry
@@ -4266,14 +4423,24 @@ ipcMain.handle('send-to-main-window', async (event, channel, data) => {
 // Theme sync: forward theme data from main renderer to Project Manager window
 ipcMain.handle('broadcast-theme-to-pm', async (event, themeData) => {
   try {
+    let sent = false;
+
+    // Forward to Project Manager window
     const pmWindow = BrowserWindow.getAllWindows().find(
       win => win.getTitle().includes('Project Manager') && !win.isDestroyed()
     );
     if (pmWindow) {
       pmWindow.webContents.send('sync-theme', themeData);
-      return { success: true };
+      sent = true;
     }
-    return { success: false, error: 'PM window not found' };
+
+    // Also forward to MCP Server Manager window
+    if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
+      mcpServerManagerWindow.webContents.send('sync-theme', themeData);
+      sent = true;
+    }
+
+    return { success: sent };
   } catch (error) {
     return { success: false, error: error.message };
   }

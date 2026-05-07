@@ -2320,7 +2320,7 @@ class GenomeBrowser {
     }
   }
 
-  // MCP Server Management Methods
+  // External MCP Servers Methods
   populateMCPServersList() {
     const serversList = document.getElementById('mcpServersList');
     if (!serversList) return;

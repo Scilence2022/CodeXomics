@@ -3718,17 +3718,13 @@ class ChatManager {
                             <i class="fas fa-history"></i>
                             History
                         </button>
-                        <button id="clearThinkingBtn" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-brain"></i>
-                            Clear Thinking
-                        </button>
                         <button id="exportChatBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-download"></i>
                             Export
                         </button>
-                        <button id="suggestionsBtn" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-lightbulb"></i>
-                            Examples
+                        <button id="mcpServerMgmtBtn" class="btn btn-sm btn-secondary" title="External MCP Servers">
+                            <i class="fas fa-server"></i>
+                            MCP Servers
                         </button>
                     </div>
                 </div>
@@ -3909,20 +3905,14 @@ class ChatManager {
       this.toggleChatVisibility();
     });
 
-    document.getElementById('clearThinkingBtn')?.addEventListener('click', () => {
-      this.clearThinkingHistory();
-    });
-
-    document.getElementById('toggleThinkingBtn')?.addEventListener('click', () => {
-      this.toggleThinkingHistory();
-    });
-
     document.getElementById('exportChatBtn')?.addEventListener('click', () => {
       this.exportChatHistory();
     });
 
-    document.getElementById('suggestionsBtn')?.addEventListener('click', () => {
-      this.showSuggestions();
+    document.getElementById('mcpServerMgmtBtn')?.addEventListener('click', () => {
+      if (window.genomeBrowser && window.genomeBrowser.showMCPSettingsModal) {
+        window.genomeBrowser.showMCPSettingsModal();
+      }
     });
 
     // Multi-Agent System event listeners
@@ -9179,37 +9169,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
   }
 
-  showSuggestions() {
-    const suggestions = [
-      'Go to chr1:1000-2000',
-      'Find lacZ gene',
-      'Show current state',
-      'Get sequence from 1000 to 2000',
-      'Find EcoRI sites',
-      'Calculate GC content',
-      'Toggle genes track',
-      'Search DNA polymerase',
-      'Export current region as FASTA',
-    ];
-
-    const suggestionsHTML = suggestions
-      .map(
-        s => `<span class="suggestion-chip" onclick="document.getElementById('chatInput').value = '${s}'">${s}</span>`
-      )
-      .join('');
-
-    this.addMessageToChat(
-      `<div class="suggestions-container">
-                <p><strong>🚀 Try these:</strong></p>
-                <div class="suggestion-chips">
-                    ${suggestionsHTML}
-                </div>
-                <p><em>💡 Ask questions in simple language</em></p>
-            </div>`,
-      'assistant'
-    );
-  }
-
   /**
    * Load chat history from configuration
    */
@@ -14028,60 +13987,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         }
       }, 500);
     });
-  }
-
-  /**
-   * 清除历史思考过程（用户手动操作）
-   */
-  clearThinkingHistory() {
-    const thinkingDivs = document.querySelectorAll('.thinking-process.thinking-completed');
-    thinkingDivs.forEach(thinkingDiv => {
-      thinkingDiv.style.transition = 'opacity 0.3s ease-out';
-      thinkingDiv.style.opacity = '0';
-
-      setTimeout(() => {
-        if (thinkingDiv.parentNode) {
-          thinkingDiv.parentNode.removeChild(thinkingDiv);
-        }
-      }, 300);
-    });
-
-    this.showNotification('Thinking process history cleared', 'success');
-  }
-
-  /**
-   * 切换思考过程历史显示
-   */
-  toggleThinkingHistory() {
-    const thinkingDivs = document.querySelectorAll('.thinking-process.thinking-completed');
-    const toggleBtn = document.getElementById('toggleThinkingBtn');
-
-    if (thinkingDivs.length === 0) {
-      this.showNotification('📝 No thinking history to toggle', 'info');
-      return;
-    }
-
-    const isCurrentlyVisible = thinkingDivs[0].style.display !== 'none';
-
-    thinkingDivs.forEach(thinkingDiv => {
-      if (isCurrentlyVisible) {
-        thinkingDiv.style.display = 'none';
-      } else {
-        thinkingDiv.style.display = 'block';
-      }
-    });
-
-    // 更新按钮文本和图标
-    if (toggleBtn) {
-      if (isCurrentlyVisible) {
-        toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Show History';
-      } else {
-        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide History';
-      }
-    }
-
-    const action = isCurrentlyVisible ? 'hidden' : 'shown';
-    this.showNotification(`✅ Thinking history ${action}`, 'success');
   }
 
   /**

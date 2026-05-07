@@ -3,15 +3,19 @@
 /**
  * Standard Claude MCP Server for CodeXomics
  *
- * This is a standard MCP server implementation that:
- * 1. Follows the official MCP protocol specification
- * 2. Uses proper SSE transport for MCP Client
- * 3. Handles initialization handshake correctly
- * 4. Communicates with CodeXomics via Electron IPC
+ * Dual-mode server:
+ * - In-app mode: mainWindow is provided, IPC enabled, EventEmitter events
+ *   consumed by Electron main process and forwarded to MCP Server Manager
+ * - Standalone mode (npm start mcp-server): mainWindow is null, runs independently,
+ *   EventEmitter events fire harmlessly, console.log output is primary interface
+ *
+ * Log streaming: Uses EventEmitter 'log' events in-app (captured by main.js
+ * and forwarded to MCP Server Manager). Console.log always fires for standalone mode.
  *
  * Based on the official MCP TypeScript SDK
  */
 
+const { EventEmitter } = require('events');
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { SSEServerTransport } = require('@modelcontextprotocol/sdk/server/sse.js');
 const {
@@ -34,8 +38,9 @@ const AuthenticationManager = require('./mcp-tools/AuthenticationManager.js');
 const ToolCategoryManager = require('./mcp-tools/ToolCategoryManager.js');
 const ConnectionHealthMonitor = require('./mcp-tools/ConnectionHealthMonitor.js');
 
-class StandardClaudeMCPServer {
+class StandardClaudeMCPServer extends EventEmitter {
   constructor(httpPort = 3002, wsPort = 3003, mainWindow = null, authConfig = {}) {
+    super(); // Initialize EventEmitter
     this.httpPort = httpPort;
     this.wsPort = wsPort;
     this.mainWindow = mainWindow;
@@ -48,7 +53,7 @@ class StandardClaudeMCPServer {
     //           which autonomously decides which tools to call
     this.mode = (process.env.CODEXOMICS_MCP_MODE || authConfig.mode || 'tools').toLowerCase();
     if (!['tools', 'agent'].includes(this.mode)) {
-      console.warn(`⚠️  Unknown MCP mode '${this.mode}', defaulting to 'tools'`);
+      this.serverLog('warn', `⚠️  Unknown MCP mode '${this.mode}', defaulting to 'tools'`);
       this.mode = 'tools';
     }
 
@@ -121,20 +126,42 @@ class StandardClaudeMCPServer {
     this.setupErrorHandling();
   }
 
+  /**
+   * Central logging method - emits 'log' event and calls console.log.
+   * Replaces direct console.log calls throughout the server.
+   * In standalone mode (npm start), emit is a no-op since no one listens.
+   * In-app mode, main.js captures events and forwards to MCP Server Manager.
+   * @param {'debug'|'info'|'warn'|'error'} level
+   * @param {string} message
+   * @param {Object} [data] Optional structured data
+   */
+  serverLog(level, message, data = null) {
+    // Always log to console (backward compatible for npm/standalone mode)
+    const prefix = { debug: '🔍', info: 'ℹ️', warn: '⚠️', error: '❌' }[level] || '';
+    if (data) {
+      console.log(`${prefix} ${message}`, typeof data === 'object' ? JSON.stringify(data) : data);
+    } else {
+      console.log(`${prefix} ${message}`);
+    }
+
+    // Emit event for main process to capture
+    this.emit('log', { level, message, data, timestamp: Date.now() });
+  }
+
   setupMCPServer() {
-    console.log('🔧 Setting up MCP Server handlers');
+    this.serverLog('info', '🔧 Setting up MCP Server handlers');
 
     // Handle initialization
     this.mcpServer.setRequestHandler(InitializeRequestSchema, async request => {
-      console.log('🔄 Handling initialize request');
-      console.log('📥 Client info:', JSON.stringify(request.params?.clientInfo, null, 2));
-      console.log('📥 Protocol version:', request.params?.protocolVersion);
+      this.serverLog('info', '🔄 Handling initialize request');
+      this.serverLog('info', '📥 Client info:', JSON.stringify(request.params?.clientInfo, null, 2));
+      this.serverLog('info', '📥 Protocol version:', request.params?.protocolVersion);
 
       this.clientInfo = request.params?.clientInfo;
       this.protocolVersion = request.params?.protocolVersion || '2024-11-05';
 
       const tools = this.toolsIntegrator.getAvailableTools();
-      console.log(`📊 Server has ${tools.length} tools available`);
+      this.serverLog('info', `📊 Server has ${tools.length} tools available`);
 
       const response = {
         protocolVersion: this.protocolVersion,
@@ -157,27 +184,27 @@ class StandardClaudeMCPServer {
         },
       };
 
-      console.log('✅ Initialize response:', JSON.stringify(response, null, 2));
+      this.serverLog('info', '✅ Initialize response:', JSON.stringify(response, null, 2));
       return response;
     });
 
     // Handle initialized notification
     this.mcpServer.setNotificationHandler(InitializedNotificationSchema, async notification => {
-      console.log('✅ Received initialized notification');
+      this.serverLog('info', '✅ Received initialized notification');
       this.isInitialized = true;
-      console.log('🎯 MCP Server is now fully initialized and ready');
+      this.serverLog('info', '🎯 MCP Server is now fully initialized and ready');
     });
 
     // Handle list tools
     this.mcpServer.setRequestHandler(ListToolsRequestSchema, async request => {
-      console.log('📋 Handling tools/list request');
+      this.serverLog('info', '📋 Handling tools/list request');
 
       if (!this.isInitialized) {
-        console.warn('⚠️  Tools list requested before initialization complete');
+        this.serverLog('warn', '⚠️  Tools list requested before initialization complete');
       }
 
       const tools = this.toolsIntegrator.getAvailableTools();
-      console.log(`✅ Returning ${tools.length} tools`);
+      this.serverLog('info', `✅ Returning ${tools.length} tools`);
 
       return {
         tools: tools,
@@ -187,7 +214,7 @@ class StandardClaudeMCPServer {
     // Handle tool execution
     this.mcpServer.setRequestHandler(CallToolRequestSchema, async request => {
       const { name: toolName, arguments: args } = request.params;
-      console.log(`🔧 Executing tool: ${toolName}`, JSON.stringify(args, null, 2));
+      this.serverLog('info', `🔧 Executing tool: ${toolName}`, JSON.stringify(args, null, 2));
 
       const startTime = Date.now();
 
@@ -196,7 +223,7 @@ class StandardClaudeMCPServer {
 
         // Agent mode: intercept all tool calls and route through the agent
         if (this.mode === 'agent' && toolName !== 'codexomics_chat') {
-          console.log(`🤖 [Agent Mode] Routing tool '${toolName}' through agent`);
+          this.serverLog('info', `🤖 [Agent Mode] Routing tool '${toolName}' through agent`);
           // In agent mode, we still execute individual tools, but also send
           // logging notifications to inform the MCP client about the execution flow
           this._notifyClient('info', `Executing tool: ${toolName}`);
@@ -214,7 +241,7 @@ class StandardClaudeMCPServer {
         ]);
 
         const executionTime = Date.now() - startTime;
-        console.log(`✅ Tool ${toolName} executed successfully in ${executionTime}ms`);
+        this.serverLog('info', `✅ Tool ${toolName} executed successfully in ${executionTime}ms`);
 
         // In agent mode, notify client about completion
         if (this.mode === 'agent' && toolName !== 'codexomics_chat') {
@@ -230,7 +257,7 @@ class StandardClaudeMCPServer {
           ],
         };
       } catch (error) {
-        console.error(`❌ Tool ${toolName} execution failed:`, error);
+        this.serverLog('error', `❌ Tool ${toolName} execution failed:`, error);
 
         return {
           content: [
@@ -246,7 +273,7 @@ class StandardClaudeMCPServer {
 
     // Handle ping requests
     this.mcpServer.setRequestHandler(PingRequestSchema, async request => {
-      console.log('🏓 Handling ping request');
+      this.serverLog('info', '🏓 Handling ping request');
       return {
         status: 'pong',
         timestamp: Date.now(),
@@ -257,19 +284,19 @@ class StandardClaudeMCPServer {
 
     // Connection event handlers
     this.mcpServer.onclose = () => {
-      console.log('🔌 MCP Server connection closed');
+      this.serverLog('info', '🔌 MCP Server connection closed');
       this.isInitialized = false;
     };
 
     this.mcpServer.onerror = error => {
-      console.error('❌ MCP Server error:', error);
+      this.serverLog('error', '❌ MCP Server error:', error);
     };
 
-    console.log('✅ MCP Server handlers configured');
+    this.serverLog('info', '✅ MCP Server handlers configured');
   }
 
   setupExpressApp() {
-    console.log('🌐 Setting up Express app');
+    this.serverLog('info', '🌐 Setting up Express app');
 
     // Basic middleware
     this.app.use(
@@ -305,9 +332,9 @@ class StandardClaudeMCPServer {
 
     // Request logging
     this.app.use((req, res, next) => {
-      console.log(`📥 ${req.method} ${req.path}`);
+      this.serverLog('info', `📥 ${req.method} ${req.path}`);
       if (req.method === 'POST') {
-        console.log(`📦 POST Headers:`, req.headers);
+        this.serverLog('info', `📦 POST Headers:`, req.headers);
       }
       next();
     });
@@ -375,10 +402,10 @@ class StandardClaudeMCPServer {
     this.app.post('/sse', this.authMiddleware, async (req, res) => {
       // Monitor connection events
       req.on('close', () => {
-        console.log('🔌 POST request connection closed');
+        this.serverLog('info', '🔌 POST request connection closed');
       });
       req.on('error', error => {
-        console.log('❌ POST request error:', error);
+        this.serverLog('info', '❌ POST request error:', error);
       });
 
       await this.handleMCPPostRequest(req, res);
@@ -418,20 +445,20 @@ class StandardClaudeMCPServer {
     this.app.post('/', this.authMiddleware, async (req, res) => {
       // Monitor connection events
       req.on('close', () => {
-        console.log('🔌 POST request connection closed');
+        this.serverLog('info', '🔌 POST request connection closed');
       });
       req.on('error', error => {
-        console.log('❌ POST request error:', error);
+        this.serverLog('info', '❌ POST request error:', error);
       });
 
       await this.handleMCPPostRequest(req, res);
     });
 
-    console.log('✅ Express app configured');
+    this.serverLog('info', '✅ Express app configured');
   }
 
   setupWebSocketServer() {
-    console.log('🔧 Setting up WebSocket server');
+    this.serverLog('info', '🔧 Setting up WebSocket server');
 
     // Create WebSocket server
     this.wsServer = new WebSocket.Server({
@@ -441,7 +468,8 @@ class StandardClaudeMCPServer {
     });
 
     this.wsServer.on('connection', (ws, req) => {
-      console.log('🔗 New WebSocket connection from:', req.socket.remoteAddress);
+      this.serverLog('info', '🔗 New WebSocket connection from:', req.socket.remoteAddress);
+      this.emit('client-connected', { type: 'websocket', address: req.socket.remoteAddress });
 
       // WebSocket connections need to authenticate via first message
       let authenticated = false;
@@ -451,7 +479,7 @@ class StandardClaudeMCPServer {
       // Set authentication timeout
       const authTimeout = setTimeout(() => {
         if (!authenticated) {
-          console.log('❌ WebSocket authentication timeout');
+          this.serverLog('info', '❌ WebSocket authentication timeout');
           ws.send(
             JSON.stringify({
               type: 'error',
@@ -464,7 +492,7 @@ class StandardClaudeMCPServer {
 
       // Track connection
       this.wsConnections.add(ws);
-      console.log(`📊 WebSocket connections: ${this.wsConnections.size}`);
+      this.serverLog('info', `📊 WebSocket connections: ${this.wsConnections.size}`);
 
       // Handle messages
       ws.on('message', async data => {
@@ -523,7 +551,8 @@ class StandardClaudeMCPServer {
                 })
               );
 
-              console.log(`✅ Internal CodeXomics client connected: ${connectionId} (windowId: ${clientWindowId})`);
+              this.serverLog('info', `✅ Internal CodeXomics client connected: ${connectionId} (windowId: ${clientWindowId})`);
+              this.emit('client-connected', { type: 'internal', connectionId, windowId: clientWindowId });
               return;
             }
 
@@ -584,7 +613,7 @@ class StandardClaudeMCPServer {
                 })
               );
 
-              console.log(`✅ WebSocket authenticated: ${connectionId}`);
+              this.serverLog('info', `✅ WebSocket authenticated: ${connectionId}`);
               return;
             } else {
               ws.send(
@@ -604,7 +633,7 @@ class StandardClaudeMCPServer {
           if (authenticated && message.type === 'internal-client') {
             const newWindowId = message.windowId;
             if (newWindowId && ws.windowId !== newWindowId) {
-              console.log(`[MCP Server] Internal client re-identified from ${ws.windowId} to ${newWindowId}`);
+              this.serverLog('info', `[MCP Server] Internal client re-identified from ${ws.windowId} to ${newWindowId}`);
 
               // Remove old mapping if it was pointing to this exact websocket
               if (ws.windowId && this.internalClients.get(ws.windowId) === ws) {
@@ -633,14 +662,14 @@ class StandardClaudeMCPServer {
               this.pendingRequests.delete(requestId);
 
               if (error) {
-                console.log(`❌ Tool execution failed via internal client: ${pending.toolName}`, error);
+                this.serverLog('info', `❌ Tool execution failed via internal client: ${pending.toolName}`, error);
                 pending.reject(new Error(error));
               } else {
-                console.log(`✅ Tool execution completed via internal client: ${pending.toolName}`);
+                this.serverLog('info', `✅ Tool execution completed via internal client: ${pending.toolName}`);
                 pending.resolve(result);
               }
             } else {
-              console.warn(`⚠️ Received tool result for unknown requestId: ${requestId}`);
+              this.serverLog('warn', `⚠️ Received tool result for unknown requestId: ${requestId}`);
             }
             return; // Don't process further
           }
@@ -654,12 +683,12 @@ class StandardClaudeMCPServer {
 
           // Handle genome loaded updates from internal client
           if (message.type === 'genome-loaded') {
-            console.log(`[MCP Server] Client ${ws.windowId || connectionId} loaded genome: ${message.genomeName}`);
+            this.serverLog('info', `[MCP Server] Client ${ws.windowId || connectionId} loaded genome: ${message.genomeName}`);
             ws.genomeName = message.genomeName;
             return;
           }
 
-          console.log('📥 WebSocket message:', message);
+          this.serverLog('info', '📥 WebSocket message:', message);
 
           // Handle MCP-style messages
           const response = await this.handleWebSocketMessage(message, sessionId);
@@ -667,7 +696,7 @@ class StandardClaudeMCPServer {
             ws.send(JSON.stringify(response));
           }
         } catch (error) {
-          console.error('❌ WebSocket message error:', error);
+          this.serverLog('error', '❌ WebSocket message error:', error);
           ws.send(
             JSON.stringify({
               jsonrpc: '2.0',
@@ -684,12 +713,14 @@ class StandardClaudeMCPServer {
 
       // Handle connection close
       ws.on('close', () => {
-        console.log('🔌 WebSocket connection closed');
+        this.serverLog('info', '🔌 WebSocket connection closed');
         this.wsConnections.delete(ws);
+        this.emit('client-disconnected', { type: 'websocket' });
 
         // Clean up internal client reference if this was the internal client
         if (ws.windowId && this.internalClients.get(ws.windowId) === ws) {
-          console.log(`🔌 Internal CodeXomics client disconnected (windowId: ${ws.windowId})`);
+          this.serverLog('info', `🔌 Internal CodeXomics client disconnected (windowId: ${ws.windowId})`);
+          this.emit('client-disconnected', { type: 'internal', windowId: ws.windowId });
           this.internalClients.delete(ws.windowId);
         }
         if (this.internalClient === ws) {
@@ -707,12 +738,12 @@ class StandardClaudeMCPServer {
           this.healthMonitor.unregisterConnection(connectionId);
         }
 
-        console.log(`📊 WebSocket connections: ${this.wsConnections.size}`);
+        this.serverLog('info', `📊 WebSocket connections: ${this.wsConnections.size}`);
       });
 
       // Handle errors
       ws.on('error', error => {
-        console.error('❌ WebSocket error:', error);
+        this.serverLog('error', '❌ WebSocket error:', error);
         this.wsConnections.delete(ws);
 
         if (connectionId) {
@@ -732,10 +763,14 @@ class StandardClaudeMCPServer {
     });
 
     this.wsServer.on('error', error => {
-      console.error('❌ WebSocket server error:', error);
+      this.serverLog('error', '❌ WebSocket server error:', error);
+      // If the error is port conflict, emit a specific event so the caller can handle it
+      if (error.code === 'EADDRINUSE') {
+        this._wsPortError = error;
+      }
     });
 
-    console.log('✅ WebSocket server configured');
+    this.serverLog('info', '✅ WebSocket server configured');
   }
 
   async handleWebSocketMessage(message, sessionId) {
@@ -824,7 +859,7 @@ class StandardClaudeMCPServer {
   }
 
   handleSSEConnection(req, res) {
-    console.log('🔄 New SSE connection request');
+    this.serverLog('info', '🔄 New SSE connection request');
 
     try {
       // Create connection ID
@@ -848,39 +883,39 @@ class StandardClaudeMCPServer {
 
       // Track connection
       this.activeConnections.add(transport);
-      console.log(`📊 Active connections: ${this.activeConnections.size}`);
+      this.serverLog('info', `📊 Active connections: ${this.activeConnections.size}`);
 
       // Connect MCP server to transport
       this.mcpServer.connect(transport);
-      console.log('✅ SSE connection established and MCP server connected');
+      this.serverLog('info', '✅ SSE connection established and MCP server connected');
 
       // Handle connection events
       req.on('close', () => {
-        console.log('🔌 SSE connection closed by client');
+        this.serverLog('info', '🔌 SSE connection closed by client');
         this.activeConnections.delete(transport);
         this.healthMonitor.unregisterConnection(connectionId);
-        console.log(`📊 Active connections: ${this.activeConnections.size}`);
+        this.serverLog('info', `📊 Active connections: ${this.activeConnections.size}`);
       });
 
       req.on('error', error => {
-        console.error('❌ SSE connection error:', error);
+        this.serverLog('error', '❌ SSE connection error:', error);
         this.activeConnections.delete(transport);
         this.healthMonitor.unregisterConnection(connectionId);
       });
 
       res.on('error', error => {
-        console.error('❌ SSE response error:', error);
+        this.serverLog('error', '❌ SSE response error:', error);
         this.activeConnections.delete(transport);
         this.healthMonitor.unregisterConnection(connectionId);
       });
 
       res.on('close', () => {
-        console.log('🔌 SSE response closed');
+        this.serverLog('info', '🔌 SSE response closed');
         this.activeConnections.delete(transport);
         this.healthMonitor.unregisterConnection(connectionId);
       });
     } catch (error) {
-      console.error('❌ Failed to establish SSE connection:', error);
+      this.serverLog('error', '❌ Failed to establish SSE connection:', error);
       if (!res.headersSent) {
         res.status(500).json({
           error: 'Failed to establish SSE connection',
@@ -892,9 +927,9 @@ class StandardClaudeMCPServer {
 
   async handleMCPPostRequest(req, res) {
     const startTime = Date.now();
-    console.log('📮 Received POST request:', req.path);
-    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
-    console.log('🔗 Client connection info:', {
+    this.serverLog('info', '📮 Received POST request:', req.path);
+    this.serverLog('info', '📦 Request body:', JSON.stringify(req.body, null, 2));
+    this.serverLog('info', '🔗 Client connection info:', {
       ip: req.ip,
       userAgent: req.get('User-Agent'),
       connection: req.get('Connection'),
@@ -934,18 +969,18 @@ class StandardClaudeMCPServer {
         });
       }
 
-      console.log(`🔧 Processing MCP method: ${method}`);
+      this.serverLog('info', `🔧 Processing MCP method: ${method}`);
 
       let response;
 
       switch (method) {
         case 'initialize':
-          console.log('🔄 Handling initialize request');
+          this.serverLog('info', '🔄 Handling initialize request');
           this.clientInfo = params?.clientInfo;
           this.protocolVersion = params?.protocolVersion || '2024-11-05';
 
           const tools = this.toolsIntegrator.getAvailableTools();
-          console.log(`📊 Server has ${tools.length} tools available`);
+          this.serverLog('info', `📊 Server has ${tools.length} tools available`);
 
           response = {
             jsonrpc: '2.0',
@@ -968,13 +1003,13 @@ class StandardClaudeMCPServer {
           break;
 
         case 'initialized':
-          console.log('✅ Handling initialized notification');
+          this.serverLog('info', '✅ Handling initialized notification');
           this.isInitialized = true;
           // Notifications don't need responses
           return res.status(204).send();
 
         case 'tools/list':
-          console.log('📋 Handling tools/list request');
+          this.serverLog('info', '📋 Handling tools/list request');
           const availableTools = this.toolsIntegrator.getAvailableTools();
           response = {
             jsonrpc: '2.0',
@@ -986,7 +1021,7 @@ class StandardClaudeMCPServer {
           break;
 
         case 'tools/call':
-          console.log('🔧 Handling tools/call request');
+          this.serverLog('info', '🔧 Handling tools/call request');
           const { name: toolName, arguments: args } = params;
           const startTime = Date.now();
 
@@ -1001,7 +1036,7 @@ class StandardClaudeMCPServer {
             ]);
 
             const executionTime = Date.now() - startTime;
-            console.log(`✅ Tool ${toolName} executed in ${executionTime}ms`);
+            this.serverLog('info', `✅ Tool ${toolName} executed in ${executionTime}ms`);
 
             response = {
               jsonrpc: '2.0',
@@ -1016,7 +1051,7 @@ class StandardClaudeMCPServer {
               id,
             };
           } catch (error) {
-            console.error(`❌ Tool ${toolName} failed:`, error);
+            this.serverLog('error', `❌ Tool ${toolName} failed:`, error);
             response = {
               jsonrpc: '2.0',
               result: {
@@ -1034,7 +1069,7 @@ class StandardClaudeMCPServer {
           break;
 
         case 'ping':
-          console.log('🏓 Handling ping request');
+          this.serverLog('info', '🏓 Handling ping request');
           response = {
             jsonrpc: '2.0',
             result: {
@@ -1048,7 +1083,7 @@ class StandardClaudeMCPServer {
           break;
 
         default:
-          console.log(`❓ Unknown method: ${method}`);
+          this.serverLog('info', `❓ Unknown method: ${method}`);
           response = {
             jsonrpc: '2.0',
             error: {
@@ -1060,8 +1095,8 @@ class StandardClaudeMCPServer {
           break;
       }
 
-      console.log('✅ Sending response:', JSON.stringify(response, null, 2));
-      console.log('📡 Response headers being sent:', res.getHeaders());
+      this.serverLog('info', '✅ Sending response:', JSON.stringify(response, null, 2));
+      this.serverLog('info', '📡 Response headers being sent:', res.getHeaders());
 
       // Ensure response is sent properly
       res.json(response);
@@ -1071,10 +1106,10 @@ class StandardClaudeMCPServer {
         res.flush();
       }
 
-      console.log('📤 Response sent to client');
-      console.log(`⏱️  Total request processing time: ${Date.now() - startTime}ms`);
+      this.serverLog('info', '📤 Response sent to client');
+      this.serverLog('info', `⏱️  Total request processing time: ${Date.now() - startTime}ms`);
     } catch (error) {
-      console.error('❌ POST request error:', error);
+      this.serverLog('error', '❌ POST request error:', error);
       const errorResponse = {
         jsonrpc: '2.0',
         error: {
@@ -1090,12 +1125,12 @@ class StandardClaudeMCPServer {
 
   setupIPCCommunication() {
     if (!this.mainWindow) {
-      console.log('ℹ️  Running in standalone mode (no Electron main window)');
-      console.log('   CodeXomics app can connect via WebSocket at ws://localhost:' + this.wsPort);
+      this.serverLog('info', 'ℹ️  Running in standalone mode (no Electron main window)');
+      this.serverLog('info', '   CodeXomics app can connect via WebSocket at ws://localhost:' + this.wsPort);
       return;
     }
 
-    console.log('🔧 Setting up IPC communication');
+    this.serverLog('info', '🔧 Setting up IPC communication');
 
     const { ipcMain } = require('electron');
 
@@ -1106,11 +1141,11 @@ class StandardClaudeMCPServer {
 
     // Listen for server status updates
     ipcMain.on('internal-mcp-server-ready', () => {
-      console.log('✅ Internal MCP Server is ready');
+      this.serverLog('info', '✅ Internal MCP Server is ready');
     });
 
     ipcMain.on('internal-mcp-server-stopped', () => {
-      console.log('🛑 Internal MCP Server stopped');
+      this.serverLog('info', '🛑 Internal MCP Server stopped');
     });
 
     // Listen for agent progress notifications from renderer process
@@ -1119,7 +1154,7 @@ class StandardClaudeMCPServer {
       this.sendAgentProgress(progress);
     });
 
-    console.log('✅ IPC communication configured');
+    this.serverLog('info', '✅ IPC communication configured');
   }
 
   handleToolResponse(response) {
@@ -1127,7 +1162,7 @@ class StandardClaudeMCPServer {
 
     const pendingRequest = this.pendingRequests.get(requestId);
     if (!pendingRequest) {
-      console.warn(`❓ Received response for unknown request ID: ${requestId}`);
+      this.serverLog('warn', `❓ Received response for unknown request ID: ${requestId}`);
       return;
     }
 
@@ -1230,7 +1265,7 @@ class StandardClaudeMCPServer {
       });
 
       // Send tool execution request via WebSocket to target window's client
-      console.log(
+      this.serverLog('info', 
         `📡 [MCP Server] Sending tool execution via WebSocket: ${toolName} -> ${methodName} (window: ${resolvedWindowId})`
       );
       targetClient.send(
@@ -1306,7 +1341,7 @@ class StandardClaudeMCPServer {
       });
 
       // Send tool execution request to renderer process via IPC
-      console.log(
+      this.serverLog('info', 
         `📡 [MCP Server] Sending tool execution via Electron IPC: ${toolName} -> ${methodName} (window: ${targetWindowId})`
       );
       targetWindow.webContents.send('mcp-tool-call', {
@@ -1341,7 +1376,7 @@ class StandardClaudeMCPServer {
       });
 
       // Send execution request to bridge
-      console.log(`📡 [MCP Server] Sending tool execution via Bridge: ${toolName}`);
+      this.serverLog('info', `📡 [MCP Server] Sending tool execution via Bridge: ${toolName}`);
 
       // The bridge client will poll for pending requests
       bridge.lastActivity = Date.now();
@@ -1370,7 +1405,7 @@ class StandardClaudeMCPServer {
 
     this.clientBridges.set(bridgeId, bridge);
 
-    console.log(`✅ Client bridge registered: ${bridgeId}`);
+    this.serverLog('info', `✅ Client bridge registered: ${bridgeId}`);
 
     res.json({
       success: true,
@@ -1383,7 +1418,7 @@ class StandardClaudeMCPServer {
     const { bridgeId } = req.body;
 
     if (this.clientBridges.delete(bridgeId)) {
-      console.log(`🔌 Client bridge unregistered: ${bridgeId}`);
+      this.serverLog('info', `🔌 Client bridge unregistered: ${bridgeId}`);
 
       res.json({
         success: true,
@@ -1447,36 +1482,63 @@ class StandardClaudeMCPServer {
 
   setupErrorHandling() {
     process.on('SIGINT', async () => {
-      console.log('🛑 Received SIGINT, shutting down gracefully');
+      this.serverLog('info', '🛑 Received SIGINT, shutting down gracefully');
       await this.stop();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
-      console.log('🛑 Received SIGTERM, shutting down gracefully');
+      this.serverLog('info', '🛑 Received SIGTERM, shutting down gracefully');
       await this.stop();
       process.exit(0);
     });
 
     process.on('uncaughtException', error => {
-      console.error('💥 Uncaught exception:', error);
-      process.exit(1);
+      // Don't crash on EADDRINUSE - it will be caught by the start() method
+      if (error.code === 'EADDRINUSE') {
+        this.serverLog('error', `❌ Port already in use: ${error.port || 'unknown'} (${error.syscall || 'unknown'})`);
+        return;
+      }
+      this.serverLog('error', '💥 Uncaught exception:', error);
+      // Only exit in standalone mode
+      if (!this.mainWindow) {
+        process.exit(1);
+      }
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      console.error('💥 Unhandled rejection at:', promise, 'reason:', reason);
-      process.exit(1);
+      this.serverLog('error', '💥 Unhandled rejection at:', promise, 'reason:', reason);
+      // Only exit in standalone mode
+      if (!this.mainWindow) {
+        process.exit(1);
+      }
     });
   }
 
   async start() {
-    console.log('🚀 Starting Standard Claude MCP Server');
+    this.serverLog('info', '🚀 Starting Standard Claude MCP Server');
+
+    // Check if WebSocket server failed to bind during construction
+    if (this._wsPortError) {
+      const wsError = this._wsPortError;
+      this._wsPortError = null;
+      const errMsg = wsError.code === 'EADDRINUSE'
+        ? `WebSocket port ${this.wsPort} is already in use`
+        : `Failed to bind WebSocket server on port ${this.wsPort}: ${wsError.message}`;
+      this.serverLog('error', `❌ ${errMsg}`);
+      this.emit('start-failed', { type: 'ws', port: this.wsPort, error: errMsg });
+      throw new Error(errMsg);
+    }
 
     try {
       await new Promise((resolve, reject) => {
         this.httpServer = this.app.listen(this.httpPort, error => {
           if (error) {
-            reject(new Error(`Failed to start HTTP server on port ${this.httpPort}: ${error.message}`));
+            if (error.code === 'EADDRINUSE') {
+              reject(new Error(`HTTP port ${this.httpPort} is already in use`));
+            } else {
+              reject(new Error(`Failed to start HTTP server on port ${this.httpPort}: ${error.message}`));
+            }
             return;
           }
           resolve();
@@ -1488,23 +1550,38 @@ class StandardClaudeMCPServer {
       this.httpServer.headersTimeout = 62000; // 62 seconds
       this.httpServer.timeout = 120000; // 2 minutes
 
-      console.log('✅ Standard Claude MCP Server started successfully');
-      console.log(`📡 HTTP Server: http://localhost:${this.httpPort}`);
-      console.log(`🌐 SSE Endpoint: http://localhost:${this.httpPort}/sse`);
-      console.log(`📋 Server Info: http://localhost:${this.httpPort}/mcp`);
-      console.log(`🔗 WebSocket Server: ws://localhost:${this.wsPort}`);
-      console.log(`🔧 IPC Communication: ${!!this.mainWindow}`);
-      console.log('');
-      console.log('🎯 Ready for MCP Client connections!');
-      console.log('');
+      this.serverLog('info', '✅ Standard Claude MCP Server started successfully');
+      this.serverLog('info', `📡 HTTP Server: http://localhost:${this.httpPort}`);
+      this.serverLog('info', `🌐 SSE Endpoint: http://localhost:${this.httpPort}/sse`);
+      this.serverLog('info', `📋 Server Info: http://localhost:${this.httpPort}/mcp`);
+      this.serverLog('info', `🔗 WebSocket Server: ws://localhost:${this.wsPort}`);
+      this.serverLog('info', `🔧 IPC Communication: ${!!this.mainWindow}`);
+      this.serverLog('info', '');
+      this.serverLog('info', '🎯 Ready for MCP Client connections!');
+      this.serverLog('info', '');
+
+      // Emit started event
+      this.emit('started', { httpPort: this.httpPort, wsPort: this.wsPort });
     } catch (error) {
-      console.error('💥 Failed to start server:', error.message);
-      process.exit(1);
+      this.serverLog('error', `💥 Failed to start server: ${error.message}`);
+
+      // Emit start-failed event so the main process can handle it gracefully
+      const portType = error.message.includes('HTTP') ? 'http' : 'ws';
+      const port = portType === 'http' ? this.httpPort : this.wsPort;
+      this.emit('start-failed', { type: portType, port, error: error.message });
+
+      // In standalone mode (no mainWindow), exit with error
+      // In-app mode, throw the error so the caller can handle it
+      if (!this.mainWindow) {
+        process.exit(1);
+      } else {
+        throw error;
+      }
     }
   }
 
   async stop() {
-    console.log('🛑 Stopping Standard Claude MCP Server');
+    this.serverLog('info', '🛑 Stopping Standard Claude MCP Server');
 
     try {
       // Cleanup health monitor
@@ -1556,9 +1633,12 @@ class StandardClaudeMCPServer {
       // Clear active connections
       this.activeConnections.clear();
 
-      console.log('✅ Server stopped successfully');
+      this.serverLog('info', '✅ Server stopped successfully');
+
+      // Emit stopped event
+      this.emit('stopped');
     } catch (error) {
-      console.error('❌ Error stopping server:', error.message);
+      this.serverLog('error', '❌ Error stopping server:', error.message);
     }
   }
 
@@ -1626,7 +1706,7 @@ class StandardClaudeMCPServer {
     }
     const previousMode = this.mode;
     this.mode = mode;
-    console.log(`🔄 MCP Server mode changed: ${previousMode} → ${mode}`);
+    this.serverLog('info', `🔄 MCP Server mode changed: ${previousMode} → ${mode}`);
 
     // Notify client about mode change
     this._notifyClient('notice', `Server mode changed to '${mode}'`, { previousMode, newMode: mode });
@@ -1660,19 +1740,19 @@ class StandardClaudeMCPServer {
   // Multi-window support: Set reference to the authoritative windowRegistry from main.js
   setMainWindowRegistry(registry) {
     this.mainWindowRegistry = registry;
-    console.log(`📋 [MCP Server] Linked to main window registry (${registry.size} windows)`);
+    this.serverLog('info', `📋 [MCP Server] Linked to main window registry (${registry.size} windows)`);
     // Log all windows in the registry
     for (const [windowId, entry] of registry.entries()) {
       const win = entry.window || entry;
-      console.log(`📋 [MCP Server] Registry entry: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`);
+      this.serverLog('info', `📋 [MCP Server] Registry entry: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`);
     }
   }
 
   // Multi-window support: Register a BrowserWindow for IPC routing
   registerWindow(windowId, browserWindow) {
     this.windowRegistry.set(windowId, { window: browserWindow, genomeName: null });
-    console.log(`📋 [MCP Server] Registered window: ${windowId} (total: ${this.windowRegistry.size})`);
-    console.log(`📋 [MCP Server] Window isDestroyed: ${browserWindow.isDestroyed()}, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}`);
+    this.serverLog('info', `📋 [MCP Server] Registered window: ${windowId} (total: ${this.windowRegistry.size})`);
+    this.serverLog('info', `📋 [MCP Server] Window isDestroyed: ${browserWindow.isDestroyed()}, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}`);
   }
 
   // Multi-window support: Unregister a BrowserWindow
@@ -1682,7 +1762,7 @@ class StandardClaudeMCPServer {
     if (this.internalClients.has(windowId)) {
       this.internalClients.delete(windowId);
     }
-    console.log(`📋 [MCP Server] Unregistered window: ${windowId} (total: ${this.windowRegistry.size})`);
+    this.serverLog('info', `📋 [MCP Server] Unregistered window: ${windowId} (total: ${this.windowRegistry.size})`);
   }
 
   // Multi-window support: Get the WebSocket client for the currently focused window
@@ -1705,12 +1785,12 @@ class StandardClaudeMCPServer {
   listWindows() {
     // Use the authoritative main.js registry if available, fall back to local copy
     const registry = this.mainWindowRegistry || this.windowRegistry;
-    console.log(`[MCP Server] listWindows called, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}, windowRegistry: ${this.windowRegistry.size} entries, using: ${this.mainWindowRegistry ? 'mainWindowRegistry' : 'windowRegistry'}`);
-    console.log(`[MCP Server] Registry size: ${registry.size}`);
+    this.serverLog('info', `[MCP Server] listWindows called, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}, windowRegistry: ${this.windowRegistry.size} entries, using: ${this.mainWindowRegistry ? 'mainWindowRegistry' : 'windowRegistry'}`);
+    this.serverLog('info', `[MCP Server] Registry size: ${registry.size}`);
     const windows = [];
     for (const [windowId, entry] of registry.entries()) {
       const win = entry.window || entry;
-      console.log(`[MCP Server] Checking window: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`);
+      this.serverLog('info', `[MCP Server] Checking window: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`);
       if (!win || win.isDestroyed()) continue;
       windows.push({
         windowId,
@@ -1723,7 +1803,7 @@ class StandardClaudeMCPServer {
 
     // Fall back to standalone WebSocket clients if no registries are available or populated
     if (windows.length === 0 && this.internalClients.size > 0) {
-      console.log(`[MCP Server] Using fallback: listing ${this.internalClients.size} standalone internal clients as windows.`);
+      this.serverLog('info', `[MCP Server] Using fallback: listing ${this.internalClients.size} standalone internal clients as windows.`);
       for (const [windowId, ws] of this.internalClients.entries()) {
         windows.push({
           windowId,
@@ -1735,7 +1815,7 @@ class StandardClaudeMCPServer {
       }
     }
 
-    console.log(`[MCP Server] Returning ${windows.length} windows`);
+    this.serverLog('info', `[MCP Server] Returning ${windows.length} windows`);
     return windows;
   }
 
@@ -1769,14 +1849,14 @@ if (require.main === module) {
     if (['tools', 'agent'].includes(mode)) {
       process.env.CODEXOMICS_MCP_MODE = mode;
     } else {
-      console.error(`⚠️  Invalid mode '${mode}'. Use 'tools' or 'agent'. Defaulting to 'tools'.`);
+      this.serverLog('error', `⚠️  Invalid mode '${mode}'. Use 'tools' or 'agent'. Defaulting to 'tools'.`);
     }
   }
 
   const server = new StandardClaudeMCPServer();
-  console.log(`🚀 Starting MCP Server in '${server.mode}' mode`);
+  this.serverLog('info', `🚀 Starting MCP Server in '${server.mode}' mode`);
   server.start().catch(error => {
-    console.error('💥 Startup error:', error.message);
+    this.serverLog('error', '💥 Startup error:', error.message);
     process.exit(1);
   });
 }
