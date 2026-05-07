@@ -1606,21 +1606,6 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Search UniProt Database',
-          accelerator: 'CmdOrCtrl+Shift+U',
-          click: () => {
-            createUniProtWindow();
-          },
-        },
-        {
-          label: 'Search NCBI Database',
-          accelerator: 'CmdOrCtrl+Shift+N',
-          click: () => {
-            createNCBIWindow();
-          },
-        },
-        { type: 'separator' },
-        {
           label: 'Copy',
           accelerator: 'CmdOrCtrl+C',
           click: () => {
@@ -1913,17 +1898,17 @@ function createMenu() {
             sendToCurrentMainWindow('configure-llms');
           },
         },
-        {
-          label: 'Multi-Agent Settings',
-          click: () => {
-            sendToCurrentMainWindow('multi-agent-settings');
-          },
-        },
         { type: 'separator' },
         {
           label: 'ChatBox Settings',
           click: () => {
             sendToCurrentMainWindow('chatbox-settings');
+          },
+        },
+        {
+          label: 'Multi-Agent Settings',
+          click: () => {
+            sendToCurrentMainWindow('multi-agent-settings');
           },
         },
         { type: 'separator' },
