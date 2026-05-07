@@ -859,7 +859,7 @@ class BenchmarkUI {
 
             <!-- Test Selection Modal -->
             <div id="testSelectionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 99999999; align-items: center; justify-content: center;">
-                <div style="background: white; border-radius: 12px; width: 80%; max-width: 800px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3); pointer-events: auto;">
+                <div class="modal-content resizable" style="background: white; border-radius: 12px; width: 80%; max-width: 800px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3); pointer-events: auto; position: relative;">
                     <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
                         <h2 style="margin: 0; font-size: 20px; color: #333;" id="testSelectionTitle">Select Tests</h2>
                         <button id="closeTestSelectionBtn" type="button" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
@@ -876,6 +876,16 @@ class BenchmarkUI {
                     <div style="padding: 20px; border-top: 1px solid #eee; text-align: right; background: #f9f9f9; border-radius: 0 0 12px 12px;">
                         <button id="saveTestSelectionBtn" type="button" class="btn btn-success" style="margin: 0;">Save Selection</button>
                     </div>
+                    
+                    <!-- Resize handles -->
+                    <div class="resize-handle resize-handle-n"></div>
+                    <div class="resize-handle resize-handle-s"></div>
+                    <div class="resize-handle resize-handle-e"></div>
+                    <div class="resize-handle resize-handle-w"></div>
+                    <div class="resize-handle resize-handle-ne"></div>
+                    <div class="resize-handle resize-handle-nw"></div>
+                    <div class="resize-handle resize-handle-se"></div>
+                    <div class="resize-handle resize-handle-sw"></div>
                 </div>
             </div>
         `;
@@ -974,6 +984,12 @@ class BenchmarkUI {
 
     // Setup Test Selection modal handlers
     this.setupTestSelectionHandlers();
+
+    // Make Test Selection Modal resizable
+    if (window.resizableModalManager) {
+      window.resizableModalManager.makeResizable('#testSelectionModal');
+      console.log('📐 Test Selection Modal registered with ResizableModalManager');
+    }
 
     // Mark handlers as setup to prevent duplicates
     this.handlersSetup = true;

@@ -303,6 +303,234 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         timeout: 60000,
         evaluator: this.evaluateMultipleTabOpeningCall.bind(this),
       },
+
+      // TEST 5: SEQUENCE ANALYSIS - Automatic + Complex
+      {
+        id: 'analysis_auto_01',
+        name: 'Gene Retrieval and Translation',
+        type: 'workflow',
+        category: 'sequence_analysis',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: "Search for the gene 'dnaA', get its sequence, and translate it to a protein sequence.",
+        expectedResult: {
+          tool_sequence: ['find_gene_by_name', 'get_sequence', 'translate_sequence'],
+          parameters: [
+            { geneName: 'dnaA' },
+            { chromosome: '<any>', start: '<any>', end: '<any>' },
+            { sequence: '<any>' }
+          ]
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      },
+
+      // TEST 6: EXPORT WORKFLOW - Automatic + Complex
+      {
+        id: 'analysis_auto_02',
+        name: 'GC Content and Export',
+        type: 'workflow',
+        category: 'sequence_analysis',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: `Calculate the GC content for the current view region and then export the region features to a BED file named '${this.buildFilePath('region_features.bed')}'.`,
+        expectedResult: {
+          tool_sequence: ['calc_region_gc', 'export_bed_format'],
+          parameters: [
+            {},
+            { filePath: this.buildFilePath('region_features.bed') }
+          ]
+        },
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 60000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      },
+
+      // TEST 7: ADVANCED SEQUENCE ANALYSIS - Automatic + Complex
+      {
+        id: 'analysis_auto_04',
+        name: 'Sequence Metrics and Translation',
+        type: 'workflow',
+        category: 'sequence_analysis',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: "Calculate the sequence entropy for the current region, translate the DNA into a protein sequence, and then compute the molecular weight of the resulting protein.",
+        expectedResult: {
+          tool_sequence: ['calculate_entropy', 'translate_dna', 'calculate_molecular_weight'],
+          parameters: [
+            {},
+            { sequence: '<any>' },
+            { sequence: '<any>' }
+          ]
+        },
+        maxScore: 15,
+        bonusScore: 5,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      },
+
+      // TEST 8: UI WORKFLOW - Automatic + Complex
+      {
+        id: 'ui_auto_02',
+        name: 'Track Configuration and View State',
+        type: 'workflow',
+        category: 'browserActions',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: "Hide the 'genes' track, update the 'variants' track color to red, and save this view state as 'VariantFocus'.",
+        expectedResult: {
+          tool_sequence: ['toggle_track', 'set_track_settings', 'save_view_state'],
+          parameters: [
+            { trackId: 'genes', visible: false },
+            { trackId: 'variants', settings: { color: 'red' } },
+            { stateName: 'VariantFocus' }
+          ]
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 60000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      },
+
+      // TEST 9: PROTEIN WORKFLOW - Automatic + Complex
+      {
+        id: 'protein_auto_01',
+        name: 'PDB Search and Viewer',
+        type: 'workflow',
+        category: 'proteinStructure',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: "Search the PDB database for 'DNA polymerase', get the details for the first matching PDB ID, and open it in the protein viewer.",
+        expectedResult: {
+          tool_sequence: ['search_pdb_structures', 'get_pdb_details', 'open_protein_viewer'],
+          parameters: [
+            { query: 'DNA polymerase' },
+            { pdbId: '<any>' },
+            { pdbId: '<any>' }
+          ]
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      },
+
+      // TEST 10: GENOME STATS - Automatic + Complex
+      {
+        id: 'analysis_auto_03',
+        name: 'Genome Statistics Suite',
+        type: 'workflow',
+        category: 'sequence_analysis',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: "Calculate sequence statistics for the current genome, perform a genome-wide codon usage analysis, and compute the overall genome GC content.",
+        expectedResult: {
+          tool_sequence: ['sequence_statistics', 'genome_codon_usage_analysis', 'compute_gc'],
+          parameters: [
+            {},
+            {},
+            {}
+          ]
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      },
+
+      // TEST 11: ANNOTATION WORKFLOW - Automatic + Complex
+      {
+        id: 'annotation_auto_01',
+        name: 'Promoter Prediction and Annotation',
+        type: 'workflow',
+        category: 'annotation',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: "Find the gene 'lacZ', predict its promoter in the upstream region, and create a new annotation for this promoter.",
+        expectedResult: {
+          tool_sequence: ['find_gene_by_name', 'predict_promoter', 'create_annotation'],
+          parameters: [
+            { geneName: 'lacZ' },
+            { sequence: '<any>' },
+            { type: 'promoter', name: 'lacZ_promoter' }
+          ]
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      },
+
+      // TEST 12: SYSTEM WORKFLOW - Automatic + Complex
+      {
+        id: 'env_auto_01',
+        name: 'Environment Setup and Load',
+        type: 'workflow',
+        category: 'system',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: `Set the working directory to '${this.buildFilePath('project')}', download the file from 'http://example.com/data.gbk', and load it as a genome file.`,
+        expectedResult: {
+          tool_sequence: ['set_working_directory', 'download_internet_file', 'load_genome_file'],
+          parameters: [
+            { directory: this.buildFilePath('project') },
+            { url: 'http://example.com/data.gbk' },
+            { filePath: this.buildFilePath('project/data.gbk') }
+          ]
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      },
+
+      // TEST 13: PROTEIN WORKFLOW - Automatic + Complex
+      {
+        id: 'protein_auto_02',
+        name: 'UniProt to AlphaFold Workflow',
+        type: 'workflow',
+        category: 'proteinStructure',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: "Search UniProt for 'insulin receptor', identify the AlphaFold structure ID from the best match, and fetch the AlphaFold structure.",
+        expectedResult: {
+          tool_sequence: ['search_uniprot_database', 'fetch_alphafold_structure'],
+          parameters: [
+            { query: 'insulin receptor' },
+            { uniprotId: '<any>' }
+          ]
+        },
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      },
+
+      // TEST 14: SYSTEM WORKFLOW - Automatic + Complex
+      {
+        id: 'sys_auto_01',
+        name: 'Schema Retrieval and UI Pause',
+        type: 'workflow',
+        category: 'system',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: "Get the track settings schema, list all available tools in the system, and then pause the benchmark.",
+        expectedResult: {
+          tool_sequence: ['get_track_settings_schema', 'list_available_tools', 'pause_benchmark'],
+          parameters: [
+            {},
+            {},
+            {}
+          ]
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 60000,
+        evaluator: this.evaluateWorkflowCall.bind(this)
+      }
     ];
   }
 

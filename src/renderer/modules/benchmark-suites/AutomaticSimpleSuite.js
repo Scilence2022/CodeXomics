@@ -1088,103 +1088,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
  
-
-      // PROTEIN STRUCTURE TASKS - Automatic + Simple
-      // {
-      //   id: 'protein_auto_01',
-      //   name: 'Fetch AlphaFold Structure',
-      //   type: 'function_call',
-      //   category: 'protein_structure',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Fetch the AlphaFold structure prediction for UniProt ID P00722.',
-      //   expectedResult: {
-      //     tool_name: 'fetch_alphafold_structure',
-      //     parameters: {
-      //       uniprotId: 'P00722',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 60000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'protein_auto_02',
-      //   name: 'Get UniProt Entry',
-      //   type: 'function_call',
-      //   category: 'protein_structure',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Get the UniProt entry details for protein P00722.',
-      //   expectedResult: {
-      //     tool_name: 'get_uniprot_entry',
-      //     parameters: {
-      //       accession: 'P00722',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 60000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'protein_auto_03',
-      //   name: 'Open AlphaFold Viewer',
-      //   type: 'function_call',
-      //   category: 'protein_structure',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Open the AlphaFold 3D structure viewer for gene lacZ.',
-      //   expectedResult: {
-      //     tool_name: 'open_protein_viewer',
-      //     parameters: {
-      //       geneName: 'lacZ',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 60000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-
-      // GENE/REGION ANALYSIS TASKS - Automatic + Simple
-      // {
-      //   id: 'gene_auto_01',
-      //   name: 'Get Gene Details',
-      //   type: 'function_call',
-      //   category: 'gene_analysis',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Get detailed information about the lacZ gene.',
-      //   expectedResult: {
-      //     tool_name: 'get_gene_details',
-      //     parameters: {
-      //       geneName: 'lacZ',
-      //     },
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
-      // {
-      //   id: 'gene_auto_02',
-      //   name: 'Get Operons',
-      //   type: 'function_call',
-      //   category: 'gene_analysis',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Get operon information for the current genome.',
-      //   expectedResult: {
-      //     tool_name: 'get_operons',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
       {
         id: 'gene_auto_03',
         name: 'Get Nearby Features',
@@ -1205,23 +1108,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      // {
-      //   id: 'gene_auto_04',
-      //   name: 'Find Intergenic Regions',
-      //   type: 'function_call',
-      //   category: 'gene_analysis',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Find intergenic regions in the current genomic view.',
-      //   expectedResult: {
-      //     tool_name: 'find_intergenic_regions',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+   
 
       // SEQUENCE ANALYSIS EXTENSION TASKS - Automatic + Simple
       {
@@ -1243,23 +1130,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      // {
-      //   id: 'seq_auto_04',
-      //   name: 'Predict Promoter Regions',
-      //   type: 'function_call',
-      //   category: 'sequence',
-      //   complexity: 'simple',
-      //   evaluation: 'automatic',
-      //   instruction: 'Predict promoter regions in the current genomic view.',
-      //   expectedResult: {
-      //     tool_name: 'predict_promoter',
-      //     parameters: {},
-      //   },
-      //   maxScore: 5,
-      //   bonusScore: 1,
-      //   timeout: 30000,
-      //   evaluator: this.evaluateBasicFunctionCall.bind(this),
-      // },
+    
 
       // ZOOM/NAVIGATION EXTENSION TASKS - Automatic + Simple
       {
@@ -1429,97 +1300,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
  
-      {
-        id: 'blast_auto_01',
-        name: 'BLAST Search Local',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Perform a local BLAST search with the sequence ATGAAAGCGCTGAAAGCGCTG.',
-        expectedResult: {
-          tool_name: 'blast_search_local',
-          parameters: {
-            sequence: 'ATGAAAGCGCTGAAAGCGCTG',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 60000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'blast_auto_02',
-        name: 'Create BLAST Database',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Create a BLAST database from the current genome.',
-        expectedResult: {
-          tool_name: 'blast_create_quick_db_for_current_genome',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 60000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'blast_auto_03',
-        name: 'List BLAST Databases',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'List all available BLAST databases.',
-        expectedResult: {
-          tool_name: 'blast_list_databases',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'blast_auto_04',
-        name: 'Filter BLAST Results',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Filter BLAST results to show only hits with identity above 90%.',
-        expectedResult: {
-          tool_name: 'blast_filter_results',
-          parameters: {
-            minIdentity: 90,
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'blast_auto_05',
-        name: 'BLAST Get Installation Status',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Check if BLAST is installed and available on the system.',
-        expectedResult: {
-          tool_name: 'blast_get_installation_status',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
 
- 
 
       // PRIMER DESIGN TASKS - Automatic + Simple
       {
@@ -1761,9 +1542,101 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
 
  
 
+      {
+        id: 'blast_auto_01',
+        name: 'BLAST Search Local',
+        type: 'function_call',
+        category: 'blast',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Perform a local BLAST search with the sequence ATGAAAGCGCTGAAAGCGCTG.',
+        expectedResult: {
+          tool_name: 'blast_search_local',
+          parameters: {
+            sequence: 'ATGAAAGCGCTGAAAGCGCTG',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 60000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'blast_auto_02',
+        name: 'Create BLAST Database',
+        type: 'function_call',
+        category: 'blast',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Create a BLAST database from the current genome.',
+        expectedResult: {
+          tool_name: 'blast_create_quick_db_for_current_genome',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 60000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'blast_auto_03',
+        name: 'List BLAST Databases',
+        type: 'function_call',
+        category: 'blast',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'List all available BLAST databases.',
+        expectedResult: {
+          tool_name: 'blast_list_databases',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'blast_auto_04',
+        name: 'Filter BLAST Results',
+        type: 'function_call',
+        category: 'blast',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Filter BLAST results to show only hits with identity above 90%.',
+        expectedResult: {
+          tool_name: 'blast_filter_results',
+          parameters: {
+            minIdentity: 90,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'blast_auto_05',
+        name: 'BLAST Get Installation Status',
+        type: 'function_call',
+        category: 'blast',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Check if BLAST is installed and available on the system.',
+        expectedResult: {
+          tool_name: 'blast_get_installation_status',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+
+       
+
       // BLAST ADDITIONAL TASKS - Automatic + Simple
       {
-        id: 'blast_auto_07',
+        id: 'blast_auto_06',
         name: 'BLAST Database Info',
         type: 'function_call',
         category: 'blast',
