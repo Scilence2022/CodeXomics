@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * IPC Handlers Module for CodeXomics
  * 

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * BlastManager - Handles BLAST search functionality
  * Supports NCBI remote BLAST searches with comprehensive parameter control

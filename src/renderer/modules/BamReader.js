@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * BamReader - Enhanced BAM file parser using @gmod/bam library
  * Directly uses @gmod/bam API for optimal performance and compatibility

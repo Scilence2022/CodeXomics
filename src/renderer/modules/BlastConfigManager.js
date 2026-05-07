@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * BlastConfigManager - Handles BLAST+ tools configuration
  * Provides auto-detection and manual configuration of BLAST+ installation

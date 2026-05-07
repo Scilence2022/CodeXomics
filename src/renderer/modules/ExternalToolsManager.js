@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * ExternalToolsManager - Manages external tools configuration and integration
  * Handles both built-in external tools (Deep Gene Research, CHOPCHOP) and custom tools

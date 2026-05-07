@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * FileManager - Handles all file operations including loading, parsing, and file type management
  */

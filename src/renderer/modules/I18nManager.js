@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * I18nManager.js - Internationalization Manager for Renderer Process
  *

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * ActionManager - Unified sequence operations management system
  *

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * BLAST Function Tools - AI-Integrated BLAST Functionality
  * Provides comprehensive BLAST search, database management, and analysis tools

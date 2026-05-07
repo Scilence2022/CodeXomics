@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * LLM Benchmark Framework - Comprehensive system for testing LLM instruction following capabilities
  */

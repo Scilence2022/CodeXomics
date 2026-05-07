@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Benchmark UI - User interface for LLM benchmark system
  */

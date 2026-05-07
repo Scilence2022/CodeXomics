@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * GeneAttachmentsManager - Manages file attachments for genes
  * Allows users to upload, view, and manage files (PDF, Markdown, images, etc.) for each gene
