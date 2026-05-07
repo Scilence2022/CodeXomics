@@ -37,8 +37,23 @@ This document is intended for AI coding assistants (e.g., GitHub Copilot, Cursor
   - `ActivationEventsService.js` – Lazy extension activation based on events.
   - `ExtensionManifest.js` – Manifest validation for extension packages.
   - `Disposable.js` – Base class for lifecycle-managed resources.
+  - `ServiceContainer.js` – Lightweight DI container with lazy singleton caching and cycle detection (P1-8).
+  - `ErrorHandler.js` – Centralized error handling with fatal/error/warning/info levels (P1-10).
+  - `NotificationService.js` – Non-blocking toast notifications replacing alert() (P1-10).
+- `src/renderer/modules/security/` – Security infrastructure.
+  - `SanitizeService.js` – DOMPurify-based HTML sanitization for safe innerHTML operations (P0-1).
+- `src/renderer/modules/tracks/` – Track rendering infrastructure (P2 extraction).
+  - `GeneShapeCreators.js` – 24 static SVG gene shape methods extracted from TrackRenderer.js (P2-13).
+  - `CanvasRendererBase.js` – Abstract base class eliminating ~300 lines of duplicated boilerplate across 3 canvas renderers (P2-17).
 - `src/renderer/modules/export/` – Unified export functionality.
   - `GenBankExporter.js` – Consolidated GenBank format export (replaces duplicate code across modules).
+- `src/main/` – Extracted main process modules from main.js (P1-7, 10,584→407 lines).
+  - `window-registry.js` – Window ID management, registry, cleanup.
+  - `menu-builder.js` – 5 menu functions (createMenu, createCircosPlotterMenu, etc.).
+  - `window-management.js` – 21 window creation + 9 layout functions.
+  - `mcp-lifecycle.js` – MCP server start/stop/settings.
+  - `ipc-handlers.js` – 105 ipcMain.handle + 33 ipcMain.on handlers.
+  - `project-ipc.js` – ~38 Project Manager IPC handlers.
 - `docs/` – Markdown documentation managed by MkDocs.
 
 ## 3. Core Architectural Patterns
