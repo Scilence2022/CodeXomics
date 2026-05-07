@@ -134,6 +134,8 @@ function createWindow() {
     console.error(`📋 [createMainWindow] Window ${windowId} render process gone: ${details.reason}`);
     cleanupWindowRegistration(windowId);
   });
+
+  return mainWindow;
 }
 
 // Helper function to get the current active main window
