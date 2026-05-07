@@ -1,5 +1,8 @@
 {
-  "extends": ["eslint:recommended", "google"],
+  "extends": [
+    "eslint:recommended",
+    "google"
+  ],
   "env": {
     "browser": true,
     "node": true,
@@ -19,7 +22,48 @@
       {
         "code": 120
       }
-    ]
+    ],
+    "no-console": "warn",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-inner-declarations": "error",
+    "no-constant-binary-expression": "error",
+    "no-duplicate-imports": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "warn",
+    "no-unmodified-loop-condition": "warn",
+    "no-unreachable-loop": "error",
+    "prefer-const": "warn",
+    "eqeqeq": ["warn", "smart"],
+    "curly": ["warn", "multi-line"],
+    "no-var": "warn",
+    "no-throw-literal": "error"
   },
-  "ignorePatterns": ["node_modules/", "dist/", "build/", "docs/", "scripts/marketplace-data/"]
+  "overrides": [
+    {
+      "files": ["src/main.js"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["test/**/*.js"],
+      "env": {
+        "jest": true
+      },
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "build/",
+    "docs/",
+    "site/",
+    "scripts/marketplace-data/",
+    "packages/"
+  ]
 }

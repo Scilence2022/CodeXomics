@@ -1183,7 +1183,9 @@ class PluginMarketplace {
           // Create a temporary script element to load the plugin code
           const pluginCode = downloadResult.data['index.js'];
 
-          // Use Function constructor to evaluate the module code in a controlled context
+          // SECURITY NOTE: Loading third-party plugin code is inherently risky.
+          // Using new Function instead of eval for slightly better control.
+          // TODO (P2): Move to iframe sandbox or Web Worker for full isolation.
           // Create a module-like environment
           const moduleExports = {};
           const moduleContext = {
@@ -1194,23 +1196,23 @@ class PluginMarketplace {
             window: window,
           };
 
-          // Wrap the code to make it work in our context
-          const wrappedCode = `
-                        (function(module, exports, console, document, window) {
-                            ${pluginCode}
-                            return module.exports;
-                        })
-                    `;
+          try {
+            // Use new Function instead of eval — while not fully sandboxed,
+            // it avoids eval's scope access and is slightly more controlled
+            const pluginFactory = new Function(
+              'module', 'exports', 'console', 'document', 'window',
+              pluginCode + '\nreturn module.exports;'
+            );
 
-          const PluginClass = eval(wrappedCode)(
-            moduleContext.module,
-            moduleContext.exports,
-            moduleContext.console,
-            moduleContext.document,
-            moduleContext.window
-          );
+            const PluginClass = pluginFactory(
+              moduleContext.module,
+              moduleContext.exports,
+              moduleContext.console,
+              moduleContext.document,
+              moduleContext.window
+            );
 
-          console.log(`✅ Plugin class loaded for ${downloadResult.pluginId}`);
+            console.log(`✅ Plugin class loaded for ${downloadResult.pluginId}`);
 
           // Create a mock ExtensionContext to capture registrations
           const mockContext = {
@@ -1257,11 +1259,11 @@ class PluginMarketplace {
             hasExecutor: !!pluginDefinition.executor,
             supportedDataTypes: pluginDefinition.supportedDataTypes,
           });
-        } catch (loadError) {
-          console.error(`❌ Failed to load plugin code for ${downloadResult.pluginId}:`, loadError);
-          // Fall back to manifest-only registration
-          pluginDefinition = downloadResult.manifest;
-        }
+          } catch (pluginLoadError) {
+            console.error(`❌ Failed to load plugin code safely for ${downloadResult.pluginId}:`, pluginLoadError);
+            // Fall back to manifest-only registration
+            pluginDefinition = downloadResult.manifest;
+          }
       } else {
         // No code available, use manifest only
         pluginDefinition = downloadResult.manifest;

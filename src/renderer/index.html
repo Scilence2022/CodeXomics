@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: file: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:; style-src 'self' 'unsafe-inline' https: http: data:; img-src 'self' data: blob: https: http: file:; font-src 'self' https: http: data:; connect-src 'self' https: http: ws: wss: data: blob:;">
+        content="default-src 'self' data: blob: file:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://d3js.org https://cdn.jsdelivr.net data: blob:; style-src 'self' 'unsafe-inline' https: http: data:; img-src 'self' data: blob: https: http: file:; font-src 'self' https: http: data:; connect-src 'self' https: http: ws: wss: data: blob:;">
     <title>CodeXomics</title>
     <!-- Modular CSS Architecture -->
     <link rel="stylesheet" href="css/base.css">
@@ -4710,6 +4710,9 @@ Supported formats:
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <!-- Markdown parser for enhanced ChatBox rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <!-- Security: DOMPurify for HTML sanitization (loaded before app modules) -->
+    <script src="../../node_modules/dompurify/dist/purify.cjs.js"></script>
+    <script src="modules/security/SanitizeService.js"></script>
     <!-- Application modules -->
     <script src="modules/ConfigManager.js"></script>
     <script src="modules/I18nManager.js"></script>

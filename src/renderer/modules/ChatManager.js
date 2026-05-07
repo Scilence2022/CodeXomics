@@ -8740,59 +8740,52 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Allows safe HTML tags and attributes
    */
   sanitizeHTML(html) {
-    // Allow these HTML tags
+    // Use DOMPurify via SanitizeService if available (much more robust than manual sanitization)
+    if (typeof window !== 'undefined' && window.SanitizeService) {
+      return window.SanitizeService.sanitizeMarkdown(html);
+    }
+
+    // Fallback: if DOMPurify is available directly
+    if (typeof DOMPurify !== 'undefined' && DOMPurify.sanitize) {
+      return DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: [
+          'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'code', 'pre',
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li',
+          'a', 'img', 'blockquote', 'hr', 'table', 'thead', 'tbody',
+          'tr', 'th', 'td', 'div', 'span', 'del', 'ins', 'sup', 'sub',
+          'details', 'summary', 'mark', 'kbd', 'var', 'cite',
+        ],
+        ALLOWED_ATTR: [
+          'href', 'title', 'target', 'rel', 'src', 'alt', 'width', 'height',
+          'class', 'id', 'style',
+        ],
+        ALLOW_DATA_ATTR: true,
+        FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+        ADD_ATTR: ['target'],
+      });
+    }
+
+    // Last resort fallback: original manual sanitization (less secure than DOMPurify)
+    console.warn('[Security] DOMPurify not available, falling back to manual HTML sanitization');
     const allowedTags = [
-      'p',
-      'br',
-      'strong',
-      'b',
-      'em',
-      'i',
-      'u',
-      'code',
-      'pre',
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-      'ul',
-      'ol',
-      'li',
-      'a',
-      'img',
-      'blockquote',
-      'hr',
-      'table',
-      'thead',
-      'tbody',
-      'tr',
-      'th',
-      'td',
-      'div',
-      'span',
-      'del',
-      'ins',
-      'sup',
-      'sub',
+      'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'code', 'pre',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li',
+      'a', 'img', 'blockquote', 'hr', 'table', 'thead', 'tbody',
+      'tr', 'th', 'td', 'div', 'span', 'del', 'ins', 'sup', 'sub',
     ];
 
-    // Allow these attributes
     const allowedAttributes = {
       a: ['href', 'title', 'target', 'rel'],
       img: ['src', 'alt', 'title', 'width', 'height'],
       code: ['class'],
       pre: ['class'],
-      div: ['class'],
-      span: ['class'],
+      div: ['class', 'style'],
+      span: ['class', 'style'],
     };
 
-    // Create a temporary DOM element for parsing
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
 
-    // Recursively sanitize the DOM
     const sanitizeNode = node => {
       if (node.nodeType === Node.TEXT_NODE) {
         return node.cloneNode(true);
@@ -8801,24 +8794,18 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       if (node.nodeType === Node.ELEMENT_NODE) {
         const tagName = node.tagName.toLowerCase();
 
-        // Remove disallowed tags
         if (!allowedTags.includes(tagName)) {
-          // Return text content only for disallowed tags
           const textNode = document.createTextNode(node.textContent);
           return textNode;
         }
 
-        // Create new element
         const newElement = document.createElement(tagName);
 
-        // Copy allowed attributes
         if (allowedAttributes[tagName]) {
           Array.from(node.attributes).forEach(attr => {
             if (allowedAttributes[tagName].includes(attr.name)) {
-              // Special handling for links to ensure they're safe
               if (tagName === 'a' && attr.name === 'href') {
                 const href = attr.value;
-                // Only allow http, https, and mailto links
                 if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
                   newElement.setAttribute(attr.name, attr.value);
                 }
@@ -8828,7 +8815,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             }
           });
 
-          // Add security attributes for links
           if (tagName === 'a' && !newElement.hasAttribute('target')) {
             newElement.setAttribute('target', '_blank');
           }
@@ -8837,7 +8823,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           }
         }
 
-        // Recursively sanitize children
         Array.from(node.childNodes).forEach(child => {
           const sanitizedChild = sanitizeNode(child);
           if (sanitizedChild) {
@@ -8851,7 +8836,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       return null;
     };
 
-    // Sanitize all child nodes
     const sanitizedDiv = document.createElement('div');
     Array.from(tempDiv.childNodes).forEach(child => {
       const sanitizedChild = sanitizeNode(child);
@@ -9232,7 +9216,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const displayTime = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
     const displayId = messageId || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    messageDiv.innerHTML = `<div class="message-content"><div class="message-icon"><i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i></div><div class="message-text" id="${displayId}">${this.formatMessage(message)}</div><div class="message-actions"><button class="copy-message-btn" onclick="chatManager.copyMessage('${displayId}')" title="Copy message"><i class="fas fa-copy"></i></button></div></div><div class="message-time">${displayTime}</div>`;
+    const safeMessage = this.formatMessage(message);
+    const safeDisplayId = displayId.replace(/[^a-zA-Z0-9_-]/g, '');
+    messageDiv.innerHTML = `<div class="message-content"><div class="message-icon"><i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i></div><div class="message-text" id="${safeDisplayId}">${safeMessage}</div><div class="message-actions"><button class="copy-message-btn" onclick="chatManager.copyMessage('${safeDisplayId}')" title="Copy message"><i class="fas fa-copy"></i></button></div></div><div class="message-time">${displayTime}</div>`;
 
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
