@@ -25,9 +25,9 @@ let isInitialized = false;
  * Handles both development and packaged app scenarios
  */
 function getLocalesPath() {
-  if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'locales');
-  }
+  // src/locales/ is the single source of truth for all locale files.
+  // Included in the asar via build.files: ["src/**/*"].
+  // Path: src/i18n/i18n-main.js → ../locales → src/locales/
   return path.join(__dirname, '..', 'locales');
 }
 

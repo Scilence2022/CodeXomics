@@ -22,6 +22,17 @@ class I18nManager {
   static DEFAULT_LANGUAGE = 'en';
 
   /**
+   * Resolve the shared locales directory path.
+   * Uses Node.js __dirname (available due to nodeIntegration:true).
+   * From src/renderer/modules/ → ../../locales → src/locales/
+   */
+  static getLocalesPath() {
+    // Compute from __dirname: this file → modules/ → renderer/ → src/ → locales/
+    const path = require('path');
+    return path.join(__dirname, '..', '..', 'locales');
+  }
+
+  /**
    * Create an I18nManager instance
    * @param {ConfigManager} configManager - The config manager for persistence
    */
@@ -117,18 +128,24 @@ class I18nManager {
    */
   async loadTranslations(language) {
     const translationsData = {};
+    const fs = require('fs');
+    const path = require('path');
+    const localesPath = I18nManager.getLocalesPath();
 
     for (const ns of this.namespaces) {
       try {
-        const response = await fetch(`./locales/${language}/${ns}.json`);
-        if (response.ok) {
-          translationsData[ns] = await response.json();
+        // Single source of truth: src/locales/ (shared between main & renderer)
+        const filePath = path.join(localesPath, language, `${ns}.json`);
+        if (fs.existsSync(filePath)) {
+          const content = fs.readFileSync(filePath, 'utf-8');
+          translationsData[ns] = JSON.parse(content);
         } else {
           // Try fallback to English
           if (language !== 'en') {
-            const fallbackResponse = await fetch(`./locales/en/${ns}.json`);
-            if (fallbackResponse.ok) {
-              translationsData[ns] = await fallbackResponse.json();
+            const fallbackPath = path.join(localesPath, 'en', `${ns}.json`);
+            if (fs.existsSync(fallbackPath)) {
+              const fallbackContent = fs.readFileSync(fallbackPath, 'utf-8');
+              translationsData[ns] = JSON.parse(fallbackContent);
             }
           }
         }

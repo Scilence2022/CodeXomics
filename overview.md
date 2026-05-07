@@ -1,30 +1,59 @@
-# Project Manager UI Style Sync - Fix Summary
+# P0 Critical Security & Quality Fixes — Overview
 
-## What was done
-The Project Manager window was a separate Electron BrowserWindow with ~2500 lines of **hardcoded CSS colors** — it never responded to UI Style changes from the main app. Fixed by:
+## Branch
+`fix/p0-critical-security-and-quality` (commit: 06403ef)
 
-1. **Defined 40+ CSS custom properties** (`--pm-*`) in `project-manager.html` `:root` block
-2. **Replaced 224 hardcoded color references** with variable references throughout the CSS
-3. **Built IPC theme sync pipeline**: Main renderer → `main.js` → PM window
-4. **Updated JS files** to use CSS variables for dynamic colors
+## What Was Done
 
-## Key Decisions
-| Decision | Rationale |
-|----------|-----------|
-| File type icon colors kept as direct hex | Functional/semantic identifiers (FASTA=green, BAM=red etc.) |
-| `--pm-on-accent` for button/icon text | Must always be white even in dark mode |
-| `--pm-surface` for card/modal backgrounds | Adapts to theme (white → dark gray) |
-| Body gradient cores (`#1e3c72`, `#2a5298`) kept | PM's signature deep blue identity |
-| Theme sync via IPC chain | Main renderer and PM window are separate BrowserWindows |
+### P0-1: DOMPurify + SanitizeService ✅
+- **Installed**: `dompurify@3.4.2`
+- **Created**: `src/renderer/modules/security/SanitizeService.js`
+  - 6 sanitization methods: `sanitize()`, `sanitizeMarkdown()`, `sanitizeForGenomeBrowser()`, `safeSetInnerHTML()`, `stripHtml()`, `isUnsafe()`
+  - 3 config profiles: default, markdown, genome browser
+  - Singleton export + `window.SanitizeService` global
+- **Modified**: `ChatManager.js` — replaced manual HTML sanitizer with DOMPurify-backed version via SanitizeService
+- **Modified**: `ChatManager.js` — sanitized AI message display IDs (prevents ID injection)
+- **Modified**: `PluginMarketplace.js` — replaced `eval()` with `new Function()` + error handling + security TODO for future sandboxing
 
-## Files Modified (6)
-- `src/project-manager.html` — CSS variables + theme sync listener
-- `src/renderer/modules/ProjectManagerWindow.js` — text/notification colors
-- `src/renderer/modules/ProjectManager.js` — empty state + save button gradients
-- `src/main.js` — IPC handlers for theme relay
-- `src/preload.js` — IPC channel whitelist
-- `src/renderer/renderer-modular.js` — theme change forwarding
+### P0-2: Content Security Policy Strengthened ✅
+- **Before**: `default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: file: https: http:` (allows ANY source)
+- **After**: `default-src 'self' data: blob: file:` + `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://d3js.org https://cdn.jsdelivr.net data: blob:`
+- Key change: script sources restricted to specific CDNs only
 
-## Follow-up
-- PM's theme is applied on load and on any style change in the main app
-- Body gradient base colors could be made fully theme-variable in future
+### P0-3: Vitest + 68 Tests (100% Pass) ✅
+- **Installed**: `vitest@4.1.5`
+- **Created test infrastructure**: `test/` with `unit/`, `integration/`, `mocks/`, `setup.js`
+- **6 test files, 68 tests**:
+  - `test/unit/sanitize-service.test.js` — 29 tests
+  - `test/unit/tool-names.test.js` — 7 tests
+  - `test/unit/default-settings.test.js` — 14 tests
+  - `test/unit/tool-registry.test.js` — 9 tests
+  - `test/integration/mcp-integration.test.js` — 5 tests
+  - `test/integration/ipc-channels.test.js` — 4 tests
+
+### P0-4: Enhanced ESLint + Pre-commit Hooks ✅
+- **Updated**: `.eslintrc.json` with security + quality rules
+  - Security: `no-eval`, `no-implied-eval`, `no-new-func`, `no-throw-literal`
+  - Quality: `prefer-const`, `eqeqeq`, `curly`, `no-var`, `no-duplicate-imports`
+- **Configured**: Husky pre-commit hook → lint-staged
+- **Configured**: commitlint (conventional commits)
+- **Added scripts**: `test`, `test:watch`, `test:coverage` in package.json
+
+## Test Results
+```
+ Test Files  6 passed (6)
+      Tests  68 passed (68)
+   Duration  378ms
+```
+
+## Known Issues
+- `NODE_OPTIONS=--use-system-ca` causes Husky pre-commit hook to fail — needs environment fix
+- `eslint-plugin-security` v3/v4 incompatible with ESLint 8 eslintrc format — used direct rules instead
+- CSP still allows `unsafe-inline` and `unsafe-eval` — required by current no-bundler architecture
+
+## Next Steps (P1)
+- Enable `contextIsolation: true` + disable `nodeIntegration` in BrowserWindow configs
+- Split `main.js` (10,584 lines) into separate modules
+- Create DI container to reduce `window` global coupling
+- Expand test coverage to 30% on core paths
+- Replace `alert()` calls with Toast notification system
