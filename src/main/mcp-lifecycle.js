@@ -1,4 +1,5 @@
 'use strict';
+// @ts-check
 
 const { app, BrowserWindow } = require('electron');
 const path = require('path');

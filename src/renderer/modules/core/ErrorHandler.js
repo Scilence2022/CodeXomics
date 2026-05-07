@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * ErrorHandler — Centralized Error Handling for CodeXomics
  *

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * ServiceContainer — Lightweight Dependency Injection Container
  *

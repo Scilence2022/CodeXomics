@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * SanitizeService — HTML sanitization utility for CodeXomics
  *

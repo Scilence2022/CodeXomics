@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * NotificationService — Toast Notification System for CodeXomics
  *
