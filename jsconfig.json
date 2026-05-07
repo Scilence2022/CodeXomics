@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "checkJs": true,
+    "allowJs": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@renderer/*": ["src/renderer/*"],
+      "@main/*": ["src/main/*"],
+      "@core/*": ["src/renderer/modules/core/*"],
+      "@services/*": ["src/renderer/modules/chat/services/*"],
+      "@constants/*": ["src/renderer/modules/chat/constants/*"],
+      "@toolsRegistry/*": ["tools_registry/*"]
+    },
+    "types": ["node", "electron", "dom"]
+  },
+  "include": [
+    "src/**/*.js",
+    "test/**/*.js",
+    "tools_registry/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "site",
+    "packages",
+    "**/*.min.js",
+    "src/renderer/modules/chat/services/UIService.js",
+    "src/main.js.bak"
+  ],
+  "typeAcquisition": {
+    "enable": true,
+    "include": ["node", "electron", "dom"]
+  }
+}
