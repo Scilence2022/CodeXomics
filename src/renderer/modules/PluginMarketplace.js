@@ -1177,42 +1177,41 @@ class PluginMarketplace {
 
       if (downloadResult.data && typeof downloadResult.data === 'object' && downloadResult.data['index.js']) {
         // We have the plugin code in the download result
+        console.log(`📦 Loading plugin code for ${downloadResult.pluginId}...`);
+
+        // Create a temporary script element to load the plugin code
+        const pluginCode = downloadResult.data['index.js'];
+
+        // SECURITY NOTE: Loading third-party plugin code is inherently risky.
+        // Using new Function instead of eval for slightly better control.
+        // TODO (P2): Move to iframe sandbox or Web Worker for full isolation.
+        // Create a module-like environment
+        const moduleExports = {};
+        const moduleContext = {
+          module: { exports: moduleExports },
+          exports: moduleExports,
+          console: console,
+          document: document,
+          window: window,
+        };
+
         try {
-          console.log(`📦 Loading plugin code for ${downloadResult.pluginId}...`);
+          // Use new Function instead of eval — while not fully sandboxed,
+          // it avoids eval's scope access and is slightly more controlled
+          const pluginFactory = new Function(
+            'module', 'exports', 'console', 'document', 'window',
+            pluginCode + '\nreturn module.exports;'
+          );
 
-          // Create a temporary script element to load the plugin code
-          const pluginCode = downloadResult.data['index.js'];
+          const PluginClass = pluginFactory(
+            moduleContext.module,
+            moduleContext.exports,
+            moduleContext.console,
+            moduleContext.document,
+            moduleContext.window
+          );
 
-          // SECURITY NOTE: Loading third-party plugin code is inherently risky.
-          // Using new Function instead of eval for slightly better control.
-          // TODO (P2): Move to iframe sandbox or Web Worker for full isolation.
-          // Create a module-like environment
-          const moduleExports = {};
-          const moduleContext = {
-            module: { exports: moduleExports },
-            exports: moduleExports,
-            console: console,
-            document: document,
-            window: window,
-          };
-
-          try {
-            // Use new Function instead of eval — while not fully sandboxed,
-            // it avoids eval's scope access and is slightly more controlled
-            const pluginFactory = new Function(
-              'module', 'exports', 'console', 'document', 'window',
-              pluginCode + '\nreturn module.exports;'
-            );
-
-            const PluginClass = pluginFactory(
-              moduleContext.module,
-              moduleContext.exports,
-              moduleContext.console,
-              moduleContext.document,
-              moduleContext.window
-            );
-
-            console.log(`✅ Plugin class loaded for ${downloadResult.pluginId}`);
+          console.log(`✅ Plugin class loaded for ${downloadResult.pluginId}`);
 
           // Create a mock ExtensionContext to capture registrations
           const mockContext = {
@@ -1259,11 +1258,11 @@ class PluginMarketplace {
             hasExecutor: !!pluginDefinition.executor,
             supportedDataTypes: pluginDefinition.supportedDataTypes,
           });
-          } catch (pluginLoadError) {
-            console.error(`❌ Failed to load plugin code safely for ${downloadResult.pluginId}:`, pluginLoadError);
-            // Fall back to manifest-only registration
-            pluginDefinition = downloadResult.manifest;
-          }
+        } catch (pluginLoadError) {
+          console.error(`❌ Failed to load plugin code safely for ${downloadResult.pluginId}:`, pluginLoadError);
+          // Fall back to manifest-only registration
+          pluginDefinition = downloadResult.manifest;
+        }
       } else {
         // No code available, use manifest only
         pluginDefinition = downloadResult.manifest;

@@ -4831,17 +4831,15 @@ class PluginManagementUI {
         document.querySelector('script[src*="PluginManagementUI"]') ||
         document.querySelector('script[src*="renderer-modular"]');
 
-      let basePath = './';
+      let basePath = './modules/';
       if (currentScript && currentScript.src) {
         const scriptPath = currentScript.src;
         const pathParts = scriptPath.split('/');
         // Remove the filename to get directory
         pathParts.pop();
         basePath = pathParts.join('/') + '/';
-        // Make it relative if it's an absolute path
-        if (basePath.startsWith('file:///')) {
-          basePath = './';
-        }
+        // Keep absolute file:/// paths — they work correctly with <script src> in Electron
+        // Do NOT reset to './' as that resolves relative to the HTML page, not the script
       }
 
       console.log(`🔍 Using base path: ${basePath}`);
@@ -4892,31 +4890,7 @@ class PluginManagementUI {
 
       const missing = Object.keys(finalCheck).filter(key => !finalCheck[key]);
       if (missing.length > 0) {
-        console.warn('⚠️ Some modules still missing, attempting forced reload...');
-
-        // Try to force reload missing modules
-        for (const missingModule of missing) {
-          try {
-            // Remove existing script tags for this module
-            const existingScripts = document.querySelectorAll(`script[src*="${missingModule}"]`);
-            existingScripts.forEach(script => script.remove());
-
-            // Force reload
-            await this.loadScript(`./${missingModule}.js`, true); // Add force=true parameter
-            await this.waitForModuleAvailability(missingModule, 3000);
-            console.log(`🔄 Force reloaded ${missingModule}`);
-          } catch (error) {
-            console.error(`❌ Failed to force reload ${missingModule}:`, error);
-          }
-        }
-
-        // Final final check
-        const ultimateCheck = this.checkModuleAvailability();
-        const stillMissing = Object.keys(ultimateCheck).filter(key => !ultimateCheck[key]);
-
-        if (stillMissing.length > 0) {
-          throw new Error(`Required modules still missing after all attempts: ${stillMissing.join(', ')}`);
-        }
+        throw new Error(`Required modules still missing after all attempts: ${missing.join(', ')}`);
       }
 
       console.log('✅ All PluginManagerV2 modules loaded successfully');
@@ -4972,21 +4946,44 @@ class PluginManagementUI {
    */
   loadScript(src, force = false) {
     return new Promise((resolve, reject) => {
-      // Check if script is already loaded (unless force is true)
+      // Extract module key from filename (e.g., "PluginUpdateManager" from ".../PluginUpdateManager.js")
+      const filename = src.split('/').pop();
+      const moduleKey = filename.replace('.js', '');
+
+      // Check if the global is already defined — prevents "Identifier already declared" errors
+      // when the same module is loaded from different URL paths (e.g., file:/// vs ./)
+      if (!force && moduleKey && window[moduleKey]) {
+        console.log(`✅ ${moduleKey} already available in window scope, skipping load of ${src}`);
+        resolve();
+        return;
+      }
+
+      // Check if script tag with same src already exists (unless force is true)
       if (!force) {
         const existingScript = document.querySelector(`script[src="${src}"]`);
         if (existingScript) {
-          console.log(`Script ${src} already loaded, skipping...`);
-          resolve();
-          return;
+          // If the global is already defined, skip — otherwise the script may have failed
+          // to execute (e.g. syntax error) so remove the stale tag and reload
+          if (moduleKey && window[moduleKey]) {
+            console.log(`Script ${src} already loaded and module available, skipping...`);
+            resolve();
+            return;
+          } else {
+            console.warn(`⚠️ Script ${src} exists but module ${moduleKey} not available — removing stale tag and reloading`);
+            existingScript.remove();
+          }
         }
       }
 
-      // If forcing reload, remove existing script first
+      // Forcing reload is not supported for class-declaring scripts
+      // (class declarations cannot be re-declared in the same scope)
       if (force) {
-        const existingScripts = document.querySelectorAll(`script[src="${src}"]`);
-        existingScripts.forEach(script => script.remove());
-        console.log(`🔄 Force reloading script: ${src}`);
+        console.warn(`⚠️ Force reload requested for ${src}, but class re-declaration is not possible. Skipping.`);
+        if (moduleKey && window[moduleKey]) {
+          resolve();
+          return;
+        }
+        // If the global doesn't exist either, proceed with load (first real load)
       }
 
       const script = document.createElement('script');
@@ -5018,7 +5015,7 @@ class PluginManagementUI {
       console.log('📦 Loading PluginMarketplaceUI module...');
 
       // Use smart path detection
-      let basePath = './';
+      let basePath = './modules/';
       const currentScript =
         document.currentScript ||
         document.querySelector('script[src*="PluginManagementUI"]') ||
@@ -5029,9 +5026,7 @@ class PluginManagementUI {
         const pathParts = scriptPath.split('/');
         pathParts.pop(); // Remove filename
         basePath = pathParts.join('/') + '/';
-        if (basePath.startsWith('file:///')) {
-          basePath = './';
-        }
+        // Keep absolute file:/// paths — they work correctly with <script src> in Electron
       }
 
       console.log(`🔍 Using base path for PluginMarketplaceUI: ${basePath}`);
