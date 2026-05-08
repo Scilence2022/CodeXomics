@@ -1,21 +1,21 @@
 // @ts-check
 /**
  * IPC Handlers Module for CodeXomics
- * 
+ *
  * Contains all non-Project-Manager IPC handlers extracted from main.js.
  * This module exports a registerIpcHandlers(deps) function that registers
  * all handlers with the ipcMain object.
- * 
+ *
  * @module ipc-handlers
  */
 
-const { ipcMain, app, dialog, BrowserWindow } = require('electron');
+const {ipcMain, app, dialog, BrowserWindow} = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 /**
  * Register all non-Project-Manager IPC handlers.
- * 
+ *
  * @param {Object} deps - Dependencies object containing shared state and functions
  * @param {BrowserWindow} deps.mainWindow - Main BrowserWindow instance
  * @param {Map} deps.windowRegistry - Window registry for multi-window support
@@ -118,7 +118,7 @@ function registerIpcHandlers(deps) {
   // This is the missing bridge between MCP server and renderer process
   ipcMain.on('tool-execution', async (event, data) => {
     console.log('[Main] Received tool execution request:', data);
-    const { requestId, toolName, parameters, clientId } = data;
+    const {requestId, toolName, parameters, clientId} = data;
 
     try {
       if (!mainWindow || mainWindow.isDestroyed()) {
@@ -191,13 +191,13 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('ensure-directory', async (event, dirPath) => {
     try {
       if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
+        fs.mkdirSync(dirPath, {recursive: true});
         console.log('Created directory:', dirPath);
       }
-      return { success: true, path: dirPath };
+      return {success: true, path: dirPath};
     } catch (error) {
       console.error('Failed to create directory:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -207,22 +207,22 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('list-plugins', async (event, pluginPath) => {
     try {
       if (!fs.existsSync(pluginPath)) {
-        return { success: true, plugins: [] };
+        return {success: true, plugins: []};
       }
 
-      const items = fs.readdirSync(pluginPath, { withFileTypes: true });
+      const items = fs.readdirSync(pluginPath, {withFileTypes: true});
       const plugins = items
-        .filter(item => item.isDirectory())
-        .map(item => ({
-          id: item.name,
-          path: path.join(pluginPath, item.name),
-          hasManifest: fs.existsSync(path.join(pluginPath, item.name, 'plugin.json')),
-        }));
+          .filter((item) => item.isDirectory())
+          .map((item) => ({
+            id: item.name,
+            path: path.join(pluginPath, item.name),
+            hasManifest: fs.existsSync(path.join(pluginPath, item.name, 'plugin.json')),
+          }));
 
-      return { success: true, plugins };
+      return {success: true, plugins};
     } catch (error) {
       console.error('Failed to list plugins:', error);
-      return { success: false, error: error.message, plugins: [] };
+      return {success: false, error: error.message, plugins: []};
     }
   });
 
@@ -234,8 +234,8 @@ function registerIpcHandlers(deps) {
       title: 'Select Plugin File or Directory',
       properties: ['openFile', 'openDirectory'],
       filters: [
-        { name: 'Plugin Files', extensions: ['js', 'zip'] },
-        { name: 'All Files', extensions: ['*'] },
+        {name: 'Plugin Files', extensions: ['js', 'zip']},
+        {name: 'All Files', extensions: ['*']},
       ],
     });
     return result;
@@ -307,8 +307,8 @@ function registerIpcHandlers(deps) {
 
       // Scan both plugin directories
       const dirsToScan = [
-        { path: paths.builtinPluginsPath, type: 'builtin' },
-        { path: paths.userPluginsPath, type: 'user' },
+        {path: paths.builtinPluginsPath, type: 'builtin'},
+        {path: paths.userPluginsPath, type: 'user'},
       ];
 
       for (const dirInfo of dirsToScan) {
@@ -316,7 +316,7 @@ function registerIpcHandlers(deps) {
           continue;
         }
 
-        const items = fs.readdirSync(dirInfo.path, { withFileTypes: true });
+        const items = fs.readdirSync(dirInfo.path, {withFileTypes: true});
 
         for (const item of items) {
           const itemPath = path.join(dirInfo.path, item.name);
@@ -422,7 +422,7 @@ function registerIpcHandlers(deps) {
         const manifestPath = path.join(pluginPath, 'plugin.json');
         if (fs.existsSync(manifestPath)) {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-          return { success: true, metadata: manifest };
+          return {success: true, metadata: manifest};
         }
 
         // Try to load from package.json
@@ -466,16 +466,16 @@ function registerIpcHandlers(deps) {
 
         // Try to extract function names
         const functionMatches = content.match(
-          /(?:async\s+)?function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?function|(?:async\s+)?(\w+)\s*\(/g
+            /(?:async\s+)?function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?function|(?:async\s+)?(\w+)\s*\(/g,
         );
         if (functionMatches) {
-          metadata.functions = functionMatches.map(match => {
+          metadata.functions = functionMatches.map((match) => {
             const name = match.match(/\w+/g)[match.includes('function') ? 1 : 0];
-            return { name };
+            return {name};
           });
         }
 
-        return { success: true, metadata };
+        return {success: true, metadata};
       }
 
       return {
@@ -498,7 +498,7 @@ function registerIpcHandlers(deps) {
     try {
       // Create temp directory for extraction
       const tempDir = path.join(app.getPath('temp'), `plugin-${Date.now()}`);
-      fs.mkdirSync(tempDir, { recursive: true });
+      fs.mkdirSync(tempDir, {recursive: true});
 
       // Note: This is a placeholder - you'll need to add a zip extraction library
       // For now, return error indicating zip extraction not implemented
@@ -522,10 +522,10 @@ function registerIpcHandlers(deps) {
       // Recursive directory copy
       const copyRecursive = (src, dest) => {
         if (!fs.existsSync(dest)) {
-          fs.mkdirSync(dest, { recursive: true });
+          fs.mkdirSync(dest, {recursive: true});
         }
 
-        const entries = fs.readdirSync(src, { withFileTypes: true });
+        const entries = fs.readdirSync(src, {withFileTypes: true});
 
         for (const entry of entries) {
           const srcPath = path.join(src, entry.name);
@@ -540,10 +540,10 @@ function registerIpcHandlers(deps) {
       };
 
       copyRecursive(sourcePath, destPath);
-      return { success: true };
+      return {success: true};
     } catch (error) {
       console.error('Failed to copy plugin directory:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -554,12 +554,12 @@ function registerIpcHandlers(deps) {
     try {
       const destDir = path.dirname(destPath);
       if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
+        fs.mkdirSync(destDir, {recursive: true});
       }
       fs.copyFileSync(sourcePath, destPath);
-      return { success: true };
+      return {success: true};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -570,12 +570,12 @@ function registerIpcHandlers(deps) {
     try {
       const dir = path.dirname(filePath);
       if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+        fs.mkdirSync(dir, {recursive: true});
       }
       fs.writeFileSync(filePath, content, 'utf8');
-      return { success: true };
+      return {success: true};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -584,14 +584,14 @@ function registerIpcHandlers(deps) {
    * Handles both JSON (mock packages) and ZIP (real packages) data
    */
   ipcMain.handle('write-plugin-files', async (event, options) => {
-    const { pluginId, installPath, data, manifest } = options;
+    const {pluginId, installPath, data, manifest} = options;
 
     console.log(`[Main] Writing plugin files for ${pluginId} to ${installPath}`);
 
     try {
       // Create plugin directory if it doesn't exist
       if (!fs.existsSync(installPath)) {
-        fs.mkdirSync(installPath, { recursive: true });
+        fs.mkdirSync(installPath, {recursive: true});
         console.log(`[Main] Created plugin directory: ${installPath}`);
       }
 
@@ -634,7 +634,7 @@ function registerIpcHandlers(deps) {
             const fileDir = path.dirname(filePath);
 
             if (!fs.existsSync(fileDir)) {
-              fs.mkdirSync(fileDir, { recursive: true });
+              fs.mkdirSync(fileDir, {recursive: true});
             }
 
             // Handle different content types
@@ -677,7 +677,7 @@ function registerIpcHandlers(deps) {
    * Load plugin from disk for restoration
    */
   ipcMain.handle('load-plugin-from-disk', async (event, options) => {
-    const { pluginId, installPath } = options;
+    const {pluginId, installPath} = options;
 
     console.log(`[Main] Loading plugin ${pluginId} from ${installPath}`);
 
@@ -734,7 +734,7 @@ function registerIpcHandlers(deps) {
    * Delete plugin files from disk (for uninstallation)
    */
   ipcMain.handle('delete-plugin-files', async (event, options) => {
-    const { pluginId, installPath } = options;
+    const {pluginId, installPath} = options;
 
     console.log(`[Main] Deleting plugin ${pluginId} from ${installPath}`);
 
@@ -749,9 +749,9 @@ function registerIpcHandlers(deps) {
       }
 
       // Recursively delete the plugin directory
-      const deleteRecursive = dirPath => {
+      const deleteRecursive = (dirPath) => {
         if (fs.existsSync(dirPath)) {
-          fs.readdirSync(dirPath).forEach(file => {
+          fs.readdirSync(dirPath).forEach((file) => {
             const curPath = path.join(dirPath, file);
             if (fs.lstatSync(curPath).isDirectory()) {
               deleteRecursive(curPath);
@@ -821,24 +821,24 @@ function registerIpcHandlers(deps) {
 
       // Check if this is a gzip compressed file
       const isGzipped = extension === '.gz';
-      
+
       if (isGzipped) {
         // For gzipped files, we need to decompress them
         // Use async decompression to avoid blocking the main process
         const zlib = require('zlib');
-        const { promisify } = require('util');
+        const {promisify} = require('util');
         const gunzip = promisify(zlib.gunzip);
-        
+
         const compressedData = fs.readFileSync(filePath);
         const decompressedData = await gunzip(compressedData);
         const data = decompressedData.toString('utf8');
-        return { success: true, data, isGzipped: true };
+        return {success: true, data, isGzipped: true};
       } else {
         const data = fs.readFileSync(filePath, 'utf8');
-        return { success: true, data };
+        return {success: true, data};
       }
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -849,7 +849,7 @@ function registerIpcHandlers(deps) {
       return result;
     } catch (error) {
       console.error('Error showing save dialog:', error);
-      return { canceled: true, error: error.message };
+      return {canceled: true, error: error.message};
     }
   });
 
@@ -861,7 +861,7 @@ function registerIpcHandlers(deps) {
       // Ensure directory exists
       const directory = path.dirname(filePath);
       if (!fs.existsSync(directory)) {
-        fs.mkdirSync(directory, { recursive: true });
+        fs.mkdirSync(directory, {recursive: true});
       }
 
       // Write the file
@@ -882,7 +882,7 @@ function registerIpcHandlers(deps) {
       }
     } catch (error) {
       console.error('Error writing file:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -906,7 +906,7 @@ function registerIpcHandlers(deps) {
           highWaterMark: chunkSize,
         });
 
-        stream.on('data', chunk => {
+        stream.on('data', (chunk) => {
           try {
             totalRead += Buffer.byteLength(chunk, 'utf8');
             buffer += chunk;
@@ -918,24 +918,24 @@ function registerIpcHandlers(deps) {
             // Send lines to renderer for processing
             if (lines.length > 0) {
               lineCount += lines.length;
-              event.sender.send('file-lines-chunk', { lines, lineCount });
+              event.sender.send('file-lines-chunk', {lines, lineCount});
             }
 
             // Send progress update
             const progress = Math.round((totalRead / fileSize) * 100);
-            event.sender.send('file-read-progress', { progress, totalRead, fileSize });
+            event.sender.send('file-read-progress', {progress, totalRead, fileSize});
 
             // Log progress for very large files
             if (totalRead % (50 * 1024 * 1024) === 0) {
               // Every 50MB
               console.log(
-                `Stream progress: ${(totalRead / (1024 * 1024)).toFixed(1)} MB / ${(fileSize / (1024 * 1024)).toFixed(1)} MB`
+                  `Stream progress: ${(totalRead / (1024 * 1024)).toFixed(1)} MB / ${(fileSize / (1024 * 1024)).toFixed(1)} MB`,
               );
             }
           } catch (chunkError) {
             console.error('Error processing chunk:', chunkError);
             stream.destroy();
-            reject({ success: false, error: `Error processing data chunk: ${chunkError.message}` });
+            reject({success: false, error: `Error processing data chunk: ${chunkError.message}`});
           }
         });
 
@@ -944,28 +944,28 @@ function registerIpcHandlers(deps) {
             // Process any remaining data in buffer
             if (buffer.trim()) {
               lineCount += 1;
-              event.sender.send('file-lines-chunk', { lines: [buffer], lineCount });
+              event.sender.send('file-lines-chunk', {lines: [buffer], lineCount});
             }
 
             console.log(`Stream complete: ${lineCount} lines, ${(totalRead / (1024 * 1024)).toFixed(1)} MB`);
 
             // Signal completion
-            event.sender.send('file-stream-complete', { totalLines: lineCount, totalBytes: totalRead });
-            resolve({ success: true, totalLines: lineCount, size: totalRead });
+            event.sender.send('file-stream-complete', {totalLines: lineCount, totalBytes: totalRead});
+            resolve({success: true, totalLines: lineCount, size: totalRead});
           } catch (endError) {
             console.error('Error finalizing stream:', endError);
-            reject({ success: false, error: `Error finalizing stream: ${endError.message}` });
+            reject({success: false, error: `Error finalizing stream: ${endError.message}`});
           }
         });
 
-        stream.on('error', error => {
+        stream.on('error', (error) => {
           console.error('Stream error:', error);
-          reject({ success: false, error: `File read error: ${error.message}` });
+          reject({success: false, error: `File read error: ${error.message}`});
         });
       });
     } catch (error) {
       console.error('Error setting up stream:', error);
-      return { success: false, error: `Failed to set up file stream: ${error.message}` };
+      return {success: false, error: `Failed to set up file stream: ${error.message}`};
     }
   });
 
@@ -982,7 +982,7 @@ function registerIpcHandlers(deps) {
         },
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -995,7 +995,7 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('select-attachment-files', async (event, options = {}) => {
     try {
-      const { dialog } = require('electron');
+      const {dialog} = require('electron');
 
       const result = await dialog.showOpenDialog(null, {
         title: options.title || 'Select Attachment Files',
@@ -1020,16 +1020,16 @@ function registerIpcHandlers(deps) {
               'html',
             ],
           },
-          { name: 'Documents', extensions: ['pdf', 'doc', 'docx', 'txt', 'md'] },
-          { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg'] },
-          { name: 'Data Files', extensions: ['csv', 'json', 'xls', 'xlsx'] },
-          { name: 'All Files', extensions: ['*'] },
+          {name: 'Documents', extensions: ['pdf', 'doc', 'docx', 'txt', 'md']},
+          {name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg']},
+          {name: 'Data Files', extensions: ['csv', 'json', 'xls', 'xlsx']},
+          {name: 'All Files', extensions: ['*']},
         ],
         properties: options.properties || ['openFile', 'multiSelections'],
       });
 
       if (result.canceled) {
-        return { success: false, canceled: true };
+        return {success: false, canceled: true};
       }
 
       return {
@@ -1039,7 +1039,7 @@ function registerIpcHandlers(deps) {
       };
     } catch (error) {
       console.error('Error selecting attachment files:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1050,12 +1050,12 @@ function registerIpcHandlers(deps) {
     try {
       // Validate source file exists
       if (!fs.existsSync(sourcePath)) {
-        return { success: false, error: 'Source file does not exist' };
+        return {success: false, error: 'Source file does not exist'};
       }
 
       // Ensure target directory exists
       if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
+        fs.mkdirSync(targetDir, {recursive: true});
       }
 
       // Determine target path
@@ -1078,7 +1078,7 @@ function registerIpcHandlers(deps) {
       };
     } catch (error) {
       console.error('Error copying attachment file:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1088,21 +1088,21 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('delete-attachment-file', async (event, filePath) => {
     try {
       if (!filePath) {
-        return { success: false, error: 'File path is required' };
+        return {success: false, error: 'File path is required'};
       }
 
       if (!fs.existsSync(filePath)) {
         console.log(`Attachment file does not exist, skipping deletion: ${filePath}`);
-        return { success: true, message: 'File does not exist' };
+        return {success: true, message: 'File does not exist'};
       }
 
       fs.unlinkSync(filePath);
       console.log(`Attachment deleted: ${filePath}`);
 
-      return { success: true, message: 'Attachment deleted successfully' };
+      return {success: true, message: 'Attachment deleted successfully'};
     } catch (error) {
       console.error('Error deleting attachment file:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1112,28 +1112,28 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('open-attachment-file', async (event, filePath) => {
     try {
       if (!filePath) {
-        return { success: false, error: 'File path is required' };
+        return {success: false, error: 'File path is required'};
       }
 
       if (!fs.existsSync(filePath)) {
-        return { success: false, error: 'File does not exist' };
+        return {success: false, error: 'File does not exist'};
       }
 
-      const { shell } = require('electron');
+      const {shell} = require('electron');
       await shell.openPath(filePath);
 
       console.log(`Opened attachment: ${filePath}`);
-      return { success: true };
+      return {success: true};
     } catch (error) {
       console.error('Error opening attachment file:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
   /**
    * Get the base storage path for gene attachments
    */
-  ipcMain.handle('get-attachments-storage-path', async event => {
+  ipcMain.handle('get-attachments-storage-path', async (event) => {
     try {
       // Use app's user data directory for attachments storage
       const userDataPath = app.getPath('userData');
@@ -1141,7 +1141,7 @@ function registerIpcHandlers(deps) {
 
       // Ensure directory exists
       if (!fs.existsSync(attachmentsPath)) {
-        fs.mkdirSync(attachmentsPath, { recursive: true });
+        fs.mkdirSync(attachmentsPath, {recursive: true});
       }
 
       return {
@@ -1150,7 +1150,7 @@ function registerIpcHandlers(deps) {
       };
     } catch (error) {
       console.error('Error getting attachments storage path:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1162,14 +1162,14 @@ function registerIpcHandlers(deps) {
    * Download a file from the internet to a local path
    */
   ipcMain.handle('download-internet-file', async (event, options) => {
-    const { url, destinationPath, filename } = options;
+    const {url, destinationPath, filename} = options;
 
     try {
       console.log(`[Download] Starting download from: ${url}`);
 
       // Validate URL
       if (!url || typeof url !== 'string') {
-        return { success: false, error: 'Invalid URL provided' };
+        return {success: false, error: 'Invalid URL provided'};
       }
 
       // Parse URL to get protocol and filename
@@ -1188,15 +1188,15 @@ function registerIpcHandlers(deps) {
 
       // Ensure destination directory exists
       if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
+        fs.mkdirSync(destDir, {recursive: true});
       }
 
       const fullPath = path.join(destDir, extractedFilename);
 
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         const file = fs.createWriteStream(fullPath);
 
-        const request = protocol.get(url, response => {
+        const request = protocol.get(url, (response) => {
           // Handle redirects
           if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
             console.log(`[Download] Following redirect to: ${response.headers.location}`);
@@ -1225,7 +1225,7 @@ function registerIpcHandlers(deps) {
           const contentLength = parseInt(response.headers['content-length'], 10);
           let downloadedBytes = 0;
 
-          response.on('data', chunk => {
+          response.on('data', (chunk) => {
             downloadedBytes += chunk.length;
             if (contentLength) {
               const progress = Math.round((downloadedBytes / contentLength) * 100);
@@ -1255,13 +1255,13 @@ function registerIpcHandlers(deps) {
           });
         });
 
-        request.on('error', error => {
+        request.on('error', (error) => {
           file.close();
           if (fs.existsSync(fullPath)) {
             fs.unlinkSync(fullPath);
           }
           console.error(`[Download] Error:`, error);
-          resolve({ success: false, error: error.message });
+          resolve({success: false, error: error.message});
         });
 
         request.setTimeout(60000, () => {
@@ -1270,12 +1270,12 @@ function registerIpcHandlers(deps) {
           if (fs.existsSync(fullPath)) {
             fs.unlinkSync(fullPath);
           }
-          resolve({ success: false, error: 'Download timeout (60 seconds)' });
+          resolve({success: false, error: 'Download timeout (60 seconds)'});
         });
       });
     } catch (error) {
       console.error(`[Download] Error:`, error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1283,19 +1283,19 @@ function registerIpcHandlers(deps) {
    * Open a markdown file in a dedicated viewer window
    */
   ipcMain.handle('open-markdown-viewer', async (event, options) => {
-    const { filePath, title } = options;
+    const {filePath, title} = options;
 
     try {
       console.log(`[Markdown Viewer] Opening: ${filePath}`);
 
       // Validate file path
       if (!filePath || typeof filePath !== 'string') {
-        return { success: false, error: 'Invalid file path provided' };
+        return {success: false, error: 'Invalid file path provided'};
       }
 
       // Check if file exists
       if (!fs.existsSync(filePath)) {
-        return { success: false, error: `File not found: ${filePath}` };
+        return {success: false, error: `File not found: ${filePath}`};
       }
 
       // Check file extension
@@ -1362,7 +1362,7 @@ function registerIpcHandlers(deps) {
       };
     } catch (error) {
       console.error(`[Markdown Viewer] Error:`, error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1372,11 +1372,11 @@ function registerIpcHandlers(deps) {
   function createMarkdownViewerHTML(content, title) {
     // Escape content for embedding in HTML
     const escapedContent = content
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -1480,7 +1480,7 @@ function registerIpcHandlers(deps) {
   // Handle directory selection for benchmark default directory
   ipcMain.handle('show-directory-dialog', async (event, options = {}) => {
     try {
-      const { dialog } = require('electron');
+      const {dialog} = require('electron');
       const result = await dialog.showOpenDialog(null, {
         properties: ['openDirectory'],
         title: options.title || 'Select Directory',
@@ -1538,7 +1538,7 @@ function registerIpcHandlers(deps) {
       }
 
       if (getUnifiedServerStatus() === 'starting') {
-        return { success: false, message: 'Unified Claude MCP Server is already starting', status: 'starting' };
+        return {success: false, message: 'Unified Claude MCP Server is already starting', status: 'starting'};
       }
 
       setUnifiedServerStatus('starting');
@@ -1574,22 +1574,22 @@ function registerIpcHandlers(deps) {
         setUnifiedMCPServer(server);
 
         // Forward server log events to the Manager window
-        server.on('log', logEntry => {
-          const mcpWindow = BrowserWindow.getAllWindows().find(win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed());
+        server.on('log', (logEntry) => {
+          const mcpWindow = BrowserWindow.getAllWindows().find((win) => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed());
           if (mcpWindow) {
             mcpWindow.webContents.send('mcp-server-log', logEntry);
           }
         });
 
         // Forward client connection events
-        server.on('client-connected', data => {
-          const mcpWindow = BrowserWindow.getAllWindows().find(win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed());
+        server.on('client-connected', (data) => {
+          const mcpWindow = BrowserWindow.getAllWindows().find((win) => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed());
           if (mcpWindow) {
             mcpWindow.webContents.send('mcp-server-client-update', data);
           }
         });
-        server.on('client-disconnected', data => {
-          const mcpWindow = BrowserWindow.getAllWindows().find(win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed());
+        server.on('client-disconnected', (data) => {
+          const mcpWindow = BrowserWindow.getAllWindows().find((win) => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed());
           if (mcpWindow) {
             mcpWindow.webContents.send('mcp-server-client-update', data);
           }
@@ -1625,7 +1625,9 @@ function registerIpcHandlers(deps) {
         // Clean up the server instance
         const currentServer = getUnifiedMCPServer();
         if (currentServer) {
-          try { await currentServer.stop(); } catch (e) { /* ignore */ }
+          try {
+            await currentServer.stop();
+          } catch (e) {/* ignore */}
         }
         setUnifiedMCPServer(null);
         console.error('Failed to start Unified Claude MCP Server:', error);
@@ -1645,12 +1647,12 @@ function registerIpcHandlers(deps) {
           success: false,
           message: msg || `Failed to start Unified Claude MCP Server: ${error.message}`,
           status: 'stopped',
-          ...(conflictPort ? { conflictPort, conflictType } : {}),
+          ...(conflictPort ? {conflictPort, conflictType} : {}),
         };
       }
     } catch (error) {
       setUnifiedServerStatus('stopped');
-      return { success: false, message: error.message, status: 'stopped' };
+      return {success: false, message: error.message, status: 'stopped'};
     }
   });
 
@@ -1678,17 +1680,17 @@ function registerIpcHandlers(deps) {
       }
 
       if (getUnifiedServerStatus() === 'stopped') {
-        return { success: true, message: 'Unified Claude MCP Server is already stopped', status: 'stopped' };
+        return {success: true, message: 'Unified Claude MCP Server is already stopped', status: 'stopped'};
       }
 
       if (getUnifiedServerStatus() === 'stopping') {
-        return { success: false, message: 'Unified Claude MCP Server is already stopping', status: 'stopping' };
+        return {success: false, message: 'Unified Claude MCP Server is already stopping', status: 'stopping'};
       }
 
-      return { success: true, message: 'No MCP Server is running', status: 'stopped' };
+      return {success: true, message: 'No MCP Server is running', status: 'stopped'};
     } catch (error) {
       setUnifiedServerStatus('stopped');
-      return { success: false, message: error.message, status: 'stopped' };
+      return {success: false, message: error.message, status: 'stopped'};
     }
   });
 
@@ -1716,16 +1718,16 @@ function registerIpcHandlers(deps) {
     const httpPort = parseInt(settings.httpPort, 10);
     const wsPort = parseInt(settings.wsPort, 10);
     if (isNaN(httpPort) || httpPort < 1024 || httpPort > 65535) {
-      return { success: false, error: 'HTTP port must be between 1024 and 65535' };
+      return {success: false, error: 'HTTP port must be between 1024 and 65535'};
     }
     if (isNaN(wsPort) || wsPort < 1024 || wsPort > 65535) {
-      return { success: false, error: 'WebSocket port must be between 1024 and 65535' };
+      return {success: false, error: 'WebSocket port must be between 1024 and 65535'};
     }
     if (httpPort === wsPort) {
-      return { success: false, error: 'HTTP and WebSocket ports must be different' };
+      return {success: false, error: 'HTTP and WebSocket ports must be different'};
     }
-    saveMCPServerSettings({ httpPort, wsPort });
-    return { success: true };
+    saveMCPServerSettings({httpPort, wsPort});
+    return {success: true};
   });
 
   ipcMain.handle('mcp-server-check-port', async (event, port) => {
@@ -1740,22 +1742,22 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('list-genome-windows', async () => {
     // Filter out destroyed windows and map to result format
     const result = Array.from(windowRegistry.entries())
-      .filter(([id, info]) => info.window && !info.window.isDestroyed())
-      .map(([id, info]) => ({
-        windowId: id,
-        genomeName: info.genomeName || null,
-        isFocused: info.window.isFocused(),
-        isDestroyed: false,
-        status: info.status,
-        createdAt: info.createdAt ? info.createdAt.toISOString() : null,
-        lastUpdate: info.lastUpdate ? info.lastUpdate.toISOString() : null,
-      }));
-    
+        .filter(([id, info]) => info.window && !info.window.isDestroyed())
+        .map(([id, info]) => ({
+          windowId: id,
+          genomeName: info.genomeName || null,
+          isFocused: info.window.isFocused(),
+          isDestroyed: false,
+          status: info.status,
+          createdAt: info.createdAt ? info.createdAt.toISOString() : null,
+          lastUpdate: info.lastUpdate ? info.lastUpdate.toISOString() : null,
+        }));
+
     // Only log in debug mode or when windows count changes significantly
     if (process.env.DEBUG_MCP || result.length !== windowRegistry.size) {
       console.log(`[IPC] list-genome-windows: ${result.length} active windows`);
     }
-    
+
     return result;
   });
 
@@ -1769,7 +1771,7 @@ function registerIpcHandlers(deps) {
   // Sync all windows with MCP server
   ipcMain.handle('sync-mcp-windows', async () => {
     const result = syncWindowsWithMCPServer();
-    return { success: true, ...result };
+    return {success: true, ...result};
   });
 
   // Focus a specific genome window by windowId (used by ChatBox AI agent)
@@ -1785,7 +1787,7 @@ function registerIpcHandlers(deps) {
 
     const win = entry.window;
     if (!win || win.isDestroyed()) {
-      return { success: false, error: `Window '${windowId}' is destroyed` };
+      return {success: false, error: `Window '${windowId}' is destroyed`};
     }
 
     win.focus();
@@ -1798,7 +1800,7 @@ function registerIpcHandlers(deps) {
   });
 
   // Renderer calls this when a genome file is loaded to update the registry
-  ipcMain.on('update-window-genome-name', (event, { windowId, genomeName }) => {
+  ipcMain.on('update-window-genome-name', (event, {windowId, genomeName}) => {
     const entry = windowRegistry.get(windowId);
     if (entry) {
       entry.genomeName = genomeName;
@@ -1811,7 +1813,7 @@ function registerIpcHandlers(deps) {
   });
 
   // Get the windowId for the sender window
-  ipcMain.handle('get-window-id', async event => {
+  ipcMain.handle('get-window-id', async (event) => {
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
 
     if (!senderWindow) {
@@ -1849,7 +1851,7 @@ function registerIpcHandlers(deps) {
   // =====================================================================
 
   // Handle opening resource manager
-  ipcMain.on('open-resource-manager', event => {
+  ipcMain.on('open-resource-manager', (event) => {
     try {
       // Create new window for the resource manager
       const resourceManagerWindow = new BrowserWindow({
@@ -1919,9 +1921,9 @@ function registerIpcHandlers(deps) {
         },
       ];
 
-      return { success: true, resources: mockResources };
+      return {success: true, resources: mockResources};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1931,9 +1933,9 @@ function registerIpcHandlers(deps) {
       if (mainWindow) {
         mainWindow.webContents.send('collect-resource-info');
       }
-      return { success: true, message: 'Resources refreshed' };
+      return {success: true, message: 'Resources refreshed'};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1942,9 +1944,9 @@ function registerIpcHandlers(deps) {
       // In a real implementation, this would communicate with the main window
       // to remove the resource
       console.log('Removing resource:', resourceId);
-      return { success: true, message: 'Resource removed' };
+      return {success: true, message: 'Resource removed'};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1952,9 +1954,9 @@ function registerIpcHandlers(deps) {
     try {
       // Implementation would show save dialog and export the resource
       console.log('Exporting resource:', resourceId, options);
-      return { success: true, message: 'Resource exported' };
+      return {success: true, message: 'Resource exported'};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -1964,15 +1966,15 @@ function registerIpcHandlers(deps) {
       if (mainWindow) {
         mainWindow.webContents.send('open-resource', resourceId);
       }
-      return { success: true, message: 'Resource opened in browser' };
+      return {success: true, message: 'Resource opened in browser'};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
   ipcMain.handle('select-and-load-file', async () => {
     try {
-      const { dialog } = require('electron');
+      const {dialog} = require('electron');
       const result = await dialog.showOpenDialog(mainWindow, {
         properties: ['openFile'],
         filters: [
@@ -1980,7 +1982,7 @@ function registerIpcHandlers(deps) {
             name: 'Genome Files',
             extensions: ['fasta', 'fa', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'fastq', 'fq'],
           },
-          { name: 'All Files', extensions: ['*'] },
+          {name: 'All Files', extensions: ['*']},
         ],
       });
 
@@ -1988,12 +1990,12 @@ function registerIpcHandlers(deps) {
         const filePath = result.filePaths[0];
         // Send to main window for loading
         mainWindow.webContents.send('load-file', filePath);
-        return { success: true, filePath };
+        return {success: true, filePath};
       }
 
-      return { success: false, canceled: true };
+      return {success: false, canceled: true};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2002,9 +2004,9 @@ function registerIpcHandlers(deps) {
       if (mainWindow) {
         mainWindow.webContents.send(channel, data);
       }
-      return { success: true };
+      return {success: true};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2019,7 +2021,7 @@ function registerIpcHandlers(deps) {
 
       // Forward to Project Manager window
       const pmWindow = BrowserWindow.getAllWindows().find(
-        win => win.getTitle().includes('Project Manager') && !win.isDestroyed()
+          (win) => win.getTitle().includes('Project Manager') && !win.isDestroyed(),
       );
       if (pmWindow) {
         pmWindow.webContents.send('sync-theme', themeData);
@@ -2028,7 +2030,7 @@ function registerIpcHandlers(deps) {
 
       // Also forward to MCP Server Manager window
       const mcpWindow = BrowserWindow.getAllWindows().find(
-        win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed()
+          (win) => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed(),
       );
       if (mcpWindow) {
         mcpWindow.webContents.send('sync-theme', themeData);
@@ -2037,16 +2039,16 @@ function registerIpcHandlers(deps) {
 
       // Also forward to Circos Genome Plotter window
       const circosWindow = BrowserWindow.getAllWindows().find(
-        win => win.getTitle().includes('Circos Genome Plotter') && !win.isDestroyed()
+          (win) => win.getTitle().includes('Circos Genome Plotter') && !win.isDestroyed(),
       );
       if (circosWindow) {
         circosWindow.webContents.send('sync-theme', themeData);
         sent = true;
       }
 
-      return { success: sent };
+      return {success: sent};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2056,11 +2058,11 @@ function registerIpcHandlers(deps) {
       // Forward the request to main window, which has ThemeManager
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('request-theme-for-pm');
-        return { success: true };
+        return {success: true};
       }
-      return { success: false, error: 'Main window not found' };
+      return {success: false, error: 'Main window not found'};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2121,10 +2123,10 @@ function registerIpcHandlers(deps) {
         debugWindow.setParentWindow(mainWindow);
       }
 
-      return { success: true, fileName };
+      return {success: true, fileName};
     } catch (error) {
       console.error('Failed to open debug tool:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2133,7 +2135,7 @@ function registerIpcHandlers(deps) {
   // =====================================================================
 
   // Handle genome data requests from Circos Plotter
-  ipcMain.handle('get-circos-genome-data', async event => {
+  ipcMain.handle('get-circos-genome-data', async (event) => {
     try {
       // Get the sender window (Circos window)
       const senderWindow = BrowserWindow.fromWebContents(event.sender);
@@ -2302,10 +2304,10 @@ function registerIpcHandlers(deps) {
         `);
         return result;
       }
-      return { success: false, error: 'Main window not available' };
+      return {success: false, error: 'Main window not available'};
     } catch (error) {
       console.error('Error getting Circos genome data:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2331,12 +2333,12 @@ function registerIpcHandlers(deps) {
             return false;
           })()
         `);
-        return { success: true };
+        return {success: true};
       }
-      return { success: false, error: 'Main window not available' };
+      return {success: false, error: 'Main window not available'};
     } catch (error) {
       console.error('Error navigating to chromosome:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2374,12 +2376,12 @@ function registerIpcHandlers(deps) {
             return false;
           })()
         `);
-        return { success: true };
+        return {success: true};
       }
-      return { success: false, error: 'Main window not available' };
+      return {success: false, error: 'Main window not available'};
     } catch (error) {
       console.error('Error navigating to gene:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2673,7 +2675,7 @@ function registerIpcHandlers(deps) {
         webContents.findInPage('');
         break;
       case 'find-next':
-        webContents.findInPage('', { forward: true });
+        webContents.findInPage('', {forward: true});
         break;
       case 'reload':
         webContents.reload();
@@ -2786,12 +2788,12 @@ function registerIpcHandlers(deps) {
             window.genomeBrowser.configManager.setEvo2Config(${JSON.stringify(config)});
           }
         `);
-        return { success: true };
+        return {success: true};
       }
-      return { success: false, error: 'Main window not available' };
+      return {success: false, error: 'Main window not available'};
     } catch (error) {
       console.error('Error setting Evo2 config:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2824,12 +2826,12 @@ function registerIpcHandlers(deps) {
             window.genomeBrowser.configManager.setEvo2ApiKey('${apiKey}');
           }
         `);
-        return { success: true };
+        return {success: true};
       }
-      return { success: false, error: 'Main window not available' };
+      return {success: false, error: 'Main window not available'};
     } catch (error) {
       console.error('Error setting Evo2 API key:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2862,12 +2864,12 @@ function registerIpcHandlers(deps) {
             window.genomeBrowser.configManager.setEvo2AnalysisHistory(${JSON.stringify(history)});
           }
         `);
-        return { success: true };
+        return {success: true};
       }
-      return { success: false, error: 'Main window not available' };
+      return {success: false, error: 'Main window not available'};
     } catch (error) {
       console.error('Error setting Evo2 analysis history:', error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   });
 
@@ -2876,22 +2878,22 @@ function registerIpcHandlers(deps) {
   // =====================================================================
 
   // IPC handler for BLAST installation check
-  ipcMain.on('check-blast-installation', event => {
+  ipcMain.on('check-blast-installation', (event) => {
     console.log('IPC: Checking BLAST installation...');
-    const { exec } = require('child_process');
+    const {exec} = require('child_process');
     const path = require('path');
     const fs = require('fs');
     const os = require('os');
 
     // Function to check BLAST+ at specific path
     function checkBlastAtPath(blastPath) {
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         const command = `"${blastPath}" -version`;
         console.log('Checking BLAST at:', command);
 
         exec(command, (error, stdout, stderr) => {
           if (error) {
-            resolve({ found: false, error: error.message });
+            resolve({found: false, error: error.message});
           } else {
             const versionMatch = stdout.match(/blastn: ([\d.]+)/);
             const version = versionMatch ? versionMatch[1] : 'Unknown version';
@@ -2944,42 +2946,42 @@ function registerIpcHandlers(deps) {
         }
       }
 
-      return { found: false, error: 'BLAST+ not found in any common locations' };
+      return {found: false, error: 'BLAST+ not found in any common locations'};
     }
 
     // Execute the search
     findBlastExecutable()
-      .then(result => {
-        if (result.found) {
-          event.sender.send('blast-check-result', {
-            installed: true,
-            message: `BLAST+ installed successfully (version ${result.version})`,
-            version: result.version,
-            path: result.path,
-            output: result.output,
-          });
-        } else {
+        .then((result) => {
+          if (result.found) {
+            event.sender.send('blast-check-result', {
+              installed: true,
+              message: `BLAST+ installed successfully (version ${result.version})`,
+              version: result.version,
+              path: result.path,
+              output: result.output,
+            });
+          } else {
+            event.sender.send('blast-check-result', {
+              installed: false,
+              message: 'BLAST+ not found or not installed',
+              error: result.error,
+            });
+          }
+        })
+        .catch((error) => {
           event.sender.send('blast-check-result', {
             installed: false,
-            message: 'BLAST+ not found or not installed',
-            error: result.error,
+            message: 'Error checking BLAST+ installation',
+            error: error.message,
           });
-        }
-      })
-      .catch(error => {
-        event.sender.send('blast-check-result', {
-          installed: false,
-          message: 'Error checking BLAST+ installation',
-          error: error.message,
         });
-      });
   });
 
   // IPC handler for system requirements check
-  ipcMain.on('system-requirements-check', event => {
+  ipcMain.on('system-requirements-check', (event) => {
     console.log('IPC: Checking system requirements...');
     const os = require('os');
-    const { exec } = require('child_process');
+    const {exec} = require('child_process');
 
     const systemInfo = {
       platform: os.platform(),
@@ -3066,4 +3068,4 @@ function registerIpcHandlers(deps) {
   });
 }
 
-module.exports = { registerIpcHandlers };
+module.exports = {registerIpcHandlers};

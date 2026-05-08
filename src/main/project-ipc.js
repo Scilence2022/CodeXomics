@@ -1469,7 +1469,7 @@ function createGenomicDownloadWindow(downloadType) {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, 'preload.js'),
+        preload: path.join(__dirname, '..', 'preload.js'),
       },
       icon: path.join(__dirname, '../assets/icon.png'),
       title: `Download Genomic Data - ${downloadType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
