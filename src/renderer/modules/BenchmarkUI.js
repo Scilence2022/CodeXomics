@@ -2916,8 +2916,12 @@ class BenchmarkUI {
                         <div class="metric">Timeout: ${interaction.request?.timeout ? interaction.request.timeout / 1000 + 's' : 'N/A'}</div>
                         
                         <details>
+                            <summary>👤 User Prompt</summary>
+                            <pre>${interaction.request?.instruction || 'Not available'}</pre>
+                        </details>
+                        <details>
                             <summary>📝 Full Prompt</summary>
-                            <pre>${interaction.request?.fullPrompt || interaction.request?.instruction || 'Not available'}</pre>
+                            <pre>System Prompt:\n${interaction.request?.systemPrompt || 'Not available'}\n\nUser Instruction:\n${interaction.request?.instruction || 'Not available'}</pre>
                         </details>
                     </div>
                     
@@ -3111,8 +3115,12 @@ class BenchmarkUI {
                                 <strong>Available Tools:</strong> ${requestData.availableTools ? requestData.availableTools.join(', ') : 'None'}
                             </div>
                             <details style="margin-top: 10px;">
-                                <summary style="cursor: pointer; font-weight: bold; color: #2980b9;">📝 Full Prompt (Click to expand)</summary>
-                                <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${requestData.fullPrompt || requestData.instruction || 'Not available'}</pre>
+                                <summary style="cursor: pointer; font-weight: bold; color: #2980b9;">👤 User Prompt (Click to expand)</summary>
+                                <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${requestData.instruction || 'Not available'}</pre>
+                            </details>
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; font-weight: bold; color: #e67e22;">📝 Full Prompt (Click to expand)</summary>
+                                <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">System Prompt:\n${requestData.systemPrompt || 'Not available'}\n\nUser Instruction:\n${requestData.instruction || 'Not available'}</pre>
                             </details>
                             <details style="margin-top: 10px;">
                                 <summary style="cursor: pointer; font-weight: bold; color: #8e44ad;">🔧 System Prompt (Click to expand)</summary>
