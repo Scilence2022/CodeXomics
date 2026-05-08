@@ -244,7 +244,7 @@ function createMCPServerManagerWindow() {
   });
 
   // Load the MCP Server Manager HTML
-  mcpServerManagerWindow.loadFile(path.join(__dirname, 'mcp-server-manager.html'));
+  mcpServerManagerWindow.loadFile(path.join(__dirname, '..', 'mcp-server-manager.html'));
 
   // Handle window closed
   mcpServerManagerWindow.on('closed', () => {

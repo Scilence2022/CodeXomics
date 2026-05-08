@@ -3295,7 +3295,7 @@ class BenchmarkUI {
    * Generate detailed logs display from captured Console output
    */
   generateDetailedLogsDisplay(detailedLogs) {
-    if (!detailedLogs || !detailedLogs.logs) {
+    if (!detailedLogs) {
       return '';
     }
 
@@ -3468,7 +3468,7 @@ class BenchmarkUI {
                                         <span style="color: #6c757d;">(via ${tool.method})</span>
                                         ${tool.parameters ? `<br><span style="font-size: 10px; color: #495057;">Parameters: ${JSON.stringify(tool.parameters)}</span>` : ''}
                                     </div>
-                                `
+                                  `
                                   )
                                   .join('')}
                             </div>
@@ -3502,6 +3502,7 @@ class BenchmarkUI {
                 }
                 
                 <!-- Complete Console Log Dump -->
+                ${detailedLogs.logs && detailedLogs.logs.length > 0 ? `
                 <details style="margin-bottom: 10px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #fd7e14;">📜 Complete Console Log Dump (Click to expand)</summary>
                     <div style="background: #2c3e50; color: #ecf0f1; border-radius: 4px; padding: 12px; margin-top: 8px; max-height: 400px; overflow-y: auto;">
@@ -3516,7 +3517,11 @@ class BenchmarkUI {
                           )
                           .join('')}
                     </div>
-                </details>
+                </details>` : `
+                <div style="padding: 10px; font-size: 11px; color: #7f8c8d; font-style: italic; background: #f8f9fa; border-radius: 4px; border: 1px dashed #dee2e6; margin-top: 10px;">
+                    ℹ️ Complete raw console logs have been discarded for memory optimization. Use the sections above to see extracted details.
+                </div>
+                `}
             </div>
         `;
   }
