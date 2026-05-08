@@ -1319,15 +1319,9 @@ class LLMBenchmarkFramework {
         interactionData.request.model = 'unknown';
       }
 
-      // MEMORY OPTIMIZATION: Truncate system prompt to preview instead of storing full text.
-      // The system prompt can be 50-200KB (includes all tool registry definitions).
-      // For diagnostics we only need the first few KB to verify what was sent.
-      const MAX_SYSTEM_PROMPT_STORE = 2048; // 2KB preview
+      // Capture the complete system prompt (now stored in full since details are persisted to disk)
       const capturedSystemPrompt = await this.captureSystemPrompt();
-      interactionData.request.systemPrompt =
-        capturedSystemPrompt && capturedSystemPrompt.length > MAX_SYSTEM_PROMPT_STORE
-          ? capturedSystemPrompt.substring(0, MAX_SYSTEM_PROMPT_STORE) + `...[TRUNCATED: ${capturedSystemPrompt.length} chars total]`
-          : capturedSystemPrompt;
+      interactionData.request.systemPrompt = capturedSystemPrompt;
       interactionData.request.systemPromptLength = capturedSystemPrompt ? capturedSystemPrompt.length : 0;
       interactionData.request.contextLength = this.getChatContextLength();
       interactionData.request.availableTools = this.getAvailableTools();
