@@ -20,33 +20,35 @@ class ToolExecutionService {
         }
       }
 
-      // --- PRIORITY 2: NEW EXTRACTED SERVICES ---
+      // --- PRIORITY 2: EXTRACTED SERVICES (use singleton instances from ChatManager) ---
+      const services = this.chatManager.services;
+
       // 1. File Operation Services
-      const fileService = new window.FileOperationService(this.app, this.chatManager);
+      const fileService = services.file;
       if (typeof fileService[this._toCamelCase(toolName)] === 'function') {
         return await fileService[this._toCamelCase(toolName)](parameters);
       }
 
       // 2. Annotation Services
-      const annotationService = new window.AnnotationService(this.app, this.chatManager);
+      const annotationService = services.annotation;
       if (typeof annotationService[this._toCamelCase(toolName)] === 'function') {
         return await annotationService[this._toCamelCase(toolName)](parameters);
       }
 
       // 3. BLAST Services
-      const blastService = new window.BlastService(this.app, this.chatManager);
+      const blastService = services.blast;
       if (typeof blastService[this._toCamelCase(toolName)] === 'function') {
         return await blastService[this._toCamelCase(toolName)](parameters);
       }
 
       // 4. Protein Services
-      const proteinService = new window.ProteinService(this.app, this.chatManager);
+      const proteinService = services.protein;
       if (typeof proteinService[this._toCamelCase(toolName)] === 'function') {
         return await proteinService[this._toCamelCase(toolName)](parameters);
       }
 
       // 5. Genome Analysis Services
-      const analysisService = new window.GenomeAnalysisService(this.app, this.chatManager);
+      const analysisService = services.analysis;
       if (typeof analysisService[this._toCamelCase(toolName)] === 'function') {
         return await analysisService[this._toCamelCase(toolName)](parameters);
       }

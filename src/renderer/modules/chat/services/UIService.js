@@ -61,7 +61,7 @@ class UIService {
                             <div class="start-time">${startTime.toLocaleDateString()} ${startTime.toLocaleTimeString()}</div>
                         </div>
                     </div>
-                    <div class="conversation-preview">${this.chatManager.formatMessage(preview)}</div>
+                    <div class="conversation-preview">${this.chatManager.services.messaging.formatMessage(preview)}</div>
                     <div class="conversation-actions">
                         <button onclick="event.stopPropagation(); chatManager.copyConversation(${index})" title="Copy conversation">
                             <i class="fas fa-copy"></i>
@@ -91,11 +91,11 @@ class UIService {
                 </div>
                 <div class="modal-body chat-history-body">
                     <div class="history-controls">
-                        <button class="btn btn-sm btn-secondary" onclick="chatManager.exportChatHistory('txt')">
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.services.messaging.exportChatHistory('txt')">
                             <i class="fas fa-download"></i>
                             Export All TXT
                         </button>
-                        <button class="btn btn-sm btn-secondary" onclick="chatManager.exportChatHistory('json')">
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.services.messaging.exportChatHistory('json')">
                             <i class="fas fa-download"></i>
                             Export All JSON
                         </button>
