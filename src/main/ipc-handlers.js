@@ -1317,7 +1317,7 @@ function registerIpcHandlers(deps) {
           nodeIntegration: false,
           contextIsolation: true,
           enableRemoteModule: false,
-          preload: path.join(__dirname, 'preload.js'),
+          preload: path.join(__dirname, '..', 'preload.js'),
         },
         title: windowTitle,
         icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -1575,20 +1575,23 @@ function registerIpcHandlers(deps) {
 
         // Forward server log events to the Manager window
         server.on('log', logEntry => {
-          if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
-            mcpServerManagerWindow.webContents.send('mcp-server-log', logEntry);
+          const mcpWindow = BrowserWindow.getAllWindows().find(win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed());
+          if (mcpWindow) {
+            mcpWindow.webContents.send('mcp-server-log', logEntry);
           }
         });
 
         // Forward client connection events
         server.on('client-connected', data => {
-          if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
-            mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
+          const mcpWindow = BrowserWindow.getAllWindows().find(win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed());
+          if (mcpWindow) {
+            mcpWindow.webContents.send('mcp-server-client-update', data);
           }
         });
         server.on('client-disconnected', data => {
-          if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
-            mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
+          const mcpWindow = BrowserWindow.getAllWindows().find(win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed());
+          if (mcpWindow) {
+            mcpWindow.webContents.send('mcp-server-client-update', data);
           }
         });
 
@@ -1856,7 +1859,7 @@ function registerIpcHandlers(deps) {
           nodeIntegration: false,
           contextIsolation: true,
           enableRemoteModule: false,
-          preload: path.join(__dirname, 'preload.js'),
+          preload: path.join(__dirname, '..', 'preload.js'),
         },
         title: 'Resource Manager - CodeXomics',
         icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -2024,8 +2027,11 @@ function registerIpcHandlers(deps) {
       }
 
       // Also forward to MCP Server Manager window
-      if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
-        mcpServerManagerWindow.webContents.send('sync-theme', themeData);
+      const mcpWindow = BrowserWindow.getAllWindows().find(
+        win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed()
+      );
+      if (mcpWindow) {
+        mcpWindow.webContents.send('sync-theme', themeData);
         sent = true;
       }
 
