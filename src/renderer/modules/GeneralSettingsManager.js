@@ -463,6 +463,11 @@ class GeneralSettingsManager {
         console.log('🔄 [GeneralSettings] Save Settings button clicked');
         this.saveAllSettings();
       }
+      if (e.target && e.target.id === 'applyGeneralSettings') {
+        e.preventDefault();
+        console.log('🔄 [GeneralSettings] Apply button clicked');
+        this.applySettingsOnly();
+      }
     });
 
     // Modal close handlers and other form elements are handled in setupModalHandlers
@@ -749,6 +754,24 @@ class GeneralSettingsManager {
   /**
    * Save all settings and close modal
    */
+  async applySettingsOnly() {
+    try {
+      this.applySettings();
+
+      if (this.configManager) {
+        await this.configManager.set('generalSettings', this.settings);
+        await this.configManager.saveConfig();
+      }
+
+      this.showNotification('Settings applied!', 'success');
+
+      console.log('✅ [GeneralSettings] Settings applied (modal stays open)');
+    } catch (error) {
+      console.error('❌ [GeneralSettings] Failed to apply settings:', error);
+      this.showNotification('Failed to apply settings. Please try again.', 'error');
+    }
+  }
+
   async saveAllSettings() {
     try {
       // Apply all current settings
