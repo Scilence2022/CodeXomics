@@ -34,7 +34,6 @@ class MultiTrackGeneManager {
     const controlsContainer = document.getElementById('controls');
     if (!controlsContainer) return;
 
-    // Create track controls section similar to GC Content controls
     const trackControlsDiv = document.createElement('div');
     trackControlsDiv.className = 'track-controls';
     trackControlsDiv.innerHTML = `
@@ -43,13 +42,14 @@ class MultiTrackGeneManager {
                 ${Object.keys(this.geneTracks)
                   .map(
                     type => `
-                    <div class="checkbox-group">
+                    <div class="checkbox-group" style="position: relative;">
                         <input type="checkbox" id="track-${type}" value="${type}" ${this.geneTracks[type].enabled ? 'checked' : ''}>
                         <label for="track-${type}">
-                            <span class="track-color" style="background-color: ${this.geneTracks[type].color}"></span>
+                            <span class="track-color track-color-btn" id="trackColorBtn-${type}" style="background-color: ${this.geneTracks[type].color}" title="Change ${this.geneTracks[type].name} color"></span>
                             ${this.geneTracks[type].name}
                             <span class="gene-count" id="count-${type}">0</span>
                         </label>
+                        <input type="color" class="hidden-color-input" id="trackColorPicker-${type}" value="${this.geneTracks[type].color}" />
                     </div>
                 `
                   )
@@ -67,12 +67,35 @@ class MultiTrackGeneManager {
 
     controlsContainer.appendChild(trackControlsDiv);
 
-    // Add event listeners for gene type checkboxes
+    // Add event listeners for gene type checkboxes and color pickers
     Object.keys(this.geneTracks).forEach(type => {
       const checkbox = document.getElementById(`track-${type}`);
       if (checkbox) {
         checkbox.addEventListener('change', e => {
           this.geneTracks[type].enabled = e.target.checked;
+          this.circosPlotter.redrawPlot();
+        });
+      }
+
+      const colorBtn = document.getElementById(`trackColorBtn-${type}`);
+      const colorPicker = document.getElementById(`trackColorPicker-${type}`);
+      if (colorBtn && colorPicker) {
+        colorBtn.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          colorPicker.click();
+        });
+
+        colorPicker.addEventListener('input', e => {
+          this.geneTracks[type].color = e.target.value;
+          colorBtn.style.backgroundColor = e.target.value;
+
+          const theme = this.circosPlotter.getCurrentTheme();
+          if (theme.genes && theme.genes[type]) {
+            theme.genes[type] = e.target.value;
+          }
+
+          this.circosPlotter.dataProcessor.clearCache();
           this.circosPlotter.redrawPlot();
         });
       }

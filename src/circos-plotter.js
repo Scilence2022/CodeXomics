@@ -375,6 +375,18 @@ class CircosPlotter {
       if (picker) picker.value = color;
     });
 
+    // Update gene track color buttons and pickers
+    if (this.multiTrackManager) {
+      Object.keys(this.multiTrackManager.geneTracks).forEach(type => {
+        const color = theme.genes[type] || theme.genes.default;
+        this.multiTrackManager.geneTracks[type].color = color;
+        const btn = document.getElementById(`trackColorBtn-${type}`);
+        const picker = document.getElementById(`trackColorPicker-${type}`);
+        if (btn) btn.style.backgroundColor = color;
+        if (picker) picker.value = color;
+      });
+    }
+
     if (this.data) {
       this.redrawPlot();
     }
