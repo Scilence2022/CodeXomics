@@ -5,6 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Circos Genome Plotter - CodeXomics</title>
 
+    <!-- Synchronous Theme Loading -->
+    <script>
+      function applyThemeVariables(themeData) {
+        const root = document.documentElement;
+        const vars = themeData.isDark && themeData.darkVariables
+          ? { ...themeData.variables, ...themeData.darkVariables }
+          : themeData.variables;
+        const isDark = !!themeData.isDark;
+
+        // Map global variables to --circos-* variables
+        const directMap = {
+          '--bg-primary': '--circos-bg-primary',
+          '--bg-secondary': '--circos-bg-secondary',
+          '--bg-tertiary': '--circos-bg-tertiary',
+          '--text-primary': '--circos-text-primary',
+          '--text-secondary': '--circos-text-secondary',
+          '--text-muted': '--circos-text-muted',
+          '--border-color': '--circos-border',
+          '--border-hover': '--circos-border-hover',
+          '--primary-color': '--circos-primary',
+          '--primary-hover': '--circos-primary-hover',
+          '--header-gradient': '--circos-header-gradient',
+          '--welcome-gradient': '--circos-body-gradient',
+          '--modal-header-gradient': '--circos-panel-gradient',
+          '--focus-ring': '--circos-focus-ring',
+          '--accent-indigo': '--circos-accent',
+          '--accent-purple': '--circos-accent-secondary',
+        };
+
+        Object.entries(directMap).forEach(([themeVar, circosVar]) => {
+          if (vars[themeVar]) {
+            root.style.setProperty(circosVar, vars[themeVar]);
+          }
+        });
+
+        // Derive/adjust specific colors
+        if (vars['--border-color']) {
+          root.style.setProperty('--circos-border-input', vars['--border-color']);
+        }
+        if (vars['--primary-color']) {
+          root.style.setProperty('--circos-focus-color', vars['--primary-color']);
+          root.style.setProperty('--circos-spinner-color', vars['--primary-color']);
+        }
+        if (vars['--bg-primary']) {
+          root.style.setProperty('--circos-svg-bg', vars['--bg-primary']);
+        }
+        if (vars['--bg-tertiary']) {
+          root.style.setProperty('--circos-btn-secondary-bg', vars['--bg-tertiary']);
+        }
+        if (vars['--border-color']) {
+          root.style.setProperty('--circos-btn-secondary-hover', vars['--border-color']);
+        }
+        if (vars['--text-secondary']) {
+          root.style.setProperty('--circos-btn-secondary-color', vars['--text-secondary']);
+        }
+        if (vars['--text-muted']) {
+          root.style.setProperty('--circos-text-dim', vars['--text-muted']);
+        }
+
+        // Apply dark/light theme attributes to root
+        root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        root.setAttribute('data-ui-style', themeData.style);
+      }
+
+      // Try applying synchronously to prevent theme flash
+      try {
+        const themeDataStr = localStorage.getItem('_globalThemeData');
+        if (themeDataStr) {
+          applyThemeVariables(JSON.parse(themeDataStr));
+        }
+      } catch (e) {
+        console.warn('Failed to load initial theme from localStorage', e);
+      }
+    </script>
+
     <!-- External Dependencies -->
     <script
       src="../node_modules/d3/dist/d3.min.js"
@@ -1247,67 +1322,6 @@
       });
 
       // ===== Theme Integration =====
-      function applyThemeVariables(themeData) {
-        const root = document.documentElement;
-        const vars = themeData.isDark && themeData.darkVariables
-          ? { ...themeData.variables, ...themeData.darkVariables }
-          : themeData.variables;
-        const isDark = !!themeData.isDark;
-
-        // Map global variables to --circos-* variables
-        const directMap = {
-          '--bg-primary': '--circos-bg-primary',
-          '--bg-secondary': '--circos-bg-secondary',
-          '--bg-tertiary': '--circos-bg-tertiary',
-          '--text-primary': '--circos-text-primary',
-          '--text-secondary': '--circos-text-secondary',
-          '--text-muted': '--circos-text-muted',
-          '--border-color': '--circos-border',
-          '--border-hover': '--circos-border-hover',
-          '--primary-color': '--circos-primary',
-          '--primary-hover': '--circos-primary-hover',
-          '--header-gradient': '--circos-header-gradient',
-          '--welcome-gradient': '--circos-body-gradient',
-          '--modal-header-gradient': '--circos-panel-gradient',
-          '--focus-ring': '--circos-focus-ring',
-          '--accent-indigo': '--circos-accent',
-          '--accent-purple': '--circos-accent-secondary',
-        };
-
-        Object.entries(directMap).forEach(([themeVar, circosVar]) => {
-          if (vars[themeVar]) {
-            root.style.setProperty(circosVar, vars[themeVar]);
-          }
-        });
-
-        // Derive/adjust specific colors
-        if (vars['--border-color']) {
-          root.style.setProperty('--circos-border-input', vars['--border-color']);
-        }
-        if (vars['--primary-color']) {
-          root.style.setProperty('--circos-focus-color', vars['--primary-color']);
-          root.style.setProperty('--circos-spinner-color', vars['--primary-color']);
-        }
-        if (vars['--bg-primary']) {
-          root.style.setProperty('--circos-svg-bg', vars['--bg-primary']);
-        }
-        if (vars['--bg-tertiary']) {
-          root.style.setProperty('--circos-btn-secondary-bg', vars['--bg-tertiary']);
-        }
-        if (vars['--border-color']) {
-          root.style.setProperty('--circos-btn-secondary-hover', vars['--border-color']);
-        }
-        if (vars['--text-secondary']) {
-          root.style.setProperty('--circos-btn-secondary-color', vars['--text-secondary']);
-        }
-        if (vars['--text-muted']) {
-          root.style.setProperty('--circos-text-dim', vars['--text-muted']);
-        }
-
-        // Apply dark/light theme attributes to root
-        root.setAttribute('data-theme', isDark ? 'dark' : 'light');
-        root.setAttribute('data-ui-style', themeData.style);
-      }
 
       // Listen for theme sync from main process
       if (typeof ipcRenderer !== 'undefined') {

@@ -3444,6 +3444,11 @@ class GenomeBrowser {
           darkVariables: preset.darkVariables || {},
           isDark: isDark,
         };
+        try {
+          localStorage.setItem('_globalThemeData', JSON.stringify(themeData));
+        } catch (e) {
+          console.warn('Failed to save global theme data to localStorage');
+        }
         // Send to PM window via IPC (use ipcRenderer directly - main window has nodeIntegration:true)
         ipcRenderer.invoke('broadcast-theme-to-pm', themeData).catch(err => {
           console.warn('[ThemeSync] Failed to broadcast theme to PM:', err.message);
@@ -3463,6 +3468,11 @@ class GenomeBrowser {
         darkVariables: preset.darkVariables || {},
         isDark: isDark,
       };
+      try {
+        localStorage.setItem('_globalThemeData', JSON.stringify(themeData));
+      } catch (e) {
+        console.warn('Failed to save global theme data to localStorage');
+      }
       // Use ipcRenderer directly - main window has nodeIntegration:true, no preload.js
       ipcRenderer.invoke('broadcast-theme-to-pm', themeData).catch(err => {
         console.warn('[ThemeSync] Failed to broadcast theme to PM:', err.message);
