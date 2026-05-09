@@ -387,6 +387,18 @@ class CircosPlotter {
       });
     }
 
+    // Update chromosome color buttons
+    if (this.data && this.data.chromosomes) {
+      this.data.chromosomes.forEach((chr, i) => {
+        const color = theme.chromosomes[i % theme.chromosomes.length];
+        chr.color = color;
+        const btn = document.getElementById(`chrColorBtn-${i}`);
+        const picker = document.getElementById(`chrColorPicker-${i}`);
+        if (btn) btn.style.backgroundColor = color;
+        if (picker) picker.value = color;
+      });
+    }
+
     if (this.data) {
       this.redrawPlot();
     }
@@ -1329,6 +1341,8 @@ class CircosPlotter {
       this.multiTrackManager = new MultiTrackGeneManager(this);
     }
 
+    this.updateChromosomeColorList();
+
     const theme = this.getCurrentTheme();
 
     if (this.renderingMode === 'canvas') {
@@ -1336,6 +1350,59 @@ class CircosPlotter {
     } else {
       this.createSVGPlot(theme);
     }
+  }
+
+  updateChromosomeColorList() {
+    const container = document.getElementById('chromosomeColorList');
+    if (!container || !this.data || !this.data.chromosomes) return;
+
+    const theme = this.getCurrentTheme();
+    const existingItems = container.querySelectorAll('.chromosome-color-item');
+
+    if (existingItems.length === this.data.chromosomes.length) {
+      this.data.chromosomes.forEach((chr, i) => {
+        const btn = document.getElementById(`chrColorBtn-${i}`);
+        const picker = document.getElementById(`chrColorPicker-${i}`);
+        const color = chr.color || theme.chromosomes[i % theme.chromosomes.length];
+        if (btn) btn.style.backgroundColor = color;
+        if (picker) picker.value = color;
+      });
+      return;
+    }
+
+    container.innerHTML = '';
+
+    this.data.chromosomes.forEach((chr, i) => {
+      const color = chr.color || theme.chromosomes[i % theme.chromosomes.length];
+      const chrName = chr.name || chr.label || chr.id || `Chr ${i + 1}`;
+      const truncatedName = chrName.length > 16 ? chrName.substring(0, 14) + '…' : chrName;
+
+      const item = document.createElement('div');
+      item.className = 'chromosome-color-item';
+      item.innerHTML = `
+        <span class="track-color track-color-btn" id="chrColorBtn-${i}" style="background-color: ${color}" title="Change ${chrName} color"></span>
+        <label>${truncatedName}</label>
+        <input type="color" class="hidden-color-input" id="chrColorPicker-${i}" value="${color}" />
+      `;
+      container.appendChild(item);
+
+      const btn = item.querySelector(`#chrColorBtn-${i}`);
+      const picker = item.querySelector(`#chrColorPicker-${i}`);
+
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        picker.click();
+      });
+
+      picker.addEventListener('input', e => {
+        chr.color = e.target.value;
+        theme.chromosomes[i] = e.target.value;
+        btn.style.backgroundColor = e.target.value;
+        this.dataProcessor.clearCache();
+        this.redrawPlot();
+      });
+    });
   }
 
   redrawPlot() {

@@ -732,6 +732,27 @@
         pointer-events: none;
       }
 
+      .chromosome-color-list {
+        margin-top: 8px;
+      }
+
+      .chromosome-color-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+        position: relative;
+      }
+
+      .chromosome-color-item label {
+        font-size: 12px;
+        color: var(--circos-text-secondary);
+        cursor: default;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       .gene-count {
         margin-left: auto;
         background: var(--circos-bg-tertiary);
@@ -977,6 +998,10 @@
               <label>Label Distance</label>
               <input type="range" class="range-input" id="labelDistanceSlider" min="10" max="50" value="25" step="5" />
               <div class="range-value" id="labelDistanceValue">25px</div>
+            </div>
+
+            <div id="chromosomeColorList" class="chromosome-color-list">
+              <!-- Populated dynamically when data is loaded -->
             </div>
           </div>
 
