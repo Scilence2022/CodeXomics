@@ -2127,11 +2127,22 @@ class CircosPlotter {
       try {
         const content = e.target.result;
 
-        if (file.name.endsWith('.json')) {
+        const fileNameLower = file.name.toLowerCase();
+        
+        if (fileNameLower.endsWith('.gbk') || fileNameLower.endsWith('.gb') || fileNameLower.endsWith('.fasta') || fileNameLower.endsWith('.fa')) {
+          throw new Error('Please load genome files (.gbk/.fasta) in the main window and click "Load Current Genome".');
+        }
+
+        if (fileNameLower.endsWith('.json')) {
           this.data = JSON.parse(content);
-        } else {
+        } else if (fileNameLower.endsWith('.csv') || fileNameLower.endsWith('.tsv') || fileNameLower.endsWith('.txt')) {
           const parsed = Papa.parse(content, { header: true });
+          if (parsed.errors.length > 0 && parsed.data.length === 0) {
+            throw new Error('Invalid CSV/TSV format.');
+          }
           this.convertCSVToCircosData(parsed.data);
+        } else {
+          throw new Error('Unsupported file format. Please load a .csv, .tsv, .txt, or .json file.');
         }
 
         this.createPlot();
