@@ -362,6 +362,19 @@ class CircosPlotter {
     if (bgPicker) bgPicker.value = theme.background;
     if (strokePicker) strokePicker.value = theme.stroke;
 
+    // Update data track color buttons and pickers
+    const trackColorSync = [
+      { btnId: 'gcContentColorBtn', pickerId: 'gcContentColorPicker', color: theme.tracks.gc_content },
+      { btnId: 'gcSkewColorBtn', pickerId: 'gcSkewColorPicker', color: theme.tracks.gc_skew },
+      { btnId: 'wigDataColorBtn', pickerId: 'wigDataColorPicker', color: theme.tracks.wig_data },
+    ];
+    trackColorSync.forEach(({ btnId, pickerId, color }) => {
+      const btn = document.getElementById(btnId);
+      const picker = document.getElementById(pickerId);
+      if (btn) btn.style.backgroundColor = color;
+      if (picker) picker.value = color;
+    });
+
     if (this.data) {
       this.redrawPlot();
     }
@@ -507,6 +520,33 @@ class CircosPlotter {
     document.getElementById('strokeColorPicker').addEventListener('input', e => {
       this.strokeColor = e.target.value;
       this.redrawPlot();
+    });
+
+    // Data track color pickers
+    const trackColorBindings = [
+      { btnId: 'gcContentColorBtn', pickerId: 'gcContentColorPicker', trackKey: 'gc_content' },
+      { btnId: 'gcSkewColorBtn', pickerId: 'gcSkewColorPicker', trackKey: 'gc_skew' },
+      { btnId: 'wigDataColorBtn', pickerId: 'wigDataColorPicker', trackKey: 'wig_data' },
+    ];
+
+    trackColorBindings.forEach(({ btnId, pickerId, trackKey }) => {
+      const btn = document.getElementById(btnId);
+      const picker = document.getElementById(pickerId);
+      if (!btn || !picker) return;
+
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        picker.click();
+      });
+
+      picker.addEventListener('input', e => {
+        const theme = this.getCurrentTheme();
+        theme.tracks[trackKey] = e.target.value;
+        btn.style.backgroundColor = e.target.value;
+        this.dataProcessor.clearCache();
+        this.redrawPlot();
+      });
     });
 
     // Sample data buttons

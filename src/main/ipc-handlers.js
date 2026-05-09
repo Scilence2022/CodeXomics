@@ -2189,27 +2189,50 @@ function registerIpcHandlers(deps) {
                   
                   // Process all annotations (genes and other features are mixed in the array)
                   if (Array.isArray(annotations)) {
+                    // First pass: collect CDS/gene features and deduplicate
+                    // GenBank files contain both 'gene' and 'CDS' features for the same
+                    // locus — keeping both doubles the count. We prefer CDS (richer
+                    // annotation: product, translation, etc.) and discard 'gene' when
+                    // a CDS with the same locus_tag or overlapping coordinates exists.
+                    const cdsByLocus = {};
+                    const genesByLocus = {};
+                    const otherFeatures = [];
+                    
                     annotations.forEach(annotation => {
-                      // Skip source features as they cover the entire genome and obscure other genes
-                      if (annotation.type === 'source') {
-                        console.log('Skipping source feature:', annotation);
-                        return;
-                      }
+                      if (annotation.type === 'source') return;
                       
-                      // Extract gene information from qualifiers
+                      const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || null;
+                      
+                      if (annotation.type === 'CDS') {
+                        const key = locusTag || \`cds_\${annotation.start}_\${annotation.end}\`;
+                        cdsByLocus[key] = annotation;
+                      } else if (annotation.type === 'gene') {
+                        const key = locusTag || \`gene_\${annotation.start}_\${annotation.end}\`;
+                        genesByLocus[key] = annotation;
+                      } else {
+                        otherFeatures.push(annotation);
+                      }
+                    });
+                    
+                    // Merge: prefer CDS, add gene only if no matching CDS exists
+                    const mergedFeatures = [];
+                    Object.keys(cdsByLocus).forEach(key => {
+                      mergedFeatures.push(cdsByLocus[key]);
+                    });
+                    Object.keys(genesByLocus).forEach(key => {
+                      if (!cdsByLocus[key]) {
+                        mergedFeatures.push(genesByLocus[key]);
+                      }
+                    });
+                    mergedFeatures.push(...otherFeatures);
+                    
+                    mergedFeatures.forEach(annotation => {
                       const geneName = annotation.qualifiers?.gene || annotation.qualifiers?.locus_tag || 'Unknown';
                       const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || \`feature_\${genes.length}\`;
                       const product = annotation.qualifiers?.product || annotation.qualifiers?.note || 'Unknown function';
                       
-                      // Determine feature type - keep original types for better classification
                       let featureType = annotation.type || 'other';
                       
-                      // Debug: Log original annotation type
-                      if (genes.length < 20) { // Only log first 20 for debugging
-                        console.log('Annotation type:', annotation.type, '-> Feature type:', featureType);
-                      }
-                      
-                      // Only map general types, keep specific types like tRNA, rRNA as-is
                       if (featureType === 'gene' || featureType === 'CDS' || featureType === 'mRNA') {
                         featureType = 'protein_coding';
                       } else if (featureType === 'ncRNA') {
@@ -2219,12 +2242,9 @@ function registerIpcHandlers(deps) {
                       } else if (featureType === 'regulatory' || featureType === 'promoter' || featureType === 'terminator') {
                         featureType = 'regulatory';
                       }
-                      // Keep tRNA, rRNA, and other specific types as-is for proper classification
                       
-                      // Convert strand from -1/1 to +/- format
                       const strand = annotation.strand === -1 ? '-' : '+';
                       
-                      // Validate gene coordinates
                       const start = parseInt(annotation.start) || 0;
                       const end = parseInt(annotation.end) || start + 1000;
                       

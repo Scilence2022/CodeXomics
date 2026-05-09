@@ -479,6 +479,7 @@
         align-items: center;
         gap: 8px;
         margin-bottom: 8px;
+        position: relative;
       }
 
       .checkbox-input {
@@ -703,6 +704,32 @@
         height: 12px;
         border-radius: 2px;
         border: 1px solid rgba(0, 0, 0, 0.1);
+        display: inline-block;
+        vertical-align: middle;
+        flex-shrink: 0;
+      }
+
+      .track-color-btn {
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        position: relative;
+      }
+
+      .track-color-btn:hover {
+        transform: scale(1.3);
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
+      }
+
+      .track-color-btn:active {
+        transform: scale(1.1);
+      }
+
+      .hidden-color-input {
+        position: absolute;
+        width: 0;
+        height: 0;
+        opacity: 0;
+        pointer-events: none;
       }
 
       .gene-count {
@@ -1040,17 +1067,29 @@
 
             <div class="checkbox-group">
               <input type="checkbox" class="checkbox-input" id="showGCContentCheck" />
-              <label class="checkbox-label" for="showGCContentCheck">Show GC Content</label>
+              <label class="checkbox-label" for="showGCContentCheck">
+                <span class="track-color track-color-btn" id="gcContentColorBtn" style="background-color: #27ae60" title="Change GC Content color"></span>
+                Show GC Content
+              </label>
+              <input type="color" class="hidden-color-input" id="gcContentColorPicker" value="#27ae60" />
             </div>
 
             <div class="checkbox-group">
               <input type="checkbox" class="checkbox-input" id="showGCSkewCheck" />
-              <label class="checkbox-label" for="showGCSkewCheck">Show GC Skew</label>
+              <label class="checkbox-label" for="showGCSkewCheck">
+                <span class="track-color track-color-btn" id="gcSkewColorBtn" style="background-color: #e74c3c" title="Change GC Skew color"></span>
+                Show GC Skew
+              </label>
+              <input type="color" class="hidden-color-input" id="gcSkewColorPicker" value="#e74c3c" />
             </div>
 
             <div class="checkbox-group">
               <input type="checkbox" class="checkbox-input" id="showWigDataCheck" />
-              <label class="checkbox-label" for="showWigDataCheck">Show WIG Data</label>
+              <label class="checkbox-label" for="showWigDataCheck">
+                <span class="track-color track-color-btn" id="wigDataColorBtn" style="background-color: #9b59b6" title="Change WIG Data color"></span>
+                Show WIG Data
+              </label>
+              <input type="color" class="hidden-color-input" id="wigDataColorPicker" value="#9b59b6" />
             </div>
 
             <div class="parameter-group">
