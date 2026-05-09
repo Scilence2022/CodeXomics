@@ -2296,7 +2296,7 @@ function registerIpcHandlers(deps) {
                     timestamp: new Date().toISOString()
                   }
                 },
-                originalData: genomeData
+                originalData: { currentSequence: genomeData.currentSequence }
               };
             }
             return { success: false, error: 'No genome data loaded' };
