@@ -1296,6 +1296,9 @@ class CircosPlotter {
 
     this.drawCanvasChromosomes(processedChromosomes, centerX, centerY);
 
+    if (this.showTicks) this.drawCanvasTicks(processedChromosomes, centerX, centerY);
+    if (this.showLabels) this.drawCanvasLabels(processedChromosomes, centerX, centerY);
+
     if (this.showGenes && this.data.genes && this.data.genes.length > 0) {
       this.drawCanvasGenesMultiTrack(centerX, centerY, theme);
     }
@@ -1320,13 +1323,11 @@ class CircosPlotter {
       trackOffset += this.wigTrackHeight + 5;
     }
 
-    if (this.showLinks && processedLinks.length > 0) {
+    if (this.showLinks && this.data.links && this.data.links.length > 0) {
       this.drawCanvasLinks(processedLinks, centerX, centerY);
     }
 
-    if (this.showLabels) {
-      this.drawCanvasLabels(processedChromosomes, centerX, centerY);
-    }
+    if (this.showLegend) this.drawLegend();
 
     let statusText = `Canvas: ${this.data.chromosomes.length} chromosomes`;
     if (this.data.genes) statusText += `, ${this.data.genes.length} genes`;
@@ -1342,24 +1343,14 @@ class CircosPlotter {
     this.ctx.rotate((this.startAngle * Math.PI) / 180);
 
     processedChromosomes.forEach(chr => {
-      const midRadius = (chr.innerRadius + chr.outerRadius) / 2;
-
-      this.ctx.beginPath();
-      this.ctx.arc(0, 0, midRadius, chr.startRadians, chr.endRadians);
-      this.ctx.lineWidth = this.chromosomeWidth;
-      this.ctx.strokeStyle = chr.color;
-      this.ctx.stroke();
-
-      this.ctx.beginPath();
-      this.ctx.arc(0, 0, chr.innerRadius, chr.startRadians, chr.endRadians);
-      this.ctx.lineWidth = 1;
-      this.ctx.strokeStyle = this.strokeColor;
-      this.ctx.stroke();
-
       this.ctx.beginPath();
       this.ctx.arc(0, 0, chr.outerRadius, chr.startRadians, chr.endRadians);
-      this.ctx.lineWidth = 1;
+      this.ctx.arc(0, 0, chr.innerRadius, chr.endRadians, chr.startRadians, true);
+      this.ctx.closePath();
+      this.ctx.fillStyle = chr.color;
+      this.ctx.fill();
       this.ctx.strokeStyle = this.strokeColor;
+      this.ctx.lineWidth = this.strokeWidth;
       this.ctx.stroke();
     });
 
@@ -1385,19 +1376,42 @@ class CircosPlotter {
     this.ctx.translate(centerX, centerY);
     this.ctx.rotate((this.startAngle * Math.PI) / 180);
 
-    trackData.data.forEach(chrData => {
-      const chr = chrData.chromosome;
-      const innerRadius = chr.innerRadius + this.chromosomeWidth + trackOffset;
+    const trackRadius = this.innerRadius + this.chromosomeWidth + this.geneHeight + 10 + trackOffset;
 
-      chrData.points.forEach(point => {
-        const height = this._calculateTrackHeight(point.value, trackData.type);
+    trackData.data.forEach(chrData => {
+      const points = chrData.points;
+      if (!points || points.length === 0) return;
+
+      if (trackData.type === 'gc_content') {
         this.ctx.beginPath();
-        this.ctx.moveTo(point.x * innerRadius, point.y * innerRadius);
-        this.ctx.lineTo(point.x * (innerRadius + height), point.y * (innerRadius + height));
-        this.ctx.lineWidth = 1;
+        this.ctx.moveTo(points[0].x * trackRadius, points[0].y * trackRadius);
+        for (let i = 1; i < points.length; i++) {
+          const height = this._calculateTrackHeight(points[i].value, trackData.type);
+          const outerR = trackRadius + height;
+          this.ctx.lineTo(points[i].x * outerR, points[i].y * outerR);
+        }
+        for (let i = points.length - 1; i >= 0; i--) {
+          this.ctx.lineTo(points[i].x * trackRadius, points[i].y * trackRadius);
+        }
+        this.ctx.closePath();
+        this.ctx.fillStyle = trackData.color;
+        this.ctx.globalAlpha = 0.7;
+        this.ctx.fill();
+        this.ctx.globalAlpha = 1;
+      } else {
+        this.ctx.beginPath();
+        this.ctx.moveTo(points[0].x * trackRadius, points[0].y * trackRadius);
+        for (let i = 1; i < points.length; i++) {
+          const height = this._calculateTrackHeight(points[i].value, trackData.type);
+          const outerR = trackRadius + height;
+          this.ctx.lineTo(points[i].x * outerR, points[i].y * outerR);
+        }
         this.ctx.strokeStyle = trackData.color;
+        this.ctx.lineWidth = 2;
+        this.ctx.globalAlpha = 0.8;
         this.ctx.stroke();
-      });
+        this.ctx.globalAlpha = 1;
+      }
     });
 
     this.ctx.restore();
@@ -1415,19 +1429,54 @@ class CircosPlotter {
   drawCanvasLinks(processedLinks, centerX, centerY) {
     if (!processedLinks || !Array.isArray(processedLinks)) return;
 
+    const theme = this.getCurrentTheme();
+
     this.ctx.save();
     this.ctx.translate(centerX, centerY);
     this.ctx.rotate((this.startAngle * Math.PI) / 180);
 
-    processedLinks.forEach(link => {
+    const linkRadius = this.innerRadius - 20;
+
+    this.data.links.forEach(link => {
+      const sourceChr = this.data.chromosomes.find(c => c.name === link.source.chromosome);
+      const targetChr = this.data.chromosomes.find(c => c.name === link.target.chromosome);
+      if (!sourceChr || !targetChr) return;
+
+      const sourceAngle = sourceChr.startAngle + (link.source.start / sourceChr.length) * (sourceChr.endAngle - sourceChr.startAngle);
+      const targetAngle = targetChr.startAngle + (link.target.start / targetChr.length) * (targetChr.endAngle - targetChr.startAngle);
+
+      const sourceRadians = (sourceAngle * Math.PI) / 180;
+      const targetRadians = (targetAngle * Math.PI) / 180;
+
+      const sourceX = Math.cos(sourceRadians) * linkRadius;
+      const sourceY = Math.sin(sourceRadians) * linkRadius;
+      const targetX = Math.cos(targetRadians) * linkRadius;
+      const targetY = Math.sin(targetRadians) * linkRadius;
+
+      let linkColor, strokeWidth, dashPattern = [];
+      if (link.value >= 0.7) {
+        linkColor = theme.links.strong;
+        strokeWidth = Math.max(3, link.value * 5);
+      } else if (link.value >= 0.4) {
+        linkColor = theme.links.medium;
+        strokeWidth = Math.max(2, link.value * 4);
+        dashPattern = [5, 2];
+      } else {
+        linkColor = theme.links.weak;
+        strokeWidth = Math.max(1, link.value * 3);
+        dashPattern = [3, 3];
+      }
+
       this.ctx.beginPath();
-      this.ctx.moveTo(link.source.x, link.source.y);
-      this.ctx.quadraticCurveTo(0, 0, link.target.x, link.target.y);
-      this.ctx.lineWidth = 1;
-      this.ctx.strokeStyle = link.color;
-      this.ctx.globalAlpha = link.opacity;
+      this.ctx.moveTo(sourceX, sourceY);
+      this.ctx.quadraticCurveTo(0, 0, targetX, targetY);
+      this.ctx.lineWidth = strokeWidth;
+      this.ctx.strokeStyle = linkColor;
+      this.ctx.globalAlpha = this.linkOpacity;
+      this.ctx.setLineDash(dashPattern);
       this.ctx.stroke();
       this.ctx.globalAlpha = 1;
+      this.ctx.setLineDash([]);
     });
 
     this.ctx.restore();
@@ -1436,19 +1485,76 @@ class CircosPlotter {
   drawCanvasLabels(processedChromosomes, centerX, centerY) {
     if (!processedChromosomes || !Array.isArray(processedChromosomes)) return;
 
+    const theme = this.getCurrentTheme();
+
     this.ctx.save();
     this.ctx.translate(centerX, centerY);
     this.ctx.rotate((this.startAngle * Math.PI) / 180);
 
-    this.ctx.fillStyle = '#2c3e50';
-    this.ctx.font = '12px Arial';
+    this.ctx.fillStyle = theme.text;
+    this.ctx.font = '500 12px Arial';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
 
     processedChromosomes.forEach(chr => {
       const x = Math.cos(chr.midRadians) * chr.labelRadius;
       const y = Math.sin(chr.midRadians) * chr.labelRadius;
-      this.ctx.fillText(chr.name || chr.label || chr.id || 'Unknown', x, y);
+      const angleDeg = chr.midAngle;
+      const needFlip = angleDeg > 90 && angleDeg < 270;
+      const rotationDeg = needFlip ? angleDeg + 180 : angleDeg;
+
+      this.ctx.save();
+      this.ctx.translate(x, y);
+      this.ctx.rotate((rotationDeg * Math.PI) / 180);
+      this.ctx.fillText(chr.name || chr.label || chr.id || 'Unknown', 0, 0);
+      this.ctx.restore();
+    });
+
+    this.ctx.restore();
+  }
+
+  drawCanvasTicks(processedChromosomes, centerX, centerY) {
+    if (!processedChromosomes || !Array.isArray(processedChromosomes)) return;
+
+    const theme = this.getCurrentTheme();
+    const tickInterval = 50000000;
+
+    this.ctx.save();
+    this.ctx.translate(centerX, centerY);
+    this.ctx.rotate((this.startAngle * Math.PI) / 180);
+
+    this.data.chromosomes.forEach(chr => {
+      const numTicks = Math.floor(chr.length / tickInterval);
+      for (let i = 0; i <= numTicks; i++) {
+        const position = i * tickInterval;
+        const angle = chr.startAngle + (position / chr.length) * (chr.endAngle - chr.startAngle);
+        const radians = (angle * Math.PI) / 180;
+
+        const x1 = Math.cos(radians) * this.innerRadius;
+        const y1 = Math.sin(radians) * this.innerRadius;
+        const x2 = Math.cos(radians) * (this.innerRadius - 5);
+        const y2 = Math.sin(radians) * (this.innerRadius - 5);
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1);
+        this.ctx.lineTo(x2, y2);
+        this.ctx.strokeStyle = theme.ticks;
+        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+
+        if (i % 2 === 0) {
+          const labelRadius = this.innerRadius - 15;
+          this.ctx.fillStyle = theme.text;
+          this.ctx.font = '10px Arial';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(
+            `${(position / 1000000).toFixed(0)}M`,
+            Math.cos(radians) * labelRadius,
+            Math.sin(radians) * labelRadius
+          );
+        }
+      }
     });
 
     this.ctx.restore();
