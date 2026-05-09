@@ -141,12 +141,11 @@ function createWindow() {
 // Helper function to get the current active main window
 
 function getCurrentMainWindow() {
-  // First try to use the tracked current active window
+  // First try to use the tracked current active window if it's genuinely a main window
   if (
     currentActiveWindow &&
     !currentActiveWindow.isDestroyed() &&
-    currentActiveWindow.getTitle().includes('CodeXomics') &&
-    !currentActiveWindow.getTitle().includes('Project Manager')
+    currentActiveWindow.windowId // Only the true main window gets a windowId assigned
   ) {
     return currentActiveWindow;
   }
@@ -156,9 +155,9 @@ function getCurrentMainWindow() {
     return mainWindow;
   }
 
-  // Last resort: find any main window
+  // Last resort: find any main window using the windowId marker
   const mainWindows = BrowserWindow.getAllWindows().filter(
-    win => !win.isDestroyed() && win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
+    win => !win.isDestroyed() && win.windowId
   );
 
   return mainWindows.length > 0 ? mainWindows[0] : null;

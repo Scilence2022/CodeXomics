@@ -602,7 +602,8 @@ class CircosPlotter {
           this.updateDataInfo();
           return true;
         } else {
-          this.updateStatus('No genome data loaded', 'disconnected');
+          console.error('IPC result error:', result?.error);
+          this.updateStatus('Error: ' + (result?.error || 'No genome data loaded'), 'disconnected');
         }
       }
     } catch (error) {

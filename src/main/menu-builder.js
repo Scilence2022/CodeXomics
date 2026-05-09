@@ -385,31 +385,7 @@ function createCircosPlotterMenu(circosWindow) {
             },
           ],
         },
-        { type: 'separator' },
-        {
-          label: 'AI Assistant',
-          submenu: [
-            {
-              label: 'Parameter Optimization',
-              accelerator: 'CmdOrCtrl+Shift+O',
-              click: () => {
-                circosWindow.webContents.send('circos-menu-action', 'ai-optimization');
-              },
-            },
-            {
-              label: 'Pattern Recognition',
-              click: () => {
-                circosWindow.webContents.send('circos-menu-action', 'pattern-recognition');
-              },
-            },
-            {
-              label: 'Automated Insights',
-              click: () => {
-                circosWindow.webContents.send('circos-menu-action', 'automated-insights');
-              },
-            },
-          ],
-        },
+
         {
           label: 'Custom Annotations',
           click: () => {
