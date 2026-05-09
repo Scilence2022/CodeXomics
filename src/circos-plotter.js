@@ -30,12 +30,10 @@ class CircosPlotter {
     // Gene properties
     this.geneHeight = 8;
     this.showGenes = true;
-    this.maxGenes = 200;
 
     // Link properties
     this.showLinks = true;
     this.linkOpacity = 0.6;
-    this.maxLinks = 50;
 
     // Data track properties
     this.showGCContent = false;
@@ -434,7 +432,6 @@ class CircosPlotter {
     document.getElementById('resetBtn').addEventListener('click', () => this.resetPlot());
     document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
     document.getElementById('resetZoomBtn').addEventListener('click', () => this.resetZoom());
-    document.getElementById('optimizeBtn').addEventListener('click', () => this.optimizeParameters());
 
     // Slider controls - all use debounced redraw for performance
     const sliderBindings = [
@@ -447,8 +444,6 @@ class CircosPlotter {
       ['strokeWidthSlider', v => { this.strokeWidth = parseFloat(v); }],
       ['geneHeightSlider', v => { this.geneHeight = parseInt(v); }],
       ['linkOpacitySlider', v => { this.linkOpacity = parseFloat(v); }],
-      ['maxGenesSlider', v => { this.maxGenes = parseInt(v); }],
-      ['maxLinksSlider', v => { this.maxLinks = parseInt(v); }],
       ['gcWindowSlider', v => { this.gcWindowSize = parseInt(v); }],
       ['wigHeightSlider', v => { this.wigTrackHeight = parseInt(v); }],
       ['legendOpacitySlider', v => { this.legendOpacity = parseFloat(v); }],
@@ -559,8 +554,6 @@ class CircosPlotter {
       strokeWidthValue: `${this.strokeWidth}px`,
       geneHeightValue: `${this.geneHeight}px`,
       linkOpacityValue: `${Math.round(this.linkOpacity * 100)}%`,
-      maxGenesValue: `${this.maxGenes}`,
-      maxLinksValue: `${this.maxLinks}`,
       gcWindowValue: `${Math.round(this.gcWindowSize / 1000)}kb`,
       wigHeightValue: `${this.wigTrackHeight}px`,
       legendOpacityValue: `${Math.round(this.legendOpacity * 100)}%`,
@@ -919,12 +912,12 @@ class CircosPlotter {
         });
       }
     });
-    return genes.slice(0, this.maxGenes);
+    return genes;
   }
 
   generateHumanLinks() {
     const links = [];
-    for (let i = 0; i < this.maxLinks; i++) {
+    for (let i = 0; i < 50; i++) {
       const chr1 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       if (chr1.name !== chr2.name) {
@@ -950,7 +943,7 @@ class CircosPlotter {
   generateEcoliGenes() {
     const genes = [];
     const geneNames = ['dnaA', 'dnaB', 'dnaC', 'dnaG', 'dnaK', 'recA', 'rpoA', 'rpoB', 'rpoC', 'gyrA', 'gyrB'];
-    for (let i = 0; i < Math.min(100, this.maxGenes - 9); i++) {
+    for (let i = 0; i < 100; i++) {
       const start = Math.floor(Math.random() * (this.data.chromosomes[0].length - 5000));
       const length = Math.floor(Math.random() * 3000) + 500;
       genes.push({
@@ -968,7 +961,7 @@ class CircosPlotter {
     const genes = [];
     this.data.chromosomes.forEach(chr => {
       const numGenes = Math.floor(chr.length / 5000);
-      for (let i = 0; i < Math.min(numGenes, Math.floor(this.maxGenes / this.data.chromosomes.length)); i++) {
+      for (let i = 0; i < numGenes; i++) {
         const start = Math.floor(Math.random() * (chr.length - 2000));
         const length = Math.floor(Math.random() * 1500) + 500;
         genes.push({
@@ -983,7 +976,7 @@ class CircosPlotter {
 
   generateYeastLinks() {
     const links = [];
-    for (let i = 0; i < Math.min(this.maxLinks, 15); i++) {
+    for (let i = 0; i < 15; i++) {
       const chr1 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       if (chr1.name !== chr2.name) {
@@ -1001,7 +994,7 @@ class CircosPlotter {
     const genes = [];
     this.data.chromosomes.forEach(chr => {
       const numGenes = Math.floor(chr.length / 15000);
-      for (let i = 0; i < Math.min(numGenes, Math.floor(this.maxGenes / this.data.chromosomes.length)); i++) {
+      for (let i = 0; i < numGenes; i++) {
         const start = Math.floor(Math.random() * (chr.length - 10000));
         const length = Math.floor(Math.random() * 8000) + 2000;
         genes.push({
@@ -1016,7 +1009,7 @@ class CircosPlotter {
 
   generateDrosophilaLinks() {
     const links = [];
-    for (let i = 0; i < Math.min(this.maxLinks, 12); i++) {
+    for (let i = 0; i < 12; i++) {
       const chr1 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       if (chr1.name !== chr2.name) {
@@ -1034,7 +1027,7 @@ class CircosPlotter {
     const genes = [];
     this.data.chromosomes.forEach((chr, chrIndex) => {
       const numGenes = Math.floor(chr.length / 8000);
-      for (let i = 0; i < Math.min(numGenes, Math.floor(this.maxGenes / this.data.chromosomes.length)); i++) {
+      for (let i = 0; i < numGenes; i++) {
         const start = Math.floor(Math.random() * (chr.length - 5000));
         const length = Math.floor(Math.random() * 4000) + 1000;
         genes.push({
@@ -1049,7 +1042,7 @@ class CircosPlotter {
 
   generatePlantLinks() {
     const links = [];
-    for (let i = 0; i < Math.min(this.maxLinks, 10); i++) {
+    for (let i = 0; i < 10; i++) {
       const chr1 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       if (chr1.name !== chr2.name) {
@@ -1569,9 +1562,6 @@ class CircosPlotter {
 
       if (this.multiTrackManager.geneTracks.protein_coding.enabled) {
         const cdsGenes = this.multiTrackManager.groupGenesByType(this.data.genes).protein_coding || [];
-        if (cdsGenes.length > this.multiTrackManager.geneTracks.protein_coding.maxGenes) {
-          trackOffset += this.multiTrackManager.cdsDensityTracks * (this.multiTrackManager.cdsTrackHeight + 1);
-        }
       }
     }
     return trackOffset;
@@ -1758,7 +1748,7 @@ class CircosPlotter {
     const theme = this.getCurrentTheme();
     const linkGroup = g.append('g').attr('class', 'links');
 
-    this.data.links.slice(0, this.maxLinks).forEach(link => {
+    this.data.links.forEach(link => {
       const sourceChr = this.data.chromosomes.find(c => c.name === link.source.chromosome);
       const targetChr = this.data.chromosomes.find(c => c.name === link.target.chromosome);
       if (!sourceChr || !targetChr) return;
@@ -2175,71 +2165,12 @@ class CircosPlotter {
     };
   }
 
-  // ─── AI Optimization ────────────────────────────────────
-
-  optimizeParameters() {
-    if (!this.data || !this.data.chromosomes) {
-      this.updateStatus('No data available for optimization');
-      return;
-    }
-
-    const numChromosomes = this.data.chromosomes.length;
-    const totalLength = this.data.chromosomes.reduce((sum, chr) => sum + (chr.length || chr.size || 0), 0);
-    const avgLength = totalLength / numChromosomes;
-    const suggestions = [];
-
-    // Optimize radius
-    if (numChromosomes <= 5) {
-      this.radius = Math.max(200, Math.min(400, 250 + numChromosomes * 20));
-    } else if (numChromosomes <= 15) {
-      this.radius = Math.max(300, Math.min(500, 350 + (numChromosomes - 5) * 10));
-    } else {
-      this.radius = Math.max(400, Math.min(600, 450 + (numChromosomes - 15) * 5));
-    }
-    suggestions.push(`Adjusted radius to ${this.radius}px for ${numChromosomes} chromosomes`);
-
-    // Optimize chromosome width
-    if (avgLength < 1000000) {
-      this.chromosomeWidth = 8; this.geneHeight = 4;
-      suggestions.push('Optimized for small genome visualization');
-    } else if (avgLength < 100000000) {
-      this.chromosomeWidth = 12; this.geneHeight = 6;
-      suggestions.push('Optimized for bacterial genome visualization');
-    } else {
-      this.chromosomeWidth = 15; this.geneHeight = 8;
-      suggestions.push('Optimized for large genome visualization');
-    }
-
-    // Optimize gene display
-    if (this.data.genes && this.data.genes.length > 0) {
-      const geneCount = this.data.genes.length;
-      if (geneCount > 1000) {
-        this.maxGenes = 500;
-        suggestions.push('Limited gene display to 500 for performance');
-      } else if (geneCount > 500) {
-        this.maxGenes = Math.min(1000, geneCount);
-        suggestions.push(`Displaying ${this.maxGenes} genes`);
-      } else {
-        this.maxGenes = geneCount;
-        suggestions.push(`Displaying all ${geneCount} genes`);
-      }
-    }
-
-    this.updateUISliders();
-    this.createPlot();
-
-    const suggestionText = suggestions.join('; ');
-    this.updateStatus(`AI Optimization: ${suggestionText}`);
-    this.showOptimizationSuggestions(suggestions);
-  }
-
   updateUISliders() {
     const updates = {
       radiusSlider: this.radius,
       innerRadiusSlider: this.innerRadiusRatio,
       chrWidthSlider: this.chromosomeWidth,
       geneHeightSlider: this.geneHeight,
-      maxGenesSlider: this.maxGenes,
     };
 
     Object.entries(updates).forEach(([id, value]) => {
@@ -2282,7 +2213,6 @@ class CircosPlotter {
   enablePerformanceMode() {
     this.performanceMode = true;
     this.animationDuration = 0;
-    this.maxGenes = Math.min(this.maxGenes, 500);
     this.updateStatus('Performance mode enabled');
   }
 
@@ -2300,10 +2230,6 @@ class CircosPlotter {
       this.enablePerformanceMode();
       this.chromosomeWidth = Math.max(8, this.chromosomeWidth - 2);
       this.geneHeight = Math.max(4, this.geneHeight - 2);
-      this.maxGenes = Math.min(500, geneCount);
-      this.showLinks = false;
-      this.showGCContent = false;
-      this.showGCSkew = false;
       this.updateStatus(`Optimized for large dataset (${geneCount} genes)`);
       return true;
     }
@@ -2353,8 +2279,6 @@ class CircosPlotter {
     this.showGenes = true;
     this.showLinks = true;
     this.linkOpacity = 0.6;
-    this.maxGenes = 200;
-    this.maxLinks = 50;
     this.geneHeight = 8;
     this.strokeWidth = 1;
     this.labelDistance = 20;
@@ -2365,7 +2289,7 @@ class CircosPlotter {
       radiusSlider: 300, innerRadiusSlider: 0.8, startAngleSlider: -90,
       chrWidthSlider: 15, gapSlider: 2, labelDistanceSlider: 20,
       strokeWidthSlider: 1, geneHeightSlider: 8, linkOpacitySlider: 0.6,
-      maxGenesSlider: 200, maxLinksSlider: 50,
+      
       showLabelsCheck: true, showTicksCheck: false, showGenesCheck: true,
       showLinksCheck: true, showGCContentCheck: false, showGCSkewCheck: false,
       showWigDataCheck: false, gcWindowSlider: 10000, wigHeightSlider: 30,
@@ -2485,17 +2409,13 @@ class CircosDataProcessor {
   }
 
   processGenes(genes, processedChromosomes, theme) {
-    const cacheKey = `genes_${genes?.length || 0}_${processedChromosomes?.length || 0}_${theme.name}_${this.plotter.innerRadius}_${this.plotter.geneHeight}_${this.plotter.maxGenes}`;
+    const cacheKey = `genes_${genes?.length || 0}_${processedChromosomes?.length || 0}_${theme.name}_${this.plotter.innerRadius}_${this.plotter.geneHeight}`;
 
     if (this.cache.has(cacheKey)) return this.cache.get(cacheKey);
 
     if (!genes || !Array.isArray(genes)) return [];
 
-    const maxGenes = this.plotter.renderingMode === 'canvas'
-      ? Math.min(genes.length, this.plotter.maxGenes)
-      : genes.length;
-
-    const processed = genes.slice(0, maxGenes)
+    const processed = genes
       .map(gene => {
         const chr = processedChromosomes.find(
           c => c.name === gene.chromosome || c.label === gene.chromosome || c.id === gene.chromosome
@@ -2568,14 +2488,13 @@ class CircosDataProcessor {
   }
 
   processLinks(links, processedChromosomes, theme) {
-    const cacheKey = `links_${links?.length || 0}_${processedChromosomes?.length || 0}_${theme.name}_${this.plotter.innerRadius}_${this.plotter.maxLinks}`;
+    const cacheKey = `links_${links?.length || 0}_${processedChromosomes?.length || 0}_${theme.name}_${this.plotter.innerRadius}`;
 
     if (this.cache.has(cacheKey)) return this.cache.get(cacheKey);
 
     if (!links || !Array.isArray(links)) return [];
 
-    const maxLinks = Math.min(links.length, this.plotter.maxLinks);
-    const linksToProcess = links.slice(0, maxLinks);
+    const linksToProcess = links;
 
     const processed = linksToProcess
       .map(link => {
