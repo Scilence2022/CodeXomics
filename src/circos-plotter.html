@@ -1543,6 +1543,8 @@
         panelWidth = parametersPanel.offsetWidth || 320;
         parametersPanel.classList.add('animated');
         parametersPanel.classList.add('collapsed');
+        parametersPanel.style.width = '0px';
+        parametersPanel.style.minWidth = '0px';
         panelExpandBtn.classList.add('visible');
         panelSplitter.style.display = 'none';
         panelToggleBtn.title = 'Expand panel';
@@ -1558,6 +1560,7 @@
         parametersPanel.classList.add('animated');
         parametersPanel.classList.remove('collapsed');
         parametersPanel.style.width = panelWidth + 'px';
+        parametersPanel.style.minWidth = '';
         panelExpandBtn.classList.remove('visible');
         panelSplitter.style.display = '';
         panelToggleBtn.title = 'Collapse panel';
