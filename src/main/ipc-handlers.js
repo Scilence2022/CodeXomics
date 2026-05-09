@@ -2282,6 +2282,77 @@ function registerIpcHandlers(deps) {
                 });
               }
               
+              // Pre-compute GC content, GC skew, and WIG data from real sequences
+              // This avoids transferring raw sequence strings (which can be 4.6M+ chars)
+              // through IPC, which causes serialization issues and fallback to synthetic data
+              const gcWindowSize = 10000;
+              const preComputedTracks = {};
+              
+              chromosomes.forEach(chr => {
+                const seq = genomeData.currentSequence[chr.name] || genomeData.currentSequence[chr.id] || '';
+                if (!seq || seq.length === 0) return;
+                
+                const chrLength = seq.length;
+                const numPoints = Math.floor(chrLength / gcWindowSize);
+                const gcContentData = [];
+                const gcSkewData = [];
+                const wigData = [];
+                const halfWindow = gcWindowSize / 2;
+                const numWigPoints = Math.floor(chrLength / halfWindow);
+                
+                for (let i = 0; i < numPoints; i++) {
+                  const start = i * gcWindowSize;
+                  const end = Math.min(start + gcWindowSize, chrLength);
+                  const position = start + gcWindowSize / 2;
+                  const windowSeq = seq.substring(start, end);
+                  
+                  const gCount = (windowSeq.match(/G/g) || []).length;
+                  const cCount = (windowSeq.match(/C/g) || []).length;
+                  const aCount = (windowSeq.match(/A/g) || []).length;
+                  const tCount = (windowSeq.match(/T/g) || []).length;
+                  const gcCount = gCount + cCount;
+                  
+                  const gcContent = windowSeq.length > 0 ? (gcCount / windowSeq.length) * 100 : 0;
+                  gcContentData.push({ position, value: gcContent });
+                  
+                  const gcSkew = gcCount > 0 ? (gCount - cCount) / gcCount : 0;
+                  gcSkewData.push({ position, value: gcSkew });
+                }
+                
+                for (let i = 0; i < numWigPoints; i++) {
+                  const start = i * halfWindow;
+                  const end = Math.min(start + halfWindow, chrLength);
+                  const position = start + halfWindow / 4;
+                  const windowSeq = seq.substring(start, end);
+                  
+                  const gCount = (windowSeq.match(/G/g) || []).length;
+                  const cCount = (windowSeq.match(/C/g) || []).length;
+                  const gcCount = gCount + cCount;
+                  const gcContent = windowSeq.length > 0 ? (gcCount / windowSeq.length) * 100 : 0;
+                  
+                  let complexity = 0;
+                  if (windowSeq.length >= 2) {
+                    const diNucs = {};
+                    for (let j = 0; j < windowSeq.length - 1; j++) {
+                      const di = windowSeq.substring(j, j + 2).toUpperCase();
+                      diNucs[di] = (diNucs[di] || 0) + 1;
+                    }
+                    const maxDi = 16;
+                    const obsDi = Object.keys(diNucs).length;
+                    complexity = obsDi / maxDi;
+                  }
+                  
+                  const value = Math.max(0, gcContent * 0.5 + complexity * 20 + (100 - gcContent) * 0.3);
+                  wigData.push({ position, value });
+                }
+                
+                preComputedTracks[chr.name || chr.id] = {
+                  gc_content: gcContentData,
+                  gc_skew: gcSkewData,
+                  wig: wigData
+                };
+              });
+              
               return {
                 success: true,
                 data: {
@@ -2296,7 +2367,7 @@ function registerIpcHandlers(deps) {
                     timestamp: new Date().toISOString()
                   }
                 },
-                originalData: { currentSequence: genomeData.currentSequence }
+                preComputedTracks: preComputedTracks
               };
             }
             return { success: false, error: 'No genome data loaded' };

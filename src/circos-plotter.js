@@ -48,6 +48,11 @@ class CircosPlotter {
     // Unified data interface
     this.dataProcessor = new CircosDataProcessor(this);
 
+  // Pre-computed data tracks from real genome (populated via IPC)
+  // Computed at gcWindowSize=10000 in the main window; used when available
+  // regardless of current gcWindowSize slider (which affects synthetic fallback)
+  this.preComputedTracks = null;
+
     // Legend properties
     this.showLegend = true;
     this.legendPosition = 'top-right';
@@ -593,10 +598,14 @@ class CircosPlotter {
 
         if (result && result.success) {
           this.data = result.data;
-          this.originalData = result.originalData;
-          this.sequenceData = result.originalData?.currentSequence || {};
+          this.preComputedTracks = result.preComputedTracks || {};
+          this.sequenceData = null;
 
-          this.updateStatus('Connected to main window', 'connected');
+          const hasTracks = Object.keys(this.preComputedTracks).length > 0;
+          this.updateStatus(
+            hasTracks ? 'Connected — real sequence data available' : 'Connected — using synthetic data',
+            'connected'
+          );
           this.optimizeForLargeDataset();
           this.createPlot();
           this.updateDataInfo();
@@ -648,7 +657,8 @@ class CircosPlotter {
     if (statusText) {
       let statusMessage = `${info.totalChromosomes} chromosomes, ${info.totalGenes} genes, ${(info.totalLength / 1000000).toFixed(1)}M bp`;
 
-      if (this.sequenceData && Object.keys(this.sequenceData).length > 0) {
+      const hasRealData = this.preComputedTracks && Object.keys(this.preComputedTracks).length > 0;
+      if (hasRealData) {
         statusMessage += ' (Real sequence data available)';
       } else {
         statusMessage += ' (Using synthetic data)';
@@ -1124,13 +1134,24 @@ class CircosPlotter {
   }
 
   _getSequenceForChromosome(chromosome) {
+    return null;
+  }
+
+  _getPreComputedTrackData(chromosome, trackType) {
     const chrName = chromosome.name || chromosome.label || chromosome.id;
-    if (this.sequenceData && this.sequenceData[chrName]) return this.sequenceData[chrName];
-    if (this.originalData?.currentSequence?.[chrName]) return this.originalData.currentSequence[chrName];
+    if (this.preComputedTracks && this.preComputedTracks[chrName]) {
+      const trackData = this.preComputedTracks[chrName][trackType];
+      if (trackData && trackData.length > 0) return trackData;
+    }
     return null;
   }
 
   generateRealGCData(chromosome) {
+    if (this.preComputedTracks) {
+      const preComputed = this._getPreComputedTrackData(chromosome, 'gc_content');
+      if (preComputed && preComputed.length > 0) return preComputed;
+    }
+
     const data = [];
     const chrLength = chromosome.length || chromosome.size || 0;
     const numPoints = Math.floor(chrLength / this.gcWindowSize);
@@ -1157,6 +1178,11 @@ class CircosPlotter {
   }
 
   generateRealGCSkew(chromosome) {
+    if (this.preComputedTracks) {
+      const preComputed = this._getPreComputedTrackData(chromosome, 'gc_skew');
+      if (preComputed && preComputed.length > 0) return preComputed;
+    }
+
     const data = [];
     const chrLength = chromosome.length || chromosome.size || 0;
     const numPoints = Math.floor(chrLength / this.gcWindowSize);
@@ -1184,6 +1210,11 @@ class CircosPlotter {
   }
 
   generateRealWigData(chromosome) {
+    if (this.preComputedTracks) {
+      const preComputed = this._getPreComputedTrackData(chromosome, 'wig');
+      if (preComputed && preComputed.length > 0) return preComputed;
+    }
+
     const data = [];
     const chrLength = chromosome.length || chromosome.size || 0;
     const windowSize = this.gcWindowSize / 2;

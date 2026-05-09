@@ -271,6 +271,13 @@ function createCircosPlotterMenu(circosWindow) {
         },
         { type: 'separator' },
         {
+          label: 'Toggle Parameters Panel',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'toggle-parameters-panel');
+          },
+        },
+        {
           label: 'Toggle Genes',
           accelerator: 'CmdOrCtrl+G',
           click: () => {
