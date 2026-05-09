@@ -159,8 +159,48 @@
       .container {
         display: flex;
         height: 100vh;
-        gap: 15px;
         padding: 15px;
+      }
+
+      .panel-splitter {
+        width: 6px;
+        cursor: col-resize;
+        flex-shrink: 0;
+        position: relative;
+        margin: 0 -3px;
+        z-index: 10;
+      }
+
+      .panel-splitter::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 4px;
+        height: 40px;
+        border-radius: 2px;
+        background: var(--circos-border, #ddd);
+        transition: background 0.2s ease, height 0.2s ease;
+      }
+
+      .panel-splitter:hover::before {
+        background: var(--circos-primary, #667eea);
+        height: 60px;
+      }
+
+      .panel-splitter:active::before {
+        background: var(--circos-primary, #667eea);
+        height: 80px;
+      }
+
+      .panel-splitter.dragging {
+        cursor: col-resize;
+      }
+
+      .panel-splitter.dragging::before {
+        background: var(--circos-primary, #667eea);
+        height: 80px;
       }
 
       .main-panel {
@@ -171,7 +211,8 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        min-width: 0; /* Allow flex shrinking */
+        min-width: 0;
+        margin-right: 6px;
       }
 
       .header {
@@ -259,6 +300,7 @@
 
       .parameters-panel {
         width: 320px;
+        min-width: 240px;
         background: var(--circos-bg-primary);
         border-radius: 12px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
@@ -266,6 +308,11 @@
         flex-direction: column;
         overflow: hidden;
         max-height: 100%;
+        flex-shrink: 0;
+      }
+
+      .parameters-panel.animated {
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .panel-header {
@@ -324,8 +371,6 @@
         padding: 0;
         flex-shrink: 0;
         align-self: center;
-        margin-left: -15px;
-        margin-right: -15px;
       }
 
       .panel-expand-btn:hover {
@@ -349,6 +394,9 @@
         overflow: hidden;
         border-radius: 0;
         box-shadow: none;
+      }
+
+      .parameters-panel.collapsed.animated {
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                     min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                     padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -734,13 +782,16 @@
 
       .chromosome-color-list {
         margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
       }
 
       .chromosome-color-item {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 4px 0;
+        gap: 4px;
+        padding: 2px 0;
         position: relative;
       }
 
@@ -907,6 +958,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Splitter between main panel and parameters panel -->
+      <div class="panel-splitter" id="panelSplitter"></div>
 
       <!-- Parameters Panel -->
       <button class="panel-expand-btn" id="panelExpandBtn" title="Expand panel">
@@ -1472,19 +1526,27 @@
         }
       });
 
-      // ===== Panel Collapse/Expand (Mac-style) =====
+      // ===== Panel Collapse/Expand (Mac-style) + Splitter =====
 
       const parametersPanel = document.getElementById('parametersPanel');
       const panelContent = document.getElementById('panelContent');
       const panelToggleBtn = document.getElementById('panelToggleBtn');
       const panelExpandBtn = document.getElementById('panelExpandBtn');
+      const panelSplitter = document.getElementById('panelSplitter');
       let panelCollapsed = false;
+      let panelWidth = 320;
+      const PANEL_MIN_WIDTH = 240;
+      const PANEL_MAX_WIDTH = 480;
 
       function collapsePanel() {
         panelCollapsed = true;
+        panelWidth = parametersPanel.offsetWidth || 320;
+        parametersPanel.classList.add('animated');
         parametersPanel.classList.add('collapsed');
         panelExpandBtn.classList.add('visible');
+        panelSplitter.style.display = 'none';
         panelToggleBtn.title = 'Expand panel';
+        setTimeout(() => parametersPanel.classList.remove('animated'), 350);
         if (window.circosPlotter) {
           window.circosPlotter.calculateOptimalSize();
           setTimeout(() => window.circosPlotter.createPlot(), 320);
@@ -1493,9 +1555,13 @@
 
       function expandPanel() {
         panelCollapsed = false;
+        parametersPanel.classList.add('animated');
         parametersPanel.classList.remove('collapsed');
+        parametersPanel.style.width = panelWidth + 'px';
         panelExpandBtn.classList.remove('visible');
+        panelSplitter.style.display = '';
         panelToggleBtn.title = 'Collapse panel';
+        setTimeout(() => parametersPanel.classList.remove('animated'), 350);
         if (window.circosPlotter) {
           window.circosPlotter.calculateOptimalSize();
           setTimeout(() => window.circosPlotter.createPlot(), 320);
@@ -1512,6 +1578,49 @@
 
       panelExpandBtn.addEventListener('click', () => {
         expandPanel();
+      });
+
+      // Splitter drag logic
+      let splitterDragging = false;
+
+      panelSplitter.addEventListener('mousedown', e => {
+        e.preventDefault();
+        splitterDragging = true;
+        panelSplitter.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', e => {
+        if (!splitterDragging) return;
+        const containerRect = document.querySelector('.container').getBoundingClientRect();
+        const newWidth = containerRect.right - e.clientX - 15;
+        panelWidth = Math.max(PANEL_MIN_WIDTH, Math.min(PANEL_MAX_WIDTH, newWidth));
+        parametersPanel.style.width = panelWidth + 'px';
+        if (window.circosPlotter) {
+          window.circosPlotter.calculateOptimalSize();
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (!splitterDragging) return;
+        splitterDragging = false;
+        panelSplitter.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        if (window.circosPlotter) {
+          window.circosPlotter.createPlot();
+        }
+      });
+
+      // Double-click splitter to reset to default width
+      panelSplitter.addEventListener('dblclick', () => {
+        panelWidth = 320;
+        parametersPanel.style.width = panelWidth + 'px';
+        if (window.circosPlotter) {
+          window.circosPlotter.calculateOptimalSize();
+          window.circosPlotter.createPlot();
+        }
       });
 
       // ===== Theme Integration =====
