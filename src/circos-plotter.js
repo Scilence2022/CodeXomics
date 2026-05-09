@@ -664,6 +664,7 @@ class CircosPlotter {
           this.data = result.data;
           this.preComputedTracks = result.preComputedTracks || {};
           this.sequenceData = null;
+          this.dataProcessor.clearCache();
 
           const hasTracks = Object.keys(this.preComputedTracks).length > 0;
           this.updateStatus(
@@ -1968,33 +1969,43 @@ class CircosPlotter {
 
   drawDataTrackSVG(g, trackData, trackOffset) {
     const trackRadius = this.innerRadius + this.chromosomeWidth + this.geneHeight + 10 + trackOffset;
-    const trackHeight = trackData.height || this.wigTrackHeight;
 
     const trackGroup = g.append('g').attr('class', `track ${trackData.type}-track`);
 
     trackData.data.forEach(chrData => {
-      const chr = chrData.chromosome;
       const points = chrData.points;
       if (!points || points.length === 0) return;
 
-      const line = d3.line()
-        .x(d => d.x * trackRadius)
-        .y(d => d.y * trackRadius)
-        .curve(d3.curveLinear);
-
-      const area = d3.area()
-        .x(d => d.x * trackRadius)
-        .y0(d => d.y * trackRadius)
-        .y1(d => d.y * (trackRadius + trackHeight))
-        .curve(d3.curveLinear);
-
       if (trackData.type === 'gc_content') {
-        trackGroup.append('path').attr('d', area(points)).attr('fill', trackData.color).attr('opacity', 0.7);
-      } else {
+        const pathData = [];
+        pathData.push(`M${points[0].x * trackRadius},${points[0].y * trackRadius}`);
+        for (let i = 1; i < points.length; i++) {
+          const height = this._calculateTrackHeight(points[i].value, trackData.type);
+          const outerR = trackRadius + height;
+          pathData.push(`L${points[i].x * outerR},${points[i].y * outerR}`);
+        }
+        for (let i = points.length - 1; i >= 0; i--) {
+          pathData.push(`L${points[i].x * trackRadius},${points[i].y * trackRadius}`);
+        }
+        pathData.push('Z');
         trackGroup.append('path')
-          .attr('d', line(points))
-          .attr('fill', 'none').attr('stroke', trackData.color)
-          .attr('stroke-width', 2).attr('opacity', 0.8);
+          .attr('d', pathData.join(' '))
+          .attr('fill', trackData.color)
+          .attr('opacity', 0.7);
+      } else {
+        const pathData = [];
+        pathData.push(`M${points[0].x * trackRadius},${points[0].y * trackRadius}`);
+        for (let i = 1; i < points.length; i++) {
+          const height = this._calculateTrackHeight(points[i].value, trackData.type);
+          const outerR = trackRadius + height;
+          pathData.push(`L${points[i].x * outerR},${points[i].y * outerR}`);
+        }
+        trackGroup.append('path')
+          .attr('d', pathData.join(' '))
+          .attr('fill', 'none')
+          .attr('stroke', trackData.color)
+          .attr('stroke-width', 2)
+          .attr('opacity', 0.8);
       }
     });
   }
@@ -2715,7 +2726,8 @@ class CircosDataProcessor {
   }
 
   processDataTrack(processedChromosomes, trackType, theme) {
-    const cacheKey = `track_${trackType}_${processedChromosomes?.length || 0}_${theme.name}_${this.plotter.innerRadius}_${this.plotter.wigTrackHeight}_${this.plotter.gcWindowSize}`;
+    const hasPreComputed = this.plotter.preComputedTracks && Object.keys(this.plotter.preComputedTracks).length > 0;
+    const cacheKey = `track_${trackType}_${processedChromosomes?.length || 0}_${theme.name}_${this.plotter.innerRadius}_${this.plotter.wigTrackHeight}_${this.plotter.gcWindowSize}_${hasPreComputed ? 'real' : 'synth'}`;
 
     if (this.cache.has(cacheKey)) return this.cache.get(cacheKey);
 
