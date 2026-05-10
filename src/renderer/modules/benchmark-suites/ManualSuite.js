@@ -367,13 +367,6 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
         manualVerification: 'Please verify: 1) design_primers tool is called with geneName=lacZ and targetTm=60, 2) Task is submitted successfully.',
       },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 300000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) Primer sequences are generated, 2) Melting temperatures are near 60°C, 3) Primer properties are reasonable.',
-      },
 
       // RESTRICTION ANALYSIS TASKS - Manual + Simple
       {

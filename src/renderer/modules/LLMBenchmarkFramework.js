@@ -4328,7 +4328,8 @@ class LLMBenchmarkFramework {
     if (test.evaluator && typeof test.evaluator === 'function') {
       console.log('🔧 [Test Evaluation] Using custom evaluator for test:', test.id);
       try {
-        const customEval = await test.evaluator(testResult.actualResult, test.expectedResult, testResult);
+        const evaluatorContext = { ...testResult, earlyReturn: test.earlyReturn || false, testId: test.id };
+        const customEval = await test.evaluator(testResult.actualResult, test.expectedResult, evaluatorContext);
         Object.assign(evaluation, customEval);
         console.log('✅ [Test Evaluation] Custom evaluator completed with score:', evaluation.score);
         this.displayEvaluationResult(test, evaluation, testResult);

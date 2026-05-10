@@ -279,9 +279,12 @@ class BenchmarkEvaluatorBase {
 
   /**
    * Check the Tool Execution Tracker for a given tool name.
-   * Returns { found: true, status: 'completed'|'failed', execution } or { found: false }.
+   * Returns { found: true, status: 'completed'|'running'|'failed', execution } or { found: false }.
+   * @param {string} expectedToolName - The tool name to look for
+   * @param {number} [timeoutMs] - Timeout for staleness check
+   * @param {boolean} [earlyReturn=false] - If true, accept 'running' status as successful submission
    */
-  checkToolExecutionTracker(expectedToolName, timeoutMs) {
+  checkToolExecutionTracker(expectedToolName, timeoutMs, earlyReturn = false) {
     if (!window.chatManager || !window.chatManager.toolExecutionTracker) {
       return { found: false };
     }
@@ -294,6 +297,15 @@ class BenchmarkEvaluatorBase {
     );
     if (completed) {
       return { found: true, status: 'completed', execution: completed };
+    }
+
+    if (earlyReturn) {
+      const running = recentExecutions.find(
+        exec => exec.toolName === expectedToolName && exec.status === 'running' && Date.now() - exec.startTime < effectiveTimeout
+      );
+      if (running) {
+        return { found: true, status: 'running', execution: running };
+      }
     }
 
     const failed = recentExecutions.find(
@@ -384,12 +396,18 @@ class BenchmarkEvaluatorBase {
     }
 
     // ── PRIORITY 0: Tool Execution Tracker ──
-    const trackerResult = this.checkToolExecutionTracker(expectedResult.tool_name);
+    const earlyReturn = testResult.earlyReturn || false;
+    const trackerResult = this.checkToolExecutionTracker(expectedResult.tool_name, undefined, earlyReturn);
     if (trackerResult.found) {
       if (trackerResult.status === 'completed') {
         evaluation.score = evaluation.maxScore;
         evaluation.success = true;
         evaluation.warnings.push('Awarded full points based on Tool Execution Tracker data');
+        return evaluation;
+      } else if (trackerResult.status === 'running') {
+        evaluation.score = evaluation.maxScore;
+        evaluation.success = true;
+        evaluation.warnings.push('Tool submitted and running (earlyReturn: task accepted, not waiting for completion)');
         return evaluation;
       } else {
         evaluation.errors.push(`Tool execution failed: ${trackerResult.execution.error?.message || 'Unknown error'}`);
@@ -598,6 +616,7 @@ class BenchmarkEvaluatorBase {
    */
   async evaluateWorkflowCall(actualResult, expectedResult, testResult, options = {}) {
     const { defaultMaxScore = 10, successThreshold = 0.4 } = options;
+    const earlyReturn = testResult.earlyReturn || false;
     const evaluation = {
       success: false,
       score: 0,
@@ -609,6 +628,32 @@ class BenchmarkEvaluatorBase {
     if (!actualResult) {
       evaluation.errors.push('No result obtained from workflow execution');
       return evaluation;
+    }
+
+    // For earlyReturn workflows, check if any expected tool was submitted via tracker
+    if (earlyReturn && expectedResult.tool_sequence) {
+      const submittedTools = [];
+      const failedTools = [];
+      for (const expectedTool of expectedResult.tool_sequence) {
+        const trackerCheck = this.checkToolExecutionTracker(expectedTool, undefined, true);
+        if (trackerCheck.found && (trackerCheck.status === 'completed' || trackerCheck.status === 'running')) {
+          submittedTools.push(expectedTool);
+        } else if (trackerCheck.found && trackerCheck.status === 'failed') {
+          failedTools.push(expectedTool);
+        }
+      }
+      if (submittedTools.length === expectedResult.tool_sequence.length) {
+        evaluation.score = evaluation.maxScore;
+        evaluation.success = true;
+        evaluation.warnings.push(`All ${submittedTools.length} workflow tools submitted (earlyReturn: not waiting for completion)`);
+        return evaluation;
+      } else if (submittedTools.length > 0) {
+        const partialScore = Math.floor(evaluation.maxScore * (submittedTools.length / expectedResult.tool_sequence.length));
+        evaluation.score = partialScore;
+        evaluation.success = partialScore >= Math.ceil(evaluation.maxScore * successThreshold);
+        evaluation.warnings.push(`${submittedTools.length}/${expectedResult.tool_sequence.length} workflow tools submitted (earlyReturn)`);
+        return evaluation;
+      }
     }
 
     if (Array.isArray(actualResult) && actualResult.length > 1) {
