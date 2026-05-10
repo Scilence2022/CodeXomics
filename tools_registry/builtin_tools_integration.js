@@ -1283,12 +1283,36 @@ class BuiltInToolsIntegration {
       });
     }
 
+    // Check for list_annotations patterns
+    // Matches: "list annotations", "list all annotations", "show annotations in region",
+    //          "display annotations", "list genes in region", "list features"
+    if (/\b(list|show|display|get|view)\s+.*?\b(annotations?|genes?|features?)\b/i.test(query) &&
+        !/\b(search|find|look\s+up)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'list_annotations',
+        confidence: 0.95,
+        reason: 'Annotation listing keywords detected (list/show/display annotations)',
+      });
+    }
+
+    // Check for get_annotation (single annotation details) patterns
+    // Matches: "get annotation details for lacZ", "annotation details", "get details for gene"
+    if (/\b(get|show|retrieve|fetch|lookup)\s+.*?\b(annotation|gene)\s+.*?\b(details?|info|information)\b/i.test(query) ||
+        /\b(annotation|gene)\s+.*?\b(details?|info|information)\b/i.test(query) &&
+        !/\b(list|all|search|find)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'get_annotation',
+        confidence: 0.95,
+        reason: 'Single annotation detail lookup keywords detected',
+      });
+    }
+
     // Check for feature search patterns — BROAD search by annotation/function/type
     // Matches: "search for features", "find all tRNA", "search kinase genes"
     // Key distinction: "kinase genes" → search_features (functional keyword)
     //                 "gene lacZ" → find_gene_by_name (specific identifier)
     if (/\b(search|find|look\s+up)\s+.*?\bfeatures?\b/i.test(query) ||
-        /\bannotation\b/i.test(query) ||
+        (/\bannotation\b/i.test(query) && !relevantTools.some(t => t.name === 'list_annotations' || t.name === 'get_annotation')) ||
         /\b(all|every)\s+(genes?|proteins?|cds|trna|rrna)\b/i.test(query) ||
         /\bfeatures?\s+search\b/i.test(query) ||
         /\b(search|find)\s+.*?\b(genes?|proteins?)\s+(by|with|related\s+to|containing)\s+(function|type|annotation|activity)/i.test(query)) {

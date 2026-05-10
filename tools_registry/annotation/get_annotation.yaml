@@ -1,8 +1,24 @@
 name: get_annotation
 version: 1.0.0
-description: Get detailed information about a specific annotation by locus_tag, gene name, or protein_id
+description: 'Get detailed information about a specific annotation by locus_tag, gene name, or protein_id. Use this when the user asks for details about one specific gene/annotation by name or identifier. Returns the complete annotation record with all available fields. NOT the same as list_annotations which returns multiple annotations in a region, or search_annotations which searches by keyword pattern.'
 category: annotation
 subcategory: annotation_crud
+keywords:
+  - get
+  - annotation
+  - details
+  - information
+  - specific
+  - gene
+  - locus
+  - tag
+  - protein
+  - id
+  - identifier
+  - retrieve
+  - fetch
+  - lookup
+  - find
 
 execution:
   type: client-side
@@ -14,6 +30,10 @@ parameters:
     identifier:
       type: string
       description: The locus_tag, gene name, or protein_id of the annotation to retrieve.
+      examples:
+        - lacZ
+        - b0343
+        - NP_414765.1
     chromosome:
       type: string
       description: Chromosome name (optional, searches all if omitted).
@@ -27,6 +47,35 @@ parameters:
       default: default
   required:
     - identifier
+
+sample_usages:
+  - user_query: 'Get annotation details for the lacZ gene'
+    tool_call: 'get_annotation(identifier=''lacZ'')'
+    thought: 'User wants detailed information about the lacZ gene annotation'
+    expected_result: 'Complete annotation record for lacZ with position, type, strand, product, etc.'
+
+  - user_query: 'Get details for locus tag b0343'
+    tool_call: 'get_annotation(identifier=''b0343'')'
+    thought: 'User wants annotation details by locus tag'
+    expected_result: 'Annotation record for the gene with locus_tag b0343'
+
+  - user_query: 'Get full annotation information for dnaA'
+    tool_call: 'get_annotation(identifier=''dnaA'', full_details=true)'
+    thought: 'User wants complete raw annotation data for dnaA'
+    expected_result: 'Full annotation object with all available fields'
+
+  - user_query: 'Look up protein NP_414765.1'
+    tool_call: 'get_annotation(identifier=''NP_414765.1'')'
+    thought: 'User wants annotation by protein ID'
+    expected_result: 'Annotation record matching the protein ID'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['list_annotations', 'search_annotations']
+  alternatives: ['search_annotations', 'list_annotations']
+  prerequisites: []
+  follow_up: ['get_sequence', 'analyze_region']
 
 returns:
   type: object

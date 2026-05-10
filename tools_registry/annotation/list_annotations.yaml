@@ -1,8 +1,21 @@
 name: list_annotations
 version: 1.0.0
-description: List genome annotations in a specified region or chromosome with filtering by feature type
+description: 'List genome annotations in a specified region or chromosome with filtering by feature type. Use this when the user asks to list, show, or display annotations/genes/features in a region. Returns structured annotation data with position, type, strand, gene name, and product. NOT the same as search_annotations which searches by keyword, or analyze_region which does statistical analysis.'
 category: annotation
 subcategory: annotation_crud
+keywords:
+  - list
+  - annotations
+  - genes
+  - features
+  - region
+  - chromosome
+  - show
+  - display
+  - all
+  - current
+  - visible
+  - get
 
 execution:
   type: client-side
@@ -36,6 +49,35 @@ parameters:
       description: Browser client ID for multi-window support
       default: default
   required: []
+
+sample_usages:
+  - user_query: 'List all annotations in the current region'
+    tool_call: 'list_annotations()'
+    thought: 'User wants to list annotations in the current visible region'
+    expected_result: 'Array of annotations with gene names, positions, types'
+
+  - user_query: 'Show all genes on this chromosome'
+    tool_call: 'list_annotations(type=''gene'')'
+    thought: 'User wants to list gene annotations'
+    expected_result: 'Array of gene annotations'
+
+  - user_query: 'List CDS features between position 1000 and 5000'
+    tool_call: 'list_annotations(start=1000, end=5000, type=''CDS'')'
+    thought: 'User wants CDS annotations in a specific range'
+    expected_result: 'Array of CDS annotations in the specified region'
+
+  - user_query: 'Display all annotations in the visible region'
+    tool_call: 'list_annotations()'
+    thought: 'User wants to see all annotations currently visible'
+    expected_result: 'All annotations in current visible region'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['search_annotations', 'get_annotation']
+  alternatives: ['search_annotations', 'analyze_region']
+  prerequisites: []
+  follow_up: ['get_annotation', 'search_annotations']
 
 returns:
   type: object

@@ -1194,7 +1194,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'annotation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'List all annotations in the current visible genomic region.',
+        instruction: 'List all annotations in the current visible genomic region using list_annotations.',
         expectedResult: {
           tool_name: 'list_annotations',
           parameters: {},
@@ -1230,7 +1230,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'annotation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Get annotation details for the lacZ gene.',
+        instruction: 'Get annotation details for the lacZ gene using get_annotation.',
         expectedResult: {
           tool_name: 'get_annotation',
           parameters: {
