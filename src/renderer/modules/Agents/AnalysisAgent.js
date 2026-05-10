@@ -729,28 +729,11 @@ class AnalysisAgent extends AgentBase {
    */
   async findRestrictionSites(parameters, strategy) {
     try {
-      const { enzyme, sequence } = parameters;
-
-      if (!enzyme || !sequence) {
-        throw new Error('Enzyme and sequence are required');
+      const chatManager = this.multiAgentSystem.chatManager;
+      if (chatManager && typeof chatManager.executeToolByName === 'function') {
+        return await chatManager.executeToolByName('find_restriction_sites', parameters);
       }
-
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const sites = this.sequenceUtils.findRestrictionSites(enzyme, sequence);
-
-      return {
-        success: true,
-        enzyme,
-        sites: sites.map(site => ({
-          position: site.position,
-          sequence: site.sequence,
-          cutPosition: site.cutPosition,
-        })),
-        count: sites.length,
-      };
+      throw new Error('ChatManager not available for restriction site analysis');
     } catch (error) {
       return {
         success: false,
@@ -759,33 +742,13 @@ class AnalysisAgent extends AgentBase {
     }
   }
 
-  /**
-   * 虚拟酶切
-   */
   async virtualDigest(parameters, strategy) {
     try {
-      const { sequence, enzymes } = parameters;
-
-      if (!sequence || !enzymes) {
-        throw new Error('Sequence and enzymes are required');
+      const chatManager = this.multiAgentSystem.chatManager;
+      if (chatManager && typeof chatManager.executeToolByName === 'function') {
+        return await chatManager.executeToolByName('virtual_digest', parameters);
       }
-
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const fragments = this.sequenceUtils.virtualDigest(sequence, enzymes);
-
-      return {
-        success: true,
-        fragments: fragments.map(fragment => ({
-          start: fragment.start,
-          end: fragment.end,
-          length: fragment.end - fragment.start,
-          sequence: fragment.sequence,
-        })),
-        count: fragments.length,
-      };
+      throw new Error('ChatManager not available for virtual digest');
     } catch (error) {
       return {
         success: false,

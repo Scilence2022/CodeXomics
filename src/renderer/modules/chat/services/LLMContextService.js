@@ -147,28 +147,35 @@ class LLMContextService {
       case 'find_restriction_sites':
         return (
           `Restriction Sites for ${result.enzyme} (${result.recognitionSite}):\n` +
-          `• Found ${result.sitesFound} sites in ${result.searchRegion}\n` +
+          `• Overhang type: ${result.overhangType || 'unknown'}, length: ${result.overhangLength ?? '?'}\n` +
+          `• Found ${result.sitesFound} sites in ${result.searchRegionStr || result.searchRegion}\n` +
           (result.sites.length > 0
             ? `• Sites:\n${result.sites
-              .map(s => `  - Position ${s.position}: ${s.site} (${s.strand} strand)`)
+              .map(s => `  - Position ${s.position}: ${s.site} (${s.strand} strand, top cut: ${s.topStrandCut}, bottom cut: ${s.bottomStrandCut})`)
               .join('\n')}`
             : '• No restriction sites found')
         );
 
       case 'virtual_digest':
-        return (
-          `Virtual Digest with ${result.enzymes.join(', ')}:\n` +
+        const digestHeader = `Virtual Digest with ${result.enzymes.join(', ')}:\n`;
+        const digestStats = 
           `• Total cut sites: ${result.totalSites}\n` +
-          `• Fragments generated: ${result.fragments}\n` +
+          `• Fragments generated: ${result.totalFragments}\n` +
           `• Average fragment size: ${result.averageFragmentSize.toLocaleString()} bp\n` +
-          `• Size range: ${result.smallestFragment.toLocaleString()} - ${result.largestFragment.toLocaleString()} bp\n` +
-          (result.fragmentDetails.length > 0
-            ? `• Largest fragments:\n${result.fragmentDetails
-              .slice(0, 5)
-              .map(f => `  - ${f.start}-${f.end} (${f.length.toLocaleString()} bp) cut by ${f.cutBy}`)
+          `• Median fragment size: ${(result.medianFragmentSize || 0).toLocaleString()} bp\n` +
+          `• Size range: ${result.sizeRange || `${result.smallestFragment?.toLocaleString() ?? '?'} - ${result.largestFragment?.toLocaleString() ?? '?'} bp`}\n`;
+        const enzymeInfo = result.enzymeDetails
+          ? `• Enzyme details:\n${Object.entries(result.enzymeDetails).map(([name, d]) => `  - ${name}: ${d.recognition} (${d.overhangType}, ${d.overhangLength}bp overhang)`).join('\n')}\n`
+          : '';
+        const fragmentInfo = result.fragmentDetails && result.fragmentDetails.length > 0
+          ? `• Fragment details (top 10 by size):\n${result.fragmentDetails
+              .slice()
+              .sort((a, b) => b.length - a.length)
+              .slice(0, 10)
+              .map(f => `  - Fragment ${f.index}: ${f.start.toLocaleString()}-${f.end.toLocaleString()} (${f.length.toLocaleString()} bp) [${f.leftEndType || '?'}→${f.rightEndType || '?'}]`)
               .join('\n')}`
-            : '')
-        );
+          : '';
+        return digestHeader + digestStats + enzymeInfo + fragmentInfo;
 
       case 'sequence_statistics':
         let statsOutput = `Sequence Statistics for ${result.region}:\n`;

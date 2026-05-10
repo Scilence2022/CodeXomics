@@ -129,7 +129,8 @@ class ChatManager {
       annotation: new window.AnnotationService(this.app, this),
       intent: new window.IntentParserService(this.app, this),
       context: new window.LLMContextService(this.app, this),
-      ui: new window.UIService(this.app, this)
+      ui: new window.UIService(this.app, this),
+      restriction: new window.RestrictionDigestService(this.app, this)
     };
 
     // Legacy MCP connection check (kept for backward compatibility)
@@ -7157,8 +7158,9 @@ ${coreTools}
       search_interpro_entry: () => this.services.protein.searchInterproEntry(parameters),
       get_interpro_entry_details: () => this.services.protein.getInterproEntryDetails(parameters),
       search_pattern: () => this.searchPattern(parameters),
-      find_restriction_sites: () => this.findRestrictionSites(parameters),
-      virtual_digest: () => this.virtualDigest(parameters),
+      find_restriction_sites: () => this.services.restriction.findRestrictionSites(parameters),
+      virtual_digest: () => this.services.restriction.virtualDigest(parameters),
+      list_restriction_enzymes: () => this.services.restriction.listEnzymes(parameters),
       search_sequence_motif: () => this.searchMotif(parameters),
 
       // AlphaFold and protein structure tools
@@ -10443,136 +10445,17 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     };
   }
 
-  // 3. RESTRICTION ENZYME ANALYSIS
+  // 3. RESTRICTION ENZYME ANALYSIS (delegated to RestrictionDigestService)
   async findRestrictionSites(params) {
-    const { enzyme, chromosome, start, end } = params;
-
-    const chr = chromosome || this.app.currentChromosome;
-    if (!chr) {
-      throw new Error('No chromosome specified and none currently selected');
-    }
-
-    const regionStart = start || this.app.currentPosition?.start || 0;
-    const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
-
-    const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
-
-    // Common restriction enzyme recognition sites
-    const restrictionSites = {
-      EcoRI: 'GAATTC',
-      BamHI: 'GGATCC',
-      HindIII: 'AAGCTT',
-      XhoI: 'CTCGAG',
-      SalI: 'GTCGAC',
-      SpeI: 'ACTAGT',
-      NotI: 'GCGGCCGC',
-      KpnI: 'GGTACC',
-      SacI: 'GAGCTC',
-      PstI: 'CTGCAG',
-    };
-
-    const recognitionSite = restrictionSites[enzyme];
-    if (!recognitionSite) {
-      throw new Error(`Unknown restriction enzyme: ${enzyme}. Supported: ${Object.keys(restrictionSites).join(', ')}`);
-    }
-
-    const sites = [];
-    const siteLength = recognitionSite.length;
-
-    // Search forward strand
-    for (let i = 0; i <= sequence.length - siteLength; i++) {
-      const subsequence = sequence.substring(i, i + siteLength);
-      if (subsequence === recognitionSite) {
-        sites.push({
-          position: regionStart + i,
-          site: subsequence,
-          strand: '+',
-        });
-      }
-    }
-
-    // Search reverse strand
-    const reverseComplement = this.reverseComplement(recognitionSite);
-    for (let i = 0; i <= sequence.length - siteLength; i++) {
-      const subsequence = sequence.substring(i, i + siteLength);
-      if (subsequence === reverseComplement) {
-        sites.push({
-          position: regionStart + i,
-          site: subsequence,
-          strand: '-',
-        });
-      }
-    }
-
-    return {
-      enzyme: enzyme,
-      recognitionSite: recognitionSite,
-      chromosome: chr,
-      searchRegion: `${regionStart}-${regionEnd}`,
-      sitesFound: sites.length,
-      sites: sites,
-    };
+    return await this.services.restriction.findRestrictionSites(params);
   }
 
   async virtualDigest(params) {
-    const { enzymes, chromosome } = params;
+    return await this.services.restriction.virtualDigest(params);
+  }
 
-    const chr = chromosome || this.app.currentChromosome;
-    if (!chr) {
-      throw new Error('No chromosome specified and none currently selected');
-    }
-
-    const sequenceLength = this.app.currentSequence[chr]?.length || 0;
-    const allSites = [];
-
-    // Find all restriction sites for all enzymes
-    for (const enzyme of enzymes) {
-      const result = await this.findRestrictionSites({ enzyme, chromosome: chr, start: 0, end: sequenceLength });
-      result.sites.forEach(site => {
-        allSites.push({ ...site, enzyme });
-      });
-    }
-
-    // Sort all sites by position
-    allSites.sort((a, b) => a.position - b.position);
-
-    // Calculate fragment sizes
-    const fragments = [];
-    let lastPosition = 0;
-
-    allSites.forEach(site => {
-      const fragmentLength = site.position - lastPosition;
-      if (fragmentLength > 0) {
-        fragments.push({
-          start: lastPosition,
-          end: site.position,
-          length: fragmentLength,
-          cutBy: site.enzyme,
-        });
-      }
-      lastPosition = site.position;
-    });
-
-    // Add final fragment
-    if (lastPosition < sequenceLength) {
-      fragments.push({
-        start: lastPosition,
-        end: sequenceLength,
-        length: sequenceLength - lastPosition,
-        cutBy: 'terminal',
-      });
-    }
-
-    return {
-      enzymes: enzymes,
-      chromosome: chr,
-      totalSites: allSites.length,
-      fragments: fragments.length,
-      averageFragmentSize: Math.round(fragments.reduce((sum, f) => sum + f.length, 0) / fragments.length),
-      largestFragment: Math.max(...fragments.map(f => f.length)),
-      smallestFragment: Math.min(...fragments.map(f => f.length)),
-      fragmentDetails: fragments.slice(0, 20), // Show first 20 fragments
-    };
+  async listRestrictionEnzymes(params = {}) {
+    return await this.services.restriction.listEnzymes(params);
   }
 
   // 4. ENHANCED SEQUENCE STATISTICS
