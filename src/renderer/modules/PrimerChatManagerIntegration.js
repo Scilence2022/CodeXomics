@@ -19,6 +19,9 @@
             // Load PrimerDesigner dependency first
             await this.loadScript('modules/PrimerDesigner.js');
 
+            // Load shared schemas
+            await this.loadScript('modules/PrimerToolSchemas.js');
+
             // Load PrimerFunctionTools module
             await this.loadScript('modules/PrimerFunctionTools.js');
 

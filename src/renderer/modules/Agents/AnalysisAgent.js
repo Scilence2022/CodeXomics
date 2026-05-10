@@ -857,74 +857,73 @@ class AnalysisAgent extends AgentBase {
    */
   async calculatePrimerProperties(parameters, strategy) {
     try {
-      const { sequence } = parameters;
-      if (!sequence) {
-        throw new Error('Primer sequence is required');
+      const PrimerDesigner = (typeof window !== 'undefined' && window.PrimerDesigner)
+        || (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
+      if (PrimerDesigner) {
+        const properties = PrimerDesigner.calculateProperties(parameters.sequence);
+        return { success: true, properties };
       }
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
+      if (!parameters.sequence) throw new Error('Primer sequence is required');
+      if (this.sequenceUtils?.calculatePrimerProperties) {
+        return { success: true, properties: this.sequenceUtils.calculatePrimerProperties(parameters.sequence) };
       }
-      const properties = this.sequenceUtils.calculatePrimerProperties
-        ? this.sequenceUtils.calculatePrimerProperties(sequence)
-        : { length: sequence.length, gcContent: this.sequenceUtils.calculateGCContent(sequence) };
-      return { success: true, properties };
+      throw new Error('No primer calculation engine available');
     } catch (error) {
       return { success: false, error: error.message };
     }
   }
 
-  /**
-   * 设计引物
-   */
   async designPrimers(parameters, strategy) {
     try {
-      const { sequence, targetRegion, constraints = {} } = parameters;
-      if (!sequence && !targetRegion) {
-        throw new Error('Sequence or targetRegion is required');
+      const PrimerDesigner = (typeof window !== 'undefined' && window.PrimerDesigner)
+        || (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
+      const targetSequence = parameters.targetSequence || parameters.sequence || parameters.targetRegion;
+      if (!targetSequence) throw new Error('targetSequence is required');
+      if (PrimerDesigner) {
+        const options = { targetTm: parameters.targetTm || 60.0, minProductSize: parameters.minProductSize || 100 };
+        const pair = PrimerDesigner.designPrimerPair(targetSequence, options);
+        return { success: true, primers: pair || { note: 'No valid primer pair found' } };
       }
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
+      if (this.sequenceUtils?.designPrimers) {
+        return { success: true, primers: await this.sequenceUtils.designPrimers(targetSequence, parameters.constraints || {}) };
       }
-      const primers = this.sequenceUtils.designPrimers
-        ? await this.sequenceUtils.designPrimers(sequence || targetRegion, constraints)
-        : { forward: null, reverse: null, note: 'Primer design not fully implemented' };
-      return { success: true, primers };
+      throw new Error('No primer design engine available');
     } catch (error) {
       return { success: false, error: error.message };
     }
   }
 
-  /**
-   * 查找引物结合位点
-   */
   async findPrimerBindingSites(parameters, strategy) {
     try {
-      const { primer, sequence } = parameters;
-      if (!primer || !sequence) {
-        throw new Error('Primer and sequence are required');
+      const PrimerDesigner = (typeof window !== 'undefined' && window.PrimerDesigner)
+        || (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
+      const primer = parameters.primerSequence || parameters.primer;
+      const template = parameters.templateSequence || parameters.sequence;
+      if (!primer || !template) throw new Error('primerSequence and templateSequence are required');
+      if (PrimerDesigner) {
+        const sites = PrimerDesigner.findBindingSites(primer, template, parameters.maxMismatches || 0);
+        return { success: true, sites, count: sites.length };
       }
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
+      if (this.sequenceUtils?.findPrimerBindingSites) {
+        const sites = this.sequenceUtils.findPrimerBindingSites(primer, template);
+        return { success: true, sites, count: sites.length };
       }
-      const sites = this.sequenceUtils.findPrimerBindingSites
-        ? this.sequenceUtils.findPrimerBindingSites(primer, sequence)
-        : [];
-      return { success: true, sites, count: sites.length };
+      throw new Error('No primer binding site engine available');
     } catch (error) {
       return { success: false, error: error.message };
     }
   }
 
-  /**
-   * 添加引物注释
-   */
   async addPrimerAnnotation(parameters, strategy) {
     try {
-      const { primerName, sequence, position, chromosome } = parameters;
-      if (!primerName || !sequence) {
-        throw new Error('Primer name and sequence are required');
+      if (this.chatManager && typeof this.chatManager.primerAddAnnotation === 'function') {
+        return await this.chatManager.primerAddAnnotation(parameters);
       }
-      return { success: true, annotation: { name: primerName, sequence, position, chromosome } };
+      const { name, chromosome, start, end } = parameters;
+      if (!name || !chromosome || !start || !end) {
+        throw new Error('name, chromosome, start, and end are required for primer annotation');
+      }
+      return { success: true, annotation: { name, chromosome, start, end, strand: parameters.strand || '+' } };
     } catch (error) {
       return { success: false, error: error.message };
     }

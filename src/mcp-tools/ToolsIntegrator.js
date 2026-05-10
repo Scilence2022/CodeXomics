@@ -338,6 +338,9 @@ class ToolsIntegrator {
           case 'calculate_primer_properties':
             return this.primerTools.calculateProperties(parameters.sequence);
           case 'design_primers':
+            if (!parameters.targetSequence && (parameters.geneName || parameters.chromosome)) {
+              return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+            }
             return this.primerTools.designPrimers(parameters.targetSequence, {
               targetTm: parameters.targetTm,
               minProductSize: parameters.minProductSize,

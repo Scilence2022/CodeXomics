@@ -4,299 +4,352 @@
  * This class provides static utility methods used by both ChatBox and MCP server integrations.
  */
 
+const IUPAC_COMPLEMENT = {
+  A: 'T', T: 'A', G: 'C', C: 'G',
+  R: 'Y', Y: 'R', M: 'K', K: 'M',
+  S: 'S', W: 'W', B: 'V', D: 'H',
+  H: 'D', V: 'B', N: 'N',
+  a: 't', t: 'a', g: 'c', c: 'g',
+  r: 'y', y: 'r', m: 'k', k: 'm',
+  s: 's', w: 'w', b: 'v', d: 'h',
+  h: 'd', v: 'b', n: 'n',
+};
+
 class PrimerDesigner {
-    /**
+  /**
      * Calculate properties of a primer sequence
      * @param {string} sequence - DNA sequence of the primer
      * @returns {Object} Primer properties including length, GC%, and Tm
      */
-    static calculateProperties(sequence) {
-        if (!sequence || typeof sequence !== 'string') {
-            throw new Error('Valid DNA sequence is required');
-        }
-
-        const seq = sequence.toUpperCase().replace(/[^ATCG]/g, '');
-        const length = seq.length;
-
-        if (length === 0) {
-            throw new Error('Sequence contains no valid DNA characters');
-        }
-
-        // Calculate GC content
-        const gCount = (seq.match(/G/g) || []).length;
-        const cCount = (seq.match(/C/g) || []).length;
-        const gcContent = ((gCount + cCount) / length) * 100;
-
-        // Calculate Melting Temperature (Tm)
-        // Using the same logic from MicrobeGenomicsFunctions but extracted here for specialized use
-        let tm;
-        if (length < 14) {
-            // Wallace rule for short oligos: Tm = 2°C(A+T) + 4°C(G+C)
-            const aCount = (seq.match(/A/g) || []).length;
-            const tCount = (seq.match(/T/g) || []).length;
-            tm = 2 * (aCount + tCount) + 4 * (gCount + cCount);
-        } else {
-            // Simple salt-adjusted formula for longer oligos
-            tm = 81.5 + 0.41 * gcContent - 675 / length;
-        }
-
-        // Check for potential self-complementarity (simple hairpin check)
-        // A more complex implementation would use nearest-neighbor thermodynamics
-        const hasHairpinPotential = this._checkHairpinPotential(seq);
-
-        return {
-            sequence: seq,
-            length: length,
-            gcContent: Number(gcContent.toFixed(2)),
-            tm: Number(tm.toFixed(2)),
-            hasHairpinPotential: hasHairpinPotential
-        };
+  static calculateProperties(sequence) {
+    if (!sequence || typeof sequence !== 'string') {
+      throw new Error('Valid DNA sequence is required');
     }
 
-    /**
+    const upper = sequence.toUpperCase();
+    const invalidChars = upper.replace(/[ATCG]/g, '');
+    const invalidRatio = invalidChars.length / upper.length;
+
+    if (invalidRatio > 0.1) {
+      throw new Error(
+          `Sequence contains ${(invalidRatio * 100).toFixed(1)}% non-ATCG characters (${invalidChars.substring(0, 20)}...). ` +
+                `Only A, T, C, G are supported for primer calculations.`,
+      );
+    }
+
+    const seq = upper.replace(/[^ATCG]/g, '');
+    const length = seq.length;
+
+    if (length === 0) {
+      throw new Error('Sequence contains no valid DNA characters');
+    }
+
+    const warnings = [];
+    if (invalidChars.length > 0) {
+      warnings.push(`${invalidChars.length} non-ATCG character(s) were stripped from the sequence`);
+    }
+
+    const gCount = (seq.match(/G/g) || []).length;
+    const cCount = (seq.match(/C/g) || []).length;
+    const gcContent = ((gCount + cCount) / length) * 100;
+
+    const tm = this._calculateTm(seq, gCount, cCount, gcContent);
+
+    const hasHairpinPotential = this._checkHairpinPotential(seq);
+
+    const result = {
+      sequence: seq,
+      length: length,
+      gcContent: Number(gcContent.toFixed(2)),
+      tm: Number(tm.toFixed(2)),
+      hasHairpinPotential: hasHairpinPotential,
+    };
+
+    if (warnings.length > 0) {
+      result.warnings = warnings;
+    }
+
+    return result;
+  }
+
+  /**
+     * Unified Tm calculation using salt-adjusted formula with smooth transition.
+     * For oligos < 14bp, blends Wallace rule with salt-adjusted to avoid discontinuity.
+     */
+  static _calculateTm(seq, gCount, cCount, gcContent) {
+    const length = seq.length;
+    const aCount = (seq.match(/A/g) || []).length;
+    const tCount = (seq.match(/T/g) || []).length;
+
+    const wallaceTm = 2 * (aCount + tCount) + 4 * (gCount + cCount);
+    const saltAdjustedTm = 81.5 + 0.41 * gcContent - 675 / length;
+
+    if (length < 14) {
+      const weight = (length - 1) / 13;
+      return wallaceTm * (1 - weight) + saltAdjustedTm * weight;
+    }
+
+    return saltAdjustedTm;
+  }
+
+  /**
      * Design a primer pair for a given target sequence
      * @param {string} targetSequence - The DNA sequence to amplify
      * @param {Object} options - Design parameters (targetTm, minLen, maxLen)
      * @returns {Object} Best primer pair found, or null if none match criteria
      */
-    static designPrimerPair(targetSequence, options = {}) {
-        if (!targetSequence || targetSequence.length < 50) {
-            throw new Error('Target sequence must be at least 50bp to design primers');
-        }
-
-        const seq = targetSequence.toUpperCase().replace(/[^ATCG]/g, '');
-
-        // Default parameters
-        const targetTm = options.targetTm || 60.0;
-        const baseTmTolerance = options.tmTolerance || 2.0; 
-        const minLen = options.minLen || 18;
-        const maxLen = options.maxLen || 25;
-        const minPropSize = options.minProductSize || Math.min(seq.length, 100);
-        const maxPropSize = options.maxProductSize || seq.length;
-
-        // Progressive strictness levels to ensure we find *something* if sequence is difficult
-        const strictnessLevels = [
-            { tmTol: baseTmTolerance, gcMin: 40, gcMax: 60, requireGcClamp: true, avoidHairpin: true },
-            { tmTol: baseTmTolerance + 2.0, gcMin: 35, gcMax: 65, requireGcClamp: true, avoidHairpin: true },
-            { tmTol: baseTmTolerance + 5.0, gcMin: 30, gcMax: 70, requireGcClamp: false, avoidHairpin: true },
-            { tmTol: baseTmTolerance + 10.0, gcMin: 20, gcMax: 80, requireGcClamp: false, avoidHairpin: false }
-        ];
-
-        for (const strictness of strictnessLevels) {
-            const pairs = this._findPrimerPairsWithStrictness(seq, minLen, maxLen, targetTm, minPropSize, maxPropSize, strictness);
-            if (pairs && pairs.length > 0) {
-                 // Sort by smallest Tm difference
-                 pairs.sort((a, b) => a.tmDifference - b.tmDifference);
-                 return pairs[0];
-            }
-        }
-
-        return null;
+  static designPrimerPair(targetSequence, options = {}) {
+    if (!targetSequence || targetSequence.length < 150) {
+      throw new Error('Target sequence must be at least 150bp to design primers');
     }
 
-    static _findPrimerPairsWithStrictness(seq, minLen, maxLen, targetTm, minPropSize, maxPropSize, strictness) {
-        const pairs = [];
-        const forwardPrimers = this._findCandidatePrimers(seq.substring(0, Math.floor(seq.length / 2)), minLen, maxLen, targetTm, strictness);
+    const seq = targetSequence.toUpperCase().replace(/[^ATCG]/g, '');
 
-        // For reverse primers, we look at the end of the sequence, but we need their reverse complement
-        const reverseRegionStart = Math.max(0, seq.length - Math.floor(seq.length / 2));
-        const reverseRegion = seq.substring(reverseRegionStart);
-
-        // Find candidates on the reverse strand (by finding them on the forward strand and reverse complementing)
-        // Note: Candidates are found 5' -> 3' on the bottom strand, which means reading the top strand right-to-left
-        const reverseCandidatesRaw = this._findCandidatePrimersRaw(reverseRegion, minLen, maxLen, targetTm, strictness);
-
-        const reversePrimers = reverseCandidatesRaw.map(cand => ({
-            sequence: this.reverseComplement(cand.sequence),
-            startPos: reverseRegionStart + cand.startPos,
-            endPos: reverseRegionStart + cand.endPos,
-            length: cand.length,
-            tm: cand.tm,
-            gcContent: cand.gcContent
-        }));
-
-        // Find pairs that meet product size criteria and have similar Tm
-        for (const fp of forwardPrimers) {
-            for (const rp of reversePrimers) {
-                // rp.endPos is the 5' end of the reverse primer on the bottom strand
-                // which corresponds to the 3' end on the top strand.
-                // Product size = rp.endPos - fp.startPos
-                const productSize = rp.endPos - fp.startPos;
-
-                if (productSize >= minPropSize && productSize <= maxPropSize) {
-                    const tmDiff = Math.abs(fp.tm - rp.tm);
-                    if (tmDiff <= strictness.tmTol) {
-                        pairs.push({
-                            forward: {
-                                sequence: fp.sequence,
-                                tm: fp.tm,
-                                gcContent: fp.gcContent,
-                                length: fp.length,
-                                bindStart: fp.startPos,
-                                bindEnd: fp.startPos + fp.length
-                            },
-                            reverse: {
-                                sequence: rp.sequence,
-                                tm: rp.tm,
-                                gcContent: rp.gcContent,
-                                length: rp.length,
-                                bindStart: rp.endPos - rp.length,
-                                bindEnd: rp.endPos
-                            },
-                            productSize: productSize,
-                            tmDifference: Number(tmDiff.toFixed(2))
-                        });
-                    }
-                }
-            }
-        }
-
-        return pairs;
+    if (seq.length < 150) {
+      throw new Error(`After removing non-ATCG characters, only ${seq.length}bp remain. Need at least 150bp.`);
     }
 
-    /**
+    const targetTm = options.targetTm || 60.0;
+    const baseTmTolerance = options.tmTolerance || 2.0;
+    const minLen = options.minLen || 18;
+    const maxLen = options.maxLen || 25;
+    const minPropSize = options.minProductSize || Math.min(seq.length, 100);
+    const maxPropSize = options.maxProductSize || seq.length;
+
+    const strictnessLevels = [
+      {tmTol: baseTmTolerance, gcMin: 40, gcMax: 60, requireGcClamp: true, avoidHairpin: true},
+      {tmTol: baseTmTolerance + 2.0, gcMin: 35, gcMax: 65, requireGcClamp: true, avoidHairpin: true},
+      {tmTol: baseTmTolerance + 5.0, gcMin: 30, gcMax: 70, requireGcClamp: false, avoidHairpin: true},
+      {tmTol: baseTmTolerance + 10.0, gcMin: 20, gcMax: 80, requireGcClamp: false, avoidHairpin: false},
+    ];
+
+    for (const strictness of strictnessLevels) {
+      const pairs = this._findPrimerPairsWithStrictness(seq, minLen, maxLen, targetTm, minPropSize, maxPropSize, strictness);
+      if (pairs && pairs.length > 0) {
+        pairs.sort((a, b) => a.tmDifference - b.tmDifference);
+        return pairs[0];
+      }
+    }
+
+    return null;
+  }
+
+  static _findPrimerPairsWithStrictness(seq, minLen, maxLen, targetTm, minPropSize, maxPropSize, strictness) {
+    const pairs = [];
+
+    const searchRegionSize = Math.min(200, Math.floor(seq.length / 2));
+    const forwardRegion = seq.substring(0, searchRegionSize);
+    const forwardPrimers = this._findCandidatePrimersEfficient(forwardRegion, minLen, maxLen, targetTm, strictness);
+
+    const reverseRegionStart = Math.max(0, seq.length - searchRegionSize);
+    const reverseRegion = seq.substring(reverseRegionStart);
+
+    const reverseCandidatesRaw = this._findCandidatePrimersEfficient(reverseRegion, minLen, maxLen, targetTm, strictness);
+
+    const reversePrimers = reverseCandidatesRaw.map((cand) => ({
+      sequence: this.reverseComplement(cand.sequence),
+      startPos: reverseRegionStart + cand.startPos,
+      endPos: reverseRegionStart + cand.endPos,
+      length: cand.length,
+      tm: cand.tm,
+      gcContent: cand.gcContent,
+    }));
+
+    const MAX_PAIRS = 50;
+    for (const fp of forwardPrimers) {
+      if (pairs.length >= MAX_PAIRS) break;
+      for (const rp of reversePrimers) {
+        const productSize = rp.endPos - fp.startPos;
+
+        if (productSize >= minPropSize && productSize <= maxPropSize) {
+          const tmDiff = Math.abs(fp.tm - rp.tm);
+          if (tmDiff <= strictness.tmTol) {
+            pairs.push({
+              forward: {
+                sequence: fp.sequence,
+                tm: fp.tm,
+                gcContent: fp.gcContent,
+                length: fp.length,
+                bindStart: fp.startPos,
+                bindEnd: fp.startPos + fp.length,
+              },
+              reverse: {
+                sequence: rp.sequence,
+                tm: rp.tm,
+                gcContent: rp.gcContent,
+                length: rp.length,
+                bindStart: rp.endPos - rp.length,
+                bindEnd: rp.endPos,
+              },
+              productSize: productSize,
+              tmDifference: Number(tmDiff.toFixed(2)),
+            });
+            if (pairs.length >= MAX_PAIRS) break;
+          }
+        }
+      }
+    }
+
+    return pairs;
+  }
+
+  /**
+     * Efficient candidate primer finder using sliding window for GC calculation.
+     * Avoids calling calculateProperties() for every subsequence.
+     */
+  static _findCandidatePrimersEfficient(seq, minLen, maxLen, targetTm, strictness) {
+    const {tmTol, gcMin, gcMax, requireGcClamp, avoidHairpin} = strictness;
+    const MAX_CANDIDATES = 200;
+    const candidates = [];
+
+    for (let i = 0; i <= seq.length - minLen && candidates.length < MAX_CANDIDATES; i++) {
+      let gcInWindow = 0;
+      for (let k = i; k < i + minLen; k++) {
+        const ch = seq[k];
+        if (ch === 'G' || ch === 'C') gcInWindow++;
+      }
+
+      for (let len = minLen; len <= maxLen && i + len <= seq.length && candidates.length < MAX_CANDIDATES; len++) {
+        if (len > minLen) {
+          const addedChar = seq[i + len - 1];
+          if (addedChar === 'G' || addedChar === 'C') gcInWindow++;
+        }
+
+        const gcContent = (gcInWindow / len) * 100;
+
+        if (gcContent < gcMin || gcContent > gcMax) continue;
+
+        const subSeq = seq.substring(i, i + len);
+        const tm = this._calculateTm(subSeq, 0, 0, gcContent);
+
+        if (Math.abs(tm - targetTm) > tmTol) continue;
+
+        if (requireGcClamp) {
+          const lastChar = subSeq[subSeq.length - 1];
+          if (lastChar !== 'G' && lastChar !== 'C') continue;
+        }
+
+        if (avoidHairpin && this._checkHairpinPotential(subSeq)) continue;
+
+        candidates.push({
+          startPos: i,
+          endPos: i + len,
+          length: len,
+          sequence: subSeq,
+          tm: Number(tm.toFixed(2)),
+          gcContent: Number(gcContent.toFixed(2)),
+        });
+      }
+    }
+
+    return candidates;
+  }
+
+  /**
      * Find binding sites for a primer in a template sequence
      * @param {string} primer - The primer sequence
      * @param {string} template - The template sequence (e.g., a chromosome)
      * @param {number} maxMismatches - Maximum allowed mismatches
+     * @param {Object} options - Optional: { maxSites: number } to limit results
      * @returns {Array} Array of binding site objects with position, strand, and mismatch count
      */
-    static findBindingSites(primer, template, maxMismatches = 0) {
-        if (!primer || !template) return [];
+  static findBindingSites(primer, template, maxMismatches = 0, options = {}) {
+    if (!primer || !template) return [];
 
-        const pSeq = primer.toUpperCase().replace(/[^ATCG]/g, '');
-        const tSeq = template.toUpperCase().replace(/[^ATCG]/g, '');
-        const pRevComp = this.reverseComplement(pSeq);
-        const pLen = pSeq.length;
+    const maxSites = options.maxSites || 10000;
 
-        const sites = [];
+    const pSeq = primer.toUpperCase().replace(/[^ATCG]/g, '');
+    const tSeq = template.toUpperCase().replace(/[^ATCG]/g, '');
+    const pRevComp = this.reverseComplement(pSeq);
+    const pLen = pSeq.length;
 
-        if (pLen === 0 || tSeq.length < pLen) return sites;
+    const sites = [];
 
-        // Search forward strand
-        for (let i = 0; i <= tSeq.length - pLen; i++) {
-            let mismatches = 0;
-            for (let j = 0; j < pLen; j++) {
-                if (tSeq[i + j] !== pSeq[j]) {
-                    mismatches++;
-                    if (mismatches > maxMismatches) break;
-                }
-            }
-            if (mismatches <= maxMismatches) {
-                sites.push({
-                    start: i,
-                    end: i + pLen,
-                    strand: '+',
-                    mismatches: mismatches,
-                    sequence: tSeq.substring(i, i + pLen)
-                });
-            }
+    if (pLen === 0 || tSeq.length < pLen) return sites;
+
+    for (let i = 0; i <= tSeq.length - pLen && sites.length < maxSites; i++) {
+      let mismatches = 0;
+      for (let j = 0; j < pLen; j++) {
+        if (tSeq[i + j] !== pSeq[j]) {
+          mismatches++;
+          if (mismatches > maxMismatches) break;
         }
-
-        // Search reverse strand using reverse complement of primer
-        for (let i = 0; i <= tSeq.length - pLen; i++) {
-            let mismatches = 0;
-            for (let j = 0; j < pLen; j++) {
-                if (tSeq[i + j] !== pRevComp[j]) {
-                    mismatches++;
-                    if (mismatches > maxMismatches) break;
-                }
-            }
-            if (mismatches <= maxMismatches) {
-                sites.push({
-                    start: i,
-                    end: i + pLen,
-                    strand: '-',
-                    mismatches: mismatches,
-                    sequence: tSeq.substring(i, i + pLen)
-                });
-            }
-        }
-
-        return sites;
+      }
+      if (mismatches <= maxMismatches) {
+        sites.push({
+          start: i,
+          end: i + pLen,
+          strand: '+',
+          mismatches: mismatches,
+          sequence: tSeq.substring(i, i + pLen),
+        });
+      }
     }
 
-    /**
-     * Reverse complement a DNA sequence
+    for (let i = 0; i <= tSeq.length - pLen && sites.length < maxSites; i++) {
+      let mismatches = 0;
+      for (let j = 0; j < pLen; j++) {
+        if (tSeq[i + j] !== pRevComp[j]) {
+          mismatches++;
+          if (mismatches > maxMismatches) break;
+        }
+      }
+      if (mismatches <= maxMismatches) {
+        sites.push({
+          start: i,
+          end: i + pLen,
+          strand: '-',
+          mismatches: mismatches,
+          sequence: tSeq.substring(i, i + pLen),
+        });
+      }
+    }
+
+    if (sites.length >= maxSites) {
+      sites.truncated = true;
+      sites.totalMatchedAtLeast = maxSites;
+    }
+
+    return sites;
+  }
+
+  /**
+     * Reverse complement a DNA sequence, supporting IUPAC ambiguity codes.
      */
-    static reverseComplement(dna) {
-        const complement = {
-            A: 'T', T: 'A', G: 'C', C: 'G',
-            a: 't', t: 'a', g: 'c', c: 'g',
-            N: 'N', n: 'n'
-        };
-        return dna.split('').reverse().map(base => complement[base] || base).join('');
+  static reverseComplement(dna) {
+    return dna.split('').reverse().map((base) => IUPAC_COMPLEMENT[base] || base).join('');
+  }
+
+  // --- Internal Helpers ---
+
+  static _findCandidatePrimers(seq, minLen, maxLen, targetTm, strictness) {
+    return this._findCandidatePrimersEfficient(seq, minLen, maxLen, targetTm, strictness).map((cand) => ({
+      sequence: cand.sequence,
+      startPos: cand.startPos,
+      length: cand.length,
+      tm: cand.tm,
+      gcContent: cand.gcContent,
+    }));
+  }
+
+  static _checkHairpinPotential(seq, motifLen = 4, minLoop = 3) {
+    const minTotalLen = motifLen + minLoop + motifLen;
+    if (seq.length < minTotalLen) return false;
+
+    for (let i = 0; i <= seq.length - minTotalLen; i++) {
+      const motif = seq.substring(i, i + motifLen);
+      const revComp = this.reverseComplement(motif);
+      if (seq.substring(i + motifLen + minLoop).includes(revComp)) {
+        return true;
+      }
     }
-
-    // --- Internal Helpers ---
-
-    static _findCandidatePrimers(seq, minLen, maxLen, targetTm, strictness) {
-        return this._findCandidatePrimersRaw(seq, minLen, maxLen, targetTm, strictness).map(cand => ({
-            sequence: seq.substring(cand.startPos, cand.startPos + cand.length),
-            startPos: cand.startPos,
-            length: cand.length,
-            tm: cand.tm,
-            gcContent: cand.gcContent
-        }));
-    }
-
-    static _findCandidatePrimersRaw(seq, minLen, maxLen, targetTm, strictness) {
-        const tmTolerance = strictness.tmTol;
-        const gcMin = strictness.gcMin;
-        const gcMax = strictness.gcMax;
-        const requireGcClamp = strictness.requireGcClamp;
-        const avoidHairpin = strictness.avoidHairpin;
-
-        const candidates = [];
-        for (let i = 0; i <= seq.length - minLen; i++) {
-            for (let len = minLen; len <= maxLen && i + len <= seq.length; len++) {
-                const subSeq = seq.substring(i, i + len);
-                const props = this.calculateProperties(subSeq);
-
-                // Progressive filters based on strictness object
-                let pass = Math.abs(props.tm - targetTm) <= tmTolerance &&
-                           props.gcContent >= gcMin && props.gcContent <= gcMax;
-                
-                if (requireGcClamp) {
-                    pass = pass && (subSeq.endsWith('G') || subSeq.endsWith('C'));
-                }
-                
-                if (avoidHairpin) {
-                    pass = pass && !props.hasHairpinPotential;
-                }
-
-                if (pass) {
-                    candidates.push({
-                        startPos: i,
-                        endPos: i + len,
-                        length: len,
-                        sequence: subSeq,
-                        tm: props.tm,
-                        gcContent: props.gcContent
-                    });
-                }
-            }
-        }
-        return candidates;
-    }
-
-    static _checkHairpinPotential(seq) {
-        // Simple check: looking for inverted repeats of length >= 4 separated by loop >= 3
-        for (let i = 0; i <= seq.length - 11; i++) {
-            const motif = seq.substring(i, i + 4);
-            const revComp = this.reverseComplement(motif);
-            // Look for the reverse complement further down the sequence (leaving a loop of at least 3 bp)
-            if (seq.substring(i + 7).includes(revComp)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    return false;
+  }
 }
 
 // Export for Node.js (MCP server) or make available globally for browser (ChatManager)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PrimerDesigner;
+  module.exports = PrimerDesigner;
 } else if (typeof window !== 'undefined') {
-    window.PrimerDesigner = PrimerDesigner;
+  window.PrimerDesigner = PrimerDesigner;
 }

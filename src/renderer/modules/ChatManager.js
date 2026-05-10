@@ -93,7 +93,11 @@ class ChatManager {
     // Initialize Dynamic Tools Registry System
     this.dynamicTools = null;
     this.dynamicToolsEnabled = true;
-    this.initializeDynamicTools();
+    this._dynamicToolsReady = false;
+    this.initializeDynamicTools().then(() => { this._dynamicToolsReady = true; }).catch(err => {
+      console.error('❌ Failed to initialize dynamic tools:', err);
+      this._dynamicToolsReady = true;
+    });
 
     // Initialize Tool Execution Tracker
     this.toolExecutionTracker = null;
@@ -7231,28 +7235,23 @@ ${coreTools}
       batch_set_track_settings: () => this.batchSetTrackSettings(parameters),
 
       // Primer Design Tools
-      calculate_primer_properties: () => this.primerCalculateProperties(parameters),
-      design_primers: () => this.primerDesign(parameters),
-      find_primer_binding_sites: () => this.primerFindBindingSites(parameters),
+      calculate_primer_properties: async () => {
+        if (typeof this.primerCalculateProperties === 'function') return await this.primerCalculateProperties(parameters);
+        throw new Error('Primer integration not yet loaded. Please retry in a moment.');
+      },
+      design_primers: async () => {
+        if (typeof this.primerDesign === 'function') return await this.primerDesign(parameters);
+        throw new Error('Primer integration not yet loaded. Please retry in a moment.');
+      },
+      find_primer_binding_sites: async () => {
+        if (typeof this.primerFindBindingSites === 'function') return await this.primerFindBindingSites(parameters);
+        throw new Error('Primer integration not yet loaded. Please retry in a moment.');
+      },
       add_primer_annotation: async () => {
-        // Fallback implementation if Primer integration hasn't loaded
         if (typeof this.primerAddAnnotation === 'function') {
           return await this.primerAddAnnotation(parameters);
         }
-        // Direct implementation using createAnnotation
-        if (!parameters.chromosome || !parameters.start || !parameters.end || !parameters.name) {
-          throw new Error('Missing required fields for annotation: chromosome, start, end, name');
-        }
-        const strand = parameters.strand === '-' ? -1 : 1;
-        return await this.createAnnotation({
-          type: 'primer',
-          name: parameters.name,
-          chromosome: parameters.chromosome,
-          start: parseInt(parameters.start),
-          end: parseInt(parameters.end),
-          strand: strand,
-          description: parameters.description || `Tm: ${parameters.tm || '?'}, GC: ${parameters.gcContent || '?'}%`
-        });
+        throw new Error('Primer integration not yet loaded. Please retry in a moment.');
       },
 
       // View control tools

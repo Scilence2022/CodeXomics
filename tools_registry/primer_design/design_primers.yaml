@@ -1,5 +1,5 @@
 name: design_primers
-description: "Design a forward and reverse primer pair to amplify a target DNA sequence. This automatically finds optimal primers matching length, GC, and melting temperature criteria. Provide at least 150bp of sequence."
+description: "Design a forward and reverse primer pair to amplify a target DNA sequence. This automatically finds optimal primers matching length, GC, and melting temperature criteria. Provide at least 150bp of sequence, or use geneName or chromosome/start/end to fetch it."
 category: primer_design
 subcategory: design
 execution_type: hybrid
@@ -14,12 +14,23 @@ parameters:
   properties:
     targetSequence:
       type: string
-      description: "The full DNA sequence region containing the desired amplicon. If not provided, fetch it first via sequence tools."
+      description: "The full DNA sequence region containing the desired amplicon. If not provided, use geneName or chromosome/start/end."
+    geneName:
+      type: string
+      description: "Name of the gene to fetch the coding sequence for primer design"
+    chromosome:
+      type: string
+      description: "Chromosome/replicon ID for the target region"
+    start:
+      type: number
+      description: "Start position of the target region (used with chromosome)"
+    end:
+      type: number
+      description: "End position of the target region (used with chromosome)"
     targetTm:
       type: number
       description: "Target melting temperature (default: 60.0)"
     minProductSize:
       type: number
       description: "Minimum PCR product size (default: 100)"
-  required:
-    - targetSequence
+  required: []

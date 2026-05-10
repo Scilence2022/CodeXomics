@@ -227,4 +227,11 @@ const TOOL_NAMES = {
     GET_BENCHMARK_STATUS: 'get_benchmark_status',
     EXPORT_BENCHMARK_RESULTS: 'export_benchmark_results',
   },
+
+  PRIMER: {
+    CALCULATE_PRIMER_PROPERTIES: 'calculate_primer_properties',
+    DESIGN_PRIMERS: 'design_primers',
+    FIND_PRIMER_BINDING_SITES: 'find_primer_binding_sites',
+    ADD_PRIMER_ANNOTATION: 'add_primer_annotation',
+  },
 };

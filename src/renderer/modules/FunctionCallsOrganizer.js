@@ -339,6 +339,17 @@ class FunctionCallsOrganizer {
           'export_benchmark_results',
         ],
       },
+
+      primerDesign: {
+        priority: 2,
+        description: 'Primer design, property calculation, binding site analysis, and annotation',
+        functions: [
+          'calculate_primer_properties',
+          'design_primers',
+          'find_primer_binding_sites',
+          'add_primer_annotation',
+        ],
+      },
     };
 
     // 功能映射表
