@@ -1,0 +1,103 @@
+name: zoom_to_gene
+version: 1.0.0
+description: 'Zoom the genome browser view to fit a specific gene, centering on it with configurable padding. This changes the visible region to show the entire gene with surrounding context. Use this when the user asks to zoom to a gene, focus on a gene, center view on a gene, or fit a gene in view. NOT the same as select_gene which only highlights without zooming.'
+category: navigation
+keywords:
+  - zoom
+  - gene
+  - focus
+  - center
+  - fit
+  - view
+  - navigate
+  - go
+  - show
+  - display
+priority: 2
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    geneName:
+      type: string
+      description: Gene name or locus tag to zoom to (e.g., 'lacZ', 'dnaA', 'thrA')
+      examples:
+        - lacZ
+        - dnaA
+        - thrA
+        - araA
+    chromosome:
+      type: string
+      description: Chromosome name (optional, searches all chromosomes if not specified)
+    padding:
+      type: integer
+      description: 'Number of base pairs to add as padding around the gene (default: 1000)'
+      default: 1000
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - geneName
+sample_usages:
+  - user_query: 'Zoom to the lacZ gene'
+    tool_call: 'zoom_to_gene(geneName=''lacZ'')'
+    thought: 'User wants to zoom the view to fit the lacZ gene'
+    expected_result: 'Genome view centers on lacZ gene with 1000bp padding'
+
+  - user_query: 'Focus on gene dnaA'
+    tool_call: 'zoom_to_gene(geneName=''dnaA'')'
+    thought: 'User wants to center the view on dnaA gene'
+    expected_result: 'View zooms to fit dnaA gene with surrounding context'
+
+  - user_query: 'Zoom to fit the thrA gene in view'
+    tool_call: 'zoom_to_gene(geneName=''thrA'')'
+    thought: 'User explicitly asks to zoom/fit a gene in the view'
+    expected_result: 'Genome view adjusts to show thrA gene completely'
+
+  - user_query: 'Show me the araA gene region'
+    tool_call: 'zoom_to_gene(geneName=''araA'')'
+    thought: 'User wants to see the araA gene region, which requires zooming to it'
+    expected_result: 'View navigates and zooms to araA gene'
+
+  - user_query: 'Center view on lacZ with 2000bp padding'
+    tool_call: 'zoom_to_gene(geneName=''lacZ'', padding=2000)'
+    thought: 'User wants to zoom to lacZ with specific padding'
+    expected_result: 'View centers on lacZ with 2000bp padding on each side'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['navigate_to_position', 'jump_to_gene']
+  alternatives: ['select_gene', 'jump_to_gene']
+  prerequisites: []
+  follow_up: ['get_sequence', 'get_gene_details', 'analyze_region']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - zoom
+    - gene
+    - view
+  complexity: simple
+  usage_pattern: frequent
+  recommendation: 'Use this to zoom the view to a gene. This is different from select_gene which only highlights. zoom_to_gene actually changes the visible region.'
+error_handling:
+  gene_not_found: 'Returns error if gene name not found'
+  invalid_gene_name: 'Returns error if gene name is empty or invalid'
+  no_genome_loaded: 'Returns error if no genome is loaded'
+returns:
+  geneName: string - The gene name that was zoomed to
+  gene: object - Gene information (name, start, end, strand)
+  zoomedRegion: string - The resulting visible region (start-end)
+  padding: integer - The padding used in base pairs
+  message: string - Status message

@@ -455,7 +455,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'navigation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Zoom to fit the lacZ gene in the genome browser view.',
+        instruction: 'Zoom to fit the lacZ gene in the genome browser view using zoom_to_gene.',
         expectedResult: {
           tool_name: 'zoom_to_gene',
           parameters: {

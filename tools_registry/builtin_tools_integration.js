@@ -1217,6 +1217,22 @@ class BuiltInToolsIntegration {
       });
     }
 
+    // Check for zoom-to-gene patterns
+    // Matches: "zoom to gene lacZ", "zoom to the lacZ gene", "focus on gene", "center on gene",
+    //          "fit gene in view", "zoom to fit gene", "show gene region"
+    const zoomToGenePatterns = [
+      /\b(zoom|focus|center)\s+.*?\b(to|on|fit|in)?\s*.*?\bgene\b/i,
+      /\b(zoom\s+to)\s+.*?\b(gene|[a-z]{3,})\b/i,
+      /\b(fit|show|display)\s+.*?\bgene\b.*?\b(view|region|in)\b/i,
+    ];
+    if (zoomToGenePatterns.some((pattern) => pattern.test(query))) {
+      relevantTools.push({
+        name: 'zoom_to_gene',
+        confidence: 0.95,
+        reason: 'Zoom to gene / focus on gene keywords detected',
+      });
+    }
+
     // Check for gene navigation patterns
     // Supports intermediate words: "navigate to the gene thrA", "go to gene xyz"
     if (/\b(jump|go|navigate|move)\s+.*?\bgene\b/i.test(query) ||
