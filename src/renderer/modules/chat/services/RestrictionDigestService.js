@@ -97,7 +97,7 @@ class RestrictionDigestService {
         allCutEvents.push({
           position: site.position,
           topStrandCut: site.position + enzymeData.topCut,
-          bottomStrandCut: site.position + enzymeData.recognitionLength - enzymeData.bottomCut - 1,
+          bottomStrandCut: site.position + enzymeData.bottomCut,
           enzyme: enzymeName,
           strand: site.strand,
           recognitionSite: site.site,
@@ -206,10 +206,10 @@ class RestrictionDigestService {
       recognition,
       recognitionLength: recognition.length,
       topCut: 1,
-      bottomCut: recognition.length - 2,
+      bottomCut: recognition.length - 1,
       isPalindromic: true,
       overhangType: "5'_overhang",
-      overhangLength: 4,
+      overhangLength: recognition.length - 2,
       commercial: true,
       isoschizomers: [],
     };
@@ -230,7 +230,7 @@ class RestrictionDigestService {
           site: match[0],
           strand: '+',
           topStrandCut: offset + match.index + enzymeData.topCut,
-          bottomStrandCut: offset + match.index + enzymeData.recognitionLength - enzymeData.bottomCut - 1,
+          bottomStrandCut: offset + match.index + enzymeData.bottomCut,
         });
       }
 
