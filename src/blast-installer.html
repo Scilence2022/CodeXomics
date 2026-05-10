@@ -2116,6 +2116,55 @@ pause`;
       if (typeof ipcRenderer !== 'undefined') {
         ipcRenderer.on('tool-menu-action', (event, action, data) => {
           switch (action) {
+            case 'copy': {
+              const activeEl = document.activeElement;
+              if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                const start = activeEl.selectionStart;
+                const end = activeEl.selectionEnd;
+                if (start !== end) {
+                  navigator.clipboard.writeText(activeEl.value.substring(start, end)).catch(() => {});
+                }
+              } else {
+                const selection = window.getSelection();
+                if (selection && selection.toString()) {
+                  navigator.clipboard.writeText(selection.toString()).catch(() => {});
+                }
+              }
+              break;
+            }
+            case 'paste':
+              if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+                navigator.clipboard.readText().then(text => {
+                  const el = document.activeElement;
+                  const start = el.selectionStart;
+                  const end = el.selectionEnd;
+                  el.value = el.value.substring(0, start) + text + el.value.substring(end);
+                  el.selectionStart = el.selectionEnd = start + text.length;
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                }).catch(() => {});
+              }
+              break;
+            case 'cut': {
+              const activeElCut = document.activeElement;
+              if (activeElCut && (activeElCut.tagName === 'INPUT' || activeElCut.tagName === 'TEXTAREA')) {
+                const startC = activeElCut.selectionStart;
+                const endC = activeElCut.selectionEnd;
+                if (startC !== endC) {
+                  navigator.clipboard.writeText(activeElCut.value.substring(startC, endC)).catch(() => {});
+                  activeElCut.value = activeElCut.value.substring(0, startC) + activeElCut.value.substring(endC);
+                  activeElCut.selectionStart = activeElCut.selectionEnd = startC;
+                  activeElCut.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+              }
+              break;
+            }
+            case 'select-all':
+              if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+                document.activeElement.select();
+              } else {
+                window.getSelection().selectAllChildren(document.body);
+              }
+              break;
             case 'new-analysis':
               initializeInstaller();
               break;
@@ -2138,7 +2187,47 @@ pause`;
               break;
           }
         });
+
+        ipcRenderer.on('sync-theme', (event, themeData) => {
+          console.log('Theme sync received in BLAST Installer:', themeData);
+          applyBlastInstallerTheme(themeData);
+        });
       }
+
+      function applyBlastInstallerTheme(themeData) {
+        const root = document.documentElement;
+        const vars = themeData.isDark && themeData.darkVariables
+          ? { ...themeData.variables, ...themeData.darkVariables }
+          : themeData.variables;
+
+        if (vars['--header-gradient']) {
+          document.body.style.background = vars['--header-gradient'];
+        }
+
+        if (vars['--primary-color']) {
+          document.querySelectorAll('.btn-primary').forEach(el => {
+            if (vars['--btn-gradient']) {
+              el.style.background = vars['--btn-gradient'];
+            }
+          });
+        }
+
+        if (themeData.isDark) {
+          document.body.style.color = vars['--text-primary'] || '#e0e0e0';
+          document.querySelectorAll('.header, .card, .container').forEach(el => {
+            el.style.background = vars['--bg-secondary'] || '#1e1e2e';
+            el.style.color = vars['--text-primary'] || '#e0e0e0';
+          });
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        if (typeof ipcRenderer !== 'undefined' && ipcRenderer.invoke) {
+          ipcRenderer.invoke('request-current-theme').catch(err => {
+            console.warn('Failed to request initial theme:', err.message);
+          });
+        }
+      });
     </script>
   </body>
 </html>

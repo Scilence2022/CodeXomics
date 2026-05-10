@@ -933,7 +933,7 @@ function createToolWindowMenu(toolWindow, toolName) {
   // 存储工具窗口的菜单模板
   toolMenuTemplates.set(toolWindow.id, { template, toolName });
 
-  // 创建菜单并设置为应用菜单（这会替换当前的应用菜单）
+  // 创建菜单（不立即设置为应用菜单，等窗口获得焦点时再设置）
   const menu = Menu.buildFromTemplate(template);
 
   // 设置窗口聚焦时切换菜单
@@ -941,6 +941,17 @@ function createToolWindowMenu(toolWindow, toolName) {
     currentActiveWindow = toolWindow;
     Menu.setApplicationMenu(menu);
     console.log(`Switched to ${toolName} menu`);
+  });
+
+  // 窗口失焦时恢复主窗口菜单
+  toolWindow.on('blur', () => {
+    if (currentActiveWindow === toolWindow) {
+      currentActiveWindow = null;
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()) {
+        createMenu();
+        console.log(`Restored main menu after ${toolName} blur`);
+      }
+    }
   });
 
   // 当窗口关闭时清理

@@ -385,10 +385,137 @@
       <button class="btn btn-secondary" id="closeBtn">Close</button>
     </div>
 
+    <script>
+      function applyBlastThemeVariables(themeData) {
+        const root = document.documentElement;
+        const vars = themeData.isDark && themeData.darkVariables
+          ? { ...themeData.variables, ...themeData.darkVariables }
+          : themeData.variables;
+
+        const mapping = {
+          '--primary-color': '--blast-primary',
+          '--primary-hover': '--blast-primary-hover',
+          '--header-gradient': '--blast-header-gradient',
+          '--primary-rgb': '--blast-primary-rgb',
+        };
+
+        Object.entries(mapping).forEach(([themeVar, blastVar]) => {
+          if (vars[themeVar]) {
+            root.style.setProperty(blastVar, vars[themeVar]);
+          }
+        });
+
+        if (vars['--primary-color']) {
+          root.style.setProperty('--blast-primary', vars['--primary-color']);
+          document.querySelectorAll('.header h1, .section-title, .detection-value, .spinner').forEach(el => {
+            el.style.color = vars['--primary-color'];
+          });
+          document.querySelectorAll('.form-input').forEach(el => {
+            el.style.borderColor = vars['--border-color'] || '#e0e0e0';
+          });
+          document.querySelectorAll('.btn-primary').forEach(el => {
+            if (vars['--btn-gradient']) {
+              el.style.background = vars['--btn-gradient'];
+            } else if (vars['--header-gradient']) {
+              el.style.background = vars['--header-gradient'];
+            }
+          });
+        }
+
+        if (vars['--header-gradient']) {
+          document.body.style.background = vars['--header-gradient'];
+        }
+
+        if (themeData.isDark) {
+          document.body.style.color = vars['--text-primary'] || '#e0e0e0';
+          document.querySelectorAll('.header, .config-container, .actions').forEach(el => {
+            el.style.background = vars['--bg-secondary'] || '#1e1e2e';
+            el.style.color = vars['--text-primary'] || '#e0e0e0';
+          });
+          document.querySelectorAll('.form-input').forEach(el => {
+            el.style.background = vars['--bg-tertiary'] || '#2d2d3d';
+            el.style.color = vars['--text-primary'] || '#e0e0e0';
+            el.style.borderColor = vars['--border-color'] || '#3d3d4d';
+          });
+          document.querySelectorAll('.help-text, .header p').forEach(el => {
+            el.style.color = vars['--text-secondary'] || '#aaa';
+          });
+        }
+      }
+
+      const { ipcRenderer } = require('electron');
+
+      ipcRenderer.on('sync-theme', (event, themeData) => {
+        console.log('Theme sync received in BLAST Config:', themeData);
+        applyBlastThemeVariables(themeData);
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        ipcRenderer.invoke('request-current-theme').catch(err => {
+          console.warn('Failed to request initial theme:', err.message);
+        });
+      });
+    </script>
     <script src="renderer/modules/BlastConfigManager.js"></script>
     <script>
       // Initialize BlastConfigManager
       const blastConfig = new BlastConfigManager();
+
+      // ===== Menu Action Handler =====
+      const { ipcRenderer: configIpc } = require('electron');
+      configIpc.on('tool-menu-action', (event, action) => {
+        switch (action) {
+          case 'copy': {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+              const start = activeEl.selectionStart;
+              const end = activeEl.selectionEnd;
+              if (start !== end) {
+                navigator.clipboard.writeText(activeEl.value.substring(start, end)).catch(() => {});
+              }
+            } else {
+              const selection = window.getSelection();
+              if (selection && selection.toString()) {
+                navigator.clipboard.writeText(selection.toString()).catch(() => {});
+              }
+            }
+            break;
+          }
+          case 'paste':
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+              navigator.clipboard.readText().then(text => {
+                const el = document.activeElement;
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+                el.value = el.value.substring(0, start) + text + el.value.substring(end);
+                el.selectionStart = el.selectionEnd = start + text.length;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+              }).catch(() => {});
+            }
+            break;
+          case 'cut': {
+            const activeElCut = document.activeElement;
+            if (activeElCut && (activeElCut.tagName === 'INPUT' || activeElCut.tagName === 'TEXTAREA')) {
+              const startC = activeElCut.selectionStart;
+              const endC = activeElCut.selectionEnd;
+              if (startC !== endC) {
+                navigator.clipboard.writeText(activeElCut.value.substring(startC, endC)).catch(() => {});
+                activeElCut.value = activeElCut.value.substring(0, startC) + activeElCut.value.substring(endC);
+                activeElCut.selectionStart = activeElCut.selectionEnd = startC;
+                activeElCut.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            }
+            break;
+          }
+          case 'select-all':
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+              document.activeElement.select();
+            } else {
+              window.getSelection().selectAllChildren(document.body);
+            }
+            break;
+        }
+      });
     </script>
   </body>
 </html>

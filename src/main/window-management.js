@@ -116,6 +116,15 @@ function createWindow() {
     }
   });
 
+  // 主窗口 webContents 获得焦点时也恢复主菜单（处理点击主窗口区域的情况）
+  mainWindow.webContents.on('focus', () => {
+    if (currentActiveWindow !== mainWindow) {
+      currentActiveWindow = mainWindow;
+      createMenu();
+      console.log('Switched to main window menu (via webContents focus)');
+    }
+  });
+
   // Handle window closed - cleanup is handled automatically via the 'closed' event listener in registerGenomeWindow
   mainWindow.on('closed', () => {
     console.log(`📋 [createMainWindow] Window ${windowId} closed`);

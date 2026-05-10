@@ -2046,6 +2046,33 @@ function registerIpcHandlers(deps) {
         sent = true;
       }
 
+      // Forward to BLAST+ Downloader window
+      const blastDownloaderWindow = BrowserWindow.getAllWindows().find(
+          (win) => win.getTitle().includes('BLAST+ Tools Downloader') && !win.isDestroyed(),
+      );
+      if (blastDownloaderWindow) {
+        blastDownloaderWindow.webContents.send('sync-theme', themeData);
+        sent = true;
+      }
+
+      // Forward to BLAST Configuration window
+      const blastConfigWindow = BrowserWindow.getAllWindows().find(
+          (win) => win.getTitle().includes('Configure BLAST Tools') && !win.isDestroyed(),
+      );
+      if (blastConfigWindow) {
+        blastConfigWindow.webContents.send('sync-theme', themeData);
+        sent = true;
+      }
+
+      // Forward to BLAST Installer window
+      const blastInstallerWindow = BrowserWindow.getAllWindows().find(
+          (win) => win.getTitle().includes('BLAST') && win.getTitle().includes('Installer') && !win.isDestroyed(),
+      );
+      if (blastInstallerWindow) {
+        blastInstallerWindow.webContents.send('sync-theme', themeData);
+        sent = true;
+      }
+
       return {success: sent};
     } catch (error) {
       return {success: false, error: error.message};

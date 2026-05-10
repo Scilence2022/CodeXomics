@@ -475,7 +475,7 @@
     </div>
 
     <script>
-      const { shell } = require('electron');
+      const { shell, ipcRenderer } = require('electron');
       const os = require('os');
       const path = require('path');
       const fs = require('fs');
@@ -1064,6 +1064,147 @@
 
         logMessage('Log exported', 'success');
       }
+
+      // ===== Menu Action Handler =====
+      ipcRenderer.on('tool-menu-action', (event, action) => {
+        switch (action) {
+          case 'copy': {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+              const start = activeEl.selectionStart;
+              const end = activeEl.selectionEnd;
+              if (start !== end) {
+                navigator.clipboard.writeText(activeEl.value.substring(start, end)).catch(() => {});
+              }
+            } else {
+              const selection = window.getSelection();
+              if (selection && selection.toString()) {
+                navigator.clipboard.writeText(selection.toString()).catch(() => {});
+              }
+            }
+            break;
+          }
+          case 'paste':
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+              navigator.clipboard.readText().then(text => {
+                const el = document.activeElement;
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+                el.value = el.value.substring(0, start) + text + el.value.substring(end);
+                el.selectionStart = el.selectionEnd = start + text.length;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+              }).catch(() => {});
+            }
+            break;
+          case 'cut': {
+            const activeElCut = document.activeElement;
+            if (activeElCut && (activeElCut.tagName === 'INPUT' || activeElCut.tagName === 'TEXTAREA')) {
+              const startC = activeElCut.selectionStart;
+              const endC = activeElCut.selectionEnd;
+              if (startC !== endC) {
+                navigator.clipboard.writeText(activeElCut.value.substring(startC, endC)).catch(() => {});
+                activeElCut.value = activeElCut.value.substring(0, startC) + activeElCut.value.substring(endC);
+                activeElCut.selectionStart = activeElCut.selectionEnd = startC;
+                activeElCut.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            }
+            break;
+          }
+          case 'select-all':
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+              document.activeElement.select();
+            } else {
+              window.getSelection().selectAllChildren(document.body);
+            }
+            break;
+          case 'find':
+          case 'find-next':
+            break;
+          case 'new-analysis':
+            location.reload();
+            break;
+          case 'save-results':
+          case 'export-data':
+            exportLog();
+            break;
+          case 'refresh-data':
+            location.reload();
+            break;
+          case 'clear-results':
+            clearLog();
+            break;
+        }
+      });
+
+      // ===== Theme Integration =====
+      function applyBlastDownloaderTheme(themeData) {
+        const root = document.documentElement;
+        const vars = themeData.isDark && themeData.darkVariables
+          ? { ...themeData.variables, ...themeData.darkVariables }
+          : themeData.variables;
+
+        if (vars['--header-gradient']) {
+          document.body.style.background = vars['--header-gradient'];
+        }
+
+        if (vars['--primary-color']) {
+          root.style.setProperty('--blast-accent', vars['--primary-color']);
+          document.querySelectorAll('.info-item').forEach(el => {
+            el.style.borderLeftColor = vars['--primary-color'];
+          });
+          document.querySelectorAll('.version-info').forEach(el => {
+            el.style.borderLeftColor = vars['--primary-color'];
+          });
+          document.querySelectorAll('.btn-primary').forEach(el => {
+            if (vars['--btn-gradient']) {
+              el.style.background = vars['--btn-gradient'];
+            }
+          });
+          document.querySelectorAll('#currentStep').forEach(el => {
+            el.style.color = vars['--primary-color'];
+          });
+          document.querySelectorAll('.progress-fill').forEach(el => {
+            if (vars['--btn-gradient']) {
+              el.style.background = vars['--btn-gradient'];
+            }
+          });
+        }
+
+        if (themeData.isDark) {
+          document.body.style.color = vars['--text-primary'] || '#e0e0e0';
+          document.querySelectorAll('.header, .card').forEach(el => {
+            el.style.background = vars['--bg-secondary'] || '#1e1e2e';
+            el.style.color = vars['--text-primary'] || '#e0e0e0';
+          });
+          document.querySelectorAll('.header h1, .card h2').forEach(el => {
+            el.style.color = vars['--text-primary'] || '#e0e0e0';
+          });
+          document.querySelectorAll('.info-label').forEach(el => {
+            el.style.color = vars['--text-secondary'] || '#ccc';
+          });
+          document.querySelectorAll('.info-value').forEach(el => {
+            el.style.color = vars['--text-muted'] || '#999';
+          });
+          document.querySelectorAll('.subtitle').forEach(el => {
+            el.style.color = vars['--text-muted'] || '#999';
+          });
+        }
+      }
+
+      if (typeof ipcRenderer !== 'undefined') {
+        ipcRenderer.on('sync-theme', (event, themeData) => {
+          console.log('Theme sync received in BLAST Downloader:', themeData);
+          applyBlastDownloaderTheme(themeData);
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        if (typeof ipcRenderer !== 'undefined' && ipcRenderer.invoke) {
+          ipcRenderer.invoke('request-current-theme').catch(err => {
+            console.warn('Failed to request initial theme:', err.message);
+          });
+        }
+      });
     </script>
   </body>
 </html>
