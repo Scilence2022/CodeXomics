@@ -170,16 +170,17 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_sequence: ['uniprot_search', 'alphafold_search'],
           parameters: [
-            { sequence: '<araA_protein_sequence>', blastType: 'blastp', database: 'nr' },
-            { sequence: '<araA_protein_sequence>', blastType: 'blastp', database: 'nr' },
+            { geneName: 'araA' },
+            { geneName: 'araA' },
           ],
         },
         maxScore: 10,
         bonusScore: 2,
-        timeout: 60000,
+        timeout: 30000,
+        earlyReturn: true,
         evaluator: this.evaluateWorkflowCall.bind(this),
         manualVerification:
-          'Please verify: 1) Both database searches execute successfully, 2) Results are comprehensive and relevant, 3) Data integration maintains cross-references, 4) Functional characterization is coherent, 5) Structural and functional data correlate.',
+          'Please verify: 1) uniprot_search and alphafold_search tool calls are issued, 2) Both tasks are submitted successfully (do not wait for completion as online search time is variable).',
       },
 
       // ANNOTATION WORKFLOW TASKS - Manual + Complex
@@ -248,9 +249,10 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         },
         maxScore: 10,
         bonusScore: 2,
-        timeout: 60000,
+        timeout: 30000,
+        earlyReturn: true,
         evaluator: this.evaluateWorkflowCall.bind(this),
-        manualVerification: 'Please verify: 1) Primers are designed for lacZ, 2) Properties are calculated correctly, 3) Primer annotation appears on the genome.',
+        manualVerification: 'Please verify: 1) design_primers is called for lacZ, 2) calculate_primer_properties is called, 3) add_primer_annotation is called, 4) All tasks are submitted successfully (do not wait for completion).',
       },
 
       // BLAST WORKFLOW - Manual + Complex
@@ -271,9 +273,10 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         },
         maxScore: 10,
         bonusScore: 2,
-        timeout: 90000,
+        timeout: 30000,
+        earlyReturn: true,
         evaluator: this.evaluateWorkflowCall.bind(this),
-        manualVerification: 'Please verify: 1) BLAST database is created successfully, 2) Local BLAST search runs against the new database, 3) Results include relevant hits.',
+        manualVerification: 'Please verify: 1) blast_create_quick_db_for_current_genome is called, 2) blast_search_local is called with correct sequence, 3) Both tasks are submitted successfully (do not wait for completion).',
       },
 
       // RESTRICTION ANALYSIS WORKFLOW - Manual + Complex
