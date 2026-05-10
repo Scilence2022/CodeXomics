@@ -1,0 +1,53 @@
+name: blast_delete_database
+version: 1.0.0
+description: Delete a local BLAST database
+category: database
+keywords:
+  - blast
+  - database
+  - delete
+  - remove
+priority: 2
+execution:
+  type: built-in
+  timeout: 30000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    dbName:
+      type: string
+      description: Name of the BLAST database to delete
+    confirm:
+      type: boolean
+      description: Confirmation flag to prevent accidental deletion
+      default: false
+  required:
+    - dbName
+sample_usages:
+  - user_query: 'Delete the old BLAST database'
+    tool_call: "blast_delete_database(dbName='old_db', confirm=true)"
+    thought: 'User wants to remove a BLAST database'
+    expected_result: 'Database deleted successfully'
+relationships:
+  depends_on: []
+  conflicts_with:
+    - blast_search_local
+  follow_up:
+    - blast_list_databases
+metadata:
+  tags:
+    - blast
+    - database
+    - delete
+  complexity: simple
+  usage_pattern: rare
+error_handling:
+  not_found: 'Returns error if database does not exist'
+  not_confirmed: 'Returns error if confirm parameter is not set to true'
+returns:
+  success: boolean
+  message: string

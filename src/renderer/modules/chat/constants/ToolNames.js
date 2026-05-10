@@ -150,6 +150,22 @@ const TOOL_NAMES = {
   // === BLAST Tools ===
   BLAST: {
     BLAST_SEARCH: 'blast_search',
+    BLAST_SEARCH_ONLINE: 'blast_search_online',
+    BLAST_SEARCH_LOCAL: 'blast_search_local',
+    BLAST_SEARCH_BATCH: 'blast_search_batch',
+    BLAST_CREATE_DATABASE: 'blast_create_database',
+    BLAST_LIST_DATABASES: 'blast_list_databases',
+    BLAST_DATABASE_INFO: 'blast_database_info',
+    BLAST_DELETE_DATABASE: 'blast_delete_database',
+    BLAST_CREATE_DB_FROM_GENOME: 'blast_create_db_from_genome',
+    BLAST_CREATE_PROTEIN_DB_FROM_GENOME: 'blast_create_protein_db_from_genome',
+    BLAST_FILTER_RESULTS: 'blast_filter_results',
+    BLAST_EXPORT_RESULTS: 'blast_export_results',
+    BLAST_DETECT_SEQUENCE_TYPE: 'blast_detect_sequence_type',
+    BLAST_VALIDATE_DATABASE: 'blast_validate_database',
+    BLAST_GET_INSTALLATION_STATUS: 'blast_get_installation_status',
+    BLAST_CREATE_QUICK_DB_FOR_CURRENT_GENOME: 'blast_create_quick_db_for_current_genome',
+    // Legacy aliases (kept for backward compatibility)
     BLAST_SEQUENCE_FROM_REGION: 'blast_sequence_from_region',
     GET_BLAST_DATABASES: 'get_blast_databases',
     BATCH_BLAST_SEARCH: 'batch_blast_search',

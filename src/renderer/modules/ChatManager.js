@@ -7277,6 +7277,25 @@ ${coreTools}
       get_benchmark_results: () => this.getBenchmarkResults(parameters),
       get_benchmark_status: () => this.getBenchmarkStatus(parameters),
       export_benchmark_results: () => this.exportBenchmarkResults(parameters),
+
+      // BLAST tools (fallback when BlastService/BlastChatManagerIntegration not available)
+      blast_search: () => this.services.blast.blastSearch(parameters),
+      blast_search_online: () => this.services.blast.blastSearchOnline(parameters),
+      blast_search_local: () => this.services.blast.blastSearchLocal(parameters),
+      blast_search_batch: () => this.services.blast.blastSearchBatch(parameters),
+      blast_sequence_from_region: () => this.services.blast.blastSequenceFromRegion(parameters),
+      blast_create_database: () => this.services.blast.blastCreateDatabase(parameters),
+      blast_list_databases: () => this.services.blast.blastListDatabases(parameters),
+      blast_database_info: () => this.services.blast.blastDatabaseInfo(parameters),
+      blast_delete_database: () => this.services.blast.blastDeleteDatabase(parameters),
+      blast_create_db_from_genome: () => this.services.blast.blastCreateDbFromGenome(parameters),
+      blast_create_protein_db_from_genome: () => this.services.blast.blastCreateProteinDbFromGenome(parameters),
+      blast_create_quick_db_for_current_genome: () => this.services.blast.blastCreateQuickDbForCurrentGenome(parameters),
+      blast_filter_results: () => this.services.blast.blastFilterResults(parameters),
+      blast_export_results: () => this.services.blast.blastExportResults(parameters),
+      blast_detect_sequence_type: () => this.services.blast.blastDetectSequenceType(parameters),
+      blast_validate_database: () => this.services.blast.blastValidateDatabase(parameters),
+      blast_get_installation_status: () => this.services.blast.blastGetInstallationStatus(parameters),
     };
 
     if (localTools[toolName]) {

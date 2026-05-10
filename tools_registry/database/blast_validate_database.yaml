@@ -1,0 +1,52 @@
+name: blast_validate_database
+version: 1.0.0
+description: Validate a local BLAST database integrity and format
+category: database
+keywords:
+  - blast
+  - database
+  - validate
+  - check
+  - integrity
+priority: 2
+execution:
+  type: built-in
+  timeout: 60000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    dbName:
+      type: string
+      description: Name of the BLAST database to validate
+  required:
+    - dbName
+sample_usages:
+  - user_query: 'Check if my BLAST database is valid'
+    tool_call: "blast_validate_database(dbName='my_nucleotide_db')"
+    thought: 'User wants to verify database integrity'
+    expected_result: 'Database validation result with any issues found'
+relationships:
+  depends_on: []
+  enhances:
+    - blast_list_databases
+    - blast_database_info
+  follow_up:
+    - blast_search_local
+metadata:
+  tags:
+    - blast
+    - database
+    - validate
+  complexity: simple
+  usage_pattern: rare
+error_handling:
+  not_found: 'Returns error if database does not exist'
+returns:
+  success: boolean
+  valid: boolean - Whether the database passed validation
+  issues: array - List of validation issues found
+  message: string

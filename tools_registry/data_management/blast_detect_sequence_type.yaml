@@ -1,0 +1,55 @@
+name: blast_detect_sequence_type
+version: 1.0.0
+description: Detect whether a sequence is DNA, RNA, or protein
+category: data_management
+keywords:
+  - blast
+  - detect
+  - sequence
+  - type
+  - dna
+  - protein
+  - rna
+priority: 2
+execution:
+  type: built-in
+  timeout: 5000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    sequence:
+      type: string
+      description: Sequence to analyze for type detection
+  required:
+    - sequence
+sample_usages:
+  - user_query: 'What type of sequence is this?'
+    tool_call: "blast_detect_sequence_type(sequence='ATGCGATCGATCG')"
+    thought: 'User wants to know if the sequence is DNA, RNA, or protein'
+    expected_result: 'Sequence type detection result (DNA/RNA/Protein)'
+relationships:
+  depends_on: []
+  enhances:
+    - blast_search
+    - blast_search_online
+  follow_up:
+    - blast_search_online
+    - blast_search_local
+metadata:
+  tags:
+    - blast
+    - detect
+    - sequence-type
+  complexity: simple
+  usage_pattern: moderate
+error_handling:
+  empty_sequence: 'Returns error if sequence is empty'
+returns:
+  success: boolean
+  type: string - Detected sequence type (dna, rna, protein, unknown)
+  confidence: number - Confidence score 0-1
+  message: string

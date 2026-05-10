@@ -1,0 +1,63 @@
+name: blast_export_results
+version: 1.0.0
+description: Export BLAST search results in various formats
+category: data_management
+keywords:
+  - blast
+  - export
+  - results
+  - download
+  - format
+priority: 2
+execution:
+  type: built-in
+  timeout: 30000
+  retries: 1
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    searchId:
+      type: string
+      description: ID of the BLAST search to export results from
+    format:
+      type: string
+      description: Output format for exported results
+      enum:
+        - tsv
+        - xml
+        - json
+        - csv
+      default: tsv
+    outputPath:
+      type: string
+      description: File path to save exported results
+  required:
+    - searchId
+sample_usages:
+  - user_query: 'Export BLAST results as CSV'
+    tool_call: "blast_export_results(searchId='blast_123', format='csv')"
+    thought: 'User wants to export BLAST results in CSV format'
+    expected_result: 'BLAST results exported in CSV format'
+relationships:
+  depends_on:
+    - blast_search_online
+    - blast_search_local
+  follow_up: []
+metadata:
+  tags:
+    - blast
+    - export
+    - results
+  complexity: simple
+  usage_pattern: moderate
+error_handling:
+  not_found: 'Returns error if search ID does not exist'
+  invalid_format: 'Returns error if format is not supported'
+returns:
+  success: boolean
+  filePath: string - Path to exported file
+  format: string - Export format used
+  message: string

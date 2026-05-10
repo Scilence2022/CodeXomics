@@ -1,0 +1,83 @@
+name: blast_search_batch
+version: 1.0.0
+description: Perform batch BLAST searches on multiple sequences simultaneously
+category: external_apis
+keywords:
+  - blast
+  - batch
+  - multiple
+  - search
+  - similarity
+  - sequences
+priority: 2
+execution:
+  type: built-in
+  timeout: 600000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: true
+parameters:
+  type: object
+  properties:
+    sequences:
+      type: array
+      items:
+        type: string
+      description: Array of query sequences to search
+    blastType:
+      type: string
+      description: Type of BLAST search
+      enum:
+        - blastn
+        - blastp
+        - blastx
+        - tblastn
+        - tblastx
+    database:
+      type: string
+      description: Target database name
+    evalue:
+      type: string
+      description: E-value threshold for reporting matches
+      default: '0.01'
+    maxTargets:
+      type: integer
+      description: Maximum number of target sequences per query
+      default: 50
+  required:
+    - sequences
+    - blastType
+    - database
+sample_usages:
+  - user_query: 'BLAST search multiple sequences against nr database'
+    tool_call: "blast_search_batch(sequences=['ATGCGT...', 'GGATCC...'], blastType='blastn', database='nr')"
+    thought: 'User wants to batch BLAST multiple sequences'
+    expected_result: 'Batch BLAST results for all input sequences'
+relationships:
+  depends_on: []
+  enhances:
+    - blast_search_online
+    - blast_search_local
+  alternatives:
+    - blast_search_online
+  prerequisites: []
+  follow_up:
+    - blast_filter_results
+    - blast_export_results
+metadata:
+  tags:
+    - blast
+    - batch
+    - search
+  complexity: high
+  usage_pattern: moderate
+error_handling:
+  network_error: 'Returns error if remote BLAST service is unavailable'
+  timeout_error: 'Returns error if batch search exceeds 10 minute timeout'
+  invalid_sequence: 'Returns error if any sequence format is invalid'
+returns:
+  success: boolean
+  results: array - Array of BLAST search results for each query
+  totalCount: integer - Total number of searches completed
+  timestamp: string

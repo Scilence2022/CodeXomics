@@ -1,0 +1,52 @@
+name: blast_database_info
+version: 1.0.0
+description: Get detailed information about a specific BLAST database
+category: database
+keywords:
+  - blast
+  - database
+  - info
+  - details
+  - statistics
+priority: 2
+execution:
+  type: built-in
+  timeout: 10000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    dbName:
+      type: string
+      description: Name of the BLAST database to get info for
+  required:
+    - dbName
+sample_usages:
+  - user_query: 'Get information about my BLAST database'
+    tool_call: "blast_database_info(dbName='my_nucleotide_db')"
+    thought: 'User wants details about a specific BLAST database'
+    expected_result: 'Database information including type, sequence count, and size'
+relationships:
+  depends_on: []
+  enhances:
+    - blast_list_databases
+  follow_up:
+    - blast_search_local
+    - blast_delete_database
+    - blast_validate_database
+metadata:
+  tags:
+    - blast
+    - database
+    - info
+  complexity: simple
+  usage_pattern: moderate
+error_handling:
+  not_found: 'Returns error if database does not exist'
+returns:
+  success: boolean
+  database: object - Database information including type, count, size, path
+  message: string

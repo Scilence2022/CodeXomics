@@ -354,7 +354,7 @@ class MultiAgentSystem {
 
     // Low priority functions
     const lowPriorityFunctions = [
-      'batch_blast_search',
+      'blast_search_batch', 'batch_blast_search',
       'advanced_blast_search',
       'evo2_generate_sequence',
       'build_phylogenetic_tree',
@@ -830,8 +830,13 @@ class MultiAgentSystem {
         'get_data_statistics', 'get_genome_summary',
       ],
       ExternalAgent: [
-        // From registerToolMapping() — excluding legacy aliases (blast_search_online, uniprot_search, uniprot_get_protein, uniprot_get_annotation, alphafold_search, alphafold_get_structure, search_interpro_entry, interpro_search, interpro_get_domain)
-        'blast_search', 'blast_sequence', 'blast_protein',
+        // From registerToolMapping() — excluding legacy aliases
+        'blast_search', 'blast_search_online', 'blast_search_local', 'blast_search_batch',
+        'blast_sequence', 'blast_protein', 'blast_sequence_from_region',
+        'blast_create_database', 'blast_list_databases', 'blast_database_info',
+        'blast_delete_database', 'blast_create_db_from_genome', 'blast_create_protein_db_from_genome',
+        'blast_create_quick_db_for_current_genome', 'blast_filter_results', 'blast_export_results',
+        'blast_detect_sequence_type', 'blast_validate_database', 'blast_get_installation_status',
         'search_uniprot_database', 'advanced_uniprot_search', 'get_uniprot_entry', 'uniprot_get_annotation',
         'fetch_alphafold_structure', 'search_alphafold_structures', 'search_alphafold_by_sequence',
         'search_pdb_structures', 'fetch_protein_structure',

@@ -74,9 +74,24 @@ class ExternalAgent extends AgentBase {
   registerToolMapping() {
     // BLAST搜索工具 - builtInToolsMap-aligned names
     this.toolMapping.set('blast_search', this.blastSearch.bind(this));
-    this.toolMapping.set('blast_search_online', this.blastSearch.bind(this)); // alias
+    this.toolMapping.set('blast_search_online', this.blastSearch.bind(this));
+    this.toolMapping.set('blast_search_local', this.blastSearch.bind(this));
+    this.toolMapping.set('blast_search_batch', this.blastSearch.bind(this));
     this.toolMapping.set('blast_sequence', this.blastSequence.bind(this));
     this.toolMapping.set('blast_protein', this.blastProtein.bind(this));
+    this.toolMapping.set('blast_sequence_from_region', this.blastSearch.bind(this));
+    this.toolMapping.set('blast_create_database', this._delegateToChatManager.bind(this, 'blastCreateDatabase'));
+    this.toolMapping.set('blast_list_databases', this._delegateToChatManager.bind(this, 'blastListDatabases'));
+    this.toolMapping.set('blast_database_info', this._delegateToChatManager.bind(this, 'blastDatabaseInfo'));
+    this.toolMapping.set('blast_delete_database', this._delegateToChatManager.bind(this, 'blastDeleteDatabase'));
+    this.toolMapping.set('blast_create_db_from_genome', this._delegateToChatManager.bind(this, 'blastCreateDbFromGenome'));
+    this.toolMapping.set('blast_create_protein_db_from_genome', this._delegateToChatManager.bind(this, 'blastCreateProteinDbFromGenome'));
+    this.toolMapping.set('blast_create_quick_db_for_current_genome', this._delegateToChatManager.bind(this, 'blastCreateQuickDbForCurrentGenome'));
+    this.toolMapping.set('blast_filter_results', this._delegateToChatManager.bind(this, 'blastFilterResults'));
+    this.toolMapping.set('blast_export_results', this._delegateToChatManager.bind(this, 'blastExportResults'));
+    this.toolMapping.set('blast_detect_sequence_type', this._delegateToChatManager.bind(this, 'blastDetectSequenceType'));
+    this.toolMapping.set('blast_validate_database', this._delegateToChatManager.bind(this, 'blastValidateDatabase'));
+    this.toolMapping.set('blast_get_installation_status', this._delegateToChatManager.bind(this, 'blastGetInstallationStatus'));
 
     // UniProt搜索工具 - builtInToolsMap-aligned names
     this.toolMapping.set('search_uniprot_database', this.uniprotSearch.bind(this));
@@ -113,6 +128,16 @@ class ExternalAgent extends AgentBase {
     this.toolMapping.set('evo2_optimize', this.evo2Optimize.bind(this));
 
     console.log(`🌐 ExternalAgent: Registered ${this.toolMapping.size} external API tools`);
+  }
+
+  async _delegateToChatManager(methodName, parameters) {
+    if (this.chatManager && typeof this.chatManager[methodName] === 'function') {
+      return await this.chatManager[methodName](parameters);
+    }
+    if (this.chatManager && this.chatManager.services && this.chatManager.services.blast && typeof this.chatManager.services.blast[methodName] === 'function') {
+      return await this.chatManager.services.blast[methodName](parameters);
+    }
+    throw new Error(`BLAST method '${methodName}' not available`);
   }
 
   /**

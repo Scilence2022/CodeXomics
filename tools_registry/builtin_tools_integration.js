@@ -330,6 +330,42 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // BLAST legacy aliases (map to same methods as primary entries)
+    this.builtInToolsMap.set('blast_sequence_from_region', {
+      method: 'blastSequenceFromRegion',
+      category: 'external_apis',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('batch_blast_search', {
+      method: 'blastSearchBatch',
+      category: 'external_apis',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('advanced_blast_search', {
+      method: 'blastSearchOnline',
+      category: 'external_apis',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('get_blast_databases', {
+      method: 'blastListDatabases',
+      category: 'database',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('local_blast_database_info', {
+      method: 'blastDatabaseInfo',
+      category: 'database',
+      type: 'built-in',
+      priority: 2,
+    });
+
     // Utility Tools
     this.builtInToolsMap.set('download_internet_file', {
       method: 'downloadInternetFile',
