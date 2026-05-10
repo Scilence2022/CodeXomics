@@ -284,7 +284,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'system',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'List all chromosomes in the currently loaded genome.',
+        instruction: 'List all chromosomes (contigs) in the currently loaded genome using get_chromosome_list.',
         expectedResult: {
           tool_name: 'get_chromosome_list',
           parameters: {},

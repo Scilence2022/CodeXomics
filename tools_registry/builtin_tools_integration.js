@@ -1186,6 +1186,20 @@ class BuiltInToolsIntegration {
       });
     }
 
+    // Check for chromosome list patterns
+    // Matches: "list chromosomes", "get chromosome list", "show chromosomes"
+    const chromPattern1 = /\b(list|get|show|display|what|available|all)\s+/i;
+    const chromPattern2 = /\b(chromosomes?|contigs?|scaffolds?)\b/i;
+    const chromPattern3 = /\b(list|names?|available|all|show|display)\b/i;
+    if ((chromPattern1.test(query) && chromPattern2.test(query)) ||
+        (chromPattern2.test(query) && chromPattern3.test(query))) {
+      relevantTools.push({
+        name: 'get_chromosome_list',
+        confidence: 0.95,
+        reason: 'Chromosome/contig/scaffold listing keywords detected',
+      });
+    }
+
     // Check for zoom patterns
     if (/\b(zoom\s*in|magnify|enlarge|focus|scale\s*up)\b/i.test(query)) {
       relevantTools.push({
@@ -1515,9 +1529,7 @@ class BuiltInToolsIntegration {
           confidence: 0.95,
           reason: 'Benchmark start/run keywords detected',
         });
-      }
-      // open_benchmark (only 'open/show/display/launch/view' — NOT 'start/run')
-      else if (/\b(open|show|display|launch|view)\s+.*?\bbenchmark\b/i.test(query) ||
+      } else if (/\b(open|show|display|launch|view)\s+.*?\bbenchmark\b/i.test(query) ||
           /\bbenchmark\s+.*?\b(panel|interface|window|ui)\b/i.test(query)) {
         relevantTools.push({
           name: 'open_benchmark',

@@ -1,0 +1,77 @@
+name: get_chromosome_list
+version: 1.0.0
+description: 'Get the list of all chromosomes (contigs/scaffolds) in the currently loaded genome, including their names, lengths, and which one is currently selected. Use this when the user asks about chromosome names, genome contigs, scaffold list, or wants to know what chromosomes are available.'
+category: navigation
+keywords:
+  - chromosome
+  - chromosomes
+  - contig
+  - contigs
+  - scaffold
+  - scaffolds
+  - list
+  - names
+  - available
+  - genome
+  - sequence
+priority: 2
+execution:
+  type: client
+  timeout: 10000
+  retries: 1
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties: {}
+  required: []
+sample_usages:
+  - user_query: 'List all chromosomes in the genome'
+    tool_call: 'get_chromosome_list()'
+    thought: 'User wants to see all chromosome/contig names in the loaded genome'
+    expected_result: 'Array of chromosome objects with name, length, and selection status'
+
+  - user_query: 'What chromosomes are available?'
+    tool_call: 'get_chromosome_list()'
+    thought: 'User wants to know available chromosomes in the current genome'
+    expected_result: 'List of chromosome names with their lengths'
+
+  - user_query: 'Show me the chromosome names'
+    tool_call: 'get_chromosome_list()'
+    thought: 'User wants chromosome names from the loaded genome'
+    expected_result: 'Chromosome list with name, length, and current selection'
+
+  - user_query: 'Get contig list'
+    tool_call: 'get_chromosome_list()'
+    thought: 'User asks for contigs which are equivalent to chromosomes/scaffolds'
+    expected_result: 'List of all contigs/chromosomes in the genome'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['navigate_to_position', 'get_current_state', 'get_genome_info']
+  alternatives: ['get_loaded_files_list']
+  prerequisites: []
+  follow_up: ['navigate_to_position', 'jump_to_gene']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - chromosome
+    - genome
+    - information
+    - list
+  complexity: simple
+  usage_pattern: occasional
+  recommendation: 'Use this when the user needs to know what chromosomes/contigs are in the genome, NOT for listing loaded files'
+error_handling:
+  client_error: 'Returns empty list if genome browser is not initialized'
+  no_data: 'Returns empty chromosomes array with message "No genome sequence loaded"'
+returns:
+  chromosomes: array - List of chromosome info objects with name, length, isSelected
+  count: integer - Number of chromosomes
+  currentChromosome: string - Name of the currently selected chromosome
