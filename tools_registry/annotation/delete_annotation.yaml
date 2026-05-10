@@ -1,8 +1,16 @@
 name: delete_annotation
 version: 1.0.0
-description: Delete a genome annotation by identifier with change tracking
+description: 'Delete a genome annotation by identifier (locus_tag, gene name, or protein_id) with change tracking. Use this when the user explicitly asks to delete or remove a specific annotation. NOT the same as delete_sequence which removes sequence data.'
 category: annotation
 subcategory: annotation_crud
+keywords:
+  - delete
+  - remove
+  - annotation
+  - gene
+  - feature
+  - erase
+  - drop
 
 execution:
   type: client-side
@@ -14,6 +22,10 @@ parameters:
     identifier:
       type: string
       description: The locus_tag, gene name, or protein_id of the annotation to delete.
+      examples:
+        - test_gene
+        - lacZ
+        - b0343
     chromosome:
       type: string
       description: Chromosome name (optional).
@@ -27,6 +39,30 @@ parameters:
       default: default
   required:
     - identifier
+
+sample_usages:
+  - user_query: 'Delete the annotation named test_gene'
+    tool_call: 'delete_annotation(identifier=''test_gene'')'
+    thought: 'User wants to delete a specific annotation by name'
+    expected_result: 'Annotation test_gene is deleted with change tracking'
+
+  - user_query: 'Remove the gene annotation lacZ'
+    tool_call: 'delete_annotation(identifier=''lacZ'')'
+    thought: 'User wants to remove the lacZ annotation'
+    expected_result: 'lacZ annotation is deleted'
+
+  - user_query: 'Delete annotation with locus tag b0343'
+    tool_call: 'delete_annotation(identifier=''b0343'')'
+    thought: 'User wants to delete annotation by locus tag'
+    expected_result: 'Annotation with locus_tag b0343 is deleted'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['list_annotations', 'search_annotations']
+  alternatives: ['delete_sequence']
+  prerequisites: ['list_annotations', 'search_annotations']
+  follow_up: ['list_annotations']
 
 metadata:
   added_in: phase1

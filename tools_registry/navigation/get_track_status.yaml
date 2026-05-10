@@ -1,0 +1,71 @@
+name: get_track_status
+version: 1.0.0
+description: 'Get the current visibility status of all tracks in the genome browser. Returns which tracks (genes, sequence, gc, variants, reads, proteins) are currently visible and their descriptions. Use this when the user asks about track visibility, which tracks are shown/hidden, or current track status. NOT the same as get_all_track_settings which returns detailed configuration/settings for each track.'
+category: navigation
+keywords:
+  - track
+  - status
+  - visibility
+  - visible
+  - hidden
+  - shown
+  - tracks
+  - current
+  - get
+  - show
+  - display
+  - which
+priority: 2
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties: {}
+  required: []
+sample_usages:
+  - user_query: 'Get the current track status'
+    tool_call: 'get_track_status()'
+    thought: 'User wants to know which tracks are visible'
+    expected_result: 'List of all tracks with their visibility status'
+
+  - user_query: 'Which tracks are currently visible?'
+    tool_call: 'get_track_status()'
+    thought: 'User asks about visible tracks'
+    expected_result: 'Visible tracks list and hidden tracks'
+
+  - user_query: 'Show track visibility status'
+    tool_call: 'get_track_status()'
+    thought: 'User wants to see track on/off status'
+    expected_result: 'Track status with visible/hidden information for each track'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['toggle_track', 'get_all_track_settings']
+  alternatives: ['get_all_track_settings']
+  prerequisites: []
+  follow_up: ['toggle_track', 'set_track_settings']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - track
+    - status
+    - visibility
+  complexity: simple
+  usage_pattern: occasional
+  recommendation: 'Use this for track visibility status. Use get_all_track_settings for detailed track configuration.'
+error_handling:
+  no_genome_loaded: 'Returns error if genome browser is not initialized'
+returns:
+  visibleTracks: array - List of currently visible track names
+  totalTracks: integer - Total number of tracks
+  tracks: array - Array of track objects with name, visible, and description

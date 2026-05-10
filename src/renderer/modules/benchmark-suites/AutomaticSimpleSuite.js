@@ -1269,7 +1269,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'annotation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Delete the annotation named "test_gene" without user confirmation.',
+        instruction: 'Delete the annotation named "test_gene" using delete_annotation without user confirmation.',
         expectedResult: {
           tool_name: 'delete_annotation',
           parameters: {
@@ -1311,7 +1311,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'track_control',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Get the current visibility status of all tracks.',
+        instruction: 'Get the current visibility status of all tracks using get_track_status.',
         expectedResult: {
           tool_name: 'get_track_status',
           parameters: {},
@@ -1354,7 +1354,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluation: 'automatic',
         instruction: 'Translate the DNA sequence ATGAAAGCGCTGAAAGCGCTGAAAGCGCTGAAAGCGCTG to protein using standard genetic code.',
         expectedResult: {
-          tool_name: 'translate_sequence',
+          tool_name: 'translate_dna',
           parameters: {
             sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAGCGCTGAAAGCGCTG',
           },

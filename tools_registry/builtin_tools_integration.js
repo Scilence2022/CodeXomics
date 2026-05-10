@@ -1393,6 +1393,29 @@ class BuiltInToolsIntegration {
       });
     }
 
+    // Check for track status/visibility patterns
+    // Matches: "get track status", "track visibility", "which tracks are visible",
+    //          "show track status", "current tracks"
+    if (/\b(get|show|display|check|what|which)\s+.*?\btrack\s*(status|visibility|state)\b/i.test(query) ||
+        /\btrack\s*(status|visibility|state)\b/i.test(query) ||
+        /\b(which|what)\s+.*?\btracks?\s+.*?\b(visible|shown|hidden|active)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'get_track_status',
+        confidence: 0.95,
+        reason: 'Track status/visibility query keywords detected',
+      });
+    }
+
+    // Check for delete_annotation patterns
+    // Matches: "delete annotation", "remove annotation", "delete gene annotation"
+    if (/\b(delete|remove|erase|drop)\s+.*?\b(annotation|gene|feature)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'delete_annotation',
+        confidence: 0.95,
+        reason: 'Annotation deletion keywords detected',
+      });
+    }
+
     // Check for sequence analysis patterns
     if (/\b(sequence)\b/i.test(query)) {
       relevantTools.push({
