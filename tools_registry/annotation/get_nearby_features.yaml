@@ -1,0 +1,91 @@
+name: get_nearby_features
+version: 1.0.0
+description: 'Get genomic features (genes, CDS, etc.) near a specific position within a given distance range. Returns features sorted by proximity to the target position. Use this when the user asks for features near a position, genes around a location, or what is nearby a genomic coordinate. NOT the same as navigate_to_position which moves the view, or list_annotations which lists all annotations in a region.'
+category: annotation
+keywords:
+  - nearby
+  - near
+  - close
+  - around
+  - surrounding
+  - features
+  - genes
+  - position
+  - location
+  - distance
+  - range
+  - flanking
+  - neighborhood
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Chromosome name (optional, uses current chromosome if omitted).
+    position:
+      type: number
+      description: Center position to search around.
+      minimum: 1
+    distance:
+      type: number
+      description: 'Search radius in base pairs (default: 5000).'
+      default: 5000
+    featureTypes:
+      type: array
+      description: 'Filter by feature types (e.g., ["gene", "CDS"]).'
+      items:
+        type: string
+      default: []
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - position
+
+sample_usages:
+  - user_query: 'Get features near position 500000'
+    tool_call: 'get_nearby_features(position=500000)'
+    thought: 'User wants features near a genomic position'
+    expected_result: 'Features within 5000bp of position 500000, sorted by distance'
+
+  - user_query: 'Find genes within 10000bp of position 200000 on NC_000913'
+    tool_call: 'get_nearby_features(position=200000, chromosome=''NC_000913'', distance=10000)'
+    thought: 'User wants nearby features with specific chromosome and distance'
+    expected_result: 'Features within 10000bp of position 200000 on NC_000913'
+
+  - user_query: 'What genes are near position 500000 within 5000bp range?'
+    tool_call: 'get_nearby_features(position=500000, distance=5000, featureTypes=[''gene''])'
+    thought: 'User wants nearby genes with specific range'
+    expected_result: 'Gene features within 5000bp of position 500000'
+
+  - user_query: 'Find flanking features around position 100000'
+    tool_call: 'get_nearby_features(position=100000)'
+    thought: 'User wants flanking/surrounding features'
+    expected_result: 'Features near position 100000 sorted by proximity'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['list_annotations', 'search_annotations']
+  alternatives: ['list_annotations', 'navigate_to_position']
+  prerequisites: []
+  follow_up: ['get_annotation', 'get_sequence']
+
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - annotation
+    - proximity
+    - search
+  complexity: simple
+  usage_pattern: occasional
+  recommendation: 'Use this for proximity-based feature queries. Use list_annotations for region-based queries.'

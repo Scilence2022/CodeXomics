@@ -463,10 +463,11 @@ class BuiltInToolsIntegration {
 
     // Sequence Tools
     this.builtInToolsMap.set('translate_sequence', {
-      method: 'translateSequence',
+      method: 'executeMicrobeFunction_translateDNA',
       category: 'sequence',
       type: 'built-in',
       priority: 1,
+      isAliasOf: 'translate_dna',
     });
 
     this.builtInToolsMap.set('translate_dna', {
@@ -1307,12 +1308,36 @@ class BuiltInToolsIntegration {
       });
     }
 
+    // Check for search_annotations patterns
+    // Matches: "search for annotations matching X", "search annotations", "find annotations"
+    if (/\b(search|find)\s+.*?\bannotations?\b/i.test(query) ||
+        /\bsearch\s+annotations?\b/i.test(query)) {
+      relevantTools.push({
+        name: 'search_annotations',
+        confidence: 0.95,
+        reason: 'Annotation search keywords detected',
+      });
+    }
+
+    // Check for get_nearby_features patterns
+    // Matches: "features near position X", "nearby features", "genes around position",
+    //          "features within Xbp of position", "flanking features"
+    if (/\b(nearby|near|close|around|surrounding|flanking|neighborhood)\s+.*?\b(features?|genes?)\b/i.test(query) ||
+        /\b(features?|genes?)\s+.*?\b(near|nearby|close|around|surrounding|flanking)\b/i.test(query) ||
+        /\b(get|find|show)\s+.*?\b(nearby|near|flanking)\s+.*?\b(features?|genes?)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'get_nearby_features',
+        confidence: 0.95,
+        reason: 'Nearby features query keywords detected',
+      });
+    }
+
     // Check for feature search patterns — BROAD search by annotation/function/type
     // Matches: "search for features", "find all tRNA", "search kinase genes"
     // Key distinction: "kinase genes" → search_features (functional keyword)
     //                 "gene lacZ" → find_gene_by_name (specific identifier)
     if (/\b(search|find|look\s+up)\s+.*?\bfeatures?\b/i.test(query) ||
-        (/\bannotation\b/i.test(query) && !relevantTools.some(t => t.name === 'list_annotations' || t.name === 'get_annotation')) ||
+        (/\bannotation\b/i.test(query) && !relevantTools.some(t => t.name === 'list_annotations' || t.name === 'get_annotation' || t.name === 'search_annotations')) ||
         /\b(all|every)\s+(genes?|proteins?|cds|trna|rrna)\b/i.test(query) ||
         /\bfeatures?\s+search\b/i.test(query) ||
         /\b(search|find)\s+.*?\b(genes?|proteins?)\s+(by|with|related\s+to|containing)\s+(function|type|annotation|activity)/i.test(query)) {

@@ -66,7 +66,8 @@ class LLMContextService {
         }
 
       case 'translate_sequence':
-        return `🔬 Translated ${result.length.dna}bp DNA sequence to ${result.length.protein}aa protein from ${result.chromosome}:${result.start}-${result.end} (${result.strand} strand)`;
+      case 'translate_dna':
+        return `🔬 Translated ${result.length?.dna || result.sequenceLength || '?'}bp DNA to ${result.length?.protein || result.proteinLength || '?'}aa protein`;
 
       case 'calculate_gc_content':
         return `📊 GC content analysis for ${result.chromosome}:${result.region}: Overall ${result.overallGCContent}% GC (${result.length}bp analyzed in ${result.totalWindows} windows)`;

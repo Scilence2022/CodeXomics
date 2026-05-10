@@ -807,7 +807,7 @@ class MultiAgentSystem {
       ],
       AnalysisAgent: [
         // From registerToolMapping() — excluding legacy aliases
-        'get_sequence', 'translate_sequence', 'translate_dna', 'reverse_complement',
+        'get_sequence', 'translate_dna', 'reverse_complement',
         'calculate_gc_content', 'compute_gc', 'calc_region_gc',
         'sequence_statistics', 'codon_usage_analysis', 'analyze_codon_usage', 'genome_codon_usage_analysis',
         'calculate_entropy', 'calculate_melting_temp', 'calculate_molecular_weight',

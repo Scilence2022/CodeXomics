@@ -7120,7 +7120,7 @@ ${coreTools}
 
       // Sequence tools
       get_sequence: () => this.getSequence(parameters),
-      translate_sequence: () => this.translateSequence(parameters),
+      translate_sequence: () => this.executeMicrobeFunction('translateDNA', parameters),
       calculate_gc_content: () => this.calculateGCContent(parameters),
 
       // Track and display tools

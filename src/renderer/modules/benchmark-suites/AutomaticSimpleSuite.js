@@ -1211,7 +1211,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'annotation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Search for annotations matching "ligase" in the current genome.',
+        instruction: 'Search for annotations matching "ligase" in the current genome using search_annotations.',
         expectedResult: {
           tool_name: 'search_annotations',
           parameters: {
@@ -1329,7 +1329,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'gene_analysis',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Get features near position 500000 within a 5000bp range.',
+        instruction: 'Get features near position 500000 within a 5000bp range using get_nearby_features.',
         expectedResult: {
           tool_name: 'get_nearby_features',
           parameters: {

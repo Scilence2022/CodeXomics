@@ -314,11 +314,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluation: 'automatic',
         instruction: "Search for the gene 'dnaA', get its sequence, and translate it to a protein sequence.",
         expectedResult: {
-          tool_sequence: ['find_gene_by_name', 'get_sequence', 'translate_sequence'],
+          tool_sequence: ['find_gene_by_name', 'get_sequence', 'translate_dna'],
           parameters: [
             { geneName: 'dnaA' },
             { chromosome: '<any>', start: '<any>', end: '<any>' },
-            { sequence: '<any>' }
+            { dna: '<any>' }
           ]
         },
         maxScore: 15,

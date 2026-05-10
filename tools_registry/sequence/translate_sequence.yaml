@@ -1,0 +1,56 @@
+name: translate_sequence
+version: 1.0.0
+description: 'Translate DNA sequence to amino acid sequence. This is an alias for translate_dna — prefer using translate_dna instead, which supports additional options like reading frame and genetic code table selection.'
+category: sequence
+keywords:
+  - translate
+  - sequence
+  - protein
+  - amino
+  - acid
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    sequence:
+      type: string
+      description: 'DNA sequence to translate (alias for the ''dna'' parameter in translate_dna)'
+    dna:
+      type: string
+      description: 'DNA sequence to translate (preferred parameter name)'
+    reading_frame:
+      type: number
+      enum: [1, 2, 3]
+      description: 'Reading frame to use (1, 2, or 3)'
+      default: 1
+  required: []
+sample_usages:
+  - user_query: 'Translate this DNA sequence to protein'
+    tool_call: 'translate_dna(dna=''ATGCGCTATCGAAAG'', reading_frame=1)'
+    thought: 'Prefer translate_dna over translate_sequence'
+    expected_result: 'Amino acid sequence'
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: ['translate_dna']
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - sequence
+    - alias
+  complexity: simple
+  usage_pattern: rare
+  recommendation: 'Prefer translate_dna which has full parameter support. This tool exists as a backward-compatible alias.'

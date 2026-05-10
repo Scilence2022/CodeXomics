@@ -73,7 +73,7 @@ class AnalysisAgent extends AgentBase {
   registerToolMapping() {
     // 序列分析工具
     this.toolMapping.set('get_sequence', this.getSequence.bind(this));
-    this.toolMapping.set('translate_sequence', this.translateSequence.bind(this));
+    this.toolMapping.set('translate_sequence', this.translateDNA.bind(this));
     this.toolMapping.set('translate_dna', this.translateDNA.bind(this));
     this.toolMapping.set('reverse_complement', this.reverseComplement.bind(this));
 
