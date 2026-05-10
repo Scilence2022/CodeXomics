@@ -7234,25 +7234,8 @@ ${coreTools}
       get_track_settings_schema: () => this.getTrackSettingsSchema(parameters),
       batch_set_track_settings: () => this.batchSetTrackSettings(parameters),
 
-      // Primer Design Tools
-      calculate_primer_properties: async () => {
-        if (typeof this.primerCalculateProperties === 'function') return await this.primerCalculateProperties(parameters);
-        throw new Error('Primer integration not yet loaded. Please retry in a moment.');
-      },
-      design_primers: async () => {
-        if (typeof this.primerDesign === 'function') return await this.primerDesign(parameters);
-        throw new Error('Primer integration not yet loaded. Please retry in a moment.');
-      },
-      find_primer_binding_sites: async () => {
-        if (typeof this.primerFindBindingSites === 'function') return await this.primerFindBindingSites(parameters);
-        throw new Error('Primer integration not yet loaded. Please retry in a moment.');
-      },
-      add_primer_annotation: async () => {
-        if (typeof this.primerAddAnnotation === 'function') {
-          return await this.primerAddAnnotation(parameters);
-        }
-        throw new Error('Primer integration not yet loaded. Please retry in a moment.');
-      },
+      // Primer tools are now handled directly by PrimerService at PRIORITY 2
+      // in ToolExecutionService — no longer routed through executeLocalTool
 
       // View control tools
       zoom_in: () => this.zoomIn(parameters),

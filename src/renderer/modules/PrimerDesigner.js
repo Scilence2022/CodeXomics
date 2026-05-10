@@ -350,6 +350,7 @@ class PrimerDesigner {
 // Export for Node.js (MCP server) or make available globally for browser (ChatManager)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = PrimerDesigner;
-} else if (typeof window !== 'undefined') {
+}
+if (typeof window !== 'undefined') {
   window.PrimerDesigner = PrimerDesigner;
 }

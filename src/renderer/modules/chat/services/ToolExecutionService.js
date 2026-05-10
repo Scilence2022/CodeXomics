@@ -51,6 +51,17 @@ class ToolExecutionService {
         return await analysisService[this._toCamelCase(toolName)](parameters);
       }
 
+      // 6. Primer Services (bypasses multi-agent re-entry, 7-layer direct path)
+      if (this._isPrimerTool(toolName)) {
+        await this._ensurePrimerServiceLoaded();
+      }
+      if (typeof window.PrimerService === 'function') {
+        const primerService = new window.PrimerService(this.app, this.chatManager);
+        if (typeof primerService[this._toCamelCase(toolName)] === 'function') {
+          return await primerService[this._toCamelCase(toolName)](parameters);
+        }
+      }
+
       // --- PRIORITY 3: MULTI-AGENT ROUTING (when enabled) ---
       if (this.chatManager.agentSystemEnabled && this.chatManager.multiAgentSystem) {
         try {
@@ -223,6 +234,49 @@ class ToolExecutionService {
   _toCamelCase(str) {
     return str.replace(/([-_][a-z])/ig, ($1) => {
       return $1.toUpperCase().replace('-', '').replace('_', '');
+    });
+  }
+
+  _isPrimerTool(toolName) {
+    return [
+      'calculate_primer_properties',
+      'design_primers',
+      'find_primer_binding_sites',
+      'add_primer_annotation',
+    ].includes(toolName);
+  }
+
+  async _ensurePrimerServiceLoaded() {
+    await this._ensureScriptGlobal('PrimerDesigner', 'modules/PrimerDesigner.js');
+    await this._ensureScriptGlobal('PrimerService', 'modules/chat/services/PrimerService.js');
+  }
+
+  async _ensureScriptGlobal(globalName, scriptPath) {
+    if (typeof window[globalName] !== 'undefined') return;
+
+    if (typeof document === 'undefined') {
+      if (!this.chatManager || typeof this.chatManager.loadScript !== 'function') {
+        throw new Error(`${globalName} is not loaded and no script loader is available.`);
+      }
+      await this.chatManager.loadScript(scriptPath);
+      if (typeof window[globalName] !== 'undefined') return;
+      throw new Error(`${globalName} failed to initialize after loading ${scriptPath}.`);
+    }
+
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = scriptPath;
+      script.onload = () => {
+        setTimeout(() => {
+          if (typeof window[globalName] !== 'undefined') {
+            resolve();
+          } else {
+            reject(new Error(`${globalName} failed to initialize after loading ${scriptPath}.`));
+          }
+        }, 0);
+      };
+      script.onerror = () => reject(new Error(`Failed to load ${scriptPath}.`));
+      document.head.appendChild(script);
     });
   }
 
