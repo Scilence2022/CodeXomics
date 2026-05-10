@@ -1,0 +1,77 @@
+name: get_clipboard_content
+version: 1.0.0
+description: 'Get the current content of the sequence clipboard. The clipboard holds sequences that have been copied or cut from the genome using copy_sequence or cut_sequence. Use this to check what sequence is currently stored in the clipboard before pasting or to verify a copy/cut operation. NOT the same as get_action_list which lists pending editing actions.'
+category: sequence_editing
+keywords:
+  - clipboard
+  - content
+  - copied
+  - cut
+  - buffer
+  - current
+  - get
+  - show
+  - check
+  - what
+  - sequence
+priority: 2
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties: {}
+  required: []
+sample_usages:
+  - user_query: 'Get the clipboard content'
+    tool_call: 'get_clipboard_content()'
+    thought: 'User wants to see what sequence is currently in the clipboard'
+    expected_result: 'Current clipboard content with sequence data and metadata'
+
+  - user_query: 'What is in the sequence clipboard?'
+    tool_call: 'get_clipboard_content()'
+    thought: 'User asks about clipboard contents'
+    expected_result: 'Clipboard content showing the copied/cut sequence'
+
+  - user_query: 'Show me the current clipboard content'
+    tool_call: 'get_clipboard_content()'
+    thought: 'User wants to check clipboard before pasting'
+    expected_result: 'Current clipboard content with source information'
+
+  - user_query: 'Check what was copied to the clipboard'
+    tool_call: 'get_clipboard_content()'
+    thought: 'User wants to verify a copy operation'
+    expected_result: 'Clipboard content with the copied sequence'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['paste_sequence', 'copy_sequence', 'cut_sequence']
+  alternatives: ['get_action_list']
+  prerequisites: ['copy_sequence', 'cut_sequence']
+  follow_up: ['paste_sequence']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - sequence_editing
+    - clipboard
+    - editing
+  complexity: simple
+  usage_pattern: occasional
+  recommendation: 'Use this to check clipboard contents before pasting. This is different from get_action_list which shows editing actions.'
+error_handling:
+  empty_clipboard: 'Returns result indicating clipboard is empty'
+  no_genome_loaded: 'Returns error if no genome is loaded'
+returns:
+  success: boolean - Whether operation was successful
+  hasContent: boolean - Whether clipboard has content
+  sequence: string - The sequence in the clipboard (if any)
+  source: object - Information about where the content was copied from
+  message: string - Status message

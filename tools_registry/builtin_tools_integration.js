@@ -1475,6 +1475,19 @@ class BuiltInToolsIntegration {
       });
     }
 
+    // Check for clipboard content patterns
+    // Matches: "get clipboard content", "what is in the clipboard", "show clipboard",
+    //          "check clipboard", "clipboard content", "what was copied"
+    if (/\b(clipboard)\s+.*?\b(content|contents?|data|sequence|what|show|get|check)\b/i.test(query) ||
+        /\b(get|show|check|display|view|what)\s+.*?\bclipboard\b/i.test(query) ||
+        /\b(what)\s+.*?\b(copied|cut|in)\s+.*?\b(clipboard)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'get_clipboard_content',
+        confidence: 0.95,
+        reason: 'Clipboard content query keywords detected',
+      });
+    }
+
     // Check for track settings patterns
     if (/\b(track\s+settings?|track\s+options?|track\s+config|configure\s+track|display\s+settings?|track\s+styling?)\b/i.test(query) ||
         /\b(configure|set|change|adjust|update|reset|get|show|view|retrieve)\s+.*?\b(track\s+settings?|track\s+options?|track\s+configs?)\b/i.test(query)) {

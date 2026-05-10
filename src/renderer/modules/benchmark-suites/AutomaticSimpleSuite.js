@@ -1149,7 +1149,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'sequence_editing',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Get the current content of the sequence clipboard.',
+        instruction: 'Get the current content of the sequence clipboard using get_clipboard_content.',
         expectedResult: {
           tool_name: 'get_clipboard_content',
           parameters: {},
