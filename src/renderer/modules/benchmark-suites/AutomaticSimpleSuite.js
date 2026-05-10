@@ -1368,12 +1368,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
 
 
 
-
- 
-
-
-
-
       // TRACK SETTINGS TASKS - Automatic + Simple
       {
         id: 'settings_auto_01',
@@ -1384,7 +1378,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluation: 'automatic',
         instruction: 'Get the current track display settings.',
         expectedResult: {
-          tool_name: 'get_track_settings',
+          tool_name: 'get_all_track_settings',
           parameters: {},
         },
         maxScore: 5,
