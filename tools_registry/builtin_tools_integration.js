@@ -848,6 +848,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('list_restriction_enzymes', {
+      method: 'listRestrictionEnzymes',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Multi-window Tools
     this.builtInToolsMap.set('list_genome_windows', {
       method: 'listGenomeWindows',
@@ -1926,11 +1933,22 @@ class BuiltInToolsIntegration {
 
     // Check for restriction analysis / pattern search patterns
     if (/\b(restriction|enzyme|digest|cut|recognition\s+site|cleave)\b/i.test(query)) {
-      if (/\b(digest|simulate|virtual|run|perform)\b/i.test(query)) {
+      if (/\b(list|show|browse|available|what\s+enzymes)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'list_restriction_enzymes',
+          confidence: 0.95,
+          reason: 'Enzyme list/browse keywords detected',
+        });
+      } else if (/\b(digest|simulate|virtual|run|perform)\b/i.test(query)) {
         relevantTools.push({
           name: 'virtual_digest',
           confidence: 0.95,
           reason: 'Virtual restriction digest keywords detected',
+        });
+        relevantTools.push({
+          name: 'find_restriction_sites',
+          confidence: 0.8,
+          reason: 'Restriction site mapping also relevant to digest',
         });
       } else {
         relevantTools.push({

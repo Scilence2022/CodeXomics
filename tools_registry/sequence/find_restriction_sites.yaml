@@ -1,11 +1,11 @@
 name: 'find_restriction_sites'
-description: 'Locates recognition and cleavage sites for specific restriction endonucleases (e.g., EcoRI, BamHI, HindIII) in a genomic region.'
+description: 'Locates recognition and cleavage sites for restriction endonucleases in a genomic region. Supports 80+ enzymes with IUPAC ambiguity codes, staggered cut positions (5\' overhang, 3\' overhang, blunt end), and HF variants.'
 parameters:
   type: 'object'
   properties:
     enzyme:
       type: 'string'
-      description: 'Name of the restriction enzyme (supported: EcoRI, BamHI, HindIII, XhoI, SalI, SpeI, NotI, KpnI, SacI, PstI).'
+      description: 'Name of the restriction enzyme (e.g., EcoRI, BamHI, HindIII, XhoI, SalI, NotI, EcoRV, SmaI, KpnI, PstI, and 70+ more). Use list_restriction_enzymes to browse all available enzymes.'
     chromosome:
       type: 'string'
       description: 'The chromosome to search (defaults to current active chromosome).'
@@ -23,6 +23,19 @@ keywords:
   - 'enzyme digestion sites'
   - 'EcoRI sites'
   - 'HindIII sites'
+  - 'cleavage site'
+  - 'recognition site'
+  - 'restriction enzyme'
+  - 'cut site'
 sample_usages:
   - 'Find EcoRI restriction sites in the genome.'
   - 'Locate recognition sites for HindIII.'
+  - 'Find EcoRV blunt-end cut sites in the current region.'
+  - 'Search for NotI rare-cutter sites on chromosome 1.'
+relationships:
+  enhances:
+    - 'virtual_digest'
+    - 'search_sequence_motif'
+  follow_up:
+    - 'virtual_digest'
+    - 'list_restriction_enzymes'

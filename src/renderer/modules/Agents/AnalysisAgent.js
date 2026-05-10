@@ -106,6 +106,7 @@ class AnalysisAgent extends AgentBase {
     // 限制性酶切
     this.toolMapping.set('find_restriction_sites', this.findRestrictionSites.bind(this));
     this.toolMapping.set('virtual_digest', this.virtualDigest.bind(this));
+    this.toolMapping.set('list_restriction_enzymes', this.listRestrictionEnzymes.bind(this));
 
     // 序列模式搜索
     this.toolMapping.set('search_pattern', this.searchPattern.bind(this));
@@ -749,6 +750,21 @@ class AnalysisAgent extends AgentBase {
         return await chatManager.executeToolByName('virtual_digest', parameters);
       }
       throw new Error('ChatManager not available for virtual digest');
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  async listRestrictionEnzymes(parameters = {}, strategy) {
+    try {
+      const chatManager = this.multiAgentSystem.chatManager;
+      if (chatManager && typeof chatManager.executeToolByName === 'function') {
+        return await chatManager.executeToolByName('list_restriction_enzymes', parameters);
+      }
+      throw new Error('ChatManager not available for enzyme listing');
     } catch (error) {
       return {
         success: false,

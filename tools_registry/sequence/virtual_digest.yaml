@@ -1,5 +1,5 @@
 name: 'virtual_digest'
-description: 'Performs an in-silico restriction digest of a chromosome or sequence using one or more restriction enzymes to calculate fragment positions and sizes.'
+description: 'Performs an in-silico restriction digest of a chromosome or sequence using one or more restriction enzymes. Calculates fragment positions, sizes, end types (5\' overhang, 3\' overhang, blunt), and provides digest map for gel electrophoresis visualization.'
 parameters:
   type: 'object'
   properties:
@@ -7,10 +7,16 @@ parameters:
       type: 'array'
       items:
         type: 'string'
-      description: 'Array of restriction enzyme names to include in the digestion (e.g. ["EcoRI", "HindIII"]).'
+      description: 'Array of restriction enzyme names to include in the digestion (e.g. ["EcoRI", "HindIII"]). Supports 80+ enzymes from the built-in database.'
     chromosome:
       type: 'string'
       description: 'The chromosome to digest (defaults to the currently loaded chromosome).'
+    start:
+      type: 'integer'
+      description: 'Start position of the region to digest (defaults to 0).'
+    end:
+      type: 'integer'
+      description: 'End position of the region to digest (defaults to chromosome end).'
   required:
     - 'enzymes'
 keywords:
@@ -19,6 +25,19 @@ keywords:
   - 'digest genome'
   - 'simulate digestion'
   - 'restriction fragments'
+  - 'gel electrophoresis'
+  - 'restriction map'
+  - 'in silico digest'
 sample_usages:
   - 'Perform a virtual restriction digest with EcoRI and HindIII.'
   - 'Simulate digestion of the sequence with BamHI.'
+  - 'Run a double digest with EcoRI and NotI on the full chromosome.'
+  - 'Digest the current region with EcoRV, SmaI, and PvuII for blunt-end cloning.'
+relationships:
+  enhances:
+    - 'find_restriction_sites'
+    - 'search_sequence_motif'
+  prerequisites:
+    - 'find_restriction_sites'
+  follow_up:
+    - 'list_restriction_enzymes'

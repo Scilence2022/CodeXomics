@@ -97,6 +97,58 @@ class SequenceTools {
           required: ['identifier'],
         },
       },
+
+      find_restriction_sites: {
+        name: 'find_restriction_sites',
+        description: 'Locate recognition and cleavage sites for restriction endonucleases in a genomic region. Supports 80+ enzymes with IUPAC ambiguity codes and staggered cut positions.',
+        parameters: {
+          type: 'object',
+          properties: {
+            enzyme: { type: 'string', description: 'Restriction enzyme name (e.g., EcoRI, BamHI, HindIII, NotI). Use list_restriction_enzymes to browse all available enzymes.' },
+            chromosome: { type: 'string', description: 'Chromosome to search (defaults to current active chromosome)' },
+            start: { type: 'number', description: 'Start position of region to analyze' },
+            end: { type: 'number', description: 'End position of region to analyze' },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+          required: ['enzyme'],
+        },
+      },
+
+      virtual_digest: {
+        name: 'virtual_digest',
+        description: 'Perform an in-silico restriction digest of a chromosome using one or more restriction enzymes. Calculates fragment positions, sizes, and end types (5\' overhang, 3\' overhang, blunt).',
+        parameters: {
+          type: 'object',
+          properties: {
+            enzymes: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Array of restriction enzyme names (e.g., ["EcoRI", "HindIII"])',
+            },
+            chromosome: { type: 'string', description: 'Chromosome to digest (defaults to current chromosome)' },
+            start: { type: 'number', description: 'Start position of region to digest' },
+            end: { type: 'number', description: 'End position of region to digest' },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+          required: ['enzymes'],
+        },
+      },
+
+      list_restriction_enzymes: {
+        name: 'list_restriction_enzymes',
+        description: 'List available restriction enzymes from the built-in database (80+ enzymes). Supports filtering by query, recognition length, overhang type, and commercial availability.',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query to filter enzymes by name or recognition sequence' },
+            minRecognitionLength: { type: 'number', description: 'Minimum recognition sequence length' },
+            maxRecognitionLength: { type: 'number', description: 'Maximum recognition sequence length' },
+            overhangType: { type: 'string', enum: ["5'_overhang", "3'_overhang", 'blunt'], description: 'Filter by overhang type' },
+            commercialOnly: { type: 'boolean', description: 'Only show commercially available enzymes', default: true },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+        },
+      },
     };
   }
 

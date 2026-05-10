@@ -1,0 +1,45 @@
+name: 'list_restriction_enzymes'
+description: 'List available restriction enzymes from the built-in database (80+ enzymes). Supports filtering by name query, recognition sequence length, overhang type (5\' overhang, 3\' overhang, blunt), and commercial availability. Also shows isoschizomers and HF variants.'
+parameters:
+  type: 'object'
+  properties:
+    query:
+      type: 'string'
+      description: 'Search query to filter enzymes by name or recognition sequence (e.g., "Eco", "GGATCC").'
+    minRecognitionLength:
+      type: 'integer'
+      description: 'Minimum recognition sequence length (e.g., 6 for 6-cutters).'
+    maxRecognitionLength:
+      type: 'integer'
+      description: 'Maximum recognition sequence length.'
+    overhangType:
+      type: 'string'
+      enum:
+        - "5'_overhang"
+        - "3'_overhang"
+        - 'blunt'
+      description: 'Filter enzymes by their overhang/cleavage type.'
+    commercialOnly:
+      type: 'boolean'
+      description: 'Only show commercially available enzymes (default: true).'
+      default: true
+keywords:
+  - 'list enzymes'
+  - 'restriction enzymes'
+  - 'enzyme database'
+  - 'available enzymes'
+  - 'enzyme list'
+  - 'browse enzymes'
+sample_usages:
+  - 'List all available restriction enzymes.'
+  - 'Show me all 6-cutter enzymes.'
+  - 'Find blunt-end restriction enzymes.'
+  - 'Search for EcoRI and its variants.'
+  - 'List rare-cutter enzymes (8+ bp recognition).'
+relationships:
+  enhances:
+    - 'find_restriction_sites'
+    - 'virtual_digest'
+  follow_up:
+    - 'find_restriction_sites'
+    - 'virtual_digest'

@@ -112,6 +112,7 @@ class FunctionCallsOrganizer {
           'search_intergenic_regions',
           'find_restriction_sites',
           'virtual_digest',
+          'list_restriction_enzymes',
           'predict_promoter',
           'predict_rbs',
           'predict_terminator',
