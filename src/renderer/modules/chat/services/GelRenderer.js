@@ -73,12 +73,13 @@ class GelRenderer {
       wellDepth: 12,
       laneSpacing: 4,
       ladderLaneWidth: 60,
-      gelBgColor: '#0a0a2e',
-      gelBorderColor: '#555588',
-      wellColor: '#000015',
-      labelColor: '#eeeeff',
-      sizeLabelColor: '#ddddff',
-      scaleLabelColor: '#bbbbdd',
+      gelBgColor: '#0a0a1a',
+      gelBorderColor: '#333355',
+      wellColor: '#050510',
+      labelColor: '#ffffff',
+      sizeLabelColor: '#aaccff',
+      scaleLabelColor: '#aaccff',
+      canvasBgColor: '#12121a',
     };
   }
 
@@ -200,14 +201,8 @@ class GelRenderer {
     const panel = document.createElement('div');
     panel.className = 'gel-controls-panel';
 
-    const exportBtn = document.createElement('button');
-    exportBtn.className = 'btn btn-secondary gel-export-btn';
-    exportBtn.innerHTML = '<i class="fas fa-download"></i> Export PNG';
-    exportBtn.addEventListener('click', () => this._exportPNG());
-
     const sizeTable = this._createSizeTable(result);
 
-    panel.appendChild(exportBtn);
     panel.appendChild(sizeTable);
     return panel;
   }
@@ -242,7 +237,8 @@ class GelRenderer {
     const { gelLeft, gelRight, gelTop, gelBottom } = layout;
     const scheme = this._getScheme();
 
-    ctx.fillStyle = '#f5f5f8';
+    // Fill canvas with dark background
+    ctx.fillStyle = layout.canvasBgColor || '#12121a';
     ctx.fillRect(0, 0, layout.canvasWidth, layout.canvasHeight);
 
     this._drawGelBackground();
@@ -361,6 +357,10 @@ class GelRenderer {
 
     ctx.save();
 
+    // Add glowing effect
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = `rgba(${mR}, ${mG}, ${mB}, ${0.8 * intensity})`;
+
     const gradient = ctx.createLinearGradient(cx - halfWidth, cy, cx + halfWidth, cy);
     const baseAlpha = 0.3 * intensity;
     gradient.addColorStop(0, `rgba(${eR}, ${eG}, ${eB}, ${baseAlpha})`);
@@ -370,7 +370,26 @@ class GelRenderer {
     gradient.addColorStop(1, `rgba(${eR}, ${eG}, ${eB}, ${baseAlpha})`);
 
     ctx.fillStyle = gradient;
-    ctx.fillRect(cx - halfWidth, cy - height / 2, halfWidth * 2, height);
+    
+    // Draw with rounded corners for realism
+    const x = cx - halfWidth;
+    const y = cy - height / 2;
+    const w = halfWidth * 2;
+    const h = height;
+    const r = Math.min(2, h / 2);
+    
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
 
     ctx.restore();
   }
