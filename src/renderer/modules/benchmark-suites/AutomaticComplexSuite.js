@@ -87,7 +87,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         if (fs.existsSync(exportedFilesDir)) {
           // Read all files in the directory
           const files = fs.readdirSync(exportedFilesDir);
-          
+
           // Delete each file
           for (const file of files) {
             const filePath = `${exportedFilesDir}/${file}`;
@@ -118,7 +118,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         'exported_files/exported_proteins.fasta',
         'exported_files/exported_region.fasta',
       ];
-      
+
       for (const filename of exportFiles) {
         try {
           const filePath = this.buildFilePath(filename);
@@ -464,73 +464,94 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateWorkflowCall.bind(this)
       },
 
-      // TEST 12: SYSTEM WORKFLOW - Automatic + Complex
+
+      // PRIMER DESIGN TASKS - Automatic + Simple
       {
-        id: 'env_auto_01',
-        name: 'Environment Setup and Load',
-        type: 'workflow',
-        category: 'system',
-        complexity: 'complex',
+        id: 'primer_auto_01',
+        name: 'Calculate Primer Properties',
+        type: 'function_call',
+        category: 'primer_design',
+        complexity: 'simple',
         evaluation: 'automatic',
-        instruction: `Set the working directory to '${this.buildFilePath('project')}', download the file from 'http://example.com/data.gbk', and load it as a genome file.`,
+        instruction: 'Calculate properties for primer sequence ATGAAAGCGCTGAAAGCGCTGAAAG.',
         expectedResult: {
-          tool_sequence: ['set_working_directory', 'download_internet_file', 'load_genome_file'],
-          parameters: [
-            { directory: this.buildFilePath('project') },
-            { url: 'http://example.com/data.gbk' },
-            { filePath: this.buildFilePath('project/data.gbk') }
-          ]
+          tool_name: 'calculate_primer_properties',
+          parameters: {
+            sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAG',
+          },
         },
-        maxScore: 15,
-        bonusScore: 3,
-        timeout: 90000,
-        evaluator: this.evaluateWorkflowCall.bind(this)
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 15000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'primer_auto_02',
+        name: 'Design Primers',
+        type: 'function_call',
+        category: 'primer_design',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Design PCR primers for the lacZ gene with default parameters.',
+        expectedResult: {
+          tool_name: 'design_primers',
+          parameters: {
+            geneName: 'lacZ',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 20000,
+        earlyReturn: true,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'primer_auto_03',
+        name: 'Find Primer Binding Sites',
+        type: 'function_call',
+        category: 'primer_design',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Find binding sites for primer GCAATATGTCTCTGTGTGGAT on the current genome.',
+        expectedResult: {
+          tool_name: 'find_primer_binding_sites',
+          parameters: {
+            sequence: 'GCAATATGTCTCTGTGTGGAT',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 20000,
+        earlyReturn: true,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-      // TEST 13: PROTEIN WORKFLOW - Automatic + Complex
+
       {
-        id: 'protein_auto_02',
-        name: 'UniProt to AlphaFold Workflow',
-        type: 'workflow',
-        category: 'proteinStructure',
-        complexity: 'complex',
+        id: 'restrict_auto_01',
+        name: 'Virtual Digest',
+        type: 'function_call',
+        category: 'restriction',
+        complexity: 'simple',
         evaluation: 'automatic',
-        instruction: "Search UniProt for 'insulin receptor', identify the AlphaFold structure ID from the best match, and fetch the AlphaFold structure.",
+        instruction: 'Perform a virtual restriction digest with EcoRI and HindIII enzymes.',
         expectedResult: {
-          tool_sequence: ['search_uniprot_database', 'fetch_alphafold_structure'],
-          parameters: [
-            { query: 'insulin receptor' },
-            { uniprotId: '<any>' }
-          ]
+          tool_name: 'virtual_digest',
+          parameters: {
+            enzymes: ['EcoRI', 'HindIII'],
+          },
         },
-        maxScore: 10,
-        bonusScore: 2,
-        timeout: 90000,
-        evaluator: this.evaluateWorkflowCall.bind(this)
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-      // TEST 14: SYSTEM WORKFLOW - Automatic + Complex
-      {
-        id: 'sys_auto_01',
-        name: 'Schema Retrieval and UI Pause',
-        type: 'workflow',
-        category: 'system',
-        complexity: 'complex',
-        evaluation: 'automatic',
-        instruction: "Get the track settings schema, list all available tools in the system, and then pause the benchmark.",
-        expectedResult: {
-          tool_sequence: ['get_track_settings_schema', 'list_available_tools', 'pause_benchmark'],
-          parameters: [
-            {},
-            {},
-            {}
-          ]
-        },
-        maxScore: 15,
-        bonusScore: 3,
-        timeout: 60000,
-        evaluator: this.evaluateWorkflowCall.bind(this)
-      }
+
+
+
+
+
     ];
   }
 

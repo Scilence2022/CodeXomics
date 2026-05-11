@@ -258,7 +258,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
 
 
-            // FILE LOADING EXTENSION TASKS - Automatic + Simple
+      // FILE LOADING EXTENSION TASKS - Automatic + Simple
       {
         id: 'load_auto_07',
         name: 'Get Loaded Files List',
@@ -375,7 +375,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-            // ZOOM/NAVIGATION EXTENSION TASKS - Automatic + Simple
+      // ZOOM/NAVIGATION EXTENSION TASKS - Automatic + Simple
       {
         id: 'nav_auto_05',
         name: 'Zoom In',
@@ -886,7 +886,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateTabOpeningCall.bind(this),
       },
 
-                  // CLOSE TAB TASKS - Automatic + Simple
+      // CLOSE TAB TASKS - Automatic + Simple
       {
         id: 'tab_auto_02',
         name: 'Close Tab',
@@ -1141,7 +1141,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
 
 
-       // CLIPBOARD CONTENT TASKS - Automatic + Simple
+      // CLIPBOARD CONTENT TASKS - Automatic + Simple
       {
         id: 'edit_auto_10',
         name: 'Get Clipboard Content',
@@ -1159,7 +1159,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      
+
       // =====================================================================
       // PHASE 1: CRITICAL PRIORITY TOOLS — Annotation, Track, Protein, Gene, System
       // =====================================================================
@@ -1321,7 +1321,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
- 
+
       {
         id: 'gene_auto_03',
         name: 'Get Nearby Features',
@@ -1342,7 +1342,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-   
+
 
       // SEQUENCE ANALYSIS EXTENSION TASKS - Automatic + Simple
       {
@@ -1364,7 +1364,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-    
+
 
 
 
@@ -1386,7 +1386,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-     
+
       {
         id: 'settings_auto_02',
         name: 'Get All Track Settings',
@@ -1398,7 +1398,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'get_all_track_settings',
           parameters: {},
- },
+        },
         maxScore: 5,
         bonusScore: 1,
         timeout: 30000,
@@ -1423,7 +1423,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-       // SYSTEM SETTINGS TASKS - Automatic + Simple
+      // SYSTEM SETTINGS TASKS - Automatic + Simple
       {
         id: 'settings_auto_04',
         name: 'Toggle Settings Modal',
@@ -1484,13 +1484,13 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
- 
 
 
 
 
 
- 
+
+
 
       {
         id: 'blast_auto_01',
@@ -1684,11 +1684,11 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'primer_design',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Find binding sites for primer ATGAAAGCGCTGAAAGCGCTGAAAG on the current genome.',
+        instruction: 'Find binding sites for primer GCAATATGTCTCTGTGTGGAT on the current genome.',
         expectedResult: {
           tool_name: 'find_primer_binding_sites',
           parameters: {
-            sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAG',
+            sequence: 'GCAATATGTCTCTGTGTGGAT',
           },
         },
         maxScore: 5,
@@ -1698,7 +1698,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-     
+
       {
         id: 'restrict_auto_01',
         name: 'Virtual Digest',

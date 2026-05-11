@@ -244,6 +244,8 @@ function buildModuleDeps() {
     // Window management (window creation functions)
     createWindow: wm.createWindow,
     getCurrentMainWindow: wm.getCurrentMainWindow,
+    getCurrentActiveWindow: wm.getCurrentActiveWindow,
+    setCurrentActiveWindow: wm.setCurrentActiveWindow,
     sendToCurrentMainWindow: wm.sendToCurrentMainWindow,
     createProjectManagerWindow: wm.createProjectManagerWindow,
     createCircosWindow: wm.createCircosWindow,

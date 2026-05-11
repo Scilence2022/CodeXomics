@@ -2209,9 +2209,19 @@ function openTestFile(filename) {
 }
 
 
+function getCurrentActiveWindow() {
+  return currentActiveWindow;
+}
+
+function setCurrentActiveWindow(win) {
+  currentActiveWindow = win;
+}
+
 module.exports = {
   createWindow,
   getCurrentMainWindow,
+  getCurrentActiveWindow,
+  setCurrentActiveWindow,
   sendToCurrentMainWindow,
   getCustomExternalToolsMenuItems,
   createCircosWindow,

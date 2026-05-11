@@ -23,6 +23,8 @@ let syncWindowsWithMCPServer;
 let mcpServerManagerWindow = null;
 let createMCPServerManagerMenu;
 let createMenu;
+let getCurrentActiveWindow;
+let setCurrentActiveWindow;
 
 async function startUnifiedMCPServer() {
   try {
@@ -256,26 +258,23 @@ function createMCPServerManagerWindow() {
     });
 
     mcpServerManagerWindow.on('focus', () => {
-      createMCPServerManagerMenu(mcpServerManagerWindow);
+      if (getCurrentActiveWindow() !== mcpServerManagerWindow) {
+        setCurrentActiveWindow(mcpServerManagerWindow);
+        createMCPServerManagerMenu(mcpServerManagerWindow);
+        console.log('Switched to MCP Server Manager menu');
+      }
     });
   }
 
   // Handle window closed - restore main menu
   mcpServerManagerWindow.on('closed', () => {
+    if (getCurrentActiveWindow() === mcpServerManagerWindow) {
+      setCurrentActiveWindow(null);
+    }
     mcpServerManagerWindow = null;
     if (createMenu && mainWindow && !mainWindow.isDestroyed()) {
       createMenu();
-    }
-  });
-
-  // Handle window blur - restore main menu if main window is focused
-  mcpServerManagerWindow.on('blur', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      setTimeout(() => {
-        if (mainWindow.isFocused() && createMenu) {
-          createMenu();
-        }
-      }, 200);
+      console.log('Switched back to main window menu from MCP Server Manager');
     }
   });
 
@@ -309,6 +308,8 @@ function setMCPDependencies(deps) {
   if (deps.syncWindowsWithMCPServer !== undefined) syncWindowsWithMCPServer = deps.syncWindowsWithMCPServer;
   if (deps.createMCPServerManagerMenu !== undefined) createMCPServerManagerMenu = deps.createMCPServerManagerMenu;
   if (deps.createMenu !== undefined) createMenu = deps.createMenu;
+  if (deps.getCurrentActiveWindow !== undefined) getCurrentActiveWindow = deps.getCurrentActiveWindow;
+  if (deps.setCurrentActiveWindow !== undefined) setCurrentActiveWindow = deps.setCurrentActiveWindow;
 }
 
 module.exports = {
