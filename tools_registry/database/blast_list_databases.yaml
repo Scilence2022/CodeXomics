@@ -44,7 +44,6 @@ relationships:
     - blast_search_local
     - blast_search_online
   follow_up:
-    - blast_database_info
     - blast_search_local
 metadata:
   tags:

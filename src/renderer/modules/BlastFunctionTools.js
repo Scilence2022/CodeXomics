@@ -36,7 +36,6 @@ class BlastFunctionTools {
       // Database management
       blast_create_database: this.createBlastDatabase.bind(this),
       blast_list_databases: this.listBlastDatabases.bind(this),
-      blast_database_info: this.getBlastDatabaseInfo.bind(this),
       blast_delete_database: this.deleteBlastDatabase.bind(this),
 
       // Database from loaded genomes
@@ -393,61 +392,6 @@ class BlastFunctionTools {
   /**
    * Get detailed information about a BLAST database
    */
-  async getBlastDatabaseInfo(params) {
-    const { database, databaseType = 'auto' } = params;
-
-    if (!database) {
-      throw new Error('database parameter is required');
-    }
-
-    try {
-      // Try to get local database info
-      if (this.blastManager.config.localDatabases.has(database)) {
-        const dbInfo = this.blastManager.config.localDatabases.get(database);
-        return {
-          success: true,
-          database: database,
-          type: dbInfo.type,
-          source: 'local',
-          info: dbInfo,
-          timestamp: new Date().toISOString(),
-        };
-      }
-
-      // Check custom databases
-      for (const [id, db] of this.blastManager.customDatabases) {
-        if (db.name === database || `custom_${id}` === database) {
-          return {
-            success: true,
-            database: database,
-            type: db.type,
-            source: 'custom',
-            info: db,
-            timestamp: new Date().toISOString(),
-          };
-        }
-      }
-
-      // Online database info
-      const onlineInfo = this.blastManager.getDatabaseInfo(database);
-      return {
-        success: true,
-        database: database,
-        type: onlineInfo.type,
-        source: 'online',
-        info: onlineInfo,
-        timestamp: new Date().toISOString(),
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-        database: database,
-        timestamp: new Date().toISOString(),
-      };
-    }
-  }
-
   /**
    * Delete a BLAST database
    */

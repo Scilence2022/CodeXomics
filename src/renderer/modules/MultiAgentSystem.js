@@ -833,7 +833,7 @@ class MultiAgentSystem {
         // From registerToolMapping() — excluding legacy aliases
         'blast_search', 'blast_search_online', 'blast_search_local', 'blast_search_batch',
         'blast_sequence', 'blast_protein', 'blast_sequence_from_region',
-        'blast_create_database', 'blast_list_databases', 'blast_database_info',
+        'blast_create_database', 'blast_list_databases',
         'blast_delete_database', 'blast_create_db_from_genome', 'blast_create_protein_db_from_genome',
         'blast_create_quick_db_for_current_genome', 'blast_filter_results', 'blast_export_results',
         'blast_detect_sequence_type', 'blast_validate_database', 'blast_get_installation_status',

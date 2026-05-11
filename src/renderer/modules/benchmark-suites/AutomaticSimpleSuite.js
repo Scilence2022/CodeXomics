@@ -1535,7 +1535,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluation: 'automatic',
         instruction: 'Get information about the available BLAST databases.',
         expectedResult: {
-          tool_name: 'blast_database_info',
+          tool_name: 'blast_list_databases',
           parameters: {},
         },
         maxScore: 5,
@@ -1657,26 +1657,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 15000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      {
-        id: 'primer_auto_02',
-        name: 'Design Primers',
-        type: 'function_call',
-        category: 'primer_design',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Design PCR primers for the lacZ gene with default parameters.',
-        expectedResult: {
-          tool_name: 'design_primers',
-          parameters: {
-            geneName: 'lacZ',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 20000,
-        earlyReturn: true,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
+
       {
         id: 'primer_auto_03',
         name: 'Find Primer Binding Sites',
@@ -1706,7 +1687,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Perform a virtual restriction digest with EcoRI and HindIII enzymes.',
+        instruction: 'Perform a virtual restriction digest with EcoRI and HindIII enzymes using sequence ACGGACAAATTGACCTCCCTTCGTCAGTACACCACCGTAGTGGCCGACACTGGGGACATCGCGGCAATGAAGCTGTATCAACCGCAGGATGCCACAACCAACCCTTCTCTCATTCTTAACGCAGCGCAGATTCCGGAATACCGTAAGTTGATTGATGATGCTGTCGCCTGGGCGAAACAGCAGAGCAACGATCGCGCGCAGCAGATCGTGGACGCGACCGACAAACTGGCAGTAAATATTGGTCTGGAAATCCTGAAACTGGTTCCGGGCCGTATCTCAACTGAAGTTGATGCGCGTCTTTCCTATGACACCGAAGCGTCAATTGCGAAAGCAAAACGCCTGATCAAACTCTACAACGATGCTGGTATTAGCAACGATCGTATTCTGATCAAACTGGCTTCTACCTGGCAGGGTATCCGTGCTGCAGAACAGCTGGAAAAAGAAGGCATCAACTGTAACCTGACCCTGCTGTTCTCCTTCGCTCAGGCTCGTGCTTGTGCGGAAGCGGGCGTGTTCCTGATCTCGCCGTTTGTTGGCCGTATTCTTGACTGGTACAAAGCGAATACCGATAAGAAAGAGTACGCTCCGGCAGAAGATCCGGGCGTGGTTTCTGTATCTGAAATCTACCAGTACTACAAAGAGCACGGTTATGAAACCGTGGTTATGGGCGCAAGCTTCCGTAACATCGGCGAAATTCTGGAACTGGCAGGCTGCGACCGTCTGACCATCGCACCGGCACTGCTGAAAGAGCTGGCGGAGAGCGAAGGGGCTATCGAACGTAAACTGTCTTACACCGGCGAAGTGAAAGCGCGTCCGGCGCGTATCACTGAGTCCGAGTTCCTGTGGCAGCACAACCAGGATCCAATGGCAGTAGATAAACTGGCGGAAGGTATCCGTAAGTTTGCTATTGACCAGGAAAAACTGGAAAAAATGATCGGCGATCTGCTGTAA',
         expectedResult: {
           tool_name: 'virtual_digest',
           parameters: {

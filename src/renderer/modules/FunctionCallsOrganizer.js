@@ -132,7 +132,6 @@ class FunctionCallsOrganizer {
           'blast_search_batch',
           'blast_create_database',
           'blast_list_databases',
-          'blast_database_info',
           'blast_delete_database',
           'blast_create_db_from_genome',
           'blast_create_protein_db_from_genome',
@@ -147,7 +146,6 @@ class FunctionCallsOrganizer {
           'get_blast_databases',
           'batch_blast_search',
           'advanced_blast_search',
-          'local_blast_database_info',
         ],
       },
 

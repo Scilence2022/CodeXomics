@@ -465,26 +465,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       },
 
 
-      // PRIMER DESIGN TASKS - Automatic + Simple
-      {
-        id: 'primer_auto_01',
-        name: 'Calculate Primer Properties',
-        type: 'function_call',
-        category: 'primer_design',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Calculate properties for primer sequence ATGAAAGCGCTGAAAGCGCTGAAAG.',
-        expectedResult: {
-          tool_name: 'calculate_primer_properties',
-          parameters: {
-            sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAG',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 15000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
+
       {
         id: 'primer_auto_02',
         name: 'Design Primers',
@@ -505,26 +486,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         earlyReturn: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      {
-        id: 'primer_auto_03',
-        name: 'Find Primer Binding Sites',
-        type: 'function_call',
-        category: 'primer_design',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Find binding sites for primer GCAATATGTCTCTGTGTGGAT on the current genome.',
-        expectedResult: {
-          tool_name: 'find_primer_binding_sites',
-          parameters: {
-            sequence: 'GCAATATGTCTCTGTGTGGAT',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 20000,
-        earlyReturn: true,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
+ 
 
 
       {
@@ -534,7 +496,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Perform a virtual restriction digest with EcoRI and HindIII enzymes.',
+        instruction: 'Perform a virtual restriction digest with EcoRI and HindIII enzymes of genome sequence in current view.',
         expectedResult: {
           tool_name: 'virtual_digest',
           parameters: {

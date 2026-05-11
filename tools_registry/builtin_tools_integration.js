@@ -260,13 +260,6 @@ class BuiltInToolsIntegration {
       priority: 2,
     });
 
-    this.builtInToolsMap.set('blast_database_info', {
-      method: 'blastDatabaseInfo',
-      category: 'database',
-      type: 'built-in',
-      priority: 2,
-    });
-
     this.builtInToolsMap.set('blast_delete_database', {
       method: 'blastDeleteDatabase',
       category: 'database',
@@ -354,13 +347,6 @@ class BuiltInToolsIntegration {
 
     this.builtInToolsMap.set('get_blast_databases', {
       method: 'blastListDatabases',
-      category: 'database',
-      type: 'built-in',
-      priority: 2,
-    });
-
-    this.builtInToolsMap.set('local_blast_database_info', {
-      method: 'blastDatabaseInfo',
       category: 'database',
       type: 'built-in',
       priority: 2,

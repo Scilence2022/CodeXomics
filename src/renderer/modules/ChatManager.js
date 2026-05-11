@@ -7270,7 +7270,6 @@ ${coreTools}
       blast_sequence_from_region: () => this.services.blast.blastSequenceFromRegion(parameters),
       blast_create_database: () => this.services.blast.blastCreateDatabase(parameters),
       blast_list_databases: () => this.services.blast.blastListDatabases(parameters),
-      blast_database_info: () => this.services.blast.blastDatabaseInfo(parameters),
       blast_delete_database: () => this.services.blast.blastDeleteDatabase(parameters),
       blast_create_db_from_genome: () => this.services.blast.blastCreateDbFromGenome(parameters),
       blast_create_protein_db_from_genome: () => this.services.blast.blastCreateProteinDbFromGenome(parameters),
@@ -8448,7 +8447,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'get_blast_databases',
       'batch_blast_search',
       'advanced_blast_search',
-      'local_blast_database_info',
 
       // Protein Structure
       'open_protein_viewer',
@@ -13519,7 +13517,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       get_blast_databases: 'Network Agent',
       batch_blast_search: 'Network Agent',
       advanced_blast_search: 'Network Agent',
-      local_blast_database_info: 'Network Agent',
       show_metabolic_pathway: 'Network Agent',
       find_pathway_genes: 'Network Agent',
 

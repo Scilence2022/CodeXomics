@@ -156,7 +156,6 @@ const TOOL_NAMES = {
     BLAST_SEARCH_BATCH: 'blast_search_batch',
     BLAST_CREATE_DATABASE: 'blast_create_database',
     BLAST_LIST_DATABASES: 'blast_list_databases',
-    BLAST_DATABASE_INFO: 'blast_database_info',
     BLAST_DELETE_DATABASE: 'blast_delete_database',
     BLAST_CREATE_DB_FROM_GENOME: 'blast_create_db_from_genome',
     BLAST_CREATE_PROTEIN_DB_FROM_GENOME: 'blast_create_protein_db_from_genome',
@@ -171,7 +170,6 @@ const TOOL_NAMES = {
     GET_BLAST_DATABASES: 'get_blast_databases',
     BATCH_BLAST_SEARCH: 'batch_blast_search',
     ADVANCED_BLAST_SEARCH: 'advanced_blast_search',
-    LOCAL_BLAST_DATABASE_INFO: 'local_blast_database_info',
   },
 
   // === Pathway Tools ===

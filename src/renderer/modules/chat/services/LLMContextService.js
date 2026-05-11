@@ -2168,7 +2168,6 @@ BLAST Examples:
 Enhanced BLAST Tools (Available with MCP BLAST Server):
 - Batch BLAST search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGCGCTATCG"}, {"id": "seq2", "sequence": "ATGAAAGAATT"}], "blastType": "blastn", "database": "nt", "maxTargets": 10}}
 - Advanced BLAST with filtering: {"tool_name": "advanced_blast_search", "parameters": {"sequence": "ATGCGCTATCG", "blastType": "blastn", "database": "nt", "filters": {"minIdentity": 95, "minCoverage": 80}, "algorithms": {"wordSize": "11", "matrix": "BLOSUM62"}}}
-- Local database info: {"tool_name": "local_blast_database_info", "parameters": {"databasePath": "/path/to/local/db"}}
 
 Enhanced BLAST Examples:
 1. Batch protein search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "protein1", "sequence": "MKELLKAGWKELQP"}, {"id": "protein2", "sequence": "MKLSAGATRVST"}], "blastType": "blastp", "database": "nr"}}
@@ -2395,7 +2394,6 @@ BLAST Examples:
 Enhanced BLAST Tools (Available with MCP BLAST Server):
 - Batch BLAST search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGCGCTATCG"}, {"id": "seq2", "sequence": "ATGAAAGAATT"}], "blastType": "blastn", "database": "nt", "maxTargets": 10}}
 - Advanced BLAST with filtering: {"tool_name": "advanced_blast_search", "parameters": {"sequence": "ATGCGCTATCG", "blastType": "blastn", "database": "nt", "filters": {"minIdentity": 95, "minCoverage": 80}, "algorithms": {"wordSize": "11", "matrix": "BLOSUM62"}}}
-- Local database info: {"tool_name": "local_blast_database_info", "parameters": {"databasePath": "/path/to/local/db"}}
 
 Enhanced BLAST Examples:
 1. Batch protein search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "protein1", "sequence": "MKELLKAGWKELQP"}, {"id": "protein2", "sequence": "MKLSAGATRVST"}], "blastType": "blastp", "database": "nr"}}

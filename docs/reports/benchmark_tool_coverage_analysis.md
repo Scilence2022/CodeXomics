@@ -138,8 +138,7 @@
 4. `blast_search_batch` — Batch BLAST search
 5. `blast_create_database` — Create BLAST database
 6. `blast_list_databases` — List BLAST databases
-7. `blast_database_info` — Get database information
-8. `blast_delete_database` — Delete BLAST database
+7. `blast_delete_database` — Delete BLAST database
 9. `blast_create_db_from_genome` — Create DB from genome
 10. `blast_create_protein_db_from_genome` — Create protein DB
 11. `blast_create_quick_db_for_current_genome` — Quick DB creation

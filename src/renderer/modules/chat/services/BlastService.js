@@ -45,10 +45,6 @@ class BlastService {
     return this._executeBlastRequest('blastListDatabases', params);
   }
 
-  async blastDatabaseInfo(params) {
-    return this._executeBlastRequest('blastDatabaseInfo', params);
-  }
-
   async blastDeleteDatabase(params) {
     return this._executeBlastRequest('blastDeleteDatabase', params);
   }
@@ -99,10 +95,6 @@ class BlastService {
 
   async advancedBlastSearch(params) {
     return this.blastSearchOnline(params);
-  }
-
-  async localBlastDatabaseInfo(params) {
-    return this.blastDatabaseInfo(params);
   }
 
   // --- Internal delegation ---

@@ -82,7 +82,6 @@ class ExternalAgent extends AgentBase {
     this.toolMapping.set('blast_sequence_from_region', this.blastSearch.bind(this));
     this.toolMapping.set('blast_create_database', this._delegateToChatManager.bind(this, 'blastCreateDatabase'));
     this.toolMapping.set('blast_list_databases', this._delegateToChatManager.bind(this, 'blastListDatabases'));
-    this.toolMapping.set('blast_database_info', this._delegateToChatManager.bind(this, 'blastDatabaseInfo'));
     this.toolMapping.set('blast_delete_database', this._delegateToChatManager.bind(this, 'blastDeleteDatabase'));
     this.toolMapping.set('blast_create_db_from_genome', this._delegateToChatManager.bind(this, 'blastCreateDbFromGenome'));
     this.toolMapping.set('blast_create_protein_db_from_genome', this._delegateToChatManager.bind(this, 'blastCreateProteinDbFromGenome'));

@@ -4565,9 +4565,6 @@ class BlastManager {
     } catch (error) {
       console.error('Local BLAST search error:', error);
 
-      // Show error directly instead of simulated results
-      this.showNotification(`Local BLAST failed: ${error.message}`, 'error');
-
       // Return error result instead of mock results
       return {
         searchId: `LOCAL_ERROR_${Date.now()}`,

@@ -94,16 +94,6 @@
   }
 
   /**
-   * Get BLAST Database Info - Wrapper method
-   */
-  async function blastDatabaseInfo(parameters) {
-    if (!this.blastFunctionTools) {
-      throw new Error('BLAST Function Tools not initialized');
-    }
-    return await this.blastFunctionTools.executeTool('blast_database_info', parameters);
-  }
-
-  /**
    * Delete BLAST Database - Wrapper method
    */
   async function blastDeleteDatabase(parameters) {
@@ -201,7 +191,6 @@
     ChatManager.prototype.blastSearchBatch = blastSearchBatch;
     ChatManager.prototype.blastCreateDatabase = blastCreateDatabase;
     ChatManager.prototype.blastListDatabases = blastListDatabases;
-    ChatManager.prototype.blastDatabaseInfo = blastDatabaseInfo;
     ChatManager.prototype.blastDeleteDatabase = blastDeleteDatabase;
     ChatManager.prototype.blastCreateDbFromGenome = blastCreateDbFromGenome;
     ChatManager.prototype.blastCreateProteinDbFromGenome = blastCreateProteinDbFromGenome;

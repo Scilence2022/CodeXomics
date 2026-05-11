@@ -33,7 +33,6 @@ relationships:
   depends_on: []
   enhances:
     - blast_list_databases
-    - blast_database_info
   follow_up:
     - blast_search_local
 metadata:
