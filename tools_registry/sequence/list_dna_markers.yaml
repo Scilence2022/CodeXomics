@@ -1,0 +1,33 @@
+name: 'list_dna_markers'
+description: 'List available DNA markers/ladders from the built-in commercial marker database. Covers NEB, Thermo Fisher, Takara, and common Chinese domestic brands (TransGen, Vazyme, BioMaded, Sangon). Supports filtering by brand, category, and text search.'
+parameters:
+  type: 'object'
+  properties:
+    query:
+      type: 'string'
+      description: 'Search query to filter markers by name, brand, or description.'
+    brand:
+      type: 'string'
+      description: 'Filter by brand name (e.g. "NEB", "Takara", "TransGen", "Vazyme").'
+    category:
+      type: 'string'
+      enum: ['ladder', 'digest_marker']
+      description: 'Filter by marker category. "ladder" = standard DNA ladders, "digest_marker" = lambda digest markers.'
+keywords:
+  - 'dna marker'
+  - 'dna ladder'
+  - 'marker database'
+  - 'ladder list'
+  - 'marker browse'
+  - 'size standard'
+sample_usages:
+  - 'List all available DNA markers.'
+  - 'Show Takara DNA markers.'
+  - 'Browse NEB ladders.'
+  - 'Search for DL2000 marker.'
+relationships:
+  enhances:
+    - 'simulate_gel_electrophoresis'
+  follow_up:
+    - 'get_dna_marker_info'
+    - 'simulate_gel_electrophoresis'

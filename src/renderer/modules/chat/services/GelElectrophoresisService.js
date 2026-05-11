@@ -17,6 +17,19 @@ class GelElectrophoresisService {
   constructor(app, chatManager) {
     this.app = app;
     this.chatManager = chatManager;
+    this._markerDb = null;
+  }
+
+  get markerDb() {
+    if (!this._markerDb) {
+      const DbClass = (typeof window !== 'undefined' && window.DNAMarkerDatabase)
+        ? window.DNAMarkerDatabase
+        : null;
+      if (DbClass) {
+        this._markerDb = new DbClass();
+      }
+    }
+    return this._markerDb;
   }
 
   async simulateGelElectrophoresis(params) {
@@ -108,6 +121,13 @@ class GelElectrophoresisService {
   }
 
   _getLadderData(type) {
+    if (this.markerDb) {
+      const marker = this.markerDb.get(type);
+      if (marker && marker.sizes) {
+        return { name: marker.name, sizes: marker.sizes.filter(s => s > 0) };
+      }
+    }
+
     const ladders = {
       '1kb': {
         name: '1 kb DNA Ladder',
@@ -127,13 +147,72 @@ class GelElectrophoresisService {
       },
       lambda_ecori: {
         name: 'Lambda EcoRI Ladder',
-        sizes: [21226, 7421, 5804, 5643, 4878, 3530, 0],
+        sizes: [21226, 7421, 5804, 5643, 4878, 3530],
       },
     };
 
     const ladder = ladders[type];
     if (ladder) return ladder;
     return ladders['1kb'];
+  }
+
+  listMarkers(params = {}) {
+    if (!this.markerDb) {
+      return { markers: [], total: 0, error: 'Marker database not available' };
+    }
+
+    const { query, brand, category } = params;
+    let results = this.markerDb.getAll();
+
+    if (query) {
+      results = this.markerDb.search(query);
+    }
+    if (brand) {
+      results = results.filter(m => m.brand === brand);
+    }
+    if (category) {
+      results = results.filter(m => m.category === category);
+    }
+
+    return {
+      markers: results.map(m => ({
+        id: m.id,
+        name: m.name,
+        brand: m.brand,
+        category: m.category,
+        sizeRange: m.sizeRange,
+        bandCount: m.sizes.length,
+        recommendedGel: m.recommendedGel,
+        description: m.description,
+        tags: m.tags,
+      })),
+      brands: this.markerDb.getBrands(),
+      total: results.length,
+    };
+  }
+
+  getMarkerInfo(params) {
+    if (!this.markerDb) {
+      return { error: 'Marker database not available' };
+    }
+
+    const { markerId } = params;
+    const marker = this.markerDb.get(markerId);
+    if (!marker) {
+      return { error: `Marker not found: ${markerId}. Use list_dna_markers to browse available markers.` };
+    }
+
+    return {
+      id: marker.id,
+      name: marker.name,
+      brand: marker.brand,
+      category: marker.category,
+      sizeRange: marker.sizeRange,
+      sizes: marker.sizes,
+      recommendedGel: marker.recommendedGel,
+      description: marker.description,
+      tags: marker.tags,
+    };
   }
 
   _calculateBands(sizes, gelConfig) {

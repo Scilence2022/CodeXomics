@@ -1,0 +1,23 @@
+name: 'get_dna_marker_info'
+description: 'Get detailed information about a specific DNA marker/ladder, including all band sizes, recommended gel percentage, and description.'
+parameters:
+  type: 'object'
+  properties:
+    markerId:
+      type: 'string'
+      description: 'The marker ID (e.g. "takara_dl2000", "neb_1kb_plus", "trans2k"). Use list_dna_markers to find available IDs.'
+  required:
+    - 'markerId'
+keywords:
+  - 'marker details'
+  - 'marker info'
+  - 'ladder details'
+  - 'ladder bands'
+sample_usages:
+  - 'Get details for the Takara DL2000 marker.'
+  - 'Show band sizes for NEB 1kb Plus ladder.'
+relationships:
+  prerequisites:
+    - 'list_dna_markers'
+  follow_up:
+    - 'simulate_gel_electrophoresis'

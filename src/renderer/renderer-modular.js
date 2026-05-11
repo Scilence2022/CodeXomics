@@ -1270,7 +1270,6 @@ class GenomeBrowser {
       this.externalToolsManager.showConfigurationModal();
     } else {
       console.error('❌ [ExternalTools] ExternalToolsManager not available');
-      // Try to create it on-demand
       try {
         this.externalToolsManager = new ExternalToolsManager(this);
         window.externalToolsManager = this.externalToolsManager;
@@ -1287,6 +1286,109 @@ class GenomeBrowser {
         console.error('❌ [ExternalTools] Failed to create ExternalToolsManager:', error);
       }
     }
+  }
+
+  showEnzymeBrowserModal() {
+    this._showDatabaseBrowserModal('enzyme', 'Restriction Enzyme Browser', () => {
+      const svc = this.chatManager?.services?.restriction;
+      if (!svc || !svc.enzymeDb) return [];
+      return svc.enzymeDb.getCommerciallyAvailable().map(e => ({
+        id: e.name,
+        name: e.name,
+        subtitle: `${e.recognition} | ${e.overhangType} | ${e.overhangLength}bp overhang`,
+        detail: e,
+      }));
+    });
+  }
+
+  showDNAMarkerBrowserModal() {
+    this._showDatabaseBrowserModal('dnaMarker', 'DNA Marker / Ladder Browser', () => {
+      const dbClass = window.DNAMarkerDatabase;
+      if (!dbClass) return [];
+      const db = new dbClass();
+      return db.getAll().map(m => ({
+        id: m.id,
+        name: m.name,
+        subtitle: `${m.brand} | ${m.sizes.length} bands | ${m.sizeRange[0].toLocaleString()}-${m.sizeRange[1].toLocaleString()} bp`,
+        detail: m,
+      }));
+    });
+  }
+
+  _showDatabaseBrowserModal(type, title, dataLoader) {
+    let modal = document.getElementById(`${type}BrowserModal`);
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = `${type}BrowserModal`;
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px; min-width: 500px;">
+          <div class="modal-header">
+            <h3><i class="fas fa-database"></i> ${title}</h3>
+            <div class="modal-controls">
+              <button class="modal-close" type="button">&times;</button>
+            </div>
+          </div>
+          <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+            <div style="margin-bottom: 12px;">
+              <input type="text" id="${type}BrowserSearch" class="input-full" placeholder="Search..." style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: var(--bg-secondary, #1e1e3a); color: var(--text-primary, #e0e0f0);">
+            </div>
+            <div id="${type}BrowserResults"></div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      modal.querySelector('.modal-close').addEventListener('click', () => {
+        modal.classList.remove('show');
+      });
+
+      const searchInput = modal.querySelector(`#${type}BrowserSearch`);
+      searchInput.addEventListener('input', () => {
+        this._populateDatabaseBrowserResults(type, dataLoader, searchInput.value);
+      });
+    }
+
+    this._populateDatabaseBrowserResults(type, dataLoader, '');
+    modal.classList.add('show');
+
+    const searchInput = modal.querySelector(`#${type}BrowserSearch`);
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.focus();
+    }
+  }
+
+  _populateDatabaseBrowserResults(type, dataLoader, query) {
+    const container = document.getElementById(`${type}BrowserResults`);
+    if (!container) return;
+
+    let items = dataLoader();
+    if (query) {
+      const q = query.toLowerCase();
+      items = items.filter(item =>
+        item.name.toLowerCase().includes(q) ||
+        item.subtitle.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q)
+      );
+    }
+
+    if (items.length === 0) {
+      container.innerHTML = `<p style="color: var(--text-secondary); padding: 20px; text-align: center;">No items found${query ? ` for "${query}"` : ''}. Database may not be loaded.</p>`;
+      return;
+    }
+
+    const rows = items.map(item => `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <div>
+          <div style="font-weight: 600; color: var(--text-primary, #e0e0f0); font-size: 13px;">${item.name}</div>
+          <div style="color: var(--text-secondary, #8888aa); font-size: 11px;">${item.subtitle}</div>
+        </div>
+        <div style="color: var(--text-secondary, #666688); font-size: 10px; font-family: monospace;">${item.id}</div>
+      </div>
+    `).join('');
+
+    container.innerHTML = `<div style="margin-bottom: 8px; color: var(--text-secondary, #8888aa); font-size: 11px;">${items.length} item${items.length !== 1 ? 's' : ''} found</div>${rows}`;
   }
 
   showDebugToolsModal() {
@@ -2976,6 +3078,14 @@ class GenomeBrowser {
 
     ipcRenderer.on('configure-external-tools', () => {
       this.showExternalToolsModal();
+    });
+
+    ipcRenderer.on('open-enzyme-browser', () => {
+      this.showEnzymeBrowserModal();
+    });
+
+    ipcRenderer.on('open-dna-marker-browser', () => {
+      this.showDNAMarkerBrowserModal();
     });
 
     ipcRenderer.on('configure-search', () => {

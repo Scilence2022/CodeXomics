@@ -108,6 +108,8 @@ class AnalysisAgent extends AgentBase {
     this.toolMapping.set('virtual_digest', this.virtualDigest.bind(this));
     this.toolMapping.set('list_restriction_enzymes', this.listRestrictionEnzymes.bind(this));
     this.toolMapping.set('simulate_gel_electrophoresis', this.simulateGelElectrophoresis.bind(this));
+    this.toolMapping.set('list_dna_markers', this.listDnaMarkers.bind(this));
+    this.toolMapping.set('get_dna_marker_info', this.getDnaMarkerInfo.bind(this));
 
     // 序列模式搜索
     this.toolMapping.set('search_pattern', this.searchPattern.bind(this));
@@ -786,6 +788,30 @@ class AnalysisAgent extends AgentBase {
         success: false,
         error: error.message,
       };
+    }
+  }
+
+  async listDnaMarkers(parameters = {}, strategy) {
+    try {
+      const chatManager = this.multiAgentSystem.chatManager;
+      if (chatManager && typeof chatManager.executeToolByName === 'function') {
+        return await chatManager.executeToolByName('list_dna_markers', parameters);
+      }
+      throw new Error('ChatManager not available for DNA marker listing');
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getDnaMarkerInfo(parameters, strategy) {
+    try {
+      const chatManager = this.multiAgentSystem.chatManager;
+      if (chatManager && typeof chatManager.executeToolByName === 'function') {
+        return await chatManager.executeToolByName('get_dna_marker_info', parameters);
+      }
+      throw new Error('ChatManager not available for DNA marker info');
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   }
 

@@ -7163,6 +7163,8 @@ ${coreTools}
       virtual_digest: () => this.services.restriction.virtualDigest(parameters),
       list_restriction_enzymes: () => this.services.restriction.listEnzymes(parameters),
       simulate_gel_electrophoresis: () => this.services.gel.simulateGelElectrophoresis(parameters),
+      list_dna_markers: () => this.services.gel.listMarkers(parameters),
+      get_dna_marker_info: () => this.services.gel.getMarkerInfo(parameters),
       search_sequence_motif: () => this.searchMotif(parameters),
 
       // AlphaFold and protein structure tools

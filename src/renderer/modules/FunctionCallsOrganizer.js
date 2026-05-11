@@ -114,6 +114,8 @@ class FunctionCallsOrganizer {
           'virtual_digest',
           'list_restriction_enzymes',
           'simulate_gel_electrophoresis',
+          'list_dna_markers',
+          'get_dna_marker_info',
           'predict_promoter',
           'predict_rbs',
           'predict_terminator',

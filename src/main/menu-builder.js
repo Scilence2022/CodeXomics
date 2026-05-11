@@ -1346,6 +1346,30 @@ function createMenu() {
 
         { type: 'separator' },
         {
+          label: 'Restriction Enzymes',
+          submenu: [
+            {
+              label: 'Enzyme Browser',
+              click: () => {
+                sendToCurrentMainWindow('open-enzyme-browser');
+              },
+            },
+          ],
+        },
+        {
+          label: 'DNA Markers / Ladders',
+          submenu: [
+            {
+              label: 'Marker Browser',
+              click: () => {
+                sendToCurrentMainWindow('open-dna-marker-browser');
+              },
+            },
+          ],
+        },
+
+        { type: 'separator' },
+        {
           label: 'KEGG Pathway Enrichment Analysis',
           accelerator: 'CmdOrCtrl+Shift+K',
           enabled: false,

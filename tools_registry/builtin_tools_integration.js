@@ -848,6 +848,20 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('list_dna_markers', {
+      method: 'listDnaMarkers',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_dna_marker_info', {
+      method: 'getDnaMarkerInfo',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Multi-window Tools
     this.builtInToolsMap.set('list_genome_windows', {
       method: 'listGenomeWindows',
@@ -1984,6 +1998,15 @@ class BuiltInToolsIntegration {
         name: 'virtual_digest',
         confidence: 0.8,
         reason: 'Virtual digest is prerequisite for gel simulation',
+      });
+    }
+
+    if (/\b(dna\s+marker|dna\s+ladder|marker|ladder)\b/i.test(query) &&
+        /\b(list|show|browse|available|search|find|what)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'list_dna_markers',
+        confidence: 0.9,
+        reason: 'DNA marker/ladder browse keywords detected',
       });
     }
 
