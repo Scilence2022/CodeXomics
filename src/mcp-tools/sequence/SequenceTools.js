@@ -173,6 +173,7 @@ class SequenceTools {
             runTime: { type: 'number', description: 'Run time in minutes', default: 45 },
             showLadder: { type: 'boolean', description: 'Show DNA ladder lane', default: true },
             label: { type: 'string', description: 'Custom label for digest lane' },
+            bandColorScheme: { type: 'string', description: 'Band color scheme (ethidium_bromide, gel_red, sybr_safe, methylene_blue, uv_default)', default: 'ethidium_bromide' },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
           required: ['enzymes'],

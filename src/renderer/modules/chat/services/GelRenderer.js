@@ -2,12 +2,65 @@
  * GelRenderer - Canvas-based agarose gel electrophoresis visualization
  * Renders realistic gel images with wells, DNA bands, ladder lanes,
  * and size annotations on an HTML5 Canvas element.
+ *
+ * Color schemes: ethidium_bromide (classic orange/red), gel_red (red),
+ * sybr_safe (green), methylene_blue (blue), uv_default (violet)
  */
 class GelRenderer {
   constructor() {
     this.canvas = null;
     this.ctx = null;
     this.dpr = window.devicePixelRatio || 1;
+    this._currentResult = null;
+    this._currentScheme = 'ethidium_bromide';
+
+    this.colorSchemes = {
+      ethidium_bromide: {
+        name: 'Ethidium Bromide',
+        bandColor: 'rgba(220, 60, 30, 0.88)',
+        bandSmearColor: 'rgba(220, 60, 30, 0.25)',
+        ladderColor: 'rgba(255, 120, 80, 0.7)',
+        bandGradientEdge: [220, 60, 30],
+        bandGradientMid: [240, 80, 40],
+        smearRGB: [220, 60, 30],
+      },
+      gel_red: {
+        name: 'Gel Red',
+        bandColor: 'rgba(255, 40, 40, 0.88)',
+        bandSmearColor: 'rgba(255, 40, 40, 0.25)',
+        ladderColor: 'rgba(255, 100, 100, 0.7)',
+        bandGradientEdge: [255, 40, 40],
+        bandGradientMid: [255, 70, 50],
+        smearRGB: [255, 40, 40],
+      },
+      sybr_safe: {
+        name: 'SYBR Safe',
+        bandColor: 'rgba(40, 200, 80, 0.88)',
+        bandSmearColor: 'rgba(40, 200, 80, 0.25)',
+        ladderColor: 'rgba(100, 220, 130, 0.7)',
+        bandGradientEdge: [40, 200, 80],
+        bandGradientMid: [60, 220, 100],
+        smearRGB: [40, 200, 80],
+      },
+      methylene_blue: {
+        name: 'Methylene Blue',
+        bandColor: 'rgba(40, 80, 220, 0.88)',
+        bandSmearColor: 'rgba(40, 80, 220, 0.25)',
+        ladderColor: 'rgba(100, 130, 255, 0.7)',
+        bandGradientEdge: [40, 80, 220],
+        bandGradientMid: [60, 100, 240],
+        smearRGB: [40, 80, 220],
+      },
+      uv_default: {
+        name: 'UV Default',
+        bandColor: 'rgba(80, 40, 180, 0.85)',
+        bandSmearColor: 'rgba(80, 40, 180, 0.3)',
+        ladderColor: 'rgba(180, 140, 255, 0.7)',
+        bandGradientEdge: [80, 40, 180],
+        bandGradientMid: [90, 50, 200],
+        smearRGB: [80, 40, 180],
+      },
+    };
 
     this.layout = {
       canvasWidth: 600,
@@ -20,14 +73,12 @@ class GelRenderer {
       wellDepth: 12,
       laneSpacing: 4,
       ladderLaneWidth: 60,
-      bandColor: 'rgba(80, 40, 180, 0.85)',
-      bandSmearColor: 'rgba(80, 40, 180, 0.3)',
       gelBgColor: '#0a0a2e',
-      gelBorderColor: '#333366',
+      gelBorderColor: '#555588',
       wellColor: '#000015',
-      ladderColor: 'rgba(180, 140, 255, 0.7)',
-      labelColor: '#ccccdd',
-      sizeLabelColor: '#aaaacc',
+      labelColor: '#eeeeff',
+      sizeLabelColor: '#ddddff',
+      scaleLabelColor: '#bbbbdd',
     };
   }
 
@@ -44,6 +95,10 @@ class GelRenderer {
       return;
     }
 
+    this._currentResult = result;
+    if (result.bandColorScheme && this.colorSchemes[result.bandColorScheme]) {
+      this._currentScheme = result.bandColorScheme;
+    }
     container.innerHTML = '';
 
     const wrapper = document.createElement('div');
@@ -71,12 +126,28 @@ class GelRenderer {
 
     container.appendChild(wrapper);
 
+    this._wireExportButton();
     modal.classList.add('show');
+  }
+
+  _wireExportButton() {
+    const headerExportBtn = document.getElementById('exportGelBtn');
+    if (headerExportBtn) {
+      const newBtn = headerExportBtn.cloneNode(true);
+      headerExportBtn.parentNode.replaceChild(newBtn, headerExportBtn);
+      newBtn.id = 'exportGelBtn';
+      newBtn.addEventListener('click', () => this._exportPNG());
+    }
   }
 
   _createInfoPanel(result) {
     const panel = document.createElement('div');
     panel.className = 'gel-info-panel';
+
+    const schemeOptions = Object.entries(this.colorSchemes)
+      .map(([key, val]) => `<option value="${key}"${key === this._currentScheme ? ' selected' : ''}>${val.name}</option>`)
+      .join('');
+
     panel.innerHTML = `
       <div class="gel-info-header">
         <span class="gel-info-title">Gel Electrophoresis</span>
@@ -100,8 +171,29 @@ class GelRenderer {
           <span class="gel-stat-value">${result.chromosome}</span>
         </div>
       </div>
+      <div class="gel-color-scheme-row">
+        <label for="gelColorSchemeSelect" class="gel-color-scheme-label">Stain / Color:</label>
+        <select id="gelColorSchemeSelect" class="gel-color-scheme-select">${schemeOptions}</select>
+      </div>
     `;
+
+    const select = panel.querySelector('#gelColorSchemeSelect');
+    select.addEventListener('change', (e) => {
+      this._currentScheme = e.target.value;
+      if (this._currentResult) {
+        this._redraw();
+      }
+    });
+
     return panel;
+  }
+
+  _redraw() {
+    if (!this.canvas || !this.ctx || !this._currentResult) return;
+
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(this.dpr, this.dpr);
+    this._drawGel(this._currentResult);
   }
 
   _createControlsPanel(result) {
@@ -141,9 +233,14 @@ class GelRenderer {
     return table;
   }
 
+  _getScheme() {
+    return this.colorSchemes[this._currentScheme] || this.colorSchemes.ethidium_bromide;
+  }
+
   _drawGel(result) {
     const { ctx, layout } = this;
     const { gelLeft, gelRight, gelTop, gelBottom } = layout;
+    const scheme = this._getScheme();
 
     ctx.fillStyle = '#f5f5f8';
     ctx.fillRect(0, 0, layout.canvasWidth, layout.canvasHeight);
@@ -160,11 +257,11 @@ class GelRenderer {
     let currentX = gelLeft + layout.laneSpacing;
 
     if (hasLadder) {
-      this._drawLane(currentX, laneWidth, result.ladderBands, true, result.ladderSizes);
+      this._drawLane(currentX, laneWidth, result.ladderBands, true, result.ladderSizes, scheme);
       currentX += laneWidth + layout.laneSpacing;
     }
 
-    this._drawLane(currentX, laneWidth, result.bands, false, result.fragmentSizes);
+    this._drawLane(currentX, laneWidth, result.bands, false, result.fragmentSizes, scheme);
     this._drawLaneLabel(currentX, laneWidth, result.label || 'Digest');
 
     if (hasLadder) {
@@ -207,7 +304,7 @@ class GelRenderer {
     ctx.strokeRect(gelLeft, gelTop, gelRight - gelLeft, gelBottom - gelTop);
   }
 
-  _drawLane(x, width, bands, isLadder, sizes) {
+  _drawLane(x, width, bands, isLadder, sizes, scheme) {
     const { ctx, layout } = this;
     const { gelTop, gelBottom, wellDepth } = layout;
 
@@ -243,12 +340,12 @@ class GelRenderer {
       const pixelHeight = Math.max(1.5, bandWidth * 8);
 
       if (isLadder) {
-        this._drawBand(bandCenterX, yPos, width * 0.7, pixelHeight, layout.ladderColor, intensity, false);
+        this._drawBand(bandCenterX, yPos, width * 0.7, pixelHeight, scheme.ladderColor, intensity, scheme);
       } else if (band.isSmear) {
-        this._drawSmearBand(bandCenterX, yPos, width * 0.7, pixelHeight * 3, layout.bandSmearColor, intensity);
-        this._drawBand(bandCenterX, yPos, width * 0.5, pixelHeight, layout.bandColor, intensity * 0.6, false);
+        this._drawSmearBand(bandCenterX, yPos, width * 0.7, pixelHeight * 3, scheme.bandSmearColor, intensity, scheme);
+        this._drawBand(bandCenterX, yPos, width * 0.5, pixelHeight, scheme.bandColor, intensity * 0.6, scheme);
       } else {
-        this._drawBand(bandCenterX, yPos, width * 0.7, pixelHeight, layout.bandColor, intensity, false);
+        this._drawBand(bandCenterX, yPos, width * 0.7, pixelHeight, scheme.bandColor, intensity, scheme);
       }
     }
 
@@ -257,23 +354,20 @@ class GelRenderer {
     }
   }
 
-  _drawBand(cx, cy, halfWidth, height, color, intensity, glow) {
+  _drawBand(cx, cy, halfWidth, height, color, intensity, scheme) {
     const { ctx } = this;
+    const [eR, eG, eB] = scheme.bandGradientEdge;
+    const [mR, mG, mB] = scheme.bandGradientMid;
 
     ctx.save();
 
-    if (glow) {
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 4;
-    }
-
     const gradient = ctx.createLinearGradient(cx - halfWidth, cy, cx + halfWidth, cy);
     const baseAlpha = 0.3 * intensity;
-    gradient.addColorStop(0, `rgba(80, 40, 180, ${baseAlpha})`);
-    gradient.addColorStop(0.15, `rgba(90, 50, 200, ${0.7 * intensity})`);
+    gradient.addColorStop(0, `rgba(${eR}, ${eG}, ${eB}, ${baseAlpha})`);
+    gradient.addColorStop(0.15, `rgba(${mR}, ${mG}, ${mB}, ${0.7 * intensity})`);
     gradient.addColorStop(0.5, color);
-    gradient.addColorStop(0.85, `rgba(90, 50, 200, ${0.7 * intensity})`);
-    gradient.addColorStop(1, `rgba(80, 40, 180, ${baseAlpha})`);
+    gradient.addColorStop(0.85, `rgba(${mR}, ${mG}, ${mB}, ${0.7 * intensity})`);
+    gradient.addColorStop(1, `rgba(${eR}, ${eG}, ${eB}, ${baseAlpha})`);
 
     ctx.fillStyle = gradient;
     ctx.fillRect(cx - halfWidth, cy - height / 2, halfWidth * 2, height);
@@ -281,15 +375,16 @@ class GelRenderer {
     ctx.restore();
   }
 
-  _drawSmearBand(cx, cy, halfWidth, height, color, intensity) {
+  _drawSmearBand(cx, cy, halfWidth, height, color, intensity, scheme) {
     const { ctx } = this;
+    const [sR, sG, sB] = scheme.smearRGB;
 
     const gradient = ctx.createLinearGradient(cx, cy - height / 2, cx, cy + height / 2);
-    gradient.addColorStop(0, 'rgba(80, 40, 180, 0.0)');
-    gradient.addColorStop(0.3, `rgba(80, 40, 180, ${0.15 * intensity})`);
-    gradient.addColorStop(0.5, `rgba(80, 40, 180, ${0.25 * intensity})`);
-    gradient.addColorStop(0.7, `rgba(80, 40, 180, ${0.15 * intensity})`);
-    gradient.addColorStop(1, 'rgba(80, 40, 180, 0.0)');
+    gradient.addColorStop(0, `rgba(${sR}, ${sG}, ${sB}, 0.0)`);
+    gradient.addColorStop(0.3, `rgba(${sR}, ${sG}, ${sB}, ${0.15 * intensity})`);
+    gradient.addColorStop(0.5, `rgba(${sR}, ${sG}, ${sB}, ${0.25 * intensity})`);
+    gradient.addColorStop(0.7, `rgba(${sR}, ${sG}, ${sB}, ${0.15 * intensity})`);
+    gradient.addColorStop(1, `rgba(${sR}, ${sG}, ${sB}, 0.0)`);
 
     ctx.fillStyle = gradient;
     ctx.fillRect(cx - halfWidth, cy - height / 2, halfWidth * 2, height);
@@ -300,7 +395,7 @@ class GelRenderer {
     const { gelTop, wellDepth } = layout;
 
     ctx.save();
-    ctx.font = '9px monospace';
+    ctx.font = 'bold 11px monospace';
     ctx.fillStyle = layout.sizeLabelColor;
     ctx.textAlign = 'right';
 
@@ -318,6 +413,10 @@ class GelRenderer {
       if (yPos < gelTop + wellDepth + 5 || yPos > layout.gelBottom - 5) continue;
 
       const label = size >= 1000 ? `${(size / 1000).toFixed(size % 1000 === 0 ? 0 : 1)}kb` : `${size}bp`;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillText(label, laneX - 3, yPos + 4);
+      ctx.fillStyle = layout.sizeLabelColor;
       ctx.fillText(label, laneX - 4, yPos + 3);
     }
 
@@ -328,10 +427,10 @@ class GelRenderer {
     const { ctx, layout } = this;
 
     ctx.save();
-    ctx.font = '10px sans-serif';
+    ctx.font = 'bold 12px sans-serif';
     ctx.fillStyle = layout.labelColor;
     ctx.textAlign = 'center';
-    ctx.fillText(label, x + width / 2, layout.gelTop - 8);
+    ctx.fillText(label, x + width / 2, layout.gelTop - 10);
     ctx.restore();
   }
 
@@ -342,8 +441,8 @@ class GelRenderer {
     if (!result.ladderBands || result.ladderBands.length === 0) return;
 
     ctx.save();
-    ctx.font = '9px monospace';
-    ctx.fillStyle = '#888899';
+    ctx.font = 'bold 10px monospace';
+    ctx.fillStyle = layout.scaleLabelColor;
     ctx.textAlign = 'center';
 
     const scaleSizes = [10000, 5000, 2000, 1000, 500, 200, 100];
@@ -361,7 +460,7 @@ class GelRenderer {
 
       if (yPos < layout.gelTop + 15 || yPos > layout.gelBottom - 5) continue;
 
-      ctx.strokeStyle = 'rgba(100, 100, 140, 0.2)';
+      ctx.strokeStyle = 'rgba(120, 120, 180, 0.18)';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(gelLeft, yPos);
@@ -369,6 +468,10 @@ class GelRenderer {
       ctx.stroke();
 
       const label = size >= 1000 ? `${size / 1000}kb` : `${size}bp`;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.fillText(label, gelRight + 26, yPos + 4);
+      ctx.fillStyle = layout.scaleLabelColor;
       ctx.fillText(label, gelRight + 25, yPos + 3);
     }
 
@@ -396,12 +499,22 @@ class GelRenderer {
   }
 
   _exportPNG() {
-    if (!this.canvas) return;
+    if (!this.canvas) {
+      console.warn('GelRenderer: No canvas to export');
+      return;
+    }
 
-    const link = document.createElement('a');
-    link.download = 'gel_electrophoresis.png';
-    link.href = this.canvas.toDataURL('image/png');
-    link.click();
+    try {
+      const dataURL = this.canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = 'gel_electrophoresis.png';
+      link.href = dataURL;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('GelRenderer: Export PNG failed:', err);
+    }
   }
 }
 

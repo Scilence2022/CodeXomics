@@ -40,6 +40,11 @@ parameters:
     label:
       type: 'string'
       description: 'Custom label for the digest lane.'
+    bandColorScheme:
+      type: 'string'
+      enum: ['ethidium_bromide', 'gel_red', 'sybr_safe', 'methylene_blue', 'uv_default']
+      description: 'Band staining color scheme. ethidium_bromide=orange/red (default), gel_red=red, sybr_safe=green, methylene_blue=blue, uv_default=violet.'
+      default: 'ethidium_bromide'
   required:
     - 'enzymes'
 keywords:

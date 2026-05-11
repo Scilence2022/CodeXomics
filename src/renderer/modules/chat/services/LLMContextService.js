@@ -183,6 +183,7 @@ class LLMContextService {
           `• Enzymes: ${result.enzymes.join(', ') || 'N/A'}\n` +
           `• Total fragments: ${result.totalFragments}\n` +
           `• Ladder: ${result.ladderType}\n` +
+          `• Color scheme: ${result.bandColorScheme || 'ethidium_bromide'}\n` +
           `• Effective range: ${result.gelConfig.effectiveRange[0].toLocaleString()}-${result.gelConfig.effectiveRange[1].toLocaleString()} bp\n`;
         const gelFragments = result.fragmentSizes && result.fragmentSizes.length > 0
           ? `• Fragment sizes (sorted, largest first):\n${result.fragmentSizes

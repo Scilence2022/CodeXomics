@@ -1,3 +1,19 @@
+/* Non-blocking floating panel — no backdrop overlay */
+#gelElectrophoresisModal {
+  background: transparent;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+#gelElectrophoresisModal.show {
+  display: flex;
+  pointer-events: none;
+}
+
+#gelElectrophoresisModal .modal-content {
+  pointer-events: auto;
+}
+
 .gel-results-content {
   max-height: 90vh;
 }
@@ -93,6 +109,38 @@
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary, #e0e0f0);
+}
+
+.gel-color-scheme-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gel-color-scheme-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #8888aa);
+  white-space: nowrap;
+}
+
+.gel-color-scheme-select {
+  background: var(--bg-primary, #12122a);
+  color: var(--text-primary, #e0e0f0);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.gel-color-scheme-select:focus {
+  border-color: var(--primary-color, #667eea);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.25);
 }
 
 .gel-canvas {

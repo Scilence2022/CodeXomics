@@ -27,6 +27,7 @@ class GelElectrophoresisService {
       runTime = 45,
       showLadder = true,
       label = null,
+      bandColorScheme = 'ethidium_bromide',
     } = params;
 
     let resolvedFragments = fragments;
@@ -69,6 +70,7 @@ class GelElectrophoresisService {
       runTime,
       showLadder,
       label: label || (enzymes ? enzymes.join(' + ') : 'Digest'),
+      bandColorScheme,
       gelConfig: {
         wellToBottomDistance: gelConfig.wellToBottom,
         effectiveRange: gelConfig.effectiveRange,
@@ -235,6 +237,28 @@ class GelElectrophoresisService {
       resetBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         window.modalDragManager.resetPosition(selector);
+      });
+    }
+
+    modal.querySelectorAll('.modal-close').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        modal.classList.remove('show');
+      });
+    });
+
+    const collapseBtn = modal.querySelector('.modal-collapse');
+    if (collapseBtn) {
+      collapseBtn.addEventListener('click', () => {
+        const body = modal.querySelector('.modal-body');
+        const icon = collapseBtn.querySelector('i');
+        if (body) {
+          const isCollapsed = body.style.display === 'none';
+          body.style.display = isCollapsed ? '' : 'none';
+          if (icon) {
+            icon.className = isCollapsed ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+          }
+        }
       });
     }
 
