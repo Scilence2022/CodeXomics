@@ -18,9 +18,10 @@ describe('Menu Builder Module', () => {
     expect(content).toContain("'use strict'");
   });
 
-  it('should define all 5 menu functions', () => {
+  it('should define all 6 menu functions', () => {
     const funcs = ['createCircosPlotterMenu', 'createToolWindowMenu',
-      'createMenu', 'createDeepGeneResearchMenu', 'createProjectManagerMenu'];
+      'createMenu', 'createDeepGeneResearchMenu', 'createProjectManagerMenu',
+      'createMCPServerManagerMenu'];
     for (const fn of funcs) {
       expect(content.includes(`function ${fn}`), `Missing ${fn}`).toBe(true);
     }

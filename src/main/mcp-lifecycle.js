@@ -21,6 +21,8 @@ let syncWindowsWithMCPServer;
 
 // External MCP Servers Functions
 let mcpServerManagerWindow = null;
+let createMCPServerManagerMenu;
+let createMenu;
 
 async function startUnifiedMCPServer() {
   try {
@@ -246,9 +248,35 @@ function createMCPServerManagerWindow() {
   // Load the MCP Server Manager HTML
   mcpServerManagerWindow.loadFile(path.join(__dirname, '..', 'mcp-server-manager.html'));
 
-  // Handle window closed
+  // Set up the application menu when window is ready
+  if (createMCPServerManagerMenu) {
+    mcpServerManagerWindow.once('ready-to-show', () => {
+      mcpServerManagerWindow.show();
+      createMCPServerManagerMenu(mcpServerManagerWindow);
+    });
+
+    mcpServerManagerWindow.on('focus', () => {
+      createMCPServerManagerMenu(mcpServerManagerWindow);
+    });
+  }
+
+  // Handle window closed - restore main menu
   mcpServerManagerWindow.on('closed', () => {
     mcpServerManagerWindow = null;
+    if (createMenu && mainWindow && !mainWindow.isDestroyed()) {
+      createMenu();
+    }
+  });
+
+  // Handle window blur - restore main menu if main window is focused
+  mcpServerManagerWindow.on('blur', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      setTimeout(() => {
+        if (mainWindow.isFocused() && createMenu) {
+          createMenu();
+        }
+      }, 200);
+    }
   });
 
   // Send initial status and request theme
@@ -279,6 +307,8 @@ function setMCPDependencies(deps) {
   if (deps.startWindowCleanupInterval !== undefined) startWindowCleanupInterval = deps.startWindowCleanupInterval;
   if (deps.stopWindowCleanupInterval !== undefined) stopWindowCleanupInterval = deps.stopWindowCleanupInterval;
   if (deps.syncWindowsWithMCPServer !== undefined) syncWindowsWithMCPServer = deps.syncWindowsWithMCPServer;
+  if (deps.createMCPServerManagerMenu !== undefined) createMCPServerManagerMenu = deps.createMCPServerManagerMenu;
+  if (deps.createMenu !== undefined) createMenu = deps.createMenu;
 }
 
 module.exports = {

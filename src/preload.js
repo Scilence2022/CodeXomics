@@ -269,6 +269,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         'menu-about',
         'request-current-project-for-download',
         'tool-menu-action',
+        'mcp-server-manager-menu-action',
         'mcp-server-status-update',
         'mcp-server-status-changed',
         'mcp-server-log',

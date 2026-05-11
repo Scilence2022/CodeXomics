@@ -1570,7 +1570,7 @@ function registerIpcHandlers(deps) {
 
       try {
         // Create Unified Claude MCP server with configurable ports
-        const server = new (require('../mcp/UnifiedMCPServer'))(settings.httpPort, settings.wsPort, mainWindow);
+        const server = new (require('../mcp-server'))(settings.httpPort, settings.wsPort, mainWindow);
         setUnifiedMCPServer(server);
 
         // Forward server log events to the Manager window

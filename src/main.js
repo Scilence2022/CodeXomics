@@ -273,6 +273,7 @@ function buildModuleDeps() {
     createToolWindowMenu: mb.createToolWindowMenu,
     createProjectManagerMenu: mb.createProjectManagerMenu,
     createDeepGeneResearchMenu: mb.createDeepGeneResearchMenu,
+    createMCPServerManagerMenu: mb.createMCPServerManagerMenu,
     updateMCPServerMenu: mcp.updateMCPServerMenu,
 
     // MCP lifecycle

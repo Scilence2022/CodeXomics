@@ -1200,6 +1200,97 @@
           window.electronAPI.invoke('request-current-theme').catch(() => {});
         }
       });
+
+      // ===== Menu Actions (Copy/Paste/Cut/Select All) =====
+      function showToast(message) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position: fixed; top: 20px; right: 20px;
+          background: var(--mcp-bg-elevated, #161b22); color: var(--mcp-text-bright, #e6edf3);
+          padding: 10px 20px; border-radius: 6px; z-index: 10000; font-size: 14px;
+          opacity: 0; transition: opacity 0.3s; border: 1px solid var(--mcp-border, #30363d);
+          max-width: 300px; word-wrap: break-word;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => (toast.style.opacity = '1'), 10);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => {
+            if (document.body.contains(toast)) document.body.removeChild(toast);
+          }, 300);
+        }, 2000);
+      }
+
+      function handleMenuAction(action) {
+        switch (action) {
+          case 'copy': {
+            const selection = window.getSelection();
+            if (selection && selection.toString()) {
+              navigator.clipboard.writeText(selection.toString()).then(() => {
+                showToast('Copied to clipboard');
+              }).catch(() => {
+                document.execCommand('copy');
+              });
+            }
+            break;
+          }
+          case 'paste': {
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+              navigator.clipboard.readText().then(text => {
+                const start = active.selectionStart;
+                const end = active.selectionEnd;
+                active.value = active.value.substring(0, start) + text + active.value.substring(end);
+                active.selectionStart = active.selectionEnd = start + text.length;
+                active.dispatchEvent(new Event('input', { bubbles: true }));
+              }).catch(() => {
+                document.execCommand('paste');
+              });
+            }
+            break;
+          }
+          case 'cut': {
+            const selection = window.getSelection();
+            if (selection && selection.toString()) {
+              navigator.clipboard.writeText(selection.toString()).then(() => {
+                const active = document.activeElement;
+                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                  document.execCommand('delete');
+                }
+                showToast('Cut to clipboard');
+              }).catch(() => {
+                document.execCommand('cut');
+              });
+            }
+            break;
+          }
+          case 'select-all': {
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+              active.select();
+            } else {
+              const range = document.createRange();
+              range.selectNodeContents(document.body);
+              const sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+            break;
+          }
+          case 'about': {
+            alert('CodeXomics MCP Server Manager\n\nVersion: 0.2.0\n\nManage the MCP server for AI-powered bioinformatics tools.');
+            break;
+          }
+        }
+      }
+
+      // Listen for menu actions from the main process
+      if (window.electronAPI && window.electronAPI.ipcRenderer) {
+        window.electronAPI.ipcRenderer.on('mcp-server-manager-menu-action', (event, action) => {
+          handleMenuAction(action);
+        });
+      }
     </script>
   </body>
 </html>

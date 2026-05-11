@@ -2770,6 +2770,125 @@ function createProjectManagerMenu(projectManagerWindow) {
   return Menu.buildFromTemplate(template);
 }
 
+// Create specialized menu for MCP Server Manager window
+function createMCPServerManagerMenu(mcpWindow) {
+  const template = [
+    ...(process.platform === 'darwin'
+      ? [
+        {
+          label: 'CodeXomics',
+          submenu: [
+            {
+              label: 'About MCP Server Manager',
+              click: () => {
+                mcpWindow.webContents.send('mcp-server-manager-menu-action', 'about');
+              },
+            },
+            { type: 'separator' },
+            {
+              label: `Hide ${APP_NAME}`,
+              accelerator: 'Cmd+H',
+              role: 'hide',
+            },
+            {
+              label: 'Hide Others',
+              accelerator: 'Cmd+Shift+H',
+              role: 'hideothers',
+            },
+            {
+              label: 'Show All',
+              role: 'unhide',
+            },
+            { type: 'separator' },
+            {
+              label: `Quit ${APP_NAME}`,
+              accelerator: 'Cmd+Q',
+              click: () => {
+                app.quit();
+              },
+            },
+          ],
+        },
+      ]
+      : []),
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Close Window',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => {
+            mcpWindow.close();
+          },
+        },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          label: 'Copy',
+          accelerator: 'CmdOrCtrl+C',
+          click: () => {
+            mcpWindow.webContents.send('mcp-server-manager-menu-action', 'copy');
+          },
+        },
+        {
+          label: 'Paste',
+          accelerator: 'CmdOrCtrl+V',
+          click: () => {
+            mcpWindow.webContents.send('mcp-server-manager-menu-action', 'paste');
+          },
+        },
+        {
+          label: 'Cut',
+          accelerator: 'CmdOrCtrl+X',
+          click: () => {
+            mcpWindow.webContents.send('mcp-server-manager-menu-action', 'cut');
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'Select All',
+          accelerator: 'CmdOrCtrl+A',
+          click: () => {
+            mcpWindow.webContents.send('mcp-server-manager-menu-action', 'select-all');
+          },
+        },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'About MCP Server Manager',
+          click: () => {
+            mcpWindow.webContents.send('mcp-server-manager-menu-action', 'about');
+          },
+        },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+  return menu;
+}
+
 // Set all external dependencies at once
 function setMenuDependencies(deps) {
   if (deps.APP_NAME !== undefined) APP_NAME = deps.APP_NAME;
@@ -2808,5 +2927,6 @@ module.exports = {
   createMenu,
   createDeepGeneResearchMenu,
   createProjectManagerMenu,
+  createMCPServerManagerMenu,
   setMenuDependencies,
 };

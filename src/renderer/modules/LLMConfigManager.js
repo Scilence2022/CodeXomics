@@ -1095,6 +1095,20 @@ class LLMConfigManager {
         } else {
           console.log('No LLM providers found in ConfigManager config');
         }
+
+        // Restore saved local configs from ConfigManager (file-based storage)
+        // so they survive Electron restarts. Only migrate if localStorage is empty
+        // to avoid overwriting newer localStorage data.
+        const savedLocalConfigs = this.configManager.get('llm.localCustomConfigs');
+        if (savedLocalConfigs && Object.keys(savedLocalConfigs).length > 0) {
+          const existingLocalConfigs = this.getLocalSavedConfigs();
+          if (Object.keys(existingLocalConfigs).length === 0) {
+            console.log('Restoring localCustomConfigs from ConfigManager:', Object.keys(savedLocalConfigs));
+            this.persistLocalSavedConfigs(savedLocalConfigs);
+          } else {
+            console.log('localCustomConfigs already in localStorage, skipping ConfigManager restore');
+          }
+        }
       } else {
         console.log('No ConfigManager available, using localStorage fallback');
         // Fallback to localStorage
@@ -1165,10 +1179,19 @@ class LLMConfigManager {
       // Set as enabled if it has required fields
       provider.enabled = !!(provider.apiKey || providerName === 'local') && provider.model;
 
+      // Sync all providers' form values to in-memory state before persisting.
+      // This prevents saveProviderInfo(providerA) from overwriting providerB's
+      // unsaved form changes with stale in-memory values.
+      this.syncAllProvidersFromForm();
+
       // Save to ConfigManager or localStorage
       if (this.configManager) {
         await this.configManager.set('llm.providers', this.providers);
         await this.configManager.set('llm.modelTypes', this.modelTypes);
+        // Also persist localCustomConfigs to ConfigManager so saved endpoint
+        // configurations survive across Electron restarts (file-based storage)
+        const localCustomConfigs = this.getLocalSavedConfigs();
+        await this.configManager.set('llm.localCustomConfigs', localCustomConfigs);
         await this.configManager.saveConfig();
       } else {
         localStorage.setItem(
@@ -1189,8 +1212,56 @@ class LLMConfigManager {
   }
 
   /**
-   * Toggle custom model input visibility
+   * Read all providers' form fields into this.providers so that a
+   * per-provider save does not accidentally overwrite another provider's
+   * unsaved form changes with stale in-memory values.
    */
+  syncAllProvidersFromForm() {
+    Object.keys(this.providers).forEach(providerKey => {
+      const provider = this.providers[providerKey];
+      const prefix = providerKey;
+
+      const apiKeyField = document.getElementById(`${prefix}ApiKey`);
+      if (apiKeyField) {
+        provider.apiKey = apiKeyField.value;
+      }
+
+      if (providerKey === 'local') {
+        const localModelSelect = document.getElementById('localModel');
+        if (localModelSelect) {
+          if (localModelSelect.value === 'other') {
+            provider.model = document.getElementById('localModelOther')?.value || '';
+          } else {
+            provider.model = localModelSelect.value;
+          }
+        }
+        const endpointField = document.getElementById('localEndpoint');
+        if (endpointField) provider.baseUrl = endpointField.value;
+        const streamingField = document.getElementById('localStreamingSupport');
+        if (streamingField) provider.streamingSupport = streamingField.checked;
+      } else {
+        const modelField = document.getElementById(`${prefix}Model`);
+        if (modelField) {
+          if (modelField.value === 'other') {
+            const otherModelInput = document.getElementById(`${prefix}ModelOther`);
+            provider.model = otherModelInput ? otherModelInput.value : '';
+          } else {
+            provider.model = modelField.value;
+          }
+        }
+        const baseUrlField = document.getElementById(`${prefix}BaseUrl`);
+        if (baseUrlField) {
+          provider.baseUrl = baseUrlField.value;
+        }
+      }
+
+      provider.enabled = !!(provider.apiKey || providerKey === 'local') && provider.model;
+    });
+  }
+
+  /**
+    * Toggle custom model input visibility
+    */
   toggleCustomModelInput(type) {
     const modelSelect = document.getElementById(`${type}Model`);
     const customGroup = document.getElementById(`${type}CustomModelGroup`);
@@ -1289,6 +1360,10 @@ class LLMConfigManager {
         // Use ConfigManager if available (now with async support)
         await this.configManager.set('llm.providers', this.providers);
         await this.configManager.set('llm.modelTypes', this.modelTypes);
+        // Also persist localCustomConfigs so saved endpoint configurations
+        // survive across Electron restarts (file-based storage)
+        const localCustomConfigs = this.getLocalSavedConfigs();
+        await this.configManager.set('llm.localCustomConfigs', localCustomConfigs);
         await this.configManager.saveConfig();
         console.log('Configuration saved via ConfigManager');
       } else {
@@ -3280,6 +3355,17 @@ Current context summary:
     const listSelect = document.getElementById('localSavedConfigsList');
     if (listSelect) listSelect.value = name;
 
+    // Also update the active local provider so this.providers.local
+    // stays in sync with what the user just saved to the named config.
+    this.providers.local.model = config.model;
+    this.providers.local.baseUrl = config.baseUrl || this.providers.local.baseUrl;
+    this.providers.local.apiKey = config.apiKey ?? this.providers.local.apiKey;
+    this.providers.local.streamingSupport = config.streamingSupport ?? this.providers.local.streamingSupport;
+    this.providers.local.enabled = !!this.providers.local.model;
+
+    // Persist active provider and saved configs to ConfigManager
+    this.persistLocalConfigToConfigManager();
+
     this.showNotification(`Configuration "${name}" saved`, 'success');
   }
 
@@ -3367,6 +3453,35 @@ Current context summary:
     this.persistLocalSavedConfigs(configs);
     this.refreshLocalSavedConfigs();
 
+    // Sync deletion to ConfigManager
+    this.persistLocalConfigToConfigManager();
+
     this.showNotification(`Configuration "${configName}" deleted`, 'success');
+  }
+
+  /**
+   * Persist the active local provider and saved local configs to ConfigManager
+   * so they survive across Electron restarts (file-based storage).
+   * Falls back to localStorage when ConfigManager is unavailable.
+   */
+  async persistLocalConfigToConfigManager() {
+    try {
+      const localCustomConfigs = this.getLocalSavedConfigs();
+      if (this.configManager) {
+        await this.configManager.set('llm.providers', this.providers);
+        await this.configManager.set('llm.localCustomConfigs', localCustomConfigs);
+        await this.configManager.saveConfig();
+      } else {
+        localStorage.setItem(
+          'llmConfiguration',
+          JSON.stringify({
+            providers: this.providers,
+            modelTypes: this.modelTypes,
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error persisting local config to ConfigManager:', error);
+    }
   }
 }
