@@ -260,7 +260,7 @@ class GelRenderer {
     }
 
     this._drawLane(currentX, laneWidth, result.bands, false, result.fragmentSizes, scheme);
-    this._drawLaneLabel(currentX, laneWidth, result.label || 'Digest', spacing);
+    this._drawLaneLabel(currentX, laneWidth, result.laneLabel || 'Digest', spacing);
 
     this._drawGelBorder();
     this._drawSizeScale(result);

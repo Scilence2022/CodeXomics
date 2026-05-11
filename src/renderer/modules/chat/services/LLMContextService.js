@@ -180,7 +180,7 @@ class LLMContextService {
       case 'simulate_gel_electrophoresis':
         const gelHeader = `Gel Electrophoresis Simulation (${result.gelPercentage}% agarose):\n`;
         const gelStats =
-          `• Enzymes: ${result.enzymes.join(', ') || 'N/A'}\n` +
+          `• Lane: ${result.laneLabel || 'Digest'}\n` +
           `• Total fragments: ${result.totalFragments}\n` +
           `• Ladder: ${result.ladderType}\n` +
           `• Color scheme: ${result.bandColorScheme || 'ethidium_bromide'}\n` +

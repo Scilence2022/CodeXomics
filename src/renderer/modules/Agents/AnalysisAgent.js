@@ -778,15 +778,6 @@ class AnalysisAgent extends AgentBase {
     try {
       const chatManager = this.multiAgentSystem.chatManager;
       if (chatManager && typeof chatManager.executeToolByName === 'function') {
-        if (!parameters.fragments && parameters.enzymes) {
-          const digestResult = await chatManager.executeToolByName('virtual_digest', {
-            enzymes: parameters.enzymes,
-            chromosome: parameters.chromosome,
-          });
-          if (digestResult && digestResult.fragmentDetails) {
-            parameters.fragments = digestResult.fragmentDetails;
-          }
-        }
         return await chatManager.executeToolByName('simulate_gel_electrophoresis', parameters);
       }
       throw new Error('ChatManager not available for gel electrophoresis simulation');

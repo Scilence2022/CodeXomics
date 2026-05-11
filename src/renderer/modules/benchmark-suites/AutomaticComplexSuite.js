@@ -514,11 +514,13 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Simulate agarose gel electrophoresis for EcoRI and HindIII digest fragments on the current genome.',
+        instruction: 'Run virtual_digest with EcoRI and HindIII, then simulate agarose gel electrophoresis to visualize the digest fragments on a 1% gel with 1kb ladder.',
         expectedResult: {
           tool_name: 'simulate_gel_electrophoresis',
           parameters: {
-            enzymes: ['EcoRI', 'HindIII'],
+            fragments: '<any>',
+            gelPercentage: 1.0,
+            ladderType: '1kb',
           },
         },
         maxScore: 5,
@@ -529,16 +531,16 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       {
         id: 'gel_auto_02',
-        name: 'Custom Gel Electrophoresis',
+        name: 'Custom Gel with Marker and Stain',
         type: 'function_call',
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Run a 1.5% agarose gel electrophoresis for BamHI digest with 100bp DNA ladder and SYBR Safe staining.',
+        instruction: 'Perform a BamHI digest, then run a 1.5% agarose gel electrophoresis with 100bp DNA ladder and SYBR Safe staining to visualize fragments.',
         expectedResult: {
           tool_name: 'simulate_gel_electrophoresis',
           parameters: {
-            enzymes: ['BamHI'],
+            fragments: '<any>',
             gelPercentage: 1.5,
             ladderType: '100bp',
             bandColorScheme: 'sybr_safe',
@@ -552,16 +554,16 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       {
         id: 'gel_auto_03',
-        name: 'Gel with Ethidium Bromide Stain',
+        name: 'Gel with Lambda Ladder and EtBr Stain',
         type: 'function_call',
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Run gel electrophoresis simulation with NotI and SalI digest, using 0.8% agarose gel, lambda HindIII ladder, and ethidium bromide stain color.',
+        instruction: 'Digest with NotI and SalI, then run gel electrophoresis on a 0.8% agarose gel with lambda HindIII ladder and ethidium bromide stain.',
         expectedResult: {
           tool_name: 'simulate_gel_electrophoresis',
           parameters: {
-            enzymes: ['NotI', 'SalI'],
+            fragments: '<any>',
             gelPercentage: 0.8,
             ladderType: 'lambda_hindiii',
             bandColorScheme: 'ethidium_bromide',
@@ -584,8 +586,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_sequence: ['virtual_digest', 'simulate_gel_electrophoresis'],
           parameters: [
-            {enzymes: ['EcoRI', 'HindIII']},
-            {enzymes: ['EcoRI', 'HindIII'], gelPercentage: 1.0},
+            { enzymes: ['EcoRI', 'HindIII'] },
+            { fragments: '<any>', gelPercentage: 1.0 },
           ],
         },
         maxScore: 15,
@@ -605,9 +607,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_sequence: ['find_restriction_sites', 'virtual_digest', 'simulate_gel_electrophoresis'],
           parameters: [
-            {enzyme: 'EcoRI'},
-            {enzymes: ['EcoRI', 'HindIII']},
-            {enzymes: ['EcoRI', 'HindIII'], bandColorScheme: 'methylene_blue'},
+            { enzyme: 'EcoRI' },
+            { enzymes: ['EcoRI', 'HindIII'] },
+            { fragments: '<any>', bandColorScheme: 'methylene_blue' },
           ],
         },
         maxScore: 20,
@@ -627,8 +629,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_sequence: ['virtual_digest', 'simulate_gel_electrophoresis'],
           parameters: [
-            {enzymes: ['EcoRI', 'BamHI']},
-            {enzymes: ['EcoRI', 'BamHI'], gelPercentage: 1.2, bandColorScheme: 'gel_red'},
+            { enzymes: ['EcoRI', 'BamHI'] },
+            { fragments: '<any>', gelPercentage: 1.2, bandColorScheme: 'gel_red' },
           ],
         },
         maxScore: 15,

@@ -1,5 +1,5 @@
 name: 'simulate_gel_electrophoresis'
-description: 'Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel based on fragment sizes from a virtual_digest result. Supports configurable gel percentage, DNA ladders, and realistic band migration physics.'
+description: 'Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel. This is a visualization-only tool — it does NOT perform digestion. Call virtual_digest first and pass its fragmentDetails to this tool.'
 parameters:
   type: 'object'
   properties:
@@ -7,12 +7,7 @@ parameters:
       type: 'array'
       items:
         type: 'object'
-      description: 'Fragment details from virtual_digest result (array of objects with length property, or array of integers). If omitted, runs virtual_digest first with the provided enzymes.'
-    enzymes:
-      type: 'array'
-      items:
-        type: 'string'
-      description: 'Restriction enzyme names to digest with (used when fragments not provided, or for labeling).'
+      description: 'Fragment details from virtual_digest result (array of objects with length property, or array of integers). REQUIRED. Obtain from virtual_digest output: result.fragmentDetails'
     gelPercentage:
       type: 'number'
       description: 'Agarose gel percentage (0.5-3.0). Lower % for large fragments, higher % for small fragments. Default 1.0.'
@@ -20,11 +15,11 @@ parameters:
     ladderType:
       type: 'string'
       enum: ['1kb', '100bp', '2log', 'lambda_hindiii', 'lambda_ecori']
-      description: 'DNA ladder type for size reference. Default 1kb.'
+      description: 'DNA ladder/marker type for size reference. Default 1kb.'
       default: '1kb'
-    chromosome:
+    laneLabel:
       type: 'string'
-      description: 'Chromosome name (defaults to current chromosome).'
+      description: 'Label for the sample lane (e.g. "EcoRI + HindIII digest").'
     voltage:
       type: 'number'
       description: 'Electrophoresis voltage in volts (default 100).'
@@ -35,18 +30,15 @@ parameters:
       default: 45
     showLadder:
       type: 'boolean'
-      description: 'Whether to show the DNA size ladder lane (default true).'
+      description: 'Whether to show the DNA size ladder/marker lane (default true).'
       default: true
-    label:
-      type: 'string'
-      description: 'Custom label for the digest lane.'
     bandColorScheme:
       type: 'string'
       enum: ['ethidium_bromide', 'gel_red', 'sybr_safe', 'methylene_blue', 'uv_default']
       description: 'Band staining color scheme. ethidium_bromide=orange/red (default), gel_red=red, sybr_safe=green, methylene_blue=blue, uv_default=violet.'
       default: 'ethidium_bromide'
   required:
-    - 'enzymes'
+    - 'fragments'
 keywords:
   - 'gel electrophoresis'
   - 'gel image'
@@ -59,10 +51,9 @@ keywords:
   - 'band pattern'
   - 'electrophoresis'
 sample_usages:
-  - 'Run gel electrophoresis with EcoRI and HindIII digest fragments.'
-  - 'Simulate a 1.5% agarose gel for BamHI digest.'
-  - 'Show gel image for the virtual digest with EcoRI, using 100bp ladder.'
-  - 'Run a 0.8% gel for large fragments from NotI digest.'
+  - 'Visualize digest fragments on a 1% agarose gel with 1kb ladder.'
+  - 'Simulate a 1.5% agarose gel with 100bp ladder and SYBR Safe stain.'
+  - 'Run a 0.8% gel for large fragments with lambda HindIII ladder.'
 relationships:
   enhances:
     - 'virtual_digest'

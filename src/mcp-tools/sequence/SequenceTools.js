@@ -152,31 +152,25 @@ class SequenceTools {
 
       simulate_gel_electrophoresis: {
         name: 'simulate_gel_electrophoresis',
-        description: 'Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel based on fragment sizes from a virtual_digest result.',
+        description: 'Simulate agarose gel electrophoresis to visualize restriction digest fragments. Visualization-only tool — call virtual_digest first and pass its fragmentDetails.',
         parameters: {
           type: 'object',
           properties: {
             fragments: {
               type: 'array',
               items: { type: 'object' },
-              description: 'Fragment details from virtual_digest result (array of {length, start, end, index})',
-            },
-            enzymes: {
-              type: 'array',
-              items: { type: 'string' },
-              description: 'Restriction enzyme names used in the digest',
+              description: 'Fragment details from virtual_digest result (array of {length, start, end, index}). REQUIRED.',
             },
             gelPercentage: { type: 'number', description: 'Agarose gel percentage (0.5-3.0, default 1.0)', default: 1.0 },
-            ladderType: { type: 'string', description: 'DNA ladder type (1kb, 100bp, 2log, lambda_hindiii, lambda_ecori)', default: '1kb' },
-            chromosome: { type: 'string', description: 'Chromosome name' },
+            ladderType: { type: 'string', description: 'DNA ladder/marker type (1kb, 100bp, 2log, lambda_hindiii, lambda_ecori)', default: '1kb' },
+            laneLabel: { type: 'string', description: 'Label for the sample lane' },
             voltage: { type: 'number', description: 'Electrophoresis voltage in volts', default: 100 },
             runTime: { type: 'number', description: 'Run time in minutes', default: 45 },
             showLadder: { type: 'boolean', description: 'Show DNA ladder lane', default: true },
-            label: { type: 'string', description: 'Custom label for digest lane' },
             bandColorScheme: { type: 'string', description: 'Band color scheme (ethidium_bromide, gel_red, sybr_safe, methylene_blue, uv_default)', default: 'ethidium_bromide' },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
-          required: ['enzymes'],
+          required: ['fragments'],
         },
       },
     };
