@@ -107,6 +107,7 @@ class AnalysisAgent extends AgentBase {
     this.toolMapping.set('find_restriction_sites', this.findRestrictionSites.bind(this));
     this.toolMapping.set('virtual_digest', this.virtualDigest.bind(this));
     this.toolMapping.set('list_restriction_enzymes', this.listRestrictionEnzymes.bind(this));
+    this.toolMapping.set('simulate_gel_electrophoresis', this.simulateGelElectrophoresis.bind(this));
 
     // 序列模式搜索
     this.toolMapping.set('search_pattern', this.searchPattern.bind(this));
@@ -765,6 +766,30 @@ class AnalysisAgent extends AgentBase {
         return await chatManager.executeToolByName('list_restriction_enzymes', parameters);
       }
       throw new Error('ChatManager not available for enzyme listing');
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  async simulateGelElectrophoresis(parameters, strategy) {
+    try {
+      const chatManager = this.multiAgentSystem.chatManager;
+      if (chatManager && typeof chatManager.executeToolByName === 'function') {
+        if (!parameters.fragments && parameters.enzymes) {
+          const digestResult = await chatManager.executeToolByName('virtual_digest', {
+            enzymes: parameters.enzymes,
+            chromosome: parameters.chromosome,
+          });
+          if (digestResult && digestResult.fragmentDetails) {
+            parameters.fragments = digestResult.fragmentDetails;
+          }
+        }
+        return await chatManager.executeToolByName('simulate_gel_electrophoresis', parameters);
+      }
+      throw new Error('ChatManager not available for gel electrophoresis simulation');
     } catch (error) {
       return {
         success: false,

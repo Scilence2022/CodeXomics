@@ -113,6 +113,7 @@ class FunctionCallsOrganizer {
           'find_restriction_sites',
           'virtual_digest',
           'list_restriction_enzymes',
+          'simulate_gel_electrophoresis',
           'predict_promoter',
           'predict_rbs',
           'predict_terminator',

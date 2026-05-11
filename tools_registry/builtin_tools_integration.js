@@ -841,6 +841,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('simulate_gel_electrophoresis', {
+      method: 'simulateGelElectrophoresis',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Multi-window Tools
     this.builtInToolsMap.set('list_genome_windows', {
       method: 'listGenomeWindows',
@@ -1936,6 +1943,13 @@ class BuiltInToolsIntegration {
           confidence: 0.8,
           reason: 'Restriction site mapping also relevant to digest',
         });
+        if (/\b(gel|electrophoresis|show|visualize)\b/i.test(query)) {
+          relevantTools.push({
+            name: 'simulate_gel_electrophoresis',
+            confidence: 0.9,
+            reason: 'Gel visualization requested alongside digest',
+          });
+        }
       } else {
         relevantTools.push({
           name: 'find_restriction_sites',
@@ -1956,6 +1970,20 @@ class BuiltInToolsIntegration {
         name: 'search_pattern',
         confidence: 0.85,
         reason: 'Sequence pattern or motif search keywords detected',
+      });
+    }
+
+    if (/\b(gel|electrophoresis|agarose)\b/i.test(query) ||
+        /\b(run|simulate|show|visualize)\s+.*?\b(gel|electrophoresis)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'simulate_gel_electrophoresis',
+        confidence: 0.95,
+        reason: 'Gel electrophoresis simulation keywords detected',
+      });
+      relevantTools.push({
+        name: 'virtual_digest',
+        confidence: 0.8,
+        reason: 'Virtual digest is prerequisite for gel simulation',
       });
     }
 

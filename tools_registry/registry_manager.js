@@ -723,7 +723,7 @@ class ToolsRegistryManager {
       ],
       search: ['search', 'find', 'query', 'lookup', 'annotation', 'function', 'features'],
       analysis: ['analyze', 'calculate', 'compute', 'measure'],
-      sequence: ['sequence', 'dna', 'rna', 'protein', 'restriction', 'enzyme', 'digest', 'cleavage', 'recognition site'],
+      sequence: ['sequence', 'dna', 'rna', 'protein', 'restriction', 'enzyme', 'digest', 'cleavage', 'recognition site', 'gel', 'electrophoresis', 'agarose'],
       structure: ['structure', '3d', 'pdb', 'alphafold'],
       database: ['database', 'uniprot', 'interpro'],
       editing: ['edit', 'modify', 'change', 'replace', 'copy', 'cut', 'paste', 'insert', 'delete', 'clipboard'],

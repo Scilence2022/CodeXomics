@@ -813,7 +813,7 @@ class MultiAgentSystem {
         'calculate_entropy', 'calculate_melting_temp', 'calculate_molecular_weight',
         'predict_promoter', 'predict_rbs', 'predict_terminator',
         'analyze_region', 'compare_regions', 'find_similar_sequences',
-        'find_restriction_sites', 'virtual_digest', 'list_restriction_enzymes',
+        'find_restriction_sites', 'virtual_digest', 'list_restriction_enzymes', 'simulate_gel_electrophoresis',
         'search_pattern', 'search_sequence_motif',
         'calculate_primer_properties', 'design_primers', 'find_primer_binding_sites', 'add_primer_annotation',
         'get_coding_sequence', 'get_upstream_region', 'get_downstream_region',

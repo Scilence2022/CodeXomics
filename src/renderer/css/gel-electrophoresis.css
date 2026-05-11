@@ -1,0 +1,183 @@
+.gel-results-content {
+  max-width: 900px;
+  max-height: 90vh;
+  width: 95%;
+}
+
+.gel-results-body {
+  padding: 12px;
+  max-height: calc(90vh - 80px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.gel-visualization-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gel-info-panel {
+  background: var(--bg-secondary, #1e1e3a);
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gel-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.gel-info-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #e0e0f0);
+}
+
+.gel-info-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary, #8888aa);
+}
+
+.gel-info-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.gel-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gel-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #8888aa);
+}
+
+.gel-stat-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #e0e0f0);
+}
+
+.gel-canvas {
+  display: block;
+  margin: 0 auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.gel-controls-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.gel-export-btn {
+  flex-shrink: 0;
+}
+
+.gel-size-table {
+  background: var(--bg-secondary, #1e1e3a);
+  border-radius: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex: 1;
+  min-width: 200px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.gel-size-table-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #8888aa);
+  margin-bottom: 6px;
+}
+
+.gel-size-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.gel-size-table thead th {
+  text-align: left;
+  padding: 3px 6px;
+  color: var(--text-secondary, #8888aa);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+}
+
+.gel-size-table tbody td {
+  padding: 2px 6px;
+  color: var(--text-primary, #e0e0f0);
+}
+
+.gel-size-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.gel-results-summary {
+  padding: 12px 16px;
+  background: var(--bg-secondary, #1e1e3a);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gel-results-summary h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: var(--text-primary, #e0e0f0);
+}
+
+.gel-results-summary p {
+  margin: 4px 0;
+  font-size: 12px;
+  color: var(--text-secondary, #aaaacc);
+}
+
+.gel-results-table {
+  margin-top: 12px;
+}
+
+.gel-results-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.gel-results-table thead th {
+  text-align: left;
+  padding: 4px 8px;
+  color: var(--text-secondary, #8888aa);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gel-results-table tbody td {
+  padding: 3px 8px;
+  color: var(--text-primary, #e0e0f0);
+}
+
+.gel-note {
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--text-secondary, #666688);
+  font-style: italic;
+}
+
+@media (prefers-color-scheme: dark) {
+  .gel-canvas {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  }
+}

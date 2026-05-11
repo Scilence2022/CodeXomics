@@ -177,6 +177,21 @@ class LLMContextService {
           : '';
         return digestHeader + digestStats + enzymeInfo + fragmentInfo;
 
+      case 'simulate_gel_electrophoresis':
+        const gelHeader = `Gel Electrophoresis Simulation (${result.gelPercentage}% agarose):\n`;
+        const gelStats =
+          `• Enzymes: ${result.enzymes.join(', ') || 'N/A'}\n` +
+          `• Total fragments: ${result.totalFragments}\n` +
+          `• Ladder: ${result.ladderType}\n` +
+          `• Effective range: ${result.gelConfig.effectiveRange[0].toLocaleString()}-${result.gelConfig.effectiveRange[1].toLocaleString()} bp\n`;
+        const gelFragments = result.fragmentSizes && result.fragmentSizes.length > 0
+          ? `• Fragment sizes (sorted, largest first):\n${result.fragmentSizes
+              .slice(0, 15)
+              .map((s, i) => `  - ${i + 1}: ${s.toLocaleString()} bp`)
+              .join('\n')}${result.fragmentSizes.length > 15 ? `\n  ... and ${result.fragmentSizes.length - 15} more` : ''}`
+          : '';
+        return gelHeader + gelStats + gelFragments;
+
       case 'sequence_statistics':
         let statsOutput = `Sequence Statistics for ${result.region}:\n`;
         if (result.statistics.composition) {

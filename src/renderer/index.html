@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="css/llm-config.css">
     <link rel="stylesheet" href="css/advanced-search.css">
     <link rel="stylesheet" href="css/digest.css">
+    <link rel="stylesheet" href="css/gel-electrophoresis.css">
     <link rel="stylesheet" href="css/themes/professional.css">
     <link rel="stylesheet" href="css/themes/minimal.css">
     <link rel="stylesheet" href="css/themes/pastel.css">
@@ -2959,6 +2960,38 @@ Supported formats:
         </div>
     </div>
 
+    <!-- Gel Electrophoresis Modal -->
+    <div id="gelElectrophoresisModal" class="modal">
+        <div class="modal-content gel-results-content resizable">
+            <div class="modal-header">
+                <h3><i class="fas fa-grip-lines-vertical"></i> Gel Electrophoresis</h3>
+                <div class="results-controls modal-controls">
+                    <button class="modal-collapse" type="button" title="Toggle collapse">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <button id="exportGelBtn" class="btn btn-secondary">
+                        <i class="fas fa-download"></i>
+                        Export PNG
+                    </button>
+                    <button class="modal-close" type="button">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body gel-results-body">
+                <div id="gelResultsContainer">
+                </div>
+            </div>
+
+            <div class="resize-handle resize-handle-n"></div>
+            <div class="resize-handle resize-handle-s"></div>
+            <div class="resize-handle resize-handle-e"></div>
+            <div class="resize-handle resize-handle-w"></div>
+            <div class="resize-handle resize-handle-ne"></div>
+            <div class="resize-handle resize-handle-nw"></div>
+            <div class="resize-handle resize-handle-se"></div>
+            <div class="resize-handle resize-handle-sw"></div>
+        </div>
+    </div>
+
 
 
     <!-- Plugin Management Modal -->
@@ -4783,6 +4816,8 @@ Supported formats:
     <script src="modules/chat/services/ProteinService.js"></script>
     <script src="modules/chat/services/RestrictionEnzymeDatabase.js"></script>
     <script src="modules/chat/services/RestrictionDigestService.js"></script>
+    <script src="modules/chat/services/GelElectrophoresisService.js"></script>
+    <script src="modules/chat/services/GelRenderer.js"></script>
     <script src="modules/chat/services/ToolExecutionService.js"></script>
     <script src="modules/chat/services/IntentParserService.js"></script>
     <script src="modules/chat/services/LLMContextService.js"></script>

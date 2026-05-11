@@ -130,7 +130,8 @@ class ChatManager {
       intent: new window.IntentParserService(this.app, this),
       context: new window.LLMContextService(this.app, this),
       ui: new window.UIService(this.app, this),
-      restriction: new window.RestrictionDigestService(this.app, this)
+      restriction: new window.RestrictionDigestService(this.app, this),
+      gel: new window.GelElectrophoresisService(this.app, this)
     };
 
     // Legacy MCP connection check (kept for backward compatibility)
@@ -7161,6 +7162,7 @@ ${coreTools}
       find_restriction_sites: () => this.services.restriction.findRestrictionSites(parameters),
       virtual_digest: () => this.services.restriction.virtualDigest(parameters),
       list_restriction_enzymes: () => this.services.restriction.listEnzymes(parameters),
+      simulate_gel_electrophoresis: () => this.services.gel.simulateGelElectrophoresis(parameters),
       search_sequence_motif: () => this.searchMotif(parameters),
 
       // AlphaFold and protein structure tools

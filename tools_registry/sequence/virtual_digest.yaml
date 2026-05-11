@@ -41,3 +41,4 @@ relationships:
     - 'find_restriction_sites'
   follow_up:
     - 'list_restriction_enzymes'
+    - 'simulate_gel_electrophoresis'

@@ -51,6 +51,7 @@ const TOOL_NAMES = {
     FIND_RESTRICTION_SITES: 'find_restriction_sites',
     VIRTUAL_DIGEST: 'virtual_digest',
     LIST_RESTRICTION_ENZYMES: 'list_restriction_enzymes',
+    SIMULATE_GEL_ELECTROPHORESIS: 'simulate_gel_electrophoresis',
     SEQUENCE_STATISTICS: 'sequence_statistics',
     CODON_USAGE_ANALYSIS: 'codon_usage_analysis',
     GENOME_CODON_USAGE_ANALYSIS: 'genome_codon_usage_analysis',
