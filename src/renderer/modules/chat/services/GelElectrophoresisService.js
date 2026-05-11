@@ -1,7 +1,10 @@
 // @ts-check
 /**
  * GelElectrophoresisService - Simulates agarose gel electrophoresis
- * Works with virtual_digest results to visualize restriction fragment patterns.
+ * Visualizes restriction fragment patterns from virtual_digest results.
+ *
+ * This tool is a pure visualization tool — it does NOT perform digestion.
+ * Call virtual_digest first, then pass its fragmentDetails to this tool.
  *
  * Physics model:
  * - Fragment migration distance follows: d = a - b * log10(MW)
@@ -19,57 +22,38 @@ class GelElectrophoresisService {
   async simulateGelElectrophoresis(params) {
     const {
       fragments,
-      enzymes,
       gelPercentage = 1.0,
       ladderType = '1kb',
-      chromosome,
+      laneLabel = 'Digest',
       voltage = 100,
       runTime = 45,
       showLadder = true,
-      label = null,
       bandColorScheme = 'ethidium_bromide',
     } = params;
 
-    let resolvedFragments = fragments;
-
-    if (!resolvedFragments || !Array.isArray(resolvedFragments) || resolvedFragments.length === 0) {
-      if (enzymes && Array.isArray(enzymes) && enzymes.length > 0) {
-        const digestResult = await this.chatManager.executeToolByName('virtual_digest', {
-          enzymes,
-          chromosome,
-          start: params.start,
-          end: params.end,
-        });
-        if (digestResult && digestResult.fragmentDetails) {
-          resolvedFragments = digestResult.fragmentDetails;
-        } else {
-          throw new Error('virtual_digest did not return fragment data. Ensure a genome is loaded.');
-        }
-      } else {
-        throw new Error('No fragment data or enzymes provided. Pass fragments from virtual_digest, or specify enzymes to auto-digest.');
-      }
+    if (!fragments || !Array.isArray(fragments) || fragments.length === 0) {
+      throw new Error(
+        'No fragment data provided. Run virtual_digest first and pass its fragmentDetails to this tool. ' +
+          'Example: simulate_gel_electrophoresis(fragments=<virtual_digest_result>.fragmentDetails)'
+      );
     }
 
-    const fragmentSizes = resolvedFragments.map(f => f.length || f);
+    const fragmentSizes = fragments.map(f => f.length || f);
 
     const gelConfig = this._getGelConfig(gelPercentage);
     const ladderData = this._getLadderData(ladderType);
 
     const bands = this._calculateBands(fragmentSizes, gelConfig);
 
-    const ladderBands = showLadder ? this._calculateBands(
-      ladderData.sizes, gelConfig
-    ) : [];
+    const ladderBands = showLadder ? this._calculateBands(ladderData.sizes, gelConfig) : [];
 
     const result = {
-      enzymes: enzymes || [],
-      chromosome: chromosome || this.app.currentChromosome || 'unknown',
+      laneLabel,
       gelPercentage,
       ladderType,
       voltage,
       runTime,
       showLadder,
-      label: label || (enzymes ? enzymes.join(' + ') : 'Digest'),
       bandColorScheme,
       gelConfig: {
         wellToBottomDistance: gelConfig.wellToBottom,
@@ -137,11 +121,11 @@ class GelElectrophoresisService {
         name: '2-Log DNA Ladder',
         sizes: [10000, 8000, 6000, 5000, 4000, 3000, 2500, 2000, 1500, 1000, 750, 500, 250, 100],
       },
-      'lambda_hindiii': {
+      lambda_hindiii: {
         name: 'Lambda HindIII Ladder',
         sizes: [23130, 9416, 6557, 4361, 2322, 2027, 564, 125],
       },
-      'lambda_ecori': {
+      lambda_ecori: {
         name: 'Lambda EcoRI Ladder',
         sizes: [21226, 7421, 5804, 5643, 4878, 3530, 0],
       },
@@ -198,9 +182,7 @@ class GelElectrophoresisService {
   _showGelVisualization(result) {
     this._ensureDraggableResizable();
 
-    const GelRendererClass = (typeof window !== 'undefined' && window.GelRenderer)
-      ? window.GelRenderer
-      : null;
+    const GelRendererClass = typeof window !== 'undefined' && window.GelRenderer ? window.GelRenderer : null;
 
     if (GelRendererClass) {
       const renderer = new GelRendererClass();
@@ -234,14 +216,14 @@ class GelElectrophoresisService {
 
     const resetBtn = modal.querySelector('.reset-position-btn');
     if (resetBtn && window.modalDragManager) {
-      resetBtn.addEventListener('click', (e) => {
+      resetBtn.addEventListener('click', e => {
         e.stopPropagation();
         window.modalDragManager.resetPosition(selector);
       });
     }
 
     modal.querySelectorAll('.modal-close').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
         modal.classList.remove('show');
       });
@@ -266,16 +248,18 @@ class GelElectrophoresisService {
   }
 
   _renderFallbackHTML(container, result) {
-    const fragmentRows = result.fragmentSizes.map((size, i) => {
-      const band = result.bands[i];
-      const pos = band ? (band.normalizedPosition * 100).toFixed(1) : '?';
-      return `<tr><td>${i + 1}</td><td>${size.toLocaleString()} bp</td><td>${pos}%</td></tr>`;
-    }).join('');
+    const fragmentRows = result.fragmentSizes
+      .map((size, i) => {
+        const band = result.bands[i];
+        const pos = band ? (band.normalizedPosition * 100).toFixed(1) : '?';
+        return `<tr><td>${i + 1}</td><td>${size.toLocaleString()} bp</td><td>${pos}%</td></tr>`;
+      })
+      .join('');
 
     container.innerHTML = `
       <div class="gel-results-summary">
         <h4>Gel Electrophoresis Simulation</h4>
-        <p><strong>Enzymes:</strong> ${result.enzymes.join(', ') || 'N/A'}</p>
+        <p><strong>Lane:</strong> ${result.laneLabel || 'Digest'}</p>
         <p><strong>Gel:</strong> ${result.gelPercentage}% agarose</p>
         <p><strong>Ladder:</strong> ${result.ladderType}</p>
         <p><strong>Fragments:</strong> ${result.totalFragments}</p>

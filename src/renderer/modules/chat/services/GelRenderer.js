@@ -146,10 +146,10 @@ class GelRenderer {
     panel.className = 'gel-info-panel';
 
     const schemeOptions = Object.entries(this.colorSchemes)
-        .map(
-            ([key, val]) => `<option value="${key}"${key === this._currentScheme ? ' selected' : ''}>${val.name}</option>`,
-        )
-        .join('');
+      .map(
+        ([key, val]) => `<option value="${key}"${key === this._currentScheme ? ' selected' : ''}>${val.name}</option>`
+      )
+      .join('');
 
     panel.innerHTML = `
       <div class="gel-info-header">
@@ -158,8 +158,8 @@ class GelRenderer {
       </div>
       <div class="gel-info-stats">
         <div class="gel-stat">
-          <span class="gel-stat-label">Enzymes</span>
-          <span class="gel-stat-value">${result.enzymes.join(', ') || 'N/A'}</span>
+          <span class="gel-stat-label">Lane</span>
+          <span class="gel-stat-value">${result.laneLabel || 'Digest'}</span>
         </div>
         <div class="gel-stat">
           <span class="gel-stat-label">Fragments</span>
@@ -169,10 +169,6 @@ class GelRenderer {
           <span class="gel-stat-label">Range</span>
           <span class="gel-stat-value">${result.gelConfig.effectiveRange[0].toLocaleString()}-${result.gelConfig.effectiveRange[1].toLocaleString()} bp</span>
         </div>
-        <div class="gel-stat">
-          <span class="gel-stat-label">Chromosome</span>
-          <span class="gel-stat-value">${result.chromosome}</span>
-        </div>
       </div>
       <div class="gel-color-scheme-row">
         <label for="gelColorSchemeSelect" class="gel-color-scheme-label">Stain / Color:</label>
@@ -181,7 +177,7 @@ class GelRenderer {
     `;
 
     const select = panel.querySelector('#gelColorSchemeSelect');
-    select.addEventListener('change', (e) => {
+    select.addEventListener('change', e => {
       this._currentScheme = e.target.value;
       if (this._currentResult) {
         this._redraw();
@@ -213,12 +209,12 @@ class GelRenderer {
     const table = document.createElement('div');
     table.className = 'gel-size-table';
 
-    const sortedFragments = result.fragmentSizes.map((size, i) => ({index: i + 1, size}));
+    const sortedFragments = result.fragmentSizes.map((size, i) => ({ index: i + 1, size }));
     sortedFragments.sort((a, b) => b.size - a.size);
 
     const rows = sortedFragments
-        .map((f) => `<tr><td>${f.index}</td><td>${f.size.toLocaleString()} bp</td></tr>`)
-        .join('');
+      .map(f => `<tr><td>${f.index}</td><td>${f.size.toLocaleString()} bp</td></tr>`)
+      .join('');
 
     table.innerHTML = `
       <div class="gel-size-table-title">Fragment Sizes</div>
@@ -235,8 +231,8 @@ class GelRenderer {
   }
 
   _drawGel(result) {
-    const {ctx, layout} = this;
-    const {gelLeft, gelRight} = layout;
+    const { ctx, layout } = this;
+    const { gelLeft, gelRight } = layout;
     const scheme = this._getScheme();
 
     // Fill canvas with dark background
@@ -271,16 +267,16 @@ class GelRenderer {
   }
 
   _drawGelBackground() {
-    const {ctx, layout} = this;
-    const {gelLeft, gelRight, gelTop, gelBottom} = layout;
+    const { ctx, layout } = this;
+    const { gelLeft, gelRight, gelTop, gelBottom } = layout;
 
     ctx.fillStyle = layout.gelBgColor;
     ctx.fillRect(gelLeft, gelTop, gelRight - gelLeft, gelBottom - gelTop);
   }
 
   _drawGelGradient() {
-    const {ctx, layout} = this;
-    const {gelLeft, gelRight, gelTop, gelBottom} = layout;
+    const { ctx, layout } = this;
+    const { gelLeft, gelRight, gelTop, gelBottom } = layout;
 
     const gradient = ctx.createLinearGradient(gelLeft, gelTop, gelLeft, gelBottom);
     gradient.addColorStop(0, 'rgba(10, 10, 50, 0.0)');
@@ -294,8 +290,8 @@ class GelRenderer {
   }
 
   _drawGelBorder() {
-    const {ctx, layout} = this;
-    const {gelLeft, gelRight, gelTop, gelBottom} = layout;
+    const { ctx, layout } = this;
+    const { gelLeft, gelRight, gelTop, gelBottom } = layout;
 
     ctx.strokeStyle = layout.gelBorderColor;
     ctx.lineWidth = 1.5;
@@ -303,8 +299,8 @@ class GelRenderer {
   }
 
   _drawLane(x, width, bands, isLadder, sizes, scheme) {
-    const {ctx, layout} = this;
-    const {gelTop, gelBottom, wellDepth} = layout;
+    const { ctx, layout } = this;
+    const { gelTop, gelBottom, wellDepth } = layout;
 
     ctx.fillStyle = layout.wellColor;
     ctx.fillRect(x + 1, gelTop, width - 2, wellDepth);
@@ -326,9 +322,9 @@ class GelRenderer {
       if (band.isInWell || band.size <= 0) continue;
 
       const normalizedPos =
-        band.normalizedPosition !== undefined ?
-          band.normalizedPosition :
-          band.migrationDistance / layout.wellToBottomDistance;
+        band.normalizedPosition !== undefined
+          ? band.normalizedPosition
+          : band.migrationDistance / layout.wellToBottomDistance;
 
       const yPos = gelTop + wellDepth + normalizedPos * gelHeight;
 
@@ -354,7 +350,7 @@ class GelRenderer {
   }
 
   _drawBand(cx, cy, halfWidth, height, color, intensity, scheme) {
-    const {ctx} = this;
+    const { ctx } = this;
     const [eR, eG, eB] = scheme.bandGradientEdge;
     const [mR, mG, mB] = scheme.bandGradientMid;
 
@@ -398,7 +394,7 @@ class GelRenderer {
   }
 
   _drawSmearBand(cx, cy, halfWidth, height, color, intensity, scheme) {
-    const {ctx} = this;
+    const { ctx } = this;
     const [sR, sG, sB] = scheme.smearRGB;
 
     const gradient = ctx.createLinearGradient(cx, cy - height / 2, cx, cy + height / 2);
@@ -413,8 +409,8 @@ class GelRenderer {
   }
 
   _drawLadderSizeLabels(laneX, laneWidth, bands, sizes, gelHeight) {
-    const {ctx, layout} = this;
-    const {gelTop, wellDepth} = layout;
+    const { ctx, layout } = this;
+    const { gelTop, wellDepth } = layout;
 
     ctx.save();
     ctx.font = 'bold 11px monospace';
@@ -445,7 +441,7 @@ class GelRenderer {
   }
 
   _drawLaneLabel(x, width, label, spacing = 20) {
-    const {ctx, layout} = this;
+    const { ctx, layout } = this;
 
     ctx.save();
     ctx.font = 'bold 12px sans-serif';
@@ -469,8 +465,8 @@ class GelRenderer {
   }
 
   _drawSizeScale(result) {
-    const {ctx, layout} = this;
-    const {gelLeft, gelRight} = layout;
+    const { ctx, layout } = this;
+    const { gelLeft, gelRight } = layout;
 
     if (!result.ladderBands || result.ladderBands.length === 0) return;
 
@@ -486,7 +482,7 @@ class GelRenderer {
       if (size < gelConfig.effectiveRange[0] * 0.5 || size > gelConfig.effectiveRange[1] * 2) continue;
 
       const logMW = Math.log10(size);
-      const {a, b, wellToBottom} = this._getGelParamsFromResult(result);
+      const { a, b, wellToBottom } = this._getGelParamsFromResult(result);
       const migration = a - b * logMW;
       const normalizedPos = Math.max(0, Math.min(1, migration / wellToBottom));
 
@@ -526,11 +522,11 @@ class GelRenderer {
         if (d1 !== d2) {
           const b = (d1 - d2) / (Math.log10(large) - Math.log10(small));
           const a = d1 + b * Math.log10(large);
-          return {a, b, wellToBottom: Math.max(a, 12)};
+          return { a, b, wellToBottom: Math.max(a, 12) };
         }
       }
     }
-    return {a: 9.5, b: 2.7, wellToBottom: 12};
+    return { a: 9.5, b: 2.7, wellToBottom: 12 };
   }
 
   _exportPNG() {
