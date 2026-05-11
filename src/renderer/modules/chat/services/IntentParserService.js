@@ -1,6 +1,16 @@
 // @ts-check
 /**
  * IntentParserService - Extracted from ChatManager
+ *
+ * Parses LLM text responses to extract tool call JSON objects.
+ * Handles mixed content (text + JSON), markdown code fences,
+ * and DeepSeek-style <think> tags.
+ *
+ * Parsing strategy (ordered by robustness):
+ * 1. Strip <think> tags, code fences, whitespace
+ * 2. Try direct JSON.parse on entire cleaned response
+ * 3. Brace-counting extraction of ALL balanced {...} blocks
+ * 4. Validate each candidate for tool_name + parameters
  */
 class IntentParserService {
   constructor(app, chatManager) {
@@ -8,179 +18,180 @@ class IntentParserService {
     this.chatManager = chatManager;
   }
 
+  /**
+   * Clean LLM response by stripping think tags, code fences, and whitespace.
+   * @param {string} response
+   * @returns {string}
+   */
+  _cleanResponse(response) {
+    let clean = response.trim();
+
+    // Strip DeepSeek-style <think>...</think> tags
+    // Match both complete tags and unclosed <think> (some models omit </think>)
+    const thinkRegex = /<think>[\s\S]*?<\/think>/g;
+    clean = clean.replace(thinkRegex, '').trim();
+
+    // Handle unclosed <think> tag (model returned <think> but no </think>)
+    if (clean.includes('<think>')) {
+      const thinkStart = clean.lastIndexOf('<think>');
+      const afterThink = clean.substring(thinkStart + 7).trim();
+      // If there's a </think> after this <think>, the regex above should have caught it
+      // This handles the case where </think> is missing — assume rest of response is thinking
+      // and look for content after a blank line or the JSON start
+      const jsonStart = afterThink.indexOf('{');
+      if (jsonStart !== -1) {
+        clean = afterThink.substring(jsonStart).trim();
+      } else {
+        clean = afterThink;
+      }
+    }
+
+    // Strip markdown code fences (```json ... ``` or ``` ... ```)
+    clean = clean.replace(/```json\s*/gi, '').replace(/\s*```/g, '');
+    clean = clean.replace(/```\s*/g, '').trim();
+
+    return clean;
+  }
+
+  /**
+   * Extract all balanced JSON objects from a string using brace counting.
+   * Each candidate is a substring from a '{' to its matching '}'.
+   * @param {string} text
+   * @returns {string[]} Array of JSON candidate strings
+   */
+  _extractBalancedJsonBlocks(text) {
+    const blocks = [];
+    let index = 0;
+
+    while (index < text.length) {
+      const start = text.indexOf('{', index);
+      if (start === -1) break;
+
+      let braceCount = 0;
+      let end = start;
+      let inString = false;
+      let escapeNext = false;
+
+      for (let i = start; i < text.length; i++) {
+        const ch = text[i];
+
+        if (escapeNext) {
+          escapeNext = false;
+          continue;
+        }
+
+        if (ch === '\\' && inString) {
+          escapeNext = true;
+          continue;
+        }
+
+        if (ch === '"') {
+          inString = !inString;
+          continue;
+        }
+
+        if (!inString) {
+          if (ch === '{') braceCount++;
+          if (ch === '}') braceCount--;
+          if (braceCount === 0) {
+            end = i;
+            break;
+          }
+        }
+      }
+
+      if (braceCount === 0) {
+        const candidate = text.substring(start, end + 1);
+        blocks.push(candidate);
+        index = end + 1;
+      } else {
+        index = start + 1;
+      }
+    }
+
+    return blocks;
+  }
+
+  /**
+   * Fix known malformed parameters (e.g., set_working_directory path issues).
+   * @param {object} parsed
+   * @returns {object}
+   */
+  _fixMalformedParameters(parsed) {
+    if (
+      parsed.tool_name === 'set_working_directory' &&
+      typeof parsed.parameters === 'object'
+    ) {
+      const paramKeys = Object.keys(parsed.parameters);
+      if (
+        paramKeys.length === 1 &&
+        !paramKeys.includes('directory_path') &&
+        !paramKeys.includes('use_home_directory')
+      ) {
+        const pathValue = paramKeys[0];
+        if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
+          parsed.parameters = { directory_path: pathValue };
+        }
+      }
+    }
+    return parsed;
+  }
+
+  /**
+   * Validate that a parsed object is a valid tool call.
+   * @param {any} obj
+   * @returns {boolean}
+   */
+  _isValidToolCall(obj) {
+    return (
+      obj &&
+      typeof obj === 'object' &&
+      typeof obj.tool_name === 'string' &&
+      obj.parameters !== undefined
+    );
+  }
+
   parseToolCall(response) {
-    // Early return for null/undefined responses but NOT empty strings
     if (response === null || response === undefined) {
       return null;
     }
 
-    // Handle empty strings differently - they might be valid in some contexts
-    if (response === '') {
-      // Empty string - continue with parsing logic
-    }
-
     try {
-      // Clean the response by removing any leading/trailing whitespace
-      let cleanResponse = response.trim();
+      const cleanResponse = this._cleanResponse(response);
 
-      // If response contains thinking tags, extract content after them
-      if (cleanResponse.includes('</think>')) {
-        const thinkEndIndex = cleanResponse.lastIndexOf('</think>');
-        cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
+      if (!cleanResponse) {
+        return null;
       }
 
-      // Remove any potential code block markers
-      cleanResponse = cleanResponse.replace(/```json\s*|\s*```/gi, '').trim();
-      cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '').trim();
-
-      // If the response starts with non-JSON text (like "✅"), check if there's a JSON after it
-      if (!cleanResponse.startsWith('{')) {
-        const jsonMatch = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
-        if (jsonMatch) {
-          cleanResponse = jsonMatch[0];
-        } else {
-          // Check if this is a confirmation message that should have been a tool call
-          if (cleanResponse.includes('Navigated to') || cleanResponse.includes('✅')) {
-            return null;
-          }
-        }
-      }
-
-      // Try to parse the entire response as JSON first (most direct approach)
+      // Strategy 1: Try direct JSON.parse on entire cleaned response (fastest path)
       try {
         const parsed = JSON.parse(cleanResponse);
-
-        // ENHANCED: Fix malformed parameters if needed
-        if (parsed.tool_name && parsed.parameters !== undefined) {
-          // Fix malformed parameters for set_working_directory
-          if (parsed.tool_name === 'set_working_directory' && typeof parsed.parameters === 'object') {
-            const paramKeys = Object.keys(parsed.parameters);
-            if (
-              paramKeys.length === 1 &&
-              !paramKeys.includes('directory_path') &&
-              !paramKeys.includes('use_home_directory')
-            ) {
-              const pathValue = paramKeys[0];
-              if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
-                parsed.parameters = {
-                  directory_path: pathValue,
-                };
-              }
-            }
-          }
-
-          return parsed;
+        if (this._isValidToolCall(parsed)) {
+          return this._fixMalformedParameters(parsed);
         }
       } catch (e) {
-        // Continue to other parsing methods if direct parse fails
+        // Not pure JSON — continue to extraction
       }
 
-      // Try to extract JSON from potential markdown or mixed content
-      const jsonMatches = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
-      if (jsonMatches) {
+      // Strategy 2: Extract ALL balanced {...} blocks and validate each
+      const blocks = this._extractBalancedJsonBlocks(cleanResponse);
+      for (const block of blocks) {
         try {
-          const parsed = JSON.parse(jsonMatches[0]);
-
-          // ENHANCED: Fix malformed parameters if needed
-          if (parsed.tool_name && parsed.parameters !== undefined) {
-            // Fix malformed parameters for set_working_directory
-            if (parsed.tool_name === 'set_working_directory' && typeof parsed.parameters === 'object') {
-              const paramKeys = Object.keys(parsed.parameters);
-              if (
-                paramKeys.length === 1 &&
-                !paramKeys.includes('directory_path') &&
-                !paramKeys.includes('use_home_directory')
-              ) {
-                const pathValue = paramKeys[0];
-                if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
-                  parsed.parameters = {
-                    directory_path: pathValue,
-                  };
-                }
-              }
-            }
-
-            return parsed;
+          const parsed = JSON.parse(block);
+          if (this._isValidToolCall(parsed)) {
+            return this._fixMalformedParameters(parsed);
           }
         } catch (e) {
-          // Continue to next method
+          // Not valid JSON — skip
         }
       }
 
-      // Try a more flexible JSON extraction that can handle nested braces
-      const startIndex = cleanResponse.indexOf('{');
-      if (startIndex !== -1) {
-        let braceCount = 0;
-        let endIndex = startIndex;
-
-        for (let i = startIndex; i < cleanResponse.length; i++) {
-          if (cleanResponse[i] === '{') braceCount++;
-          if (cleanResponse[i] === '}') braceCount--;
-          if (braceCount === 0) {
-            endIndex = i;
-            break;
-          }
-        }
-
-        if (braceCount === 0) {
-          const jsonCandidate = cleanResponse.substring(startIndex, endIndex + 1);
-          try {
-            const parsed = JSON.parse(jsonCandidate);
-
-            // ENHANCED: Fix malformed parameters if needed
-            if (parsed.tool_name && parsed.parameters !== undefined) {
-              // Fix malformed parameters for set_working_directory
-              if (parsed.tool_name === 'set_working_directory' && typeof parsed.parameters === 'object') {
-                // If parameters is an object but doesn't have proper keys, try to fix it
-                const paramKeys = Object.keys(parsed.parameters);
-                if (
-                  paramKeys.length === 1 &&
-                  !paramKeys.includes('directory_path') &&
-                  !paramKeys.includes('use_home_directory')
-                ) {
-                  // The parameter seems to be a path value without proper key
-                  const pathValue = paramKeys[0];
-                  if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
-                    parsed.parameters = {
-                      directory_path: pathValue,
-                    };
-                  }
-                }
-              }
-
-              return parsed;
-            }
-          } catch (e) {
-            // Continue to next method
-          }
-        }
-      }
-
-      // Try to find any valid JSON object that has tool_name and parameters
-      const allJsonMatches = cleanResponse.match(/\{[^}]*\}/g);
-      if (allJsonMatches) {
-        for (let i = 0; i < allJsonMatches.length; i++) {
-          const match = allJsonMatches[i];
-          try {
-            const parsed = JSON.parse(match);
-            if (parsed.tool_name && parsed.parameters !== undefined) {
-              return parsed;
-            }
-          } catch (e) {
-            // Continue to next match
-          }
-        }
-      }
-
-      // If no valid tool call found, return null
-      return null;
       return null;
     } catch (error) {
       console.error('=== parseToolCall ERROR ===');
       console.error('Error:', error);
       console.error('Stack:', error.stack);
       console.error('=======================');
-      console.warn('Error parsing potential tool call:', error);
       return null;
     }
   }
@@ -189,78 +200,42 @@ class IntentParserService {
     const toolCalls = [];
 
     try {
-      let cleanResponse = response.trim();
+      const cleanResponse = this._cleanResponse(response);
 
-      // Remove thinking tags if present
-      if (cleanResponse.includes('</think>')) {
-        const thinkEndIndex = cleanResponse.lastIndexOf('</think>');
-        cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
+      if (!cleanResponse) {
+        return toolCalls;
       }
 
-      // Remove code block markers but preserve structure for multiple JSON objects
-      cleanResponse = cleanResponse.replace(/```json\s*/gi, '').replace(/\s*```/g, '');
+      // Clean up residual 'json' text between objects
+      let normalized = cleanResponse
+        .replace(/}\s*json\s*{/g, '}\n{')
+        .replace(/^json\s*/, '')
+        .replace(/\s*json\s*$/, '')
+        .replace(/}\s*json\s*/g, '}\n')
+        .replace(/\s*json\s*{/g, '\n{');
 
-      // Clean up residual 'json' text that might remain between objects
-      // Handle cases like: }json{ and standalone 'json' strings
-      cleanResponse = cleanResponse.replace(/}\s*json\s*{/g, '}\n{');
-      cleanResponse = cleanResponse.replace(/^json\s*/, '').replace(/\s*json\s*$/, '');
-      cleanResponse = cleanResponse.replace(/}\s*json\s*/g, '}\n');
-      cleanResponse = cleanResponse.replace(/\s*json\s*{/g, '\n{');
-
-      // Try to parse as array first (if properly formatted)
-      if (cleanResponse.startsWith('[')) {
+      // Try to parse as array first
+      if (normalized.startsWith('[')) {
         try {
-          const parsedArray = JSON.parse(cleanResponse);
+          const parsedArray = JSON.parse(normalized);
           if (Array.isArray(parsedArray)) {
-            const validTools = parsedArray.filter(
-              item => item && typeof item === 'object' && item.tool_name && item.parameters !== undefined
-            );
-            return validTools;
+            const validTools = parsedArray.filter(item => this._isValidToolCall(item));
+            if (validTools.length > 0) {
+              return validTools.map(t => this._fixMalformedParameters(t));
+            }
           }
         } catch (e) {
-          // Continue to other parsing methods
+          // Continue to extraction
         }
       }
 
-      // Find all JSON objects in the response using flexible regex
-      // This handles both simple and nested JSON objects
-      const jsonMatches = [];
-      let index = 0;
-
-      while (index < cleanResponse.length) {
-        const start = cleanResponse.indexOf('{', index);
-        if (start === -1) break;
-
-        let braceCount = 0;
-        let end = start;
-
-        // Find matching closing brace
-        for (let i = start; i < cleanResponse.length; i++) {
-          if (cleanResponse[i] === '{') braceCount++;
-          if (cleanResponse[i] === '}') braceCount--;
-          if (braceCount === 0) {
-            end = i;
-            break;
-          }
-        }
-
-        if (braceCount === 0) {
-          const jsonCandidate = cleanResponse.substring(start, end + 1);
-          jsonMatches.push(jsonCandidate);
-          index = end + 1;
-        } else {
-          // Unmatched braces, move to next position
-          index = start + 1;
-        }
-      }
-
-      // Parse each JSON object and validate
-      for (let i = 0; i < jsonMatches.length; i++) {
-        const match = jsonMatches[i];
+      // Extract all balanced JSON blocks using brace counting
+      const blocks = this._extractBalancedJsonBlocks(normalized);
+      for (const block of blocks) {
         try {
-          const parsed = JSON.parse(match);
-          if (parsed.tool_name && parsed.parameters !== undefined) {
-            toolCalls.push(parsed);
+          const parsed = JSON.parse(block);
+          if (this._isValidToolCall(parsed)) {
+            toolCalls.push(this._fixMalformedParameters(parsed));
           }
         } catch (e) {
           // Skip invalid JSON
