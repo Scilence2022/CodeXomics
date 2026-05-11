@@ -1,5 +1,5 @@
 name: 'virtual_digest'
-description: 'Performs an in-silico restriction digest of a chromosome or sequence using one or more restriction enzymes. Calculates fragment positions, sizes, end types (5\' overhang, 3\' overhang, blunt), and provides digest map for gel electrophoresis visualization.'
+description: 'Performs an in-silico restriction digest of a chromosome or sequence using one or more restriction enzymes. Calculates fragment positions, sizes, end types (5'' overhang, 3'' overhang, blunt), and provides digest map for gel electrophoresis visualization.'
 parameters:
   type: 'object'
   properties:
