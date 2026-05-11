@@ -194,6 +194,8 @@ class GelElectrophoresisService {
   }
 
   _showGelVisualization(result) {
+    this._ensureDraggableResizable();
+
     const GelRendererClass = (typeof window !== 'undefined' && window.GelRenderer)
       ? window.GelRenderer
       : null;
@@ -212,6 +214,31 @@ class GelElectrophoresisService {
       }
       modal.classList.add('show');
     }
+  }
+
+  _ensureDraggableResizable() {
+    if (this._dragResizeInitialized) return;
+
+    const selector = '#gelElectrophoresisModal';
+    const modal = document.querySelector(selector);
+    if (!modal) return;
+
+    if (window.modalDragManager) {
+      window.modalDragManager.makeDraggable(selector);
+    }
+    if (window.resizableModalManager) {
+      window.resizableModalManager.makeResizable(selector);
+    }
+
+    const resetBtn = modal.querySelector('.reset-position-btn');
+    if (resetBtn && window.modalDragManager) {
+      resetBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.modalDragManager.resetPosition(selector);
+      });
+    }
+
+    this._dragResizeInitialized = true;
   }
 
   _renderFallbackHTML(container, result) {

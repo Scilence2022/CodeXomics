@@ -204,6 +204,7 @@ class ModalDragManager {
       '#multiAgentSettingsModal',
       '#chatboxSettingsModal',
       '#advancedSearchModal',
+      '#gelElectrophoresisModal',
     ];
 
     managementModals.forEach(selector => {

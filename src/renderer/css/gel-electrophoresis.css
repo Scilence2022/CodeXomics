@@ -1,7 +1,35 @@
 .gel-results-content {
-  max-width: 900px;
   max-height: 90vh;
-  width: 95%;
+}
+
+#gelElectrophoresisModal .modal-header {
+  cursor: move;
+  user-select: none;
+}
+
+#gelElectrophoresisModal .modal-header .modal-controls {
+  cursor: default;
+}
+
+#gelElectrophoresisModal .modal-content.dragging {
+  opacity: 0.92;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+#gelElectrophoresisModal .modal-header .reset-position-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+
+#gelElectrophoresisModal .modal-header .reset-position-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .gel-results-body {
