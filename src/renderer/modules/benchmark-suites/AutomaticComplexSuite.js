@@ -276,7 +276,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'sequence_analysis',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: 'Search for the gene \'dnaA\', get its sequence, and translate it to a protein sequence.',
+        instruction: `Search for the gene 'dnaA', get its CDS sequence, and translate CDS sequence to protein sequence.`,
         expectedResult: {
           tool_sequence: ['find_gene_by_name', 'get_sequence', 'translate_dna'],
           parameters: [
@@ -478,7 +478,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Digest with NotI and SalI, then run gel electrophoresis on a 0.8% agarose gel with lambda HindIII ladder and ethidium bromide stain.',
+        instruction: 'Perform a virtual digest of current viewing region with NotI and SalI, then run gel electrophoresis on a 0.8% agarose gel with lambda HindIII ladder and ethidium bromide stain.',
         expectedResult: {
           tool_name: 'simulate_gel_electrophoresis',
           parameters: {
