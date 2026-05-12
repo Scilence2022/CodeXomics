@@ -387,6 +387,7 @@ class ToolsRegistryManager {
       blast: ['blast', 'similarity', 'align', 'match', 'homolog'],
       plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace'],
       primer_design: ['primer', 'design primer', 'pcr', 'binding site', 'melting temperature', 'tm ', 'oligo', 'amplicon'],
+      sequence_metrics: ['entropy', 'molecular weight', 'molar mass', 'complexity', 'information content', 'dalton', 'mw '],
       benchmark: ['benchmark', 'benchmarks', 'benchmark run', 'benchmark results', 'benchmark status', 'llm benchmark', 'performance test', 'test suite'],
     };
 

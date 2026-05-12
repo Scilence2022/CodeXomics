@@ -1781,12 +1781,12 @@ class LLMConfigManager {
     const response = await fetch(`${baseUrl}/models`, {
       headers: config.apiKey
         ? {
-            Authorization: `Bearer ${config.apiKey}`,
-            'Content-Type': 'application/json',
-          }
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        }
         : {
-            'Content-Type': 'application/json',
-          },
+          'Content-Type': 'application/json',
+        },
     });
 
     if (!response.ok) {
@@ -2728,7 +2728,13 @@ class LLMConfigManager {
   }
 
   async sendLocalMessage(provider, message, context, memoryContext = null) {
-    const messages = this.buildMessages(message, context, 'openai', memoryContext);
+    const rawMessages = this.buildMessages(message, context, 'openai', memoryContext);
+
+    // Modify "system" role to "SystemInstruction" to support model providers that don't allow "system"
+    const messages = rawMessages.map(msg => ({
+      ...msg,
+      role: msg.role === 'system' ? 'Instruction' : msg.role
+    }));
 
     const apiUrl = `${provider.baseUrl}/chat/completions`;
     const payload = {
@@ -2745,12 +2751,12 @@ class LLMConfigManager {
       method: 'POST',
       headers: provider.apiKey
         ? {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
-          }
+          Authorization: `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json',
+        }
         : {
-            'Content-Type': 'application/json',
-          },
+          'Content-Type': 'application/json',
+        },
       body: JSON.stringify(payload),
     });
 
@@ -2790,9 +2796,16 @@ class LLMConfigManager {
 
   async sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
     const apiUrl = `${provider.baseUrl}/chat/completions`;
+
+    // Modify "system" role to "SystemInstruction" to support model providers that don't allow "system"
+    const messages = conversationHistory.map(msg => ({
+      ...msg,
+      role: msg.role === 'system' ? 'system' : msg.role
+    }));
+
     const payload = {
       model: provider.model,
-      messages: conversationHistory,
+      messages: messages,
       max_tokens: 2000,
       temperature: 0.7,
       stream: false,
@@ -2805,12 +2818,12 @@ class LLMConfigManager {
       method: 'POST',
       headers: provider.apiKey
         ? {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
-          }
+          Authorization: `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json',
+        }
         : {
-            'Content-Type': 'application/json',
-          },
+          'Content-Type': 'application/json',
+        },
       body: JSON.stringify(payload),
     });
 

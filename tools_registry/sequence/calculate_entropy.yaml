@@ -1,0 +1,62 @@
+name: calculate_entropy
+version: 1.1.0
+description: 'Calculate Shannon entropy of a DNA or protein sequence as a measure of sequence complexity. Higher entropy indicates more random/complex sequences; lower entropy indicates more ordered/repetitive sequences.'
+category: sequence
+keywords: ['entropy', 'shannon', 'complexity', 'information', 'diversity', 'randomness', 'calculate', 'measure']
+priority: 1
+execution:
+  type: client
+  timeout: 5000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    sequence:
+      type: string
+      description: 'DNA or protein sequence to calculate entropy for'
+      examples: ['ATGCGCTATCG', 'ATATATATAT', 'ACDEFGHIKLMNPQRSTVWY']
+    clientId:
+      type: string
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: ['sequence']
+sample_usages:
+  - user_query: 'Calculate the entropy of this sequence'
+    tool_call: "calculate_entropy(sequence='ATGCGCTATCG')"
+    thought: 'User wants to measure sequence complexity using Shannon entropy'
+    expected_result: 'Entropy value in bits (0-2 for DNA, 0-4.32 for protein)'
+
+  - user_query: 'What is the information content of the current region?'
+    tool_call: "calculate_entropy(sequence='ATGAAAGAATTGAAAGAAGCTGGCT')"
+    thought: 'User wants to assess sequence complexity via information content'
+    expected_result: 'Shannon entropy value indicating sequence randomness'
+relationships:
+  depends_on: ['get_sequence']
+  conflicts_with: []
+  enhances: ['sequence_statistics', 'analyze_region']
+  alternatives: ['sequence_statistics']
+  prerequisites: []
+  follow_up: ['compute_gc', 'translate_dna']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - sequence
+    - analysis
+    - complexity
+    - entropy
+  complexity: simple
+  usage_pattern: occasional
+error_handling:
+  empty_sequence: 'Returns 0 if sequence is empty or null'
+  invalid_sequence: 'Returns 0 if sequence is not a string'
+returns:
+  success: 'boolean - Whether calculation was successful'
+  entropy: 'number - Shannon entropy value in bits'
+  sequence: 'string - The analyzed sequence'
+  length: 'number - Length of the sequence'

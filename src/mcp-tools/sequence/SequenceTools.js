@@ -98,6 +98,32 @@ class SequenceTools {
         },
       },
 
+      calculate_entropy: {
+        name: 'calculate_entropy',
+        description: 'Calculate Shannon entropy of a DNA or protein sequence as a measure of sequence complexity (0-2 bits for DNA, 0-4.32 for protein)',
+        parameters: {
+          type: 'object',
+          properties: {
+            sequence: { type: 'string', description: 'DNA or protein sequence to calculate entropy for' },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+          required: ['sequence'],
+        },
+      },
+
+      calculate_molecular_weight: {
+        name: 'calculate_molecular_weight',
+        description: 'Calculate molecular weight of a DNA sequence in Daltons using standard average nucleotide weights (A=331.2, T=322.2, G=347.2, C=307.2 Da)',
+        parameters: {
+          type: 'object',
+          properties: {
+            dna: { type: 'string', description: 'DNA sequence to calculate molecular weight for' },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+          required: ['dna'],
+        },
+      },
+
       find_restriction_sites: {
         name: 'find_restriction_sites',
         description: 'Locate recognition and cleavage sites for restriction endonucleases in a genomic region. Supports 80+ enzymes with IUPAC ambiguity codes and staggered cut positions.',
@@ -292,6 +318,31 @@ class SequenceTools {
       .reverse()
       .map(base => complement[base] || base)
       .join('');
+  }
+
+  calculateEntropy(sequence) {
+    if (!sequence || typeof sequence !== 'string') return 0;
+    const counts = {};
+    for (const base of sequence.toUpperCase()) {
+      counts[base] = (counts[base] || 0) + 1;
+    }
+    const length = sequence.length;
+    let entropy = 0;
+    for (const count of Object.values(counts)) {
+      const p = count / length;
+      entropy -= p * Math.log2(p);
+    }
+    return entropy;
+  }
+
+  calculateMolecularWeight(dna) {
+    if (!dna || typeof dna !== 'string') return 0;
+    const weights = { A: 331.2, T: 322.2, G: 347.2, C: 307.2 };
+    let weight = 0;
+    for (const base of dna.toUpperCase()) {
+      weight += weights[base] || 0;
+    }
+    return weight - (dna.length - 1) * 18.01;
   }
 }
 

@@ -1,0 +1,64 @@
+name: calculate_molecular_weight
+version: 1.1.0
+description: 'Calculate the molecular weight of a DNA sequence in Daltons. Uses standard average molecular weights for each nucleotide (A=331.2, T=322.2, G=347.2, C=307.2 Da) and subtracts water molecules for phosphodiester bonds.'
+category: sequence
+keywords: ['molecular weight', 'molar mass', 'mw', 'daltons', 'mass', 'weight', 'dna', 'calculate']
+priority: 1
+execution:
+  type: client
+  timeout: 5000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    dna:
+      type: string
+      description: 'DNA sequence to calculate molecular weight for'
+      pattern: '^[ATGCNatgcn]+$'
+      examples: ['ATGCGCTATCG', 'ATGAAATAG', 'GCTAGCTAGCTAGC']
+    clientId:
+      type: string
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: ['dna']
+sample_usages:
+  - user_query: 'Calculate the molecular weight of this DNA sequence'
+    tool_call: "calculate_molecular_weight(dna='ATGCGCTATCG')"
+    thought: 'User wants molecular weight calculation for a DNA sequence'
+    expected_result: 'Molecular weight in Daltons'
+
+  - user_query: 'What is the molar mass of the translated protein?'
+    tool_call: "calculate_molecular_weight(dna='ATGAAAGAATTGAAAGAAGCTGGCT')"
+    thought: 'User wants to know the mass of a DNA sequence in Daltons'
+    expected_result: 'Molecular weight value accounting for phosphodiester bonds'
+relationships:
+  depends_on: ['get_sequence']
+  conflicts_with: []
+  enhances: ['sequence_statistics', 'translate_dna']
+  alternatives: ['sequence_statistics']
+  prerequisites: []
+  follow_up: ['calculate_melting_temp', 'compute_gc']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - sequence
+    - analysis
+    - molecular
+    - weight
+    - mass
+  complexity: simple
+  usage_pattern: occasional
+error_handling:
+  empty_sequence: 'Returns 0 if sequence is empty or null'
+  invalid_sequence: 'Returns 0 if sequence is not a string'
+returns:
+  success: 'boolean - Whether calculation was successful'
+  molecularWeight: 'number - Molecular weight in Daltons'
+  dna: 'string - The analyzed DNA sequence'
+  length: 'number - Length of the DNA sequence'

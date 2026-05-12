@@ -484,6 +484,20 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('calculate_entropy', {
+      method: 'executeMicrobeFunction_calculateEntropy',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('calculate_molecular_weight', {
+      method: 'executeMicrobeFunction_calculateMolecularWeight',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('predict_promoter', {
       method: 'predictPromoter',
       category: 'sequence',
@@ -1469,6 +1483,22 @@ class BuiltInToolsIntegration {
         name: 'compute_gc',
         confidence: 0.8,
         reason: 'GC content keywords detected',
+      });
+    }
+
+    if (/\b(calculate|compute|measure|determine)\s+.*?\b(entropy|complexity|information\s+content)\b/i.test(query) || /\b(entropy|shannon)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'calculate_entropy',
+        confidence: 0.85,
+        reason: 'Sequence entropy keywords detected',
+      });
+    }
+
+    if (/\b(calculate|compute|measure|determine)\s+.*?\b(molecular\s+weight|molar\s+mass|mw|daltons?)\b/i.test(query) || /\b(molecular\s+weight|molar\s+mass)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'calculate_molecular_weight',
+        confidence: 0.85,
+        reason: 'Molecular weight keywords detected',
       });
     }
 

@@ -7150,6 +7150,8 @@ ${coreTools}
       translate_dna: () => this.executeMicrobeFunction('translateDNA', parameters),
       reverse_complement: () => this.reverseComplement(parameters),
       codon_usage_analysis: () => this.codonUsageAnalysis(parameters),
+      calculate_entropy: () => this.executeMicrobeFunction('calculateEntropy', parameters),
+      calculate_molecular_weight: () => this.executeMicrobeFunction('calculateMolecularWeight', parameters),
 
       // Database tools
       analyze_interpro_domains: () => this.analyzeInterProDomains(parameters),

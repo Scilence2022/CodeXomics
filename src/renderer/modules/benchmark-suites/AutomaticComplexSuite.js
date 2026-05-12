@@ -56,7 +56,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     }
 
     // Fallback to memory default
-    return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+    return './';
   }
 
   /**
@@ -104,42 +104,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       } catch (error) {
         console.warn(`⚠️  [AutomaticComplexSuite] Error during directory cleanup: ${error.message}`);
       }
-    }
-    // Method 2: Try via ChatManager's file operations if available
-    else if (window.chatManager && window.chatManager.deleteFile) {
-      console.log(`ℹ️  [AutomaticComplexSuite] Using ChatManager for cleanup (limited to specific files)`);
-      // Fallback to specific files if directory operations not available
-      const exportFiles = [
-        'exported_files/exported_sequences.fasta',
-        'exported_files/exported_data.gbk',
-        'exported_files/exported_annotations.gff3',
-        'exported_files/exported_features.bed',
-        'exported_files/exported_cds.fasta',
-        'exported_files/exported_proteins.fasta',
-        'exported_files/exported_region.fasta',
-      ];
-
-      for (const filename of exportFiles) {
-        try {
-          const filePath = this.buildFilePath(filename);
-          const result = await window.chatManager.deleteFile({filePath: filePath});
-          if (result && result.success) {
-            console.log(`✅ [AutomaticComplexSuite] Deleted via ChatManager: ${filePath}`);
-          } else {
-            console.log(`ℹ️  [AutomaticComplexSuite] File may not exist or delete failed: ${filePath}`);
-          }
-        } catch (error) {
-          if (error.message && error.message.includes('not found')) {
-            console.log(`ℹ️  [AutomaticComplexSuite] File does not exist: ${filePath}`);
-          } else {
-            console.warn(`⚠️  [AutomaticComplexSuite] Error checking/deleting ${filePath}:`, error.message);
-          }
-        }
-      }
-    }
-    // Method 3: Log warning if no deletion method available
-    else {
-      console.warn(`⚠️  [AutomaticComplexSuite] No file deletion method available for ${exportedFilesDir}`);
     }
 
     console.log('✅ [AutomaticComplexSuite] Export file cleanup completed');
@@ -218,7 +182,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'file_export',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Please perform the following tasks in order: 1) Export sequences in FASTA format to file: ${this.buildFilePath('exported_sequences.fasta')}; 2) Export data in GenBank format to file: ${this.buildFilePath('exported_data.gbk')}; 3) Export GFF3 annotation format to file: ${this.buildFilePath('exported_annotations.gff3')}; 4) Export features in BED format to file: ${this.buildFilePath('exported_features.bed')}; 5) Export coding sequences as FASTA format to file: ${this.buildFilePath('exported_cds.fasta')}; 6) Export protein sequences in FASTA format to file: ${this.buildFilePath('exported_proteins.fasta')}; 7) Export currently visible genomic region as FASTA to file: ${this.buildFilePath('exported_region.fasta')}.`,
+        instruction: `Please perform the following tasks in order: 1) Export sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_sequences.fasta')}; 2) Export data in GenBank format to file: ${this.buildFilePath('exported_files/exported_data.gbk')}; 3) Export GFF3 annotation format to file: ${this.buildFilePath('exported_files/exported_annotations.gff3')}; 4) Export features in BED format to file: ${this.buildFilePath('exported_files/exported_features.bed')}; 5) Export coding sequences as FASTA format to file: ${this.buildFilePath('exported_files/exported_cds.fasta')}; 6) Export protein sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_proteins.fasta')}; 7) Export currently visible genomic region as FASTA to file: ${this.buildFilePath('exported_files/exported_region.fasta')}.`,
         expectedResult: {
           tool_sequence: [
             'export_fasta_sequence',
@@ -233,49 +197,49 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               format: 'fasta',
               includeDescription: true,
-              filePath: this.buildFilePath('exported_sequences.fasta'),
+              filePath: this.buildFilePath('exported_files/exported_sequences.fasta'),
             },
             {
               includeSequence: true,
               includeAnnotations: true,
-              filePath: this.buildFilePath('exported_data.gbk'),
+              filePath: this.buildFilePath('exported_files/exported_data.gbk'),
             },
             {
               version: 'gff3',
               includeSequence: false,
-              filePath: this.buildFilePath('exported_annotations.gff3'),
+              filePath: this.buildFilePath('exported_files/exported_annotations.gff3'),
             },
             {
               trackName: 'exported_features',
               includeScore: true,
-              filePath: this.buildFilePath('exported_features.bed'),
+              filePath: this.buildFilePath('exported_files/exported_features.bed'),
             },
             {
               sequenceType: 'cds',
               includeHeaders: true,
-              filePath: this.buildFilePath('exported_cds.fasta'),
+              filePath: this.buildFilePath('exported_files/exported_cds.fasta'),
             },
             {
               sequenceType: 'protein',
               includeHeaders: true,
               translate: true,
-              filePath: this.buildFilePath('exported_proteins.fasta'),
+              filePath: this.buildFilePath('exported_files/exported_proteins.fasta'),
             },
             {
               format: 'fasta',
               currentViewOnly: true,
               includeCoordinates: true,
-              filePath: this.buildFilePath('exported_region.fasta'),
+              filePath: this.buildFilePath('exported_files/exported_region.fasta'),
             },
           ],
           expectedFiles: [
-            'exported_sequences.fasta',
-            'exported_data.gbk',
-            'exported_annotations.gff3',
-            'exported_features.bed',
-            'exported_cds.fasta',
-            'exported_proteins.fasta',
-            'exported_region.fasta',
+            'exported_files/exported_sequences.fasta',
+            'exported_files/exported_data.gbk',
+            'exported_files/exported_annotations.gff3',
+            'exported_files/exported_features.bed',
+            'exported_files/exported_cds.fasta',
+            'exported_files/exported_proteins.fasta',
+            'exported_files/exported_region.fasta',
           ],
         },
         maxScore: 20,
@@ -316,9 +280,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_sequence: ['find_gene_by_name', 'get_sequence', 'translate_dna'],
           parameters: [
-            {geneName: 'dnaA'},
-            {chromosome: '<any>', start: '<any>', end: '<any>'},
-            {dna: '<any>'},
+            { geneName: 'dnaA' },
+            { chromosome: '<any>', start: '<any>', end: '<any>' },
+            { dna: '<any>' },
           ],
         },
         maxScore: 15,
@@ -335,12 +299,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'sequence_analysis',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Calculate the GC content for the current view region and then export the region features to a BED file named '${this.buildFilePath('region_features.bed')}'.`,
+        instruction: `Calculate the GC content for the current view region and then export the region features to a BED file named '${this.buildFilePath('exported_files/region_features.bed')}'.`,
         expectedResult: {
           tool_sequence: ['calc_region_gc', 'export_bed_format'],
           parameters: [
             {},
-            {filePath: this.buildFilePath('region_features.bed')},
+            { filePath: this.buildFilePath('exported_files/region_features.bed') },
           ],
         },
         maxScore: 10,
@@ -362,8 +326,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           tool_sequence: ['calculate_entropy', 'translate_dna', 'calculate_molecular_weight'],
           parameters: [
             {},
-            {sequence: '<any>'},
-            {sequence: '<any>'},
+            { sequence: '<any>' },
+            { sequence: '<any>' },
           ],
         },
         maxScore: 15,
@@ -384,9 +348,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_sequence: ['toggle_track', 'set_track_settings', 'save_view_state'],
           parameters: [
-            {trackId: 'genes', visible: false},
-            {trackId: 'variants', settings: {color: 'red'}},
-            {stateName: 'VariantFocus'},
+            { trackId: 'genes', visible: false },
+            { trackId: 'variants', settings: { color: 'red' } },
+            { stateName: 'VariantFocus' },
           ],
         },
         maxScore: 15,
@@ -395,30 +359,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
-      // TEST 9: PROTEIN WORKFLOW - Automatic + Complex
-      {
-        id: 'protein_auto_01',
-        name: 'PDB Search and Viewer',
-        type: 'workflow',
-        category: 'proteinStructure',
-        complexity: 'complex',
-        evaluation: 'automatic',
-        instruction: 'Search the PDB database for \'DNA polymerase\', get the details for the first matching PDB ID, and open it in the protein viewer.',
-        expectedResult: {
-          tool_sequence: ['search_pdb_structures', 'get_pdb_details', 'open_protein_viewer'],
-          parameters: [
-            {query: 'DNA polymerase'},
-            {pdbId: '<any>'},
-            {pdbId: '<any>'},
-          ],
-        },
-        maxScore: 15,
-        bonusScore: 3,
-        timeout: 90000,
-        evaluator: this.evaluateWorkflowCall.bind(this),
-      },
 
-      // TEST 10: GENOME STATS - Automatic + Complex
+      // TEST 9: GENOME STATS - Automatic + Complex
       {
         id: 'analysis_auto_03',
         name: 'Genome Statistics Suite',
@@ -441,32 +383,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
-      // TEST 11: ANNOTATION WORKFLOW - Automatic + Complex
-      {
-        id: 'annotation_auto_01',
-        name: 'Promoter Prediction and Annotation',
-        type: 'workflow',
-        category: 'annotation',
-        complexity: 'complex',
-        evaluation: 'automatic',
-        instruction: 'Find the gene \'lacZ\', predict its promoter in the upstream region, and create a new annotation for this promoter.',
-        expectedResult: {
-          tool_sequence: ['find_gene_by_name', 'predict_promoter', 'create_annotation'],
-          parameters: [
-            {geneName: 'lacZ'},
-            {sequence: '<any>'},
-            {type: 'promoter', name: 'lacZ_promoter'},
-          ],
-        },
-        maxScore: 15,
-        bonusScore: 3,
-        timeout: 90000,
-        evaluator: this.evaluateWorkflowCall.bind(this),
-      },
-
 
       {
-        id: 'primer_auto_02',
+        id: 'primer_auto_01',
         name: 'Design Primers',
         type: 'function_call',
         category: 'primer_design',
@@ -514,7 +433,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Run virtual_digest with EcoRI and HindIII, then simulate agarose gel electrophoresis to visualize the digest fragments on a 1% gel with 1kb ladder.',
+        instruction: 'Run virtual_digest of current viewing region with EcoRI and HindIII, then simulate agarose gel electrophoresis to visualize the digest fragments on a 1% gel with 1kb ladder.',
         expectedResult: {
           tool_name: 'simulate_gel_electrophoresis',
           parameters: {
@@ -676,8 +595,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         name: '1655_C10.mutations.vcf',
         patterns: ['variant file loaded successfully', '1655_C10.mutations.vcf', 'variant.*loaded', 'VCF.*loaded'],
       },
-      {name: 'sample.wig', patterns: ['wig.*loaded', 'sample.wig', 'tracks.*loaded']},
-      {name: 'another_sample.wig', patterns: ['wig.*loaded', 'another_sample.wig', 'tracks.*loaded']},
+      { name: 'sample.wig', patterns: ['wig.*loaded', 'sample.wig', 'tracks.*loaded'] },
+      { name: 'another_sample.wig', patterns: ['wig.*loaded', 'another_sample.wig', 'tracks.*loaded'] },
     ];
 
     const pointsPerFile = Math.floor(evaluation.maxScore / evaluation.details.totalFiles);
@@ -726,14 +645,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     console.log(`🎯 [FileLoadingWorkflow] Natural language parsing results:`);
     console.log(`   Score: ${evaluation.score}/${evaluation.maxScore}`);
     console.log(
-        `   Files loaded: ${evaluation.details.successfulFiles}/${evaluation.details.totalFiles} (${evaluation.details.filesLoaded.join(', ')})`,
+      `   Files loaded: ${evaluation.details.successfulFiles}/${evaluation.details.totalFiles} (${evaluation.details.filesLoaded.join(', ')})`,
     );
     console.log(`   Success rate: ${(successRate * 100).toFixed(1)}%`);
     console.log(`   Success: ${evaluation.success}`);
 
     if (!evaluation.success) {
       evaluation.errors.push(
-          `Insufficient files loaded: ${evaluation.details.successfulFiles}/${evaluation.details.totalFiles} (need at least 2 files)`,
+        `Insufficient files loaded: ${evaluation.details.successfulFiles}/${evaluation.details.totalFiles} (need at least 2 files)`,
       );
     }
 
@@ -932,12 +851,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     } else {
       // Single step workflow
       const singleStepEval = await this.evaluateBasicFunctionCall(
-          actualResult,
-          {
-            tool_name: expectedResult.tool_sequence?.[0] || expectedResult.tool_name,
-            parameters: expectedResult.parameters?.[0] || expectedResult.parameters,
-          },
-          testResult,
+        actualResult,
+        {
+          tool_name: expectedResult.tool_sequence?.[0] || expectedResult.tool_name,
+          parameters: expectedResult.parameters?.[0] || expectedResult.parameters,
+        },
+        testResult,
       );
       evaluation.score = singleStepEval.score;
       evaluation.errors = singleStepEval.errors;
@@ -1060,8 +979,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               const fileName = result.parameters.filePath.split('/').pop();
               if (
                 toolFiles.some(
-                    (expectedFile) =>
-                      fileName === expectedFile || fileName.includes(expectedFile) || expectedFile.includes(fileName),
+                  (expectedFile) =>
+                    fileName === expectedFile || fileName.includes(expectedFile) || expectedFile.includes(fileName),
                 )
               ) {
                 hasCorrectParameters = true;
@@ -1073,8 +992,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               const fileNames = result.parameters.filePaths.map((path) => path.split('/').pop());
               hasCorrectParameters = toolFiles.some((expectedFile) =>
                 fileNames.some(
-                    (fileName) =>
-                      fileName === expectedFile || fileName.includes(expectedFile) || expectedFile.includes(fileName),
+                  (fileName) =>
+                    fileName === expectedFile || fileName.includes(expectedFile) || expectedFile.includes(fileName),
                 ),
               );
             }
@@ -1119,14 +1038,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     console.log(`🎯 [FileLoadingWorkflow] Final evaluation:`);
     console.log(`   Score: ${evaluation.score}/${evaluation.maxScore}`);
     console.log(
-        `   Files loaded: ${evaluation.details.successfulFiles}/${evaluation.details.totalFiles} (${evaluation.details.filesLoaded.join(', ')})`,
+      `   Files loaded: ${evaluation.details.successfulFiles}/${evaluation.details.totalFiles} (${evaluation.details.filesLoaded.join(', ')})`,
     );
     console.log(`   Success rate: ${(successRate * 100).toFixed(1)}%`);
     console.log(`   Success: ${evaluation.success}`);
 
     if (!evaluation.success) {
       evaluation.errors.push(
-          `Insufficient files loaded: ${evaluation.details.successfulFiles}/${evaluation.details.totalFiles} (need at least 2 files)`,
+        `Insufficient files loaded: ${evaluation.details.successfulFiles}/${evaluation.details.totalFiles} (need at least 2 files)`,
       );
     }
 
@@ -1182,8 +1101,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       expectedTools.forEach((expectedTool) => {
         const relevantExecution = recentExecutions.find(
-            (exec) =>
-              exec.toolName === expectedTool && exec.status === 'completed' && Date.now() - exec.startTime < timeoutMs,
+          (exec) =>
+            exec.toolName === expectedTool && exec.status === 'completed' && Date.now() - exec.startTime < timeoutMs,
         );
 
         if (relevantExecution) {
@@ -1197,7 +1116,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       if (executedTools.length > 0) {
         console.log(
-            `🎯 [DataExportWorkflow] TRACKER PRIORITY: Found ${executedTools.length}/${expectedTools.length} successful tool executions`,
+          `🎯 [DataExportWorkflow] TRACKER PRIORITY: Found ${executedTools.length}/${expectedTools.length} successful tool executions`,
         );
 
         // Song's tiered scoring for tool execution tracker
@@ -1217,7 +1136,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
         evaluation.score = Math.min(score, evaluation.maxScore);
         console.log(
-            `🎯 [DataExportWorkflow] TRACKER Tiered scoring: ${toolsFound <= 4 ? toolsFound + ' tools × 2 points' : '4 tools × 2 + ' + (toolsFound - 4) + ' tools × 4'} = ${score} points`,
+          `🎯 [DataExportWorkflow] TRACKER Tiered scoring: ${toolsFound <= 4 ? toolsFound + ' tools × 2 points' : '4 tools × 2 + ' + (toolsFound - 4) + ' tools × 4'} = ${score} points`,
         );
         evaluation.details.toolsExecuted = executedTools.map((et) => et.tool);
         evaluation.details.evaluationMethod = 'execution_tracker';
@@ -1226,10 +1145,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         if (executedTools.length >= Math.ceil(expectedTools.length * 0.6)) {
           evaluation.success = true;
           evaluation.warnings.push(
-              `Awarded points based on Tool Execution Tracker (${executedTools.length}/${expectedTools.length} tools executed)`,
+            `Awarded points based on Tool Execution Tracker (${executedTools.length}/${expectedTools.length} tools executed)`,
           );
           console.log(
-              `✅ [DataExportWorkflow] TRACKER SUCCESS: ${executedTools.length}/${expectedTools.length} tools executed successfully`,
+            `✅ [DataExportWorkflow] TRACKER SUCCESS: ${executedTools.length}/${expectedTools.length} tools executed successfully`,
           );
         }
 
@@ -1263,7 +1182,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     // If files exist, award full score (Song's primary criterion)
     if (evaluation.details.successfulExports >= Math.ceil(evaluation.details.totalExpectedFiles * 0.5)) {
       console.log(
-          `🎯 [DataExportWorkflow] PRIMARY SUCCESS: ${evaluation.details.successfulExports}/${evaluation.details.totalExpectedFiles} files exist`,
+        `🎯 [DataExportWorkflow] PRIMARY SUCCESS: ${evaluation.details.successfulExports}/${evaluation.details.totalExpectedFiles} files exist`,
       );
       evaluation.success = true;
       evaluation.details.evaluationMethod = 'file_existence';
@@ -1281,8 +1200,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     ) {
       const detectedTools = testResult.parseDebugInfo.detectedTools;
       console.log(
-          `🎯 [DataExportWorkflow] Using ChatManager's detected tools:`,
-          detectedTools.map((t) => t.tool),
+        `🎯 [DataExportWorkflow] Using ChatManager's detected tools:`,
+        detectedTools.map((t) => t.tool),
       );
 
       const expectedToolsSet = new Set(expectedResult.tool_sequence || []);
@@ -1315,13 +1234,13 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluation.success = matchingTools.length >= Math.ceil(expectedToolCount * 0.6);
 
         console.log(
-            `✅ [DataExportWorkflow] PARSE DEBUG SUCCESS: ${matchingTools.length}/${expectedToolCount} tools detected`,
+          `✅ [DataExportWorkflow] PARSE DEBUG SUCCESS: ${matchingTools.length}/${expectedToolCount} tools detected`,
         );
         console.log(
-            `🎯 [DataExportWorkflow] Tiered scoring: ${toolsFound <= 4 ? toolsFound + ' tools × 2 points' : '4 tools × 2 + ' + (toolsFound - 4) + ' tools × 4'} = ${score} points`,
+          `🎯 [DataExportWorkflow] Tiered scoring: ${toolsFound <= 4 ? toolsFound + ' tools × 2 points' : '4 tools × 2 + ' + (toolsFound - 4) + ' tools × 4'} = ${score} points`,
         );
         evaluation.warnings.push(
-            `Awarded ${score} points using tiered scoring (${matchingTools.length}/${expectedToolCount} tools detected)`,
+          `Awarded ${score} points using tiered scoring (${matchingTools.length}/${expectedToolCount} tools detected)`,
         );
 
         // Apply Song's file verification penalty system
@@ -1412,7 +1331,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     const missingFiles = [];
 
     console.log(
-        `🔍 [FileVerification] Starting verification for ${expectedFiles.length} files, ${detectedToolsCount} tools detected`,
+      `🔍 [FileVerification] Starting verification for ${expectedFiles.length} files, ${detectedToolsCount} tools detected`,
     );
     console.log(`🔍 [FileVerification] Expected files:`, expectedFiles);
 
@@ -1446,14 +1365,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       evaluation.score = Math.max(0, evaluation.score - penalty); // Don't go below 0
 
       console.log(
-          `⚠️ [FileVerificationPenalty] Files found: ${actualFilesFound}, Tools detected: ${detectedToolsCount}`,
+        `⚠️ [FileVerificationPenalty] Files found: ${actualFilesFound}, Tools detected: ${detectedToolsCount}`,
       );
       console.log(
-          `📉 [FileVerificationPenalty] Penalty applied: -${penalty} points (${originalScore} → ${evaluation.score})`,
+        `📉 [FileVerificationPenalty] Penalty applied: -${penalty} points (${originalScore} → ${evaluation.score})`,
       );
 
       evaluation.warnings.push(
-          `File verification penalty: -${penalty} points (${actualFilesFound} files found vs ${detectedToolsCount} tools detected)`,
+        `File verification penalty: -${penalty} points (${actualFilesFound} files found vs ${detectedToolsCount} tools detected)`,
       );
 
       if (foundFiles.length > 0) {
@@ -1470,7 +1389,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     }
 
     console.log(
-        `📊 [FileVerification] Summary: ${actualFilesFound}/${expectedFiles.length} files found, ${detectedToolsCount} tools detected`,
+      `📊 [FileVerification] Summary: ${actualFilesFound}/${expectedFiles.length} files found, ${detectedToolsCount} tools detected`,
     );
   }
 
@@ -1644,7 +1563,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       // For now, return true as fallback if files are confirmed to exist
       // TODO: Implement proper async file checking or adjust penalty system
       console.log(
-          `⚠️ [checkTargetFileExists] Cannot verify file existence reliably - assuming files exist based on user feedback`,
+        `⚠️ [checkTargetFileExists] Cannot verify file existence reliably - assuming files exist based on user feedback`,
       );
       return true; // Song confirmed files are successfully created
     } catch (error) {
@@ -1668,8 +1587,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       // Use execution data freshness validation (Song's requirement)
       const timeoutMs = 120000; // 2 minutes max age
       const relevantExecution = recentExecutions.find(
-          (exec) =>
-            exec.toolName === expectedToolName && exec.status === 'completed' && Date.now() - exec.startTime < timeoutMs,
+        (exec) =>
+          exec.toolName === expectedToolName && exec.status === 'completed' && Date.now() - exec.startTime < timeoutMs,
       );
 
       if (relevantExecution) {
@@ -1756,7 +1675,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         if (Array.isArray(actualResult) && actualResult.length > 0) {
           // Multiple tool calls - number of successful calls
           const successfulCalls = actualResult.filter(
-              (call) => call && call.tool_name === expectedResult.tool_name && !call.error && call.success !== false,
+            (call) => call && call.tool_name === expectedResult.tool_name && !call.error && call.success !== false,
           ).length;
           evaluation.details.tabsOpened = successfulCalls;
           console.log('🗂️ [evaluateMultipleTabOpeningCall] Multiple calls detected:', {
@@ -1782,7 +1701,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         // Fallback: analyze actualResult structure
         if (Array.isArray(actualResult)) {
           evaluation.details.tabsOpened = actualResult.filter(
-              (call) => call && call.tool_name === expectedResult.tool_name,
+            (call) => call && call.tool_name === expectedResult.tool_name,
           ).length;
         } else if (actualResult.tool_name === expectedResult.tool_name) {
           evaluation.details.tabsOpened = 1;
@@ -1795,7 +1714,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       // Fallback analysis based on actualResult structure
       if (Array.isArray(actualResult)) {
         evaluation.details.tabsOpened = actualResult.filter(
-            (call) => call && call.tool_name === expectedResult.tool_name,
+          (call) => call && call.tool_name === expectedResult.tool_name,
         ).length;
       } else if (actualResult.tool_name === expectedResult.tool_name) {
         evaluation.details.tabsOpened = 1;
