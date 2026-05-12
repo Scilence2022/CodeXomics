@@ -17,14 +17,14 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            chromosome: { type: 'string', description: 'Chromosome name' },
-            start: { type: 'number', description: 'Start position (optional if position provided)' },
-            end: { type: 'number', description: 'End position (optional if position provided)' },
+            chromosome: {type: 'string', description: 'Chromosome name'},
+            start: {type: 'number', description: 'Start position (optional if position provided)'},
+            end: {type: 'number', description: 'End position (optional if position provided)'},
             position: {
               type: 'number',
               description: 'Center position (creates 2000bp range if start/end not provided)',
             },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: ['chromosome'],
         },
@@ -37,16 +37,16 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            chromosome: { type: 'string', description: 'Chromosome name (optional if geneName provided)' },
-            start: { type: 'number', description: 'Start position (optional if position or geneName provided)' },
-            end: { type: 'number', description: 'End position (optional if position or geneName provided)' },
+            chromosome: {type: 'string', description: 'Chromosome name (optional if geneName provided)'},
+            start: {type: 'number', description: 'Start position (optional if position or geneName provided)'},
+            end: {type: 'number', description: 'End position (optional if position or geneName provided)'},
             position: {
               type: 'number',
               description: 'Center position (creates 2000bp range if start/end not provided)',
             },
-            geneName: { type: 'string', description: 'Gene name to open tab for (searches and focuses on gene)' },
-            title: { type: 'string', description: 'Custom title for the new tab (optional)' },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            geneName: {type: 'string', description: 'Gene name to open tab for (searches and focuses on gene)'},
+            title: {type: 'string', description: 'Custom title for the new tab (optional)'},
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
         },
       },
@@ -58,12 +58,12 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            tab_id: { type: 'string', description: 'Specific tab ID to switch to (e.g. "tab1", "tab2")' },
-            tab_name: { type: 'string', description: 'Tab name/title to search for and switch to' },
-            tab_index: { type: 'number', description: 'Tab index (0-based) to switch to', minimum: 0 },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            tab_id: {type: 'string', description: 'Specific tab ID to switch to (e.g. "tab1", "tab2")'},
+            tab_name: {type: 'string', description: 'Tab name/title to search for and switch to'},
+            tab_index: {type: 'number', description: 'Tab index (0-based) to switch to', minimum: 0},
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
-          anyOf: [{ required: ['tab_id'] }, { required: ['tab_name'] }, { required: ['tab_index'] }],
+          anyOf: [{required: ['tab_id']}, {required: ['tab_name']}, {required: ['tab_index']}],
         },
       },
 
@@ -73,12 +73,12 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            tab_id: { type: 'string', description: 'Specific tab ID to close (e.g. "tab1", "tab2")' },
-            tab_name: { type: 'string', description: 'Tab name/title to search for and close' },
-            tab_index: { type: 'number', description: 'Tab index (0-based) to close', minimum: 0 },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            tab_id: {type: 'string', description: 'Specific tab ID to close (e.g. "tab1", "tab2")'},
+            tab_name: {type: 'string', description: 'Tab name/title to search for and close'},
+            tab_index: {type: 'number', description: 'Tab index (0-based) to close', minimum: 0},
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
-          anyOf: [{ required: ['tab_id'] }, { required: ['tab_name'] }, { required: ['tab_index'] }],
+          anyOf: [{required: ['tab_id']}, {required: ['tab_name']}, {required: ['tab_index']}],
         },
       },
 
@@ -88,9 +88,9 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            query: { type: 'string', description: 'Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use find_gene_by_name for that)' },
-            featureType: { type: 'string', description: 'Type of feature to filter by (e.g., CDS, tRNA, rRNA, gene, promoter)' },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            query: {type: 'string', description: 'Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use find_gene_by_name for that)'},
+            featureType: {type: 'string', description: 'Type of feature to filter by (e.g., CDS, tRNA, rRNA, gene, promoter)'},
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: ['query'],
         },
@@ -102,7 +102,7 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            clientId: { type: 'string', description: 'Browser client ID' },
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
         },
       },
@@ -113,8 +113,8 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            geneName: { type: 'string', description: 'Gene name or locus tag to search for' },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            geneName: {type: 'string', description: 'Gene name or locus tag to search for'},
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: ['geneName'],
         },
@@ -126,9 +126,9 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            geneName: { type: 'string', description: 'Gene name or locus tag to select (e.g., "lacZ", "b0062", "dnaA")' },
-            chromosome: { type: 'string', description: 'Chromosome name (optional, searches all chromosomes if not specified)' },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            geneName: {type: 'string', description: 'Gene name or locus tag to select (e.g., "lacZ", "b0062", "dnaA")'},
+            chromosome: {type: 'string', description: 'Chromosome name (optional, searches all chromosomes if not specified)'},
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: ['geneName'],
         },
@@ -140,10 +140,10 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            chromosome: { type: 'string', description: 'Chromosome name (optional, defaults to current chromosome)' },
-            start: { type: 'number', description: 'Start position of the region to select (1-based)' },
-            end: { type: 'number', description: 'End position of the region to select (1-based, inclusive)' },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            chromosome: {type: 'string', description: 'Chromosome name (optional, defaults to current chromosome)'},
+            start: {type: 'number', description: 'Start position of the region to select (1-based)'},
+            end: {type: 'number', description: 'End position of the region to select (1-based, inclusive)'},
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: ['start', 'end'],
         },
@@ -155,7 +155,7 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            clientId: { type: 'string', description: 'Browser client ID' },
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
         },
       },
@@ -166,8 +166,8 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
-            name: { type: 'string', description: "Specific gene name or locus tag (e.g., 'lacZ', 'b0062', 'dnaA'). NOT for functional keywords like 'kinase' or 'transport' — use search_features for those." },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            name: {type: 'string', description: 'Specific gene name or locus tag (e.g., \'lacZ\', \'b0062\', \'dnaA\'). NOT for functional keywords like \'kinase\' or \'transport\' — use search_features for those.'},
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: ['name'],
         },
@@ -188,15 +188,15 @@ class NavigationTools {
               description:
                 'Track name (alternative to trackName) (genes, gc, variants, reads, proteins, sequence, actions)',
             },
-            visible: { type: 'boolean', description: 'Whether to show or hide the track' },
-            action: { type: 'string', description: 'Action to perform (show or hide)', enum: ['show', 'hide'] },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            visible: {type: 'boolean', description: 'Whether to show or hide the track'},
+            action: {type: 'string', description: 'Action to perform (show or hide)', enum: ['show', 'hide']},
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           anyOf: [
-            { required: ['trackName', 'visible'] },
-            { required: ['track_name', 'visible'] },
-            { required: ['trackName', 'action'] },
-            { required: ['track_name', 'action'] },
+            {required: ['trackName', 'visible']},
+            {required: ['track_name', 'visible']},
+            {required: ['trackName', 'action']},
+            {required: ['track_name', 'action']},
           ],
         },
       },
@@ -214,7 +214,7 @@ class NavigationTools {
               minimum: 1.1,
               maximum: 10,
             },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: [],
         },
@@ -233,7 +233,7 @@ class NavigationTools {
               minimum: 1.1,
               maximum: 10,
             },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: [],
         },
@@ -249,7 +249,7 @@ class NavigationTools {
               type: 'number',
               description: 'Number of base pairs to pan left (default: 10% of current view width)',
             },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: [],
         },
@@ -265,9 +265,51 @@ class NavigationTools {
               type: 'number',
               description: 'Number of base pairs to pan right (default: 10% of current view width)',
             },
-            clientId: { type: 'string', description: 'Browser client ID' },
+            clientId: {type: 'string', description: 'Browser client ID'},
           },
           required: [],
+        },
+      },
+
+      save_view_state: {
+        name: 'save_view_state',
+        description: 'Save the current genome browser view state (chromosome, position, visible tracks, track settings, active tab) for later restoration.',
+        parameters: {
+          type: 'object',
+          properties: {
+            name: {type: 'string', description: 'Descriptive name for the saved view state'},
+            description: {type: 'string', description: 'Optional longer description', default: ''},
+            clientId: {type: 'string', description: 'Browser client ID'},
+          },
+          required: ['name'],
+        },
+      },
+
+      bookmark_position: {
+        name: 'bookmark_position',
+        description: 'Bookmark the current genomic position for quick navigation later.',
+        parameters: {
+          type: 'object',
+          properties: {
+            name: {type: 'string', description: 'Name for the bookmark'},
+            chromosome: {type: 'string', description: 'Chromosome (defaults to current)'},
+            start: {type: 'number', description: 'Start position (defaults to current)'},
+            end: {type: 'number', description: 'End position (defaults to current)'},
+            clientId: {type: 'string', description: 'Browser client ID'},
+          },
+          required: ['name'],
+        },
+      },
+
+      get_bookmarks: {
+        name: 'get_bookmarks',
+        description: 'Get all saved bookmarks and view states.',
+        parameters: {
+          type: 'object',
+          properties: {
+            chromosome: {type: 'string', description: 'Filter bookmarks by chromosome (optional)'},
+            clientId: {type: 'string', description: 'Browser client ID'},
+          },
         },
       },
     };

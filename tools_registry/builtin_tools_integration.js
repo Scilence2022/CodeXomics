@@ -4,9 +4,6 @@
  * Provides seamless integration between native and dynamic tool execution
  */
 
-const path = require('path');
-const fs = require('fs').promises;
-
 class BuiltInToolsIntegration {
   constructor() {
     this.builtInToolsMap = new Map();
@@ -442,6 +439,20 @@ class BuiltInToolsIntegration {
 
     this.builtInToolsMap.set('select_sequence_region', {
       method: 'selectSequenceRegion',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('save_view_state', {
+      method: 'saveViewState',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('bookmark_position', {
+      method: 'bookmarkPosition',
       category: 'navigation',
       type: 'built-in',
       priority: 1,
@@ -1049,7 +1060,7 @@ class BuiltInToolsIntegration {
     return {
       // Direct file path patterns
       file_path:
-        /[\w\-\.\\\/]+\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)$/i,
+        /[\w\-\\./]+\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)$/i,
 
       // Quoted file paths
       quoted_path: /"[^"]*\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)"/i,
@@ -1182,7 +1193,7 @@ class BuiltInToolsIntegration {
         if (patternName === 'load_file' || patternName === 'file_path') {
           const fileLoadingTools = this.getBuiltInToolsByCategory('file_loading');
           for (const tool of fileLoadingTools) {
-            if (!relevantTools.some(t => t.name === tool.name)) {
+            if (!relevantTools.some((t) => t.name === tool.name)) {
               relevantTools.push({
                 name: tool.name,
                 confidence: 0.7,
@@ -1204,9 +1215,9 @@ class BuiltInToolsIntegration {
         reason: 'Navigation or visualization keywords detected',
       });
     }
-    
+
     // Check for genomic region visualization patterns
-    if (/\b(show|display|view).*\b(genomic|region|position|coordinate|chromosome)\b/i.test(query) || 
+    if (/\b(show|display|view).*\b(genomic|region|position|coordinate|chromosome)\b/i.test(query) ||
         /\b(genomic|region|position|coordinate|chromosome).*\b(from|to|between)\b/i.test(query)) {
       relevantTools.push({
         name: 'navigate_to_position',
@@ -1365,7 +1376,7 @@ class BuiltInToolsIntegration {
     // Key distinction: "kinase genes" → search_features (functional keyword)
     //                 "gene lacZ" → find_gene_by_name (specific identifier)
     if (/\b(search|find|look\s+up)\s+.*?\bfeatures?\b/i.test(query) ||
-        (/\bannotation\b/i.test(query) && !relevantTools.some(t => t.name === 'list_annotations' || t.name === 'get_annotation' || t.name === 'search_annotations')) ||
+        (/\bannotation\b/i.test(query) && !relevantTools.some((t) => t.name === 'list_annotations' || t.name === 'get_annotation' || t.name === 'search_annotations')) ||
         /\b(all|every)\s+(genes?|proteins?|cds|trna|rrna)\b/i.test(query) ||
         /\bfeatures?\s+search\b/i.test(query) ||
         /\b(search|find)\s+.*?\b(genes?|proteins?)\s+(by|with|related\s+to|containing)\s+(function|type|annotation|activity)/i.test(query)) {
@@ -1425,14 +1436,28 @@ class BuiltInToolsIntegration {
         /\b(scroll|pan)\s+(left|right|up|down)\b/i.test(query)) {
       const direction = query.match(/\b(left|right)\b/i)?.[1]?.toLowerCase();
       if (direction === 'left') {
-        relevantTools.push({ name: 'pan_left', confidence: 0.9, reason: 'Pan/scroll left keywords detected' });
+        relevantTools.push({name: 'pan_left', confidence: 0.9, reason: 'Pan/scroll left keywords detected'});
       } else if (direction === 'right') {
-        relevantTools.push({ name: 'pan_right', confidence: 0.9, reason: 'Pan/scroll right keywords detected' });
+        relevantTools.push({name: 'pan_right', confidence: 0.9, reason: 'Pan/scroll right keywords detected'});
       } else {
-        // Up/down - add both as fallback
-        relevantTools.push({ name: 'pan_left', confidence: 0.7, reason: 'Pan/scroll direction detected' });
-        relevantTools.push({ name: 'pan_right', confidence: 0.7, reason: 'Pan/scroll direction detected' });
+        relevantTools.push({name: 'pan_left', confidence: 0.7, reason: 'Pan/scroll direction detected'});
+        relevantTools.push({name: 'pan_right', confidence: 0.7, reason: 'Pan/scroll direction detected'});
       }
+    }
+
+    // Check for save view state / bookmark patterns
+    if (/\b(save|store|preserve|snapshot|capture)\s+.*?\b(view|state|position|workspace|layout)\b/i.test(query) ||
+        /\b(save|store)\s+.*?\b(bookmark|view)\b/i.test(query)) {
+      relevantTools.push({name: 'save_view_state', confidence: 0.9, reason: 'Save view state keywords detected'});
+    }
+
+    if (/\b(bookmark|mark|pin|flag)\s+.*?\b(position|location|region|spot)\b/i.test(query) ||
+        /\b(add|create|make)\s+.*?\bbookmarks?\b/i.test(query)) {
+      relevantTools.push({name: 'bookmark_position', confidence: 0.9, reason: 'Bookmark position keywords detected'});
+    }
+
+    if (/\b(bookmarks?|saved\s+views?)\b/i.test(query) && /\b(list|get|show|display|view|all)\b/i.test(query)) {
+      relevantTools.push({name: 'get_bookmarks', confidence: 0.85, reason: 'List bookmarks keywords detected'});
     }
 
     // Check for track toggle patterns
@@ -1554,7 +1579,7 @@ class BuiltInToolsIntegration {
         });
       }
       // Generic export pattern
-      if (!relevantTools.some(t => t.name.startsWith('export_'))) {
+      if (!relevantTools.some((t) => t.name.startsWith('export_'))) {
         relevantTools.push({
           name: 'export_fasta_sequence',
           confidence: 0.7,
@@ -1858,7 +1883,7 @@ class BuiltInToolsIntegration {
       /\b(analyze|analysis|identify|predict|find)\b/i.test(query)
     ) {
       // Add InterPro domain analysis if not already added
-      if (!relevantTools.some(t => t.name === 'analyze_interpro_domains')) {
+      if (!relevantTools.some((t) => t.name === 'analyze_interpro_domains')) {
         relevantTools.push({
           name: 'analyze_interpro_domains',
           confidence: 0.8,
@@ -1869,7 +1894,7 @@ class BuiltInToolsIntegration {
 
     // Check for specific domain names or "has/have domains" patterns
     if (/\b(kinase|phosphatase|transferase|helicase|protease)\b/i.test(query) && /\b(domain|domains)\b/i.test(query)) {
-      if (!relevantTools.some(t => t.name === 'search_interpro_entry')) {
+      if (!relevantTools.some((t) => t.name === 'search_interpro_entry')) {
         relevantTools.push({
           name: 'search_interpro_entry',
           confidence: 0.85,
@@ -1880,7 +1905,7 @@ class BuiltInToolsIntegration {
 
     // Check for "what domains" or "which domains" patterns
     if (/\b(what|which|show|list)\b/i.test(query) && /\b(domain|domains)\b/i.test(query)) {
-      if (!relevantTools.some(t => t.name === 'analyze_interpro_domains')) {
+      if (!relevantTools.some((t) => t.name === 'analyze_interpro_domains')) {
         relevantTools.push({
           name: 'analyze_interpro_domains',
           confidence: 0.85,
@@ -2088,7 +2113,7 @@ You are an advanced AI assistant for CodeXomics with access to high-performance 
 
 ## 🔧 Built-in File Loading Tools (Highest Priority)
 
-${fileLoadingTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${fileLoadingTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 **File Loading Instructions:**
 - Use load_genome_file for FASTA/GenBank genome files (.fasta, .fa, .genbank, .gbk, .gb)
@@ -2100,7 +2125,7 @@ ${fileLoadingTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} to
 
 ## 🧭 Built-in Navigation & Tab Management Tools
 
-${navigationTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${navigationTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 **Tab Management Instructions:**
 - Use open_new_tab to create new analysis tabs for parallel workflows
@@ -2110,11 +2135,11 @@ ${navigationTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} too
 
 ## 🧬 Built-in Sequence Analysis Tools
 
-${sequenceTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${sequenceTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 ## 🗄️ Built-in Database Integration Tools
 
-${databaseTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${databaseTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 **Database Tools Instructions:**
 - **UniProt Tools**: Search and retrieve protein information from UniProt database
@@ -2134,7 +2159,7 @@ ${databaseTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`
 
 ## ⚙️ Built-in System Tools
 
-${systemTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${systemTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 ## 🎯 Tool Usage Guidelines
 

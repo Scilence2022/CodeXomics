@@ -1,0 +1,80 @@
+name: save_view_state
+version: 1.1.0
+description: 'Save the current genome browser view state including chromosome, position, visible tracks, track settings, and active tab. The saved state can be restored later by name.'
+category: navigation
+keywords: ['save', 'view', 'state', 'bookmark', 'snapshot', 'workspace', 'layout', 'preserve', 'position', 'tracks']
+priority: 1
+execution:
+  type: client
+  timeout: 5000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    name:
+      type: string
+      description: 'Descriptive name for the saved view state (e.g., "lacZ operon view", "GC analysis region")'
+      examples: ['lacZ operon view', 'GC analysis region', 'variant inspection window']
+    description:
+      type: string
+      description: 'Optional longer description of the saved view state'
+      default: ''
+    clientId:
+      type: string
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: ['name']
+sample_usages:
+  - user_query: 'Save my current view'
+    tool_call: "save_view_state(name='lacZ operon view')"
+    thought: 'User wants to save the current genome browser state for later restoration'
+    expected_result: 'View state saved with chromosome, position, tracks, and settings'
+
+  - user_query: 'Save this workspace layout as "GC analysis"'
+    tool_call: "save_view_state(name='GC analysis', description='GC content analysis of the promoter region')"
+    thought: 'User wants to save a named workspace with a description'
+    expected_result: 'View state saved with full metadata including description'
+
+  - user_query: 'Take a snapshot of the current view'
+    tool_call: "save_view_state(name='current snapshot')"
+    thought: 'User wants to capture current browser state as a snapshot'
+    expected_result: 'Complete view state preserved with all track and position data'
+relationships:
+  depends_on: ['get_current_state']
+  conflicts_with: []
+  enhances: ['bookmark_position', 'get_current_state']
+  alternatives: ['bookmark_position']
+  prerequisites: []
+  follow_up: ['get_bookmarks', 'navigate_to_position']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - state
+    - persistence
+    - bookmark
+  complexity: simple
+  usage_pattern: occasional
+error_handling:
+  no_name: 'Returns error if name parameter is missing'
+  no_genome: 'Returns error if no genome is loaded'
+  storage_full: 'Returns error if localStorage or configManager storage is full'
+returns:
+  success: 'boolean - Whether save was successful'
+  viewState: 'object - The saved view state object'
+  viewState.id: 'string - Unique identifier for the saved state'
+  viewState.name: 'string - User-provided name'
+  viewState.description: 'string - User-provided description'
+  viewState.chromosome: 'string - Current chromosome'
+  viewState.position: 'object - Current viewport position { start, end }'
+  viewState.visibleTracks: 'array - List of visible track names'
+  viewState.trackSettings: 'object - Per-track settings (colors, heights, etc.)'
+  viewState.activeTabId: 'string - Active tab identifier'
+  viewState.created: 'string - ISO 8601 timestamp'
+  message: 'string - Human-readable confirmation message'

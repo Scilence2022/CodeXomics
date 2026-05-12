@@ -9,7 +9,7 @@ class LLMContextService {
   }
 
   formatToolResult(toolName, parameters, result) {
-    console.log('formatToolResult called with:', { toolName, parameters, result });
+    console.log('formatToolResult called with:', {toolName, parameters, result});
 
     switch (toolName) {
       case 'navigate_to_position':
@@ -58,9 +58,9 @@ class LLMContextService {
       case 'get_gene_details':
         if (result.found) {
           return `🧬 Found ${result.count} gene(s) matching "${result.geneName}": ${result.genes
-            .map(g => `${g.name} (${g.start}-${g.end}, ${g.product})`)
-            .slice(0, 3)
-            .join(', ')}${result.count > 3 ? '...' : ''}`;
+              .map((g) => `${g.name} (${g.start}-${g.end}, ${g.product})`)
+              .slice(0, 3)
+              .join(', ')}${result.count > 3 ? '...' : ''}`;
         } else {
           return `❌ No genes found matching "${result.geneName}" in ${result.chromosome}`;
         }
@@ -74,58 +74,58 @@ class LLMContextService {
 
       case 'get_operons':
         return `🧬 Found ${result.operonsFound} operons in ${result.chromosome}: ${result.operons
-          .slice(0, 3)
-          .map(op => `${op.name} (${op.geneCount} genes)`)
-          .join(', ')}${result.operonsFound > 3 ? '...' : ''}`;
+            .slice(0, 3)
+            .map((op) => `${op.name} (${op.geneCount} genes)`)
+            .join(', ')}${result.operonsFound > 3 ? '...' : ''}`;
 
       case 'zoom_to_gene':
         return `🔍 Zoomed to gene ${result.gene.name} at ${result.gene.start}-${result.gene.end} with ${result.padding}bp padding`;
 
       case 'get_chromosome_list':
-        return `📋 Available chromosomes (${result.count}): ${result.chromosomes.map(chr => `${chr.name} (${(chr.length / 1000000).toFixed(1)}Mbp)${chr.isSelected ? ' *' : ''}`).join(', ')}. Current: ${result.currentChromosome}`;
+        return `📋 Available chromosomes (${result.count}): ${result.chromosomes.map((chr) => `${chr.name} (${(chr.length / 1000000).toFixed(1)}Mbp)${chr.isSelected ? ' *' : ''}`).join(', ')}. Current: ${result.currentChromosome}`;
 
       case 'get_track_status':
         return `Track Status:\n${Object.entries(result)
-          .map(([track, status]) => `• ${track}: ${status ? 'visible' : 'hidden'}`)
-          .join('\n')}`;
+            .map(([track, status]) => `• ${track}: ${status ? 'visible' : 'hidden'}`)
+            .join('\n')}`;
 
       case 'search_motif':
         return (
           `Motif Search Results for "${result.pattern}":\n` +
           `• Found ${result.matchesFound} matches in ${result.searchRegion}\n` +
           `• Allowing up to ${result.allowedMismatches} mismatches\n` +
-          (result.matches.length > 0
-            ? `• Top matches:\n${result.matches
-              .slice(0, 5)
-              .map(m => `  - Position ${m.position}: ${m.sequence} (${m.strand} strand, ${m.mismatches} mismatches)`)
-              .join('\n')}`
-            : '• No matches found')
+          (result.matches.length > 0 ?
+            `• Top matches:\n${result.matches
+                .slice(0, 5)
+                .map((m) => `  - Position ${m.position}: ${m.sequence} (${m.strand} strand, ${m.mismatches} mismatches)`)
+                .join('\n')}` :
+            '• No matches found')
         );
 
       case 'search_pattern':
         return (
           `Pattern Search Results for "${result.regex}":\n` +
           `• Found ${result.matchesFound} matches in ${result.searchRegion}\n` +
-          (result.matches.length > 0
-            ? `• Matches:\n${result.matches
-              .slice(0, 10)
-              .map(m => `  - Position ${m.position}: ${m.sequence} (length: ${m.length})`)
-              .join('\n')}`
-            : '• No matches found')
+          (result.matches.length > 0 ?
+            `• Matches:\n${result.matches
+                .slice(0, 10)
+                .map((m) => `  - Position ${m.position}: ${m.sequence} (length: ${m.length})`)
+                .join('\n')}` :
+            '• No matches found')
         );
 
       case 'get_nearby_features':
         return (
           `Nearby Features (within ${result.searchDistance} bp of position ${result.position}):\n` +
           `• Found ${result.featuresFound} features\n` +
-          (result.features.length > 0
-            ? `• Features:\n${result.features
-              .map(
-                f =>
-                  `  - ${f.name} (${f.type}): ${f.start}-${f.end} ${f.strand} strand, ${f.distance} bp ${f.direction}`
-              )
-              .join('\n')}`
-            : '• No features found in range')
+          (result.features.length > 0 ?
+            `• Features:\n${result.features
+                .map(
+                    (f) =>
+                      `  - ${f.name} (${f.type}): ${f.start}-${f.end} ${f.strand} strand, ${f.distance} bp ${f.direction}`,
+                )
+                .join('\n')}` :
+            '• No features found in range')
         );
 
       case 'find_intergenic_regions':
@@ -133,15 +133,15 @@ class LLMContextService {
           `Intergenic Regions (min ${result.minLength} bp):\n` +
           `• Found ${result.regionsFound} regions\n` +
           `• Total intergenic length: ${result.totalIntergenicLength.toLocaleString()} bp\n` +
-          (result.regions.length > 0
-            ? `• Largest regions:\n${result.regions
-              .slice(0, 5)
-              .map(
-                r =>
-                  `  - ${r.start}-${r.end} (${r.length.toLocaleString()} bp) between ${r.upstreamGene} and ${r.downstreamGene}`
-              )
-              .join('\n')}`
-            : '• No intergenic regions found')
+          (result.regions.length > 0 ?
+            `• Largest regions:\n${result.regions
+                .slice(0, 5)
+                .map(
+                    (r) =>
+                      `  - ${r.start}-${r.end} (${r.length.toLocaleString()} bp) between ${r.upstreamGene} and ${r.downstreamGene}`,
+                )
+                .join('\n')}` :
+            '• No intergenic regions found')
         );
 
       case 'find_restriction_sites':
@@ -149,32 +149,32 @@ class LLMContextService {
           `Restriction Sites for ${result.enzyme} (${result.recognitionSite}):\n` +
           `• Overhang type: ${result.overhangType || 'unknown'}, length: ${result.overhangLength ?? '?'}\n` +
           `• Found ${result.sitesFound} sites in ${result.searchRegionStr || result.searchRegion}\n` +
-          (result.sites.length > 0
-            ? `• Sites:\n${result.sites
-              .map(s => `  - Position ${s.position}: ${s.site} (${s.strand} strand, top cut: ${s.topStrandCut}, bottom cut: ${s.bottomStrandCut})`)
-              .join('\n')}`
-            : '• No restriction sites found')
+          (result.sites.length > 0 ?
+            `• Sites:\n${result.sites
+                .map((s) => `  - Position ${s.position}: ${s.site} (${s.strand} strand, top cut: ${s.topStrandCut}, bottom cut: ${s.bottomStrandCut})`)
+                .join('\n')}` :
+            '• No restriction sites found')
         );
 
       case 'virtual_digest':
         const digestHeader = `Virtual Digest with ${result.enzymes.join(', ')}:\n`;
-        const digestStats = 
+        const digestStats =
           `• Total cut sites: ${result.totalSites}\n` +
           `• Fragments generated: ${result.totalFragments}\n` +
           `• Average fragment size: ${result.averageFragmentSize.toLocaleString()} bp\n` +
           `• Median fragment size: ${(result.medianFragmentSize || 0).toLocaleString()} bp\n` +
           `• Size range: ${result.sizeRange || `${result.smallestFragment?.toLocaleString() ?? '?'} - ${result.largestFragment?.toLocaleString() ?? '?'} bp`}\n`;
-        const enzymeInfo = result.enzymeDetails
-          ? `• Enzyme details:\n${Object.entries(result.enzymeDetails).map(([name, d]) => `  - ${name}: ${d.recognition} (${d.overhangType}, ${d.overhangLength}bp overhang)`).join('\n')}\n`
-          : '';
-        const fragmentInfo = result.fragmentDetails && result.fragmentDetails.length > 0
-          ? `• Fragment details (top 10 by size):\n${result.fragmentDetails
+        const enzymeInfo = result.enzymeDetails ?
+          `• Enzyme details:\n${Object.entries(result.enzymeDetails).map(([name, d]) => `  - ${name}: ${d.recognition} (${d.overhangType}, ${d.overhangLength}bp overhang)`).join('\n')}\n` :
+          '';
+        const fragmentInfo = result.fragmentDetails && result.fragmentDetails.length > 0 ?
+          `• Fragment details (top 10 by size):\n${result.fragmentDetails
               .slice()
               .sort((a, b) => b.length - a.length)
               .slice(0, 10)
-              .map(f => `  - Fragment ${f.index}: ${f.start.toLocaleString()}-${f.end.toLocaleString()} (${f.length.toLocaleString()} bp) [${f.leftEndType || '?'}→${f.rightEndType || '?'}]`)
-              .join('\n')}`
-          : '';
+              .map((f) => `  - Fragment ${f.index}: ${f.start.toLocaleString()}-${f.end.toLocaleString()} (${f.length.toLocaleString()} bp) [${f.leftEndType || '?'}→${f.rightEndType || '?'}]`)
+              .join('\n')}` :
+          '';
         return digestHeader + digestStats + enzymeInfo + fragmentInfo;
 
       case 'simulate_gel_electrophoresis':
@@ -185,12 +185,12 @@ class LLMContextService {
           `• Ladder: ${result.ladderType}\n` +
           `• Color scheme: ${result.bandColorScheme || 'ethidium_bromide'}\n` +
           `• Effective range: ${result.gelConfig.effectiveRange[0].toLocaleString()}-${result.gelConfig.effectiveRange[1].toLocaleString()} bp\n`;
-        const gelFragments = result.fragmentSizes && result.fragmentSizes.length > 0
-          ? `• Fragment sizes (sorted, largest first):\n${result.fragmentSizes
+        const gelFragments = result.fragmentSizes && result.fragmentSizes.length > 0 ?
+          `• Fragment sizes (sorted, largest first):\n${result.fragmentSizes
               .slice(0, 15)
               .map((s, i) => `  - ${i + 1}: ${s.toLocaleString()} bp`)
-              .join('\n')}${result.fragmentSizes.length > 15 ? `\n  ... and ${result.fragmentSizes.length - 15} more` : ''}`
-          : '';
+              .join('\n')}${result.fragmentSizes.length > 15 ? `\n  ... and ${result.fragmentSizes.length - 15} more` : ''}` :
+          '';
         return gelHeader + gelStats + gelFragments;
 
       case 'sequence_statistics':
@@ -215,8 +215,8 @@ class LLMContextService {
           `• Total codons: ${result.totalCodons}\n` +
           `• Unique codons used: ${result.uniqueCodons}/64\n` +
           `• Most frequent codons:\n${result.mostFrequentCodons
-            .map(c => `  - ${c.codon} (${c.aminoAcid}): ${c.count} times (${c.frequency}%)`)
-            .join('\n')}`
+              .map((c) => `  - ${c.codon} (${c.aminoAcid}): ${c.count} times (${c.frequency}%)`)
+              .join('\n')}`
         );
 
       case 'bookmark_position':
@@ -232,14 +232,14 @@ class LLMContextService {
           `Bookmarks ${result.chromosome !== 'all' ? `for ${result.chromosome}` : ''}:\n` +
           `• Total bookmarks: ${result.totalBookmarks}\n` +
           `• Showing: ${result.filteredBookmarks}\n` +
-          (result.bookmarks.length > 0
-            ? `• Bookmarks:\n${result.bookmarks
-              .map(
-                b =>
-                  `  - ${b.name}: ${b.chromosome}:${b.start}-${b.end} (${new Date(b.created).toLocaleDateString()})`
-              )
-              .join('\n')}`
-            : '• No bookmarks found')
+          (result.bookmarks.length > 0 ?
+            `• Bookmarks:\n${result.bookmarks
+                .map(
+                    (b) =>
+                      `  - ${b.name}: ${b.chromosome}:${b.start}-${b.end} (${new Date(b.created).toLocaleDateString()})`,
+                )
+                .join('\n')}` :
+            '• No bookmarks found')
         );
 
       case 'save_view_state':
@@ -248,6 +248,8 @@ class LLMContextService {
           `• State ID: ${result.viewState.id}\n` +
           `• Position: ${result.viewState.chromosome}:${result.viewState.position?.start}-${result.viewState.position?.end}\n` +
           `• Visible tracks: ${result.viewState.visibleTracks?.join(', ') || 'none'}\n` +
+          `• Track settings: ${Object.keys(result.viewState.trackSettings || {}).length > 0 ? 'captured' : 'none'}\n` +
+          `• Active tab: ${result.viewState.activeTabId || 'default'}\n` +
           `• Created: ${new Date(result.viewState.created).toLocaleString()}`
         );
 
@@ -266,12 +268,12 @@ class LLMContextService {
           `Similar Sequence Search:\n` +
           `• Query: ${result.querySequence}\n` +
           `• Found ${result.resultsFound} similar regions (≥${result.minSimilarity} similarity)\n` +
-          (result.results.length > 0
-            ? `• Top matches:\n${result.results
-              .slice(0, 5)
-              .map(r => `  - ${r.start}-${r.end}: ${r.similarity} similarity\n    ${r.sequence}`)
-              .join('\n')}`
-            : '• No similar sequences found')
+          (result.results.length > 0 ?
+            `• Top matches:\n${result.results
+                .slice(0, 5)
+                .map((r) => `  - ${r.start}-${r.end}: ${r.similarity} similarity\n    ${r.sequence}`)
+                .join('\n')}` :
+            '• No similar sequences found')
         );
 
       case 'edit_annotation':
@@ -293,11 +295,11 @@ class LLMContextService {
       case 'batch_create_annotations':
         return (
           `✓ Batch created ${result.annotationsCreated} annotations on ${result.chromosome}\n` +
-          (result.annotations.length > 0
-            ? `• Created annotations:\n${result.annotations
-              .map(a => `  - ${a.type}: ${a.start}-${a.end} (${a.qualifiers?.gene || a.id})`)
-              .join('\n')}`
-            : '')
+          (result.annotations.length > 0 ?
+            `• Created annotations:\n${result.annotations
+                .map((a) => `  - ${a.type}: ${a.start}-${a.end} (${a.qualifiers?.gene || a.id})`)
+                .join('\n')}` :
+            '')
         );
 
       case 'get_file_info':
@@ -414,9 +416,9 @@ class LLMContextService {
       },
 
       // Summary/conclusion signals
-      { patterns: ['in summary', 'to summarize', 'in conclusion', 'overall'], weight: 0.7, reason: 'Summary provided' },
-      { patterns: ['final result', 'final analysis', 'final summary'], weight: 0.75, reason: 'Final results provided' },
-      { patterns: ['that completes', 'this completes', 'this concludes'], weight: 0.8, reason: 'Completion statement' },
+      {patterns: ['in summary', 'to summarize', 'in conclusion', 'overall'], weight: 0.7, reason: 'Summary provided'},
+      {patterns: ['final result', 'final analysis', 'final summary'], weight: 0.75, reason: 'Final results provided'},
+      {patterns: ['that completes', 'this completes', 'this concludes'], weight: 0.8, reason: 'Completion statement'},
 
       // Question/offer for next steps
       {
@@ -545,7 +547,7 @@ class LLMContextService {
       result.reason = bestReason;
 
       // Extract summary if available
-      const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      const sentences = response.split(/[.!?]+/).filter((s) => s.trim().length > 0);
       if (sentences.length > 0) {
         // Use the entire response as summary for now
         result.summary = response.trim();
@@ -553,7 +555,7 @@ class LLMContextService {
     }
 
     console.log(
-      `Task completion check result: ${result.isCompleted} (confidence: ${finalConfidence}, threshold: ${completionThreshold})`
+        `Task completion check result: ${result.isCompleted} (confidence: ${finalConfidence}, threshold: ${completionThreshold})`,
     );
     if (result.isCompleted) {
       console.log(`Completion reason: ${result.reason}`);
@@ -656,7 +658,7 @@ class LLMContextService {
     ];
 
     const isSingleExecutionTask =
-      singleExecutionPatterns.some(pattern => message.toLowerCase().includes(pattern)) ||
+      singleExecutionPatterns.some((pattern) => message.toLowerCase().includes(pattern)) ||
       // Also check for very short messages that are likely simple commands
       (message.toLowerCase().split(' ').length <= 5 &&
         (message.toLowerCase().includes('toggle') ||
@@ -698,10 +700,10 @@ class LLMContextService {
       'get_file_info',
     ];
 
-    const executedTaskCompletingTool = toolsToExecute.some(tool => taskCompletingTools.includes(tool.tool_name));
+    const executedTaskCompletingTool = toolsToExecute.some((tool) => taskCompletingTools.includes(tool.tool_name));
 
     // Check if the tool execution was successful and returned meaningful data
-    const hasValidResults = successfulResults.some(result => {
+    const hasValidResults = successfulResults.some((result) => {
       if (!result.result) return false;
 
       // For file loading and UI operations, check for success flag
@@ -786,7 +788,7 @@ class LLMContextService {
         tools: ['open_new_tab', 'close_tab', 'switch_tab', 'create_annotation', 'delete_feature', 'export_data'],
         policy: 'once_per_round',
         condition: (tool, history, results, round) => {
-          const executedInCurrentRound = results.some(r => r.tool === toolName);
+          const executedInCurrentRound = results.some((r) => r.tool === toolName);
           if (executedInCurrentRound) {
             console.log(`🚫 [Policy] UI operation already executed in current round: ${toolName}`);
             return false;
@@ -886,7 +888,7 @@ class LLMContextService {
         tools: ['show_hide_features', 'set_view_mode', 'refresh_view'],
         policy: 'once_per_round',
         condition: (tool, history, results, round) => {
-          const executedInCurrentRound = results.some(r => r.tool === toolName);
+          const executedInCurrentRound = results.some((r) => r.tool === toolName);
           if (executedInCurrentRound) {
             console.log(`🚫 [Policy] Display operation already executed in current round: ${toolName}`);
             return false;
@@ -912,7 +914,7 @@ class LLMContextService {
           }
 
           // Normalize track names for comparison (treat "action" and "actions" as the same)
-          const normalizeTrackName = trackName => {
+          const normalizeTrackName = (trackName) => {
             if (trackName === 'action') return 'actions';
             return trackName;
           };
@@ -939,7 +941,7 @@ class LLMContextService {
             const trackCheckbox = document.getElementById(checkboxId);
             if (trackCheckbox && trackCheckbox.checked === currentVisibleState) {
               console.log(
-                `🚫 [Policy] Track ${currentTrack} is already ${currentVisibleState ? 'visible' : 'hidden'}, no need to toggle`
+                  `🚫 [Policy] Track ${currentTrack} is already ${currentVisibleState ? 'visible' : 'hidden'}, no need to toggle`,
               );
               return false;
             }
@@ -983,7 +985,7 @@ class LLMContextService {
                       currentVisibleState === recentVisibleState
                     ) {
                       console.log(
-                        `🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`
+                          `🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`,
                       );
                       return false;
                     }
@@ -994,7 +996,7 @@ class LLMContextService {
                 try {
                   const multipleToolCalls = this.chatManager.parseMultipleToolCalls(msg.content);
                   const matchingTool = multipleToolCalls.find(
-                    t => t.tool_name === 'toggle_track' || t.tool_name === 'toggle_annotation_track'
+                      (t) => t.tool_name === 'toggle_track' || t.tool_name === 'toggle_annotation_track',
                   );
 
                   if (matchingTool && matchingTool.parameters) {
@@ -1019,7 +1021,7 @@ class LLMContextService {
                         currentVisibleState === recentVisibleState
                       ) {
                         console.log(
-                          `🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`
+                            `🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`,
                         );
                         return false;
                       }
@@ -1136,14 +1138,14 @@ The new tab is ready for analysis and comparison.`;
         }
 
       case 'create_annotation':
-        return result.result?.success
-          ? `✅ Annotation created successfully: ${result.result.message || 'New annotation added'}`
-          : 'Annotation creation completed with potential issues.';
+        return result.result?.success ?
+          `✅ Annotation created successfully: ${result.result.message || 'New annotation added'}` :
+          'Annotation creation completed with potential issues.';
 
       case 'export_data':
-        return result.result?.success
-          ? `✅ Data exported successfully: ${result.result.filePath || result.result.message || 'Export completed'}`
-          : 'Data export completed with potential issues.';
+        return result.result?.success ?
+          `✅ Data exported successfully: ${result.result.filePath || result.result.message || 'Export completed'}` :
+          'Data export completed with potential issues.';
 
       case 'load_genome_file':
         if (result.result && result.result.success) {
@@ -1160,29 +1162,29 @@ The genome file has been loaded and is ready for analysis.`;
         }
 
       case 'load_annotation_file':
-        return result.result?.success
-          ? `✅ Annotation file loaded successfully from: ${result.result.filePath || 'selected file'}`
-          : 'Annotation file loading completed with potential issues.';
+        return result.result?.success ?
+          `✅ Annotation file loaded successfully from: ${result.result.filePath || 'selected file'}` :
+          'Annotation file loading completed with potential issues.';
 
       case 'load_variant_file':
-        return result.result?.success
-          ? `✅ Variant file loaded successfully from: ${result.result.filePath || 'selected file'}`
-          : 'Variant file loading completed with potential issues.';
+        return result.result?.success ?
+          `✅ Variant file loaded successfully from: ${result.result.filePath || 'selected file'}` :
+          'Variant file loading completed with potential issues.';
 
       case 'load_reads_file':
-        return result.result?.success
-          ? `✅ Reads file loaded successfully from: ${result.result.filePath || 'selected file'}`
-          : 'Reads file loading completed with potential issues.';
+        return result.result?.success ?
+          `✅ Reads file loaded successfully from: ${result.result.filePath || 'selected file'}` :
+          'Reads file loading completed with potential issues.';
 
       case 'load_wig_tracks':
-        return result.result?.success
-          ? `✅ WIG tracks loaded successfully. ${result.result.count || 1} file(s) processed.`
-          : 'WIG tracks loading completed with potential issues.';
+        return result.result?.success ?
+          `✅ WIG tracks loaded successfully. ${result.result.count || 1} file(s) processed.` :
+          'WIG tracks loading completed with potential issues.';
 
       case 'load_operon_file':
-        return result.result?.success
-          ? `✅ Operon file loaded successfully from: ${result.result.filePath || 'selected file'}`
-          : 'Operon file loading completed with potential issues.';
+        return result.result?.success ?
+          `✅ Operon file loaded successfully from: ${result.result.filePath || 'selected file'}` :
+          'Operon file loading completed with potential issues.';
 
       case 'analyze_interpro_domains':
         if (result.result && result.result.success) {
@@ -1203,9 +1205,9 @@ The genome file has been loaded and is ready for analysis.`;
 
 **Top Domains:**
 ${domains
-              .slice(0, 3)
-              .map(domain => `- **${domain.name}** (${domain.database}): ${domain.start}-${domain.end} (E-value: ${domain.evalue})`)
-              .join('\n')}
+      .slice(0, 3)
+      .map((domain) => `- **${domain.name}** (${domain.database}): ${domain.start}-${domain.end} (E-value: ${domain.evalue})`)
+      .join('\n')}
 
 ${domains.length > 3 ? `... and ${domains.length - 3} more domains` : ''}
 
@@ -1366,27 +1368,27 @@ The gene search has been completed successfully.`;
 
 **Top 10 Most Frequent Codons:**
 ${data.mostFrequentCodons
-              .slice(0, 10)
-              .map(
-                codon =>
-                  `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences)${codon.rscu ? ` - RSCU: ${codon.rscu}` : ''}`
-              )
-              .join('\n')}
+      .slice(0, 10)
+      .map(
+          (codon) =>
+            `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences)${codon.rscu ? ` - RSCU: ${codon.rscu}` : ''}`,
+      )
+      .join('\n')}
 
 **Amino Acid Composition:**
 ${Object.entries(data.aminoAcidComposition)
-              .sort(([, a], [, b]) => b - a)
-              .slice(0, 10)
-              .map(([aa, count]) => `- **${aa}**: ${count} codons`)
-              .join('\n')}`;
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([aa, count]) => `- **${aa}**: ${count} codons`)
+      .join('\n')}`;
 
           // Add codon preferences if available
           if (data.codonPreferences && Object.keys(data.codonPreferences).length > 0) {
             response += `\n\n**Codon Preferences by Amino Acid:**\n`;
             const sortedAAs = Object.entries(data.codonPreferences)
-              .filter(([aa]) => aa !== '*') // Exclude stop codons
-              .sort(([, a], [, b]) => b.totalCount - a.totalCount)
-              .slice(0, 10);
+                .filter(([aa]) => aa !== '*') // Exclude stop codons
+                .sort(([, a], [, b]) => b.totalCount - a.totalCount)
+                .slice(0, 10);
 
             for (const [aa, pref] of sortedAAs) {
               response += `\n**${aa}** (${pref.totalCount} total, ${pref.synonymousCodons} synonymous codons):\n`;
@@ -1420,12 +1422,12 @@ ${Object.entries(data.aminoAcidComposition)
 
 **Top 10 Most Frequent Codons (Genome-Wide):**
 ${data.mostFrequentCodons
-              .slice(0, 10)
-              .map(
-                codon =>
-                  `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences) - RSCU: ${codon.rscu}`
-              )
-              .join('\n')}
+      .slice(0, 10)
+      .map(
+          (codon) =>
+            `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences) - RSCU: ${codon.rscu}`,
+      )
+      .join('\n')}
 
 **GC Content by Codon Position:**
 - **Position 1**: ${data.gcContent?.position1}%
@@ -1443,8 +1445,8 @@ ${data.mostFrequentCodons
             response += `This analysis shows how the genome uses different codons for each amino acid. Higher RSCU values (>1.0) indicate preferred codons, while lower values (<1.0) indicate less preferred codons.\n`;
 
             const sortedAAs = Object.entries(data.codonPreferences)
-              .filter(([aa]) => aa !== '*') // Exclude stop codons
-              .sort(([, a], [, b]) => b.totalCount - a.totalCount);
+                .filter(([aa]) => aa !== '*') // Exclude stop codons
+                .sort(([, a], [, b]) => b.totalCount - a.totalCount);
 
             // Group by number of synonymous codons
             const multiCodonAAs = sortedAAs.filter(([, pref]) => pref.synonymousCodons > 1);
@@ -1479,13 +1481,13 @@ ${data.mostFrequentCodons
 
               const aaFullName = aaNames[aa] || aa;
               const biasLevel =
-                pref.statistics.biasStrength >= 75
-                  ? 'Very Strong'
-                  : pref.statistics.biasStrength >= 50
-                    ? 'Strong'
-                    : pref.statistics.biasStrength >= 25
-                      ? 'Moderate'
-                      : 'Weak';
+                pref.statistics.biasStrength >= 75 ?
+                  'Very Strong' :
+                  pref.statistics.biasStrength >= 50 ?
+                    'Strong' :
+                    pref.statistics.biasStrength >= 25 ?
+                      'Moderate' :
+                      'Weak';
 
               response += `\n**${aa} - ${aaFullName}** (${pref.totalCount.toLocaleString()} occurrences, ${pref.synonymousCodons} synonymous codons)\n`;
               response += `  📊 Bias Strength: ${biasLevel} (${pref.statistics.biasStrength}%) | Effective # of Codons: ${pref.statistics.effectiveNumberOfCodons}/${pref.synonymousCodons}\n`;
@@ -1603,7 +1605,7 @@ ${data.mostFrequentCodons
 
   getAllToolsDetailed(context) {
     const mcpServers = this.chatManager.mcpServerManager.getServerStatus();
-    const connectedServers = mcpServers.filter(s => s.connected);
+    const connectedServers = mcpServers.filter((s) => s.connected);
     const toolsByCategory = this.chatManager.mcpServerManager.getToolsByCategory();
 
     let toolsInfo = `COMPREHENSIVE TOOLS DOCUMENTATION:
@@ -1619,17 +1621,17 @@ MCP SERVER TOOLS:`;
     if (connectedServers.length > 0) {
       toolsInfo += `
 Connected Servers: ${connectedServers.length}
-${connectedServers.map(server => `- ${server.name} (${server.category}): ${server.toolCount} tools`).join('\n')}
+${connectedServers.map((server) => `- ${server.name} (${server.category}): ${server.toolCount} tools`).join('\n')}
 
 MCP Tools by Category:
 ${Object.entries(toolsByCategory)
-          .map(
-            ([category, tools]) =>
-              `${category.toUpperCase()}:\n${tools
-                .map(tool => `  - ${tool.name}: ${tool.description || 'No description'}`)
-                .join('\n')}`
-          )
-          .join('\n\n')}`;
+      .map(
+          ([category, tools]) =>
+            `${category.toUpperCase()}:\n${tools
+                .map((tool) => `  - ${tool.name}: ${tool.description || 'No description'}`)
+                .join('\n')}`,
+      )
+      .join('\n\n')}`;
     } else {
       toolsInfo += `
 No MCP servers connected. Available tools are limited to local and plugin functions.`;
@@ -1643,19 +1645,19 @@ No MCP servers connected. Available tools are limited to local and plugin functi
 
 MICROBE GENOMICS FUNCTIONS:
 ${Object.entries(categories)
-            .map(
-              ([category, info]) =>
-                `${category.toUpperCase()} (${info.description}):\n${info.functions
-                  .map(
-                    fn =>
+      .map(
+          ([category, info]) =>
+            `${category.toUpperCase()} (${info.description}):\n${info.functions
+                .map(
+                    (fn) =>
                       `  - ${fn}: Use as "${fn
-                        .toLowerCase()
-                        .replace(/([A-Z])/g, '_$1')
-                        .toLowerCase()}"`
-                  )
-                  .join('\n')}`
-            )
-            .join('\n\n')}`;
+                          .toLowerCase()
+                          .replace(/([A-Z])/g, '_$1')
+                          .toLowerCase()}"`,
+                )
+                .join('\n')}`,
+      )
+      .join('\n\n')}`;
       } catch (error) {
         toolsInfo += `\nMicrobeGenomics Functions: Available but details unavailable`;
       }
@@ -1999,7 +2001,7 @@ EXAMPLES:
 
     // Get MCP server information
     const mcpServers = this.chatManager.mcpServerManager.getServerStatus();
-    const connectedServers = mcpServers.filter(s => s.connected);
+    const connectedServers = mcpServers.filter((s) => s.connected);
     const allMcpTools = this.chatManager.mcpServerManager.getAllAvailableTools();
     const toolsByCategory = this.chatManager.mcpServerManager.getToolsByCategory();
 
@@ -2007,17 +2009,17 @@ EXAMPLES:
     if (connectedServers.length > 0) {
       mcpServersInfo = `
 Connected MCP Servers: ${connectedServers.length}
-${connectedServers.map(server => `- ${server.name} (${server.category}): ${server.toolCount} tools`).join('\n')}
+${connectedServers.map((server) => `- ${server.name} (${server.category}): ${server.toolCount} tools`).join('\n')}
 
 MCP Tools by Category:
 ${Object.entries(toolsByCategory)
-          .map(
-            ([category, tools]) =>
-              `${category.toUpperCase()}:\n${tools
-                .map(tool => `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`)
-                .join('\n')}`
-          )
-          .join('\n\n')}
+      .map(
+          ([category, tools]) =>
+            `${category.toUpperCase()}:\n${tools
+                .map((tool) => `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`)
+                .join('\n')}`,
+      )
+      .join('\n\n')}
 `;
     } else {
       mcpServersInfo = `
@@ -2036,24 +2038,24 @@ Note: Additional tools may be available when MCP servers are connected.
         microbeGenomicsInfo = `
 MICROBE GENOMICS FUNCTIONS (Advanced Analysis Tools):
 ${Object.entries(categories)
-            .map(
-              ([category, info]) =>
-                `${category.toUpperCase()} (${info.description}):\n${info.functions
-                  .map(
-                    fn =>
+      .map(
+          ([category, info]) =>
+            `${category.toUpperCase()} (${info.description}):\n${info.functions
+                .map(
+                    (fn) =>
                       `  - ${fn}: Use as "${fn
-                        .toLowerCase()
-                        .replace(/([A-Z])/g, '_$1')
-                        .toLowerCase()}"`
-                  )
-                  .join('\n')}`
-            )
-            .join('\n\n')}
+                          .toLowerCase()
+                          .replace(/([A-Z])/g, '_$1')
+                          .toLowerCase()}"`,
+                )
+                .join('\n')}`,
+      )
+      .join('\n\n')}
 
 MICROBE GENOMICS USAGE EXAMPLES:
 ${examples
-            .map(example => `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`)
-            .join('\n\n')}
+      .map((example) => `Task: ${example.task}\nSteps:\n${example.steps.map((step) => `  ${step}`).join('\n')}`)
+      .join('\n\n')}
 `;
       } catch (error) {
         microbeGenomicsInfo = '\nMicrobeGenomicsFunctions: Available but could not load details\n';
@@ -2082,7 +2084,7 @@ Available Tools Summary:
 - MCP Tools: ${context.genomeBrowser.toolSources.mcp}
 
 All Available Tools:
-${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
+${context.genomeBrowser.availableTools.map((tool) => `- ${tool}`).join('\n')}
 
 ${microbeGenomicsInfo}
 
@@ -2223,7 +2225,7 @@ Metabolic Pathway Examples:
 
     // Get MCP server information
     const mcpServers = this.chatManager.mcpServerManager.getServerStatus();
-    const connectedServers = mcpServers.filter(s => s.connected);
+    const connectedServers = mcpServers.filter((s) => s.connected);
     const allMcpTools = this.chatManager.mcpServerManager.getAllAvailableTools();
     const toolsByCategory = this.chatManager.mcpServerManager.getToolsByCategory();
 
@@ -2231,17 +2233,17 @@ Metabolic Pathway Examples:
     if (connectedServers.length > 0) {
       mcpServersInfo = `
 Connected MCP Servers: ${connectedServers.length}
-${connectedServers.map(server => `- ${server.name} (${server.category}): ${server.toolCount} tools`).join('\n')}
+${connectedServers.map((server) => `- ${server.name} (${server.category}): ${server.toolCount} tools`).join('\n')}
 
 MCP Tools by Category:
 ${Object.entries(toolsByCategory)
-          .map(
-            ([category, tools]) =>
-              `${category.toUpperCase()}:\n${tools
-                .map(tool => `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`)
-                .join('\n')}`
-          )
-          .join('\n\n')}
+      .map(
+          ([category, tools]) =>
+            `${category.toUpperCase()}:\n${tools
+                .map((tool) => `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`)
+                .join('\n')}`,
+      )
+      .join('\n\n')}
 `;
     } else {
       mcpServersInfo = `
@@ -2260,24 +2262,24 @@ Note: Additional tools may be available when MCP servers are connected.
         microbeGenomicsInfo = `
 MICROBE GENOMICS FUNCTIONS (Advanced Analysis Tools):
 ${Object.entries(categories)
-            .map(
-              ([category, info]) =>
-                `${category.toUpperCase()} (${info.description}):\n${info.functions
-                  .map(
-                    fn =>
+      .map(
+          ([category, info]) =>
+            `${category.toUpperCase()} (${info.description}):\n${info.functions
+                .map(
+                    (fn) =>
                       `  - ${fn}: Use as "${fn
-                        .toLowerCase()
-                        .replace(/([A-Z])/g, '_$1')
-                        .toLowerCase()}"`
-                  )
-                  .join('\n')}`
-            )
-            .join('\n\n')}
+                          .toLowerCase()
+                          .replace(/([A-Z])/g, '_$1')
+                          .toLowerCase()}"`,
+                )
+                .join('\n')}`,
+      )
+      .join('\n\n')}
 
 MICROBE GENOMICS USAGE EXAMPLES:
 ${examples
-            .map(example => `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`)
-            .join('\n\n')}
+      .map((example) => `Task: ${example.task}\nSteps:\n${example.steps.map((step) => `  ${step}`).join('\n')}`)
+      .join('\n\n')}
 `;
       } catch (error) {
         microbeGenomicsInfo = '\nMicrobeGenomicsFunctions: Available but could not load details\n';
@@ -2307,7 +2309,7 @@ Available Tools Summary:
 - MCP Tools: ${context.genomeBrowser.toolSources.mcp}
 
 All Available Tools:
-${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
+${context.genomeBrowser.availableTools.map((tool) => `- ${tool}`).join('\n')}
 
 ${microbeGenomicsInfo}
 
@@ -2437,8 +2439,8 @@ ${this.chatManager.getPluginSystemInfo()}`;
   }
 
   addToolResultMessage(toolResults) {
-    const successCount = toolResults.filter(r => r.success).length;
-    const failCount = toolResults.filter(r => !r.success).length;
+    const successCount = toolResults.filter((r) => r.success).length;
+    const failCount = toolResults.filter((r) => !r.success).length;
 
     // Add to Evolution data first (always record tool results)
     this.chatManager.addToEvolutionData({
@@ -2452,7 +2454,7 @@ ${this.chatManager.getPluginSystemInfo()}`;
         successCount: successCount,
         failCount: failCount,
         totalCount: toolResults.length,
-        tools: toolResults.map(r => ({ tool: r.tool, success: r.success })),
+        tools: toolResults.map((r) => ({tool: r.tool, success: r.success})),
       },
     });
 
@@ -2465,150 +2467,148 @@ ${this.chatManager.getPluginSystemInfo()}`;
 
     // 显示详细结果
     const detailsHtml = toolResults
-      .map(result => {
-        const icon = result.success ? '✅' : '❌';
-        let resultDisplay = `<div style="margin: 8px 0; padding: 8px; border-left: 3px solid ${result.success ? '#4CAF50' : '#F44336'};">`;
-        resultDisplay += `<strong>${icon} ${result.tool}</strong><br>`;
+        .map((result) => {
+          const icon = result.success ? '✅' : '❌';
+          let resultDisplay = `<div style="margin: 8px 0; padding: 8px; border-left: 3px solid ${result.success ? '#4CAF50' : '#F44336'};">`;
+          resultDisplay += `<strong>${icon} ${result.tool}</strong><br>`;
 
-        if (result.success) {
+          if (result.success) {
           // Custom handling for Deep Gene Research tool
-          if (result.tool === 'deep-gene-research') {
-            const resultData = result.result || result.data;
-            let reportSaved = false;
-            let reportPath = '';
+            if (result.tool === 'deep-gene-research') {
+              const resultData = result.result || result.data;
+              let reportSaved = false;
+              let reportPath = '';
 
-            try {
-              const fs = require('fs');
-              const path = require('path');
+              try {
+                const fs = require('fs');
+                const path = require('path');
 
-              // Use the new helper to extract report from various formats
-              const extracted = this.chatManager.extractDeepGeneResearchReport(resultData);
-              const { report, geneSymbol, stepsCount, statistics, images, sources } = extracted;
+                // Use the new helper to extract report from various formats
+                const extracted = this.chatManager.extractDeepGeneResearchReport(resultData);
+                const {report, geneSymbol, stepsCount, statistics, images, sources} = extracted;
 
-              // Save report if we have content (ensure report is a string)
-              const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
-              if (reportStr && reportStr.trim().length > 0) {
-                const reportsDir = path.join(process.cwd(), 'reports');
-                if (!fs.existsSync(reportsDir)) {
-                  fs.mkdirSync(reportsDir, { recursive: true });
+                // Save report if we have content (ensure report is a string)
+                const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
+                if (reportStr && reportStr.trim().length > 0) {
+                  const reportsDir = path.join(process.cwd(), 'reports');
+                  if (!fs.existsSync(reportsDir)) {
+                    fs.mkdirSync(reportsDir, {recursive: true});
+                  }
+
+                  const safeSymbol = geneSymbol.replace(/[^a-zA-Z0-9_-]/g, '_');
+                  const filename = `Gene_${safeSymbol}_Research_Report.md`;
+                  reportPath = path.join(reportsDir, filename);
+
+                  fs.writeFileSync(reportPath, reportStr);
+                  reportSaved = true;
+                  console.log(`✅ Deep Gene Research report saved to: ${reportPath}`);
                 }
 
-                const safeSymbol = geneSymbol.replace(/[^a-zA-Z0-9_-]/g, '_');
-                const filename = `Gene_${safeSymbol}_Research_Report.md`;
-                reportPath = path.join(reportsDir, filename);
+                // Formatted Display
+                resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">`;
+                resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Complete: ${geneSymbol}</h3>`;
 
-                fs.writeFileSync(reportPath, reportStr);
-                reportSaved = true;
-                console.log(`✅ Deep Gene Research report saved to: ${reportPath}`);
-              }
-
-              // Formatted Display
-              resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">`;
-              resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Complete: ${geneSymbol}</h3>`;
-
-              if (reportSaved) {
-                resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;">`;
-                resultDisplay += `<i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${path.basename(reportPath)}</code>`;
-                resultDisplay += `</div>`;
-              }
-
-              resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
-              if (stepsCount > 0) {
-                resultDisplay += `Completed ${stepsCount} steps of analysis.<br>`;
-              }
-              if (statistics.totalCitations > 0 || statistics.processedPapers > 0) {
-                resultDisplay += `Found ${statistics.totalCitations} citations`;
-                if (statistics.processedPapers > 0) {
-                  resultDisplay += ` and ${statistics.processedPapers} papers`;
+                if (reportSaved) {
+                  resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;">`;
+                  resultDisplay += `<i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${path.basename(reportPath)}</code>`;
+                  resultDisplay += `</div>`;
                 }
-                resultDisplay += `.<br>`;
-              }
-              if (reportStr && reportStr.length > 0) {
+
+                resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
+                if (stepsCount > 0) {
+                  resultDisplay += `Completed ${stepsCount} steps of analysis.<br>`;
+                }
+                if (statistics.totalCitations > 0 || statistics.processedPapers > 0) {
+                  resultDisplay += `Found ${statistics.totalCitations} citations`;
+                  if (statistics.processedPapers > 0) {
+                    resultDisplay += ` and ${statistics.processedPapers} papers`;
+                  }
+                  resultDisplay += `.<br>`;
+                }
+                if (reportStr && reportStr.length > 0) {
                 // Show a preview of the report content
-                const previewLength = 500;
-                const preview =
+                  const previewLength = 500;
+                  const preview =
                   reportStr.length > previewLength ? reportStr.substring(0, previewLength) + '...' : reportStr;
-                resultDisplay += `<details style="margin-top: 8px;">`;
-                resultDisplay += `<summary style="cursor: pointer; color: #1565C0;">📄 Report Preview</summary>`;
-                resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; white-space: pre-wrap; font-size: 0.85em;">${this.chatManager.escapeHtml(preview)}</div>`;
-                resultDisplay += `</details>`;
-              }
-              resultDisplay += `</div>`;
-
-              // Collapsible detailed JSON
-              if (this.chatManager.showDetailedToolData) {
-                resultDisplay += `<details style="margin-top: 8px;">`;
-                resultDisplay += `<summary style="cursor: pointer; color: #2196F3; font-size: 0.9em;">📊 View raw data</summary>`;
-                resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;">`;
-                try {
-                  const formattedData = this.chatManager.formatToolResultData(resultData);
-                  resultDisplay += formattedData;
-                } catch (error) {
-                  resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+                  resultDisplay += `<details style="margin-top: 8px;">`;
+                  resultDisplay += `<summary style="cursor: pointer; color: #1565C0;">📄 Report Preview</summary>`;
+                  resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; white-space: pre-wrap; font-size: 0.85em;">${this.chatManager.escapeHtml(preview)}</div>`;
+                  resultDisplay += `</details>`;
                 }
-                resultDisplay += `</div></details>`;
-              }
+                resultDisplay += `</div>`;
 
-              resultDisplay += `</div>`;
-            } catch (e) {
-              console.error('Error processing deep-gene-research result:', e);
-              // Fallback to default display
-              resultDisplay += `<span style="color: #4CAF50;">Status: Success (Display Error)</span>`;
+                // Collapsible detailed JSON
+                if (this.chatManager.showDetailedToolData) {
+                  resultDisplay += `<details style="margin-top: 8px;">`;
+                  resultDisplay += `<summary style="cursor: pointer; color: #2196F3; font-size: 0.9em;">📊 View raw data</summary>`;
+                  resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;">`;
+                  try {
+                    const formattedData = this.chatManager.formatToolResultData(resultData);
+                    resultDisplay += formattedData;
+                  } catch (error) {
+                    resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+                  }
+                  resultDisplay += `</div></details>`;
+                }
+
+                resultDisplay += `</div>`;
+              } catch (e) {
+                console.error('Error processing deep-gene-research result:', e);
+                // Fallback to default display
+                resultDisplay += `<span style="color: #4CAF50;">Status: Success (Display Error)</span>`;
+                if (this.chatManager.showDetailedToolData) {
+                  const rawData = result.result || result.data;
+                  if (rawData) {
+                    resultDisplay += `<br><details style="margin-top: 8px;">`;
+                    resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
+                    resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
+                    try {
+                      const formattedData = this.chatManager.formatToolResultData(rawData);
+                      resultDisplay += formattedData;
+                    } catch (error) {
+                      resultDisplay += `<pre>${JSON.stringify(rawData, null, 2)}</pre>`;
+                    }
+                    resultDisplay += `</div></details>`;
+                  }
+                }
+              }
+            } else {
+            // Standard display for other tools
+              resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
+
+              // 显示详细数据（如果启用）
               if (this.chatManager.showDetailedToolData) {
-                const rawData = result.result || result.data;
-                if (rawData) {
+              // Check for result.result first (standard tool execution result), then fallback to result.data (legacy)
+                const resultData = result.result || result.data;
+                if (resultData) {
                   resultDisplay += `<br><details style="margin-top: 8px;">`;
                   resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
                   resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
                   try {
-                    const formattedData = this.chatManager.formatToolResultData(rawData);
+                  // 格式化数据显示
+                    const formattedData = this.chatManager.formatToolResultData(resultData);
                     resultDisplay += formattedData;
                   } catch (error) {
-                    resultDisplay += `<pre>${JSON.stringify(rawData, null, 2)}</pre>`;
+                    resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
                   }
                   resultDisplay += `</div></details>`;
                 }
               }
             }
           } else {
-            // Standard display for other tools
-            resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
-
-            // 显示详细数据（如果启用）
-            if (this.chatManager.showDetailedToolData) {
-              // Check for result.result first (standard tool execution result), then fallback to result.data (legacy)
-              const resultData = result.result || result.data;
-              if (resultData) {
-                resultDisplay += `<br><details style="margin-top: 8px;">`;
-                resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
-                resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
-                try {
-                  // 格式化数据显示
-                  const formattedData = this.chatManager.formatToolResultData(resultData);
-                  resultDisplay += formattedData;
-                } catch (error) {
-                  resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
-                }
-                resultDisplay += `</div></details>`;
-              }
+            resultDisplay += `<span style="color: #F44336;">Status: Failed</span>`;
+            if (result.error) {
+              resultDisplay += `<br><span style="color: #F44336; font-size: 0.9em;">Error: ${result.error}</span>`;
             }
           }
-        } else {
-          resultDisplay += `<span style="color: #F44336;">Status: Failed</span>`;
-          if (result.error) {
-            resultDisplay += `<br><span style="color: #F44336; font-size: 0.9em;">Error: ${result.error}</span>`;
-          }
-        }
 
-        resultDisplay += `</div>`;
-        return resultDisplay;
-      })
-      .join('');
+          resultDisplay += `</div>`;
+          return resultDisplay;
+        })
+        .join('');
 
     this.chatManager.updateThinkingMessage(`${resultMessage}<br><div style="margin-top: 8px;">${detailsHtml}</div>`);
   }
-
-
 }
 
 window.LLMContextService = LLMContextService;

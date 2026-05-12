@@ -10,7 +10,7 @@ class NavigationAgent extends AgentBase {
         description: 'Navigate to genomic coordinates',
         priority: 'high',
         estimatedTime: 100,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.chromosome) throw new Error('chromosome parameter required');
           if (!params.start && !params.position) throw new Error('start or position parameter required');
         },
@@ -34,7 +34,7 @@ class NavigationAgent extends AgentBase {
         description: 'Navigate to specific gene',
         priority: 'high',
         estimatedTime: 200,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.geneName) throw new Error('geneName parameter required');
         },
       },
@@ -43,7 +43,7 @@ class NavigationAgent extends AgentBase {
         description: 'Scroll view left',
         priority: 'high',
         estimatedTime: 50,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.bp) throw new Error('bp parameter required');
         },
       },
@@ -52,7 +52,7 @@ class NavigationAgent extends AgentBase {
         description: 'Scroll view right',
         priority: 'high',
         estimatedTime: 50,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.bp) throw new Error('bp parameter required');
         },
       },
@@ -61,7 +61,7 @@ class NavigationAgent extends AgentBase {
         description: 'Zoom in view (default 2x, max 10x)',
         priority: 'high',
         estimatedTime: 50,
-        validateParameters: params => {
+        validateParameters: (params) => {
           // factor is optional, defaults to 2
         },
       },
@@ -70,7 +70,7 @@ class NavigationAgent extends AgentBase {
         description: 'Zoom out view (default 2x, max 10x)',
         priority: 'high',
         estimatedTime: 50,
-        validateParameters: params => {
+        validateParameters: (params) => {
           // factor is optional, defaults to 2
         },
       },
@@ -79,7 +79,7 @@ class NavigationAgent extends AgentBase {
         description: 'Zoom to gene region',
         priority: 'high',
         estimatedTime: 150,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.geneName) throw new Error('geneName parameter required');
         },
       },
@@ -88,7 +88,7 @@ class NavigationAgent extends AgentBase {
         description: 'Toggle track visibility',
         priority: 'high',
         estimatedTime: 100,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.trackName) throw new Error('trackName parameter required');
           if (typeof params.visible !== 'boolean') throw new Error('visible parameter must be boolean');
         },
@@ -105,7 +105,7 @@ class NavigationAgent extends AgentBase {
         description: 'Save current position as bookmark',
         priority: 'medium',
         estimatedTime: 100,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.name) throw new Error('name parameter required');
         },
       },
@@ -121,7 +121,7 @@ class NavigationAgent extends AgentBase {
         description: 'Save current view configuration',
         priority: 'medium',
         estimatedTime: 100,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.name) throw new Error('name parameter required');
         },
       },
@@ -130,7 +130,7 @@ class NavigationAgent extends AgentBase {
         description: 'Navigate to specified location',
         priority: 'high',
         estimatedTime: 100,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.location) throw new Error('location parameter required');
         },
       },
@@ -140,7 +140,7 @@ class NavigationAgent extends AgentBase {
         description: 'Search for features in the genome',
         priority: 'high',
         estimatedTime: 200,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.query) throw new Error('query parameter required');
         },
       },
@@ -149,7 +149,7 @@ class NavigationAgent extends AgentBase {
         description: 'Search for a gene by name',
         priority: 'high',
         estimatedTime: 200,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.geneName) throw new Error('geneName parameter required');
         },
       },
@@ -158,7 +158,7 @@ class NavigationAgent extends AgentBase {
         description: 'Pan the view left',
         priority: 'high',
         estimatedTime: 50,
-        validateParameters: params => {
+        validateParameters: (params) => {
           // bp is optional
         },
       },
@@ -167,7 +167,7 @@ class NavigationAgent extends AgentBase {
         description: 'Pan the view right',
         priority: 'high',
         estimatedTime: 50,
-        validateParameters: params => {
+        validateParameters: (params) => {
           // bp is optional
         },
       },
@@ -176,7 +176,7 @@ class NavigationAgent extends AgentBase {
         description: 'Switch to a specific tab',
         priority: 'high',
         estimatedTime: 50,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.tabName) throw new Error('tabName parameter required');
         },
       },
@@ -192,7 +192,7 @@ class NavigationAgent extends AgentBase {
         description: 'Close a browser tab',
         priority: 'medium',
         estimatedTime: 50,
-        validateParameters: params => {
+        validateParameters: (params) => {
           if (!params.tabName) throw new Error('tabName parameter required');
         },
       },
@@ -314,7 +314,7 @@ class NavigationAgent extends AgentBase {
           } catch (err) {
             console.warn(`NavigationAgent: No local implementation for ${functionName}`);
           }
-          return { success: false, error: `Function ${functionName} requires ChatManager execution` };
+          return {success: false, error: `Function ${functionName} requires ChatManager execution`};
 
         default:
           throw new Error(`Navigation function not implemented: ${functionName}`);
@@ -329,7 +329,7 @@ class NavigationAgent extends AgentBase {
    * Execute navigate to position
    */
   async executeNavigateToPosition(parameters, app) {
-    const { chromosome, start, end, position } = parameters;
+    const {chromosome, start, end, position} = parameters;
 
     // Check cache first
     const cacheKey = `nav_${chromosome}_${start || position}_${end || ''}`;
@@ -350,7 +350,7 @@ class NavigationAgent extends AgentBase {
       }
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser navigation failed, returning parameters`, error);
-      result = { success: true, chromosome, start: start || position, end, position };
+      result = {success: true, chromosome, start: start || position, end, position};
     }
 
     // Update navigation history
@@ -374,7 +374,7 @@ class NavigationAgent extends AgentBase {
     });
 
     // Update current position
-    this.currentPosition = { chromosome, start: start || position, end };
+    this.currentPosition = {chromosome, start: start || position, end};
 
     return result;
   }
@@ -395,7 +395,7 @@ class NavigationAgent extends AgentBase {
       result = await app.genomeBrowser.getCurrentState();
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.getCurrentState failed`, error);
-      result = { chromosome: 'unknown', start: 0, end: 0 };
+      result = {chromosome: 'unknown', start: 0, end: 0};
     }
 
     // Cache result
@@ -424,7 +424,7 @@ class NavigationAgent extends AgentBase {
    * Execute jump to gene
    */
   async executeJumpToGene(parameters, app) {
-    const { geneName } = parameters;
+    const {geneName} = parameters;
 
     // Check cache first
     const cacheKey = `gene_${geneName}`;
@@ -439,7 +439,7 @@ class NavigationAgent extends AgentBase {
       result = await app.genomeBrowser.jumpToGene(geneName);
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.jumpToGene failed`, error);
-      result = { success: false, error: error.message, geneName };
+      result = {success: false, error: error.message, geneName};
     }
 
     // Cache result
@@ -462,12 +462,12 @@ class NavigationAgent extends AgentBase {
    * Execute scroll left
    */
   async executeScrollLeft(parameters, app) {
-    const { bp } = parameters;
+    const {bp} = parameters;
     try {
       return await app.genomeBrowser.scrollLeft(bp);
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.scrollLeft failed`, error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   }
 
@@ -475,12 +475,12 @@ class NavigationAgent extends AgentBase {
    * Execute scroll right
    */
   async executeScrollRight(parameters, app) {
-    const { bp } = parameters;
+    const {bp} = parameters;
     try {
       return await app.genomeBrowser.scrollRight(bp);
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.scrollRight failed`, error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   }
 
@@ -489,7 +489,7 @@ class NavigationAgent extends AgentBase {
    */
   async executeZoomIn(parameters, app) {
     // Support magnification strings like "1.5X", "2x", or numeric values
-    let { factor } = parameters;
+    let {factor} = parameters;
     if (typeof factor === 'string') {
       const normalized = factor.trim().toLowerCase().replace(/×/g, 'x');
       const stripped = normalized.endsWith('x') ? normalized.slice(0, -1) : normalized;
@@ -500,7 +500,7 @@ class NavigationAgent extends AgentBase {
       return await app.genomeBrowser.zoomIn(factor);
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.zoomIn failed`, error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   }
 
@@ -509,7 +509,7 @@ class NavigationAgent extends AgentBase {
    */
   async executeZoomOut(parameters, app) {
     // Support magnification strings like "1.5X", "2x", or numeric values
-    let { factor } = parameters;
+    let {factor} = parameters;
     if (typeof factor === 'string') {
       const normalized = factor.trim().toLowerCase().replace(/×/g, 'x');
       const stripped = normalized.endsWith('x') ? normalized.slice(0, -1) : normalized;
@@ -520,7 +520,7 @@ class NavigationAgent extends AgentBase {
       return await app.genomeBrowser.zoomOut(factor);
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.zoomOut failed`, error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   }
 
@@ -528,7 +528,7 @@ class NavigationAgent extends AgentBase {
    * Execute zoom to gene
    */
   async executeZoomToGene(parameters, app) {
-    const { geneName } = parameters;
+    const {geneName} = parameters;
 
     // First jump to gene, then zoom
     const jumpResult = await this.executeJumpToGene(parameters, app);
@@ -537,7 +537,7 @@ class NavigationAgent extends AgentBase {
       zoomResult = await app.genomeBrowser.zoomToGene(geneName);
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.zoomToGene failed`, error);
-      zoomResult = { success: false, error: error.message };
+      zoomResult = {success: false, error: error.message};
     }
 
     return {
@@ -550,12 +550,12 @@ class NavigationAgent extends AgentBase {
    * Execute toggle track
    */
   async executeToggleTrack(parameters, app) {
-    const { trackName, visible } = parameters;
+    const {trackName, visible} = parameters;
     try {
       return await app.genomeBrowser.toggleTrack(trackName, visible);
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.toggleTrack failed`, error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   }
 
@@ -567,7 +567,7 @@ class NavigationAgent extends AgentBase {
       return await app.genomeBrowser.getTrackStatus();
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.getTrackStatus failed`, error);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   }
 
@@ -575,7 +575,7 @@ class NavigationAgent extends AgentBase {
    * Execute bookmark position
    */
   async executeBookmarkPosition(parameters, app) {
-    const { name } = parameters;
+    const {name} = parameters;
     const currentState = await this.executeGetCurrentState(app);
 
     const bookmark = {
@@ -610,16 +610,28 @@ class NavigationAgent extends AgentBase {
    * Execute save view state
    */
   async executeSaveViewState(parameters, app) {
-    const { name } = parameters;
+    const chatManager = this.multiAgentSystem?.chatManager;
+    if (chatManager && typeof chatManager.saveViewState === 'function') {
+      try {
+        return await chatManager.saveViewState(parameters);
+      } catch (error) {
+        console.warn('NavigationAgent: ChatManager.saveViewState failed, falling back to local implementation', error);
+      }
+    }
+
+    const {name, description = ''} = parameters;
     const currentState = await this.executeGetCurrentState(app);
 
     const viewState = {
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2, 9),
       name,
-      timestamp: Date.now(),
-      state: currentState,
+      description,
+      chromosome: currentState.chromosome,
+      position: {start: currentState.start, end: currentState.end},
+      visibleTracks: [],
+      created: new Date().toISOString(),
     };
 
-    // Store view state
     const viewStates = this.getStoredViewStates();
     viewStates.push(viewState);
     this.setStoredViewStates(viewStates);
@@ -627,6 +639,7 @@ class NavigationAgent extends AgentBase {
     return {
       success: true,
       viewState,
+      message: `Saved view state "${name}"`,
     };
   }
 
@@ -634,25 +647,25 @@ class NavigationAgent extends AgentBase {
    * Execute navigate to
    */
   async executeNavigateTo(parameters, app) {
-    const { location } = parameters;
+    const {location} = parameters;
 
     // Parse location format
     if (location.includes(':')) {
       const [chromosome, position] = location.split(':');
       return await this.executeNavigateToPosition(
-        {
-          chromosome,
-          position: parseInt(position),
-        },
-        app
+          {
+            chromosome,
+            position: parseInt(position),
+          },
+          app,
       );
     } else {
       // Assume it's a gene name
       return await this.executeJumpToGene(
-        {
-          geneName: location,
-        },
-        app
+          {
+            geneName: location,
+          },
+          app,
       );
     }
   }
@@ -661,7 +674,7 @@ class NavigationAgent extends AgentBase {
    * Execute search features
    */
   async executeSearchFeatures(parameters, app) {
-    const { query } = parameters;
+    const {query} = parameters;
     try {
       if (app.genomeBrowser && typeof app.genomeBrowser.searchFeatures === 'function') {
         return await app.genomeBrowser.searchFeatures(query);
@@ -669,7 +682,7 @@ class NavigationAgent extends AgentBase {
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.searchFeatures failed`, error);
     }
-    return { success: false, error: 'search_features requires ChatManager or genomeBrowser implementation' };
+    return {success: false, error: 'search_features requires ChatManager or genomeBrowser implementation'};
   }
 
   /**
@@ -762,18 +775,18 @@ class NavigationAgent extends AgentBase {
     // Add null checks for resource manager properties
     if (!available || !available.cpu || !available.memory || !available.network || !available.cache) {
       console.warn('ResourceManager not properly initialized, allowing execution');
-      return { available: true, reason: 'Resource checking disabled' };
+      return {available: true, reason: 'Resource checking disabled'};
     }
 
     if (currentUsage.cpu + requirements.cpu > available.cpu.available) {
-      return { available: false, reason: 'Insufficient CPU' };
+      return {available: false, reason: 'Insufficient CPU'};
     }
 
     if (currentUsage.memory + requirements.memory > available.memory.available) {
-      return { available: false, reason: 'Insufficient memory' };
+      return {available: false, reason: 'Insufficient memory'};
     }
 
-    return { available: true, requirements };
+    return {available: true, requirements};
   }
 
   /**
@@ -795,9 +808,9 @@ class NavigationAgent extends AgentBase {
 
     // Notify system of resource availability
     this.multiAgentSystem.eventBus.dispatchEvent(
-      new CustomEvent('resource-available', {
-        detail: { resourceType: 'mixed', amount: release },
-      })
+        new CustomEvent('resource-available', {
+          detail: {resourceType: 'mixed', amount: release},
+        }),
     );
   }
 }
