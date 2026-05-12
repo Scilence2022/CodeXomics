@@ -178,6 +178,9 @@ class LLMContextService {
         return digestHeader + digestStats + enzymeInfo + fragmentInfo;
 
       case 'simulate_gel_electrophoresis':
+        if (result.success === false) {
+          return `⚠️ ${result.error}\n💡 ${result.hint || ''}`;
+        }
         const gelHeader = `Gel Electrophoresis Simulation (${result.gelPercentage}% agarose):\n`;
         const gelStats =
           `• Lane: ${result.laneLabel || 'Digest'}\n` +

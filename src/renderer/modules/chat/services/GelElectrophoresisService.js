@@ -45,10 +45,12 @@ class GelElectrophoresisService {
     } = params;
 
     if (!fragments || !Array.isArray(fragments) || fragments.length === 0) {
-      throw new Error(
-        'No fragment data provided. Run virtual_digest first and pass its fragmentDetails to this tool. ' +
-          'Example: simulate_gel_electrophoresis(fragments=<virtual_digest_result>.fragmentDetails)'
-      );
+      return {
+        success: false,
+        error: 'No fragment data provided. Run virtual_digest first and pass its fragmentDetails to this tool.',
+        hint: 'Example: simulate_gel_electrophoresis(fragments=<virtual_digest_result>.fragmentDetails)',
+        requiredParam: 'fragments',
+      };
     }
 
     const fragmentSizes = fragments.map(f => f.length || f);

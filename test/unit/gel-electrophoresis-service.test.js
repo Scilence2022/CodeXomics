@@ -57,10 +57,11 @@ describe('GelElectrophoresisService - simulateGelElectrophoresis', () => {
     expect(result2.gelPercent).toBe(2.0);
   });
 
-  it('should require fragments parameter', () => {
-    expect(() => {
-      service.simulateGelElectrophoresis({});
-    }).toThrow();
+  it('should return error object when fragments is missing (not throw)', async () => {
+    const result = await service.simulateGelElectrophoresis({});
+    expect(result.success).toBe(false);
+    expect(result.error).toBeDefined();
+    expect(result.hint).toBeDefined();
   });
 
   it('should NOT accept enzymes parameter (visualization-only)', () => {
