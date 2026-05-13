@@ -173,6 +173,19 @@ class NavigationTools {
         },
       },
 
+      find_gene: {
+        name: 'find_gene',
+        description: 'Legacy alias for find_gene_by_name. Search for a SPECIFIC GENE by its name or locus tag.',
+        parameters: {
+          type: 'object',
+          properties: {
+            name: {type: 'string', description: 'Specific gene name or locus tag'},
+            clientId: {type: 'string', description: 'Browser client ID'},
+          },
+          required: ['name'],
+        },
+      },
+
       toggle_track: {
         name: 'toggle_track',
         description: 'Show or hide a specific track',

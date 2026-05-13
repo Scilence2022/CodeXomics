@@ -61,6 +61,7 @@ class FunctionCallsOrganizer {
           'get_chromosome_list',
           'search_features',
           'find_gene_by_name',
+          'find_gene', // legacy alias
           'search_by_position',
           'get_nearby_features',
           'get_operons',

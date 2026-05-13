@@ -154,6 +154,15 @@ class NavigationAgent extends AgentBase {
         },
       },
       {
+        functionName: 'find_gene',
+        description: 'Search for a gene by name (legacy alias for find_gene_by_name)',
+        priority: 'high',
+        estimatedTime: 200,
+        validateParameters: (params) => {
+          if (!params.geneName) throw new Error('geneName parameter required');
+        },
+      },
+      {
         functionName: 'pan_left',
         description: 'Pan the view left',
         priority: 'high',
@@ -258,6 +267,7 @@ class NavigationAgent extends AgentBase {
 
         case 'jump_to_gene':
         case 'find_gene_by_name':
+        case 'find_gene': // legacy alias
           return await this.executeJumpToGene(parameters, app);
 
         case 'scroll_left':

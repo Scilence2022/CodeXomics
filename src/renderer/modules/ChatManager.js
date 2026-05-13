@@ -7124,6 +7124,7 @@ ${coreTools}
       search_features: () => this.searchFeatures(parameters),
       get_current_state: () => this.getCurrentState(),
       find_gene_by_name: () => this.executeMicrobeFunction('searchGeneByName', parameters),
+      find_gene: () => this.executeMicrobeFunction('searchGeneByName', parameters), // legacy alias
       save_view_state: () => this.saveViewState(parameters),
       bookmark_position: () => this.bookmarkPosition(parameters),
 
@@ -7825,6 +7826,10 @@ ${coreTools}
         window.MicrobeGenomicsFunctions.searchGeneByName(
             parameters.name || parameters.geneName || parameters.identifier,
         ),
+      find_gene: () =>
+        window.MicrobeGenomicsFunctions.searchGeneByName(
+            parameters.name || parameters.geneName || parameters.identifier,
+        ), // legacy alias
       get_coding_sequence: () =>
         window.MicrobeGenomicsFunctions.getCodingSequence(
             parameters.identifier || parameters.geneName || parameters.gene_name,
@@ -13592,6 +13597,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // External Agent - 外部工具和API
       search_features: 'External Agent',
       find_gene_by_name: 'External Agent',
+      find_gene: 'External Agent', // legacy alias
       search_by_position: 'External Agent',
       search_motif: 'External Agent',
       search_pattern: 'External Agent',

@@ -30,6 +30,7 @@ const TOOL_NAMES = {
   SEARCH: {
     SEARCH_FEATURES: 'search_features',
     SEARCH_GENE_BY_NAME: 'find_gene_by_name',
+    FIND_GENE: 'find_gene', // legacy alias for find_gene_by_name
     SEARCH_MOTIF: 'search_motif',
     SEARCH_PATTERN: 'search_pattern',
     SEARCH_BY_POSITION: 'search_by_position',

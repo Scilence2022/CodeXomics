@@ -415,6 +415,14 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // Legacy alias: find_gene → find_gene_by_name
+    this.builtInToolsMap.set('find_gene', {
+      method: 'searchGeneByName',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 2, // lower priority than find_gene_by_name
+    });
+
     this.builtInToolsMap.set('search_features', {
       method: 'searchFeatures',
       category: 'navigation',

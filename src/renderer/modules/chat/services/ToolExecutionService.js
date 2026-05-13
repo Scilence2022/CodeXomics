@@ -10,6 +10,16 @@ class ToolExecutionService {
 
   async execute(toolName, parameters) {
     try {
+      // --- LEGACY ALIAS RESOLUTION ---
+      const legacyAliases = {
+        'find_gene': 'find_gene_by_name',
+        'search_gene_by_name': 'find_gene_by_name',
+      };
+      if (legacyAliases[toolName]) {
+        console.log(`[ToolExecutionService] Legacy alias: '${toolName}' → '${legacyAliases[toolName]}'`);
+        toolName = legacyAliases[toolName];
+      }
+
       console.log(`[ToolExecutionService] Executing: ${toolName}`, parameters);
 
       // --- PRIORITY 1: MULTI-AGENT SETTINGS (if handled exclusively) ---
@@ -285,6 +295,7 @@ class ToolExecutionService {
   _extractMGFArgs(toolName, parameters) {
     const argMappings = {
       'search_sequence_motif': [], // Pass full params object - searchSequenceMotif handles object deconstruction internally
+      'find_gene': ['name'], // legacy alias
       'find_gene_by_name': ['name'],
       'search_gene_by_locus_tag': ['locusTag', 'locus_tag', 'identifier'],
       'search_by_position': ['chromosome', 'position'],

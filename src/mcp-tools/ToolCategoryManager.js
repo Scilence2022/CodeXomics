@@ -37,6 +37,7 @@ class ToolCategoryManager {
       'navigate_to_position',
       'jump_to_gene',
       'find_gene_by_name',
+      'find_gene',
       'search_features',
       'zoom_in',
       'zoom_out',

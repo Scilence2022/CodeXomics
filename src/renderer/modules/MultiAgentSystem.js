@@ -801,7 +801,7 @@ class MultiAgentSystem {
         'navigate_to_position', 'get_current_state', 'get_current_region', 'jump_to_gene',
         'scroll_left', 'scroll_right', 'zoom_in', 'zoom_out', 'zoom_to_gene',
         'toggle_track', 'get_track_status', 'bookmark_position', 'get_bookmarks',
-        'save_view_state', 'navigate_to', 'search_features', 'find_gene_by_name',
+        'save_view_state', 'navigate_to', 'search_features', 'find_gene_by_name', 'find_gene',
         'pan_left', 'pan_right', 'switch_to_tab', 'open_new_tab', 'close_tab',
         'get_chromosome_list',
       ],
