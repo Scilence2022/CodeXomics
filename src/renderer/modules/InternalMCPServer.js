@@ -694,7 +694,7 @@ class InternalMCPServer {
       if (checkbox) {
         checkbox.checked = visible;
         // Trigger change event to ensure any listeners are notified
-        checkbox.dispatchEvent(new Event('change'));
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
       // Also sync sidebar checkbox if it exists

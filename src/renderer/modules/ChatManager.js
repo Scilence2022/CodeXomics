@@ -3285,14 +3285,14 @@ class ChatManager {
     }
 
     trackCheckbox.checked = visible;
-    trackCheckbox.dispatchEvent(new Event('change'));
+    trackCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
 
     // Also sync with sidebar checkbox
     const sidebarCheckboxId = 'sidebar' + checkboxId.charAt(0).toUpperCase() + checkboxId.slice(1);
     const sidebarCheckbox = document.getElementById(sidebarCheckboxId);
     if (sidebarCheckbox) {
       sidebarCheckbox.checked = visible;
-      sidebarCheckbox.dispatchEvent(new Event('change'));
+      sidebarCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     return {

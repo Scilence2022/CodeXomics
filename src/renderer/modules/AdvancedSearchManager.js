@@ -786,7 +786,7 @@ class AdvancedSearchManager {
       const chrSelect = document.getElementById('chromosomeSelect');
       if (chrSelect) {
         chrSelect.value = result.chromosome;
-        chrSelect.dispatchEvent(new Event('change'));
+        chrSelect.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }
 

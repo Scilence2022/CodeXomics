@@ -9244,7 +9244,7 @@ class GenomeBrowser {
     const checkbox = document.getElementById('trackPrimers');
     if (checkbox) {
       checkbox.checked = !checkbox.checked;
-      checkbox.dispatchEvent(new Event('change'));
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
       this.updatePrimerTrackButtonState(checkbox.checked);
       return;
     }
