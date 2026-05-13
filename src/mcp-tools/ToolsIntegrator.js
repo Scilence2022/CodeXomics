@@ -337,14 +337,32 @@ class ToolsIntegrator {
         switch (toolName) {
           case 'calculate_primer_properties':
             return this.primerTools.calculateProperties(parameters.sequence);
-          case 'design_primers':
+          case 'design_primers': {
             if (!parameters.targetSequence && (parameters.geneName || parameters.chromosome)) {
               return await this.primerTools.executeClientTool(toolName, parameters, clientId);
             }
+            const toNumber = (value) => {
+              const parsed = Number(value);
+              return Number.isFinite(parsed) ? parsed : undefined;
+            };
+            const exactPrimerLength = toNumber(
+              parameters.primerLength ?? parameters.primerLengthBp ?? parameters.primerSize
+            );
             return this.primerTools.designPrimers(parameters.targetSequence, {
-              targetTm: parameters.targetTm,
-              minProductSize: parameters.minProductSize,
+              targetTm: toNumber(parameters.targetTm),
+              tmTolerance: toNumber(parameters.tmTolerance),
+              minLen: toNumber(parameters.minPrimerLength ?? parameters.minLen ?? parameters.minLength) ?? exactPrimerLength,
+              maxLen: toNumber(parameters.maxPrimerLength ?? parameters.maxLen ?? parameters.maxLength) ?? exactPrimerLength,
+              minProductSize: toNumber(parameters.minProductSize),
+              maxProductSize: toNumber(parameters.maxProductSize),
+              minGcContent: toNumber(parameters.minGcContent ?? parameters.minGc),
+              maxGcContent: toNumber(parameters.maxGcContent ?? parameters.maxGc),
+              requireGcClamp: typeof parameters.requireGcClamp === 'boolean' ? parameters.requireGcClamp : undefined,
+              avoidHairpin: typeof parameters.avoidHairpin === 'boolean' ? parameters.avoidHairpin : undefined,
+              requiredAmpliconStart: parameters.requiredAmpliconStart,
+              requiredAmpliconEnd: parameters.requiredAmpliconEnd,
             });
+          }
           case 'find_primer_binding_sites':
             return this.primerTools.findBindingSites(
               parameters.primerSequence,

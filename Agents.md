@@ -108,6 +108,7 @@ When adding a new UI Style preset:
 
 ## 13. Editing Reminders
 
+- Commit all changes in a concise conventional commit style (e.g., `feat(primer): add advanced parameters for biological directions`).
 - Maintain strict adherence to semantic versioning in `package.json` and `CHANGELOG.md`.
 - Do not modify `package-lock.json` manually; run `npm install` if a dependency is added.
 - When generating markdown artifacts or tables, maintain standard GitHub Flavored Markdown (GFM).

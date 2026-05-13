@@ -32,8 +32,8 @@ class PrimerDesigner {
 
     if (invalidRatio > 0.1) {
       throw new Error(
-          `Sequence contains ${(invalidRatio * 100).toFixed(1)}% non-ATCG characters (${invalidChars.substring(0, 20)}...). ` +
-                `Only A, T, C, G are supported for primer calculations.`,
+          `Sequence contains ${(invalidRatio * 100).toFixed(1)}% non-ATCG characters ` +
+          `(${invalidChars.substring(0, 20)}...). Only A, T, C, G are supported for primer calculations.`,
       );
     }
 
@@ -93,11 +93,13 @@ class PrimerDesigner {
   }
 
   /**
-     * Design a primer pair for a given target sequence
-     * @param {string} targetSequence - The DNA sequence to amplify
-     * @param {Object} options - Design parameters (targetTm, minLen, maxLen)
-     * @returns {Object} Best primer pair found, or null if none match criteria
-     */
+   * Design a primer pair for a given target sequence
+   * @param {string} targetSequence - The DNA sequence to amplify
+   * @param {Object} options - Design parameters (targetTm, minLen, maxLen)
+   * @param {number} [options.requiredAmpliconStart] - 0-based offset the product must start at or before.
+   * @param {number} [options.requiredAmpliconEnd] - 0-based exclusive offset the product must end at or after.
+   * @returns {Object} Best primer pair found, or null if none match criteria
+   */
   static designPrimerPair(targetSequence, options = {}) {
     if (!targetSequence || targetSequence.length < 150) {
       throw new Error('Target sequence must be at least 150bp to design primers');
@@ -109,24 +111,58 @@ class PrimerDesigner {
       throw new Error(`After removing non-ATCG characters, only ${seq.length}bp remain. Need at least 150bp.`);
     }
 
-    const targetTm = options.targetTm || 60.0;
-    const baseTmTolerance = options.tmTolerance || 2.0;
-    const minLen = options.minLen || 18;
-    const maxLen = options.maxLen || 25;
-    const minPropSize = options.minProductSize || Math.min(seq.length, 100);
-    const maxPropSize = options.maxProductSize || seq.length;
+    const targetTm = Number.isFinite(options.targetTm) ? options.targetTm : 60.0;
+    const baseTmTolerance = Number.isFinite(options.tmTolerance) ? options.tmTolerance : 2.0;
+    const minLen = Number.isFinite(options.minLen) ? Math.floor(options.minLen) : 18;
+    const maxLen = Number.isFinite(options.maxLen) ? Math.floor(options.maxLen) : 25;
+    const minPropSize = Number.isFinite(options.minProductSize) ?
+      Math.floor(options.minProductSize) :
+      Math.min(seq.length, 100);
+    const maxPropSize = Number.isFinite(options.maxProductSize) ? Math.floor(options.maxProductSize) : seq.length;
+    const hasCustomGcRange = Number.isFinite(options.minGcContent) || Number.isFinite(options.maxGcContent);
+    const minGcContent = Number.isFinite(options.minGcContent) ? options.minGcContent : 40;
+    const maxGcContent = Number.isFinite(options.maxGcContent) ? options.maxGcContent : 60;
+    const gcClampOverride = typeof options.requireGcClamp === 'boolean' ? options.requireGcClamp : null;
+    const avoidHairpinOverride = typeof options.avoidHairpin === 'boolean' ? options.avoidHairpin : null;
+    const requiredAmpliconStart = Number.isFinite(options.requiredAmpliconStart) ?
+      Math.max(0, Math.floor(options.requiredAmpliconStart)) :
+      null;
+    const requiredAmpliconEnd = Number.isFinite(options.requiredAmpliconEnd) ?
+      Math.min(seq.length, Math.ceil(options.requiredAmpliconEnd)) :
+      null;
 
-    const strictnessLevels = [
-      {tmTol: baseTmTolerance, gcMin: 40, gcMax: 60, requireGcClamp: true, avoidHairpin: true},
-      {tmTol: baseTmTolerance + 2.0, gcMin: 35, gcMax: 65, requireGcClamp: true, avoidHairpin: true},
-      {tmTol: baseTmTolerance + 5.0, gcMin: 30, gcMax: 70, requireGcClamp: false, avoidHairpin: true},
-      {tmTol: baseTmTolerance + 10.0, gcMin: 20, gcMax: 80, requireGcClamp: false, avoidHairpin: false},
-    ];
+    if (minLen < 1 || maxLen < minLen) {
+      throw new Error(`Invalid primer length range: minLen=${minLen}, maxLen=${maxLen}`);
+    }
+    if (minPropSize < 1 || maxPropSize < minPropSize) {
+      throw new Error(`Invalid product size range: minProductSize=${minPropSize}, maxProductSize=${maxPropSize}`);
+    }
+    if (minGcContent < 0 || maxGcContent > 100 || maxGcContent < minGcContent) {
+      throw new Error(`Invalid GC range: minGcContent=${minGcContent}, maxGcContent=${maxGcContent}`);
+    }
+
+    const strictnessLevels = this._buildStrictnessLevels({
+      baseTmTolerance,
+      hasCustomGcRange,
+      minGcContent,
+      maxGcContent,
+      gcClampOverride,
+      avoidHairpinOverride,
+    });
 
     for (const strictness of strictnessLevels) {
-      const pairs = this._findPrimerPairsWithStrictness(seq, minLen, maxLen, targetTm, minPropSize, maxPropSize, strictness);
+      const pairs = this._findPrimerPairsWithStrictness(
+          seq,
+          minLen,
+          maxLen,
+          targetTm,
+          minPropSize,
+          maxPropSize,
+          strictness,
+          {requiredAmpliconStart, requiredAmpliconEnd},
+      );
       if (pairs && pairs.length > 0) {
-        pairs.sort((a, b) => a.tmDifference - b.tmDifference);
+        pairs.sort((a, b) => a.designScore - b.designScore);
         return pairs[0];
       }
     }
@@ -134,8 +170,59 @@ class PrimerDesigner {
     return null;
   }
 
-  static _findPrimerPairsWithStrictness(seq, minLen, maxLen, targetTm, minPropSize, maxPropSize, strictness) {
+  static _buildStrictnessLevels(options) {
+    const {
+      baseTmTolerance,
+      hasCustomGcRange,
+      minGcContent,
+      maxGcContent,
+      gcClampOverride,
+      avoidHairpinOverride,
+    } = options;
+
+    const gcRanges = hasCustomGcRange ?
+      [
+        [minGcContent, maxGcContent],
+        [minGcContent, maxGcContent],
+        [minGcContent, maxGcContent],
+        [minGcContent, maxGcContent],
+      ] :
+      [
+        [40, 60],
+        [35, 65],
+        [30, 70],
+        [20, 80],
+      ];
+    const defaults = [
+      {tmTol: baseTmTolerance, requireGcClamp: true, avoidHairpin: true},
+      {tmTol: baseTmTolerance + 2.0, requireGcClamp: true, avoidHairpin: true},
+      {tmTol: baseTmTolerance + 5.0, requireGcClamp: false, avoidHairpin: true},
+      {tmTol: baseTmTolerance + 10.0, requireGcClamp: false, avoidHairpin: false},
+    ];
+
+    return defaults.map((strictness, index) => ({
+      ...strictness,
+      gcMin: gcRanges[index][0],
+      gcMax: gcRanges[index][1],
+      requireGcClamp: gcClampOverride === null ? strictness.requireGcClamp : gcClampOverride,
+      avoidHairpin: avoidHairpinOverride === null ? strictness.avoidHairpin : avoidHairpinOverride,
+    }));
+  }
+
+  static _findPrimerPairsWithStrictness(
+      seq,
+      minLen,
+      maxLen,
+      targetTm,
+      minPropSize,
+      maxPropSize,
+      strictness,
+      constraints = {},
+  ) {
     const pairs = [];
+    const {requiredAmpliconStart, requiredAmpliconEnd} = constraints;
+    const hasRequiredStart = Number.isFinite(requiredAmpliconStart);
+    const hasRequiredEnd = Number.isFinite(requiredAmpliconEnd);
 
     const searchRegionSize = Math.min(200, Math.floor(seq.length / 2));
     const forwardRegion = seq.substring(0, searchRegionSize);
@@ -144,7 +231,13 @@ class PrimerDesigner {
     const reverseRegionStart = Math.max(0, seq.length - searchRegionSize);
     const reverseRegion = seq.substring(reverseRegionStart);
 
-    const reverseCandidatesRaw = this._findCandidatePrimersEfficient(reverseRegion, minLen, maxLen, targetTm, strictness);
+    const reverseCandidatesRaw = this._findCandidatePrimersEfficient(
+        reverseRegion,
+        minLen,
+        maxLen,
+        targetTm,
+        strictness,
+    );
 
     const reversePrimers = reverseCandidatesRaw.map((cand) => ({
       sequence: this.reverseComplement(cand.sequence),
@@ -162,8 +255,22 @@ class PrimerDesigner {
         const productSize = rp.endPos - fp.startPos;
 
         if (productSize >= minPropSize && productSize <= maxPropSize) {
+          if (hasRequiredStart && fp.startPos > requiredAmpliconStart) {
+            continue;
+          }
+          if (hasRequiredEnd && rp.endPos < requiredAmpliconEnd) {
+            continue;
+          }
+
           const tmDiff = Math.abs(fp.tm - rp.tm);
           if (tmDiff <= strictness.tmTol) {
+            const extraUpstream = hasRequiredStart ?
+              Math.max(0, requiredAmpliconStart - fp.startPos) :
+              0;
+            const extraDownstream = hasRequiredEnd ?
+              Math.max(0, rp.endPos - requiredAmpliconEnd) :
+              0;
+            const designScore = tmDiff + ((extraUpstream + extraDownstream) / 1000);
             pairs.push({
               forward: {
                 sequence: fp.sequence,
@@ -183,6 +290,7 @@ class PrimerDesigner {
               },
               productSize: productSize,
               tmDifference: Number(tmDiff.toFixed(2)),
+              designScore: Number(designScore.toFixed(4)),
             });
             if (pairs.length >= MAX_PAIRS) break;
           }

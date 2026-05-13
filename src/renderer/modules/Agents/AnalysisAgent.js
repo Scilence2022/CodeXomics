@@ -901,7 +901,27 @@ class AnalysisAgent extends AgentBase {
       const targetSequence = parameters.targetSequence || parameters.sequence || parameters.targetRegion;
       if (!targetSequence) throw new Error('targetSequence is required');
       if (PrimerDesigner) {
-        const options = { targetTm: parameters.targetTm || 60.0, minProductSize: parameters.minProductSize || 100 };
+        const toNumber = (value) => {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : undefined;
+        };
+        const exactPrimerLength = toNumber(
+          parameters.primerLength ?? parameters.primerLengthBp ?? parameters.primerSize
+        );
+        const options = {
+          targetTm: toNumber(parameters.targetTm) ?? 60.0,
+          tmTolerance: toNumber(parameters.tmTolerance),
+          minLen: toNumber(parameters.minPrimerLength ?? parameters.minLen ?? parameters.minLength) ?? exactPrimerLength,
+          maxLen: toNumber(parameters.maxPrimerLength ?? parameters.maxLen ?? parameters.maxLength) ?? exactPrimerLength,
+          minProductSize: toNumber(parameters.minProductSize) ?? 100,
+          maxProductSize: toNumber(parameters.maxProductSize),
+          minGcContent: toNumber(parameters.minGcContent ?? parameters.minGc),
+          maxGcContent: toNumber(parameters.maxGcContent ?? parameters.maxGc),
+          requireGcClamp: typeof parameters.requireGcClamp === 'boolean' ? parameters.requireGcClamp : undefined,
+          avoidHairpin: typeof parameters.avoidHairpin === 'boolean' ? parameters.avoidHairpin : undefined,
+          requiredAmpliconStart: parameters.requiredAmpliconStart,
+          requiredAmpliconEnd: parameters.requiredAmpliconEnd,
+        };
         const pair = PrimerDesigner.designPrimerPair(targetSequence, options);
         return { success: true, primers: pair || { note: 'No valid primer pair found' } };
       }

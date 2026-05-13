@@ -886,6 +886,25 @@ class LLMContextService {
         },
       },
 
+      // Primer design operations - allow re-runs when design parameters change
+      primer_design: {
+        tools: [
+          'design_primers',
+          'calculate_primer_properties',
+          'find_primer_binding_sites',
+          'add_primer_annotation',
+        ],
+        policy: 'parameter_based',
+        condition: (tool, history, results) => {
+          const existingExecution = this.chatManager.findExistingExecution(toolKey, history);
+          if (existingExecution && existingExecution.success) {
+            console.log(`🚫 [Policy] Primer tool already executed with same parameters: ${toolName}`);
+            return false;
+          }
+          return true;
+        },
+      },
+
       // Display/UI state operations - once per round
       display_operations: {
         tools: ['show_hide_features', 'set_view_mode', 'refresh_view'],
@@ -1732,7 +1751,7 @@ Track Settings:
 
 Primer Design & PCR:
   - calculate_primer_properties: Calculate melting temp, GC content for a primer
-  - design_primers: Design a full PCR primer pair for a given sequence
+  - design_primers: Design a full PCR primer pair; use upstreamBp/downstreamBp and primer length/Tm/GC options
   - find_primer_binding_sites: Find binding locations of a primer on the genome
   - add_primer_annotation: Add an interactive primer display to the genome track
 
@@ -1785,6 +1804,8 @@ Track Settings:
 Primer Tools:
   {"tool_name": "calculate_primer_properties", "parameters": {"sequence": "ATGCGCTAGCATCAT"}}
   {"tool_name": "design_primers", "parameters": {"geneName": "lacZ", "targetTm": 60.5}}
+  {"tool_name": "design_primers", "parameters": {"geneName": "lysC", "upstreamBp": 50, "targetTm": 60}}
+  {"tool_name": "design_primers", "parameters": {"geneName": "lysC", "upstreamBp": 50, "downstreamBp": 30, "primerLength": 22}}
   {"tool_name": "find_primer_binding_sites", "parameters": {"primerSequence": "ATGCGTAC", "chromosome": "chr1"}}
   {"tool_name": "add_primer_annotation", "parameters": {"name": "Test_Fwd", "chromosome": "chr1", "start": 1000, "end": 1020, "strand": "+"}}`;
 

@@ -24,7 +24,7 @@ class PrimerTools {
 
     designPrimers(targetSequence, options) {
         if (!targetSequence) {
-            return { error: 'targetSequence is required for MCP server primer design. Use geneName or chromosome/start/end with the ChatBox instead, or fetch the sequence first via sequence tools.' };
+            return { error: 'targetSequence is required for MCP server primer design. Use geneName or chromosome/start/end with the ChatBox instead, or fetch a strand-aware sequence first via sequence tools. For gene upstream/RBS designs, pass requiredAmpliconStart and requiredAmpliconEnd so the product is forced to include the requested upstream interval.' };
         }
         const pair = PrimerDesigner.designPrimerPair(targetSequence, options);
         return pair || { error: 'Could not find a valid primer pair meeting the criteria in the given sequence' };

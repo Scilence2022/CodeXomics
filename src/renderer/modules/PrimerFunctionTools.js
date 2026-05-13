@@ -64,10 +64,7 @@ class PrimerFunctionTools {
 
       design_primers: buildTool('design_primers', async (params) => {
         await this._ensureDesigner();
-        const options = {
-          targetTm: params.targetTm || 60.0,
-          minProductSize: params.minProductSize || 100,
-        };
+        const options = this._getDesignOptions(params);
         const pair = this.PrimerDesigner.designPrimerPair(params.targetSequence, options);
         return pair || {error: 'Could not find a valid primer pair meeting the criteria in the given sequence'};
       }),
@@ -105,6 +102,29 @@ class PrimerFunctionTools {
       console.error(`❌ [Primer Tools] Tool execution failed for ${toolName}:`, error);
       throw error;
     }
+  }
+
+  _getDesignOptions(params) {
+    const toNumber = (value) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    };
+    const exactPrimerLength = toNumber(params.primerLength ?? params.primerLengthBp ?? params.primerSize);
+
+    return {
+      targetTm: toNumber(params.targetTm) ?? 60.0,
+      tmTolerance: toNumber(params.tmTolerance),
+      minLen: toNumber(params.minPrimerLength ?? params.minLen ?? params.minLength) ?? exactPrimerLength,
+      maxLen: toNumber(params.maxPrimerLength ?? params.maxLen ?? params.maxLength) ?? exactPrimerLength,
+      minProductSize: toNumber(params.minProductSize) ?? 100,
+      maxProductSize: toNumber(params.maxProductSize),
+      minGcContent: toNumber(params.minGcContent ?? params.minGc),
+      maxGcContent: toNumber(params.maxGcContent ?? params.maxGc),
+      requireGcClamp: typeof params.requireGcClamp === 'boolean' ? params.requireGcClamp : undefined,
+      avoidHairpin: typeof params.avoidHairpin === 'boolean' ? params.avoidHairpin : undefined,
+      requiredAmpliconStart: params.requiredAmpliconStart,
+      requiredAmpliconEnd: params.requiredAmpliconEnd,
+    };
   }
 
   getAvailableTools() {

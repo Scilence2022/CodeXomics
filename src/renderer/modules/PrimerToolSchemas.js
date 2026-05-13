@@ -22,7 +22,7 @@ const PRIMER_TOOL_SCHEMAS = {
 
   design_primers: {
     name: 'design_primers',
-    description: 'Design a forward and reverse primer pair to amplify a target DNA sequence. This automatically finds optimal primers matching length, GC, and melting temperature criteria. Provide at least 150bp of sequence, or use geneName or chromosome/start/end to fetch it.',
+    description: 'Design a forward and reverse primer pair to amplify a target DNA sequence. Use upstreamBp/downstreamBp when the amplicon must include flanking bases; both are interpreted relative to gene strand, so reverse-strand upstream is higher genomic coordinates and reverse-strand downstream is lower genomic coordinates. Provide at least 150bp of sequence, or use geneName or chromosome/start/end to fetch it.',
     parameters: {
       type: 'object',
       properties: {
@@ -33,6 +33,46 @@ const PRIMER_TOOL_SCHEMAS = {
         geneName: {
           type: 'string',
           description: 'Name of the gene to fetch the coding sequence for primer design',
+        },
+        upstreamBp: {
+          type: 'number',
+          description: 'Number of bases upstream of the gene translation/start boundary that must be included in the PCR product. For reverse-strand genes, upstream means higher genomic coordinates.',
+          minimum: 0,
+        },
+        upstreamBases: {
+          type: 'number',
+          description: 'Alias for upstreamBp; number of biologically upstream bases to include in the amplicon.',
+          minimum: 0,
+        },
+        upstream: {
+          type: 'number',
+          description: 'Alias for upstreamBp for natural language phrases like "50 up" or "50 upstream".',
+          minimum: 0,
+        },
+        downstreamBp: {
+          type: 'number',
+          description: 'Number of bases downstream of the gene stop/end boundary that must be included in the PCR product. For reverse-strand genes, downstream means lower genomic coordinates.',
+          minimum: 0,
+        },
+        downstreamBases: {
+          type: 'number',
+          description: 'Alias for downstreamBp; number of biologically downstream bases to include in the amplicon.',
+          minimum: 0,
+        },
+        downstream: {
+          type: 'number',
+          description: 'Alias for downstreamBp for natural language phrases like "50 downstream".',
+          minimum: 0,
+        },
+        upstreamPrimerBuffer: {
+          type: 'number',
+          description: 'Extra biologically upstream bases to search before the required upstream interval so primers can bind while still including upstreamBp bases (default: 75).',
+          minimum: 0,
+        },
+        downstreamPrimerBuffer: {
+          type: 'number',
+          description: 'Extra biologically downstream bases to search past the gene end so the reverse primer can bind outside the CDS when possible (default: 75).',
+          minimum: 0,
         },
         chromosome: {
           type: 'string',
@@ -50,9 +90,69 @@ const PRIMER_TOOL_SCHEMAS = {
           type: 'number',
           description: 'Target melting temperature (default: 60.0)',
         },
+        tmTolerance: {
+          type: 'number',
+          description: 'Allowed Tm deviation from targetTm in Celsius before relaxed search tiers are tried (default: 2.0).',
+          minimum: 0,
+        },
+        primerLength: {
+          type: 'number',
+          description: 'Exact primer length to use. Sets both minPrimerLength and maxPrimerLength unless those are provided.',
+          minimum: 1,
+        },
+        primerLengthBp: {
+          type: 'number',
+          description: 'Alias for primerLength.',
+          minimum: 1,
+        },
+        minPrimerLength: {
+          type: 'number',
+          description: 'Minimum primer length in bases (default: 18).',
+          minimum: 1,
+        },
+        maxPrimerLength: {
+          type: 'number',
+          description: 'Maximum primer length in bases (default: 25).',
+          minimum: 1,
+        },
         minProductSize: {
           type: 'number',
           description: 'Minimum PCR product size (default: 100)',
+        },
+        maxProductSize: {
+          type: 'number',
+          description: 'Maximum PCR product size (default: full target sequence length).',
+          minimum: 1,
+        },
+        minGcContent: {
+          type: 'number',
+          description: 'Minimum primer GC percentage. If set, the GC range is treated as a hard constraint.',
+          minimum: 0,
+          maximum: 100,
+        },
+        maxGcContent: {
+          type: 'number',
+          description: 'Maximum primer GC percentage. If set, the GC range is treated as a hard constraint.',
+          minimum: 0,
+          maximum: 100,
+        },
+        requireGcClamp: {
+          type: 'boolean',
+          description: 'Whether primer candidates must end in G/C. Defaults to true in strict tiers and false in relaxed tiers.',
+        },
+        avoidHairpin: {
+          type: 'boolean',
+          description: 'Whether to reject primers with simple hairpin potential. Defaults to true in strict tiers and false in the most relaxed tier.',
+        },
+        requiredAmpliconStart: {
+          type: 'number',
+          description: 'Advanced use with targetSequence: 0-based sequence offset that the primer product must start at or before.',
+          minimum: 0,
+        },
+        requiredAmpliconEnd: {
+          type: 'number',
+          description: 'Advanced use with targetSequence: 0-based exclusive sequence offset that the primer product must end at or after.',
+          minimum: 0,
         },
       },
       required: [],
