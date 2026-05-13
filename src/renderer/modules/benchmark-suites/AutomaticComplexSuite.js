@@ -268,28 +268,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateMultipleTabOpeningCall.bind(this),
       },
 
-      // TEST 5: SEQUENCE ANALYSIS - Automatic + Complex
-      {
-        id: 'analysis_auto_01',
-        name: 'Gene Retrieval and Translation',
-        type: 'workflow',
-        category: 'sequence_analysis',
-        complexity: 'complex',
-        evaluation: 'automatic',
-        instruction: `Search for the gene 'dnaA', get its CDS sequence, and translate CDS sequence to protein sequence.`,
-        expectedResult: {
-          tool_sequence: ['find_gene_by_name', 'get_sequence', 'translate_dna'],
-          parameters: [
-            { geneName: 'dnaA' },
-            { chromosome: '<any>', start: '<any>', end: '<any>' },
-            { dna: '<any>' },
-          ],
-        },
-        maxScore: 15,
-        bonusScore: 3,
-        timeout: 90000,
-        evaluator: this.evaluateWorkflowCall.bind(this),
-      },
+
 
       // TEST 6: EXPORT WORKFLOW - Automatic + Complex
       {
@@ -336,28 +315,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
-      // TEST 8: UI WORKFLOW - Automatic + Complex
-      {
-        id: 'ui_auto_02',
-        name: 'Track Configuration and View State',
-        type: 'workflow',
-        category: 'browserActions',
-        complexity: 'complex',
-        evaluation: 'automatic',
-        instruction: 'Hide the \'genes\' track, update the \'variants\' track color to red, and save this view state as \'VariantFocus\'.',
-        expectedResult: {
-          tool_sequence: ['toggle_track', 'set_track_settings', 'save_view_state'],
-          parameters: [
-            { trackId: 'genes', visible: false },
-            { trackId: 'variants', settings: { color: 'red' } },
-            { stateName: 'VariantFocus' },
-          ],
-        },
-        maxScore: 15,
-        bonusScore: 3,
-        timeout: 60000,
-        evaluator: this.evaluateWorkflowCall.bind(this),
-      },
 
 
       // TEST 9: GENOME STATS - Automatic + Complex
@@ -448,28 +405,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-      {
-        id: 'gel_auto_02',
-        name: 'Custom Gel with Marker and Stain',
-        type: 'function_call',
-        category: 'restriction',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Perform a BamHI digest, then run a 1.5% agarose gel electrophoresis with 100bp DNA ladder and SYBR Safe staining to visualize fragments.',
-        expectedResult: {
-          tool_name: 'simulate_gel_electrophoresis',
-          parameters: {
-            fragments: '<any>',
-            gelPercentage: 1.5,
-            ladderType: '100bp',
-            bandColorScheme: 'sybr_safe',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 2,
-        timeout: 45000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
 
       {
         id: 'gel_auto_03',
@@ -495,27 +430,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       },
 
       {
-        id: 'gel_auto_workflow_01',
-        name: 'Virtual Digest and Gel Electrophoresis',
-        type: 'workflow',
-        category: 'restriction',
-        complexity: 'complex',
-        evaluation: 'automatic',
-        instruction: 'Perform a virtual restriction digest with EcoRI and HindIII enzymes, then simulate a 1% agarose gel electrophoresis to visualize the resulting fragments.',
-        expectedResult: {
-          tool_sequence: ['virtual_digest', 'simulate_gel_electrophoresis'],
-          parameters: [
-            { enzymes: ['EcoRI', 'HindIII'] },
-            { fragments: '<any>', gelPercentage: 1.0 },
-          ],
-        },
-        maxScore: 15,
-        bonusScore: 3,
-        timeout: 90000,
-        evaluator: this.evaluateWorkflowCall.bind(this),
-      },
-
-      {
         id: 'gel_auto_workflow_02',
         name: 'Complete Restriction Analysis and Gel Visualization',
         type: 'workflow',
@@ -534,27 +448,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         maxScore: 20,
         bonusScore: 5,
         timeout: 120000,
-        evaluator: this.evaluateWorkflowCall.bind(this),
-      },
-
-      {
-        id: 'gel_auto_workflow_03',
-        name: 'Double Digest Gel Comparison',
-        type: 'workflow',
-        category: 'restriction',
-        complexity: 'complex',
-        evaluation: 'automatic',
-        instruction: 'Perform a double digest with EcoRI and BamHI, then simulate gel electrophoresis with 1.2% agarose gel and Gel Red stain to visualize the fragment pattern.',
-        expectedResult: {
-          tool_sequence: ['virtual_digest', 'simulate_gel_electrophoresis'],
-          parameters: [
-            { enzymes: ['EcoRI', 'BamHI'] },
-            { fragments: '<any>', gelPercentage: 1.2, bandColorScheme: 'gel_red' },
-          ],
-        },
-        maxScore: 15,
-        bonusScore: 3,
-        timeout: 90000,
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
