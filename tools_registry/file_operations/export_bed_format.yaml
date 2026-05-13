@@ -64,12 +64,21 @@ parameters:
         - 'U00096'
     start_position:
       type: integer
-      description: Start position for custom range export
+      description: Start position for custom range export (1-based inclusive)
       minimum: 1
     end_position:
       type: integer
-      description: End position for custom range export
+      description: End position for custom range export (1-based inclusive)
       minimum: 1
+    include_partial_overlap:
+      type: boolean
+      description: >-
+        When exporting a custom range, whether to include features that partially
+        overlap the range (i.e., features that start before or end after the range
+        boundaries). When true (default), all features overlapping the range are
+        included. When false, only features fully contained within the range are
+        exported.
+      default: true
     include_strand:
       type: boolean
       description: Include strand information (for bed6+ formats)
@@ -121,6 +130,14 @@ sample_usages:
     tool_call: export_bed_format(filename="current_view.bed", export_range="current_view", bed_format="bed6")
     thought: User wants BED export of currently visible region
     expected_result: BED file containing features from current view
+  - user_query: Export genes in range 1000-5000
+    tool_call: export_bed_format(filename="region.bed", export_range="custom_range", start_position=1000, end_position=5000)
+    thought: User wants BED export of features in a specific genomic range
+    expected_result: BED file containing features that overlap the range 1000-5000
+  - user_query: Export fully contained features in range 1000-5000
+    tool_call: export_bed_format(filename="strict.bed", export_range="custom_range", start_position=1000, end_position=5000, include_partial_overlap=false)
+    thought: User wants only features fully contained within the range
+    expected_result: BED file containing only features completely within 1000-5000
 relationships:
   depends_on: []
   conflicts_with: []

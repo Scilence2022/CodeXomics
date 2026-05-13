@@ -397,17 +397,57 @@ class FileOperationService {
   }
 
   async exportBedFormat(parameters = {}) {
-    const { filename, auto_save = false } = parameters;
+    const {
+      filename,
+      auto_save = false,
+      export_range = 'all',
+      chromosome: filterChromosome,
+      start_position,
+      end_position,
+      include_partial_overlap = true,
+      feature_types = ['gene'],
+      bed_format = 'bed6',
+    } = parameters;
+
     try {
       const chromosomes = Object.keys(this.app.currentAnnotations || {});
       let bedContent = '';
-      chromosomes.forEach(chr => {
+      let exportedCount = 0;
+      const hasRangeFilter = (export_range === 'custom_range' && start_position != null && end_position != null);
+      const rangeStart = hasRangeFilter ? start_position : null;
+      const rangeEnd = hasRangeFilter ? end_position : null;
+      const includeAllTypes = feature_types.includes('all');
+
+      const filteredChromosomes = filterChromosome && export_range === 'by_chromosome'
+        ? chromosomes.filter(chr => chr === filterChromosome)
+        : chromosomes;
+
+      filteredChromosomes.forEach(chr => {
         const features = this.app.currentAnnotations[chr];
+        if (!features) return;
         features.forEach(f => {
+          if (!includeAllTypes && !feature_types.includes(f.type)) return;
+
+          if (hasRangeFilter) {
+            if (include_partial_overlap) {
+              if (f.end < rangeStart || f.start > rangeEnd) return;
+            } else {
+              if (f.start < rangeStart || f.end > rangeEnd) return;
+            }
+          }
+
           const name = f.attributes?.name || f.attributes?.ID || f.type;
-          bedContent += `${chr}\t${f.start - 1}\t${f.end}\t${name}\t0\t${f.strand || '+'}\n`;
+          const score = bed_format === 'bed3' ? '' : `\t0`;
+          const strand = bed_format === 'bed3' ? '' : `\t${f.strand || '+'}`;
+          bedContent += `${chr}\t${f.start - 1}\t${f.end}\t${name}${score}${strand}\n`;
+          exportedCount++;
         });
       });
+
+      if (exportedCount === 0) {
+        const rangeInfo = hasRangeFilter ? ` in range ${rangeStart}-${rangeEnd}` : '';
+        return { success: false, tool: 'export_bed_format', error: `No features found${rangeInfo}`, exported_count: 0 };
+      }
 
       const outputFilename = filename || 'features.bed';
       let writeResult;
@@ -417,7 +457,19 @@ class FileOperationService {
         writeResult = await this.showExportSaveDialog(bedContent, outputFilename, 'BED format', 'text/plain');
       }
 
-      return { success: true, tool: 'export_bed_format', exported_format: 'BED', filename: outputFilename, file_path: writeResult?.filePath || outputFilename };
+      const result = {
+        success: true,
+        tool: 'export_bed_format',
+        exported_format: 'BED',
+        filename: outputFilename,
+        file_path: writeResult?.filePath || outputFilename,
+        exported_count: exportedCount,
+        bed_format,
+      };
+      if (hasRangeFilter) {
+        result.range = { start: rangeStart, end: rangeEnd, include_partial_overlap };
+      }
+      return result;
     } catch (error) {
       throw new Error(`BED export failed: ${error.message}`);
     }

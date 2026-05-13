@@ -1605,7 +1605,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'blast',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Create a protein BLAST database from the currently loaded genome by translating CDS features.',
+        instruction: 'Create a protein BLAST database from the currently loaded genome.',
         expectedResult: {
           tool_name: 'blast_create_protein_db_from_genome',
           parameters: {},
@@ -1623,11 +1623,11 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'blast',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Perform a local BLAST search with the sequence ATGAAAGCGCTGAAAGCGCTG.',
+        instruction: 'Perform a local BLAST search with the sequence ATGATCATGCTGATTCTCGCGCCTCTGGTGGGCGTGCTGGGTGCGCTTTTGCTGGCGTATGGTGCCTGGCTGATTTATCCCCCGGCGGGTTTTGTTGTTGCCGGGGCGCTGTGCCTGTTCTGGTCGTGGCTGGTGGCGCGATATCTCGACCGTACACAGTCGTCTGTCGGCGGAGGTAAATAG against the currently loaded local genome',
         expectedResult: {
           tool_name: 'blast_search_local',
           parameters: {
-            sequence: 'ATGAAAGCGCTGAAAGCGCTG',
+            sequence: 'ATGATCATGCTGATTCTCGCGCCTCTGGTGGGCGTGCTGGGTGCGCTTTTGCTGGCGTATGGTGCCTGGCTGATTTATCCCCCGGCGGGTTTTGTTGTTGCCGGGGCGCTGTGCCTGTTCTGGTCGTGGCTGGTGGCGCGATATCTCGACCGTACACAGTCGTCTGTCGGCGGAGGTAAATAG',
           },
         },
         maxScore: 5,

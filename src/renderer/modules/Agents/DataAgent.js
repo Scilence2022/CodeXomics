@@ -485,6 +485,9 @@ class DataAgent extends AgentBase {
    */
   async exportBedFormat(parameters) {
     try {
+      if (this.services?.file?.exportBedFormat) {
+        return await this.services.file.exportBedFormat(parameters);
+      }
       const { chromosome, start, end } = parameters;
       const content = `${chromosome}\t${start}\t${end}\n`;
       const filename = `${chromosome}_${start}-${end}.bed`;
