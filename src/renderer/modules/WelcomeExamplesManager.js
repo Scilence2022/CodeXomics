@@ -13,9 +13,9 @@ class WelcomeExamplesManager {
       title: 'Navigation & Search',
       cssClass: 'welcome-card-search',
       examples: [
-        'Navigate to E. coli origin of replication',
-        'Search for DNA polymerase genes',
-        'Find genes near position 123456',
+        { title: 'Navigate to E. coli origin of replication', prompt: 'Navigate to E. coli origin of replication' },
+        { title: 'Search for DNA polymerase genes', prompt: 'Search for DNA polymerase genes' },
+        { title: 'Find genes near position 123456', prompt: 'Find genes near position 123456' },
       ],
     },
     {
@@ -24,9 +24,9 @@ class WelcomeExamplesManager {
       title: 'Molecular Biology',
       cssClass: 'welcome-card-molbio',
       examples: [
-        'Find EcoRI restriction sites in this region',
-        'Virtual digest with EcoRI and BamHI',
-        'Search for TATAAA promoter motifs',
+        { title: 'Find EcoRI restriction sites in this region', prompt: 'Find EcoRI restriction sites in this region' },
+        { title: 'Virtual digest with EcoRI and BamHI', prompt: 'Virtual digest with EcoRI and BamHI' },
+        { title: 'Search for TATAAA promoter motifs', prompt: 'Search for TATAAA promoter motifs' },
       ],
     },
     {
@@ -35,9 +35,9 @@ class WelcomeExamplesManager {
       title: 'Sequence Analysis',
       cssClass: 'welcome-card-analysis',
       examples: [
-        'What is the GC content of the current view?',
-        'Analyze codon usage in the lacZ gene',
-        'Find all ORFs longer than 300bp',
+        { title: 'What is the GC content of the current view?', prompt: 'What is the GC content of the current view?' },
+        { title: 'Analyze codon usage in the lacZ gene', prompt: 'Analyze codon usage in the lacZ gene' },
+        { title: 'Find all ORFs longer than 300bp', prompt: 'Find all ORFs longer than 300bp' },
       ],
     },
     {
@@ -46,9 +46,9 @@ class WelcomeExamplesManager {
       title: 'Organization & Export',
       cssClass: 'welcome-card-export',
       examples: [
-        'Bookmark this interesting region',
-        'Export features from current view',
-        'Show file information summary',
+        { title: 'Bookmark this interesting region', prompt: 'Bookmark this interesting region' },
+        { title: 'Export features from current view', prompt: 'Export features from current view' },
+        { title: 'Show file information summary', prompt: 'Show file information summary' },
       ],
     },
   ];
@@ -83,7 +83,18 @@ class WelcomeExamplesManager {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          // Backward compatibility: Convert string examples to {title, prompt} objects
+          return parsed.map(cat => {
+            if (cat.examples) {
+              cat.examples = cat.examples.map(ex => {
+                if (typeof ex === 'string') {
+                  return { title: ex, prompt: ex };
+                }
+                return ex;
+              });
+            }
+            return cat;
+          });
         }
       }
     } catch (err) {

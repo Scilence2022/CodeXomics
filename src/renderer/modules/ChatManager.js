@@ -233,9 +233,12 @@ class ChatManager {
           <span class="welcome-card-title">${cat.title || ''}</span>
         </div>
         <div class="welcome-card-examples">
-          ${(cat.examples || []).map(ex =>
-            `<button class="welcome-example-btn" data-prompt="${ex.replace(/"/g, '&quot;')}">${ex}</button>`
-          ).join('')}
+          ${(cat.examples || []).map(ex => {
+            // Handle both legacy string format and new object format gracefully
+            const promptStr = typeof ex === 'string' ? ex : (ex.prompt || '');
+            const titleStr = typeof ex === 'string' ? ex : (ex.title || promptStr);
+            return `<button class="welcome-example-btn" data-prompt="${promptStr.replace(/"/g, '&quot;')}">${titleStr}</button>`;
+          }).join('')}
         </div>
       </div>
     `).join('');

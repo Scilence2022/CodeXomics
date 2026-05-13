@@ -2005,8 +2005,12 @@ class ChatBoxSettingsManager {
         const title = card.querySelector('.cat-title-input').value;
         const cssClass = card.querySelector('.cat-style-select').value;
         
-        const promptInputs = card.querySelectorAll('.prompt-text-input');
-        const examples = Array.from(promptInputs).map(inp => inp.value.trim()).filter(val => val !== '');
+        const promptItems = card.querySelectorAll('.editor-prompt-item');
+        const examples = Array.from(promptItems).map(item => {
+          const promptTitle = item.querySelector('.prompt-title-input')?.value.trim() || '';
+          const promptText = item.querySelector('.prompt-text-input')?.value.trim() || '';
+          return { title: promptTitle, prompt: promptText };
+        }).filter(ex => ex.title !== '' || ex.prompt !== '');
         
         data.push({ id, icon, title, cssClass, examples });
       });
@@ -2211,23 +2215,31 @@ class ChatBoxSettingsManager {
         </div>
         
         <div class="editor-prompts-list" style="display: flex; flex-direction: column; gap: 6px;">
-          ${(cat.examples || []).map((prompt, prIdx) => `
-            <div class="editor-prompt-item" data-index="${prIdx}" style="display: flex; gap: 6px; align-items: center;">
-              <span style="color: #94a3b8; font-size: 10px; width: 14px; text-align: right; font-weight: 500;">${prIdx + 1}</span>
-              <input type="text" class="prompt-text-input" value="${prompt.replace(/"/g, '&quot;')}" placeholder="Example prompt..." style="flex: 1; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; background: #ffffff; color: #1e293b;">
-              <div style="display: flex; gap: 2px;">
-                <button type="button" class="btn btn-sm btn-secondary move-prompt-up-btn" title="Move up" ${prIdx === 0 ? 'disabled' : ''} style="padding: 2px 6px; font-size: 10px;">
-                  <i class="fas fa-caret-up"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-secondary move-prompt-down-btn" title="Move down" ${prIdx === cat.examples.length - 1 ? 'disabled' : ''} style="padding: 2px 6px; font-size: 10px;">
-                  <i class="fas fa-caret-down"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-secondary delete-prompt-btn" title="Delete Example" style="padding: 2px 6px; font-size: 10px; color: #ef4444; border-color: #fee2e2; background: #fef2f2;">
-                  <i class="fas fa-times"></i>
-                </button>
+          ${(cat.examples || []).map((exObj, prIdx) => {
+            const titleStr = typeof exObj === 'string' ? exObj : (exObj.title || '');
+            const promptStr = typeof exObj === 'string' ? exObj : (exObj.prompt || '');
+            return `
+            <div class="editor-prompt-item" data-index="${prIdx}" style="display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="color: #94a3b8; font-size: 10px; width: 14px; text-align: right; font-weight: 500;">${prIdx + 1}</span>
+                <input type="text" class="prompt-title-input" value="${titleStr.replace(/"/g, '&quot;')}" placeholder="Button Title (e.g. Navigate to Gene)" title="Text displayed on the button" style="flex: 1; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; background: #ffffff; color: #1e293b;">
+                <div style="display: flex; gap: 2px;">
+                  <button type="button" class="btn btn-sm btn-secondary move-prompt-up-btn" title="Move up" ${prIdx === 0 ? 'disabled' : ''} style="padding: 2px 6px; font-size: 10px;">
+                    <i class="fas fa-caret-up"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-secondary move-prompt-down-btn" title="Move down" ${prIdx === cat.examples.length - 1 ? 'disabled' : ''} style="padding: 2px 6px; font-size: 10px;">
+                    <i class="fas fa-caret-down"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-secondary delete-prompt-btn" title="Delete Example" style="padding: 2px 6px; font-size: 10px; color: #ef4444; border-color: #fee2e2; background: #fef2f2;">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div style="display: flex; gap: 6px; align-items: center; padding-left: 20px;">
+                <input type="text" class="prompt-text-input" value="${promptStr.replace(/"/g, '&quot;')}" placeholder="Actual prompt sent to AI (e.g. Find genes near position 123)" title="Prompt sent to the AI when clicked" style="flex: 1; padding: 4px 8px; border: 1px dashed #cbd5e1; border-radius: 4px; font-size: 11px; background: #ffffff; color: #475569;">
               </div>
             </div>
-          `).join('')}
+          `}).join('')}
           <button type="button" class="btn btn-sm btn-secondary add-prompt-btn" style="align-self: flex-start; margin-top: 4px; border-style: dashed; padding: 2px 8px; font-size: 11px; background: #ffffff; border-color: #cbd5e1;">
             <i class="fas fa-plus" style="font-size: 9px; margin-right: 3px;"></i> Add Example
           </button>
@@ -2264,8 +2276,12 @@ class ChatBoxSettingsManager {
         const title = titleInput.value;
         const cssClass = cssClassSelect.value;
         
-        const promptInputs = card.querySelectorAll('.prompt-text-input');
-        const examples = Array.from(promptInputs).map(inp => inp.value.trim()).filter(val => val !== '');
+        const promptItems = card.querySelectorAll('.editor-prompt-item');
+        const examples = Array.from(promptItems).map(item => {
+          const promptTitle = item.querySelector('.prompt-title-input')?.value.trim() || '';
+          const promptText = item.querySelector('.prompt-text-input')?.value.trim() || '';
+          return { title: promptTitle, prompt: promptText };
+        }).filter(ex => ex.title !== '' || ex.prompt !== '');
         
         data.push({ id, icon, title, cssClass, examples });
       });
@@ -2318,14 +2334,14 @@ class ChatBoxSettingsManager {
       if (e.target.closest('.add-prompt-btn')) {
         const cat = data.find(c => c.id === categoryId);
         if (cat) {
-          cat.examples.push('New Example Prompt');
+          cat.examples.push({ title: 'New Example Title', prompt: 'New Example Prompt' });
           manager.saveAll(data);
           this.populateWelcomeExamplesForm(modal);
           
-          // Focus newly added input
-          const promptInputs = container.querySelectorAll(`[data-id="${categoryId}"] .prompt-text-input`);
-          if (promptInputs.length > 0) {
-            const lastInput = promptInputs[promptInputs.length - 1];
+          // Focus newly added title input
+          const titleInputs = container.querySelectorAll(`[data-id="${categoryId}"] .prompt-title-input`);
+          if (titleInputs.length > 0) {
+            const lastInput = titleInputs[titleInputs.length - 1];
             lastInput.focus();
             lastInput.select();
           }
