@@ -489,6 +489,7 @@ class TabManager {
       // Sidebar state (independent per tab)
       sidebarPanels: {
         geneDetailsSection: { visible: false, content: null },
+        primerDetailsSection: { visible: false, content: null },
         readDetailsSection: { visible: false, content: null },
         variantDetailsSection: { visible: false, content: null },
         searchResultsSection: { visible: false, content: null },
@@ -2654,6 +2655,7 @@ class TabManager {
     if (!tabState.sidebarPanels) {
       tabState.sidebarPanels = {
         geneDetailsSection: { visible: false, content: null },
+        primerDetailsSection: { visible: false, content: null },
         readDetailsSection: { visible: false, content: null },
         variantDetailsSection: { visible: false, content: null },
         searchResultsSection: { visible: false, content: null },
@@ -2663,6 +2665,7 @@ class TabManager {
     // Ensure all required panel properties exist
     const requiredPanels = [
       'geneDetailsSection',
+      'primerDetailsSection',
       'readDetailsSection',
       'variantDetailsSection',
       'searchResultsSection',
@@ -2679,6 +2682,15 @@ class TabManager {
       tabState.sidebarPanels.geneDetailsSection.visible = genePanel.style.display !== 'none';
       if (tabState.sidebarPanels.geneDetailsSection.visible) {
         tabState.sidebarPanels.geneDetailsSection.content = genePanel.innerHTML;
+      }
+    }
+
+    // Save primer details panel state
+    const primerPanel = document.getElementById('primerDetailsSection');
+    if (primerPanel && tabState.sidebarPanels.primerDetailsSection) {
+      tabState.sidebarPanels.primerDetailsSection.visible = primerPanel.style.display !== 'none';
+      if (tabState.sidebarPanels.primerDetailsSection.visible) {
+        tabState.sidebarPanels.primerDetailsSection.content = primerPanel.innerHTML;
       }
     }
 
@@ -2720,6 +2732,7 @@ class TabManager {
       // Initialize with default state if not present
       tabState.sidebarPanels = {
         geneDetailsSection: { visible: false, content: null },
+        primerDetailsSection: { visible: false, content: null },
         readDetailsSection: { visible: false, content: null },
         variantDetailsSection: { visible: false, content: null },
         searchResultsSection: { visible: false, content: null },
@@ -2729,6 +2742,7 @@ class TabManager {
     // Ensure all required panel properties exist
     const requiredPanels = [
       'geneDetailsSection',
+      'primerDetailsSection',
       'readDetailsSection',
       'variantDetailsSection',
       'searchResultsSection',
@@ -2747,6 +2761,17 @@ class TabManager {
         genePanel.style.display = 'block';
       } else {
         genePanel.style.display = 'none';
+      }
+    }
+
+    // Restore primer details panel
+    const primerPanel = document.getElementById('primerDetailsSection');
+    if (primerPanel && tabState.sidebarPanels.primerDetailsSection) {
+      if (tabState.sidebarPanels.primerDetailsSection.visible && tabState.sidebarPanels.primerDetailsSection.content) {
+        primerPanel.innerHTML = tabState.sidebarPanels.primerDetailsSection.content;
+        primerPanel.style.display = 'block';
+      } else {
+        primerPanel.style.display = 'none';
       }
     }
 
@@ -2831,6 +2856,7 @@ class TabManager {
     if (!tabState.sidebarPanels) {
       tabState.sidebarPanels = {
         geneDetailsSection: { visible: false, content: null },
+        primerDetailsSection: { visible: false, content: null },
         readDetailsSection: { visible: false, content: null },
         variantDetailsSection: { visible: false, content: null },
         searchResultsSection: { visible: false, content: null },

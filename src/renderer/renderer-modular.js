@@ -5119,6 +5119,12 @@ class GenomeBrowser {
 
   // Gene Selection Methods
   selectGene(gene, operonInfo = null) {
+    const type = (gene.type || '').toLowerCase();
+    if (type === 'primer' || type === 'primer_bind') {
+      this.selectPrimer(gene);
+      return;
+    }
+
     // Remove selection from previously selected gene
     this.clearGeneSelection();
 
@@ -5310,6 +5316,25 @@ class GenomeBrowser {
 
       // Scroll sidebar to bring gene details section into view
       this.scrollSidebarToSection(geneDetailsSection);
+    }
+  }
+
+  showPrimerDetailsPanel() {
+    // Hide gene details panel — primers and genes are mutually exclusive
+    const geneDetailsSection = document.getElementById('geneDetailsSection');
+    if (geneDetailsSection) geneDetailsSection.style.display = 'none';
+
+    const primerDetailsSection = document.getElementById('primerDetailsSection');
+    if (primerDetailsSection) {
+      primerDetailsSection.style.display = 'block';
+      this.uiManager.showSidebarIfHidden();
+
+      if (this.tabManager) {
+        this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', false, null);
+        this.tabManager.updateCurrentTabSidebarPanel('primerDetailsSection', true, primerDetailsSection.innerHTML);
+      }
+
+      this.scrollSidebarToSection(primerDetailsSection);
     }
   }
 
@@ -5524,6 +5549,262 @@ class GenomeBrowser {
         `;
 
     return html;
+  }
+
+  selectPrimer(primer) {
+    this.clearGeneSelection();
+    this.selectedGene = { gene: primer, operonInfo: null };
+    this.highlightSelectedGene(primer);
+    this.showPrimerSelectionFeedback(primer);
+    this.populatePrimerDetails(primer);
+    this.showPrimerDetailsPanel();
+  }
+
+  showPrimerSelectionFeedback(primer) {
+    const primerName = primer.name || primer.qualifiers?.label || primer.qualifiers?.gene || 'Unnamed Primer';
+    const message = `Selected primer: ${primerName}`;
+
+    if (typeof this.showNotification === 'function') {
+      this.showNotification(message, 'info');
+    }
+
+    this.updateStatus(message, {
+      highlight: true,
+      color: '#10b981',
+      duration: 3000,
+      restore: true
+    });
+  }
+
+  /**
+   * Populate the dedicated Primer Details sidebar panel.
+   * Extracts the primer sequence from the loaded genome and runs
+   * PrimerDesigner.calculateProperties to compute Tm, GC%, and hairpin risk.
+   */
+  populatePrimerDetails(primer) {
+    const content = document.getElementById('primerDetailsContent');
+    if (!content) return;
+
+    const name = primer.name || primer.qualifiers?.label || primer.qualifiers?.gene || 'Unnamed Primer';
+    const length = Math.abs(primer.end - primer.start) + 1;
+    const strand = primer.strand === -1 ? 'Reverse (-)' : 'Forward (+)';
+    const strandIcon = primer.strand === -1 ? 'fa-long-arrow-alt-left' : 'fa-long-arrow-alt-right';
+    const desc = primer.description || primer.qualifiers?.note || '';
+    const product = primer.qualifiers?.product || '';
+
+    // Extract primer sequence from loaded genome
+    const currentChr = document.getElementById('chromosomeSelect')?.value;
+    const fullSequence = this.currentSequence ? this.currentSequence[currentChr] : null;
+    let primerSequence = '';
+    if (fullSequence && primer.start != null && primer.end != null) {
+      const seqStart = Math.max(0, primer.start - 1); // 1-based → 0-based
+      const seqEnd = Math.min(fullSequence.length, primer.end);
+      primerSequence = fullSequence.substring(seqStart, seqEnd).toUpperCase();
+      if (primer.strand === -1) {
+        // Reverse complement
+        const complement = { A: 'T', T: 'A', G: 'C', C: 'G', N: 'N' };
+        primerSequence = primerSequence.split('').reverse().map(b => complement[b] || b).join('');
+      }
+    }
+
+    // Calculate properties via PrimerDesigner if available
+    let props = null;
+    if (primerSequence && window.PrimerDesigner) {
+      try {
+        props = window.PrimerDesigner.calculateProperties(primerSequence);
+      } catch (e) {
+        console.warn('PrimerDesigner.calculateProperties error:', e.message);
+      }
+    }
+
+    // Fallback: parse from description metadata
+    if (!props) {
+      const tmMatch = desc.match(/Tm:\s*([\d.]+)/i);
+      const gcMatch = desc.match(/GC:\s*([\d.]+)/i);
+      props = {
+        tm: tmMatch ? parseFloat(tmMatch[1]) : null,
+        gcContent: gcMatch ? parseFloat(gcMatch[1]) : null,
+        hasHairpinPotential: null,
+        length: primerSequence.length || length
+      };
+    }
+
+    // Quality assessment
+    const tmQuality = props.tm != null ? this._assessTmQuality(props.tm) : null;
+    const gcQuality = props.gcContent != null ? this._assessGcQuality(props.gcContent) : null;
+    const lengthQuality = this._assessLengthQuality(props.length || length);
+
+    // Build HTML
+    const safeName = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+    // Primer identity card
+    let html = `
+      <div class="primer-identity-card">
+        <div class="primer-name">${name}</div>
+        <div class="primer-badges">
+          <span class="primer-type-badge"><i class="fas fa-vial"></i> primer</span>
+          <span class="primer-strand-badge ${primer.strand === -1 ? 'reverse' : 'forward'}">
+            <i class="fas ${strandIcon}"></i> ${strand}
+          </span>
+        </div>
+        <div class="primer-position">
+          <i class="fas fa-map-marker-alt"></i>
+          ${currentChr || 'chr'}:${primer.start.toLocaleString()}-${primer.end.toLocaleString()}
+          <span class="primer-length-badge">${length} bp</span>
+        </div>
+      </div>
+    `;
+
+    // Action buttons
+    html += `
+      <div class="primer-actions">
+        <button class="primer-action-btn primer-zoom-btn" onclick="
+          if (window.genomeBrowser) {
+            const padding = Math.max(200, ${length} * 3);
+            const newStart = Math.max(0, ${primer.start} - padding);
+            const newEnd = ${primer.end} + padding;
+            window.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+            const chr = document.getElementById('chromosomeSelect')?.value;
+            if (chr && window.genomeBrowser.currentSequence && window.genomeBrowser.currentSequence[chr]) {
+              window.genomeBrowser.displayGenomeView(chr, window.genomeBrowser.currentSequence[chr]);
+              if (window.genomeBrowser.genomeNavigationBar) window.genomeBrowser.genomeNavigationBar.update();
+              if (window.genomeBrowser.tabManager) window.genomeBrowser.tabManager.updateCurrentTabPosition(chr, newStart + 1, newEnd, { source: 'navigation' });
+            }
+          }
+        " title="Zoom to primer region">
+          <i class="fas fa-search-plus"></i> Zoom to
+        </button>
+        <button class="primer-action-btn primer-copy-btn" onclick="
+          const seq = '${primerSequence}';
+          if (seq) { navigator.clipboard.writeText(seq).then(() => { if (window.genomeBrowser) window.genomeBrowser.showNotification('Primer sequence copied', 'success'); }); }
+        " title="Copy sequence to clipboard" ${!primerSequence ? 'disabled' : ''}>
+          <i class="fas fa-copy"></i> Copy Seq
+        </button>
+      </div>
+    `;
+
+    // Thermodynamic properties section
+    if (props.tm != null || props.gcContent != null) {
+      html += `<div class="primer-properties-section">
+        <div class="primer-section-title"><i class="fas fa-thermometer-half"></i> Thermodynamic Properties</div>
+        <div class="primer-props-grid">`;
+
+      if (props.tm != null) {
+        html += `
+          <div class="primer-prop-card ${tmQuality?.class || ''}">
+            <div class="primer-prop-label">Melting Temp (Tm)</div>
+            <div class="primer-prop-value">${props.tm.toFixed(1)} °C</div>
+            ${tmQuality ? `<div class="primer-prop-quality">${tmQuality.icon} ${tmQuality.text}</div>` : ''}
+          </div>`;
+      }
+
+      if (props.gcContent != null) {
+        html += `
+          <div class="primer-prop-card ${gcQuality?.class || ''}">
+            <div class="primer-prop-label">GC Content</div>
+            <div class="primer-prop-value">${props.gcContent.toFixed(1)}%</div>
+            ${gcQuality ? `<div class="primer-prop-quality">${gcQuality.icon} ${gcQuality.text}</div>` : ''}
+          </div>`;
+      }
+
+      html += `
+          <div class="primer-prop-card ${lengthQuality?.class || ''}">
+            <div class="primer-prop-label">Length</div>
+            <div class="primer-prop-value">${props.length || length} bp</div>
+            ${lengthQuality ? `<div class="primer-prop-quality">${lengthQuality.icon} ${lengthQuality.text}</div>` : ''}
+          </div>`;
+
+      if (props.hasHairpinPotential != null) {
+        html += `
+          <div class="primer-prop-card ${props.hasHairpinPotential ? 'quality-warning' : 'quality-good'}">
+            <div class="primer-prop-label">Hairpin Risk</div>
+            <div class="primer-prop-value">${props.hasHairpinPotential ? 'Possible' : 'Low'}</div>
+            <div class="primer-prop-quality">${props.hasHairpinPotential ? '⚠️ Self-complementary' : '✅ No hairpin'}</div>
+          </div>`;
+      }
+
+      html += `</div></div>`;
+    }
+
+    // Sequence display
+    if (primerSequence) {
+      // Color-code the nucleotides
+      const coloredSeq = primerSequence.split('').map(b => {
+        const colors = { A: '#22c55e', T: '#ef4444', G: '#f59e0b', C: '#3b82f6' };
+        return `<span style="color: ${colors[b] || '#888'}">${b}</span>`;
+      }).join('');
+
+      html += `
+      <div class="primer-sequence-section">
+        <div class="primer-section-title"><i class="fas fa-dna"></i> Sequence (5'→3')</div>
+        <div class="primer-sequence-display">${coloredSeq}</div>
+      </div>`;
+    }
+
+    // Additional information (description, product, qualifiers)
+    const infoItems = [];
+    if (product) infoItems.push({ label: 'Product', value: product });
+    if (desc && desc !== product) infoItems.push({ label: 'Note', value: desc });
+
+    // Add other qualifiers (excluding ones we already show)
+    const skipQualifiers = new Set(['gene', 'label', 'product', 'note', 'sequence', 'user_defined']);
+    if (primer.qualifiers) {
+      Object.entries(primer.qualifiers).forEach(([key, value]) => {
+        if (skipQualifiers.has(key)) return;
+        const strVal = String(value);
+        if (strVal && strVal !== 'Unknown' && strVal.trim()) {
+          infoItems.push({ label: key.replace(/_/g, ' '), value: strVal });
+        }
+      });
+    }
+
+    if (infoItems.length > 0) {
+      html += `<div class="primer-info-section">
+        <div class="primer-section-title"><i class="fas fa-info-circle"></i> Additional Information</div>`;
+      infoItems.forEach(item => {
+        html += `
+          <div class="primer-info-row">
+            <span class="primer-info-label">${item.label}</span>
+            <span class="primer-info-value">${item.value}</span>
+          </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // AI action
+    html += `
+      <div class="primer-ai-section">
+        <button class="primer-ai-btn" onclick="if(window.chatBox) { window.chatBox.setInputText('Please calculate the properties of this primer sequence: ${primerSequence || safeName}'); window.chatBox.focusInput(); }">
+          <i class="fas fa-robot"></i> Analyze with AI
+        </button>
+        <button class="primer-ai-btn primer-binding-btn" onclick="if(window.chatBox) { window.chatBox.setInputText('Find binding sites for primer ${safeName} in the current genome'); window.chatBox.focusInput(); }">
+          <i class="fas fa-crosshairs"></i> Find Binding Sites
+        </button>
+      </div>
+    `;
+
+    content.innerHTML = html;
+  }
+
+  /** @private Assess melting temperature quality */
+  _assessTmQuality(tm) {
+    if (tm >= 55 && tm <= 65) return { class: 'quality-good', icon: '✅', text: 'Optimal (55-65°C)' };
+    if (tm >= 50 && tm <= 70) return { class: 'quality-acceptable', icon: '🟡', text: 'Acceptable' };
+    return { class: 'quality-warning', icon: '⚠️', text: tm < 50 ? 'Low — may not anneal' : 'High — may misprimed' };
+  }
+
+  /** @private Assess GC content quality */
+  _assessGcQuality(gc) {
+    if (gc >= 40 && gc <= 60) return { class: 'quality-good', icon: '✅', text: 'Optimal (40-60%)' };
+    if (gc >= 30 && gc <= 70) return { class: 'quality-acceptable', icon: '🟡', text: 'Acceptable' };
+    return { class: 'quality-warning', icon: '⚠️', text: gc < 30 ? 'AT-rich' : 'GC-rich' };
+  }
+
+  /** @private Assess primer length quality */
+  _assessLengthQuality(len) {
+    if (len >= 18 && len <= 25) return { class: 'quality-good', icon: '✅', text: 'Optimal (18-25 bp)' };
+    if (len >= 15 && len <= 30) return { class: 'quality-acceptable', icon: '🟡', text: 'Acceptable' };
+    return { class: 'quality-warning', icon: '⚠️', text: len < 15 ? 'Too short' : 'Too long' };
   }
 
   populateGeneDetails(gene, operonInfo = null) {
@@ -8188,7 +8469,12 @@ class GenomeBrowser {
     // Update tab manager about gene selection clear
     if (this.tabManager) {
       this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', false, null);
+      this.tabManager.updateCurrentTabSidebarPanel('primerDetailsSection', false, null);
     }
+
+    // Hide primer details panel if it was open
+    const primerPanel = document.getElementById('primerDetailsSection');
+    if (primerPanel) primerPanel.style.display = 'none';
 
     console.log('Cleared gene selection');
   }
@@ -8867,7 +9153,38 @@ class GenomeBrowser {
 
     document.getElementById('primerTrackBtn')?.addEventListener('click', e => {
       e.stopPropagation();
+      this.togglePrimersDropdown();
+    });
+
+    // Primer dropdown menu buttons
+    document.getElementById('designPrimersBtn')?.addEventListener('click', () => {
+      this.hidePrimersDropdown();
+      if (window.chatBox) {
+        window.chatBox.setInputText('I want to design primers. Please guide me through the process.');
+        window.chatBox.focusInput();
+      }
+    });
+
+    document.getElementById('calcPrimerPropsBtn')?.addEventListener('click', () => {
+      this.hidePrimersDropdown();
+      if (window.chatBox) {
+        window.chatBox.setInputText('Please calculate the properties of the following primer sequence: ');
+        window.chatBox.focusInput();
+      }
+    });
+
+    document.getElementById('findPrimerSitesBtn')?.addEventListener('click', () => {
+      this.hidePrimersDropdown();
+      if (window.chatBox) {
+        window.chatBox.setInputText('Find binding sites for this primer sequence: ');
+        window.chatBox.focusInput();
+      }
+    });
+
+    document.getElementById('togglePrimerTrackMenuBtn')?.addEventListener('click', e => {
+      e.stopPropagation();
       this.togglePrimerTrack();
+      this.hidePrimersDropdown();
     });
 
     // Actions dropdown menu
@@ -8892,6 +9209,7 @@ class GenomeBrowser {
     document.addEventListener('click', () => {
       this.hideAddFeaturesDropdown();
       this.hideActionsDropdown();
+      this.hidePrimersDropdown();
     });
 
     // Enable sequence selection in bottom panel
@@ -8946,10 +9264,32 @@ class GenomeBrowser {
   }
 
   updatePrimerTrackButtonState(isVisible = this.visibleTracks?.has('primers')) {
+    // Note: primerTrackBtn is now a dropdown toggle, so we don't update its active state based on track visibility
+    const trackMenuBtn = document.getElementById('togglePrimerTrackMenuBtn');
+    if (trackMenuBtn) {
+      trackMenuBtn.innerHTML = isVisible ? '<i class="fas fa-eye-slash"></i> Hide Primer Track' : '<i class="fas fa-eye"></i> Show Primer Track';
+    }
+  }
+
+  togglePrimersDropdown() {
+    const dropdown = document.getElementById('primersDropdown');
     const button = document.getElementById('primerTrackBtn');
-    if (!button) return;
-    button.classList.toggle('active', !!isVisible);
-    button.title = isVisible ? 'Hide Primer Track' : 'Show Primer Track';
+
+    if (dropdown && button) {
+      const isVisible = dropdown.style.display === 'block';
+      dropdown.style.display = isVisible ? 'none' : 'block';
+      button.classList.toggle('active', !isVisible);
+    }
+  }
+
+  hidePrimersDropdown() {
+    const dropdown = document.getElementById('primersDropdown');
+    const button = document.getElementById('primerTrackBtn');
+
+    if (dropdown && button) {
+      dropdown.style.display = 'none';
+      button.classList.remove('active');
+    }
   }
 
   toggleActionsDropdown() {

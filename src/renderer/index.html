@@ -632,10 +632,6 @@
                     <i class="fas fa-plus"></i>
                     <span>Add Features</span>
                 </button>
-                <button id="primerTrackBtn" class="btn btn-sm toggle-btn" title="Show Primer Track">
-                    <i class="fas fa-vial"></i>
-                    <span>Primers</span>
-                </button>
                 <div class="add-features-dropdown" id="addFeaturesDropdown" style="display: none;">
                     <div class="dropdown-section">
                         <div class="dropdown-section-title">
@@ -716,6 +712,44 @@
                     </div>
                 </div>
             </div>
+
+            <div class="toolbar-section">
+                <button id="primerTrackBtn" class="btn btn-sm toggle-btn" title="Primer Options">
+                    <i class="fas fa-vial"></i>
+                    <span>Primers</span>
+                </button>
+                <div class="actions-dropdown" id="primersDropdown" style="display: none;">
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
+                            <i class="fas fa-robot"></i>
+                            AI Primer Tools
+                        </div>
+                        <button id="designPrimersBtn" class="dropdown-feature-btn" title="Design Primers via AI">
+                            <i class="fas fa-magic"></i>
+                            Design Primers
+                        </button>
+                        <button id="calcPrimerPropsBtn" class="dropdown-feature-btn" title="Calculate Properties">
+                            <i class="fas fa-calculator"></i>
+                            Calculate Properties
+                        </button>
+                        <button id="findPrimerSitesBtn" class="dropdown-feature-btn" title="Find Binding Sites">
+                            <i class="fas fa-search-location"></i>
+                            Find Binding Sites
+                        </button>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
+                            <i class="fas fa-eye"></i>
+                            Track Display
+                        </div>
+                        <button id="togglePrimerTrackMenuBtn" class="dropdown-feature-btn" title="Toggle Primer Track">
+                            <i class="fas fa-vial"></i>
+                            Toggle Primer Track
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Main Content -->
@@ -743,6 +777,23 @@
                         <div class="no-gene-selected">
                             <i class="fas fa-dna gene-icon"></i>
                             <p>Click on a gene in the Genes & Features track to view details</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="primerDetailsSection" style="display: none;">
+                    <div class="section-header">
+                        <h3>Primer Details</h3>
+                        <div class="section-header-buttons">
+                            <button class="close-panel-btn" data-panel="primerDetailsSection">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="primerDetailsContent" class="primer-details-content">
+                        <div class="no-primer-selected">
+                            <i class="fas fa-vial gene-icon"></i>
+                            <p>Click on a primer in the Primers track to view details</p>
                         </div>
                     </div>
                 </div>

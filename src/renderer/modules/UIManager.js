@@ -132,6 +132,11 @@ class UIManager {
         this.genomeBrowser.clearGeneSelection();
       }
 
+      // Special handling for primer details panel
+      if (panelId === 'primerDetailsSection') {
+        this.genomeBrowser.clearGeneSelection(); // Primers use the same selection clearing mechanism
+      }
+
       // Special handling for read details panel
       if (panelId === 'readDetailsSection') {
         this.genomeBrowser.clearReadSelection();

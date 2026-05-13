@@ -6735,6 +6735,13 @@ class TrackRenderer {
   }
 
   showGeneDetails(gene, operonInfo) {
+    const featureType = (gene.type || '').toLowerCase();
+    if (featureType === 'primer' || featureType === 'primer_bind') {
+      // Route primers to dedicated Primer Details sidebar
+      this.genomeBrowser.selectPrimer(gene);
+      return;
+    }
+
     // Call the main CodeXomics's gene selection methods
     this.genomeBrowser.selectGene(gene, operonInfo);
     this.genomeBrowser.showGeneDetailsPanel();
