@@ -120,6 +120,8 @@ class AnalysisAgent extends AgentBase {
     this.toolMapping.set('design_primers', this.designPrimers.bind(this));
     this.toolMapping.set('find_primer_binding_sites', this.findPrimerBindingSites.bind(this));
     this.toolMapping.set('add_primer_annotation', this.addPrimerAnnotation.bind(this));
+    this.toolMapping.set('list_primer_annotations', this.listPrimerAnnotations.bind(this));
+    this.toolMapping.set('clear_primer_annotations', this.clearPrimerAnnotations.bind(this));
 
     // CDS
     this.toolMapping.set('get_coding_sequence', this.getCodingSequence.bind(this));
@@ -965,6 +967,28 @@ class AnalysisAgent extends AgentBase {
         throw new Error('name, chromosome, start, and end are required for primer annotation');
       }
       return { success: true, annotation: { name, chromosome, start, end, strand: parameters.strand || '+' } };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  async listPrimerAnnotations(parameters, strategy) {
+    try {
+      if (this.chatManager?.services?.toolExecution) {
+        return await this.chatManager.services.toolExecution.execute('list_primer_annotations', parameters);
+      }
+      return { success: false, error: 'Primer annotation listing requires ChatBox tool execution' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  async clearPrimerAnnotations(parameters, strategy) {
+    try {
+      if (this.chatManager?.services?.toolExecution) {
+        return await this.chatManager.services.toolExecution.execute('clear_primer_annotations', parameters);
+      }
+      return { success: false, error: 'Primer annotation clearing requires ChatBox tool execution' };
     } catch (error) {
       return { success: false, error: error.message };
     }

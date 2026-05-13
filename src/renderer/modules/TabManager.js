@@ -1758,7 +1758,7 @@ class TabManager {
   updateTrackVisibilityControls() {
     try {
       // Update track visibility checkboxes in toolbar if they exist
-      const trackTypes = ['genes', 'gc', 'variants', 'reads', 'proteins', 'sequence', 'actions', 'blast'];
+      const trackTypes = ['genes', 'gc', 'variants', 'reads', 'proteins', 'primers', 'sequence', 'actions', 'blast'];
 
       trackTypes.forEach(trackType => {
         const checkbox = document.getElementById(`show${trackType.charAt(0).toUpperCase() + trackType.slice(1)}Track`);
@@ -1789,6 +1789,7 @@ class TabManager {
         { type: 'reads', id: 'sidebarTrackReads' },
         { type: 'wigTracks', id: 'sidebarTrackWIG' },
         { type: 'proteins', id: 'sidebarTrackProteins' },
+        { type: 'primers', id: 'sidebarTrackPrimers' },
         { type: 'sequence', id: 'sidebarTrackSequence' },
         { type: 'sequenceLine', id: 'sidebarTrackSequenceLine' },
         { type: 'actions', id: 'sidebarTrackActions' },

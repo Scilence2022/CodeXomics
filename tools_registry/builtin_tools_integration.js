@@ -845,6 +845,20 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('list_primer_annotations', {
+      method: 'listPrimerAnnotations',
+      category: 'primer_design',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('clear_primer_annotations', {
+      method: 'clearPrimerAnnotations',
+      category: 'primer_design',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Restriction Analysis Tools
     this.builtInToolsMap.set('search_pattern', {
       method: 'searchPattern',
@@ -1807,6 +1821,30 @@ class BuiltInToolsIntegration {
           name: 'find_primer_binding_sites',
           confidence: 0.9,
           reason: 'Primer binding site keywords detected',
+        });
+      }
+      if (/\b(add|annotate|display|visuali[sz]e|draw)\s+.*?\bprimers?\b/i.test(query) ||
+          /\bprimers?\s+.*?\b(display|visuali[sz]e|annotation)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'add_primer_annotation',
+          confidence: 0.9,
+          reason: 'Primer visualization/annotation keywords detected',
+        });
+      }
+      if (/\b(list|show|display|get)\s+.*?\bprimer\s+annotations?\b/i.test(query) ||
+          /\bprimers?\s+.*?\b(list|annotations?|current|shown|displayed)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'list_primer_annotations',
+          confidence: 0.9,
+          reason: 'Primer annotation listing keywords detected',
+        });
+      }
+      if (/\b(clear|remove|delete)\s+.*?\bprimer\s+annotations?\b/i.test(query) ||
+          /\bprimers?\s+.*?\b(clear|remove|delete)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'clear_primer_annotations',
+          confidence: 0.9,
+          reason: 'Primer annotation clearing keywords detected',
         });
       }
     }

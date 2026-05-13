@@ -3245,6 +3245,8 @@ class ChatManager {
       variants: 'trackVariants',
       reads: 'trackReads',
       proteins: 'trackProteins',
+      primers: 'trackPrimers',
+      primer: 'trackPrimers',
       wigTracks: 'trackWIG',
       sequence: 'trackSequence',
       actions: 'trackActions',
@@ -3318,6 +3320,12 @@ class ChatManager {
         end: end,
         strand: strand || 1,
         description: description || '',
+        qualifiers: {
+          gene: name,
+          product: description || name,
+          note: description || '',
+          user_defined: true,
+        },
       };
 
       const featureId = await this.app.addUserDefinedFeature(feature);
@@ -3512,6 +3520,7 @@ class ChatManager {
       {name: 'variants', id: 'trackVariants'},
       {name: 'reads', id: 'trackReads'},
       {name: 'proteins', id: 'trackProteins'},
+      {name: 'primers', id: 'trackPrimers'},
       {name: 'wigTracks', id: 'trackWIG'},
       {name: 'sequence', id: 'trackSequence'},
       {name: 'actions', id: 'trackActions'},
@@ -6950,6 +6959,8 @@ TOOL AVAILABILITY:
         'design_primers',
         'find_primer_binding_sites',
         'add_primer_annotation',
+        'list_primer_annotations',
+        'clear_primer_annotations',
       ],
       'SYSTEM & FILE MANAGEMENT': [
         'set_working_directory',
@@ -10100,7 +10111,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     const visibleTracks = this.getVisibleTracks();
-    const allTracks = ['genes', 'sequence', 'gc', 'variants', 'reads', 'proteins'];
+    const allTracks = ['genes', 'primers', 'sequence', 'gc', 'variants', 'reads', 'proteins'];
 
     const trackStatus = allTracks.map((track) => ({
       name: track,
@@ -10118,6 +10129,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   getTrackDescription(trackName) {
     const descriptions = {
       genes: 'Gene annotations and features',
+      primers: 'Primer annotations and binding direction',
       sequence: 'DNA sequence display',
       gc: 'GC content visualization',
       variants: 'VCF variant data',
@@ -14534,6 +14546,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const validTrackTypes = [
       'genes',
+      'primers',
       'reads',
       'sequence',
       'gc',
@@ -14577,6 +14590,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const validTrackTypes = [
       'genes',
+      'primers',
       'reads',
       'sequence',
       'gc',
@@ -14617,6 +14631,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   async getAllTrackSettings(parameters = {}) {
     const trackTypes = [
       'genes',
+      'primers',
       'reads',
       'sequence',
       'gc',
@@ -14680,6 +14695,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // Reset all tracks
       const trackTypes = [
         'genes',
+        'primers',
         'reads',
         'sequence',
         'gc',
@@ -14724,6 +14740,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // Reset specific track
       const validTrackTypes = [
         'genes',
+        'primers',
         'reads',
         'sequence',
         'gc',

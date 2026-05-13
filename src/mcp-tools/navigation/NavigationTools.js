@@ -194,12 +194,12 @@ class NavigationTools {
           properties: {
             trackName: {
               type: 'string',
-              description: 'Track name (genes, gc, variants, reads, proteins, sequence, actions)',
+              description: 'Track name (genes, gc, variants, reads, proteins, primers, sequence, actions)',
             },
             track_name: {
               type: 'string',
               description:
-                'Track name (alternative to trackName) (genes, gc, variants, reads, proteins, sequence, actions)',
+                'Track name (alternative to trackName) (genes, gc, variants, reads, proteins, primers, sequence, actions)',
             },
             visible: {type: 'boolean', description: 'Whether to show or hide the track'},
             action: {type: 'string', description: 'Action to perform (show or hide)', enum: ['show', 'hide']},

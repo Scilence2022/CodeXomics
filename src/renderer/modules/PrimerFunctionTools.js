@@ -84,6 +84,14 @@ class PrimerFunctionTools {
       add_primer_annotation: buildTool('add_primer_annotation', async (params) => {
         throw new Error('add_primer_annotation requires UI interaction — use PrimerChatManagerIntegration.primerAddAnnotation instead');
       }),
+
+      list_primer_annotations: buildTool('list_primer_annotations', async (params) => {
+        throw new Error('list_primer_annotations requires UI state — use PrimerService through ChatBox or MCP client routing');
+      }),
+
+      clear_primer_annotations: buildTool('clear_primer_annotations', async (params) => {
+        throw new Error('clear_primer_annotations requires UI state — use PrimerService through ChatBox or MCP client routing');
+      }),
     };
   }
 

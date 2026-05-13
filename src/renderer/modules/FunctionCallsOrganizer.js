@@ -351,6 +351,8 @@ class FunctionCallsOrganizer {
           'design_primers',
           'find_primer_binding_sites',
           'add_primer_annotation',
+          'list_primer_annotations',
+          'clear_primer_annotations',
         ],
       },
     };

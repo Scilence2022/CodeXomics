@@ -21,7 +21,7 @@ class TrackSettingsTools {
             track_type: {
               type: 'string',
               description: 'Type of track to get settings for',
-              enum: ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'],
+              enum: ['genes', 'primers', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'],
             },
             file_id: {
               type: 'string',
@@ -42,7 +42,7 @@ class TrackSettingsTools {
             track_type: {
               type: 'string',
               description: 'Type of track to configure',
-              enum: ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'],
+              enum: ['genes', 'primers', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'],
             },
             file_id: {
               type: 'string',
@@ -79,6 +79,7 @@ class TrackSettingsTools {
               description: 'Type of track to reset (or "all" to reset all tracks)',
               enum: [
                 'genes',
+                'primers',
                 'reads',
                 'sequence',
                 'gc',
@@ -190,6 +191,26 @@ class TrackSettingsTools {
             default: 1,
             description: 'Maximum border width for gene elements',
           },
+        },
+      },
+
+      primers: {
+        description: 'Primer Visualization Track Settings',
+        settings: {
+          renderingMode: { type: 'string', enum: ['svg', 'canvas'], default: 'svg', description: 'Rendering mode' },
+          maxRows: { type: 'number', min: 1, max: 10, default: 3, description: 'Maximum primer rows' },
+          height: { type: 'number', min: 40, max: 240, default: 80, description: 'Track height in pixels' },
+          geneHeight: { type: 'number', min: 6, max: 30, default: 10, description: 'Primer element height in pixels' },
+          fontSize: { type: 'number', min: 8, max: 24, default: 11, description: 'Primer label font size' },
+          geneNameColor: { type: 'string', format: 'color', default: '#4a044e', description: 'Primer label color' },
+          fontFamily: { type: 'string', default: 'Arial, sans-serif', description: 'Primer label font family' },
+          layoutMode: {
+            type: 'string',
+            enum: ['expanded', 'compact', 'groupByType'],
+            default: 'compact',
+            description: 'Layout mode',
+          },
+          circularMode: { type: 'boolean', default: false, description: 'Enable circular browsing mode' },
         },
       },
 

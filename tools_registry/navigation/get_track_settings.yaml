@@ -1,6 +1,6 @@
 name: get_track_settings
 version: 1.0.0
-description: 'Get current settings for a specific track type in the genome browser (genes, reads, sequence, gc, variants, actions, blast, wigTracks, sequenceLine). For multi-instance tracks, provide file_id to get instance-specific settings.'
+description: 'Get current settings for a specific track type in the genome browser (genes, primers, reads, sequence, gc, variants, actions, blast, wigTracks, sequenceLine). For multi-instance tracks, provide file_id to get instance-specific settings.'
 category: navigation
 keywords:
   - track
@@ -22,7 +22,7 @@ parameters:
     track_type:
       type: string
       description: 'Type of track to get settings for'
-      enum: ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine']
+      enum: ['genes', 'primers', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine']
     file_id:
       type: string
       description: 'Optional file ID for multi-instance tracks (genes, reads, variants). When provided, returns instance-specific settings merged with type defaults.'

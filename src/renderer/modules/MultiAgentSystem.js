@@ -816,6 +816,7 @@ class MultiAgentSystem {
         'find_restriction_sites', 'virtual_digest', 'list_restriction_enzymes', 'simulate_gel_electrophoresis', 'list_dna_markers', 'get_dna_marker_info',
         'search_pattern', 'search_sequence_motif',
         'calculate_primer_properties', 'design_primers', 'find_primer_binding_sites', 'add_primer_annotation',
+        'list_primer_annotations', 'clear_primer_annotations',
         'get_coding_sequence', 'get_upstream_region', 'get_downstream_region',
       ],
       DataAgent: [

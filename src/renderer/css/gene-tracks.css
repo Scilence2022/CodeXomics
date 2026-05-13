@@ -1,7 +1,8 @@
 /* Gene Track Styles with Operon Support */
 
 /* Base Gene Track */
-.gene-track {
+.gene-track,
+.primer-track {
   margin-bottom: 10px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -9,7 +10,8 @@
 }
 
 /* Remove top margin for the first track to eliminate space at top */
-.gene-track:first-child {
+.gene-track:first-child,
+.primer-track:first-child {
   margin-top: 0;
 }
 
@@ -45,7 +47,8 @@
 }
 
 /* Track Content */
-.gene-track .track-content {
+.gene-track .track-content,
+.primer-track .track-content {
   position: relative;
   background: #fafafa;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
@@ -297,8 +300,6 @@ svg {
   border-radius: 2px !important;
   height: 8px !important;
   /* Thinner than normal genes */
-  top: 50% !important;
-  /* Center vertically in the track if possible, or adjust based on layout */
 }
 
 /* Forward primer (arrow pointing right) */
@@ -324,6 +325,14 @@ svg {
 .gene-element.primer.reverse-strand::after {
   content: none;
   /* Remove diagonal stripes */
+}
+
+.primer-track .track-content {
+  border-left: 4px solid #c026d3;
+}
+
+.primer-track .gene-stats {
+  display: none;
 }
 
 /* Ensure text is always visible */

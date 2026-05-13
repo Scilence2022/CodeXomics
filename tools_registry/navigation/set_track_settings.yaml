@@ -1,6 +1,6 @@
 name: set_track_settings
 version: 1.0.0
-description: 'Set settings for a specific track type in the genome browser (genes, reads, sequence, gc, variants, actions, blast, wigTracks, sequenceLine). Only provided parameters will be updated. For multi-instance tracks, provide file_id to update instance-specific settings.'
+description: 'Set settings for a specific track type in the genome browser (genes, primers, reads, sequence, gc, variants, actions, blast, wigTracks, sequenceLine). Only provided parameters will be updated. For multi-instance tracks, provide file_id to update instance-specific settings.'
 category: navigation
 keywords:
   - track
@@ -23,7 +23,7 @@ parameters:
     track_type:
       type: string
       description: 'Type of track to configure'
-      enum: ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine']
+      enum: ['genes', 'primers', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine']
     file_id:
       type: string
       description: 'Optional file ID for multi-instance tracks. When provided, settings are saved for that specific track instance only.'

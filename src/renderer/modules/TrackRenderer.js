@@ -60,6 +60,13 @@ class TrackRenderer {
         requiresData: true,
         dataSource: 'currentAnnotations',
       },
+      primers: {
+        defaultHeight: '80px',
+        header: 'Primers',
+        className: 'primer-track',
+        requiresData: false,
+        dataSource: 'currentAnnotations',
+      },
       wigTracks: {
         defaultHeight: '120px',
         header: 'WIG Tracks',
@@ -139,6 +146,7 @@ class TrackRenderer {
 
     const track = document.createElement('div');
     track.className = config.className;
+    track.dataset.trackType = trackType;
 
     const trackHeader = this.createTrackHeader(config.header, trackType);
     track.appendChild(trackHeader);
@@ -825,6 +833,35 @@ class TrackRenderer {
   }
 
   /**
+   * Create a dedicated primer visualization track.
+   * Primer annotations are stored with normal annotations but rendered separately
+   * so they do not crowd the primary Genes & Features track.
+   */
+  createPrimerTrack(chromosome) {
+    const { track, trackContent } = this.createTrackBase('primers', chromosome);
+    const viewport = this.getCurrentViewport();
+    const settings = this.getTrackSettings('primers');
+
+    const detailedRuler = this.createDetailedRuler(chromosome);
+    trackContent.appendChild(detailedRuler);
+
+    const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+    const visiblePrimers = this.filterPrimerAnnotations(annotations, viewport, settings);
+
+    if (visiblePrimers.length === 0) {
+      const noPrimersMsg = this.createNoDataMessage('No primers in this region', 'no-primers-message');
+      trackContent.appendChild(noPrimersMsg);
+      trackContent.style.height = `${settings.height || 80}px`;
+      return track;
+    }
+
+    this.renderGeneElements(trackContent, visiblePrimers, viewport, [], settings);
+    this.restoreHeaderState(track, 'primers');
+
+    return track;
+  }
+
+  /**
    * Create BLAST Results track with SVG rendering
    */
   createBlastTrack(chromosome) {
@@ -1359,6 +1396,24 @@ class TrackRenderer {
         }
         return this.filterFeaturesByViewport([gene], viewport).length > 0;
       });
+  }
+
+  /**
+   * Filter primer annotations for the dedicated primer track.
+   */
+  filterPrimerAnnotations(annotations, viewport, settings = {}) {
+    const primerAnnotations = (annotations || []).filter(feature => {
+      const featureType = String(feature?.type || '').toLowerCase();
+      return featureType === 'primer' || featureType === 'primer_bind';
+    });
+
+    const isCircular = settings.circularMode || false;
+    return primerAnnotations.filter(primer => {
+      if (isCircular) {
+        return this.isFeatureVisibleCircular(primer, viewport);
+      }
+      return this.filterFeaturesByViewport([primer], viewport).length > 0;
+    });
   }
 
   /**
@@ -11446,6 +11501,27 @@ This action cannot be undone.`;
         groupByFile: false,
         fileSpacing: 10,
       },
+      primers: {
+        maxRows: 3,
+        showOperonsSameRow: false,
+        height: 80,
+        geneHeight: 10,
+        displayType: 'standard',
+        fontSize: 11,
+        geneNameColor: '#4a044e',
+        fontFamily: 'Arial, sans-serif',
+        layoutMode: 'compact',
+        enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false,
+        highlightEffect: 'border',
+        autoHighlightSequence: false,
+        showSequence: false,
+        sequenceHeight: 20,
+        renderingMode: 'svg',
+        circularMode: false,
+        wheelZoomSensitivity: 0.1,
+        overrideGlobalZoom: false,
+        maxBorderWidth: 1,
+      },
       reads: {
         readHeight: 4,
         readSpacing: 2,
@@ -12874,6 +12950,10 @@ This action cannot be undone.`;
       this.updateGeneTrackSVG(currentChr, sequence, annotations, operons);
     }
 
+    if (this.genomeBrowser.visibleTracks.has('primers')) {
+      this.updatePrimerTrackSVG(currentChr);
+    }
+
     // Update reads track SVG
     if (this.genomeBrowser.visibleTracks.has('reads')) {
       this.updateReadsTrackSVG(currentChr);
@@ -12917,6 +12997,25 @@ This action cannot be undone.`;
     if (visibleGenes.length > 0) {
       this.addGeneTrackStatistics(trackContent, visibleGenes, operons, this.getTrackSettings('genes'));
     }
+  }
+
+  updatePrimerTrackSVG(chromosome) {
+    const primerTrack = document.querySelector('.primer-track');
+    if (!primerTrack) return;
+
+    const trackContent = primerTrack.querySelector('.track-content');
+    if (!trackContent) return;
+
+    const primerTrackElement = this.createPrimerTrack(chromosome);
+    const primerContent = primerTrackElement?.querySelector('.track-content');
+    if (!primerContent) return;
+
+    trackContent.innerHTML = '';
+    while (primerContent.firstChild) {
+      trackContent.appendChild(primerContent.firstChild);
+    }
+
+    console.log('🧬 Primer track SVG updated');
   }
 
   /**
@@ -14628,6 +14727,16 @@ This action cannot be undone.`;
           showArrows: true,
           colorBy: 'type',
           fontSize: 10,
+          wheelZoomSensitivity: 0.1,
+          overrideGlobalZoom: false,
+        },
+        primers: {
+          visible: true,
+          height: 80,
+          showLabels: true,
+          showArrows: true,
+          colorBy: 'type',
+          fontSize: 11,
           wheelZoomSensitivity: 0.1,
           overrideGlobalZoom: false,
         },

@@ -691,17 +691,20 @@
 }
 
 /* ===== ADD FEATURES BUTTON & DROPDOWN ===== */
-[data-ui-style="professional"] #addFeaturesBtn {
+[data-ui-style="professional"] #addFeaturesBtn,
+[data-ui-style="professional"] #primerTrackBtn {
   background: var(--btn-gradient) !important;
   border-color: var(--primary-color) !important;
 }
 
-[data-ui-style="professional"] #addFeaturesBtn:hover {
+[data-ui-style="professional"] #addFeaturesBtn:hover,
+[data-ui-style="professional"] #primerTrackBtn:hover {
   background: var(--btn-gradient-hover) !important;
   box-shadow: 0 4px 12px rgba(13, 115, 119, 0.3) !important;
 }
 
-[data-ui-style="professional"] #addFeaturesBtn.active {
+[data-ui-style="professional"] #addFeaturesBtn.active,
+[data-ui-style="professional"] #primerTrackBtn.active {
   background: var(--btn-gradient-hover) !important;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(13, 115, 119, 0.25) !important;
 }

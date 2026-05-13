@@ -184,7 +184,7 @@ const PRIMER_TOOL_SCHEMAS = {
 
   add_primer_annotation: {
     name: 'add_primer_annotation',
-    description: 'Add an interactive primer display to the genome track',
+    description: 'Add an interactive primer display to the dedicated Primers track',
     parameters: {
       type: 'object',
       properties: {
@@ -214,6 +214,48 @@ const PRIMER_TOOL_SCHEMAS = {
         },
       },
       required: ['name', 'chromosome', 'start', 'end'],
+    },
+  },
+
+  list_primer_annotations: {
+    name: 'list_primer_annotations',
+    description: 'List primer annotations currently displayed in the Primers track, optionally filtered by chromosome or genomic interval.',
+    parameters: {
+      type: 'object',
+      properties: {
+        chromosome: {
+          type: 'string',
+          description: 'Optional chromosome/replicon ID to filter primers',
+        },
+        start: {
+          type: 'number',
+          description: 'Optional interval start position',
+        },
+        end: {
+          type: 'number',
+          description: 'Optional interval end position',
+        },
+      },
+      required: [],
+    },
+  },
+
+  clear_primer_annotations: {
+    name: 'clear_primer_annotations',
+    description: 'Clear primer annotations from the Primers track. Requires confirm=true to prevent accidental deletion.',
+    parameters: {
+      type: 'object',
+      properties: {
+        chromosome: {
+          type: 'string',
+          description: 'Optional chromosome/replicon ID. If omitted, clears primer annotations from all chromosomes.',
+        },
+        confirm: {
+          type: 'boolean',
+          description: 'Must be true to clear primer annotations.',
+        },
+      },
+      required: ['confirm'],
     },
   },
 };

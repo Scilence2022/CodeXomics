@@ -26,6 +26,7 @@ parameters:
       description: 'Type of track to reset (or "all" to reset all tracks)'
       enum:
         - 'genes'
+        - 'primers'
         - 'reads'
         - 'sequence'
         - 'gc'

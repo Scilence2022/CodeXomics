@@ -1,5 +1,5 @@
 name: add_primer_annotation
-description: "Add an interactive primer display to the genome track"
+description: "Add an interactive primer display to the dedicated Primers track"
 category: primer_design
 subcategory: display
 execution_type: client

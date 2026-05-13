@@ -1082,6 +1082,10 @@ class UIManager {
       this.refreshGeneTrackSVG(currentChr, sequence, annotations, operons);
     }
 
+    if (this.genomeBrowser.visibleTracks.has('primers')) {
+      this.refreshPrimerTrackSVG(currentChr);
+    }
+
     // Refresh reads track if visible
     if (this.genomeBrowser.visibleTracks.has('reads')) {
       this.refreshReadsTrackSVG(currentChr);
@@ -1140,6 +1144,24 @@ class UIManager {
     }
 
     console.log('🧬 Gene track SVG refreshed with', visibleGenes.length, 'genes');
+  }
+
+  refreshPrimerTrackSVG(chromosome) {
+    const primerTrack = document.querySelector('.primer-track');
+    if (!primerTrack) return;
+
+    const trackContent = primerTrack.querySelector('.track-content');
+    if (!trackContent) return;
+
+    const primerElement = this.genomeBrowser.trackRenderer.createPrimerTrack(chromosome);
+    const primerContent = primerElement?.querySelector('.track-content');
+    if (!primerContent) return;
+
+    trackContent.innerHTML = '';
+    while (primerContent.firstChild) {
+      trackContent.appendChild(primerContent.firstChild);
+    }
+    console.log('🧬 Primer track SVG refreshed');
   }
 
   /**

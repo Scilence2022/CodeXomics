@@ -893,6 +893,8 @@ class LLMContextService {
           'calculate_primer_properties',
           'find_primer_binding_sites',
           'add_primer_annotation',
+          'list_primer_annotations',
+          'clear_primer_annotations',
         ],
         policy: 'parameter_based',
         condition: (tool, history, results) => {
@@ -938,6 +940,7 @@ class LLMContextService {
           // Normalize track names for comparison (treat "action" and "actions" as the same)
           const normalizeTrackName = (trackName) => {
             if (trackName === 'action') return 'actions';
+            if (trackName === 'primer') return 'primers';
             return trackName;
           };
 
@@ -950,6 +953,8 @@ class LLMContextService {
             variants: 'trackVariants',
             reads: 'trackReads',
             proteins: 'trackProteins',
+            primers: 'trackPrimers',
+            primer: 'trackPrimers',
             wigTracks: 'trackWIG',
             sequence: 'trackSequence',
             actions: 'trackActions',
@@ -1753,7 +1758,9 @@ Primer Design & PCR:
   - calculate_primer_properties: Calculate melting temp, GC content for a primer
   - design_primers: Design a full PCR primer pair; use upstreamBp/downstreamBp and primer length/Tm/GC options
   - find_primer_binding_sites: Find binding locations of a primer on the genome
-  - add_primer_annotation: Add an interactive primer display to the genome track
+  - add_primer_annotation: Add an interactive primer display to the dedicated Primers track
+  - list_primer_annotations: List primers currently displayed in the Primers track
+  - clear_primer_annotations: Clear primers from the Primers track with confirm=true
 
 Protein Structure:
   - open_protein_viewer: Display 3D protein structures
@@ -1807,7 +1814,9 @@ Primer Tools:
   {"tool_name": "design_primers", "parameters": {"geneName": "lysC", "upstreamBp": 50, "targetTm": 60}}
   {"tool_name": "design_primers", "parameters": {"geneName": "lysC", "upstreamBp": 50, "downstreamBp": 30, "primerLength": 22}}
   {"tool_name": "find_primer_binding_sites", "parameters": {"primerSequence": "ATGCGTAC", "chromosome": "chr1"}}
-  {"tool_name": "add_primer_annotation", "parameters": {"name": "Test_Fwd", "chromosome": "chr1", "start": 1000, "end": 1020, "strand": "+"}}`;
+  {"tool_name": "add_primer_annotation", "parameters": {"name": "Test_Fwd", "chromosome": "chr1", "start": 1000, "end": 1020, "strand": "+"}}
+  {"tool_name": "list_primer_annotations", "parameters": {"chromosome": "chr1"}}
+  {"tool_name": "clear_primer_annotations", "parameters": {"chromosome": "chr1", "confirm": true}}`;
 
     return toolsInfo;
   }

@@ -265,6 +265,7 @@ class GenomeBrowser {
       variants: false,
       reads: false,
       proteins: false,
+      primers: false,
       sequence: true, // Bottom sequence panel
       sequenceLine: false, // Single-line sequence track
       actions: false, // Add actions track
@@ -3657,6 +3658,11 @@ class GenomeBrowser {
         }
         break;
 
+      case 'primers':
+        // Primer visualization track
+        trackElement = this.trackRenderer.createPrimerTrack(chromosome);
+        break;
+
       case 'actions':
         // Actions track (show even without data)
         trackElement = this.trackRenderer.createActionsTrack(chromosome);
@@ -3717,6 +3723,7 @@ class GenomeBrowser {
         gc: 'gc',
         variant: 'variants',
         reads: 'reads',
+        primer: 'primers',
         proteins: 'proteins',
         wig: 'wigTracks', // Add WIG tracks to preservation mapping
         actions: 'actions', // Add actions track to preservation mapping
@@ -3790,7 +3797,7 @@ class GenomeBrowser {
           currentTabOrder = domOrder;
           console.log('[displayGenomeView] Using current DOM track order:', currentTabOrder);
         } else {
-          currentTabOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'sequenceLine', 'actions'];
+          currentTabOrder = ['genes', 'primers', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'sequenceLine', 'actions'];
           console.log('[displayGenomeView] Using default track order:', currentTabOrder);
         }
       }
@@ -3810,6 +3817,7 @@ class GenomeBrowser {
         'reads',
         'wigTracks',
         'proteins',
+        'primers',
         'sequenceLine',
         'actions',
         'blast',
@@ -4544,6 +4552,7 @@ class GenomeBrowser {
       { id: 'reads', name: 'Primary Aligned Reads', category: 'reads' },
       { id: 'wigTracks', name: 'Primary WIG Tracks', category: 'wigTracks' },
       { id: 'proteins', name: 'Proteins', category: 'proteins' },
+      { id: 'primers', name: 'Primers', category: 'primers' },
       { id: 'sequence', name: 'Bottom Sequence Panel', category: 'sequence' },
       { id: 'sequenceLine', name: 'Single-line Sequence', category: 'sequenceLine' },
       { id: 'actions', name: 'Actions Track', category: 'actions' },
@@ -4612,6 +4621,7 @@ class GenomeBrowser {
       trackReads: 'reads',
       trackWIG: 'wigTracks',
       trackProteins: 'proteins',
+      trackPrimers: 'primers',
       trackSequence: 'sequence',
       trackSequenceLine: 'sequenceLine',
       trackActions: 'actions',
@@ -4712,6 +4722,7 @@ class GenomeBrowser {
       reads: 'trackReads',
       wigTracks: 'trackWIG',
       proteins: 'trackProteins',
+      primers: 'trackPrimers',
       sequence: 'trackSequence',
       sequenceLine: 'trackSequenceLine',
       actions: 'trackActions',
@@ -4746,10 +4757,15 @@ class GenomeBrowser {
     this.trackVisibility.reads = tracks.has('reads');
     this.trackVisibility.wig = tracks.has('wigTracks');
     this.trackVisibility.proteins = tracks.has('proteins');
+    this.trackVisibility.primers = tracks.has('primers');
     this.trackVisibility.sequence = tracks.has('sequence');
     this.trackVisibility.sequenceLine = tracks.has('sequenceLine');
     this.trackVisibility.actions = tracks.has('actions');
     this.trackVisibility.blast = tracks.has('blast');
+
+    if (typeof this.updatePrimerTrackButtonState === 'function') {
+      this.updatePrimerTrackButtonState(tracks.has('primers'));
+    }
   }
 
   // Helper method to programmatically enable Actions track
@@ -8849,6 +8865,11 @@ class GenomeBrowser {
       this.toggleAddFeaturesDropdown();
     });
 
+    document.getElementById('primerTrackBtn')?.addEventListener('click', e => {
+      e.stopPropagation();
+      this.togglePrimerTrack();
+    });
+
     // Actions dropdown menu
     document.getElementById('actionsMenuBtn')?.addEventListener('click', e => {
       e.stopPropagation();
@@ -8899,6 +8920,36 @@ class GenomeBrowser {
       dropdown.style.display = 'none';
       button.classList.remove('active');
     }
+  }
+
+  togglePrimerTrack() {
+    const checkbox = document.getElementById('trackPrimers');
+    if (checkbox) {
+      checkbox.checked = !checkbox.checked;
+      checkbox.dispatchEvent(new Event('change'));
+      this.updatePrimerTrackButtonState(checkbox.checked);
+      return;
+    }
+
+    if (this.visibleTracks.has('primers')) {
+      this.visibleTracks.delete('primers');
+      this.updatePrimerTrackButtonState(false);
+    } else {
+      this.visibleTracks.add('primers');
+      this.updatePrimerTrackButtonState(true);
+    }
+    this.updateTrackVisibilityUI();
+    const currentChr = document.getElementById('chromosomeSelect')?.value;
+    if (currentChr && this.currentSequence?.[currentChr]) {
+      this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+    }
+  }
+
+  updatePrimerTrackButtonState(isVisible = this.visibleTracks?.has('primers')) {
+    const button = document.getElementById('primerTrackBtn');
+    if (!button) return;
+    button.classList.toggle('active', !!isVisible);
+    button.title = isVisible ? 'Hide Primer Track' : 'Show Primer Track';
   }
 
   toggleActionsDropdown() {
@@ -9279,6 +9330,14 @@ class GenomeBrowser {
 
     const featureWithId = { ...feature, id: featureId, userDefined: true };
     this.userDefinedFeatures[feature.chromosome].push(featureWithId);
+
+    if (!this.currentAnnotations) {
+      this.currentAnnotations = {};
+    }
+    if (!this.currentAnnotations[feature.chromosome]) {
+      this.currentAnnotations[feature.chromosome] = [];
+    }
+    this.currentAnnotations[feature.chromosome].push(featureWithId);
 
     // Refresh the display
     this.updateGeneDisplay();

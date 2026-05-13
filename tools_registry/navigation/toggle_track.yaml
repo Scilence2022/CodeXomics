@@ -31,7 +31,8 @@ parameters:
         - 'variants'
         - 'reads'
         - 'proteins'
-      enum: ['genes', 'gc', 'sequence', 'variants', 'reads', 'proteins', 'actions']
+        - 'primers'
+      enum: ['genes', 'gc', 'sequence', 'variants', 'reads', 'proteins', 'primers', 'actions']
     action:
       type: string
       description: 'Action to perform on the track'

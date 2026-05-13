@@ -65,8 +65,8 @@ class PrimerService {
     if (!params.chromosome || !params.start || !params.end || !params.name) {
       throw new Error('Missing required fields for annotation: chromosome, start, end, name');
     }
-    const strand = params.strand === '-' ? -1 : 1;
-    return await this.chatManager.createAnnotation({
+    const strand = params.strand === '-' || params.strand === -1 ? -1 : 1;
+    const result = await this.chatManager.createAnnotation({
       type: 'primer',
       name: params.name,
       chromosome: params.chromosome,
@@ -75,6 +75,57 @@ class PrimerService {
       strand,
       description: params.description || `Tm: ${params.tm || '?'}, GC: ${params.gcContent || '?'}%`,
     });
+
+    this._showPrimerTrack(params.chromosome);
+    return {
+      ...result,
+      track: 'primers',
+      message: `Added primer "${params.name}" to the Primers track`,
+    };
+  }
+
+  async listPrimerAnnotations(params = {}) {
+    const primers = this._getPrimerAnnotations(params.chromosome)
+        .filter(primer => {
+          const start = this._getNumber(params.start);
+          const end = this._getNumber(params.end);
+          if (start !== undefined && primer.end < start) return false;
+          if (end !== undefined && primer.start > end) return false;
+          return true;
+        })
+        .map(primer => ({
+          id: primer.id,
+          name: primer.name || primer.qualifiers?.gene || primer.qualifiers?.label || 'Primer',
+          chromosome: primer.chromosome,
+          start: primer.start,
+          end: primer.end,
+          strand: primer.strand === -1 ? '-' : '+',
+          description: primer.description || primer.qualifiers?.note || '',
+        }));
+
+    return {
+      success: true,
+      count: primers.length,
+      primers,
+    };
+  }
+
+  async clearPrimerAnnotations(params = {}) {
+    const chromosome = params.chromosome;
+    const clearAll = params.confirm === true || params.confirm === 'true';
+    if (!clearAll) {
+      throw new Error('Set confirm=true to clear primer annotations');
+    }
+
+    const removed = this._removePrimerAnnotations(chromosome);
+    this._showPrimerTrack(chromosome);
+
+    return {
+      success: true,
+      removed,
+      chromosome: chromosome || 'all',
+      message: `Removed ${removed} primer annotation${removed === 1 ? '' : 's'}`,
+    };
   }
 
   // --- Private helpers ---
@@ -84,6 +135,87 @@ class PrimerService {
       return window.PrimerDesigner;
     }
     throw new Error('PrimerDesigner is not loaded. Primer tools are unavailable.');
+  }
+
+  _getPrimerAnnotations(chromosome = null) {
+    const annotationsByChromosome = this.app?.currentAnnotations || {};
+    const chromosomes = chromosome ? [chromosome] : Object.keys(annotationsByChromosome);
+    const primers = [];
+
+    chromosomes.forEach(chr => {
+      const annotations = annotationsByChromosome[chr] || [];
+      annotations.forEach(feature => {
+        const featureType = String(feature?.type || '').toLowerCase();
+        if (featureType === 'primer' || featureType === 'primer_bind') {
+          primers.push({
+            ...feature,
+            chromosome: feature.chromosome || chr,
+          });
+        }
+      });
+    });
+
+    return primers;
+  }
+
+  _removePrimerAnnotations(chromosome = null) {
+    let removed = 0;
+    const removeFromCollection = (collection, countRemovals = true) => {
+      if (!collection) return;
+      const chromosomes = chromosome ? [chromosome] : Object.keys(collection);
+      chromosomes.forEach(chr => {
+        if (!Array.isArray(collection[chr])) return;
+        const before = collection[chr].length;
+        collection[chr] = collection[chr].filter(feature => {
+          const featureType = String(feature?.type || '').toLowerCase();
+          return featureType !== 'primer' && featureType !== 'primer_bind';
+        });
+        if (countRemovals) {
+          removed += before - collection[chr].length;
+        }
+      });
+    };
+
+    removeFromCollection(this.app?.currentAnnotations, true);
+    removeFromCollection(this.app?.userDefinedFeatures, false);
+
+    if (this.app && typeof this.app.updateGeneDisplay === 'function') {
+      this.app.updateGeneDisplay();
+    }
+
+    return removed;
+  }
+
+  _showPrimerTrack(chromosome = null) {
+    if (!this.app) return;
+
+    if (this.app.visibleTracks && typeof this.app.visibleTracks.add === 'function') {
+      this.app.visibleTracks.add('primers');
+    }
+
+    this.app.trackVisibility = this.app.trackVisibility || {};
+    this.app.trackVisibility.primers = true;
+
+    const checkbox = typeof document !== 'undefined' ? document.getElementById('trackPrimers') : null;
+    if (checkbox && !checkbox.checked) {
+      checkbox.checked = true;
+    }
+
+    if (typeof this.app.updateTrackVisibilityUI === 'function') {
+      this.app.updateTrackVisibilityUI();
+    }
+
+    const selectedChr = typeof document !== 'undefined' ? document.getElementById('chromosomeSelect')?.value : null;
+    const currentChr = selectedChr || chromosome;
+    if (currentChr && this.app.currentSequence?.[currentChr] && typeof this.app.displayGenomeView === 'function') {
+      this.app.displayGenomeView(currentChr, this.app.currentSequence[currentChr]);
+    }
+  }
+
+  _getNumber(value) {
+    if (value === undefined || value === null || value === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
   }
 
   async _resolveTargetSequence(params) {

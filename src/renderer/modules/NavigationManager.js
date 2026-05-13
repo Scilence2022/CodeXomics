@@ -373,6 +373,21 @@ class NavigationManager {
         }
       }
 
+      // Update primer track
+      const primerTrack = document.querySelector('.primer-track .track-content');
+      if (primerTrack) {
+        const primerElement = this.genomeBrowser.trackRenderer.createPrimerTrack(currentChr);
+        if (primerElement) {
+          const primerContent = primerElement.querySelector('.track-content');
+          if (primerContent) {
+            primerTrack.innerHTML = '';
+            while (primerContent.firstChild) {
+              primerTrack.appendChild(primerContent.firstChild);
+            }
+          }
+        }
+      }
+
       // Update GC track
       const gcTrack = document.querySelector('.gc-track .track-content');
       if (gcTrack) {
