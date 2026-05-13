@@ -8,6 +8,18 @@ class WelcomeExamplesManager {
 
   static DEFAULT_EXAMPLES = [
     {
+      id: 'file-operation',
+      icon: '📦',
+      title: 'File Operation',
+      cssClass: 'welcome-card-file',
+      examples: [
+        { title: 'Download GBK file', prompt: 'Download internet file https://github.com/Scilence2022/CodeXomics/blob/main/test_data/ECOLI.gbk to ~/Downloads/ECOLI.gbk' },
+        { title: 'Load local file', prompt: 'Load local file ~/Downloads/ECOLI.gbk' },
+        { title: 'Export fasta sequence', prompt: 'Export genome sequence as fasta file ~/Downloads/ECOLI.fasta' },
+      ],
+    },
+
+    {
       id: 'nav-search',
       icon: '🔍',
       title: 'Navigation & Search',
