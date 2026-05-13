@@ -327,6 +327,12 @@ class ChatBoxSettingsManager {
 
     this.settings = { ...defaultSettings };
     this.saveSettings();
+
+    // Reset Welcome Examples to default too
+    if (window.welcomeExamplesManager) {
+      window.welcomeExamplesManager.resetToDefaults();
+    }
+
     console.log('🔄 ChatBox settings reset to defaults');
   }
 
@@ -592,6 +598,9 @@ class ChatBoxSettingsManager {
                         </button>
                         <button class="tab-button" data-tab="advanced">
                             <i class="fas fa-tools"></i> Advanced
+                        </button>
+                        <button class="tab-button" data-tab="welcome-examples">
+                            <i class="fas fa-list"></i> Examples
                         </button>
                     </div>
                     
@@ -1215,6 +1224,25 @@ class ChatBoxSettingsManager {
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Welcome Examples Tab -->
+                        <div id="welcome-examples-tab" class="tab-content">
+                            <div class="form-section">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <h4 style="margin: 0;">Welcome Screen Example Prompts</h4>
+                                    <button type="button" class="btn btn-sm btn-primary" id="addWelcomeCategoryBtn">
+                                        <i class="fas fa-plus"></i> Add Category
+                                    </button>
+                                </div>
+                                <p class="help-text" style="margin-top: -10px; margin-bottom: 15px;">
+                                    Configure the clickable example cards shown on the initial ChatBox screen.
+                                </p>
+                                
+                                <div id="welcomeExamplesContainer" class="welcome-examples-editor-container" style="max-height: 400px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 15px;">
+                                    <!-- Dynamic categories & prompts will be rendered here -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1281,6 +1309,24 @@ class ChatBoxSettingsManager {
       saveBtn.addEventListener('click', () => {
         console.log('💾 ChatBox Settings save button clicked');
         this.saveSettingsFromForm(modal);
+      });
+    }
+
+    // Setup Add Category button for Welcome Examples
+    const addCatBtn = modal.querySelector('#addWelcomeCategoryBtn');
+    if (addCatBtn) {
+      addCatBtn.addEventListener('click', () => {
+        const manager = window.welcomeExamplesManager;
+        if (manager) {
+          manager.addCategory();
+          this.populateWelcomeExamplesForm(modal);
+          
+          // Scroll to the bottom of the container to show the new category
+          const container = modal.querySelector('#welcomeExamplesContainer');
+          if (container) {
+            container.scrollTop = container.scrollHeight;
+          }
+        }
       });
     }
 
@@ -1860,6 +1906,9 @@ class ChatBoxSettingsManager {
       }
     }
 
+    // Populate Welcome Examples
+    this.populateWelcomeExamplesForm(modal);
+
     // Update system prompt section status display
     const sectionContainer = modal.querySelector('#systemPromptSectionContainer');
     if (sectionContainer) {
@@ -1943,6 +1992,25 @@ class ChatBoxSettingsManager {
           newSettings[key] = element.value;
         }
       }
+    }
+
+    // Serialize and save Welcome Examples
+    const examplesContainer = modal.querySelector('#welcomeExamplesContainer');
+    if (examplesContainer && window.welcomeExamplesManager) {
+      const cards = examplesContainer.querySelectorAll('.welcome-editor-card');
+      const data = [];
+      cards.forEach(card => {
+        const id = card.dataset.id;
+        const icon = card.querySelector('.cat-icon-input').value;
+        const title = card.querySelector('.cat-title-input').value;
+        const cssClass = card.querySelector('.cat-style-select').value;
+        
+        const promptInputs = card.querySelectorAll('.prompt-text-input');
+        const examples = Array.from(promptInputs).map(inp => inp.value.trim()).filter(val => val !== '');
+        
+        data.push({ id, icon, title, cssClass, examples });
+      });
+      window.welcomeExamplesManager.saveAll(data);
     }
 
     // Sync customSystemPrompt to llm.systemPrompt for backward compatibility
@@ -2091,6 +2159,226 @@ class ChatBoxSettingsManager {
       // Fallback to alert
       alert(message);
     }
+  }
+
+  /**
+   * Populate Welcome Examples tab form editor
+   */
+  populateWelcomeExamplesForm(modal) {
+    const container = modal.querySelector('#welcomeExamplesContainer');
+    if (!container) return;
+
+    const manager = window.welcomeExamplesManager;
+    if (!manager) {
+      container.innerHTML = '<div style="color: #ef4444; padding: 10px;">Welcome Examples Manager not loaded yet.</div>';
+      return;
+    }
+
+    const categories = manager.getAll();
+
+    if (categories.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 30px; color: #6b7280; background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 6px; width: 100%;">
+          <i class="fas fa-folder-open" style="font-size: 24px; margin-bottom: 8px; display: block; color: #94a3b8;"></i>
+          No categories defined. Click "Add Category" above to create one.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = categories.map((cat, catIdx) => `
+      <div class="welcome-editor-card" data-id="${cat.id}" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+          <input type="text" class="cat-icon-input" value="${cat.icon || '💬'}" placeholder="Emoji" title="Category Emoji" style="width: 40px; text-align: center; font-size: 14px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; color: #1e293b;">
+          <input type="text" class="cat-title-input" value="${(cat.title || '').replace(/"/g, '&quot;')}" placeholder="Category Title" title="Category Title" style="flex: 1; font-weight: 600; font-size: 13px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; color: #1e293b;">
+          <select class="cat-style-select" title="Card Theme Color" style="width: 140px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; color: #1e293b; font-size: 12px;">
+            <option value="welcome-card-search" ${cat.cssClass === 'welcome-card-search' ? 'selected' : ''}>🔍 Blue (Search)</option>
+            <option value="welcome-card-molbio" ${cat.cssClass === 'welcome-card-molbio' ? 'selected' : ''}>🧪 Green (Mol Bio)</option>
+            <option value="welcome-card-analysis" ${cat.cssClass === 'welcome-card-analysis' ? 'selected' : ''}>📊 Purple (Analysis)</option>
+            <option value="welcome-card-export" ${cat.cssClass === 'welcome-card-export' ? 'selected' : ''}>🔖 Orange (Export)</option>
+          </select>
+          <div style="display: flex; gap: 2px;">
+            <button type="button" class="btn btn-sm btn-secondary move-cat-up-btn" title="Move category up" ${catIdx === 0 ? 'disabled' : ''} style="padding: 4px 8px;">
+              <i class="fas fa-arrow-up" style="font-size: 11px;"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary move-cat-down-btn" title="Move category down" ${catIdx === categories.length - 1 ? 'disabled' : ''} style="padding: 4px 8px;">
+              <i class="fas fa-arrow-down" style="font-size: 11px;"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary delete-cat-btn" title="Delete Category" style="padding: 4px 8px; color: #ef4444; border-color: #fee2e2; background: #fef2f2;">
+              <i class="fas fa-trash-alt" style="font-size: 11px;"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="editor-prompts-list" style="display: flex; flex-direction: column; gap: 6px;">
+          ${(cat.examples || []).map((prompt, prIdx) => `
+            <div class="editor-prompt-item" data-index="${prIdx}" style="display: flex; gap: 6px; align-items: center;">
+              <span style="color: #94a3b8; font-size: 10px; width: 14px; text-align: right; font-weight: 500;">${prIdx + 1}</span>
+              <input type="text" class="prompt-text-input" value="${prompt.replace(/"/g, '&quot;')}" placeholder="Example prompt..." style="flex: 1; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; background: #ffffff; color: #1e293b;">
+              <div style="display: flex; gap: 2px;">
+                <button type="button" class="btn btn-sm btn-secondary move-prompt-up-btn" title="Move up" ${prIdx === 0 ? 'disabled' : ''} style="padding: 2px 6px; font-size: 10px;">
+                  <i class="fas fa-caret-up"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary move-prompt-down-btn" title="Move down" ${prIdx === cat.examples.length - 1 ? 'disabled' : ''} style="padding: 2px 6px; font-size: 10px;">
+                  <i class="fas fa-caret-down"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary delete-prompt-btn" title="Delete Example" style="padding: 2px 6px; font-size: 10px; color: #ef4444; border-color: #fee2e2; background: #fef2f2;">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+          `).join('')}
+          <button type="button" class="btn btn-sm btn-secondary add-prompt-btn" style="align-self: flex-start; margin-top: 4px; border-style: dashed; padding: 2px 8px; font-size: 11px; background: #ffffff; border-color: #cbd5e1;">
+            <i class="fas fa-plus" style="font-size: 9px; margin-right: 3px;"></i> Add Example
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    this.setupWelcomeExamplesEditorEvents(modal);
+  }
+
+  /**
+   * Setup active interaction event listeners inside Welcome Examples form editor
+   */
+  setupWelcomeExamplesEditorEvents(modal) {
+    const container = modal.querySelector('#welcomeExamplesContainer');
+    if (!container) return;
+
+    const manager = window.welcomeExamplesManager;
+    if (!manager) return;
+
+    // Helper to serialize inputs directly from DOM
+    const getCurrentUISerializedData = () => {
+      const cards = container.querySelectorAll('.welcome-editor-card');
+      const data = [];
+      cards.forEach(card => {
+        const id = card.dataset.id;
+        const iconInput = card.querySelector('.cat-icon-input');
+        const titleInput = card.querySelector('.cat-title-input');
+        const cssClassSelect = card.querySelector('.cat-style-select');
+        
+        if (!iconInput || !titleInput || !cssClassSelect) return;
+        
+        const icon = iconInput.value;
+        const title = titleInput.value;
+        const cssClass = cssClassSelect.value;
+        
+        const promptInputs = card.querySelectorAll('.prompt-text-input');
+        const examples = Array.from(promptInputs).map(inp => inp.value.trim()).filter(val => val !== '');
+        
+        data.push({ id, icon, title, cssClass, examples });
+      });
+      return data;
+    };
+
+    // Category and Prompt Level Actions
+    container.addEventListener('click', e => {
+      const card = e.target.closest('.welcome-editor-card');
+      if (!card) return;
+      const categoryId = card.dataset.id;
+      const data = getCurrentUISerializedData();
+      const catIdx = data.findIndex(c => c.id === categoryId);
+
+      // Delete Category
+      if (e.target.closest('.delete-cat-btn')) {
+        if (confirm('Are you sure you want to delete this entire category and all its examples?')) {
+          const updated = data.filter(c => c.id !== categoryId);
+          manager.saveAll(updated);
+          this.populateWelcomeExamplesForm(modal);
+        }
+        return;
+      }
+
+      // Move Category Up
+      if (e.target.closest('.move-cat-up-btn')) {
+        if (catIdx > 0) {
+          const temp = data[catIdx];
+          data[catIdx] = data[catIdx - 1];
+          data[catIdx - 1] = temp;
+          manager.saveAll(data);
+          this.populateWelcomeExamplesForm(modal);
+        }
+        return;
+      }
+
+      // Move Category Down
+      if (e.target.closest('.move-cat-down-btn')) {
+        if (catIdx < data.length - 1) {
+          const temp = data[catIdx];
+          data[catIdx] = data[catIdx + 1];
+          data[catIdx + 1] = temp;
+          manager.saveAll(data);
+          this.populateWelcomeExamplesForm(modal);
+        }
+        return;
+      }
+
+      // Add Prompt Example
+      if (e.target.closest('.add-prompt-btn')) {
+        const cat = data.find(c => c.id === categoryId);
+        if (cat) {
+          cat.examples.push('New Example Prompt');
+          manager.saveAll(data);
+          this.populateWelcomeExamplesForm(modal);
+          
+          // Focus newly added input
+          const promptInputs = container.querySelectorAll(`[data-id="${categoryId}"] .prompt-text-input`);
+          if (promptInputs.length > 0) {
+            const lastInput = promptInputs[promptInputs.length - 1];
+            lastInput.focus();
+            lastInput.select();
+          }
+        }
+        return;
+      }
+
+      // Prompt specific button handlers
+      const promptItem = e.target.closest('.editor-prompt-item');
+      if (promptItem) {
+        const prIdx = parseInt(promptItem.dataset.index);
+        const cat = data.find(c => c.id === categoryId);
+        if (!cat) return;
+
+        // Delete prompt example
+        if (e.target.closest('.delete-prompt-btn')) {
+          cat.examples.splice(prIdx, 1);
+          manager.saveAll(data);
+          this.populateWelcomeExamplesForm(modal);
+          return;
+        }
+
+        // Move prompt example up
+        if (e.target.closest('.move-prompt-up-btn')) {
+          if (prIdx > 0) {
+            const temp = cat.examples[prIdx];
+            cat.examples[prIdx] = cat.examples[prIdx - 1];
+            cat.examples[prIdx - 1] = temp;
+            manager.saveAll(data);
+            this.populateWelcomeExamplesForm(modal);
+          }
+          return;
+        }
+
+        // Move prompt example down
+        if (e.target.closest('.move-prompt-down-btn')) {
+          if (prIdx < cat.examples.length - 1) {
+            const temp = cat.examples[prIdx];
+            cat.examples[prIdx] = cat.examples[prIdx + 1];
+            cat.examples[prIdx + 1] = temp;
+            manager.saveAll(data);
+            this.populateWelcomeExamplesForm(modal);
+          }
+          return;
+        }
+      }
+    });
+
+    // Save inputs back to WelcomeExamplesManager on value edits
+    container.addEventListener('change', () => {
+      const data = getCurrentUISerializedData();
+      manager.saveAll(data);
+    });
   }
 }
 

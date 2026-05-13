@@ -38,6 +38,7 @@ class ChatManager {
 
     // Initialize ChatBox Settings Manager
     this.chatBoxSettingsManager = null;
+    this.welcomeExamplesManager = null;
     this.initializeChatBoxSettings();
 
     // 思考过程和工具调用显示 - 现在从设置管理器获取
@@ -154,8 +155,23 @@ class ChatManager {
    */
   async initializeChatBoxSettings() {
     try {
-      // Load the settings manager module
+      // Load the settings manager modules
+      await this.loadScript('modules/WelcomeExamplesManager.js');
       await this.loadScript('modules/ChatBoxSettingsManager.js');
+
+      // Initialize WelcomeExamplesManager
+      if (typeof WelcomeExamplesManager !== 'undefined') {
+        this.welcomeExamplesManager = new WelcomeExamplesManager();
+        window.welcomeExamplesManager = this.welcomeExamplesManager;
+
+        // Re-render welcome cards whenever the data changes
+        this.welcomeExamplesManager.onChange(() => {
+          this.renderWelcomeCards();
+        });
+
+        // Initial render (UI may not be ready yet; renderWelcomeCards guards against that)
+        this.renderWelcomeCards();
+      }
 
       // Initialize the settings manager
       if (typeof ChatBoxSettingsManager !== 'undefined') {
@@ -192,7 +208,37 @@ class ChatManager {
       }
     } catch (error) {
       // Silently handle initialization error
+      console.warn('[ChatManager] initializeChatBoxSettings error:', error);
     }
+  }
+
+  /**
+   * Render (or re-render) the welcome screen example cards from WelcomeExamplesManager data.
+   * Safe to call at any time; silently no-ops when the container is not yet in the DOM.
+   */
+  renderWelcomeCards() {
+    const container = document.getElementById('welcomeCardsGrid');
+    if (!container) return;
+
+    const manager = this.welcomeExamplesManager
+      || (typeof WelcomeExamplesManager !== 'undefined' && window.welcomeExamplesManager);
+    if (!manager) return;
+
+    const categories = manager.getAll();
+
+    container.innerHTML = categories.map(cat => `
+      <div class="welcome-card ${cat.cssClass || 'welcome-card-search'}">
+        <div class="welcome-card-header">
+          <span class="welcome-card-icon">${cat.icon || '💬'}</span>
+          <span class="welcome-card-title">${cat.title || ''}</span>
+        </div>
+        <div class="welcome-card-examples">
+          ${(cat.examples || []).map(ex =>
+            `<button class="welcome-example-btn" data-prompt="${ex.replace(/"/g, '&quot;')}">${ex}</button>`
+          ).join('')}
+        </div>
+      </div>
+    `).join('');
   }
 
   /**
@@ -3641,51 +3687,8 @@ class ChatManager {
                                             <p>Your intelligent genomics assistant — click any example below to get started</p>
                                         </div>
                                     </div>
-                                    <div class="welcome-cards-grid">
-                                        <div class="welcome-card welcome-card-search">
-                                            <div class="welcome-card-header">
-                                                <span class="welcome-card-icon">🔍</span>
-                                                <span class="welcome-card-title">Navigation & Search</span>
-                                            </div>
-                                            <div class="welcome-card-examples">
-                                                <button class="welcome-example-btn" data-prompt="Navigate to E. coli origin of replication">Navigate to E. coli origin of replication</button>
-                                                <button class="welcome-example-btn" data-prompt="Search for DNA polymerase genes">Search for DNA polymerase genes</button>
-                                                <button class="welcome-example-btn" data-prompt="Find genes near position 123456">Find genes near position 123456</button>
-                                            </div>
-                                        </div>
-                                        <div class="welcome-card welcome-card-molbio">
-                                            <div class="welcome-card-header">
-                                                <span class="welcome-card-icon">🧪</span>
-                                                <span class="welcome-card-title">Molecular Biology</span>
-                                            </div>
-                                            <div class="welcome-card-examples">
-                                                <button class="welcome-example-btn" data-prompt="Find EcoRI restriction sites in this region">Find EcoRI restriction sites in this region</button>
-                                                <button class="welcome-example-btn" data-prompt="Virtual digest with EcoRI and BamHI">Virtual digest with EcoRI and BamHI</button>
-                                                <button class="welcome-example-btn" data-prompt="Search for TATAAA promoter motifs">Search for TATAAA promoter motifs</button>
-                                            </div>
-                                        </div>
-                                        <div class="welcome-card welcome-card-analysis">
-                                            <div class="welcome-card-header">
-                                                <span class="welcome-card-icon">📊</span>
-                                                <span class="welcome-card-title">Sequence Analysis</span>
-                                            </div>
-                                            <div class="welcome-card-examples">
-                                                <button class="welcome-example-btn" data-prompt="What is the GC content of the current view?">What is the GC content of the current view?</button>
-                                                <button class="welcome-example-btn" data-prompt="Analyze codon usage in the lacZ gene">Analyze codon usage in the lacZ gene</button>
-                                                <button class="welcome-example-btn" data-prompt="Find all ORFs longer than 300bp">Find all ORFs longer than 300bp</button>
-                                            </div>
-                                        </div>
-                                        <div class="welcome-card welcome-card-export">
-                                            <div class="welcome-card-header">
-                                                <span class="welcome-card-icon">🔖</span>
-                                                <span class="welcome-card-title">Organization & Export</span>
-                                            </div>
-                                            <div class="welcome-card-examples">
-                                                <button class="welcome-example-btn" data-prompt="Bookmark this interesting region">Bookmark this interesting region</button>
-                                                <button class="welcome-example-btn" data-prompt="Export features from current view">Export features from current view</button>
-                                                <button class="welcome-example-btn" data-prompt="Show file information summary">Show file information summary</button>
-                                            </div>
-                                        </div>
+                                    <div class="welcome-cards-grid" id="welcomeCardsGrid">
+                                        <!-- Populated dynamically by ChatManager.renderWelcomeCards() -->
                                     </div>
                                     <div class="welcome-tip">
                                         <i class="fas fa-lightbulb"></i>
@@ -3759,6 +3762,9 @@ class ChatManager {
     // Insert chat panel into the page
     const appDiv = document.getElementById('app');
     appDiv.insertAdjacentHTML('beforeend', chatHTML);
+
+    // Initial render of welcome examples
+    this.renderWelcomeCards();
 
     // Ensure ChatBox is visible by default
     const chatPanel = document.getElementById('llmChatPanel');
