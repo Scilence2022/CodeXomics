@@ -617,6 +617,10 @@ class LLMContextService {
       'open new tab',
       'create new tab',
       'new tab',
+      'close tab',
+      'remove tab',
+      'switch tab',
+      'change tab',
       // Track control patterns - expanded to include more variations
       'toggle track',
       'hide track',
@@ -690,6 +694,8 @@ class LLMContextService {
       'load_wig_tracks',
       'load_operon_file',
       'open_new_tab',
+      'close_tab',
+      'switch_to_tab',
       'create_annotation',
       'export_data',
       // Track control operations - complete actions that don't need follow-up
@@ -718,6 +724,8 @@ class LLMContextService {
         'load_wig_tracks',
         'load_operon_file',
         'open_new_tab',
+        'close_tab',
+        'switch_to_tab',
         'create_annotation',
         'export_data',
         // Track control operations
@@ -1162,6 +1170,31 @@ The genome browser is now showing the ${geneName} gene region.`;
 The new tab is ready for analysis and comparison.`;
         } else {
           return 'New tab creation completed, but there may have been issues.';
+        }
+
+      case 'close_tab':
+        if (result.result && result.result.success) {
+          return `🗂️ **Tab closed successfully!**
+
+**Details:**
+- **Closed Tab:** ${result.result.closed_tab_title || result.result.closed_tab_id || 'Unknown'}
+- **Remaining Tabs:** ${result.result.remaining_tabs || 0}
+
+${result.result.message || 'The tab has been removed.'}`;
+        } else {
+          return 'Tab closing completed, but there may have been issues.';
+        }
+
+      case 'switch_to_tab':
+        if (result.result && result.result.success) {
+          return `🗂️ **Switched tab successfully!**
+
+**Details:**
+- **Active Tab:** ${result.result.tab_title || result.result.tab_id || 'Unknown'}
+
+${result.result.message || 'The requested tab is now active.'}`;
+        } else {
+          return 'Tab switching completed, but there may have been issues.';
         }
 
       case 'create_annotation':
