@@ -2423,116 +2423,9 @@ class ChatManager {
     }
   }
 
-  /**
-   * Switch to a specific tab by ID, name, or index - Built-in function tool
-   * @param {Object} params - Tool parameters
-   * @param {string} params.tab_id - Specific tab ID to switch to
-   * @param {string} params.tab_name - Tab name/title to search for (partial matching)
-   * @param {number} params.tab_index - Zero-based index of tab to switch to
-   * @param {string} params.clientId - Optional client identifier
-   * @returns {Object} Switch result
-   */
-  async switchToTab(params) {
-    const { tab_id, tab_name, tab_index, clientId } = params;
-
-    console.log('🔧 [ChatManager] switchToTab called with params:', params);
-
-    try {
-      // Use window.genomeBrowser for access
-      const genomeBrowser = window.genomeBrowser;
-      if (!genomeBrowser) {
-        throw new Error('Genome browser not available via window.genomeBrowser');
-      }
-
-      // Wait for TabManager to be initialized
-      if (!genomeBrowser.tabManager) {
-        console.log('⏳ TabManager not ready, waiting...');
-        let retries = 0;
-        const maxRetries = 10;
-        while (!genomeBrowser.tabManager && retries < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 200));
-          retries++;
-          console.log(`⏳ Waiting for TabManager... attempt ${retries}/${maxRetries}`);
-        }
-
-        if (!genomeBrowser.tabManager) {
-          throw new Error('Tab manager not available after waiting - check TabManager initialization');
-        }
-      }
-
-      let targetTabId = null;
-      let targetTabTitle = null;
-      const tabEntries = Array.from(genomeBrowser.tabManager.tabs.entries());
-
-      // Strategy 1: Switch by specific tab ID
-      if (tab_id) {
-        if (genomeBrowser.tabManager.tabs.has(tab_id)) {
-          targetTabId = tab_id;
-          const tabState = genomeBrowser.tabManager.tabs.get(tab_id);
-          targetTabTitle = tabState.title || `Tab ${tab_id}`;
-          console.log(`🎯 [ChatManager] Found tab by ID: ${tab_id}`);
-        } else {
-          throw new Error(`Tab with ID '${tab_id}' not found`);
-        }
-      }
-      // Strategy 2: Switch by tab name/title (case-insensitive partial matching)
-      else if (tab_name) {
-        const foundTab = tabEntries.find(([tabId, tabState]) => {
-          if (tabState.title) {
-            return tabState.title.toLowerCase().includes(tab_name.toLowerCase());
-          }
-          return false;
-        });
-
-        if (foundTab) {
-          targetTabId = foundTab[0];
-          targetTabTitle = foundTab[1].title;
-          console.log(`🎯 [ChatManager] Found tab by name '${tab_name}': ${targetTabId} - ${targetTabTitle}`);
-        } else {
-          throw new Error(`No tab found matching name '${tab_name}'`);
-        }
-      }
-      // Strategy 3: Switch by tab index (zero-based)
-      else if (tab_index !== undefined) {
-        const tabIds = Array.from(genomeBrowser.tabManager.tabs.keys());
-        if (tab_index >= 0 && tab_index < tabIds.length) {
-          targetTabId = tabIds[tab_index];
-          const tabState = genomeBrowser.tabManager.tabs.get(targetTabId);
-          targetTabTitle = tabState.title || `Tab ${targetTabId}`;
-          console.log(`🎯 [ChatManager] Found tab by index ${tab_index}: ${targetTabId} - ${targetTabTitle}`);
-        } else {
-          throw new Error(`Tab index ${tab_index} is out of range (0-${tabIds.length - 1})`);
-        }
-      } else {
-        throw new Error('At least one parameter (tab_id, tab_name, or tab_index) must be provided');
-      }
-
-      // Perform the tab switch
-      if (targetTabId) {
-        // Use the TabManager's switchTab method
-        genomeBrowser.tabManager.switchTab(targetTabId);
-
-        console.log(`✅ [ChatManager] Successfully switched to tab: ${targetTabId} - ${targetTabTitle}`);
-
-        return {
-          success: true,
-          tab_id: targetTabId,
-          tab_title: targetTabTitle,
-          message: `Successfully switched to tab: ${targetTabTitle}`,
-          clientId: clientId,
-        };
-      } else {
-        throw new Error('Failed to identify target tab');
-      }
-    } catch (error) {
-      console.error('❌ [ChatManager] Error switching tab:', error);
-      return {
-        success: false,
-        error: error.message,
-        clientId: clientId,
-      };
-    }
-  }
+  // NOTE: switchToTab is defined below (after closeTab) as the single authoritative implementation.
+  // A previous duplicate definition here was removed — it incorrectly treated
+  // TabManager.tabs entries (DOM elements) as state objects with .title properties.
 
   /**
    * Close a specific tab by ID, name, or index - Built-in function tool
@@ -2549,11 +2442,26 @@ class ChatManager {
     console.log('🔧 [ChatManager] closeTab called with params:', params);
 
     try {
-      const genomeBrowser = this.app;
+      // Use window.genomeBrowser instead of this.app for access
+      const genomeBrowser = window.genomeBrowser;
+      if (!genomeBrowser) {
+        throw new Error('Genome browser not available via window.genomeBrowser');
+      }
 
-      // Wait for tabManager to be available
+      // Wait for TabManager to be initialized with retry mechanism
       if (!genomeBrowser.tabManager) {
-        throw new Error('TabManager not available');
+        console.log('⏳ TabManager not ready, waiting...');
+        let retries = 0;
+        const maxRetries = 10;
+        while (!genomeBrowser.tabManager && retries < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          retries++;
+          console.log(`⏳ Waiting for TabManager... attempt ${retries}/${maxRetries}`);
+        }
+
+        if (!genomeBrowser.tabManager) {
+          throw new Error('Tab manager not available after waiting - check TabManager initialization');
+        }
       }
 
       const tabManager = genomeBrowser.tabManager;
@@ -7080,6 +6988,8 @@ ${coreTools}
       // Navigation and state tools
       navigate_to_position: () => this.navigateToPosition(parameters),
       open_new_tab: () => this.openNewTab(parameters),
+      close_tab: () => this.closeTab(parameters),
+      switch_to_tab: () => this.switchToTab(parameters),
       search_features: () => this.searchFeatures(parameters),
       get_current_state: () => this.getCurrentState(),
       find_gene_by_name: () => this.executeMicrobeFunction('searchGeneByName', parameters),

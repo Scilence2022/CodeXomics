@@ -316,13 +316,16 @@ class NavigationAgent extends AgentBase {
         case 'open_new_tab':
         case 'close_tab':
         case 'get_chromosome_list':
-          // These are best handled by ChatManager; local fallback via app
+          // These tools are authoritatively implemented on ChatManager.
+          // Delegate directly to ChatManager methods.
           try {
-            if (app.genomeBrowser && typeof app.genomeBrowser[functionName] === 'function') {
-              return await app.genomeBrowser[functionName](parameters);
+            const chatMgr = this.multiAgentSystem.chatManager;
+            const camelCaseName = functionName.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+            if (chatMgr && typeof chatMgr[camelCaseName] === 'function') {
+              return await chatMgr[camelCaseName](parameters);
             }
           } catch (err) {
-            console.warn(`NavigationAgent: No local implementation for ${functionName}`);
+            console.warn(`NavigationAgent: ChatManager delegation failed for ${functionName}:`, err.message);
           }
           return {success: false, error: `Function ${functionName} requires ChatManager execution`};
 

@@ -442,7 +442,7 @@ class ProteinService {
       `;
       tabButton.onclick = (e) => {
         if (e.target.classList.contains('tab-close')) {
-          this.closeTab(tab.id);
+          this.closeProteinSidebarTab(tab.id);
         } else {
           this.activeTabId = tab.id;
           this.refreshSidebarUI();
@@ -471,7 +471,7 @@ class ProteinService {
     sidebar.classList.add('visible');
   }
 
-  closeTab(tabId) {
+  closeProteinSidebarTab(tabId) {
     const index = this.tabs.findIndex(t => t.id === tabId);
     if (index !== -1) {
       this.tabs.splice(index, 1);
