@@ -341,29 +341,31 @@ class NavigationAgent extends AgentBase {
   async executeNavigateToPosition(parameters, app) {
     const {chromosome, start, end, position} = parameters;
 
-    // Check cache first
     const cacheKey = `nav_${chromosome}_${start || position}_${end || ''}`;
     const cached = this.positionCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < 30000) {
-      // 30 second cache
-      console.log('⚡ Navigation cache hit');
+      console.log(' Navigation cache hit');
       return cached.result;
     }
 
-    // Execute navigation
     let result;
     try {
-      if (position) {
-        result = await app.genomeBrowser.navigateToPosition(chromosome, position);
+      const nm = app.navigationManager || (app.genomeBrowser && app.genomeBrowser.navigationManager);
+      if (!nm) throw new Error('NavigationManager not available');
+
+      if (position !== undefined && (start === undefined || end === undefined)) {
+        const defaultRange = 2000;
+        const s = Math.max(1, position - Math.floor(defaultRange / 2));
+        const e = position + Math.floor(defaultRange / 2);
+        result = nm.navigateToPosition(chromosome, s, e);
       } else {
-        result = await app.genomeBrowser.navigateToRegion(chromosome, start, end);
+        result = nm.navigateToPosition(chromosome, start, end);
       }
     } catch (error) {
-      console.warn(`NavigationAgent: genomeBrowser navigation failed, returning parameters`, error);
+      console.warn(`NavigationAgent: navigation failed`, error);
       result = {success: true, chromosome, start: start || position, end, position};
     }
 
-    // Update navigation history
     this.navigationHistory.push({
       timestamp: Date.now(),
       chromosome,
@@ -372,18 +374,15 @@ class NavigationAgent extends AgentBase {
       type: 'position',
     });
 
-    // Keep only recent history
     if (this.navigationHistory.length > 100) {
       this.navigationHistory = this.navigationHistory.slice(-100);
     }
 
-    // Cache result
     this.positionCache.set(cacheKey, {
       result,
       timestamp: Date.now(),
     });
 
-    // Update current position
     this.currentPosition = {chromosome, start: start || position, end};
 
     return result;
@@ -436,29 +435,27 @@ class NavigationAgent extends AgentBase {
   async executeJumpToGene(parameters, app) {
     const {geneName} = parameters;
 
-    // Check cache first
     const cacheKey = `gene_${geneName}`;
     const cached = this.positionCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < 60000) {
-      // 1 minute cache
       return cached.result;
     }
 
     let result;
     try {
-      result = await app.genomeBrowser.jumpToGene(geneName);
+      const nm = app.navigationManager || (app.genomeBrowser && app.genomeBrowser.navigationManager);
+      if (!nm) throw new Error('NavigationManager not available');
+      result = nm.jumpToGene(geneName);
     } catch (error) {
-      console.warn(`NavigationAgent: genomeBrowser.jumpToGene failed`, error);
+      console.warn(`NavigationAgent: jumpToGene failed`, error);
       result = {success: false, error: error.message, geneName};
     }
 
-    // Cache result
     this.positionCache.set(cacheKey, {
       result,
       timestamp: Date.now(),
     });
 
-    // Update navigation history
     this.navigationHistory.push({
       timestamp: Date.now(),
       geneName,
@@ -474,9 +471,11 @@ class NavigationAgent extends AgentBase {
   async executeScrollLeft(parameters, app) {
     const {bp} = parameters;
     try {
-      return await app.genomeBrowser.scrollLeft(bp);
+      const nm = app.navigationManager || (app.genomeBrowser && app.genomeBrowser.navigationManager);
+      if (!nm) throw new Error('NavigationManager not available');
+      return nm.scrollLeft(bp);
     } catch (error) {
-      console.warn(`NavigationAgent: genomeBrowser.scrollLeft failed`, error);
+      console.warn(`NavigationAgent: scrollLeft failed`, error);
       return {success: false, error: error.message};
     }
   }
@@ -487,9 +486,11 @@ class NavigationAgent extends AgentBase {
   async executeScrollRight(parameters, app) {
     const {bp} = parameters;
     try {
-      return await app.genomeBrowser.scrollRight(bp);
+      const nm = app.navigationManager || (app.genomeBrowser && app.genomeBrowser.navigationManager);
+      if (!nm) throw new Error('NavigationManager not available');
+      return nm.scrollRight(bp);
     } catch (error) {
-      console.warn(`NavigationAgent: genomeBrowser.scrollRight failed`, error);
+      console.warn(`NavigationAgent: scrollRight failed`, error);
       return {success: false, error: error.message};
     }
   }
@@ -498,7 +499,6 @@ class NavigationAgent extends AgentBase {
    * Execute zoom in
    */
   async executeZoomIn(parameters, app) {
-    // Support magnification strings like "1.5X", "2x", or numeric values
     let {factor} = parameters;
     if (typeof factor === 'string') {
       const normalized = factor.trim().toLowerCase().replace(/×/g, 'x');
@@ -507,9 +507,11 @@ class NavigationAgent extends AgentBase {
       factor = isFinite(numeric) && numeric > 0 ? numeric : 2;
     }
     try {
-      return await app.genomeBrowser.zoomIn(factor);
+      const nm = app.navigationManager || (app.genomeBrowser && app.genomeBrowser.navigationManager);
+      if (!nm) throw new Error('NavigationManager not available');
+      return nm.zoomIn(factor);
     } catch (error) {
-      console.warn(`NavigationAgent: genomeBrowser.zoomIn failed`, error);
+      console.warn(`NavigationAgent: zoomIn failed`, error);
       return {success: false, error: error.message};
     }
   }
@@ -518,7 +520,6 @@ class NavigationAgent extends AgentBase {
    * Execute zoom out
    */
   async executeZoomOut(parameters, app) {
-    // Support magnification strings like "1.5X", "2x", or numeric values
     let {factor} = parameters;
     if (typeof factor === 'string') {
       const normalized = factor.trim().toLowerCase().replace(/×/g, 'x');
@@ -527,9 +528,11 @@ class NavigationAgent extends AgentBase {
       factor = isFinite(numeric) && numeric > 0 ? numeric : 2;
     }
     try {
-      return await app.genomeBrowser.zoomOut(factor);
+      const nm = app.navigationManager || (app.genomeBrowser && app.genomeBrowser.navigationManager);
+      if (!nm) throw new Error('NavigationManager not available');
+      return nm.zoomOut(factor);
     } catch (error) {
-      console.warn(`NavigationAgent: genomeBrowser.zoomOut failed`, error);
+      console.warn(`NavigationAgent: zoomOut failed`, error);
       return {success: false, error: error.message};
     }
   }

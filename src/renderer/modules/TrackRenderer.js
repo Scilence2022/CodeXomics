@@ -8152,9 +8152,9 @@ class TrackRenderer {
     console.log(`🎯 Navigating to action at ${action.target}`);
 
     // Use genome browser's navigation functionality
-    if (this.genomeBrowser && this.genomeBrowser.navigateToPosition) {
-      this.genomeBrowser.navigateToPosition(chromosome, newStart, newEnd);
-    } else {
+    if (this.genomeBrowser && this.genomeBrowser.navigationManager) {
+      this.genomeBrowser.navigationManager.navigateToPosition(chromosome, newStart, newEnd);
+    } else if (this.genomeBrowser) {
       // Fallback: update position and refresh view
       this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
       const sequence = this.genomeBrowser.currentSequence[chromosome];

@@ -190,7 +190,12 @@ class ToolExecutionService {
       }
 
       // --- PRIORITY 6: MICROBE GENOMICS FUNCTIONS ---
-      if (window.MicrobeGenomicsFunctions) {
+      // Navigation tools are handled by NavigationManager (P7/P8), skip here
+      const navigationTools = new Set([
+        'navigate_to_position', 'navigate_to', 'jump_to_gene', 'get_current_region',
+        'scroll_left', 'scroll_right', 'zoom_in', 'zoom_out',
+      ]);
+      if (window.MicrobeGenomicsFunctions && !navigationTools.has(toolName)) {
         const mgfMethodName = this._toCamelCase(toolName);
         if (typeof window.MicrobeGenomicsFunctions[mgfMethodName] === 'function') {
           console.log(`[ToolExecutionService] Routing to MicrobeGenomicsFunctions.${mgfMethodName}`);
@@ -211,16 +216,16 @@ class ToolExecutionService {
       switch (toolName) {
         case 'navigate_to_position':
         case 'navigate_to':
-          if (this.app.uiManager) {
-            this.app.uiManager.navigateTo(parameters.chromosome, parameters.start, parameters.end);
-            return { success: true };
+          if (this.app.navigationManager) {
+            const r = this.app.navigationManager.navigateToPosition(parameters.chromosome, parameters.start, parameters.end);
+            return { success: r.success, chromosome: r.chromosome, start: r.start, end: r.end };
           }
           break;
         case 'zoom_in':
-          if (this.app.uiManager) { this.app.uiManager.zoom('in'); return { success: true }; }
+          if (this.app.navigationManager) { const r = this.app.navigationManager.zoomIn(parameters.factor || 2); return { success: r.success, factor: r.factor }; }
           break;
         case 'zoom_out':
-          if (this.app.uiManager) { this.app.uiManager.zoom('out'); return { success: true }; }
+          if (this.app.navigationManager) { const r = this.app.navigationManager.zoomOut(parameters.factor || 2); return { success: r.success, factor: r.factor }; }
           break;
       }
 
@@ -319,6 +324,8 @@ class ToolExecutionService {
       'delete_gene': ['geneName', 'identifier'],
       'get_upstream_region': ['geneObj', 'length'],
       'get_downstream_region': ['geneObj', 'length'],
+      'zoom_in': ['factor'],
+      'zoom_out': ['factor'],
     };
 
     const argNames = argMappings[toolName];

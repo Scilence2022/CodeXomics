@@ -440,7 +440,10 @@ class InternalMCPServer {
 
   // Navigation implementations
   async navigateToPosition({ chromosome, start, end, position }) {
-    // Auto-detect chromosome if not provided
+    if (!this.genomeStudio.navigationManager) {
+      throw new Error('NavigationManager not available');
+    }
+
     if (!chromosome) {
       const chromosomeSelect = document.getElementById('chromosomeSelect');
       if (chromosomeSelect && chromosomeSelect.value) {
@@ -457,36 +460,16 @@ class InternalMCPServer {
       throw new Error('No chromosome specified and unable to auto-detect');
     }
 
-    // Handle position parameter with default 2000bp range
     if (position !== undefined && (start === undefined || end === undefined)) {
       const defaultRange = 2000;
       start = Math.max(1, position - Math.floor(defaultRange / 2));
       end = position + Math.floor(defaultRange / 2);
     }
 
-    const sequence = this.genomeStudio.currentSequence[chromosome];
-    if (!sequence) {
-      throw new Error(`Chromosome ${chromosome} not found in loaded data`);
-    }
-
-    // Validate and adjust bounds (convert to 0-based)
-    const validatedStart = Math.max(0, start - 1);
-    const validatedEnd = Math.min(sequence.length, end);
-
-    // Set position directly
-    this.genomeStudio.currentPosition = { start: validatedStart, end: validatedEnd };
-    this.genomeStudio.currentChromosome = chromosome;
-
-    // Update view
-    this.genomeStudio.updateStatistics(chromosome, sequence);
-    this.genomeStudio.displayGenomeView(chromosome, sequence);
-
-    if (this.genomeStudio.genomeNavigationBar) {
-      this.genomeStudio.genomeNavigationBar.update();
-    }
+    const result = this.genomeStudio.navigationManager.navigateToPosition(chromosome, start, end);
 
     return {
-      success: true,
+      success: result.success,
       chromosome,
       start,
       end,

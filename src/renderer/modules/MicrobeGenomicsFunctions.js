@@ -29,134 +29,45 @@
 
 class MicrobeGenomicsFunctions {
   /* --------------------------------------------------------- */
-  /*  NAVIGATION                                              */
+  /*  NAVIGATION  (delegated to NavigationManager)             */
   /* --------------------------------------------------------- */
 
-  /**
-   * Parse a zoom factor value which may be a number or a string like "1.5X", "2x", "10"
-   * Returns a positive numeric factor, defaulting to 2 on invalid input, maximum 10x
-   */
+  static _getNavManager() {
+    const gb = window.genomeBrowser;
+    if (!gb || !gb.navigationManager) throw new Error('NavigationManager not available');
+    return gb.navigationManager;
+  }
+
   static parseZoomFactor(value) {
-    let factor = 2; // Default value
-
-    if (typeof value === 'number' && isFinite(value) && value > 0) {
-      factor = value;
-    } else if (typeof value === 'string') {
-      const normalized = value.trim().toLowerCase().replace(/×/g, 'x');
-      // Accept forms like "1.5x", "2x", or plain number strings "1.5", "10"
-      const stripped = normalized.endsWith('x') ? normalized.slice(0, -1) : normalized;
-      const numeric = parseFloat(stripped);
-      if (isFinite(numeric) && numeric > 0) {
-        factor = numeric;
-      }
-    }
-
-    // Enforce maximum zoom factor of 10x
-    return Math.min(factor, 10);
+    return this._getNavManager().parseZoomFactor(value);
   }
 
-  /**
-   * Navigate to a specific genomic region
-   * @param {string} chromosome - Target chromosome/contig
-   * @param {number} start - Start position (1-based)
-   * @param {number} end - End position (1-based)
-   */
   static navigateTo(chromosome, start, end) {
-    const gb = window.genomeBrowser;
-    if (!gb) throw new Error('GenomeBrowser not initialised');
-
-    // Set the position first
-    gb.currentPosition = { start, end };
-    gb.currentChromosome = chromosome;
-
-    // Update chromosome select if different
-    const chrSelect = document.getElementById('chromosomeSelect');
-    if (chrSelect && chrSelect.value !== chromosome) {
-      chrSelect.value = chromosome;
-    }
-
-    // Trigger view refresh to show the new position
-    if (gb.currentSequence && gb.currentSequence[chromosome]) {
-      gb.displayGenomeView(chromosome, gb.currentSequence[chromosome]);
-    }
+    return this._getNavManager().navigateToPosition(chromosome, start, end);
   }
 
-  /**
-   * Jump directly to a gene location
-   * @param {string} geneName - Gene name or locus tag
-   * @returns {Object} Gene location or null if not found
-   */
   static jumpToGene(geneName) {
-    const gene = this.searchGeneByName(geneName);
-    if (gene) {
-      this.navigateTo(gene.chromosome, gene.feature.start, gene.feature.end);
-      return gene;
-    }
-    return null;
+    return this._getNavManager().jumpToGene(geneName);
   }
 
-  /**
-   * Get the currently visible genomic region
-   * @returns {Object} Current region {chromosome, start, end}
-   */
   static getCurrentRegion() {
-    const gb = window.genomeBrowser;
-    if (!gb) throw new Error('GenomeBrowser not initialised');
-    return {
-      chromosome: gb.currentChromosome,
-      start: gb.currentPosition.start,
-      end: gb.currentPosition.end,
-    };
+    return this._getNavManager().getCurrentRegion();
   }
 
-  /**
-   * Scroll the view left by specified base pairs
-   * @param {number} bp - Base pairs to scroll (default: 1000)
-   */
   static scrollLeft(bp = 1000) {
-    const region = this.getCurrentRegion();
-    const newStart = Math.max(1, region.start - bp);
-    const newEnd = region.end - bp;
-    this.navigateTo(region.chromosome, newStart, newEnd);
+    return this._getNavManager().scrollLeft(bp);
   }
 
-  /**
-   * Scroll the view right by specified base pairs
-   * @param {number} bp - Base pairs to scroll (default: 1000)
-   */
   static scrollRight(bp = 1000) {
-    const region = this.getCurrentRegion();
-    const newStart = region.start + bp;
-    const newEnd = region.end + bp;
-    this.navigateTo(region.chromosome, newStart, newEnd);
+    return this._getNavManager().scrollRight(bp);
   }
 
-  /**
-   * Zoom in by reducing the viewing window
-   * @param {number} factor - Zoom factor (default: 2)
-   */
   static zoomIn(factor = 2) {
-    const parsedFactor = this.parseZoomFactor(factor);
-    const region = this.getCurrentRegion();
-    const center = Math.floor((region.start + region.end) / 2);
-    const width = Math.floor((region.end - region.start) / parsedFactor);
-    const newStart = Math.max(1, center - Math.floor(width / 2));
-    const newEnd = newStart + width;
-    this.navigateTo(region.chromosome, newStart, newEnd);
+    return this._getNavManager().zoomIn(factor);
   }
 
-  /**
-   * Zoom out by expanding the viewing window
-   * @param {number} factor - Zoom factor (default: 2)
-   */
   static zoomOut(factor = 2) {
-    const parsedFactor = this.parseZoomFactor(factor);
-    const region = this.getCurrentRegion();
-    const center = Math.floor((region.start + region.end) / 2);
-    const width = Math.floor((region.end - region.start) * parsedFactor);
-    const newStart = Math.max(1, center - Math.floor(width / 2));
-    const newEnd = newStart + width;
-    this.navigateTo(region.chromosome, newStart, newEnd);
+    return this._getNavManager().zoomOut(factor);
   }
 
   /* --------------------------------------------------------- */

@@ -2482,8 +2482,9 @@ function registerIpcHandlers(deps) {
               
               // Then navigate to the gene position
               setTimeout(() => {
-                if (window.genomeBrowser.navigateToPosition) {
-                  window.genomeBrowser.navigateToPosition(${geneData.start}, ${geneData.end});
+                const nm = window.genomeBrowser && window.genomeBrowser.navigationManager;
+                if (nm && nm.navigateToPosition) {
+                  nm.navigateToPosition('${geneData.chromosome}', ${geneData.start}, ${geneData.end});
                 } else if (window.genomeBrowser.setPosition) {
                   window.genomeBrowser.setPosition(${geneData.start}, ${geneData.end});
                 }

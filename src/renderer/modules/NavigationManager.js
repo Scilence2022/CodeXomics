@@ -106,36 +106,42 @@ class NavigationManager {
   }
 
   // Zoom methods
-  zoomIn() {
+  zoomIn(factor = 2) {
+    const safeFactor = this.parseZoomFactor(factor);
+    const currentChr = document.getElementById('chromosomeSelect').value;
+    if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) {
+      return { success: false, error: 'No active chromosome or sequence loaded' };
+    }
+
+    const sequence = this.genomeBrowser.currentSequence[currentChr];
     const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-    const newRange = Math.max(100, Math.floor(currentRange / 2));
+    const newRange = Math.max(100, Math.floor(currentRange / safeFactor));
     const center = Math.floor((this.genomeBrowser.currentPosition.start + this.genomeBrowser.currentPosition.end) / 2);
     const newStart = Math.max(0, center - Math.floor(newRange / 2));
     const newEnd = newStart + newRange;
 
     this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+    this.genomeBrowser.updateStatistics(currentChr, sequence);
+    this.genomeBrowser.displayGenomeView(currentChr, sequence);
+    this.genomeBrowser.genomeNavigationBar.update();
 
-    const currentChr = document.getElementById('chromosomeSelect').value;
-    if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-      this.genomeBrowser.updateStatistics(currentChr, this.genomeBrowser.currentSequence[currentChr]);
-      this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
-      // Update navigation bar
-      this.genomeBrowser.genomeNavigationBar.update();
-
-      // Update current tab title with new position (from zoom in)
-      if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'zoom' });
-      }
+    if (this.genomeBrowser.tabManager) {
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'zoom' });
     }
+
+    return { success: true, factor: safeFactor, newRange, position: { start: newStart, end: newEnd } };
   }
 
-  zoomOut() {
+  zoomOut(factor = 2) {
+    const safeFactor = this.parseZoomFactor(factor);
     const currentChr = document.getElementById('chromosomeSelect').value;
-    if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) return;
+    if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) {
+      return { success: false, error: 'No active chromosome or sequence loaded' };
+    }
 
     const sequence = this.genomeBrowser.currentSequence[currentChr];
     const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-    const newRange = Math.min(sequence.length, currentRange * 2);
+    const newRange = Math.min(sequence.length, Math.floor(currentRange * safeFactor));
     const center = Math.floor((this.genomeBrowser.currentPosition.start + this.genomeBrowser.currentPosition.end) / 2);
     const newStart = Math.max(0, center - Math.floor(newRange / 2));
     const newEnd = Math.min(sequence.length, newStart + newRange);
@@ -143,13 +149,113 @@ class NavigationManager {
     this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
     this.genomeBrowser.updateStatistics(currentChr, sequence);
     this.genomeBrowser.displayGenomeView(currentChr, sequence);
-    // Update navigation bar
     this.genomeBrowser.genomeNavigationBar.update();
 
-    // Update current tab title with new position (from zoom out)
     if (this.genomeBrowser.tabManager) {
       this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'zoom' });
     }
+
+    return { success: true, factor: safeFactor, newRange, position: { start: newStart, end: newEnd } };
+  }
+
+  parseZoomFactor(value) {
+    let factor = 2;
+    if (typeof value === 'number' && isFinite(value) && value > 0) {
+      factor = value;
+    } else if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase().replace(/×/g, 'x');
+      const stripped = normalized.endsWith('x') ? normalized.slice(0, -1) : normalized;
+      const numeric = parseFloat(stripped);
+      if (isFinite(numeric) && numeric > 0) {
+        factor = numeric;
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      const extracted = value.factor ?? value.zoomFactor ?? value.zoom;
+      if (typeof extracted === 'number' && isFinite(extracted) && extracted > 0) {
+        factor = extracted;
+      } else if (typeof extracted === 'string') {
+        return this.parseZoomFactor(extracted);
+      }
+    }
+    return Math.min(factor, 10);
+  }
+
+  getCurrentRegion() {
+    const currentChr = document.getElementById('chromosomeSelect').value;
+    return {
+      chromosome: currentChr || this.genomeBrowser.currentChromosome,
+      start: this.genomeBrowser.currentPosition.start,
+      end: this.genomeBrowser.currentPosition.end,
+      length: this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start,
+    };
+  }
+
+  navigateToPosition(chromosome, start, end) {
+    const gb = this.genomeBrowser;
+    const currentChr = document.getElementById('chromosomeSelect').value;
+
+    if (currentChr !== chromosome) {
+      if (typeof gb.selectChromosome === 'function') {
+        gb.selectChromosome(chromosome);
+      } else {
+        const chrSelect = document.getElementById('chromosomeSelect');
+        if (chrSelect) chrSelect.value = chromosome;
+      }
+    }
+
+    const sequence = gb.currentSequence && gb.currentSequence[chromosome];
+    if (!sequence) {
+      return { success: false, error: `Chromosome ${chromosome} not found in loaded genome data` };
+    }
+
+    const validatedStart = Math.max(0, start - 1);
+    const validatedEnd = Math.min(sequence.length, end);
+
+    if (validatedStart >= validatedEnd) {
+      return { success: false, error: `Invalid position range: ${start}-${end}` };
+    }
+
+    gb.currentPosition = { start: validatedStart, end: validatedEnd };
+    gb.currentChromosome = chromosome;
+    gb.updateStatistics(chromosome, sequence);
+    gb.displayGenomeView(chromosome, sequence);
+
+    if (gb.genomeNavigationBar) gb.genomeNavigationBar.update();
+    if (gb.tabManager) gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validatedEnd, { source: 'navigation' });
+
+    return { success: true, chromosome, start: validatedStart, end: validatedEnd };
+  }
+
+  jumpToGene(geneName) {
+    const searchFn = (window.MicrobeGenomicsFunctions && window.MicrobeGenomicsFunctions.searchGeneByName)
+      || (this.genomeBrowser.searchGeneByName);
+    if (typeof searchFn !== 'function') {
+      return { success: false, error: 'Gene search function not available' };
+    }
+    const gene = searchFn(geneName);
+    if (!gene) {
+      return { success: false, error: `Gene "${geneName}" not found`, geneName };
+    }
+    const navResult = this.navigateToPosition(gene.chromosome, gene.feature.start, gene.feature.end);
+    return { ...navResult, gene };
+  }
+
+  scrollLeft(bp = 1000) {
+    const region = this.getCurrentRegion();
+    const newStart = Math.max(0, region.start - bp);
+    const shift = region.start - newStart;
+    const newEnd = region.end - shift;
+    return this.navigateToPosition(region.chromosome, newStart + 1, newEnd);
+  }
+
+  scrollRight(bp = 1000) {
+    const region = this.getCurrentRegion();
+    const sequence = this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[region.chromosome];
+    const maxEnd = sequence ? sequence.length : Infinity;
+    const newEnd = Math.min(maxEnd, region.end + bp);
+    const shift = newEnd - region.end;
+    const newStart = region.start + shift;
+    return this.navigateToPosition(region.chromosome, newStart + 1, newEnd);
   }
 
   resetZoom() {

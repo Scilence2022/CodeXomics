@@ -2262,109 +2262,48 @@ class ChatManager {
   async navigateToPosition(params) {
     let { chromosome, start, end, position } = params;
 
-    console.log('navigateToPosition called with params:', params);
-
-    if (!this.app) {
-      throw new Error('Genome browser not initialized');
+    if (!this.app || !this.app.navigationManager) {
+      throw new Error('NavigationManager not available');
     }
 
-    // Auto-detect chromosome if not provided
     if (!chromosome) {
-      // Try to get current chromosome from the chromosome selector
       const chromosomeSelect = document.getElementById('chromosomeSelect');
       if (chromosomeSelect && chromosomeSelect.value) {
         chromosome = chromosomeSelect.value;
-        console.log(`Auto-detected chromosome: ${chromosome}`);
       } else if (this.app.currentSequence) {
-        // If no chromosome is selected, use the first available chromosome
         const availableChromosomes = Object.keys(this.app.currentSequence);
         if (availableChromosomes.length > 0) {
           chromosome = availableChromosomes[0];
-          console.log(`Using first available chromosome: ${chromosome}`);
         }
       }
-
       if (!chromosome) {
-        throw new Error(
-          'No chromosome specified and unable to auto-detect current chromosome. Please load genome data first.',
-        );
+        throw new Error('No chromosome specified and unable to auto-detect current chromosome. Please load genome data first.');
       }
     }
 
-    // Check if the target chromosome exists in loaded data
-    if (!this.app.currentSequence || !this.app.currentSequence[chromosome]) {
-      // List available chromosomes for better error message
-      const availableChromosomes = this.app.currentSequence ? Object.keys(this.app.currentSequence) : [];
-      throw new Error(
-        `Chromosome ${chromosome} not found in loaded genome data. Available chromosomes: ${availableChromosomes.join(', ')}`,
-      );
-    }
-
-    // Handle position parameter with default 2000bp range
     if (position !== undefined && (start === undefined || end === undefined)) {
       const defaultRange = 2000;
       start = Math.max(1, position - Math.floor(defaultRange / 2));
       end = position + Math.floor(defaultRange / 2);
-      console.log(`Using position ${position} with default ${defaultRange}bp range: ${start}-${end}`);
     }
 
-    // Handle start=end or start-only: center on position with ~2kb window (±1kb)
     if (start !== undefined && (end === undefined || start === end)) {
-      const center = start;
       const halfRange = 1000;
-      start = Math.max(1, center - halfRange);
-      end = center + halfRange;
-      console.log(`Centering on position ${center} with ±${halfRange}bp range: ${start}-${end}`);
+      start = Math.max(1, start - halfRange);
+      end = start + 2 * halfRange;
     }
 
-    // Validate required parameters
     if (!chromosome || start === undefined || end === undefined) {
       throw new Error('Missing required parameters: chromosome and either (start, end) or position');
     }
 
-    // First, switch to the target chromosome if it's not currently selected
-    const currentChr = document.getElementById('chromosomeSelect')?.value;
-    if (currentChr !== chromosome) {
-      console.log(`Switching from chromosome ${currentChr} to ${chromosome}`);
-
-      // Use the selectChromosome method to properly switch
-      this.app.selectChromosome(chromosome);
-
-      // Wait a bit for the UI to update
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
-    // Now navigate to the specific position within that chromosome
-    const sequence = this.app.currentSequence[chromosome];
-
-    // Validate and adjust bounds
-    const validatedStart = Math.max(0, start - 1); // Convert to 0-based
-    const validatedEnd = Math.min(sequence.length, end);
-
-    if (validatedStart >= validatedEnd) {
-      throw new Error(`Invalid position range: ${start}-${end}`);
-    }
-
-    // Set the position directly
-    this.app.currentPosition = { start: validatedStart, end: validatedEnd };
-    this.app.currentChromosome = chromosome;
-
-    // Update the genome view
-    this.app.updateStatistics(chromosome, sequence);
-    this.app.displayGenomeView(chromosome, sequence);
-
-    // Update navigation bar if it exists
-    if (this.app.genomeNavigationBar) {
-      this.app.genomeNavigationBar.update();
-    }
-
-    console.log(`Successfully navigated to ${chromosome}:${start}-${end}`);
+    const result = this.app.navigationManager.navigateToPosition(chromosome, start, end);
 
     return {
-      success: true,
-      chromosome: chromosome,
-      start: start,
-      end: end,
+      success: result.success,
+      chromosome,
+      start,
+      end,
       message: `Navigated to ${chromosome}:${start}-${end}`,
       usedDefaultRange: position !== undefined && (params.start === undefined || params.end === undefined),
     };
@@ -7331,13 +7270,11 @@ ${coreTools}
   async zoomIn(parameters = {}) {
     const factor = parameters.factor || 2;
     if (!this.app.navigationManager) throw new Error('NavigationManager not available');
-    for (let i = 0; i < Math.log2(factor); i++) {
-      this.app.navigationManager.zoomIn();
-    }
+    const result = this.app.navigationManager.zoomIn(factor);
     const state = this.getCurrentState();
     return {
       success: true,
-      factor,
+      factor: result.factor || factor,
       message: `Zoomed in by ${factor}x`,
       newRange: state.viewingRegion,
     };
@@ -7349,13 +7286,11 @@ ${coreTools}
   async zoomOut(parameters = {}) {
     const factor = parameters.factor || 2;
     if (!this.app.navigationManager) throw new Error('NavigationManager not available');
-    for (let i = 0; i < Math.log2(factor); i++) {
-      this.app.navigationManager.zoomOut();
-    }
+    const result = this.app.navigationManager.zoomOut(factor);
     const state = this.getCurrentState();
     return {
       success: true,
-      factor,
+      factor: result.factor || factor,
       message: `Zoomed out by ${factor}x`,
       newRange: state.viewingRegion,
     };

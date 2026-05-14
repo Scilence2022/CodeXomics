@@ -129,11 +129,10 @@ class GenomeStudioRPCHandler {
       throw new Error('NavigationManager not available');
     }
 
-    // Navigate to the specified position
-    await this.modules.navigationManager.navigateToPosition(chromosome, start, end);
+    const result = this.modules.navigationManager.navigateToPosition(chromosome, start, end);
 
     return {
-      success: true,
+      success: result.success,
       chromosome,
       start,
       end,
@@ -162,10 +161,10 @@ class GenomeStudioRPCHandler {
       throw new Error('NavigationManager not available');
     }
 
-    const result = await this.modules.navigationManager.jumpToGene(geneName);
+    const result = this.modules.navigationManager.jumpToGene(geneName);
 
     return {
-      success: true,
+      success: result.success !== false,
       geneName,
       result,
     };
