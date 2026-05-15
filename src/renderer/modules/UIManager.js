@@ -168,7 +168,7 @@ class UIManager {
 
   checkAndHideSidebarIfAllPanelsClosed() {
     const sidebar = document.getElementById('sidebar');
-    const horizontalSplitter = document.getElementById('horizontalSplitter');
+    const splitter = document.getElementById('sidebarSplitter');
     const mainContent = document.querySelector('.main-content');
     const splitterToggleBtn = document.getElementById('splitterToggleBtn');
 
@@ -179,7 +179,7 @@ class UIManager {
     if (visiblePanels.length === 0) {
       // All panels are closed, hide sidebar
       sidebar.classList.add('collapsed');
-      horizontalSplitter.classList.add('hidden');
+      if (splitter) splitter.classList.add('collapsed');
       mainContent.classList.add('sidebar-collapsed');
 
       // Update splitter toggle button
@@ -196,7 +196,7 @@ class UIManager {
 
   showSidebarIfHidden() {
     const sidebar = document.getElementById('sidebar');
-    const horizontalSplitter = document.getElementById('horizontalSplitter');
+    const splitter = document.getElementById('sidebarSplitter');
     const mainContent = document.querySelector('.main-content');
     const splitterToggleBtn = document.getElementById('splitterToggleBtn');
 
@@ -206,7 +206,7 @@ class UIManager {
     if (isHidden) {
       // Show sidebar and splitter
       sidebar.classList.remove('collapsed');
-      horizontalSplitter.classList.remove('hidden');
+      if (splitter) splitter.classList.remove('collapsed');
       mainContent.classList.remove('sidebar-collapsed');
 
       // Restore width if it was set to 0
@@ -234,7 +234,7 @@ class UIManager {
   // fromCheckbox: true when triggered by the mac-toggle checkbox change event
   toggleSidebar(fromCheckbox = false) {
     const sidebar = document.getElementById('sidebar');
-    const horizontalSplitter = document.getElementById('horizontalSplitter');
+    const splitter = document.getElementById('sidebarSplitter');
     const mainContent = document.querySelector('.main-content');
     const toggleCheckbox = document.getElementById('toggleSidebar');
 
@@ -248,7 +248,7 @@ class UIManager {
     if (shouldShow) {
       // Show sidebar
       sidebar.classList.remove('collapsed');
-      horizontalSplitter.classList.remove('hidden');
+      if (splitter) splitter.classList.remove('collapsed');
       mainContent.classList.remove('sidebar-collapsed');
 
       // Restore previous width or use default
@@ -260,7 +260,7 @@ class UIManager {
     } else {
       // Hide sidebar
       sidebar.classList.add('collapsed');
-      horizontalSplitter.classList.add('hidden');
+      if (splitter) splitter.classList.add('collapsed');
       mainContent.classList.add('sidebar-collapsed');
 
       // Store current width before hiding
@@ -677,145 +677,6 @@ class UIManager {
     });
   }
 
-  initializeHorizontalSplitter() {
-    const horizontalSplitter = document.getElementById('horizontalSplitter');
-    const sidebar = document.getElementById('sidebar');
-    const viewerContainer = document.getElementById('viewerContainer');
-    const mainContent = document.querySelector('.main-content');
-
-    if (!horizontalSplitter || !sidebar || !viewerContainer || !mainContent) {
-      console.warn('Horizontal splitter elements not found, skipping initialization');
-      return;
-    }
-
-    let isResizing = false;
-    let startX = 0;
-    let startSidebarWidth = 0;
-
-    // Mouse events for dragging
-    horizontalSplitter.addEventListener('mousedown', e => {
-      // Don't start resizing if clicking on the toggle button
-      if (e.target.closest('.splitter-toggle-btn')) {
-        return;
-      }
-
-      isResizing = true;
-      startX = e.clientX;
-      startSidebarWidth = sidebar.offsetWidth;
-
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-      horizontalSplitter.classList.add('active');
-
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', e => {
-      if (!isResizing) return;
-
-      const deltaX = e.clientX - startX;
-      const newSidebarWidth = startSidebarWidth + deltaX;
-
-      // Set minimum and maximum widths
-      const minWidth = 200;
-      const maxWidth = window.innerWidth * 0.5; // Max 50% of window width
-
-      if (newSidebarWidth >= minWidth && newSidebarWidth <= maxWidth) {
-        sidebar.style.width = `${newSidebarWidth}px`;
-        sidebar.style.flex = 'none';
-
-        // Ensure sidebar is visible when resizing
-        if (sidebar.classList.contains('collapsed')) {
-          this.showSidebarIfHidden();
-        }
-
-        // Update toggle button states during resize
-        this.updateToggleButtonStates();
-      }
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (isResizing) {
-        isResizing = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        horizontalSplitter.classList.remove('active');
-
-        // Update toggle button state after resize
-        this.updateToggleButtonStates();
-
-        // CRITICAL FIX: Recalculate canvas-based track widths after splitter resize
-        // This fixes the issue where coverage visualization becomes too narrow
-        this.recalculateCanvasTrackWidths();
-      }
-    });
-
-    // Keyboard accessibility
-    horizontalSplitter.setAttribute('tabindex', '0');
-    horizontalSplitter.setAttribute('role', 'separator');
-    horizontalSplitter.setAttribute('aria-label', 'Resize sidebar');
-
-    horizontalSplitter.addEventListener('keydown', e => {
-      const step = 20; // pixels to move per keypress
-      let deltaX = 0;
-
-      switch (e.key) {
-        case 'ArrowLeft':
-          deltaX = -step;
-          break;
-        case 'ArrowRight':
-          deltaX = step;
-          break;
-        case 'Home':
-          // Reset to default width
-          sidebar.style.width = '280px';
-          sidebar.style.flex = 'none';
-          this.showSidebarIfHidden();
-          this.updateToggleButtonStates();
-          e.preventDefault();
-          return;
-        default:
-          return;
-      }
-
-      e.preventDefault();
-
-      // Apply keyboard movement
-      const currentWidth = sidebar.offsetWidth;
-      const newWidth = currentWidth + deltaX;
-
-      const minWidth = 200;
-      const maxWidth = window.innerWidth * 0.5;
-
-      if (newWidth >= minWidth && newWidth <= maxWidth) {
-        sidebar.style.width = `${newWidth}px`;
-        sidebar.style.flex = 'none';
-
-        // Ensure sidebar is visible when resizing
-        if (sidebar.classList.contains('collapsed')) {
-          this.showSidebarIfHidden();
-        }
-        this.updateToggleButtonStates();
-
-        // CRITICAL FIX: Recalculate canvas-based track widths after keyboard resize
-        // This fixes the issue where coverage visualization becomes too narrow
-        this.recalculateCanvasTrackWidths();
-      }
-    });
-
-    // Double-click to reset to default width
-    horizontalSplitter.addEventListener('dblclick', () => {
-      sidebar.style.width = '280px';
-      sidebar.style.flex = 'none';
-      this.showSidebarIfHidden();
-      this.updateToggleButtonStates();
-
-      // CRITICAL FIX: Recalculate canvas-based track widths after dblclick resize
-      // This fixes the issue where coverage visualization becomes too narrow
-      this.recalculateCanvasTrackWidths();
-    });
-  }
-
   /**
    * Initialize vertical drag functionality for genome navigation buttons
    * Allows users to reposition the left/right pan buttons to avoid track obstruction
@@ -983,7 +844,7 @@ class UIManager {
 
     // Ensure the container (splitter) has height to allow dragging along it
     const parent = toggleBtn.parentElement;
-    if (parent && parent.id === 'horizontalSplitter') {
+    if (parent && (parent.id === 'sidebarSplitter' || parent.id === 'horizontalSplitter')) {
       parent.style.height = '100%';
       parent.style.minHeight = '100px';
     }
