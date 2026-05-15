@@ -154,7 +154,7 @@ class TrackRenderer {
     const trackContent = this.createTrackContent(config.defaultHeight, chromosome);
     track.appendChild(trackContent);
 
-    return { track, trackContent, config };
+    return {track, trackContent, config};
   }
 
   /**
@@ -179,7 +179,7 @@ class TrackRenderer {
       titleElement.style.cursor = 'pointer';
       titleElement.title = 'Click to rename';
 
-      titleElement.addEventListener('click', e => {
+      titleElement.addEventListener('click', (e) => {
         e.stopPropagation();
         this.makeTrackTitleEditable(titleElement, fileId);
       });
@@ -224,7 +224,7 @@ class TrackRenderer {
       const currentPct = currentSettings.samplingPercentage || 20;
 
       const presets = [1, 2, 5, 10, 20, 30, 50, 75, 100];
-      presets.forEach(preset => {
+      presets.forEach((preset) => {
         const option = document.createElement('option');
         option.value = preset;
         option.textContent = preset + '%';
@@ -244,7 +244,7 @@ class TrackRenderer {
       }
 
       // Handle selection change
-      samplingInput.addEventListener('change', e => {
+      samplingInput.addEventListener('change', (e) => {
         const percentage = parseInt(e.target.value);
         if (!isNaN(percentage)) {
           this.updateSamplingPercentage(percentage, fileId);
@@ -292,7 +292,7 @@ class TrackRenderer {
       galleryBtn.className = 'track-btn track-gallery-btn';
       galleryBtn.innerHTML = '<i class="fas fa-images"></i>';
       galleryBtn.title = 'Feature Glyph Legend';
-      galleryBtn.addEventListener('click', e => {
+      galleryBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.openFeatureGlyphLegend();
       });
@@ -307,7 +307,7 @@ class TrackRenderer {
         currentLayout === 'compact' ? '<i class="fas fa-compress-alt"></i>' : '<i class="fas fa-expand-alt"></i>';
       layoutBtn.title = `Switch to ${currentLayout === 'compact' ? 'Expanded' : 'Compact'} Layout`;
 
-      layoutBtn.addEventListener('click', e => {
+      layoutBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.toggleTrackLayout(trackType, layoutBtn);
       });
@@ -325,7 +325,7 @@ class TrackRenderer {
         rulerBtn.style.color = '#ccc';
       }
 
-      rulerBtn.addEventListener('click', e => {
+      rulerBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         // Find the track content and then the ruler container
         const trackElement = trackHeader.parentElement;
@@ -352,17 +352,17 @@ class TrackRenderer {
       const circularBtn = document.createElement('button');
       circularBtn.className = 'track-btn track-circular-btn';
       const isCircular = this.getTrackSettings('genes').circularMode || false;
-      circularBtn.innerHTML = isCircular
-        ? '<i class="fas fa-circle-notch"></i>'
-        : '<i class="fas fa-long-arrow-alt-right"></i>';
-      circularBtn.title = isCircular
-        ? 'Circular Mode: ON (click to disable)'
-        : 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+      circularBtn.innerHTML = isCircular ?
+        '<i class="fas fa-circle-notch"></i>' :
+        '<i class="fas fa-long-arrow-alt-right"></i>';
+      circularBtn.title = isCircular ?
+        'Circular Mode: ON (click to disable)' :
+        'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
       if (isCircular) {
         circularBtn.classList.add('active');
       }
 
-      circularBtn.addEventListener('click', e => {
+      circularBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.toggleCircularMode(circularBtn);
       });
@@ -382,7 +382,7 @@ class TrackRenderer {
         wiggleBtn.style.color = '#ccc';
       }
 
-      wiggleBtn.addEventListener('click', e => {
+      wiggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
 
         // Find the management header
@@ -415,7 +415,7 @@ class TrackRenderer {
       selectionBtn.className = 'track-btn track-selection-btn';
       selectionBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i>';
       selectionBtn.title = 'Toggle sequence selection mode';
-      selectionBtn.addEventListener('click', e => {
+      selectionBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.toggleSecondaryRulerSelection(trackType);
       });
@@ -427,7 +427,7 @@ class TrackRenderer {
     settingsBtn.className = 'track-btn track-settings-btn';
     settingsBtn.innerHTML = '<i class="fas fa-cog"></i>';
     settingsBtn.title = 'Track Settings';
-    settingsBtn.addEventListener('click', e => {
+    settingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.openTrackSettings(trackType, fileId);
     });
@@ -441,7 +441,7 @@ class TrackRenderer {
     toggleBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
     toggleBtn.title = 'Lock/Unlock Track Controls';
     toggleBtn.dataset.locked = 'false';
-    toggleBtn.addEventListener('click', e => {
+    toggleBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       console.log('Toggle button clicked for track:', trackType);
       try {
@@ -457,7 +457,7 @@ class TrackRenderer {
     hideHeaderBtn.className = 'track-btn track-hide-header-btn';
     hideHeaderBtn.innerHTML = '<i class="fas fa-minus"></i>';
     hideHeaderBtn.title = 'Minimize Track Header';
-    hideHeaderBtn.addEventListener('click', e => {
+    hideHeaderBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.toggleTrackHeader(trackType, hideHeaderBtn);
     });
@@ -472,7 +472,7 @@ class TrackRenderer {
       // File-specific track - show remove icon and update functionality
       closeBtn.innerHTML = '<i class="fas fa-times"></i>';
       closeBtn.title = 'Remove Track';
-      closeBtn.addEventListener('click', e => {
+      closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.removeFileTrack(fileId, trackType);
       });
@@ -480,7 +480,7 @@ class TrackRenderer {
       // Regular track - show hide icon
       closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
       closeBtn.title = 'Hide Track';
-      closeBtn.addEventListener('click', e => {
+      closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.closeTrack(trackType);
       });
@@ -550,7 +550,7 @@ class TrackRenderer {
       };
     }
     // Fallback if genome browser is not available
-    return { start: 0, end: 1000, range: 1000 };
+    return {start: 0, end: 1000, range: 1000};
   }
 
   /**
@@ -561,7 +561,7 @@ class TrackRenderer {
     if (!container) return;
 
     const existingTracks = container.querySelectorAll('[class*="-track"]');
-    existingTracks.forEach(track => {
+    existingTracks.forEach((track) => {
       const trackHeader = track.querySelector('.track-header');
       if (trackHeader) {
         // Determine track type from class name
@@ -572,9 +572,9 @@ class TrackRenderer {
 
             // Map specific track class names to track types
             const typeMapping = {
-              gene: 'genes',
-              variant: 'variants',
-              wig: 'wigTracks',
+              'gene': 'genes',
+              'variant': 'variants',
+              'wig': 'wigTracks',
               'sequence-line': 'sequence-line', // Ensure consistency for sequence-line track
             };
             trackType = typeMapping[trackType] || trackType;
@@ -709,8 +709,8 @@ class TrackRenderer {
     if (!Array.isArray(features)) return [];
 
     return features.filter(
-      feature =>
-        feature && feature.start && feature.end && feature.start <= viewport.end && feature.end >= viewport.start
+        (feature) =>
+          feature && feature.start && feature.end && feature.start <= viewport.end && feature.end >= viewport.start,
     );
   }
 
@@ -719,7 +719,7 @@ class TrackRenderer {
   // ============================================================================
 
   createGeneTrack(chromosome) {
-    const { track, trackContent } = this.createTrackBase('genes', chromosome);
+    const {track, trackContent} = this.createTrackBase('genes', chromosome);
     const viewport = this.getCurrentViewport();
 
     // Get track settings
@@ -747,8 +747,8 @@ class TrackRenderer {
 
     if (visibleGenes.length === 0) {
       const noGenesMsg = this.createNoDataMessage(
-        'No genes/features in this region or all filtered out',
-        'no-genes-message'
+          'No genes/features in this region or all filtered out',
+          'no-genes-message',
       );
       trackContent.appendChild(noGenesMsg);
       trackContent.style.height = '80px';
@@ -780,9 +780,9 @@ class TrackRenderer {
 
     // Create track header
     const trackHeader = this.createTrackHeader(
-      annotationTrack.name,
-      'genes', // Use genes track type for header functionality
-      annotationTrack.id
+        annotationTrack.name,
+        'genes', // Use genes track type for header functionality
+        annotationTrack.id,
     );
     track.appendChild(trackHeader);
 
@@ -800,13 +800,13 @@ class TrackRenderer {
     // Filter annotations using the gene annotation filter (reuse existing logic)
     const visibleAnnotations = this.filterGeneAnnotations(annotations, viewport);
     console.log(
-      `Displaying ${visibleAnnotations.length} annotations in track ${annotationTrack.name} for region ${viewport.start}-${viewport.end}`
+        `Displaying ${visibleAnnotations.length} annotations in track ${annotationTrack.name} for region ${viewport.start}-${viewport.end}`,
     );
 
     if (visibleAnnotations.length === 0) {
       const noDataMsg = this.createNoDataMessage(
-        `No annotations in this region for track ${annotationTrack.name}`,
-        'no-annotations-message'
+          `No annotations in this region for track ${annotationTrack.name}`,
+          'no-annotations-message',
       );
       trackContent.appendChild(noDataMsg);
       trackContent.style.height = '80px';
@@ -838,7 +838,7 @@ class TrackRenderer {
    * so they do not crowd the primary Genes & Features track.
    */
   createPrimerTrack(chromosome) {
-    const { track, trackContent } = this.createTrackBase('primers', chromosome);
+    const {track, trackContent} = this.createTrackBase('primers', chromosome);
     const viewport = this.getCurrentViewport();
     const settings = this.getTrackSettings('primers');
 
@@ -865,7 +865,7 @@ class TrackRenderer {
    * Create BLAST Results track with SVG rendering
    */
   createBlastTrack(chromosome) {
-    const { track, trackContent } = this.createTrackBase('blast', chromosome);
+    const {track, trackContent} = this.createTrackBase('blast', chromosome);
     const viewport = this.getCurrentViewport();
 
     // Get track settings
@@ -882,8 +882,8 @@ class TrackRenderer {
 
     if (!allBlastResults || allBlastResults.length === 0) {
       const noResultsMsg = this.createNoDataMessage(
-        'No BLAST results available for this chromosome',
-        'no-blast-results-message'
+          'No BLAST results available for this chromosome',
+          'no-blast-results-message',
       );
       trackContent.appendChild(noResultsMsg);
       trackContent.style.height = `${settings.height}px`;
@@ -892,14 +892,14 @@ class TrackRenderer {
 
     // Filter results by viewport
     const visibleResults = this.filterBlastResultsByViewport(allBlastResults, viewport);
-    const outOfViewResults = allBlastResults.filter(result => {
+    const outOfViewResults = allBlastResults.filter((result) => {
       const resultStart = result.hitRange.from;
       const resultEnd = result.hitRange.to;
       return !(resultStart <= viewport.end && resultEnd >= viewport.start);
     });
 
     console.log(
-      `Displaying ${visibleResults.length} BLAST results in region ${viewport.start}-${viewport.end}, ${outOfViewResults.length} results outside view`
+        `Displaying ${visibleResults.length} BLAST results in region ${viewport.start}-${viewport.end}, ${outOfViewResults.length} results outside view`,
     );
 
     // Create main container for all blast results content
@@ -1083,7 +1083,7 @@ class TrackRenderer {
     navButton.title = `Jump to ${chromosome}:${resultStart}-${resultEnd}`;
 
     // Add click event to jump to this result
-    navButton.addEventListener('click', e => {
+    navButton.addEventListener('click', (e) => {
       e.stopPropagation();
       // Calculate appropriate viewport to show the result
       const viewportSize = viewport.end - viewport.start;
@@ -1091,20 +1091,20 @@ class TrackRenderer {
       const newEnd = newStart + viewportSize;
 
       // Navigate to the new position
-      this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+      this.genomeBrowser.currentPosition = {start: newStart, end: newEnd};
       if (this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[chromosome]) {
         this.genomeBrowser.displayGenomeView(chromosome, this.genomeBrowser.currentSequence[chromosome]);
         if (this.genomeBrowser.genomeNavigationBar) {
           this.genomeBrowser.genomeNavigationBar.update();
         }
         if (this.genomeBrowser.tabManager) {
-          this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd, { source: 'navigation' });
+          this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd, {source: 'navigation'});
         }
       }
     });
 
     // Add click event to show result details
-    item.addEventListener('click', e => {
+    item.addEventListener('click', (e) => {
       if (e.target !== navButton && !navButton.contains(e.target)) {
         this.genomeBrowser.blastManager.showResultDetails(result);
       }
@@ -1120,7 +1120,7 @@ class TrackRenderer {
    * Filter BLAST results by viewport
    */
   filterBlastResultsByViewport(results, viewport) {
-    return results.filter(result => {
+    return results.filter((result) => {
       const resultStart = result.hitRange.from;
       const resultEnd = result.hitRange.to;
       return resultStart <= viewport.end && resultEnd >= viewport.start;
@@ -1133,7 +1133,7 @@ class TrackRenderer {
   renderBlastElements(trackContent, visibleResults, viewport, settings) {
     console.log(`🔍 [BLAST Render] Rendering ${visibleResults.length} BLAST results`);
     console.log(
-      `🔍 [BLAST Render] Viewport: ${viewport.start}-${viewport.end} (range: ${viewport.end - viewport.start})`
+        `🔍 [BLAST Render] Viewport: ${viewport.start}-${viewport.end} (range: ${viewport.end - viewport.start})`,
     );
 
     // Create SVG container
@@ -1199,14 +1199,14 @@ class TrackRenderer {
     const isZoomedIn = viewportWidth < 500; // Show detailed info when viewport is less than 500 bp
 
     console.log(
-      `🔍 [BLAST Render] Scale factor: ${scaleFactor}, Zoom level: ${viewportWidth} bp, Show detailed alignment: ${isZoomedIn}`
+        `🔍 [BLAST Render] Scale factor: ${scaleFactor}, Zoom level: ${viewportWidth} bp, Show detailed alignment: ${isZoomedIn}`,
     );
 
     // Render each blast result
     visibleResults.forEach((result, index) => {
       // Get raw start and end positions
-      let resultStart = result.hitRange.from;
-      let resultEnd = result.hitRange.to;
+      const resultStart = result.hitRange.from;
+      const resultEnd = result.hitRange.to;
 
       // Determine hit direction for BLAST results
       // For reverse alignments (start > end), arrow should point left
@@ -1226,7 +1226,7 @@ class TrackRenderer {
       const resultWidth = actualEnd - actualStart;
 
       console.log(
-        `🔍 [BLAST Render] Result ${index}: ${resultStart}-${resultEnd} (actual: ${actualStart}-${actualEnd}, width: ${resultWidth}, direction: ${isForward ? 'Forward' : 'Reverse'})`
+          `🔍 [BLAST Render] Result ${index}: ${resultStart}-${resultEnd} (actual: ${actualStart}-${actualEnd}, width: ${resultWidth}, direction: ${isForward ? 'Forward' : 'Reverse'})`,
       );
 
       // Calculate x position and width
@@ -1384,31 +1384,31 @@ class TrackRenderer {
     const isCircular = settings.circularMode || false;
 
     return annotations
-      .filter(feature => {
-        return (
-          (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&
+        .filter((feature) => {
+          return (
+            (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&
           this.genomeBrowser.shouldShowGeneType(feature.type)
-        );
-      })
-      .filter(gene => {
-        if (isCircular) {
-          return this.isFeatureVisibleCircular(gene, viewport);
-        }
-        return this.filterFeaturesByViewport([gene], viewport).length > 0;
-      });
+          );
+        })
+        .filter((gene) => {
+          if (isCircular) {
+            return this.isFeatureVisibleCircular(gene, viewport);
+          }
+          return this.filterFeaturesByViewport([gene], viewport).length > 0;
+        });
   }
 
   /**
    * Filter primer annotations for the dedicated primer track.
    */
   filterPrimerAnnotations(annotations, viewport, settings = {}) {
-    const primerAnnotations = (annotations || []).filter(feature => {
+    const primerAnnotations = (annotations || []).filter((feature) => {
       const featureType = String(feature?.type || '').toLowerCase();
       return featureType === 'primer' || featureType === 'primer_bind';
     });
 
     const isCircular = settings.circularMode || false;
-    return primerAnnotations.filter(primer => {
+    return primerAnnotations.filter((primer) => {
       if (isCircular) {
         return this.isFeatureVisibleCircular(primer, viewport);
       }
@@ -1504,13 +1504,13 @@ class TrackRenderer {
     // We can instantiate the CanvasGenesRenderer directly
     // It handles its own canvas creation and lifecycle
     const renderer = new CanvasGenesRenderer(
-      container,
-      geneRows,
-      viewport,
-      layout,
-      operons,
-      settings,
-      this.genomeBrowser
+        container,
+        geneRows,
+        viewport,
+        layout,
+        operons,
+        settings,
+        this.genomeBrowser,
     );
 
     // Store reference for cleanup and updates
@@ -1569,16 +1569,16 @@ class TrackRenderer {
     geneRows.forEach((rowGenes, rowIndex) => {
       if (rowIndex >= layout.maxRows) return; // Skip hidden rows
 
-      rowGenes.forEach(gene => {
+      rowGenes.forEach((gene) => {
         const geneGroup = this.createSVGGeneElement(
-          gene,
-          viewport,
-          operons,
-          rowIndex,
-          layout,
-          settings,
-          defs,
-          containerWidth
+            gene,
+            viewport,
+            operons,
+            rowIndex,
+            layout,
+            settings,
+            defs,
+            containerWidth,
         );
         if (geneGroup) {
           svg.appendChild(geneGroup);
@@ -1696,14 +1696,14 @@ class TrackRenderer {
 
     // Create gene shape based on strand direction and truncation state
     const geneShape = GeneShapeCreators.createSVGGeneShape(this,
-      gene,
-      elementWidth,
-      elementHeight,
-      gradientId,
-      operonInfo,
-      isLeftTruncated,
-      isRightTruncated,
-      strokeWidth
+        gene,
+        elementWidth,
+        elementHeight,
+        gradientId,
+        operonInfo,
+        isLeftTruncated,
+        isRightTruncated,
+        strokeWidth,
     );
     geneGroup.appendChild(geneShape);
 
@@ -1766,7 +1766,7 @@ class TrackRenderer {
 
     // Update settings
     this.trackSettings = this.trackSettings || {};
-    this.trackSettings.genes = { ...currentSettings, circularMode: newCircularMode };
+    this.trackSettings.genes = {...currentSettings, circularMode: newCircularMode};
 
     // Save to config
     if (this.genomeBrowser.configManager) {
@@ -1774,12 +1774,12 @@ class TrackRenderer {
     }
 
     // Update button appearance
-    button.innerHTML = newCircularMode
-      ? '<i class="fas fa-circle-notch"></i>'
-      : '<i class="fas fa-long-arrow-alt-right"></i>';
-    button.title = newCircularMode
-      ? 'Circular Mode: ON (click to disable)'
-      : 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+    button.innerHTML = newCircularMode ?
+      '<i class="fas fa-circle-notch"></i>' :
+      '<i class="fas fa-long-arrow-alt-right"></i>';
+    button.title = newCircularMode ?
+      'Circular Mode: ON (click to disable)' :
+      'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
     button.classList.toggle('active', newCircularMode);
 
     // Update navigation manager with circular mode state
@@ -1807,12 +1807,12 @@ class TrackRenderer {
     if (!circularBtn) return;
 
     const isCircular = this.getTrackSettings('genes').circularMode || false;
-    circularBtn.innerHTML = isCircular
-      ? '<i class="fas fa-circle-notch"></i>'
-      : '<i class="fas fa-long-arrow-alt-right"></i>';
-    circularBtn.title = isCircular
-      ? 'Circular Mode: ON (click to disable)'
-      : 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+    circularBtn.innerHTML = isCircular ?
+      '<i class="fas fa-circle-notch"></i>' :
+      '<i class="fas fa-long-arrow-alt-right"></i>';
+    circularBtn.title = isCircular ?
+      'Circular Mode: ON (click to disable)' :
+      'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
     circularBtn.classList.toggle('active', isCircular);
   }
 
@@ -1822,7 +1822,7 @@ class TrackRenderer {
   updateLayoutButtonAppearance(buttonElement, mode) {
     if (!buttonElement) return;
 
-    let icon, title;
+    let icon; let title;
     switch (mode) {
       case 'compact':
         icon = '<i class="fas fa-compress-alt"></i>';
@@ -1873,7 +1873,7 @@ class TrackRenderer {
     // These elements extend above their bounding box and need extra top padding
     let topPadding = 2;
     if (geneRows.length > 0 && geneRows[0] && geneRows[0].length > 0) {
-      const hasUpwardElements = geneRows[0].some(gene => {
+      const hasUpwardElements = geneRows[0].some((gene) => {
         const geneType = (gene.type || '').toLowerCase();
         return geneType === 'promoter' || geneType === 'terminator';
       });
@@ -2082,21 +2082,21 @@ class TrackRenderer {
     // If layout not provided, calculate it (for backward compatibility)
     if (!layout) {
       const geneRows = this.arrangeGenesInRows(
-        visibleGenes,
-        this.getCurrentViewport().start,
-        this.getCurrentViewport().end,
-        operons,
-        settings
+          visibleGenes,
+          this.getCurrentViewport().start,
+          this.getCurrentViewport().end,
+          operons,
+          settings,
       );
       layout = this.calculateGeneTrackLayout(geneRows, settings);
     }
 
     const geneRows = this.arrangeGenesInRows(
-      visibleGenes,
-      this.getCurrentViewport().start,
-      this.getCurrentViewport().end,
-      operons,
-      settings
+        visibleGenes,
+        this.getCurrentViewport().start,
+        this.getCurrentViewport().end,
+        operons,
+        settings,
     );
 
     // Count visible and hidden genes
@@ -2125,7 +2125,7 @@ class TrackRenderer {
     const visibleOperons = new Set();
     geneRows.forEach((rowGenes, rowIndex) => {
       if (rowIndex < layout.maxRows) {
-        rowGenes.forEach(gene => {
+        rowGenes.forEach((gene) => {
           const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
           if (operonInfo.isInOperon) {
             visibleOperons.add(operonInfo.operonName);
@@ -2138,7 +2138,7 @@ class TrackRenderer {
   }
 
   createSequenceLineTrack(chromosome, sequence) {
-    const { track, trackContent } = this.createTrackBase('sequenceLine', chromosome);
+    const {track, trackContent} = this.createTrackBase('sequenceLine', chromosome);
     const viewport = this.getCurrentViewport();
 
     // Get subsequence for current viewport
@@ -2210,11 +2210,11 @@ class TrackRenderer {
 
     try {
       const canvasRenderer = new CanvasSequenceRenderer(
-        seqDisplay,
-        subsequence,
-        viewport,
-        canvasOptions,
-        this.genomeBrowser
+          seqDisplay,
+          subsequence,
+          viewport,
+          canvasOptions,
+          this.genomeBrowser,
       );
 
       // Store renderer for cleanup and updates
@@ -2286,7 +2286,7 @@ class TrackRenderer {
     const measurements = [];
     const charCounts = [16, 32, 64]; // Use different character counts for validation
 
-    charCounts.forEach(count => {
+    charCounts.forEach((count) => {
       const testElement = document.createElement('span');
       testElement.textContent = 'ATCG'.repeat(count / 4);
       testElement.style.cssText = `
@@ -2311,7 +2311,7 @@ class TrackRenderer {
     // Calculate average and use most consistent measurement
     const average = measurements.reduce((a, b) => a + b, 0) / measurements.length;
     const mostConsistent = measurements.reduce((prev, current) =>
-      Math.abs(current - average) < Math.abs(prev - average) ? current : prev
+      Math.abs(current - average) < Math.abs(prev - average) ? current : prev,
     );
 
     const measuredCharWidth = mostConsistent > 0 ? mostConsistent : 9.5;
@@ -2350,7 +2350,7 @@ class TrackRenderer {
       effectiveCharWidth,
       finalFontSize,
       finalCharWidth,
-      measurements: measurements.map(m => m.toFixed(3)),
+      measurements: measurements.map((m) => m.toFixed(3)),
       average: average.toFixed(3),
       selectedWidth: measuredCharWidth.toFixed(3),
     });
@@ -2410,7 +2410,7 @@ class TrackRenderer {
   }
 
   createGCTrack(chromosome, sequence) {
-    const { track, trackContent } = this.createTrackBase('gc', chromosome);
+    const {track, trackContent} = this.createTrackBase('gc', chromosome);
     const viewport = this.getCurrentViewport();
 
     // Get subsequence for current viewport
@@ -2443,7 +2443,7 @@ class TrackRenderer {
   }
 
   createLegacyVariantTrack(chromosome) {
-    const { track, trackContent } = this.createTrackBase('variants', chromosome);
+    const {track, trackContent} = this.createTrackBase('variants', chromosome);
     const viewport = this.getCurrentViewport();
 
     // Get variant track settings
@@ -2452,8 +2452,8 @@ class TrackRenderer {
     // Check if we have any variant data at all
     if (!this.genomeBrowser.currentVariants || Object.keys(this.genomeBrowser.currentVariants).length === 0) {
       const noDataMsg = this.createNoDataMessage(
-        'No VCF file loaded. Load a VCF file to see variants.',
-        'no-variants-message'
+          'No VCF file loaded. Load a VCF file to see variants.',
+          'no-variants-message',
       );
       trackContent.appendChild(noDataMsg);
       return track;
@@ -2485,7 +2485,7 @@ class TrackRenderer {
     // Apply quality filter if set
     let filteredVariants = visibleVariants;
     if (settings.minQuality > 0) {
-      filteredVariants = visibleVariants.filter(v => (v.quality || 0) >= settings.minQuality);
+      filteredVariants = visibleVariants.filter((v) => (v.quality || 0) >= settings.minQuality);
     }
 
     // Apply max display count limit
@@ -2510,12 +2510,12 @@ class TrackRenderer {
     // Simple row assignment - variants that overlap get different rows
     const rows = [];
 
-    variants.forEach(variant => {
+    variants.forEach((variant) => {
       let assignedRow = 0;
 
       // Find a row where this variant doesn't overlap with existing variants
       for (let i = 0; i < rows.length; i++) {
-        const canFit = !rows[i].some(existingVariant => {
+        const canFit = !rows[i].some((existingVariant) => {
           return !(variant.end < existingVariant.start || variant.start > existingVariant.end);
         });
 
@@ -2727,7 +2727,7 @@ class TrackRenderer {
     variantElement.title = variantInfo;
 
     // Enhanced click handler with detailed analysis
-    variantElement.addEventListener('click', async event => {
+    variantElement.addEventListener('click', async (event) => {
       event.stopPropagation();
 
       try {
@@ -2894,8 +2894,8 @@ class TrackRenderer {
             const nextVcfFile = vcfFiles[i + 1];
             if (this.genomeBrowser.multiFileManager.getTrackVisibility(nextVcfFile.trackId)) {
               const splitter = this.genomeBrowser.createTrackSplitter(
-                `variant-${vcfFile.metadata.id}`,
-                `variant-${nextVcfFile.metadata.id}`
+                  `variant-${vcfFile.metadata.id}`,
+                  `variant-${nextVcfFile.metadata.id}`,
               );
               splitter.classList.add('multi-file-splitter');
               splitter.setAttribute('data-file-type', 'variant');
@@ -2925,10 +2925,10 @@ class TrackRenderer {
 
     // Create file-specific header with rename capability
     const trackHeader = this.createTrackHeader(
-      vcfFile.metadata.name,
-      'variants',
-      vcfFile.metadata.id,
-      true // isRenameable
+        vcfFile.metadata.name,
+        'variants',
+        vcfFile.metadata.id,
+        true, // isRenameable
     );
     track.appendChild(trackHeader);
 
@@ -2942,13 +2942,13 @@ class TrackRenderer {
       const visibleVariants = this.filterFeaturesByViewport(variants, viewport);
 
       console.log(
-        `Displaying ${visibleVariants.length} variants from ${vcfFile.metadata.name} in region ${viewport.start}-${viewport.end}`
+          `Displaying ${visibleVariants.length} variants from ${vcfFile.metadata.name} in region ${viewport.start}-${viewport.end}`,
       );
 
       if (visibleVariants.length === 0) {
         const noVariantsMsg = this.createNoDataMessage(
-          `No variants found in this region for ${vcfFile.metadata.name}`,
-          'no-variants-message'
+            `No variants found in this region for ${vcfFile.metadata.name}`,
+            'no-variants-message',
         );
         trackContent.appendChild(noVariantsMsg);
       } else {
@@ -2988,13 +2988,13 @@ class TrackRenderer {
       const visibleVariants = this.filterFeaturesByViewport(variants, viewport);
 
       console.log(
-        `[createVariantTrackContent] Displaying ${visibleVariants.length} variants from ${vcfFile.metadata.name} in region ${viewport.start}-${viewport.end}`
+          `[createVariantTrackContent] Displaying ${visibleVariants.length} variants from ${vcfFile.metadata.name} in region ${viewport.start}-${viewport.end}`,
       );
 
       if (visibleVariants.length === 0) {
         const noVariantsMsg = this.createNoDataMessage(
-          `No variants found in this region for ${vcfFile.metadata.name}`,
-          'no-variants-message'
+            `No variants found in this region for ${vcfFile.metadata.name}`,
+            'no-variants-message',
         );
         trackContent.appendChild(noVariantsMsg);
       } else {
@@ -3028,8 +3028,8 @@ class TrackRenderer {
     // Check if we have any variant data at all
     if (!this.genomeBrowser.currentVariants || Object.keys(this.genomeBrowser.currentVariants).length === 0) {
       const noDataMsg = this.createNoDataMessage(
-        'No VCF file loaded. Load a VCF file to see variants.',
-        'no-variants-message'
+          'No VCF file loaded. Load a VCF file to see variants.',
+          'no-variants-message',
       );
       trackContent.appendChild(noDataMsg);
       return trackContent;
@@ -3040,7 +3040,7 @@ class TrackRenderer {
     const visibleVariants = this.filterFeaturesByViewport(variants, viewport);
 
     console.log(
-      `[createLegacyVariantTrackContent] Displaying ${visibleVariants.length} variants in region ${viewport.start}-${viewport.end}`
+        `[createLegacyVariantTrackContent] Displaying ${visibleVariants.length} variants in region ${viewport.start}-${viewport.end}`,
     );
 
     if (visibleVariants.length === 0) {
@@ -3128,10 +3128,10 @@ class TrackRenderer {
     } else {
       // Get reads for current region using ReadsManager with settings
       const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(
-        chromosome,
-        viewport.start,
-        viewport.end,
-        settings
+          chromosome,
+          viewport.start,
+          viewport.end,
+          settings,
       );
 
       // Update sampling display based on whether sampling was applied
@@ -3158,7 +3158,7 @@ class TrackRenderer {
   }
 
   async createLegacyReadsTrack(chromosome) {
-    const { track, trackContent } = this.createTrackBase('reads', chromosome);
+    const {track, trackContent} = this.createTrackBase('reads', chromosome);
     const viewport = this.getCurrentViewport();
 
     // Check if ReadsManager has data loaded (either in-memory, streaming, or BAM mode)
@@ -3234,16 +3234,16 @@ class TrackRenderer {
 
       // Get reads for current region using ReadsManager with settings
       const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(
-        chromosome,
-        viewport.start,
-        viewport.end,
-        settings
+          chromosome,
+          viewport.start,
+          viewport.end,
+          settings,
       );
 
       console.log(`🎯 [TrackRenderer] Retrieved reads for sequence display check:`, {
         readsCount: visibleReads.length,
-        hasSequenceData: visibleReads.length > 0 && visibleReads.some(read => read.sequence),
-        sampleReads: visibleReads.slice(0, 3).map(read => ({
+        hasSequenceData: visibleReads.length > 0 && visibleReads.some((read) => read.sequence),
+        sampleReads: visibleReads.slice(0, 3).map((read) => ({
           id: read.id,
           hasSequence: !!read.sequence,
           sequenceLength: read.sequence ? read.sequence.length : 0,
@@ -3255,7 +3255,7 @@ class TrackRenderer {
       trackContent.removeChild(loadingMsg);
 
       console.log(
-        `🎯 [TrackRenderer] Retrieved ${visibleReads.length} reads for display in region ${viewport.start}-${viewport.end}`
+          `🎯 [TrackRenderer] Retrieved ${visibleReads.length} reads for display in region ${viewport.start}-${viewport.end}`,
       );
 
       // Update sampling display based on whether sampling was applied
@@ -3274,19 +3274,19 @@ class TrackRenderer {
       } else {
         // Log sample reads and their properties
         console.log(
-          `🎯 [TrackRenderer] Sample reads (first 3):`,
-          visibleReads.slice(0, 3).map(read => ({
-            id: read.id,
-            chromosome: read.chromosome,
-            position: `${read.start}-${read.end}`,
-            strand: read.strand,
-            mappingQuality: read.mappingQuality,
-            flags: read.flags,
-          }))
+            `🎯 [TrackRenderer] Sample reads (first 3):`,
+            visibleReads.slice(0, 3).map((read) => ({
+              id: read.id,
+              chromosome: read.chromosome,
+              position: `${read.start}-${read.end}`,
+              strand: read.strand,
+              mappingQuality: read.mappingQuality,
+              flags: read.flags,
+            })),
         );
 
         // Check mapping quality distribution
-        const mappingQualities = visibleReads.map(read => read.mappingQuality || 0);
+        const mappingQualities = visibleReads.map((read) => read.mappingQuality || 0);
         const minMQ = Math.min(...mappingQualities);
         const maxMQ = Math.max(...mappingQualities);
         const avgMQ = mappingQualities.reduce((a, b) => a + b, 0) / mappingQualities.length;
@@ -3359,14 +3359,14 @@ class TrackRenderer {
         if (enableVerticalScroll) {
           // Create scrollable reads track with all rows
           this.createScrollableReadsTrack(
-            trackContent,
-            readRows,
-            viewport,
-            readHeight,
-            rowSpacing,
-            topPadding,
-            bottomPadding,
-            settings
+              trackContent,
+              readRows,
+              viewport,
+              readHeight,
+              rowSpacing,
+              topPadding,
+              bottomPadding,
+              settings,
           );
         } else {
           // Use traditional limited rows approach
@@ -3398,7 +3398,7 @@ class TrackRenderer {
           // Render reads using Canvas or SVG based on settings
           const renderingMode = settings.renderingMode || 'canvas';
           console.log(
-            `🔧 [DEBUG] [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`
+              `🔧 [DEBUG] [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`,
           );
           console.log(`🔧 [DEBUG] [TrackRenderer] Full settings object:`, settings);
 
@@ -3412,36 +3412,36 @@ class TrackRenderer {
             if (renderingMode === 'canvas') {
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
-                settings.showReference !== false
-                  ? this.getReferenceSequence(viewport.start, viewport.end, chromosome)
-                  : null;
+                settings.showReference !== false ?
+                  this.getReferenceSequence(viewport.start, viewport.end, chromosome) :
+                  null;
 
               // Use Canvas rendering for high performance
               this.renderReadsElementsCanvas(
-                trackContent,
-                limitedReadRows,
-                viewport,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
-                settings,
-                referenceSequence
+                  trackContent,
+                  limitedReadRows,
+                  viewport,
+                  readHeight,
+                  rowSpacing,
+                  topPadding,
+                  trackHeight,
+                  settings,
+                  referenceSequence,
               );
             } else {
               // Create SVG-based read visualization
               // Pass just topPadding - reads SVG will be positioned after coverage automatically
               this.renderReadsElementsSVG(
-                trackContent,
-                limitedReadRows,
-                viewport.start,
-                viewport.end,
-                viewport.end - viewport.start,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
-                settings
+                  trackContent,
+                  limitedReadRows,
+                  viewport.start,
+                  viewport.end,
+                  viewport.end - viewport.start,
+                  readHeight,
+                  rowSpacing,
+                  topPadding,
+                  trackHeight,
+                  settings,
               );
             }
           }
@@ -3485,9 +3485,9 @@ class TrackRenderer {
             }
           } else {
             // No sampling applied - show 100%
-            const totalReadsCount = enableVerticalScroll
-              ? readRows.reduce((sum, row) => sum + row.length, 0)
-              : visibleReadsCount;
+            const totalReadsCount = enableVerticalScroll ?
+              readRows.reduce((sum, row) => sum + row.length, 0) :
+              visibleReadsCount;
             statsText += ` | All reads shown (100%)`;
           }
         }
@@ -3546,8 +3546,8 @@ class TrackRenderer {
             const nextBamFile = bamFiles[i + 1];
             if (this.genomeBrowser.multiFileManager.getTrackVisibility(nextBamFile.trackId)) {
               const splitter = this.genomeBrowser.createTrackSplitter(
-                `reads-${bamFile.metadata.id}`,
-                `reads-${nextBamFile.metadata.id}`
+                  `reads-${bamFile.metadata.id}`,
+                  `reads-${nextBamFile.metadata.id}`,
               );
               splitter.classList.add('multi-file-splitter');
               splitter.setAttribute('data-file-type', 'reads');
@@ -3588,8 +3588,8 @@ class TrackRenderer {
     settings.showReference = settings.showReference !== false ? true : false;
 
     console.log(
-      `🔍 [createSingleReadsTrackContent] Applied settings during zoom for ${bamFile.metadata.filename}:`,
-      settings
+        `🔍 [createSingleReadsTrackContent] Applied settings during zoom for ${bamFile.metadata.filename}:`,
+        settings,
     );
 
     try {
@@ -3604,14 +3604,14 @@ class TrackRenderer {
         bamEnd,
         fileName: bamFile.metadata.name,
         hasReferences: bamFile.reader.references?.length || 0,
-        availableReferences: bamFile.reader.references?.slice(0, 5).map(ref => ref.name) || [],
+        availableReferences: bamFile.reader.references?.slice(0, 5).map((ref) => ref.name) || [],
       });
 
       const reads = await bamFile.reader.getRecordsForRange(
-        chromosome,
-        bamStart,
-        bamEnd,
-        settings // CRITICAL FIX: Pass settings to BAM reader
+          chromosome,
+          bamStart,
+          bamEnd,
+          settings, // CRITICAL FIX: Pass settings to BAM reader
       );
 
       console.log(`📊 [TrackRenderer] BAM query result (content only):`, {
@@ -3632,7 +3632,7 @@ class TrackRenderer {
         if (bamFile.reader.references?.length === 0) {
           diagnosticMessage += `\n⚠️ BAM file has no reference sequences - file may be corrupted`;
         } else if (bamFile.reader.references?.length > 0) {
-          const availableRefs = bamFile.reader.references.slice(0, 10).map(ref => ref.name);
+          const availableRefs = bamFile.reader.references.slice(0, 10).map((ref) => ref.name);
           diagnosticMessage += `\n💡 Available references: ${availableRefs.join(', ')}`;
 
           if (!availableRefs.includes(chromosome)) {
@@ -3700,14 +3700,14 @@ class TrackRenderer {
         if (forceScrollable) {
           // Use new scrollable track system for performance
           this.createScrollableReadsTrack(
-            trackContent,
-            readRows,
-            viewport,
-            readHeight,
-            rowSpacing,
-            topPadding,
-            bottomPadding,
-            settings
+              trackContent,
+              readRows,
+              viewport,
+              readHeight,
+              rowSpacing,
+              topPadding,
+              bottomPadding,
+              settings,
           );
         } else {
           // Use traditional limited rows approach
@@ -3739,7 +3739,7 @@ class TrackRenderer {
           // Render reads using Canvas or SVG based on settings
           const renderingMode = settings.renderingMode || 'canvas';
           console.log(
-            `🔧 [DEBUG] [createSingleReadsTrack] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`
+              `🔧 [DEBUG] [createSingleReadsTrack] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`,
           );
           console.log(`🔧 [DEBUG] [createSingleReadsTrack] Full settings object:`, settings);
 
@@ -3749,35 +3749,35 @@ class TrackRenderer {
 
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
-                settings.showReference !== false
-                  ? this.getReferenceSequence(viewport.start, viewport.end, chromosome)
-                  : null;
+                settings.showReference !== false ?
+                  this.getReferenceSequence(viewport.start, viewport.end, chromosome) :
+                  null;
 
               // Use Canvas rendering for high performance
               this.renderReadsElementsCanvas(
-                trackContent,
-                limitedReadRows,
-                viewport,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
-                settings,
-                referenceSequence
+                  trackContent,
+                  limitedReadRows,
+                  viewport,
+                  readHeight,
+                  rowSpacing,
+                  topPadding,
+                  trackHeight,
+                  settings,
+                  referenceSequence,
               );
             } else {
               // ... SVG rendering ...
               this.renderReadsElementsSVG(
-                trackContent,
-                limitedReadRows,
-                viewport.start,
-                viewport.end,
-                viewport.end - viewport.start,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
-                settings
+                  trackContent,
+                  limitedReadRows,
+                  viewport.start,
+                  viewport.end,
+                  viewport.end - viewport.start,
+                  readHeight,
+                  rowSpacing,
+                  topPadding,
+                  trackHeight,
+                  settings,
               );
             }
           }
@@ -3843,10 +3843,10 @@ class TrackRenderer {
 
     // Create file-specific header with rename capability
     const trackHeader = this.createTrackHeader(
-      bamFile.metadata.name,
-      'reads',
-      bamFile.metadata.id,
-      true // isRenameable
+        bamFile.metadata.name,
+        'reads',
+        bamFile.metadata.id,
+        true, // isRenameable
     );
     track.appendChild(trackHeader);
 
@@ -3866,7 +3866,7 @@ class TrackRenderer {
         bamEnd,
         fileName: bamFile.metadata.name,
         hasReferences: bamFile.reader.references?.length || 0,
-        availableReferences: bamFile.reader.references?.slice(0, 5).map(ref => ref.name) || [],
+        availableReferences: bamFile.reader.references?.slice(0, 5).map((ref) => ref.name) || [],
         isInitialized: bamFile.reader.isInitialized,
         readerType: bamFile.reader.constructor.name,
       });
@@ -3884,10 +3884,10 @@ class TrackRenderer {
 
       console.log('🔧 [DEBUG] [createSingleReadsTrack] About to call BAM getRecordsForRange...');
       const reads = await bamFile.reader.getRecordsForRange(
-        chromosome,
-        bamStart,
-        bamEnd,
-        settings // CRITICAL FIX: Pass settings to BAM reader
+          chromosome,
+          bamStart,
+          bamEnd,
+          settings, // CRITICAL FIX: Pass settings to BAM reader
       );
       console.log('🔧 [DEBUG] [createSingleReadsTrack] BAM getRecordsForRange completed, reads count:', reads.length);
 
@@ -3916,7 +3916,7 @@ class TrackRenderer {
         if (bamFile.reader.references?.length === 0) {
           diagnosticMessage += `\n⚠️ BAM file has no reference sequences - file may be corrupted`;
         } else if (bamFile.reader.references?.length > 0) {
-          const availableRefs = bamFile.reader.references.slice(0, 10).map(ref => ref.name);
+          const availableRefs = bamFile.reader.references.slice(0, 10).map((ref) => ref.name);
           diagnosticMessage += `\n💡 Available references: ${availableRefs.join(', ')}`;
 
           if (!availableRefs.includes(chromosome)) {
@@ -3967,9 +3967,9 @@ class TrackRenderer {
         const rowSpacing = parseInt(settings.rowSpacing) || 2;
 
         const topPadding =
-          showCoverage || referenceHeight > 0
-            ? coverageHeight + referenceHeight + 2
-            : parseInt(settings.topPadding) || 10;
+          showCoverage || referenceHeight > 0 ?
+            coverageHeight + referenceHeight + 2 :
+            parseInt(settings.topPadding) || 10;
         const bottomPadding = parseInt(settings.bottomPadding) || 10;
 
         // Total height above reads (coverage + reference)
@@ -3993,14 +3993,14 @@ class TrackRenderer {
 
         if (enableVerticalScroll && readRows.length > maxVisibleRows) {
           this.createScrollableReadsTrack(
-            trackContent,
-            readRows,
-            viewport,
-            readHeight,
-            rowSpacing,
-            topPadding,
-            bottomPadding,
-            settings
+              trackContent,
+              readRows,
+              viewport,
+              readHeight,
+              rowSpacing,
+              topPadding,
+              bottomPadding,
+              settings,
           );
         } else {
           // Render all reads normally
@@ -4014,34 +4014,34 @@ class TrackRenderer {
 
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
-                settings.showReference !== false
-                  ? this.getReferenceSequence(viewport.start, viewport.end, chromosome)
-                  : null;
+                settings.showReference !== false ?
+                  this.getReferenceSequence(viewport.start, viewport.end, chromosome) :
+                  null;
 
               this.renderReadsElementsCanvas(
-                trackContent,
-                readRows,
-                viewport,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
-                settings,
-                referenceSequence
+                  trackContent,
+                  readRows,
+                  viewport,
+                  readHeight,
+                  rowSpacing,
+                  topPadding,
+                  trackHeight,
+                  settings,
+                  referenceSequence,
               );
             } else {
               console.log(`🔧 [DEBUG] [createMultiReadsTrack] Calling renderReadsElementsSVG`);
               this.renderReadsElementsSVG(
-                trackContent,
-                readRows,
-                viewport.start,
-                viewport.end,
-                viewport.end - viewport.start,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
-                settings
+                  trackContent,
+                  readRows,
+                  viewport.start,
+                  viewport.end,
+                  viewport.end - viewport.start,
+                  readHeight,
+                  rowSpacing,
+                  topPadding,
+                  trackHeight,
+                  settings,
               );
             }
           }
@@ -4082,14 +4082,14 @@ class TrackRenderer {
    * Create scrollable reads track with vertical scrolling capability
    */
   createScrollableReadsTrack(
-    trackContent,
-    readRows,
-    viewport,
-    readHeight,
-    rowSpacing,
-    topPadding,
-    bottomPadding,
-    settings
+      trackContent,
+      readRows,
+      viewport,
+      readHeight,
+      rowSpacing,
+      topPadding,
+      bottomPadding,
+      settings,
   ) {
     const maxVisibleRows = settings.maxVisibleRows || 10;
     const scrollbarWidth = 16; // Standard scrollbar width
@@ -4098,8 +4098,8 @@ class TrackRenderer {
     const rowHeight = readHeight + rowSpacing;
     const totalContentHeight = topPadding + readRows.length * rowHeight - rowSpacing + bottomPadding;
     const visibleHeight = Math.min(
-      totalContentHeight,
-      topPadding + maxVisibleRows * rowHeight - rowSpacing + bottomPadding
+        totalContentHeight,
+        topPadding + maxVisibleRows * rowHeight - rowSpacing + bottomPadding,
     );
     const trackHeight = Math.max(visibleHeight, settings.height || 150);
 
@@ -4141,19 +4141,19 @@ class TrackRenderer {
 
     // Initial render of visible rows - start from top to eliminate gap
     this.renderVisibleRows(
-      contentViewport,
-      readRows,
-      viewport,
-      readHeight,
-      rowSpacing,
-      topPadding,
-      visibleRowStart,
-      visibleRowEnd,
-      settings
+        contentViewport,
+        readRows,
+        viewport,
+        readHeight,
+        rowSpacing,
+        topPadding,
+        visibleRowStart,
+        visibleRowEnd,
+        settings,
     );
 
     // Handle scrolling
-    const handleScroll = scrollTop => {
+    const handleScroll = (scrollTop) => {
       currentScrollTop = scrollTop;
 
       // Calculate which rows should be visible
@@ -4168,15 +4168,15 @@ class TrackRenderer {
         // Clear and re-render visible rows
         contentViewport.innerHTML = '';
         this.renderVisibleRows(
-          contentViewport,
-          readRows,
-          viewport,
-          readHeight,
-          rowSpacing,
-          topPadding,
-          visibleRowStart,
-          visibleRowEnd,
-          settings
+            contentViewport,
+            readRows,
+            viewport,
+            readHeight,
+            rowSpacing,
+            topPadding,
+            visibleRowStart,
+            visibleRowEnd,
+            settings,
         );
       }
 
@@ -4190,10 +4190,10 @@ class TrackRenderer {
       totalRows: readRows.length,
       visibleRows: maxVisibleRows,
       currentScrollTop: () => currentScrollTop,
-      scrollToRow: rowIndex => {
+      scrollToRow: (rowIndex) => {
         const targetScrollTop = Math.max(
-          0,
-          Math.min(totalContentHeight - visibleHeight, topPadding + rowIndex * rowHeight)
+            0,
+            Math.min(totalContentHeight - visibleHeight, topPadding + rowIndex * rowHeight),
         );
         handleScroll(targetScrollTop);
         scrollbar._updateScrollPosition(targetScrollTop);
@@ -4214,7 +4214,7 @@ class TrackRenderer {
     }
 
     console.log(
-      `📜 [ScrollableReads] Created scrollable track: ${readRows.length} total rows, ${maxVisibleRows} visible, ${totalContentHeight}px total height`
+        `📜 [ScrollableReads] Created scrollable track: ${readRows.length} total rows, ${maxVisibleRows} visible, ${totalContentHeight}px total height`,
     );
   }
 
@@ -4268,7 +4268,7 @@ class TrackRenderer {
     let dragStartY = 0;
     let dragStartScrollTop = 0;
 
-    const updateScrollPosition = scrollTop => {
+    const updateScrollPosition = (scrollTop) => {
       const maxScrollTop = contentHeight - trackHeight;
       const clampedScrollTop = Math.max(0, Math.min(maxScrollTop, scrollTop));
       const thumbTop = (clampedScrollTop / maxScrollTop) * (trackHeight - thumbHeight);
@@ -4280,7 +4280,7 @@ class TrackRenderer {
     };
 
     // Mouse down on thumb
-    thumb.addEventListener('mousedown', e => {
+    thumb.addEventListener('mousedown', (e) => {
       e.preventDefault();
       isDragging = true;
       dragStartY = e.clientY;
@@ -4289,7 +4289,7 @@ class TrackRenderer {
     });
 
     // Mouse move (document level)
-    document.addEventListener('mousemove', e => {
+    document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
 
       const deltaY = e.clientY - dragStartY;
@@ -4309,7 +4309,7 @@ class TrackRenderer {
     });
 
     // Click on scrollbar track
-    scrollbar.addEventListener('click', e => {
+    scrollbar.addEventListener('click', (e) => {
       if (e.target === scrollbar) {
         const rect = scrollbar.getBoundingClientRect();
         const clickY = e.clientY - rect.top;
@@ -4320,7 +4320,7 @@ class TrackRenderer {
     });
 
     // Mouse wheel scrolling on scroll container
-    scrollContainer.addEventListener('wheel', e => {
+    scrollContainer.addEventListener('wheel', (e) => {
       // Check if wheel zoom is enabled in NavigationManager
       const isWheelZoomEnabled = window.genomeBrowser?.navigationManager?.wheelZoomConfig?.enabled;
 
@@ -4406,16 +4406,16 @@ class TrackRenderer {
     if (renderingMode === 'canvas') {
       // Use Canvas rendering for scrollable reads
       this.renderVisibleRowsCanvas(
-        container,
-        readRows,
-        viewport,
-        readHeight,
-        rowSpacing,
-        topPadding,
-        startRow,
-        endRow,
-        settings,
-        containerWidth
+          container,
+          readRows,
+          viewport,
+          readHeight,
+          rowSpacing,
+          topPadding,
+          startRow,
+          endRow,
+          settings,
+          containerWidth,
       );
       return;
     }
@@ -4460,20 +4460,20 @@ class TrackRenderer {
       const rowReads = readRows[rowIndex];
       const relativeRowIndex = rowIndex - startRow;
 
-      rowReads.forEach(read => {
+      rowReads.forEach((read) => {
         // In scrollable mode, calculate reference spacing separately
         const referenceSpacing = settings.showReference !== false ? readHeight + 5 : 0;
         const readGroup = this.createSVGReadElement(
-          read,
-          viewport.start,
-          viewport.end,
-          viewport.end - viewport.start,
-          readHeight,
-          relativeRowIndex,
-          rowSpacing,
-          referenceSpacing, // Pass reference spacing as topPadding in scrollable mode
-          containerWidth,
-          settings
+            read,
+            viewport.start,
+            viewport.end,
+            viewport.end - viewport.start,
+            readHeight,
+            relativeRowIndex,
+            rowSpacing,
+            referenceSpacing, // Pass reference spacing as topPadding in scrollable mode
+            containerWidth,
+            settings,
         );
         if (readGroup) {
           svg.appendChild(readGroup);
@@ -4486,16 +4486,16 @@ class TrackRenderer {
               sequenceLength: read.sequence ? read.sequence.length : 0,
             });
             const sequenceGroup = this.createSVGSequenceElement(
-              read,
-              viewport.start,
-              viewport.end,
-              viewport.end - viewport.start,
-              readHeight,
-              relativeRowIndex,
-              rowSpacing,
-              0,
-              containerWidth,
-              settings
+                read,
+                viewport.start,
+                viewport.end,
+                viewport.end - viewport.start,
+                readHeight,
+                relativeRowIndex,
+                rowSpacing,
+                0,
+                containerWidth,
+                settings,
             ); // Use 0 padding in scrollable mode
             if (sequenceGroup) {
               svg.appendChild(sequenceGroup);
@@ -4523,16 +4523,16 @@ class TrackRenderer {
    * Render visible rows using Canvas for high performance
    */
   renderVisibleRowsCanvas(
-    container,
-    readRows,
-    viewport,
-    readHeight,
-    rowSpacing,
-    topPadding,
-    startRow,
-    endRow,
-    settings,
-    containerWidth
+      container,
+      readRows,
+      viewport,
+      readHeight,
+      rowSpacing,
+      topPadding,
+      startRow,
+      endRow,
+      settings,
+      containerWidth,
   ) {
     console.log(`🎨 [ScrollableReads] Rendering rows ${startRow}-${endRow - 1} with Canvas`);
 
@@ -4554,7 +4554,7 @@ class TrackRenderer {
     canvas.width = containerWidth * devicePixelRatio;
     canvas.height = canvasHeight * devicePixelRatio;
 
-    const ctx = canvas.getContext('2d', { alpha: true });
+    const ctx = canvas.getContext('2d', {alpha: true});
     ctx.scale(devicePixelRatio, devicePixelRatio);
 
     // Clear canvas
@@ -4590,7 +4590,7 @@ class TrackRenderer {
       paired: settings.pairedColor || '#6c5ce7',
     };
 
-    rowReads.forEach(read => {
+    rowReads.forEach((read) => {
       // Calculate read position and dimensions
       const readStart = Math.max(read.start, viewport.start);
       const readEnd = Math.min(read.end || read.start + read.sequence.length, viewport.end);
@@ -4643,7 +4643,7 @@ class TrackRenderer {
       lastSortedStart: sortedReads[sortedReads.length - 1]?.start,
     });
 
-    sortedReads.forEach(read => {
+    sortedReads.forEach((read) => {
       let placed = false;
 
       // Try to place read in existing rows
@@ -4691,16 +4691,16 @@ class TrackRenderer {
    * Create SVG-based reads visualization
    */
   renderReadsElementsSVG(
-    trackContent,
-    readRows,
-    start,
-    end,
-    range,
-    readHeight,
-    rowSpacing,
-    topPadding,
-    trackHeight,
-    settings = {}
+      trackContent,
+      readRows,
+      start,
+      end,
+      range,
+      readHeight,
+      rowSpacing,
+      topPadding,
+      trackHeight,
+      settings = {},
   ) {
     console.log('🔧 [DEBUG] [renderReadsElementsSVG] Entry point called');
     console.log('🔧 [DEBUG] [renderReadsElementsSVG] Parameters:', {
@@ -4762,19 +4762,19 @@ class TrackRenderer {
 
     // Create read elements as SVG rectangles
     readRows.forEach((rowReads, rowIndex) => {
-      rowReads.forEach(read => {
+      rowReads.forEach((read) => {
         // Reference is now handled separately, so use original topPadding
         const readGroup = this.createSVGReadElement(
-          read,
-          start,
-          end,
-          range,
-          readHeight,
-          rowIndex,
-          rowSpacing,
-          topPadding,
-          containerWidth,
-          settings
+            read,
+            start,
+            end,
+            range,
+            readHeight,
+            rowIndex,
+            rowSpacing,
+            topPadding,
+            containerWidth,
+            settings,
         );
         if (readGroup) {
           svg.appendChild(readGroup);
@@ -4787,24 +4787,6 @@ class TrackRenderer {
               sequenceLength: read.sequence ? read.sequence.length : 0,
             });
             const sequenceGroup = this.createSVGSequenceElement(
-              read,
-              start,
-              end,
-              range,
-              readHeight,
-              rowIndex,
-              rowSpacing,
-              topPadding,
-              containerWidth,
-              settings
-            );
-            if (sequenceGroup) {
-              svg.appendChild(sequenceGroup);
-              console.log(`✅ [TrackRenderer] Sequence element added for read: ${read.id}`);
-            } else {
-              console.log(`❌ [TrackRenderer] Sequence rendering failed, creating fallback read shape for: ${read.id}`);
-              // Sequence rendering failed, create a fallback read shape
-              const fallbackReadGroup = this.createSVGReadElement(
                 read,
                 start,
                 end,
@@ -4814,7 +4796,25 @@ class TrackRenderer {
                 rowSpacing,
                 topPadding,
                 containerWidth,
-                { ...settings, showSequences: false }
+                settings,
+            );
+            if (sequenceGroup) {
+              svg.appendChild(sequenceGroup);
+              console.log(`✅ [TrackRenderer] Sequence element added for read: ${read.id}`);
+            } else {
+              console.log(`❌ [TrackRenderer] Sequence rendering failed, creating fallback read shape for: ${read.id}`);
+              // Sequence rendering failed, create a fallback read shape
+              const fallbackReadGroup = this.createSVGReadElement(
+                  read,
+                  start,
+                  end,
+                  range,
+                  readHeight,
+                  rowIndex,
+                  rowSpacing,
+                  topPadding,
+                  containerWidth,
+                  {...settings, showSequences: false},
               );
               if (fallbackReadGroup) {
                 svg.appendChild(fallbackReadGroup);
@@ -4844,15 +4844,15 @@ class TrackRenderer {
    * Render reads elements using Canvas for high performance
    */
   renderReadsElementsCanvas(
-    trackContent,
-    readRows,
-    viewport,
-    readHeight,
-    rowSpacing,
-    topPadding,
-    trackHeight,
-    settings = {},
-    referenceSequence = null
+      trackContent,
+      readRows,
+      viewport,
+      readHeight,
+      rowSpacing,
+      topPadding,
+      trackHeight,
+      settings = {},
+      referenceSequence = null,
   ) {
     console.log('🎨 [TrackRenderer] Rendering reads with Canvas for high performance');
 
@@ -4860,16 +4860,16 @@ class TrackRenderer {
     if (typeof CanvasReadsRenderer === 'undefined') {
       console.warn('⚠️ [TrackRenderer] CanvasReadsRenderer not available, falling back to SVG rendering');
       return this.renderReadsElementsSVG(
-        trackContent,
-        readRows,
-        viewport.start,
-        viewport.end,
-        viewport.end - viewport.start,
-        readHeight,
-        rowSpacing,
-        topPadding,
-        trackHeight,
-        settings
+          trackContent,
+          readRows,
+          viewport.start,
+          viewport.end,
+          viewport.end - viewport.start,
+          readHeight,
+          rowSpacing,
+          topPadding,
+          trackHeight,
+          settings,
       );
     }
 
@@ -4961,16 +4961,16 @@ class TrackRenderer {
       console.error('❌ [TrackRenderer] Failed to create Canvas reads renderer:', error);
       // Fall back to SVG rendering if Canvas fails
       return this.renderReadsElementsSVG(
-        trackContent,
-        readRows,
-        viewport.start,
-        viewport.end,
-        viewport.end - viewport.start,
-        readHeight,
-        rowSpacing,
-        topPadding,
-        trackHeight,
-        settings
+          trackContent,
+          readRows,
+          viewport.start,
+          viewport.end,
+          viewport.end - viewport.start,
+          readHeight,
+          rowSpacing,
+          topPadding,
+          trackHeight,
+          settings,
       );
     }
   }
@@ -5049,16 +5049,16 @@ class TrackRenderer {
    * Create individual SVG read element
    */
   createSVGReadElement(
-    read,
-    start,
-    end,
-    range,
-    readHeight,
-    rowIndex,
-    rowSpacing,
-    topPadding,
-    containerWidth,
-    settings = {}
+      read,
+      start,
+      end,
+      range,
+      readHeight,
+      rowIndex,
+      rowSpacing,
+      topPadding,
+      containerWidth,
+      settings = {},
   ) {
     // Calculate position and dimensions
     const readStart = Math.max(read.start, start);
@@ -5101,16 +5101,16 @@ class TrackRenderer {
       // Add mutation visualization if enabled
       if (settings.showMutations && read.mutations && read.mutations.length > 0) {
         const mutationElements = this.createSVGMutations(
-          read,
-          elementWidth,
-          readHeight,
-          start,
-          end,
-          range,
-          containerWidth,
-          settings
+            read,
+            elementWidth,
+            readHeight,
+            start,
+            end,
+            range,
+            containerWidth,
+            settings,
         );
-        mutationElements.forEach(mutationElement => {
+        mutationElements.forEach((mutationElement) => {
           readGroup.appendChild(mutationElement);
         });
       }
@@ -5126,16 +5126,16 @@ class TrackRenderer {
    * Create SVG sequence text element for read
    */
   createSVGSequenceElement(
-    read,
-    start,
-    end,
-    range,
-    readHeight,
-    rowIndex,
-    rowSpacing,
-    topPadding,
-    containerWidth,
-    settings = {}
+      read,
+      start,
+      end,
+      range,
+      readHeight,
+      rowIndex,
+      rowSpacing,
+      topPadding,
+      containerWidth,
+      settings = {},
   ) {
     // Calculate position and dimensions
     const readStart = Math.max(read.start, start);
@@ -5164,21 +5164,21 @@ class TrackRenderer {
     // Add sequence text based on display mode
     const basesPerPixel = range / containerWidth;
     let shouldRenderText = false;
-    let effectiveSettings = { ...settings };
+    const effectiveSettings = {...settings};
 
     if (settings.forceSequences) {
       // Force mode - calculate optimal font size if auto sizing is enabled
       shouldRenderText = true;
       if (settings.autoFontSize !== false) {
         const optimalFontSize = this.calculateOptimalFontSize(
-          visibleSequence.length,
-          elementWidth,
-          readHeight,
-          settings
+            visibleSequence.length,
+            elementWidth,
+            readHeight,
+            settings,
         );
         effectiveSettings.sequenceFontSize = optimalFontSize;
         console.log(
-          `🎯 [TrackRenderer] Auto font size for read: ${optimalFontSize}px (sequence length: ${visibleSequence.length})`
+            `🎯 [TrackRenderer] Auto font size for read: ${optimalFontSize}px (sequence length: ${visibleSequence.length})`,
         );
       }
     } else {
@@ -5190,11 +5190,11 @@ class TrackRenderer {
     if (shouldRenderText && visibleSequence && visibleSequence.length > 0) {
       const referenceSequence = settings.showMismatches ? this.getReferenceSequence(readStart, readEnd) : null;
       const sequenceText = this.createSVGSequenceText(
-        visibleSequence,
-        elementWidth,
-        readHeight,
-        effectiveSettings,
-        referenceSequence
+          visibleSequence,
+          elementWidth,
+          readHeight,
+          effectiveSettings,
+          referenceSequence,
       );
       if (sequenceText) {
         sequenceGroup.appendChild(sequenceText);
@@ -5247,7 +5247,7 @@ class TrackRenderer {
     const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart - 1); // Convert visibleEnd from 0-based exclusive to 0-based inclusive
 
     // Map to sequence indices using actual sequence length
-    let startIndex, endIndex;
+    let startIndex; let endIndex;
 
     if (actualReadLength <= 1) {
       // Handle single base reads
@@ -5257,8 +5257,8 @@ class TrackRenderer {
       // Calculate indices for multi-base reads using actual sequence length
       startIndex = Math.max(0, Math.floor((startOffset / (actualReadLength - 1)) * (actualReadLength - 1)));
       endIndex = Math.min(
-        actualReadLength - 1,
-        Math.ceil((endOffset / (actualReadLength - 1)) * (actualReadLength - 1))
+          actualReadLength - 1,
+          Math.ceil((endOffset / (actualReadLength - 1)) * (actualReadLength - 1)),
       );
     }
 
@@ -5354,8 +5354,8 @@ class TrackRenderer {
         charText.setAttribute('font-family', fontFamily);
         charText.setAttribute('font-size', fontSize);
         charText.setAttribute(
-          'fill',
-          isMismatch ? mismatchColor : baseColors[char.toUpperCase()] || baseColors.default
+            'fill',
+          isMismatch ? mismatchColor : baseColors[char.toUpperCase()] || baseColors.default,
         );
         charText.setAttribute('font-weight', isMismatch ? 'bold' : 'normal');
         charText.setAttribute('text-anchor', 'middle');
@@ -5389,16 +5389,16 @@ class TrackRenderer {
    */
   createSVGReferenceSequence(start, end, range, readHeight, topPadding, containerWidth, settings = {}) {
     console.log(
-      `🔍 [createSVGReferenceSequence] Called with start=${start}, end=${end}, containerWidth=${containerWidth}`
+        `🔍 [createSVGReferenceSequence] Called with start=${start}, end=${end}, containerWidth=${containerWidth}`,
     );
 
     // Get reference sequence from genome browser
     const referenceSequence = this.getReferenceSequence(start, end);
     console.log(
-      `🔍 [createSVGReferenceSequence] Got reference sequence:`,
-      referenceSequence
-        ? `length=${referenceSequence.length}, preview="${referenceSequence.substring(0, 20)}..."`
-        : 'null/empty'
+        `🔍 [createSVGReferenceSequence] Got reference sequence:`,
+      referenceSequence ?
+        `length=${referenceSequence.length}, preview="${referenceSequence.substring(0, 20)}..."` :
+        'null/empty',
     );
 
     if (!referenceSequence) {
@@ -5427,7 +5427,7 @@ class TrackRenderer {
 
     // Always show reference sequence text when reference is enabled
     const basesPerPixel = range / containerWidth;
-    let effectiveRefSettings = { ...settings };
+    const effectiveRefSettings = {...settings};
 
     // Calculate optimal font size if auto sizing is enabled
     if (settings.autoFontSize !== false) {
@@ -5438,10 +5438,10 @@ class TrackRenderer {
 
     // Always create reference text when reference sequence is available
     const sequenceText = this.createSVGReferenceText(
-      referenceSequence,
-      containerWidth,
-      readHeight,
-      effectiveRefSettings
+        referenceSequence,
+        containerWidth,
+        readHeight,
+        effectiveRefSettings,
     );
     if (sequenceText) {
       referenceGroup.appendChild(sequenceText);
@@ -5503,7 +5503,7 @@ class TrackRenderer {
         return result;
       } else {
         console.log(
-          `🔍 [getReferenceSequence] Invalid sequence type or empty: ${typeof sequence}, length: ${sequence?.length}`
+            `🔍 [getReferenceSequence] Invalid sequence type or empty: ${typeof sequence}, length: ${sequence?.length}`,
         );
       }
     }
@@ -5566,7 +5566,7 @@ class TrackRenderer {
     const showDirectionArrows = settings.showDirectionArrows !== false; // Default to true
 
     // Determine fill color based on settings
-    let fillColor, strokeColor;
+    let fillColor; let strokeColor;
 
     if (showQualityColors && read.mappingQuality !== undefined) {
       // Color by mapping quality
@@ -5663,11 +5663,11 @@ class TrackRenderer {
     }
 
     // Filter mutations that are visible in the current view
-    const visibleMutations = read.mutations.filter(mutation => {
+    const visibleMutations = read.mutations.filter((mutation) => {
       return mutation.position >= viewStart && mutation.position <= viewEnd;
     });
 
-    visibleMutations.forEach(mutation => {
+    visibleMutations.forEach((mutation) => {
       // CRITICAL FIX: Calculate position within the read using actual sequence length
       const mutationPosInRead = mutation.position - read.start;
       const readLength = read.sequence ? read.sequence.length : read.end - read.start + 1;
@@ -5711,7 +5711,7 @@ class TrackRenderer {
 
       // Add click handler for mutation details
       mutationLine.style.cursor = 'pointer';
-      mutationLine.addEventListener('click', e => {
+      mutationLine.addEventListener('click', (e) => {
         e.stopPropagation();
         if (this.genomeBrowser && this.genomeBrowser.selectMutation) {
           this.genomeBrowser.selectMutation(read, mutation);
@@ -5882,7 +5882,7 @@ class TrackRenderer {
         readDensityFactor: readDensityFactor.toFixed(2),
         rawFontSize: Math.floor(pixelsPerBase * 0.8),
         optimalFontSize: optimalFontSize,
-        constraints: { minFontSize, maxFontSize },
+        constraints: {minFontSize, maxFontSize},
       });
     }
 
@@ -5973,7 +5973,7 @@ class TrackRenderer {
   }
 
   createProteinTrack(chromosome) {
-    const { track, trackContent } = this.createTrackBase('proteins', chromosome);
+    const {track, trackContent} = this.createTrackBase('proteins', chromosome);
     const viewport = this.getCurrentViewport();
 
     // Get and filter proteins
@@ -5984,8 +5984,8 @@ class TrackRenderer {
 
     if (proteins.length === 0) {
       const noProteinsMsg = this.createNoDataMessage(
-        'No proteins in this region or CDS filtered out',
-        'no-proteins-message'
+          'No proteins in this region or CDS filtered out',
+          'no-proteins-message',
       );
       trackContent.appendChild(noProteinsMsg);
     } else {
@@ -6003,8 +6003,8 @@ class TrackRenderer {
    */
   filterProteinAnnotations(annotations, viewport) {
     return annotations
-      .filter(feature => feature.type === 'CDS' && this.genomeBrowser.shouldShowGeneType('CDS'))
-      .filter(protein => this.filterFeaturesByViewport([protein], viewport).length > 0);
+        .filter((feature) => feature.type === 'CDS' && this.genomeBrowser.shouldShowGeneType('CDS'))
+        .filter((protein) => this.filterFeaturesByViewport([protein], viewport).length > 0);
   }
 
   /**
@@ -6144,7 +6144,7 @@ class TrackRenderer {
     const stepSize = Math.max(1, Math.floor(windowSize / 4));
 
     console.log(
-      `Dynamic GC analysis: containerWidth=${containerWidth}px, range=${currentRange}, bpPerPixel=${basePairsPerPixel.toFixed(2)}, windowSize=${windowSize}, stepSize=${stepSize}`
+        `Dynamic GC analysis: containerWidth=${containerWidth}px, range=${currentRange}, bpPerPixel=${basePairsPerPixel.toFixed(2)}, windowSize=${windowSize}, stepSize=${stepSize}`,
     );
 
     // Calculate GC content and skew data with dynamic parameters
@@ -6281,7 +6281,7 @@ class TrackRenderer {
   }
 
   renderSVGGCVisualization(svg, data, containerWidth = 800, settings = {}) {
-    const { gcData, skewData, positions, gcMin, gcMax, skewMin, skewMax, sequenceLength } = data;
+    const {gcData, skewData, positions, gcMin, gcMax, skewMin, skewMax, sequenceLength} = data;
 
     // Get settings with defaults
     const contentColor = settings.contentColor || '#3b82f6';
@@ -6378,48 +6378,48 @@ class TrackRenderer {
 
     // Draw GC content area and line with settings
     this.drawSVGGCContent(
-      svg,
-      gcData,
-      positions,
-      sequenceLength,
-      padding,
-      plotWidth,
-      gcHeight,
-      gcMin,
-      gcMax,
-      contentColor,
-      lineWidth
+        svg,
+        gcData,
+        positions,
+        sequenceLength,
+        padding,
+        plotWidth,
+        gcHeight,
+        gcMin,
+        gcMax,
+        contentColor,
+        lineWidth,
     );
 
     // Draw GC skew areas and line with settings
     this.drawSVGGCSkew(
-      svg,
-      skewData,
-      positions,
-      sequenceLength,
-      padding,
-      plotWidth,
-      centerY,
-      plotHeight,
-      skewMin,
-      skewMax,
-      skewPositiveColor,
-      skewNegativeColor,
-      lineWidth
+        svg,
+        skewData,
+        positions,
+        sequenceLength,
+        padding,
+        plotWidth,
+        centerY,
+        plotHeight,
+        skewMin,
+        skewMax,
+        skewPositiveColor,
+        skewNegativeColor,
+        lineWidth,
     );
 
     // Draw axis labels with custom colors
     this.drawSVGAxisLabels(
-      svg,
-      viewWidth,
-      viewHeight,
-      gcMin,
-      gcMax,
-      skewMin,
-      skewMax,
-      contentColor,
-      skewPositiveColor,
-      skewNegativeColor
+        svg,
+        viewWidth,
+        viewHeight,
+        gcMin,
+        gcMax,
+        skewMin,
+        skewMax,
+        contentColor,
+        skewPositiveColor,
+        skewNegativeColor,
     );
   }
 
@@ -6467,17 +6467,17 @@ class TrackRenderer {
   }
 
   drawSVGGCContent(
-    svg,
-    gcData,
-    positions,
-    sequenceLength,
-    padding,
-    plotWidth,
-    maxHeight,
-    gcMin,
-    gcMax,
-    contentColor = '#3b82f6',
-    lineWidth = 2
+      svg,
+      gcData,
+      positions,
+      sequenceLength,
+      padding,
+      plotWidth,
+      maxHeight,
+      gcMin,
+      gcMax,
+      contentColor = '#3b82f6',
+      lineWidth = 2,
   ) {
     if (gcData.length < 2) return;
 
@@ -6528,19 +6528,19 @@ class TrackRenderer {
   }
 
   drawSVGGCSkew(
-    svg,
-    skewData,
-    positions,
-    sequenceLength,
-    padding,
-    plotWidth,
-    centerY,
-    plotHeight,
-    skewMin,
-    skewMax,
-    skewPositiveColor = '#10b981',
-    skewNegativeColor = '#ef4444',
-    lineWidth = 2
+      svg,
+      skewData,
+      positions,
+      sequenceLength,
+      padding,
+      plotWidth,
+      centerY,
+      plotHeight,
+      skewMin,
+      skewMax,
+      skewPositiveColor = '#10b981',
+      skewNegativeColor = '#ef4444',
+      lineWidth = 2,
   ) {
     if (skewData.length < 2) return;
 
@@ -6626,16 +6626,16 @@ class TrackRenderer {
   }
 
   drawSVGAxisLabels(
-    svg,
-    viewWidth,
-    viewHeight,
-    gcMin,
-    gcMax,
-    skewMin,
-    skewMax,
-    contentColor = '#3b82f6',
-    skewPositiveColor = '#10b981',
-    skewNegativeColor = '#ef4444'
+      svg,
+      viewWidth,
+      viewHeight,
+      gcMin,
+      gcMax,
+      skewMin,
+      skewMax,
+      contentColor = '#3b82f6',
+      skewPositiveColor = '#10b981',
+      skewNegativeColor = '#ef4444',
   ) {
     const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     labelGroup.setAttribute('class', 'axis-labels');
@@ -6683,7 +6683,7 @@ class TrackRenderer {
         `;
     container.appendChild(tooltip);
 
-    svg.addEventListener('mousemove', e => {
+    svg.addEventListener('mousemove', (e) => {
       const rect = svg.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
 
@@ -6767,7 +6767,7 @@ class TrackRenderer {
     details.push(`Position: ${protein.start}-${protein.end}`);
     details.push(`Strand: ${protein.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}`);
     details.push(
-      `Length: ${protein.end - protein.start + 1} bp (${Math.floor((protein.end - protein.start + 1) / 3)} aa)`
+        `Length: ${protein.end - protein.start + 1} bp (${Math.floor((protein.end - protein.start + 1) / 3)} aa)`,
     );
     details.push(`DNA Sequence: ${dnaSequence.substring(0, 60)}${dnaSequence.length > 60 ? '...' : ''}`);
     details.push(`Protein Sequence: ${proteinSequence.substring(0, 20)}${proteinSequence.length > 20 ? '...' : ''}`);
@@ -6794,8 +6794,8 @@ class TrackRenderer {
     return (
       '#' +
       (0x1000000 + (R < 255 ? R : 255) * 0x10000 + (G < 255 ? G : 255) * 0x100 + (B < 255 ? B : 255))
-        .toString(16)
-        .slice(1)
+          .toString(16)
+          .slice(1)
     );
   }
 
@@ -6827,9 +6827,9 @@ class TrackRenderer {
     }
 
     // Create operon items for visible operons
-    Array.from(visibleOperons).forEach(operonName => {
+    Array.from(visibleOperons).forEach((operonName) => {
       // Find the operon data
-      const operonData = operons.find(op => op.name === operonName);
+      const operonData = operons.find((op) => op.name === operonName);
       if (!operonData) return;
 
       const color = this.genomeBrowser.assignOperonColor(operonName);
@@ -6883,7 +6883,7 @@ class TrackRenderer {
     const newStart = Math.max(0, operonData.start - padding);
     const newEnd = operonData.end + padding;
 
-    this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+    this.genomeBrowser.currentPosition = {start: newStart, end: newEnd};
 
     // Refresh the view
     const currentChr = document.getElementById('chromosomeSelect').value;
@@ -6927,10 +6927,10 @@ class TrackRenderer {
     ];
 
     // Initialize the map to maintain order
-    typeOrder.forEach(type => typeMap.set(type, []));
+    typeOrder.forEach((type) => typeMap.set(type, []));
 
     // Group genes by their type
-    sortedGenes.forEach(gene => {
+    sortedGenes.forEach((gene) => {
       const type = typeOrder.includes(gene.type) ? gene.type : 'misc_feature';
       if (!typeMap.has(type)) {
         // For types not in our canonical order
@@ -6959,7 +6959,7 @@ class TrackRenderer {
     const showOperonsSameRow = settings?.showOperonsSameRow || false;
 
     const sortedGenes = [...genes].sort((a, b) => a.start - b.start);
-    let idealRows = [];
+    const idealRows = [];
 
     // First, arrange into ideal non-overlapping rows
     if (showOperonsSameRow && operons && operons.length > 0) {
@@ -6967,7 +6967,7 @@ class TrackRenderer {
       const operonGroups = new Map();
       const singleGenes = [];
 
-      sortedGenes.forEach(gene => {
+      sortedGenes.forEach((gene) => {
         const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
         if (operonInfo.isInOperon) {
           if (!operonGroups.has(operonInfo.operonName)) operonGroups.set(operonInfo.operonName, []);
@@ -6978,10 +6978,10 @@ class TrackRenderer {
       });
 
       const placeInRows = (geneList, rows) => {
-        geneList.forEach(gene => {
+        geneList.forEach((gene) => {
           let placed = false;
           for (let i = 0; i < rows.length; i++) {
-            if (!rows[i].some(existing => this.genesOverlap(gene, existing))) {
+            if (!rows[i].some((existing) => this.genesOverlap(gene, existing))) {
               rows[i].push(gene);
               placed = true;
               break;
@@ -6997,10 +6997,10 @@ class TrackRenderer {
       placeInRows(singleGenes, idealRows);
     } else {
       // Original simpler algorithm for non-operon mode or no operons
-      sortedGenes.forEach(gene => {
+      sortedGenes.forEach((gene) => {
         let placed = false;
         for (const row of idealRows) {
-          if (!row.some(existingGene => this.genesOverlap(gene, existingGene))) {
+          if (!row.some((existingGene) => this.genesOverlap(gene, existingGene))) {
             row.push(gene);
             placed = true;
             break;
@@ -7036,7 +7036,7 @@ class TrackRenderer {
     const showOperonsSameRow = settings?.showOperonsSameRow || false;
 
     console.log(
-      `arrangeGenesInRows: maxRows=${maxRows}, showOperonsSameRow=${showOperonsSameRow}, totalGenes=${genes.length}`
+        `arrangeGenesInRows: maxRows=${maxRows}, showOperonsSameRow=${showOperonsSameRow}, totalGenes=${genes.length}`,
     );
 
     // Sort genes by start position
@@ -7048,7 +7048,7 @@ class TrackRenderer {
       const operonGroups = new Map();
       const singleGenes = [];
 
-      sortedGenes.forEach(gene => {
+      sortedGenes.forEach((gene) => {
         const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
         if (operonInfo.isInOperon) {
           if (!operonGroups.has(operonInfo.operonName)) {
@@ -7100,7 +7100,7 @@ class TrackRenderer {
           rows.push([...operonGenes]);
         } else if (!placedInExistingRow) {
           // If we've reached max rows, place operon genes in available rows with space
-          operonGenes.forEach(gene => {
+          operonGenes.forEach((gene) => {
             let placed = false;
             for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
               const row = rows[rowIndex];
@@ -7129,7 +7129,7 @@ class TrackRenderer {
       }
 
       // Process single genes
-      singleGenes.forEach(gene => {
+      singleGenes.forEach((gene) => {
         let placed = false;
 
         // Try to place in existing rows
@@ -7161,7 +7161,7 @@ class TrackRenderer {
       });
     } else {
       // Original algorithm: place genes without operon grouping
-      sortedGenes.forEach(gene => {
+      sortedGenes.forEach((gene) => {
         let placed = false;
 
         // Try to place gene in existing rows (up to maxRows)
@@ -7249,7 +7249,7 @@ class TrackRenderer {
     // Mark button for easy finding later
     btn.dataset.toggleType = stateKey;
 
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
 
       // Toggle state
@@ -7278,7 +7278,7 @@ class TrackRenderer {
         if (!this.trackSettings) this.trackSettings = {};
         if (!this.trackSettings[settingsKey]) {
           // Initialize with type-level defaults merged
-          this.trackSettings[settingsKey] = { ...(this.trackSettings['reads'] || {}) };
+          this.trackSettings[settingsKey] = {...(this.trackSettings['reads'] || {})};
         }
 
         // Update and save
@@ -7294,7 +7294,7 @@ class TrackRenderer {
 
       // Update all active CanvasReadsRenderers
       if (this.canvasRenderers) {
-        this.canvasRenderers.forEach(renderer => {
+        this.canvasRenderers.forEach((renderer) => {
           // Check if it has the updateOptions method (is a CanvasReadsRenderer)
           if (renderer && typeof renderer.updateOptions === 'function') {
             renderer.updateOptions({
@@ -7403,7 +7403,7 @@ class TrackRenderer {
   drawDetailedRuler(ctx, width, chromosome) {
     const start = this.genomeBrowser.currentPosition.start;
     const end = this.genomeBrowser.currentPosition.end;
-    const position = { start, end };
+    const position = {start, end};
     this.drawDetailedRulerWithPosition(ctx, width, chromosome, position);
   }
 
@@ -7432,7 +7432,7 @@ class TrackRenderer {
     ctx.fillRect(0, 0, width, 35);
 
     // Calculate intelligent tick spacing
-    const { majorInterval, minorInterval } = this.calculateDetailedTickSpacing(range, width);
+    const {majorInterval, minorInterval} = this.calculateDetailedTickSpacing(range, width);
 
     // Draw ticks and labels with reduced internal height
     ctx.strokeStyle = '#6c757d';
@@ -7578,7 +7578,7 @@ class TrackRenderer {
       minorInterval = majorInterval / 4;
     }
 
-    return { majorInterval, minorInterval };
+    return {majorInterval, minorInterval};
   }
 
   // Format position for detailed ruler
@@ -7623,7 +7623,7 @@ class TrackRenderer {
   }
 
   createWIGTrack(chromosome) {
-    const { track, trackContent } = this.createTrackBase('wigTracks', chromosome);
+    const {track, trackContent} = this.createTrackBase('wigTracks', chromosome);
     const viewport = this.getCurrentViewport();
 
     // Get WIG tracks data
@@ -7632,8 +7632,8 @@ class TrackRenderer {
     // Check if we have any WIG data at all
     if (!wigTracks || Object.keys(wigTracks).length === 0) {
       const noDataMsg = this.createNoDataMessage(
-        'No WIG file loaded. Load a WIG file to see track data.',
-        'no-wig-message'
+          'No WIG file loaded. Load a WIG file to see track data.',
+          'no-wig-message',
       );
       trackContent.appendChild(noDataMsg);
       return track;
@@ -7664,14 +7664,14 @@ class TrackRenderer {
     }
 
     // Pre-calculate track offsets for all visible tracks to avoid race conditions in async rendering
-    const visibleTrackNames = this.genomeBrowser.wigTrackOrder.filter(name => {
+    const visibleTrackNames = this.genomeBrowser.wigTrackOrder.filter((name) => {
       const track = wigTracks[name];
       return track && !track.hidden;
     });
 
     const trackOffsets = {};
     let currentOffset = 0;
-    visibleTrackNames.forEach(name => {
+    visibleTrackNames.forEach((name) => {
       trackOffsets[name] = currentOffset;
       const trackHeight = settings.trackHeights?.[name] || 30;
       currentOffset += trackHeight + trackSpacing;
@@ -7683,15 +7683,15 @@ class TrackRenderer {
       const trackHeight = settings.trackHeights?.[trackName] || 30;
       const trackTop = trackOffsets[trackName];
 
-      let trackData = wigTrack.data[chromosome] || [];
+      const trackData = wigTrack.data[chromosome] || [];
       let visibleData = [];
 
       // Check if this is a BigWig track
       if (wigTrack.bigWigFile) {
         try {
           // Load BigWig data for the current viewport
-          const { BigWig } = require('@gmod/bbi');
-          const { LocalFile } = require('generic-filehandle2');
+          const {BigWig} = require('@gmod/bbi');
+          const {LocalFile} = require('generic-filehandle2');
 
           // Initialize the BigWig file
           const file = new BigWig({
@@ -7704,7 +7704,7 @@ class TrackRenderer {
           });
 
           // Convert BigWig features to our internal format
-          visibleData = visibleData.map(feature => ({
+          visibleData = visibleData.map((feature) => ({
             start: feature.start,
             end: feature.end,
             value: feature.score,
@@ -7736,7 +7736,7 @@ class TrackRenderer {
       } else {
         // Regular WIG track - use pre-loaded data
         // Filter data points in current viewport
-        visibleData = trackData.filter(point => point.start <= viewport.end && point.end >= viewport.start);
+        visibleData = trackData.filter((point) => point.start <= viewport.end && point.end >= viewport.start);
       }
 
       if (visibleData.length === 0) {
@@ -7764,7 +7764,7 @@ class TrackRenderer {
       }
 
       // Calculate value range for scaling
-      const values = visibleData.map(point => point.value);
+      const values = visibleData.map((point) => point.value);
       const minValue = Math.min(...values);
       const maxValue = Math.max(...values);
       const valueRange = maxValue - minValue;
@@ -7857,7 +7857,7 @@ class TrackRenderer {
     });
 
     // Update track content height based on number of visible tracks
-    const visibleTracks = Object.values(wigTracks).filter(track => !track.hidden);
+    const visibleTracks = Object.values(wigTracks).filter((track) => !track.hidden);
     const totalHeight = Math.max(100, trackOffset);
     trackContent.style.height = `${totalHeight + 40}px`; // Add space for management header
 
@@ -7867,7 +7867,7 @@ class TrackRenderer {
     const totalTracks = Object.keys(wigTracks).length;
     const visibleTracksCount = visibleTracks.length;
     const tracksWithData = visibleTracks.filter(
-      track => track.data[chromosome] && track.data[chromosome].length > 0
+        (track) => track.data[chromosome] && track.data[chromosome].length > 0,
     ).length;
 
     const statsText = `${tracksWithData}/${visibleTracksCount} visible tracks with data (${totalTracks} total)`;
@@ -7884,15 +7884,15 @@ class TrackRenderer {
    * Create Actions track with SVG rendering similar to genes
    */
   createActionsTrack(chromosome) {
-    const { track, trackContent } = this.createTrackBase('actions', chromosome);
+    const {track, trackContent} = this.createTrackBase('actions', chromosome);
     const viewport = this.getCurrentViewport();
 
     // Get actions from ActionManager
     const actionManager = this.genomeBrowser.actionManager;
     if (!actionManager || !actionManager.actions || actionManager.actions.length === 0) {
       const noDataMsg = this.createNoDataMessage(
-        'No actions in queue. Use the Action menu to add sequence operations.',
-        'no-actions-message'
+          'No actions in queue. Use the Action menu to add sequence operations.',
+          'no-actions-message',
       );
       trackContent.appendChild(noDataMsg);
       return track;
@@ -7920,7 +7920,7 @@ class TrackRenderer {
     });
 
     // Separate actions into in-view and out-of-view
-    const visibleActions = chromosomeActions.filter(action => {
+    const visibleActions = chromosomeActions.filter((action) => {
       const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
       const actionStart = parseInt(positionMatch[2]);
       const actionEnd = parseInt(positionMatch[3]);
@@ -7928,7 +7928,7 @@ class TrackRenderer {
       return actionEnd >= viewport.start && actionStart <= viewport.end;
     });
 
-    const outOfViewActions = chromosomeActions.filter(action => {
+    const outOfViewActions = chromosomeActions.filter((action) => {
       const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
       const actionStart = parseInt(positionMatch[2]);
       const actionEnd = parseInt(positionMatch[3]);
@@ -7939,7 +7939,7 @@ class TrackRenderer {
     if (chromosomeActions.length === 0) {
       // No actions for this chromosome at all
       const totalActions = actionManager.actions.length;
-      const actionsWithPosition = actionManager.actions.filter(action => {
+      const actionsWithPosition = actionManager.actions.filter((action) => {
         return action.target && action.target.match(/(\w+):(\d+)-(\d+)/);
       }).length;
 
@@ -8156,7 +8156,7 @@ class TrackRenderer {
       this.genomeBrowser.navigationManager.navigateToPosition(chromosome, newStart, newEnd);
     } else if (this.genomeBrowser) {
       // Fallback: update position and refresh view
-      this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+      this.genomeBrowser.currentPosition = {start: newStart, end: newEnd};
       const sequence = this.genomeBrowser.currentSequence[chromosome];
       if (sequence) {
         this.genomeBrowser.displayGenomeView(chromosome, sequence);
@@ -8209,15 +8209,15 @@ class TrackRenderer {
     actionRows.forEach((rowActions, rowIndex) => {
       if (rowIndex >= layout.maxRows) return;
 
-      rowActions.forEach(action => {
+      rowActions.forEach((action) => {
         const actionGroup = this.createSVGActionElement(
-          action,
-          viewport,
-          rowIndex,
-          layout,
-          settings,
-          defs,
-          containerWidth
+            action,
+            viewport,
+            rowIndex,
+            layout,
+            settings,
+            defs,
+            containerWidth,
         );
         if (actionGroup) {
           svg.appendChild(actionGroup);
@@ -8327,16 +8327,16 @@ class TrackRenderer {
    */
   createActionGradients(defs) {
     const gradients = [
-      { id: 'copy-gradient', color: '#3b82f6' },
-      { id: 'cut-gradient', color: '#ef4444' },
-      { id: 'paste-gradient', color: '#10b981' },
-      { id: 'delete-gradient', color: '#f59e0b' },
-      { id: 'insert-gradient', color: '#8b5cf6' },
-      { id: 'replace-gradient', color: '#06b6d4' },
-      { id: 'default-gradient', color: '#6b7280' },
+      {id: 'copy-gradient', color: '#3b82f6'},
+      {id: 'cut-gradient', color: '#ef4444'},
+      {id: 'paste-gradient', color: '#10b981'},
+      {id: 'delete-gradient', color: '#f59e0b'},
+      {id: 'insert-gradient', color: '#8b5cf6'},
+      {id: 'replace-gradient', color: '#06b6d4'},
+      {id: 'default-gradient', color: '#6b7280'},
     ];
 
-    gradients.forEach(({ id, color }) => {
+    gradients.forEach(({id, color}) => {
       const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
       gradient.setAttribute('id', id);
       gradient.setAttribute('x1', '0%');
@@ -8772,7 +8772,7 @@ class TrackRenderer {
     });
 
     // Add click handler
-    actionGroup.addEventListener('click', e => {
+    actionGroup.addEventListener('click', (e) => {
       e.stopPropagation();
       this.showActionDetails(action);
     });
@@ -8868,7 +8868,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     });
 
     // Place actions in rows
-    sortedActions.forEach(action => {
+    sortedActions.forEach((action) => {
       const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
       if (!positionMatch) return;
 
@@ -8879,7 +8879,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       let placed = false;
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        const canPlace = row.every(existingAction => {
+        const canPlace = row.every((existingAction) => {
           const existingMatch = existingAction.target.match(/(\w+):(\d+)-(\d+)/);
           if (!existingMatch) return true;
 
@@ -9019,7 +9019,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
     svg.setAttribute('preserveAspectRatio', 'none');
 
-    data.forEach(point => {
+    data.forEach((point) => {
       const x = ((point.start - viewport.start) / (viewport.end - viewport.start)) * svgWidth;
       const width = Math.max(1, ((point.end - point.start) / (viewport.end - viewport.start)) * svgWidth);
       const normalizedValue = (point.value - minValue) / (maxValue - minValue);
@@ -9057,7 +9057,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
   addWIGTrackInteraction(trackElement, wigTrack, visibleData, trackName) {
     // Add tooltip on hover
-    trackElement.addEventListener('mouseover', e => {
+    trackElement.addEventListener('mouseover', (e) => {
       const rect = trackElement.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const relativeX = x / rect.width;
@@ -9101,7 +9101,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       }
     });
 
-    trackElement.addEventListener('mousemove', e => {
+    trackElement.addEventListener('mousemove', (e) => {
       if (trackElement._tooltip) {
         trackElement._tooltip.style.left = `${e.clientX + 10}px`;
         trackElement._tooltip.style.top = `${e.clientY - 10}px`;
@@ -9170,7 +9170,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       this.genomeBrowser.wigTrackOrder = Object.keys(wigTracks);
     }
 
-    this.genomeBrowser.wigTrackOrder.forEach(trackName => {
+    this.genomeBrowser.wigTrackOrder.forEach((trackName) => {
       const wigTrack = wigTracks[trackName];
       if (!wigTrack) return;
 
@@ -9193,7 +9193,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             `;
 
       // Prevent mousedown from bubbling to genome browser zoom/pan
-      trackItem.addEventListener('mousedown', e => {
+      trackItem.addEventListener('mousedown', (e) => {
         e.stopPropagation();
       });
 
@@ -9263,12 +9263,12 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       trackItem.appendChild(removeBtn);
 
       // Add drag and drop events
-      trackItem.addEventListener('dragstart', e => this.handleWIGTrackDragStart(e));
-      trackItem.addEventListener('dragenter', e => this.handleWIGTrackDragEnter(e));
-      trackItem.addEventListener('dragover', e => this.handleWIGTrackDragOver(e));
-      trackItem.addEventListener('dragleave', e => this.handleWIGTrackDragLeave(e));
-      trackItem.addEventListener('drop', e => this.handleWIGTrackDrop(e));
-      trackItem.addEventListener('dragend', e => this.handleWIGTrackDragEnd(e));
+      trackItem.addEventListener('dragstart', (e) => this.handleWIGTrackDragStart(e));
+      trackItem.addEventListener('dragenter', (e) => this.handleWIGTrackDragEnter(e));
+      trackItem.addEventListener('dragover', (e) => this.handleWIGTrackDragOver(e));
+      trackItem.addEventListener('dragleave', (e) => this.handleWIGTrackDragLeave(e));
+      trackItem.addEventListener('drop', (e) => this.handleWIGTrackDrop(e));
+      trackItem.addEventListener('dragend', (e) => this.handleWIGTrackDragEnd(e));
 
       tracksList.appendChild(trackItem);
     });
@@ -9381,10 +9381,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
   handleWIGTrackDragEnd(e) {
     e.currentTarget.classList.remove('wig-track-dragging');
     e.currentTarget.style.opacity = '1';
-    
+
     // Remove any drag-over indicators from items
     const items = document.querySelectorAll('.wig-track-item');
-    items.forEach(item => {
+    items.forEach((item) => {
       item.style.borderLeft = '';
       item.style.paddingLeft = '';
     });
@@ -9448,7 +9448,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
     // Remove indicators from all items
     const items = document.querySelectorAll('.wig-track-item');
-    items.forEach(item => {
+    items.forEach((item) => {
       item.style.borderTop = '';
     });
   }
@@ -9983,8 +9983,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
     // Show notification
     this.genomeBrowser.showNotification(
-      `Sequence selected: ${this.genomeBrowser.currentChromosome}:${start}-${end} (${end - start + 1} bp)`,
-      'success'
+        `Sequence selected: ${this.genomeBrowser.currentChromosome}:${start}-${end} (${end - start + 1} bp)`,
+        'success',
     );
 
     // Update status bar with selection information
@@ -10026,7 +10026,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     this.secondaryRulerSelection = null;
 
     // Clear feature highlights
-    document.querySelectorAll('.feature-highlighted').forEach(el => {
+    document.querySelectorAll('.feature-highlighted').forEach((el) => {
       el.classList.remove('feature-highlighted');
     });
   }
@@ -10039,17 +10039,17 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     const chromosome = this.genomeBrowser.currentChromosome;
     if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
       const annotations = this.genomeBrowser.currentAnnotations[chromosome];
-      const overlappingFeatures = annotations.filter(feature => feature.start <= end && feature.end >= start);
+      const overlappingFeatures = annotations.filter((feature) => feature.start <= end && feature.end >= start);
 
       // Clear previous highlights
-      document.querySelectorAll('.feature-highlighted').forEach(el => {
+      document.querySelectorAll('.feature-highlighted').forEach((el) => {
         el.classList.remove('feature-highlighted');
       });
 
       // Highlight overlapping features
-      overlappingFeatures.forEach(feature => {
+      overlappingFeatures.forEach((feature) => {
         const featureElements = document.querySelectorAll(`[data-feature-id="${feature.id}"]`);
-        featureElements.forEach(el => {
+        featureElements.forEach((el) => {
           el.classList.add('feature-highlighted');
         });
       });
@@ -10092,7 +10092,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             transition: opacity 0.2s;
         `;
 
-    floatingBtn.addEventListener('click', e => {
+    floatingBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const trackHeader = trackElement.querySelector('.track-header');
       if (trackHeader) {
@@ -10211,7 +10211,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
     // Handle events
     input.addEventListener('blur', () => finishEdit(true));
-    input.addEventListener('keypress', e => {
+    input.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         finishEdit(true);
       } else if (e.key === 'Escape') {
@@ -10298,7 +10298,7 @@ This action cannot be undone.`;
         `;
 
     // Add event listeners
-    modal.addEventListener('click', e => {
+    modal.addEventListener('click', (e) => {
       // Only close when clicking the close button, not the background
       if (e.target.classList.contains('modal-close')) {
         modal.classList.remove('show');
@@ -10307,7 +10307,7 @@ This action cannot be undone.`;
 
     const applyButton = modal.querySelector('#applyTrackSettings');
     if (applyButton) {
-      applyButton.addEventListener('click', e => {
+      applyButton.addEventListener('click', (e) => {
         console.log('🔧 [DEBUG] Apply button clicked!');
         console.log('🔧 [DEBUG] Event target:', e.target);
         console.log('🔧 [DEBUG] Modal dataset:', modal.dataset);
@@ -10389,29 +10389,29 @@ This action cannot be undone.`;
           // Check each tab panel individually
           tabPanels.forEach((panel, index) => {
             console.log(
-              `🔍 Panel ${index}:`,
-              panel.id,
-              'has active:',
-              panel.classList.contains('active'),
-              'display:',
-              getComputedStyle(panel).display
+                `🔍 Panel ${index}:`,
+                panel.id,
+                'has active:',
+                panel.classList.contains('active'),
+                'display:',
+                getComputedStyle(panel).display,
             );
           });
 
           // Check each tab button
           tabButtons.forEach((button, index) => {
             console.log(
-              `🔍 Button ${index}:`,
-              button.getAttribute('data-tab'),
-              'has active:',
-              button.classList.contains('active')
+                `🔍 Button ${index}:`,
+                button.getAttribute('data-tab'),
+                'has active:',
+                button.classList.contains('active'),
             );
           });
 
           console.log('🔍 Active tab panel (.tab-panel.active):', bodyElement.querySelector('.tab-panel.active'));
           console.log(
-            '🔍 Active tab panel (.sequence-settings-tabs .tab-panel.active):',
-            bodyElement.querySelector('.sequence-settings-tabs .tab-panel.active')
+              '🔍 Active tab panel (.sequence-settings-tabs .tab-panel.active):',
+              bodyElement.querySelector('.sequence-settings-tabs .tab-panel.active'),
           );
           console.log('🔍 Just active class (.active):', bodyElement.querySelectorAll('.active'));
           console.log('🔍 All tab panels:', bodyElement.querySelectorAll('.tab-panel'));
@@ -10469,15 +10469,15 @@ This action cannot be undone.`;
 
           // Manually set up tab functionality since script tags in innerHTML don't execute
           console.log('🔧 Setting up tab button event listeners');
-          tabButtons.forEach(button => {
-            button.addEventListener('click', e => {
+          tabButtons.forEach((button) => {
+            button.addEventListener('click', (e) => {
               e.preventDefault();
               const targetTab = button.getAttribute('data-tab');
               console.log('🔧 Tab clicked:', targetTab);
 
               // Remove active class from all buttons and panels
-              tabButtons.forEach(btn => btn.classList.remove('active'));
-              tabPanels.forEach(panel => panel.classList.remove('active'));
+              tabButtons.forEach((btn) => btn.classList.remove('active'));
+              tabPanels.forEach((panel) => panel.classList.remove('active'));
 
               // Add active class to clicked button
               button.classList.add('active');
@@ -10503,7 +10503,7 @@ This action cannot be undone.`;
             const geneColorSettings = bodyElement.querySelector('#geneColorSettings');
             const baseColorSettings = bodyElement.querySelector('#baseColorSettings');
 
-            const switchColorMode = mode => {
+            const switchColorMode = (mode) => {
               console.log('🎨 Switching to color mode:', mode);
 
               // Hide all color mode settings
@@ -10525,7 +10525,7 @@ This action cannot be undone.`;
               }
             };
 
-            colorModeSelect.addEventListener('change', e => {
+            colorModeSelect.addEventListener('change', (e) => {
               switchColorMode(e.target.value);
             });
 
@@ -11412,7 +11412,7 @@ This action cannot be undone.`;
       console.log(`🔍 [getTrackSettings] Using instance-level settings for ${instanceKey}`);
       // Merge type-level defaults with instance overrides
       const typeDefaults = this.trackSettings[trackType] || this._getDefaultTrackSettings(trackType);
-      return { ...typeDefaults, ...this.trackSettings[instanceKey] };
+      return {...typeDefaults, ...this.trackSettings[instanceKey]};
     }
 
     // Then check if we have type-level saved settings from applySettingsToTrack
@@ -11420,7 +11420,7 @@ This action cannot be undone.`;
       console.log(`🔍 [getTrackSettings] Using saved ${trackType} track settings:`, this.trackSettings[trackType]);
       console.log(`🔍 [getTrackSettings] Saved renderingMode: ${this.trackSettings[trackType].renderingMode}`);
       console.log(
-        `🔍 [getTrackSettings] showReference from saved settings: ${this.trackSettings[trackType].showReference}`
+          `🔍 [getTrackSettings] showReference from saved settings: ${this.trackSettings[trackType].showReference}`,
       );
       return this.trackSettings[trackType];
     } else {
@@ -11629,7 +11629,7 @@ This action cannot be undone.`;
       }
     }
 
-    return { ...defaultSettings, ...savedSettings };
+    return {...defaultSettings, ...savedSettings};
   }
 
   /**
@@ -11793,8 +11793,8 @@ This action cannot be undone.`;
           </div>
           <div id="glyphLegendGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px;">
             ${entries
-              .map(
-                entry => `
+      .map(
+          (entry) => `
               <div class="glyph-legend-item" style="
                 background: var(--bg-secondary);
                 border: 1px solid var(--border-color);
@@ -11832,9 +11832,9 @@ This action cannot be undone.`;
                   ">Type: ${entry.type}</div>
                 </div>
               </div>
-            `
-              )
-              .join('')}
+            `,
+      )
+      .join('')}
           </div>
         </div>
         <div class="modal-footer">
@@ -11853,21 +11853,21 @@ This action cannot be undone.`;
     `;
 
     // Event listeners
-    modal.addEventListener('click', e => {
+    modal.addEventListener('click', (e) => {
       if (e.target.classList.contains('modal-close')) {
         modal.classList.remove('show');
       }
     });
 
     // Hover effects
-    modal.addEventListener('mouseover', e => {
+    modal.addEventListener('mouseover', (e) => {
       const item = e.target.closest('.glyph-legend-item');
       if (item) {
         item.style.transform = 'translateY(-2px)';
         item.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
       }
     });
-    modal.addEventListener('mouseout', e => {
+    modal.addEventListener('mouseout', (e) => {
       const item = e.target.closest('.glyph-legend-item');
       if (item) {
         item.style.transform = '';
@@ -11884,7 +11884,7 @@ This action cannot be undone.`;
    */
   renderGlyphLegendPreviews(modal) {
     const containers = modal.querySelectorAll('.glyph-preview-container');
-    containers.forEach(container => {
+    containers.forEach((container) => {
       const type = container.dataset.glyphType;
       const strand = parseInt(container.dataset.glyphStrand) || 1;
 
@@ -11950,14 +11950,14 @@ This action cannot be undone.`;
 
     if (GeneShapeCreators.shouldUseSpecializedShape(geneType)) {
       const shape = GeneShapeCreators.createSpecializedGeneShape(this,
-        mockGene,
-        geneWidth,
-        geneHeight,
-        gradientId,
-        operonInfo,
-        false, // not truncated
-        false,
-        strokeWidth
+          mockGene,
+          geneWidth,
+          geneHeight,
+          gradientId,
+          operonInfo,
+          false, // not truncated
+          false,
+          strokeWidth,
       );
       if (shape) {
         group.appendChild(shape);
@@ -11965,14 +11965,14 @@ This action cannot be undone.`;
     } else {
       // Standard gene (CDS, gene) - use arrow shape
       const shape = GeneShapeCreators.createSVGGeneShape(this,
-        mockGene,
-        geneWidth,
-        geneHeight,
-        `gene-gradient-glyph-${type}-${strand}`,
-        operonInfo,
-        false,
-        false,
-        strokeWidth
+          mockGene,
+          geneWidth,
+          geneHeight,
+          `gene-gradient-glyph-${type}-${strand}`,
+          operonInfo,
+          false,
+          false,
+          strokeWidth,
       );
       if (shape) {
         // Create the gradient for this specific gene
@@ -12031,7 +12031,7 @@ This action cannot be undone.`;
       misc_feature: '#7c3aed',
     };
     const color = colorMap[type.toLowerCase()] || '#6366f1';
-    return { color: color, operonName: null };
+    return {color: color, operonName: null};
   }
 
   /**
@@ -12074,9 +12074,9 @@ This action cannot be undone.`;
 
     // Three genes in an operon on the same row
     const geneConfigs = [
-      { width: 55, color: '#3b82f6', strand: 1 },
-      { width: 65, color: '#6366f1', strand: 1 },
-      { width: 50, color: '#8b5cf6', strand: -1 },
+      {width: 55, color: '#3b82f6', strand: 1},
+      {width: 65, color: '#6366f1', strand: 1},
+      {width: 50, color: '#8b5cf6', strand: -1},
     ];
     const gap = 8;
     const geneHeight = 14;
@@ -12086,8 +12086,8 @@ This action cannot be undone.`;
 
     let x = startX;
     geneConfigs.forEach((cfg, i) => {
-      const mockGene = { type: 'CDS', strand: cfg.strand, start: 0, end: cfg.width, qualifiers: {} };
-      const operonInfo = { color: cfg.color, operonName: null };
+      const mockGene = {type: 'CDS', strand: cfg.strand, start: 0, end: cfg.width, qualifiers: {}};
+      const operonInfo = {color: cfg.color, operonName: null};
 
       // Create gradient for this gene
       const gradId = `operon-glyph-grad-${i}`;
@@ -12211,7 +12211,7 @@ This action cannot be undone.`;
         settings.referenceFontSize = parseInt(modal.querySelector('#referenceFontSize')?.value) || 12;
         settings.referenceFontFamily = modal.querySelector('#referenceFontFamily')?.value || 'monospace';
         console.log(
-          `🔍 [collectSettingsFromModal] Collected showReference: ${settings.showReference} from checkbox checked: ${modal.querySelector('#readsShowReference').checked}`
+            `🔍 [collectSettingsFromModal] Collected showReference: ${settings.showReference} from checkbox checked: ${modal.querySelector('#readsShowReference').checked}`,
         );
         settings.referenceHeight = parseInt(modal.querySelector('#referenceHeight').value) || 25;
 
@@ -12327,7 +12327,7 @@ This action cannot be undone.`;
         const heightInputs = modal.querySelectorAll('.wig-track-height-input');
         if (heightInputs.length > 0) {
           settings.trackHeights = {};
-          heightInputs.forEach(input => {
+          heightInputs.forEach((input) => {
             const trackName = input.dataset.trackName;
             const height = parseInt(input.value) || 30;
             settings.trackHeights[trackName] = height;
@@ -12606,9 +12606,9 @@ This action cannot be undone.`;
       this.trackSettings = {};
     }
     if (fileId) {
-      this.trackSettings[instanceKey] = { ...settings };
+      this.trackSettings[instanceKey] = {...settings};
     } else {
-      this.trackSettings[trackType] = { ...settings };
+      this.trackSettings[trackType] = {...settings};
     }
 
     // Always save type-level settings (the base defaults)
@@ -12871,10 +12871,10 @@ This action cannot be undone.`;
   refreshViewAfterSettingsChange(forceFullRedraw = false) {
     const currentChr = document.getElementById('chromosomeSelect').value;
     console.log(
-      '🔄 [refreshViewAfterSettingsChange] Called for chromosome:',
-      currentChr,
-      'forceFullRedraw:',
-      forceFullRedraw
+        '🔄 [refreshViewAfterSettingsChange] Called for chromosome:',
+        currentChr,
+        'forceFullRedraw:',
+        forceFullRedraw,
     );
 
     // CRITICAL: Preserve trackSettings before redraw
@@ -12895,8 +12895,8 @@ This action cannot be undone.`;
         this.trackSettings = preservedTrackSettings;
         console.log('🔄 [refreshViewAfterSettingsChange] Applied trackSettings BEFORE redraw:', this.trackSettings);
         console.log(
-          '🔧 [DEBUG] [refreshViewAfterSettingsChange] Reads renderingMode BEFORE redraw:',
-          this.trackSettings?.reads?.renderingMode
+            '🔧 [DEBUG] [refreshViewAfterSettingsChange] Reads renderingMode BEFORE redraw:',
+            this.trackSettings?.reads?.renderingMode,
         );
 
         // Perform complete redraw of all tracks
@@ -12942,7 +12942,7 @@ This action cannot be undone.`;
       console.error('❌ [updateAllSVGTracks] Invalid sequence type:', typeof sequence);
       console.error('Expected string, got:', sequence);
       console.error(
-        'This indicates currentSequence was corrupted - possibly stored as length instead of actual sequence'
+          'This indicates currentSequence was corrupted - possibly stored as length instead of actual sequence',
       );
       return;
     }
@@ -13065,9 +13065,9 @@ This action cannot be undone.`;
     // 🔒 CRITICAL: Validate sequence is a string, not a number
     if (typeof sequence !== 'string') {
       console.warn(
-        '⚠️ [updateGCTrackSVG] Sequence is not a string (type:',
-        typeof sequence,
-        '), skipping GC track update'
+          '⚠️ [updateGCTrackSVG] Sequence is not a string (type:',
+          typeof sequence,
+          '), skipping GC track update',
       );
       console.warn('This might happen if sequence was stored as length instead of actual sequence data');
       return;
@@ -13098,7 +13098,7 @@ This action cannot be undone.`;
   updateOtherTracksSVG(chromosome, sequence) {
     // Update WIG tracks if present
     const wigTracks = document.querySelectorAll('.wig-track');
-    wigTracks.forEach(wigTrack => {
+    wigTracks.forEach((wigTrack) => {
       const trackContent = wigTrack.querySelector('.track-content');
       if (trackContent) {
         const svgContainer = trackContent.querySelector('svg');
@@ -13114,7 +13114,7 @@ This action cannot be undone.`;
 
     // Update variant tracks if present
     const variantTracks = document.querySelectorAll('.variant-track');
-    variantTracks.forEach(variantTrack => {
+    variantTracks.forEach((variantTrack) => {
       const trackContent = variantTrack.querySelector('.track-content');
       if (trackContent) {
         const svgContainer = trackContent.querySelector('svg');
@@ -13488,13 +13488,13 @@ This action cannot be undone.`;
     if (settings.showReference === false) return 0;
 
     console.log(
-      `🔍 [createReferenceVisualization] Creating reference for viewport: ${viewport.start}-${viewport.end}, height: ${referenceHeight}`
+        `🔍 [createReferenceVisualization] Creating reference for viewport: ${viewport.start}-${viewport.end}, height: ${referenceHeight}`,
     );
 
     // Get reference sequence from genome browser
     const referenceSequence = this.getReferenceSequence(viewport.start, viewport.end);
     console.log(
-      `🔍 [createReferenceVisualization] Got reference sequence: ${referenceSequence ? referenceSequence.length + ' bases' : 'null'}`
+        `🔍 [createReferenceVisualization] Got reference sequence: ${referenceSequence ? referenceSequence.length + ' bases' : 'null'}`,
     );
 
     // Check if coverage exists to position reference below it
@@ -13528,10 +13528,10 @@ This action cannot be undone.`;
     } else {
       // Use the same high-quality renderer as Single-line sequence track
       const referenceDisplay = this.createReferenceSequenceDisplay(
-        referenceSequence,
-        viewport,
-        referenceHeight,
-        settings
+          referenceSequence,
+          viewport,
+          referenceHeight,
+          settings,
       );
       referenceContainer.appendChild(referenceDisplay);
     }
@@ -13546,7 +13546,7 @@ This action cannot be undone.`;
    */
   createReferenceSequenceDisplay(subsequence, viewport, referenceHeight, settings) {
     console.log(
-      `🔍 [createReferenceSequenceDisplay] Creating high-quality reference display for ${subsequence.length} bases`
+        `🔍 [createReferenceSequenceDisplay] Creating high-quality reference display for ${subsequence.length} bases`,
     );
 
     // Create container for the reference sequence display
@@ -13566,7 +13566,7 @@ This action cannot be undone.`;
     // Check if CanvasSequenceRenderer is available
     if (typeof CanvasSequenceRenderer === 'undefined') {
       console.warn(
-        '⚠️ [createReferenceSequenceDisplay] CanvasSequenceRenderer not available, falling back to DOM rendering'
+          '⚠️ [createReferenceSequenceDisplay] CanvasSequenceRenderer not available, falling back to DOM rendering',
       );
       return this.createReferenceSequenceDisplayFallback(subsequence, viewport, referenceHeight);
     }
@@ -13745,13 +13745,13 @@ This action cannot be undone.`;
    */
   createGenesSequenceVisualization(trackContent, viewport, sequenceHeight, settings) {
     console.log(
-      `🧬 [createGenesSequenceVisualization] Creating sequence display for genes track: ${viewport.start}-${viewport.end}, height: ${sequenceHeight}`
+        `🧬 [createGenesSequenceVisualization] Creating sequence display for genes track: ${viewport.start}-${viewport.end}, height: ${sequenceHeight}`,
     );
 
     // Get reference sequence from genome browser
     const referenceSequence = this.getReferenceSequence(viewport.start, viewport.end);
     console.log(
-      `🧬 [createGenesSequenceVisualization] Got reference sequence: ${referenceSequence ? referenceSequence.length + ' bases' : 'null'}`
+        `🧬 [createGenesSequenceVisualization] Got reference sequence: ${referenceSequence ? referenceSequence.length + ' bases' : 'null'}`,
     );
 
     // Check if detailed ruler exists to position sequence below it
@@ -13788,10 +13788,10 @@ This action cannot be undone.`;
     } else {
       // Use the same high-quality renderer as Single-line sequence track
       const sequenceDisplay = this.createReferenceSequenceDisplay(
-        referenceSequence,
-        viewport,
-        sequenceHeight,
-        settings
+          referenceSequence,
+          viewport,
+          sequenceHeight,
+          settings,
       );
       sequenceContainer.appendChild(sequenceDisplay);
     }
@@ -13799,7 +13799,7 @@ This action cannot be undone.`;
     trackContent.appendChild(sequenceContainer);
 
     console.log(
-      `✅ [createGenesSequenceVisualization] Genes sequence visualization created with height: ${sequenceHeight}px`
+        `✅ [createGenesSequenceVisualization] Genes sequence visualization created with height: ${sequenceHeight}px`,
     );
 
     return sequenceHeight;
@@ -13810,7 +13810,7 @@ This action cannot be undone.`;
    */
   renderReferenceSequenceInSVG(svg, referenceSequence, viewport, height, settings) {
     console.log(
-      `🔍 [renderReferenceSequenceInSVG] Rendering ${referenceSequence.length} bases, viewport: ${viewport.start}-${viewport.end}`
+        `🔍 [renderReferenceSequenceInSVG] Rendering ${referenceSequence.length} bases, viewport: ${viewport.start}-${viewport.end}`,
     );
 
     // Calculate optimal font size based on available space for each base
@@ -13826,9 +13826,9 @@ This action cannot be undone.`;
 
     // Use the smaller of the two constraints, with reasonable min/max limits
     const optimalFontSize = Math.min(
-      heightBasedFontSize,
-      widthBasedFontSize,
-      14 // max font size
+        heightBasedFontSize,
+        widthBasedFontSize,
+        14, // max font size
     );
     const fontSize = Math.max(optimalFontSize, 4); // min font size
 
@@ -13836,7 +13836,7 @@ This action cannot be undone.`;
     const isReadable = fontSize >= 6;
 
     console.log(
-      `🔍 [renderReferenceSequenceInSVG] spacePerBase: ${spacePerBase.toFixed(2)}, fontSize: ${fontSize.toFixed(1)}, isReadable: ${isReadable}`
+        `🔍 [renderReferenceSequenceInSVG] spacePerBase: ${spacePerBase.toFixed(2)}, fontSize: ${fontSize.toFixed(1)}, isReadable: ${isReadable}`,
     );
 
     if (isReadable) {
@@ -13855,7 +13855,7 @@ This action cannot be undone.`;
         const maxBases = Math.max(1, Math.floor(availableWidth / minSpacePerBase));
         const sampleStep = Math.ceil(referenceSequence.length / maxBases);
         console.log(
-          `🔍 [renderReferenceSequenceInSVG] Showing sampled bases: ${maxBases} of ${referenceSequence.length} (step: ${sampleStep})`
+            `🔍 [renderReferenceSequenceInSVG] Showing sampled bases: ${maxBases} of ${referenceSequence.length} (step: ${sampleStep})`,
         );
 
         for (let i = 0; i < referenceSequence.length && Math.floor(i / sampleStep) < maxBases; i += sampleStep) {
@@ -13868,7 +13868,7 @@ This action cannot be undone.`;
     } else {
       // Font too small to be readable - show background pattern only
       console.log(
-        `🔍 [renderReferenceSequenceInSVG] Font too small (${fontSize.toFixed(1)}px), showing background pattern`
+          `🔍 [renderReferenceSequenceInSVG] Font too small (${fontSize.toFixed(1)}px), showing background pattern`,
       );
 
       // Create subtle background pattern to indicate reference sequence presence
@@ -13953,7 +13953,7 @@ This action cannot be undone.`;
     const numBins = Math.ceil(range / binSize);
     const coverage = new Array(numBins).fill(0);
 
-    reads.forEach(read => {
+    reads.forEach((read) => {
       const readStart = Math.max(read.start, start);
       const readEnd = Math.min(read.end, end);
 
@@ -14026,7 +14026,7 @@ This action cannot be undone.`;
     trackContent.appendChild(referenceContainer);
 
     console.log(
-      `🧬 Reference sequence visualization created: ${sequence.length} bases, zoom level: ${basesPerPixel.toFixed(2)} bp/px`
+        `🧬 Reference sequence visualization created: ${sequence.length} bases, zoom level: ${basesPerPixel.toFixed(2)} bp/px`,
     );
   }
 
@@ -14218,7 +14218,7 @@ This action cannot be undone.`;
    * Get dominant base in a sequence chunk
    */
   getDominantBase(sequence) {
-    const counts = { A: 0, T: 0, G: 0, C: 0, N: 0 };
+    const counts = {A: 0, T: 0, G: 0, C: 0, N: 0};
     for (const base of sequence.toUpperCase()) {
       if (counts[base] !== undefined) counts[base]++;
     }
@@ -14243,14 +14243,14 @@ This action cannot be undone.`;
 
     if (zoomSensitivitySlider && zoomSensitivityValue) {
       // Update display value in real-time as user drags slider
-      zoomSensitivitySlider.addEventListener('input', e => {
+      zoomSensitivitySlider.addEventListener('input', (e) => {
         zoomSensitivityValue.textContent = e.target.value;
       });
 
       // Note: Setting will be applied when Apply button is clicked
-      zoomSensitivitySlider.addEventListener('change', e => {
+      zoomSensitivitySlider.addEventListener('change', (e) => {
         console.log(
-          `🔧 [setupGenesSettingsEventListeners] Zoom sensitivity changed to: ${e.target.value} (will apply on Apply button)`
+            `🔧 [setupGenesSettingsEventListeners] Zoom sensitivity changed to: ${e.target.value} (will apply on Apply button)`,
         );
       });
     }
@@ -14258,9 +14258,9 @@ This action cannot be undone.`;
     // Override global zoom checkbox - setting will be applied when Apply button is clicked
     const overrideGlobalZoomCheckbox = bodyElement.querySelector('#genesOverrideGlobalZoom');
     if (overrideGlobalZoomCheckbox) {
-      overrideGlobalZoomCheckbox.addEventListener('change', e => {
+      overrideGlobalZoomCheckbox.addEventListener('change', (e) => {
         console.log(
-          `🔧 [setupGenesSettingsEventListeners] Override global zoom changed to: ${e.target.checked} (will apply on Apply button)`
+            `🔧 [setupGenesSettingsEventListeners] Override global zoom changed to: ${e.target.checked} (will apply on Apply button)`,
         );
       });
     }
@@ -14270,10 +14270,10 @@ This action cannot be undone.`;
     const sequenceHeightInput = bodyElement.querySelector('#genesSequenceHeight');
 
     if (showSequenceCheckbox && sequenceHeightInput) {
-      showSequenceCheckbox.addEventListener('change', e => {
+      showSequenceCheckbox.addEventListener('change', (e) => {
         sequenceHeightInput.disabled = !e.target.checked;
         console.log(
-          `🔧 [setupGenesSettingsEventListeners] Show sequence changed to: ${e.target.checked} (will apply on Apply button)`
+            `🔧 [setupGenesSettingsEventListeners] Show sequence changed to: ${e.target.checked} (will apply on Apply button)`,
         );
       });
     }
@@ -14281,9 +14281,9 @@ This action cannot be undone.`;
     // Highlight effect selection - setting will be applied when Apply button is clicked
     const highlightEffectSelect = bodyElement.querySelector('#genesHighlightEffect');
     if (highlightEffectSelect) {
-      highlightEffectSelect.addEventListener('change', e => {
+      highlightEffectSelect.addEventListener('change', (e) => {
         console.log(
-          `🔧 [setupGenesSettingsEventListeners] Highlight effect changed to: ${e.target.value} (will apply on Apply button)`
+            `🔧 [setupGenesSettingsEventListeners] Highlight effect changed to: ${e.target.value} (will apply on Apply button)`,
         );
       });
     }
@@ -14291,9 +14291,9 @@ This action cannot be undone.`;
     // Auto-highlight sequence checkbox - setting will be applied when Apply button is clicked
     const autoHighlightSequenceCheckbox = bodyElement.querySelector('#genesAutoHighlightSequence');
     if (autoHighlightSequenceCheckbox) {
-      autoHighlightSequenceCheckbox.addEventListener('change', e => {
+      autoHighlightSequenceCheckbox.addEventListener('change', (e) => {
         console.log(
-          `🔧 [setupGenesSettingsEventListeners] Auto-highlight sequence changed to: ${e.target.checked} (will apply on Apply button)`
+            `🔧 [setupGenesSettingsEventListeners] Auto-highlight sequence changed to: ${e.target.checked} (will apply on Apply button)`,
         );
       });
     }
@@ -14306,7 +14306,7 @@ This action cannot be undone.`;
       // Only add visual feedback, actual application happens on Apply button
       renderingModeSelect.addEventListener('change', () => {
         console.log(
-          `🔧 [setupReadsSettingsEventListeners] Rendering mode selection changed to: ${renderingModeSelect.value} (will apply on Apply button)`
+            `🔧 [setupReadsSettingsEventListeners] Rendering mode selection changed to: ${renderingModeSelect.value} (will apply on Apply button)`,
         );
       });
     }
@@ -14547,7 +14547,7 @@ This action cannot be undone.`;
     document.body.appendChild(menu);
 
     // Remove menu when clicking elsewhere
-    const removeMenu = e => {
+    const removeMenu = (e) => {
       if (!menu.contains(e.target)) {
         menu.remove();
         document.removeEventListener('click', removeMenu);
@@ -14576,9 +14576,9 @@ This action cannot be undone.`;
     if (!header) return;
 
     let isDragging = false;
-    let startX, startY, startLeft, startTop;
+    let startX; let startY; let startLeft; let startTop;
 
-    header.addEventListener('mousedown', e => {
+    header.addEventListener('mousedown', (e) => {
       if (e.target.classList.contains('modal-close')) return;
 
       isDragging = true;
@@ -14593,7 +14593,7 @@ This action cannot be undone.`;
       e.preventDefault();
     });
 
-    document.addEventListener('mousemove', e => {
+    document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
 
       const deltaX = e.clientX - startX;
@@ -14628,10 +14628,10 @@ This action cannot be undone.`;
     const handles = modal.querySelectorAll('.resize-handle');
     let isResizing = false;
     let currentHandle = null;
-    let startX, startY, startWidth, startHeight, startLeft, startTop;
+    let startX; let startY; let startWidth; let startHeight; let startLeft; let startTop;
 
-    handles.forEach(handle => {
-      handle.addEventListener('mousedown', e => {
+    handles.forEach((handle) => {
+      handle.addEventListener('mousedown', (e) => {
         isResizing = true;
         currentHandle = handle;
         startX = e.clientX;
@@ -14648,7 +14648,7 @@ This action cannot be undone.`;
       });
     });
 
-    document.addEventListener('mousemove', e => {
+    document.addEventListener('mousemove', (e) => {
       if (!isResizing || !currentHandle) return;
 
       const deltaX = e.clientX - startX;
@@ -14715,7 +14715,7 @@ This action cannot be undone.`;
 
     if (
       confirm(
-        `Are you sure you want to reset ${trackType} track settings to their default values? This action cannot be undone.`
+          `Are you sure you want to reset ${trackType} track settings to their default values? This action cannot be undone.`,
       )
     ) {
       // Define default settings for different track types
@@ -14766,7 +14766,7 @@ This action cannot be undone.`;
       const settings = defaultSettings[trackType] || {};
 
       // Apply default settings to form
-      Object.keys(settings).forEach(key => {
+      Object.keys(settings).forEach((key) => {
         const element = modal.querySelector(`[name="${key}"], #${key}`);
         if (element) {
           if (element.type === 'checkbox') {
@@ -14848,7 +14848,7 @@ This action cannot be undone.`;
         stats[trackId] = renderer.getPerformanceStats();
       } catch (error) {
         console.error(`Failed to get performance stats from Canvas renderer ${trackId}:`, error);
-        stats[trackId] = { error: error.message };
+        stats[trackId] = {error: error.message};
       }
     });
     return stats;
@@ -14877,7 +14877,7 @@ This action cannot be undone.`;
     console.log(`🧹 [TrackRenderer] Cleaning up ${this.canvasRenderers.size} Canvas renderers`);
 
     const trackIds = Array.from(this.canvasRenderers.keys());
-    trackIds.forEach(trackId => {
+    trackIds.forEach((trackId) => {
       this.cleanupCanvasRenderer(trackId);
     });
 
@@ -14891,7 +14891,7 @@ This action cannot be undone.`;
     const existingTrackIds = new Set();
 
     // Check which Canvas containers still exist in DOM
-    document.querySelectorAll('[data-track-id]').forEach(element => {
+    document.querySelectorAll('[data-track-id]').forEach((element) => {
       const trackId = element.getAttribute('data-track-id');
       if (trackId) {
         existingTrackIds.add(trackId);
@@ -14906,7 +14906,7 @@ This action cannot be undone.`;
       }
     });
 
-    renderersToCleanup.forEach(trackId => {
+    renderersToCleanup.forEach((trackId) => {
       this.cleanupCanvasRenderer(trackId);
     });
 
@@ -14960,12 +14960,12 @@ This action cannot be undone.`;
       showReads: 'readsReads',
     };
 
-    Object.keys(settingToToggle).forEach(settingKey => {
+    Object.keys(settingToToggle).forEach((settingKey) => {
       const toggleType = settingToToggle[settingKey];
       // Find buttons with this toggle type
       const buttons = document.querySelectorAll(`.track-reads-toggle-btn[data-toggle-type="${toggleType}"]`);
 
-      buttons.forEach(btn => {
+      buttons.forEach((btn) => {
         // Determine state: default to true if undefined, otherwise use setting value
         const isActive = settings[settingKey] !== false;
 
@@ -14988,7 +14988,7 @@ This action cannot be undone.`;
     // Also update any active renderers to ensure they match current settings
     // This handles the case where settings change from the panel -> renderers need update
     if (this.canvasRenderers) {
-      this.canvasRenderers.forEach(renderer => {
+      this.canvasRenderers.forEach((renderer) => {
         if (renderer && typeof renderer.updateOptions === 'function') {
           renderer.updateOptions(settings);
         }
