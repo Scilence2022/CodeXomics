@@ -9768,7 +9768,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       // Update button appearance
       const selectionBtn = document.querySelector('.track-selection-btn');
       if (selectionBtn) {
-        selectionBtn.style.background = '#3b82f6';
+        selectionBtn.style.background = '#ef4444';
         selectionBtn.style.color = '#ffffff';
       }
 
@@ -9920,8 +9920,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             position: absolute;
             top: 0;
             height: 100%;
-            background: rgba(59, 130, 246, 0.3);
-            border: 2px solid #3b82f6;
+            background: rgba(239, 68, 68, 0.3);
+            border: 2px solid #ef4444;
             pointer-events: none;
             z-index: 20;
         `;
@@ -9989,7 +9989,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
     // Update status bar with selection information
     const selectionLength = end - start + 1;
-    const statusMessage = `🔵 Secondary Ruler Selection: ${this.genomeBrowser.currentChromosome}:${start.toLocaleString()}-${end.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
+    const statusMessage = `🔴 Secondary Ruler Selection: ${this.genomeBrowser.currentChromosome}:${start.toLocaleString()}-${end.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
 
     if (this.genomeBrowser.uiManager) {
       this.genomeBrowser.uiManager.updateStatus(statusMessage);
@@ -9997,7 +9997,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       const statusElement = document.getElementById('statusText');
       if (statusElement) {
         statusElement.textContent = statusMessage;
-        statusElement.style.color = '#3b82f6';
+        statusElement.style.color = '#ef4444';
         statusElement.style.fontWeight = 'bold';
 
         // Reset to normal after 5 seconds
