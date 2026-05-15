@@ -11,12 +11,14 @@ class UIManager {
       document.addEventListener('DOMContentLoaded', () => {
         this.initializeSidebarSplitter();
         this.initializeNavigationDrag();
+        this.initializeSplitterToggleDrag();
       });
     } else {
       // DOM is already loaded
       setTimeout(() => {
         this.initializeSidebarSplitter();
         this.initializeNavigationDrag();
+        this.initializeSplitterToggleDrag();
       }, 100);
     }
   }
@@ -867,6 +869,9 @@ class UIManager {
       const parentRect = navContainer.parentElement.getBoundingClientRect();
       startTop = rect.top - parentRect.top;
 
+      // Disable transition during drag to prevent lag
+      navContainer.style.transition = 'none';
+
       document.body.style.cursor = 'ns-resize';
       prevBtn.style.cursor = 'grabbing';
       nextBtn.style.cursor = 'grabbing';
@@ -907,6 +912,9 @@ class UIManager {
       prevBtn.style.cursor = 'grab';
       nextBtn.style.cursor = 'grab';
 
+      // Restore transition
+      navContainer.style.transition = '';
+
       if (hasMoved) {
         wasDragged = true;
         localStorage.setItem('genomeNavigationTop', navContainer.style.top);
@@ -939,6 +947,143 @@ class UIManager {
     nextBtn.addEventListener('click', onBtnClick, true);
 
     console.log('✅ [UIManager] Genome navigation vertical drag initialized');
+  }
+
+  /**
+   * Initialize vertical drag functionality for the splitter toggle button
+   * Allows users to reposition the sidebar toggle button vertically along the splitter
+   */
+  initializeSplitterToggleDrag() {
+    const toggleBtn = document.getElementById('splitterToggleBtn');
+    if (!toggleBtn) {
+      // Retry if not available yet
+      setTimeout(() => {
+        const retryBtn = document.getElementById('splitterToggleBtn');
+        if (retryBtn && !retryBtn.dataset.dragInitialized) {
+          this.initializeSplitterToggleDrag();
+        }
+      }, 1000);
+      return;
+    }
+
+    // Mark as initialized to prevent duplicate setups
+    if (toggleBtn.dataset.dragInitialized) return;
+    toggleBtn.dataset.dragInitialized = 'true';
+
+    let isDragging = false;
+    let startY = 0;
+    let startTop = 0;
+    let hasMoved = false;
+    let wasDragged = false;
+
+    // Set cursor and ensure it's on top of the splitter
+    toggleBtn.style.cursor = 'grab';
+    toggleBtn.style.zIndex = '1001';
+    toggleBtn.style.pointerEvents = 'auto';
+
+    // Ensure the container (splitter) has height to allow dragging along it
+    const parent = toggleBtn.parentElement;
+    if (parent && parent.id === 'horizontalSplitter') {
+      parent.style.height = '100%';
+      parent.style.minHeight = '100px';
+    }
+
+    // Restore position from localStorage
+    const savedTop = localStorage.getItem('splitterToggleBtnTop');
+    if (savedTop) {
+      toggleBtn.style.top = savedTop;
+    }
+
+    const onMouseDown = e => {
+      // Only handle left mouse button
+      if (e.button !== 0) return;
+
+      isDragging = true;
+      hasMoved = false;
+      startY = e.clientY;
+
+      // Parse current top position - use offsetTop as it's more reliable
+      startTop = toggleBtn.offsetTop;
+
+      // Disable transition during drag
+      toggleBtn.style.transition = 'none';
+
+      document.body.style.cursor = 'ns-resize';
+      toggleBtn.style.cursor = 'grabbing';
+
+      // Prevent the splitter from catching the mousedown event
+      e.stopPropagation();
+    };
+
+    const onMouseMove = e => {
+      if (!isDragging) return;
+
+      const deltaY = e.clientY - startY;
+
+      // Use a small threshold before considering it a drag vs a click
+      if (!hasMoved && Math.abs(deltaY) > 4) {
+        hasMoved = true;
+      }
+
+      if (hasMoved) {
+        const parent = toggleBtn.parentElement;
+        const parentRect = parent.getBoundingClientRect();
+
+        // Use parent height, fallback to window height if container is collapsed or 0-height
+        let containerHeight = parentRect.height;
+        if (containerHeight < 50) {
+          const mainContent = document.querySelector('.main-content');
+          containerHeight = mainContent ? mainContent.offsetHeight : window.innerHeight;
+        }
+
+        let newTop = startTop + deltaY;
+
+        // Constrain within parent (splitter bar)
+        // Button is 24px tall (from CSS)
+        newTop = Math.max(0, Math.min(containerHeight - 24, newTop));
+
+        toggleBtn.style.top = `${newTop}px`;
+      }
+    };
+
+    const onMouseUp = () => {
+      if (!isDragging) return;
+
+      isDragging = false;
+      document.body.style.cursor = '';
+      toggleBtn.style.cursor = 'grab';
+
+      // Restore transition
+      toggleBtn.style.transition = '';
+
+      if (hasMoved) {
+        wasDragged = true;
+        localStorage.setItem('splitterToggleBtnTop', toggleBtn.style.top);
+
+        // Reset wasDragged after current event cycle to allow click event to be suppressed
+        setTimeout(() => {
+          wasDragged = false;
+        }, 100);
+      }
+    };
+
+    const onBtnClick = e => {
+      if (wasDragged) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        wasDragged = false;
+      }
+    };
+
+    // Event listeners
+    toggleBtn.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    // Use capturing phase to intercept and stop the original click if dragged
+    toggleBtn.addEventListener('click', onBtnClick, true);
+
+    console.log('✅ [UIManager] Splitter toggle vertical drag initialized');
   }
 
   // UI state management
