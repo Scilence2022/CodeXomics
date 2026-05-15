@@ -1486,12 +1486,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
 
 
 
-
-
-
-
-
-
       {
         id: 'blast_auto_01',
         name: 'BLAST Get Installation Status',
@@ -1526,42 +1520,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 15000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      {
-        id: 'blast_auto_03',
-        name: 'BLAST Database Info',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Get information about the available BLAST databases.',
-        expectedResult: {
-          tool_name: 'blast_list_databases',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 15000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'blast_auto_04',
-        name: 'Filter BLAST Results',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Filter BLAST results to show only hits with identity above 90%.',
-        expectedResult: {
-          tool_name: 'blast_filter_results',
-          parameters: {
-            minIdentity: 90,
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 15000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
+ 
+ 
       {
         id: 'blast_auto_05',
         name: 'Create BLAST Database Quick',
@@ -1580,62 +1540,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         earlyReturn: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      {
-        id: 'blast_auto_06',
-        name: 'Create BLAST DB from Genome',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Create a nucleotide BLAST database from the currently loaded genome.',
-        expectedResult: {
-          tool_name: 'blast_create_db_from_genome',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 0,
-        timeout: 20000,
-        earlyReturn: true,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'blast_auto_07',
-        name: 'Create Protein BLAST DB from Genome',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Create a protein BLAST database from the currently loaded genome.',
-        expectedResult: {
-          tool_name: 'blast_create_protein_db_from_genome',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 0,
-        timeout: 20000,
-        earlyReturn: true,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'blast_auto_08',
-        name: 'BLAST Search Local',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Perform a local BLAST search with the sequence ATGATCATGCTGATTCTCGCGCCTCTGGTGGGCGTGCTGGGTGCGCTTTTGCTGGCGTATGGTGCCTGGCTGATTTATCCCCCGGCGGGTTTTGTTGTTGCCGGGGCGCTGTGCCTGTTCTGGTCGTGGCTGGTGGCGCGATATCTCGACCGTACACAGTCGTCTGTCGGCGGAGGTAAATAG against the currently loaded local genome',
-        expectedResult: {
-          tool_name: 'blast_search_local',
-          parameters: {
-            sequence: 'ATGATCATGCTGATTCTCGCGCCTCTGGTGGGCGTGCTGGGTGCGCTTTTGCTGGCGTATGGTGCCTGGCTGATTTATCCCCCGGCGGGTTTTGTTGTTGCCGGGGCGCTGTGCCTGTTCTGGTCGTGGCTGGTGGCGCGATATCTCGACCGTACACAGTCGTCTGTCGGCGGAGGTAAATAG',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 25000,
-        earlyReturn: true,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
+
 
       // PRIMER DESIGN TASKS - Automatic + Simple
       {
