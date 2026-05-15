@@ -5934,6 +5934,40 @@ class ChatManager {
   }
 
   /**
+   * Count how many times a tool with specific parameters has been executed
+   */
+  getToolExecutionCount(toolKey, conversationHistory) {
+    const [toolName, ...paramsParts] = toolKey.split(':');
+    const paramsStr = paramsParts.join(':');
+    let count = 0;
+
+    for (const msg of conversationHistory) {
+      if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
+        if (msg.content.includes(`with parameters: ${paramsStr}`)) {
+          count++;
+        } else if (!msg.content.includes('with parameters:')) {
+          // Legacy support
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Count how many times a tool name has been executed (any parameters)
+   */
+  getToolExecutionCountByName(toolName, conversationHistory) {
+    let count = 0;
+    for (const msg of conversationHistory) {
+      if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Find existing execution of a tool with specific parameters
    */
   findExistingExecution(toolKey, conversationHistory) {

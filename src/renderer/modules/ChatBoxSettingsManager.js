@@ -75,6 +75,8 @@ class ChatBoxSettingsManager {
       functionCallRounds: 10,
       enableEarlyCompletion: true,
       completionThreshold: 0.7,
+      maxSameToolDifferentParams: 3, // Default limit for different parameters
+      maxSameToolIdenticalParams: 2, // Default limit for identical parameters
 
       // Model Selection Settings
       chatboxModelType: 'auto',
@@ -748,6 +750,16 @@ class ChatBoxSettingsManager {
                                         Enable Early Task Completion
                                     </label>
                                     <small class="help-text">Allow the AI to end the function call loop early when it determines the task is complete, instead of using all available rounds.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="maxSameToolDifferentParams">Max Execution of Same Tool (Different Parameters):</label>
+                                    <input type="number" id="maxSameToolDifferentParams" class="input-full" min="1" max="10" step="1">
+                                    <small class="help-text">Maximum number of times the same tool can be called with different parameters in a single conversation. Prevents excessive looping during search or exploration tasks.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="maxSameToolIdenticalParams">Max Execution of Same Tool (Identical Parameters):</label>
+                                    <input type="number" id="maxSameToolIdenticalParams" class="input-full" min="1" max="10" step="1">
+                                    <small class="help-text">Maximum number of times the same tool can be called with the exact same parameters. Prevents infinite loops when a tool fails or provides unexpected output.</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="completionThreshold">Task Completion Confidence Threshold:</label>

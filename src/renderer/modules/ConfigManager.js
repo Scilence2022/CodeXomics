@@ -274,6 +274,8 @@ class ConfigManager {
         functionCallRounds: 6, // Maximum number of function call rounds
         enableEarlyCompletion: true, // Enable early task completion detection
         completionThreshold: 0.7, // Confidence threshold for task completion (0.0-1.0)
+        maxSameToolDifferentParams: 3, // Default limit for different parameters
+        maxSameToolIdenticalParams: 2, // Default limit for identical parameters
       },
       ui: {
         theme: 'default',

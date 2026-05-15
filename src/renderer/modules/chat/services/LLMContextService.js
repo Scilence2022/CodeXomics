@@ -1120,15 +1120,42 @@ class LLMContextService {
 
     // Find applicable policy
     let applicablePolicy = null;
+    let applicablePolicyName = null;
     for (const [policyName, policy] of Object.entries(toolPolicies)) {
       if (policy.tools.includes(toolName)) {
         applicablePolicy = policy;
+        applicablePolicyName = policyName;
         console.log(`🎯 [Policy] Applied ${policyName} policy to ${toolName}`);
         break;
       }
     }
 
-    // Default policy for unknown tools - allow once
+    // Apply global execution limits unless exempted
+    // Scroll and zoom operations are exempted as they are meant to be repeated for exploration
+    const exemptedPolicies = ['scroll_operations', 'zoom_operations'];
+    if (!exemptedPolicies.includes(applicablePolicyName)) {
+      const chatboxSettings = this.chatManager.configManager.get('chatboxSettings') || {};
+      const maxSameToolDifferentParams = chatboxSettings.maxSameToolDifferentParams || 
+                                         this.chatManager.configManager.get('llm.maxSameToolDifferentParams', 3);
+      const maxSameToolIdenticalParams = chatboxSettings.maxSameToolIdenticalParams || 
+                                         this.chatManager.configManager.get('llm.maxSameToolIdenticalParams', 2);
+
+      // Check identical parameters limit
+      const identicalExecutionCount = this.chatManager.getToolExecutionCount(toolKey, conversationHistory);
+      if (identicalExecutionCount >= maxSameToolIdenticalParams) {
+        console.log(`🚫 [Policy] Maximum identical tool execution limit reached (${maxSameToolIdenticalParams}): ${toolName}`);
+        return false;
+      }
+
+      // Check different parameters limit
+      const totalExecutionCount = this.chatManager.getToolExecutionCountByName(toolName, conversationHistory);
+      if (totalExecutionCount >= maxSameToolDifferentParams) {
+        console.log(`🚫 [Policy] Maximum total tool execution limit reached (${maxSameToolDifferentParams}): ${toolName}`);
+        return false;
+      }
+    }
+
+    // Default policy for unknown tools - allow once (if not already blocked by global limits)
     if (!applicablePolicy) {
       console.log(`⚠️ [Policy] Unknown tool, applying default once-per-round policy: ${toolName}`);
       const alreadyExecuted = this.chatManager.wasToolExecutedSuccessfully(toolKey, conversationHistory);
