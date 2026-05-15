@@ -505,29 +505,29 @@ class GenomeNavigationBar {
     const selectionWidth = endX - startX;
 
     // Draw selection background
-    this.ctx.fillStyle = 'rgba(59, 130, 246, 0.3)';
+    this.ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
     this.ctx.fillRect(startX, 0, selectionWidth, height);
 
     // Draw selection border
-    this.ctx.strokeStyle = '#3b82f6';
+    this.ctx.strokeStyle = '#ef4444';
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(startX, 0, selectionWidth, height);
 
     // Draw selection handles
     const handleWidth = 6;
-    this.ctx.fillStyle = '#3b82f6';
+    this.ctx.fillStyle = '#ef4444';
     this.ctx.fillRect(startX - handleWidth / 2, height - 20, handleWidth, 20);
     this.ctx.fillRect(endX - handleWidth / 2, height - 20, handleWidth, 20);
 
     // Draw handle borders
-    this.ctx.strokeStyle = '#1d4ed8';
+    this.ctx.strokeStyle = '#b91c1c';
     this.ctx.lineWidth = 1;
     this.ctx.strokeRect(startX - handleWidth / 2, height - 20, handleWidth, 20);
     this.ctx.strokeRect(endX - handleWidth / 2, height - 20, handleWidth, 20);
 
     // Draw selection label
     const length = end - start + 1;
-    this.ctx.fillStyle = '#1d4ed8';
+    this.ctx.fillStyle = '#b91c1c';
     this.ctx.font = 'bold 10px Inter, sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.fillText(`${length.toLocaleString()} bp`, startX + selectionWidth / 2, 15);
@@ -949,9 +949,9 @@ class GenomeNavigationBar {
     this.selectionMode = !this.selectionMode;
 
     if (this.selectionMode) {
-      this.selectionToggle.style.background = '#3b82f6';
+      this.selectionToggle.style.background = '#ef4444';
       this.selectionToggle.style.color = '#ffffff';
-      this.selectionToggle.style.borderColor = '#3b82f6';
+      this.selectionToggle.style.borderColor = '#ef4444';
       this.canvas.style.cursor = 'crosshair';
       this.genomeBrowser.showNotification(
         'Sequence selection mode enabled. Click and drag on the ruler to select a region.',
