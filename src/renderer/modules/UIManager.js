@@ -6,14 +6,18 @@ class UIManager {
     this.genomeBrowser = genomeBrowser;
     this.initializeDropdownHandlers();
 
-    // Initialize the sidebar splitter when DOM is ready
+    // Initialize the sidebar splitter and navigation drag when DOM is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
         this.initializeSidebarSplitter();
+        this.initializeNavigationDrag();
       });
     } else {
       // DOM is already loaded
-      setTimeout(() => this.initializeSidebarSplitter(), 100);
+      setTimeout(() => {
+        this.initializeSidebarSplitter();
+        this.initializeNavigationDrag();
+      }, 100);
     }
   }
 
@@ -237,9 +241,7 @@ class UIManager {
     // Determine desired state:
     // - From checkbox: use checkbox.checked (already toggled by browser)
     // - Otherwise: toggle the current state
-    const shouldShow = fromCheckbox
-      ? toggleCheckbox.checked
-      : !isCurrentlyVisible;
+    const shouldShow = fromCheckbox ? toggleCheckbox.checked : !isCurrentlyVisible;
 
     if (shouldShow) {
       // Show sidebar
@@ -586,7 +588,7 @@ class UIManager {
         case 'ArrowDown':
           deltaY = step;
           break;
-        case 'Home':
+        case 'Home': {
           // Reset to default split - sequence gets reasonable height, genome gets the rest
           const viewportHeight = window.innerHeight;
           const defaultSequenceHeight = Math.min(250, viewportHeight * 0.3); // Max 30% of viewport or 250px
@@ -606,6 +608,7 @@ class UIManager {
 
           e.preventDefault();
           return;
+        }
         default:
           return;
       }
@@ -809,6 +812,133 @@ class UIManager {
       // This fixes the issue where coverage visualization becomes too narrow
       this.recalculateCanvasTrackWidths();
     });
+  }
+
+  /**
+   * Initialize vertical drag functionality for genome navigation buttons
+   * Allows users to reposition the left/right pan buttons to avoid track obstruction
+   */
+  initializeNavigationDrag() {
+    const navContainer = document.getElementById('genomeNavigation');
+    const prevBtn = document.getElementById('prevBtnGenome');
+    const nextBtn = document.getElementById('nextBtnGenome');
+
+    if (!navContainer || !prevBtn || !nextBtn) {
+      // Retry if not available yet (e.g. if called before DOM is fully parsed)
+      setTimeout(() => {
+        const retryContainer = document.getElementById('genomeNavigation');
+        if (retryContainer && !retryContainer.dataset.dragInitialized) {
+          this.initializeNavigationDrag();
+        }
+      }, 1000);
+      return;
+    }
+
+    // Mark as initialized to prevent duplicate setups
+    if (navContainer.dataset.dragInitialized) return;
+    navContainer.dataset.dragInitialized = 'true';
+
+    let isDragging = false;
+    let startY = 0;
+    let startTop = 0;
+    let hasMoved = false;
+    let wasDragged = false;
+
+    // Set cursor to grab to indicate draggability
+    prevBtn.style.cursor = 'grab';
+    nextBtn.style.cursor = 'grab';
+
+    // Restore position from localStorage
+    const savedTop = localStorage.getItem('genomeNavigationTop');
+    if (savedTop) {
+      navContainer.style.top = savedTop;
+      navContainer.style.transform = 'none';
+    }
+
+    const onMouseDown = e => {
+      // Only handle left mouse button
+      if (e.button !== 0) return;
+
+      isDragging = true;
+      hasMoved = false;
+      startY = e.clientY;
+
+      const rect = navContainer.getBoundingClientRect();
+      const parentRect = navContainer.parentElement.getBoundingClientRect();
+      startTop = rect.top - parentRect.top;
+
+      document.body.style.cursor = 'ns-resize';
+      prevBtn.style.cursor = 'grabbing';
+      nextBtn.style.cursor = 'grabbing';
+
+      // We don't call preventDefault() here to allow :active styles to trigger,
+      // but we will use wasDragged to suppress click if it turns out to be a move.
+    };
+
+    const onMouseMove = e => {
+      if (!isDragging) return;
+
+      const deltaY = e.clientY - startY;
+
+      // Use a small threshold before considering it a drag vs a click
+      if (!hasMoved && Math.abs(deltaY) > 4) {
+        hasMoved = true;
+      }
+
+      if (hasMoved) {
+        const parentRect = navContainer.parentElement.getBoundingClientRect();
+        let newTop = startTop + deltaY;
+
+        // Constrain within parent viewer area
+        const containerHeight = parentRect.height;
+        // Buttons are 40px tall (from CSS)
+        newTop = Math.max(0, Math.min(containerHeight - 40, newTop));
+
+        navContainer.style.top = `${newTop}px`;
+        navContainer.style.transform = 'none'; // Overrides CSS translateY(-50%)
+      }
+    };
+
+    const onMouseUp = () => {
+      if (!isDragging) return;
+
+      isDragging = false;
+      document.body.style.cursor = '';
+      prevBtn.style.cursor = 'grab';
+      nextBtn.style.cursor = 'grab';
+
+      if (hasMoved) {
+        wasDragged = true;
+        localStorage.setItem('genomeNavigationTop', navContainer.style.top);
+
+        // Reset wasDragged after current event cycle to allow click event to be suppressed
+        setTimeout(() => {
+          wasDragged = false;
+        }, 100);
+      }
+    };
+
+    const onBtnClick = e => {
+      if (wasDragged) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        wasDragged = false;
+      }
+    };
+
+    // Event listeners
+    prevBtn.addEventListener('mousedown', onMouseDown);
+    nextBtn.addEventListener('mousedown', onMouseDown);
+
+    // Attach move/up to document for robust dragging even when mouse leaves button
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    // Use capturing phase to intercept and stop the original click if dragged
+    prevBtn.addEventListener('click', onBtnClick, true);
+    nextBtn.addEventListener('click', onBtnClick, true);
+
+    console.log('✅ [UIManager] Genome navigation vertical drag initialized');
   }
 
   // UI state management
