@@ -1,6 +1,7 @@
 /**
  * GenomeNavigationBar - Interactive ruler-style navigation for the genome viewer
  */
+/* eslint-disable no-unused-vars */
 class GenomeNavigationBar {
   constructor(genomeBrowser) {
     this.genomeBrowser = genomeBrowser;
@@ -138,11 +139,9 @@ class GenomeNavigationBar {
 
   setupEventListeners() {
     // Handle canvas resizing
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
-        this.resizeCanvas();
-        this.draw();
-      }
+    const resizeObserver = new ResizeObserver(() => {
+      this.resizeCanvas();
+      this.draw();
     });
     resizeObserver.observe(this.container);
 
@@ -209,28 +208,11 @@ class GenomeNavigationBar {
     const width = this.canvas.width / (window.devicePixelRatio || 1);
     const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
 
-    // If collapsed, only draw a minimal background
-    if (this.isRulerCollapsed) {
-      // Clear canvas
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-      // Draw background
-      this.ctx.fillStyle = '#f8fafc';
-      this.ctx.fillRect(0, 0, width, height);
-
-      // Draw border
-      this.ctx.strokeStyle = '#cbd5e1';
-      this.ctx.lineWidth = 1;
-      this.ctx.strokeRect(0, 0, width, height);
-
-      return;
-    }
-
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Set font and styles
-    this.ctx.font = '11px Inter, sans-serif';
+    this.ctx.font = this.isRulerCollapsed ? '9px Inter, sans-serif' : '11px Inter, sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.strokeStyle = '#64748b';
     this.ctx.fillStyle = '#334155';
@@ -244,15 +226,22 @@ class GenomeNavigationBar {
     const scale = width / this.sequenceLength;
     const { majorInterval, minorInterval } = this.calculateTickIntervals();
 
-    // Draw minor ticks
-    this.ctx.strokeStyle = '#cbd5e1';
-    this.ctx.lineWidth = 0.5;
-    for (let pos = 0; pos <= this.sequenceLength; pos += minorInterval) {
-      const x = pos * scale;
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, height - this.minorTickHeight);
-      this.ctx.lineTo(x, height);
-      this.ctx.stroke();
+    // Adjust heights and offsets for collapsed mode
+    const majorH = this.isRulerCollapsed ? 6 : this.majorTickHeight;
+    const minorH = this.isRulerCollapsed ? 3 : this.minorTickHeight;
+    const labelY = this.isRulerCollapsed ? 12 : this.labelOffset;
+
+    // Draw minor ticks (only if not collapsed for better clarity)
+    if (!this.isRulerCollapsed) {
+      this.ctx.strokeStyle = '#cbd5e1';
+      this.ctx.lineWidth = 0.5;
+      for (let pos = 0; pos <= this.sequenceLength; pos += minorInterval) {
+        const x = pos * scale;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, height - minorH);
+        this.ctx.lineTo(x, height);
+        this.ctx.stroke();
+      }
     }
 
     // Draw major ticks and labels
@@ -265,13 +254,15 @@ class GenomeNavigationBar {
 
       // Draw major tick
       this.ctx.beginPath();
-      this.ctx.moveTo(x, height - this.majorTickHeight);
+      this.ctx.moveTo(x, height - majorH);
       this.ctx.lineTo(x, height);
       this.ctx.stroke();
 
-      // Draw label
-      const label = this.formatPosition(pos);
-      this.ctx.fillText(label, x, this.labelOffset);
+      // Draw label (simplified in collapsed mode)
+      if (!this.isRulerCollapsed || pos % (majorInterval * 2) === 0) {
+        const label = this.formatPosition(pos);
+        this.ctx.fillText(label, x, labelY);
+      }
     }
 
     // Draw origin marker in circular mode
@@ -351,8 +342,6 @@ class GenomeNavigationBar {
    * Draw origin marker at position 0 when in circular mode
    */
   drawOriginMarker() {
-    const width = this.canvas.width / (window.devicePixelRatio || 1);
-    const scale = width / this.sequenceLength;
     const originX = 0; // Origin is always at position 0
 
     // Draw dashed vertical line at origin
@@ -425,19 +414,20 @@ class GenomeNavigationBar {
       const startX = range.start * scale;
       const endX = range.end * scale;
       const rangeWidth = endX - startX;
+      const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
 
       // Draw highlighted range
       this.ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
-      this.ctx.fillRect(startX, 0, rangeWidth, this.height);
+      this.ctx.fillRect(startX, 0, rangeWidth, height);
 
       // Draw range borders
       this.ctx.strokeStyle = '#3b82f6';
       this.ctx.lineWidth = 2;
       this.ctx.beginPath();
       this.ctx.moveTo(startX, 0);
-      this.ctx.lineTo(startX, this.height);
+      this.ctx.lineTo(startX, height);
       this.ctx.moveTo(endX, 0);
-      this.ctx.lineTo(endX, this.height);
+      this.ctx.lineTo(endX, height);
       this.ctx.stroke();
 
       // Draw resize handles
@@ -450,24 +440,26 @@ class GenomeNavigationBar {
    */
   drawRangeSegment(startX, endX) {
     const rangeWidth = endX - startX;
+    const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
 
     // Draw highlighted range
     this.ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
-    this.ctx.fillRect(startX, 0, rangeWidth, this.height);
+    this.ctx.fillRect(startX, 0, rangeWidth, height);
 
     // Draw range borders
     this.ctx.strokeStyle = '#3b82f6';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     this.ctx.moveTo(startX, 0);
-    this.ctx.lineTo(startX, this.height);
+    this.ctx.lineTo(startX, height);
     this.ctx.moveTo(endX, 0);
-    this.ctx.lineTo(endX, this.height);
+    this.ctx.lineTo(endX, height);
     this.ctx.stroke();
   }
 
   drawResizeHandles(startX, endX) {
-    const halfH = this.height / 2;
+    const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
+    const halfH = height / 2;
     const hw = this.handleWidth;
 
     // Left handle: top half only — easier to distinguish from right handle at small ranges
@@ -490,7 +482,8 @@ class GenomeNavigationBar {
    */
   drawSelectionIndicator() {
     // Use either active selection or final selection
-    let start, end;
+    let start;
+    let end;
     if (this.selectionStart && this.selectionEnd) {
       // Active selection during drag
       start = Math.min(this.selectionStart, this.selectionEnd);
@@ -504,7 +497,7 @@ class GenomeNavigationBar {
     }
 
     const width = this.canvas.width / (window.devicePixelRatio || 1);
-    const height = this.height;
+    const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
     const scale = width / this.sequenceLength;
 
     const startX = start * scale;
@@ -916,7 +909,9 @@ class GenomeNavigationBar {
 
     // Update current tab title with new position (from ruler click navigation)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd, { source: 'ruler' });
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd, {
+        source: 'ruler',
+      });
     }
 
     console.log(`GenomeNavigationBar: Navigated to position ${position}`);
@@ -938,7 +933,9 @@ class GenomeNavigationBar {
 
     // Update current tab title with new position (from ruler double-click zoom)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd, { source: 'ruler' });
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(this.currentChromosome, newStart + 1, newEnd, {
+        source: 'ruler',
+      });
     }
 
     console.log(`GenomeNavigationBar: Zoomed to position ${position} with range ${zoomRange}`);
