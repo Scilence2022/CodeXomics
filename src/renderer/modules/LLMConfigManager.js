@@ -2,7 +2,8 @@
  * LLMConfigManager - Manages LLM provider configurations and API communication
  */
 class LLMConfigManager {
-  constructor(configManager = null) {
+  constructor(genomeBrowser, configManager = null) {
+    this.genomeBrowser = genomeBrowser;
     this.configManager = configManager;
     this.providers = {
       // OpenAI Direct API - GPT-5 requires bringing your own API key (BYOK)
@@ -835,15 +836,7 @@ class LLMConfigManager {
 
     console.log('Setting up LLM Config Manager event listeners...');
 
-    // Options menu dropdown
-    const optionsBtn = document.getElementById('optionsBtn');
-    if (optionsBtn) {
-      optionsBtn.addEventListener('click', e => {
-        console.log('Options button clicked');
-        e.stopPropagation();
-        this.toggleOptionsDropdown();
-      });
-    }
+    // Options menu dropdown - Handled by UIManager now
 
     // Configure LLM button
     const configureLLMBtn = document.getElementById('configureLLMBtn');
@@ -950,13 +943,7 @@ class LLMConfigManager {
       }
     });
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', e => {
-      const optionsDropdownMenu = document.getElementById('optionsDropdownMenu');
-      if (optionsDropdownMenu && !e.target.closest('.file-menu-container')) {
-        this.hideOptionsDropdown();
-      }
-    });
+    // Close dropdown when clicking outside - Handled by UIManager now
 
     // Modal close handlers
     document.querySelectorAll('#llmConfigModal .modal-close').forEach(btn => {
@@ -1001,22 +988,10 @@ class LLMConfigManager {
     this.refreshLocalSavedConfigs();
   }
 
-  toggleOptionsDropdown() {
-    const dropdown = document.getElementById('optionsDropdownMenu');
-    const isVisible = dropdown.classList.contains('show');
-
-    // Hide all other dropdowns first
-    document.querySelectorAll('.dropdown-menu').forEach(menu => {
-      menu.classList.remove('show');
-    });
-
-    if (!isVisible) {
-      dropdown.classList.add('show');
-    }
-  }
-
   hideOptionsDropdown() {
-    document.getElementById('optionsDropdownMenu').classList.remove('show');
+    if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+      this.genomeBrowser.uiManager.closeOptionsDropdown();
+    }
   }
 
   showConfigModal() {

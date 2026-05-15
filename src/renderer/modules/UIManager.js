@@ -64,6 +64,17 @@ class UIManager {
           }
         }
       }
+
+      // Close options dropdown if click is outside
+      const optionsDropdown = document.getElementById('optionsDropdownMenu');
+      const optionsButton = document.getElementById('optionsBtn');
+      if (optionsDropdown && optionsDropdown.classList.contains('show')) {
+        if (!optionsButton.contains(e.target) && !optionsDropdown.contains(e.target)) {
+          if (!e.target.classList.contains('dropdown-item')) {
+            this.closeOptionsDropdown();
+          }
+        }
+      }
     });
 
     // Reposition dropdowns on window resize
@@ -434,6 +445,24 @@ class UIManager {
   closeExportDropdown() {
     const dropdown = document.getElementById('exportDropdownMenu');
     dropdown.classList.remove('show');
+  }
+
+  // Options dropdown management
+  toggleOptionsDropdown() {
+    const dropdown = document.getElementById('optionsDropdownMenu');
+    const button = document.getElementById('optionsBtn');
+
+    if (dropdown.classList.contains('show')) {
+      dropdown.classList.remove('show');
+    } else {
+      this.positionDropdown(dropdown, button);
+      dropdown.classList.add('show');
+    }
+  }
+
+  closeOptionsDropdown() {
+    const dropdown = document.getElementById('optionsDropdownMenu');
+    if (dropdown) dropdown.classList.remove('show');
   }
 
   // Modal management

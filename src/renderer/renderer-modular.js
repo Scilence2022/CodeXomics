@@ -401,7 +401,7 @@ class GenomeBrowser {
     // Step 4: Initialize LLM configuration
     console.log('🤖 About to initialize LLMConfigManager...');
     try {
-      this.llmConfigManager = new LLMConfigManager(this.configManager);
+      this.llmConfigManager = new LLMConfigManager(this, this.configManager);
       console.log('✅ LLMConfigManager initialized successfully');
     } catch (error) {
       console.error('❌ Error initializing LLMConfigManager:', error);
@@ -581,29 +581,7 @@ class GenomeBrowser {
       this.uiManager.handleWindowResize();
     });
 
-    // Step 10: Debug Options button after delay
-    console.log('⏱️ Setting up Options button debug...');
-    setTimeout(() => {
-      const optionsBtn = document.getElementById('optionsBtn');
-      console.log('🔍 Debug: Options button found:', !!optionsBtn);
-      if (optionsBtn) {
-        console.log('🎯 Adding fallback click listener to Options button');
-        optionsBtn.addEventListener('click', e => {
-          console.log('🖱️ DEBUG: Fallback Options button clicked!');
-          e.stopPropagation();
-          const dropdown = document.getElementById('optionsDropdownMenu');
-          if (dropdown) {
-            dropdown.classList.toggle('show');
-            console.log('📋 DEBUG: Toggled dropdown, classes:', dropdown.className);
-          } else {
-            console.error('❌ DEBUG: Dropdown menu not found');
-          }
-        });
-      } else {
-        console.error('❌ DEBUG: Options button not found in DOM');
-      }
-    }, 1000);
-
+    // Step 10: Final initialization steps
     console.log('🎉 CodeXomics initialized successfully!');
 
     // Initialize MCP server status check
@@ -865,7 +843,8 @@ class GenomeBrowser {
   }
 
   setupEventListeners() {
-    // File operations - dropdown menu
+    // Main banner dropdowns
+    document.getElementById('optionsBtn').addEventListener('click', () => this.uiManager.toggleOptionsDropdown());
     document.getElementById('openFileBtn').addEventListener('click', () => this.uiManager.toggleFileDropdown());
     document
       .getElementById('openGenomeBtn')
