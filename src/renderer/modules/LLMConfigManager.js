@@ -5,6 +5,8 @@ class LLMConfigManager {
   constructor(genomeBrowser, configManager = null) {
     this.genomeBrowser = genomeBrowser;
     this.configManager = configManager;
+    this.isInitialized = false;
+    this._initPromise = null;
     this.providers = {
       // OpenAI Direct API - GPT-5 requires bringing your own API key (BYOK)
       openai: {
@@ -352,7 +354,12 @@ class LLMConfigManager {
     };
 
     // Initialize asynchronously to wait for ConfigManager
-    this.initializeAsync();
+    this._initPromise = this.initializeAsync();
+  }
+
+  async waitForInitialization() {
+    if (this.isInitialized) return;
+    await this._initPromise;
   }
 
   async initializeAsync() {
@@ -370,11 +377,13 @@ class LLMConfigManager {
 
       // Initialize UI
       this.initializeUI();
+      this.isInitialized = true;
     } catch (error) {
       console.error('LLMConfigManager initialization error:', error);
       // Fallback to immediate initialization
       this.loadConfiguration();
       this.initializeUI();
+      this.isInitialized = true;
     }
   }
 

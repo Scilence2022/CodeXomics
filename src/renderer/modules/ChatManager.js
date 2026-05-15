@@ -48,8 +48,9 @@ class ChatManager {
     this.showDetailedToolData = true;
     this.detailedLogging = true;
 
-    // Initialize LLM configuration manager with config integration
-    this.llmConfigManager = new LLMConfigManager(this.configManager);
+    // Use app's LLM configuration manager if available, otherwise create one
+    // Ensure we pass arguments correctly: (genomeBrowser, configManager)
+    this.llmConfigManager = this.app?.llmConfigManager || new LLMConfigManager(this.app, this.configManager);
 
     // Initialize MCP Server Manager
     this.mcpServerManager = new MCPServerManager(this.configManager);
@@ -708,6 +709,9 @@ class ChatManager {
 
     try {
       // Validate LLM configuration
+      if (this.llmConfigManager && this.llmConfigManager.waitForInitialization) {
+        await this.llmConfigManager.waitForInitialization();
+      }
       if (!this.llmConfigManager || !this.llmConfigManager.isConfigured()) {
         throw new Error('No LLM configured. Please set up an LLM provider in Settings > LLM Config.');
       }
@@ -4241,6 +4245,11 @@ class ChatManager {
   async sendToLLM(message, options = {}) {
     // Set current message for Dynamic Tools Registry
     this.currentMessage = message;
+
+    // Wait for LLM configuration to be fully loaded
+    if (this.llmConfigManager && this.llmConfigManager.waitForInitialization) {
+      await this.llmConfigManager.waitForInitialization();
+    }
 
     // Check if LLM is configured
     if (!this.llmConfigManager.isConfigured()) {
