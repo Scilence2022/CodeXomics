@@ -168,9 +168,6 @@ class ChatManager {
         this.welcomeExamplesManager.onChange(() => {
           this.renderWelcomeCards();
         });
-
-        // Initial render (UI may not be ready yet; renderWelcomeCards guards against that)
-        this.renderWelcomeCards();
       }
 
       // Initialize the settings manager
@@ -184,6 +181,9 @@ class ChatManager {
 
         // Update display flags from settings
         this.updateSettingsFromManager();
+
+        // Initial render of welcome cards
+        this.renderWelcomeCards();
 
         // Listen for settings changes
         window.addEventListener('chatbox-settingsChanged', (event) => {
@@ -3613,8 +3613,8 @@ class ChatManager {
     const appDiv = document.getElementById('app');
     appDiv.insertAdjacentHTML('beforeend', chatHTML);
 
-    // Initial render of welcome examples
-    this.renderWelcomeCards();
+    // Initial render of welcome cards will be handled in initializeChatBoxSettings()
+    // once the WelcomeExamplesManager is loaded and initialized.
 
     // Ensure ChatBox is visible by default
     const chatPanel = document.getElementById('llmChatPanel');

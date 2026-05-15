@@ -13,9 +13,9 @@ class WelcomeExamplesManager {
       title: 'File Operation',
       cssClass: 'welcome-card-file',
       examples: [
-        { title: 'Download GBK file', prompt: 'Download internet file https://github.com/Scilence2022/CodeXomics/blob/main/test_data/ECOLI.gbk to ~/Downloads/ECOLI.gbk' },
-        { title: 'Load local file', prompt: 'Load local file ~/Downloads/ECOLI.gbk' },
-        { title: 'Export fasta sequence', prompt: 'Export genome sequence as fasta file ~/Downloads/ECOLI.fasta' },
+        { title: 'Download GBK file', prompt: 'Download internet file https://github.com/Scilence2022/CodeXomics/blob/main/test_data/ECOLI.gbk to ~/ECOLI.gbk' },
+        { title: 'Load local file', prompt: 'Load local file ~/ECOLI.gbk' },
+        { title: 'Export fasta sequence', prompt: 'Export genome sequence as fasta file ~/ECOLI.fasta' },
       ],
     },
 
@@ -89,30 +89,53 @@ class WelcomeExamplesManager {
    * Return the full list of categories. Falls back to defaults when no data is stored.
    * @returns {Array<{id:string, icon:string, title:string, cssClass:string, examples:string[]}>}
    */
+  /**
+   * Get all categories, merging saved user data with default categories.
+   * Ensures new default categories appear even for users with existing data.
+   */
   getAll() {
+    let savedCategories = [];
     try {
       const raw = localStorage.getItem(WelcomeExamplesManager.STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Backward compatibility: Convert string examples to {title, prompt} objects
-          return parsed.map(cat => {
-            if (cat.examples) {
-              cat.examples = cat.examples.map(ex => {
-                if (typeof ex === 'string') {
-                  return { title: ex, prompt: ex };
-                }
-                return ex;
-              });
-            }
-            return cat;
-          });
+        if (Array.isArray(parsed)) {
+          savedCategories = parsed;
         }
       }
     } catch (err) {
       console.warn('[WelcomeExamplesManager] Failed to parse localStorage data:', err);
     }
-    return JSON.parse(JSON.stringify(WelcomeExamplesManager.DEFAULT_EXAMPLES));
+
+    // Get a fresh copy of defaults
+    const defaults = JSON.parse(JSON.stringify(WelcomeExamplesManager.DEFAULT_EXAMPLES));
+
+    if (savedCategories.length === 0) {
+      return defaults;
+    }
+
+    // Merge logic: Use saved categories, but ensure all default IDs are present
+    const merged = [...savedCategories];
+    const savedIds = new Set(merged.map(cat => cat.id));
+
+    defaults.forEach(defaultCat => {
+      if (!savedIds.has(defaultCat.id)) {
+        merged.push(defaultCat);
+      }
+    });
+
+    // Ensure all examples are in the new object format {title, prompt}
+    return merged.map(cat => {
+      if (cat.examples) {
+        cat.examples = cat.examples.map(ex => {
+          if (typeof ex === 'string') {
+            return { title: ex, prompt: ex };
+          }
+          return ex;
+        });
+      }
+      return cat;
+    });
   }
 
   /**
