@@ -4760,7 +4760,7 @@ class ChatManager {
                     `${(sanitizedStr.length / 1024).toFixed(1)}KB. Consider adding tool-specific sanitization rules.`,
                   );
                 }
-                return `${result.tool} executed successfully: ${sanitizedStr}`;
+                return `${result.tool} executed successfully with parameters: ${JSON.stringify(result.parameters)}: ${sanitizedStr}`;
               });
               conversationHistory.push({
                 role: 'system',
@@ -5836,13 +5836,25 @@ class ChatManager {
    */
   wasToolExecutedSuccessfully(toolKey, conversationHistory) {
     // Look for system messages indicating successful execution
+    const [toolName, ...paramsParts] = toolKey.split(':');
+    const paramsStr = paramsParts.join(':');
+
     for (const msg of conversationHistory) {
       if (msg.role === 'system' && msg.content && msg.content.includes('executed successfully')) {
         // Extract tool name and check if it matches
-        const toolName = toolKey.split(':')[0];
         if (msg.content.includes(`${toolName} executed successfully`)) {
-          console.log(`🔍 Found successful execution record for: ${toolName}`);
-          return true;
+          // If message contains parameters, check for exact match
+          if (msg.content.includes(`with parameters: ${paramsStr}`)) {
+            console.log(`🔍 Found successful execution record for: ${toolName} with matching parameters`);
+            return true;
+          }
+          
+          // Legacy support: if message doesn't have the "with parameters" part, 
+          // we fall back to name-only match to be safe
+          if (!msg.content.includes('with parameters:')) {
+            console.log(`🔍 Found legacy successful execution record for: ${toolName}`);
+            return true;
+          }
         }
       }
     }
@@ -5925,13 +5937,21 @@ class ChatManager {
    * Find existing execution of a tool with specific parameters
    */
   findExistingExecution(toolKey, conversationHistory) {
-    const toolName = toolKey.split(':')[0];
+    const [toolName, ...paramsParts] = toolKey.split(':');
+    const paramsStr = paramsParts.join(':');
+
     for (const msg of conversationHistory) {
       if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed`)) {
-        return {
-          success: msg.content.includes('successfully'),
-          timestamp: new Date().toISOString(), // Approximate
-        };
+        // Check for parameter match
+        const hasParams = msg.content.includes('with parameters:');
+        const paramsMatch = msg.content.includes(`with parameters: ${paramsStr}`);
+
+        if (paramsMatch || !hasParams) {
+          return {
+            success: msg.content.includes('successfully'),
+            timestamp: new Date().toISOString(), // Approximate
+          };
+        }
       }
     }
     return null;
