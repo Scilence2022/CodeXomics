@@ -460,6 +460,7 @@ class TabManager {
 
       // File management state (shared references to loaded files)
       loadedFiles: this.genomeBrowser.loadedFiles || [],
+      annotationTracks: this.genomeBrowser.annotationTracks || [],
 
       // UI state (inherit current state but keep independent)
       sidebarVisible: currentSidebarVisible,
@@ -659,6 +660,7 @@ class TabManager {
       tabState.currentWIGTracks = this.genomeBrowser.currentWIGTracks;
       tabState.wigTrackOrder = this.genomeBrowser.wigTrackOrder || [];
       tabState.loadedFiles = this.genomeBrowser.loadedFiles;
+      tabState.annotationTracks = this.genomeBrowser.annotationTracks;
 
       // Save UI state (independent per tab)
       tabState.sidebarVisible = !document.getElementById('sidebar').classList.contains('hidden');
@@ -714,6 +716,7 @@ class TabManager {
       this.genomeBrowser.currentWIGTracks = tabState.currentWIGTracks;
       this.genomeBrowser.wigTrackOrder = tabState.wigTrackOrder || [];
       this.genomeBrowser.loadedFiles = tabState.loadedFiles;
+      this.genomeBrowser.annotationTracks = tabState.annotationTracks || [];
 
       // Restore UI state
       const sidebar = document.getElementById('sidebar');
@@ -907,6 +910,10 @@ class TabManager {
       // Update track visibility
       if (this.genomeBrowser.trackVisibility) {
         tabState.trackVisibility = { ...this.genomeBrowser.trackVisibility };
+      }
+      
+      if (this.genomeBrowser.visibleTracks) {
+        tabState.visibleTracks = new Set(this.genomeBrowser.visibleTracks);
       }
 
       // Update feature visibility

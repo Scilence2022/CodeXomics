@@ -4463,27 +4463,34 @@ class GenomeBrowser {
     const newOrder = [];
 
     trackElements.forEach(element => {
-      const classList = Array.from(element.classList);
-      const trackClass = classList.find(cls => cls.endsWith('-track'));
-      if (trackClass) {
-        const trackType = trackClass.replace('-track', '');
-        const typeMapping = {
-          gene: 'genes',
-          gc: 'gc',
-          variant: 'variants',
-          reads: 'reads',
-          protein: 'proteins',
-          proteins: 'proteins',
-          wig: 'wigTracks',
-          'sequence-line': 'sequenceLine',
-          sequence: 'sequence',
-          actions: 'actions',
-          blast: 'blast',
-        };
-        const mappedType = typeMapping[trackType] || trackType;
-        if (!newOrder.includes(mappedType)) {
-          newOrder.push(mappedType);
+      // Prioritize explicit track type from data attribute
+      let trackType = element.dataset.trackType;
+
+      if (!trackType) {
+        // Fallback to class-based detection for legacy tracks
+        const classList = Array.from(element.classList);
+        const trackClass = classList.find(cls => cls.endsWith('-track'));
+        if (trackClass) {
+          const rawType = trackClass.replace('-track', '');
+          const typeMapping = {
+            gene: 'genes',
+            gc: 'gc',
+            variant: 'variants',
+            reads: 'reads',
+            protein: 'proteins',
+            proteins: 'proteins',
+            wig: 'wigTracks',
+            'sequence-line': 'sequenceLine',
+            sequence: 'sequence',
+            actions: 'actions',
+            blast: 'blast',
+          };
+          trackType = typeMapping[rawType] || rawType;
         }
+      }
+
+      if (trackType && !newOrder.includes(trackType)) {
+        newOrder.push(trackType);
       }
     });
 

@@ -774,6 +774,7 @@ class TrackRenderer {
     const track = document.createElement('div');
     track.className = 'gene-track'; // Reuse gene track styling
     track.dataset.trackId = annotationTrack.id;
+    track.dataset.trackType = `annotation_${annotationTrack.id}`;
 
     // Get per-instance settings
     const settings = this.getTrackSettings('genes', annotationTrack.id);
@@ -10224,7 +10225,23 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
    * Remove file-specific track and cleanup
    */
   async removeFileTrack(fileId, trackType) {
-    const metadata = this.genomeBrowser.multiFileManager.getFileMetadata(fileId);
+    let metadata = this.genomeBrowser.multiFileManager.getFileMetadata(fileId);
+    let isAnnotationTrack = false;
+
+    if (!metadata) {
+      // Check if it's an annotation track (GFF/BED)
+      const annotationTrack = this.genomeBrowser.annotationTracks?.find((t) => t.id === fileId);
+      if (annotationTrack) {
+        metadata = {
+          id: fileId,
+          name: annotationTrack.name,
+          type: annotationTrack.fileType,
+          isAnnotation: true,
+        };
+        isAnnotationTrack = true;
+      }
+    }
+
     if (!metadata) {
       console.error(`File not found: ${fileId}`);
       return;
@@ -10246,11 +10263,33 @@ This action cannot be undone.`;
     try {
       console.log(`Removing file track: ${fileId} (${metadata.name})`);
 
-      // Remove file from multi-file manager
-      await this.genomeBrowser.multiFileManager.removeFile(fileId);
+      if (isAnnotationTrack) {
+        // Remove from annotationTracks list
+        this.genomeBrowser.annotationTracks = this.genomeBrowser.annotationTracks.filter(
+            (t) => t.id !== fileId,
+        );
+
+        // Remove from global visibility set
+        this.genomeBrowser.visibleTracks.delete(`annotation_${fileId}`);
+
+        // Update sidebar if it's open
+        if (this.genomeBrowser.populateSidebarTracks) {
+          this.genomeBrowser.populateSidebarTracks();
+        }
+
+        // Notify TabManager to synchronize state
+        if (this.genomeBrowser.tabManager) {
+          this.genomeBrowser.tabManager.onTrackVisibilityChanged();
+        }
+      } else {
+        // Remove file from multi-file manager
+        await this.genomeBrowser.multiFileManager.removeFile(fileId);
+      }
 
       // Find and remove the track element
-      const trackElement = document.querySelector(`[data-file-id="${fileId}"]`)?.closest('[class*="-track"]');
+      const trackElement = document
+          .querySelector(`[data-file-id="${fileId}"]`)
+          ?.closest('[class*="-track"]');
       if (trackElement) {
         trackElement.remove();
       }

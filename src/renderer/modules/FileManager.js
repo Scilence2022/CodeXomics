@@ -1842,7 +1842,7 @@ Original error: ${error.message}`;
 
     // Synchronize with the global visibility control system
     if (newTrack.visible) {
-      this.genomeBrowser.visibleTracks.add(newTrack.id);
+      this.genomeBrowser.visibleTracks.add(`annotation_${newTrack.id}`);
     }
 
     // Add file to loaded files list
