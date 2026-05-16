@@ -79,12 +79,18 @@ class ProteinNetworkPlugin {
 
       console.log(`✅ Network visualized: ${networkId}`);
 
-      return {
+      const result = {
         success: true,
         networkId,
         nodeCount: networkData.nodes.length,
         edgeCount: networkData.edges.length,
       };
+
+      // Attach the DOM element for the UI to render
+      // This will be detected by the ChatManager/LLMContextService
+      result.visualizationElement = visualization;
+
+      return result;
     } catch (error) {
       console.error('❌ Network visualization failed:', error);
       throw error;

@@ -13609,8 +13609,18 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     if (thinkingDiv) {
       const thinkingContent = thinkingDiv.querySelector('.thinking-content');
       if (thinkingContent) {
-        // Use innerHTML to properly render HTML tags and entities
-        thinkingContent.innerHTML += '\n' + message;
+        if (message instanceof HTMLElement) {
+          // If message is a DOM element, append it directly
+          const wrapper = document.createElement('div');
+          wrapper.className = 'thinking-step-dom';
+          wrapper.style.marginTop = '8px';
+          wrapper.style.marginBottom = '8px';
+          wrapper.appendChild(message);
+          thinkingContent.appendChild(wrapper);
+        } else {
+          // Use innerHTML to properly render HTML tags and entities
+          thinkingContent.innerHTML += '\n' + message;
+        }
       }
     } else {
       this.addThinkingMessage(message);

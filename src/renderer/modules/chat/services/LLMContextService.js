@@ -2558,149 +2558,98 @@ ${this.chatManager.getPluginSystemInfo()}`;
       resultMessage += `, ${failCount} failed`;
     }
 
-    // 显示详细结果
-    const detailsHtml = toolResults
-        .map((result) => {
-          const icon = result.success ? '✅' : '❌';
-          let resultDisplay = `<div style="margin: 8px 0; padding: 8px; border-left: 3px solid ${result.success ? '#4CAF50' : '#F44336'};">`;
-          resultDisplay += `<strong>${icon} ${result.tool}</strong><br>`;
+    // First show the summary message
+    this.chatManager.updateThinkingMessage(resultMessage);
 
-          if (result.success) {
-          // Custom handling for Deep Gene Research tool
-            if (result.tool === 'deep-gene-research') {
-              const resultData = result.result || result.data;
-              let reportSaved = false;
-              let reportPath = '';
+    // Then process each tool result individually
+    toolResults.forEach((result) => {
+      const icon = result.success ? '✅' : '❌';
+      let resultDisplay = `<div style="margin: 8px 0; padding: 8px; border-left: 3px solid ${result.success ? '#4CAF50' : '#F44336'};">`;
+      resultDisplay += `<strong>${icon} ${result.tool}</strong><br>`;
 
-              try {
-                const fs = require('fs');
-                const path = require('path');
+      const resultData = result.result || result.data;
 
-                // Use the new helper to extract report from various formats
-                const extracted = this.chatManager.extractDeepGeneResearchReport(resultData);
-                const {report, geneSymbol, stepsCount, statistics, images, sources} = extracted;
+      if (result.success) {
+        // Custom handling for Deep Gene Research tool
+        if (result.tool === 'deep-gene-research') {
+          try {
+            const fs = require('fs');
+            const path = require('path');
+            const extracted = this.chatManager.extractDeepGeneResearchReport(resultData);
+            const { report, geneSymbol, stepsCount, statistics } = extracted;
+            let reportSaved = false;
+            let reportPath = '';
 
-                // Save report if we have content (ensure report is a string)
-                const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
-                if (reportStr && reportStr.trim().length > 0) {
-                  const reportsDir = path.join(process.cwd(), 'reports');
-                  if (!fs.existsSync(reportsDir)) {
-                    fs.mkdirSync(reportsDir, {recursive: true});
-                  }
-
-                  const safeSymbol = geneSymbol.replace(/[^a-zA-Z0-9_-]/g, '_');
-                  const filename = `Gene_${safeSymbol}_Research_Report.md`;
-                  reportPath = path.join(reportsDir, filename);
-
-                  fs.writeFileSync(reportPath, reportStr);
-                  reportSaved = true;
-                  console.log(`✅ Deep Gene Research report saved to: ${reportPath}`);
-                }
-
-                // Formatted Display
-                resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">`;
-                resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Complete: ${geneSymbol}</h3>`;
-
-                if (reportSaved) {
-                  resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;">`;
-                  resultDisplay += `<i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${path.basename(reportPath)}</code>`;
-                  resultDisplay += `</div>`;
-                }
-
-                resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
-                if (stepsCount > 0) {
-                  resultDisplay += `Completed ${stepsCount} steps of analysis.<br>`;
-                }
-                if (statistics.totalCitations > 0 || statistics.processedPapers > 0) {
-                  resultDisplay += `Found ${statistics.totalCitations} citations`;
-                  if (statistics.processedPapers > 0) {
-                    resultDisplay += ` and ${statistics.processedPapers} papers`;
-                  }
-                  resultDisplay += `.<br>`;
-                }
-                if (reportStr && reportStr.length > 0) {
-                // Show a preview of the report content
-                  const previewLength = 500;
-                  const preview =
-                  reportStr.length > previewLength ? reportStr.substring(0, previewLength) + '...' : reportStr;
-                  resultDisplay += `<details style="margin-top: 8px;">`;
-                  resultDisplay += `<summary style="cursor: pointer; color: #1565C0;">📄 Report Preview</summary>`;
-                  resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; white-space: pre-wrap; font-size: 0.85em;">${this.chatManager.escapeHtml(preview)}</div>`;
-                  resultDisplay += `</details>`;
-                }
-                resultDisplay += `</div>`;
-
-                // Collapsible detailed JSON
-                if (this.chatManager.showDetailedToolData) {
-                  resultDisplay += `<details style="margin-top: 8px;">`;
-                  resultDisplay += `<summary style="cursor: pointer; color: #2196F3; font-size: 0.9em;">📊 View raw data</summary>`;
-                  resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;">`;
-                  try {
-                    const formattedData = this.chatManager.formatToolResultData(resultData);
-                    resultDisplay += formattedData;
-                  } catch (error) {
-                    resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
-                  }
-                  resultDisplay += `</div></details>`;
-                }
-
-                resultDisplay += `</div>`;
-              } catch (e) {
-                console.error('Error processing deep-gene-research result:', e);
-                // Fallback to default display
-                resultDisplay += `<span style="color: #4CAF50;">Status: Success (Display Error)</span>`;
-                if (this.chatManager.showDetailedToolData) {
-                  const rawData = result.result || result.data;
-                  if (rawData) {
-                    resultDisplay += `<br><details style="margin-top: 8px;">`;
-                    resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
-                    resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
-                    try {
-                      const formattedData = this.chatManager.formatToolResultData(rawData);
-                      resultDisplay += formattedData;
-                    } catch (error) {
-                      resultDisplay += `<pre>${JSON.stringify(rawData, null, 2)}</pre>`;
-                    }
-                    resultDisplay += `</div></details>`;
-                  }
-                }
-              }
-            } else {
-            // Standard display for other tools
-              resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
-
-              // 显示详细数据（如果启用）
-              if (this.chatManager.showDetailedToolData) {
-              // Check for result.result first (standard tool execution result), then fallback to result.data (legacy)
-                const resultData = result.result || result.data;
-                if (resultData) {
-                  resultDisplay += `<br><details style="margin-top: 8px;">`;
-                  resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
-                  resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
-                  try {
-                  // 格式化数据显示
-                    const formattedData = this.chatManager.formatToolResultData(resultData);
-                    resultDisplay += formattedData;
-                  } catch (error) {
-                    resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
-                  }
-                  resultDisplay += `</div></details>`;
-                }
-              }
+            const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
+            if (reportStr && reportStr.trim().length > 0) {
+              const reportsDir = path.join(process.cwd(), 'reports');
+              if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
+              const safeSymbol = geneSymbol.replace(/[^a-zA-Z0-9_-]/g, '_');
+              reportPath = path.join(reportsDir, `Gene_${safeSymbol}_Research_Report.md`);
+              fs.writeFileSync(reportPath, reportStr);
+              reportSaved = true;
             }
-          } else {
-            resultDisplay += `<span style="color: #F44336;">Status: Failed</span>`;
-            if (result.error) {
-              resultDisplay += `<br><span style="color: #F44336; font-size: 0.9em;">Error: ${result.error}</span>`;
+
+            resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">`;
+            resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Complete: ${geneSymbol}</h3>`;
+            if (reportSaved) {
+              resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${path.basename(reportPath)}</code></div>`;
             }
+            resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
+            if (stepsCount > 0) resultDisplay += `Completed ${stepsCount} steps of analysis.<br>`;
+            if (statistics.totalCitations > 0 || statistics.processedPapers > 0) {
+              resultDisplay += `Found ${statistics.totalCitations} citations${statistics.processedPapers > 0 ? ` and ${statistics.processedPapers} papers` : ''}.<br>`;
+            }
+            if (reportStr && reportStr.length > 0) {
+              const preview = reportStr.length > 500 ? reportStr.substring(0, 500) + '...' : reportStr;
+              resultDisplay += `<details style="margin-top: 8px;"><summary style="cursor: pointer; color: #1565C0;">📄 Report Preview</summary>`;
+              resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; white-space: pre-wrap; font-size: 0.85em;">${this.chatManager.escapeHtml(preview)}</div></details>`;
+            }
+            resultDisplay += `</div>`;
+            
+            if (this.chatManager.showDetailedToolData && resultData) {
+              resultDisplay += `<details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2196F3; font-size: 0.9em;">📊 View raw data</summary>`;
+              resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;">`;
+              try { resultDisplay += this.chatManager.formatToolResultData(resultData); } catch (e) { resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`; }
+              resultDisplay += `</div></details>`;
+            }
+            resultDisplay += `</div>`;
+          } catch (e) {
+            console.error('Error processing deep-gene-research result:', e);
+            resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
+          }
+        } else {
+          // Standard display for other tools
+          resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
+
+          // Handle visualization if present (detecting visualizationElement)
+          if (resultData && resultData.visualizationElement instanceof HTMLElement) {
+            resultDisplay += `<br><div style="margin-top: 8px; color: #1565C0;"><i class="fas fa-chart-network"></i> Visualization Generated</div>`;
           }
 
-          resultDisplay += `</div>`;
-          return resultDisplay;
-        })
-        .join('');
+          if (this.chatManager.showDetailedToolData && resultData) {
+            resultDisplay += `<br><details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
+            resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
+            try { resultDisplay += this.chatManager.formatToolResultData(resultData); } catch (e) { resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`; }
+            resultDisplay += `</div></details>`;
+          }
+        }
+      } else {
+        resultDisplay += `<span style="color: #F44336;">Status: Failed</span>`;
+        if (result.error) resultDisplay += `<br><span style="color: #F44336; font-size: 0.9em;">Error: ${result.error}</span>`;
+      }
 
-    this.chatManager.updateThinkingMessage(`${resultMessage}<br><div style="margin-top: 8px;">${detailsHtml}</div>`);
+      resultDisplay += `</div>`;
+      
+      // Update with the text part
+      this.chatManager.updateThinkingMessage(resultDisplay);
+
+      // If there's a visualization element, append it now
+      if (resultData && resultData.visualizationElement instanceof HTMLElement) {
+        this.chatManager.updateThinkingMessage(resultData.visualizationElement);
+      }
+    });
+
   }
 }
 
