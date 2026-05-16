@@ -219,6 +219,15 @@ Tab title system in `TabManager.js` supports two modes:
 
 Navigation source values: `'ruler'`, `'zoom'`, `'drag'`, `'navigation'`. Gene name titles are preserved during zoom/drag/navigation; only `source === 'ruler'` switches to Mode 1.
 
+### 3.10 Annotation Track Management (Dynamic Tracks)
+
+Custom annotation tracks (GFF/BED) are managed dynamically outside the `multiFileManager` (which is reserved for BAM/VCF). 
+
+- **ID Pattern**: The internal `id` (e.g., `annotation_track_123`) is stored in `genomeBrowser.annotationTracks`. However, for rendering and visibility tracking, a double-prefixed ID is used: `annotation_annotation_track_123`.
+- **Visibility Control**: The `visibleTracks` set must contain the full prefixed ID (`annotation_${at.id}`) to be correctly rendered by `displayGenomeView`.
+- **Track Identification**: Tracks in the DOM are identified by `data-track-type`. For custom tracks, this attribute must match the full prefixed ID to prevent them from being lost or misidentified as generic "genes" tracks during DOM-based order updates.
+- **State Persistence**: `TabManager` explicitly synchronizes both the `annotationTracks` data list and the `visibleTracks` set per tab to ensure custom tracks survive navigation, tab switching, and ruler interactions.
+
 ## 4. Historical Decisions
 
 - **P1-7**: Main process extraction (10,584→407 lines) into `src/main/` modules
@@ -230,6 +239,7 @@ Navigation source values: `'ruler'`, `'zoom'`, `'drag'`, `'navigation'`. Gene na
 - **Dynamic Tool Registry**: Moved from static tool definitions in ChatManager to `tools_registry/` YAML-based dynamic registry with 4-source merging
 - **Service Extraction**: Tool execution logic extracted from ChatManager into dedicated service classes (`ToolExecutionService`, `FileOperationService`, etc.)
 - **Policy System Design**: Tool execution policies hardcoded inline in `LLMContextService.shouldAllowToolExecution()` rather than configurable — intentional decision to keep policies immutable and auditable
+- **Annotation Track Persistence**: Resolved intermittent disappearance of GFF/BED tracks by enforcing ID prefix consistency and prioritizing `data-track-type` in track order detection.
 
 ## 5. Build and Execution Commands
 
