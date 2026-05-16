@@ -26,15 +26,18 @@ class BenchmarkUI {
       const container = document.getElementById(elementId);
       if (!container) return;
       try {
-        container.innerHTML = '<div style="padding: 15px; text-align: center; color: #7f8c8d;">⏳ Loading from disk...</div>';
+        container.innerHTML =
+          '<div style="padding: 15px; text-align: center; color: #7f8c8d;">⏳ Loading from disk...</div>';
         const framework = window.benchmarkFramework || this.framework;
         if (!framework || typeof framework.loadInteractionDataFromDisk !== 'function') {
-          container.innerHTML = '<div style="padding: 15px; color: #e74c3c;">❌ Framework not available for disk loading</div>';
+          container.innerHTML =
+            '<div style="padding: 15px; color: #e74c3c;">❌ Framework not available for disk loading</div>';
           return;
         }
         const data = await framework.loadInteractionDataFromDisk(diskPath);
         if (!data) {
-          container.innerHTML = '<div style="padding: 15px; color: #e74c3c;">❌ Failed to load data — file may have been cleaned up</div>';
+          container.innerHTML =
+            '<div style="padding: 15px; color: #e74c3c;">❌ Failed to load data — file may have been cleaned up</div>';
           return;
         }
         container.outerHTML = this._renderFullInteractionDisplay(data);
@@ -1005,10 +1008,10 @@ class BenchmarkUI {
    */
   setupTestSelectionHandlers() {
     this.selectedTests = this.selectedTests || {};
-    
+
     // Add click event for configure buttons
     document.querySelectorAll('.configure-tests-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
         const suiteId = btn.getAttribute('data-suite');
         this.openTestSelectionModal(suiteId);
@@ -1022,11 +1025,11 @@ class BenchmarkUI {
 
     // Select All / Deselect All
     document.getElementById('selectAllTestsBtn')?.addEventListener('click', () => {
-      document.querySelectorAll('#testSelectionList input[type="checkbox"]').forEach(cb => cb.checked = true);
+      document.querySelectorAll('#testSelectionList input[type="checkbox"]').forEach(cb => (cb.checked = true));
       this.updateTestSelectionCount();
     });
     document.getElementById('deselectAllTestsBtn')?.addEventListener('click', () => {
-      document.querySelectorAll('#testSelectionList input[type="checkbox"]').forEach(cb => cb.checked = false);
+      document.querySelectorAll('#testSelectionList input[type="checkbox"]').forEach(cb => (cb.checked = false));
       this.updateTestSelectionCount();
     });
 
@@ -1036,19 +1039,19 @@ class BenchmarkUI {
       if (suiteId) {
         const checkboxes = Array.from(document.querySelectorAll('#testSelectionList input[type="checkbox"]'));
         const allChecked = checkboxes.every(cb => cb.checked);
-        
+
         if (allChecked) {
-           delete this.selectedTests[suiteId]; // Use default
+          delete this.selectedTests[suiteId]; // Use default
         } else {
-           this.selectedTests[suiteId] = checkboxes.filter(cb => cb.checked).map(cb => cb.value);
+          this.selectedTests[suiteId] = checkboxes.filter(cb => cb.checked).map(cb => cb.value);
         }
-        
+
         // Update count text
         const total = checkboxes.length;
         const selected = this.selectedTests[suiteId] ? this.selectedTests[suiteId].length : total;
         const countSpan = document.getElementById(`count-${suiteId}`);
         if (countSpan) {
-           countSpan.textContent = `(${selected}/${total} tests)`;
+          countSpan.textContent = `(${selected}/${total} tests)`;
         }
       }
       document.getElementById('testSelectionModal').style.display = 'none';
@@ -1056,7 +1059,6 @@ class BenchmarkUI {
   }
 
   updateTestSelectionCount() {
-    const total = document.querySelectorAll('#testSelectionList input[type="checkbox"]').length;
     const selected = document.querySelectorAll('#testSelectionList input[type="checkbox"]:checked').length;
     const countSpan = document.getElementById('testSelectionCount');
     if (countSpan) {
@@ -1068,48 +1070,49 @@ class BenchmarkUI {
     const modal = document.getElementById('testSelectionModal');
     const title = document.getElementById('testSelectionTitle');
     const list = document.getElementById('testSelectionList');
-    
+
     if (!modal || !title || !list || !this.framework || !this.framework.testSuites) return;
-    
+
     const suite = this.framework.testSuites.get(suiteId);
     if (!suite) return;
-    
+
     modal.setAttribute('data-current-suite', suiteId);
     const suiteNameMap = {
-      'automatic_simple': 'Automatic Simple Tests',
-      'automatic_complex': 'Automatic Complex Tests',
-      'manual_suite': 'Manual Tests',
-      'manual_complex': 'Manual Complex Tests'
+      automatic_simple: 'Automatic Simple Tests',
+      automatic_complex: 'Automatic Complex Tests',
+      manual_suite: 'Manual Tests',
+      manual_complex: 'Manual Complex Tests',
     };
     title.textContent = `Select Tests - ${suiteNameMap[suiteId] || suiteId}`;
-    
+
     // Generate checkboxes
     const tests = suite.getTests();
     const currentSelection = this.selectedTests[suiteId];
-    
+
     list.innerHTML = '';
     tests.forEach(test => {
       const isChecked = currentSelection ? currentSelection.includes(test.id) : true;
       const desc = test.description || test.name || test.id;
-      
+
       const item = document.createElement('label');
-      item.style.cssText = 'display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding: 8px; background: white; border: 1px solid #eee; border-radius: 6px;';
-      
+      item.style.cssText =
+        'display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding: 8px; background: white; border: 1px solid #eee; border-radius: 6px;';
+
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.value = test.id;
       checkbox.checked = isChecked;
       checkbox.style.marginTop = '4px';
       checkbox.addEventListener('change', () => this.updateTestSelectionCount());
-      
+
       const textDiv = document.createElement('div');
       textDiv.innerHTML = `<strong style="display: block; font-size: 13px;">${test.id}</strong><span style="font-size: 11px; color: #666;">${desc}</span>`;
-      
+
       item.appendChild(checkbox);
       item.appendChild(textDiv);
       list.appendChild(item);
     });
-    
+
     this.updateTestSelectionCount();
     modal.style.display = 'flex';
   }
@@ -1124,7 +1127,10 @@ class BenchmarkUI {
     if (!header || !container) return;
 
     let isDragging = false;
-    let startX, startY, startLeft, startTop;
+    let startX;
+    let startY;
+    let startLeft;
+    let startTop;
 
     // Add draggable cursor style
     header.style.cursor = 'move';
@@ -2181,7 +2187,7 @@ class BenchmarkUI {
     if (!verificationText) return [];
 
     // Remove "Please verify:" prefix if it exists
-    let cleanText = verificationText.replace(/^Please verify:\s*/i, '');
+    const cleanText = verificationText.replace(/^Please verify:\s*/i, '');
 
     // Split by numbered items (1), 2), 3), etc.) or simple enumeration
     const items = cleanText.split(/\d+\)\s*/).filter(item => item.trim());
@@ -2345,7 +2351,7 @@ class BenchmarkUI {
       console.error('❌ Benchmark failed:', error);
 
       // Enhanced error handling with specific LLM configuration guidance
-      let errorMessage = error.message || 'Unknown error occurred';
+      const errorMessage = error.message || 'Unknown error occurred';
       let detailedGuidance = '';
 
       if (errorMessage.includes('LLM not configured') || errorMessage.includes('LLM provider')) {
@@ -3031,28 +3037,6 @@ class BenchmarkUI {
   }
 
   /**
-   * Export detailed HTML report
-   */
-  exportDetailedHTMLReport(exportData) {
-    try {
-      const htmlContent = this.generateDetailedHTMLReport(exportData);
-
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'llm-interactions-report-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.html';
-      a.click();
-      URL.revokeObjectURL(url);
-
-      console.log('📤 Detailed HTML report exported');
-    } catch (error) {
-      console.error('Failed to export HTML report:', error);
-    }
-  }
-
-  /**
    * Generate detailed LLM interaction display for test results
    * Supports: full llmInteractionData, on-disk persisted data, or summary-only display
    */
@@ -3265,35 +3249,51 @@ class BenchmarkUI {
                     </div>
 
                     <!-- Token Usage -->
-                    ${s.tokenUsage ? `
+                    ${
+                      s.tokenUsage
+                        ? `
                     <div style="background: white; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;">
                         <strong>Token Usage:</strong> Prompt: ${s.tokenUsage.promptTokens || 0}, Completion: ${s.tokenUsage.completionTokens || 0}, Total: ${s.tokenUsage.totalTokens || 0}
-                    </div>` : ''}
+                    </div>`
+                        : ''
+                    }
 
                     <!-- Tool Call Rounds -->
-                    ${s.toolCallRounds && s.toolCallRounds.length > 0 ? `
+                    ${
+                      s.toolCallRounds && s.toolCallRounds.length > 0
+                        ? `
                     <details style="margin-top: 10px;">
                         <summary style="cursor: pointer; font-weight: bold; color: #2980b9;">🔄 Tool Call Rounds (${s.toolCallRounds.length})</summary>
                         <pre style="background: white; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${JSON.stringify(s.toolCallRounds, null, 2)}</pre>
-                    </details>` : ''}
+                    </details>`
+                        : ''
+                    }
 
                     <!-- Confidence -->
-                    ${s.analysisConfidence != null ? `
+                    ${
+                      s.analysisConfidence != null
+                        ? `
                     <div style="background: white; padding: 8px; border-radius: 4px; margin-top: 10px; font-size: 12px;">
                         <strong>Confidence:</strong> <span style="color: ${BenchmarkUI.getConfidenceColor(s.analysisConfidence)}; font-weight: bold;">${s.analysisConfidence.toFixed(1)}</span>
-                    </div>` : ''}
+                    </div>`
+                        : ''
+                    }
 
                     <!-- Load Full Details from Disk -->
-                    ${hasDiskData ? `
+                    ${
+                      hasDiskData
+                        ? `
                     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
                         <button onclick="window.__benchmarkLoadDiskData('${diskPath}', '${uniqueId}')" style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">
                             📂 Load Full Details from Disk
                         </button>
                         <span style="font-size: 10px; color: #95a5a6; margin-left: 8px;">Data persisted to: ${diskPath}</span>
-                    </div>` : `
+                    </div>`
+                        : `
                     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 11px; color: #95a5a6;">
                         ℹ️ Full interaction data was not persisted to disk (write failed or unavailable)
-                    </div>`}
+                    </div>`
+                    }
                 </div>
             </div>
         `;
@@ -3510,7 +3510,9 @@ class BenchmarkUI {
                 }
                 
                 <!-- Complete Console Log Dump -->
-                ${detailedLogs.logs && detailedLogs.logs.length > 0 ? `
+                ${
+                  detailedLogs.logs && detailedLogs.logs.length > 0
+                    ? `
                 <details style="margin-bottom: 10px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #fd7e14;">📜 Complete Console Log Dump (Click to expand)</summary>
                     <div style="background: #2c3e50; color: #ecf0f1; border-radius: 4px; padding: 12px; margin-top: 8px; max-height: 400px; overflow-y: auto;">
@@ -3525,11 +3527,13 @@ class BenchmarkUI {
                           )
                           .join('')}
                     </div>
-                </details>` : `
+                </details>`
+                    : `
                 <div style="padding: 10px; font-size: 11px; color: #7f8c8d; font-style: italic; background: #f8f9fa; border-radius: 4px; border: 1px dashed #dee2e6; margin-top: 10px;">
                     ℹ️ Complete raw console logs have been discarded for memory optimization. Use the sections above to see extracted details.
                 </div>
-                `}
+                `
+                }
             </div>
         `;
   }
@@ -3585,17 +3589,17 @@ class BenchmarkUI {
 
     let allSelectedTests = null;
     if (this.selectedTests && Object.keys(this.selectedTests).length > 0) {
-       allSelectedTests = [];
-       selectedSuites.forEach(suiteId => {
-          if (this.selectedTests[suiteId]) {
-             allSelectedTests.push(...this.selectedTests[suiteId]);
-          } else {
-             const suite = this.framework?.testSuites?.get(suiteId);
-             if (suite) {
-               allSelectedTests.push(...suite.getTests().map(t => t.id));
-             }
+      allSelectedTests = [];
+      selectedSuites.forEach(suiteId => {
+        if (this.selectedTests[suiteId]) {
+          allSelectedTests.push(...this.selectedTests[suiteId]);
+        } else {
+          const suite = this.framework?.testSuites?.get(suiteId);
+          if (suite) {
+            allSelectedTests.push(...suite.getTests().map(t => t.id));
           }
-       });
+        }
+      });
     }
 
     const timeoutValue = parseInt(document.getElementById('testTimeout').value);
@@ -3804,8 +3808,8 @@ class BenchmarkUI {
     if (currentModel) currentModel.textContent = '-';
     const agentModeElement = document.getElementById('currentAgentMode');
     if (agentModeElement) {
-        agentModeElement.textContent = '-';
-        agentModeElement.style.color = '#6c757d';
+      agentModeElement.textContent = '-';
+      agentModeElement.style.color = '#6c757d';
     }
 
     // Reset percentage display
@@ -3859,7 +3863,9 @@ class BenchmarkUI {
         agentModeElement.style.color = isAgentEnabled ? '#27ae60' : '#6c757d'; // Green for enabled, gray for disabled
       }
 
-      console.log(`🤖 [UI Model Info] Provider: ${providerKey}, Model: ${modelName}, Multi-Agent: ${chatManager?.agentSystemEnabled}`);
+      console.log(
+        `🤖 [UI Model Info] Provider: ${providerKey}, Model: ${modelName}, Multi-Agent: ${chatManager?.agentSystemEnabled}`
+      );
     } catch (error) {
       console.warn('⚠️ [UI Model Info] Failed to get model info:', error.message);
       if (providerElement) providerElement.textContent = 'Error';
@@ -3968,20 +3974,19 @@ class BenchmarkUI {
    */
   renderFilteredResults(results, filter) {
     return results.testSuiteResults
-      .map(
-        suite => {
-          // Filter tests based on filter type
-          const filteredTests = suite.testResults.filter(test => {
-            if (filter === 'all') return true;
-            if (filter === 'passed') return test.success;
-            if (filter === 'failed') return !test.success;
-            return true;
-          });
+      .map(suite => {
+        // Filter tests based on filter type
+        const filteredTests = suite.testResults.filter(test => {
+          if (filter === 'all') return true;
+          if (filter === 'passed') return test.success;
+          if (filter === 'failed') return !test.success;
+          return true;
+        });
 
-          // Skip suite if no tests match the filter
-          if (filteredTests.length === 0) return '';
+        // Skip suite if no tests match the filter
+        if (filteredTests.length === 0) return '';
 
-          return `
+        return `
                     <div style="border: 1px solid var(--border-color); border-radius: 8px; margin: 15px 0; overflow: hidden;">
                         <div style="background: var(--bg-secondary); padding: 20px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -4015,8 +4020,7 @@ class BenchmarkUI {
                         </div>
                     </div>
                 `;
-        }
-      )
+      })
       .join('');
   }
 
@@ -5380,10 +5384,10 @@ class BenchmarkUI {
     }
 
     const suiteCountMap = {
-      'automatic_simple': { id: 'count-automatic_simple' },
-      'automatic_complex': { id: 'count-automatic_complex' },
-      'manual_suite': { id: 'count-manual_suite' },
-      'manual_complex': { id: 'count-manual_complex' },
+      automatic_simple: { id: 'count-automatic_simple' },
+      automatic_complex: { id: 'count-automatic_complex' },
+      manual_suite: { id: 'count-manual_suite' },
+      manual_complex: { id: 'count-manual_complex' },
     };
 
     let updatedCount = 0;
@@ -5403,10 +5407,10 @@ class BenchmarkUI {
     // Also update the suite names in the suite objects with actual counts
     if (updatedCount > 0) {
       const suiteNameMap = {
-        'automatic_simple': 'Automatic Simple Tests',
-        'automatic_complex': 'Automatic Complex Tests',
-        'manual_suite': 'Manual Tests',
-        'manual_complex': 'Manual Complex Tests',
+        automatic_simple: 'Automatic Simple Tests',
+        automatic_complex: 'Automatic Complex Tests',
+        manual_suite: 'Manual Tests',
+        manual_complex: 'Manual Complex Tests',
       };
       for (const [suiteId, baseName] of Object.entries(suiteNameMap)) {
         const suite = this.framework.testSuites.get(suiteId);
