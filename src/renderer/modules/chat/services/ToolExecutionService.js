@@ -12,8 +12,8 @@ class ToolExecutionService {
     try {
       // --- LEGACY ALIAS RESOLUTION ---
       const legacyAliases = {
-        'find_gene': 'find_gene_by_name',
-        'search_gene_by_name': 'find_gene_by_name',
+        find_gene: 'find_gene_by_name',
+        search_gene_by_name: 'find_gene_by_name',
       };
       if (legacyAliases[toolName]) {
         console.log(`[ToolExecutionService] Legacy alias: '${toolName}' → '${legacyAliases[toolName]}'`);
@@ -23,8 +23,11 @@ class ToolExecutionService {
       console.log(`[ToolExecutionService] Executing: ${toolName}`, parameters);
 
       // --- PRIORITY 1: MULTI-AGENT SETTINGS (if handled exclusively) ---
-      if (['update_agent_setting', 'get_agent_settings', 'toggle_agent_mode'].includes(toolName) && this.chatManager.agentSettingsManager) {
-        const handlerName = toolName.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
+      if (
+        ['update_agent_setting', 'get_agent_settings', 'toggle_agent_mode'].includes(toolName) &&
+        this.chatManager.agentSettingsManager
+      ) {
+        const handlerName = toolName.replace(/([-_][a-z])/gi, $1 => $1.toUpperCase().replace('-', '').replace('_', ''));
         if (typeof this.chatManager.agentSettingsManager[handlerName] === 'function') {
           return await this.chatManager.agentSettingsManager[handlerName](parameters);
         }
@@ -82,7 +85,9 @@ class ToolExecutionService {
           }
           // If the agent couldn't handle it (success=false or no result), fall through
         } catch (agentError) {
-          console.log(`[ToolExecutionService] Multi-agent routing failed for ${toolName}: ${agentError.message}, falling through`);
+          console.log(
+            `[ToolExecutionService] Multi-agent routing failed for ${toolName}: ${agentError.message}, falling through`
+          );
           // Fall through to other priorities
         }
       }
@@ -94,7 +99,10 @@ class ToolExecutionService {
 
       if (knownMcpToolServerMapping[toolName] && this.chatManager.mcpServerManager) {
         const serverId = knownMcpToolServerMapping[toolName];
-        if (this.chatManager.mcpServerManager.activeServers && this.chatManager.mcpServerManager.activeServers.has(serverId)) {
+        if (
+          this.chatManager.mcpServerManager.activeServers &&
+          this.chatManager.mcpServerManager.activeServers.has(serverId)
+        ) {
           try {
             return await this.chatManager.mcpServerManager.executeToolOnServer(serverId, toolName, parameters);
           } catch (directError) {
@@ -112,11 +120,11 @@ class ToolExecutionService {
       // --- PRIORITY 4: DYNAMIC REGISTRY TOOLS (Plugin Integrator) ---
       if (window.toolsRegistry && window.toolsRegistry[toolName]) {
         console.log(`[ToolExecutionService] Executing dynamic tool: ${toolName}`);
-        
+
         if (this.app.toolsIntegrator) {
-           return await this.app.toolsIntegrator.executeTool(toolName, parameters);
+          return await this.app.toolsIntegrator.executeTool(toolName, parameters);
         } else if (typeof window.executeDynamicTool === 'function') {
-           return await window.executeDynamicTool(toolName, parameters);
+          return await window.executeDynamicTool(toolName, parameters);
         }
       }
 
@@ -130,35 +138,64 @@ class ToolExecutionService {
             return await this.chatManager.pluginFunctionCallsIntegrator.executePluginFunction(toolName, parameters);
           } else {
             // Tool has plugin format but isn't in the integrator map - try PluginManager directly
-            console.log(`[ToolExecutionService] Plugin tool '${toolName}' not in integrator map, trying PluginManager.executeFunctionByName`);
-            if (this.chatManager.pluginManager && typeof this.chatManager.pluginManager.executeFunctionByName === 'function') {
+            console.log(
+              `[ToolExecutionService] Plugin tool '${toolName}' not in integrator map, trying PluginManager.executeFunctionByName`
+            );
+            if (
+              this.chatManager.pluginManager &&
+              typeof this.chatManager.pluginManager.executeFunctionByName === 'function'
+            ) {
               try {
                 const result = await this.chatManager.pluginManager.executeFunctionByName(toolName, parameters);
                 if (result !== undefined) {
                   return result;
                 }
               } catch (e) {
-                console.warn(`[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`, e.message);
+                console.warn(
+                  `[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`,
+                  e.message
+                );
+                return {
+                  success: false,
+                  error: `Plugin tool execution failed: ${e.message}`,
+                  toolName: toolName,
+                };
               }
             }
           }
         } else {
           // No integrator but tool name looks like a plugin - try PluginManager directly
-          console.log(`[ToolExecutionService] No PluginFunctionCallsIntegrator, trying PluginManager for '${toolName}'`);
-          if (this.chatManager && this.chatManager.pluginManager && typeof this.chatManager.pluginManager.executeFunctionByName === 'function') {
+          console.log(
+            `[ToolExecutionService] No PluginFunctionCallsIntegrator, trying PluginManager for '${toolName}'`
+          );
+          if (
+            this.chatManager &&
+            this.chatManager.pluginManager &&
+            typeof this.chatManager.pluginManager.executeFunctionByName === 'function'
+          ) {
             try {
               const result = await this.chatManager.pluginManager.executeFunctionByName(toolName, parameters);
               if (result !== undefined) {
                 return result;
               }
             } catch (e) {
-              console.warn(`[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`, e.message);
+              console.warn(
+                `[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`,
+                e.message
+              );
+              return {
+                success: false,
+                error: `Plugin tool execution failed: ${e.message}`,
+                toolName: toolName,
+              };
             }
           }
         }
 
         // If we reach here, the plugin tool was advertised but has no executable implementation
-        console.warn(`[ToolExecutionService] Plugin tool '${toolName}' was not found. The plugin may not be installed or the function is not registered.`);
+        console.warn(
+          `[ToolExecutionService] Plugin tool '${toolName}' was not found. The plugin may not be installed or the function is not registered.`
+        );
         return {
           success: false,
           error: `Plugin tool '${toolName}' is not available. The required plugin may not be installed or the function is not registered. Please check your installed plugins.`,
@@ -168,17 +205,28 @@ class ToolExecutionService {
 
       // --- PRIORITY 5: ACTION MANAGER TOOLS ---
       const actionManagerTools = {
-        'copy_sequence': true, 'action_copy_sequence': true,
-        'cut_sequence': true, 'action_cut_sequence': true,
-        'paste_sequence': true, 'action_paste_sequence': true,
-        'delete_sequence': true, 'action_delete_sequence': true,
-        'insert_sequence': true, 'action_insert_sequence': true,
-        'replace_sequence': true, 'action_replace_sequence': true,
-        'execute_actions': true, 'action_execute_actions': true,
-        'get_action_list': true, 'action_get_action_list': true,
-        'show_action_list': true, 'action_show_action_list': true,
-        'clear_actions': true, 'action_clear_actions': true,
-        'get_clipboard_content': true, 'action_get_clipboard_content': true,
+        copy_sequence: true,
+        action_copy_sequence: true,
+        cut_sequence: true,
+        action_cut_sequence: true,
+        paste_sequence: true,
+        action_paste_sequence: true,
+        delete_sequence: true,
+        action_delete_sequence: true,
+        insert_sequence: true,
+        action_insert_sequence: true,
+        replace_sequence: true,
+        action_replace_sequence: true,
+        execute_actions: true,
+        action_execute_actions: true,
+        get_action_list: true,
+        action_get_action_list: true,
+        show_action_list: true,
+        action_show_action_list: true,
+        clear_actions: true,
+        action_clear_actions: true,
+        get_clipboard_content: true,
+        action_get_clipboard_content: true,
       };
 
       if (actionManagerTools[toolName]) {
@@ -191,16 +239,12 @@ class ToolExecutionService {
 
       // --- PRIORITY 6: MICROBE GENOMICS FUNCTIONS ---
       // Navigation tools are handled by NavigationManager (P7/P8), skip here
-      const navigationTools = new Set([
-        'navigate_to_position', 'navigate_to', 'zoom_in', 'zoom_out',
-      ]);
+      const navigationTools = new Set(['navigate_to_position', 'navigate_to', 'zoom_in', 'zoom_out']);
       if (window.MicrobeGenomicsFunctions && !navigationTools.has(toolName)) {
         const mgfMethodName = this._toCamelCase(toolName);
         if (typeof window.MicrobeGenomicsFunctions[mgfMethodName] === 'function') {
           console.log(`[ToolExecutionService] Routing to MicrobeGenomicsFunctions.${mgfMethodName}`);
-          return await window.MicrobeGenomicsFunctions[mgfMethodName](
-            ...this._extractMGFArgs(toolName, parameters)
-          );
+          return await window.MicrobeGenomicsFunctions[mgfMethodName](...this._extractMGFArgs(toolName, parameters));
         }
       }
 
@@ -208,7 +252,7 @@ class ToolExecutionService {
       // We will map any remaining ChatManager functions manually
       const camelCaseMethod = this._toCamelCase(toolName);
       if (typeof this.chatManager[camelCaseMethod] === 'function') {
-         return await this.chatManager[camelCaseMethod](parameters);
+        return await this.chatManager[camelCaseMethod](parameters);
       }
 
       // Special cases
@@ -216,15 +260,25 @@ class ToolExecutionService {
         case 'navigate_to_position':
         case 'navigate_to':
           if (this.app.navigationManager) {
-            const r = this.app.navigationManager.navigateToPosition(parameters.chromosome, parameters.start, parameters.end);
+            const r = this.app.navigationManager.navigateToPosition(
+              parameters.chromosome,
+              parameters.start,
+              parameters.end
+            );
             return { success: r.success, chromosome: r.chromosome, start: r.start, end: r.end };
           }
           break;
         case 'zoom_in':
-          if (this.app.navigationManager) { const r = this.app.navigationManager.zoomIn(parameters.factor || 2); return { success: r.success, factor: r.factor }; }
+          if (this.app.navigationManager) {
+            const r = this.app.navigationManager.zoomIn(parameters.factor || 2);
+            return { success: r.success, factor: r.factor };
+          }
           break;
         case 'zoom_out':
-          if (this.app.navigationManager) { const r = this.app.navigationManager.zoomOut(parameters.factor || 2); return { success: r.success, factor: r.factor }; }
+          if (this.app.navigationManager) {
+            const r = this.app.navigationManager.zoomOut(parameters.factor || 2);
+            return { success: r.success, factor: r.factor };
+          }
           break;
       }
 
@@ -246,7 +300,7 @@ class ToolExecutionService {
 
   // Utility to convert snake_case (MCP format) to camelCase (JS method format)
   _toCamelCase(str) {
-    return str.replace(/([-_][a-z])/ig, ($1) => {
+    return str.replace(/([-_][a-z])/gi, $1 => {
       return $1.toUpperCase().replace('-', '').replace('_', '');
     });
   }
@@ -300,34 +354,34 @@ class ToolExecutionService {
   // These methods expect individual args, not a params object
   _extractMGFArgs(toolName, parameters) {
     const argMappings = {
-      'search_sequence_motif': [], // Pass full params object - searchSequenceMotif handles object deconstruction internally
-      'find_gene': ['name'], // legacy alias
-      'find_gene_by_name': ['name'],
-      'search_gene_by_locus_tag': ['locusTag', 'locus_tag', 'identifier'],
-      'search_by_position': ['chromosome', 'position'],
-      'search_intergenic_regions': ['chromosome', 'minLength', 'min_length'],
-      'compute_gc': ['dna', 'sequence', 'dna_sequence'],
-      'reverse_complement': ['dna', 'sequence', 'dna_sequence'],
-      'translate_dna': ['dna', 'sequence', 'dna_sequence'],
-      'find_orfs': ['dna', 'sequence', 'dna_sequence'],
-      'calculate_entropy': ['sequence', 'dna', 'dna_sequence'],
-      'calc_region_gc': ['chromosome', 'start', 'end'],
-      'calculate_melting_temp': ['dna', 'sequence', 'dna_sequence'],
-      'calculate_molecular_weight': ['dna', 'sequence', 'dna_sequence'],
-      'analyze_codon_usage': ['dna', 'sequence', 'dna_sequence'],
-      'predict_promoter': ['seq', 'sequence'],
-      'predict_rbs': ['seq', 'sequence'],
-      'predict_terminator': ['seq', 'sequence'],
-      'get_coding_sequence': ['identifier', 'gene_name', 'geneName'],
-      'jump_to_gene': ['geneName', 'identifier', 'name'],
-      'delete_gene': ['geneName', 'identifier'],
-      'get_upstream_region': ['geneObj', 'length'],
-      'get_downstream_region': ['geneObj', 'length'],
-      'zoom_in': ['factor'],
-      'zoom_out': ['factor'],
-      'scroll_left': ['bp', 'amount'],
-      'scroll_right': ['bp', 'amount'],
-      'get_current_region': [],
+      search_sequence_motif: [], // Pass full params object - searchSequenceMotif handles object deconstruction internally
+      find_gene: ['name'], // legacy alias
+      find_gene_by_name: ['name'],
+      search_gene_by_locus_tag: ['locusTag', 'locus_tag', 'identifier'],
+      search_by_position: ['chromosome', 'position'],
+      search_intergenic_regions: ['chromosome', 'minLength', 'min_length'],
+      compute_gc: ['dna', 'sequence', 'dna_sequence'],
+      reverse_complement: ['dna', 'sequence', 'dna_sequence'],
+      translate_dna: ['dna', 'sequence', 'dna_sequence'],
+      find_orfs: ['dna', 'sequence', 'dna_sequence'],
+      calculate_entropy: ['sequence', 'dna', 'dna_sequence'],
+      calc_region_gc: ['chromosome', 'start', 'end'],
+      calculate_melting_temp: ['dna', 'sequence', 'dna_sequence'],
+      calculate_molecular_weight: ['dna', 'sequence', 'dna_sequence'],
+      analyze_codon_usage: ['dna', 'sequence', 'dna_sequence'],
+      predict_promoter: ['seq', 'sequence'],
+      predict_rbs: ['seq', 'sequence'],
+      predict_terminator: ['seq', 'sequence'],
+      get_coding_sequence: ['identifier', 'gene_name', 'geneName'],
+      jump_to_gene: ['geneName', 'identifier', 'name'],
+      delete_gene: ['geneName', 'identifier'],
+      get_upstream_region: ['geneObj', 'length'],
+      get_downstream_region: ['geneObj', 'length'],
+      zoom_in: ['factor'],
+      zoom_out: ['factor'],
+      scroll_left: ['bp', 'amount'],
+      scroll_right: ['bp', 'amount'],
+      get_current_region: [],
     };
 
     const argNames = argMappings[toolName];

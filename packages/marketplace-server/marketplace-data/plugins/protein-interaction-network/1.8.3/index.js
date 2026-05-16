@@ -94,7 +94,10 @@ class ProteinNetworkPlugin {
   /**
    * Parse network data from various formats
    */
-  parseNetworkData(data) {
+  parseNetworkData(input) {
+    // Handle wrapped data (parameters.data) or direct data
+    let data = (input && typeof input === 'object' && input.data) ? input.data : input;
+
     if (!data) {
       throw new Error('Invalid network data: data is null or undefined. Expected an object with "nodes" and "edges" arrays.');
     }
