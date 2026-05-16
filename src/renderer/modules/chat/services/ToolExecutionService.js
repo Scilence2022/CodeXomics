@@ -192,8 +192,7 @@ class ToolExecutionService {
       // --- PRIORITY 6: MICROBE GENOMICS FUNCTIONS ---
       // Navigation tools are handled by NavigationManager (P7/P8), skip here
       const navigationTools = new Set([
-        'navigate_to_position', 'navigate_to', 'jump_to_gene', 'get_current_region',
-        'scroll_left', 'scroll_right', 'zoom_in', 'zoom_out',
+        'navigate_to_position', 'navigate_to', 'zoom_in', 'zoom_out',
       ]);
       if (window.MicrobeGenomicsFunctions && !navigationTools.has(toolName)) {
         const mgfMethodName = this._toCamelCase(toolName);
@@ -326,6 +325,9 @@ class ToolExecutionService {
       'get_downstream_region': ['geneObj', 'length'],
       'zoom_in': ['factor'],
       'zoom_out': ['factor'],
+      'scroll_left': ['bp', 'amount'],
+      'scroll_right': ['bp', 'amount'],
+      'get_current_region': [],
     };
 
     const argNames = argMappings[toolName];

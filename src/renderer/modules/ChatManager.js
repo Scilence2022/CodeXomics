@@ -7055,6 +7055,10 @@ ${coreTools}
       switch_to_tab: () => this.switchToTab(parameters),
       search_features: () => this.searchFeatures(parameters),
       get_current_state: () => this.getCurrentState(),
+      get_current_region: () => this.executeMicrobeFunction('getCurrentRegion', parameters),
+      jump_to_gene: () => this.executeMicrobeFunction('jumpToGene', parameters),
+      scroll_left: () => this.executeMicrobeFunction('scrollLeft', parameters),
+      scroll_right: () => this.executeMicrobeFunction('scrollRight', parameters),
       find_gene_by_name: () => this.executeMicrobeFunction('searchGeneByName', parameters),
       find_gene: () => this.executeMicrobeFunction('searchGeneByName', parameters), // legacy alias
       save_view_state: () => this.saveViewState(parameters),
