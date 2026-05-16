@@ -95,19 +95,33 @@ class ProteinNetworkPlugin {
    * Parse network data from various formats
    */
   parseNetworkData(data) {
+    if (!data) {
+      throw new Error('Invalid network data: data is null or undefined. Expected an object with "nodes" and "edges" arrays.');
+    }
+
     // Handle different data formats
     if (typeof data === 'string') {
-      // Parse JSON string
-      data = JSON.parse(data);
+      try {
+        // Parse JSON string
+        data = JSON.parse(data);
+      } catch (e) {
+        throw new Error(`Invalid network data: failed to parse JSON string. ${e.message}`);
+      }
+    }
+
+    // Check if the LLM passed a single protein or identifier instead of a network
+    if (!data.nodes && (data.protein || data.gene || data.identifier || data.proteins)) {
+      const hint = data.protein || data.gene || data.identifier || (Array.isArray(data.proteins) ? data.proteins.join(', ') : data.proteins);
+      throw new Error(`Invalid network data: received identifier(s) "${hint}" but no network structure. This plugin ONLY visualizes existing network data. Please use a search tool (like 'string-network-explorer.search') first to fetch the interaction data, then pass the result to this tool's "data" parameter.`);
     }
 
     // Validate required fields
     if (!data.nodes || !Array.isArray(data.nodes)) {
-      throw new Error('Invalid network data: missing nodes array');
+      throw new Error('Invalid network data: missing "nodes" array. The data object must contain a "nodes" array (e.g., {"nodes": [{"id": "P1"}], "edges": [...]}).');
     }
 
     // Ensure edges array exists
-    if (!data.edges) {
+    if (!data.edges || !Array.isArray(data.edges)) {
       data.edges = [];
     }
 

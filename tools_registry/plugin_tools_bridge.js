@@ -311,7 +311,7 @@ class PluginToolsBridge {
       // These plugins should expose their commands as separate tools, not just visualize
       if (plugin._commandHandlers && plugin._commandHandlers.size > 0) {
         // Create tools for each registered command
-        for (const [commandId, handler] of plugin._commandHandlers) {
+        for (const [commandId] of plugin._commandHandlers) {
           const commandName = commandId.split('.').pop(); // e.g., 'search' from 'string-explorer.search'
           const toolName = `${pluginId}.${commandName}`;
 
@@ -427,11 +427,12 @@ class PluginToolsBridge {
           properties: {
             data: {
               type: 'object',
-              description: 'Data to visualize',
+              description:
+                'Network data object containing "nodes" and "edges" arrays. NOTE: This tool DOES NOT fetch data; you must provide the full network object.',
               properties: {
                 nodes: {
                   type: 'array',
-                  description: 'Array of nodes (for network visualizations)',
+                  description: 'Array of nodes (e.g. [{"id": "P1", "name": "Protein 1"}])',
                   items: {
                     type: 'object',
                     properties: {
@@ -439,11 +440,12 @@ class PluginToolsBridge {
                       name: { type: 'string' },
                       type: { type: 'string' },
                     },
+                    required: ['id'],
                   },
                 },
                 edges: {
                   type: 'array',
-                  description: 'Array of edges (for network visualizations)',
+                  description: 'Array of edges (e.g. [{"source": "P1", "target": "P2", "confidence": 0.9}])',
                   items: {
                     type: 'object',
                     properties: {
@@ -451,9 +453,11 @@ class PluginToolsBridge {
                       target: { type: 'string' },
                       confidence: { type: 'number' },
                     },
+                    required: ['source', 'target'],
                   },
                 },
               },
+              required: ['nodes'],
             },
           },
           required: ['data'],
@@ -463,6 +467,12 @@ class PluginToolsBridge {
           plugin_id: pluginId,
         },
       };
+
+      // Add a special warning for pure visualizers like protein-interaction-network
+      if (pluginId === 'protein-interaction-network') {
+        visualizeTool.description +=
+          '. IMPORTANT: This is a PURE VISUALIZER. It requires a full network data object. If you only have protein names, use "string-network-explorer.search" first to fetch the data.';
+      }
 
       tools.push(visualizeTool);
 
@@ -475,7 +485,7 @@ class PluginToolsBridge {
         const renderNetworkTool = {
           ...visualizeTool,
           name: `${pluginId}.renderNetwork`,
-          description: `Render network visualization using ${plugin.name || pluginId}`,
+          description: `Render network visualization using ${plugin.name || pluginId}. Requires full network data object.`,
         };
         tools.push(renderNetworkTool);
       }
@@ -627,7 +637,7 @@ class PluginToolsBridge {
     }
 
     // Generate prompt for each plugin
-    for (const [pluginId, group] of pluginGroups) {
+    for (const [, group] of pluginGroups) {
       prompt += `**${group.name}** (${group.type}):\n`;
 
       for (const tool of group.tools) {
@@ -653,7 +663,10 @@ class PluginToolsBridge {
 
     // Add specific examples
     if (pluginGroups.has('protein-interaction-network')) {
-      prompt += `- Visualize protein network: {"tool_name": "protein-interaction-network.visualize", "parameters": {"data": {"nodes": [{"id": "TP53", "name": "TP53", "type": "protein"}, {"id": "MDM2", "name": "MDM2", "type": "protein"}], "edges": [{"source": "TP53", "target": "MDM2", "confidence": 0.9}]}}}\n`;
+      prompt += `\n**Protein Interaction Network Workflow:**\n`;
+      prompt += `IMPORTANT: This plugin is a pure visualizer and does NOT fetch data itself. You must provide a full JSON object with "nodes" and "edges".\n`;
+      prompt += `Example: {"tool_name": "protein-interaction-network.visualize", "parameters": {"data": {"nodes": [{"id": "P1", "name": "Prot1"}, {"id": "P2", "name": "Prot2"}], "edges": [{"source": "P1", "target": "P2"}]}}}\n`;
+      prompt += `If you only have protein names, use "string-network-explorer.search" first, then pass its result to this tool.\n`;
     }
 
     // Add generic examples based on available tools
