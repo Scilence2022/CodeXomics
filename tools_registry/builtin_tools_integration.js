@@ -1859,6 +1859,87 @@ class BuiltInToolsIntegration {
       });
     }
 
+    if (/\b(update|edit|modify|change|rewrite|patch)\s+.*?\bannotations?\b/i.test(query)) {
+      if (/\b(bulk|batch|multiple|all)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'bulk_update_annotations',
+          confidence: 0.9,
+          reason: 'Bulk annotation update keywords detected',
+        });
+      } else {
+        relevantTools.push({
+          name: 'update_annotation',
+          confidence: 0.9,
+          reason: 'Annotation update keywords detected',
+        });
+      }
+    }
+
+    if (/\b(get|retrieve|fetch|show|view|find|search|list|query)\s+.*?\bannotations?\b/i.test(query) ||
+        /\bannotations?\s+.*?\b(get|retrieve|fetch|show|view|find|search|list|query)\b/i.test(query)) {
+      if (/\b(list|all|region|visible)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'list_annotations',
+          confidence: 0.85,
+          reason: 'Annotation listing keywords detected',
+        });
+      } else if (/\b(search|find|query|lookup)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'search_annotations',
+          confidence: 0.85,
+          reason: 'Annotation search keywords detected',
+        });
+      } else {
+        relevantTools.push({
+          name: 'get_annotation',
+          confidence: 0.85,
+          reason: 'Annotation retrieval keywords detected',
+        });
+      }
+    }
+
+    if (/\b(history|updates|changes|logs)\s+.*?\bannotations?\b/i.test(query) ||
+        /\bannotations?\s+.*?\b(history|updates|changes|logs)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'get_annotation_history',
+        confidence: 0.9,
+        reason: 'Annotation history/log keywords detected',
+      });
+    }
+
+    if (/\b(get|show|view|retrieve|details|info|information)\s+.*?\bgenes?\b/i.test(query)) {
+      relevantTools.push({
+        name: 'get_gene_details',
+        confidence: 0.85,
+        reason: 'Gene details query keywords detected',
+      });
+    }
+
+    if (/\b(get|show|find|list|predict)\s+.*?\boperons?\b/i.test(query) || /\boperons?\b/i.test(query)) {
+      relevantTools.push({
+        name: 'get_operons',
+        confidence: 0.9,
+        reason: 'Operon query keywords detected',
+      });
+    }
+
+    if (/\b(nearby|adjacent|neighboring)\s+.*?\b(features?|genes?)\b/i.test(query) ||
+        /\b(features?|genes?)\s+.*?\b(nearby|adjacent|neighboring)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'get_nearby_features',
+        confidence: 0.9,
+        reason: 'Nearby features query keywords detected',
+      });
+    }
+
+    if (/\b(find|search|identify|get|list)\s+.*?\bintergenic\s+regions?\b/i.test(query) || /\bintergenic\b/i.test(query)) {
+      relevantTools.push({
+        name: 'find_intergenic_regions',
+        confidence: 0.9,
+        reason: 'Intergenic regions query keywords detected',
+      });
+    }
+
     if (/\b(analyze\s+region|region\s+analysis|features\s+in\s+region)\b/i.test(query)) {
       relevantTools.push({
         name: 'analyze_region',

@@ -71,6 +71,9 @@ class FunctionCallsOrganizer {
           'search_motif',
           'search_sequence_motif',
           'get_coding_sequence',
+          'get_annotation',
+          'list_annotations',
+          'search_annotations',
           // File loading tools - CRITICAL FIX
           'load_genome_file',
           'load_annotation_file',
@@ -160,7 +163,10 @@ class FunctionCallsOrganizer {
         functions: [
           'create_annotation',
           'edit_annotation',
+          'update_annotation',
           'delete_annotation',
+          'bulk_update_annotations',
+          'get_annotation_history',
           'add_annotation',
           'batch_create_annotations',
           'merge_annotations',

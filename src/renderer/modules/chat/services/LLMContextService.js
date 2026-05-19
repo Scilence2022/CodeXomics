@@ -796,7 +796,18 @@ class LLMContextService {
 
       // UI operations - allow once per round, prevent rapid repetition
       ui_operations: {
-        tools: ['open_new_tab', 'close_tab', 'switch_tab', 'create_annotation', 'delete_feature', 'export_data'],
+        tools: [
+          'open_new_tab',
+          'close_tab',
+          'switch_tab',
+          'create_annotation',
+          'update_annotation',
+          'delete_annotation',
+          'bulk_update_annotations',
+          'get_annotation_history',
+          'delete_feature',
+          'export_data'
+        ],
         policy: 'once_per_round',
         condition: (tool, history, results, round) => {
           const executedInCurrentRound = results.some((r) => r.tool === toolName);
@@ -1084,6 +1095,9 @@ class LLMContextService {
           'get_sequence',
           'get_current_region',
           'get_visible_tracks',
+          'get_annotation',
+          'list_annotations',
+          'search_annotations',
         ],
         policy: 'parameter_based',
         condition: (tool, history, results) => {

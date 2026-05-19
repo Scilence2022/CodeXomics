@@ -112,6 +112,13 @@ class DataAgent extends AgentBase {
     this.toolMapping.set('get_data_statistics', this.getDataStatistics.bind(this));
     this.toolMapping.set('get_genome_summary', this.getGenomeSummary.bind(this));
 
+    // Annotation CRUD tools
+    this.toolMapping.set('create_annotation', this.createAnnotation.bind(this));
+    this.toolMapping.set('update_annotation', this.updateAnnotation.bind(this));
+    this.toolMapping.set('delete_annotation', this.deleteAnnotation.bind(this));
+    this.toolMapping.set('bulk_update_annotations', this.bulkUpdateAnnotations.bind(this));
+    this.toolMapping.set('get_annotation_history', this.getAnnotationHistory.bind(this));
+
     console.log(`💾 DataAgent: Registered ${this.toolMapping.size} data tools`);
   }
 
@@ -1078,6 +1085,59 @@ class DataAgent extends AgentBase {
     }
 
     return trackData;
+  }
+
+  /**
+   * Create an annotation
+   */
+  async createAnnotation(parameters) {
+    if (this.multiAgentSystem.chatManager) {
+      return await this.multiAgentSystem.chatManager.executeToolByName('create_annotation', parameters);
+    }
+    const { chromosome, start, end, type, name, attributes } = parameters;
+    const annotation = { id: name, chromosome, start, end, type, strand: parameters.strand || '+', attributes: attributes || {} };
+    await this.app.annotationManager.addAnnotation(annotation);
+    return { success: true, annotation };
+  }
+
+  /**
+   * Update an annotation
+   */
+  async updateAnnotation(parameters) {
+    if (this.multiAgentSystem.chatManager) {
+      return await this.multiAgentSystem.chatManager.executeToolByName('update_annotation', parameters);
+    }
+    throw new Error('update_annotation requires ChatManager execution');
+  }
+
+  /**
+   * Delete an annotation
+   */
+  async deleteAnnotation(parameters) {
+    if (this.multiAgentSystem.chatManager) {
+      return await this.multiAgentSystem.chatManager.executeToolByName('delete_annotation', parameters);
+    }
+    throw new Error('delete_annotation requires ChatManager execution');
+  }
+
+  /**
+   * Bulk update annotations
+   */
+  async bulkUpdateAnnotations(parameters) {
+    if (this.multiAgentSystem.chatManager) {
+      return await this.multiAgentSystem.chatManager.executeToolByName('bulk_update_annotations', parameters);
+    }
+    throw new Error('bulk_update_annotations requires ChatManager execution');
+  }
+
+  /**
+   * Get annotation history
+   */
+  async getAnnotationHistory(parameters) {
+    if (this.multiAgentSystem.chatManager) {
+      return await this.multiAgentSystem.chatManager.executeToolByName('get_annotation_history', parameters);
+    }
+    throw new Error('get_annotation_history requires ChatManager execution');
   }
 }
 

@@ -829,6 +829,7 @@ class MultiAgentSystem {
         'get_operons', 'get_nearby_features', 'find_intergenic_regions',
         'search_genes', 'search_sequences', 'search_annotations', 'list_annotations',
         'get_data_statistics', 'get_genome_summary',
+        'create_annotation', 'update_annotation', 'delete_annotation', 'bulk_update_annotations', 'get_annotation_history',
       ],
       ExternalAgent: [
         // From registerToolMapping() — excluding legacy aliases
