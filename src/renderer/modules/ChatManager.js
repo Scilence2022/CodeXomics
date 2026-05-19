@@ -6,6 +6,7 @@
 class ChatManager {
   constructor(app, configManager = null) {
     this.app = app;
+    this.genomeBrowser = app || window.genomeBrowser;
     this.configManager = configManager;
     this.llmConfigManager = null;
     this.mcpServerManager = null;
