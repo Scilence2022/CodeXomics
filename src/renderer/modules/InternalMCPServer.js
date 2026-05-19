@@ -70,12 +70,12 @@ class InternalMCPServer {
     const toolName = method.replace(/([A-Z])/g, '_$1').toLowerCase();
 
     // First, try to delegate to ChatManager for comprehensive tool support
-    // ChatManager.executeToolWithPriority() handles 70+ tools with priority routing
+    // ChatManager.executeToolByName() handles 70+ tools with priority routing via ToolExecutionService
     const chatManager = this.genomeStudio.chatManager || window.chatManager;
     if (chatManager) {
       try {
         console.log(`📡 [InternalMCPServer] Delegating '${toolName}' to ChatManager`);
-        const result = await chatManager.executeToolWithPriority(toolName, parameters);
+        const result = await chatManager.executeToolByName(toolName, parameters);
         if (result !== undefined) {
           console.log(`✅ [InternalMCPServer] Tool '${toolName}' executed via ChatManager`);
           return {
@@ -84,8 +84,8 @@ class InternalMCPServer {
             executedVia: 'ChatManager',
           };
         }
-        // ChatManager returned undefined — tool not found in any priority category
-        console.warn(`⚠️ [InternalMCPServer] ChatManager returned undefined for '${toolName}' — tool not found in any priority category`);
+        // ChatManager returned undefined — tool not found
+        console.warn(`⚠️ [InternalMCPServer] ChatManager returned undefined for '${toolName}'`);
       } catch (error) {
         console.warn(`⚠️ [InternalMCPServer] ChatManager execution failed for '${toolName}':`, error.message);
         // Rethrow the original error instead of falling through
@@ -174,7 +174,7 @@ class InternalMCPServer {
         return await this.focusGenomeWindowViaIPC(parameters);
 
       // File loading tools — delegate to ChatManager method directly
-      // These are needed as fallback when executeToolWithPriority returns undefined
+      // These are needed as fallback when executeToolByName returns undefined
       case 'loadGenomeFile':
         return await this._delegateToChatManager('loadGenomeFile', parameters);
       case 'loadAnnotationFile':
@@ -191,7 +191,7 @@ class InternalMCPServer {
       default:
         // Last resort: try to call the method directly on ChatManager by camelCase name
         // This handles tools that exist in ChatManager but are not in the switch or
-        // were missed by executeToolWithPriority
+        // were missed by executeToolByName
         if (chatManager && typeof chatManager[method] === 'function') {
           console.log(`🔄 [InternalMCPServer] Last-resort: calling chatManager.${method}() directly`);
           try {
@@ -697,7 +697,7 @@ class InternalMCPServer {
 
   /**
    * Delegate a method call to ChatManager directly.
-   * Used as fallback when executeToolWithPriority returns undefined.
+   * Used as fallback when executeToolByName returns undefined.
    */
   async _delegateToChatManager(methodName, parameters) {
     const chatManager = this.genomeStudio.chatManager || window.chatManager;
