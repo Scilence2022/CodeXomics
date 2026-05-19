@@ -367,7 +367,7 @@ class ToolExecutionService {
       calculate_entropy: ['sequence', 'dna', 'dna_sequence'],
       calc_region_gc: ['chromosome', 'start', 'end'],
       calculate_melting_temp: ['dna', 'sequence', 'dna_sequence'],
-      calculate_molecular_weight: ['dna', 'sequence', 'dna_sequence'],
+      calculate_molecular_weight: ['dna', 'sequence', 'dna_sequence', 'type'],
       analyze_codon_usage: ['dna', 'sequence', 'dna_sequence'],
       predict_promoter: ['seq', 'sequence'],
       predict_rbs: ['seq', 'sequence'],

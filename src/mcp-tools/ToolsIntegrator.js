@@ -193,6 +193,17 @@ class ToolsIntegrator {
           return { protein: this.sequenceTools.translateDNA(parameters.dna, parameters.frame) };
         } else if (toolName === 'reverse_complement') {
           return { reverseComplement: this.sequenceTools.reverseComplement(parameters.dna) };
+        } else if (toolName === 'calculate_molecular_weight') {
+          const seq = parameters.sequence || parameters.dna || parameters.protein || parameters.dna_sequence || parameters.protein_sequence;
+          const type = parameters.type || 'auto';
+          const weight = this.sequenceTools.calculateMolecularWeight(seq, type);
+          return {
+            success: true,
+            molecularWeight: weight,
+            dna: seq,
+            sequence: seq,
+            length: seq ? seq.length : 0
+          };
         } else {
           // All other sequence tools (get_sequence, search_sequence_motif, get_coding_sequence)
           // require client-side access to genome data

@@ -2213,13 +2213,17 @@ class ChatManager {
       if (!parameters || Object.keys(parameters).length === 0) {
         // No parameters
         result = this.MicrobeFns[methodName]();
-      } else if (parameters.sequence || parameters.dna || parameters.dna_sequence) {
+      } else if (parameters.sequence || parameters.dna || parameters.dna_sequence || parameters.protein || parameters.protein_sequence) {
         // Single sequence parameter — extract the actual string value
-        const seq = parameters.sequence || parameters.dna || parameters.dna_sequence;
+        const seq = parameters.sequence || parameters.dna || parameters.dna_sequence || parameters.protein || parameters.protein_sequence;
         if (typeof seq !== 'string') {
-          throw new Error(`Expected a DNA sequence string but received ${typeof seq}. Provide a 'sequence' parameter with a string value.`);
+          throw new Error(`Expected a sequence string but received ${typeof seq}. Provide a 'sequence' parameter with a string value.`);
         }
-        result = this.MicrobeFns[methodName](seq);
+        if (methodName === 'calculateMolecularWeight') {
+          result = this.MicrobeFns[methodName](seq, parameters.type || 'auto');
+        } else {
+          result = this.MicrobeFns[methodName](seq);
+        }
       } else if (parameters.chromosome && parameters.start && parameters.end) {
         // Position-based parameters
         result = this.MicrobeFns[methodName](parameters.chromosome, parameters.start, parameters.end);

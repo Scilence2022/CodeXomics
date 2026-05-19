@@ -486,23 +486,24 @@ class AnalysisAgent extends AgentBase {
    */
   async calculateMolecularWeight(parameters, strategy) {
     try {
-      const { dna } = parameters;
+      const seq = parameters.sequence || parameters.dna || parameters.protein || parameters.dna_sequence || parameters.protein_sequence;
+      const type = parameters.type || 'auto';
 
-      if (!dna) {
-        throw new Error('DNA sequence is required');
+      if (!seq) {
+        throw new Error('Sequence is required');
       }
 
       if (!this.sequenceUtils) {
         throw new Error('SequenceUtils not available');
       }
 
-      const molecularWeight = this.sequenceUtils.calculateMolecularWeight(dna);
+      const molecularWeight = this.sequenceUtils.calculateMolecularWeight(seq, type);
 
       return {
         success: true,
         molecularWeight,
-        dna: dna,
-        length: dna.length,
+        dna: seq,
+        length: seq.length,
       };
     } catch (error) {
       return {

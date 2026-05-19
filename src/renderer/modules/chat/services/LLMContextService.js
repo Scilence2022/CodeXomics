@@ -882,6 +882,8 @@ class LLMContextService {
           'reverse_complement',
           'get_coding_sequence',
           'analyze_interpro_domains',
+          'calculate_molecular_weight',
+          'calculate_entropy',
         ],
         policy: 'parameter_based',
         condition: (tool, history, results) => {
