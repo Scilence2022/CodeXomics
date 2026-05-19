@@ -4629,6 +4629,16 @@ class ChatManager {
               const previousToolCall = this.parseToolCall(msg.content);
               console.log(`Parse result for message ${i}:`, previousToolCall);
               if (previousToolCall) {
+                const prevToolKey = `${previousToolCall.tool_name}:${JSON.stringify(previousToolCall.parameters)}`;
+                const wasSuccessful = this.wasToolExecutedSuccessfully(prevToolKey, conversationHistory) ||
+                                      executedTools.has(previousToolCall.tool_name);
+                if (wasSuccessful) {
+                  // eslint-disable-next-line no-console
+                  console.log(
+                      `🚫 [Policy] Already executed successfully: ${previousToolCall.tool_name}`,
+                  );
+                  continue;
+                }
                 const shouldAllow = this.shouldAllowToolExecution(
                     previousToolCall,
                     conversationHistory,
