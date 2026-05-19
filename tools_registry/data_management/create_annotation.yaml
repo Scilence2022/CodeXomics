@@ -18,16 +18,75 @@ execution:
 parameters:
   type: object
   properties:
+    type:
+      type: string
+      description: 'The type of the biological feature to create (e.g., gene, CDS, mRNA, tRNA, rRNA, promoter, regulatory, terminator, ribosome_binding_site, primer)'
+      enum: ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'promoter', 'regulatory', 'terminator', 'ribosome_binding_site', 'primer', 'other']
+    name:
+      type: string
+      description: 'The name or identifier of the feature (e.g., gene name like lacZ, primer name, etc.)'
+    chromosome:
+      type: string
+      description: 'The chromosome or contig where the feature is located'
+    start:
+      type: integer
+      description: 'The 1-based start genomic position of the feature'
+    end:
+      type: integer
+      description: 'The 1-based end genomic position of the feature (inclusive)'
+    strand:
+      type: integer
+      description: 'The strand direction: 1 for forward (+), -1 for reverse (-)'
+      enum: [1, -1]
+      default: 1
+    description:
+      type: string
+      description: 'A description, note, or comment for the feature'
+    product:
+      type: string
+      description: 'The protein product name (for CDS/mRNA) or RNA product name (for tRNA/rRNA)'
+    codonStart:
+      type: integer
+      description: 'The codon start reading frame (1, 2, or 3) for CDS features'
+      enum: [1, 2, 3]
+      default: 1
+    translTable:
+      type: integer
+      description: 'The translation table / genetic code table ID (e.g., 11 for bacterial, 1 for standard) for CDS features'
+      default: 11
+    translation:
+      type: string
+      description: 'Explicit protein translation sequence for CDS. If omitted, will be auto-translated from genomic DNA sequence'
+    anticodon:
+      type: string
+      description: 'Anticodon for tRNA features (e.g., anticodon sequence like GAA or detailed position/codon specification)'
+    regulatoryClass:
+      type: string
+      description: 'Regulatory class for regulatory features (e.g., promoter, terminator, ribosome_binding_site)'
+    sequence:
+      type: string
+      description: 'Specific sequence of the feature (e.g., the oligonucleotide sequence for primer features)'
+    direction:
+      type: string
+      description: 'Primer direction (forward or reverse) for primer features'
+      enum: ['forward', 'reverse']
+    qualifiers:
+      type: object
+      description: 'Any additional custom qualifiers/key-value pairs to add to the feature'
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
-  required: []
+  required: ['type', 'name', 'chromosome', 'start', 'end']
 sample_usages:
-  - user_query: Use create_annotation to analyze genomic data
-    tool_call: create_annotation(parameter1='value1', parameter2='value2')
-    thought: User wants to use create_annotation for create a new user-defined annotation
-    expected_result: Result from create_annotation analysis
+  - user_query: 'Create a CDS feature named lacZ at chr1:1000..2000 on forward strand'
+    tool_call: create_annotation(type='CDS', name='lacZ', chromosome='chr1', start=1000, end=2000, strand=1, product='beta-galactosidase')
+    thought: 'The user wants to create a coding sequence (CDS) feature. We specify the type, name, genomic coordinates, strand, and product.'
+    expected_result: 'Created CDS annotation lacZ with auto-calculated protein translation'
+  - user_query: 'Add a promoter annotation named promoter_lac at chr1:900..950'
+    tool_call: create_annotation(type='promoter', name='promoter_lac', chromosome='chr1', start=900, end=950, strand=1, regulatoryClass='promoter')
+    thought: 'The user wants to add a promoter feature. We use promoter/regulatory class logic.'
+    expected_result: 'Created regulatory promoter_lac annotation'
 relationships:
   depends_on: []
   conflicts_with: []
