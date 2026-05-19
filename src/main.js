@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 
 // =============================================================================
 // GPU and WebGL fixes - matching working version configuration
@@ -12,9 +12,7 @@ app.commandLine.appendSwitch('use-angle', 'gl');
 
 const path = require('path');
 const fs = require('fs');
-const net = require('net');
 
-const UnifiedMCPServer = require('./mcp-server');
 const codeXomicsRPC = require('./codexomics-rpc');
 const VERSION_INFO = require('./version');
 const i18n = require('./i18n/i18n-main');
@@ -46,10 +44,10 @@ let unifiedMCPServer = null;
 let unifiedServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
 
 // Tool menu templates
-let toolMenuTemplates = new Map();
+const toolMenuTemplates = new Map();
 
 // Active window tracking
-let currentActiveWindow = null;
+const currentActiveWindow = null;
 
 // Queue for files opened before app is ready
 let fileOpenQueue = [];
@@ -180,11 +178,7 @@ ipcMain.handle('getProjectDirectoryName', async () => {
     const documentsPath = app.getPath('documents');
 
     // Check which project directory exists
-    const possibleNames = [
-      'CodeXomics Projects',
-      'GenomeExplorer Projects',
-      'Genome Explorer Projects',
-    ];
+    const possibleNames = ['CodeXomics Projects', 'GenomeExplorer Projects', 'Genome Explorer Projects'];
 
     for (const name of possibleNames) {
       const testPath = path.join(documentsPath, name);
@@ -218,9 +212,13 @@ function buildModuleDeps() {
 
     // Mutable state getters (always return live value when called)
     getUnifiedMCPServer: () => unifiedMCPServer,
-    setUnifiedMCPServer: (v) => { unifiedMCPServer = v; },
+    setUnifiedMCPServer: v => {
+      unifiedMCPServer = v;
+    },
     getUnifiedServerStatus: () => unifiedServerStatus,
-    setUnifiedServerStatus: (v) => { unifiedServerStatus = v; },
+    setUnifiedServerStatus: v => {
+      unifiedServerStatus = v;
+    },
 
     // Constants
     APP_NAME,
@@ -268,6 +266,14 @@ function buildModuleDeps() {
     createGenomicDownloadWindow: wm.createGenomicDownloadWindow,
     createResourceManagerWindow,
     createDebugWindow,
+    getCustomExternalToolsMenuItems: wm.getCustomExternalToolsMenuItems,
+    arrangeWindowsOptimal: wm.arrangeWindowsOptimal,
+    arrangeWindowsSideBySide: wm.arrangeWindowsSideBySide,
+    arrangeMainWindowFocus: wm.arrangeMainWindowFocus,
+    arrangeProjectManagerFocus: wm.arrangeProjectManagerFocus,
+    arrangeWindowsVertical: wm.arrangeWindowsVertical,
+    arrangeWindowsCascade: wm.arrangeWindowsCascade,
+    resetWindowPositions: wm.resetWindowPositions,
 
     // Menu functions
     createMenu: mb.createMenu,
