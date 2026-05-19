@@ -1,0 +1,78 @@
+name: get_gene_details
+version: 1.0.0
+description: 'Get detailed information about a gene by its name or locus tag. This tool returns structured information including locus tag, product/function, coordinates, strand, length, and notes.'
+category: annotation
+subcategory: annotation_crud
+keywords:
+  - gene
+  - details
+  - information
+  - specific
+  - product
+  - locus
+  - tag
+  - coordinates
+  - function
+  - notes
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    geneName:
+      type: string
+      description: The name or locus tag of the gene to get details for (e.g., 'lacZ', 'thrA').
+      examples:
+        - lacZ
+        - thrA
+    chromosome:
+      type: string
+      description: Chromosome name (optional, searches all if omitted).
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - geneName
+
+sample_usages:
+  - user_query: 'Get gene details for lacZ'
+    tool_call: 'get_gene_details(geneName=''lacZ'')'
+    thought: 'User wants details about the lacZ gene'
+    expected_result: 'Structured information about lacZ including coordinates, strand, product, locusTag, and note'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['get_annotation', 'list_annotations']
+  alternatives: ['get_annotation']
+  prerequisites: []
+  follow_up: ['get_sequence', 'analyze_region']
+
+returns:
+  type: object
+  properties:
+    geneName:
+      type: string
+    chromosome:
+      type: string
+    found:
+      type: boolean
+    count:
+      type: integer
+    genes:
+      type: array
+      items:
+        type: object
+
+metadata:
+  added_in: phase1
+  integration: openclaw
+  priority: high
+  tags:
+    - gene
+    - details
+    - annotation
