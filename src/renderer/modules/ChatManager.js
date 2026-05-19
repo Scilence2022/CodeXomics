@@ -2154,26 +2154,8 @@ class ChatManager {
     const { requestId, toolName, parameters } = data;
 
     try {
-      let result;
-
-      // Use new priority-based tool execution system first
-      result = await this.executeToolWithPriority(toolName, parameters);
-
-      if (result !== undefined) {
-        // Tool found and executed via priority system
-        this.sendMessage({
-          type: 'tool-response',
-          requestId,
-          success: true,
-          result: result,
-        });
-        return;
-      }
-
-      // Fallback to main executeToolByName method (unified tool execution)
-      // This eliminates the need for duplicate switch statements
-      console.log(`🔄 [MCP] Fallback to executeToolByName for tool: ${toolName}`);
-      result = await this.executeToolByName(toolName, parameters);
+      console.log(`📡 [MCP] Executing tool request: ${toolName}`);
+      const result = await this.executeToolByName(toolName, parameters);
 
       // Send success response
       this.sendToMCP({
@@ -6988,58 +6970,6 @@ ${coreTools}
   }
 
   /**
-   * Execute tool with priority-based selection
-   */
-  async executeToolWithPriority(toolName, parameters) {
-    // Get tool priority from settings
-    const toolPriority = this.configManager.get('chatboxSettings.toolPriority', [
-      'local',
-      'genomics',
-      'plugins',
-      'mcp',
-    ]);
-
-    console.log(`🔧 Executing tool '${toolName}' with priority order:`, toolPriority);
-
-    // Try to execute tool based on priority order
-    for (const category of toolPriority) {
-      const result = await this.tryExecuteToolInCategory(toolName, parameters, category);
-      if (result !== undefined) {
-        console.log(`✅ Tool '${toolName}' executed in category '${category}'`);
-        return result;
-      }
-    }
-
-    console.log(`❌ Tool '${toolName}' not found in any priority category`);
-    return undefined; // Tool not found
-  }
-
-  /**
-   * Try to execute tool in specific category
-   */
-  async tryExecuteToolInCategory(toolName, parameters, category) {
-    console.log(`🔍 Trying to execute '${toolName}' in category '${category}'`);
-
-    switch (category) {
-      case 'local':
-        return await this.executeLocalTool(toolName, parameters);
-
-      case 'genomics':
-        return await this.executeGenomicsTool(toolName, parameters);
-
-      case 'plugins':
-        return await this.executePluginTool(toolName, parameters);
-
-      case 'mcp':
-        return await this.executeMCPTool(toolName, parameters);
-
-      default:
-        console.warn(`Unknown tool category: ${category}`);
-        return undefined;
-    }
-  }
-
-  /**
    * Execute local tools (built-in browser functions)
    */
   async executeLocalTool(toolName, parameters) {
@@ -7744,94 +7674,6 @@ ${coreTools}
         error: error.message,
       };
     }
-  }
-
-  /**
-   * Execute genomics tools (specialized analysis functions)
-   */
-  async executeGenomicsTool(toolName, parameters) {
-    // Check if MicrobeGenomicsFunctions is available
-    if (typeof window.MicrobeGenomicsFunctions === 'undefined') {
-      console.log(`📦 MicrobeGenomicsFunctions not available for '${toolName}'`);
-      return undefined;
-    }
-
-    // Tool-specific parameter extraction - MicrobeGenomicsFunctions methods expect specific arguments
-    const genomicsTools = {
-      find_gene_by_name: () =>
-        window.MicrobeGenomicsFunctions.searchGeneByName(
-          parameters.name || parameters.geneName || parameters.identifier,
-        ),
-      find_gene: () =>
-        window.MicrobeGenomicsFunctions.searchGeneByName(
-          parameters.name || parameters.geneName || parameters.identifier,
-        ), // legacy alias
-      get_coding_sequence: () =>
-        window.MicrobeGenomicsFunctions.getCodingSequence(
-          parameters.identifier || parameters.geneName || parameters.gene_name,
-        ),
-      jump_to_gene: () =>
-        window.MicrobeGenomicsFunctions.jumpToGene(parameters.geneName || parameters.identifier || parameters.name),
-      delete_gene: () => window.MicrobeGenomicsFunctions.deleteGene(parameters.geneName || parameters.identifier),
-      search_gene_by_locus_tag: () =>
-        window.MicrobeGenomicsFunctions.searchGeneByLocusTag(
-          parameters.locusTag || parameters.locus_tag || parameters.identifier,
-        ),
-    };
-
-    if (genomicsTools[toolName]) {
-      try {
-        const result = await genomicsTools[toolName]();
-        console.log(`✅ Genomics tool '${toolName}' executed successfully`);
-        return result;
-      } catch (error) {
-        console.error(`❌ Genomics tool '${toolName}' execution failed:`, error);
-        throw error;
-      }
-    }
-
-    return undefined; // Tool not found in genomics tools
-  }
-
-  /**
-   * Execute plugin tools
-   */
-  async executePluginTool(toolName, parameters) {
-    // Delegate to PluginFunctionCallsIntegrator if available
-    if (this.pluginFunctionCallsIntegrator && this.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
-      return await this.pluginFunctionCallsIntegrator.executePluginFunction(toolName, parameters);
-    }
-
-    console.log(`🔌 Plugin tool '${toolName}' not found in PluginFunctionCallsIntegrator`);
-    return undefined;
-  }
-
-  /**
-   * Execute MCP server tools
-   */
-  async executeMCPTool(toolName, parameters) {
-    if (!this.mcpServerManager) {
-      console.log(`📡 MCP Server Manager not available for '${toolName}'`);
-      return undefined;
-    }
-
-    try {
-      // Get all available MCP tools
-      const mcpTools = this.mcpServerManager.getAllAvailableTools();
-      const tool = mcpTools.find((t) => t.name === toolName);
-
-      if (tool) {
-        console.log(`🎯 Found MCP tool '${toolName}' on server '${tool.serverId}'`);
-        const result = await this.mcpServerManager.executeToolOnServer(tool.serverId, toolName, parameters);
-        console.log(`✅ MCP tool '${toolName}' executed successfully`);
-        return result;
-      }
-    } catch (error) {
-      console.error(`❌ MCP tool '${toolName}' execution failed:`, error);
-      throw error;
-    }
-
-    return undefined; // Tool not found in MCP tools
   }
 
   /**

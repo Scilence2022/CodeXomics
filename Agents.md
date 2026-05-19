@@ -74,6 +74,7 @@ This document contains **behavioral rules and constraints** for AI coding assist
 - **Rule**: Agent mode timeout is 120s (vs 30s in tools mode).
 - **Rule**: `setMode()` triggers `sendToolListChanged()` so MCP clients re-fetch the tool list.
 - **Rule**: When the ChatBox is busy (`conversationState.isProcessing`), `processAgentPrompt` returns `{ success: false, error: 'ChatBox is busy...' }`.
+- **Rule**: Client-delegated tool calls from MCP clients must use `chatManager.executeToolByName()` rather than legacy routing methods. `executeToolWithPriority()` and its category-specific switch functions are obsolete and removed.
 
 ## 9. Styling Rules
 

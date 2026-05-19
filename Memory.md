@@ -74,9 +74,7 @@ The authoritative source for whether a tool is "Built-in" is the `builtInToolsMa
 
 CodeXomics runs 7 specialized agents: `NavigationAgent`, `DataAgent`, `CoordinatorAgent`, `AnalysisAgent`, `ExternalAgent`, `PluginAgent`, `DeepResearchAgent`.
 
-**Tool Execution Flow (Priority Chain):**
-
-When `ChatManager.executeToolByName()` is called, it delegates to `ToolExecutionService.execute()`:
+When `ChatManager.executeToolByName()` is called (either directly by the ChatBox LLM or delegated from the MCP Server), it delegates to `ToolExecutionService.execute()`:
 
 1. **PRIORITY 1**: Agent settings tools → `AgentSettingsManager`
 2. **PRIORITY 2**: Extracted service classes (`FileOperationService`, `AnnotationService`, `BlastService`, `ProteinService`, `GenomeAnalysisService`, `IntentParserService`, `UIService`, `LLMContextService`)
@@ -240,6 +238,7 @@ Custom annotation tracks (GFF/BED) are managed dynamically outside the `multiFil
 - **Service Extraction**: Tool execution logic extracted from ChatManager into dedicated service classes (`ToolExecutionService`, `FileOperationService`, etc.)
 - **Policy System Design**: Tool execution policies hardcoded inline in `LLMContextService.shouldAllowToolExecution()` rather than configurable — intentional decision to keep policies immutable and auditable
 - **Annotation Track Persistence**: Resolved intermittent disappearance of GFF/BED tracks by enforcing ID prefix consistency and prioritizing `data-track-type` in track order detection.
+- **Tool Routing Unification**: Unified delegated tool routing on `ToolExecutionService.execute()` (via `executeToolByName`) for both ChatBox and MCP Server contexts, deprecating and removing `executeToolWithPriority()`, `tryExecuteToolInCategory()`, `executeGenomicsTool()`, `executePluginTool()`, and `executeMCPTool()` in ChatManager.
 
 ## 5. Build and Execution Commands
 
