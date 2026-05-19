@@ -803,7 +803,7 @@ class MultiAgentSystem {
         'toggle_track', 'get_track_status', 'bookmark_position', 'get_bookmarks',
         'save_view_state', 'navigate_to', 'search_features', 'find_gene_by_name', 'find_gene',
         'pan_left', 'pan_right', 'switch_to_tab', 'open_new_tab', 'close_tab',
-        'get_chromosome_list',
+        'get_chromosome_list', 'select_gene', 'select_sequence_region',
       ],
       AnalysisAgent: [
         // From registerToolMapping() — excluding legacy aliases

@@ -212,6 +212,26 @@ class NavigationAgent extends AgentBase {
         estimatedTime: 50,
         validateParameters: () => {},
       },
+      {
+        functionName: 'select_gene',
+        description: 'Select a gene in the visual browser',
+        priority: 'high',
+        estimatedTime: 100,
+        validateParameters: (params) => {
+          if (!params.geneName && !params.gene_name) throw new Error('geneName or gene_name parameter required');
+        },
+      },
+      {
+        functionName: 'select_sequence_region',
+        description: 'Select a sequence region in the visual browser',
+        priority: 'high',
+        estimatedTime: 100,
+        validateParameters: (params) => {
+          if (!params.chromosome) throw new Error('chromosome parameter required');
+          if (params.start === undefined) throw new Error('start parameter required');
+          if (params.end === undefined) throw new Error('end parameter required');
+        },
+      },
     ];
 
     super(multiAgentSystem, 'NavigationAgent', capabilities);
@@ -316,6 +336,8 @@ class NavigationAgent extends AgentBase {
         case 'open_new_tab':
         case 'close_tab':
         case 'get_chromosome_list':
+        case 'select_gene':
+        case 'select_sequence_region':
           // These tools are authoritatively implemented on ChatManager.
           // Delegate directly to ChatManager methods.
           try {

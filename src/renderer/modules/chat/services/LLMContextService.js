@@ -835,7 +835,7 @@ class LLMContextService {
 
       // Scroll operations - can be repeated (different from precise navigation)
       scroll_operations: {
-        tools: ['scroll_left', 'scroll_right'],
+        tools: ['scroll_left', 'scroll_right', 'pan_left', 'pan_right'],
         policy: 'always_allowed',
         condition: () => true,
       },
@@ -856,7 +856,7 @@ class LLMContextService {
 
       // Gene/feature navigation - single execution per gene/feature
       feature_navigation: {
-        tools: ['jump_to_gene', 'jump_to_feature', 'focus_on_gene'],
+        tools: ['jump_to_gene', 'jump_to_feature', 'focus_on_gene', 'select_gene', 'select_sequence_region'],
         policy: 'parameter_based',
         condition: (tool, history, results) => {
           const existingExecution = this.chatManager.findExistingExecution(toolKey, history);
