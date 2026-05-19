@@ -18,6 +18,7 @@ class MCPBridge {
     this.maxReconnectAttempts = options.maxReconnectAttempts || Infinity;
     this.quiet = false; // Suppress repeated "not available" logs
     this.windowId = options.windowId || null; // Multi-window support: unique window identifier
+    this.enabled = false; // Is the bridge enabled/started?
 
     console.log('[MCPBridge] Initialized, will attempt connection to:', this.wsUrl);
   }
@@ -70,6 +71,7 @@ class MCPBridge {
    * Start automatic connection attempts
    */
   start() {
+    this.enabled = true;
     this.connect();
   }
 
@@ -78,6 +80,7 @@ class MCPBridge {
    */
   stop() {
     console.log('[MCPBridge] Stopping bridge');
+    this.enabled = false;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -97,6 +100,9 @@ class MCPBridge {
    * Attempt to connect to MCP server
    */
   connect() {
+    if (!this.enabled) {
+      return;
+    }
     if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
       return; // Already connecting or connected
     }
@@ -172,6 +178,9 @@ class MCPBridge {
    * Schedule reconnection attempt with exponential backoff
    */
   scheduleReconnect() {
+    if (!this.enabled) {
+      return;
+    }
     if (this.reconnectTimer) {
       return; // Already scheduled
     }
@@ -191,7 +200,9 @@ class MCPBridge {
     );
 
     if (!this.quiet) {
-      console.log(`[MCPBridge] Reconnecting in ${(backoffInterval / 1000).toFixed(1)}s (attempt ${this.connectionAttempts})`);
+      console.log(
+        `[MCPBridge] Reconnecting in ${(backoffInterval / 1000).toFixed(1)}s (attempt ${this.connectionAttempts})`
+      );
     }
 
     this.reconnectTimer = setTimeout(() => {
@@ -238,7 +249,7 @@ class MCPBridge {
    * Handle tool execution request from MCP server
    */
   async handleToolExecution(message) {
-    const { requestId, method, toolName, parameters, clientId } = message;
+    const { requestId, method, toolName, parameters } = message;
 
     console.log(`[MCPBridge] Received tool execution request: ${method} (${toolName})`);
 
