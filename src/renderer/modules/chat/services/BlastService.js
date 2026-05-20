@@ -97,6 +97,10 @@ class BlastService {
     return this.blastSearchOnline(params);
   }
 
+  async localBlastDatabaseInfo(params) {
+    return this.blastListDatabases(params);
+  }
+
   // --- Internal delegation ---
 
   async _executeBlastRequest(methodName, params) {
@@ -126,7 +130,13 @@ class BlastService {
     }
 
     // Priority 4: MCP blast tool fallback for search operations
-    const searchMethods = ['blastSearch', 'blastSearchOnline', 'blastSearchLocal', 'blastSearchBatch', 'blastSequenceFromRegion'];
+    const searchMethods = [
+      'blastSearch',
+      'blastSearchOnline',
+      'blastSearchLocal',
+      'blastSearchBatch',
+      'blastSequenceFromRegion',
+    ];
     if (searchMethods.includes(methodName)) {
       try {
         return await this.executeMCPBlastTool(methodName, params);
@@ -140,11 +150,11 @@ class BlastService {
 
   async executeMCPBlastTool(toolName, params) {
     const mcpToolMap = {
-      'blastSearch': 'blast_search',
-      'blastSearchOnline': 'blast_search_online',
-      'blastSearchLocal': 'blast_search_local',
-      'blastSearchBatch': 'blast_search_batch',
-      'blastSequenceFromRegion': 'blast_sequence_from_region',
+      blastSearch: 'blast_search',
+      blastSearchOnline: 'blast_search_online',
+      blastSearchLocal: 'blast_search_local',
+      blastSearchBatch: 'blast_search_batch',
+      blastSequenceFromRegion: 'blast_sequence_from_region',
     };
 
     const mcpToolName = mcpToolMap[toolName] || this._toSnakeCase(toolName);

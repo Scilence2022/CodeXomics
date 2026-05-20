@@ -21,21 +21,46 @@
 #gelElectrophoresisModal .modal-header {
   cursor: move;
   user-select: none;
+  background: var(--modal-header-gradient);
+  color: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+#gelElectrophoresisModal .modal-header h3 {
+  color: #ffffff;
+}
+
+#gelElectrophoresisModal .modal-header h3 i {
+  color: #ffffff;
+  margin-right: 8px;
+}
+
+#gelElectrophoresisModal .modal-header .modal-close {
+  color: rgba(255, 255, 255, 0.8);
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+#gelElectrophoresisModal .modal-header .modal-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 #gelElectrophoresisModal .modal-header .modal-controls {
   cursor: default;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-#gelElectrophoresisModal .modal-content.dragging {
-  opacity: 0.92;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-}
-
+#gelElectrophoresisModal .modal-header .modal-controls button,
 #gelElectrophoresisModal .modal-header .reset-position-btn {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   font-size: 14px;
   padding: 4px 8px;
@@ -43,9 +68,32 @@
   transition: color 0.2s, background 0.2s;
 }
 
+#gelElectrophoresisModal .modal-header .modal-controls button:hover,
 #gelElectrophoresisModal .modal-header .reset-position-btn:hover {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+#gelElectrophoresisModal .modal-header #exportGelBtn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#gelElectrophoresisModal .modal-header #exportGelBtn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+
+#gelElectrophoresisModal .modal-content.dragging {
+  opacity: 1 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .gel-results-body {
