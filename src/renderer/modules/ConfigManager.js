@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars, camelcase, no-prototype-builtins */
 // @ts-check
 /**
  * ConfigManager - Comprehensive configuration management for the CodeXomics
@@ -192,7 +193,7 @@ class ConfigManager {
           openai: {
             name: 'OpenAI',
             apiKey: '',
-            model: 'gpt-5.2',
+            model: 'gpt-5.5',
             baseUrl: 'https://api.openai.com/v1',
             enabled: false,
             maxTokens: 4096,
@@ -210,7 +211,7 @@ class ConfigManager {
           google: {
             name: 'Google',
             apiKey: '',
-            model: 'gemini-2.5-flash-preview-05-20',
+            model: 'gemini-3.5-flash',
             baseUrl: 'https://generativelanguage.googleapis.com',
             enabled: false,
             maxTokens: 4096,
@@ -237,7 +238,7 @@ class ConfigManager {
           openrouter: {
             name: 'OpenRouter',
             apiKey: '',
-            model: 'openai/gpt-5.2',
+            model: 'openai/gpt-5.5',
             baseUrl: 'https://openrouter.ai/api/v1',
             enabled: false,
             maxTokens: 4096,
@@ -582,7 +583,8 @@ class ConfigManager {
    */
   async loadFromFiles() {
     console.log('=== loadFromFiles Debug Start ===');
-    let fs, path;
+    let fs;
+    let path;
 
     try {
       // Try to get file system APIs

@@ -13,12 +13,13 @@ class MultiAgentSettingsManager {
       openai: {
         name: 'OpenAI',
         models: {
-          'gpt-4o': 'GPT-4o (Latest - Most Capable)',
-          'gpt-4o-mini': 'GPT-4o Mini (Fast & Efficient)',
-          'gpt-4-turbo': 'GPT-4 Turbo (Latest)',
-          'gpt-4': 'GPT-4 (Legacy)',
-          'gpt-3.5-turbo': 'GPT-3.5 Turbo (Fast)',
-          'gpt-3.5-turbo-16k': 'GPT-3.5 Turbo 16K (Long Context)',
+          'gpt-5.5-pro': 'GPT-5.5 Pro (Pro)',
+          'gpt-5.5': 'GPT-5.5 (Thinking / Standard)',
+          'gpt-5.4-thinking': 'GPT-5.4 Thinking (Thinking)',
+          'gpt-5.5-instant': 'GPT-5.5 Instant (Instant)',
+          'gpt-realtime-2': 'GPT-Realtime-2 (Streaming)',
+          'gpt-realtime-translate': 'GPT-Realtime-Translate',
+          'gpt-realtime-whisper': 'GPT-Realtime-Whisper',
         },
         baseUrl: 'https://api.openai.com/v1',
         apiKeyPrefix: 'sk-',
@@ -26,11 +27,9 @@ class MultiAgentSettingsManager {
       anthropic: {
         name: 'Anthropic (Claude)',
         models: {
-          'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
-          'claude-3-opus-20240229': 'Claude 3 Opus (Most Capable)',
-          'claude-3-sonnet-20240229': 'Claude 3 Sonnet (Balanced)',
-          'claude-3-haiku-20240307': 'Claude 3 Haiku (Fast)',
-          'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku (Latest Fast)',
+          'claude-opus-4.7': 'Claude Opus 4.7 (Opus)',
+          'claude-sonnet-4.6': 'Claude Sonnet 4.6 (Balanced)',
+          'claude-haiku-4.5': 'Claude Haiku 4.5 (Fast)',
         },
         baseUrl: 'https://api.anthropic.com',
         apiKeyPrefix: 'sk-ant-',
@@ -38,13 +37,9 @@ class MultiAgentSettingsManager {
       google: {
         name: 'Google (Gemini)',
         models: {
-          'gemini-2.0-flash': 'Gemini 2.0 Flash (Latest)',
-          'gemini-2.0-flash-exp': 'Gemini 2.0 Flash Experimental',
-          'gemini-1.5-pro-latest': 'Gemini 1.5 Pro (Latest)',
-          'gemini-1.5-flash-latest': 'Gemini 1.5 Flash (Latest)',
-          'gemini-1.5-pro': 'Gemini 1.5 Pro (Legacy)',
-          'gemini-1.5-flash': 'Gemini 1.5 Flash (Legacy)',
-          'gemini-pro': 'Gemini 1.0 Pro (Legacy)',
+          'gemini-3.5-flash': 'Gemini 3.5 Flash (Flash)',
+          'gemini-3.1-pro': 'Gemini 3.1 Pro (Pro)',
+          'gemini-3.1-flash-lite': 'Gemini 3.1 Flash-Lite (Lite)',
         },
         baseUrl: 'https://generativelanguage.googleapis.com',
         apiKeyPrefix: 'AI',
@@ -52,10 +47,10 @@ class MultiAgentSettingsManager {
       deepseek: {
         name: 'DeepSeek',
         models: {
-          'deepseek-chat': 'DeepSeek Chat (Latest)',
-          'deepseek-coder': 'DeepSeek Coder (Code Focused)',
-          'deepseek-v2.5': 'DeepSeek V2.5 (Legacy)',
-          'deepseek-v2': 'DeepSeek V2 (Legacy)',
+          'deepseek-v4-pro': 'DeepSeek V4 Pro (Flagship)',
+          'deepseek-v4-flash': 'DeepSeek V4 Flash (Fast)',
+          'deepseek-chat': 'DeepSeek Chat (V4 Flash non-thinking)',
+          'deepseek-reasoner': 'DeepSeek Reasoner (V4 Flash thinking)',
         },
         baseUrl: 'https://api.deepseek.com/v1',
         apiKeyPrefix: 'sk-',
@@ -64,97 +59,48 @@ class MultiAgentSettingsManager {
         name: 'OpenRouter',
         models: {
           // OpenAI Models (Latest)
-          'openai/gpt-5': 'GPT-5 (Latest - Most Advanced)',
-          'openai/gpt-5o': 'GPT-5o (Latest - Most Capable)',
-          'openai/gpt-5o-mini': 'GPT-5o Mini (Fast & Efficient)',
-          'openai/gpt-4o': 'GPT-4o (Previous - Most Capable)',
-          'openai/gpt-4o-mini': 'GPT-4o Mini (Fast & Efficient)',
-          'openai/gpt-4-turbo': 'GPT-4 Turbo (Latest)',
-          'openai/gpt-4': 'GPT-4 (Legacy)',
+          'openai/gpt-5.5-pro': 'GPT-5.5 Pro (Pro)',
+          'openai/gpt-5.5': 'GPT-5.5 (Thinking / Standard)',
+          'openai/gpt-5.4-thinking': 'GPT-5.4 Thinking (Thinking)',
+          'openai/gpt-5.5-instant': 'GPT-5.5 Instant (Instant)',
+          'openai/gpt-realtime-2': 'GPT-Realtime-2 (Streaming)',
+          'openai/gpt-realtime-translate': 'GPT-Realtime-Translate',
+          'openai/gpt-realtime-whisper': 'GPT-Realtime-Whisper',
 
           // Anthropic Models (Latest)
-          'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest - Most Capable)',
-          'anthropic/claude-3-5-haiku-20241022': 'Claude 3.5 Haiku (Latest - Fast)',
-          'anthropic/claude-3-opus-20240229': 'Claude 3 Opus (Most Capable)',
-          'anthropic/claude-3-sonnet-20240229': 'Claude 3 Sonnet (Balanced)',
-          'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku (Fast)',
+          'anthropic/claude-opus-4.7': 'Claude Opus 4.7 (Opus)',
+          'anthropic/claude-sonnet-4.6': 'Claude Sonnet 4.6 (Balanced)',
+          'anthropic/claude-haiku-4.5': 'Claude Haiku 4.5 (Fast)',
 
           // GLM Models (Z.AI)
           'z-ai/glm-4.6': 'GLM-4.6 (Latest Flagship)',
           'z-ai/glm-4.5': 'GLM-4.5 (Previous Flagship)',
           'z-ai/glm-4.5-air:free': 'GLM-4.5-Air (Free)',
           'z-ai/glm-4.5v': 'GLM-4.5V (Vision)',
-          // Claude Sonnet 4 Series (Latest)
-          'anthropic/claude-3-5-sonnet-4': 'Claude Sonnet 4 (Latest - Most Advanced)',
-          'anthropic/claude-3-5-sonnet-4-mini': 'Claude Sonnet 4 Mini (Fast & Efficient)',
 
           // Google Models (Latest)
-          'google/gemini-2.0-flash': 'Gemini 2.0 Flash (Latest)',
-          'google/gemini-2.0-flash-exp': 'Gemini 2.0 Flash Experimental',
-          'google/gemini-1.5-pro-latest': 'Gemini 1.5 Pro (Latest)',
-          'google/gemini-1.5-flash-latest': 'Gemini 1.5 Flash (Latest)',
-          'google/gemini-1.5-pro': 'Gemini 1.5 Pro (Legacy)',
-          'google/gemini-1.5-flash': 'Gemini 1.5 Flash (Legacy)',
-          'google/gemini-pro': 'Gemini 1.0 Pro (Legacy)',
+          'google/gemini-3.5-flash': 'Gemini 3.5 Flash (Flash)',
+          'google/gemini-3.1-pro': 'Gemini 3.1 Pro (Pro)',
+          'google/gemini-3.1-flash-lite': 'Gemini 3.1 Flash-Lite (Lite)',
 
           // Meta Models (Latest)
           'meta-llama/llama-3.1-405b-instruct': 'Llama 3.1 405B Instruct (Most Capable)',
           'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B Instruct (Balanced)',
           'meta-llama/llama-3.1-8b-instruct': 'Llama 3.1 8B Instruct (Fast)',
-          'meta-llama/llama-3.1-1b-instruct': 'Llama 3.1 1B Instruct (Very Fast)',
 
           // Mistral Models (Latest)
           'mistralai/mistral-large-latest': 'Mistral Large (Latest)',
-          'mistralai/mixtral-8x7b-instruct': 'Mixtral 8x7B Instruct (Balanced)',
-          'mistralai/mistral-7b-instruct': 'Mistral 7B Instruct (Fast)',
           'mistralai/mistral-small-latest': 'Mistral Small (Latest)',
 
           // DeepSeek Models (Latest)
-          'deepseek-ai/deepseek-chat': 'DeepSeek Chat (Latest)',
-          'deepseek-ai/deepseek-coder': 'DeepSeek Coder (Code Focused)',
-          'deepseek-ai/deepseek-v2.5': 'DeepSeek V2.5 (Legacy)',
-          'deepseek-ai/deepseek-v2': 'DeepSeek V2 (Legacy)',
+          'deepseek/deepseek-v4-pro': 'DeepSeek V4 Pro',
+          'deepseek/deepseek-v4-flash': 'DeepSeek V4 Flash',
+          'deepseek/deepseek-chat': 'DeepSeek Chat (V4 Flash)',
+          'deepseek/deepseek-reasoner': 'DeepSeek Reasoner (V4 Flash thinking)',
 
           // Qwen Models (Latest)
           'qwen/qwen2.5-72b-instruct': 'Qwen 2.5 72B Instruct (Most Capable)',
-          'qwen/qwen2.5-32b-instruct': 'Qwen 2.5 32B Instruct (Balanced)',
-          'qwen/qwen2.5-14b-instruct': 'Qwen 2.5 14B Instruct (Fast)',
-          'qwen/qwen2.5-7b-instruct': 'Qwen 2.5 7B Instruct (Very Fast)',
           'qwen/qwen2.5-coder-32b-instruct': 'Qwen 2.5 Coder 32B (Code Focused)',
-          'qwen/qwen2.5-coder-7b-instruct': 'Qwen 2.5 Coder 7B (Code Fast)',
-
-          // Microsoft Models
-          'microsoft/wizardlm-2-8x22b': 'WizardLM 2 8x22B (Most Capable)',
-          'microsoft/wizardlm-2-7b': 'WizardLM 2 7B (Fast)',
-
-          // Perplexity Models
-          'perplexity/llama-3.1-70b-instruct': 'Perplexity Llama 3.1 70B (Most Capable)',
-          'perplexity/llama-3.1-8b-instruct': 'Perplexity Llama 3.1 8B (Fast)',
-          'perplexity/llama-3.1-1b-instruct': 'Perplexity Llama 3.1 1B (Very Fast)',
-
-          // Nous Research Models
-          'nousresearch/nous-hermes-2-mixtral-8x7b-dpo': 'Nous Hermes 2 Mixtral (Balanced)',
-          'nousresearch/nous-hermes-2-yi-34b': 'Nous Hermes 2 Yi 34B (Capable)',
-          'nousresearch/nous-hermes-2-yi-6b': 'Nous Hermes 2 Yi 6B (Fast)',
-
-          // Other Popular Models
-          '01-ai/yi-34b-chat': 'Yi 34B Chat (Capable)',
-          '01-ai/yi-6b-chat': 'Yi 6B Chat (Fast)',
-          'microsoft/phi-3-medium-4k-instruct': 'Phi-3 Medium 4K (Fast)',
-          'microsoft/phi-3-small-8k-instruct': 'Phi-3 Small 8K (Very Fast)',
-          'microsoft/phi-3-mini-4k-instruct': 'Phi-3 Mini 4K (Ultra Fast)',
-          'cohere/command-r-plus': 'Command R+ (Most Capable)',
-          'cohere/command-r': 'Command R (Balanced)',
-          'cohere/command-light': 'Command Light (Fast)',
-          'databricks/dbrx-instruct': 'DBRX Instruct (Most Capable)',
-          'databricks/dbrx-base': 'DBRX Base (Balanced)',
-          'snowflake/arctic-instruct': 'Snowflake Arctic Instruct (Capable)',
-          'snowflake/arctic-base': 'Snowflake Arctic Base (Balanced)',
-          'fireworks/firellava-3-8b': 'FireLLaVA 3 8B (Multimodal)',
-          'fireworks/firellava-3-1b': 'FireLLaVA 3 1B (Multimodal Fast)',
-          'anthropic/claude-3-5-sonnet-20241022-vision': 'Claude 3.5 Sonnet Vision (Multimodal)',
-          'openai/gpt-4o-mini-vision': 'GPT-4o Mini Vision (Multimodal)',
-          'openai/gpt-4o-vision': 'GPT-4o Vision (Multimodal)',
         },
         baseUrl: 'https://openrouter.ai/api/v1',
         apiKeyPrefix: 'sk-or-',
@@ -172,9 +118,14 @@ class MultiAgentSettingsManager {
           'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B': 'DeepSeek-R1-Distill-Qwen-14B',
           'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B': 'DeepSeek-R1-Distill-Qwen-7B',
           'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B': 'DeepSeek-R1-Distill-Qwen-7B (Pro)',
-          'deepseek-ai/DeepSeek-V2.5': 'DeepSeek-V2.5 (Legacy)',
 
           // Qwen Models
+          'Qwen/Qwen3.5-39B-A17B': 'Qwen3.5-39B-A17B (Latest Flagship)',
+          'Qwen/Qwen3.5-27B': 'Qwen3.5-27B',
+          'Qwen/Qwen3.5-12B-A10B': 'Qwen3.5-12B-A10B',
+          'Qwen/Qwen3.5-8B': 'Qwen3.5-8B',
+          'Qwen/Qwen3.5-4B': 'Qwen3.5-4B',
+          'Qwen/Qwen3.5-3B-A3B': 'Qwen3.5-3B-A3B',
           'Qwen/Qwen3-Coder-480B-A35B-Instruct': 'Qwen3-Coder-480B-A35B-Instruct (Code Specialized)',
           'Qwen/Qwen3-235B-A22B-Thinking-2507': 'Qwen3-235B-A22B-Thinking-2507',
           'Qwen/Qwen3-235B-A22B-Instruct-2507': 'Qwen3-235B-A22B-Instruct-2507',
@@ -183,43 +134,26 @@ class MultiAgentSettingsManager {
           'Qwen/Qwen3-8B': 'Qwen3-8B (Fast)',
           'Qwen/QwQ-32B': 'QwQ-32B (Latest)',
           'Qwen/QwQ-32B-Preview': 'QwQ-32B-Preview (Experimental)',
-          'Qwen/Qwen2.5-72B-Instruct-128K': 'Qwen2.5-72B-Instruct-128K (Long Context)',
-          'Qwen/Qwen2.5-72B-Instruct': 'Qwen2.5-72B-Instruct (Standard)',
-          'Qwen/Qwen2.5-32B-Instruct': 'Qwen2.5-32B-Instruct (Balanced)',
-          'Qwen/Qwen2.5-14B-Instruct': 'Qwen2.5-14B-Instruct (Fast)',
-          'Qwen/Qwen2.5-7B-Instruct': 'Qwen2.5-7B-Instruct (Very Fast)',
-          'Qwen/Qwen2.5-Coder-32B-Instruct': 'Qwen2.5-Coder-32B-Instruct (Code Focused)',
-          'Qwen/Qwen2.5-Coder-7B-Instruct': 'Qwen2.5-Coder-7B-Instruct (Code Fast)',
-          'Qwen/Qwen2-7B-Instruct': 'Qwen2-7B-Instruct (Legacy)',
-          'Qwen/Qwen2-1.5B-Instruct': 'Qwen2-1.5B-Instruct (Legacy)',
-          'Pro/Qwen/Qwen2.5-7B-Instruct': 'Qwen2.5-7B-Instruct (Pro)',
-          'Pro/Qwen/Qwen2-7B-Instruct': 'Qwen2-7B-Instruct (Pro)',
-          'Pro/Qwen/Qwen2-1.5B-Instruct': 'Qwen2-1.5B-Instruct (Pro)',
-          'Vendor-A/Qwen/Qwen2.5-72B-Instruct': 'Qwen2.5-72B-Instruct (Vendor-A)',
 
           // GLM Models (Available on SiliconFlow)
-          'zai-org/GLM-4.5': 'GLM-4.5 (Previous Flagship)',
+          'Pro/zai-org/GLM-5': 'GLM-5 Pro (Latest)',
+          'Pro/zai-org/GLM-4.7': 'GLM-4.7 Pro',
+          'zai-org/GLM-4.6V': 'GLM-4.6V (Vision)',
+          'zai-org/GLM-4.6': 'GLM-4.6',
+          'zai-org/GLM-4.5': 'GLM-4.5',
           'zai-org/GLM-4.5-Air': 'GLM-4.5-Air (Lightweight)',
-          'THUDM/GLM-Z1-32B-0414': 'GLM-Z1-32B-0414 (Latest)',
-          'THUDM/GLM-4-32B-0414': 'GLM-4-32B-0414 (Latest)',
-          'THUDM/GLM-Z1-Rumination-32B-0414': 'GLM-Z1-Rumination-32B-0414 (Rumination)',
-          'THUDM/GLM-4-9B-0414': 'GLM-4-9B-0414 (Fast)',
-          'THUDM/glm-4-9b-chat': 'GLM-4-9B-Chat (Chat Optimized)',
-          'Pro/THUDM/glm-4-9b-chat': 'GLM-4-9B-Chat (Pro)',
 
           // Other Models
           'baidu/ERNIE-4.5-300B-A47B': 'ERNIE-4.5-300B-A47B',
           // Kimi Series
+          'Pro/moonshotai/Kimi-K2.5': 'Kimi-K2.5 (Pro)',
           'Pro/moonshotai/Kimi-K2-Instruct-0905': 'Kimi-K2-Instruct-0905 (Pro)',
           'moonshotai/Kimi-K2-Instruct': 'Kimi-K2-Instruct',
           'moonshotai/Kimi-K2-Thinking': 'Kimi-K2-Thinking (Reasoning)',
           'ascend-tribe/pangu-pro-moe': 'pangu-pro-moe',
           'tencent/Hunyuan-A13B-Instruct': 'Hunyuan-A13B-Instruct',
-          'zai-org/GLM-4.5': 'GLM-4.5',
-          'zai-org/GLM-4.5-Air': 'GLM-4.5-Air',
-          'MiniMaxAI/MiniMax-M1-80k': 'MiniMax-M1-80k (Long Context)',
           'MiniMaxAI/MiniMax-M2': 'MiniMax-M2 (Latest)',
-          'Tongyi-Zhiwen/QwenLong-L1-32B': 'QwenLong-L1-32B (Long Context)',
+          'Pro/MiniMax/MiniMax-M2.5': 'MiniMax-M2.5 Pro (Latest)',
           'TeleAI/TeleChat2': 'TeleChat2 (Latest)',
           'internlm/internlm2_5-7b-chat': 'InternLM2.5-7B-Chat (Fast)',
           'internlm/internlm2_5-20b-chat': 'InternLM2.5-20B-Chat (Balanced)',
@@ -283,11 +217,9 @@ class MultiAgentSettingsManager {
           'deepseek-r1:32b': 'DeepSeek-R1:32b (20GB)',
           'deepseek-r1:70b': 'DeepSeek-R1:70b (43GB)',
           'deepseek-r1:671b': 'DeepSeek-R1:671b (404GB)',
-          'qwen2:latest': 'Qwen2:latest (Legacy)',
           'mistral-large:latest': 'Mistral Large:latest (Legacy)',
           'llama3.1:70b': 'Llama3.1:70b (Legacy)',
           'llama3.1:latest': 'Llama3.1:latest (Legacy)',
-          'llama3:latest': 'Llama3:latest (Legacy)',
           'gemma3:27b': 'Gemma3:27b (Legacy)',
           other: 'Other (Custom)',
         },
@@ -376,8 +308,10 @@ class MultiAgentSettingsManager {
         if (cms.llmMaxTokens !== undefined) this.currentSettings.multiAgentLLMMaxTokens = cms.llmMaxTokens;
         if (cms.llmTimeout !== undefined) this.currentSettings.multiAgentLLMTimeout = cms.llmTimeout;
         if (cms.llmRetryAttempts !== undefined) this.currentSettings.multiAgentLLMRetryAttempts = cms.llmRetryAttempts;
-        if (cms.llmUseSystemPrompt !== undefined) this.currentSettings.multiAgentLLMUseSystemPrompt = cms.llmUseSystemPrompt;
-        if (cms.llmEnableFunctionCalling !== undefined) this.currentSettings.multiAgentLLMEnableFunctionCalling = cms.llmEnableFunctionCalling;
+        if (cms.llmUseSystemPrompt !== undefined)
+          this.currentSettings.multiAgentLLMUseSystemPrompt = cms.llmUseSystemPrompt;
+        if (cms.llmEnableFunctionCalling !== undefined)
+          this.currentSettings.multiAgentLLMEnableFunctionCalling = cms.llmEnableFunctionCalling;
       }
 
       console.log('Multi-Agent Settings loaded:', this.currentSettings);

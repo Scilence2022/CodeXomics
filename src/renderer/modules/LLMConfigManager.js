@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * LLMConfigManager - Manages LLM provider configurations and API communication
  */
@@ -12,32 +13,17 @@ class LLMConfigManager {
       openai: {
         name: 'OpenAI',
         apiKey: '',
-        model: 'gpt-5.2',
+        model: 'gpt-5.5',
         baseUrl: 'https://api.openai.com/v1',
         enabled: false,
         availableModels: [
-          // GPT-5.5 Series (Latest - April 2026)
-          'gpt-5.5', // Full retrain, latest flagship
-          // GPT-5.2 Series
-          'gpt-5.2-pro', // Top tier
-          'gpt-5.2', // Flagship
-          // GPT-5 Series
-          'gpt-5.1',
-          'gpt-5',
-          'gpt-5-mini',
-          'gpt-5-nano',
-          // o-Series (Reasoning)
-          'o3-pro',
-          'o3',
-          'o4-mini',
-          'o3-mini',
-          // GPT-4.1 Series (1M Context)
-          'gpt-4.1',
-          'gpt-4.1-mini',
-          'gpt-4.1-nano',
-          // GPT-4o (Legacy)
-          'gpt-4o',
-          'gpt-4o-mini',
+          'gpt-5.5-pro',
+          'gpt-5.5',
+          'gpt-5.4-thinking',
+          'gpt-5.5-instant',
+          'gpt-realtime-2',
+          'gpt-realtime-translate',
+          'gpt-realtime-whisper',
         ],
       },
       anthropic: {
@@ -46,37 +32,16 @@ class LLMConfigManager {
         model: 'claude-sonnet-4.6', // Latest Claude Sonnet 4.6
         baseUrl: 'https://api.anthropic.com',
         enabled: false,
-        availableModels: [
-          // Claude 4.6 Series (Latest - 2026)
-          'claude-opus-4.6', // Most intelligent
-          'claude-sonnet-4.6', // Balanced intelligence and speed
-          // Claude 4.5 Series (2025/2026)
-          'claude-opus-4.5-20251101', // Complex tasks
-          'claude-sonnet-4.5-20250929', // Balanced
-          'claude-haiku-4.5', // Fast and cost-efficient
-          // Claude 3.5 Series (Previous)
-          'claude-3-5-sonnet-20241022',
-          'claude-3-5-haiku-20241022',
-        ],
+        availableModels: ['claude-opus-4.7', 'claude-sonnet-4.6', 'claude-haiku-4.5'],
       },
       // Google - Direct API access to Gemini models
       google: {
         name: 'Google',
         apiKey: '',
-        model: 'gemini-2.5-flash-preview-05-20', // Latest Gemini 2.5 Flash
+        model: 'gemini-3.5-flash',
         baseUrl: 'https://generativelanguage.googleapis.com',
         enabled: false,
-        availableModels: [
-          // Gemini 2.5 Series (Latest - 2025/2026)
-          'gemini-2.5-pro-preview-05-06', // Best reasoning, coding, multimodal
-          'gemini-2.5-flash-preview-05-20', // Best value, adaptive thinking
-          // Gemini 2.0 Series (Stable)
-          'gemini-2.0-flash', // Multimodal
-          'gemini-2.0-flash-exp', // Experimental
-          // Gemini 1.5 Series (Legacy)
-          'gemini-1.5-pro-latest',
-          'gemini-1.5-flash-latest',
-        ],
+        availableModels: ['gemini-3.5-flash', 'gemini-3.1-pro', 'gemini-3.1-flash-lite'],
       },
       deepseek: {
         name: 'DeepSeek',
@@ -84,14 +49,7 @@ class LLMConfigManager {
         model: 'deepseek-v4-flash',
         baseUrl: 'https://api.deepseek.com/v1',
         enabled: false,
-        availableModels: [
-          // DeepSeek V4 Series (Latest - 2026)
-          'deepseek-v4-pro', // Flagship
-          'deepseek-v4-flash', // Fast, efficient
-          // DeepSeek V3 Series (Legacy aliases)
-          'deepseek-chat', // Points to V4 Flash non-thinking (deprecated July 2026)
-          'deepseek-reasoner', // Points to V4 Flash thinking (deprecated July 2026)
-        ],
+        availableModels: ['deepseek-v4-pro', 'deepseek-v4-flash', 'deepseek-chat', 'deepseek-reasoner'],
       },
       siliconflow: {
         name: 'SiliconFlow',
@@ -101,7 +59,6 @@ class LLMConfigManager {
         enabled: false,
         availableModels: [
           // 🤖 Qwen Series (Arranged by size: high to low)
-
           // Qwen3.5 Series (Latest)
           'Qwen/Qwen3.5-39B-A17B', // 39B total, 17B active
           'Qwen/Qwen3.5-27B', // 27B
@@ -132,21 +89,12 @@ class LLMConfigManager {
           'Qwen/QwQ-32B-Preview', // 32B (Reasoning Preview)
           'Qwen/Qwen3-14B', // 14B
 
-          // Qwen2.5 Coder Series (Legacy)
-          'Qwen/Qwen2.5-Coder-32B-Instruct', // 32B (Legacy)
-          'Qwen/Qwen2.5-Coder-7B-Instruct', // 7B (Legacy)
-
-          // Qwen Long Context Series
-          'Tongyi-Zhiwen/QwenLong-L1-32B', // 32B (Long context)
-
           // 🧠 DeepSeek Series (Arranged by capability and size)
-
           // DeepSeek Pro Series
           'Pro/deepseek-ai/DeepSeek-R1', // Latest R1 Pro
           'Pro/deepseek-ai/DeepSeek-V3', // V3 Pro
           'Pro/deepseek-ai/DeepSeek-V3.2', // V3.2 Pro
           'Pro/deepseek-ai/DeepSeek-V3.1-Terminus', // V3.1 Terminus Pro
-          'Pro/THUDM/glm-4-9b-chat', // GLM Pro variant
           'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', // R1 Distilled Pro
 
           // DeepSeek Standard Series
@@ -154,7 +102,6 @@ class LLMConfigManager {
           'deepseek-ai/DeepSeek-V3.2', // V3.2
           'deepseek-ai/DeepSeek-V3', // V3
           'deepseek-ai/DeepSeek-V3.1-Terminus', // V3.1 Terminus
-          'deepseek-ai/DeepSeek-V2.5', // V2.5
 
           // DeepSeek R1 Distilled Series (by size)
           'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B', // 32B Distilled
@@ -163,7 +110,6 @@ class LLMConfigManager {
           'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', // 7B Distilled
 
           // 🌙 Kimi Series (Moonshot AI)
-
           'Pro/moonshotai/Kimi-K2.5', // Kimi K2.5 Pro (Latest)
           'Pro/moonshotai/Kimi-K2-Instruct-0905', // Kimi K2 Pro
           'Pro/moonshotai/Kimi-K2-Thinking', // Kimi K2 Thinking Pro
@@ -171,7 +117,6 @@ class LLMConfigManager {
           'moonshotai/Kimi-K2-Thinking', // Kimi K2 Thinking (Reasoning)
 
           // 🔮 GLM Series (Zhipu AI - Arranged by version and size)
-
           // GLM Latest Series
           'Pro/zai-org/GLM-5', // GLM-5 Pro (Latest)
           'Pro/zai-org/GLM-4.7', // GLM-4.7 Pro
@@ -180,22 +125,13 @@ class LLMConfigManager {
           'zai-org/GLM-4.5', // GLM-4.5
           'zai-org/GLM-4.5-Air', // GLM-4.5-Air (Lightweight)
 
-          // GLM THUDM Series (by size)
-          'THUDM/GLM-Z1-32B-0414', // 32B Z1
-          'THUDM/GLM-4-32B-0414', // 32B GLM-4
-          'THUDM/GLM-Z1-Rumination-32B-0414', // 32B Z1 Rumination
-          'THUDM/GLM-4-9B-0414', // 9B GLM-4
-          'THUDM/glm-4-9b-chat', // 9B Chat
-
           // 🏢 Enterprise & Commercial Models
-
           // Baidu ERNIE Series
           'baidu/ERNIE-4.5-300B-A47B', // 300B ERNIE (47B active)
 
           // Other Large Enterprise Models
           'Pro/MiniMax/MiniMax-M2.5', // MiniMax M2.5 Pro (Latest)
           'MiniMaxAI/MiniMax-M2', // MiniMax M2
-          'MiniMaxAI/MiniMax-M1-80k', // MiniMax M1 (Long Context)
           'ascend-tribe/pangu-pro-moe', // PanGu Pro MoE
           'tencent/Hunyuan-A13B-Instruct', // Hunyuan 13B
           'TeleAI/TeleChat2', // TeleChat2
@@ -213,34 +149,28 @@ class LLMConfigManager {
       openrouter: {
         name: 'OpenRouter',
         apiKey: '',
-        model: 'openai/gpt-5.2',
+        model: 'openai/gpt-5.5',
         baseUrl: 'https://openrouter.ai/api/v1',
         enabled: false,
         availableModels: [
-          // OpenAI GPT-5.5/GPT-5.2 Series (Latest - 2026)
-          'openai/gpt-5.5', // Latest full retrain
-          'openai/gpt-5.2-pro', // Top tier
-          'openai/gpt-5.2', // Flagship
-          'openai/gpt-5', // $1.25/$10 per M, 400K ctx
-          'openai/gpt-5-mini', // $0.25/$2 per M, 400K ctx
-          'openai/gpt-5-nano', // $0.05/$0.40 per M, 400K ctx
+          // OpenAI GPT-5.5/GPT-5.4 Series (Latest)
+          'openai/gpt-5.5-pro',
+          'openai/gpt-5.5',
+          'openai/gpt-5.4-thinking',
+          'openai/gpt-5.5-instant',
+          'openai/gpt-realtime-2',
+          'openai/gpt-realtime-translate',
+          'openai/gpt-realtime-whisper',
 
-          // OpenAI o-Series (Reasoning)
-          'openai/o3-pro',
-          'openai/o3',
-          'openai/o4-mini',
-          'openai/o3-mini',
-
-          // Anthropic Claude Series (Latest - 2026)
-          'anthropic/claude-opus-4.6',
+          // Anthropic Claude Series (Latest)
+          'anthropic/claude-opus-4.7',
           'anthropic/claude-sonnet-4.6',
-          'anthropic/claude-sonnet-4.5-20250929',
           'anthropic/claude-haiku-4.5',
 
-          // Google Gemini Series (Latest - 2025/2026)
-          'google/gemini-2.5-pro-preview-05-06',
-          'google/gemini-2.5-flash-preview-05-20',
-          'google/gemini-2.0-flash',
+          // Google Gemini Series (Latest)
+          'google/gemini-3.5-flash',
+          'google/gemini-3.1-pro',
+          'google/gemini-3.1-flash-lite',
 
           // GLM Series (Latest from Z.AI)
           'z-ai/glm-4.6', // GLM-4.6 (Latest flagship)
@@ -274,11 +204,11 @@ class LLMConfigManager {
         preferredProviders: ['anthropic', 'openai', 'google', 'deepseek'],
         preferredModels: {
           anthropic: 'claude-sonnet-4.6',
-          openai: 'o3',
-          google: 'gemini-2.5-pro-preview-05-06',
+          openai: 'gpt-5.5',
+          google: 'gemini-3.1-pro',
           deepseek: 'deepseek-v4-pro',
           siliconflow: 'Qwen/Qwen3.5-39B-A17B',
-          openrouter: 'openai/o3',
+          openrouter: 'openai/gpt-5.5',
         },
       },
       task: {
@@ -287,12 +217,12 @@ class LLMConfigManager {
         description: 'For general task execution and completion',
         preferredProviders: ['openai', 'anthropic', 'siliconflow', 'google'],
         preferredModels: {
-          openai: 'gpt-5.2',
+          openai: 'gpt-5.5',
           anthropic: 'claude-sonnet-4.6',
           siliconflow: 'Qwen/Qwen3.5-39B-A17B',
-          google: 'gemini-2.5-flash-preview-05-20',
+          google: 'gemini-3.5-flash',
           deepseek: 'deepseek-v4-flash',
-          openrouter: 'openai/gpt-5.2',
+          openrouter: 'openai/gpt-5.5',
         },
       },
       code: {
@@ -303,9 +233,9 @@ class LLMConfigManager {
         preferredModels: {
           siliconflow: 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
           deepseek: 'deepseek-v4-flash',
-          openai: 'gpt-5.2',
+          openai: 'gpt-5.5',
           anthropic: 'claude-sonnet-4.6',
-          openrouter: 'openai/gpt-5.2',
+          openrouter: 'openai/gpt-5.5',
           local: 'deepseek-r1:70b',
         },
       },
@@ -315,8 +245,8 @@ class LLMConfigManager {
         description: 'For text-to-speech conversion',
         preferredProviders: ['openai', 'google'],
         preferredModels: {
-          openai: 'tts-1',
-          google: 'gemini-2.5-flash-preview-05-20',
+          openai: 'gpt-realtime-2',
+          google: 'gemini-3.5-flash',
         },
       },
       voiceSTT: {
@@ -325,8 +255,8 @@ class LLMConfigManager {
         description: 'For speech-to-text conversion',
         preferredProviders: ['openai', 'google'],
         preferredModels: {
-          openai: 'whisper-1',
-          google: 'gemini-2.5-flash-preview-05-20',
+          openai: 'gpt-realtime-whisper',
+          google: 'gemini-3.5-flash',
         },
       },
       image: {
@@ -335,8 +265,8 @@ class LLMConfigManager {
         description: 'For image analysis and generation',
         preferredProviders: ['openai', 'google', 'anthropic'],
         preferredModels: {
-          openai: 'gpt-4o',
-          google: 'gemini-2.5-pro-preview-05-06',
+          openai: 'gpt-5.5',
+          google: 'gemini-3.1-pro',
           anthropic: 'claude-sonnet-4.6',
         },
       },
@@ -346,8 +276,8 @@ class LLMConfigManager {
         description: 'For processing text, images, and other media',
         preferredProviders: ['google', 'openai', 'anthropic'],
         preferredModels: {
-          google: 'gemini-2.5-pro-preview-05-06',
-          openai: 'gpt-4o',
+          google: 'gemini-3.1-pro',
+          openai: 'gpt-5.5',
           anthropic: 'claude-sonnet-4.6',
         },
       },
@@ -683,7 +613,7 @@ class LLMConfigManager {
               const providerConfig = this.providers[provider];
               if (providerConfig && providerConfig.enabled) {
                 // Test the specific model
-                const result = await this.makeTestRequest(provider, providerConfig);
+                await this.makeTestRequest(provider, providerConfig);
                 results[type] = { success: true, provider, model };
               } else {
                 results[type] = { success: false, error: 'Provider not enabled', provider, model };
@@ -1244,8 +1174,8 @@ class LLMConfigManager {
   }
 
   /**
-    * Toggle custom model input visibility
-    */
+   * Toggle custom model input visibility
+   */
   toggleCustomModelInput(type) {
     const modelSelect = document.getElementById(`${type}Model`);
     const customGroup = document.getElementById(`${type}CustomModelGroup`);
@@ -1292,9 +1222,6 @@ class LLMConfigManager {
 
   async saveConfiguration() {
     try {
-      // Collect configuration from UI
-      const currentTab = document.querySelector('.tab-button.active').dataset.provider;
-
       // Update provider configurations from form fields
       Object.keys(this.providers).forEach(providerKey => {
         const provider = this.providers[providerKey];
@@ -1765,19 +1692,19 @@ class LLMConfigManager {
     const response = await fetch(`${baseUrl}/models`, {
       headers: config.apiKey
         ? {
-          Authorization: `Bearer ${config.apiKey}`,
-          'Content-Type': 'application/json',
-        }
+            Authorization: `Bearer ${config.apiKey}`,
+            'Content-Type': 'application/json',
+          }
         : {
-          'Content-Type': 'application/json',
-        },
+            'Content-Type': 'application/json',
+          },
     });
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
       throw new Error(
         `HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}. ` +
-        `Make sure your local LLM server (Ollama, LMStudio, etc.) is running at ${baseUrl}`
+          `Make sure your local LLM server (Ollama, LMStudio, etc.) is running at ${baseUrl}`
       );
     }
 
@@ -1788,7 +1715,7 @@ class LLMConfigManager {
       if (availableModels.length > 0 && config.model && !availableModels.includes(config.model)) {
         throw new Error(
           `Model "${config.model}" not found on local server. ` +
-          `Available models: ${availableModels.slice(0, 10).join(', ')}${availableModels.length > 10 ? '...' : ''}`
+            `Available models: ${availableModels.slice(0, 10).join(', ')}${availableModels.length > 10 ? '...' : ''}`
         );
       }
     } catch (error) {
@@ -2665,26 +2592,32 @@ class LLMConfigManager {
 
     // OpenAI GPT-5 series fallbacks
     if (model.startsWith('openai/')) {
-      if (model.includes('gpt-5-nano')) return 'openai/gpt-5-mini'; // Nano → Mini
-      if (model.includes('gpt-5-mini')) return 'openai/gpt-5'; // Mini → Full GPT-5
-      if (model.includes('gpt-5') && !model.includes('mini') && !model.includes('nano')) return 'openai/gpt-4o'; // Full GPT-5 → GPT-4o
-      if (model.includes('gpt-4o')) return 'openai/gpt-4-turbo';
+      if (model.includes('gpt-5.5-pro')) return 'openai/gpt-5.5';
+      if (model.includes('gpt-5.5') && !model.includes('pro') && !model.includes('instant'))
+        return 'openai/gpt-5.4-thinking';
+      if (model.includes('gpt-5.4-thinking')) return 'openai/gpt-5.5-instant';
+      if (model.includes('gpt-5.5-instant')) return 'openai/gpt-5.5'; // fallback cycle/safeguard
+      // legacy support
+      if (model.includes('gpt-4o') || model.includes('gpt-4')) return 'openai/gpt-5.5';
     }
 
     // Google Gemini series fallbacks
     if (model.startsWith('google/')) {
-      if (model.includes('gemini-2.0-flash-exp')) return 'google/gemini-2.0-flash'; // Experimental → Stable
-      if (model.includes('gemini-2.0-flash')) return 'google/gemini-1.5-pro-latest'; // 2.0 Flash → 1.5 Pro
-      if (model.includes('gemini-1.5-pro-latest')) return 'google/gemini-1.5-flash-latest'; // Pro → Flash
-      if (model.includes('gemini-1.5-flash-latest')) return 'google/gemini-1.5-pro'; // Flash Latest → Pro Legacy
-      if (model.includes('gemini-1.5')) return 'google/gemini-pro'; // 1.5 → 1.0 Pro
+      if (model.includes('gemini-3.5-flash')) return 'google/gemini-3.1-pro';
+      if (model.includes('gemini-3.1-pro')) return 'google/gemini-3.1-flash-lite';
+      if (model.includes('gemini-3.1-flash-lite')) return 'google/gemini-3.5-flash';
+      // legacy support
+      if (model.includes('gemini-2.5') || model.includes('gemini-2.0') || model.includes('gemini-1.5'))
+        return 'google/gemini-3.5-flash';
     }
 
     // Anthropic fallbacks
     if (model.startsWith('anthropic/')) {
-      if (model.includes('claude-3-5-sonnet')) return 'anthropic/claude-3-5-haiku-20241022';
-      if (model.includes('claude-3-5-haiku')) return 'anthropic/claude-3-opus-20240229';
-      if (model.includes('claude-3-opus')) return 'anthropic/claude-3-sonnet-20240229';
+      if (model.includes('claude-opus-4.7')) return 'anthropic/claude-sonnet-4.6';
+      if (model.includes('claude-sonnet-4.6')) return 'anthropic/claude-haiku-4.5';
+      if (model.includes('claude-haiku-4.5')) return 'anthropic/claude-sonnet-4.6';
+      // legacy support
+      if (model.includes('claude-3-5') || model.includes('claude-3')) return 'anthropic/claude-sonnet-4.6';
     }
 
     // GLM fallbacks (different for different providers)
@@ -2692,20 +2625,16 @@ class LLMConfigManager {
       // OpenRouter GLM models
       if (model.includes('glm-4.6')) return 'z-ai/glm-4.5';
       if (model.includes('glm-4.5') && !model.includes('air')) return 'z-ai/glm-4.5-air:free';
-      if (model.includes('glm-4.5-air')) return 'openai/gpt-4o-mini';
+      if (model.includes('glm-4.5-air')) return 'openai/gpt-5.5-instant';
     }
 
     if (model.startsWith('zai-org/')) {
       // SiliconFlow GLM models
-      if (model.includes('GLM-4.5') && !model.includes('Air')) return 'zai-org/GLM-4.5-Air';
-      if (model.includes('GLM-4.5-Air')) return 'THUDM/GLM-4-9B-0414';
-    }
-
-    if (model.startsWith('THUDM/')) {
-      // SiliconFlow THUDM models
-      if (model.includes('GLM-4.6')) return 'zai-org/GLM-4.5'; // GLM-4.6 doesn't exist on SiliconFlow
-      if (model.includes('GLM-4.5') && !model.includes('Air')) return 'zai-org/GLM-4.5-Air';
-      if (model.includes('GLM-Z1')) return 'THUDM/GLM-4-32B-0414';
+      if (model.includes('glm-5')) return 'zai-org/GLM-4.7';
+      if (model.includes('glm-4.7')) return 'zai-org/GLM-4.6';
+      if (model.includes('glm-4.6') && !model.includes('v')) return 'zai-org/GLM-4.5';
+      if (model.includes('glm-4.5') && !model.includes('air')) return 'zai-org/GLM-4.5-Air';
+      if (model.includes('glm-4.5-air')) return 'Qwen/Qwen3.5-8B';
     }
 
     return null;
@@ -2717,7 +2646,7 @@ class LLMConfigManager {
     // Modify "system" role to "SystemInstruction" to support model providers that don't allow "system"
     const messages = rawMessages.map(msg => ({
       ...msg,
-      role: msg.role === 'system' ? 'Instruction' : msg.role
+      role: msg.role === 'system' ? 'Instruction' : msg.role,
     }));
 
     const apiUrl = `${provider.baseUrl}/chat/completions`;
@@ -2735,12 +2664,12 @@ class LLMConfigManager {
       method: 'POST',
       headers: provider.apiKey
         ? {
-          Authorization: `Bearer ${provider.apiKey}`,
-          'Content-Type': 'application/json',
-        }
+            Authorization: `Bearer ${provider.apiKey}`,
+            'Content-Type': 'application/json',
+          }
         : {
-          'Content-Type': 'application/json',
-        },
+            'Content-Type': 'application/json',
+          },
       body: JSON.stringify(payload),
     });
 
@@ -2784,7 +2713,7 @@ class LLMConfigManager {
     // Modify "system" role to "SystemInstruction" to support model providers that don't allow "system"
     const messages = conversationHistory.map(msg => ({
       ...msg,
-      role: msg.role === 'system' ? 'system' : msg.role
+      role: msg.role === 'system' ? 'system' : msg.role,
     }));
 
     const payload = {
@@ -2802,12 +2731,12 @@ class LLMConfigManager {
       method: 'POST',
       headers: provider.apiKey
         ? {
-          Authorization: `Bearer ${provider.apiKey}`,
-          'Content-Type': 'application/json',
-        }
+            Authorization: `Bearer ${provider.apiKey}`,
+            'Content-Type': 'application/json',
+          }
         : {
-          'Content-Type': 'application/json',
-        },
+            'Content-Type': 'application/json',
+          },
       body: JSON.stringify(payload),
     });
 
@@ -3414,7 +3343,7 @@ Current context summary:
 
     const configName = listSelect.value;
     const configs = this.getLocalSavedConfigs();
-    let config = configs[configName];
+    const config = configs[configName];
 
     if (!config) {
       this.showNotification(`Configuration "${configName}" not found`, 'error');
