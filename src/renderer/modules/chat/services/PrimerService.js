@@ -39,6 +39,12 @@ class PrimerService {
   // --- find_primer_binding_sites ---
 
   async findPrimerBindingSites(params) {
+    const primerSeq = params.primerSequence || params.sequence || params.primer;
+    if (!primerSeq) {
+      throw new Error('primerSequence or sequence parameter is required');
+    }
+    params.primerSequence = primerSeq;
+
     await this._resolveTemplateSequence(params);
     const Designer = this._getDesigner();
     const result = {

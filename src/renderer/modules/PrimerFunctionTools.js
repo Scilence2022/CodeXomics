@@ -71,10 +71,14 @@ class PrimerFunctionTools {
 
       find_primer_binding_sites: buildTool('find_primer_binding_sites', async (params) => {
         await this._ensureDesigner();
+        const primerSeq = params.primerSequence || params.sequence || params.primer;
+        if (!primerSeq) {
+          throw new Error('primerSequence or sequence parameter is required');
+        }
         return {
-          queryLength: params.primerSequence.length,
+          queryLength: primerSeq.length,
           sites: this.PrimerDesigner.findBindingSites(
-              params.primerSequence,
+              primerSeq,
               params.templateSequence,
               params.maxMismatches || 0,
           ),

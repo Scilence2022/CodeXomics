@@ -161,24 +161,28 @@ const PRIMER_TOOL_SCHEMAS = {
 
   find_primer_binding_sites: {
     name: 'find_primer_binding_sites',
-    description: 'Search for binding sites of a specific primer sequence within a larger template (e.g. searching a gene sequence). Finds both forward and reverse occurrences.',
+    description: 'Search for binding sites of a specific primer sequence within a larger template (e.g. searching a gene sequence or current genome). Finds both forward and reverse occurrences.',
     parameters: {
       type: 'object',
       properties: {
+        sequence: {
+          type: 'string',
+          description: 'The short primer DNA sequence to search for (e.g. GCAATATGTCTCTGTGTGGAT).',
+        },
         primerSequence: {
           type: 'string',
-          description: 'The short primer DNA sequence',
+          description: 'Alias for sequence. The short primer DNA sequence.',
         },
         templateSequence: {
           type: 'string',
-          description: 'The larger template DNA sequence to search within. If not provided, fetch it first via sequence tools.',
+          description: 'Optional. The larger template DNA sequence to search within. If not provided, the tool will automatically search the current active genome or chromosome.',
         },
         maxMismatches: {
           type: 'number',
           description: 'Maximum number of mismatched bases allowed (default: 0)',
         },
       },
-      required: ['primerSequence', 'templateSequence'],
+      required: [],
     },
   },
 

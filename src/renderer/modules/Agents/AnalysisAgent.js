@@ -832,12 +832,11 @@ class AnalysisAgent extends AgentBase {
         end,
         strand = 'both',
         maxMismatches = 0,
-        max_mismatches,
-        case_sensitive = false,
+        caseSensitive = false,
       } = parameters;
 
       const motifPattern = motif || pattern;
-      const maxMM = max_mismatches ?? maxMismatches ?? 0;
+      const maxMM = maxMismatches ?? 0;
 
       if (!motifPattern) {
         throw new Error('Pattern/motif is required');
@@ -863,7 +862,7 @@ class AnalysisAgent extends AgentBase {
           end,
           strand,
           max_mismatches: maxMM,
-          case_sensitive,
+          case_sensitive: caseSensitive,
         });
       }
 
@@ -941,9 +940,30 @@ class AnalysisAgent extends AgentBase {
     try {
       const PrimerDesigner = (typeof window !== 'undefined' && window.PrimerDesigner)
         || (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
-      const primer = parameters.primerSequence || parameters.primer;
-      const template = parameters.templateSequence || parameters.sequence;
-      if (!primer || !template) throw new Error('primerSequence and templateSequence are required');
+      const primer = parameters.primerSequence || parameters.sequence || parameters.primer;
+      let template = parameters.templateSequence;
+      if (!primer) throw new Error('primerSequence or sequence is required');
+      if (!template && this.chatManager) {
+        const state = this.chatManager.getCurrentState();
+        if (state && state.currentChromosome) {
+          const padding = 5000;
+          const seqStart = Math.max(1, (state.viewingRegion?.start || 1) - padding);
+          const seqEnd = (state.viewingRegion?.end || seqStart + 10000) + padding;
+          try {
+            const seqData = await this.chatManager.getSequence({
+              chromosome: state.currentChromosome,
+              start: seqStart,
+              end: seqEnd,
+            });
+            if (seqData && seqData.sequence) {
+              template = seqData.sequence;
+            }
+          } catch (e) {
+            console.warn('Failed to auto-retrieve template sequence in AnalysisAgent:', e);
+          }
+        }
+      }
+      if (!template) throw new Error('templateSequence is required');
       if (PrimerDesigner) {
         const sites = PrimerDesigner.findBindingSites(primer, template, parameters.maxMismatches || 0);
         return { success: true, sites, count: sites.length };

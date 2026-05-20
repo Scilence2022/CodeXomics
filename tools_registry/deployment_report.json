@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-05-20T00:50:14.680Z",
+  "timestamp": "2026-05-20T01:06:51.570Z",
   "version": "1.0.0",
   "stats": {
     "totalTools": 158,
     "validTools": 158,
     "invalidTools": 17,
     "categories": 17,
-    "totalSize": 454929
+    "totalSize": 455164
   },
   "errors": [
     "find_restriction_sites.yaml: Missing required fields: version, category, priority",
