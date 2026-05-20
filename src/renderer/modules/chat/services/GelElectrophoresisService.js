@@ -22,9 +22,7 @@ class GelElectrophoresisService {
 
   get markerDb() {
     if (!this._markerDb) {
-      const DbClass = (typeof window !== 'undefined' && window.DNAMarkerDatabase)
-        ? window.DNAMarkerDatabase
-        : null;
+      const DbClass = typeof window !== 'undefined' && window.DNAMarkerDatabase ? window.DNAMarkerDatabase : null;
       if (DbClass) {
         this._markerDb = new DbClass();
       }
@@ -71,6 +69,8 @@ class GelElectrophoresisService {
       showLadder,
       bandColorScheme,
       gelConfig: {
+        a: gelConfig.a,
+        b: gelConfig.b,
         wellToBottomDistance: gelConfig.wellToBottom,
         effectiveRange: gelConfig.effectiveRange,
       },
@@ -89,15 +89,15 @@ class GelElectrophoresisService {
 
   _getGelConfig(percentage) {
     const configs = {
-      0.5: { a: 11.5, b: 3.8, wellToBottom: 12, effectiveRange: [1000, 30000], diffusionFactor: 0.8 },
-      0.7: { a: 10.5, b: 3.2, wellToBottom: 12, effectiveRange: [800, 20000], diffusionFactor: 0.9 },
-      0.8: { a: 10.0, b: 3.0, wellToBottom: 12, effectiveRange: [600, 15000], diffusionFactor: 0.95 },
-      1.0: { a: 9.5, b: 2.7, wellToBottom: 12, effectiveRange: [400, 10000], diffusionFactor: 1.0 },
-      1.2: { a: 9.0, b: 2.4, wellToBottom: 12, effectiveRange: [300, 7000], diffusionFactor: 1.1 },
-      1.5: { a: 8.5, b: 2.1, wellToBottom: 12, effectiveRange: [200, 5000], diffusionFactor: 1.2 },
-      2.0: { a: 8.0, b: 1.8, wellToBottom: 12, effectiveRange: [100, 3000], diffusionFactor: 1.4 },
-      2.5: { a: 7.5, b: 1.5, wellToBottom: 12, effectiveRange: [50, 2000], diffusionFactor: 1.6 },
-      3.0: { a: 7.0, b: 1.3, wellToBottom: 12, effectiveRange: [30, 1000], diffusionFactor: 1.8 },
+      0.5: { a: 32.33, b: 7.11, wellToBottom: 12, effectiveRange: [1000, 30000], diffusionFactor: 0.8 },
+      0.7: { a: 32.8, b: 7.51, wellToBottom: 12, effectiveRange: [800, 20000], diffusionFactor: 0.9 },
+      0.8: { a: 31.86, b: 7.51, wellToBottom: 12, effectiveRange: [600, 15000], diffusionFactor: 0.95 },
+      1.0: { a: 30.54, b: 7.51, wellToBottom: 12, effectiveRange: [400, 10000], diffusionFactor: 1.0 },
+      1.2: { a: 30.03, b: 7.68, wellToBottom: 12, effectiveRange: [300, 7000], diffusionFactor: 1.1 },
+      1.5: { a: 28.28, b: 7.51, wellToBottom: 12, effectiveRange: [200, 5000], diffusionFactor: 1.2 },
+      2.0: { a: 25.22, b: 7.11, wellToBottom: 12, effectiveRange: [100, 3000], diffusionFactor: 1.4 },
+      2.5: { a: 22.12, b: 6.55, wellToBottom: 12, effectiveRange: [50, 2000], diffusionFactor: 1.6 },
+      3.0: { a: 21.17, b: 6.89, wellToBottom: 12, effectiveRange: [30, 1000], diffusionFactor: 1.8 },
     };
 
     if (configs[percentage]) return configs[percentage];

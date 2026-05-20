@@ -510,6 +510,14 @@ class GelRenderer {
   }
 
   _getGelParamsFromResult(result) {
+    if (result.gelConfig && result.gelConfig.a !== undefined && result.gelConfig.b !== undefined) {
+      return {
+        a: result.gelConfig.a,
+        b: result.gelConfig.b,
+        wellToBottom: result.gelConfig.wellToBottomDistance || 12,
+      };
+    }
+
     if (result.bands && result.bands.length > 0 && result.bands[0].migrationDistance !== undefined) {
       const sizes = result.fragmentSizes || [];
       if (sizes.length >= 2) {
@@ -521,12 +529,12 @@ class GelRenderer {
         const d2 = bands[bands.length - 1].migrationDistance;
         if (d1 !== d2) {
           const b = (d1 - d2) / (Math.log10(large) - Math.log10(small));
-          const a = d1 + b * Math.log10(large);
+          const a = d1 + b * Math.log10(small);
           return { a, b, wellToBottom: Math.max(a, 12) };
         }
       }
     }
-    return { a: 9.5, b: 2.7, wellToBottom: 12 };
+    return { a: 30.54, b: 7.51, wellToBottom: 12 };
   }
 
   _exportPNG() {
