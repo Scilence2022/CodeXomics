@@ -1451,6 +1451,8 @@
                     <button class="tab-button" data-provider="deepseek">DeepSeek</button>
                     <button class="tab-button" data-provider="siliconflow">SiliconFlow</button>
                     <button class="tab-button" data-provider="openrouter">OpenRouter</button>
+                    <button class="tab-button" data-provider="minimax">MiniMax (Global)</button>
+                    <button class="tab-button" data-provider="minimax_cn">MiniMax CN</button>
                     <button class="tab-button" data-provider="local">Custom Endpoint</button>
                     <button class="tab-button" data-provider="models">Model Selection</button>
                 </div>
@@ -1845,6 +1847,92 @@
                         </div>
                         <div class="form-group">
                             <button type="button" id="saveOpenrouterProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MiniMax (Global) Configuration -->
+                    <div id="minimax-config" class="provider-config">
+                        <div class="form-group">
+                            <label for="minimaxApiKey">API Key:</label>
+                            <div class="input-with-button">
+                                <input type="password" id="minimaxApiKey" placeholder="ey..." class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteMinimaxApiKeyBtn"
+                                    title="Paste API Key">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
+                            <small class="help-text">Get your API key from <a href="https://platform.minimax.io/"
+                                    target="_blank">MiniMax Developer Platform</a></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="minimaxModel">Default Model:</label>
+                            <select id="minimaxModel" class="select">
+                                <option value="MiniMax-M2.7" selected>MiniMax-M2.7 (Flagship)</option>
+                                <option value="MiniMax-M2.7-highspeed">MiniMax-M2.7-highspeed (Fast)</option>
+                                <option value="MiniMax-M2.5">MiniMax-M2.5</option>
+                                <option value="MiniMax-M2.5-highspeed">MiniMax-M2.5-highspeed</option>
+                                <option value="M2-her">M2-her</option>
+                                <option value="other">Other (specify below)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="minimaxModelOtherGroup" style="display: none;">
+                            <label for="minimaxModelOther">Custom Model Name:</label>
+                            <input type="text" id="minimaxModelOther" placeholder="Enter custom model name"
+                                class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <label for="minimaxBaseUrl">Base URL:</label>
+                            <input type="text" id="minimaxBaseUrl" value="https://api.minimax.io/v1"
+                                class="input-full" readonly>
+                            <small class="help-text">MiniMax Global API endpoint (read-only)</small>
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="saveMinimaxProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MiniMax CN Configuration -->
+                    <div id="minimax_cn-config" class="provider-config">
+                        <div class="form-group">
+                            <label for="minimax_cnApiKey">API Key:</label>
+                            <div class="input-with-button">
+                                <input type="password" id="minimax_cnApiKey" placeholder="ey..." class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteMinimax_cnApiKeyBtn"
+                                    title="Paste API Key">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
+                            <small class="help-text">Get your API key from <a href="https://platform.minimaxi.com/"
+                                    target="_blank">MiniMax CN Developer Platform</a></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="minimax_cnModel">Default Model:</label>
+                            <select id="minimax_cnModel" class="select">
+                                <option value="MiniMax-M2.7" selected>MiniMax-M2.7 (Flagship)</option>
+                                <option value="MiniMax-M2.7-highspeed">MiniMax-M2.7-highspeed (Fast)</option>
+                                <option value="MiniMax-M2.5">MiniMax-M2.5</option>
+                                <option value="MiniMax-M2.5-highspeed">MiniMax-M2.5-highspeed</option>
+                                <option value="M2-her">M2-her</option>
+                                <option value="other">Other (specify below)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="minimax_cnModelOtherGroup" style="display: none;">
+                            <label for="minimax_cnModelOther">Custom Model Name:</label>
+                            <input type="text" id="minimax_cnModelOther" placeholder="Enter custom model name"
+                                class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <label for="minimax_cnBaseUrl">Base URL:</label>
+                            <input type="text" id="minimax_cnBaseUrl" value="https://api.minimaxi.com/v1"
+                                class="input-full" readonly>
+                            <small class="help-text">MiniMax CN API endpoint (read-only)</small>
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="saveMinimax_cnProviderBtn" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Save Provider Info
                             </button>
                         </div>

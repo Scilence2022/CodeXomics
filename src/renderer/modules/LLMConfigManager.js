@@ -67,42 +67,6 @@ class LLMConfigManager {
           'Qwen/Qwen3.5-4B', // 4B
           'Qwen/Qwen3.5-3B-A3B', // 3B total, 3B active
 
-          // Qwen3 Coder Series (Largest - 480B)
-          'Qwen/Qwen3-Coder-480B-A35B-Instruct', // 480B total, 35B active
-
-          // Qwen3 235B Series
-          'Qwen/Qwen3-235B-A22B-Thinking-2507', // 235B total, 22B active
-          'Qwen/Qwen3-235B-A22B-Instruct-2507', // 235B total, 22B active
-
-          // Qwen3 Next 80B Series
-          'Qwen/Qwen3-Next-80B-A3B-Instruct', // 80B total, 3B active
-          'Qwen/Qwen3-Next-80B-A3B-Thinking', // 80B total, 3B active
-
-          // Qwen3 30B Series
-          'Qwen/Qwen3-30B-A3B-Thinking-2507', // 30B total, 3B active
-          'Qwen/Qwen3-30B-A3B-Instruct-2507', // 30B total, 3B active
-          'Qwen/Qwen3-Coder-30B-A3B-Instruct', // 30B total, 3B active (Coder)
-
-          // Qwen3 Standard Series (32B and below)
-          'Qwen/Qwen3-32B', // 32B
-          'Qwen/QwQ-32B', // 32B (Reasoning)
-          'Qwen/QwQ-32B-Preview', // 32B (Reasoning Preview)
-          'Qwen/Qwen3-14B', // 14B
-
-          // 🧠 DeepSeek Series (Arranged by capability and size)
-          // DeepSeek Pro Series
-          'Pro/deepseek-ai/DeepSeek-R1', // Latest R1 Pro
-          'Pro/deepseek-ai/DeepSeek-V3', // V3 Pro
-          'Pro/deepseek-ai/DeepSeek-V3.2', // V3.2 Pro
-          'Pro/deepseek-ai/DeepSeek-V3.1-Terminus', // V3.1 Terminus Pro
-          'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', // R1 Distilled Pro
-
-          // DeepSeek Standard Series
-          'deepseek-ai/DeepSeek-R1', // Latest R1
-          'deepseek-ai/DeepSeek-V3.2', // V3.2
-          'deepseek-ai/DeepSeek-V3', // V3
-          'deepseek-ai/DeepSeek-V3.1-Terminus', // V3.1 Terminus
-
           // DeepSeek R1 Distilled Series (by size)
           'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B', // 32B Distilled
           'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B', // 14B Distilled
@@ -110,39 +74,8 @@ class LLMConfigManager {
           'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', // 7B Distilled
 
           // 🌙 Kimi Series (Moonshot AI)
-          'Pro/moonshotai/Kimi-K2.5', // Kimi K2.5 Pro (Latest)
-          'Pro/moonshotai/Kimi-K2-Instruct-0905', // Kimi K2 Pro
-          'Pro/moonshotai/Kimi-K2-Thinking', // Kimi K2 Thinking Pro
-          'moonshotai/Kimi-K2-Instruct', // Kimi K2 Standard
-          'moonshotai/Kimi-K2-Thinking', // Kimi K2 Thinking (Reasoning)
-
-          // 🔮 GLM Series (Zhipu AI - Arranged by version and size)
-          // GLM Latest Series
-          'Pro/zai-org/GLM-5', // GLM-5 Pro (Latest)
-          'Pro/zai-org/GLM-4.7', // GLM-4.7 Pro
-          'zai-org/GLM-4.6V', // GLM-4.6V (Vision)
-          'zai-org/GLM-4.6', // GLM-4.6
-          'zai-org/GLM-4.5', // GLM-4.5
-          'zai-org/GLM-4.5-Air', // GLM-4.5-Air (Lightweight)
-
-          // 🏢 Enterprise & Commercial Models
-          // Baidu ERNIE Series
-          'baidu/ERNIE-4.5-300B-A47B', // 300B ERNIE (47B active)
-
-          // Other Large Enterprise Models
-          'Pro/MiniMax/MiniMax-M2.5', // MiniMax M2.5 Pro (Latest)
-          'MiniMaxAI/MiniMax-M2', // MiniMax M2
-          'ascend-tribe/pangu-pro-moe', // PanGu Pro MoE
-          'tencent/Hunyuan-A13B-Instruct', // Hunyuan 13B
-          'TeleAI/TeleChat2', // TeleChat2
-
-          // Other Models
-          'stepfun-ai/Step-5-Flash', // Step-5 Flash
-          'PaddlePaddle/PaddleOCR-VL-1.5', // PaddleOCR-VL-1.5
-
-          // InternLM Series (by size)
-          'internlm/internlm2_5-20b-chat', // 20B InternLM
-          'internlm/internlm2_5-7b-chat', // 7B InternLM
+          'Pro/moonshotai/Kimi-K2.6', // Kimi K2.6 Pro (Latest)
+          'Pro/moonshotai/Kimi-K2.5', // Kimi K2.5 Pro
         ],
       },
       // OpenRouter - Access to GPT-5 series via OpenRouter API
@@ -185,6 +118,22 @@ class LLMConfigManager {
           'deepseek/deepseek-reasoner',
         ],
       },
+      minimax: {
+        name: 'MiniMax (Global)',
+        apiKey: '',
+        model: 'MiniMax-M2.7',
+        baseUrl: 'https://api.minimax.io/v1',
+        enabled: false,
+        availableModels: ['MiniMax-M2.7', 'MiniMax-M2.7-highspeed', 'MiniMax-M2.5', 'MiniMax-M2.5-highspeed', 'M2-her'],
+      },
+      minimax_cn: {
+        name: 'MiniMax CN',
+        apiKey: '',
+        model: 'MiniMax-M2.7',
+        baseUrl: 'https://api.minimaxi.com/v1',
+        enabled: false,
+        availableModels: ['MiniMax-M2.7', 'MiniMax-M2.7-highspeed', 'MiniMax-M2.5', 'MiniMax-M2.5-highspeed', 'M2-her'],
+      },
       local: {
         name: 'Custom Endpoint',
         apiKey: '',
@@ -201,7 +150,7 @@ class LLMConfigManager {
         provider: 'auto',
         model: 'auto',
         description: 'For complex reasoning and analysis tasks',
-        preferredProviders: ['anthropic', 'openai', 'google', 'deepseek'],
+        preferredProviders: ['anthropic', 'openai', 'google', 'deepseek', 'minimax', 'minimax_cn'],
         preferredModels: {
           anthropic: 'claude-sonnet-4.6',
           openai: 'gpt-5.5',
@@ -209,13 +158,15 @@ class LLMConfigManager {
           deepseek: 'deepseek-v4-pro',
           siliconflow: 'Qwen/Qwen3.5-39B-A17B',
           openrouter: 'openai/gpt-5.5',
+          minimax: 'MiniMax-M2.7',
+          minimax_cn: 'MiniMax-M2.7',
         },
       },
       task: {
         provider: 'auto',
         model: 'auto',
         description: 'For general task execution and completion',
-        preferredProviders: ['openai', 'anthropic', 'siliconflow', 'google'],
+        preferredProviders: ['openai', 'anthropic', 'siliconflow', 'google', 'minimax', 'minimax_cn'],
         preferredModels: {
           openai: 'gpt-5.5',
           anthropic: 'claude-sonnet-4.6',
@@ -223,13 +174,15 @@ class LLMConfigManager {
           google: 'gemini-3.5-flash',
           deepseek: 'deepseek-v4-flash',
           openrouter: 'openai/gpt-5.5',
+          minimax: 'MiniMax-M2.7',
+          minimax_cn: 'MiniMax-M2.7',
         },
       },
       code: {
         provider: 'auto',
         model: 'auto',
         description: 'For code generation and programming tasks',
-        preferredProviders: ['siliconflow', 'deepseek', 'openai', 'anthropic'],
+        preferredProviders: ['siliconflow', 'deepseek', 'openai', 'anthropic', 'minimax', 'minimax_cn'],
         preferredModels: {
           siliconflow: 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
           deepseek: 'deepseek-v4-flash',
@@ -237,6 +190,8 @@ class LLMConfigManager {
           anthropic: 'claude-sonnet-4.6',
           openrouter: 'openai/gpt-5.5',
           local: 'deepseek-r1:70b',
+          minimax: 'MiniMax-M2.7',
+          minimax_cn: 'MiniMax-M2.7',
         },
       },
       voiceTTS: {
@@ -810,7 +765,17 @@ class LLMConfigManager {
     }
 
     // Save Provider Info buttons
-    const providerNames = ['openai', 'anthropic', 'google', 'deepseek', 'siliconflow', 'openrouter', 'local'];
+    const providerNames = [
+      'openai',
+      'anthropic',
+      'google',
+      'deepseek',
+      'siliconflow',
+      'openrouter',
+      'minimax',
+      'minimax_cn',
+      'local',
+    ];
     providerNames.forEach(provider => {
       const saveBtn = document.getElementById(`save${provider.charAt(0).toUpperCase() + provider.slice(1)}ProviderBtn`);
       if (saveBtn) {
@@ -834,7 +799,16 @@ class LLMConfigManager {
     }
 
     // Cloud provider model select change - toggle custom model name input
-    const cloudProviders = ['openai', 'anthropic', 'google', 'deepseek', 'siliconflow', 'openrouter'];
+    const cloudProviders = [
+      'openai',
+      'anthropic',
+      'google',
+      'deepseek',
+      'siliconflow',
+      'openrouter',
+      'minimax',
+      'minimax_cn',
+    ];
     cloudProviders.forEach(provider => {
       const modelSelect = document.getElementById(`${provider}Model`);
       if (modelSelect) {
@@ -855,6 +829,8 @@ class LLMConfigManager {
       { btnId: 'pasteDeepseekApiKeyBtn', inputId: 'deepseekApiKey' },
       { btnId: 'pasteSiliconflowApiKeyBtn', inputId: 'siliconflowApiKey' },
       { btnId: 'pasteOpenrouterApiKeyBtn', inputId: 'openrouterApiKey' },
+      { btnId: 'pasteMinimaxApiKeyBtn', inputId: 'minimaxApiKey' },
+      { btnId: 'pasteMinimax_cnApiKeyBtn', inputId: 'minimax_cnApiKey' },
       { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' },
     ];
 
@@ -1489,6 +1465,10 @@ class LLMConfigManager {
           return await this.testSiliconFlow(config);
         case 'openrouter':
           return await this.testOpenRouter(config);
+        case 'minimax':
+          return await this.testMinimax(config);
+        case 'minimax_cn':
+          return await this.testMinimax_cn(config);
         case 'local':
           return await this.testLocal(config);
         default:
@@ -1687,6 +1667,72 @@ class LLMConfigManager {
     return { success: true };
   }
 
+  async testMinimax(config) {
+    const baseUrl = config.baseUrl || 'https://api.minimax.io/v1';
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'user', content: 'test' }],
+        max_tokens: 1,
+      }),
+    });
+
+    if (!response.ok) {
+      let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error?.message) {
+          errorMsg += ` - ${errorData.error.message}`;
+        } else if (errorData.message) {
+          errorMsg += ` - ${errorData.message}`;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      throw new Error(errorMsg);
+    }
+
+    return { success: true };
+  }
+
+  async testMinimax_cn(config) {
+    const baseUrl = config.baseUrl || 'https://api.minimaxi.com/v1';
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'user', content: 'test' }],
+        max_tokens: 1,
+      }),
+    });
+
+    if (!response.ok) {
+      let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error?.message) {
+          errorMsg += ` - ${errorData.error.message}`;
+        } else if (errorData.message) {
+          errorMsg += ` - ${errorData.message}`;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      throw new Error(errorMsg);
+    }
+
+    return { success: true };
+  }
+
   async testLocal(config) {
     const baseUrl = config.baseUrl || 'http://localhost:11434/v1';
     const response = await fetch(`${baseUrl}/models`, {
@@ -1752,6 +1798,10 @@ class LLMConfigManager {
           return await this.sendSiliconFlowMessage(provider, message, context, memoryContext);
         case 'openrouter':
           return await this.sendOpenRouterMessage(provider, message, context, memoryContext);
+        case 'minimax':
+          return await this.sendMinimaxMessage(provider, message, context, memoryContext);
+        case 'minimax_cn':
+          return await this.sendMinimax_cnMessage(provider, message, context, memoryContext);
         case 'local':
           return await this.sendLocalMessage(provider, message, context, memoryContext);
         default:
@@ -1845,6 +1895,10 @@ class LLMConfigManager {
         return await this.sendSiliconFlowMessageWithHistory(provider, conversationHistory, context, memoryContext);
       case 'openrouter':
         return await this.sendOpenRouterMessageWithHistory(provider, conversationHistory, context, memoryContext);
+      case 'minimax':
+        return await this.sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext);
+      case 'minimax_cn':
+        return await this.sendMinimax_cnMessageWithHistory(provider, conversationHistory, context, memoryContext);
       case 'local':
         return await this.sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext);
       default:
@@ -2593,8 +2647,9 @@ class LLMConfigManager {
     // OpenAI GPT-5 series fallbacks
     if (model.startsWith('openai/')) {
       if (model.includes('gpt-5.5-pro')) return 'openai/gpt-5.5';
-      if (model.includes('gpt-5.5') && !model.includes('pro') && !model.includes('instant'))
+      if (model.includes('gpt-5.5') && !model.includes('pro') && !model.includes('instant')) {
         return 'openai/gpt-5.4-thinking';
+      }
       if (model.includes('gpt-5.4-thinking')) return 'openai/gpt-5.5-instant';
       if (model.includes('gpt-5.5-instant')) return 'openai/gpt-5.5'; // fallback cycle/safeguard
       // legacy support
@@ -2607,8 +2662,9 @@ class LLMConfigManager {
       if (model.includes('gemini-3.1-pro')) return 'google/gemini-3.1-flash-lite';
       if (model.includes('gemini-3.1-flash-lite')) return 'google/gemini-3.5-flash';
       // legacy support
-      if (model.includes('gemini-2.5') || model.includes('gemini-2.0') || model.includes('gemini-1.5'))
+      if (model.includes('gemini-2.5') || model.includes('gemini-2.0') || model.includes('gemini-1.5')) {
         return 'google/gemini-3.5-flash';
+      }
     }
 
     // Anthropic fallbacks
@@ -2638,6 +2694,160 @@ class LLMConfigManager {
     }
 
     return null;
+  }
+
+  async sendMinimaxMessage(provider, message, context, memoryContext = null) {
+    const messages = this.buildMessages(message, context, 'openai', memoryContext);
+    console.log(
+      'Sending to MiniMax (Global) - Request Payload:',
+      JSON.stringify(
+        {
+          model: provider.model,
+          messages: messages,
+          max_tokens: 2000,
+          temperature: 0.7,
+        },
+        null,
+        2
+      )
+    );
+
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${provider.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        messages: messages,
+        max_tokens: 2000,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content ?? '';
+  }
+
+  async sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+    console.log(
+      'Sending to MiniMax (Global) - Request Payload:',
+      JSON.stringify(
+        {
+          model: provider.model,
+          messages: conversationHistory,
+          max_tokens: 2000,
+          temperature: 0.7,
+        },
+        null,
+        2
+      )
+    );
+
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${provider.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        messages: conversationHistory,
+        max_tokens: 2000,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content ?? '';
+  }
+
+  async sendMinimax_cnMessage(provider, message, context, memoryContext = null) {
+    const messages = this.buildMessages(message, context, 'openai', memoryContext);
+    console.log(
+      'Sending to MiniMax CN - Request Payload:',
+      JSON.stringify(
+        {
+          model: provider.model,
+          messages: messages,
+          max_tokens: 2000,
+          temperature: 0.7,
+        },
+        null,
+        2
+      )
+    );
+
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${provider.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        messages: messages,
+        max_tokens: 2000,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content ?? '';
+  }
+
+  async sendMinimax_cnMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+    console.log(
+      'Sending to MiniMax CN - Request Payload:',
+      JSON.stringify(
+        {
+          model: provider.model,
+          messages: conversationHistory,
+          max_tokens: 2000,
+          temperature: 0.7,
+        },
+        null,
+        2
+      )
+    );
+
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${provider.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        messages: conversationHistory,
+        max_tokens: 2000,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content ?? '';
   }
 
   async sendLocalMessage(provider, message, context, memoryContext = null) {

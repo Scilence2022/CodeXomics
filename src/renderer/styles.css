@@ -5118,12 +5118,20 @@ path.svg-gene-element.selected.border-highlight text {
   background: #f8f9fa;
   border-bottom: 1px solid var(--border-color);
   border-radius: 8px 8px 0 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.llm-provider-tabs::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
 }
 
 /* LLM Config Tab Buttons */
 .llm-provider-tabs .tab-button {
-  flex: 1;
+  flex: 0 0 auto;
   padding: 12px 16px;
   background: transparent;
   border: none;
@@ -5282,6 +5290,30 @@ path.svg-gene-element.selected.border-highlight text {
 
 .llm-provider-tabs .tab-button[data-provider='local']::before {
   content: '\f233';
+}
+
+.llm-provider-tabs .tab-button[data-provider='deepseek']::before {
+  content: '\f5dc'; /* brain */
+}
+
+.llm-provider-tabs .tab-button[data-provider='siliconflow']::before {
+  content: '\f2db'; /* microchip */
+}
+
+.llm-provider-tabs .tab-button[data-provider='openrouter']::before {
+  content: '\f542'; /* route */
+}
+
+.llm-provider-tabs .tab-button[data-provider='minimax']::before {
+  content: '\f0d0'; /* wand-magic-sparkles */
+}
+
+.llm-provider-tabs .tab-button[data-provider='minimax_cn']::before {
+  content: '\f0d0'; /* wand-magic-sparkles */
+}
+
+.llm-provider-tabs .tab-button[data-provider='models']::before {
+  content: '\f1de'; /* sliders */
 }
 
 .provider-config input[type='password']:not(:placeholder-shown) {
