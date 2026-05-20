@@ -5115,18 +5115,13 @@ path.svg-gene-element.selected.border-highlight text {
 
 .llm-provider-tabs {
   display: flex;
+  flex-wrap: wrap;
   background: #f8f9fa;
   border-bottom: 1px solid var(--border-color);
   border-radius: 8px 8px 0 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  white-space: nowrap;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
-}
-
-.llm-provider-tabs::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 /* LLM Config Tab Buttons */
