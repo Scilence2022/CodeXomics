@@ -1,6 +1,7 @@
 /**
  * Tool Policy Robustness Tests
  */
+/* eslint-disable no-new-func, max-len */
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
@@ -23,10 +24,12 @@ function loadChatManagerClass() {
   let content = fs.readFileSync(managerPath, 'utf-8');
   
   // ChatManager has various browser/electron-specific dependencies at the top,
-  // we will extract only the helper methods we want to test: normalizeParams, areParametersEqual,
-  // wasToolExecutedSuccessfully, getToolExecutionCount, and findExistingExecution.
+  // so we extract only the helper methods we want to test.
   
   // We can construct a mock class containing these methods
+  const getToolExecutionKeyMatch = content.match(/getToolExecutionKey\s*\(toolName,\s*parameters\s*=\s*\{\}\)\s*\{[\s\S]*?\}\n\n\s*getRequestedToolExecutionLimit/);
+  const getRequestedToolExecutionLimitMatch = content.match(/getRequestedToolExecutionLimit\s*\(originalMessage,\s*tool\)\s*\{[\s\S]*?\}\n\n\s*filterExecutableToolInstances/);
+  const filterExecutableToolInstancesMatch = content.match(/filterExecutableToolInstances\s*\(toolsToExecute,\s*successfulToolExecutionCounts,\s*originalMessage\)\s*\{[\s\S]*?\}\n\n\s*normalizeParams/);
   const normalizeParamsMatch = content.match(/normalizeParams\s*\(params\)\s*\{[\s\S]*?\}\n\n\s*areParametersEqual/);
   const areParametersEqualMatch = content.match(/areParametersEqual\s*\(params1,\s*params2\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
   const extractParametersMatch = content.match(/extractParametersFromExecutionMessage\s*\(content\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
@@ -34,6 +37,9 @@ function loadChatManagerClass() {
   const getToolExecutionCountMatch = content.match(/getToolExecutionCount\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
   const findExistingExecutionMatch = content.match(/findExistingExecution\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
 
+  const getToolExecutionKeyCode = getToolExecutionKeyMatch ? getToolExecutionKeyMatch[0].replace('getRequestedToolExecutionLimit', '') : '';
+  const getRequestedToolExecutionLimitCode = getRequestedToolExecutionLimitMatch ? getRequestedToolExecutionLimitMatch[0].replace('filterExecutableToolInstances', '') : '';
+  const filterExecutableToolInstancesCode = filterExecutableToolInstancesMatch ? filterExecutableToolInstancesMatch[0].replace('normalizeParams', '') : '';
   const normalizeParamsCode = normalizeParamsMatch ? normalizeParamsMatch[0].replace('areParametersEqual', '') : '';
   const areParametersEqualCode = areParametersEqualMatch ? areParametersEqualMatch[0].replace('/**', '') : '';
   const extractParametersCode = extractParametersMatch ? extractParametersMatch[0].replace('/**', '') : '';
@@ -43,6 +49,9 @@ function loadChatManagerClass() {
 
   const mockClassCode = `
     class MockChatManager {
+      ${getToolExecutionKeyCode}
+      ${getRequestedToolExecutionLimitCode}
+      ${filterExecutableToolInstancesCode}
       ${normalizeParamsCode}
       ${areParametersEqualCode}
       ${extractParametersCode}
@@ -94,6 +103,30 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
       { sequence: 'GCAATAT' },
       { sequence: 'GCAATAT', primerSequence: 'GCAATAT' },
     )).toBe(true);
+  });
+
+  it('should suppress duplicate tool instances after successful execution in the same request', () => {
+    const manager = new MockChatManager();
+    const tool = { tool_name: 'pan_right', parameters: { amount: 500 } };
+    const successfulCounts = new Map([[manager.getToolExecutionKey(tool.tool_name, tool.parameters), 1]]);
+
+    const result = manager.filterExecutableToolInstances([tool], successfulCounts, 'pan right');
+
+    expect(result.executableTools).toHaveLength(0);
+    expect(result.suppressedTools).toHaveLength(1);
+  });
+
+  it('should cap duplicate tool instances within a single model response unless the user asked for repeats', () => {
+    const manager = new MockChatManager();
+    const tool = { tool_name: 'pan_right', parameters: { amount: 500 } };
+
+    const singleResult = manager.filterExecutableToolInstances([tool, tool], new Map(), 'pan right');
+    expect(singleResult.executableTools).toHaveLength(1);
+    expect(singleResult.suppressedTools).toHaveLength(1);
+
+    const repeatedResult = manager.filterExecutableToolInstances([tool, tool], new Map(), 'pan right twice');
+    expect(repeatedResult.executableTools).toHaveLength(2);
+    expect(repeatedResult.suppressedTools).toHaveLength(0);
   });
 
   it('should compare parameters correctly (ChatManager areParametersEqual)', () => {
@@ -226,6 +259,25 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
         },
       }],
       'Find binding sites for primer GCAATATGTCTCTGTGTGGAT on the current genome.',
+    );
+
+    expect(shouldTerminate).toBe(true);
+  });
+
+  it('should terminate after successful simple pan requests', () => {
+    const service = new LLMContextService({}, {});
+
+    const shouldTerminate = service.shouldTerminateAfterToolExecution(
+      [{ tool_name: 'pan_right' }],
+      [{
+        tool: 'pan_right',
+        result: {
+          success: true,
+          message: 'Panned right',
+          newRange: { chromosome: 'U00096', start: 10000, end: 20000 },
+        },
+      }],
+      'pan right',
     );
 
     expect(shouldTerminate).toBe(true);

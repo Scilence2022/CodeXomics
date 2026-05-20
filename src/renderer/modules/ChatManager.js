@@ -4497,6 +4497,9 @@ class ChatManager {
       let finalResponse = null;
       let taskCompleted = false;
       const executedTools = new Set(); // Track executed tools to prevent re-execution
+      const successfulToolExecutionCounts = new Map(); // Track successful tool instances within this user request
+      let lastSuccessfulResults = [];
+      let lastSuccessfulTools = [];
 
       // Iterative function calling loop
       while (currentRound < maxRounds && !taskCompleted) {
@@ -4559,6 +4562,15 @@ class ChatManager {
 
         // Determine which tools to execute
         let toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : toolCall ? [toolCall] : [];
+        const detectedToolCount = toolsToExecute.length;
+
+        const executionFilter = this.filterExecutableToolInstances(
+            toolsToExecute,
+            successfulToolExecutionCounts,
+            message,
+        );
+        toolsToExecute = executionFilter.executableTools;
+        const alreadyExecutedToolCount = executionFilter.suppressedTools.length;
 
         // Display tool detection information
         if (this.showThinkingProcess) {
@@ -4568,6 +4580,11 @@ class ChatManager {
             );
           } else {
             this.updateThinkingMessage(`💬 No tool calls detected - conversational response`);
+          }
+          if (alreadyExecutedToolCount > 0) {
+            this.updateThinkingMessage(
+                `♻️ Ignored ${alreadyExecutedToolCount} already-completed tool call(s) from this request`,
+            );
           }
         }
 
@@ -4588,6 +4605,19 @@ class ChatManager {
           this.updateThinkingMessage(
               `⚠️ Filtered ${toolsBeforeFilter - toolsToExecute.length} tool(s) by execution policy`,
           );
+        }
+
+        if (detectedToolCount > 0 && toolsToExecute.length === 0 && alreadyExecutedToolCount > 0) {
+          console.log('=== DUPLICATE TOOL CALLS SUPPRESSED ===');
+          console.log('The LLM repeated tool calls that already completed in this user request.');
+          console.log('Suppressed tools:', executionFilter.suppressedTools.map((tool) => tool.tool_name));
+          console.log('=======================================');
+
+          taskCompleted = true;
+          finalResponse = lastSuccessfulResults.length > 0 ?
+            this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools) :
+            'The requested action has already been completed.';
+          break;
         }
 
         // CRITICAL FIX: If current response has no tools, check previous assistant messages
@@ -4911,6 +4941,19 @@ class ChatManager {
             const failedResults = toolResults.filter((r) => !r.success);
 
             if (successfulResults.length > 0) {
+              successfulResults.forEach((result) => {
+                const toolKey = this.getToolExecutionKey(result.tool, result.parameters);
+                successfulToolExecutionCounts.set(
+                    toolKey,
+                    (successfulToolExecutionCounts.get(toolKey) || 0) + 1,
+                );
+              });
+              lastSuccessfulResults = successfulResults;
+              lastSuccessfulTools = successfulResults.map((result) => ({
+                tool_name: result.tool,
+                parameters: result.parameters,
+              }));
+
               // Add successful tool results to conversation with SYSTEM role to prevent re-execution
               // IMPORTANT: Sanitize results before sending to LLM to prevent context overflow
               const successMessages = successfulResults.map((result) => {
@@ -5992,6 +6035,74 @@ class ChatManager {
       return;
     }
     return this.services.context.shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults);
+  }
+
+  getToolExecutionKey(toolName, parameters = {}) {
+    return `${toolName}:${JSON.stringify(this.normalizeParams(parameters))}`;
+  }
+
+  getRequestedToolExecutionLimit(originalMessage, tool) {
+    if (!tool || !tool.tool_name) return 1;
+
+    const message = String(originalMessage || '').toLowerCase();
+    const numberWords = {
+      once: 1,
+      one: 1,
+      twice: 2,
+      two: 2,
+      thrice: 3,
+      three: 3,
+      four: 4,
+      five: 5,
+      six: 6,
+      seven: 7,
+      eight: 8,
+      nine: 9,
+      ten: 10,
+    };
+
+    const numericMatch = message.match(/\b(\d{1,2})\s*(?:x|times?|rounds?|steps?)\b/);
+    if (numericMatch) {
+      return Math.max(1, Math.min(parseInt(numericMatch[1], 10), 20));
+    }
+
+    for (const [word, count] of Object.entries(numberWords)) {
+      const pattern = word === 'once' || word === 'twice' || word === 'thrice' ?
+        new RegExp(`\\b${word}\\b`) :
+        new RegExp(`\\b${word}\\s+(?:times?|rounds?|steps?)\\b`);
+      if (pattern.test(message)) {
+        return count;
+      }
+    }
+
+    return 1;
+  }
+
+  filterExecutableToolInstances(toolsToExecute, successfulToolExecutionCounts, originalMessage) {
+    const plannedToolExecutionCounts = new Map();
+    const executableTools = [];
+    const suppressedTools = [];
+
+    for (const tool of toolsToExecute) {
+      const toolKey = this.getToolExecutionKey(tool.tool_name, tool.parameters);
+      const alreadySucceeded = successfulToolExecutionCounts.get(toolKey) || 0;
+      const alreadyPlanned = plannedToolExecutionCounts.get(toolKey) || 0;
+      const requestedLimit = this.getRequestedToolExecutionLimit(originalMessage, tool);
+
+      if (alreadySucceeded + alreadyPlanned >= requestedLimit) {
+        console.log(
+            `♻️ [ToolLoop] Suppressing duplicate tool instance: ${tool.tool_name} ` +
+            `(completed/planned ${alreadySucceeded + alreadyPlanned}/${requestedLimit})`,
+        );
+        suppressedTools.push(tool);
+        continue;
+      }
+
+      plannedToolExecutionCounts.set(toolKey, alreadyPlanned + 1);
+      executableTools.push(tool);
+    }
+
+    return {executableTools, suppressedTools};
   }
 
   normalizeParams(params) {

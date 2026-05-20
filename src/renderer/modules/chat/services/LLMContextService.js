@@ -593,6 +593,12 @@ class LLMContextService {
       'jump to position',
       'show position',
       'go to coordinates',
+      'pan right',
+      'pan left',
+      'scroll right',
+      'scroll left',
+      'move right',
+      'move left',
       // Analysis patterns
       'codon usage analysis',
       'codon analysis',
@@ -710,6 +716,10 @@ class LLMContextService {
       'toggle_annotation_track',
       // Navigation operations - complete actions that don't need follow-up
       'navigate_to_position',
+      'pan_right',
+      'pan_left',
+      'scroll_right',
+      'scroll_left',
       // State information operations - complete actions that don't need follow-up
       'get_genome_info',
       'get_current_state',
@@ -743,6 +753,10 @@ class LLMContextService {
         'toggle_annotation_track',
         // Navigation operations
         'navigate_to_position',
+        'pan_right',
+        'pan_left',
+        'scroll_right',
+        'scroll_left',
         // State information operations
         'get_genome_info',
         'get_current_state',
@@ -1552,6 +1566,18 @@ The gene search has been completed successfully.`;
 
       case 'find_feature':
         return `Feature search completed successfully. Found ${result.result?.length || 0} matching feature(s).`;
+
+      case 'pan_right':
+      case 'pan_left':
+      case 'scroll_right':
+      case 'scroll_left': {
+        const direction = tool.tool_name.includes('right') ? 'right' : 'left';
+        const range = result.result?.newRange;
+        if (range) {
+          return `Panned ${direction}. Current range: ${range.chromosome}:${range.start}-${range.end}.`;
+        }
+        return `Panned ${direction}. ${result.result?.message || 'Navigation completed.'}`;
+      }
 
       case 'find_primer_binding_sites': {
         const sites = result.result?.sites || [];
