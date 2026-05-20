@@ -1,24 +1,43 @@
 {
-  "timestamp": "2026-03-04T04:53:16.578Z",
+  "timestamp": "2026-05-20T00:50:14.680Z",
   "version": "1.0.0",
   "stats": {
-    "totalTools": 122,
-    "validTools": 122,
-    "invalidTools": 5,
-    "categories": 16,
-    "totalSize": 314987
+    "totalTools": 158,
+    "validTools": 158,
+    "invalidTools": 17,
+    "categories": 17,
+    "totalSize": 454929
   },
   "errors": [
-    "generate_sequence.yaml: Cannot read properties of undefined (reading 'name')",
-    "add_primer_annotation.yaml: Missing required fields: version, keywords",
-    "calculate_primer_properties.yaml: Missing required fields: version, keywords",
-    "design_primers.yaml: Missing required fields: version, keywords",
-    "find_primer_binding_sites.yaml: Missing required fields: version, keywords"
+    "find_restriction_sites.yaml: Missing required fields: version, category, priority",
+    "get_dna_marker_info.yaml: Missing required fields: version, category, priority",
+    "list_dna_markers.yaml: Missing required fields: version, category, priority",
+    "list_restriction_enzymes.yaml: Missing required fields: version, category, priority",
+    "search_pattern.yaml: Missing required fields: version, category, priority",
+    "simulate_gel_electrophoresis.yaml: Missing required fields: version, category, priority",
+    "virtual_digest.yaml: Missing required fields: version, category, priority",
+    "bulk_update_annotations.yaml: Missing required fields: keywords, priority",
+    "delete_annotation.yaml: Missing required fields: priority",
+    "get_annotation.yaml: Missing required fields: priority",
+    "get_annotation_history.yaml: Missing required fields: keywords, priority",
+    "get_gene_details.yaml: Missing required fields: priority",
+    "get_nearby_features.yaml: Missing required fields: priority",
+    "list_annotations.yaml: Missing required fields: priority",
+    "search_annotations.yaml: Missing required fields: priority",
+    "update_annotation.yaml: Missing required fields: keywords, priority",
+    "blast_get_installation_status.yaml: Missing required fields: version, category, priority"
   ],
   "warnings": [
     "close_tab.yaml: Parameters should be an object type",
     "switch_to_tab.yaml: Parameters should be an object type",
-    "set_working_directory.yaml: Parameters should be an object type",
+    "export_benchmark_results.yaml: Parameters should be an object type",
+    "get_benchmark_results.yaml: Parameters should be an object type",
+    "get_benchmark_status.yaml: Parameters should be an object type",
+    "open_benchmark.yaml: Parameters should be an object type",
+    "pause_benchmark.yaml: Parameters should be an object type",
+    "resume_benchmark.yaml: Parameters should be an object type",
+    "start_benchmark.yaml: Parameters should be an object type",
+    "stop_benchmark.yaml: Parameters should be an object type",
     "interpro_search.yaml: Invalid priority value: 5"
   ],
   "categories": [
@@ -27,13 +46,14 @@
     "sequence",
     "protein",
     "database",
-    "ai_analysis",
     "data_management",
+    "annotation",
     "file_operations",
     "pathway",
     "sequence_editing",
     "primer_design",
     "system",
+    "benchmark",
     "plugin_management",
     "coordination",
     "external_apis",
@@ -76,9 +96,29 @@
       "file": "load_wig_tracks.yaml"
     },
     {
+      "name": "batch_set_track_settings",
+      "category": "navigation",
+      "file": "batch_set_track_settings.yaml"
+    },
+    {
       "name": "close_tab",
       "category": "navigation",
       "file": "close_tab.yaml"
+    },
+    {
+      "name": "find_gene_by_name",
+      "category": "navigation",
+      "file": "find_gene_by_name.yaml"
+    },
+    {
+      "name": "get_all_track_settings",
+      "category": "navigation",
+      "file": "get_all_track_settings.yaml"
+    },
+    {
+      "name": "get_chromosome_list",
+      "category": "navigation",
+      "file": "get_chromosome_list.yaml"
     },
     {
       "name": "get_current_state",
@@ -89,6 +129,21 @@
       "name": "get_genome_info",
       "category": "navigation",
       "file": "get_genome_info.yaml"
+    },
+    {
+      "name": "get_track_settings",
+      "category": "navigation",
+      "file": "get_track_settings.yaml"
+    },
+    {
+      "name": "get_track_settings_schema",
+      "category": "navigation",
+      "file": "get_track_settings_schema.yaml"
+    },
+    {
+      "name": "get_track_status",
+      "category": "navigation",
+      "file": "get_track_status.yaml"
     },
     {
       "name": "jump_to_gene",
@@ -106,14 +161,44 @@
       "file": "open_new_tab.yaml"
     },
     {
+      "name": "pan_left",
+      "category": "navigation",
+      "file": "pan_left.yaml"
+    },
+    {
+      "name": "pan_right",
+      "category": "navigation",
+      "file": "pan_right.yaml"
+    },
+    {
+      "name": "reset_track_settings",
+      "category": "navigation",
+      "file": "reset_track_settings.yaml"
+    },
+    {
+      "name": "save_view_state",
+      "category": "navigation",
+      "file": "save_view_state.yaml"
+    },
+    {
       "name": "search_features",
       "category": "navigation",
       "file": "search_features.yaml"
     },
     {
-      "name": "find_gene_by_name",
+      "name": "select_gene",
       "category": "navigation",
-      "file": "find_gene_by_name.yaml"
+      "file": "select_gene.yaml"
+    },
+    {
+      "name": "select_sequence_region",
+      "category": "navigation",
+      "file": "select_sequence_region.yaml"
+    },
+    {
+      "name": "set_track_settings",
+      "category": "navigation",
+      "file": "set_track_settings.yaml"
     },
     {
       "name": "switch_to_tab",
@@ -136,9 +221,29 @@
       "file": "zoom_out.yaml"
     },
     {
+      "name": "zoom_to_gene",
+      "category": "navigation",
+      "file": "zoom_to_gene.yaml"
+    },
+    {
+      "name": "calculate_entropy",
+      "category": "sequence",
+      "file": "calculate_entropy.yaml"
+    },
+    {
+      "name": "calculate_molecular_weight",
+      "category": "sequence",
+      "file": "calculate_molecular_weight.yaml"
+    },
+    {
       "name": "compute_gc",
       "category": "sequence",
       "file": "compute_gc.yaml"
+    },
+    {
+      "name": "find_restriction_sites",
+      "category": "sequence",
+      "file": "find_restriction_sites.yaml"
     },
     {
       "name": "get_coding_sequence",
@@ -146,9 +251,24 @@
       "file": "get_coding_sequence.yaml"
     },
     {
+      "name": "get_dna_marker_info",
+      "category": "sequence",
+      "file": "get_dna_marker_info.yaml"
+    },
+    {
       "name": "get_sequence",
       "category": "sequence",
       "file": "get_sequence.yaml"
+    },
+    {
+      "name": "list_dna_markers",
+      "category": "sequence",
+      "file": "list_dna_markers.yaml"
+    },
+    {
+      "name": "list_restriction_enzymes",
+      "category": "sequence",
+      "file": "list_restriction_enzymes.yaml"
     },
     {
       "name": "predict_promoter",
@@ -161,14 +281,34 @@
       "file": "reverse_complement.yaml"
     },
     {
+      "name": "search_pattern",
+      "category": "sequence",
+      "file": "search_pattern.yaml"
+    },
+    {
       "name": "search_sequence_motif",
       "category": "sequence",
       "file": "search_sequence_motif.yaml"
     },
     {
+      "name": "simulate_gel_electrophoresis",
+      "category": "sequence",
+      "file": "simulate_gel_electrophoresis.yaml"
+    },
+    {
       "name": "translate_dna",
       "category": "sequence",
       "file": "translate_dna.yaml"
+    },
+    {
+      "name": "translate_sequence",
+      "category": "sequence",
+      "file": "translate_sequence.yaml"
+    },
+    {
+      "name": "virtual_digest",
+      "category": "sequence",
+      "file": "virtual_digest.yaml"
     },
     {
       "name": "fetch_alphafold_structure",
@@ -226,9 +366,19 @@
       "file": "blast_create_quick_db_for_current_genome.yaml"
     },
     {
+      "name": "blast_delete_database",
+      "category": "database",
+      "file": "blast_delete_database.yaml"
+    },
+    {
       "name": "blast_list_databases",
       "category": "database",
       "file": "blast_list_databases.yaml"
+    },
+    {
+      "name": "blast_validate_database",
+      "category": "database",
+      "file": "blast_validate_database.yaml"
     },
     {
       "name": "get_interpro_entry_details",
@@ -251,14 +401,19 @@
       "file": "search_uniprot_database.yaml"
     },
     {
-      "name": "generate_sequence",
-      "category": "ai_analysis",
-      "file": "generate_sequence.yaml"
-    },
-    {
       "name": "analyze_region",
       "category": "data_management",
       "file": "analyze_region.yaml"
+    },
+    {
+      "name": "blast_detect_sequence_type",
+      "category": "data_management",
+      "file": "blast_detect_sequence_type.yaml"
+    },
+    {
+      "name": "blast_export_results",
+      "category": "data_management",
+      "file": "blast_export_results.yaml"
     },
     {
       "name": "blast_filter_results",
@@ -284,6 +439,51 @@
       "name": "genome_codon_usage_analysis",
       "category": "data_management",
       "file": "genome_codon_usage_analysis.yaml"
+    },
+    {
+      "name": "bulk_update_annotations",
+      "category": "annotation",
+      "file": "bulk_update_annotations.yaml"
+    },
+    {
+      "name": "delete_annotation",
+      "category": "annotation",
+      "file": "delete_annotation.yaml"
+    },
+    {
+      "name": "get_annotation",
+      "category": "annotation",
+      "file": "get_annotation.yaml"
+    },
+    {
+      "name": "get_annotation_history",
+      "category": "annotation",
+      "file": "get_annotation_history.yaml"
+    },
+    {
+      "name": "get_gene_details",
+      "category": "annotation",
+      "file": "get_gene_details.yaml"
+    },
+    {
+      "name": "get_nearby_features",
+      "category": "annotation",
+      "file": "get_nearby_features.yaml"
+    },
+    {
+      "name": "list_annotations",
+      "category": "annotation",
+      "file": "list_annotations.yaml"
+    },
+    {
+      "name": "search_annotations",
+      "category": "annotation",
+      "file": "search_annotations.yaml"
+    },
+    {
+      "name": "update_annotation",
+      "category": "annotation",
+      "file": "update_annotation.yaml"
     },
     {
       "name": "configure_export_settings",
@@ -396,6 +596,11 @@
       "file": "get_action_list.yaml"
     },
     {
+      "name": "get_clipboard_content",
+      "category": "sequence_editing",
+      "file": "get_clipboard_content.yaml"
+    },
+    {
       "name": "insert_sequence",
       "category": "sequence_editing",
       "file": "insert_sequence.yaml"
@@ -431,6 +636,11 @@
       "file": "calculate_primer_properties.yaml"
     },
     {
+      "name": "clear_primer_annotations",
+      "category": "primer_design",
+      "file": "clear_primer_annotations.yaml"
+    },
+    {
       "name": "design_primers",
       "category": "primer_design",
       "file": "design_primers.yaml"
@@ -441,6 +651,16 @@
       "file": "find_primer_binding_sites.yaml"
     },
     {
+      "name": "list_primer_annotations",
+      "category": "primer_design",
+      "file": "list_primer_annotations.yaml"
+    },
+    {
+      "name": "blast_get_installation_status",
+      "category": "system",
+      "file": "blast_get_installation_status.yaml"
+    },
+    {
       "name": "list_available_tools",
       "category": "system",
       "file": "list_available_tools.yaml"
@@ -449,6 +669,56 @@
       "name": "set_working_directory",
       "category": "system",
       "file": "set_working_directory.yaml"
+    },
+    {
+      "name": "switch_ui_style",
+      "category": "system",
+      "file": "switch_ui_style.yaml"
+    },
+    {
+      "name": "toggle_settings_modal",
+      "category": "system",
+      "file": "toggle_settings_modal.yaml"
+    },
+    {
+      "name": "export_benchmark_results",
+      "category": "benchmark",
+      "file": "export_benchmark_results.yaml"
+    },
+    {
+      "name": "get_benchmark_results",
+      "category": "benchmark",
+      "file": "get_benchmark_results.yaml"
+    },
+    {
+      "name": "get_benchmark_status",
+      "category": "benchmark",
+      "file": "get_benchmark_status.yaml"
+    },
+    {
+      "name": "open_benchmark",
+      "category": "benchmark",
+      "file": "open_benchmark.yaml"
+    },
+    {
+      "name": "pause_benchmark",
+      "category": "benchmark",
+      "file": "pause_benchmark.yaml"
+    },
+    {
+      "name": "resume_benchmark",
+      "category": "benchmark",
+      "file": "resume_benchmark.yaml"
+    },
+    {
+      "name": "start_benchmark",
+      "category": "benchmark",
+      "file": "start_benchmark.yaml"
+    },
+    {
+      "name": "stop_benchmark",
+      "category": "benchmark",
+      "file": "stop_benchmark.yaml"
     },
     {
       "name": "call_plugin_function",
@@ -606,6 +876,11 @@
       "file": "blast_search.yaml"
     },
     {
+      "name": "blast_search_batch",
+      "category": "external_apis",
+      "file": "blast_search_batch.yaml"
+    },
+    {
       "name": "blast_search_local",
       "category": "external_apis",
       "file": "blast_search_local.yaml"
@@ -619,11 +894,6 @@
       "name": "blast_sequence",
       "category": "external_apis",
       "file": "blast_sequence.yaml"
-    },
-    {
-      "name": "evo2_design",
-      "category": "external_apis",
-      "file": "evo2_design.yaml"
     },
     {
       "name": "evo2_optimize",

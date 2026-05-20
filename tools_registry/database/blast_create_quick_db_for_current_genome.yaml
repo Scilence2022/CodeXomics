@@ -1,15 +1,15 @@
 name: blast_create_quick_db_for_current_genome
 version: 1.0.0
-description: Quickly create BLAST databases (both nucleotide and protein) for the currently loaded genome. Automatically associates databases with the genome for smart database selection.
+description: Quickly create BLAST databases (both nucleotide and protein) for the entire currently loaded genome. Use this as the default/quick way to index the genome when no specific chromosome name is specified. Automatically associates databases with the genome for smart database selection.
 category: database
 keywords:
   - blast
   - database
   - quick
-  - genome
-  - nucleotide
-  - protein
+  - current genome
+  - whole genome
   - create
+  - setup blast
 priority: 1
 execution:
   type: built-in

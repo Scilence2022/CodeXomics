@@ -1,9 +1,21 @@
 name: find_primer_binding_sites
-description: "Search for binding sites of a specific primer sequence within a larger template. Finds both forward and reverse occurrences."
+version: 1.0.0
+description: 'Search for binding sites of a specific primer sequence within a larger template. Finds both forward and reverse occurrences.'
 category: primer_design
+keywords:
+  - primer
+  - binding
+  - find binding sites
+  - template sequence
+  - primer binding
+  - primer sequence
+  - map primer
+  - mismatch
+  - search primer
+  - specificity
+priority: 1
 subcategory: mapping
 execution_type: hybrid
-priority: 1
 complexity: simple
 tags:
   - primer
@@ -14,13 +26,12 @@ parameters:
   properties:
     primerSequence:
       type: string
-      description: "The short primer DNA sequence"
+      description: 'The short primer DNA sequence'
     templateSequence:
       type: string
-      description: "The larger template DNA sequence to search within."
+      description: 'The larger template DNA sequence to search within.'
     maxMismatches:
       type: number
-      description: "Maximum number of mismatched bases allowed (default: 0)"
+      description: 'Maximum number of mismatched bases allowed (default: 0)'
   required:
     - primerSequence
-    - templateSequence

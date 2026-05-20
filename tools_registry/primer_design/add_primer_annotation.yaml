@@ -1,9 +1,18 @@
 name: add_primer_annotation
-description: "Add an interactive primer display to the dedicated Primers track"
+version: 1.0.0
+description: 'Add an interactive primer display to the dedicated Primers track'
 category: primer_design
+keywords:
+  - add primer
+  - primer annotation
+  - primer track
+  - annotation
+  - visualization
+  - track
+  - display primer
+priority: 1
 subcategory: display
 execution_type: client
-priority: 1
 complexity: moderate
 tags:
   - primer
@@ -14,10 +23,10 @@ parameters:
   properties:
     name:
       type: string
-      description: "Name of the primer (e.g., Fwd_1)"
+      description: 'Name of the primer (e.g., Fwd_1)'
     chromosome:
       type: string
-      description: "Chromosome/replicon ID where the primer binds"
+      description: 'Chromosome/replicon ID where the primer binds'
     start:
       type: number
       description: "Start position (5' end)"
@@ -26,10 +35,10 @@ parameters:
       description: "End position (3' end)"
     strand:
       type: string
-      description: "Strand (+ or -)"
+      description: 'Strand (+ or -)'
     description:
       type: string
-      description: "Optional description or properties"
+      description: 'Optional description or properties'
   required:
     - name
     - chromosome

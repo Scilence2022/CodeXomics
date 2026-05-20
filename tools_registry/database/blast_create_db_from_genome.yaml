@@ -1,13 +1,13 @@
 name: blast_create_db_from_genome
 version: 1.0.0
-description: Create BLAST nucleotide database from currently loaded genome chromosome
+description: Create BLAST nucleotide database from a specific chromosome of the currently loaded genome. Use this ONLY when you want to index a single chromosome and have a specific chromosome name (e.g. chr1, chr2, etc.). Do not use this for the entire genome.
 category: database
 keywords:
   - blast
   - database
-  - genome
   - chromosome
-  - create
+  - specific chromosome
+  - create database from chromosome
 priority: 2
 execution:
   type: built-in

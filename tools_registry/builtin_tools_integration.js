@@ -174,7 +174,6 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
-
     // Database tools - PDB
     this.builtInToolsMap.set('search_pdb_structures', {
       method: 'searchPDBStructures',
@@ -182,7 +181,6 @@ class BuiltInToolsIntegration {
       type: 'built-in',
       priority: 1,
     });
-
 
     this.builtInToolsMap.set('search_interpro_entry', {
       method: 'searchInterProEntry',
@@ -1125,8 +1123,10 @@ class BuiltInToolsIntegration {
     }
 
     // Check for list_available_tools patterns
-    if (/\b(list|show|display|what|available|all)\s+.*?\b(tools?|functions?|capabilities?|commands?)\b/i.test(query) ||
-        /\b(tools?|functions?|capabilities?)\s+.*?\b(list|available|all|show)\b/i.test(query)) {
+    if (
+      /\b(list|show|display|what|available|all)\s+.*?\b(tools?|functions?|capabilities?|commands?)\b/i.test(query) ||
+      /\b(tools?|functions?|capabilities?)\s+.*?\b(list|available|all|show)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'list_available_tools',
         confidence: 0.85,
@@ -1135,8 +1135,10 @@ class BuiltInToolsIntegration {
     }
 
     // Check for download_internet_file patterns
-    if (/\b(download|fetch|save|get)\s+.*?\b(file|url|link|internet|online|web)\b/i.test(query) ||
-        /\b(download|fetch)\s+.*?\b(from|via)\s+.*?\b(web|internet|online|url)\b/i.test(query)) {
+    if (
+      /\b(download|fetch|save|get)\s+.*?\b(file|url|link|internet|online|web)\b/i.test(query) ||
+      /\b(download|fetch)\s+.*?\b(from|via)\s+.*?\b(web|internet|online|url)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'download_internet_file',
         confidence: 0.85,
@@ -1147,9 +1149,11 @@ class BuiltInToolsIntegration {
     // Check for view_markdown_file patterns
     // Matches: "view the markdown file", "open README.md", "show/display/read the .md file",
     //          "open the guide markdown", "view documentation file"
-    if (/\b(view|open|show|display|read|render)\s+.*?\b(markdown|\.md\b|readme)/i.test(query) ||
-        /\b(markdown|\.md\b)\s+.*?\b(view|open|show|display|read|render|file)\b/i.test(query) ||
-        /\b(view|open|show|display|read)\s+.*?\bmarkdown\b/i.test(query)) {
+    if (
+      /\b(view|open|show|display|read|render)\s+.*?\b(markdown|\.md\b|readme)/i.test(query) ||
+      /\b(markdown|\.md\b)\s+.*?\b(view|open|show|display|read|render|file)\b/i.test(query) ||
+      /\b(view|open|show|display|read)\s+.*?\bmarkdown\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'view_markdown_file',
         confidence: 0.9,
@@ -1215,7 +1219,7 @@ class BuiltInToolsIntegration {
         if (patternName === 'load_file' || patternName === 'file_path') {
           const fileLoadingTools = this.getBuiltInToolsByCategory('file_loading');
           for (const tool of fileLoadingTools) {
-            if (!relevantTools.some((t) => t.name === tool.name)) {
+            if (!relevantTools.some(t => t.name === tool.name)) {
               relevantTools.push({
                 name: tool.name,
                 confidence: 0.7,
@@ -1239,8 +1243,10 @@ class BuiltInToolsIntegration {
     }
 
     // Check for genomic region visualization patterns
-    if (/\b(show|display|view).*\b(genomic|region|position|coordinate|chromosome)\b/i.test(query) ||
-        /\b(genomic|region|position|coordinate|chromosome).*\b(from|to|between)\b/i.test(query)) {
+    if (
+      /\b(show|display|view).*\b(genomic|region|position|coordinate|chromosome)\b/i.test(query) ||
+      /\b(genomic|region|position|coordinate|chromosome).*\b(from|to|between)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'navigate_to_position',
         confidence: 0.95,
@@ -1253,8 +1259,10 @@ class BuiltInToolsIntegration {
     const chromPattern1 = /\b(list|get|show|display|what|available|all)\s+/i;
     const chromPattern2 = /\b(chromosomes?|contigs?|scaffolds?)\b/i;
     const chromPattern3 = /\b(list|names?|available|all|show|display)\b/i;
-    if ((chromPattern1.test(query) && chromPattern2.test(query)) ||
-        (chromPattern2.test(query) && chromPattern3.test(query))) {
+    if (
+      (chromPattern1.test(query) && chromPattern2.test(query)) ||
+      (chromPattern2.test(query) && chromPattern3.test(query))
+    ) {
       relevantTools.push({
         name: 'get_chromosome_list',
         confidence: 0.95,
@@ -1287,7 +1295,7 @@ class BuiltInToolsIntegration {
       /\b(zoom\s+to)\s+.*?\b(gene|[a-z]{3,})\b/i,
       /\b(fit|show|display)\s+.*?\bgene\b.*?\b(view|region|in)\b/i,
     ];
-    if (zoomToGenePatterns.some((pattern) => pattern.test(query))) {
+    if (zoomToGenePatterns.some(pattern => pattern.test(query))) {
       relevantTools.push({
         name: 'zoom_to_gene',
         confidence: 0.95,
@@ -1297,9 +1305,11 @@ class BuiltInToolsIntegration {
 
     // Check for gene navigation patterns
     // Supports intermediate words: "navigate to the gene thrA", "go to gene xyz"
-    if (/\b(jump|go|navigate|move)\s+.*?\bgene\b/i.test(query) ||
-        /\b(find|locate)\s+.*?\bgene\b/i.test(query) ||
-        /\bgene\s+(name|location|position)\b/i.test(query)) {
+    if (
+      /\b(jump|go|navigate|move)\s+.*?\bgene\b/i.test(query) ||
+      /\b(find|locate)\s+.*?\bgene\b/i.test(query) ||
+      /\bgene\s+(name|location|position)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'jump_to_gene',
         confidence: 0.9,
@@ -1309,9 +1319,13 @@ class BuiltInToolsIntegration {
 
     // Check for gene/sequence selection patterns
     // Matches: "select gene lacZ", "select the gene", "highlight gene dnaA", "choose gene thrA"
-    if (/\b(select|highlight|choose|pick|activate|set\s+selection)\s+.*?\bgene\b/i.test(query) ||
-        /\bselect\s+.*?\b(lacZ|dnaA|thrA|araA|lysC|recA|gyrA|rpoB|trpA|pyrF|leuA|ilvA|metA|cysA|serA|proA|hisA|argA|valA|alaA|glyA|pheA|tyrA|trpA)/i.test(query) ||
-        /\bgene\s+(selection|selected|highlighted|active)\b/i.test(query)) {
+    if (
+      /\b(select|highlight|choose|pick|activate|set\s+selection)\s+.*?\bgene\b/i.test(query) ||
+      /\bselect\s+.*?\b(lacZ|dnaA|thrA|araA|lysC|recA|gyrA|rpoB|trpA|pyrF|leuA|ilvA|metA|cysA|serA|proA|hisA|argA|valA|alaA|glyA|pheA|tyrA|trpA)/i.test(
+        query
+      ) ||
+      /\bgene\s+(selection|selected|highlighted|active)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'select_gene',
         confidence: 0.9,
@@ -1321,9 +1335,11 @@ class BuiltInToolsIntegration {
 
     // Check for sequence region selection patterns
     // Matches: "select region 1000-5000", "select the sequence from position X to Y", "highlight region"
-    if (/\b(select|highlight|choose)\s+.*?\b(region|range|sequence\s+region|interval|area)\b/i.test(query) ||
-        /\b(select|highlight)\s+.*?\b(position|coordinates?)\s+.*?\b(to|until|through|-)\b/i.test(query) ||
-        /\bregion\s+(selection|selected|highlighted|active)\b/i.test(query)) {
+    if (
+      /\b(select|highlight|choose)\s+.*?\b(region|range|sequence\s+region|interval|area)\b/i.test(query) ||
+      /\b(select|highlight)\s+.*?\b(position|coordinates?)\s+.*?\b(to|until|through|-)\b/i.test(query) ||
+      /\bregion\s+(selection|selected|highlighted|active)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'select_sequence_region',
         confidence: 0.9,
@@ -1334,10 +1350,12 @@ class BuiltInToolsIntegration {
     // Check for gene search patterns — SPECIFIC gene name/identifier lookup
     // Matches: "search for gene lacZ", "find gene b0062", "locate the gene called dnaA"
     // Does NOT match broad queries like "find kinase genes" (those go to search_features)
-    if (/\b(search\s+for|find|look\s+up|locate)\s+(the\s+)?gene\b/i.test(query) ||
-        /\bgene\s+(named|called|with\s+name)\b/i.test(query) ||
-        /\bgene\s+search\b/i.test(query) ||
-        /\blocus\s+tag\b/i.test(query)) {
+    if (
+      /\b(search\s+for|find|look\s+up|locate)\s+(the\s+)?gene\b/i.test(query) ||
+      /\bgene\s+(named|called|with\s+name)\b/i.test(query) ||
+      /\bgene\s+search\b/i.test(query) ||
+      /\blocus\s+tag\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'find_gene_by_name',
         confidence: 0.9,
@@ -1348,8 +1366,10 @@ class BuiltInToolsIntegration {
     // Check for list_annotations patterns
     // Matches: "list annotations", "list all annotations", "show annotations in region",
     //          "display annotations", "list genes in region", "list features"
-    if (/\b(list|show|display|get|view)\s+.*?\b(annotations?|genes?|features?)\b/i.test(query) &&
-        !/\b(search|find|look\s+up)\b/i.test(query)) {
+    if (
+      /\b(list|show|display|get|view)\s+.*?\b(annotations?|genes?|features?)\b/i.test(query) &&
+      !/\b(search|find|look\s+up)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'list_annotations',
         confidence: 0.95,
@@ -1359,9 +1379,11 @@ class BuiltInToolsIntegration {
 
     // Check for get_annotation (single annotation details) patterns
     // Matches: "get annotation details for lacZ", "annotation details", "get details for gene"
-    if (/\b(get|show|retrieve|fetch|lookup)\s+.*?\b(annotation|gene)\s+.*?\b(details?|info|information)\b/i.test(query) ||
-        /\b(annotation|gene)\s+.*?\b(details?|info|information)\b/i.test(query) &&
-        !/\b(list|all|search|find)\b/i.test(query)) {
+    if (
+      /\b(get|show|retrieve|fetch|lookup)\s+.*?\b(annotation|gene)\s+.*?\b(details?|info|information)\b/i.test(query) ||
+      (/\b(annotation|gene)\s+.*?\b(details?|info|information)\b/i.test(query) &&
+        !/\b(list|all|search|find)\b/i.test(query))
+    ) {
       relevantTools.push({
         name: 'get_annotation',
         confidence: 0.95,
@@ -1371,8 +1393,7 @@ class BuiltInToolsIntegration {
 
     // Check for search_annotations patterns
     // Matches: "search for annotations matching X", "search annotations", "find annotations"
-    if (/\b(search|find)\s+.*?\bannotations?\b/i.test(query) ||
-        /\bsearch\s+annotations?\b/i.test(query)) {
+    if (/\b(search|find)\s+.*?\bannotations?\b/i.test(query) || /\bsearch\s+annotations?\b/i.test(query)) {
       relevantTools.push({
         name: 'search_annotations',
         confidence: 0.95,
@@ -1383,9 +1404,11 @@ class BuiltInToolsIntegration {
     // Check for get_nearby_features patterns
     // Matches: "features near position X", "nearby features", "genes around position",
     //          "features within Xbp of position", "flanking features"
-    if (/\b(nearby|near|close|around|surrounding|flanking|neighborhood)\s+.*?\b(features?|genes?)\b/i.test(query) ||
-        /\b(features?|genes?)\s+.*?\b(near|nearby|close|around|surrounding|flanking)\b/i.test(query) ||
-        /\b(get|find|show)\s+.*?\b(nearby|near|flanking)\s+.*?\b(features?|genes?)\b/i.test(query)) {
+    if (
+      /\b(nearby|near|close|around|surrounding|flanking|neighborhood)\s+.*?\b(features?|genes?)\b/i.test(query) ||
+      /\b(features?|genes?)\s+.*?\b(near|nearby|close|around|surrounding|flanking)\b/i.test(query) ||
+      /\b(get|find|show)\s+.*?\b(nearby|near|flanking)\s+.*?\b(features?|genes?)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'get_nearby_features',
         confidence: 0.95,
@@ -1397,11 +1420,18 @@ class BuiltInToolsIntegration {
     // Matches: "search for features", "find all tRNA", "search kinase genes"
     // Key distinction: "kinase genes" → search_features (functional keyword)
     //                 "gene lacZ" → find_gene_by_name (specific identifier)
-    if (/\b(search|find|look\s+up)\s+.*?\bfeatures?\b/i.test(query) ||
-        (/\bannotation\b/i.test(query) && !relevantTools.some((t) => t.name === 'list_annotations' || t.name === 'get_annotation' || t.name === 'search_annotations')) ||
-        /\b(all|every)\s+(genes?|proteins?|cds|trna|rrna)\b/i.test(query) ||
-        /\bfeatures?\s+search\b/i.test(query) ||
-        /\b(search|find)\s+.*?\b(genes?|proteins?)\s+(by|with|related\s+to|containing)\s+(function|type|annotation|activity)/i.test(query)) {
+    if (
+      /\b(search|find|look\s+up)\s+.*?\bfeatures?\b/i.test(query) ||
+      (/\bannotation\b/i.test(query) &&
+        !relevantTools.some(
+          t => t.name === 'list_annotations' || t.name === 'get_annotation' || t.name === 'search_annotations'
+        )) ||
+      /\b(all|every)\s+(genes?|proteins?|cds|trna|rrna)\b/i.test(query) ||
+      /\bfeatures?\s+search\b/i.test(query) ||
+      /\b(search|find)\s+.*?\b(genes?|proteins?)\s+(by|with|related\s+to|containing)\s+(function|type|annotation|activity)/i.test(
+        query
+      )
+    ) {
       relevantTools.push({
         name: 'search_features',
         confidence: 0.9,
@@ -1454,38 +1484,46 @@ class BuiltInToolsIntegration {
 
     // Check for pan/scroll patterns
     // Supports: "scroll to the left", "pan to the right by 1000bp", "scroll left"
-    if (/\b(scroll|pan|move)\s+.*?\b(left|right|up|down)\b/i.test(query) ||
-        /\b(scroll|pan)\s+(left|right|up|down)\b/i.test(query)) {
+    if (
+      /\b(scroll|pan|move)\s+.*?\b(left|right|up|down)\b/i.test(query) ||
+      /\b(scroll|pan)\s+(left|right|up|down)\b/i.test(query)
+    ) {
       const direction = query.match(/\b(left|right)\b/i)?.[1]?.toLowerCase();
       if (direction === 'left') {
-        relevantTools.push({name: 'pan_left', confidence: 0.9, reason: 'Pan/scroll left keywords detected'});
+        relevantTools.push({ name: 'pan_left', confidence: 0.9, reason: 'Pan/scroll left keywords detected' });
       } else if (direction === 'right') {
-        relevantTools.push({name: 'pan_right', confidence: 0.9, reason: 'Pan/scroll right keywords detected'});
+        relevantTools.push({ name: 'pan_right', confidence: 0.9, reason: 'Pan/scroll right keywords detected' });
       } else {
-        relevantTools.push({name: 'pan_left', confidence: 0.7, reason: 'Pan/scroll direction detected'});
-        relevantTools.push({name: 'pan_right', confidence: 0.7, reason: 'Pan/scroll direction detected'});
+        relevantTools.push({ name: 'pan_left', confidence: 0.7, reason: 'Pan/scroll direction detected' });
+        relevantTools.push({ name: 'pan_right', confidence: 0.7, reason: 'Pan/scroll direction detected' });
       }
     }
 
     // Check for save view state / bookmark patterns
-    if (/\b(save|store|preserve|snapshot|capture)\s+.*?\b(view|state|position|workspace|layout)\b/i.test(query) ||
-        /\b(save|store)\s+.*?\b(bookmark|view)\b/i.test(query)) {
-      relevantTools.push({name: 'save_view_state', confidence: 0.9, reason: 'Save view state keywords detected'});
+    if (
+      /\b(save|store|preserve|snapshot|capture)\s+.*?\b(view|state|position|workspace|layout)\b/i.test(query) ||
+      /\b(save|store)\s+.*?\b(bookmark|view)\b/i.test(query)
+    ) {
+      relevantTools.push({ name: 'save_view_state', confidence: 0.9, reason: 'Save view state keywords detected' });
     }
 
-    if (/\b(bookmark|mark|pin|flag)\s+.*?\b(position|location|region|spot)\b/i.test(query) ||
-        /\b(add|create|make)\s+.*?\bbookmarks?\b/i.test(query)) {
-      relevantTools.push({name: 'bookmark_position', confidence: 0.9, reason: 'Bookmark position keywords detected'});
+    if (
+      /\b(bookmark|mark|pin|flag)\s+.*?\b(position|location|region|spot)\b/i.test(query) ||
+      /\b(add|create|make)\s+.*?\bbookmarks?\b/i.test(query)
+    ) {
+      relevantTools.push({ name: 'bookmark_position', confidence: 0.9, reason: 'Bookmark position keywords detected' });
     }
 
     if (/\b(bookmarks?|saved\s+views?)\b/i.test(query) && /\b(list|get|show|display|view|all)\b/i.test(query)) {
-      relevantTools.push({name: 'get_bookmarks', confidence: 0.85, reason: 'List bookmarks keywords detected'});
+      relevantTools.push({ name: 'get_bookmarks', confidence: 0.85, reason: 'List bookmarks keywords detected' });
     }
 
     // Check for track toggle patterns
     // Supports: "toggle the coverage track", "show the gc track", "hide annotation track"
-    if (/\b(toggle|show|hide|turn\s+(on|off)|enable|disable)\s+.*?\btrack\b/i.test(query) ||
-        /\btrack\s+(toggle|show|hide|visibility|on|off)\b/i.test(query)) {
+    if (
+      /\b(toggle|show|hide|turn\s+(on|off)|enable|disable)\s+.*?\btrack\b/i.test(query) ||
+      /\btrack\s+(toggle|show|hide|visibility|on|off)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'toggle_track',
         confidence: 0.9,
@@ -1496,9 +1534,11 @@ class BuiltInToolsIntegration {
     // Check for track status/visibility patterns
     // Matches: "get track status", "track visibility", "which tracks are visible",
     //          "show track status", "current tracks"
-    if (/\b(get|show|display|check|what|which)\s+.*?\btrack\s*(status|visibility|state)\b/i.test(query) ||
-        /\btrack\s*(status|visibility|state)\b/i.test(query) ||
-        /\b(which|what)\s+.*?\btracks?\s+.*?\b(visible|shown|hidden|active)\b/i.test(query)) {
+    if (
+      /\b(get|show|display|check|what|which)\s+.*?\btrack\s*(status|visibility|state)\b/i.test(query) ||
+      /\btrack\s*(status|visibility|state)\b/i.test(query) ||
+      /\b(which|what)\s+.*?\btracks?\s+.*?\b(visible|shown|hidden|active)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'get_track_status',
         confidence: 0.95,
@@ -1533,7 +1573,10 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(calculate|compute|measure|determine)\s+.*?\b(entropy|complexity|information\s+content)\b/i.test(query) || /\b(entropy|shannon)\b/i.test(query)) {
+    if (
+      /\b(calculate|compute|measure|determine)\s+.*?\b(entropy|complexity|information\s+content)\b/i.test(query) ||
+      /\b(entropy|shannon)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'calculate_entropy',
         confidence: 0.85,
@@ -1541,7 +1584,10 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(calculate|compute|measure|determine)\s+.*?\b(molecular\s+weight|molar\s+mass|mw|daltons?)\b/i.test(query) || /\b(molecular\s+weight|molar\s+mass)\b/i.test(query)) {
+    if (
+      /\b(calculate|compute|measure|determine)\s+.*?\b(molecular\s+weight|molar\s+mass|mw|daltons?)\b/i.test(query) ||
+      /\b(molecular\s+weight|molar\s+mass)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'calculate_molecular_weight',
         confidence: 0.85,
@@ -1593,7 +1639,10 @@ class BuiltInToolsIntegration {
           reason: 'Protein FASTA export keywords detected',
         });
       }
-      if (/\b(current\s+view|visible\s+region|current\s+region)\b/i.test(query) && /\b(fasta|export|save)\b/i.test(query)) {
+      if (
+        /\b(current\s+view|visible\s+region|current\s+region)\b/i.test(query) &&
+        /\b(fasta|export|save)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'export_current_view_fasta',
           confidence: 0.9,
@@ -1601,7 +1650,7 @@ class BuiltInToolsIntegration {
         });
       }
       // Generic export pattern
-      if (!relevantTools.some((t) => t.name.startsWith('export_'))) {
+      if (!relevantTools.some(t => t.name.startsWith('export_'))) {
         relevantTools.push({
           name: 'export_fasta_sequence',
           confidence: 0.7,
@@ -1612,9 +1661,11 @@ class BuiltInToolsIntegration {
 
     // Check for sequence editing patterns
     // Supports intermediate words: "replace the sequence at position 100", "edit the sequence here"
-    if (/\b(replace|substitute|swap)\s+.*?\b(sequence|region|bases?|nucleotides?)\b/i.test(query) ||
-        /\b(edit|modify)\s+.*?\bsequence\b/i.test(query) ||
-        /\bmutate\b/i.test(query)) {
+    if (
+      /\b(replace|substitute|swap)\s+.*?\b(sequence|region|bases?|nucleotides?)\b/i.test(query) ||
+      /\b(edit|modify)\s+.*?\bsequence\b/i.test(query) ||
+      /\bmutate\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'replace_sequence',
         confidence: 0.9,
@@ -1641,9 +1692,11 @@ class BuiltInToolsIntegration {
     // Check for clipboard content patterns
     // Matches: "get clipboard content", "what is in the clipboard", "show clipboard",
     //          "check clipboard", "clipboard content", "what was copied"
-    if (/\b(clipboard)\s+.*?\b(content|contents?|data|sequence|what|show|get|check)\b/i.test(query) ||
-        /\b(get|show|check|display|view|what)\s+.*?\bclipboard\b/i.test(query) ||
-        /\b(what)\s+.*?\b(copied|cut|in)\s+.*?\b(clipboard)\b/i.test(query)) {
+    if (
+      /\b(clipboard)\s+.*?\b(content|contents?|data|sequence|what|show|get|check)\b/i.test(query) ||
+      /\b(get|show|check|display|view|what)\s+.*?\bclipboard\b/i.test(query) ||
+      /\b(what)\s+.*?\b(copied|cut|in)\s+.*?\b(clipboard)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'get_clipboard_content',
         confidence: 0.95,
@@ -1652,8 +1705,14 @@ class BuiltInToolsIntegration {
     }
 
     // Check for track settings patterns
-    if (/\b(track\s+settings?|track\s+options?|track\s+config|configure\s+track|display\s+settings?|track\s+styling?)\b/i.test(query) ||
-        /\b(configure|set|change|adjust|update|reset|get|show|view|retrieve)\s+.*?\b(track\s+settings?|track\s+options?|track\s+configs?)\b/i.test(query)) {
+    if (
+      /\b(track\s+settings?|track\s+options?|track\s+config|configure\s+track|display\s+settings?|track\s+styling?)\b/i.test(
+        query
+      ) ||
+      /\b(configure|set|change|adjust|update|reset|get|show|view|retrieve)\s+.*?\b(track\s+settings?|track\s+options?|track\s+configs?)\b/i.test(
+        query
+      )
+    ) {
       relevantTools.push({
         name: 'get_track_settings',
         confidence: 0.85,
@@ -1687,10 +1746,14 @@ class BuiltInToolsIntegration {
     }
 
     // Check for settings modal open/close/toggle patterns
-    if (/\b(open|close|show|hide|toggle|launch|display)\s+(settings?|config|preferences?|options?)\b/i.test(query) ||
-        /\b(settings?|config|preferences?)\s+(modal|panel|window|dialog)\b/i.test(query) ||
-        /\b(llm\s+config|chatbox\s+settings|general\s+settings|track\s+settings|mcp\s+settings|agent\s+settings|multi[-\s]?agent\s+settings|tab\s+settings|search\s+settings|gene\s+detail\s+settings|external\s+tools?\s+settings|plugin\s+(management|settings)|literature\s+settings)\b/i.test(query) ||
-        /\bconfigure\s+(llm|model|chat|agent|mcp|track|search|plugin)\b/i.test(query)) {
+    if (
+      /\b(open|close|show|hide|toggle|launch|display)\s+(settings?|config|preferences?|options?)\b/i.test(query) ||
+      /\b(settings?|config|preferences?)\s+(modal|panel|window|dialog)\b/i.test(query) ||
+      /\b(llm\s+config|chatbox\s+settings|general\s+settings|track\s+settings|mcp\s+settings|agent\s+settings|multi[-\s]?agent\s+settings|tab\s+settings|search\s+settings|gene\s+detail\s+settings|external\s+tools?\s+settings|plugin\s+(management|settings)|literature\s+settings)\b/i.test(
+        query
+      ) ||
+      /\bconfigure\s+(llm|model|chat|agent|mcp|track|search|plugin)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'toggle_settings_modal',
         confidence: 0.9,
@@ -1699,11 +1762,19 @@ class BuiltInToolsIntegration {
     }
 
     // Check for UI style / theme switching patterns
-    if (/\b(switch|change|set|apply|activate|use)\s+.*?\b(ui\s*style|style|theme|appearance|color\s*scheme|visual\s*style|look\s*and\s*feel)\b/i.test(query) ||
-        /\b(ui\s*style|theme|appearance)\s+.*?\b(switch|change|set|apply|activate|toggle)\b/i.test(query) ||
-        /\b(switch\s+style|change\s+style|switch\s+theme|change\s+theme|switch\s+ui|change\s+ui)\b/i.test(query) ||
-        /\b(dark\s*mode|light\s*mode|toggle\s*dark|toggle\s*light|enable\s*dark|enable\s*light|turn\s+on\s+dark|turn\s+off\s+dark)\b/i.test(query) ||
-        /\b(ai\s*dynamic|professional\s*style|minimal\s*style|elegant\s*style|midnight\s*style|pastel\s*style)\b/i.test(query)) {
+    if (
+      /\b(switch|change|set|apply|activate|use)\s+.*?\b(ui\s*style|style|theme|appearance|color\s*scheme|visual\s*style|look\s*and\s*feel)\b/i.test(
+        query
+      ) ||
+      /\b(ui\s*style|theme|appearance)\s+.*?\b(switch|change|set|apply|activate|toggle)\b/i.test(query) ||
+      /\b(switch\s+style|change\s+style|switch\s+theme|change\s+theme|switch\s+ui|change\s+ui)\b/i.test(query) ||
+      /\b(dark\s*mode|light\s*mode|toggle\s*dark|toggle\s*light|enable\s*dark|enable\s*light|turn\s+on\s+dark|turn\s+off\s+dark)\b/i.test(
+        query
+      ) ||
+      /\b(ai\s*dynamic|professional\s*style|minimal\s*style|elegant\s*style|midnight\s*style|pastel\s*style)\b/i.test(
+        query
+      )
+    ) {
       relevantTools.push({
         name: 'switch_ui_style',
         confidence: 0.95,
@@ -1714,15 +1785,19 @@ class BuiltInToolsIntegration {
     // Check for benchmark patterns
     if (/\b(benchmark|benchmarks)\b/i.test(query)) {
       // start_benchmark (check FIRST — 'start' and 'run' are the primary trigger verbs)
-      if (/\b(start|run|execute|begin|kick\s+off)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\bbenchmark\s+.*?\b(start|run|execute|begin)\b/i.test(query)) {
+      if (
+        /\b(start|run|execute|begin|kick\s+off)\s+.*?\bbenchmark\b/i.test(query) ||
+        /\bbenchmark\s+.*?\b(start|run|execute|begin)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'start_benchmark',
           confidence: 0.95,
           reason: 'Benchmark start/run keywords detected',
         });
-      } else if (/\b(open|show|display|launch|view)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\bbenchmark\s+.*?\b(panel|interface|window|ui)\b/i.test(query)) {
+      } else if (
+        /\b(open|show|display|launch|view)\s+.*?\bbenchmark\b/i.test(query) ||
+        /\bbenchmark\s+.*?\b(panel|interface|window|ui)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'open_benchmark',
           confidence: 0.9,
@@ -1743,8 +1818,10 @@ class BuiltInToolsIntegration {
         });
       }
       // stop_benchmark
-      if (/\b(stop|cancel|halt|abort|terminate|end)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\bbenchmark\s+.*?\b(stop|cancel|halt|abort|terminate|end)\b/i.test(query)) {
+      if (
+        /\b(stop|cancel|halt|abort|terminate|end)\s+.*?\bbenchmark\b/i.test(query) ||
+        /\bbenchmark\s+.*?\b(stop|cancel|halt|abort|terminate|end)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'stop_benchmark',
           confidence: 0.9,
@@ -1752,8 +1829,10 @@ class BuiltInToolsIntegration {
         });
       }
       // pause_benchmark
-      if (/\b(pause|suspend|hold|freeze)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\bbenchmark\s+.*?\b(pause|suspend|hold|freeze)\b/i.test(query)) {
+      if (
+        /\b(pause|suspend|hold|freeze)\s+.*?\bbenchmark\b/i.test(query) ||
+        /\bbenchmark\s+.*?\b(pause|suspend|hold|freeze)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'pause_benchmark',
           confidence: 0.9,
@@ -1761,8 +1840,10 @@ class BuiltInToolsIntegration {
         });
       }
       // resume_benchmark
-      if (/\b(resume|continue|unpause|restart)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\bbenchmark\s+.*?\b(resume|continue|unpause)\b/i.test(query)) {
+      if (
+        /\b(resume|continue|unpause|restart)\s+.*?\bbenchmark\b/i.test(query) ||
+        /\bbenchmark\s+.*?\b(resume|continue|unpause)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'resume_benchmark',
           confidence: 0.9,
@@ -1770,9 +1851,11 @@ class BuiltInToolsIntegration {
         });
       }
       // get_benchmark_results
-      if (/\bbenchmark\s+.*?\b(result|results|stat|stats|statistics|history|score|scores|report)\b/i.test(query) ||
-          /\b(result|results|stat|stats|statistics|history|score|scores|report)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\b(get|show|view|display)\s+.*?\bbenchmark\s+.*?\b(result|stat|history|score|report)\b/i.test(query)) {
+      if (
+        /\bbenchmark\s+.*?\b(result|results|stat|stats|statistics|history|score|scores|report)\b/i.test(query) ||
+        /\b(result|results|stat|stats|statistics|history|score|scores|report)\s+.*?\bbenchmark\b/i.test(query) ||
+        /\b(get|show|view|display)\s+.*?\bbenchmark\s+.*?\b(result|stat|history|score|report)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'get_benchmark_results',
           confidence: 0.9,
@@ -1780,9 +1863,11 @@ class BuiltInToolsIntegration {
         });
       }
       // get_benchmark_status
-      if (/\bbenchmark\s+.*?\b(status|state|running|ready|initialized)\b/i.test(query) ||
-          /\b(status|state|check)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\bis\s+.*?\bbenchmark\s+.*?\b(running|ready|available)\b/i.test(query)) {
+      if (
+        /\bbenchmark\s+.*?\b(status|state|running|ready|initialized)\b/i.test(query) ||
+        /\b(status|state|check)\s+.*?\bbenchmark\b/i.test(query) ||
+        /\bis\s+.*?\bbenchmark\s+.*?\b(running|ready|available)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'get_benchmark_status',
           confidence: 0.9,
@@ -1790,8 +1875,10 @@ class BuiltInToolsIntegration {
         });
       }
       // export_benchmark_results
-      if (/\b(export|save|download)\s+.*?\bbenchmark\b/i.test(query) ||
-          /\bbenchmark\s+.*?\b(export|save|download)\b/i.test(query)) {
+      if (
+        /\b(export|save|download)\s+.*?\bbenchmark\b/i.test(query) ||
+        /\bbenchmark\s+.*?\b(export|save|download)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'export_benchmark_results',
           confidence: 0.9,
@@ -1819,28 +1906,34 @@ class BuiltInToolsIntegration {
       if (/\b(binding\s+sites?|anneal\w*|specificity|target|match)\b/i.test(query)) {
         relevantTools.push({
           name: 'find_primer_binding_sites',
-          confidence: 0.9,
+          confidence: 0.95,
           reason: 'Primer binding site keywords detected',
         });
       }
-      if (/\b(add|annotate|display|visuali[sz]e|draw)\s+.*?\bprimers?\b/i.test(query) ||
-          /\bprimers?\s+.*?\b(display|visuali[sz]e|annotation)\b/i.test(query)) {
+      if (
+        /\b(add|annotate|display|visuali[sz]e|draw)\s+.*?\bprimers?\b/i.test(query) ||
+        /\bprimers?\s+.*?\b(display|visuali[sz]e|annotation)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'add_primer_annotation',
           confidence: 0.9,
           reason: 'Primer visualization/annotation keywords detected',
         });
       }
-      if (/\b(list|show|display|get)\s+.*?\bprimer\s+annotations?\b/i.test(query) ||
-          /\bprimers?\s+.*?\b(list|annotations?|current|shown|displayed)\b/i.test(query)) {
+      if (
+        /\b(list|show|display|get)\s+.*?\bprimer\s+annotations?\b/i.test(query) ||
+        /\bprimers?\s+.*?\b(list|annotations?|current|shown|displayed)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'list_primer_annotations',
           confidence: 0.9,
           reason: 'Primer annotation listing keywords detected',
         });
       }
-      if (/\b(clear|remove|delete)\s+.*?\bprimer\s+annotations?\b/i.test(query) ||
-          /\bprimers?\s+.*?\b(clear|remove|delete)\b/i.test(query)) {
+      if (
+        /\b(clear|remove|delete)\s+.*?\bprimer\s+annotations?\b/i.test(query) ||
+        /\bprimers?\s+.*?\b(clear|remove|delete)\b/i.test(query)
+      ) {
         relevantTools.push({
           name: 'clear_primer_annotations',
           confidence: 0.9,
@@ -1875,8 +1968,10 @@ class BuiltInToolsIntegration {
       }
     }
 
-    if (/\b(get|retrieve|fetch|show|view|find|search|list|query)\s+.*?\bannotations?\b/i.test(query) ||
-        /\bannotations?\s+.*?\b(get|retrieve|fetch|show|view|find|search|list|query)\b/i.test(query)) {
+    if (
+      /\b(get|retrieve|fetch|show|view|find|search|list|query)\s+.*?\bannotations?\b/i.test(query) ||
+      /\bannotations?\s+.*?\b(get|retrieve|fetch|show|view|find|search|list|query)\b/i.test(query)
+    ) {
       if (/\b(list|all|region|visible)\b/i.test(query)) {
         relevantTools.push({
           name: 'list_annotations',
@@ -1898,8 +1993,10 @@ class BuiltInToolsIntegration {
       }
     }
 
-    if (/\b(history|updates|changes|logs)\s+.*?\bannotations?\b/i.test(query) ||
-        /\bannotations?\s+.*?\b(history|updates|changes|logs)\b/i.test(query)) {
+    if (
+      /\b(history|updates|changes|logs)\s+.*?\bannotations?\b/i.test(query) ||
+      /\bannotations?\s+.*?\b(history|updates|changes|logs)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'get_annotation_history',
         confidence: 0.9,
@@ -1923,8 +2020,10 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(nearby|adjacent|neighboring)\s+.*?\b(features?|genes?)\b/i.test(query) ||
-        /\b(features?|genes?)\s+.*?\b(nearby|adjacent|neighboring)\b/i.test(query)) {
+    if (
+      /\b(nearby|adjacent|neighboring)\s+.*?\b(features?|genes?)\b/i.test(query) ||
+      /\b(features?|genes?)\s+.*?\b(nearby|adjacent|neighboring)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'get_nearby_features',
         confidence: 0.9,
@@ -1932,7 +2031,10 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(find|search|identify|get|list)\s+.*?\bintergenic\s+regions?\b/i.test(query) || /\bintergenic\b/i.test(query)) {
+    if (
+      /\b(find|search|identify|get|list)\s+.*?\bintergenic\s+regions?\b/i.test(query) ||
+      /\bintergenic\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'find_intergenic_regions',
         confidence: 0.9,
@@ -2010,7 +2112,7 @@ class BuiltInToolsIntegration {
       /\b(analyze|analysis|identify|predict|find)\b/i.test(query)
     ) {
       // Add InterPro domain analysis if not already added
-      if (!relevantTools.some((t) => t.name === 'analyze_interpro_domains')) {
+      if (!relevantTools.some(t => t.name === 'analyze_interpro_domains')) {
         relevantTools.push({
           name: 'analyze_interpro_domains',
           confidence: 0.8,
@@ -2021,7 +2123,7 @@ class BuiltInToolsIntegration {
 
     // Check for specific domain names or "has/have domains" patterns
     if (/\b(kinase|phosphatase|transferase|helicase|protease)\b/i.test(query) && /\b(domain|domains)\b/i.test(query)) {
-      if (!relevantTools.some((t) => t.name === 'search_interpro_entry')) {
+      if (!relevantTools.some(t => t.name === 'search_interpro_entry')) {
         relevantTools.push({
           name: 'search_interpro_entry',
           confidence: 0.85,
@@ -2032,7 +2134,7 @@ class BuiltInToolsIntegration {
 
     // Check for "what domains" or "which domains" patterns
     if (/\b(what|which|show|list)\b/i.test(query) && /\b(domain|domains)\b/i.test(query)) {
-      if (!relevantTools.some((t) => t.name === 'analyze_interpro_domains')) {
+      if (!relevantTools.some(t => t.name === 'analyze_interpro_domains')) {
         relevantTools.push({
           name: 'analyze_interpro_domains',
           confidence: 0.85,
@@ -2043,8 +2145,12 @@ class BuiltInToolsIntegration {
 
     // Check for protein structure viewer patterns
     // Matches: "open protein viewer", "open alphafold viewer", "show 3D structure", "visualize protein structure"
-    if (/\b(open|show|display|launch|visualize|view)\s+.*?\b(protein\s+viewer|alphafold\s+viewer|3[dD]\s+structure|structure\s+viewer)\b/i.test(query) ||
-        /\b(protein|alphafold)\s+.*?\b(viewer|3[dD]|visualization)\b/i.test(query)) {
+    if (
+      /\b(open|show|display|launch|visualize|view)\s+.*?\b(protein\s+viewer|alphafold\s+viewer|3[dD]\s+structure|structure\s+viewer)\b/i.test(
+        query
+      ) ||
+      /\b(protein|alphafold)\s+.*?\b(viewer|3[dD]|visualization)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'open_protein_viewer',
         confidence: 0.9,
@@ -2067,11 +2173,19 @@ class BuiltInToolsIntegration {
           reason: 'Local BLAST keywords detected',
         });
       } else if (/\b(create|make|build|generate|setup)\s+.*?\b(db|database)\b/i.test(query)) {
-        relevantTools.push({
-          name: 'blast_create_quick_db_for_current_genome',
-          confidence: 0.9,
-          reason: 'Create BLAST database keywords detected',
-        });
+        if (/\b(chrom|chromosome|chr\d+|plasmid|replicon)\b/i.test(query)) {
+          relevantTools.push({
+            name: 'blast_create_db_from_genome',
+            confidence: 0.95,
+            reason: 'Create BLAST database for specific chromosome keywords detected',
+          });
+        } else {
+          relevantTools.push({
+            name: 'blast_create_quick_db_for_current_genome',
+            confidence: 0.95,
+            reason: 'Create BLAST database for entire genome keywords detected',
+          });
+        }
       } else if (/\b(list|show|view|get|available)\s+.*?\b(dbs|databases)\b/i.test(query)) {
         relevantTools.push({
           name: 'blast_list_databases',
@@ -2160,8 +2274,10 @@ class BuiltInToolsIntegration {
       }
     }
 
-    if (/\b(search|find|locate|match)\s+.*?\b(pattern|motif|sequence|regex|regular\s+expression|string)\b/i.test(query) ||
-        /\b(pattern|motif|regex)\s+.*?\b(search|find|locate|match)\b/i.test(query)) {
+    if (
+      /\b(search|find|locate|match)\s+.*?\b(pattern|motif|sequence|regex|regular\s+expression|string)\b/i.test(query) ||
+      /\b(pattern|motif|regex)\s+.*?\b(search|find|locate|match)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'search_pattern',
         confidence: 0.85,
@@ -2169,8 +2285,10 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(gel|electrophoresis|agarose)\b/i.test(query) ||
-        /\b(run|simulate|show|visualize)\s+.*?\b(gel|electrophoresis)\b/i.test(query)) {
+    if (
+      /\b(gel|electrophoresis|agarose)\b/i.test(query) ||
+      /\b(run|simulate|show|visualize)\s+.*?\b(gel|electrophoresis)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'simulate_gel_electrophoresis',
         confidence: 0.95,
@@ -2183,8 +2301,10 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(dna\s+marker|dna\s+ladder|marker|ladder)\b/i.test(query) &&
-        /\b(list|show|browse|available|search|find|what)\b/i.test(query)) {
+    if (
+      /\b(dna\s+marker|dna\s+ladder|marker|ladder)\b/i.test(query) &&
+      /\b(list|show|browse|available|search|find|what)\b/i.test(query)
+    ) {
       relevantTools.push({
         name: 'list_dna_markers',
         confidence: 0.9,
@@ -2240,7 +2360,7 @@ You are an advanced AI assistant for CodeXomics with access to high-performance 
 
 ## 🔧 Built-in File Loading Tools (Highest Priority)
 
-${fileLoadingTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${fileLoadingTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 **File Loading Instructions:**
 - Use load_genome_file for FASTA/GenBank genome files (.fasta, .fa, .genbank, .gbk, .gb)
@@ -2252,7 +2372,7 @@ ${fileLoadingTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} 
 
 ## 🧭 Built-in Navigation & Tab Management Tools
 
-${navigationTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${navigationTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 **Tab Management Instructions:**
 - Use open_new_tab to create new analysis tabs for parallel workflows
@@ -2262,11 +2382,11 @@ ${navigationTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} t
 
 ## 🧬 Built-in Sequence Analysis Tools
 
-${sequenceTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${sequenceTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 ## 🗄️ Built-in Database Integration Tools
 
-${databaseTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${databaseTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 **Database Tools Instructions:**
 - **UniProt Tools**: Search and retrieve protein information from UniProt database
@@ -2286,7 +2406,7 @@ ${databaseTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} too
 
 ## ⚙️ Built-in System Tools
 
-${systemTools.map((tool) => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+${systemTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
 ## 🎯 Tool Usage Guidelines
 
