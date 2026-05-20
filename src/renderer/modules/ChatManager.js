@@ -4923,7 +4923,7 @@ class ChatManager {
                     `${(sanitizedStr.length / 1024).toFixed(1)}KB. Consider adding tool-specific sanitization rules.`,
                   );
                 }
-                return `${result.tool} executed successfully with parameters: ${JSON.stringify(result.parameters)}: ${sanitizedStr}`;
+                return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.normalizeParams(result.parameters))}: ${sanitizedStr}`;
               });
               conversationHistory.push({
                 role: 'system',
@@ -5994,6 +5994,79 @@ class ChatManager {
     return this.services.context.shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults);
   }
 
+  normalizeParams(params) {
+    if (!params || typeof params !== 'object') return {};
+    const sorted = {};
+    Object.keys(params).sort().forEach(key => {
+      const val = params[key];
+      if (val !== undefined) {
+        sorted[key] = (val && typeof val === 'object') ? this.normalizeParams(val) : val;
+      }
+    });
+    if (sorted.primerSequence && (!sorted.sequence || sorted.sequence === sorted.primerSequence)) {
+      sorted.sequence = sorted.primerSequence;
+      delete sorted.primerSequence;
+    }
+    return sorted;
+  }
+
+  areParametersEqual(params1, params2) {
+    if (!params1 && !params2) return true;
+    if (!params1 || !params2) return false;
+    try {
+      const norm1 = this.normalizeParams(typeof params1 === 'string' ? JSON.parse(params1) : params1);
+      const norm2 = this.normalizeParams(typeof params2 === 'string' ? JSON.parse(params2) : params2);
+      return JSON.stringify(norm1) === JSON.stringify(norm2);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  extractParametersFromExecutionMessage(content) {
+    const marker = 'with parameters:';
+    const markerIdx = content.indexOf(marker);
+    if (markerIdx === -1) return null;
+
+    const jsonStart = content.indexOf('{', markerIdx + marker.length);
+    if (jsonStart === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = jsonStart; i < content.length; i++) {
+      const char = content[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) continue;
+
+      if (char === '{') {
+        depth++;
+      } else if (char === '}') {
+        depth--;
+        if (depth === 0) {
+          return content.substring(jsonStart, i + 1);
+        }
+      }
+    }
+
+    return null;
+  }
+
   /**
    * Check if a tool with specific parameters was executed successfully in conversation history
    */
@@ -6001,20 +6074,36 @@ class ChatManager {
     // Look for system messages indicating successful execution
     const [toolName, ...paramsParts] = toolKey.split(':');
     const paramsStr = paramsParts.join(':');
+    let parsedKeyParams = null;
+    try {
+      parsedKeyParams = JSON.parse(paramsStr);
+    } catch (e) {}
 
     for (const msg of conversationHistory) {
       if (msg.role === 'system' && msg.content && msg.content.includes('executed successfully')) {
         // Extract tool name and check if it matches
         if (msg.content.includes(`${toolName} executed successfully`)) {
           // If message contains parameters, check for exact match
-          if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-            console.log(`🔍 Found successful execution record for: ${toolName} with matching parameters`);
-            return true;
-          }
-
-          // Legacy support: if message doesn't have the "with parameters" part,
-          // we fall back to name-only match to be safe
-          if (!msg.content.includes('with parameters:')) {
+          if (msg.content.includes('with parameters:')) {
+            const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
+            if (msgParamsStr) {
+              try {
+                const parsedMsgParams = JSON.parse(msgParamsStr);
+                if (parsedKeyParams && this.areParametersEqual(parsedKeyParams, parsedMsgParams)) {
+                  console.log(`🔍 Found successful execution record for: ${toolName} with matching parameters (robust check)`);
+                  return true;
+                }
+              } catch (e) {
+                if (msg.content.includes(`with parameters: ${paramsStr}`)) {
+                  return true;
+                }
+              }
+            } else if (msg.content.includes(`with parameters: ${paramsStr}`)) {
+              return true;
+            }
+          } else if (!msg.content.includes('with parameters:')) {
+            // Legacy support: if message doesn't have the "with parameters" part,
+            // we fall back to name-only match to be safe
             console.log(`🔍 Found legacy successful execution record for: ${toolName}`);
             return true;
           }
@@ -6102,12 +6191,30 @@ class ChatManager {
   getToolExecutionCount(toolKey, conversationHistory) {
     const [toolName, ...paramsParts] = toolKey.split(':');
     const paramsStr = paramsParts.join(':');
+    let parsedKeyParams = null;
+    try {
+      parsedKeyParams = JSON.parse(paramsStr);
+    } catch (e) {}
     let count = 0;
 
     for (const msg of conversationHistory) {
       if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
-        if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-          count++;
+        if (msg.content.includes('with parameters:')) {
+          const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
+          if (msgParamsStr) {
+            try {
+              const parsedMsgParams = JSON.parse(msgParamsStr);
+              if (parsedKeyParams && this.areParametersEqual(parsedKeyParams, parsedMsgParams)) {
+                count++;
+              }
+            } catch (e) {
+              if (msg.content.includes(`with parameters: ${paramsStr}`)) {
+                count++;
+              }
+            }
+          } else if (msg.content.includes(`with parameters: ${paramsStr}`)) {
+            count++;
+          }
         } else if (!msg.content.includes('with parameters:')) {
           // Legacy support
           count++;
@@ -6136,14 +6243,41 @@ class ChatManager {
   findExistingExecution(toolKey, conversationHistory) {
     const [toolName, ...paramsParts] = toolKey.split(':');
     const paramsStr = paramsParts.join(':');
+    let parsedKeyParams = null;
+    try {
+      parsedKeyParams = JSON.parse(paramsStr);
+    } catch (e) {}
 
     for (const msg of conversationHistory) {
       if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed`)) {
         // Check for parameter match
         const hasParams = msg.content.includes('with parameters:');
-        const paramsMatch = msg.content.includes(`with parameters: ${paramsStr}`);
-
-        if (paramsMatch || !hasParams) {
+        if (hasParams) {
+          const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
+          if (msgParamsStr) {
+            try {
+              const parsedMsgParams = JSON.parse(msgParamsStr);
+              if (parsedKeyParams && this.areParametersEqual(parsedKeyParams, parsedMsgParams)) {
+                return {
+                  success: msg.content.includes('successfully'),
+                  timestamp: new Date().toISOString(),
+                };
+              }
+            } catch (e) {
+              if (msg.content.includes(`with parameters: ${paramsStr}`)) {
+                return {
+                  success: msg.content.includes('successfully'),
+                  timestamp: new Date().toISOString(),
+                };
+              }
+            }
+          } else if (msg.content.includes(`with parameters: ${paramsStr}`)) {
+            return {
+              success: msg.content.includes('successfully'),
+              timestamp: new Date().toISOString(),
+            };
+          }
+        } else {
           return {
             success: msg.content.includes('successfully'),
             timestamp: new Date().toISOString(), // Approximate

@@ -603,6 +603,13 @@ class LLMContextService {
       'domain analysis',
       'interpro analysis',
       'protein domains',
+      // Primer analysis patterns
+      'find binding sites',
+      'binding sites for primer',
+      'primer binding',
+      'primer specificity',
+      'map primer',
+      'search primer',
       // File loading patterns
       'load genome',
       'load file',
@@ -707,6 +714,9 @@ class LLMContextService {
       'get_genome_info',
       'get_current_state',
       'get_file_info',
+      'calculate_primer_properties',
+      'find_primer_binding_sites',
+      'list_primer_annotations',
     ];
 
     const executedTaskCompletingTool = toolsToExecute.some((tool) => taskCompletingTools.includes(tool.tool_name));
@@ -767,8 +777,76 @@ class LLMContextService {
     return false;
   }
 
+  normalizeParams(params) {
+    if (!params || typeof params !== 'object') return {};
+    const sorted = {};
+    Object.keys(params).sort().forEach(key => {
+      const val = params[key];
+      if (val !== undefined) {
+        sorted[key] = (val && typeof val === 'object') ? this.normalizeParams(val) : val;
+      }
+    });
+    if (sorted.primerSequence && (!sorted.sequence || sorted.sequence === sorted.primerSequence)) {
+      sorted.sequence = sorted.primerSequence;
+      delete sorted.primerSequence;
+    }
+    return sorted;
+  }
+
+  hasViewStateChangedSinceLastExecution(toolName, conversationHistory) {
+    if (!conversationHistory || !Array.isArray(conversationHistory)) {
+      return false;
+    }
+
+    // 1. Find the index of the last successful execution of this tool
+    let lastExecIdx = -1;
+    for (let i = conversationHistory.length - 1; i >= 0; i--) {
+      const msg = conversationHistory[i];
+      if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
+        lastExecIdx = i;
+        break;
+      }
+    }
+
+    if (lastExecIdx === -1) {
+      return false; // No prior execution
+    }
+
+    // 2. Look for any view-changing tools executed successfully after that index
+    const viewChangingTools = [
+      'navigate_to_position',
+      'jump_to_gene',
+      'jump_to_feature',
+      'focus_on_gene',
+      'scroll_left',
+      'scroll_right',
+      'pan_left',
+      'pan_right',
+      'zoom_in',
+      'zoom_out',
+      'switch_to_tab',
+      'open_new_tab',
+      'load_genome_file',
+      'load_annotation_file'
+    ];
+
+    for (let i = lastExecIdx + 1; i < conversationHistory.length; i++) {
+      const msg = conversationHistory[i];
+      if (msg.role === 'system' && msg.content) {
+        for (const viewTool of viewChangingTools) {
+          if (msg.content.includes(`${viewTool} executed successfully`)) {
+            console.log(`🔄 [Policy] View state changed since last execution of ${toolName} due to subsequent successful ${viewTool}`);
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
   shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults = []) {
-    const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
+    const toolKey = `${tool.tool_name}:${JSON.stringify(this.normalizeParams(tool.parameters))}`;
     const toolName = tool.tool_name;
 
     // Define tool execution policies
@@ -1151,23 +1229,43 @@ class LLMContextService {
     const exemptedPolicies = ['scroll_operations', 'zoom_operations'];
     if (!exemptedPolicies.includes(applicablePolicyName)) {
       const chatboxSettings = this.chatManager.configManager.get('chatboxSettings') || {};
-      const maxSameToolDifferentParams = chatboxSettings.maxSameToolDifferentParams || 
-                                         this.chatManager.configManager.get('llm.maxSameToolDifferentParams', 3);
       const maxSameToolIdenticalParams = chatboxSettings.maxSameToolIdenticalParams || 
                                          this.chatManager.configManager.get('llm.maxSameToolIdenticalParams', 2);
 
       // Check identical parameters limit
       const identicalExecutionCount = this.chatManager.getToolExecutionCount(toolKey, conversationHistory);
       if (identicalExecutionCount >= maxSameToolIdenticalParams) {
-        console.log(`🚫 [Policy] Maximum identical tool execution limit reached (${maxSameToolIdenticalParams}): ${toolName}`);
-        return false;
+        // If view state changed since the last execution, bypass identical params block
+        if (this.hasViewStateChangedSinceLastExecution(toolName, conversationHistory)) {
+          console.log(`🔄 [Policy] View state has changed since last successful run. Bypassing identical execution limit for ${toolName}`);
+        } else {
+          console.log(`🚫 [Policy] Maximum identical tool execution limit reached (${maxSameToolIdenticalParams}): ${toolName}`);
+          return false;
+        }
       }
 
-      // Check different parameters limit
-      const totalExecutionCount = this.chatManager.getToolExecutionCountByName(toolName, conversationHistory);
-      if (totalExecutionCount >= maxSameToolDifferentParams) {
-        console.log(`🚫 [Policy] Maximum total tool execution limit reached (${maxSameToolDifferentParams}): ${toolName}`);
-        return false;
+      // Check different parameters limit, unless policy is exempted from total limit
+      const exemptedFromTotalLimit = [
+        'scroll_operations',
+        'zoom_operations',
+        'search',
+        'analysis',
+        'state',
+        'external_api',
+        'primer_design',
+        'feature_navigation',
+        'position_navigation',
+        'track_operations'
+      ];
+
+      if (!exemptedFromTotalLimit.includes(applicablePolicyName)) {
+        const maxSameToolDifferentParams = chatboxSettings.maxSameToolDifferentParams || 
+                                           this.chatManager.configManager.get('llm.maxSameToolDifferentParams', 3);
+        const totalExecutionCount = this.chatManager.getToolExecutionCountByName(toolName, conversationHistory);
+        if (totalExecutionCount >= maxSameToolDifferentParams) {
+          console.log(`🚫 [Policy] Maximum total tool execution limit reached (${maxSameToolDifferentParams}): ${toolName}`);
+          return false;
+        }
       }
     }
 
@@ -1454,6 +1552,25 @@ The gene search has been completed successfully.`;
 
       case 'find_feature':
         return `Feature search completed successfully. Found ${result.result?.length || 0} matching feature(s).`;
+
+      case 'find_primer_binding_sites': {
+        const sites = result.result?.sites || [];
+        const primer = tool.parameters.primerSequence || tool.parameters.sequence || 'primer';
+        if (sites.length === 0) {
+          return `Primer binding-site search completed for ${primer}. No binding sites were found in the current genome.`;
+        }
+
+        const siteLines = sites
+            .slice(0, 20)
+            .map((site, index) => {
+              const strand = site.strand || '+';
+              const mismatches = site.mismatches ?? 0;
+              return `${index + 1}. ${site.start}-${site.end} (${strand} strand, ${mismatches} mismatch${mismatches === 1 ? '' : 'es'})`;
+            })
+            .join('\n');
+        const extra = sites.length > 20 ? `\n\nShowing the first 20 of ${sites.length} sites.` : '';
+        return `Found ${sites.length} binding site${sites.length === 1 ? '' : 's'} for primer ${primer}:\n\n${siteLines}${extra}`;
+      }
 
       case 'codon_usage_analysis':
         if (result.result) {
