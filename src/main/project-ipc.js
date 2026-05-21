@@ -611,7 +611,7 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
     console.log(`📋 [createNewMainWindow] Window ${windowId} registered in registry`);
 
     // Set up the new window with same initialization as original main window
-    newMainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
+    newMainWindow.loadFile(path.join(__dirname, '..', 'renderer/index.html'));
 
     // Clear cache aggressively to ensure fresh file loading (same as original)
     newMainWindow.webContents.session.clearCache();
@@ -671,7 +671,7 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
     // Handle window closed - cleanup is handled automatically via the 'closed' event listener in registerGenomeWindow
     newMainWindow.on('closed', () => {
       console.log(`📋 [createNewMainWindow] Window ${windowId} closed`);
-      undeps.registerGenomeWindow(windowId);
+      deps.unregisterGenomeWindow(windowId);
       if (deps.currentActiveWindow === newMainWindow) {
         deps.currentActiveWindow = null;
       }
