@@ -91,11 +91,31 @@ class NavigationAgent extends AgentBase {
         validateParameters: (params) => {
           const track = params.trackName !== undefined ? params.trackName : params.track_name;
           if (track === undefined) throw new Error('trackName or track_name parameter required');
-          if (params.visible !== undefined && typeof params.visible !== 'boolean') {
-            throw new Error('visible parameter must be boolean');
+          if (params.visible !== undefined) {
+            if (typeof params.visible === 'string') {
+              const normalized = params.visible.trim().toLowerCase();
+              const validVisibles = [
+                'true', 'show', 'shown', 'visible', 'on', 'enable', 'enabled', 'display',
+                'false', 'hide', 'hidden', 'off', 'disable', 'disabled',
+              ];
+              if (!validVisibles.includes(normalized)) {
+                throw new Error('visible parameter must be boolean');
+              }
+            } else if (typeof params.visible !== 'boolean') {
+              throw new Error('visible parameter must be boolean');
+            }
           }
-          if (params.action !== undefined && !['show', 'hide', 'toggle'].includes(params.action)) {
-            throw new Error('action parameter must be "show", "hide" or "toggle"');
+          const action = params.action || params.actionType || params.action_type || params.state || params.visibility;
+          if (action !== undefined) {
+            const normalizedAction = String(action).trim().toLowerCase();
+            const validActions = [
+              'show', 'shown', 'display', 'visible', 'on', 'enable', 'enabled', 'true',
+              'hide', 'hidden', 'off', 'disable', 'disabled', 'false',
+              'toggle', 'switch',
+            ];
+            if (!validActions.includes(normalizedAction)) {
+              throw new Error('action parameter must be "show", "hide" or "toggle"');
+            }
           }
         },
       },
@@ -207,9 +227,7 @@ class NavigationAgent extends AgentBase {
         description: 'Close a browser tab',
         priority: 'medium',
         estimatedTime: 50,
-        validateParameters: (params) => {
-          if (!params.tabName) throw new Error('tabName parameter required');
-        },
+        validateParameters: () => {},
       },
       {
         functionName: 'get_chromosome_list',
@@ -596,14 +614,24 @@ class NavigationAgent extends AgentBase {
   async executeToggleTrack(parameters, app) {
     const trackName = parameters.trackName || parameters.track_name;
     let visible = parameters.visible;
-    const action = parameters.action;
+    const action = parameters.action || parameters.actionType || parameters.action_type || parameters.state || parameters.visibility;
+
+    if (typeof visible === 'string') {
+      const normalizedVisible = visible.trim().toLowerCase();
+      if (['true', 'show', 'shown', 'visible', 'on', 'enable', 'enabled', 'display'].includes(normalizedVisible)) {
+        visible = true;
+      } else if (['false', 'hide', 'hidden', 'off', 'disable', 'disabled'].includes(normalizedVisible)) {
+        visible = false;
+      }
+    }
 
     if (visible === undefined && action) {
-      if (action === 'show') {
+      const normalizedAction = String(action).trim().toLowerCase();
+      if (['show', 'shown', 'display', 'visible', 'on', 'enable', 'enabled', 'true'].includes(normalizedAction)) {
         visible = true;
-      } else if (action === 'hide') {
+      } else if (['hide', 'hidden', 'off', 'disable', 'disabled', 'false'].includes(normalizedAction)) {
         visible = false;
-      } else if (action === 'toggle') {
+      } else if (['toggle', 'switch'].includes(normalizedAction)) {
         visible = undefined;
       }
     }

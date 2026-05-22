@@ -27,16 +27,28 @@ parameters:
       examples:
         - 'genes'
         - 'gc'
+        - 'GC Content'
         - 'sequence'
         - 'variants'
         - 'reads'
         - 'proteins'
         - 'primers'
-      enum: ['genes', 'gc', 'sequence', 'variants', 'reads', 'proteins', 'primers', 'actions']
+      enum: ['genes', 'gc', 'gc_content', 'GC Content', 'sequence', 'variants', 'reads', 'proteins', 'primers', 'actions', 'wigTracks', 'blast']
+    trackName:
+      type: string
+      description: 'Name of the track to toggle (camelCase alternative to track_name)'
+      examples:
+        - 'genes'
+        - 'gc_content'
+        - 'GC Content'
+        - 'Variants'
+    visible:
+      type: boolean
+      description: 'Whether to show or hide the track. true shows the track; false hides it.'
     action:
       type: string
-      description: 'Action to perform on the track'
-      enum: ['show', 'hide', 'toggle']
+      description: 'Action to perform on the track. Synonyms such as on/off, enable/disable, and display/hidden are normalized.'
+      enum: ['show', 'hide', 'toggle', 'on', 'off', 'enable', 'disable', 'display', 'visible', 'hidden']
       default: 'toggle'
     clientId:
       type: string

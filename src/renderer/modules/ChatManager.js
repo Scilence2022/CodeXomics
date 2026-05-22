@@ -2427,8 +2427,8 @@ class ChatManager {
    * @param {string} params.clientId - Optional client identifier
    * @returns {Object} Close result
    */
-  async closeTab(params) {
-    const {tab_id, tab_name, tab_index, clientId} = params;
+  async closeTab(params = {}) {
+    const {tab_id, tab_name, tab_index, clientId} = params || {};
 
     console.log('🔧 [ChatManager] closeTab called with params:', params);
 
@@ -2503,8 +2503,16 @@ class ChatManager {
         } else {
           throw new Error(`Tab index ${tab_index} is out of range (0-${tabIds.length - 1})`);
         }
-      } else {
-        throw new Error('At least one parameter (tab_id, tab_name, or tab_index) must be provided');
+      }
+      // Strategy 4: If no parameters are provided, default to currently active tab
+      else {
+        targetTabId = tabManager.activeTabId;
+        if (targetTabId && tabManager.tabs.has(targetTabId)) {
+          const tabState = tabManager.tabStates?.get(targetTabId);
+          targetTabTitle = tabState?.title || `Tab ${targetTabId}`;
+        } else {
+          throw new Error('No active tab to close');
+        }
       }
 
       // Perform the tab close
@@ -3108,22 +3116,34 @@ class ChatManager {
     // Support both camelCase and snake_case parameter names
     const trackName = params.trackName || params.track_name;
     let visible = params.visible;
-    const action = params.action;
+    const action = params.action || params.actionType || params.action_type || params.state || params.visibility;
 
     if (!trackName) {
       throw new Error('trackName or track_name parameter is required');
     }
 
+    if (typeof visible === 'string') {
+      const normalizedVisible = visible.trim().toLowerCase();
+      if (['true', 'show', 'shown', 'visible', 'on', 'enable', 'enabled', 'display'].includes(normalizedVisible)) {
+        visible = true;
+      } else if (['false', 'hide', 'hidden', 'off', 'disable', 'disabled'].includes(normalizedVisible)) {
+        visible = false;
+      } else {
+        throw new Error('Invalid visible parameter. Must be boolean or a show/hide string');
+      }
+    }
+
     // Convert action to visible if visible is not specified
     if (visible === undefined && action) {
-      if (action === 'show') {
+      const normalizedAction = String(action).trim().toLowerCase();
+      if (['show', 'shown', 'display', 'visible', 'on', 'enable', 'enabled', 'true'].includes(normalizedAction)) {
         visible = true;
-      } else if (action === 'hide') {
+      } else if (['hide', 'hidden', 'off', 'disable', 'disabled', 'false'].includes(normalizedAction)) {
         visible = false;
-      } else if (action === 'toggle') {
+      } else if (['toggle', 'switch'].includes(normalizedAction)) {
         visible = undefined;
       } else {
-        throw new Error('Invalid action parameter. Must be "show", "hide" or "toggle"');
+        throw new Error('Invalid action parameter. Must be "show", "hide", "toggle", or a recognized synonym');
       }
     }
 
@@ -3146,7 +3166,32 @@ class ChatManager {
       blast_results: 'trackBlast',
     };
 
-    const checkboxId = trackMapping[trackName.toLowerCase()] || trackMapping[trackName];
+    const normalizedTrackName = String(trackName).trim().toLowerCase().replace(/[\s-]+/g, '_');
+    const trackAliases = {
+      gccontent: 'gc_content',
+      gc_content_track: 'gc_content',
+      gc_track: 'gc',
+      genes_track: 'genes',
+      gene_track: 'genes',
+      variants_track: 'variants',
+      variant_track: 'variants',
+      reads_track: 'reads',
+      read_track: 'reads',
+      proteins_track: 'proteins',
+      protein_track: 'proteins',
+      primers_track: 'primers',
+      primer_track: 'primers',
+      wig: 'wigtracks',
+      wig_track: 'wigtracks',
+      wig_tracks: 'wigtracks',
+      sequence_track: 'sequence',
+      actions_track: 'actions',
+      action_track: 'actions',
+      blast_track: 'blast',
+      blast_results_track: 'blast_results',
+    };
+    const trackKey = trackAliases[normalizedTrackName] || normalizedTrackName;
+    const checkboxId = trackMapping[trackKey] || trackMapping[trackName];
     if (!checkboxId) {
       throw new Error(`Unknown track: ${trackName}. Available tracks: ${Object.keys(trackMapping).join(', ')}`);
     }

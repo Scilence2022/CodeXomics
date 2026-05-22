@@ -78,7 +78,6 @@ class NavigationTools {
             tab_index: {type: 'number', description: 'Tab index (0-based) to close', minimum: 0},
             clientId: {type: 'string', description: 'Browser client ID'},
           },
-          anyOf: [{required: ['tab_id']}, {required: ['tab_name']}, {required: ['tab_index']}],
         },
       },
 
@@ -202,7 +201,11 @@ class NavigationTools {
                 'Track name (alternative to trackName) (genes, gc, variants, reads, proteins, primers, sequence, actions)',
             },
             visible: {type: 'boolean', description: 'Whether to show or hide the track'},
-            action: {type: 'string', description: 'Action to perform (show or hide)', enum: ['show', 'hide']},
+            action: {
+              type: 'string',
+              description: 'Action to perform (show, hide, toggle, or common synonyms like on/off)',
+              enum: ['show', 'hide', 'toggle', 'on', 'off', 'enable', 'disable', 'display', 'visible', 'hidden'],
+            },
             clientId: {type: 'string', description: 'Browser client ID'},
           },
           anyOf: [
@@ -210,6 +213,8 @@ class NavigationTools {
             {required: ['track_name', 'visible']},
             {required: ['trackName', 'action']},
             {required: ['track_name', 'action']},
+            {required: ['trackName']},
+            {required: ['track_name']},
           ],
         },
       },

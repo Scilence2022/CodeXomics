@@ -10,10 +10,6 @@ aliases: ['remove_tab', 'delete_tab', 'dismiss_tab']
 enabled: true
 
 parameters:
-  anyOf:
-    - required: ['tab_id']
-    - required: ['tab_name']
-    - required: ['tab_index']
   properties:
     tab_id:
       type: 'string'
@@ -113,11 +109,6 @@ error_handling:
     response:
       success: false
       error: 'Cannot close the last remaining tab'
-
-  - condition: 'No parameters provided'
-    response:
-      success: false
-      error: 'At least one parameter (tab_id, tab_name, or tab_index) must be provided'
 
 integration:
   mcp_tools: true
