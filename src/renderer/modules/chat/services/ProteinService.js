@@ -393,48 +393,18 @@ class ProteinService {
     try {
       console.log(`Adding ${searchType} results in sidebar for ${geneName}:`, results);
 
-      // Check if a tab for this geneName already exists (case-insensitive)
+      // Check if a tab for this geneName and searchType already exists (case-insensitive)
       const existingTab = this.tabs.find(
-          (t) => t.geneName && t.geneName.toLowerCase() === geneName.toLowerCase(),
+          (t) => t.geneName && t.geneName.toLowerCase() === geneName.toLowerCase() &&
+                 t.searchType && t.searchType.toLowerCase() === searchType.toLowerCase(),
       );
 
       if (existingTab) {
-        // Tag existing results with structureType if not set
-        existingTab.results.forEach((r) => {
-          if (!r.structureType) {
-            r.structureType = existingTab.searchType === 'Both' ? (r.uniprotId ? 'AlphaFold' : 'PDB') : existingTab.searchType;
-          }
-        });
-
-        // Tag new results with incoming searchType
-        const taggedNewResults = results.map((r) => ({
+        // Replace existing results with the new results
+        existingTab.results = results.map((r) => ({
           ...r,
           structureType: r.structureType || searchType,
         }));
-
-        // Merge results, removing duplicates based on uniprotId or pdbId
-        const existingIds = new Set();
-        existingTab.results.forEach((r) => {
-          if (r.uniprotId) existingIds.add(r.uniprotId.toLowerCase());
-          if (r.pdbId) existingIds.add(r.pdbId.toLowerCase());
-        });
-
-        const uniqueNewResults = taggedNewResults.filter((r) => {
-          const id = (r.uniprotId || r.pdbId || '').toLowerCase();
-          if (!id) return true;
-          if (existingIds.has(id)) return false;
-          existingIds.add(id);
-          return true;
-        });
-
-        existingTab.results = [...existingTab.results, ...uniqueNewResults];
-
-        // Update searchType and title if they are different
-        if (existingTab.searchType !== searchType && existingTab.searchType !== 'Both') {
-          existingTab.searchType = 'Both';
-          existingTab.title = `${existingTab.geneName} (PDB & AlphaFold)`;
-        }
-
         this.activeTabId = existingTab.id;
       } else {
         const tabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
