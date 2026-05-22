@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added a dedicated Primers track with toolbar toggle, track settings support, and ChatBox/MCP primer annotation list/clear tools.
 
+### 🐛 Bug Fixes
+
+- Added the missing `get_operons` tool registry schema so dynamic system prompts and benchmark runs can load operon tool metadata.
+
 ## [0.7.0-beta] - 2026-05-08 - BETA UPDATE
 
 **🔧 Milestone: Version Update to v0.7beta**

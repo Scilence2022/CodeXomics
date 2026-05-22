@@ -93,7 +93,8 @@ categories:
       - "annotation_crud"
       - "annotation_search"
       - "change_tracking"
-    tools_count: 7
+      - "operon_analysis"
+    tools_count: 10
 
   file_operations:
     name: 'File Operations'

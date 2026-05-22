@@ -1,0 +1,100 @@
+name: get_operons
+version: 1.0.0
+description: 'Get predicted operon structures for a chromosome from loaded annotations. Returns operon coordinates, strand, gene count, member genes, and length. Use this when the user asks to show, list, find, predict, or inspect operons in the current genome.'
+category: annotation
+subcategory: operon_analysis
+priority: 1
+keywords:
+  - operon
+  - operons
+  - predict
+  - list
+  - show
+  - find
+  - genes
+  - bacterial
+  - regulatory
+  - transcription
+
+execution:
+  type: client-side
+  requires_data: true
+
+implementation:
+  type: built-in
+  method: getOperons
+  class: ChatManager
+
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Chromosome or replicon name. If omitted, uses the current chromosome.
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support.
+      default: default
+  required: []
+
+sample_usages:
+  - user_query: 'Get operons for the current chromosome'
+    tool_call: 'get_operons()'
+    thought: 'User wants predicted operon structures from the current genome annotations.'
+    expected_result: 'A summary of detected operons with coordinates, strand, gene count, and member genes.'
+
+  - user_query: 'List operons on chromosome NC_000913'
+    tool_call: 'get_operons(chromosome=''NC_000913'')'
+    thought: 'User wants operon information for a specific chromosome.'
+    expected_result: 'Operons detected on NC_000913 with genomic coordinates and gene summaries.'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['list_annotations', 'get_gene_details', 'load_operon_file']
+  alternatives: ['list_annotations', 'get_nearby_features']
+  prerequisites: ['load_genome_file', 'load_annotation_file']
+  follow_up: ['get_gene_details', 'get_sequence', 'analyze_region']
+
+returns:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Chromosome used for operon detection.
+    operonsFound:
+      type: number
+      description: Number of operons detected.
+    operons:
+      type: array
+      description: Summary of detected operons.
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          start:
+            type: number
+          end:
+            type: number
+          strand:
+            type: string
+            enum: ['+', '-']
+          geneCount:
+            type: number
+          genes:
+            type: array
+            items:
+              type: string
+          length:
+            type: number
+
+metadata:
+  added_in: 0.7.0-beta
+  integration: codexomics
+  priority: high
+  tags:
+    - annotation
+    - operon
+    - bacterial
+    - regulatory

@@ -1276,6 +1276,7 @@ class LLMContextService {
           'get_annotation',
           'list_annotations',
           'search_annotations',
+          'get_operons',
         ],
         policy: 'parameter_based',
         condition: (tool, history, results) => {
