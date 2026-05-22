@@ -69,7 +69,10 @@ class NavigationTools {
 
       close_tab: {
         name: 'close_tab',
-        description: 'Close a specific tab by ID, name, or index. Cannot close the last remaining tab.',
+        description:
+          'Close a specific tab in the browser interface by tab ID, name, or index position. ' +
+          'If no parameters are provided, the tool will close the currently active tab page. ' +
+          'Cannot close the last remaining tab.',
         parameters: {
           type: 'object',
           properties: {
