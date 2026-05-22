@@ -44,7 +44,7 @@ class ExternalAgent extends AgentBase {
     // Try ChatManager first (authoritative execution path)
     if (chatManager && typeof chatManager.executeToolByName === 'function') {
       try {
-        const result = await chatManager.executeToolByName(functionName, parameters);
+        const result = await chatManager.executeToolByName(functionName, parameters, {bypassAgent: true});
         return result;
       } catch (error) {
         console.warn(`ExternalAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
@@ -144,7 +144,7 @@ class ExternalAgent extends AgentBase {
    */
   async blastSearch(parameters, strategy) {
     try {
-      const { sequence, database = 'nr', evalue = 1e-5, maxResults = 10 } = parameters;
+      const {sequence, database = 'nr', evalue = 1e-5, maxResults = 10} = parameters;
 
       if (!sequence) {
         throw new Error('Sequence is required');
@@ -158,7 +158,7 @@ class ExternalAgent extends AgentBase {
 
       return {
         success: true,
-        results: blastResults.map(result => ({
+        results: blastResults.map((result) => ({
           id: result.id,
           description: result.description,
           score: result.score,
@@ -189,8 +189,8 @@ class ExternalAgent extends AgentBase {
    * BLAST蛋白质搜索
    */
   async blastProtein(parameters, strategy) {
-    const { protein, ...otherParams } = parameters;
-    return await this.blastSearch({ sequence: protein, ...otherParams }, strategy);
+    const {protein, ...otherParams} = parameters;
+    return await this.blastSearch({sequence: protein, ...otherParams}, strategy);
   }
 
   /**
@@ -198,7 +198,7 @@ class ExternalAgent extends AgentBase {
    */
   async uniprotSearch(parameters, strategy) {
     try {
-      const { query, format = 'json', maxResults = 10 } = parameters;
+      const {query, format = 'json', maxResults = 10} = parameters;
 
       if (!query) {
         throw new Error('Search query is required');
@@ -212,7 +212,7 @@ class ExternalAgent extends AgentBase {
 
       return {
         success: true,
-        results: uniprotResults.map(result => ({
+        results: uniprotResults.map((result) => ({
           id: result.id,
           name: result.name,
           organism: result.organism,
@@ -243,7 +243,7 @@ class ExternalAgent extends AgentBase {
    */
   async uniprotGetProtein(parameters, strategy) {
     try {
-      const { id } = parameters;
+      const {id} = parameters;
 
       if (!id) {
         throw new Error('Protein ID is required');
@@ -281,7 +281,7 @@ class ExternalAgent extends AgentBase {
    */
   async uniprotGetAnnotation(parameters, strategy) {
     try {
-      const { id } = parameters;
+      const {id} = parameters;
 
       if (!id) {
         throw new Error('Protein ID is required');
@@ -316,7 +316,7 @@ class ExternalAgent extends AgentBase {
    */
   async alphafoldSearch(parameters, strategy) {
     try {
-      const { protein } = parameters;
+      const {protein} = parameters;
 
       if (!protein) {
         throw new Error('Protein sequence or ID is required');
@@ -330,7 +330,7 @@ class ExternalAgent extends AgentBase {
 
       return {
         success: true,
-        results: alphafoldResults.map(result => ({
+        results: alphafoldResults.map((result) => ({
           id: result.id,
           name: result.name,
           confidence: result.confidence,
@@ -360,7 +360,7 @@ class ExternalAgent extends AgentBase {
    */
   async alphafoldGetStructure(parameters, strategy) {
     try {
-      const { id, format = 'pdb' } = parameters;
+      const {id, format = 'pdb'} = parameters;
 
       if (!id) {
         throw new Error('Structure ID is required');
@@ -394,13 +394,13 @@ class ExternalAgent extends AgentBase {
    */
   async searchPdbStructures(parameters, strategy) {
     try {
-      const { query, maxResults = 10 } = parameters;
+      const {query, maxResults = 10} = parameters;
       if (!query) throw new Error('Search query is required');
       if (!this.apiManager) throw new Error('APIManager not available');
       const results = await this.apiManager.searchPdbStructures(query, maxResults);
-      return { success: true, results, count: results.length, query };
+      return {success: true, results, count: results.length, query};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   }
 
@@ -409,13 +409,13 @@ class ExternalAgent extends AgentBase {
    */
   async fetchProteinStructure(parameters, strategy) {
     try {
-      const { id, format = 'pdb' } = parameters;
+      const {id, format = 'pdb'} = parameters;
       if (!id) throw new Error('Structure ID is required');
       if (!this.apiManager) throw new Error('APIManager not available');
       const structure = await this.apiManager.fetchProteinStructure(id, format);
-      return { success: true, structure };
+      return {success: true, structure};
     } catch (error) {
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
   }
 
@@ -424,7 +424,7 @@ class ExternalAgent extends AgentBase {
    */
   async evo2Design(parameters, strategy) {
     try {
-      const { sequence, target, constraints = {} } = parameters;
+      const {sequence, target, constraints = {}} = parameters;
 
       if (!sequence || !target) {
         throw new Error('Sequence and target are required');
@@ -459,7 +459,7 @@ class ExternalAgent extends AgentBase {
    */
   async evo2Optimize(parameters, strategy) {
     try {
-      const { sequence, objective, constraints = {} } = parameters;
+      const {sequence, objective, constraints = {}} = parameters;
 
       if (!sequence || !objective) {
         throw new Error('Sequence and objective are required');
@@ -494,7 +494,7 @@ class ExternalAgent extends AgentBase {
    */
   async interproSearch(parameters, strategy) {
     try {
-      const { query, maxResults = 10 } = parameters;
+      const {query, maxResults = 10} = parameters;
 
       if (!query) {
         throw new Error('Search query is required');
@@ -508,7 +508,7 @@ class ExternalAgent extends AgentBase {
 
       return {
         success: true,
-        results: interproResults.map(result => ({
+        results: interproResults.map((result) => ({
           id: result.id,
           name: result.name,
           type: result.type,
@@ -531,7 +531,7 @@ class ExternalAgent extends AgentBase {
    */
   async interproGetDomain(parameters, strategy) {
     try {
-      const { id } = parameters;
+      const {id} = parameters;
 
       if (!id) {
         throw new Error('Domain ID is required');
@@ -567,7 +567,7 @@ class ExternalAgent extends AgentBase {
    */
   async keggSearch(parameters, strategy) {
     try {
-      const { query, database = 'pathway', maxResults = 10 } = parameters;
+      const {query, database = 'pathway', maxResults = 10} = parameters;
 
       if (!query) {
         throw new Error('Search query is required');
@@ -581,7 +581,7 @@ class ExternalAgent extends AgentBase {
 
       return {
         success: true,
-        results: keggResults.map(result => ({
+        results: keggResults.map((result) => ({
           id: result.id,
           name: result.name,
           description: result.description,
@@ -605,7 +605,7 @@ class ExternalAgent extends AgentBase {
    */
   async keggGetPathway(parameters, strategy) {
     try {
-      const { id } = parameters;
+      const {id} = parameters;
 
       if (!id) {
         throw new Error('Pathway ID is required');

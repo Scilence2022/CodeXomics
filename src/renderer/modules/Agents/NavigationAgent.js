@@ -89,8 +89,14 @@ class NavigationAgent extends AgentBase {
         priority: 'high',
         estimatedTime: 100,
         validateParameters: (params) => {
-          if (!params.trackName) throw new Error('trackName parameter required');
-          if (typeof params.visible !== 'boolean') throw new Error('visible parameter must be boolean');
+          const track = params.trackName !== undefined ? params.trackName : params.track_name;
+          if (track === undefined) throw new Error('trackName or track_name parameter required');
+          if (params.visible !== undefined && typeof params.visible !== 'boolean') {
+            throw new Error('visible parameter must be boolean');
+          }
+          if (params.action !== undefined && !['show', 'hide', 'toggle'].includes(params.action)) {
+            throw new Error('action parameter must be "show", "hide" or "toggle"');
+          }
         },
       },
       {
@@ -257,7 +263,7 @@ class NavigationAgent extends AgentBase {
     // Try ChatManager first (authoritative execution path)
     if (chatManager && typeof chatManager.executeToolByName === 'function') {
       try {
-        const result = await chatManager.executeToolByName(functionName, parameters);
+        const result = await chatManager.executeToolByName(functionName, parameters, {bypassAgent: true});
         return result;
       } catch (error) {
         console.warn(`NavigationAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
@@ -588,7 +594,20 @@ class NavigationAgent extends AgentBase {
    * Execute toggle track
    */
   async executeToggleTrack(parameters, app) {
-    const {trackName, visible} = parameters;
+    const trackName = parameters.trackName || parameters.track_name;
+    let visible = parameters.visible;
+    const action = parameters.action;
+
+    if (visible === undefined && action) {
+      if (action === 'show') {
+        visible = true;
+      } else if (action === 'hide') {
+        visible = false;
+      } else if (action === 'toggle') {
+        visible = undefined;
+      }
+    }
+
     try {
       return await app.genomeBrowser.toggleTrack(trackName, visible);
     } catch (error) {

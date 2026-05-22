@@ -47,7 +47,7 @@ class CoordinatorAgent extends AgentBase {
     // Try ChatManager first (authoritative execution path)
     if (chatManager && typeof chatManager.executeToolByName === 'function') {
       try {
-        const result = await chatManager.executeToolByName(functionName, parameters);
+        const result = await chatManager.executeToolByName(functionName, parameters, {bypassAgent: true});
         return result;
       } catch (error) {
         console.warn(`CoordinatorAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
@@ -108,7 +108,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async coordinateTask(parameters, strategy) {
     try {
-      const { task, priority = 'normal', timeout = 30000 } = parameters;
+      const {task, priority = 'normal', timeout = 30000} = parameters;
 
       if (!task) {
         throw new Error('Task is required');
@@ -158,7 +158,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async decomposeTask(parameters, strategy) {
     try {
-      const { task } = parameters;
+      const {task} = parameters;
 
       if (!task) {
         throw new Error('Task is required');
@@ -169,28 +169,28 @@ class CoordinatorAgent extends AgentBase {
       // 基于任务类型分解
       if (task.type === 'sequence_analysis') {
         subtasks.push(
-          { type: 'data_retrieval', agent: 'data', priority: 'high' },
-          { type: 'sequence_processing', agent: 'analysis', priority: 'high' },
-          { type: 'result_formatting', agent: 'data', priority: 'low' }
+            {type: 'data_retrieval', agent: 'data', priority: 'high'},
+            {type: 'sequence_processing', agent: 'analysis', priority: 'high'},
+            {type: 'result_formatting', agent: 'data', priority: 'low'},
         );
       } else if (task.type === 'external_search') {
         subtasks.push(
-          { type: 'api_call', agent: 'external', priority: 'high' },
-          { type: 'result_processing', agent: 'analysis', priority: 'medium' },
-          { type: 'data_storage', agent: 'data', priority: 'low' }
+            {type: 'api_call', agent: 'external', priority: 'high'},
+            {type: 'result_processing', agent: 'analysis', priority: 'medium'},
+            {type: 'data_storage', agent: 'data', priority: 'low'},
         );
       } else if (task.type === 'plugin_execution') {
         subtasks.push(
-          { type: 'plugin_validation', agent: 'plugin', priority: 'high' },
-          { type: 'plugin_execution', agent: 'plugin', priority: 'high' },
-          { type: 'result_integration', agent: 'coordinator', priority: 'medium' }
+            {type: 'plugin_validation', agent: 'plugin', priority: 'high'},
+            {type: 'plugin_execution', agent: 'plugin', priority: 'high'},
+            {type: 'result_integration', agent: 'coordinator', priority: 'medium'},
         );
       } else {
         // 通用任务分解
         subtasks.push(
-          { type: 'task_analysis', agent: 'coordinator', priority: 'high' },
-          { type: 'execution', agent: 'auto', priority: 'high' },
-          { type: 'result_validation', agent: 'coordinator', priority: 'medium' }
+            {type: 'task_analysis', agent: 'coordinator', priority: 'high'},
+            {type: 'execution', agent: 'auto', priority: 'high'},
+            {type: 'result_validation', agent: 'coordinator', priority: 'medium'},
         );
       }
 
@@ -215,7 +215,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async integrateResults(parameters, strategy) {
     try {
-      const { results } = parameters;
+      const {results} = parameters;
 
       if (!results || !Array.isArray(results)) {
         throw new Error('Results array is required');
@@ -230,21 +230,21 @@ class CoordinatorAgent extends AgentBase {
         data: {},
         metadata: {
           totalResults: results.length,
-          successfulResults: results.filter(r => r.success).length,
-          failedResults: results.filter(r => !r.success).length,
+          successfulResults: results.filter((r) => r.success).length,
+          failedResults: results.filter((r) => !r.success).length,
           integrationTime: Date.now(),
         },
       };
 
       // 合并数据
-      results.forEach(result => {
+      results.forEach((result) => {
         if (result.success && result.data) {
           Object.assign(integratedResult.data, result.data);
         }
       });
 
       // 处理错误
-      const errors = results.filter(r => !r.success).map(r => r.error);
+      const errors = results.filter((r) => !r.success).map((r) => r.error);
       if (errors.length > 0) {
         integratedResult.warnings = errors;
       }
@@ -266,7 +266,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async createWorkflow(parameters, strategy) {
     try {
-      const { name, steps, dependencies = [] } = parameters;
+      const {name, steps, dependencies = []} = parameters;
 
       if (!name || !steps) {
         throw new Error('Workflow name and steps are required');
@@ -296,7 +296,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async executeWorkflow(parameters, strategy) {
     try {
-      const { workflowId, parameters: workflowParams = {} } = parameters;
+      const {workflowId, parameters: workflowParams = {}} = parameters;
 
       if (!workflowId) {
         throw new Error('Workflow ID is required');
@@ -322,7 +322,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async getWorkflowStatus(parameters, strategy) {
     try {
-      const { workflowId } = parameters;
+      const {workflowId} = parameters;
 
       if (!workflowId) {
         throw new Error('Workflow ID is required');
@@ -347,7 +347,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async assignTaskToAgent(parameters, strategy) {
     try {
-      const { task, agentName, priority = 'normal' } = parameters;
+      const {task, agentName, priority = 'normal'} = parameters;
 
       if (!task || !agentName) {
         throw new Error('Task and agent name are required');
@@ -383,7 +383,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async getAgentStatus(parameters, strategy) {
     try {
-      const { agentName } = parameters;
+      const {agentName} = parameters;
 
       if (!agentName) {
         throw new Error('Agent name is required');
@@ -415,19 +415,19 @@ class CoordinatorAgent extends AgentBase {
    */
   async balanceLoad(parameters, strategy) {
     try {
-      const { taskType } = parameters;
+      const {taskType} = parameters;
 
       // Fix: Use agents Map directly instead of non-existent getAllAgents()
       const agentStatuses = [];
       for (const [name, agent] of this.multiAgentSystem.agents) {
         // Fix: Use getStatus() instead of non-existent healthCheck()
         const status = agent.getStatus();
-        agentStatuses.push({ name, status });
+        agentStatuses.push({name, status});
       }
 
       // 选择负载最低的智能体
       const availableAgents = agentStatuses.filter(
-        agent => agent.status.isActive
+          (agent) => agent.status.isActive,
       );
 
       if (availableAgents.length === 0) {
@@ -441,7 +441,7 @@ class CoordinatorAgent extends AgentBase {
         success: true,
         selectedAgent: bestAgent.name,
         reason: bestAgent.reason,
-        alternatives: availableAgents.map(a => a.name),
+        alternatives: availableAgents.map((a) => a.name),
       };
     } catch (error) {
       return {
@@ -456,7 +456,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async handleError(parameters, strategy) {
     try {
-      const { error, context, retryCount = 0 } = parameters;
+      const {error, context, retryCount = 0} = parameters;
 
       if (!error) {
         throw new Error('Error details are required');
@@ -490,7 +490,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async retryFailedTask(parameters, strategy) {
     try {
-      const { task, maxRetries = 3, backoffDelay = 1000 } = parameters;
+      const {task, maxRetries = 3, backoffDelay = 1000} = parameters;
 
       if (!task) {
         throw new Error('Task is required');
@@ -527,7 +527,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async fallbackStrategy(parameters, strategy) {
     try {
-      const { primaryTask, fallbackTasks } = parameters;
+      const {primaryTask, fallbackTasks} = parameters;
 
       if (!primaryTask || !fallbackTasks) {
         throw new Error('Primary task and fallback tasks are required');
@@ -572,7 +572,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async optimizeExecution(parameters, strategy) {
     try {
-      const { task, optimizationLevel = 'medium' } = parameters;
+      const {task, optimizationLevel = 'medium'} = parameters;
 
       if (!task) {
         throw new Error('Task is required');
@@ -631,7 +631,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async cacheStrategy(parameters, strategy) {
     try {
-      const { task, cacheKey, ttl = 300000 } = parameters;
+      const {task, cacheKey, ttl = 300000} = parameters;
 
       if (!task || !cacheKey) {
         throw new Error('Task and cache key are required');
@@ -671,7 +671,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async parallelExecution(parameters, strategy) {
     try {
-      const { tasks, maxConcurrency = 5 } = parameters;
+      const {tasks, maxConcurrency = 5} = parameters;
 
       if (!tasks || !Array.isArray(tasks)) {
         throw new Error('Tasks array is required');
@@ -683,14 +683,14 @@ class CoordinatorAgent extends AgentBase {
       // 并行执行
       const results = [];
       for (const group of taskGroups) {
-        const groupResults = await Promise.allSettled(group.map(task => this.executeTask(task)));
+        const groupResults = await Promise.allSettled(group.map((task) => this.executeTask(task)));
         results.push(...groupResults);
       }
 
       // 处理结果
-      const successfulResults = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+      const successfulResults = results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
 
-      const failedResults = results.filter(r => r.status === 'rejected').map(r => r.reason);
+      const failedResults = results.filter((r) => r.status === 'rejected').map((r) => r.reason);
 
       return {
         success: true,
@@ -839,18 +839,18 @@ class CoordinatorAgent extends AgentBase {
     const preferredAgents = agentCapabilities[taskType] || ['CoordinatorAgent'];
 
     for (const preferredAgent of preferredAgents) {
-      const agent = availableAgents.find(a => a.name === preferredAgent);
+      const agent = availableAgents.find((a) => a.name === preferredAgent);
       if (agent) {
-        return { name: agent.name, reason: `Preferred agent for ${taskType}` };
+        return {name: agent.name, reason: `Preferred agent for ${taskType}`};
       }
     }
 
     // 如果没有首选智能体，选择负载最低的
     const leastLoadedAgent = availableAgents.reduce((min, agent) =>
-      (agent.status.performanceStats?.totalExecutions || 0) < (min.status.performanceStats?.totalExecutions || 0) ? agent : min
+      (agent.status.performanceStats?.totalExecutions || 0) < (min.status.performanceStats?.totalExecutions || 0) ? agent : min,
     );
 
-    return { name: leastLoadedAgent.name, reason: 'Least loaded agent' };
+    return {name: leastLoadedAgent.name, reason: 'Least loaded agent'};
   }
 
   /**
@@ -870,14 +870,14 @@ class CoordinatorAgent extends AgentBase {
    */
   selectRecoveryStrategy(errorAnalysis, retryCount) {
     if (retryCount >= 3) {
-      return { type: 'fallback', action: 'use_alternative_method' };
+      return {type: 'fallback', action: 'use_alternative_method'};
     }
 
     if (errorAnalysis.recoverable) {
-      return { type: 'retry', action: 'retry_with_backoff' };
+      return {type: 'retry', action: 'retry_with_backoff'};
     }
 
-    return { type: 'fallback', action: 'use_alternative_method' };
+    return {type: 'fallback', action: 'use_alternative_method'};
   }
 
   /**
@@ -886,7 +886,7 @@ class CoordinatorAgent extends AgentBase {
   async executeRecoveryStrategy(strategy, context) {
     switch (strategy.type) {
       case 'retry':
-        return await this.retryFailedTask({ task: context.task, maxRetries: 1 });
+        return await this.retryFailedTask({task: context.task, maxRetries: 1});
       case 'fallback':
         return await this.fallbackStrategy({
           primaryTask: context.task,
@@ -925,7 +925,7 @@ class CoordinatorAgent extends AgentBase {
    * 延迟函数
    */
   delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -1077,13 +1077,13 @@ class WorkflowEngine {
    * 执行步骤 - Fix: Route through ChatManager instead of recursive coordinatorAgent.executeFunction
    */
   async executeStep(step, parameters) {
-    const stepParameters = { ...parameters, ...step.parameters };
+    const stepParameters = {...parameters, ...step.parameters};
 
     // Fix: Route through ChatManager to avoid recursive executeFunction -> performExecution loop
     const chatManager = this.coordinatorAgent.multiAgentSystem.chatManager;
     if (chatManager && typeof chatManager.executeToolByName === 'function') {
       try {
-        return await chatManager.executeToolByName(step.type, stepParameters);
+        return await chatManager.executeToolByName(step.type, stepParameters, {bypassAgent: true});
       } catch (error) {
         console.warn(`WorkflowEngine: ChatManager execution failed for step ${step.type}, trying agent system`);
       }
@@ -1107,13 +1107,13 @@ class WorkflowEngine {
     const sorted = [];
     const visited = new Set();
 
-    const visit = step => {
+    const visit = (step) => {
       if (visited.has(step.id)) return;
       visited.add(step.id);
 
-      const stepDeps = dependencies.filter(d => d.to === step.id);
+      const stepDeps = dependencies.filter((d) => d.to === step.id);
       for (const dep of stepDeps) {
-        const depStep = steps.find(s => s.id === dep.from);
+        const depStep = steps.find((s) => s.id === dep.from);
         if (depStep) visit(depStep);
       }
 

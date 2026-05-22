@@ -6,9 +6,10 @@ class ToolExecutionService {
   constructor(app, chatManager) {
     this.app = app;
     this.chatManager = chatManager;
+    this.activeAgentExecutions = new Set();
   }
 
-  async execute(toolName, parameters) {
+  async execute(toolName, parameters, options = {}) {
     try {
       // --- LEGACY ALIAS RESOLUTION ---
       const legacyAliases = {
@@ -27,7 +28,7 @@ class ToolExecutionService {
         ['update_agent_setting', 'get_agent_settings', 'toggle_agent_mode'].includes(toolName) &&
         this.chatManager.agentSettingsManager
       ) {
-        const handlerName = toolName.replace(/([-_][a-z])/gi, $1 => $1.toUpperCase().replace('-', '').replace('_', ''));
+        const handlerName = toolName.replace(/([-_][a-z])/gi, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
         if (typeof this.chatManager.agentSettingsManager[handlerName] === 'function') {
           return await this.chatManager.agentSettingsManager[handlerName](parameters);
         }
@@ -80,8 +81,14 @@ class ToolExecutionService {
       }
 
       // --- PRIORITY 3: MULTI-AGENT ROUTING (when enabled) ---
-      if (this.chatManager.agentSystemEnabled && this.chatManager.multiAgentSystem) {
+      if (
+        this.chatManager.agentSystemEnabled &&
+        this.chatManager.multiAgentSystem &&
+        !options.bypassAgent &&
+        !this.activeAgentExecutions.has(toolName)
+      ) {
         try {
+          this.activeAgentExecutions.add(toolName);
           const agentResult = await this.chatManager.multiAgentSystem.executeTool(toolName, parameters);
           // Only accept the result if it's clearly successful with a defined result
           if (agentResult && agentResult.success === true && agentResult.result !== undefined) {
@@ -90,9 +97,11 @@ class ToolExecutionService {
           // If the agent couldn't handle it (success=false or no result), fall through
         } catch (agentError) {
           console.log(
-            `[ToolExecutionService] Multi-agent routing failed for ${toolName}: ${agentError.message}, falling through`
+              `[ToolExecutionService] Multi-agent routing failed for ${toolName}: ${agentError.message}, falling through`,
           );
           // Fall through to other priorities
+        } finally {
+          this.activeAgentExecutions.delete(toolName);
         }
       }
 
@@ -115,7 +124,7 @@ class ToolExecutionService {
         }
       }
       if (this.chatManager.mcpServerManager) {
-        const mcpTool = this.chatManager.mcpServerManager.getAllAvailableTools().find(t => t.name === toolName);
+        const mcpTool = this.chatManager.mcpServerManager.getAllAvailableTools().find((t) => t.name === toolName);
         if (mcpTool) {
           return await this.chatManager.mcpServerManager.executeToolOnServer(mcpTool.serverId, toolName, parameters);
         }
@@ -143,7 +152,7 @@ class ToolExecutionService {
           } else {
             // Tool has plugin format but isn't in the integrator map - try PluginManager directly
             console.log(
-              `[ToolExecutionService] Plugin tool '${toolName}' not in integrator map, trying PluginManager.executeFunctionByName`
+                `[ToolExecutionService] Plugin tool '${toolName}' not in integrator map, trying PluginManager.executeFunctionByName`,
             );
             if (
               this.chatManager.pluginManager &&
@@ -156,8 +165,8 @@ class ToolExecutionService {
                 }
               } catch (e) {
                 console.warn(
-                  `[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`,
-                  e.message
+                    `[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`,
+                    e.message,
                 );
                 return {
                   success: false,
@@ -170,7 +179,7 @@ class ToolExecutionService {
         } else {
           // No integrator but tool name looks like a plugin - try PluginManager directly
           console.log(
-            `[ToolExecutionService] No PluginFunctionCallsIntegrator, trying PluginManager for '${toolName}'`
+              `[ToolExecutionService] No PluginFunctionCallsIntegrator, trying PluginManager for '${toolName}'`,
           );
           if (
             this.chatManager &&
@@ -184,8 +193,8 @@ class ToolExecutionService {
               }
             } catch (e) {
               console.warn(
-                `[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`,
-                e.message
+                  `[ToolExecutionService] PluginManager.executeFunctionByName failed for '${toolName}':`,
+                  e.message,
               );
               return {
                 success: false,
@@ -198,7 +207,7 @@ class ToolExecutionService {
 
         // If we reach here, the plugin tool was advertised but has no executable implementation
         console.warn(
-          `[ToolExecutionService] Plugin tool '${toolName}' was not found. The plugin may not be installed or the function is not registered.`
+            `[ToolExecutionService] Plugin tool '${toolName}' was not found. The plugin may not be installed or the function is not registered.`,
         );
         return {
           success: false,
@@ -265,23 +274,23 @@ class ToolExecutionService {
         case 'navigate_to':
           if (this.app.navigationManager) {
             const r = this.app.navigationManager.navigateToPosition(
-              parameters.chromosome,
-              parameters.start,
-              parameters.end
+                parameters.chromosome,
+                parameters.start,
+                parameters.end,
             );
-            return { success: r.success, chromosome: r.chromosome, start: r.start, end: r.end };
+            return {success: r.success, chromosome: r.chromosome, start: r.start, end: r.end};
           }
           break;
         case 'zoom_in':
           if (this.app.navigationManager) {
             const r = this.app.navigationManager.zoomIn(parameters.factor || 2);
-            return { success: r.success, factor: r.factor };
+            return {success: r.success, factor: r.factor};
           }
           break;
         case 'zoom_out':
           if (this.app.navigationManager) {
             const r = this.app.navigationManager.zoomOut(parameters.factor || 2);
-            return { success: r.success, factor: r.factor };
+            return {success: r.success, factor: r.factor};
           }
           break;
       }
@@ -304,7 +313,7 @@ class ToolExecutionService {
 
   // Utility to convert snake_case (MCP format) to camelCase (JS method format)
   _toCamelCase(str) {
-    return str.replace(/([-_][a-z])/gi, $1 => {
+    return str.replace(/([-_][a-z])/gi, ($1) => {
       return $1.toUpperCase().replace('-', '').replace('_', '');
     });
   }

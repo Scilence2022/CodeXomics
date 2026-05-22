@@ -6155,7 +6155,7 @@ class ChatManager {
   normalizeParams(params) {
     if (!params || typeof params !== 'object') return {};
     const sorted = {};
-    Object.keys(params).sort().forEach(key => {
+    Object.keys(params).sort().forEach((key) => {
       const val = params[key];
       if (val !== undefined) {
         sorted[key] = (val && typeof val === 'object') ? this.normalizeParams(val) : val;
@@ -8471,12 +8471,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     return this.services.intent.parseMultipleToolCalls(response);
   }
 
-  async executeToolByName(toolName, parameters) {
+  async executeToolByName(toolName, parameters, options = {}) {
     if (!this.services || !this.services.execution) {
       console.error('[ChatManager] ToolExecutionService not initialized!');
       throw new Error('ChatManager services not fully initialized');
     }
-    return await this.services.execution.execute(toolName, parameters);
+    return await this.services.execution.execute(toolName, parameters, options);
   }
 
   /**
