@@ -348,4 +348,78 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
 
     expect(shouldTerminate).toBe(true);
   });
+
+  it('should support case-insensitive track names in LLMContextService policy validation', () => {
+    const mockChatManager = {
+      configManager: {
+        get: (key, fallback) => {
+          if (key === 'chatboxSettings') return {};
+          return fallback;
+        }
+      },
+      parseMultipleToolCalls: () => [],
+      getToolExecutionKey: (toolName, parameters) => `${toolName}:${JSON.stringify(parameters)}`,
+      getToolExecutionCount: () => 0
+    };
+    const service = new LLMContextService({}, mockChatManager);
+    
+    const toolUpper = { tool_name: 'toggle_track', parameters: { trackName: 'BLAST', action: 'show' } };
+    const toolLower = { tool_name: 'toggle_track', parameters: { trackName: 'blast', action: 'show' } };
+    
+    const originalGetElementById = global.document.getElementById;
+    let checkedState = true;
+    global.document.getElementById = (id) => {
+      if (id === 'trackBlast') {
+        return { checked: checkedState };
+      }
+      return null;
+    };
+
+    try {
+      const allowedUpper = service.shouldAllowToolExecution(toolUpper, []);
+      const allowedLower = service.shouldAllowToolExecution(toolLower, []);
+      
+      expect(allowedUpper).toBe(false);
+      expect(allowedLower).toBe(false);
+    } finally {
+      global.document.getElementById = originalGetElementById;
+    }
+  });
+
+  it('should support toggle action in LLMContextService policy validation', () => {
+    const mockChatManager = {
+      configManager: {
+        get: (key, fallback) => {
+          if (key === 'chatboxSettings') return {};
+          return fallback;
+        }
+      },
+      parseMultipleToolCalls: () => [],
+      getToolExecutionKey: (toolName, parameters) => `${toolName}:${JSON.stringify(parameters)}`,
+      getToolExecutionCount: () => 0
+    };
+    const service = new LLMContextService({}, mockChatManager);
+    
+    const toolToggle = { tool_name: 'toggle_track', parameters: { trackName: 'genes', action: 'toggle' } };
+    
+    const originalGetElementById = global.document.getElementById;
+    let checkedState = false;
+    global.document.getElementById = (id) => {
+      if (id === 'trackGenes') {
+        return { checked: checkedState };
+      }
+      return null;
+    };
+
+    try {
+      const allowed = service.shouldAllowToolExecution(toolToggle, []);
+      expect(allowed).toBe(true);
+      
+      checkedState = true;
+      const allowed2 = service.shouldAllowToolExecution(toolToggle, []);
+      expect(allowed2).toBe(true);
+    } finally {
+      global.document.getElementById = originalGetElementById;
+    }
+  });
 });

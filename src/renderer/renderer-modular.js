@@ -3716,10 +3716,14 @@ class GenomeBrowser {
         gc: 'gc',
         variant: 'variants',
         reads: 'reads',
+        read: 'reads',
         primer: 'primers',
         proteins: 'proteins',
+        protein: 'proteins',
         wig: 'wigTracks', // Add WIG tracks to preservation mapping
+        wigTracks: 'wigTracks',
         actions: 'actions', // Add actions track to preservation mapping
+        action: 'actions',
         blast: 'blast', // Add blast track to preservation mapping
         // Remove 'sequence' since it's now handled as bottom panel, not a regular track
       };

@@ -3120,8 +3120,10 @@ class ChatManager {
         visible = true;
       } else if (action === 'hide') {
         visible = false;
+      } else if (action === 'toggle') {
+        visible = undefined;
       } else {
-        throw new Error('Invalid action parameter. Must be "show" or "hide"');
+        throw new Error('Invalid action parameter. Must be "show", "hide" or "toggle"');
       }
     }
 
@@ -3135,6 +3137,7 @@ class ChatManager {
       proteins: 'trackProteins',
       primers: 'trackPrimers',
       primer: 'trackPrimers',
+      wigtracks: 'trackWIG',
       wigTracks: 'trackWIG',
       sequence: 'trackSequence',
       actions: 'trackActions',
@@ -3143,7 +3146,7 @@ class ChatManager {
       blast_results: 'trackBlast',
     };
 
-    const checkboxId = trackMapping[trackName];
+    const checkboxId = trackMapping[trackName.toLowerCase()] || trackMapping[trackName];
     if (!checkboxId) {
       throw new Error(`Unknown track: ${trackName}. Available tracks: ${Object.keys(trackMapping).join(', ')}`);
     }

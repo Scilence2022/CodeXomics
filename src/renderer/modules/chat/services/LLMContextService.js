@@ -1076,17 +1076,13 @@ class LLMContextService {
           const currentAction = tool.parameters?.action;
           const currentVisible = tool.parameters?.visible;
 
-          // Convert action to visible state for comparison
-          let currentVisibleState = currentVisible;
-          if (currentVisibleState === undefined && currentAction) {
-            currentVisibleState = currentAction === 'show';
-          }
-
           // Normalize track names for comparison (treat "action" and "actions" as the same)
           const normalizeTrackName = (trackName) => {
-            if (trackName === 'action') return 'actions';
-            if (trackName === 'primer') return 'primers';
-            return trackName;
+            if (!trackName) return '';
+            const lower = trackName.toLowerCase();
+            if (lower === 'action') return 'actions';
+            if (lower === 'primer') return 'primers';
+            return lower;
           };
 
           const normalizedCurrentTrack = normalizeTrackName(currentTrack);
@@ -1101,6 +1097,7 @@ class LLMContextService {
             proteins: 'trackProteins',
             primers: 'trackPrimers',
             primer: 'trackPrimers',
+            wigtracks: 'trackWIG',
             wigTracks: 'trackWIG',
             sequence: 'trackSequence',
             actions: 'trackActions',
@@ -1109,10 +1106,26 @@ class LLMContextService {
             blast_results: 'trackBlast',
           };
 
-          const checkboxId = trackMapping[currentTrack];
+          // Convert action to visible state for comparison
+          let currentVisibleState = currentVisible;
+          if (currentVisibleState === undefined && currentAction) {
+            if (currentAction === 'show') {
+              currentVisibleState = true;
+            } else if (currentAction === 'hide') {
+              currentVisibleState = false;
+            } else if (currentAction === 'toggle') {
+              const checkboxId = currentTrack ? (trackMapping[currentTrack.toLowerCase()] || trackMapping[currentTrack]) : null;
+              const trackCheckbox = checkboxId ? document.getElementById(checkboxId) : null;
+              if (trackCheckbox) {
+                currentVisibleState = !trackCheckbox.checked;
+              }
+            }
+          }
+
+          const checkboxId = currentTrack ? (trackMapping[currentTrack.toLowerCase()] || trackMapping[currentTrack]) : null;
           if (checkboxId) {
             const trackCheckbox = document.getElementById(checkboxId);
-            if (trackCheckbox && trackCheckbox.checked === currentVisibleState) {
+            if (trackCheckbox && currentVisibleState !== undefined && trackCheckbox.checked === currentVisibleState) {
               console.log(
                   `🚫 [Policy] Track ${currentTrack} is already ${currentVisibleState ? 'visible' : 'hidden'}, no need to toggle`,
               );
@@ -1148,14 +1161,32 @@ class LLMContextService {
                     // Convert recent action to visible state for comparison
                     let recentVisibleState = recentVisible;
                     if (recentVisibleState === undefined && recentAction) {
-                      recentVisibleState = recentAction === 'show';
+                      if (recentAction === 'show') {
+                        recentVisibleState = true;
+                      } else if (recentAction === 'hide') {
+                        recentVisibleState = false;
+                      } else if (recentAction === 'toggle') {
+                        let foundState = null;
+                        if (i + 1 < conversationHistory.length && conversationHistory[i + 1].role === 'tool') {
+                          try {
+                            const toolResult = JSON.parse(conversationHistory[i + 1].content);
+                            if (toolResult && toolResult.visible !== undefined) {
+                              foundState = toolResult.visible;
+                            }
+                          } catch (e) {}
+                        }
+                        const checkboxIdRecent = recentTrack ? (trackMapping[recentTrack.toLowerCase()] || trackMapping[recentTrack]) : null;
+                        const trackCheckboxRecent = checkboxIdRecent ? document.getElementById(checkboxIdRecent) : null;
+                        recentVisibleState = foundState !== null ? foundState : (trackCheckboxRecent ? !trackCheckboxRecent.checked : undefined);
+                      }
                     }
 
                     // If same track and same action, block it
                     const normalizedRecentTrack = normalizeTrackName(recentTrack);
                     if (
                       normalizedCurrentTrack === normalizedRecentTrack &&
-                      currentVisibleState === recentVisibleState
+                      currentVisibleState === recentVisibleState &&
+                      currentVisibleState !== undefined
                     ) {
                       console.log(
                           `🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`,
@@ -1184,14 +1215,32 @@ class LLMContextService {
                       // Convert recent action to visible state for comparison
                       let recentVisibleState = recentVisible;
                       if (recentVisibleState === undefined && recentAction) {
-                        recentVisibleState = recentAction === 'show';
+                        if (recentAction === 'show') {
+                          recentVisibleState = true;
+                        } else if (recentAction === 'hide') {
+                          recentVisibleState = false;
+                        } else if (recentAction === 'toggle') {
+                          let foundState = null;
+                          if (i + 1 < conversationHistory.length && conversationHistory[i + 1].role === 'tool') {
+                            try {
+                              const toolResult = JSON.parse(conversationHistory[i + 1].content);
+                              if (toolResult && toolResult.visible !== undefined) {
+                                foundState = toolResult.visible;
+                              }
+                            } catch (e) {}
+                          }
+                          const checkboxIdRecent = recentTrack ? (trackMapping[recentTrack.toLowerCase()] || trackMapping[recentTrack]) : null;
+                          const trackCheckboxRecent = checkboxIdRecent ? document.getElementById(checkboxIdRecent) : null;
+                          recentVisibleState = foundState !== null ? foundState : (trackCheckboxRecent ? !trackCheckboxRecent.checked : undefined);
+                        }
                       }
 
                       // If same track and same action, block it
                       const normalizedRecentTrack = normalizeTrackName(recentTrack);
                       if (
                         normalizedCurrentTrack === normalizedRecentTrack &&
-                        currentVisibleState === recentVisibleState
+                        currentVisibleState === recentVisibleState &&
+                        currentVisibleState !== undefined
                       ) {
                         console.log(
                             `🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`,

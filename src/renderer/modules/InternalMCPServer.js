@@ -502,6 +502,10 @@ class InternalMCPServer {
       throw new Error('TrackRenderer not available');
     }
 
+    if (!trackName) {
+      throw new Error('trackName parameter is required');
+    }
+
     // Normalize track name (handle snake_case and variations)
     const trackMapping = {
       genes: 'genes',
@@ -512,9 +516,11 @@ class InternalMCPServer {
       proteins: 'proteins',
       primers: 'primers',
       primer: 'primers',
+      wigtracks: 'wigTracks',
       wigTracks: 'wigTracks',
       wig: 'wigTracks',
       sequence: 'sequence',
+      sequenceline: 'sequenceLine',
       sequenceLine: 'sequenceLine',
       actions: 'actions',
       action: 'actions',
@@ -522,7 +528,7 @@ class InternalMCPServer {
       blast_results: 'blast',
     };
 
-    const normalizedTrackName = trackMapping[trackName] || trackName;
+    const normalizedTrackName = trackMapping[trackName.toLowerCase()] || trackMapping[trackName] || trackName;
 
     // Update track visibility
     this.genomeStudio.trackVisibility = this.genomeStudio.trackVisibility || {};
