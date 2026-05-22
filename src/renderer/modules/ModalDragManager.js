@@ -205,6 +205,8 @@ class ModalDragManager {
       '#chatboxSettingsModal',
       '#advancedSearchModal',
       '#gelElectrophoresisModal',
+      '#enzymeBrowserModal',
+      '#dnaMarkerBrowserModal',
     ];
 
     managementModals.forEach(selector => {

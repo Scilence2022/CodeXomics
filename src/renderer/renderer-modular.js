@@ -1,12 +1,13 @@
+/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 const path = require('path');
 
 // Toast notification helper — replaces alert() with non-blocking notifications
 // Uses NotificationService if available, falls back to alert
-const notify = (function() {
+const notify = (function () {
   let _ns = null;
-  return function(message, type = 'warn') {
+  return function (message, type = 'warn') {
     if (!_ns && typeof NotificationService !== 'undefined') {
       _ns = new NotificationService();
       window._notificationService = _ns;
@@ -662,9 +663,7 @@ class GenomeBrowser {
   initializeMCPBridge() {
     try {
       // Restore persisted toggle state; default to true (on) if never set
-      const mcpBridgeEnabled = this.configManager
-        ? this.configManager.get('mcpBridgeEnabled', true)
-        : true;
+      const mcpBridgeEnabled = this.configManager ? this.configManager.get('mcpBridgeEnabled', true) : true;
 
       if (typeof MCPBridge !== 'undefined') {
         this.mcpBridge = new MCPBridge({ windowId: this.windowId });
@@ -886,6 +885,12 @@ class GenomeBrowser {
     const mcpServerToggle = document.getElementById('mcpServerToggle');
     if (mcpServerToggle) {
       mcpServerToggle.addEventListener('change', () => this.toggleMCPBridge());
+    }
+
+    // MCP Server start/stop button control
+    const mcpServerBtn = document.getElementById('mcpServerBtn');
+    if (mcpServerBtn) {
+      mcpServerBtn.addEventListener('click', () => this.toggleLocalMCPServer());
     }
 
     // Listen for MCP Bridge status changes
@@ -1283,9 +1288,9 @@ class GenomeBrowser {
 
   showDNAMarkerBrowserModal() {
     this._showDatabaseBrowserModal('dnaMarker', 'DNA Marker / Ladder Browser', () => {
-      const dbClass = window.DNAMarkerDatabase;
-      if (!dbClass) return [];
-      const db = new dbClass();
+      const DbClass = window.DNAMarkerDatabase;
+      if (!DbClass) return [];
+      const db = new DbClass();
       return db.getAll().map(m => ({
         id: m.id,
         name: m.name,
@@ -1319,6 +1324,10 @@ class GenomeBrowser {
       `;
       document.body.appendChild(modal);
 
+      if (window.modalDragManager) {
+        window.modalDragManager.makeDraggable(`#${type}BrowserModal`);
+      }
+
       modal.querySelector('.modal-close').addEventListener('click', () => {
         modal.classList.remove('show');
       });
@@ -1327,6 +1336,10 @@ class GenomeBrowser {
       searchInput.addEventListener('input', () => {
         this._populateDatabaseBrowserResults(type, dataLoader, searchInput.value);
       });
+    }
+
+    if (window.modalDragManager) {
+      window.modalDragManager.resetPosition(`#${type}BrowserModal`);
     }
 
     this._populateDatabaseBrowserResults(type, dataLoader, '');
@@ -1346,10 +1359,11 @@ class GenomeBrowser {
     let items = dataLoader();
     if (query) {
       const q = query.toLowerCase();
-      items = items.filter(item =>
-        item.name.toLowerCase().includes(q) ||
-        item.subtitle.toLowerCase().includes(q) ||
-        item.id.toLowerCase().includes(q)
+      items = items.filter(
+        item =>
+          item.name.toLowerCase().includes(q) ||
+          item.subtitle.toLowerCase().includes(q) ||
+          item.id.toLowerCase().includes(q)
       );
     }
 
@@ -1358,7 +1372,9 @@ class GenomeBrowser {
       return;
     }
 
-    const rows = items.map(item => `
+    const rows = items
+      .map(
+        item => `
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.06);">
         <div>
           <div style="font-weight: 600; color: var(--text-primary, #e0e0f0); font-size: 13px;">${item.name}</div>
@@ -1366,7 +1382,9 @@ class GenomeBrowser {
         </div>
         <div style="color: var(--text-secondary, #666688); font-size: 10px; font-family: monospace;">${item.id}</div>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     container.innerHTML = `<div style="margin-bottom: 8px; color: var(--text-secondary, #8888aa); font-size: 11px;">${items.length} item${items.length !== 1 ? 's' : ''} found</div>${rows}`;
   }
@@ -1538,16 +1556,17 @@ class GenomeBrowser {
       'Memory Usage:',
       performance.memory
         ? {
-          used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
-          total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB',
-          limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + ' MB',
-        }
+            used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
+            total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB',
+            limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + ' MB',
+          }
         : 'Not available'
     );
 
     // Show alert with basic performance info
     notify(
-      `Performance Monitor\n\nMemory Usage: ${performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB' : 'Not available'
+      `Performance Monitor\n\nMemory Usage: ${
+        performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB' : 'Not available'
       }\n\nCheck console for detailed information.`,
       'info'
     );
@@ -2468,13 +2487,14 @@ class GenomeBrowser {
                             onclick="genomeBrowser.editMCPServer('${server.id}')">
                         Edit
                     </button>
-                    ${!server.isBuiltin
-          ? `<button class="btn-small btn-danger" 
+                    ${
+                      !server.isBuiltin
+                        ? `<button class="btn-small btn-danger" 
                             onclick="genomeBrowser.removeMCPServer('${server.id}')">
                         Remove
                     </button>`
-          : ''
-        }
+                        : ''
+                    }
                 </div>
             `;
       serversList.appendChild(serverItem);
@@ -2524,8 +2544,8 @@ class GenomeBrowser {
                 <h4 class="category-title">${this.escapeHtml(category)}</h4>
                 <div class="tools-list">
                     ${tools
-          .map(
-            tool => `
+                      .map(
+                        tool => `
                         <div class="tool-item">
                             <div class="tool-info">
                                 <span class="tool-name">${this.escapeHtml(tool.name)}</span>
@@ -2534,8 +2554,8 @@ class GenomeBrowser {
                             <div class="tool-description">${this.escapeHtml(tool.description || 'No description')}</div>
                         </div>
                     `
-          )
-          .join('')}
+                      )
+                      .join('')}
                 </div>
             `;
       toolsList.appendChild(categorySection);
@@ -2548,7 +2568,8 @@ class GenomeBrowser {
 
     if (!statusTextElement || !statusIconElement) return;
 
-    let statusText, statusClass;
+    let statusText;
+    let statusClass;
 
     const mcpManager = this.chatManager?.mcpServerManager;
     if (!mcpManager) {
@@ -3368,22 +3389,18 @@ class GenomeBrowser {
               error: 'ActionManager not available',
             });
           }
-        }
-        // Check if this is a codexomics_chat agent call
-        else if (method === 'codexomics_chat') {
+        } else if (method === 'codexomics_chat') {
+          // Check if this is a codexomics_chat agent call
           try {
             const chatManager = window.genomeBrowser?.chatManager || window.chatManager;
             if (!chatManager) {
               throw new Error('ChatManager not available for agent mode');
             }
 
-            const result = await chatManager.processAgentPrompt(
-              parameters.prompt,
-              {
-                activateMultiAgent: parameters.activate_multi_agent || false,
-                context: parameters.context || {},
-              }
-            );
+            const result = await chatManager.processAgentPrompt(parameters.prompt, {
+              activateMultiAgent: parameters.activate_multi_agent || false,
+              context: parameters.context || {},
+            });
 
             ipcRenderer.send('mcp-tool-response', {
               requestId,
@@ -3397,9 +3414,8 @@ class GenomeBrowser {
               error: error.message,
             });
           }
-        }
-        // Check if this is a utility function call
-        else if (method && method.startsWith('utility_')) {
+        } else if (method && method.startsWith('utility_')) {
+          // Check if this is a utility function call
           const utilityFunctionName = method.substring(8); // Remove 'utility_' prefix
           console.log(`📥 [Renderer] Executing utility tool: ${utilityFunctionName}`);
 
@@ -3459,7 +3475,7 @@ class GenomeBrowser {
     // This is the missing bridge that forwards tools to ChatManager
     ipcRenderer.on('execute-tool-request', async (event, data) => {
       console.log('🔧 [Renderer] Received tool execution request:', data);
-      const { requestId, toolName, parameters, clientId } = data;
+      const { requestId, toolName, parameters } = data;
 
       try {
         let result;
@@ -3470,13 +3486,10 @@ class GenomeBrowser {
           if (!chatManager) {
             throw new Error('ChatManager not available for agent mode');
           }
-          result = await chatManager.processAgentPrompt(
-            parameters.prompt,
-            {
-              activateMultiAgent: parameters.activate_multi_agent || false,
-              context: parameters.context || {},
-            }
-          );
+          result = await chatManager.processAgentPrompt(parameters.prompt, {
+            activateMultiAgent: parameters.activate_multi_agent || false,
+            context: parameters.context || {},
+          });
         }
         // Use ChatManager's tool execution system
         if (window.genomeBrowser && window.genomeBrowser.chatManager) {
@@ -3514,7 +3527,7 @@ class GenomeBrowser {
       console.log('📢 Received notification from main process:', notificationData);
 
       if (notificationData && notificationData.title && notificationData.message) {
-        const { type = 'info', title, message, duration = 5000 } = notificationData;
+        const { type = 'info', title, message } = notificationData;
 
         // Use the existing notification system
         this.showNotification(`${title}: ${message}`, type);
@@ -3547,11 +3560,12 @@ class GenomeBrowser {
     });
 
     // Listen for style changes and broadcast to PM window
-    window.addEventListener('uiStyleChanged', (event) => {
+    window.addEventListener('uiStyleChanged', event => {
       const { style, preset } = event.detail;
       const themeManager = window.themeManager;
       // Prefer isDark from event detail (set by applyDarkModeOverrides), fallback to ThemeManager
-      const isDark = event.detail.isDark !== undefined ? event.detail.isDark : (themeManager ? themeManager.isDarkMode() : false);
+      const isDark =
+        event.detail.isDark !== undefined ? event.detail.isDark : themeManager ? themeManager.isDarkMode() : false;
       const themeData = {
         style: style,
         variables: preset.variables,
@@ -3776,7 +3790,17 @@ class GenomeBrowser {
           currentTabOrder = domOrder;
           console.log('[displayGenomeView] Using current DOM track order:', currentTabOrder);
         } else {
-          currentTabOrder = ['genes', 'primers', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'sequenceLine', 'actions'];
+          currentTabOrder = [
+            'genes',
+            'primers',
+            'gc',
+            'variants',
+            'reads',
+            'wigTracks',
+            'proteins',
+            'sequenceLine',
+            'actions',
+          ];
           console.log('[displayGenomeView] Using default track order:', currentTabOrder);
         }
       }
@@ -4053,7 +4077,7 @@ class GenomeBrowser {
             case 'gc':
               optimalHeight = 120; // Fixed height for GC Content & Skew track
               break;
-            case 'variants':
+            case 'variants': {
               // Check for canvas-based variants or SVG elements
               const canvas = topContent.querySelector('canvas');
               const variantSvg = topContent.querySelector('svg');
@@ -4065,6 +4089,7 @@ class GenomeBrowser {
                 optimalHeight = 60;
               }
               break;
+            }
             case 'proteins':
               optimalHeight = 90;
               break;
@@ -4225,7 +4250,6 @@ class GenomeBrowser {
 
     trackElement.addEventListener('drop', e => {
       e.preventDefault();
-      const draggedTrackType = e.dataTransfer.getData('text/plain');
       const draggedElement = document.querySelector('.dragging');
 
       if (draggedElement && draggedElement !== trackElement) {
@@ -4349,7 +4373,7 @@ class GenomeBrowser {
         let optimalHeight = 80;
 
         switch (trackType) {
-          case 'genes':
+          case 'genes': {
             const geneElements = trackContent.querySelectorAll('.gene-element');
             if (geneElements.length > 0) {
               let maxRow = 0;
@@ -4361,7 +4385,8 @@ class GenomeBrowser {
               optimalHeight = Math.max(100, maxRow + 60);
             }
             break;
-          case 'reads':
+          }
+          case 'reads': {
             const readElements = trackContent.querySelectorAll('.read-element');
             if (readElements.length > 0) {
               let maxRow = 0;
@@ -4373,6 +4398,7 @@ class GenomeBrowser {
               optimalHeight = Math.max(80, maxRow + 40);
             }
             break;
+          }
           case 'gc':
             optimalHeight = 120; // Updated for enhanced GC Content & Skew track
             break;
@@ -5143,7 +5169,7 @@ class GenomeBrowser {
       highlight: true,
       color: '#3b82f6',
       duration: 3000,
-      restore: true
+      restore: true,
     });
   }
 
@@ -5467,7 +5493,7 @@ class GenomeBrowser {
     processedText = processedText.replace(citsPattern, (match, content) => {
       // Remove brackets if present and split by spaces
       const numbers = content
-        .replace(/[\[\]]/g, '')
+        .replace(/[[\]]/g, '')
         .split(/\s+/)
         .filter(p => p.trim());
       const citationNumbers = numbers.map(num => {
@@ -5558,7 +5584,7 @@ class GenomeBrowser {
       highlight: true,
       color: '#10b981',
       duration: 3000,
-      restore: true
+      restore: true,
     });
   }
 
@@ -5589,7 +5615,11 @@ class GenomeBrowser {
       if (primer.strand === -1) {
         // Reverse complement
         const complement = { A: 'T', T: 'A', G: 'C', C: 'G', N: 'N' };
-        primerSequence = primerSequence.split('').reverse().map(b => complement[b] || b).join('');
+        primerSequence = primerSequence
+          .split('')
+          .reverse()
+          .map(b => complement[b] || b)
+          .join('');
       }
     }
 
@@ -5611,7 +5641,7 @@ class GenomeBrowser {
         tm: tmMatch ? parseFloat(tmMatch[1]) : null,
         gcContent: gcMatch ? parseFloat(gcMatch[1]) : null,
         hasHairpinPotential: null,
-        length: primerSequence.length || length
+        length: primerSequence.length || length,
       };
     }
 
@@ -5715,10 +5745,13 @@ class GenomeBrowser {
     // Sequence display
     if (primerSequence) {
       // Color-code the nucleotides
-      const coloredSeq = primerSequence.split('').map(b => {
-        const colors = { A: '#22c55e', T: '#ef4444', G: '#f59e0b', C: '#3b82f6' };
-        return `<span style="color: ${colors[b] || '#888'}">${b}</span>`;
-      }).join('');
+      const coloredSeq = primerSequence
+        .split('')
+        .map(b => {
+          const colors = { A: '#22c55e', T: '#ef4444', G: '#f59e0b', C: '#3b82f6' };
+          return `<span style="color: ${colors[b] || '#888'}">${b}</span>`;
+        })
+        .join('');
 
       html += `
       <div class="primer-sequence-section">
@@ -5855,7 +5888,13 @@ class GenomeBrowser {
                         </div>
                     `;
           const lowerKey = key.toLowerCase();
-          if (lowerKey.startsWith('go_') || lowerKey.startsWith('go ') || lowerKey === 'ontology_term' || lowerKey.includes('go process') || key === 'GO Process') {
+          if (
+            lowerKey.startsWith('go_') ||
+            lowerKey.startsWith('go ') ||
+            lowerKey === 'ontology_term' ||
+            lowerKey.includes('go process') ||
+            key === 'GO Process'
+          ) {
             functionAttributesHtml += attrHtml;
           } else if (lowerKey === 'ec_number' || lowerKey === 'ko' || lowerKey === 'kegg' || lowerKey === 'pathway') {
             pathwayAttributesHtml += attrHtml;
@@ -5888,12 +5927,16 @@ class GenomeBrowser {
                     <div class="gene-name">${geneName}</div>
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                         <span class="gene-type-badge" style="margin-bottom: 0;">${geneType}</span>
-                        ${operonInfo ? `
+                        ${
+                          operonInfo
+                            ? `
                             <div class="gene-operon-tag" style="display: flex; align-items: center; gap: 6px; padding: 1px 8px; background: var(--bg-hover); border-radius: 4px; border: 1px solid var(--border-color); font-size: 11px; font-weight: 600; color: var(--text-color);">
                                 <div style="width: 8px; height: 8px; background: ${operonInfo.color}; border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);"></div>
                                 <span>Operon: ${operonInfo.operonName || operonInfo.name}</span>
                             </div>
-                        ` : ''}
+                        `
+                            : ''
+                        }
                     </div>
                     <div class="gene-position">Position: ${position}</div>
                     <div class="gene-strand">Strand: ${strand} | Length: ${length} bp</div>
@@ -5951,7 +5994,7 @@ class GenomeBrowser {
     // ---------------- General Tab ----------------
     html += `<div class="gene-tab-content active" id="tab-general">`;
     html += generalAttributesHtml;
-    
+
     // Appending Literature to General Tab
     const citationList = this.generateUnifiedCitationList();
     if (citationList) {
@@ -6108,7 +6151,7 @@ class GenomeBrowser {
 
         // Add active class to clicked button
         btn.classList.add('active');
-        
+
         // Show corresponding content
         const tabId = `tab-${btn.dataset.tab}`;
         const targetContent = document.getElementById(tabId);
@@ -6544,7 +6587,7 @@ class GenomeBrowser {
     const position = mutation.position.toLocaleString();
     const type = mutation.type.charAt(0).toUpperCase() + mutation.type.slice(1);
 
-    let detailsHTML = `
+    const detailsHTML = `
             <div class="read-mutation-details">
                 <div class="mutation-header" style="background: rgba(255, 152, 0, 0.1); border-left: 4px solid #FF9800; padding: 12px; margin-bottom: 15px; border-radius: 0 4px 4px 0;">
                     <div style="font-size: 14px; font-weight: 600; color: #E65100;">READ-LEVEL MUTATION</div>
@@ -6681,7 +6724,7 @@ class GenomeBrowser {
 
     // Pattern for database cross-references - expanded to include many more databases
     const dbXrefPattern =
-      /\b(UniProt|SwissProt|TrEMBL|InterPro|Pfam|KEGG|COG|KO|PROSITE|SMART|SUPERFAMILY|PRINTS|PANTHER|TIGRFAM|HAMAP|PIR|PDB|RefSeq|GenBank|EMBL|DDBJ|CDD|OrthoDB|EggNOG|STRING|Reactome|BioCyc|MetaCyc|EcoCyc|ENZYME|BRENDA|ExPASy|NCBI|ENSEMBL|FlyBase|WormBase|SGD|MGI|RGD|ZFIN|TAIR|MaizeGDB|Gramene|PlantGDB|Phytozome|JGI|DOI|PubChem|ChEBI|ChEMBL|DrugBank)[:=]\s*([A-Za-z0-9_\.-:]+)\b/gi;
+      /\b(UniProt|SwissProt|TrEMBL|InterPro|Pfam|KEGG|COG|KO|PROSITE|SMART|SUPERFAMILY|PRINTS|PANTHER|TIGRFAM|HAMAP|PIR|PDB|RefSeq|GenBank|EMBL|DDBJ|CDD|OrthoDB|EggNOG|STRING|Reactome|BioCyc|MetaCyc|EcoCyc|ENZYME|BRENDA|ExPASy|NCBI|ENSEMBL|FlyBase|WormBase|SGD|MGI|RGD|ZFIN|TAIR|MaizeGDB|Gramene|PlantGDB|Phytozome|JGI|DOI|PubChem|ChEBI|ChEMBL|DrugBank)[:=]\s*([A-Za-z0-9_\-.:]+)\b/gi;
     enhancedValue = enhancedValue.replace(dbXrefPattern, (match, database, id) => {
       let url = '';
       let title = '';
@@ -6891,7 +6934,7 @@ class GenomeBrowser {
     });
 
     // Pattern for EC numbers: EC:X.X.X.X or EC X.X.X.X
-    const ecPattern = /\b(EC:?\s*([\d\.-]+))\b/gi;
+    const ecPattern = /\b(EC:?\s*([\d.-]+))\b/gi;
     enhancedValue = enhancedValue.replace(ecPattern, (match, fullMatch, ecNumber) => {
       return `<a href="https://enzyme.expasy.org/EC/${ecNumber}" target="_blank" class="db-xref-link" title="View in ENZYME database">EC:${ecNumber}</a>`;
     });
@@ -7032,13 +7075,14 @@ class GenomeBrowser {
 
     // CDS and Translation sections if applicable
     if (gene.type === 'CDS' || (gene.qualifiers && this.getQualifierValue(gene.qualifiers, 'translation'))) {
-        // For CDS features, the DNA sequence is the CDS
-        const cdsSequence = dnaSequence;
-        const translationStr = this.getQualifierValue(gene.qualifiers, 'translation') || this.translateDNA(cdsSequence, gene.strand);
-        const translation = Array.isArray(translationStr) ? translationStr[0] : translationStr;
-        
-        // CDS Sequence section
-        html += `
+      // For CDS features, the DNA sequence is the CDS
+      const cdsSequence = dnaSequence;
+      const translationStr =
+        this.getQualifierValue(gene.qualifiers, 'translation') || this.translateDNA(cdsSequence, gene.strand);
+      const translation = Array.isArray(translationStr) ? translationStr[0] : translationStr;
+
+      // CDS Sequence section
+      html += `
             <div class="sequence-section" style="margin-bottom: 24px;">
                 <h4><i class="fas fa-code"></i> CDS Sequence (${cdsSequence.length} bp)</h4>
                 <div class="sequence-content">
@@ -7059,11 +7103,11 @@ class GenomeBrowser {
                 </div>
             </div>
         `;
-        
-        // Translation section
-        if (translation) {
-            const translationLength = translation.replace(/\*/g, '').length; // Remove stop codons for length count
-            html += `
+
+      // Translation section
+      if (translation) {
+        const translationLength = translation.replace(/\*/g, '').length; // Remove stop codons for length count
+        html += `
                 <div class="sequence-section">
                     <h4><i class="fas fa-cog"></i> Protein Translation (${translationLength} aa)</h4>
                     <div class="sequence-content">
@@ -7084,10 +7128,10 @@ class GenomeBrowser {
                     </div>
                 </div>
             `;
-        }
+      }
     } else {
-        // DNA Sequence section
-        html += `
+      // DNA Sequence section
+      html += `
             <div class="sequence-section">
                 <h4><i class="fas fa-dna"></i> DNA Sequence (${dnaSequence.length} bp)</h4>
                 <div class="sequence-content">
@@ -7276,7 +7320,9 @@ class GenomeBrowser {
     }
 
     const fullSequence = this.currentSequence[chromosome];
-    let sequence, header, description;
+    let sequence;
+    let header;
+    let description;
 
     switch (type) {
       case 'dna':
@@ -7289,13 +7335,14 @@ class GenomeBrowser {
         description = `${type.toUpperCase()} sequence`;
         break;
 
-      case 'translation':
+      case 'translation': {
         const dnaSeq = fullSequence.substring(start - 1, end);
-        let rawTranslation = this.translateDNA(dnaSeq, parseInt(strand));
+        const rawTranslation = this.translateDNA(dnaSeq, parseInt(strand));
         sequence = rawTranslation.replace(/\*/g, ''); // Remove stop codons
         header = `>${geneName}_TRANSLATION ${chromosome}:${start}-${end} (${strand === '-1' ? '-' : '+'} strand)`;
         description = 'protein translation';
         break;
+      }
 
       default:
         notify('Unknown sequence type');
@@ -7308,7 +7355,8 @@ class GenomeBrowser {
       .writeText(fastaContent)
       .then(() => {
         // Choose appropriate icon and color based on sequence type
-        let icon, color;
+        let icon;
+        let color;
         switch (type) {
           case 'translation':
             icon = '🧬';
@@ -8106,7 +8154,7 @@ class GenomeBrowser {
       return null;
     }
 
-    for (const [chromosome, annotations] of Object.entries(this.currentAnnotations)) {
+    for (const annotations of Object.values(this.currentAnnotations)) {
       if (annotations && annotations.length) {
         const gene = annotations.find(
           g =>
@@ -9169,7 +9217,9 @@ class GenomeBrowser {
     // Note: primerTrackBtn is now a dropdown toggle, so we don't update its active state based on track visibility
     const trackMenuBtn = document.getElementById('togglePrimerTrackMenuBtn');
     if (trackMenuBtn) {
-      trackMenuBtn.innerHTML = isVisible ? '<i class="fas fa-eye-slash"></i> Hide Primer Track' : '<i class="fas fa-eye"></i> Show Primer Track';
+      trackMenuBtn.innerHTML = isVisible
+        ? '<i class="fas fa-eye-slash"></i> Hide Primer Track'
+        : '<i class="fas fa-eye"></i> Show Primer Track';
     }
   }
 
@@ -9675,9 +9725,6 @@ class GenomeBrowser {
   // Set up collapse/expand functionality for sequence header
   setupSequenceHeaderToggle() {
     const sequenceHeader = document.querySelector('.sequence-header');
-    const sequenceContent = document.getElementById('sequenceContent');
-    const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
-    const splitter = document.getElementById('splitter');
 
     if (sequenceHeader && !sequenceHeader.hasAttribute('data-toggle-setup')) {
       sequenceHeader.setAttribute('data-toggle-setup', 'true');
@@ -9810,8 +9857,8 @@ class GenomeBrowser {
 
     const step = Math.max(1, Math.floor(sequence.length / width)); // Calculate step size to fit data to canvas width
 
-    let gcContentData = [];
-    let gcSkewData = [];
+    const gcContentData = [];
+    const gcSkewData = [];
 
     // Calculate GC content and skew for sliding windows
     const windowSize = 500; // Window size for calculation
@@ -9948,7 +9995,6 @@ class GenomeBrowser {
     const statusIndicator = document.getElementById('mcpStatusIndicator');
     const statusDot = statusIndicator?.querySelector('.status-dot');
     const statusTextElement = statusIndicator?.querySelector('.status-text');
-    const toggle = document.getElementById('mcpServerToggle');
 
     if (btn) {
       btn.classList.remove('starting', 'running', 'stopping');
@@ -9977,7 +10023,7 @@ class GenomeBrowser {
           btn.title = 'Unified Claude MCP Server is starting...';
         }
         break;
-      case 'running':
+      case 'running': {
         if (statusText) statusText.textContent = 'Stop';
         const connectedText = info.connectedClients
           ? ` (${info.connectedClients} client${info.connectedClients !== 1 ? 's' : ''})`
@@ -9991,6 +10037,7 @@ class GenomeBrowser {
           btn.title = `Stop ${serverTypeText} (Connect MCP Client to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
         }
         break;
+      }
       case 'stopping':
         if (statusText) statusText.textContent = 'Stopping...';
         if (statusTextElement) statusTextElement.textContent = 'Stopping';
@@ -10063,7 +10110,7 @@ class GenomeBrowser {
     }
   }
 
-  async toggleMCPServer() {
+  async toggleLocalMCPServer() {
     try {
       const statusResult = await ipcRenderer.invoke('mcp-server-status');
 
