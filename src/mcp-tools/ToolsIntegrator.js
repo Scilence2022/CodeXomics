@@ -194,7 +194,12 @@ class ToolsIntegrator {
         } else if (toolName === 'reverse_complement') {
           return { reverseComplement: this.sequenceTools.reverseComplement(parameters.dna) };
         } else if (toolName === 'calculate_molecular_weight') {
-          const seq = parameters.sequence || parameters.dna || parameters.protein || parameters.dna_sequence || parameters.protein_sequence;
+          const seq =
+            parameters.sequence ||
+            parameters.dna ||
+            parameters.protein ||
+            parameters.dna_sequence ||
+            parameters.protein_sequence;
           const type = parameters.type || 'auto';
           const weight = this.sequenceTools.calculateMolecularWeight(seq, type);
           return {
@@ -202,7 +207,7 @@ class ToolsIntegrator {
             molecularWeight: weight,
             dna: seq,
             sequence: seq,
-            length: seq ? seq.length : 0
+            length: seq ? seq.length : 0,
           };
         } else {
           // All other sequence tools (get_sequence, search_sequence_motif, get_coding_sequence)
@@ -352,7 +357,7 @@ class ToolsIntegrator {
             if (!parameters.targetSequence && (parameters.geneName || parameters.chromosome)) {
               return await this.primerTools.executeClientTool(toolName, parameters, clientId);
             }
-            const toNumber = (value) => {
+            const toNumber = value => {
               const parsed = Number(value);
               return Number.isFinite(parsed) ? parsed : undefined;
             };
@@ -362,8 +367,10 @@ class ToolsIntegrator {
             return this.primerTools.designPrimers(parameters.targetSequence, {
               targetTm: toNumber(parameters.targetTm),
               tmTolerance: toNumber(parameters.tmTolerance),
-              minLen: toNumber(parameters.minPrimerLength ?? parameters.minLen ?? parameters.minLength) ?? exactPrimerLength,
-              maxLen: toNumber(parameters.maxPrimerLength ?? parameters.maxLen ?? parameters.maxLength) ?? exactPrimerLength,
+              minLen:
+                toNumber(parameters.minPrimerLength ?? parameters.minLen ?? parameters.minLength) ?? exactPrimerLength,
+              maxLen:
+                toNumber(parameters.maxPrimerLength ?? parameters.maxLen ?? parameters.maxLength) ?? exactPrimerLength,
               minProductSize: toNumber(parameters.minProductSize),
               maxProductSize: toNumber(parameters.maxProductSize),
               minGcContent: toNumber(parameters.minGcContent ?? parameters.minGc),
@@ -378,7 +385,14 @@ class ToolsIntegrator {
             return this.primerTools.findBindingSites(
               parameters.primerSequence,
               parameters.templateSequence,
-              parameters.maxMismatches
+              parameters.maxMismatches,
+              {
+                max3PrimeMismatches: parameters.max3PrimeMismatches,
+                minBindingTm: parameters.minBindingTm,
+                scoringMode: parameters.scoringMode,
+                naConcentration: parameters.naConcentration,
+                primerConcentration: parameters.primerConcentration,
+              }
             );
           default:
             // add_primer_annotation and any future UI tools go to client
@@ -466,20 +480,24 @@ class ToolsIntegrator {
   _buildAgentPromptFromToolCall(toolName, parameters) {
     // Map of tool names to natural language prompt templates
     const promptTemplates = {
-      navigate_to_position: (p) => `Navigate to position on chromosome ${p.chromosome || 'current'} at ${p.start ? `${p.start}-${p.end}` : `position ${p.position}`}`,
-      search_features: (p) => `Search for features matching "${p.query}"${p.featureType ? ` of type ${p.featureType}` : ''}`,
-      get_sequence: (p) => `Get the DNA sequence from ${p.chromosome || 'current chromosome'}:${p.start}-${p.end}`,
-      compute_gc: (p) => `Calculate GC content of the sequence: ${p.sequence?.substring(0, 50)}${p.sequence?.length > 50 ? '...' : ''}`,
-      search_uniprot_database: (p) => `Search UniProt database for "${p.query}"${p.searchType ? ` by ${p.searchType}` : ''}`,
-      load_genbank_file: (p) => `Load the GenBank file: ${p.file_path || p.filePath}`,
-      export_genbank: (p) => `Export the current genome as GenBank format`,
-      get_coding_sequence: (p) => `Get the coding sequence for gene ${p.identifier || p.geneName || p.gene_name}`,
-      blast_search: (p) => `Perform a ${p.blastType || 'BLAST'} search with the given sequence`,
-      zoom_in: (p) => `Zoom in by factor ${p.factor || 2}`,
-      zoom_out: (p) => `Zoom out by factor ${p.factor || 2}`,
-      jump_to_gene: (p) => `Jump to gene ${p.geneName}`,
-      find_gene_by_name: (p) => `Search for gene named "${p.name}"`,
-      find_gene: (p) => `Search for gene named "${p.name}"`,
+      navigate_to_position: p =>
+        `Navigate to position on chromosome ${p.chromosome || 'current'} at ${p.start ? `${p.start}-${p.end}` : `position ${p.position}`}`,
+      search_features: p =>
+        `Search for features matching "${p.query}"${p.featureType ? ` of type ${p.featureType}` : ''}`,
+      get_sequence: p => `Get the DNA sequence from ${p.chromosome || 'current chromosome'}:${p.start}-${p.end}`,
+      compute_gc: p =>
+        `Calculate GC content of the sequence: ${p.sequence?.substring(0, 50)}${p.sequence?.length > 50 ? '...' : ''}`,
+      search_uniprot_database: p =>
+        `Search UniProt database for "${p.query}"${p.searchType ? ` by ${p.searchType}` : ''}`,
+      load_genbank_file: p => `Load the GenBank file: ${p.file_path || p.filePath}`,
+      export_genbank: p => `Export the current genome as GenBank format`,
+      get_coding_sequence: p => `Get the coding sequence for gene ${p.identifier || p.geneName || p.gene_name}`,
+      blast_search: p => `Perform a ${p.blastType || 'BLAST'} search with the given sequence`,
+      zoom_in: p => `Zoom in by factor ${p.factor || 2}`,
+      zoom_out: p => `Zoom out by factor ${p.factor || 2}`,
+      jump_to_gene: p => `Jump to gene ${p.geneName}`,
+      find_gene_by_name: p => `Search for gene named "${p.name}"`,
+      find_gene: p => `Search for gene named "${p.name}"`,
     };
 
     const template = promptTemplates[toolName];
@@ -653,7 +671,7 @@ class ToolsIntegrator {
     const categories = this.getToolsByCategory();
     let category = 'unknown';
 
-    for (const [catKey, catData] of Object.entries(categories)) {
+    for (const [, catData] of Object.entries(categories)) {
       if (catData.tools.includes(toolName)) {
         category = catData.name;
         break;

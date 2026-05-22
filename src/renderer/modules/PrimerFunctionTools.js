@@ -28,7 +28,9 @@ class PrimerFunctionTools {
     this._resolveDesigner();
 
     if (!this.PrimerDesigner) {
-      throw new Error('PrimerDesigner is not available. Ensure PrimerDesigner.js is loaded before calling primer tools.');
+      throw new Error(
+        'PrimerDesigner is not available. Ensure PrimerDesigner.js is loaded before calling primer tools.'
+      );
     }
   }
 
@@ -51,25 +53,25 @@ class PrimerFunctionTools {
       return {
         name: schema ? schema.name : name,
         description: schema ? schema.description : name,
-        parameters: schema ? schema.parameters : {type: 'object', properties: {}},
+        parameters: schema ? schema.parameters : { type: 'object', properties: {} },
         execute: executeFn,
       };
     };
 
     this.tools = {
-      calculate_primer_properties: buildTool('calculate_primer_properties', async (params) => {
+      calculate_primer_properties: buildTool('calculate_primer_properties', async params => {
         await this._ensureDesigner();
         return this.PrimerDesigner.calculateProperties(params.sequence);
       }),
 
-      design_primers: buildTool('design_primers', async (params) => {
+      design_primers: buildTool('design_primers', async params => {
         await this._ensureDesigner();
         const options = this._getDesignOptions(params);
         const pair = this.PrimerDesigner.designPrimerPair(params.targetSequence, options);
-        return pair || {error: 'Could not find a valid primer pair meeting the criteria in the given sequence'};
+        return pair || { error: 'Could not find a valid primer pair meeting the criteria in the given sequence' };
       }),
 
-      find_primer_binding_sites: buildTool('find_primer_binding_sites', async (params) => {
+      find_primer_binding_sites: buildTool('find_primer_binding_sites', async params => {
         await this._ensureDesigner();
         const primerSeq = params.primerSequence || params.sequence || params.primer;
         if (!primerSeq) {
@@ -78,23 +80,36 @@ class PrimerFunctionTools {
         return {
           queryLength: primerSeq.length,
           sites: this.PrimerDesigner.findBindingSites(
-              primerSeq,
-              params.templateSequence,
-              params.maxMismatches || 0,
+            primerSeq,
+            params.templateSequence,
+            params.maxMismatches !== undefined ? params.maxMismatches : 3,
+            {
+              max3PrimeMismatches: params.max3PrimeMismatches,
+              minBindingTm: params.minBindingTm,
+              scoringMode: params.scoringMode || 'fast',
+              naConcentration: params.naConcentration,
+              primerConcentration: params.primerConcentration,
+            }
           ),
         };
       }),
 
-      add_primer_annotation: buildTool('add_primer_annotation', async (params) => {
-        throw new Error('add_primer_annotation requires UI interaction — use PrimerChatManagerIntegration.primerAddAnnotation instead');
+      add_primer_annotation: buildTool('add_primer_annotation', async params => {
+        throw new Error(
+          'add_primer_annotation requires UI interaction — use PrimerChatManagerIntegration.primerAddAnnotation instead'
+        );
       }),
 
-      list_primer_annotations: buildTool('list_primer_annotations', async (params) => {
-        throw new Error('list_primer_annotations requires UI state — use PrimerService through ChatBox or MCP client routing');
+      list_primer_annotations: buildTool('list_primer_annotations', async params => {
+        throw new Error(
+          'list_primer_annotations requires UI state — use PrimerService through ChatBox or MCP client routing'
+        );
       }),
 
-      clear_primer_annotations: buildTool('clear_primer_annotations', async (params) => {
-        throw new Error('clear_primer_annotations requires UI state — use PrimerService through ChatBox or MCP client routing');
+      clear_primer_annotations: buildTool('clear_primer_annotations', async params => {
+        throw new Error(
+          'clear_primer_annotations requires UI state — use PrimerService through ChatBox or MCP client routing'
+        );
       }),
     };
   }
@@ -117,7 +132,7 @@ class PrimerFunctionTools {
   }
 
   _getDesignOptions(params) {
-    const toNumber = (value) => {
+    const toNumber = value => {
       const parsed = Number(value);
       return Number.isFinite(parsed) ? parsed : undefined;
     };
@@ -140,7 +155,7 @@ class PrimerFunctionTools {
   }
 
   getAvailableTools() {
-    return Object.values(this.tools).map((tool) => ({
+    return Object.values(this.tools).map(tool => ({
       name: tool.name,
       description: tool.description,
       parameters: tool.parameters,

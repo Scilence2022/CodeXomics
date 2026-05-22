@@ -1903,7 +1903,11 @@ class BuiltInToolsIntegration {
           reason: 'Primer properties keywords detected',
         });
       }
-      if (/\b(binding\s+sites?|anneal\w*|specificity|target|match)\b/i.test(query)) {
+      if (
+        /\b(binding\s+sites?|anneal\w*|specificity|target|match|mismatch|off.?target|non.?specific|cross.?react|thermodynamic|binding\s+.*?strength)\b/i.test(
+          query
+        )
+      ) {
         relevantTools.push({
           name: 'find_primer_binding_sites',
           confidence: 0.95,

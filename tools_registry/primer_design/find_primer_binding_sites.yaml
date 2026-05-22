@@ -1,6 +1,6 @@
 name: find_primer_binding_sites
-version: 1.0.0
-description: 'Search for binding sites of a specific primer sequence within a larger template. Finds both forward and reverse occurrences.'
+version: 2.0.0
+description: "Search for binding sites of a primer sequence within a template, with scientific mismatch tolerance. Uses position-dependent scoring (3' end weighted), nearest-neighbor thermodynamic Tm estimation, and configurable filtering. Finds both forward and reverse-complement binding sites."
 category: primer_design
 keywords:
   - primer
@@ -35,5 +35,24 @@ parameters:
       description: 'Optional. The larger template DNA sequence to search within. If not provided, the tool will automatically search the current active genome or chromosome.'
     maxMismatches:
       type: number
-      description: 'Maximum number of mismatched bases allowed (default: 0)'
+      description: 'Maximum number of mismatched bases allowed (default: 3)'
+    max3PrimeMismatches:
+      type: number
+      description: 'Maximum mismatches allowed in the last 5 bases at the 3-prime end of the primer (default: 1).'
+      minimum: 0
+    minBindingTm:
+      type: number
+      description: "Minimum predicted binding Tm in °C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'."
+    scoringMode:
+      type: string
+      enum: ['fast', 'thermodynamic']
+      description: "'fast' (default): uses position-weighted Hamming scoring. 'thermodynamic': adds nearest-neighbor Tm prediction for each binding site."
+    naConcentration:
+      type: number
+      description: 'Sodium ion concentration in M (default: 0.05, representing 50 mM).'
+      minimum: 0
+    primerConcentration:
+      type: number
+      description: 'Total primer concentration in M (default: 2.5e-7, representing 250 nM).'
+      minimum: 0
   required: []

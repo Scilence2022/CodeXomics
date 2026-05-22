@@ -7,7 +7,8 @@
 const PRIMER_TOOL_SCHEMAS = {
   calculate_primer_properties: {
     name: 'calculate_primer_properties',
-    description: 'Calculate biochemical properties like melting temperature (Tm), GC content, and length for a given DNA primer sequence (18-35 bp). Use this to check if a sequence is suitable as a PCR or sequencing primer.',
+    description:
+      'Calculate biochemical properties like melting temperature (Tm), GC content, and length for a given DNA primer sequence (18-35 bp). Use this to check if a sequence is suitable as a PCR or sequencing primer.',
     parameters: {
       type: 'object',
       properties: {
@@ -22,13 +23,15 @@ const PRIMER_TOOL_SCHEMAS = {
 
   design_primers: {
     name: 'design_primers',
-    description: 'Design a forward and reverse primer pair to amplify a target DNA sequence. Use upstreamBp/downstreamBp when the amplicon must include flanking bases; both are interpreted relative to gene strand, so reverse-strand upstream is higher genomic coordinates and reverse-strand downstream is lower genomic coordinates. Provide at least 150bp of sequence, or use geneName or chromosome/start/end to fetch it.',
+    description:
+      'Design a forward and reverse primer pair to amplify a target DNA sequence. Use upstreamBp/downstreamBp when the amplicon must include flanking bases; both are interpreted relative to gene strand, so reverse-strand upstream is higher genomic coordinates and reverse-strand downstream is lower genomic coordinates. Provide at least 150bp of sequence, or use geneName or chromosome/start/end to fetch it.',
     parameters: {
       type: 'object',
       properties: {
         targetSequence: {
           type: 'string',
-          description: 'The full DNA sequence region containing the desired amplicon. If not provided, use geneName or chromosome/start/end.',
+          description:
+            'The full DNA sequence region containing the desired amplicon. If not provided, use geneName or chromosome/start/end.',
         },
         geneName: {
           type: 'string',
@@ -36,7 +39,8 @@ const PRIMER_TOOL_SCHEMAS = {
         },
         upstreamBp: {
           type: 'number',
-          description: 'Number of bases upstream of the gene translation/start boundary that must be included in the PCR product. For reverse-strand genes, upstream means higher genomic coordinates.',
+          description:
+            'Number of bases upstream of the gene translation/start boundary that must be included in the PCR product. For reverse-strand genes, upstream means higher genomic coordinates.',
           minimum: 0,
         },
         upstreamBases: {
@@ -51,7 +55,8 @@ const PRIMER_TOOL_SCHEMAS = {
         },
         downstreamBp: {
           type: 'number',
-          description: 'Number of bases downstream of the gene stop/end boundary that must be included in the PCR product. For reverse-strand genes, downstream means lower genomic coordinates.',
+          description:
+            'Number of bases downstream of the gene stop/end boundary that must be included in the PCR product. For reverse-strand genes, downstream means lower genomic coordinates.',
           minimum: 0,
         },
         downstreamBases: {
@@ -66,12 +71,14 @@ const PRIMER_TOOL_SCHEMAS = {
         },
         upstreamPrimerBuffer: {
           type: 'number',
-          description: 'Extra biologically upstream bases to search before the required upstream interval so primers can bind while still including upstreamBp bases (default: 75).',
+          description:
+            'Extra biologically upstream bases to search before the required upstream interval so primers can bind while still including upstreamBp bases (default: 75).',
           minimum: 0,
         },
         downstreamPrimerBuffer: {
           type: 'number',
-          description: 'Extra biologically downstream bases to search past the gene end so the reverse primer can bind outside the CDS when possible (default: 75).',
+          description:
+            'Extra biologically downstream bases to search past the gene end so the reverse primer can bind outside the CDS when possible (default: 75).',
           minimum: 0,
         },
         chromosome: {
@@ -92,12 +99,14 @@ const PRIMER_TOOL_SCHEMAS = {
         },
         tmTolerance: {
           type: 'number',
-          description: 'Allowed Tm deviation from targetTm in Celsius before relaxed search tiers are tried (default: 2.0).',
+          description:
+            'Allowed Tm deviation from targetTm in Celsius before relaxed search tiers are tried (default: 2.0).',
           minimum: 0,
         },
         primerLength: {
           type: 'number',
-          description: 'Exact primer length to use. Sets both minPrimerLength and maxPrimerLength unless those are provided.',
+          description:
+            'Exact primer length to use. Sets both minPrimerLength and maxPrimerLength unless those are provided.',
           minimum: 1,
         },
         primerLengthBp: {
@@ -138,20 +147,24 @@ const PRIMER_TOOL_SCHEMAS = {
         },
         requireGcClamp: {
           type: 'boolean',
-          description: 'Whether primer candidates must end in G/C. Defaults to true in strict tiers and false in relaxed tiers.',
+          description:
+            'Whether primer candidates must end in G/C. Defaults to true in strict tiers and false in relaxed tiers.',
         },
         avoidHairpin: {
           type: 'boolean',
-          description: 'Whether to reject primers with simple hairpin potential. Defaults to true in strict tiers and false in the most relaxed tier.',
+          description:
+            'Whether to reject primers with simple hairpin potential. Defaults to true in strict tiers and false in the most relaxed tier.',
         },
         requiredAmpliconStart: {
           type: 'number',
-          description: 'Advanced use with targetSequence: 0-based sequence offset that the primer product must start at or before.',
+          description:
+            'Advanced use with targetSequence: 0-based sequence offset that the primer product must start at or before.',
           minimum: 0,
         },
         requiredAmpliconEnd: {
           type: 'number',
-          description: 'Advanced use with targetSequence: 0-based exclusive sequence offset that the primer product must end at or after.',
+          description:
+            'Advanced use with targetSequence: 0-based exclusive sequence offset that the primer product must end at or after.',
           minimum: 0,
         },
       },
@@ -161,7 +174,8 @@ const PRIMER_TOOL_SCHEMAS = {
 
   find_primer_binding_sites: {
     name: 'find_primer_binding_sites',
-    description: 'Search for binding sites of a specific primer sequence within a larger template (e.g. searching a gene sequence or current genome). Finds both forward and reverse occurrences.',
+    description:
+      'Search for binding sites of a specific primer sequence within a larger template (e.g. searching a gene sequence or current genome) with scientific mismatch tolerance.',
     parameters: {
       type: 'object',
       properties: {
@@ -175,11 +189,39 @@ const PRIMER_TOOL_SCHEMAS = {
         },
         templateSequence: {
           type: 'string',
-          description: 'Optional. The larger template DNA sequence to search within. If not provided, the tool will automatically search the current active genome or chromosome.',
+          description:
+            'Optional. The larger template DNA sequence to search within. If not provided, the tool will automatically search the current active genome or chromosome.',
         },
         maxMismatches: {
           type: 'number',
           description: 'Maximum number of mismatched bases allowed (default: 0)',
+        },
+        max3PrimeMismatches: {
+          type: 'number',
+          description:
+            'Maximum mismatches allowed in the last 5 bases at the 3-prime end of the primer (default: no limit).',
+          minimum: 0,
+        },
+        minBindingTm: {
+          type: 'number',
+          description:
+            "Minimum predicted binding Tm in °C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'.",
+        },
+        scoringMode: {
+          type: 'string',
+          enum: ['fast', 'thermodynamic'],
+          description:
+            '"fast" (default): uses position-weighted Hamming scoring. "thermodynamic": adds nearest-neighbor Tm prediction for each binding site.',
+        },
+        naConcentration: {
+          type: 'number',
+          description: 'Sodium ion concentration in M (default: 0.05, representing 50 mM).',
+          minimum: 0,
+        },
+        primerConcentration: {
+          type: 'number',
+          description: 'Total primer concentration in M (default: 2.5e-7, representing 250 nM).',
+          minimum: 0,
         },
       },
       required: [],
@@ -202,11 +244,11 @@ const PRIMER_TOOL_SCHEMAS = {
         },
         start: {
           type: 'number',
-          description: 'Start position (5\' end)',
+          description: "Start position (5' end)",
         },
         end: {
           type: 'number',
-          description: 'End position (3\' end)',
+          description: "End position (3' end)",
         },
         strand: {
           type: 'string',
@@ -223,7 +265,8 @@ const PRIMER_TOOL_SCHEMAS = {
 
   list_primer_annotations: {
     name: 'list_primer_annotations',
-    description: 'List primer annotations currently displayed in the Primers track, optionally filtered by chromosome or genomic interval.',
+    description:
+      'List primer annotations currently displayed in the Primers track, optionally filtered by chromosome or genomic interval.',
     parameters: {
       type: 'object',
       properties: {
@@ -246,7 +289,8 @@ const PRIMER_TOOL_SCHEMAS = {
 
   clear_primer_annotations: {
     name: 'clear_primer_annotations',
-    description: 'Clear primer annotations from the Primers track. Requires confirm=true to prevent accidental deletion.',
+    description:
+      'Clear primer annotations from the Primers track. Requires confirm=true to prevent accidental deletion.',
     parameters: {
       type: 'object',
       properties: {

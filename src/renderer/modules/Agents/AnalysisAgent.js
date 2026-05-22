@@ -1,3 +1,4 @@
+/* global AgentBase */
 /**
  * AnalysisAgent - 分析智能体
  * 专门处理序列分析和计算相关的函数
@@ -46,7 +47,9 @@ class AnalysisAgent extends AgentBase {
         const result = await chatManager.executeToolByName(functionName, parameters);
         return result;
       } catch (error) {
-        console.warn(`AnalysisAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+        console.warn(
+          `AnalysisAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`
+        );
       }
     }
 
@@ -486,7 +489,12 @@ class AnalysisAgent extends AgentBase {
    */
   async calculateMolecularWeight(parameters, strategy) {
     try {
-      const seq = parameters.sequence || parameters.dna || parameters.protein || parameters.dna_sequence || parameters.protein_sequence;
+      const seq =
+        parameters.sequence ||
+        parameters.dna ||
+        parameters.protein ||
+        parameters.dna_sequence ||
+        parameters.protein_sequence;
       const type = parameters.type || 'auto';
 
       if (!seq) {
@@ -880,8 +888,9 @@ class AnalysisAgent extends AgentBase {
    */
   async calculatePrimerProperties(parameters, strategy) {
     try {
-      const PrimerDesigner = (typeof window !== 'undefined' && window.PrimerDesigner)
-        || (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
+      const PrimerDesigner =
+        (typeof window !== 'undefined' && window.PrimerDesigner) ||
+        (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
       if (PrimerDesigner) {
         const properties = PrimerDesigner.calculateProperties(parameters.sequence);
         return { success: true, properties };
@@ -898,12 +907,13 @@ class AnalysisAgent extends AgentBase {
 
   async designPrimers(parameters, strategy) {
     try {
-      const PrimerDesigner = (typeof window !== 'undefined' && window.PrimerDesigner)
-        || (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
+      const PrimerDesigner =
+        (typeof window !== 'undefined' && window.PrimerDesigner) ||
+        (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
       const targetSequence = parameters.targetSequence || parameters.sequence || parameters.targetRegion;
       if (!targetSequence) throw new Error('targetSequence is required');
       if (PrimerDesigner) {
-        const toNumber = (value) => {
+        const toNumber = value => {
           const parsed = Number(value);
           return Number.isFinite(parsed) ? parsed : undefined;
         };
@@ -913,8 +923,10 @@ class AnalysisAgent extends AgentBase {
         const options = {
           targetTm: toNumber(parameters.targetTm) ?? 60.0,
           tmTolerance: toNumber(parameters.tmTolerance),
-          minLen: toNumber(parameters.minPrimerLength ?? parameters.minLen ?? parameters.minLength) ?? exactPrimerLength,
-          maxLen: toNumber(parameters.maxPrimerLength ?? parameters.maxLen ?? parameters.maxLength) ?? exactPrimerLength,
+          minLen:
+            toNumber(parameters.minPrimerLength ?? parameters.minLen ?? parameters.minLength) ?? exactPrimerLength,
+          maxLen:
+            toNumber(parameters.maxPrimerLength ?? parameters.maxLen ?? parameters.maxLength) ?? exactPrimerLength,
           minProductSize: toNumber(parameters.minProductSize) ?? 100,
           maxProductSize: toNumber(parameters.maxProductSize),
           minGcContent: toNumber(parameters.minGcContent ?? parameters.minGc),
@@ -928,7 +940,10 @@ class AnalysisAgent extends AgentBase {
         return { success: true, primers: pair || { note: 'No valid primer pair found' } };
       }
       if (this.sequenceUtils?.designPrimers) {
-        return { success: true, primers: await this.sequenceUtils.designPrimers(targetSequence, parameters.constraints || {}) };
+        return {
+          success: true,
+          primers: await this.sequenceUtils.designPrimers(targetSequence, parameters.constraints || {}),
+        };
       }
       throw new Error('No primer design engine available');
     } catch (error) {
@@ -938,8 +953,9 @@ class AnalysisAgent extends AgentBase {
 
   async findPrimerBindingSites(parameters, strategy) {
     try {
-      const PrimerDesigner = (typeof window !== 'undefined' && window.PrimerDesigner)
-        || (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
+      const PrimerDesigner =
+        (typeof window !== 'undefined' && window.PrimerDesigner) ||
+        (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
       const primer = parameters.primerSequence || parameters.sequence || parameters.primer;
       let template = parameters.templateSequence;
       if (!primer) throw new Error('primerSequence or sequence is required');
@@ -965,7 +981,18 @@ class AnalysisAgent extends AgentBase {
       }
       if (!template) throw new Error('templateSequence is required');
       if (PrimerDesigner) {
-        const sites = PrimerDesigner.findBindingSites(primer, template, parameters.maxMismatches || 0);
+        const sites = PrimerDesigner.findBindingSites(
+          primer,
+          template,
+          parameters.maxMismatches !== undefined ? parameters.maxMismatches : 3,
+          {
+            max3PrimeMismatches: parameters.max3PrimeMismatches,
+            minBindingTm: parameters.minBindingTm,
+            scoringMode: parameters.scoringMode || 'fast',
+            naConcentration: parameters.naConcentration,
+            primerConcentration: parameters.primerConcentration,
+          }
+        );
         return { success: true, sites, count: sites.length };
       }
       if (this.sequenceUtils?.findPrimerBindingSites) {

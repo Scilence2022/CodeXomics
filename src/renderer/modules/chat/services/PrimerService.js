@@ -31,7 +31,7 @@ class PrimerService {
     const options = this._getDesignOptions(params);
     const pair = Designer.designPrimerPair(params.targetSequence, options);
     if (!pair) {
-      return {error: 'Could not find a valid primer pair meeting the criteria in the given sequence'};
+      return { error: 'Could not find a valid primer pair meeting the criteria in the given sequence' };
     }
     return params.targetMetadata ? this._decoratePrimerPair(pair, params.targetMetadata) : pair;
   }
@@ -50,14 +50,21 @@ class PrimerService {
     const result = {
       queryLength: params.primerSequence.length,
       sites: Designer.findBindingSites(
-          params.primerSequence,
-          params.templateSequence,
-          params.maxMismatches || 0,
+        params.primerSequence,
+        params.templateSequence,
+        params.maxMismatches !== undefined ? params.maxMismatches : 3,
+        {
+          max3PrimeMismatches: params.max3PrimeMismatches,
+          minBindingTm: params.minBindingTm,
+          scoringMode: params.scoringMode || 'fast',
+          naConcentration: params.naConcentration,
+          primerConcentration: params.primerConcentration,
+        }
       ),
     };
     if (result.sites.length > 0 && params.sequenceOffset) {
       const offset = params.sequenceOffset - 1;
-      result.sites.forEach((s) => {
+      result.sites.forEach(s => {
         s.start += offset;
         s.end += offset;
       });
@@ -92,22 +99,22 @@ class PrimerService {
 
   async listPrimerAnnotations(params = {}) {
     const primers = this._getPrimerAnnotations(params.chromosome)
-        .filter(primer => {
-          const start = this._getNumber(params.start);
-          const end = this._getNumber(params.end);
-          if (start !== undefined && primer.end < start) return false;
-          if (end !== undefined && primer.start > end) return false;
-          return true;
-        })
-        .map(primer => ({
-          id: primer.id,
-          name: primer.name || primer.qualifiers?.gene || primer.qualifiers?.label || 'Primer',
-          chromosome: primer.chromosome,
-          start: primer.start,
-          end: primer.end,
-          strand: primer.strand === -1 ? '-' : '+',
-          description: primer.description || primer.qualifiers?.note || '',
-        }));
+      .filter(primer => {
+        const start = this._getNumber(params.start);
+        const end = this._getNumber(params.end);
+        if (start !== undefined && primer.end < start) return false;
+        if (end !== undefined && primer.start > end) return false;
+        return true;
+      })
+      .map(primer => ({
+        id: primer.id,
+        name: primer.name || primer.qualifiers?.gene || primer.qualifiers?.label || 'Primer',
+        chromosome: primer.chromosome,
+        start: primer.start,
+        end: primer.end,
+        strand: primer.strand === -1 ? '-' : '+',
+        description: primer.description || primer.qualifiers?.note || '',
+      }));
 
     return {
       success: true,
@@ -277,12 +284,12 @@ class PrimerService {
     const downstreamBp = this._getRequestedDownstreamBp(params);
     const needsFlankingSequence = upstreamBp > 0 || downstreamBp > 0;
     const upstreamPrimerBuffer = this._getNonNegativeInteger(
-        params.upstreamPrimerBuffer,
-        needsFlankingSequence ? 75 : 0,
+      params.upstreamPrimerBuffer,
+      needsFlankingSequence ? 75 : 0
     );
     const downstreamPrimerBuffer = this._getNonNegativeInteger(
-        params.downstreamPrimerBuffer,
-        needsFlankingSequence ? 75 : 0,
+      params.downstreamPrimerBuffer,
+      needsFlankingSequence ? 75 : 0
     );
 
     const chromosome = seqData.chromosome;
@@ -306,9 +313,9 @@ class PrimerService {
       const requestedRequiredStart = geneStart - downstreamBp;
       const requestedRequiredEnd = geneEnd + upstreamBp;
       const requiredGenomicStart = Math.max(1, requestedRequiredStart);
-      const requiredGenomicEnd = chromosomeLength ?
-        Math.min(chromosomeLength, requestedRequiredEnd) :
-        requestedRequiredEnd;
+      const requiredGenomicEnd = chromosomeLength
+        ? Math.min(chromosomeLength, requestedRequiredEnd)
+        : requestedRequiredEnd;
 
       regionStart = Math.max(1, requiredGenomicStart - downstreamPrimerBuffer);
       regionEnd = requiredGenomicEnd + upstreamPrimerBuffer;
@@ -322,9 +329,9 @@ class PrimerService {
       const requestedRequiredStart = geneStart - upstreamBp;
       const requestedRequiredEnd = geneEnd + downstreamBp;
       const requiredGenomicStart = Math.max(1, requestedRequiredStart);
-      const requiredGenomicEnd = chromosomeLength ?
-        Math.min(chromosomeLength, requestedRequiredEnd) :
-        requestedRequiredEnd;
+      const requiredGenomicEnd = chromosomeLength
+        ? Math.min(chromosomeLength, requestedRequiredEnd)
+        : requestedRequiredEnd;
 
       regionStart = Math.max(1, requiredGenomicStart - upstreamPrimerBuffer);
       regionEnd = requiredGenomicEnd + downstreamPrimerBuffer;
@@ -413,26 +420,28 @@ class PrimerService {
 
   _decoratePrimerPair(pair, metadata) {
     const forwardBinding = this._mapOrientedBindingToGenome(
-        pair.forward.bindStart,
-        pair.forward.bindEnd,
-        metadata,
-        'forward',
+      pair.forward.bindStart,
+      pair.forward.bindEnd,
+      metadata,
+      'forward'
     );
     const reverseBinding = this._mapOrientedBindingToGenome(
-        pair.reverse.bindStart,
-        pair.reverse.bindEnd,
-        metadata,
-        'reverse',
+      pair.reverse.bindStart,
+      pair.reverse.bindEnd,
+      metadata,
+      'reverse'
     );
 
     const productStart = Math.min(forwardBinding.genomicStart, reverseBinding.genomicStart);
     const productEnd = Math.max(forwardBinding.genomicEnd, reverseBinding.genomicEnd);
-    const upstreamIncludedBp = metadata.geneStrand === '-' ?
-      Math.max(0, productEnd - metadata.geneEnd) :
-      Math.max(0, metadata.geneStart - productStart);
-    const downstreamIncludedBp = metadata.geneStrand === '-' ?
-      Math.max(0, metadata.geneStart - productStart) :
-      Math.max(0, productEnd - metadata.geneEnd);
+    const upstreamIncludedBp =
+      metadata.geneStrand === '-'
+        ? Math.max(0, productEnd - metadata.geneEnd)
+        : Math.max(0, metadata.geneStart - productStart);
+    const downstreamIncludedBp =
+      metadata.geneStrand === '-'
+        ? Math.max(0, metadata.geneStart - productStart)
+        : Math.max(0, productEnd - metadata.geneEnd);
     const coversGene = productStart <= metadata.geneStart && productEnd >= metadata.geneEnd;
     const coversRequestedUpstream = upstreamIncludedBp >= metadata.requestedUpstreamBp;
     const coversRequestedDownstream = downstreamIncludedBp >= metadata.requestedDownstreamBp;
@@ -440,26 +449,26 @@ class PrimerService {
     const warnings = [];
     if (metadata.availableUpstreamBp < metadata.requestedUpstreamBp) {
       warnings.push(
-          `Only ${metadata.availableUpstreamBp}bp upstream sequence is available before the chromosome boundary; ` +
-          `requested ${metadata.requestedUpstreamBp}bp.`,
+        `Only ${metadata.availableUpstreamBp}bp upstream sequence is available before the chromosome boundary; ` +
+          `requested ${metadata.requestedUpstreamBp}bp.`
       );
     }
     if (metadata.availableDownstreamBp < metadata.requestedDownstreamBp) {
       warnings.push(
-          `Only ${metadata.availableDownstreamBp}bp downstream sequence is available before the chromosome boundary; ` +
-          `requested ${metadata.requestedDownstreamBp}bp.`,
+        `Only ${metadata.availableDownstreamBp}bp downstream sequence is available before the chromosome boundary; ` +
+          `requested ${metadata.requestedDownstreamBp}bp.`
       );
     }
     if (!coversRequestedUpstream) {
       warnings.push(
-          `Primer pair includes ${upstreamIncludedBp}bp upstream of ${metadata.geneName}; ` +
-          `requested ${metadata.requestedUpstreamBp}bp.`,
+        `Primer pair includes ${upstreamIncludedBp}bp upstream of ${metadata.geneName}; ` +
+          `requested ${metadata.requestedUpstreamBp}bp.`
       );
     }
     if (!coversRequestedDownstream) {
       warnings.push(
-          `Primer pair includes ${downstreamIncludedBp}bp downstream of ${metadata.geneName}; ` +
-          `requested ${metadata.requestedDownstreamBp}bp.`,
+        `Primer pair includes ${downstreamIncludedBp}bp downstream of ${metadata.geneName}; ` +
+          `requested ${metadata.requestedDownstreamBp}bp.`
       );
     }
     if (!coversGene) {
@@ -508,37 +517,39 @@ class PrimerService {
 
   _getRequestedUpstreamBp(params) {
     return this._getNonNegativeInteger(
-        params.upstreamBp ?? params.upstreamBases ?? params.upstream ?? params.upstreamLength,
-        0,
+      params.upstreamBp ?? params.upstreamBases ?? params.upstream ?? params.upstreamLength,
+      0
     );
   }
 
   _getRequestedDownstreamBp(params) {
     return this._getNonNegativeInteger(
-        params.downstreamBp ?? params.downstreamBases ?? params.downstream ?? params.downstreamLength,
-        0,
+      params.downstreamBp ?? params.downstreamBases ?? params.downstream ?? params.downstreamLength,
+      0
     );
   }
 
   _shouldUseGeneAmpliconContext(params) {
-    return this._getRequestedUpstreamBp(params) > 0 ||
+    return (
+      this._getRequestedUpstreamBp(params) > 0 ||
       this._getRequestedDownstreamBp(params) > 0 ||
       params.upstreamPrimerBuffer !== undefined ||
-      params.downstreamPrimerBuffer !== undefined;
+      params.downstreamPrimerBuffer !== undefined
+    );
   }
 
   _getDesignOptions(params) {
     const exactPrimerLength = this._getPositiveInteger(
-        params.primerLength ?? params.primerLengthBp ?? params.primerSize,
-        null,
+      params.primerLength ?? params.primerLengthBp ?? params.primerSize,
+      null
     );
     const minLen = this._getPositiveInteger(
-        params.minPrimerLength ?? params.minLen ?? params.minLength,
-        exactPrimerLength || 18,
+      params.minPrimerLength ?? params.minLen ?? params.minLength,
+      exactPrimerLength || 18
     );
     const maxLen = this._getPositiveInteger(
-        params.maxPrimerLength ?? params.maxLen ?? params.maxLength,
-        exactPrimerLength || 25,
+      params.maxPrimerLength ?? params.maxLen ?? params.maxLength,
+      exactPrimerLength || 25
     );
 
     return {
