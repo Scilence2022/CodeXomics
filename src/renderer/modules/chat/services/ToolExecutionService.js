@@ -35,31 +35,32 @@ class ToolExecutionService {
 
       // --- PRIORITY 2: NEW EXTRACTED SERVICES ---
       // 1. File Operation Services
-      const fileService = new window.FileOperationService(this.app, this.chatManager);
+      const fileService = this.chatManager.services?.file || new window.FileOperationService(this.app, this.chatManager);
       if (typeof fileService[this._toCamelCase(toolName)] === 'function') {
         return await fileService[this._toCamelCase(toolName)](parameters);
       }
 
       // 2. Annotation Services
-      const annotationService = new window.AnnotationService(this.app, this.chatManager);
+      const annotationService = this.chatManager.services?.annotation || new window.AnnotationService(this.app, this.chatManager);
       if (typeof annotationService[this._toCamelCase(toolName)] === 'function') {
         return await annotationService[this._toCamelCase(toolName)](parameters);
       }
 
       // 3. BLAST Services
-      const blastService = new window.BlastService(this.app, this.chatManager);
+      const blastService = this.chatManager.services?.blast || new window.BlastService(this.app, this.chatManager);
       if (typeof blastService[this._toCamelCase(toolName)] === 'function') {
         return await blastService[this._toCamelCase(toolName)](parameters);
       }
 
       // 4. Protein Services
-      const proteinService = new window.ProteinService(this.app, this.chatManager);
+      const proteinService = this.chatManager.services?.protein ||
+          new window.ProteinService(this.app, this.chatManager);
       if (typeof proteinService[this._toCamelCase(toolName)] === 'function') {
         return await proteinService[this._toCamelCase(toolName)](parameters);
       }
 
       // 5. Genome Analysis Services
-      const analysisService = new window.GenomeAnalysisService(this.app, this.chatManager);
+      const analysisService = this.chatManager.services?.analysis || new window.GenomeAnalysisService(this.app, this.chatManager);
       if (typeof analysisService[this._toCamelCase(toolName)] === 'function') {
         return await analysisService[this._toCamelCase(toolName)](parameters);
       }
@@ -69,7 +70,10 @@ class ToolExecutionService {
         await this._ensurePrimerServiceLoaded();
       }
       if (typeof window.PrimerService === 'function') {
-        const primerService = new window.PrimerService(this.app, this.chatManager);
+        if (this.chatManager.services && !this.chatManager.services.primer) {
+          this.chatManager.services.primer = new window.PrimerService(this.app, this.chatManager);
+        }
+        const primerService = this.chatManager.services?.primer || new window.PrimerService(this.app, this.chatManager);
         if (typeof primerService[this._toCamelCase(toolName)] === 'function') {
           return await primerService[this._toCamelCase(toolName)](parameters);
         }
