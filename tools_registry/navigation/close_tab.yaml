@@ -1,5 +1,5 @@
 name: 'close_tab'
-description: 'Close a specific tab in the browser interface by tab ID, name, or index position. Cannot close the last remaining tab.'
+description: 'Close a specific tab in the browser interface by tab ID, name, or index position. If no parameters are provided, the tool will close the currently active tab page. Cannot close the last remaining tab.'
 version: '1.0.0'
 author: 'CodeXomics'
 category: 'navigation'
@@ -88,6 +88,15 @@ usage_examples:
       closed_tab_id: 'tab_67890'
       closed_tab_title: 'Data Analysis'
       remaining_tabs: 3
+
+  - description: 'Close currently active tab (no parameters provided)'
+    input: {}
+    expected_output:
+      success: true
+      message: 'Successfully closed tab'
+      closed_tab_id: 'tab_active_id'
+      closed_tab_title: 'Genome Browser'
+      remaining_tabs: 2
 
 error_handling:
   - condition: 'Tab ID not found'
