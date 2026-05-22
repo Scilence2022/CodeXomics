@@ -15,6 +15,9 @@ parameters:
     end:
       type: 'integer'
       description: 'End position of region to analyze (defaults to current end position).'
+    sequence:
+      type: 'string'
+      description: 'DNA sequence to search directly (optional). Use only if chromosome position information is not available, as direct sequence input consumes significant LLM context.'
   required:
     - 'enzyme'
 keywords:

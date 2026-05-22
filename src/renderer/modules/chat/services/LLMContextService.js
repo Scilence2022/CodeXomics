@@ -800,7 +800,7 @@ class LLMContextService {
   normalizeParams(params) {
     if (!params || typeof params !== 'object') return {};
     const sorted = {};
-    Object.keys(params).sort().forEach(key => {
+    Object.keys(params).sort().forEach((key) => {
       const val = params[key];
       if (val !== undefined) {
         sorted[key] = (val && typeof val === 'object') ? this.normalizeParams(val) : val;
@@ -871,7 +871,7 @@ class LLMContextService {
       'switch_to_tab',
       'open_new_tab',
       'load_genome_file',
-      'load_annotation_file'
+      'load_annotation_file',
     ];
 
     for (let i = lastExecIdx + 1; i < conversationHistory.length; i++) {
@@ -930,7 +930,7 @@ class LLMContextService {
           'bulk_update_annotations',
           'get_annotation_history',
           'delete_feature',
-          'export_data'
+          'export_data',
         ],
         policy: 'once_per_round',
         condition: (tool, history, results, round) => {
@@ -1019,6 +1019,10 @@ class LLMContextService {
           'analyze_interpro_domains',
           'calculate_molecular_weight',
           'calculate_entropy',
+          'find_restriction_sites',
+          'virtual_digest',
+          'list_restriction_enzymes',
+          'simulate_gel_electrophoresis',
         ],
         policy: 'parameter_based',
         condition: (tool, history, results) => {
@@ -1325,7 +1329,7 @@ class LLMContextService {
     const exemptedPolicies = ['scroll_operations', 'zoom_operations'];
     if (!exemptedPolicies.includes(applicablePolicyName)) {
       const chatboxSettings = this.chatManager.configManager.get('chatboxSettings') || {};
-      const maxSameToolIdenticalParams = chatboxSettings.maxSameToolIdenticalParams || 
+      const maxSameToolIdenticalParams = chatboxSettings.maxSameToolIdenticalParams ||
                                          this.chatManager.configManager.get('llm.maxSameToolIdenticalParams', 2);
 
       // Check identical parameters limit
@@ -1351,11 +1355,11 @@ class LLMContextService {
         'primer_design',
         'feature_navigation',
         'position_navigation',
-        'track_operations'
+        'track_operations',
       ];
 
       if (!exemptedFromTotalLimit.includes(applicablePolicyName)) {
-        const maxSameToolDifferentParams = chatboxSettings.maxSameToolDifferentParams || 
+        const maxSameToolDifferentParams = chatboxSettings.maxSameToolDifferentParams ||
                                            this.chatManager.configManager.get('llm.maxSameToolDifferentParams', 3);
         const totalExecutionCount = this.chatManager.getToolExecutionCountByName(toolName, conversationHistory);
         if (totalExecutionCount >= maxSameToolDifferentParams) {
@@ -2360,7 +2364,6 @@ EXAMPLES:
     // Get MCP server information
     const mcpServers = this.chatManager.mcpServerManager.getServerStatus();
     const connectedServers = mcpServers.filter((s) => s.connected);
-    const allMcpTools = this.chatManager.mcpServerManager.getAllAvailableTools();
     const toolsByCategory = this.chatManager.mcpServerManager.getToolsByCategory();
 
     let mcpServersInfo = '';
@@ -2584,7 +2587,6 @@ Metabolic Pathway Examples:
     // Get MCP server information
     const mcpServers = this.chatManager.mcpServerManager.getServerStatus();
     const connectedServers = mcpServers.filter((s) => s.connected);
-    const allMcpTools = this.chatManager.mcpServerManager.getAllAvailableTools();
     const toolsByCategory = this.chatManager.mcpServerManager.getToolsByCategory();
 
     let mcpServersInfo = '';
@@ -2841,14 +2843,14 @@ ${this.chatManager.getPluginSystemInfo()}`;
             const fs = require('fs');
             const path = require('path');
             const extracted = this.chatManager.extractDeepGeneResearchReport(resultData);
-            const { report, geneSymbol, stepsCount, statistics } = extracted;
+            const {report, geneSymbol, stepsCount, statistics} = extracted;
             let reportSaved = false;
             let reportPath = '';
 
             const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
             if (reportStr && reportStr.trim().length > 0) {
               const reportsDir = path.join(process.cwd(), 'reports');
-              if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
+              if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, {recursive: true});
               const safeSymbol = geneSymbol.replace(/[^a-zA-Z0-9_-]/g, '_');
               reportPath = path.join(reportsDir, `Gene_${safeSymbol}_Research_Report.md`);
               fs.writeFileSync(reportPath, reportStr);
@@ -2871,11 +2873,15 @@ ${this.chatManager.getPluginSystemInfo()}`;
               resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; white-space: pre-wrap; font-size: 0.85em;">${this.chatManager.escapeHtml(preview)}</div></details>`;
             }
             resultDisplay += `</div>`;
-            
+
             if (this.chatManager.showDetailedToolData && resultData) {
               resultDisplay += `<details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2196F3; font-size: 0.9em;">📊 View raw data</summary>`;
               resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;">`;
-              try { resultDisplay += this.chatManager.formatToolResultData(resultData); } catch (e) { resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`; }
+              try {
+                resultDisplay += this.chatManager.formatToolResultData(resultData);
+              } catch (e) {
+                resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+              }
               resultDisplay += `</div></details>`;
             }
             resultDisplay += `</div>`;
@@ -2895,7 +2901,11 @@ ${this.chatManager.getPluginSystemInfo()}`;
           if (this.chatManager.showDetailedToolData && resultData) {
             resultDisplay += `<br><details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
             resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
-            try { resultDisplay += this.chatManager.formatToolResultData(resultData); } catch (e) { resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`; }
+            try {
+              resultDisplay += this.chatManager.formatToolResultData(resultData);
+            } catch (e) {
+              resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+            }
             resultDisplay += `</div></details>`;
           }
         }
@@ -2905,7 +2915,7 @@ ${this.chatManager.getPluginSystemInfo()}`;
       }
 
       resultDisplay += `</div>`;
-      
+
       // Update with the text part
       this.chatManager.updateThinkingMessage(resultDisplay);
 
@@ -2914,7 +2924,6 @@ ${this.chatManager.getPluginSystemInfo()}`;
         this.chatManager.updateThinkingMessage(resultData.visualizationElement);
       }
     });
-
   }
 }
 

@@ -18,9 +18,9 @@ class RestrictionDigestService {
 
   get enzymeDb() {
     if (!this._enzymeDb) {
-      const DbClass = (typeof window !== 'undefined' && window.RestrictionEnzymeDatabase)
-        ? window.RestrictionEnzymeDatabase
-        : (typeof require !== 'undefined' ? require('./RestrictionEnzymeDatabase') : null);
+      const DbClass = (typeof window !== 'undefined' && window.RestrictionEnzymeDatabase) ?
+        window.RestrictionEnzymeDatabase :
+        (typeof require !== 'undefined' ? require('./RestrictionEnzymeDatabase') : null);
       if (DbClass) {
         this._enzymeDb = new DbClass();
       }
@@ -29,23 +29,44 @@ class RestrictionDigestService {
   }
 
   async findRestrictionSites(params) {
-    const { enzyme, chromosome, start, end } = params;
+    const {enzyme, chromosome, start, end, sequence} = params;
 
-    const chr = chromosome || this.app.currentChromosome;
-    if (!chr) {
-      throw new Error('No chromosome specified and none currently selected');
-    }
+    let seq = sequence;
+    let chr = chromosome;
+    let regionStart = start;
+    let regionEnd = end;
 
-    const regionStart = start || this.app.currentPosition?.start || 0;
-    const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence?.[chr]?.length || 0;
+    const hasExplicitCoords = !!(chromosome && chromosome !== 'direct_sequence' && (start !== undefined || end !== undefined));
+    const useCoords = hasExplicitCoords || (sequence === undefined || sequence === null);
 
-    const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
-    if (!sequence || sequence.length === 0) {
-      throw new Error(`No sequence available for ${chr}:${regionStart}-${regionEnd}`);
+    if (useCoords) {
+      chr = chromosome || this.app.currentChromosome;
+      if (!chr) {
+        throw new Error('No chromosome specified and none currently selected');
+      }
+
+      regionStart = start || this.app.currentPosition?.start || 0;
+      regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence?.[chr]?.length || 0;
+
+      seq = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
+      if (!seq || seq.length === 0) {
+        throw new Error(`No sequence available for ${chr}:${regionStart}-${regionEnd}`);
+      }
+    } else {
+      seq = seq.replace(/\s/g, '').toUpperCase();
+      if (!chr) {
+        chr = 'direct_sequence';
+      }
+      if (regionStart === undefined || regionStart === null) {
+        regionStart = 0;
+      }
+      if (!regionEnd) {
+        regionEnd = regionStart + seq.length;
+      }
     }
 
     const enzymeData = this._resolveEnzyme(enzyme);
-    const sites = this._findSitesInSequence(sequence, enzymeData, regionStart);
+    const sites = this._findSitesInSequence(seq, enzymeData, regionStart);
 
     return {
       enzyme: enzymeData.name,
@@ -56,7 +77,7 @@ class RestrictionDigestService {
       topCut: enzymeData.topCut,
       bottomCut: enzymeData.bottomCut,
       chromosome: chr,
-      searchRegion: { start: regionStart, end: regionEnd },
+      searchRegion: {start: regionStart, end: regionEnd},
       searchRegionStr: `${regionStart}-${regionEnd}`,
       sitesFound: sites.length,
       sites,
@@ -64,15 +85,33 @@ class RestrictionDigestService {
   }
 
   async virtualDigest(params) {
-    const { enzymes, chromosome, start, end } = params;
+    const {enzymes, chromosome, start, end, sequence} = params;
 
-    const chr = chromosome || this.app.currentChromosome;
-    if (!chr) {
-      throw new Error('No chromosome specified and none currently selected');
+    let seq = sequence;
+    let chr = chromosome;
+    const regionStart = start ?? 0;
+    let regionEnd = end;
+
+    const hasExplicitCoords = !!(chromosome && chromosome !== 'direct_sequence' && (start !== undefined || end !== undefined));
+    const useCoords = hasExplicitCoords || (sequence === undefined || sequence === null);
+
+    if (useCoords) {
+      chr = chromosome || this.app.currentChromosome;
+      if (!chr) {
+        throw new Error('No chromosome specified and none currently selected');
+      }
+      regionEnd = end || this.app.currentSequence?.[chr]?.length || 0;
+      seq = undefined;
+    } else {
+      seq = seq.replace(/\s/g, '').toUpperCase();
+      if (!chr) {
+        chr = 'direct_sequence';
+      }
+      if (!regionEnd) {
+        regionEnd = regionStart + seq.length;
+      }
     }
 
-    const regionStart = start ?? 0;
-    const regionEnd = end || this.app.currentSequence?.[chr]?.length || 0;
     const sequenceLength = regionEnd - regionStart;
 
     if (sequenceLength <= 0) {
@@ -91,6 +130,7 @@ class RestrictionDigestService {
         chromosome: chr,
         start: regionStart,
         end: regionEnd,
+        sequence: seq,
       });
 
       for (const site of result.sites) {
@@ -113,20 +153,19 @@ class RestrictionDigestService {
 
     const fragments = this._calculateFragments(deduplicatedCuts, regionStart, regionEnd);
 
-    const fragmentSizes = fragments.map(f => f.length);
     const stats = this._calculateDigestStats(fragments, sequenceLength);
 
     return {
       enzymes,
       enzymeDetails: Object.fromEntries(
-        Object.entries(enzymeDetails).map(([name, data]) => [name, {
-          recognition: data.recognition,
-          overhangType: data.overhangType,
-          overhangLength: data.overhangLength,
-        }])
+          Object.entries(enzymeDetails).map(([name, data]) => [name, {
+            recognition: data.recognition,
+            overhangType: data.overhangType,
+            overhangLength: data.overhangLength,
+          }]),
       ),
       chromosome: chr,
-      region: { start: regionStart, end: regionEnd },
+      region: {start: regionStart, end: regionEnd},
       totalSites: deduplicatedCuts.length,
       totalFragments: fragments.length,
       averageFragmentSize: stats.average,
@@ -141,10 +180,10 @@ class RestrictionDigestService {
 
   listEnzymes(params = {}) {
     if (!this.enzymeDb) {
-      return { enzymes: [], total: 0, error: 'Enzyme database not available' };
+      return {enzymes: [], total: 0, error: 'Enzyme database not available'};
     }
 
-    const { query, minRecognitionLength, maxRecognitionLength, overhangType, commercialOnly = true } = params;
+    const {query, minRecognitionLength, maxRecognitionLength, overhangType, commercialOnly = true} = params;
 
     let results = commercialOnly ? this.enzymeDb.getCommerciallyAvailable() : this.enzymeDb.getAll();
 
@@ -153,17 +192,17 @@ class RestrictionDigestService {
     }
 
     if (minRecognitionLength) {
-      results = results.filter(e => e.recognitionLength >= minRecognitionLength);
+      results = results.filter((e) => e.recognitionLength >= minRecognitionLength);
     }
     if (maxRecognitionLength) {
-      results = results.filter(e => e.recognitionLength <= maxRecognitionLength);
+      results = results.filter((e) => e.recognitionLength <= maxRecognitionLength);
     }
     if (overhangType) {
-      results = results.filter(e => e.overhangType === overhangType);
+      results = results.filter((e) => e.overhangType === overhangType);
     }
 
     return {
-      enzymes: results.map(e => ({
+      enzymes: results.map((e) => ({
         name: e.name,
         recognition: e.recognition,
         recognitionLength: e.recognitionLength,
@@ -192,12 +231,12 @@ class RestrictionDigestService {
 
     const recognition = fallback[name];
     if (!recognition) {
-      const available = this.enzymeDb
-        ? this.enzymeDb.getNames().sort().join(', ')
-        : Object.keys(fallback).join(', ');
+      const available = this.enzymeDb ?
+        this.enzymeDb.getNames().sort().join(', ') :
+        Object.keys(fallback).join(', ');
       throw new Error(
-        `Unknown restriction enzyme: ${name}. Available enzymes: ${available}. ` +
-        `Use list_restriction_enzymes to browse the full database.`
+          `Unknown restriction enzyme: ${name}. Available enzymes: ${available}. ` +
+        `Use list_restriction_enzymes to browse the full database.`,
       );
     }
 
@@ -208,7 +247,7 @@ class RestrictionDigestService {
       topCut: 1,
       bottomCut: recognition.length - 1,
       isPalindromic: true,
-      overhangType: "5'_overhang",
+      overhangType: '5\'_overhang',
       overhangLength: recognition.length - 2,
       commercial: true,
       isoschizomers: [],
@@ -287,8 +326,8 @@ class RestrictionDigestService {
   }
 
   _reverseComplement(seq) {
-    const complement = { A: 'T', T: 'A', G: 'C', C: 'G' };
-    return seq.split('').reverse().map(b => complement[b] || b).join('');
+    const complement = {A: 'T', T: 'A', G: 'C', C: 'G'};
+    return seq.split('').reverse().map((b) => complement[b] || b).join('');
   }
 
   _deduplicateCutSites(cutEvents) {
@@ -324,7 +363,7 @@ class RestrictionDigestService {
           start: lastEnd,
           end: minCut,
           length: fragmentLength,
-          leftEndType: lastEnd === regionStart ? 'origin' : cutEvents.find(c => c.topStrandCut === lastEnd || c.bottomStrandCut === lastEnd)?.overhangType || 'blunt',
+          leftEndType: lastEnd === regionStart ? 'origin' : cutEvents.find((c) => c.topStrandCut === lastEnd || c.bottomStrandCut === lastEnd)?.overhangType || 'blunt',
           rightEndType: cut.overhangType,
           rightOverhangLength: cut.overhangLength,
           cutByRight: cut.enzymes || cut.enzyme,
@@ -351,10 +390,10 @@ class RestrictionDigestService {
 
   _calculateDigestStats(fragments, totalLength) {
     if (fragments.length === 0) {
-      return { average: 0, median: 0, min: 0, max: 0 };
+      return {average: 0, median: 0, min: 0, max: 0};
     }
 
-    const sizes = fragments.map(f => f.length).sort((a, b) => a - b);
+    const sizes = fragments.map((f) => f.length).sort((a, b) => a - b);
     const sum = sizes.reduce((a, b) => a + b, 0);
     const mid = Math.floor(sizes.length / 2);
     const median = sizes.length % 2 !== 0 ? sizes[mid] : Math.round((sizes[mid - 1] + sizes[mid]) / 2);
@@ -371,19 +410,19 @@ class RestrictionDigestService {
     const lanes = [];
     for (const cut of cutEvents) {
       const enzymeName = cut.enzymes ? cut.enzymes.join('+') : cut.enzyme;
-      if (!lanes.find(l => l.enzyme === enzymeName)) {
-        lanes.push({ enzyme: enzymeName, position: cut.position });
+      if (!lanes.find((l) => l.enzyme === enzymeName)) {
+        lanes.push({enzyme: enzymeName, position: cut.position});
       }
     }
 
     return {
       totalFragments: fragments.length,
-      cutPositions: cutEvents.map(c => ({
+      cutPositions: cutEvents.map((c) => ({
         position: c.position,
         enzyme: c.enzymes ? c.enzymes.join('+') : c.enzyme,
         overhangType: c.overhangType,
       })),
-      fragmentDistribution: fragments.map(f => ({
+      fragmentDistribution: fragments.map((f) => ({
         index: f.index,
         length: f.length,
         start: f.start,

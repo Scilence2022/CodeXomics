@@ -10,13 +10,16 @@ parameters:
       description: 'Array of restriction enzyme names to include in the digestion (e.g. ["EcoRI", "HindIII"]). Supports 80+ enzymes from the built-in database.'
     chromosome:
       type: 'string'
-      description: 'The chromosome to digest (defaults to the currently loaded chromosome).'
+      description: 'The chromosome to digest (defaults to the currently loaded chromosome). Priority should be given to chromosome-position mode over direct sequence mode to avoid bloating LLM context.'
     start:
       type: 'integer'
       description: 'Start position of the region to digest (defaults to 0).'
     end:
       type: 'integer'
       description: 'End position of the region to digest (defaults to chromosome end).'
+    sequence:
+      type: 'string'
+      description: 'DNA sequence to digest directly (optional). Use only if chromosome position information is not available, as direct sequence input consumes significant LLM context.'
   required:
     - 'enzymes'
 keywords:
