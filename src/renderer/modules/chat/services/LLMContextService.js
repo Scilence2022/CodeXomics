@@ -610,6 +610,11 @@ class LLMContextService {
       'interpro analysis',
       'protein domains',
       // Primer analysis patterns
+      'design primers',
+      'primer design',
+      'amplify gene',
+      'amplify lysc',
+      'pcr primers',
       'find binding sites',
       'binding sites for primer',
       'primer binding',
@@ -724,6 +729,7 @@ class LLMContextService {
       'get_genome_info',
       'get_current_state',
       'get_file_info',
+      'design_primers',
       'calculate_primer_properties',
       'find_primer_binding_sites',
       'list_primer_annotations',
@@ -807,6 +813,30 @@ class LLMContextService {
     return sorted;
   }
 
+  normalizeToolParams(toolName, parameters = {}) {
+    if (this.chatManager && typeof this.chatManager.normalizeToolParams === 'function') {
+      return this.chatManager.normalizeToolParams(toolName, parameters);
+    }
+
+    const normalized = this.normalizeParams(parameters);
+    if (toolName === 'design_primers') {
+      const hasResolvedTarget =
+        normalized.geneName ||
+        (normalized.chromosome && (normalized.start !== undefined || normalized.end !== undefined));
+      if (hasResolvedTarget) {
+        delete normalized.targetSequence;
+        delete normalized.targetMetadata;
+      }
+    }
+    if (toolName === 'find_primer_binding_sites') {
+      const hasTemplateContext = normalized.chromosome || normalized.sequence || normalized.primerSequence;
+      if (hasTemplateContext) {
+        delete normalized.templateSequence;
+      }
+    }
+    return normalized;
+  }
+
   hasViewStateChangedSinceLastExecution(toolName, conversationHistory) {
     if (!conversationHistory || !Array.isArray(conversationHistory)) {
       return false;
@@ -860,7 +890,9 @@ class LLMContextService {
   }
 
   shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults = []) {
-    const toolKey = `${tool.tool_name}:${JSON.stringify(this.normalizeParams(tool.parameters))}`;
+    const toolKey = this.chatManager && typeof this.chatManager.getToolExecutionKey === 'function' ?
+      this.chatManager.getToolExecutionKey(tool.tool_name, tool.parameters) :
+      `${tool.tool_name}:${JSON.stringify(this.normalizeToolParams(tool.tool_name, tool.parameters))}`;
     const toolName = tool.tool_name;
 
     // Define tool execution policies
@@ -1566,6 +1598,30 @@ The gene search has been completed successfully.`;
 
       case 'find_feature':
         return `Feature search completed successfully. Found ${result.result?.length || 0} matching feature(s).`;
+
+      case 'design_primers': {
+        const pair = result.result;
+        if (!pair || pair.error) {
+          return `Primer design completed, but no valid primer pair was found. ${pair?.error || ''}`.trim();
+        }
+
+        const target = tool.parameters.geneName ? ` for ${tool.parameters.geneName}` : '';
+        const forward = pair.forward || {};
+        const reverse = pair.reverse || {};
+        const formatPrimer = (primer) => {
+          const details = [];
+          if (primer.tm !== undefined) details.push(`Tm ${primer.tm}°C`);
+          if (primer.gcContent !== undefined) details.push(`GC ${primer.gcContent}%`);
+          if (primer.length !== undefined) details.push(`${primer.length} bp`);
+          return `${primer.sequence || 'N/A'}${details.length ? ` (${details.join(', ')})` : ''}`;
+        };
+
+        return `Designed primers${target}:\n\n` +
+          `Forward: ${formatPrimer(forward)}\n` +
+          `Reverse: ${formatPrimer(reverse)}\n` +
+          `Product size: ${pair.productSize || 'N/A'} bp` +
+          (pair.tmDifference !== undefined ? `\nTm difference: ${pair.tmDifference}°C` : '');
+      }
 
       case 'pan_right':
       case 'pan_left':

@@ -4801,11 +4801,13 @@ class ChatManager {
                 // Fallback to sequential execution
                 toolResults = [];
                 for (const tool of toolsToExecute) {
+                  const recordedParameters = this.cloneToolParameters(tool.parameters);
+                  const executionParameters = this.cloneToolParameters(tool.parameters);
                   try {
-                    const result = await this.executeToolByName(tool.tool_name, tool.parameters);
+                    const result = await this.executeToolByName(tool.tool_name, executionParameters);
                     toolResults.push({
                       tool: tool.tool_name,
-                      parameters: tool.parameters,
+                      parameters: recordedParameters,
                       success: true,
                       result: result,
                       error: null,
@@ -4813,7 +4815,7 @@ class ChatManager {
                   } catch (error) {
                     toolResults.push({
                       tool: tool.tool_name,
-                      parameters: tool.parameters,
+                      parameters: recordedParameters,
                       success: false,
                       result: null,
                       error: error.message,
@@ -4825,11 +4827,13 @@ class ChatManager {
               // Standard sequential execution
               toolResults = [];
               for (const tool of toolsToExecute) {
+                const recordedParameters = this.cloneToolParameters(tool.parameters);
+                const executionParameters = this.cloneToolParameters(tool.parameters);
                 try {
-                  const result = await this.executeToolByName(tool.tool_name, tool.parameters);
+                  const result = await this.executeToolByName(tool.tool_name, executionParameters);
                   toolResults.push({
                     tool: tool.tool_name,
-                    parameters: tool.parameters,
+                    parameters: recordedParameters,
                     success: true,
                     result: result,
                     error: null,
@@ -4837,7 +4841,7 @@ class ChatManager {
                 } catch (error) {
                   toolResults.push({
                     tool: tool.tool_name,
-                    parameters: tool.parameters,
+                    parameters: recordedParameters,
                     success: false,
                     result: null,
                     error: error.message,
@@ -4903,7 +4907,7 @@ class ChatManager {
             ]);
 
             toolsToExecute.forEach((tool) => {
-              const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
+              const toolKey = this.getToolExecutionKey(tool.tool_name, tool.parameters);
 
               // Track non-re-executable tools and successful file loading operations
               if (nonReExecutableTools.has(tool.tool_name)) {
@@ -4931,8 +4935,14 @@ class ChatManager {
               role: 'assistant',
               content: JSON.stringify(
                 toolsToExecute.length === 1 ?
-                  {tool_name: toolsToExecute[0].tool_name, parameters: toolsToExecute[0].parameters} :
-                  toolsToExecute.map((t) => ({tool_name: t.tool_name, parameters: t.parameters})),
+                  {
+                    tool_name: toolsToExecute[0].tool_name,
+                    parameters: this.normalizeToolParams(toolsToExecute[0].tool_name, toolsToExecute[0].parameters),
+                  } :
+                  toolsToExecute.map((t) => ({
+                    tool_name: t.tool_name,
+                    parameters: this.normalizeToolParams(t.tool_name, t.parameters),
+                  })),
               ),
             });
 
@@ -4951,7 +4961,7 @@ class ChatManager {
               lastSuccessfulResults = successfulResults;
               lastSuccessfulTools = successfulResults.map((result) => ({
                 tool_name: result.tool,
-                parameters: result.parameters,
+                parameters: this.normalizeToolParams(result.tool, result.parameters),
               }));
 
               // Add successful tool results to conversation with SYSTEM role to prevent re-execution
@@ -4966,7 +4976,7 @@ class ChatManager {
                     `${(sanitizedStr.length / 1024).toFixed(1)}KB. Consider adding tool-specific sanitization rules.`,
                   );
                 }
-                return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.normalizeParams(result.parameters))}: ${sanitizedStr}`;
+                return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.normalizeToolParams(result.tool, result.parameters))}: ${sanitizedStr}`;
               });
               conversationHistory.push({
                 role: 'system',
@@ -6037,8 +6047,41 @@ class ChatManager {
     return this.services.context.shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults);
   }
 
+  cloneToolParameters(parameters = {}) {
+    if (!parameters || typeof parameters !== 'object') return {};
+    try {
+      return JSON.parse(JSON.stringify(parameters));
+    } catch (error) {
+      console.warn('[ChatManager] Failed to clone tool parameters, using shallow copy:', error);
+      return {...parameters};
+    }
+  }
+
+  normalizeToolParams(toolName, parameters = {}) {
+    const normalized = this.normalizeParams(parameters);
+
+    if (toolName === 'design_primers') {
+      const hasResolvedTarget =
+        normalized.geneName ||
+        (normalized.chromosome && (normalized.start !== undefined || normalized.end !== undefined));
+      if (hasResolvedTarget) {
+        delete normalized.targetSequence;
+        delete normalized.targetMetadata;
+      }
+    }
+
+    if (toolName === 'find_primer_binding_sites') {
+      const hasTemplateContext = normalized.chromosome || normalized.sequence || normalized.primerSequence;
+      if (hasTemplateContext) {
+        delete normalized.templateSequence;
+      }
+    }
+
+    return normalized;
+  }
+
   getToolExecutionKey(toolName, parameters = {}) {
-    return `${toolName}:${JSON.stringify(this.normalizeParams(parameters))}`;
+    return `${toolName}:${JSON.stringify(this.normalizeToolParams(toolName, parameters))}`;
   }
 
   getRequestedToolExecutionLimit(originalMessage, tool) {
@@ -6133,6 +6176,18 @@ class ChatManager {
     }
   }
 
+  areToolParametersEqual(toolName, params1, params2) {
+    if (!params1 && !params2) return true;
+    if (!params1 || !params2) return false;
+    try {
+      const norm1 = this.normalizeToolParams(toolName, typeof params1 === 'string' ? JSON.parse(params1) : params1);
+      const norm2 = this.normalizeToolParams(toolName, typeof params2 === 'string' ? JSON.parse(params2) : params2);
+      return JSON.stringify(norm1) === JSON.stringify(norm2);
+    } catch (e) {
+      return false;
+    }
+  }
+
   extractParametersFromExecutionMessage(content) {
     const marker = 'with parameters:';
     const markerIdx = content.indexOf(marker);
@@ -6200,7 +6255,7 @@ class ChatManager {
             if (msgParamsStr) {
               try {
                 const parsedMsgParams = JSON.parse(msgParamsStr);
-                if (parsedKeyParams && this.areParametersEqual(parsedKeyParams, parsedMsgParams)) {
+                if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
                   console.log(`🔍 Found successful execution record for: ${toolName} with matching parameters (robust check)`);
                   return true;
                 }
@@ -6315,7 +6370,7 @@ class ChatManager {
           if (msgParamsStr) {
             try {
               const parsedMsgParams = JSON.parse(msgParamsStr);
-              if (parsedKeyParams && this.areParametersEqual(parsedKeyParams, parsedMsgParams)) {
+              if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
                 count++;
               }
             } catch (e) {
@@ -6368,7 +6423,7 @@ class ChatManager {
           if (msgParamsStr) {
             try {
               const parsedMsgParams = JSON.parse(msgParamsStr);
-              if (parsedKeyParams && this.areParametersEqual(parsedKeyParams, parsedMsgParams)) {
+              if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
                 return {
                   success: msg.content.includes('successfully'),
                   timestamp: new Date().toISOString(),

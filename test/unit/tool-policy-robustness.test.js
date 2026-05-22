@@ -27,21 +27,27 @@ function loadChatManagerClass() {
   // so we extract only the helper methods we want to test.
   
   // We can construct a mock class containing these methods
+  const cloneToolParametersMatch = content.match(/cloneToolParameters\s*\(parameters\s*=\s*\{\}\)\s*\{[\s\S]*?\}\n\n\s*normalizeToolParams/);
+  const normalizeToolParamsMatch = content.match(/normalizeToolParams\s*\(toolName,\s*parameters\s*=\s*\{\}\)\s*\{[\s\S]*?\}\n\n\s*getToolExecutionKey/);
   const getToolExecutionKeyMatch = content.match(/getToolExecutionKey\s*\(toolName,\s*parameters\s*=\s*\{\}\)\s*\{[\s\S]*?\}\n\n\s*getRequestedToolExecutionLimit/);
   const getRequestedToolExecutionLimitMatch = content.match(/getRequestedToolExecutionLimit\s*\(originalMessage,\s*tool\)\s*\{[\s\S]*?\}\n\n\s*filterExecutableToolInstances/);
   const filterExecutableToolInstancesMatch = content.match(/filterExecutableToolInstances\s*\(toolsToExecute,\s*successfulToolExecutionCounts,\s*originalMessage\)\s*\{[\s\S]*?\}\n\n\s*normalizeParams/);
   const normalizeParamsMatch = content.match(/normalizeParams\s*\(params\)\s*\{[\s\S]*?\}\n\n\s*areParametersEqual/);
   const areParametersEqualMatch = content.match(/areParametersEqual\s*\(params1,\s*params2\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
+  const areToolParametersEqualMatch = content.match(/areToolParametersEqual\s*\(toolName,\s*params1,\s*params2\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
   const extractParametersMatch = content.match(/extractParametersFromExecutionMessage\s*\(content\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
   const wasToolExecutedSuccessfullyMatch = content.match(/wasToolExecutedSuccessfully\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
   const getToolExecutionCountMatch = content.match(/getToolExecutionCount\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
   const findExistingExecutionMatch = content.match(/findExistingExecution\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/);
 
+  const cloneToolParametersCode = cloneToolParametersMatch ? cloneToolParametersMatch[0].replace('normalizeToolParams', '') : '';
+  const normalizeToolParamsCode = normalizeToolParamsMatch ? normalizeToolParamsMatch[0].replace('getToolExecutionKey', '') : '';
   const getToolExecutionKeyCode = getToolExecutionKeyMatch ? getToolExecutionKeyMatch[0].replace('getRequestedToolExecutionLimit', '') : '';
   const getRequestedToolExecutionLimitCode = getRequestedToolExecutionLimitMatch ? getRequestedToolExecutionLimitMatch[0].replace('filterExecutableToolInstances', '') : '';
   const filterExecutableToolInstancesCode = filterExecutableToolInstancesMatch ? filterExecutableToolInstancesMatch[0].replace('normalizeParams', '') : '';
   const normalizeParamsCode = normalizeParamsMatch ? normalizeParamsMatch[0].replace('areParametersEqual', '') : '';
   const areParametersEqualCode = areParametersEqualMatch ? areParametersEqualMatch[0].replace('/**', '') : '';
+  const areToolParametersEqualCode = areToolParametersEqualMatch ? areToolParametersEqualMatch[0].replace('/**', '') : '';
   const extractParametersCode = extractParametersMatch ? extractParametersMatch[0].replace('/**', '') : '';
   const wasToolExecutedSuccessfullyCode = wasToolExecutedSuccessfullyMatch ? wasToolExecutedSuccessfullyMatch[0].replace('/**', '') : '';
   const getToolExecutionCountCode = getToolExecutionCountMatch ? getToolExecutionCountMatch[0].replace('/**', '') : '';
@@ -49,11 +55,14 @@ function loadChatManagerClass() {
 
   const mockClassCode = `
     class MockChatManager {
+      ${cloneToolParametersCode}
+      ${normalizeToolParamsCode}
       ${getToolExecutionKeyCode}
       ${getRequestedToolExecutionLimitCode}
       ${filterExecutableToolInstancesCode}
       ${normalizeParamsCode}
       ${areParametersEqualCode}
+      ${areToolParametersEqualCode}
       ${extractParametersCode}
       ${wasToolExecutedSuccessfullyCode}
       ${getToolExecutionCountCode}
@@ -105,12 +114,50 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     )).toBe(true);
   });
 
+  it('should drop derived target sequences from design primer execution identity', () => {
+    const service = new LLMContextService({}, {});
+    const manager = new MockChatManager();
+    const targetSequence = 'ATGTCTGAAATTGTTGTCTC';
+
+    expect(service.normalizeToolParams('design_primers', { geneName: 'lysC', targetSequence })).toEqual({
+      geneName: 'lysC',
+    });
+    expect(manager.getToolExecutionKey('design_primers', { geneName: 'lysC' })).toBe(
+      manager.getToolExecutionKey('design_primers', { geneName: 'lysC', targetSequence }),
+    );
+    expect(manager.getToolExecutionKey('design_primers', { targetSequence })).toContain(targetSequence);
+  });
+
   it('should suppress duplicate tool instances after successful execution in the same request', () => {
     const manager = new MockChatManager();
     const tool = { tool_name: 'pan_right', parameters: { amount: 500 } };
     const successfulCounts = new Map([[manager.getToolExecutionKey(tool.tool_name, tool.parameters), 1]]);
 
     const result = manager.filterExecutableToolInstances([tool], successfulCounts, 'pan right');
+
+    expect(result.executableTools).toHaveLength(0);
+    expect(result.suppressedTools).toHaveLength(1);
+  });
+
+  it('should suppress repeated design primer calls when the LLM echoes resolved targetSequence', () => {
+    const manager = new MockChatManager();
+    const firstTool = { tool_name: 'design_primers', parameters: { geneName: 'lysC' } };
+    const repeatedTool = {
+      tool_name: 'design_primers',
+      parameters: {
+        geneName: 'lysC',
+        targetSequence: 'ATGTCTGAAATTGTTGTCTC',
+      },
+    };
+    const successfulCounts = new Map([
+      [manager.getToolExecutionKey(firstTool.tool_name, firstTool.parameters), 1],
+    ]);
+
+    const result = manager.filterExecutableToolInstances(
+      [repeatedTool],
+      successfulCounts,
+      'please design primers to amplify lysC gene',
+    );
 
     expect(result.executableTools).toHaveLength(0);
     expect(result.suppressedTools).toHaveLength(1);
@@ -259,6 +306,25 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
         },
       }],
       'Find binding sites for primer GCAATATGTCTCTGTGTGGAT on the current genome.',
+    );
+
+    expect(shouldTerminate).toBe(true);
+  });
+
+  it('should terminate after successful primer design requests', () => {
+    const service = new LLMContextService({}, {});
+
+    const shouldTerminate = service.shouldTerminateAfterToolExecution(
+      [{ tool_name: 'design_primers', parameters: { geneName: 'lysC' } }],
+      [{
+        tool: 'design_primers',
+        result: {
+          forward: { sequence: 'ATGTCTGAAATTGTTGTCTC', tm: 62.1, gcContent: 35, length: 20 },
+          reverse: { sequence: 'CAAATCATGCGAATGTTGAA', tm: 62.1, gcContent: 35, length: 20 },
+          productSize: 1256,
+        },
+      }],
+      'please design primers to amplify lysC gene',
     );
 
     expect(shouldTerminate).toBe(true);
