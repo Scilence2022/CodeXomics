@@ -1095,6 +1095,7 @@ class LLMContextService {
           const trackMapping = {
             genes: 'trackGenes',
             gc: 'trackGC',
+            gc_content: 'trackGC',
             variants: 'trackVariants',
             reads: 'trackReads',
             proteins: 'trackProteins',

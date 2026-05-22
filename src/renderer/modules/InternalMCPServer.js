@@ -506,6 +506,7 @@ class InternalMCPServer {
     const trackMapping = {
       genes: 'genes',
       gc: 'gc',
+      gc_content: 'gc',
       variants: 'variants',
       reads: 'reads',
       proteins: 'proteins',
