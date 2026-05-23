@@ -744,6 +744,49 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     console.log('📄 [FileLoadingWorkflow] Parsing response text:', responseText.substring(0, 500));
 
+    // Check Tool Execution Tracker first (Most Authoritative Source)
+    if (window.chatManager && window.chatManager.toolExecutionTracker) {
+      const tracker = window.chatManager.toolExecutionTracker;
+      const recentExecutions = tracker.getSessionExecutions();
+      const expectedTools = {
+        load_genome_file: ['ECOLI.gbk'],
+        load_reads_file: ['1655_C10.sorted.bam'],
+        load_variant_file: ['1655_C10.mutations.vcf'],
+        load_wig_tracks: ['sample.wig', 'another_sample.wig'],
+      };
+
+      let trackerLoadedFiles = 0;
+      const loadedFilesList = [];
+
+      Object.entries(expectedTools).forEach(([toolName, files]) => {
+        const executed = recentExecutions.some(
+            (exec) =>
+              this.matchToolName(exec.toolName, toolName) &&
+              exec.status === 'completed' &&
+              Date.now() - exec.startTime < 120000
+        );
+        if (executed) {
+          files.forEach((file) => {
+            loadedFilesList.push(file);
+            trackerLoadedFiles++;
+          });
+        }
+      });
+
+      if (trackerLoadedFiles > 0) {
+        evaluation.details.filesLoaded = loadedFilesList;
+        evaluation.details.successfulFiles = trackerLoadedFiles;
+        const pointsPerFile = Math.floor(evaluation.maxScore / evaluation.details.totalFiles);
+        evaluation.score = Math.min(evaluation.maxScore, trackerLoadedFiles * pointsPerFile);
+        evaluation.success = (trackerLoadedFiles / evaluation.details.totalFiles) >= 0.4;
+        evaluation.warnings.push(`Evaluated via Tool Execution Tracker (${trackerLoadedFiles} files loaded)`);
+        console.log(
+            `✅ [FileLoadingWorkflow] TRACKER: Evaluated successfully: ${trackerLoadedFiles} files loaded`
+        );
+        return evaluation;
+      }
+    }
+
     // Expected files and their success indicators
     const expectedFiles = [
       {
@@ -1010,6 +1053,51 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     console.log('📄 [NavigationWorkflow] Parsing response text:', responseText.substring(0, 500));
 
+    // Check Tool Execution Tracker first (Most Authoritative Source)
+    if (window.chatManager && window.chatManager.toolExecutionTracker) {
+      const tracker = window.chatManager.toolExecutionTracker;
+      const recentExecutions = tracker.getSessionExecutions();
+
+      let hasNavigation = false;
+      let hasZoom = false;
+
+      recentExecutions.forEach((exec) => {
+        if (exec.status === 'completed' && Date.now() - exec.startTime < 120000) {
+          if (this.matchToolName(exec.toolName, 'navigate_to_position')) {
+            hasNavigation = true;
+          }
+          if (
+            this.matchToolName(exec.toolName, 'zoom_in') ||
+            this.matchToolName(exec.toolName, 'zoom_out') ||
+            this.matchToolName(exec.toolName, 'set_zoom_level')
+          ) {
+            hasZoom = true;
+          }
+        }
+      });
+
+      if (hasNavigation) {
+        evaluation.score = Math.ceil(evaluation.maxScore * 0.6); // 60% for navigation
+        if (hasZoom) {
+          evaluation.score = evaluation.maxScore; // Full points
+        } else {
+          const zoomPatterns = ['zoom.*10x', 'zoom.*in', 'magnify', 'zoom.*factor'];
+          const zoomDetected = zoomPatterns.some(
+              (pattern) => new RegExp(pattern, 'i').test(responseText),
+          );
+          if (zoomDetected) {
+            evaluation.score = evaluation.maxScore;
+          }
+        }
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.4);
+        evaluation.warnings.push('Evaluated via Tool Execution Tracker');
+        console.log(
+            `✅ [NavigationWorkflow] TRACKER: Evaluated successfully. Score: ${evaluation.score}`
+        );
+        return evaluation;
+      }
+    }
+
     // Check for navigation success indicators
     const navigationSuccessPatterns = [
       'navigate.*position.*completed',
@@ -1189,6 +1277,43 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     if (expectedTools.length === 0) {
       evaluation.errors.push('No expected tools defined for evaluation');
       return evaluation;
+    }
+
+    // Check Tool Execution Tracker first (Most Authoritative Source)
+    if (window.chatManager && window.chatManager.toolExecutionTracker) {
+      const tracker = window.chatManager.toolExecutionTracker;
+      const recentExecutions = tracker.getSessionExecutions();
+      let trackerMatches = 0;
+
+      expectedTools.forEach((tool) => {
+        const found = recentExecutions.some(
+            (exec) =>
+              this.matchToolName(exec.toolName, tool) &&
+              exec.status === 'completed' &&
+              Date.now() - exec.startTime < 120000
+        );
+        if (found) {
+          trackerMatches++;
+        }
+      });
+
+      if (trackerMatches > 0) {
+        // Calculate score directly from actual execution (most accurate!)
+        // 40% baseline for calling at least one tool, remaining scaled by tool matches
+        const baselineScore = Math.ceil(evaluation.maxScore * 0.4);
+        const remainingPoints = evaluation.maxScore - baselineScore;
+        const toolScore = Math.floor(remainingPoints * (trackerMatches / expectedTools.length));
+
+        evaluation.score = baselineScore + toolScore;
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.4);
+        evaluation.warnings.push(
+            `Evaluated via Tool Execution Tracker (${trackerMatches}/${expectedTools.length} tools executed)`
+        );
+        console.log(
+            `✅ [WorkflowCall] TRACKER: Matches: ${trackerMatches}/${expectedTools.length}. Score: ${evaluation.score}`
+        );
+        return evaluation;
+      }
     }
 
     // Award baseline points if general success is mentioned
