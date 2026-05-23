@@ -140,6 +140,8 @@ class ChatBoxSettingsManager {
     const llmFunctionCallRounds = this.configManager.get('llm.functionCallRounds');
     const llmEnableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion');
     const llmCompletionThreshold = this.configManager.get('llm.completionThreshold');
+    const llmMaxDiffParams = this.configManager.get('llm.maxSameToolDifferentParams');
+    const llmMaxIdentParams = this.configManager.get('llm.maxSameToolIdenticalParams');
 
     if (llmFunctionCallRounds !== undefined) {
       this.settings.functionCallRounds = llmFunctionCallRounds;
@@ -150,6 +152,12 @@ class ChatBoxSettingsManager {
     if (llmCompletionThreshold !== undefined) {
       this.settings.completionThreshold = llmCompletionThreshold;
     }
+    if (llmMaxDiffParams !== undefined) {
+      this.settings.maxSameToolDifferentParams = llmMaxDiffParams;
+    }
+    if (llmMaxIdentParams !== undefined) {
+      this.settings.maxSameToolIdenticalParams = llmMaxIdentParams;
+    }
 
     console.log('🔧 ChatBox settings loaded:', this.settings);
     console.log('🔄 Synced Function Call Settings from LLM config');
@@ -158,18 +166,24 @@ class ChatBoxSettingsManager {
   /**
    * Save settings to config manager
    */
-  saveSettings() {
-    this.configManager.set('chatboxSettings', this.settings);
+  async saveSettings() {
+    await this.configManager.set('chatboxSettings', this.settings);
 
     // Sync Function Call Settings to the main LLM configuration
     if (this.settings.hasOwnProperty('functionCallRounds')) {
-      this.configManager.set('llm.functionCallRounds', this.settings.functionCallRounds);
+      await this.configManager.set('llm.functionCallRounds', this.settings.functionCallRounds);
     }
     if (this.settings.hasOwnProperty('enableEarlyCompletion')) {
-      this.configManager.set('llm.enableEarlyCompletion', this.settings.enableEarlyCompletion);
+      await this.configManager.set('llm.enableEarlyCompletion', this.settings.enableEarlyCompletion);
     }
     if (this.settings.hasOwnProperty('completionThreshold')) {
-      this.configManager.set('llm.completionThreshold', this.settings.completionThreshold);
+      await this.configManager.set('llm.completionThreshold', this.settings.completionThreshold);
+    }
+    if (this.settings.hasOwnProperty('maxSameToolDifferentParams')) {
+      await this.configManager.set('llm.maxSameToolDifferentParams', this.settings.maxSameToolDifferentParams);
+    }
+    if (this.settings.hasOwnProperty('maxSameToolIdenticalParams')) {
+      await this.configManager.set('llm.maxSameToolIdenticalParams', this.settings.maxSameToolIdenticalParams);
     }
 
     console.log('💾 ChatBox settings saved:', this.settings);
@@ -190,10 +204,10 @@ class ChatBoxSettingsManager {
   /**
    * Set a specific setting
    */
-  setSetting(key, value) {
+  async setSetting(key, value) {
     if (this.settings.hasOwnProperty(key)) {
       this.settings[key] = value;
-      this.saveSettings();
+      await this.saveSettings();
       return true;
     }
     console.warn('⚠️ Unknown ChatBox setting:', key);
@@ -203,7 +217,7 @@ class ChatBoxSettingsManager {
   /**
    * Update multiple settings at once
    */
-  updateSettings(newSettings) {
+  async updateSettings(newSettings) {
     let hasChanges = false;
 
     for (const [key, value] of Object.entries(newSettings)) {
@@ -214,7 +228,7 @@ class ChatBoxSettingsManager {
     }
 
     if (hasChanges) {
-      this.saveSettings();
+      await this.saveSettings();
     }
 
     return hasChanges;
@@ -223,7 +237,7 @@ class ChatBoxSettingsManager {
   /**
    * Reset settings to default values
    */
-  resetToDefaults() {
+  async resetToDefaults() {
     const defaultSettings = {
       // Display settings
       showThinkingProcess: true,
@@ -294,6 +308,8 @@ class ChatBoxSettingsManager {
       functionCallRounds: 10,
       enableEarlyCompletion: true,
       completionThreshold: 0.7,
+      maxSameToolDifferentParams: 3,
+      maxSameToolIdenticalParams: 2,
 
       // Model Selection Settings
       chatboxModelType: 'auto',
@@ -328,7 +344,7 @@ class ChatBoxSettingsManager {
     };
 
     this.settings = { ...defaultSettings };
-    this.saveSettings();
+    await this.saveSettings();
 
     // Reset Welcome Examples to default too
     if (window.welcomeExamplesManager) {
@@ -511,8 +527,8 @@ class ChatBoxSettingsManager {
     // Add reset to defaults button handler
     const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
     if (resetDefaultsBtn) {
-      resetDefaultsBtn.addEventListener('click', () => {
-        this.resetToDefaults();
+      resetDefaultsBtn.addEventListener('click', async () => {
+        await this.resetToDefaults();
         this.populateSettingsForm(modal);
       });
     }
@@ -1318,9 +1334,9 @@ class ChatBoxSettingsManager {
     // Setup save button handler
     const saveBtn = modal.querySelector('#chatboxSaveSettingsBtn');
     if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
+      saveBtn.addEventListener('click', async () => {
         console.log('💾 ChatBox Settings save button clicked');
-        this.saveSettingsFromForm(modal);
+        await this.saveSettingsFromForm(modal);
       });
     }
 
@@ -1956,7 +1972,7 @@ class ChatBoxSettingsManager {
   /**
    * Save settings from form
    */
-  saveSettingsFromForm(modal) {
+  async saveSettingsFromForm(modal) {
     const newSettings = {};
 
     for (const key of Object.keys(this.settings)) {
@@ -2044,12 +2060,20 @@ class ChatBoxSettingsManager {
       return;
     }
 
+    // Check which settings will change BEFORE updating them
+    const changedKeys = [];
+    for (const [key, value] of Object.entries(newSettings)) {
+      if (this.settings.hasOwnProperty(key) && this.settings[key] !== value) {
+        changedKeys.push(key);
+      }
+    }
+
     // Update settings
-    const hasChanges = this.updateSettings(newSettings);
+    const hasChanges = await this.updateSettings(newSettings);
 
     if (hasChanges) {
       // Show success message with detailed feedback
-      this.showSaveSuccessMessage(newSettings);
+      this.showSaveSuccessMessage(newSettings, changedKeys);
 
       // Close modal
       modal.style.display = 'none';
@@ -2067,13 +2091,15 @@ class ChatBoxSettingsManager {
   /**
    * Show detailed save success message
    */
-  showSaveSuccessMessage(newSettings) {
-    const changedSettings = [];
+  showSaveSuccessMessage(newSettings, changedKeys = null) {
+    const changedSettings = changedKeys || [];
 
-    // Check which settings were changed
-    for (const [key, value] of Object.entries(newSettings)) {
-      if (this.settings[key] !== value) {
-        changedSettings.push(key);
+    if (!changedKeys) {
+      // Check which settings were changed
+      for (const [key, value] of Object.entries(newSettings)) {
+        if (this.settings[key] !== value) {
+          changedSettings.push(key);
+        }
       }
     }
 

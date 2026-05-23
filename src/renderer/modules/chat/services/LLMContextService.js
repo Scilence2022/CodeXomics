@@ -1126,16 +1126,7 @@ class LLMContextService {
             }
           }
 
-          const checkboxId = currentTrack ? (trackMapping[currentTrack.toLowerCase()] || trackMapping[currentTrack]) : null;
-          if (checkboxId) {
-            const trackCheckbox = document.getElementById(checkboxId);
-            if (trackCheckbox && currentVisibleState !== undefined && trackCheckbox.checked === currentVisibleState) {
-              console.log(
-                  `🚫 [Policy] Track ${currentTrack} is already ${currentVisibleState ? 'visible' : 'hidden'}, no need to toggle`,
-              );
-              return false;
-            }
-          }
+
 
           // Check for recent execution of same track toggle with more precise parameter matching
           const now = Date.now();
