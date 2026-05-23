@@ -13,6 +13,22 @@ class BenchmarkEvaluatorBase {
     this._cachedKnownFunctions = null;
   }
 
+  static TIMEOUTS = {
+    DEFAULT: 120000,
+    EXPORT_WORKFLOW: 180000,
+    SHORT: 60000,
+  };
+
+  static THRESHOLDS = {
+    SUCCESS_COMPLEX: 0.4,
+    SUCCESS_SIMPLE: 0.6,
+    SUCCESS_EXPORT_PASS: 0.6,
+    FILE_EXPORT_PASS: 0.5,
+    FILE_LOADING_PASS: 0.4,
+    GENERAL_SUCCESS_BONUS: 0.3,
+    WORKFLOW_BASELINE: 0.4,
+  };
+
   // ─── Tool Name Normalization (camelCase / kebab-case → snake_case) ───────
 
   /**
@@ -131,13 +147,19 @@ class BenchmarkEvaluatorBase {
           const similarity = this.calculateStringSimilarity(actualValue, expectedValue);
           if (similarity >= 0.8) {
             score += 35;
-            console.log(`✅ High similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(1)}%)`);
+            console.log(
+              `✅ High similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(1)}%)`
+            );
           } else if (similarity >= 0.5) {
             score += 20;
-            console.log(`⚠️ Moderate similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(1)}%)`);
+            console.log(
+              `⚠️ Moderate similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(1)}%)`
+            );
           } else {
             score += 5;
-            console.log(`❌ Low similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(1)}%)`);
+            console.log(
+              `❌ Low similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(1)}%)`
+            );
           }
         }
       } else if (typeof expectedValue === 'number' && typeof actualValue === 'number') {
@@ -194,7 +216,9 @@ class BenchmarkEvaluatorBase {
       const actual = actualParams[key];
       const expected = expectedParams[key];
       if (typeof expected === 'string' && typeof actual === 'string') {
-        return actual.toLowerCase() === expected.toLowerCase() || this.calculateStringSimilarity(actual, expected) >= 0.8;
+        return (
+          actual.toLowerCase() === expected.toLowerCase() || this.calculateStringSimilarity(actual, expected) >= 0.8
+        );
       }
       return actual === expected;
     });
@@ -230,7 +254,9 @@ class BenchmarkEvaluatorBase {
       console.log(`✅ [Single Call Eval] Function name matches exactly! +50 points`);
     } else if (nameMatch === 'normalized') {
       result.score += 45; // Slight deduction for non-canonical name format
-      result.warnings.push(`Tool name matched after normalization: ${actualCall.tool_name} ≈ ${expectedCall.tool_name}`);
+      result.warnings.push(
+        `Tool name matched after normalization: ${actualCall.tool_name} ≈ ${expectedCall.tool_name}`
+      );
       console.log(`✅ [Single Call Eval] Function name matches after normalization! +45 points`);
     } else {
       result.errors.push(`Expected function ${expectedCall.tool_name}, got ${actualCall.tool_name}`);
@@ -290,10 +316,14 @@ class BenchmarkEvaluatorBase {
     }
     const tracker = window.chatManager.toolExecutionTracker;
     const recentExecutions = tracker.getSessionExecutions();
-    const effectiveTimeout = timeoutMs || (this.framework && this.framework.testTimeout) || 120000;
+    const effectiveTimeout =
+      timeoutMs || (this.framework && this.framework.testTimeout) || BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT;
 
     const completed = recentExecutions.find(
-      exec => exec.toolName === expectedToolName && exec.status === 'completed' && Date.now() - exec.startTime < effectiveTimeout
+      exec =>
+        this.matchToolName(exec.toolName, expectedToolName) &&
+        exec.status === 'completed' &&
+        Date.now() - exec.startTime < effectiveTimeout
     );
     if (completed) {
       return { found: true, status: 'completed', execution: completed };
@@ -301,7 +331,10 @@ class BenchmarkEvaluatorBase {
 
     if (earlyReturn) {
       const running = recentExecutions.find(
-        exec => exec.toolName === expectedToolName && exec.status === 'running' && Date.now() - exec.startTime < effectiveTimeout
+        exec =>
+          this.matchToolName(exec.toolName, expectedToolName) &&
+          exec.status === 'running' &&
+          Date.now() - exec.startTime < effectiveTimeout
       );
       if (running) {
         return { found: true, status: 'running', execution: running };
@@ -309,7 +342,10 @@ class BenchmarkEvaluatorBase {
     }
 
     const failed = recentExecutions.find(
-      exec => exec.toolName === expectedToolName && exec.status === 'failed' && Date.now() - exec.startTime < effectiveTimeout
+      exec =>
+        this.matchToolName(exec.toolName, expectedToolName) &&
+        exec.status === 'failed' &&
+        Date.now() - exec.startTime < effectiveTimeout
     );
     if (failed) {
       return { found: true, status: 'failed', execution: failed };
@@ -318,7 +354,46 @@ class BenchmarkEvaluatorBase {
     return { found: false };
   }
 
-  // ─── Unified evaluateBasicFunctionCall ────────────────────────────────────
+  getRecentToolMatches(expectedToolNames, timeoutMs = BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT, expectedParams = null) {
+    if (!window.chatManager || !window.chatManager.toolExecutionTracker) {
+      return { matched: [], unmatched: [...expectedToolNames], matchDetails: [] };
+    }
+    const tracker = window.chatManager.toolExecutionTracker;
+    const recentExecutions = tracker.getSessionExecutions();
+    const now = Date.now();
+
+    const matched = [];
+    const unmatched = [];
+    const matchDetails = [];
+
+    for (const expectedTool of expectedToolNames) {
+      const paramIndex = expectedToolNames.indexOf(expectedTool);
+      const toolExpectedParams = expectedParams
+        ? Array.isArray(expectedParams)
+          ? expectedParams[paramIndex]
+          : expectedParams
+        : null;
+
+      const relevantExec = recentExecutions.find(exec => {
+        if (!this.matchToolName(exec.toolName, expectedTool)) return false;
+        if (exec.status !== 'completed') return false;
+        if (now - exec.startTime >= timeoutMs) return false;
+        if (toolExpectedParams && exec.parameters) {
+          return this.hasCriticalParams(exec.parameters, toolExpectedParams);
+        }
+        return true;
+      });
+
+      if (relevantExec) {
+        matched.push(expectedTool);
+        matchDetails.push({ tool: expectedTool, execution: relevantExec, paramsVerified: !!toolExpectedParams });
+      } else {
+        unmatched.push(expectedTool);
+      }
+    }
+
+    return { matched, unmatched, matchDetails };
+  }
 
   /**
    * Unified basic function call evaluation.
@@ -446,9 +521,11 @@ class BenchmarkEvaluatorBase {
       const hasSuccessSignal = successPatterns.some(pattern => pattern.test(actualResult));
       if (hasSuccessSignal) {
         const toolMentioned = actualResult.toLowerCase().includes(expectedResult.tool_name.toLowerCase());
-        if (/tool execution completed.*succeeded/i.test(actualResult) ||
-            /(file|reads|genome|annotation|variant).*loaded successfully|I've successfully loaded/i.test(actualResult) ||
-            toolMentioned) {
+        if (
+          /tool execution completed.*succeeded/i.test(actualResult) ||
+          /(file|reads|genome|annotation|variant).*loaded successfully|I've successfully loaded/i.test(actualResult) ||
+          toolMentioned
+        ) {
           evaluation.score = evaluation.maxScore;
           evaluation.success = true;
           evaluation.warnings.push('Awarded full points based on explicit success signal');
@@ -482,7 +559,9 @@ class BenchmarkEvaluatorBase {
             }
           }
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        /* ignore */
+      }
 
       // Emergency fallback: check if expected tool name appears in string
       if (evaluation.score === 0 && actualResult.toLowerCase().includes(expectedResult.tool_name.toLowerCase())) {
@@ -492,7 +571,11 @@ class BenchmarkEvaluatorBase {
       }
     } else if (!actualTool && actualResult && typeof actualResult === 'object') {
       // Check alternative property names
-      actualTool = actualResult.function_call?.name || actualResult.tool_call?.name || actualResult.function_name || actualResult.name;
+      actualTool =
+        actualResult.function_call?.name ||
+        actualResult.tool_call?.name ||
+        actualResult.function_name ||
+        actualResult.name;
       const altMatch = actualTool ? this.matchToolName(actualTool, expectedResult.tool_name) : false;
       if (altMatch) {
         evaluation.score = evaluation.maxScore;
@@ -645,13 +728,19 @@ class BenchmarkEvaluatorBase {
       if (submittedTools.length === expectedResult.tool_sequence.length) {
         evaluation.score = evaluation.maxScore;
         evaluation.success = true;
-        evaluation.warnings.push(`All ${submittedTools.length} workflow tools submitted (earlyReturn: not waiting for completion)`);
+        evaluation.warnings.push(
+          `All ${submittedTools.length} workflow tools submitted (earlyReturn: not waiting for completion)`
+        );
         return evaluation;
       } else if (submittedTools.length > 0) {
-        const partialScore = Math.floor(evaluation.maxScore * (submittedTools.length / expectedResult.tool_sequence.length));
+        const partialScore = Math.floor(
+          evaluation.maxScore * (submittedTools.length / expectedResult.tool_sequence.length)
+        );
         evaluation.score = partialScore;
         evaluation.success = partialScore >= Math.ceil(evaluation.maxScore * successThreshold);
-        evaluation.warnings.push(`${submittedTools.length}/${expectedResult.tool_sequence.length} workflow tools submitted (earlyReturn)`);
+        evaluation.warnings.push(
+          `${submittedTools.length}/${expectedResult.tool_sequence.length} workflow tools submitted (earlyReturn)`
+        );
         return evaluation;
       }
     }
@@ -746,7 +835,9 @@ class BenchmarkEvaluatorBase {
     }
 
     if (builtInTools.length > 0) {
-      console.log(`✅ [BenchmarkEvaluatorBase] Loaded ${builtInTools.length} tool names dynamically from builtInToolsMap`);
+      console.log(
+        `✅ [BenchmarkEvaluatorBase] Loaded ${builtInTools.length} tool names dynamically from builtInToolsMap`
+      );
       this._cachedKnownFunctions = builtInTools;
       return this._cachedKnownFunctions;
     }
@@ -755,36 +846,67 @@ class BenchmarkEvaluatorBase {
     console.warn('[BenchmarkEvaluatorBase] builtInToolsMap not available, using fallback known functions list');
     this._cachedKnownFunctions = [
       // Navigation
-      'find_gene_by_name', 'search_features', 'search_by_position',
-      'navigate_to_position', 'jump_to_gene', 'switch_chromosome',
-      'zoom_in', 'zoom_out', 'set_zoom_level',
+      'find_gene_by_name',
+      'search_features',
+      'search_by_position',
+      'navigate_to_position',
+      'jump_to_gene',
+      'switch_chromosome',
+      'zoom_in',
+      'zoom_out',
+      'set_zoom_level',
       // Sequence
-      'get_gene_sequence', 'get_sequence', 'get_coding_sequence',
-      'compute_gc', 'reverse_complement', 'translate_dna',
-      'codon_usage_analysis', 'genome_codon_usage_analysis',
+      'get_gene_sequence',
+      'get_sequence',
+      'get_coding_sequence',
+      'compute_gc',
+      'reverse_complement',
+      'translate_dna',
+      'codon_usage_analysis',
+      'genome_codon_usage_analysis',
       'search_sequence_motif',
       // File loading
-      'load_genome_file', 'load_annotation_file', 'load_reads_file',
-      'load_variant_file', 'load_wig_tracks', 'load_operon_file',
+      'load_genome_file',
+      'load_annotation_file',
+      'load_reads_file',
+      'load_variant_file',
+      'load_wig_tracks',
+      'load_operon_file',
       // Export
-      'export_fasta_sequence', 'export_genbank_format', 'export_gff_annotations',
-      'export_bed_format', 'export_cds_fasta', 'export_protein_fasta',
+      'export_fasta_sequence',
+      'export_genbank_format',
+      'export_gff_annotations',
+      'export_bed_format',
+      'export_cds_fasta',
+      'export_protein_fasta',
       'export_current_view_fasta',
       // BLAST & External
-      'run_blast_search', 'uniprot_search', 'alphafold_search',
-      'search_pdb_structures', 'search_alphafold_structures',
+      'run_blast_search',
+      'uniprot_search',
+      'alphafold_search',
+      'search_pdb_structures',
+      'search_alphafold_structures',
       // State & System
-      'get_current_state', 'set_working_directory',
-      'show_gene_details', 'save_current_view',
+      'get_current_state',
+      'set_working_directory',
+      'show_gene_details',
+      'save_current_view',
       'toggle_track_visibility',
       // Sequence editing
-      'copy_sequence', 'paste_sequence', 'delete_sequence',
-      'insert_sequence', 'replace_sequence', 'cut_sequence',
-      'execute_actions', 'get_action_list', 'clear_actions',
+      'copy_sequence',
+      'paste_sequence',
+      'delete_sequence',
+      'insert_sequence',
+      'replace_sequence',
+      'cut_sequence',
+      'execute_actions',
+      'get_action_list',
+      'clear_actions',
       // Analysis
       'analyze_region',
       // UI
-      'open_new_tab', 'switch_to_tab',
+      'open_new_tab',
+      'switch_to_tab',
     ];
     return this._cachedKnownFunctions;
   }

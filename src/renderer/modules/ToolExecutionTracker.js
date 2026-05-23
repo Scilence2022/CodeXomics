@@ -27,6 +27,7 @@ class ToolExecutionTracker {
    */
   startSession(sessionId, metadata = {}) {
     this.currentSessionId = sessionId;
+    this.currentTestId = metadata.testId || null;
     this.sessionHistory.set(sessionId, []);
 
     console.log(`🚀 [ToolExecutionTracker] Started session: ${sessionId}`, metadata);
@@ -46,6 +47,7 @@ class ToolExecutionTracker {
     const record = {
       executionId,
       sessionId: this.currentSessionId,
+      testId: context.testId || this.currentTestId || null,
       toolName,
       parameters: this.sanitizeParameters(parameters),
       context,
@@ -141,6 +143,18 @@ class ToolExecutionTracker {
     console.log(`🔍 [ToolExecutionTracker] Retrieved ${executions.length} executions for session: ${targetSessionId}`);
 
     return executions;
+  }
+
+  getTestExecutions(testId, sessionId = null) {
+    const executions = this.getSessionExecutions(sessionId);
+    if (!testId) return executions;
+    const testExecutions = executions.filter(exec => exec.testId === testId);
+    console.log(`🔍 [ToolExecutionTracker] Retrieved ${testExecutions.length} executions for test: ${testId}`);
+    return testExecutions;
+  }
+
+  setCurrentTestId(testId) {
+    this.currentTestId = testId;
   }
 
   /**
@@ -252,6 +266,7 @@ class ToolExecutionTracker {
     // 清理当前会话ID（如果结束的是当前会话）
     if (targetSessionId === this.currentSessionId) {
       this.currentSessionId = null;
+      this.currentTestId = null;
     }
 
     console.log(`🏁 [ToolExecutionTracker] Session ended: ${targetSessionId}`);

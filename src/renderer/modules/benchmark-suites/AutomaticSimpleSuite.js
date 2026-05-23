@@ -1,3 +1,4 @@
+/* global BenchmarkEvaluatorBase */
 /**
  * Automatic Simple Benchmark Suite - Automatic evaluation + Simple complexity tests
  * Extracted from ComprehensiveBenchmarkSuite.js for better organization
@@ -120,7 +121,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateWorkingDirectoryCall.bind(this),
       },
 
-
       // SYSTEM/UTILITY TASKS - Automatic + Simple
       {
         id: 'sys_auto_02',
@@ -139,7 +139,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
 
       // DATA LOADING TASKS - Automatic + Simple (FIRST - Data must be loaded before other tests)
       {
@@ -256,7 +255,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateFileLoadingCall.bind(this),
       },
-
 
       // FILE LOADING EXTENSION TASKS - Automatic + Simple
       {
@@ -433,7 +431,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-           {
+      {
         id: 'nav_auto_08',
         name: 'Zoom Out',
         type: 'function_call',
@@ -544,8 +542,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
-
 
       // ANALYSIS TASKS - Automatic + Simple
       {
@@ -986,7 +982,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-     {
+      {
         id: 'ext_auto_03',
         name: 'Search PDB Structure for lysC',
         type: 'function_call',
@@ -1026,7 +1022,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
 
       // SEQUENCE EDITING AND ACTION MANAGEMENT TASKS - Automatic + Simple
       // Logical workflow: copy → paste → delete → insert → replace → cut → execute → get_list → undo → clear
@@ -1165,7 +1160,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'sequence_editing',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: `Execute all pending sequence editing actions in the queue and export the resulting gbk file to ${this.buildFilePath("exported_files/edited_genome_sequence.gbk")}`,
+        instruction: `Execute all pending sequence editing actions in the queue and export the resulting gbk file to ${this.buildFilePath('exported_files/edited_genome_sequence.gbk')}`,
         expectedResult: {
           tool_name: 'execute_actions',
           parameters: {
@@ -1221,7 +1216,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-
       // CLIPBOARD CONTENT TASKS - Automatic + Simple
       {
         id: 'edit_auto_10',
@@ -1253,7 +1247,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'annotation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Create a gene annotation named "fakG" of type "gene" at position 500000 to 501500 on the current chromosome.',
+        instruction:
+          'Create a gene annotation named "fakG" of type "gene" at position 500000 to 501500 on the current chromosome.',
         expectedResult: {
           tool_name: 'create_annotation',
           parameters: {
@@ -1363,7 +1358,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
 
       // TRACK CONTROL TASKS - Automatic + Simple
 
@@ -1807,7 +1801,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-
       // SEQUENCE ANALYSIS EXTENSION TASKS - Automatic + Simple
       {
         id: 'seq_auto_03',
@@ -1816,7 +1809,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'sequence',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Translate the DNA sequence ATGAAAGCGCTGAAAGCGCTGAAAGCGCTGAAAGCGCTG to protein using standard genetic code.',
+        instruction:
+          'Translate the DNA sequence ATGAAAGCGCTGAAAGCGCTGAAAGCGCTGAAAGCGCTG to protein using standard genetic code.',
         expectedResult: {
           tool_name: 'translate_dna',
           parameters: {
@@ -1828,9 +1822,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
-
-
 
       // TRACK SETTINGS TASKS - Automatic + Simple
       {
@@ -1916,7 +1907,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'utility',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Download a file from the URL https://ftp.ncbi.nlm.nih.gov/genomes/README_change_notice.txt to the working directory.',
+        instruction:
+          'Download a file from the URL https://ftp.ncbi.nlm.nih.gov/genomes/README_change_notice.txt to the working directory.',
         expectedResult: {
           tool_name: 'download_internet_file',
           parameters: {
@@ -1947,8 +1939,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
-
 
       {
         id: 'blast_auto_01',
@@ -1984,8 +1974,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 15000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
- 
- 
+
       {
         id: 'blast_auto_05',
         name: 'Create BLAST Database Quick',
@@ -2004,7 +1993,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         earlyReturn: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
 
       // PRIMER DESIGN TASKS - Automatic + Simple
       {
@@ -2048,7 +2036,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
-
       {
         id: 'restrict_auto_01',
         name: 'Virtual Digest',
@@ -2056,7 +2043,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Perform a virtual restriction digest with EcoRI and HindIII enzymes using sequence ACGGACAAATTGACCTCCCTTCGTCAGTACACCACCGTAGTGGCCGACACTGGGGACATCGCGGCAATGAAGCTGTATCAACCGCAGGATGCCACAACCAACCCTTCTCTCATTCTTAACGCAGCGCAGATTCCGGAATACCGTAAGTTGATTGATGATGCTGTCGCCTGGGCGAAACAGCAGAGCAACGATCGCGCGCAGCAGATCGTGGACGCGACCGACAAACTGGCAGTAAATATTGGTCTGGAAATCCTGAAACTGGTTCCGGGCCGTATCTCAACTGAAGTTGATGCGCGTCTTTCCTATGACACCGAAGCGTCAATTGCGAAAGCAAAACGCCTGATCAAACTCTACAACGATGCTGGTATTAGCAACGATCGTATTCTGATCAAACTGGCTTCTACCTGGCAGGGTATCCGTGCTGCAGAACAGCTGGAAAAAGAAGGCATCAACTGTAACCTGACCCTGCTGTTCTCCTTCGCTCAGGCTCGTGCTTGTGCGGAAGCGGGCGTGTTCCTGATCTCGCCGTTTGTTGGCCGTATTCTTGACTGGTACAAAGCGAATACCGATAAGAAAGAGTACGCTCCGGCAGAAGATCCGGGCGTGGTTTCTGTATCTGAAATCTACCAGTACTACAAAGAGCACGGTTATGAAACCGTGGTTATGGGCGCAAGCTTCCGTAACATCGGCGAAATTCTGGAACTGGCAGGCTGCGACCGTCTGACCATCGCACCGGCACTGCTGAAAGAGCTGGCGGAGAGCGAAGGGGCTATCGAACGTAAACTGTCTTACACCGGCGAAGTGAAAGCGCGTCCGGCGCGTATCACTGAGTCCGAGTTCCTGTGGCAGCACAACCAGGATCCAATGGCAGTAGATAAACTGGCGGAAGGTATCCGTAAGTTTGCTATTGACCAGGAAAAACTGGAAAAAATGATCGGCGATCTGCTGTAA',
+        instruction:
+          'Perform a virtual restriction digest with EcoRI and HindIII enzymes using sequence ACGGACAAATTGACCTCCCTTCGTCAGTACACCACCGTAGTGGCCGACACTGGGGACATCGCGGCAATGAAGCTGTATCAACCGCAGGATGCCACAACCAACCCTTCTCTCATTCTTAACGCAGCGCAGATTCCGGAATACCGTAAGTTGATTGATGATGCTGTCGCCTGGGCGAAACAGCAGAGCAACGATCGCGCGCAGCAGATCGTGGACGCGACCGACAAACTGGCAGTAAATATTGGTCTGGAAATCCTGAAACTGGTTCCGGGCCGTATCTCAACTGAAGTTGATGCGCGTCTTTCCTATGACACCGAAGCGTCAATTGCGAAAGCAAAACGCCTGATCAAACTCTACAACGATGCTGGTATTAGCAACGATCGTATTCTGATCAAACTGGCTTCTACCTGGCAGGGTATCCGTGCTGCAGAACAGCTGGAAAAAGAAGGCATCAACTGTAACCTGACCCTGCTGTTCTCCTTCGCTCAGGCTCGTGCTTGTGCGGAAGCGGGCGTGTTCCTGATCTCGCCGTTTGTTGGCCGTATTCTTGACTGGTACAAAGCGAATACCGATAAGAAAGAGTACGCTCCGGCAGAAGATCCGGGCGTGGTTTCTGTATCTGAAATCTACCAGTACTACAAAGAGCACGGTTATGAAACCGTGGTTATGGGCGCAAGCTTCCGTAACATCGGCGAAATTCTGGAACTGGCAGGCTGCGACCGTCTGACCATCGCACCGGCACTGCTGAAAGAGCTGGCGGAGAGCGAAGGGGCTATCGAACGTAAACTGTCTTACACCGGCGAAGTGAAAGCGCGTCCGGCGCGTATCACTGAGTCCGAGTTCCTGTGGCAGCACAACCAGGATCCAATGGCAGTAGATAAACTGGCGGAAGGTATCCGTAAGTTTGCTATTGACCAGGAAAAACTGGAAAAAATGATCGGCGATCTGCTGTAA',
         expectedResult: {
           tool_name: 'virtual_digest',
           parameters: {
@@ -2068,10 +2056,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
-
-
-
     ];
   }
 
@@ -2288,20 +2272,10 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
    * Looks for success patterns in response or tool execution tracker
    */
   checkToolExecutionSuccess(actualResult, expectedToolName) {
-    // Method 1: Check Tool Execution Tracker
-    if (window.chatManager && window.chatManager.toolExecutionTracker) {
-      const tracker = window.chatManager.toolExecutionTracker;
-      const recentExecutions = tracker.getSessionExecutions();
-
-      const relevantExecution = recentExecutions.find(
-        exec =>
-          exec.toolName === expectedToolName && exec.status === 'completed' && Date.now() - exec.startTime < timeoutMs // Within configured timeout window
-      );
-
-      if (relevantExecution) {
-        console.log(`🔍 [checkToolExecutionSuccess] Tracker shows successful execution:`, relevantExecution);
-        return true;
-      }
+    const trackerResult = this.checkToolExecutionTracker(expectedToolName, BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT);
+    if (trackerResult.found && trackerResult.status === 'completed') {
+      console.log(`[checkToolExecutionSuccess] Tracker shows successful execution:`, trackerResult.execution);
+      return true;
     }
 
     // Method 2: Check for success patterns in response text
@@ -2341,9 +2315,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
     // Method 1: From actualResult parameters
     if (actualResult && actualResult.parameters && actualResult.parameters.filePath) {
       targetFilePath = actualResult.parameters.filePath;
-    }
-    // Method 2: From expectedResult parameters as fallback
-    else if (expectedResult && expectedResult.parameters && expectedResult.parameters.filePath) {
+    } else if (expectedResult && expectedResult.parameters && expectedResult.parameters.filePath) {
+      // Method 2: From expectedResult parameters as fallback
       targetFilePath = expectedResult.parameters.filePath;
     }
 
