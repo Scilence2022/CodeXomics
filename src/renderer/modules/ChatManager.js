@@ -8897,6 +8897,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Trim leading/trailing whitespace
     let formattedMessage = message.trim();
 
+    // Strip <think>...</think> blocks from final rendered messages to keep them clean
+    formattedMessage = formattedMessage.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
     // Remove common leading whitespace while preserving relative indentation
     const lines = formattedMessage.split('\n');
     if (lines.length > 1) {
@@ -14006,8 +14009,15 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const thinkingContent = thinkingMatch[1].trim();
       // 格式化思考内容，使其更易读
       const formattedThinking = this.formatThinkingContent(thinkingContent);
-      this.updateThinkingMessage(`💭 <strong>Model reasoning:</strong>`);
-      this.updateThinkingMessage(`&nbsp;&nbsp;${formattedThinking.replace(/\n/g, '\n&nbsp;&nbsp;')}`);
+      
+      // Render as a collapsible block using standard HTML details/summary
+      const detailsHtml = `
+<details>
+  <summary>💭 Model reasoning</summary>
+  <div style="padding-top: 8px; font-family: inherit; font-size: inherit; white-space: pre-line;">${formattedThinking}</div>
+</details>
+      `.trim();
+      this.updateThinkingMessage(detailsHtml);
     }
 
     // 检查是否有工具调用，并显示参数提取过程

@@ -1982,7 +1982,13 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const choiceMessage = data.choices[0].message;
+    let content = choiceMessage.content || '';
+    const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
+    if (reasoning && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   async sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2031,7 +2037,13 @@ class LLMConfigManager {
       'OpenAI',
       async response => {
         const data = await response.json();
-        return data.choices[0].message.content;
+        const choiceMessage = data.choices[0].message;
+        let content = choiceMessage.content || '';
+        const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
+        if (reasoning && !content.includes('<think>')) {
+          content = `<think>\n${reasoning}\n</think>\n${content}`;
+        }
+        return content;
       }
     );
   }
@@ -2274,7 +2286,13 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const choiceMessage = data.choices[0].message;
+    let content = choiceMessage.content || '';
+    const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
+    if (reasoning && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   async sendDeepSeekMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2311,7 +2329,13 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const choiceMessage = data.choices[0].message;
+    let content = choiceMessage.content || '';
+    const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
+    if (reasoning && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   async sendSiliconFlowMessage(provider, message, context, memoryContext = null) {
@@ -2349,7 +2373,13 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const choiceMessage = data.choices[0].message;
+    let content = choiceMessage.content || '';
+    const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
+    if (reasoning && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   /**
@@ -2502,12 +2532,17 @@ class LLMConfigManager {
         }
 
         console.log('SiliconFlow Message Object:', choice.message);
-        const content = choice.message.content;
+        const msg = choice.message;
+        let content = msg.content || '';
+        const reasoning = msg.reasoning_content || msg.reasoning;
+        if (reasoning && !content.includes('<think>')) {
+          content = `<think>\n${reasoning}\n</think>\n${content}`;
+        }
         console.log('SiliconFlow Content Extracted:', content);
         console.log('Content type:', typeof content);
         console.log('Content length:', content ? content.length : 'null/undefined');
 
-        return content || '';
+        return content;
       }
     );
   }
@@ -2567,14 +2602,26 @@ class LLMConfigManager {
             throw new Error(`HTTP ${status}: ${response.statusText} - ${errorText || fbText}`);
           }
           const fbData = await response.json();
-          return fbData.choices[0]?.message?.content ?? '';
+          const fbMsg = fbData.choices[0]?.message;
+          let fbContent = fbMsg?.content ?? '';
+          const fbReasoning = fbMsg?.reasoning_content || fbMsg?.reasoning;
+          if (fbReasoning && fbContent && !fbContent.includes('<think>')) {
+            fbContent = `<think>\n${fbReasoning}\n</think>\n${fbContent}`;
+          }
+          return fbContent;
         }
       }
       throw new Error(`HTTP ${status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content ?? '';
+    const choiceMessage = data.choices[0]?.message;
+    let content = choiceMessage?.content ?? '';
+    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
+    if (reasoning && content && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   async sendOpenRouterMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2630,14 +2677,26 @@ class LLMConfigManager {
             throw new Error(`HTTP ${status}: ${response.statusText} - ${errorText || fbText}`);
           }
           const fbData = await response.json();
-          return fbData.choices[0]?.message?.content ?? '';
+          const fbMsg = fbData.choices[0]?.message;
+          let fbContent = fbMsg?.content ?? '';
+          const fbReasoning = fbMsg?.reasoning_content || fbMsg?.reasoning;
+          if (fbReasoning && fbContent && !fbContent.includes('<think>')) {
+            fbContent = `<think>\n${fbReasoning}\n</think>\n${fbContent}`;
+          }
+          return fbContent;
         }
       }
       throw new Error(`HTTP ${status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content ?? '';
+    const choiceMessage = data.choices[0]?.message;
+    let content = choiceMessage?.content ?? '';
+    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
+    if (reasoning && content && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   getOpenRouterFallbackModel(originalModel) {
@@ -2732,7 +2791,13 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content ?? '';
+    const choiceMessage = data.choices[0]?.message;
+    let content = choiceMessage?.content ?? '';
+    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
+    if (reasoning && content && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   async sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2770,7 +2835,13 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content ?? '';
+    const choiceMessage = data.choices[0]?.message;
+    let content = choiceMessage?.content ?? '';
+    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
+    if (reasoning && content && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   async sendMinimax_cnMessage(provider, message, context, memoryContext = null) {
@@ -2809,7 +2880,13 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content ?? '';
+    const choiceMessage = data.choices[0]?.message;
+    let content = choiceMessage?.content ?? '';
+    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
+    if (reasoning && content && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   async sendMinimax_cnMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2847,7 +2924,13 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content ?? '';
+    const choiceMessage = data.choices[0]?.message;
+    let content = choiceMessage?.content ?? '';
+    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
+    if (reasoning && content && !content.includes('<think>')) {
+      content = `<think>\n${reasoning}\n</think>\n${content}`;
+    }
+    return content;
   }
 
   async sendLocalMessage(provider, message, context, memoryContext = null) {
@@ -2904,7 +2987,12 @@ class LLMConfigManager {
       data.choices[0].message &&
       typeof data.choices[0].message.content === 'string'
     ) {
-      const content = data.choices[0].message.content;
+      const choiceMessage = data.choices[0].message;
+      let content = choiceMessage.content;
+      const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
+      if (reasoning && !content.includes('<think>')) {
+        content = `<think>\n${reasoning}\n</think>\n${content}`;
+      }
       if (content.trim() === '') {
         console.warn('Local LLM returned empty content, this might indicate a model issue');
         return 'I apologize, but the local LLM model returned an empty response. This could indicate:\n\n• The model is still loading or initializing\n• The model encountered an issue processing the request\n• The model requires different parameters\n\nPlease try:\n1. Waiting a moment and trying again\n2. Checking if the local LLM service is running properly\n3. Switching to a different LLM provider temporarily';
@@ -2968,7 +3056,12 @@ class LLMConfigManager {
       data.choices[0].message &&
       typeof data.choices[0].message.content === 'string'
     ) {
-      const content = data.choices[0].message.content;
+      const choiceMessage = data.choices[0].message;
+      let content = choiceMessage.content;
+      const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
+      if (reasoning && !content.includes('<think>')) {
+        content = `<think>\n${reasoning}\n</think>\n${content}`;
+      }
       if (content.trim() === '') {
         console.warn('Local LLM returned empty content, this might indicate a model issue');
         return 'I apologize, but the local LLM model returned an empty response. This could indicate:\n\n• The model is still loading or initializing\n• The model encountered an issue processing the request\n• The model requires different parameters\n\nPlease try:\n1. Waiting a moment and trying again\n2. Checking if the local LLM service is running properly\n3. Switching to a different LLM provider temporarily';
