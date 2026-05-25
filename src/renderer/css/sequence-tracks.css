@@ -861,3 +861,69 @@
   font-size: 13px;
   color: var(--text-muted);
 }
+
+/* =====================================================
+   READS TRACK SETTINGS STYLES
+   ===================================================== */
+
+.reads-settings-tabs {
+  margin-top: 10px;
+}
+
+.reads-settings-tabs .tab-buttons {
+  display: flex;
+  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 20px;
+}
+
+.reads-settings-tabs .tab-button {
+  background: #f8f9fa;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  margin-right: 4px;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reads-settings-tabs .tab-button:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.reads-settings-tabs .tab-button.active {
+  background: #007bff;
+  color: white;
+  border-bottom: 2px solid #007bff;
+}
+
+.reads-settings-tabs .tab-panel {
+  display: none;
+  min-height: 300px;
+  padding: 15px;
+}
+
+.reads-settings-tabs .tab-panel.active {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  min-height: 300px !important;
+  overflow: visible !important;
+  position: static !important;
+  left: auto !important;
+}
+
+/* Ensure tab content container is properly sized */
+.reads-settings-tabs .tab-content {
+  display: block !important;
+  min-height: 300px;
+  overflow: visible;
+}
+

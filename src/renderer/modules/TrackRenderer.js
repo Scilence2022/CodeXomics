@@ -10380,6 +10380,16 @@ This action cannot be undone.`;
     const bodyElement = modal.querySelector('#trackSettingsBody');
     console.log('⚙️ Modal elements found - title:', !!titleElement, 'body:', !!bodyElement);
 
+    // Toggle llm-config-modal class on the modal content wrapper for styling consistency
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+      if (trackType === 'genes') {
+        modalContent.classList.add('llm-config-modal');
+      } else {
+        modalContent.classList.remove('llm-config-modal');
+      }
+    }
+
     // Get current settings for this track (instance-specific if fileId provided)
     const currentSettings = this.getTrackSettings(trackType, fileId);
     console.log('⚙️ Current settings for', trackType, ':', currentSettings);
@@ -10621,134 +10631,168 @@ This action cannot be undone.`;
    */
   createGenesSettingsContent(settings) {
     return `
-            <div class="settings-section">
-                <h4>Display Options</h4>
-                <div class="form-group">
-                    <label for="genesRenderingMode">Rendering Mode:</label>
-                    <select id="genesRenderingMode">
-                        <option value="svg" ${settings.renderingMode === 'svg' ? 'selected' : ''}>SVG (Default)</option>
-                        <option value="canvas" ${settings.renderingMode === 'canvas' ? 'selected' : ''}>Canvas (Better Performance)</option>
-                    </select>
-                    <div class="help-text">Canvas mode offers improved performance for large datasets.</div>
+            <div class="genes-settings-tabs">
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-tab="genes-display">
+                        <i class="fas fa-desktop"></i> Display
+                    </button>
+                    <button class="tab-button" data-tab="genes-highlight">
+                        <i class="fas fa-highlighter"></i> Highlight
+                    </button>
+                    <button class="tab-button" data-tab="genes-interaction">
+                        <i class="fas fa-hand-pointer"></i> Interaction
+                    </button>
+                    <button class="tab-button" data-tab="genes-visuals">
+                        <i class="fas fa-palette"></i> Visuals
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="genesMaxRows">Maximal rows for displaying features:</label>
-                    <input type="number" id="genesMaxRows" min="1" max="20" value="${settings.maxRows || 6}">
-                    <div class="help-text">Limits the number of rows shown. Features beyond this limit will be hidden or merged depending on the layout mode.</div>
-                </div>
-                <div class="form-group">
-                    <label for="genesLayoutMode">Layout Mode:</label>
-                    <select id="genesLayoutMode">
-                        <option value="expanded" ${settings.layoutMode === 'expanded' || !settings.layoutMode ? 'selected' : ''}>Expanded</option>
-                        <option value="compact" ${settings.layoutMode === 'compact' ? 'selected' : ''}>Compact</option>
-                        <option value="groupByType" ${settings.layoutMode === 'groupByType' ? 'selected' : ''}>Group by Type</option>
-                    </select>
-                    <div class="help-text">"Expanded": Full-size features with labels. "Compact": Smaller features without labels. "Group by Type": Separates features into dedicated rows by type.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="genesShowOperonsSameRow" ${settings.showOperonsSameRow ? 'checked' : ''}>
-                        Group genes in the same operon
-                    </label>
-                    <div class="help-text">When enabled, genes belonging to the same operon will be grouped together in the same row when possible (in Compact mode).</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="genesShowSequence" ${settings.showSequence ? 'checked' : ''}>
-                        Show reference sequence
-                    </label>
-                    <div class="help-text">When enabled, displays the reference sequence between the secondary ruler and gene elements for better context.</div>
-                </div>
-                <div class="form-group">
-                    <label for="genesSequenceHeight">Reference Sequence Height (px):</label>
-                    <input type="number" id="genesSequenceHeight" min="15" max="50" value="${settings.sequenceHeight || 25}" ${settings.showSequence ? '' : 'disabled'}>
-                    <div class="help-text">Height of the reference sequence display area.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="genesCircularMode" ${settings.circularMode ? 'checked' : ''}>
-                        Enable circular browsing mode
-                    </label>
-                    <div class="help-text">When enabled, enables wraparound navigation for circular genomes (e.g., plasmids, bacterial chromosomes).</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Gene Selection Highlight</h4>
-                <div class="form-group">
-                    <label for="genesHighlightEffect">Highlight Effect:</label>
-                    <select id="genesHighlightEffect">
-                        <option value="pulse" ${settings.highlightEffect === 'pulse' ? 'selected' : ''}>Breathing Pulse (Default)</option>
-                        <option value="border" ${settings.highlightEffect === 'border' ? 'selected' : ''}>Border Thickening</option>
-                        <option value="both" ${settings.highlightEffect === 'both' ? 'selected' : ''}>Both Effects</option>
-                    </select>
-                    <div class="help-text">Choose the visual effect when a gene is selected. "Breathing Pulse" creates a pulsing glow effect, "Border Thickening" creates a thick animated border, and "Both" combines both effects.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="genesAutoHighlightSequence" ${settings.autoHighlightSequence ? 'checked' : ''}>
-                        Auto-highlight sequence region when gene is selected
-                    </label>
-                    <div class="help-text">When enabled, automatically highlights the corresponding sequence region in the reference sequence when a gene is selected.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Interactive Features</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="genesEnableGlobalDragging" ${settings.enableGlobalDragging !== false ? 'checked' : ''}>
-                        Enable Global Track Dragging
-                    </label>
-                    <div class="help-text">When enabled, this track will update dynamically during drag operations, providing real-time navigation feedback. Disable for better performance on slower devices.</div>
-                </div>
-                <div class="form-group">
-                    <label for="genesWheelZoomSensitivity">Wheel Zoom Sensitivity:</label>
-                    <input type="range" id="genesWheelZoomSensitivity" min="0.01" max="0.5" step="0.01" value="${settings.wheelZoomSensitivity || 0.1}">
-                    <div class="range-display">Current: <span id="genesWheelZoomSensitivityValue">${settings.wheelZoomSensitivity || 0.1}</span></div>
-                    <div class="help-text">Adjust mouse wheel zoom sensitivity when cursor is over the Genes track. Lower values = slower zoom, higher values = faster zoom. (0.01 = very slow, 0.5 = very fast)</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="genesOverrideGlobalZoom" ${settings.overrideGlobalZoom ? 'checked' : ''}>
-                        Override Global Zoom Settings
-                    </label>
-                    <div class="help-text">When enabled, the Genes track will use its own zoom sensitivity instead of the global wheel zoom settings when the cursor is over this track.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Visual Settings</h4>
-                <div class="form-group">
-                    <label for="genesTrackHeight">Track Height (px):</label>
-                    <input type="number" id="genesTrackHeight" min="60" max="400" value="${settings.height || 120}">
-                </div>
-                <div class="form-group">
-                    <label for="genesGeneHeight">Gene Element Height (px):</label>
-                    <input type="number" id="genesGeneHeight" min="12" max="60" value="${settings.geneHeight || 24}">
-                    <div class="help-text">Height of individual gene elements. Affects spacing between gene rows.</div>
-                </div>
-                <div class="form-group">
-                    <label for="genesFontSize">Gene Name Font Size (px):</label>
-                    <input type="number" id="genesFontSize" min="8" max="48" value="${settings.fontSize || 24}">
-                    <div class="help-text">Font size for gene names and labels.</div>
-                </div>
-                <div class="form-group">
-                    <label for="genesGeneNameColor">Gene Name Color:</label>
-                    <input type="color" id="genesGeneNameColor" value="${settings.geneNameColor || '#333333'}">
-                    <div class="help-text">Color of the gene name text labels.</div>
-                </div>
-                <div class="form-group">
-                    <label for="genesMaxBorderWidth">Maximum Border Width (px):</label>
-                    <input type="number" id="genesMaxBorderWidth" min="0.5" max="5" step="0.1" value="${settings.maxBorderWidth !== undefined ? settings.maxBorderWidth : 1}">
-                    <div class="help-text">Maximum thickness of gene borders when zoomed in.</div>
-                </div>
-                <div class="form-group">
-                    <label for="genesFontFamily">Gene Name Font Family:</label>
-                    <select id="genesFontFamily">
-                        <option value="Arial, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
-                        <option value="Inter, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Inter, sans-serif' ? 'selected' : ''}>Inter</option>
-                        <option value="Helvetica, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Helvetica, sans-serif' ? 'selected' : ''}>Helvetica</option>
-                        <option value="monospace" ${(settings.fontFamily || 'Arial, sans-serif') === 'monospace' ? 'selected' : ''}>Monospace</option>
-                        <option value="Georgia, serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Georgia, serif' ? 'selected' : ''}>Georgia</option>
-                    </select>
+                
+                <div class="llm-provider-config">
+                    <!-- DISPLAY TAB -->
+                    <div class="tab-content active" id="genes-display-tab">
+                        <div class="settings-section">
+                            <h4>Display Options</h4>
+                            <div class="form-group">
+                                <label for="genesRenderingMode">Rendering Mode:</label>
+                                <select id="genesRenderingMode" class="form-select">
+                                    <option value="svg" ${settings.renderingMode === 'svg' ? 'selected' : ''}>SVG (Default)</option>
+                                    <option value="canvas" ${settings.renderingMode === 'canvas' ? 'selected' : ''}>Canvas (Better Performance)</option>
+                                </select>
+                                <div class="help-text">Canvas mode offers improved performance for large datasets.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="genesLayoutMode">Layout Mode:</label>
+                                <select id="genesLayoutMode" class="form-select">
+                                    <option value="expanded" ${settings.layoutMode === 'expanded' || !settings.layoutMode ? 'selected' : ''}>Expanded</option>
+                                    <option value="compact" ${settings.layoutMode === 'compact' ? 'selected' : ''}>Compact</option>
+                                    <option value="groupByType" ${settings.layoutMode === 'groupByType' ? 'selected' : ''}>Group by Type</option>
+                                </select>
+                                <div class="help-text">"Expanded": Full-size features with labels. "Compact": Smaller features without labels. "Group by Type": Separates features into dedicated rows by type.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="genesMaxRows">Maximal rows for displaying features:</label>
+                                <input type="number" id="genesMaxRows" class="form-input" min="1" max="20" value="${settings.maxRows || 6}">
+                                <div class="help-text">Limits the number of rows shown. Features beyond this limit will be hidden or merged depending on the layout mode.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="genesShowOperonsSameRow" ${settings.showOperonsSameRow ? 'checked' : ''}>
+                                    Group genes in the same operon
+                                </label>
+                                <div class="help-text">When enabled, genes belonging to the same operon will be grouped together in the same row when possible (in Compact mode).</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="genesShowSequence" ${settings.showSequence ? 'checked' : ''}>
+                                    Show reference sequence
+                                </label>
+                                <div class="help-text">When enabled, displays the reference sequence between the secondary ruler and gene elements for better context.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="genesSequenceHeight">Reference Sequence Height (px):</label>
+                                <input type="number" id="genesSequenceHeight" class="form-input" min="15" max="50" value="${settings.sequenceHeight || 25}" ${settings.showSequence ? '' : 'disabled'}>
+                                <div class="help-text">Height of the reference sequence display area.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="genesCircularMode" ${settings.circularMode ? 'checked' : ''}>
+                                    Enable circular browsing mode
+                                </label>
+                                <div class="help-text">When enabled, enables wraparound navigation for circular genomes (e.g., plasmids, bacterial chromosomes).</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- HIGHLIGHT TAB -->
+                    <div class="tab-content" id="genes-highlight-tab">
+                        <div class="settings-section">
+                            <h4>Gene Selection Highlight</h4>
+                            <div class="form-group">
+                                <label for="genesHighlightEffect">Highlight Effect:</label>
+                                <select id="genesHighlightEffect" class="form-select">
+                                    <option value="pulse" ${settings.highlightEffect === 'pulse' ? 'selected' : ''}>Breathing Pulse (Default)</option>
+                                    <option value="border" ${settings.highlightEffect === 'border' ? 'selected' : ''}>Border Thickening</option>
+                                    <option value="both" ${settings.highlightEffect === 'both' ? 'selected' : ''}>Both Effects</option>
+                                </select>
+                                <div class="help-text">Choose the visual effect when a gene is selected. "Breathing Pulse" creates a pulsing glow effect, "Border Thickening" creates a thick animated border, and "Both" combines both effects.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="genesAutoHighlightSequence" ${settings.autoHighlightSequence ? 'checked' : ''}>
+                                    Auto-highlight sequence region when gene is selected
+                                </label>
+                                <div class="help-text">When enabled, automatically highlights the corresponding sequence region in the reference sequence when a gene is selected.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- INTERACTION TAB -->
+                    <div class="tab-content" id="genes-interaction-tab">
+                        <div class="settings-section">
+                            <h4>Interactive Features</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="genesEnableGlobalDragging" ${settings.enableGlobalDragging !== false ? 'checked' : ''}>
+                                    Enable Global Track Dragging
+                                </label>
+                                <div class="help-text">When enabled, this track will update dynamically during drag operations, providing real-time navigation feedback. Disable for better performance on slower devices.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="genesWheelZoomSensitivity">Wheel Zoom Sensitivity:</label>
+                                <input type="range" id="genesWheelZoomSensitivity" class="form-range" min="0.01" max="0.5" step="0.01" value="${settings.wheelZoomSensitivity || 0.1}">
+                                <div class="range-display">Current: <span id="genesWheelZoomSensitivityValue">${settings.wheelZoomSensitivity || 0.1}</span></div>
+                                <div class="help-text">Adjust mouse wheel zoom sensitivity when cursor is over the Genes track. Lower values = slower zoom, higher values = faster zoom. (0.01 = very slow, 0.5 = very fast)</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="genesOverrideGlobalZoom" ${settings.overrideGlobalZoom ? 'checked' : ''}>
+                                    Override Global Zoom Settings
+                                </label>
+                                <div class="help-text">When enabled, the Genes track will use its own zoom sensitivity instead of the global wheel zoom settings when the cursor is over this track.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- VISUALS TAB -->
+                    <div class="tab-content" id="genes-visuals-tab">
+                        <div class="settings-section">
+                            <h4>Visual Settings</h4>
+                            <div class="form-group">
+                                <label for="genesTrackHeight">Track Height (px):</label>
+                                <input type="number" id="genesTrackHeight" class="form-input" min="60" max="400" value="${settings.height || 120}">
+                            </div>
+                            <div class="form-group">
+                                <label for="genesGeneHeight">Gene Element Height (px):</label>
+                                <input type="number" id="genesGeneHeight" class="form-input" min="12" max="60" value="${settings.geneHeight || 24}">
+                                <div class="help-text">Height of individual gene elements. Affects spacing between gene rows.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="genesFontSize">Gene Name Font Size (px):</label>
+                                <input type="number" id="genesFontSize" class="form-input" min="8" max="48" value="${settings.fontSize || 24}">
+                                <div class="help-text">Font size for gene names and labels.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="genesGeneNameColor">Gene Name Color:</label>
+                                <input type="color" id="genesGeneNameColor" value="${settings.geneNameColor || '#333333'}">
+                                <div class="help-text">Color of the gene name text labels.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="genesMaxBorderWidth">Maximum Border Width (px):</label>
+                                <input type="number" id="genesMaxBorderWidth" class="form-input" min="0.5" max="5" step="0.1" value="${settings.maxBorderWidth !== undefined ? settings.maxBorderWidth : 1}">
+                                <div class="help-text">Maximum thickness of gene borders when zoomed in.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="genesFontFamily">Gene Name Font Family:</label>
+                                <select id="genesFontFamily" class="form-select">
+                                    <option value="Arial, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
+                                    <option value="Inter, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Inter, sans-serif' ? 'selected' : ''}>Inter</option>
+                                    <option value="Helvetica, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Helvetica, sans-serif' ? 'selected' : ''}>Helvetica</option>
+                                    <option value="monospace" ${(settings.fontFamily || 'Arial, sans-serif') === 'monospace' ? 'selected' : ''}>Monospace</option>
+                                    <option value="Georgia, serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Georgia, serif' ? 'selected' : ''}>Georgia</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -11045,345 +11089,335 @@ This action cannot be undone.`;
    */
   createReadsSettingsContent(settings) {
     return `
-            <div class="settings-section">
-                <h4>Coverage Visualization</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowCoverage" ${settings.showCoverage !== false ? 'checked' : ''}>
-                        Show coverage visualization
-                    </label>
-                    <div class="help-text">Display read coverage track above the reads for better depth visualization.</div>
+            <div class="reads-settings-tabs">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="reads-general">
+                        <i class="fas fa-desktop"></i> Display
+                    </button>
+                    <button class="tab-button" data-tab="reads-coverage">
+                        <i class="fas fa-chart-area"></i> Coverage
+                    </button>
+                    <button class="tab-button" data-tab="reads-sequence">
+                        <i class="fas fa-dna"></i> Sequence
+                    </button>
+                    <button class="tab-button" data-tab="reads-advanced">
+                        <i class="fas fa-cogs"></i> Performance & Adv.
+                    </button>
                 </div>
-                <div class="form-group" id="coverageHeightGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
-                    <label for="coverageHeight">Coverage track height (px):</label>
-                    <input type="number" id="coverageHeight" min="30" max="100" value="${settings.coverageHeight || 50}">
-                    <div class="help-text">Height of the coverage visualization track.</div>
-                </div>
-                <div class="form-group" id="coverageColorGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
-                    <label for="coverageColor">Coverage color:</label>
-                    <input type="color" id="coverageColor" value="${settings.coverageColor || '#4a90e2'}">
-                    <div class="help-text">Color for the coverage visualization area.</div>
-                </div>
-                <div class="form-group" id="coverageStrokeColorGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
-                    <label for="coverageStrokeColor">Coverage stroke color:</label>
-                    <input type="color" id="coverageStrokeColor" value="${settings.coverageStrokeColor || '#2c5aa0'}">
-                    <div class="help-text">Stroke/border color for the coverage area outline.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Reference Sequence</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowReference" ${settings.showReference !== false ? 'checked' : ''}>
-                        Show reference sequence
-                    </label>
-                    <div class="help-text">Display reference genome sequence between coverage and reads for comparison.</div>
-                </div>
-                <div class="form-group" id="referenceHeightGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
-                    <label for="referenceHeight">Reference sequence height (px):</label>
-                    <input type="number" id="referenceHeight" min="15" max="50" value="${settings.referenceHeight || 25}">
-                    <div class="help-text">Height of the reference sequence visualization.</div>
-                </div>
-                <div class="form-group" id="referenceFontSizeGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
-                    <label for="referenceFontSize">Reference font size (px):</label>
-                    <input type="number" id="referenceFontSize" min="8" max="20" value="${settings.referenceFontSize || 12}">
-                    <div class="help-text">Font size for reference sequence text.</div>
-                </div>
-                <div class="form-group" id="referenceFontFamilyGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
-                    <label for="referenceFontFamily">Reference font family:</label>
-                    <select id="referenceFontFamily">
-                        <option value="monospace" ${(settings.referenceFontFamily || 'monospace') === 'monospace' ? 'selected' : ''}>Monospace</option>
-                        <option value="Courier New, monospace" ${settings.referenceFontFamily === 'Courier New, monospace' ? 'selected' : ''}>Courier New</option>
-                        <option value="Consolas, monospace" ${settings.referenceFontFamily === 'Consolas, monospace' ? 'selected' : ''}>Consolas</option>
-                    </select>
-                    <div class="help-text">Font family for reference sequence display.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Rendering Method</h4>
-                <div class="form-group">
-                    <label for="readsRenderingMode">Rendering method:</label>
-                    <select id="readsRenderingMode">
-                        <option value="canvas" ${settings.renderingMode === 'canvas' ? 'selected' : ''}>Canvas (High Performance)</option>
-                        <option value="svg" ${settings.renderingMode === 'svg' ? 'selected' : ''}>SVG (Legacy)</option>
-                    </select>
-                    <div class="help-text">Choose rendering method. Canvas provides better performance for large datasets, while SVG maintains DOM interaction capabilities. <strong>Click Apply to apply changes.</strong></div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Read Display</h4>
-                <div class="form-group">
-                    <label for="readsHeight">Height of each read (px):</label>
-                    <input type="number" id="readsHeight" min="2" max="30" value="${settings.readHeight || 4}">
-                    <div class="help-text">Height of individual read elements in pixels.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsSpacing">Spacing between reads (px):</label>
-                    <input type="number" id="readsSpacing" min="1" max="10" value="${settings.readSpacing || 2}">
-                    <div class="help-text">Vertical spacing between read rows.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsEnableVerticalScroll" ${settings.enableVerticalScroll === true ? 'checked' : ''}>
-                        Enable vertical scrolling
-                    </label>
-                    <div class="help-text">Enable vertical scrolling when reads exceed the maximum visible rows. When disabled, excess reads are simply hidden.</div>
-                </div>
-                <div class="form-group" id="readsMaxVisibleRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'block' : 'none'}">
-                    <label for="readsMaxVisibleRows">Maximum visible rows (scrollable):</label>
-                    <input type="number" id="readsMaxVisibleRows" min="5" max="30" value="${settings.maxVisibleRows || 10}">
-                    <div class="help-text">Maximum number of read rows visible at once when scrolling is enabled. Additional rows can be accessed by scrolling.</div>
-                </div>
-                <div class="form-group" id="readsMaxRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'none' : 'block'}">
-                    <label for="readsMaxRows">Maximum visible rows:</label>
-                    <input type="number" id="readsMaxRows" min="5" max="50" value="${settings.maxRows || 20}">
-                    <div class="help-text">Maximum number of read rows to display. Additional reads will be hidden to improve performance.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsTrackHeight">Track Height (px):</label>
-                    <input type="number" id="readsTrackHeight" min="100" max="500" value="${settings.height || 150}">
-                    <div class="help-text">Total height of the reads track container.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Read Sampling (Performance)</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsEnableSampling" ${settings.enableSampling !== false ? 'checked' : ''}>
-                        Enable read sampling for large datasets
-                    </label>
-                    <div class="help-text">Automatically sample reads when the number exceeds the threshold to improve performance.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsSamplingThreshold">Sampling threshold:</label>
-                    <input type="number" id="readsSamplingThreshold" min="1000" max="100000" step="1000" value="${settings.samplingThreshold || 10000}">
-                    <div class="help-text">Number of reads above which sampling will be applied. Default: 10,000 reads.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsSamplingMode">Sampling mode:</label>
-                    <select id="readsSamplingMode">
-                        <option value="percentage" ${(settings.samplingMode || 'percentage') === 'percentage' ? 'selected' : ''}>Percentage-based</option>
-                        <option value="fixed" ${settings.samplingMode === 'fixed' ? 'selected' : ''}>Fixed count</option>
-                    </select>
-                    <div class="help-text">Choose whether to sample by percentage or fixed number of reads.</div>
-                </div>
-                <div class="form-group" id="readsSamplingPercentageGroup" style="display: ${(settings.samplingMode || 'percentage') === 'percentage' ? 'block' : 'none'}">
-                    <label for="readsSamplingPercentage">Sampling percentage (%):</label>
-                    <input type="number" id="readsSamplingPercentage" min="1" max="100" value="${settings.samplingPercentage || 20}">
-                    <div class="help-text">Percentage of reads to randomly sample when threshold is exceeded. Default: 20%.</div>
-                </div>
-                <div class="form-group" id="readsSamplingCountGroup" style="display: ${settings.samplingMode === 'fixed' ? 'block' : 'none'}">
-                    <label for="readsSamplingCount">Maximum reads to display:</label>
-                    <input type="number" id="readsSamplingCount" min="1000" max="50000" step="1000" value="${settings.samplingCount || 5000}">
-                    <div class="help-text">Maximum number of reads to display when sampling is active. Default: 5,000 reads.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowSamplingInfo" ${settings.showSamplingInfo !== false ? 'checked' : ''}>
-                        Show sampling information in track statistics
-                    </label>
-                    <div class="help-text">Display information about sampling in the track statistics panel.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Colors & Styles</h4>
-                <div class="form-group">
-                    <label for="readsForwardColor">Forward reads fill color:</label>
-                    <input type="color" id="readsForwardColor" value="${settings.forwardColor || '#00b894'}">
-                    <div class="help-text">Fill color for reads on the forward strand.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsReverseColor">Reverse reads fill color:</label>
-                    <input type="color" id="readsReverseColor" value="${settings.reverseColor || '#f39c12'}">
-                    <div class="help-text">Fill color for reads on the reverse strand.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsPairedColor">Paired reads fill color:</label>
-                    <input type="color" id="readsPairedColor" value="${settings.pairedColor || '#6c5ce7'}">
-                    <div class="help-text">Fill color for properly paired reads.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsBorderColor">Border color:</label>
-                    <input type="color" id="readsBorderColor" value="${settings.borderColor || '#ffffff'}">
-                    <div class="help-text">Border color for all read elements.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsBorderWidth">Border width (px):</label>
-                    <input type="number" id="readsBorderWidth" min="0" max="3" step="0.5" value="${settings.borderWidth || 0}">
-                    <div class="help-text">Width of the border around read elements. Set to 0 for no border.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsOpacity">Read opacity (0-1):</label>
-                    <input type="number" id="readsOpacity" min="0.1" max="1" step="0.1" value="${settings.opacity || 0.9}">
-                    <div class="help-text">Transparency level of read elements. 1.0 = fully opaque, 0.1 = very transparent.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Read Sequence Display</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowSequences" ${settings.showSequences !== false ? 'checked' : ''}>
-                        Show read sequences when zoomed in
-                    </label>
-                    <div class="help-text">Display individual read sequences and reference sequence when the zoom level is sufficient.</div>
-                </div>
-                <div class="form-group" id="readsForceSequencesGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
-                    <label>
-                        <input type="checkbox" id="readsForceSequences" ${settings.forceSequences ? 'checked' : ''}>
-                        Force show sequences (ignore zoom threshold)
-                    </label>
-                    <div class="help-text">Always show sequences regardless of zoom level, with automatic font sizing for optimal readability.</div>
-                </div>
-                <div class="form-group" id="readsAutoFontSizeGroup" style="display: ${settings.showSequences && settings.forceSequences ? 'block' : 'none'}">
-                    <label>
-                        <input type="checkbox" id="readsAutoFontSize" ${settings.autoFontSize !== false ? 'checked' : ''}>
-                        Auto-calculate font size
-                    </label>
-                    <div class="help-text">Automatically calculate optimal font size based on available space and sequence density.</div>
-                </div>
-                <div class="form-group" id="readsSequenceThresholdGroup" style="display: ${settings.showSequences && !settings.forceSequences ? 'block' : 'none'}">
-                    <label for="readsSequenceThreshold">Sequence display threshold (bp/px):</label>
-                    <input type="number" id="readsSequenceThreshold" min="0.1" max="10" step="0.1" value="${settings.sequenceThreshold || 1.0}">
-                    <div class="help-text">Maximum bases per pixel to trigger sequence display. Lower values require more zoom. Default: 1.0 bp/px.</div>
-                </div>
-                <div class="form-group" id="readsAutoFontSizeGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
-                    <label>
-                        <input type="checkbox" id="readsAutoFontSize" ${settings.autoFontSize !== false ? 'checked' : ''}>
-                        Auto-adjust font size for optimal display
-                    </label>
-                    <div class="help-text">Automatically calculate the best font size for sequence display based on zoom level and available space. Default: enabled.</div>
-                </div>
-                <div class="form-group" id="readsSequenceFontSizeGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
-                    <label for="readsSequenceFontSize">Sequence font size (px):</label>
-                    <input type="number" id="readsSequenceFontSize" min="8" max="16" value="${settings.sequenceFontSize || 10}">
-                    <div class="help-text">Font size for sequence text. Smaller fonts allow more sequences to fit.</div>
-                </div>
-                <div class="form-group" id="readsSequenceHeightGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
-                    <label for="readsSequenceHeight">Sequence text height (px):</label>
-                    <input type="number" id="readsSequenceHeight" min="10" max="30" value="${settings.sequenceHeight || 14}">
-                    <div class="help-text">Height of each sequence text line. Should be slightly larger than font size.</div>
-                </div>
-                <div class="form-group" id="readsHighlightMismatchesGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
-                    <label>
-                        <input type="checkbox" id="readsHighlightMismatches" ${settings.highlightMismatches !== false ? 'checked' : ''}>
-                        Highlight mismatches
-                    </label>
-                    <div class="help-text">Highlight bases that differ from the reference sequence.</div>
-                </div>
-                <div class="form-group" id="readsMismatchColorGroup" style="display: ${settings.showSequences && settings.highlightMismatches !== false ? 'block' : 'none'}">
-                    <label for="readsMismatchColor">Mismatch highlight color:</label>
-                    <input type="color" id="readsMismatchColor" value="${settings.mismatchColor || '#ff6b6b'}">
-                    <div class="help-text">Color used to highlight mismatched bases.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Advanced Options</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowDirectionArrows" ${settings.showDirectionArrows ? 'checked' : ''}>
-                        Show direction arrows
-                    </label>
-                    <div class="help-text">Display small arrows indicating read direction for reads that are wide enough.</div>
-                </div>
+                <div class="tab-content">
+                    <!-- DISPLAY TAB -->
+                    <div class="tab-panel active" id="reads-general-tab">
+                        <div class="settings-section">
+                            <h4>Rendering Method</h4>
+                            <div class="form-group">
+                                <label for="readsRenderingMode">Rendering method:</label>
+                                <select id="readsRenderingMode">
+                                    <option value="canvas" ${settings.renderingMode === 'canvas' ? 'selected' : ''}>Canvas (High Performance)</option>
+                                    <option value="svg" ${settings.renderingMode === 'svg' ? 'selected' : ''}>SVG (Legacy)</option>
+                                </select>
+                                <div class="help-text">Choose rendering method. Canvas provides better performance for large datasets, while SVG maintains DOM interaction capabilities. <strong>Click Apply to apply changes.</strong></div>
+                            </div>
+                        </div>
 
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowQualityColors" ${settings.showQualityColors ? 'checked' : ''}>
-                        Color by mapping quality
-                    </label>
-                    <div class="help-text">Color reads based on their mapping quality scores instead of strand direction.</div>
+                        <div class="settings-section">
+                            <h4>Read Display</h4>
+                            <div class="form-group">
+                                <label for="readsHeight">Height of each read (px):</label>
+                                <input type="number" id="readsHeight" min="2" max="30" value="${settings.readHeight || 4}">
+                                <div class="help-text">Height of individual read elements in pixels.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsSpacing">Spacing between reads (px):</label>
+                                <input type="number" id="readsSpacing" min="1" max="10" value="${settings.readSpacing || 2}">
+                                <div class="help-text">Vertical spacing between read rows.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsEnableVerticalScroll" ${settings.enableVerticalScroll === true ? 'checked' : ''}>
+                                    Enable vertical scrolling
+                                </label>
+                                <div class="help-text">Enable vertical scrolling when reads exceed the maximum visible rows. When disabled, excess reads are simply hidden.</div>
+                            </div>
+                            <div class="form-group" id="readsMaxVisibleRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'block' : 'none'}">
+                                <label for="readsMaxVisibleRows">Maximum visible rows (scrollable):</label>
+                                <input type="number" id="readsMaxVisibleRows" min="5" max="30" value="${settings.maxVisibleRows || 10}">
+                                <div class="help-text">Maximum number of read rows visible at once when scrolling is enabled. Additional rows can be accessed by scrolling.</div>
+                            </div>
+                            <div class="form-group" id="readsMaxRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'none' : 'block'}">
+                                <label for="readsMaxRows">Maximum visible rows:</label>
+                                <input type="number" id="readsMaxRows" min="5" max="50" value="${settings.maxRows || 20}">
+                                <div class="help-text">Maximum number of read rows to display. Additional reads will be hidden to improve performance.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsTrackHeight">Track Height (px):</label>
+                                <input type="number" id="readsTrackHeight" min="100" max="500" value="${settings.height || 150}">
+                                <div class="help-text">Total height of the reads track container.</div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4>Reference Sequence</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowReference" ${settings.showReference !== false ? 'checked' : ''}>
+                                    Show reference sequence
+                                </label>
+                                <div class="help-text">Display reference genome sequence between coverage and reads for comparison.</div>
+                            </div>
+                            <div class="form-group" id="referenceHeightGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
+                                <label for="referenceHeight">Reference sequence height (px):</label>
+                                <input type="number" id="referenceHeight" min="15" max="50" value="${settings.referenceHeight || 25}">
+                                <div class="help-text">Height of the reference sequence visualization.</div>
+                            </div>
+                            <div class="form-group" id="referenceFontSizeGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
+                                <label for="referenceFontSize">Reference font size (px):</label>
+                                <input type="number" id="referenceFontSize" min="8" max="20" value="${settings.referenceFontSize || 12}">
+                                <div class="help-text">Font size for reference sequence text.</div>
+                            </div>
+                            <div class="form-group" id="referenceFontFamilyGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
+                                <label for="referenceFontFamily">Reference font family:</label>
+                                <select id="referenceFontFamily">
+                                    <option value="monospace" ${(settings.referenceFontFamily || 'monospace') === 'monospace' ? 'selected' : ''}>Monospace</option>
+                                    <option value="Courier New, monospace" ${settings.referenceFontFamily === 'Courier New, monospace' ? 'selected' : ''}>Courier New</option>
+                                    <option value="Consolas, monospace" ${settings.referenceFontFamily === 'Consolas, monospace' ? 'selected' : ''}>Consolas</option>
+                                </select>
+                                <div class="help-text">Font family for reference sequence display.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COVERAGE TAB -->
+                    <div class="tab-panel" id="reads-coverage-tab">
+                        <div class="settings-section">
+                            <h4>Coverage Visualization</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowCoverage" ${settings.showCoverage !== false ? 'checked' : ''}>
+                                    Show coverage visualization
+                                </label>
+                                <div class="help-text">Display read coverage track above the reads for better depth visualization.</div>
+                            </div>
+                            <div class="form-group" id="coverageHeightGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
+                                <label for="coverageHeight">Coverage track height (px):</label>
+                                <input type="number" id="coverageHeight" min="30" max="100" value="${settings.coverageHeight || 50}">
+                                <div class="help-text">Height of the coverage visualization track.</div>
+                            </div>
+                            <div class="form-group" id="coverageColorGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
+                                <label for="coverageColor">Coverage color:</label>
+                                <input type="color" id="coverageColor" value="${settings.coverageColor || '#4a90e2'}">
+                                <div class="help-text">Color for the coverage visualization area.</div>
+                            </div>
+                            <div class="form-group" id="coverageStrokeColorGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
+                                <label for="coverageStrokeColor">Coverage stroke color:</label>
+                                <input type="color" id="coverageStrokeColor" value="${settings.coverageStrokeColor || '#2c5aa0'}">
+                                <div class="help-text">Stroke/border color for the coverage area outline.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SEQUENCE TAB -->
+                    <div class="tab-panel" id="reads-sequence-tab">
+                        <div class="settings-section">
+                            <h4>Read Sequence Display</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowSequences" ${settings.showSequences !== false ? 'checked' : ''}>
+                                    Show read sequences when zoomed in
+                                </label>
+                                <div class="help-text">Display individual read sequences and reference sequence when the zoom level is sufficient.</div>
+                            </div>
+                            <div class="form-group" id="readsForceSequencesGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                                <label>
+                                    <input type="checkbox" id="readsForceSequences" ${settings.forceSequences ? 'checked' : ''}>
+                                    Force show sequences (ignore zoom threshold)
+                                </label>
+                                <div class="help-text">Always show sequences regardless of zoom level, with automatic font sizing for optimal readability.</div>
+                            </div>
+                            <div class="form-group" id="readsAutoFontSizeGroup" style="display: ${settings.showSequences && settings.forceSequences ? 'block' : 'none'}">
+                                <label>
+                                    <input type="checkbox" id="readsAutoFontSize" ${settings.autoFontSize !== false ? 'checked' : ''}>
+                                    Auto-calculate font size
+                                </label>
+                                <div class="help-text">Automatically calculate optimal font size based on available space and sequence density.</div>
+                            </div>
+                            <div class="form-group" id="readsSequenceThresholdGroup" style="display: ${settings.showSequences && !settings.forceSequences ? 'block' : 'none'}">
+                                <label for="readsSequenceThreshold">Sequence display threshold (bp/px):</label>
+                                <input type="number" id="readsSequenceThreshold" min="0.1" max="10" step="0.1" value="${settings.sequenceThreshold || 1.0}">
+                                <div class="help-text">Maximum bases per pixel to trigger sequence display. Lower values require more zoom. Default: 1.0 bp/px.</div>
+                            </div>
+                            <div class="form-group" id="readsSequenceFontSizeGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                                <label for="readsSequenceFontSize">Sequence font size (px):</label>
+                                <input type="number" id="readsSequenceFontSize" min="8" max="16" value="${settings.sequenceFontSize || 10}">
+                                <div class="help-text">Font size for sequence text. Smaller fonts allow more sequences to fit.</div>
+                            </div>
+                            <div class="form-group" id="readsSequenceHeightGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                                <label for="readsSequenceHeight">Sequence text height (px):</label>
+                                <input type="number" id="readsSequenceHeight" min="10" max="30" value="${settings.sequenceHeight || 14}">
+                                <div class="help-text">Height of each sequence text line. Should be slightly larger than font size.</div>
+                            </div>
+                            <div class="form-group" id="readsHighlightMismatchesGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                                <label>
+                                    <input type="checkbox" id="readsHighlightMismatches" ${settings.highlightMismatches !== false ? 'checked' : ''}>
+                                    Highlight mismatches
+                                </label>
+                                <div class="help-text">Highlight bases that differ from the reference sequence.</div>
+                            </div>
+                            <div class="form-group" id="readsMismatchColorGroup" style="display: ${settings.showSequences && settings.highlightMismatches !== false ? 'block' : 'none'}">
+                                <label for="readsMismatchColor">Mismatch highlight color:</label>
+                                <input type="color" id="readsMismatchColor" value="${settings.mismatchColor || '#ff6b6b'}">
+                                <div class="help-text">Color used to highlight mismatched bases.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PERFORMANCE & ADVANCED TAB -->
+                    <div class="tab-panel" id="reads-advanced-tab">
+                        <div class="settings-section">
+                            <h4>Read Sampling (Performance)</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsEnableSampling" ${settings.enableSampling !== false ? 'checked' : ''}>
+                                    Enable read sampling for large datasets
+                                </label>
+                                <div class="help-text">Automatically sample reads when the number exceeds the threshold to improve performance.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsSamplingThreshold">Sampling threshold:</label>
+                                <input type="number" id="readsSamplingThreshold" min="1000" max="100000" step="1000" value="${settings.samplingThreshold || 10000}">
+                                <div class="help-text">Number of reads above which sampling will be applied. Default: 10,000 reads.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsSamplingMode">Sampling mode:</label>
+                                <select id="readsSamplingMode">
+                                    <option value="percentage" ${(settings.samplingMode || 'percentage') === 'percentage' ? 'selected' : ''}>Percentage-based</option>
+                                    <option value="fixed" ${settings.samplingMode === 'fixed' ? 'selected' : ''}>Fixed count</option>
+                                </select>
+                                <div class="help-text">Choose whether to sample by percentage or fixed number of reads.</div>
+                            </div>
+                            <div class="form-group" id="readsSamplingPercentageGroup" style="display: ${(settings.samplingMode || 'percentage') === 'percentage' ? 'block' : 'none'}">
+                                <label for="readsSamplingPercentage">Sampling percentage (%):</label>
+                                <input type="number" id="readsSamplingPercentage" min="1" max="100" value="${settings.samplingPercentage || 20}">
+                                <div class="help-text">Percentage of reads to randomly sample when threshold is exceeded. Default: 20%.</div>
+                            </div>
+                            <div class="form-group" id="readsSamplingCountGroup" style="display: ${settings.samplingMode === 'fixed' ? 'block' : 'none'}">
+                                <label for="readsSamplingCount">Maximum reads to display:</label>
+                                <input type="number" id="readsSamplingCount" min="1000" max="50000" step="1000" value="${settings.samplingCount || 5000}">
+                                <div class="help-text">Maximum number of reads to display when sampling is active. Default: 5,000 reads.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowSamplingInfo" ${settings.showSamplingInfo !== false ? 'checked' : ''}>
+                                    Show sampling information in track statistics
+                                </label>
+                                <div class="help-text">Display information about sampling in the track statistics panel.</div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4>Colors & Styles</h4>
+                            <div class="form-group">
+                                <label for="readsForwardColor">Forward reads fill color:</label>
+                                <input type="color" id="readsForwardColor" value="${settings.forwardColor || '#00b894'}">
+                                <div class="help-text">Fill color for reads on the forward strand.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsReverseColor">Reverse reads fill color:</label>
+                                <input type="color" id="readsReverseColor" value="${settings.reverseColor || '#f39c12'}">
+                                <div class="help-text">Fill color for reads on the reverse strand.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsPairedColor">Paired reads fill color:</label>
+                                <input type="color" id="readsPairedColor" value="${settings.pairedColor || '#6c5ce7'}">
+                                <div class="help-text">Fill color for properly paired reads.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsBorderColor">Border color:</label>
+                                <input type="color" id="readsBorderColor" value="${settings.borderColor || '#ffffff'}">
+                                <div class="help-text">Border color for all read elements.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsBorderWidth">Border width (px):</label>
+                                <input type="number" id="readsBorderWidth" min="0" max="3" step="0.5" value="${settings.borderWidth || 0}">
+                                <div class="help-text">Width of the border around read elements. Set to 0 for no border.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsOpacity">Read opacity (0-1):</label>
+                                <input type="number" id="readsOpacity" min="0.1" max="1" step="0.1" value="${settings.opacity || 0.9}">
+                                <div class="help-text">Transparency level of read elements. 1.0 = fully opaque, 0.1 = very transparent.</div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4>Advanced Options</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowDirectionArrows" ${settings.showDirectionArrows ? 'checked' : ''}>
+                                    Show direction arrows
+                                </label>
+                                <div class="help-text">Display small arrows indicating read direction for reads that are wide enough.</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowQualityColors" ${settings.showQualityColors ? 'checked' : ''}>
+                                    Color by mapping quality
+                                </label>
+                                <div class="help-text">Color reads based on their mapping quality scores instead of strand direction.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowMutations" ${settings.showMutations ? 'checked' : ''}>
+                                    Show mutations
+                                </label>
+                                <div class="help-text">Display mutations as colored vertical lines on reads. Shows insertions (red), deletions (cyan), and mismatches (yellow).</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsIgnoreChromosome" ${settings.ignoreChromosome ? 'checked' : ''}>
+                                    Ignore chromosome information
+                                </label>
+                                <div class="help-text">Force display reads based on position only, ignoring chromosome mismatch. Useful for reads with missing or incorrect chromosome information.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsMinWidth">Minimum read width (px):</label>
+                                <input type="number" id="readsMinWidth" min="1" max="10" value="${settings.minWidth || 2}">
+                                <div class="help-text">Minimum width for very short reads to ensure they remain visible.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsStreamingThreshold">Streaming threshold (MB):</label>
+                                <input type="number" id="readsStreamingThreshold" min="10" max="1000" value="${settings.streamingThreshold || 50}">
+                                <div class="help-text">File size threshold in MB above which SAM files will be loaded using streaming mode for better memory management.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="readsMinMappingQuality">Minimum mapping quality:</label>
+                                <input type="number" id="readsMinMappingQuality" min="0" max="60" value="${settings.minMappingQuality || 0}">
+                                <div class="help-text">Minimum mapping quality (MAPQ) required for reads to be displayed. Set to 0 to show all reads regardless of quality.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowUnmapped" ${settings.showUnmapped ? 'checked' : ''}>
+                                    Show unmapped reads
+                                </label>
+                                <div class="help-text">Include unmapped reads in the display (reads with mapping quality 0 and unmapped flag).</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowSecondary" ${settings.showSecondary !== false ? 'checked' : ''}>
+                                    Show secondary alignments
+                                </label>
+                                <div class="help-text">Include secondary alignments (reads with flag 256).</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="readsShowSupplementary" ${settings.showSupplementary !== false ? 'checked' : ''}>
+                                    Show supplementary alignments
+                                </label>
+                                <div class="help-text">Include supplementary alignments (reads with flag 2048).</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowMutations" ${settings.showMutations ? 'checked' : ''}>
-                        Show mutations
-                    </label>
-                    <div class="help-text">Display mutations as colored vertical lines on reads. Shows insertions (red), deletions (cyan), and mismatches (yellow).</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsIgnoreChromosome" ${settings.ignoreChromosome ? 'checked' : ''}>
-                        Ignore chromosome information
-                    </label>
-                    <div class="help-text">Force display reads based on position only, ignoring chromosome mismatch. Useful for reads with missing or incorrect chromosome information.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsMinWidth">Minimum read width (px):</label>
-                    <input type="number" id="readsMinWidth" min="1" max="10" value="${settings.minWidth || 2}">
-                    <div class="help-text">Minimum width for very short reads to ensure they remain visible.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsStreamingThreshold">Streaming threshold (MB):</label>
-                    <input type="number" id="readsStreamingThreshold" min="10" max="1000" value="${settings.streamingThreshold || 50}">
-                    <div class="help-text">File size threshold in MB above which SAM files will be loaded using streaming mode for better memory management.</div>
-                </div>
-                <div class="form-group">
-                    <label for="readsMinMappingQuality">Minimum mapping quality:</label>
-                    <input type="number" id="readsMinMappingQuality" min="0" max="60" value="${settings.minMappingQuality || 0}">
-                    <div class="help-text">Minimum mapping quality (MAPQ) required for reads to be displayed. Set to 0 to show all reads regardless of quality.</div>
             </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowUnmapped" ${settings.showUnmapped ? 'checked' : ''}>
-                        Show unmapped reads
-                    </label>
-                    <div class="help-text">Include unmapped reads in the display (reads with mapping quality 0 and unmapped flag).</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowSecondary" ${settings.showSecondary !== false ? 'checked' : ''}>
-                        Show secondary alignments
-                    </label>
-                    <div class="help-text">Include secondary alignments (reads with flag 256).</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="readsShowSupplementary" ${settings.showSupplementary !== false ? 'checked' : ''}>
-                        Show supplementary alignments
-                    </label>
-                    <div class="help-text">Include supplementary alignments (reads with flag 2048).</div>
-                </div>
-            </div>
-            
-            <script>
-                // Add event listener for sampling mode change and vertical scroll toggle
-                document.addEventListener('DOMContentLoaded', function() {
-                    const samplingModeSelect = document.getElementById('readsSamplingMode');
-                    if (samplingModeSelect) {
-                        samplingModeSelect.addEventListener('change', function() {
-                            const mode = this.value;
-                            const percentageGroup = document.getElementById('readsSamplingPercentageGroup');
-                            const countGroup = document.getElementById('readsSamplingCountGroup');
-                            
-                            if (mode === 'percentage') {
-                                percentageGroup.style.display = 'block';
-                                countGroup.style.display = 'none';
-                            } else {
-                                percentageGroup.style.display = 'none';
-                                countGroup.style.display = 'block';
-                            }
-                        });
-                    }
-                    
-                    // Handle vertical scroll toggle
-                    const verticalScrollCheckbox = document.getElementById('readsEnableVerticalScroll');
-                    if (verticalScrollCheckbox) {
-                        verticalScrollCheckbox.addEventListener('change', function() {
-                            const isEnabled = this.checked;
-                            const maxVisibleRowsGroup = document.getElementById('readsMaxVisibleRowsGroup');
-                            const maxRowsGroup = document.getElementById('readsMaxRowsGroup');
-                            
-                            if (isEnabled) {
-                                maxVisibleRowsGroup.style.display = 'block';
-                                maxRowsGroup.style.display = 'none';
-                            } else {
-                                maxVisibleRowsGroup.style.display = 'none';
-                                maxRowsGroup.style.display = 'block';
-                            }
-                        });
-                    }
-                });
-            </script>
         `;
   }
 
@@ -14276,6 +14310,32 @@ This action cannot be undone.`;
    * Setup event listeners for reads settings
    */
   setupGenesSettingsEventListeners(bodyElement) {
+    // Set up tabs switching
+    const tabButtons = bodyElement.querySelectorAll('.llm-provider-tabs .tab-button');
+    const tabPanels = bodyElement.querySelectorAll('.llm-provider-config .tab-content');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetTab = button.getAttribute('data-tab');
+
+        // Remove active class from all buttons and panels
+        tabButtons.forEach((btn) => btn.classList.remove('active'));
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        // Add active class to clicked button
+        button.classList.add('active');
+
+        // Show corresponding panel
+        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+
     // Wheel zoom sensitivity slider
     const zoomSensitivitySlider = bodyElement.querySelector('#genesWheelZoomSensitivity');
     const zoomSensitivityValue = bodyElement.querySelector('#genesWheelZoomSensitivityValue');
@@ -14339,6 +14399,51 @@ This action cannot be undone.`;
   }
 
   setupReadsSettingsEventListeners(bodyElement) {
+    // Set up tabs switching
+    const tabButtons = bodyElement.querySelectorAll('.reads-settings-tabs .tab-button');
+    const tabPanels = bodyElement.querySelectorAll('.reads-settings-tabs .tab-panel');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetTab = button.getAttribute('data-tab');
+
+        // Remove active class from all buttons and panels
+        tabButtons.forEach((btn) => btn.classList.remove('active'));
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        // Add active class to clicked button
+        button.classList.add('active');
+
+        // Show corresponding panel
+        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+
+    // Sampling mode toggle
+    const samplingModeSelect = bodyElement.querySelector('#readsSamplingMode');
+    if (samplingModeSelect) {
+      samplingModeSelect.addEventListener('change', () => {
+        const mode = samplingModeSelect.value;
+        const percentageGroup = bodyElement.querySelector('#readsSamplingPercentageGroup');
+        const countGroup = bodyElement.querySelector('#readsSamplingCountGroup');
+        if (percentageGroup && countGroup) {
+          if (mode === 'percentage') {
+            percentageGroup.style.display = 'block';
+            countGroup.style.display = 'none';
+          } else {
+            percentageGroup.style.display = 'none';
+            countGroup.style.display = 'block';
+          }
+        }
+      });
+    }
+
     // Rendering mode selection - no immediate application, only on Apply button
     const renderingModeSelect = bodyElement.querySelector('#readsRenderingMode');
     if (renderingModeSelect) {
@@ -14354,12 +14459,14 @@ This action cannot be undone.`;
     const coverageCheckbox = bodyElement.querySelector('#readsShowCoverage');
     const coverageHeightGroup = bodyElement.querySelector('#coverageHeightGroup');
     const coverageColorGroup = bodyElement.querySelector('#coverageColorGroup');
+    const coverageStrokeColorGroup = bodyElement.querySelector('#coverageStrokeColorGroup');
 
-    if (coverageCheckbox && coverageHeightGroup && coverageColorGroup) {
+    if (coverageCheckbox) {
       const toggleCoverageSettings = () => {
         const isChecked = coverageCheckbox.checked;
-        coverageHeightGroup.style.display = isChecked ? 'block' : 'none';
-        coverageColorGroup.style.display = isChecked ? 'block' : 'none';
+        if (coverageHeightGroup) coverageHeightGroup.style.display = isChecked ? 'block' : 'none';
+        if (coverageColorGroup) coverageColorGroup.style.display = isChecked ? 'block' : 'none';
+        if (coverageStrokeColorGroup) coverageStrokeColorGroup.style.display = isChecked ? 'block' : 'none';
       };
 
       coverageCheckbox.addEventListener('change', toggleCoverageSettings);
@@ -14369,11 +14476,15 @@ This action cannot be undone.`;
     // Reference sequence visualization toggle
     const referenceCheckbox = bodyElement.querySelector('#readsShowReference');
     const referenceHeightGroup = bodyElement.querySelector('#referenceHeightGroup');
+    const referenceFontSizeGroup = bodyElement.querySelector('#referenceFontSizeGroup');
+    const referenceFontFamilyGroup = bodyElement.querySelector('#referenceFontFamilyGroup');
 
-    if (referenceCheckbox && referenceHeightGroup) {
+    if (referenceCheckbox) {
       const toggleReferenceSettings = () => {
         const isChecked = referenceCheckbox.checked;
-        referenceHeightGroup.style.display = isChecked ? 'block' : 'none';
+        if (referenceHeightGroup) referenceHeightGroup.style.display = isChecked ? 'block' : 'none';
+        if (referenceFontSizeGroup) referenceFontSizeGroup.style.display = isChecked ? 'block' : 'none';
+        if (referenceFontFamilyGroup) referenceFontFamilyGroup.style.display = isChecked ? 'block' : 'none';
       };
 
       referenceCheckbox.addEventListener('change', toggleReferenceSettings);
@@ -14404,6 +14515,9 @@ This action cannot be undone.`;
     const referenceFontGroup = bodyElement.querySelector('#readsReferenceFontGroup');
     const sequenceFontGroup = bodyElement.querySelector('#readsSequenceFontGroup');
     const mismatchColorGroup = bodyElement.querySelector('#readsMismatchColorGroup');
+    const sequenceFontSizeGroup = bodyElement.querySelector('#readsSequenceFontSizeGroup');
+    const sequenceHeightGroup = bodyElement.querySelector('#readsSequenceHeightGroup');
+    const highlightMismatchesGroup = bodyElement.querySelector('#readsHighlightMismatchesGroup');
 
     // Force sequences toggle - define first so it can be used by main toggle
     const forceSequenceCheckbox = bodyElement.querySelector('#readsForceSequences');
@@ -14438,7 +14552,14 @@ This action cannot be undone.`;
         const isChecked = sequenceCheckbox.checked;
         if (forceSequencesGroup) forceSequencesGroup.style.display = isChecked ? 'block' : 'none';
         if (sequenceFontGroup) sequenceFontGroup.style.display = isChecked ? 'block' : 'none';
-        if (mismatchColorGroup) mismatchColorGroup.style.display = isChecked ? 'block' : 'none';
+        if (sequenceFontSizeGroup) sequenceFontSizeGroup.style.display = isChecked ? 'block' : 'none';
+        if (sequenceHeightGroup) sequenceHeightGroup.style.display = isChecked ? 'block' : 'none';
+        if (highlightMismatchesGroup) highlightMismatchesGroup.style.display = isChecked ? 'block' : 'none';
+        if (mismatchColorGroup) {
+          const highlightCheckbox = bodyElement.querySelector('#readsHighlightMismatches');
+          const isHighlightChecked = highlightCheckbox ? highlightCheckbox.checked : true;
+          mismatchColorGroup.style.display = isChecked && isHighlightChecked ? 'block' : 'none';
+        }
 
         // Update force sequences dependent controls
         updateForceSequenceSettings();
@@ -14463,6 +14584,19 @@ This action cannot be undone.`;
 
       autoFontCheckbox.addEventListener('change', updateAutoFontSettings);
       updateAutoFontSettings(); // Initial state
+    }
+
+    // Highlight mismatches toggle
+    const highlightMismatchesCheckbox = bodyElement.querySelector('#readsHighlightMismatches');
+    if (highlightMismatchesCheckbox && mismatchColorGroup) {
+      const toggleMismatchColorSettings = () => {
+        const isChecked = highlightMismatchesCheckbox.checked;
+        const sequenceEnabled = sequenceCheckbox ? sequenceCheckbox.checked : false;
+        mismatchColorGroup.style.display = isChecked && sequenceEnabled ? 'block' : 'none';
+      };
+
+      highlightMismatchesCheckbox.addEventListener('change', toggleMismatchColorSettings);
+      toggleMismatchColorSettings(); // Initial state
     }
 
     // Reference sequence font toggle
@@ -14757,62 +14891,23 @@ This action cannot be undone.`;
           `Are you sure you want to reset ${trackType} track settings to their default values? This action cannot be undone.`,
       )
     ) {
-      // Define default settings for different track types
-      const defaultSettings = {
-        sequence: {
-          visible: true,
-          height: 60,
-          displayMode: 'letters',
-          showCoordinates: true,
-          fontSize: 12,
-        },
-        genes: {
-          visible: true,
-          height: 120,
-          showLabels: true,
-          showArrows: true,
-          colorBy: 'type',
-          fontSize: 10,
-          wheelZoomSensitivity: 0.1,
-          overrideGlobalZoom: false,
-        },
-        primers: {
-          visible: true,
-          height: 80,
-          showLabels: true,
-          showArrows: true,
-          colorBy: 'type',
-          fontSize: 11,
-          wheelZoomSensitivity: 0.1,
-          overrideGlobalZoom: false,
-        },
-        gc: {
-          visible: true,
-          height: 80,
-          windowSize: 100,
-          showAverage: true,
-          color: '#4CAF50',
-        },
-        reads: {
-          visible: true,
-          height: 200,
-          showSequences: false,
-          maxReads: 1000,
-          colorBy: 'base',
-        },
-      };
-
-      const settings = defaultSettings[trackType] || {};
+      // Get settings from central defaults
+      const settings = this._getDefaultTrackSettings(trackType) || {};
 
       // Apply default settings to form
       Object.keys(settings).forEach((key) => {
-        const element = modal.querySelector(`[name="${key}"], #${key}`);
+        const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+        const element = modal.querySelector(
+            `[name="${key}"], #${key}, #${trackType}${capitalizedKey}, #${trackType}${key}`,
+        );
         if (element) {
           if (element.type === 'checkbox') {
             element.checked = settings[key];
           } else {
             element.value = settings[key];
           }
+          // Dispatch change event to trigger interactive dependencies (e.g. show sequence toggle)
+          element.dispatchEvent(new Event('change'));
         }
       });
 

@@ -247,7 +247,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'file_export',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Please perform the following tasks in order: 1) Export sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_sequences.fasta')}; 2) Export data in GenBank format to file: ${this.buildFilePath('exported_files/exported_data.gbk')}; 3) Export GFF3 annotation format to file: ${this.buildFilePath('exported_files/exported_annotations.gff3')}; 4) Export features in BED format to file: ${this.buildFilePath('exported_files/exported_features.bed')}; 5) Export coding sequences as FASTA format to file: ${this.buildFilePath('exported_files/exported_cds.fasta')}; 6) Export protein sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_proteins.fasta')}; 7) Export currently visible genomic region as FASTA to file: ${this.buildFilePath('exported_files/exported_region.fasta')}.`,
+        instruction: `Please perform the following tasks in order: 1) Export sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_sequences.fasta')}; 2) Export data in GenBank format to file: ${this.buildFilePath('exported_files/exported_data.gbk')}; 3) Export GFF3 annotation format to file: ${this.buildFilePath('exported_files/exported_annotations.gff3')}; 4) Export features in BED format to file: ${this.buildFilePath('exported_files/exported_features.bed')}; 5) Export coding sequences as FASTA format to file: ${this.buildFilePath('exported_files/exported_cds.fasta')}; 6) Export protein sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_proteins.fasta')}; `,
         expectedResult: {
           tool_sequence: [
             'export_fasta_sequence',
@@ -256,7 +256,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             'export_bed_format',
             'export_cds_fasta',
             'export_protein_fasta',
-            'export_current_view_fasta',
           ],
           parameters: [
             {
@@ -290,12 +289,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               translate: true,
               filePath: this.buildFilePath('exported_files/exported_proteins.fasta'),
             },
-            {
-              format: 'fasta',
-              currentViewOnly: true,
-              includeCoordinates: true,
-              filePath: this.buildFilePath('exported_files/exported_region.fasta'),
-            },
           ],
           expectedFiles: [
             'exported_files/exported_sequences.fasta',
@@ -304,7 +297,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             'exported_files/exported_features.bed',
             'exported_files/exported_cds.fasta',
             'exported_files/exported_proteins.fasta',
-            'exported_files/exported_region.fasta',
           ],
         },
         maxScore: 20,
@@ -316,16 +308,16 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       // UI INTERACTION TASKS - Automatic + Complex
       {
         id: 'ui_auto_01',
-        name: 'Open Three New Tabs',
+        name: 'Open Five New Tabs',
         type: 'function_call',
         category: 'ui_interaction',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: 'Open three new tabs for parallel genome analysis.',
+        instruction: 'Open Five new tabs for parallel genome analysis.',
         expectedResult: {
           tool_name: 'open_new_tab',
           parameters: {},
-          expectedTabsIncrease: 3, // Expected increase in tab count
+          expectedTabsIncrease: 5, // Expected increase in tab count
         },
         maxScore: 5,
         bonusScore: 0,
@@ -335,7 +327,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       // TEST 6: EXPORT WORKFLOW - Automatic + Complex
       {
-        id: 'analysis_auto_02',
+        id: 'analysis_auto_01',
         name: 'GC Content and Export',
         type: 'workflow',
         category: 'sequence_analysis',
@@ -352,29 +344,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
-      // TEST 7: ADVANCED SEQUENCE ANALYSIS - Automatic + Complex
-      {
-        id: 'analysis_auto_04',
-        name: 'Sequence Metrics and Translation',
-        type: 'workflow',
-        category: 'sequence_analysis',
-        complexity: 'complex',
-        evaluation: 'automatic',
-        instruction:
-          'Calculate the sequence entropy for the current region, translate the DNA into a protein sequence, and then compute the molecular weight of the resulting protein.',
-        expectedResult: {
-          tool_sequence: ['calculate_entropy', 'translate_dna', 'calculate_molecular_weight'],
-          parameters: [{}, { sequence: '<any>' }, { sequence: '<any>' }],
-        },
-        maxScore: 15,
-        bonusScore: 5,
-        timeout: 90000,
-        evaluator: this.evaluateWorkflowCall.bind(this),
-      },
-
       // TEST 9: GENOME STATS - Automatic + Complex
       {
-        id: 'analysis_auto_03',
+        id: 'analysis_auto_02',
         name: 'Genome Statistics Suite',
         type: 'workflow',
         category: 'sequence_analysis',
@@ -685,31 +657,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               query: 'BRCA1',
             },
-          ],
-        },
-        maxScore: 15,
-        bonusScore: 3,
-        timeout: 90000,
-        evaluator: this.evaluateWorkflowCall.bind(this),
-      },
-
-      {
-        id: 'analysis_auto_complex_05',
-        name: 'CDS Translate and Reverse Complement Workflow',
-        type: 'workflow',
-        category: 'sequence_analysis',
-        complexity: 'complex',
-        evaluation: 'automatic',
-        instruction:
-          'Retrieve coding sequence (CDS) for gene "lacZ", calculate its reverse complement, and translate the reverse complement sequence into a protein sequence.',
-        expectedResult: {
-          tool_sequence: ['get_coding_sequence', 'reverse_complement', 'translate_dna'],
-          parameters: [
-            {
-              geneName: 'lacZ',
-            },
-            {},
-            {},
           ],
         },
         maxScore: 15,

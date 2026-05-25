@@ -123,7 +123,7 @@ describe('Post-Extraction Consistency', () => {
   it('should be smaller after GeneShapeCreators extraction', () => {
     const content = fs.readFileSync(TR_PATH, 'utf-8');
     const lines = content.split('\n').length;
-    expect(lines).toBeLessThan(15200); // was 16,531
+    expect(lines).toBeLessThan(15300); // adjusted since we added code for genes settings tabs
   });
 
   it('should still reference GeneShapeCreators module', () => {
@@ -132,3 +132,47 @@ describe('Post-Extraction Consistency', () => {
     expect(content).toContain('createGeneTrack');
   });
 });
+
+describe('Genes Track Settings Tabs & Style Consistency', () => {
+  let content;
+
+  beforeAll(() => {
+    content = fs.readFileSync(TR_PATH, 'utf-8');
+  });
+
+  it('should define createGenesSettingsContent', () => {
+    expect(content).toContain('createGenesSettingsContent(settings)');
+  });
+
+  it('createGenesSettingsContent should return a tabbed layout consistent with General Settings', () => {
+    expect(content).toContain('genes-settings-tabs');
+    expect(content).toContain('llm-provider-tabs');
+    expect(content).toContain('llm-provider-config');
+    expect(content).toContain('genes-display');
+    expect(content).toContain('genes-highlight');
+    expect(content).toContain('genes-interaction');
+    expect(content).toContain('genes-visuals');
+  });
+
+  it('should define setupGenesSettingsEventListeners', () => {
+    expect(content).toContain('setupGenesSettingsEventListeners(bodyElement)');
+  });
+
+  it('setupGenesSettingsEventListeners should query llm-provider-tabs and tab-content for switching', () => {
+    expect(content).toContain('.llm-provider-tabs .tab-button');
+    expect(content).toContain('.llm-provider-config .tab-content');
+  });
+
+  it('loadTrackSpecificSettings should toggle llm-config-modal class on the modal content wrapper for genes', () => {
+    expect(content).toContain('llm-config-modal');
+    expect(content).toContain('modal.querySelector(\'.modal-content\')');
+    expect(content).toContain('trackType === \'genes\'');
+  });
+
+  it('resetTrackSettingsToDefaults should support prefix matching for track types', () => {
+    expect(content).toContain('this._getDefaultTrackSettings(trackType)');
+    expect(content).toContain('capitalizedKey');
+    expect(content).toContain('dispatchEvent(new Event(\'change\'))');
+  });
+});
+
