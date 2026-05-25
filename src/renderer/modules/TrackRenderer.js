@@ -10383,11 +10383,7 @@ This action cannot be undone.`;
     // Toggle llm-config-modal class on the modal content wrapper for styling consistency
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) {
-      if (trackType === 'genes') {
-        modalContent.classList.add('llm-config-modal');
-      } else {
-        modalContent.classList.remove('llm-config-modal');
-      }
+      modalContent.classList.add('llm-config-modal');
     }
 
     // Get current settings for this track (instance-specific if fileId provided)
@@ -10803,27 +10799,29 @@ This action cannot be undone.`;
    */
   createGCSettingsContent(settings) {
     return `
-            <div class="settings-section">
-                <h4>Colors & Styles</h4>
-                <div class="form-group">
-                    <label for="gcContentColor">GC Content Color:</label>
-                    <input type="color" id="gcContentColor" value="${settings.contentColor || '#3b82f6'}">
-                </div>
-                <div class="form-group">
-                    <label for="gcSkewPositiveColor">GC Skew Positive Color:</label>
-                    <input type="color" id="gcSkewPositiveColor" value="${settings.skewPositiveColor || '#10b981'}">
-                </div>
-                <div class="form-group">
-                    <label for="gcSkewNegativeColor">GC Skew Negative Color:</label>
-                    <input type="color" id="gcSkewNegativeColor" value="${settings.skewNegativeColor || '#ef4444'}">
-                </div>
-                <div class="form-group">
-                    <label for="gcLineWidth">Line Width:</label>
-                    <input type="number" id="gcLineWidth" min="1" max="5" step="0.5" value="${settings.lineWidth || 2}">
-                </div>
-                <div class="form-group">
-                    <label for="gcTrackHeight">Track Height (px):</label>
-                    <input type="number" id="gcTrackHeight" min="80" max="300" value="${settings.height || 140}">
+            <div class="llm-provider-config">
+                <div class="settings-section">
+                    <h4>Colors & Styles</h4>
+                    <div class="form-group">
+                        <label for="gcContentColor">GC Content Color:</label>
+                        <input type="color" id="gcContentColor" value="${settings.contentColor || '#3b82f6'}">
+                    </div>
+                    <div class="form-group">
+                        <label for="gcSkewPositiveColor">GC Skew Positive Color:</label>
+                        <input type="color" id="gcSkewPositiveColor" value="${settings.skewPositiveColor || '#10b981'}">
+                    </div>
+                    <div class="form-group">
+                        <label for="gcSkewNegativeColor">GC Skew Negative Color:</label>
+                        <input type="color" id="gcSkewNegativeColor" value="${settings.skewNegativeColor || '#ef4444'}">
+                    </div>
+                    <div class="form-group">
+                        <label for="gcLineWidth">Line Width:</label>
+                        <input type="number" id="gcLineWidth" class="form-input" min="1" max="5" step="0.5" value="${settings.lineWidth || 2}">
+                    </div>
+                    <div class="form-group">
+                        <label for="gcTrackHeight">Track Height (px):</label>
+                        <input type="number" id="gcTrackHeight" class="form-input" min="80" max="300" value="${settings.height || 140}">
+                    </div>
                 </div>
             </div>
         `;
@@ -10834,52 +10832,54 @@ This action cannot be undone.`;
    */
   createActionsSettingsContent(settings) {
     return `
-            <div class="settings-section">
-                <h4>Display Options</h4>
-                <div class="form-group">
-                    <label for="actionsTrackHeight">Track Height (px):</label>
-                    <input type="number" id="actionsTrackHeight" min="60" max="300" value="${settings.height || 120}">
-                    <div class="help-text">Total height of the actions track container.</div>
+            <div class="llm-provider-config">
+                <div class="settings-section">
+                    <h4>Display Options</h4>
+                    <div class="form-group">
+                        <label for="actionsTrackHeight">Track Height (px):</label>
+                        <input type="number" id="actionsTrackHeight" class="form-input" min="60" max="300" value="${settings.height || 120}">
+                        <div class="help-text">Total height of the actions track container.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="actionsActionHeight">Action Element Height (px):</label>
+                        <input type="number" id="actionsActionHeight" class="form-input" min="5" max="30" value="${settings.actionHeight || 10}">
+                        <div class="help-text">Height of each individual action element (marker/arrow).</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="actionsRowSpacing">Row Spacing (px):</label>
+                        <input type="number" id="actionsRowSpacing" class="form-input" min="0" max="10" value="${settings.rowSpacing || 2}">
+                        <div class="help-text">Vertical spacing between action rows.</div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="actionsActionHeight">Action Element Height (px):</label>
-                    <input type="number" id="actionsActionHeight" min="5" max="30" value="${settings.actionHeight || 10}">
-                    <div class="help-text">Height of each individual action element (marker/arrow).</div>
+                <div class="settings-section">
+                    <h4>Padding & Layout</h4>
+                    <div class="form-group">
+                        <label for="actionsTopPadding">Top Padding (px):</label>
+                        <input type="number" id="actionsTopPadding" class="form-input" min="0" max="20" value="${settings.topPadding || 5}">
+                        <div class="help-text">Padding at the top of the track.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="actionsBottomPadding">Bottom Padding (px):</label>
+                        <input type="number" id="actionsBottomPadding" class="form-input" min="0" max="20" value="${settings.bottomPadding || 5}">
+                        <div class="help-text">Padding at the bottom of the track.</div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="actionsRowSpacing">Row Spacing (px):</label>
-                    <input type="number" id="actionsRowSpacing" min="0" max="10" value="${settings.rowSpacing || 2}">
-                    <div class="help-text">Vertical spacing between action rows.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Padding & Layout</h4>
-                <div class="form-group">
-                    <label for="actionsTopPadding">Top Padding (px):</label>
-                    <input type="number" id="actionsTopPadding" min="0" max="20" value="${settings.topPadding || 5}">
-                    <div class="help-text">Padding at the top of the track.</div>
-                </div>
-                <div class="form-group">
-                    <label for="actionsBottomPadding">Bottom Padding (px):</label>
-                    <input type="number" id="actionsBottomPadding" min="0" max="20" value="${settings.bottomPadding || 5}">
-                    <div class="help-text">Padding at the bottom of the track.</div>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4>Text Settings</h4>
-                <div class="form-group">
-                    <label for="actionsFontSize">Font Size (px):</label>
-                    <input type="number" id="actionsFontSize" min="8" max="16" value="${settings.fontSize || 10}">
-                    <div class="help-text">Font size for action labels and text.</div>
-                </div>
-                <div class="form-group">
-                    <label for="actionsFontFamily">Font Family:</label>
-                    <select id="actionsFontFamily">
-                        <option value="Arial, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
-                        <option value="Helvetica, sans-serif" ${settings.fontFamily === 'Helvetica, sans-serif' ? 'selected' : ''}>Helvetica</option>
-                        <option value="monospace" ${settings.fontFamily === 'monospace' ? 'selected' : ''}>Monospace</option>
-                    </select>
-                    <div class="help-text">Font family for action text display.</div>
+                <div class="settings-section">
+                    <h4>Text Settings</h4>
+                    <div class="form-group">
+                        <label for="actionsFontSize">Font Size (px):</label>
+                        <input type="number" id="actionsFontSize" class="form-input" min="8" max="16" value="${settings.fontSize || 10}">
+                        <div class="help-text">Font size for action labels and text.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="actionsFontFamily">Font Family:</label>
+                        <select id="actionsFontFamily" class="form-select">
+                            <option value="Arial, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
+                            <option value="Helvetica, sans-serif" ${settings.fontFamily === 'Helvetica, sans-serif' ? 'selected' : ''}>Helvetica</option>
+                            <option value="monospace" ${settings.fontFamily === 'monospace' ? 'selected' : ''}>Monospace</option>
+                        </select>
+                        <div class="help-text">Font family for action text display.</div>
+                    </div>
                 </div>
             </div>
         `;
@@ -10893,12 +10893,13 @@ This action cannot be undone.`;
     const wigTracks = this.genomeBrowser.currentWIGTracks || {};
     const trackCount = Object.keys(wigTracks).length;
 
-    // Start building the settings HTML
+    // Start building the settings HTML with llm-provider-config wrapper
     let html = `
-            <div class="settings-section">
-                <h4>Track Heights</h4>
-                <p>Set individual heights for each WIG track. Changes will be applied immediately.</p>
-                <div class="wig-track-heights-container">
+            <div class="llm-provider-config">
+                <div class="settings-section">
+                    <h4>Track Heights</h4>
+                    <p>Set individual heights for each WIG track. Changes will be applied immediately.</p>
+                    <div class="wig-track-heights-container">
         `;
 
     // Add height controls for each WIG track
@@ -10911,7 +10912,7 @@ This action cannot be undone.`;
                     <label for="wigTrackHeight-${index}">${trackName} Height (px):</label>
                     <input type="number" 
                            id="wigTrackHeight-${index}" 
-                           class="wig-track-height-input"
+                           class="form-input wig-track-height-input"
                            data-track-name="${trackName}"
                            min="15" 
                            max="100" 
@@ -10928,6 +10929,7 @@ This action cannot be undone.`;
                     <label for="wigDefaultTrackHeight">Default Track Height (px):</label>
                     <input type="number" 
                            id="wigDefaultTrackHeight" 
+                           class="form-input"
                            min="15" 
                            max="100" 
                            value="${settings.defaultTrackHeight || 30}">
@@ -10938,18 +10940,20 @@ This action cannot be undone.`;
 
     // Add track spacing option
     html += `
+                    </div>
                 </div>
-            </div>
-            <div class="settings-section">
-                <h4>General Settings</h4>
-                <div class="form-group">
-                    <label for="wigTrackSpacing">Track Spacing (px):</label>
-                    <input type="number" 
-                           id="wigTrackSpacing" 
-                           min="0" 
-                           max="20" 
-                           value="${settings.trackSpacing || 5}">
-                    <div class="help-text">Space between WIG tracks.</div>
+                <div class="settings-section">
+                    <h4>General Settings</h4>
+                    <div class="form-group">
+                        <label for="wigTrackSpacing">Track Spacing (px):</label>
+                        <input type="number" 
+                               id="wigTrackSpacing" 
+                               class="form-input"
+                               min="0" 
+                               max="20" 
+                               value="${settings.trackSpacing || 5}">
+                        <div class="help-text">Space between WIG tracks.</div>
+                    </div>
                 </div>
             </div>
         `;
@@ -10962,123 +10966,147 @@ This action cannot be undone.`;
    */
   createVariantsSettingsContent(settings) {
     return `
-            <div class="settings-section">
-                <h4>Display Options</h4>
-                <div class="form-group">
-                    <label for="variantsHeight">Track Height (px):</label>
-                    <input type="number" id="variantsHeight" min="50" max="300" value="${settings.height || 80}">
-                    <div class="help-text">Total height of the variants track container.</div>
+            <div class="variants-settings-tabs">
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-tab="variants-display">
+                        <i class="fas fa-desktop"></i> Display & Filter
+                    </button>
+                    <button class="tab-button" data-tab="variants-colors">
+                        <i class="fas fa-palette"></i> Colors
+                    </button>
+                    <button class="tab-button" data-tab="variants-multivcf">
+                        <i class="fas fa-layer-group"></i> Multi-VCF
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="variantsElementHeight">Variant Element Height (px):</label>
-                    <input type="number" id="variantsElementHeight" min="8" max="30" value="${settings.elementHeight || 12}">
-                    <div class="help-text">Height of individual variant bars.</div>
-                </div>
-                <div class="form-group">
-                    <label for="variantsRowSpacing">Row Spacing (px):</label>
-                    <input type="number" id="variantsRowSpacing" min="2" max="20" value="${settings.rowSpacing || 8}">
-                    <div class="help-text">Vertical spacing between variant rows.</div>
-                </div>
-            </div>
+                <div class="llm-provider-config">
+                    <!-- DISPLAY & FILTER TAB -->
+                    <div class="tab-content active" id="variants-display-tab">
+                        <div class="settings-section">
+                            <h4>Display Options</h4>
+                            <div class="form-group">
+                                <label for="variantsHeight">Track Height (px):</label>
+                                <input type="number" id="variantsHeight" class="form-input" min="50" max="300" value="${settings.height || 80}">
+                                <div class="help-text">Total height of the variants track container.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsElementHeight">Variant Element Height (px):</label>
+                                <input type="number" id="variantsElementHeight" class="form-input" min="8" max="30" value="${settings.elementHeight || 12}">
+                                <div class="help-text">Height of individual variant bars.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsRowSpacing">Row Spacing (px):</label>
+                                <input type="number" id="variantsRowSpacing" class="form-input" min="2" max="20" value="${settings.rowSpacing || 8}">
+                                <div class="help-text">Vertical spacing between variant rows.</div>
+                            </div>
+                        </div>
 
-            <div class="settings-section">
-                <h4>Color Scheme</h4>
-                <div class="form-group">
-                    <label for="variantsColorMode">Color by:</label>
-                    <select id="variantsColorMode">
-                        <option value="type" ${settings.colorMode === 'type' || !settings.colorMode ? 'selected' : ''}>Variant Type</option>
-                        <option value="impact" ${settings.colorMode === 'impact' ? 'selected' : ''}>Impact Severity</option>
-                        <option value="quality" ${settings.colorMode === 'quality' ? 'selected' : ''}>Quality Score</option>
-                        <option value="custom" ${settings.colorMode === 'custom' ? 'selected' : ''}>Custom Color</option>
-                    </select>
-                    <div class="help-text">Choose how variants are colored. Type: SNP/INDEL/SV. Impact: HIGH/MODERATE/LOW. Quality: Based on VCF quality score.</div>
-                </div>
-                <div id="customColorGroup" style="display: ${settings.colorMode === 'custom' ? 'block' : 'none'};">
-                    <div class="form-group">
-                        <label for="variantsCustomColor">Custom Variant Color:</label>
-                        <input type="color" id="variantsCustomColor" value="${settings.customColor || '#e74c3c'}">
-                        <div class="help-text">Custom color for all variants when 'Custom Color' mode is selected.</div>
+                        <div class="settings-section">
+                            <h4>Filtering Options</h4>
+                            <div class="form-group">
+                                <label for="variantsMinQuality">Minimum Quality Score:</label>
+                                <input type="number" id="variantsMinQuality" class="form-input" min="0" max="1000" value="${settings.minQuality || 0}">
+                                <div class="help-text">Filter out variants with quality score below this value. Set to 0 to show all variants.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsMaxDisplayCount">Maximum Display Count:</label>
+                                <input type="number" id="variantsMaxDisplayCount" class="form-input" min="10" max="1000" value="${settings.maxDisplayCount || 200}">
+                                <div class="help-text">Maximum number of variants to display. Higher values may impact performance.</div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4>Label Options</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="variantsShowLabels" ${settings.showLabels !== false ? 'checked' : ''}>
+                                    Show Variant Labels
+                                </label>
+                                <div class="help-text">Display variant IDs or gene names above variants when space permits.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsLabelFontSize">Label Font Size (px):</label>
+                                <input type="number" id="variantsLabelFontSize" class="form-input" min="8" max="16" value="${settings.labelFontSize || 10}">
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="settings-section">
-                <h4>Type Colors (when Color by Type)</h4>
-                <div class="form-group">
-                    <label for="variantsSNPColor">SNP Color:</label>
-                    <input type="color" id="variantsSNPColor" value="${settings.snpColor || '#e74c3c'}">
-                </div>
-                <div class="form-group">
-                    <label for="variantsINDELColor">INDEL Color:</label>
-                    <input type="color" id="variantsINDELColor" value="${settings.indelColor || '#3498db'}">
-                </div>
-                <div class="form-group">
-                    <label for="variantsSVColor">Structural Variant Color:</label>
-                    <input type="color" id="variantsSVColor" value="${settings.svColor || '#9b59b6'}">
-                </div>
-            </div>
+                    <!-- COLORS TAB -->
+                    <div class="tab-content" id="variants-colors-tab">
+                        <div class="settings-section">
+                            <h4>Color Scheme</h4>
+                            <div class="form-group">
+                                <label for="variantsColorMode">Color by:</label>
+                                <select id="variantsColorMode" class="form-select">
+                                    <option value="type" ${settings.colorMode === 'type' || !settings.colorMode ? 'selected' : ''}>Variant Type</option>
+                                    <option value="impact" ${settings.colorMode === 'impact' ? 'selected' : ''}>Impact Severity</option>
+                                    <option value="quality" ${settings.colorMode === 'quality' ? 'selected' : ''}>Quality Score</option>
+                                    <option value="custom" ${settings.colorMode === 'custom' ? 'selected' : ''}>Custom Color</option>
+                                </select>
+                                <div class="help-text">Choose how variants are colored. Type: SNP/INDEL/SV. Impact: HIGH/MODERATE/LOW. Quality: Based on VCF quality score.</div>
+                            </div>
+                            <div id="customColorGroup" style="display: ${settings.colorMode === 'custom' ? 'block' : 'none'};">
+                                <div class="form-group">
+                                    <label for="variantsCustomColor">Custom Variant Color:</label>
+                                    <input type="color" id="variantsCustomColor" value="${settings.customColor || '#e74c3c'}">
+                                    <div class="help-text">Custom color for all variants when 'Custom Color' mode is selected.</div>
+                                </div>
+                            </div>
+                        </div>
 
-            <div class="settings-section">
-                <h4>Impact Colors (when Color by Impact)</h4>
-                <div class="form-group">
-                    <label for="variantsHighImpactColor">HIGH Impact:</label>
-                    <input type="color" id="variantsHighImpactColor" value="${settings.highImpactColor || '#e74c3c'}">
-                </div>
-                <div class="form-group">
-                    <label for="variantsModerateImpactColor">MODERATE Impact:</label>
-                    <input type="color" id="variantsModerateImpactColor" value="${settings.moderateImpactColor || '#f39c12'}">
-                </div>
-                <div class="form-group">
-                    <label for="variantsLowImpactColor">LOW Impact:</label>
-                    <input type="color" id="variantsLowImpactColor" value="${settings.lowImpactColor || '#2ecc71'}">
-                </div>
-                <div class="form-group">
-                    <label for="variantsModifierImpactColor">MODIFIER Impact:</label>
-                    <input type="color" id="variantsModifierImpactColor" value="${settings.modifierImpactColor || '#95a5a6'}">
-                </div>
-            </div>
+                        <div class="settings-section">
+                            <h4>Type Colors (when Color by Type)</h4>
+                            <div class="form-group">
+                                <label for="variantsSNPColor">SNP Color:</label>
+                                <input type="color" id="variantsSNPColor" value="${settings.snpColor || '#e74c3c'}">
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsINDELColor">INDEL Color:</label>
+                                <input type="color" id="variantsINDELColor" value="${settings.indelColor || '#3498db'}">
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsSVColor">Structural Variant Color:</label>
+                                <input type="color" id="variantsSVColor" value="${settings.svColor || '#9b59b6'}">
+                            </div>
+                        </div>
 
-            <div class="settings-section">
-                <h4>Filtering Options</h4>
-                <div class="form-group">
-                    <label for="variantsMinQuality">Minimum Quality Score:</label>
-                    <input type="number" id="variantsMinQuality" min="0" max="1000" value="${settings.minQuality || 0}">
-                    <div class="help-text">Filter out variants with quality score below this value. Set to 0 to show all variants.</div>
-                </div>
-                <div class="form-group">
-                    <label for="variantsMaxDisplayCount">Maximum Display Count:</label>
-                    <input type="number" id="variantsMaxDisplayCount" min="10" max="1000" value="${settings.maxDisplayCount || 200}">
-                    <div class="help-text">Maximum number of variants to display. Higher values may impact performance.</div>
-                </div>
-            </div>
+                        <div class="settings-section">
+                            <h4>Impact Colors (when Color by Impact)</h4>
+                            <div class="form-group">
+                                <label for="variantsHighImpactColor">HIGH Impact:</label>
+                                <input type="color" id="variantsHighImpactColor" value="${settings.highImpactColor || '#e74c3c'}">
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsModerateImpactColor">MODERATE Impact:</label>
+                                <input type="color" id="variantsModerateImpactColor" value="${settings.moderateImpactColor || '#f39c12'}">
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsLowImpactColor">LOW Impact:</label>
+                                <input type="color" id="variantsLowImpactColor" value="${settings.lowImpactColor || '#2ecc71'}">
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsModifierImpactColor">MODIFIER Impact:</label>
+                                <input type="color" id="variantsModifierImpactColor" value="${settings.modifierImpactColor || '#95a5a6'}">
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="settings-section">
-                <h4>Label Options</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="variantsShowLabels" ${settings.showLabels !== false ? 'checked' : ''}>
-                        Show Variant Labels
-                    </label>
-                    <div class="help-text">Display variant IDs or gene names above variants when space permits.</div>
-                </div>
-                <div class="form-group">
-                    <label for="variantsLabelFontSize">Label Font Size (px):</label>
-                    <input type="number" id="variantsLabelFontSize" min="8" max="16" value="${settings.labelFontSize || 10}">
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <h4>Multi-VCF Options</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="variantsGroupByFile" ${settings.groupByFile ? 'checked' : ''}>
-                        Group Variants by VCF File
-                    </label>
-                    <div class="help-text">When multiple VCF files are loaded, group variants by source file.</div>
-                </div>
-                <div class="form-group">
-                    <label for="variantsFileSpacing">Spacing Between Files (px):</label>
-                    <input type="number" id="variantsFileSpacing" min="0" max="30" value="${settings.fileSpacing || 10}">
+                    <!-- MULTI-VCF TAB -->
+                    <div class="tab-content" id="variants-multivcf-tab">
+                        <div class="settings-section">
+                            <h4>Multi-VCF Options</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="variantsGroupByFile" ${settings.groupByFile ? 'checked' : ''}>
+                                    Group Variants by VCF File
+                                </label>
+                                <div class="help-text">When multiple VCF files are loaded, group variants by source file.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="variantsFileSpacing">Spacing Between Files (px):</label>
+                                <input type="number" id="variantsFileSpacing" class="form-input" min="0" max="30" value="${settings.fileSpacing || 10}">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -11090,7 +11118,7 @@ This action cannot be undone.`;
   createReadsSettingsContent(settings) {
     return `
             <div class="reads-settings-tabs">
-                <div class="tab-buttons">
+                <div class="llm-provider-tabs">
                     <button class="tab-button active" data-tab="reads-general">
                         <i class="fas fa-desktop"></i> Display
                     </button>
@@ -11104,14 +11132,14 @@ This action cannot be undone.`;
                         <i class="fas fa-cogs"></i> Performance & Adv.
                     </button>
                 </div>
-                <div class="tab-content">
+                <div class="llm-provider-config">
                     <!-- DISPLAY TAB -->
-                    <div class="tab-panel active" id="reads-general-tab">
+                    <div class="tab-content active" id="reads-general-tab">
                         <div class="settings-section">
                             <h4>Rendering Method</h4>
                             <div class="form-group">
                                 <label for="readsRenderingMode">Rendering method:</label>
-                                <select id="readsRenderingMode">
+                                <select id="readsRenderingMode" class="form-select">
                                     <option value="canvas" ${settings.renderingMode === 'canvas' ? 'selected' : ''}>Canvas (High Performance)</option>
                                     <option value="svg" ${settings.renderingMode === 'svg' ? 'selected' : ''}>SVG (Legacy)</option>
                                 </select>
@@ -11123,12 +11151,12 @@ This action cannot be undone.`;
                             <h4>Read Display</h4>
                             <div class="form-group">
                                 <label for="readsHeight">Height of each read (px):</label>
-                                <input type="number" id="readsHeight" min="2" max="30" value="${settings.readHeight || 4}">
+                                <input type="number" id="readsHeight" class="form-input" min="2" max="30" value="${settings.readHeight || 4}">
                                 <div class="help-text">Height of individual read elements in pixels.</div>
                             </div>
                             <div class="form-group">
                                 <label for="readsSpacing">Spacing between reads (px):</label>
-                                <input type="number" id="readsSpacing" min="1" max="10" value="${settings.readSpacing || 2}">
+                                <input type="number" id="readsSpacing" class="form-input" min="1" max="10" value="${settings.readSpacing || 2}">
                                 <div class="help-text">Vertical spacing between read rows.</div>
                             </div>
                             <div class="form-group">
@@ -11140,17 +11168,17 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group" id="readsMaxVisibleRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'block' : 'none'}">
                                 <label for="readsMaxVisibleRows">Maximum visible rows (scrollable):</label>
-                                <input type="number" id="readsMaxVisibleRows" min="5" max="30" value="${settings.maxVisibleRows || 10}">
+                                <input type="number" id="readsMaxVisibleRows" class="form-input" min="5" max="30" value="${settings.maxVisibleRows || 10}">
                                 <div class="help-text">Maximum number of read rows visible at once when scrolling is enabled. Additional rows can be accessed by scrolling.</div>
                             </div>
                             <div class="form-group" id="readsMaxRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'none' : 'block'}">
                                 <label for="readsMaxRows">Maximum visible rows:</label>
-                                <input type="number" id="readsMaxRows" min="5" max="50" value="${settings.maxRows || 20}">
+                                <input type="number" id="readsMaxRows" class="form-input" min="5" max="50" value="${settings.maxRows || 20}">
                                 <div class="help-text">Maximum number of read rows to display. Additional reads will be hidden to improve performance.</div>
                             </div>
                             <div class="form-group">
                                 <label for="readsTrackHeight">Track Height (px):</label>
-                                <input type="number" id="readsTrackHeight" min="100" max="500" value="${settings.height || 150}">
+                                <input type="number" id="readsTrackHeight" class="form-input" min="100" max="500" value="${settings.height || 150}">
                                 <div class="help-text">Total height of the reads track container.</div>
                             </div>
                         </div>
@@ -11166,17 +11194,17 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group" id="referenceHeightGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
                                 <label for="referenceHeight">Reference sequence height (px):</label>
-                                <input type="number" id="referenceHeight" min="15" max="50" value="${settings.referenceHeight || 25}">
+                                <input type="number" id="referenceHeight" class="form-input" min="15" max="50" value="${settings.referenceHeight || 25}">
                                 <div class="help-text">Height of the reference sequence visualization.</div>
                             </div>
                             <div class="form-group" id="referenceFontSizeGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
                                 <label for="referenceFontSize">Reference font size (px):</label>
-                                <input type="number" id="referenceFontSize" min="8" max="20" value="${settings.referenceFontSize || 12}">
+                                <input type="number" id="referenceFontSize" class="form-input" min="8" max="20" value="${settings.referenceFontSize || 12}">
                                 <div class="help-text">Font size for reference sequence text.</div>
                             </div>
                             <div class="form-group" id="referenceFontFamilyGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
                                 <label for="referenceFontFamily">Reference font family:</label>
-                                <select id="referenceFontFamily">
+                                <select id="referenceFontFamily" class="form-select">
                                     <option value="monospace" ${(settings.referenceFontFamily || 'monospace') === 'monospace' ? 'selected' : ''}>Monospace</option>
                                     <option value="Courier New, monospace" ${settings.referenceFontFamily === 'Courier New, monospace' ? 'selected' : ''}>Courier New</option>
                                     <option value="Consolas, monospace" ${settings.referenceFontFamily === 'Consolas, monospace' ? 'selected' : ''}>Consolas</option>
@@ -11187,7 +11215,7 @@ This action cannot be undone.`;
                     </div>
 
                     <!-- COVERAGE TAB -->
-                    <div class="tab-panel" id="reads-coverage-tab">
+                    <div class="tab-content" id="reads-coverage-tab">
                         <div class="settings-section">
                             <h4>Coverage Visualization</h4>
                             <div class="form-group">
@@ -11199,7 +11227,7 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group" id="coverageHeightGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
                                 <label for="coverageHeight">Coverage track height (px):</label>
-                                <input type="number" id="coverageHeight" min="30" max="100" value="${settings.coverageHeight || 50}">
+                                <input type="number" id="coverageHeight" class="form-input" min="30" max="100" value="${settings.coverageHeight || 50}">
                                 <div class="help-text">Height of the coverage visualization track.</div>
                             </div>
                             <div class="form-group" id="coverageColorGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
@@ -11216,7 +11244,7 @@ This action cannot be undone.`;
                     </div>
 
                     <!-- SEQUENCE TAB -->
-                    <div class="tab-panel" id="reads-sequence-tab">
+                    <div class="tab-content" id="reads-sequence-tab">
                         <div class="settings-section">
                             <h4>Read Sequence Display</h4>
                             <div class="form-group">
@@ -11242,17 +11270,17 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group" id="readsSequenceThresholdGroup" style="display: ${settings.showSequences && !settings.forceSequences ? 'block' : 'none'}">
                                 <label for="readsSequenceThreshold">Sequence display threshold (bp/px):</label>
-                                <input type="number" id="readsSequenceThreshold" min="0.1" max="10" step="0.1" value="${settings.sequenceThreshold || 1.0}">
+                                <input type="number" id="readsSequenceThreshold" class="form-input" min="0.1" max="10" step="0.1" value="${settings.sequenceThreshold || 1.0}">
                                 <div class="help-text">Maximum bases per pixel to trigger sequence display. Lower values require more zoom. Default: 1.0 bp/px.</div>
                             </div>
                             <div class="form-group" id="readsSequenceFontSizeGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
                                 <label for="readsSequenceFontSize">Sequence font size (px):</label>
-                                <input type="number" id="readsSequenceFontSize" min="8" max="16" value="${settings.sequenceFontSize || 10}">
+                                <input type="number" id="readsSequenceFontSize" class="form-input" min="8" max="16" value="${settings.sequenceFontSize || 10}">
                                 <div class="help-text">Font size for sequence text. Smaller fonts allow more sequences to fit.</div>
                             </div>
                             <div class="form-group" id="readsSequenceHeightGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
                                 <label for="readsSequenceHeight">Sequence text height (px):</label>
-                                <input type="number" id="readsSequenceHeight" min="10" max="30" value="${settings.sequenceHeight || 14}">
+                                <input type="number" id="readsSequenceHeight" class="form-input" min="10" max="30" value="${settings.sequenceHeight || 14}">
                                 <div class="help-text">Height of each sequence text line. Should be slightly larger than font size.</div>
                             </div>
                             <div class="form-group" id="readsHighlightMismatchesGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
@@ -11271,7 +11299,7 @@ This action cannot be undone.`;
                     </div>
 
                     <!-- PERFORMANCE & ADVANCED TAB -->
-                    <div class="tab-panel" id="reads-advanced-tab">
+                    <div class="tab-content" id="reads-advanced-tab">
                         <div class="settings-section">
                             <h4>Read Sampling (Performance)</h4>
                             <div class="form-group">
@@ -11283,12 +11311,12 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group">
                                 <label for="readsSamplingThreshold">Sampling threshold:</label>
-                                <input type="number" id="readsSamplingThreshold" min="1000" max="100000" step="1000" value="${settings.samplingThreshold || 10000}">
+                                <input type="number" id="readsSamplingThreshold" class="form-input" min="1000" max="100000" step="1000" value="${settings.samplingThreshold || 10000}">
                                 <div class="help-text">Number of reads above which sampling will be applied. Default: 10,000 reads.</div>
                             </div>
                             <div class="form-group">
                                 <label for="readsSamplingMode">Sampling mode:</label>
-                                <select id="readsSamplingMode">
+                                <select id="readsSamplingMode" class="form-select">
                                     <option value="percentage" ${(settings.samplingMode || 'percentage') === 'percentage' ? 'selected' : ''}>Percentage-based</option>
                                     <option value="fixed" ${settings.samplingMode === 'fixed' ? 'selected' : ''}>Fixed count</option>
                                 </select>
@@ -11296,12 +11324,12 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group" id="readsSamplingPercentageGroup" style="display: ${(settings.samplingMode || 'percentage') === 'percentage' ? 'block' : 'none'}">
                                 <label for="readsSamplingPercentage">Sampling percentage (%):</label>
-                                <input type="number" id="readsSamplingPercentage" min="1" max="100" value="${settings.samplingPercentage || 20}">
+                                <input type="number" id="readsSamplingPercentage" class="form-input" min="1" max="100" value="${settings.samplingPercentage || 20}">
                                 <div class="help-text">Percentage of reads to randomly sample when threshold is exceeded. Default: 20%.</div>
                             </div>
                             <div class="form-group" id="readsSamplingCountGroup" style="display: ${settings.samplingMode === 'fixed' ? 'block' : 'none'}">
                                 <label for="readsSamplingCount">Maximum reads to display:</label>
-                                <input type="number" id="readsSamplingCount" min="1000" max="50000" step="1000" value="${settings.samplingCount || 5000}">
+                                <input type="number" id="readsSamplingCount" class="form-input" min="1000" max="50000" step="1000" value="${settings.samplingCount || 5000}">
                                 <div class="help-text">Maximum number of reads to display when sampling is active. Default: 5,000 reads.</div>
                             </div>
                             <div class="form-group">
@@ -11337,12 +11365,12 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group">
                                 <label for="readsBorderWidth">Border width (px):</label>
-                                <input type="number" id="readsBorderWidth" min="0" max="3" step="0.5" value="${settings.borderWidth || 0}">
+                                <input type="number" id="readsBorderWidth" class="form-input" min="0" max="3" step="0.5" value="${settings.borderWidth || 0}">
                                 <div class="help-text">Width of the border around read elements. Set to 0 for no border.</div>
                             </div>
                             <div class="form-group">
                                 <label for="readsOpacity">Read opacity (0-1):</label>
-                                <input type="number" id="readsOpacity" min="0.1" max="1" step="0.1" value="${settings.opacity || 0.9}">
+                                <input type="number" id="readsOpacity" class="form-input" min="0.1" max="1" step="0.1" value="${settings.opacity || 0.9}">
                                 <div class="help-text">Transparency level of read elements. 1.0 = fully opaque, 0.1 = very transparent.</div>
                             </div>
                         </div>
@@ -11380,17 +11408,17 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group">
                                 <label for="readsMinWidth">Minimum read width (px):</label>
-                                <input type="number" id="readsMinWidth" min="1" max="10" value="${settings.minWidth || 2}">
+                                <input type="number" id="readsMinWidth" class="form-input" min="1" max="10" value="${settings.minWidth || 2}">
                                 <div class="help-text">Minimum width for very short reads to ensure they remain visible.</div>
                             </div>
                             <div class="form-group">
                                 <label for="readsStreamingThreshold">Streaming threshold (MB):</label>
-                                <input type="number" id="readsStreamingThreshold" min="10" max="1000" value="${settings.streamingThreshold || 50}">
+                                <input type="number" id="readsStreamingThreshold" class="form-input" min="10" max="1000" value="${settings.streamingThreshold || 50}">
                                 <div class="help-text">File size threshold in MB above which SAM files will be loaded using streaming mode for better memory management.</div>
                             </div>
                             <div class="form-group">
                                 <label for="readsMinMappingQuality">Minimum mapping quality:</label>
-                                <input type="number" id="readsMinMappingQuality" min="0" max="60" value="${settings.minMappingQuality || 0}">
+                                <input type="number" id="readsMinMappingQuality" class="form-input" min="0" max="60" value="${settings.minMappingQuality || 0}">
                                 <div class="help-text">Minimum mapping quality (MAPQ) required for reads to be displayed. Set to 0 to show all reads regardless of quality.</div>
                             </div>
                             <div class="form-group">
@@ -11425,14 +11453,15 @@ This action cannot be undone.`;
    * Create default settings content for other tracks
    */
   createDefaultSettingsContent(trackType, settings) {
+    let content = '';
     // Blast-specific settings
     if (trackType === 'blast') {
-      return `
+      content = `
                 <div class="settings-section">
                     <h4>BLAST Track Settings</h4>
                     <div class="form-group">
                         <label for="blastTrackHeight">Track Height (px):</label>
-                        <input type="number" id="blastTrackHeight" min="50" max="300" value="${settings.height || 120}">
+                        <input type="number" id="blastTrackHeight" class="form-input" min="50" max="300" value="${settings.height || 120}">
                     </div>
                     <div class="form-group">
                         <label for="blastShowRuler">
@@ -11442,27 +11471,28 @@ This action cannot be undone.`;
                     </div>
                     <div class="form-group">
                         <label for="blastResultHeight">Result Height (px):</label>
-                        <input type="number" id="blastResultHeight" min="8" max="30" value="${settings.resultHeight || 12}">
+                        <input type="number" id="blastResultHeight" class="form-input" min="8" max="30" value="${settings.resultHeight || 12}">
                     </div>
                     <div class="form-group">
                         <label for="blastResultSpacing">Result Spacing (px):</label>
-                        <input type="number" id="blastResultSpacing" min="5" max="30" value="${settings.resultSpacing || 14}">
+                        <input type="number" id="blastResultSpacing" class="form-input" min="5" max="30" value="${settings.resultSpacing || 14}">
                     </div>
                 </div>
             `;
-    }
-
-    // Default settings for other track types
-    return `
+    } else {
+      // Default settings for other track types
+      content = `
             <div class="settings-section">
                 <h4>Basic Settings</h4>
                 <div class="form-group">
                     <label for="defaultTrackHeight">Track Height (px):</label>
-                    <input type="number" id="defaultTrackHeight" min="50" max="300" value="${settings.height || 80}">
+                    <input type="number" id="defaultTrackHeight" class="form-input" min="50" max="300" value="${settings.height || 80}">
                 </div>
                 <p>More settings for ${trackType} track can be added here.</p>
             </div>
         `;
+    }
+    return `<div class="llm-provider-config">${content}</div>`;
   }
 
   /**
@@ -12552,77 +12582,79 @@ This action cannot be undone.`;
    */
   createSequenceLineSettingsContent(settings) {
     return `
-            <div class="settings-section">
-                <h4>Display Settings</h4>
-                <div class="form-group">
-                    <label for="sequenceLineFontSize">Font size (px):</label>
-                    <input type="number" id="sequenceLineFontSize" min="10" max="20" value="${settings.fontSize || 14}">
-                    <div class="help-text">Size of the DNA sequence text.</div>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceLineFontFamily">Font family:</label>
-                    <select id="sequenceLineFontFamily">
-                        <option value="Courier New, monospace" ${(settings.fontFamily || 'Courier New, monospace') === 'Courier New, monospace' ? 'selected' : ''}>Courier New</option>
-                        <option value="Monaco, monospace" ${settings.fontFamily === 'Monaco, monospace' ? 'selected' : ''}>Monaco</option>
-                        <option value="Consolas, monospace" ${settings.fontFamily === 'Consolas, monospace' ? 'selected' : ''}>Consolas</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceLineMaxHeight">Maximum height (px):</label>
-                    <input type="number" id="sequenceLineMaxHeight" min="30" max="200" value="${settings.maxHeight || 50}">
-                    <div class="help-text">Maximum height of the sequence track.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceLineAdaptiveHeight" ${settings.adaptiveHeight !== false ? 'checked' : ''}>
-                        Adaptive height based on content
-                    </label>
-                    <div class="help-text">Automatically adjust height based on displayed content.</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Protein Translation Settings</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceLineShowProteinTranslation" ${settings.showProteinTranslation ? 'checked' : ''}>
-                        Show protein translation sequences
-                    </label>
-                    <div class="help-text">Display amino acid translations below the DNA sequence.</div>
-                </div>
-                
-                <div class="form-group" id="sequenceLineTranslationModeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
-                    <label for="sequenceLineProteinTranslationMode">Translation mode:</label>
-                    <select id="sequenceLineProteinTranslationMode">
-                        <option value="all_frames" ${(settings.proteinTranslationMode || 'all_frames') === 'all_frames' ? 'selected' : ''}>All frames (ignore CDS)</option>
-                        <option value="cds_only" ${settings.proteinTranslationMode === 'cds_only' ? 'selected' : ''}>CDS regions only</option>
-                    </select>
-                    <div class="help-text">Choose whether to show translation for all DNA or only CDS regions.</div>
-                </div>
-                
-                <div class="form-group" id="sequenceLineFramesGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
-                    <label>Reading frames to display:</label>
-                    <div class="checkbox-group">
-                        <label>
-                            <input type="checkbox" id="sequenceLineFrame1" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(1) ? 'checked' : ''}>
-                            Frame 1
-                        </label>
-                        <label>
-                            <input type="checkbox" id="sequenceLineFrame2" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(2) ? 'checked' : ''}>
-                            Frame 2
-                        </label>
-                        <label>
-                            <input type="checkbox" id="sequenceLineFrame3" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(3) ? 'checked' : ''}>
-                            Frame 3
-                        </label>
+            <div class="llm-provider-config">
+                <div class="settings-section">
+                    <h4>Display Settings</h4>
+                    <div class="form-group">
+                        <label for="sequenceLineFontSize">Font size (px):</label>
+                        <input type="number" id="sequenceLineFontSize" class="form-input" min="10" max="20" value="${settings.fontSize || 14}">
+                        <div class="help-text">Size of the DNA sequence text.</div>
                     </div>
-                    <div class="help-text">Select which reading frames to display. Each frame shows translation starting from a different position.</div>
+                    <div class="form-group">
+                        <label for="sequenceLineFontFamily">Font family:</label>
+                        <select id="sequenceLineFontFamily" class="form-select">
+                            <option value="Courier New, monospace" ${(settings.fontFamily || 'Courier New, monospace') === 'Courier New, monospace' ? 'selected' : ''}>Courier New</option>
+                            <option value="Monaco, monospace" ${settings.fontFamily === 'Monaco, monospace' ? 'selected' : ''}>Monaco</option>
+                            <option value="Consolas, monospace" ${settings.fontFamily === 'Consolas, monospace' ? 'selected' : ''}>Consolas</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sequenceLineMaxHeight">Maximum height (px):</label>
+                        <input type="number" id="sequenceLineMaxHeight" class="form-input" min="30" max="200" value="${settings.maxHeight || 50}">
+                        <div class="help-text">Maximum height of the sequence track.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="sequenceLineAdaptiveHeight" ${settings.adaptiveHeight !== false ? 'checked' : ''}>
+                            Adaptive height based on content
+                        </label>
+                        <div class="help-text">Automatically adjust height based on displayed content.</div>
+                    </div>
                 </div>
                 
-                <div class="form-group" id="sequenceLineProteinFontSizeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
-                    <label for="sequenceLineProteinFontSize">Protein font size (px):</label>
-                    <input type="number" id="sequenceLineProteinFontSize" min="8" max="16" value="${settings.proteinFontSize || 12}">
-                    <div class="help-text">Size of the amino acid text.</div>
+                <div class="settings-section">
+                    <h4>Protein Translation Settings</h4>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="sequenceLineShowProteinTranslation" ${settings.showProteinTranslation ? 'checked' : ''}>
+                            Show protein translation sequences
+                        </label>
+                        <div class="help-text">Display amino acid translations below the DNA sequence.</div>
+                    </div>
+                    
+                    <div class="form-group" id="sequenceLineTranslationModeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
+                        <label for="sequenceLineProteinTranslationMode">Translation mode:</label>
+                        <select id="sequenceLineProteinTranslationMode" class="form-select">
+                            <option value="all_frames" ${(settings.proteinTranslationMode || 'all_frames') === 'all_frames' ? 'selected' : ''}>All frames (ignore CDS)</option>
+                            <option value="cds_only" ${settings.proteinTranslationMode === 'cds_only' ? 'selected' : ''}>CDS regions only</option>
+                        </select>
+                        <div class="help-text">Choose whether to show translation for all DNA or only CDS regions.</div>
+                    </div>
+                    
+                    <div class="form-group" id="sequenceLineFramesGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
+                        <label>Reading frames to display:</label>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="sequenceLineFrame1" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(1) ? 'checked' : ''}>
+                                Frame 1
+                            </label>
+                            <label>
+                                <input type="checkbox" id="sequenceLineFrame2" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(2) ? 'checked' : ''}>
+                                Frame 2
+                            </label>
+                            <label>
+                                <input type="checkbox" id="sequenceLineFrame3" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(3) ? 'checked' : ''}>
+                                Frame 3
+                            </label>
+                        </div>
+                        <div class="help-text">Select which reading frames to display. Each frame shows translation starting from a different position.</div>
+                    </div>
+                    
+                    <div class="form-group" id="sequenceLineProteinFontSizeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
+                        <label for="sequenceLineProteinFontSize">Protein font size (px):</label>
+                        <input type="number" id="sequenceLineProteinFontSize" class="form-input" min="8" max="16" value="${settings.proteinFontSize || 12}">
+                        <div class="help-text">Size of the amino acid text.</div>
+                    </div>
                 </div>
             </div>
         `;
@@ -13202,32 +13234,6 @@ This action cannot be undone.`;
     });
   }
 
-  /**
-   * Get current sequence view mode from SequenceUtils
-   */
-  getCurrentSequenceViewMode() {
-    try {
-      // Try to access the current sequence display mode
-      if (this.genomeBrowser && this.genomeBrowser.sequenceUtils) {
-        return this.genomeBrowser.sequenceUtils.displayMode || 'view';
-      }
-
-      // Fallback: check if VS Code editor is active
-      const sequenceContent = document.getElementById('sequenceContent');
-      if (sequenceContent && sequenceContent.querySelector('.vscode-sequence-editor')) {
-        return 'edit';
-      }
-
-      return 'view';
-    } catch (error) {
-      console.warn('Could not determine sequence view mode:', error);
-      return 'view';
-    }
-  }
-
-  /**
-   * Create View Mode specific settings content
-   */
   createViewModeSettingsContent(settings) {
     console.log('👁️ createViewModeSettingsContent called with settings:', settings);
 
@@ -13248,34 +13254,34 @@ This action cannot be undone.`;
                 </div>
                 <div class="form-group">
                     <label for="sequenceIndicatorHeight">Indicator bar height (px):</label>
-                    <input type="number" id="sequenceIndicatorHeight" min="6" max="20" value="${settings.indicatorHeight || 8}">
+                    <input type="number" id="sequenceIndicatorHeight" class="form-input" min="6" max="20" value="${settings.indicatorHeight || 8}">
                     <div class="help-text">Height of the gene indicator bars below sequence lines.</div>
                 </div>
                 <div class="form-group">
                     <label for="sequenceIndicatorOpacity">Indicator opacity (0-1):</label>
-                    <input type="number" id="sequenceIndicatorOpacity" min="0.3" max="1" step="0.1" value="${settings.indicatorOpacity || 0.7}">
+                    <input type="number" id="sequenceIndicatorOpacity" class="form-input" min="0.3" max="1" step="0.1" value="${settings.indicatorOpacity || 0.7}">
                     <div class="help-text">Transparency level of gene indicator bars.</div>
                 </div>
                 
                 <h5 style="margin-top: 20px; margin-bottom: 10px; color: #495057; font-size: 14px;">Position & Size Corrections</h5>
                 <div class="form-group">
                     <label for="sequenceHorizontalOffset">Horizontal offset (px):</label>
-                    <input type="number" id="sequenceHorizontalOffset" min="-50" max="50" step="0.5" value="${settings.horizontalOffset || 0}">
+                    <input type="number" id="sequenceHorizontalOffset" class="form-input" min="-50" max="50" step="0.5" value="${settings.horizontalOffset || 0}">
                     <div class="help-text">Horizontal position adjustment for gene indicators (positive = right, negative = left).</div>
                 </div>
                 <div class="form-group">
                     <label for="sequenceVerticalOffset">Vertical offset (px):</label>
-                    <input type="number" id="sequenceVerticalOffset" min="-20" max="20" step="0.5" value="${settings.verticalOffset || 0}">
+                    <input type="number" id="sequenceVerticalOffset" class="form-input" min="-20" max="20" step="0.5" value="${settings.verticalOffset || 0}">
                     <div class="help-text">Vertical position adjustment for gene indicators (positive = down, negative = up).</div>
                 </div>
                 <div class="form-group">
                     <label for="sequenceHeightCorrection">Height correction (%):</label>
-                    <input type="number" id="sequenceHeightCorrection" min="50" max="200" step="5" value="${settings.heightCorrection || 100}">
+                    <input type="number" id="sequenceHeightCorrection" class="form-input" min="50" max="200" step="5" value="${settings.heightCorrection || 100}">
                     <div class="help-text">Height scaling for gene indicators (100% = normal, 150% = 1.5x height, 75% = 0.75x height).</div>
                 </div>
                 <div class="form-group">
-                    <label for="sequenceWidthCorrection">Width correction (%):</label>
-                    <input type="number" id="sequenceWidthCorrection" min="50" max="200" step="5" value="${settings.widthCorrection || 100}">
+                    <label TIME_STAMP="1" for="sequenceWidthCorrection">Width correction (%):</label>
+                    <input type="number" id="sequenceWidthCorrection" class="form-input" min="50" max="200" step="5" value="${settings.widthCorrection || 100}">
                     <div class="help-text">Width scaling for gene indicators (100% = normal, 120% = 1.2x width, 80% = 0.8x width).</div>
                 </div>
             </div>
@@ -13298,22 +13304,22 @@ This action cannot be undone.`;
                 </div>
                 <div class="form-group">
                     <label for="sequenceStartMarkerWidth">Start marker width (px):</label>
-                    <input type="number" id="sequenceStartMarkerWidth" min="1" max="6" step="0.5" value="${settings.startMarkerWidth || 3}">
+                    <input type="number" id="sequenceStartMarkerWidth" class="form-input" min="1" max="6" step="0.5" value="${settings.startMarkerWidth || 3}">
                     <div class="help-text">Width of the vertical start marker lines.</div>
                 </div>
                 <div class="form-group">
                     <label for="sequenceStartMarkerHeight">Start marker height (% of bar):</label>
-                    <input type="number" id="sequenceStartMarkerHeight" min="50" max="100" value="${settings.startMarkerHeight || 85}">
+                    <input type="number" id="sequenceStartMarkerHeight" class="form-input" min="50" max="100" value="${settings.startMarkerHeight || 85}">
                     <div class="help-text">Height of start markers as percentage of indicator bar height (50-100%).</div>
                 </div>
                 <div class="form-group">
                     <label for="sequenceArrowSize">End arrow size (px):</label>
-                    <input type="number" id="sequenceArrowSize" min="3" max="12" value="${settings.arrowSize || 6}">
+                    <input type="number" id="sequenceArrowSize" class="form-input" min="3" max="12" value="${settings.arrowSize || 6}">
                     <div class="help-text">Size of the directional arrows at gene ends.</div>
                 </div>
                 <div class="form-group">
                     <label for="sequenceArrowHeight">End arrow height (% of bar):</label>
-                    <input type="number" id="sequenceArrowHeight" min="50" max="100" value="${settings.arrowHeight || 85}">
+                    <input type="number" id="sequenceArrowHeight" class="form-input" min="50" max="100" value="${settings.arrowHeight || 85}">
                     <div class="help-text">Height of end arrows as percentage of indicator bar height (50-100%).</div>
                 </div>
             </div>
@@ -13356,7 +13362,7 @@ This action cannot be undone.`;
                 <h4>DNA Base Colors</h4>
                 <div class="form-group">
                     <label for="sequenceColorMode">Color mode:</label>
-                    <select id="sequenceColorMode" class="select">
+                    <select id="sequenceColorMode" class="form-select">
                         <option value="uniform" ${(settings.colorMode || 'uniform') === 'uniform' ? 'selected' : ''}>Uniform color (single color for all bases)</option>
                         <option value="geneColors" ${(settings.colorMode || 'uniform') === 'geneColors' ? 'selected' : ''}>Gene colors (use colors from Genes & Features Track)</option>
                         <option value="baseColors" ${(settings.colorMode || 'uniform') === 'baseColors' ? 'selected' : ''}>Individual base colors (ATGCN)</option>
@@ -13389,7 +13395,7 @@ This action cannot be undone.`;
                     </div>
                     <div class="form-group">
                         <label for="sequenceGeneColorOpacity">Gene color opacity:</label>
-                        <input type="number" id="sequenceGeneColorOpacity" min="0.3" max="1" step="0.1" value="${settings.geneColorOpacity || 0.8}">
+                        <input type="number" id="sequenceGeneColorOpacity" class="form-input" min="0.3" max="1" step="0.1" value="${settings.geneColorOpacity || 0.8}">
                         <div class="help-text">Transparency level for gene-based colors (0.3 = very transparent, 1.0 = opaque).</div>
                     </div>
                 </div>
@@ -13467,9 +13473,9 @@ This action cannot be undone.`;
     const viewModeContent = this.createViewModeSettingsContent(settings);
     console.log('👁️ View mode content length:', viewModeContent.length);
 
-    // Only show view mode settings - no tabs needed
+    // Only show view mode settings - no tabs needed, but wrap in llm-provider-config for consistent padding
     const result = `
-            <div class="sequence-settings-content">
+            <div class="llm-provider-config sequence-settings-content">
                         ${viewModeContent}
             </div>
         `;
@@ -14401,7 +14407,7 @@ This action cannot be undone.`;
   setupReadsSettingsEventListeners(bodyElement) {
     // Set up tabs switching
     const tabButtons = bodyElement.querySelectorAll('.reads-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.reads-settings-tabs .tab-panel');
+    const tabPanels = bodyElement.querySelectorAll('.reads-settings-tabs .tab-content');
 
     tabButtons.forEach((button) => {
       button.addEventListener('click', (e) => {
@@ -14616,6 +14622,32 @@ This action cannot be undone.`;
    * Setup event listeners for variants track settings
    */
   setupVariantsSettingsEventListeners(bodyElement) {
+    // Set up tabs switching
+    const tabButtons = bodyElement.querySelectorAll('.variants-settings-tabs .tab-button');
+    const tabPanels = bodyElement.querySelectorAll('.variants-settings-tabs .tab-content');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetTab = button.getAttribute('data-tab');
+
+        // Remove active class from all buttons and panels
+        tabButtons.forEach((btn) => btn.classList.remove('active'));
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        // Add active class to clicked button
+        button.classList.add('active');
+
+        // Show corresponding panel
+        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+
     // Color mode selection - show/hide custom color group
     const colorModeSelect = bodyElement.querySelector('#variantsColorMode');
     const customColorGroup = bodyElement.querySelector('#customColorGroup');

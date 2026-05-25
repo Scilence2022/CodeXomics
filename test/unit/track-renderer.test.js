@@ -163,16 +163,73 @@ describe('Genes Track Settings Tabs & Style Consistency', () => {
     expect(content).toContain('.llm-provider-config .tab-content');
   });
 
-  it('loadTrackSpecificSettings should toggle llm-config-modal class on the modal content wrapper for genes', () => {
+  it('loadTrackSpecificSettings should add llm-config-modal class on the modal content wrapper for all track types', () => {
     expect(content).toContain('llm-config-modal');
     expect(content).toContain('modal.querySelector(\'.modal-content\')');
-    expect(content).toContain('trackType === \'genes\'');
+    expect(content).toContain('modalContent.classList.add(\'llm-config-modal\')');
   });
 
   it('resetTrackSettingsToDefaults should support prefix matching for track types', () => {
     expect(content).toContain('this._getDefaultTrackSettings(trackType)');
     expect(content).toContain('capitalizedKey');
     expect(content).toContain('dispatchEvent(new Event(\'change\'))');
+  });
+});
+
+describe('Other Track Settings Style Consistency & Tab Refactoring', () => {
+  let content;
+
+  beforeAll(() => {
+    content = fs.readFileSync(TR_PATH, 'utf-8');
+  });
+
+  it('createReadsSettingsContent should return tabbed layout with llm-provider-tabs and llm-provider-config and form classes', () => {
+    expect(content).toContain('createReadsSettingsContent(settings)');
+    expect(content).toContain('reads-settings-tabs');
+    expect(content).toContain('llm-provider-tabs');
+    expect(content).toContain('llm-provider-config');
+    expect(content).toContain('class="form-select"');
+    expect(content).toContain('class="form-input"');
+  });
+
+  it('createVariantsSettingsContent should return tabbed layout with variants-settings-tabs, llm-provider-tabs and form classes', () => {
+    expect(content).toContain('createVariantsSettingsContent(settings)');
+    expect(content).toContain('variants-settings-tabs');
+    expect(content).toContain('variants-display');
+    expect(content).toContain('variants-colors');
+    expect(content).toContain('variants-multivcf');
+  });
+
+  it('createGCSettingsContent should be wrapped in llm-provider-config and use form classes', () => {
+    expect(content).toContain('createGCSettingsContent(settings)');
+    expect(content).toContain('llm-provider-config');
+    expect(content).toContain('class="form-input"');
+  });
+
+  it('createActionsSettingsContent should be wrapped in llm-provider-config', () => {
+    expect(content).toContain('createActionsSettingsContent(settings)');
+    expect(content).toContain('llm-provider-config');
+    expect(content).toContain('class="form-select"');
+  });
+
+  it('createWIGTracksSettingsContent should be wrapped in llm-provider-config', () => {
+    expect(content).toContain('createWIGTracksSettingsContent(settings)');
+    expect(content).toContain('llm-provider-config');
+  });
+
+  it('createSequenceLineSettingsContent should be wrapped in llm-provider-config', () => {
+    expect(content).toContain('createSequenceLineSettingsContent(settings)');
+    expect(content).toContain('llm-provider-config');
+  });
+
+  it('createSequenceSettingsContent should be wrapped in llm-provider-config', () => {
+    expect(content).toContain('createSequenceSettingsContent(settings)');
+    expect(content).toContain('llm-provider-config');
+  });
+
+  it('createDefaultSettingsContent should be wrapped in llm-provider-config', () => {
+    expect(content).toContain('createDefaultSettingsContent(trackType, settings)');
+    expect(content).toContain('llm-provider-config');
   });
 });
 
