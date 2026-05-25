@@ -123,7 +123,7 @@ describe('Post-Extraction Consistency', () => {
   it('should be smaller after GeneShapeCreators extraction', () => {
     const content = fs.readFileSync(TR_PATH, 'utf-8');
     const lines = content.split('\n').length;
-    expect(lines).toBeLessThan(15300); // adjusted since we added code for genes settings tabs
+    expect(lines).toBeLessThan(15600); // adjusted since we added code for genes, reads, variants, and other settings tabs
   });
 
   it('should still reference GeneShapeCreators module', () => {
@@ -200,36 +200,62 @@ describe('Other Track Settings Style Consistency & Tab Refactoring', () => {
     expect(content).toContain('variants-multivcf');
   });
 
-  it('createGCSettingsContent should be wrapped in llm-provider-config and use form classes', () => {
+  it('createGCSettingsContent should return tabbed layout with gc-settings-tabs and form classes', () => {
     expect(content).toContain('createGCSettingsContent(settings)');
-    expect(content).toContain('llm-provider-config');
-    expect(content).toContain('class="form-input"');
+    expect(content).toContain('gc-settings-tabs');
+    expect(content).toContain('llm-provider-tabs');
+    expect(content).toContain('gc-colors');
+    expect(content).toContain('gc-display');
   });
 
-  it('createActionsSettingsContent should be wrapped in llm-provider-config', () => {
+  it('createActionsSettingsContent should return tabbed layout with actions-settings-tabs and form classes', () => {
     expect(content).toContain('createActionsSettingsContent(settings)');
-    expect(content).toContain('llm-provider-config');
-    expect(content).toContain('class="form-select"');
+    expect(content).toContain('actions-settings-tabs');
+    expect(content).toContain('llm-provider-tabs');
+    expect(content).toContain('actions-layout');
+    expect(content).toContain('actions-padding');
+    expect(content).toContain('actions-typography');
   });
 
-  it('createWIGTracksSettingsContent should be wrapped in llm-provider-config', () => {
+  it('createWIGTracksSettingsContent should return tabbed layout with wig-settings-tabs', () => {
     expect(content).toContain('createWIGTracksSettingsContent(settings)');
-    expect(content).toContain('llm-provider-config');
+    expect(content).toContain('wig-settings-tabs');
+    expect(content).toContain('llm-provider-tabs');
+    expect(content).toContain('wig-heights');
+    expect(content).toContain('wig-layout');
   });
 
-  it('createSequenceLineSettingsContent should be wrapped in llm-provider-config', () => {
+  it('createSequenceLineSettingsContent should return tabbed layout with seqline-settings-tabs', () => {
     expect(content).toContain('createSequenceLineSettingsContent(settings)');
-    expect(content).toContain('llm-provider-config');
+    expect(content).toContain('seqline-settings-tabs');
+    expect(content).toContain('llm-provider-tabs');
+    expect(content).toContain('seqline-display');
+    expect(content).toContain('seqline-translation');
   });
 
-  it('createSequenceSettingsContent should be wrapped in llm-provider-config', () => {
+  it('createSequenceSettingsContent should return tabbed layout with sequence-settings-tabs', () => {
     expect(content).toContain('createSequenceSettingsContent(settings)');
-    expect(content).toContain('llm-provider-config');
+    expect(content).toContain('sequence-settings-tabs');
+    expect(content).toContain('llm-provider-tabs');
+    expect(content).toContain('sequence-indicators');
+    expect(content).toContain('sequence-filters');
+    expect(content).toContain('sequence-colors');
   });
 
-  it('createDefaultSettingsContent should be wrapped in llm-provider-config', () => {
+  it('createDefaultSettingsContent should return tabbed layout with default-settings-tabs', () => {
     expect(content).toContain('createDefaultSettingsContent(trackType, settings)');
-    expect(content).toContain('llm-provider-config');
+    expect(content).toContain('default-settings-tabs');
+    expect(content).toContain('llm-provider-tabs');
+    expect(content).toContain('default-basic');
+    expect(content).toContain('default-advanced');
+  });
+
+  it('should define new setup event listener functions', () => {
+    expect(content).toContain('setupSequenceSettingsEventListeners(bodyElement)');
+    expect(content).toContain('setupGCSettingsEventListeners(bodyElement)');
+    expect(content).toContain('setupWIGTracksSettingsEventListeners(bodyElement)');
+    expect(content).toContain('setupActionsSettingsEventListeners(bodyElement)');
+    expect(content).toContain('setupDefaultSettingsEventListeners(bodyElement)');
   });
 });
 

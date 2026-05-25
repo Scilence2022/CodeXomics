@@ -10404,6 +10404,9 @@ This action cannot be undone.`;
       case 'gc':
         titleElement.textContent = 'GC Content & Skew Track Settings';
         bodyElement.innerHTML = this.createGCSettingsContent(currentSettings);
+        setTimeout(() => {
+          this.setupGCSettingsEventListeners(bodyElement);
+        }, 100);
         break;
 
       case 'reads':
@@ -10419,164 +10422,11 @@ This action cannot be undone.`;
       case 'sequence':
         console.log('⚙️ Loading sequence track settings...');
         titleElement.textContent = 'Sequence Track Settings';
-        const sequenceContent = this.createSequenceSettingsContent(currentSettings);
-        console.log('⚙️ Generated sequence content length:', sequenceContent.length);
-        bodyElement.innerHTML = sequenceContent;
+        bodyElement.innerHTML = this.createSequenceSettingsContent(currentSettings);
         console.log('⚙️ Sequence settings loaded into modal body');
 
-        // Debug: Check if tabs are actually in the DOM and set up tab functionality
         setTimeout(() => {
-          const tabButtons = bodyElement.querySelectorAll('.tab-button');
-          const tabPanels = bodyElement.querySelectorAll('.tab-panel');
-          console.log('🔍 Tab buttons found:', tabButtons.length);
-          console.log('🔍 Tab panels found:', tabPanels.length);
-
-          // Check each tab panel individually
-          tabPanels.forEach((panel, index) => {
-            console.log(
-                `🔍 Panel ${index}:`,
-                panel.id,
-                'has active:',
-                panel.classList.contains('active'),
-                'display:',
-                getComputedStyle(panel).display,
-            );
-          });
-
-          // Check each tab button
-          tabButtons.forEach((button, index) => {
-            console.log(
-                `🔍 Button ${index}:`,
-                button.getAttribute('data-tab'),
-                'has active:',
-                button.classList.contains('active'),
-            );
-          });
-
-          console.log('🔍 Active tab panel (.tab-panel.active):', bodyElement.querySelector('.tab-panel.active'));
-          console.log(
-              '🔍 Active tab panel (.sequence-settings-tabs .tab-panel.active):',
-              bodyElement.querySelector('.sequence-settings-tabs .tab-panel.active'),
-          );
-          console.log('🔍 Just active class (.active):', bodyElement.querySelectorAll('.active'));
-          console.log('🔍 All tab panels:', bodyElement.querySelectorAll('.tab-panel'));
-          console.log('🔍 Tab content div:', bodyElement.querySelector('.tab-content'));
-          console.log('🔍 Sequence settings tabs div:', bodyElement.querySelector('.sequence-settings-tabs'));
-
-          // Let's check what's actually inside the active panel
-          const activePanelForDebug = bodyElement.querySelector('.tab-panel.active');
-          if (activePanelForDebug) {
-            console.log('🔍 Active panel content length:', activePanelForDebug.innerHTML.length);
-            console.log('🔍 Active panel first 200 chars:', activePanelForDebug.innerHTML.substring(0, 200));
-          }
-
-          console.log('🔍 Modal body innerHTML length:', bodyElement.innerHTML.length);
-          console.log('🔍 Modal body first 500 chars:', bodyElement.innerHTML.substring(0, 500));
-
-          // Force show the active tab if it's hidden
-          const activePanel = bodyElement.querySelector('.tab-panel.active') || bodyElement.querySelector('.tab-panel');
-          if (activePanel) {
-            console.log('🔧 Forcing active panel to show');
-            activePanel.style.cssText =
-              'visibility: visible !important; opacity: 1 !important; height: auto !important; overflow: visible !important; position: static !important; left: auto !important;';
-            activePanel.classList.add('active');
-            console.log('🔧 Applied inline styles to panel:', activePanel.id);
-          }
-
-          // Debug modal positioning and visibility
-          console.log('🔍 Modal element:', modal);
-          console.log('🔍 Modal display:', getComputedStyle(modal).display);
-          console.log('🔍 Modal visibility:', getComputedStyle(modal).visibility);
-          console.log('🔍 Modal z-index:', getComputedStyle(modal).zIndex);
-          console.log('🔍 Modal position:', getComputedStyle(modal).position);
-          console.log('🔍 Modal top:', getComputedStyle(modal).top);
-          console.log('🔍 Modal left:', getComputedStyle(modal).left);
-
-          console.log('🔍 Body element:', bodyElement);
-          console.log('🔍 Body display:', getComputedStyle(bodyElement).display);
-          console.log('🔍 Body visibility:', getComputedStyle(bodyElement).visibility);
-          console.log('🔍 Body height:', getComputedStyle(bodyElement).height);
-          console.log('🔍 Body max-height:', getComputedStyle(bodyElement).maxHeight);
-          console.log('🔍 Body overflow:', getComputedStyle(bodyElement).overflow);
-
-          // Force modal body to have sufficient height - this was the key fix!
-          console.log('🔧 Forcing modal body height...');
-          bodyElement.style.cssText =
-            'height: auto !important; min-height: 400px !important; max-height: 600px !important; overflow-y: auto !important; display: block !important; visibility: visible !important; padding: 20px !important;';
-          console.log('🔍 After forcing - Body height:', getComputedStyle(bodyElement).height);
-          console.log('🔍 After forcing - Body overflow:', getComputedStyle(bodyElement).overflow);
-
-          // Tab panels should now be visible with proper modal body height
-          tabPanels.forEach((panel, index) => {
-            console.log(`✅ Panel ${index} should now be visible`);
-            console.log(`✅ Panel ${index} innerHTML length:`, panel.innerHTML.length);
-          });
-
-          // Manually set up tab functionality since script tags in innerHTML don't execute
-          console.log('🔧 Setting up tab button event listeners');
-          tabButtons.forEach((button) => {
-            button.addEventListener('click', (e) => {
-              e.preventDefault();
-              const targetTab = button.getAttribute('data-tab');
-              console.log('🔧 Tab clicked:', targetTab);
-
-              // Remove active class from all buttons and panels
-              tabButtons.forEach((btn) => btn.classList.remove('active'));
-              tabPanels.forEach((panel) => panel.classList.remove('active'));
-
-              // Add active class to clicked button
-              button.classList.add('active');
-
-              // Show corresponding panel
-              const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-              if (targetPanel) {
-                targetPanel.classList.add('active');
-                targetPanel.style.display = 'block !important';
-                console.log('🔧 Activated panel:', targetTab);
-              } else {
-                console.error('🔧 Target panel not found:', `${targetTab}-tab`);
-              }
-            });
-          });
-
-          // Set up color mode switching for sequence settings
-          const colorModeSelect = bodyElement.querySelector('#sequenceColorMode');
-          if (colorModeSelect) {
-            console.log('🎨 Setting up color mode switching');
-
-            const uniformSettings = bodyElement.querySelector('#uniformColorSettings');
-            const geneColorSettings = bodyElement.querySelector('#geneColorSettings');
-            const baseColorSettings = bodyElement.querySelector('#baseColorSettings');
-
-            const switchColorMode = (mode) => {
-              console.log('🎨 Switching to color mode:', mode);
-
-              // Hide all color mode settings
-              if (uniformSettings) uniformSettings.style.display = 'none';
-              if (geneColorSettings) geneColorSettings.style.display = 'none';
-              if (baseColorSettings) baseColorSettings.style.display = 'none';
-
-              // Show the selected mode settings
-              switch (mode) {
-                case 'uniform':
-                  if (uniformSettings) uniformSettings.style.display = 'block';
-                  break;
-                case 'geneColors':
-                  if (geneColorSettings) geneColorSettings.style.display = 'block';
-                  break;
-                case 'baseColors':
-                  if (baseColorSettings) baseColorSettings.style.display = 'block';
-                  break;
-              }
-            };
-
-            colorModeSelect.addEventListener('change', (e) => {
-              switchColorMode(e.target.value);
-            });
-
-            // Initialize with current mode
-            switchColorMode(colorModeSelect.value);
-          }
+          this.setupSequenceSettingsEventListeners(bodyElement);
         }, 100);
         break;
 
@@ -10594,6 +10444,9 @@ This action cannot be undone.`;
       case 'wigTracks':
         titleElement.textContent = 'WIG Tracks Settings';
         bodyElement.innerHTML = this.createWIGTracksSettingsContent(currentSettings);
+        setTimeout(() => {
+          this.setupWIGTracksSettingsEventListeners(bodyElement);
+        }, 100);
         break;
 
       case 'variants':
@@ -10609,11 +10462,17 @@ This action cannot be undone.`;
       case 'actions':
         titleElement.textContent = 'Actions Track Settings';
         bodyElement.innerHTML = this.createActionsSettingsContent(currentSettings);
+        setTimeout(() => {
+          this.setupActionsSettingsEventListeners(bodyElement);
+        }, 100);
         break;
 
       default:
         titleElement.textContent = `${trackType} Track Settings`;
         bodyElement.innerHTML = this.createDefaultSettingsContent(trackType, currentSettings);
+        setTimeout(() => {
+          this.setupDefaultSettingsEventListeners(bodyElement);
+        }, 100);
         break;
     }
 
@@ -10799,28 +10658,49 @@ This action cannot be undone.`;
    */
   createGCSettingsContent(settings) {
     return `
-            <div class="llm-provider-config">
-                <div class="settings-section">
-                    <h4>Colors & Styles</h4>
-                    <div class="form-group">
-                        <label for="gcContentColor">GC Content Color:</label>
-                        <input type="color" id="gcContentColor" value="${settings.contentColor || '#3b82f6'}">
+            <div class="gc-settings-tabs">
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-tab="gc-colors">
+                        <i class="fas fa-palette"></i> Colors
+                    </button>
+                    <button class="tab-button" data-tab="gc-display">
+                        <i class="fas fa-desktop"></i> Display
+                    </button>
+                </div>
+                
+                <div class="llm-provider-config">
+                    <!-- COLORS TAB -->
+                    <div class="tab-content active" id="gc-colors-tab">
+                        <div class="settings-section">
+                            <h4>Colors & Styles</h4>
+                            <div class="form-group">
+                                <label for="gcContentColor">GC Content Color:</label>
+                                <input type="color" id="gcContentColor" value="${settings.contentColor || '#3b82f6'}">
+                            </div>
+                            <div class="form-group">
+                                <label for="gcSkewPositiveColor">GC Skew Positive Color:</label>
+                                <input type="color" id="gcSkewPositiveColor" value="${settings.skewPositiveColor || '#10b981'}">
+                            </div>
+                            <div class="form-group">
+                                <label for="gcSkewNegativeColor">GC Skew Negative Color:</label>
+                                <input type="color" id="gcSkewNegativeColor" value="${settings.skewNegativeColor || '#ef4444'}">
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="gcSkewPositiveColor">GC Skew Positive Color:</label>
-                        <input type="color" id="gcSkewPositiveColor" value="${settings.skewPositiveColor || '#10b981'}">
-                    </div>
-                    <div class="form-group">
-                        <label for="gcSkewNegativeColor">GC Skew Negative Color:</label>
-                        <input type="color" id="gcSkewNegativeColor" value="${settings.skewNegativeColor || '#ef4444'}">
-                    </div>
-                    <div class="form-group">
-                        <label for="gcLineWidth">Line Width:</label>
-                        <input type="number" id="gcLineWidth" class="form-input" min="1" max="5" step="0.5" value="${settings.lineWidth || 2}">
-                    </div>
-                    <div class="form-group">
-                        <label for="gcTrackHeight">Track Height (px):</label>
-                        <input type="number" id="gcTrackHeight" class="form-input" min="80" max="300" value="${settings.height || 140}">
+                    
+                    <!-- DISPLAY TAB -->
+                    <div class="tab-content" id="gc-display-tab">
+                        <div class="settings-section">
+                            <h4>Display Settings</h4>
+                            <div class="form-group">
+                                <label for="gcLineWidth">Line Width:</label>
+                                <input type="number" id="gcLineWidth" class="form-input" min="1" max="5" step="0.5" value="${settings.lineWidth || 2}">
+                            </div>
+                            <div class="form-group">
+                                <label for="gcTrackHeight">Track Height (px):</label>
+                                <input type="number" id="gcTrackHeight" class="form-input" min="80" max="300" value="${settings.height || 140}">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -10832,53 +10712,78 @@ This action cannot be undone.`;
    */
   createActionsSettingsContent(settings) {
     return `
-            <div class="llm-provider-config">
-                <div class="settings-section">
-                    <h4>Display Options</h4>
-                    <div class="form-group">
-                        <label for="actionsTrackHeight">Track Height (px):</label>
-                        <input type="number" id="actionsTrackHeight" class="form-input" min="60" max="300" value="${settings.height || 120}">
-                        <div class="help-text">Total height of the actions track container.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="actionsActionHeight">Action Element Height (px):</label>
-                        <input type="number" id="actionsActionHeight" class="form-input" min="5" max="30" value="${settings.actionHeight || 10}">
-                        <div class="help-text">Height of each individual action element (marker/arrow).</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="actionsRowSpacing">Row Spacing (px):</label>
-                        <input type="number" id="actionsRowSpacing" class="form-input" min="0" max="10" value="${settings.rowSpacing || 2}">
-                        <div class="help-text">Vertical spacing between action rows.</div>
-                    </div>
+            <div class="actions-settings-tabs">
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-tab="actions-layout">
+                        <i class="fas fa-desktop"></i> Layout
+                    </button>
+                    <button class="tab-button" data-tab="actions-padding">
+                        <i class="fas fa-border-style"></i> Padding
+                    </button>
+                    <button class="tab-button" data-tab="actions-typography">
+                        <i class="fas fa-font"></i> Typography
+                    </button>
                 </div>
-                <div class="settings-section">
-                    <h4>Padding & Layout</h4>
-                    <div class="form-group">
-                        <label for="actionsTopPadding">Top Padding (px):</label>
-                        <input type="number" id="actionsTopPadding" class="form-input" min="0" max="20" value="${settings.topPadding || 5}">
-                        <div class="help-text">Padding at the top of the track.</div>
+                
+                <div class="llm-provider-config">
+                    <!-- LAYOUT TAB -->
+                    <div class="tab-content active" id="actions-layout-tab">
+                        <div class="settings-section">
+                            <h4>Display Options</h4>
+                            <div class="form-group">
+                                <label for="actionsTrackHeight">Track Height (px):</label>
+                                <input type="number" id="actionsTrackHeight" class="form-input" min="60" max="300" value="${settings.height || 120}">
+                                <div class="help-text">Total height of the actions track container.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="actionsActionHeight">Action Element Height (px):</label>
+                                <input type="number" id="actionsActionHeight" class="form-input" min="5" max="30" value="${settings.actionHeight || 10}">
+                                <div class="help-text">Height of each individual action element (marker/arrow).</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="actionsRowSpacing">Row Spacing (px):</label>
+                                <input type="number" id="actionsRowSpacing" class="form-input" min="0" max="10" value="${settings.rowSpacing || 2}">
+                                <div class="help-text">Vertical spacing between action rows.</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="actionsBottomPadding">Bottom Padding (px):</label>
-                        <input type="number" id="actionsBottomPadding" class="form-input" min="0" max="20" value="${settings.bottomPadding || 5}">
-                        <div class="help-text">Padding at the bottom of the track.</div>
+                    
+                    <!-- PADDING TAB -->
+                    <div class="tab-content" id="actions-padding-tab">
+                        <div class="settings-section">
+                            <h4>Padding & Layout</h4>
+                            <div class="form-group">
+                                <label for="actionsTopPadding">Top Padding (px):</label>
+                                <input type="number" id="actionsTopPadding" class="form-input" min="0" max="20" value="${settings.topPadding || 5}">
+                                <div class="help-text">Padding at the top of the track.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="actionsBottomPadding">Bottom Padding (px):</label>
+                                <input type="number" id="actionsBottomPadding" class="form-input" min="0" max="20" value="${settings.bottomPadding || 5}">
+                                <div class="help-text">Padding at the bottom of the track.</div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="settings-section">
-                    <h4>Text Settings</h4>
-                    <div class="form-group">
-                        <label for="actionsFontSize">Font Size (px):</label>
-                        <input type="number" id="actionsFontSize" class="form-input" min="8" max="16" value="${settings.fontSize || 10}">
-                        <div class="help-text">Font size for action labels and text.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="actionsFontFamily">Font Family:</label>
-                        <select id="actionsFontFamily" class="form-select">
-                            <option value="Arial, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
-                            <option value="Helvetica, sans-serif" ${settings.fontFamily === 'Helvetica, sans-serif' ? 'selected' : ''}>Helvetica</option>
-                            <option value="monospace" ${settings.fontFamily === 'monospace' ? 'selected' : ''}>Monospace</option>
-                        </select>
-                        <div class="help-text">Font family for action text display.</div>
+                    
+                    <!-- TYPOGRAPHY TAB -->
+                    <div class="tab-content" id="actions-typography-tab">
+                        <div class="settings-section">
+                            <h4>Text Settings</h4>
+                            <div class="form-group">
+                                <label for="actionsFontSize">Font Size (px):</label>
+                                <input type="number" id="actionsFontSize" class="form-input" min="8" max="16" value="${settings.fontSize || 10}">
+                                <div class="help-text">Font size for action labels and text.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="actionsFontFamily">Font Family:</label>
+                                <select id="actionsFontFamily" class="form-select">
+                                    <option value="Arial, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
+                                    <option value="Helvetica, sans-serif" ${settings.fontFamily === 'Helvetica, sans-serif' ? 'selected' : ''}>Helvetica</option>
+                                    <option value="monospace" ${settings.fontFamily === 'monospace' ? 'selected' : ''}>Monospace</option>
+                                </select>
+                                <div class="help-text">Font family for action text display.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -10893,66 +10798,80 @@ This action cannot be undone.`;
     const wigTracks = this.genomeBrowser.currentWIGTracks || {};
     const trackCount = Object.keys(wigTracks).length;
 
-    // Start building the settings HTML with llm-provider-config wrapper
+    // Start building the settings HTML with tabs
     let html = `
-            <div class="llm-provider-config">
-                <div class="settings-section">
-                    <h4>Track Heights</h4>
-                    <p>Set individual heights for each WIG track. Changes will be applied immediately.</p>
-                    <div class="wig-track-heights-container">
+            <div class="wig-settings-tabs">
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-tab="wig-heights">
+                        <i class="fas fa-arrows-alt-v"></i> Heights
+                    </button>
+                    <button class="tab-button" data-tab="wig-layout">
+                        <i class="fas fa-columns"></i> Layout
+                    </button>
+                </div>
+                
+                <div class="llm-provider-config">
+                    <!-- HEIGHTS TAB -->
+                    <div class="tab-content active" id="wig-heights-tab">
+                        <div class="settings-section">
+                            <h4>Track Heights</h4>
+                            <p>Set individual heights for each WIG track. Changes will be applied immediately.</p>
+                            <div class="wig-track-heights-container">
         `;
 
     // Add height controls for each WIG track
     Object.entries(wigTracks).forEach(([trackName, wigTrack], index) => {
-      // Get current height from settings or use default
       const currentHeight = settings.trackHeights?.[trackName] || 30;
-
       html += `
-                <div class="form-group">
-                    <label for="wigTrackHeight-${index}">${trackName} Height (px):</label>
-                    <input type="number" 
-                           id="wigTrackHeight-${index}" 
-                           class="form-input wig-track-height-input"
-                           data-track-name="${trackName}"
-                           min="15" 
-                           max="100" 
-                           value="${currentHeight}">
-                    <div class="help-text">Height of the "${trackName}" track visualization.</div>
-                </div>
-            `;
+                                <div class="form-group">
+                                    <label for="wigTrackHeight-${index}">${trackName} Height (px):</label>
+                                    <input type="number" 
+                                           id="wigTrackHeight-${index}" 
+                                           class="form-input wig-track-height-input"
+                                           data-track-name="${trackName}"
+                                           min="15" 
+                                           max="100" 
+                                           value="${currentHeight}">
+                                    <div class="help-text">Height of the "${trackName}" track visualization.</div>
+                                </div>
+                            `;
     });
 
-    // Add global track height option if no tracks are present
     if (trackCount === 0) {
       html += `
-                <div class="form-group">
-                    <label for="wigDefaultTrackHeight">Default Track Height (px):</label>
-                    <input type="number" 
-                           id="wigDefaultTrackHeight" 
-                           class="form-input"
-                           min="15" 
-                           max="100" 
-                           value="${settings.defaultTrackHeight || 30}">
-                    <div class="help-text">Default height for new WIG tracks.</div>
-                </div>
-            `;
+                                <div class="form-group">
+                                    <label for="wigDefaultTrackHeight">Default Track Height (px):</label>
+                                    <input type="number" 
+                                           id="wigDefaultTrackHeight" 
+                                           class="form-input"
+                                           min="15" 
+                                           max="100" 
+                                           value="${settings.defaultTrackHeight || 30}">
+                                    <div class="help-text">Default height for new WIG tracks.</div>
+                                </div>
+                            `;
     }
 
-    // Add track spacing option
     html += `
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="settings-section">
-                    <h4>General Settings</h4>
-                    <div class="form-group">
-                        <label for="wigTrackSpacing">Track Spacing (px):</label>
-                        <input type="number" 
-                               id="wigTrackSpacing" 
-                               class="form-input"
-                               min="0" 
-                               max="20" 
-                               value="${settings.trackSpacing || 5}">
-                        <div class="help-text">Space between WIG tracks.</div>
+                    
+                    <!-- LAYOUT TAB -->
+                    <div class="tab-content" id="wig-layout-tab">
+                        <div class="settings-section">
+                            <h4>General Settings</h4>
+                            <div class="form-group">
+                                <label for="wigTrackSpacing">Track Spacing (px):</label>
+                                <input type="number" 
+                                       id="wigTrackSpacing" 
+                                       class="form-input"
+                                       min="0" 
+                                       max="20" 
+                                       value="${settings.trackSpacing || 5}">
+                                <div class="help-text">Space between WIG tracks.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -11453,10 +11372,11 @@ This action cannot be undone.`;
    * Create default settings content for other tracks
    */
   createDefaultSettingsContent(trackType, settings) {
-    let content = '';
-    // Blast-specific settings
+    let basicContent = '';
+    let advancedContent = '';
+
     if (trackType === 'blast') {
-      content = `
+      basicContent = `
                 <div class="settings-section">
                     <h4>BLAST Track Settings</h4>
                     <div class="form-group">
@@ -11469,6 +11389,11 @@ This action cannot be undone.`;
                             Show Track Ruler
                         </label>
                     </div>
+                </div>
+            `;
+      advancedContent = `
+                <div class="settings-section">
+                    <h4>BLAST Result Configuration</h4>
                     <div class="form-group">
                         <label for="blastResultHeight">Result Height (px):</label>
                         <input type="number" id="blastResultHeight" class="form-input" min="8" max="30" value="${settings.resultHeight || 12}">
@@ -11480,19 +11405,47 @@ This action cannot be undone.`;
                 </div>
             `;
     } else {
-      // Default settings for other track types
-      content = `
-            <div class="settings-section">
-                <h4>Basic Settings</h4>
-                <div class="form-group">
-                    <label for="defaultTrackHeight">Track Height (px):</label>
-                    <input type="number" id="defaultTrackHeight" class="form-input" min="50" max="300" value="${settings.height || 80}">
+      basicContent = `
+                <div class="settings-section">
+                    <h4>Basic Settings</h4>
+                    <div class="form-group">
+                        <label for="defaultTrackHeight">Track Height (px):</label>
+                        <input type="number" id="defaultTrackHeight" class="form-input" min="50" max="300" value="${settings.height || 80}">
+                    </div>
                 </div>
-                <p>More settings for ${trackType} track can be added here.</p>
+            `;
+      advancedContent = `
+                <div class="settings-section">
+                    <h4>Advanced Options</h4>
+                    <p>More settings for ${trackType} track can be added here.</p>
+                </div>
+            `;
+    }
+
+    return `
+            <div class="default-settings-tabs">
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-tab="default-basic">
+                        <i class="fas fa-cog"></i> Basic
+                    </button>
+                    <button class="tab-button" data-tab="default-advanced">
+                        <i class="fas fa-sliders-h"></i> Advanced
+                    </button>
+                </div>
+                
+                <div class="llm-provider-config">
+                    <!-- BASIC TAB -->
+                    <div class="tab-content active" id="default-basic-tab">
+                        ${basicContent}
+                    </div>
+                    
+                    <!-- ADVANCED TAB -->
+                    <div class="tab-content" id="default-advanced-tab">
+                        ${advancedContent}
+                    </div>
+                </div>
             </div>
         `;
-    }
-    return `<div class="llm-provider-config">${content}</div>`;
   }
 
   /**
@@ -12582,78 +12535,95 @@ This action cannot be undone.`;
    */
   createSequenceLineSettingsContent(settings) {
     return `
-            <div class="llm-provider-config">
-                <div class="settings-section">
-                    <h4>Display Settings</h4>
-                    <div class="form-group">
-                        <label for="sequenceLineFontSize">Font size (px):</label>
-                        <input type="number" id="sequenceLineFontSize" class="form-input" min="10" max="20" value="${settings.fontSize || 14}">
-                        <div class="help-text">Size of the DNA sequence text.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="sequenceLineFontFamily">Font family:</label>
-                        <select id="sequenceLineFontFamily" class="form-select">
-                            <option value="Courier New, monospace" ${(settings.fontFamily || 'Courier New, monospace') === 'Courier New, monospace' ? 'selected' : ''}>Courier New</option>
-                            <option value="Monaco, monospace" ${settings.fontFamily === 'Monaco, monospace' ? 'selected' : ''}>Monaco</option>
-                            <option value="Consolas, monospace" ${settings.fontFamily === 'Consolas, monospace' ? 'selected' : ''}>Consolas</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="sequenceLineMaxHeight">Maximum height (px):</label>
-                        <input type="number" id="sequenceLineMaxHeight" class="form-input" min="30" max="200" value="${settings.maxHeight || 50}">
-                        <div class="help-text">Maximum height of the sequence track.</div>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="sequenceLineAdaptiveHeight" ${settings.adaptiveHeight !== false ? 'checked' : ''}>
-                            Adaptive height based on content
-                        </label>
-                        <div class="help-text">Automatically adjust height based on displayed content.</div>
-                    </div>
+            <div class="seqline-settings-tabs">
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-tab="seqline-display">
+                        <i class="fas fa-desktop"></i> Display
+                    </button>
+                    <button class="tab-button" data-tab="seqline-translation">
+                        <i class="fas fa-language"></i> Translation
+                    </button>
                 </div>
                 
-                <div class="settings-section">
-                    <h4>Protein Translation Settings</h4>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="sequenceLineShowProteinTranslation" ${settings.showProteinTranslation ? 'checked' : ''}>
-                            Show protein translation sequences
-                        </label>
-                        <div class="help-text">Display amino acid translations below the DNA sequence.</div>
-                    </div>
-                    
-                    <div class="form-group" id="sequenceLineTranslationModeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
-                        <label for="sequenceLineProteinTranslationMode">Translation mode:</label>
-                        <select id="sequenceLineProteinTranslationMode" class="form-select">
-                            <option value="all_frames" ${(settings.proteinTranslationMode || 'all_frames') === 'all_frames' ? 'selected' : ''}>All frames (ignore CDS)</option>
-                            <option value="cds_only" ${settings.proteinTranslationMode === 'cds_only' ? 'selected' : ''}>CDS regions only</option>
-                        </select>
-                        <div class="help-text">Choose whether to show translation for all DNA or only CDS regions.</div>
-                    </div>
-                    
-                    <div class="form-group" id="sequenceLineFramesGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
-                        <label>Reading frames to display:</label>
-                        <div class="checkbox-group">
-                            <label>
-                                <input type="checkbox" id="sequenceLineFrame1" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(1) ? 'checked' : ''}>
-                                Frame 1
-                            </label>
-                            <label>
-                                <input type="checkbox" id="sequenceLineFrame2" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(2) ? 'checked' : ''}>
-                                Frame 2
-                            </label>
-                            <label>
-                                <input type="checkbox" id="sequenceLineFrame3" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(3) ? 'checked' : ''}>
-                                Frame 3
-                            </label>
+                <div class="llm-provider-config">
+                    <!-- DISPLAY TAB -->
+                    <div class="tab-content active" id="seqline-display-tab">
+                        <div class="settings-section">
+                            <h4>Display Settings</h4>
+                            <div class="form-group">
+                                <label for="sequenceLineFontSize">Font size (px):</label>
+                                <input type="number" id="sequenceLineFontSize" class="form-input" min="10" max="20" value="${settings.fontSize || 14}">
+                                <div class="help-text">Size of the DNA sequence text.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceLineFontFamily">Font family:</label>
+                                <select id="sequenceLineFontFamily" class="form-select">
+                                    <option value="Courier New, monospace" ${(settings.fontFamily || 'Courier New, monospace') === 'Courier New, monospace' ? 'selected' : ''}>Courier New</option>
+                                    <option value="Monaco, monospace" ${settings.fontFamily === 'Monaco, monospace' ? 'selected' : ''}>Monaco</option>
+                                    <option value="Consolas, monospace" ${settings.fontFamily === 'Consolas, monospace' ? 'selected' : ''}>Consolas</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceLineMaxHeight">Maximum height (px):</label>
+                                <input type="number" id="sequenceLineMaxHeight" class="form-input" min="30" max="200" value="${settings.maxHeight || 50}">
+                                <div class="help-text">Maximum height of the sequence track.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceLineAdaptiveHeight" ${settings.adaptiveHeight !== false ? 'checked' : ''}>
+                                    Adaptive height based on content
+                                </label>
+                                <div class="help-text">Automatically adjust height based on displayed content.</div>
+                            </div>
                         </div>
-                        <div class="help-text">Select which reading frames to display. Each frame shows translation starting from a different position.</div>
                     </div>
                     
-                    <div class="form-group" id="sequenceLineProteinFontSizeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
-                        <label for="sequenceLineProteinFontSize">Protein font size (px):</label>
-                        <input type="number" id="sequenceLineProteinFontSize" class="form-input" min="8" max="16" value="${settings.proteinFontSize || 12}">
-                        <div class="help-text">Size of the amino acid text.</div>
+                    <!-- TRANSLATION TAB -->
+                    <div class="tab-content" id="seqline-translation-tab">
+                        <div class="settings-section">
+                            <h4>Protein Translation Settings</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceLineShowProteinTranslation" ${settings.showProteinTranslation ? 'checked' : ''}>
+                                    Show protein translation sequences
+                                </label>
+                                <div class="help-text">Display amino acid translations below the DNA sequence.</div>
+                            </div>
+                            
+                            <div class="form-group" id="sequenceLineTranslationModeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
+                                <label for="sequenceLineProteinTranslationMode">Translation mode:</label>
+                                <select id="sequenceLineProteinTranslationMode" class="form-select">
+                                    <option value="all_frames" ${(settings.proteinTranslationMode || 'all_frames') === 'all_frames' ? 'selected' : ''}>All frames (ignore CDS)</option>
+                                    <option value="cds_only" ${settings.proteinTranslationMode === 'cds_only' ? 'selected' : ''}>CDS regions only</option>
+                                </select>
+                                <div class="help-text">Choose whether to show translation for all DNA or only CDS regions.</div>
+                            </div>
+                            
+                            <div class="form-group" id="sequenceLineFramesGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
+                                <label>Reading frames to display:</label>
+                                <div class="checkbox-group">
+                                    <label>
+                                        <input type="checkbox" id="sequenceLineFrame1" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(1) ? 'checked' : ''}>
+                                        Frame 1
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" id="sequenceLineFrame2" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(2) ? 'checked' : ''}>
+                                        Frame 2
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" id="sequenceLineFrame3" ${!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(3) ? 'checked' : ''}>
+                                        Frame 3
+                                    </label>
+                                </div>
+                                <div class="help-text">Select which reading frames to display. Each frame shows translation starting from a different position.</div>
+                            </div>
+                            
+                            <div class="form-group" id="sequenceLineProteinFontSizeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
+                                <label for="sequenceLineProteinFontSize">Protein font size (px):</label>
+                                <input type="number" id="sequenceLineProteinFontSize" class="form-input" min="8" max="16" value="${settings.proteinFontSize || 12}">
+                                <div class="help-text">Size of the amino acid text.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -12679,6 +12649,28 @@ This action cannot be undone.`;
    * Setup event listeners for sequence line settings
    */
   setupSequenceLineSettingsEventListeners(bodyElement) {
+    const tabButtons = bodyElement.querySelectorAll('.seqline-settings-tabs .tab-button');
+    const tabPanels = bodyElement.querySelectorAll('.seqline-settings-tabs .tab-content');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetTab = button.getAttribute('data-tab');
+
+        tabButtons.forEach((btn) => btn.classList.remove('active'));
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        button.classList.add('active');
+
+        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+
     const showProteinTranslationCheckbox = bodyElement.querySelector('#sequenceLineShowProteinTranslation');
     const translationModeGroup = bodyElement.querySelector('#sequenceLineTranslationModeGroup');
     const framesGroup = bodyElement.querySelector('#sequenceLineFramesGroup');
@@ -13234,256 +13226,248 @@ This action cannot be undone.`;
     });
   }
 
-  createViewModeSettingsContent(settings) {
-    console.log('👁️ createViewModeSettingsContent called with settings:', settings);
-
-    const content = `
-            <div class="mode-indicator">
-                <i class="fas fa-eye"></i>
-                These settings apply to the traditional sequence view mode with gene indicator bars.
-            </div>
-            
-            <div class="settings-section">
-                <h4>Gene Indicator Bar Settings</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowIndicators" ${settings.showIndicators !== false ? 'checked' : ''}>
-                        Show gene indicator bars below sequence lines
-                    </label>
-                    <div class="help-text">Display colored bars below each sequence line showing gene locations and types.</div>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceIndicatorHeight">Indicator bar height (px):</label>
-                    <input type="number" id="sequenceIndicatorHeight" class="form-input" min="6" max="20" value="${settings.indicatorHeight || 8}">
-                    <div class="help-text">Height of the gene indicator bars below sequence lines.</div>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceIndicatorOpacity">Indicator opacity (0-1):</label>
-                    <input type="number" id="sequenceIndicatorOpacity" class="form-input" min="0.3" max="1" step="0.1" value="${settings.indicatorOpacity || 0.7}">
-                    <div class="help-text">Transparency level of gene indicator bars.</div>
-                </div>
-                
-                <h5 style="margin-top: 20px; margin-bottom: 10px; color: #495057; font-size: 14px;">Position & Size Corrections</h5>
-                <div class="form-group">
-                    <label for="sequenceHorizontalOffset">Horizontal offset (px):</label>
-                    <input type="number" id="sequenceHorizontalOffset" class="form-input" min="-50" max="50" step="0.5" value="${settings.horizontalOffset || 0}">
-                    <div class="help-text">Horizontal position adjustment for gene indicators (positive = right, negative = left).</div>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceVerticalOffset">Vertical offset (px):</label>
-                    <input type="number" id="sequenceVerticalOffset" class="form-input" min="-20" max="20" step="0.5" value="${settings.verticalOffset || 0}">
-                    <div class="help-text">Vertical position adjustment for gene indicators (positive = down, negative = up).</div>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceHeightCorrection">Height correction (%):</label>
-                    <input type="number" id="sequenceHeightCorrection" class="form-input" min="50" max="200" step="5" value="${settings.heightCorrection || 100}">
-                    <div class="help-text">Height scaling for gene indicators (100% = normal, 150% = 1.5x height, 75% = 0.75x height).</div>
-                </div>
-                <div class="form-group">
-                    <label TIME_STAMP="1" for="sequenceWidthCorrection">Width correction (%):</label>
-                    <input type="number" id="sequenceWidthCorrection" class="form-input" min="50" max="200" step="5" value="${settings.widthCorrection || 100}">
-                    <div class="help-text">Width scaling for gene indicators (100% = normal, 120% = 1.2x width, 80% = 0.8x width).</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Gene Markers</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowStartMarkers" ${settings.showStartMarkers !== false ? 'checked' : ''}>
-                        Show gene start markers (vertical lines)
-                    </label>
-                    <div class="help-text">Display vertical lines at gene start positions.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowEndArrows" ${settings.showEndArrows !== false ? 'checked' : ''}>
-                        Show gene end arrows
-                    </label>
-                    <div class="help-text">Display directional arrows at gene end positions showing strand direction.</div>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceStartMarkerWidth">Start marker width (px):</label>
-                    <input type="number" id="sequenceStartMarkerWidth" class="form-input" min="1" max="6" step="0.5" value="${settings.startMarkerWidth || 3}">
-                    <div class="help-text">Width of the vertical start marker lines.</div>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceStartMarkerHeight">Start marker height (% of bar):</label>
-                    <input type="number" id="sequenceStartMarkerHeight" class="form-input" min="50" max="100" value="${settings.startMarkerHeight || 85}">
-                    <div class="help-text">Height of start markers as percentage of indicator bar height (50-100%).</div>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceArrowSize">End arrow size (px):</label>
-                    <input type="number" id="sequenceArrowSize" class="form-input" min="3" max="12" value="${settings.arrowSize || 6}">
-                    <div class="help-text">Size of the directional arrows at gene ends.</div>
-                </div>
-                <div class="form-group">
-                    <label for="sequenceArrowHeight">End arrow height (% of bar):</label>
-                    <input type="number" id="sequenceArrowHeight" class="form-input" min="50" max="100" value="${settings.arrowHeight || 85}">
-                    <div class="help-text">Height of end arrows as percentage of indicator bar height (50-100%).</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Gene Type Filters</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowCDS" ${settings.showCDS !== false ? 'checked' : ''}>
-                        Show CDS genes
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowRNA" ${settings.showRNA !== false ? 'checked' : ''}>
-                        Show RNA genes (tRNA, rRNA, mRNA)
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowPromoter" ${settings.showPromoter !== false ? 'checked' : ''}>
-                        Show promoters
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowTerminator" ${settings.showTerminator !== false ? 'checked' : ''}>
-                        Show terminators
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowRegulatory" ${settings.showRegulatory !== false ? 'checked' : ''}>
-                        Show regulatory elements
-                    </label>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>DNA Base Colors</h4>
-                <div class="form-group">
-                    <label for="sequenceColorMode">Color mode:</label>
-                    <select id="sequenceColorMode" class="form-select">
-                        <option value="uniform" ${(settings.colorMode || 'uniform') === 'uniform' ? 'selected' : ''}>Uniform color (single color for all bases)</option>
-                        <option value="geneColors" ${(settings.colorMode || 'uniform') === 'geneColors' ? 'selected' : ''}>Gene colors (use colors from Genes & Features Track)</option>
-                        <option value="baseColors" ${(settings.colorMode || 'uniform') === 'baseColors' ? 'selected' : ''}>Individual base colors (ATGCN)</option>
-                    </select>
-                    <div class="help-text">Choose how DNA bases are colored in the sequence view.</div>
-                </div>
-                
-                <!-- Uniform Color Settings -->
-                <div id="uniformColorSettings" class="color-mode-settings" style="display: ${(settings.colorMode || 'uniform') === 'uniform' ? 'block' : 'none'};">
-                    <div class="form-group">
-                        <label for="sequenceUniformColor">Base color:</label>
-                        <input type="color" id="sequenceUniformColor" value="${settings.uniformColor || '#000000'}">
-                        <div class="help-text">Single color used for all DNA bases (default: black).</div>
-                    </div>
-                </div>
-                
-                <!-- Gene Colors Settings -->
-                <div id="geneColorSettings" class="color-mode-settings" style="display: ${(settings.colorMode || 'uniform') === 'geneColors' ? 'block' : 'none'};">
-                    <div class="form-group">
-                        <div class="help-text">
-                            <i class="fas fa-info-circle"></i>
-                            DNA bases will be colored according to the gene they belong to, using the same colors as the Genes & Features Track. 
-                            Non-coding regions will use the uniform color below.
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="sequenceIntergenicColor">Intergenic region color:</label>
-                        <input type="color" id="sequenceIntergenicColor" value="${settings.intergenicColor || '#666666'}">
-                        <div class="help-text">Color for bases in intergenic regions (between genes).</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="sequenceGeneColorOpacity">Gene color opacity:</label>
-                        <input type="number" id="sequenceGeneColorOpacity" class="form-input" min="0.3" max="1" step="0.1" value="${settings.geneColorOpacity || 0.8}">
-                        <div class="help-text">Transparency level for gene-based colors (0.3 = very transparent, 1.0 = opaque).</div>
-                    </div>
-                </div>
-                
-                <!-- Individual Base Colors Settings -->
-                <div id="baseColorSettings" class="color-mode-settings" style="display: ${(settings.colorMode || 'uniform') === 'baseColors' ? 'block' : 'none'};">
-                    <div class="form-group">
-                        <label for="sequenceColorA">Adenine (A) color:</label>
-                        <input type="color" id="sequenceColorA" value="${settings.colorA || '#FF0000'}">
-                        <div class="help-text">Color for adenine bases.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="sequenceColorT">Thymine (T) color:</label>
-                        <input type="color" id="sequenceColorT" value="${settings.colorT || '#0000FF'}">
-                        <div class="help-text">Color for thymine bases.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="sequenceColorG">Guanine (G) color:</label>
-                        <input type="color" id="sequenceColorG" value="${settings.colorG || '#00FF00'}">
-                        <div class="help-text">Color for guanine bases.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="sequenceColorC">Cytosine (C) color:</label>
-                        <input type="color" id="sequenceColorC" value="${settings.colorC || '#FFFF00'}">
-                        <div class="help-text">Color for cytosine bases.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="sequenceColorN">Unknown (N) color:</label>
-                        <input type="color" id="sequenceColorN" value="${settings.colorN || '#888888'}">
-                        <div class="help-text">Color for unknown or ambiguous bases.</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Cursor Settings</h4>
-                <div class="form-group">
-                    <label for="sequenceCursorColor">Cursor color:</label>
-                    <input type="color" id="sequenceCursorColor" value="${settings.cursorColor || '#000000'}">
-                    <div class="help-text">Color of the blinking cursor when clicking on sequence positions.</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Tooltips & Interaction</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowTooltips" ${settings.showTooltips !== false ? 'checked' : ''}>
-                        Show tooltips on hover
-                    </label>
-                    <div class="help-text">Display gene information when hovering over indicator elements.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="sequenceShowHoverEffects" ${settings.showHoverEffects !== false ? 'checked' : ''}>
-                        Enable hover effects
-                    </label>
-                    <div class="help-text">Highlight indicator elements when hovering over them.</div>
-                </div>
-            </div>
-        `;
-
-    console.log('👁️ View mode content generated, length:', content.length);
-    return content;
-  }
-
-  // Edit Mode settings method removed - only using view mode
-
-  /**
-   * Create sequence track settings content with tabs for different view modes
-   */
   createSequenceSettingsContent(settings) {
     console.log('🔧 createSequenceSettingsContent called with settings:', settings);
-
-    const viewModeContent = this.createViewModeSettingsContent(settings);
-    console.log('👁️ View mode content length:', viewModeContent.length);
-
-    // Only show view mode settings - no tabs needed, but wrap in llm-provider-config for consistent padding
-    const result = `
-            <div class="llm-provider-config sequence-settings-content">
-                        ${viewModeContent}
+    return `
+            <div class="sequence-settings-tabs">
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-tab="sequence-indicators">
+                        <i class="fas fa-desktop"></i> Indicators
+                    </button>
+                    <button class="tab-button" data-tab="sequence-filters">
+                        <i class="fas fa-filter"></i> Filters
+                    </button>
+                    <button class="tab-button" data-tab="sequence-colors">
+                        <i class="fas fa-palette"></i> Colors & Cursor
+                    </button>
+                </div>
+                
+                <div class="llm-provider-config">
+                    <!-- INDICATORS TAB -->
+                    <div class="tab-content active" id="sequence-indicators-tab">
+                        <div class="settings-section">
+                            <h4>Gene Indicator Bar Settings</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowIndicators" ${settings.showIndicators !== false ? 'checked' : ''}>
+                                    Show gene indicator bars below sequence lines
+                                </label>
+                                <div class="help-text">Display colored bars below each sequence line showing gene locations and types.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceIndicatorHeight">Indicator bar height (px):</label>
+                                <input type="number" id="sequenceIndicatorHeight" class="form-input" min="6" max="20" value="${settings.indicatorHeight || 8}">
+                                <div class="help-text">Height of the gene indicator bars below sequence lines.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceIndicatorOpacity">Indicator opacity (0-1):</label>
+                                <input type="number" id="sequenceIndicatorOpacity" class="form-input" min="0.3" max="1" step="0.1" value="${settings.indicatorOpacity || 0.7}">
+                                <div class="help-text">Transparency level of gene indicator bars.</div>
+                            </div>
+                            
+                            <h5 style="margin-top: 20px; margin-bottom: 10px; color: #495057; font-size: 14px;">Position & Size Corrections</h5>
+                            <div class="form-group">
+                                <label for="sequenceHorizontalOffset">Horizontal offset (px):</label>
+                                <input type="number" id="sequenceHorizontalOffset" class="form-input" min="-50" max="50" step="0.5" value="${settings.horizontalOffset || 0}">
+                                <div class="help-text">Horizontal position adjustment for gene indicators (positive = right, negative = left).</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceVerticalOffset">Vertical offset (px):</label>
+                                <input type="number" id="sequenceVerticalOffset" class="form-input" min="-20" max="20" step="0.5" value="${settings.verticalOffset || 0}">
+                                <div class="help-text">Vertical position adjustment for gene indicators (positive = down, negative = up).</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceHeightCorrection">Height correction (%):</label>
+                                <input type="number" id="sequenceHeightCorrection" class="form-input" min="50" max="200" step="5" value="${settings.heightCorrection || 100}">
+                                <div class="help-text">Height scaling for gene indicators (100% = normal, 150% = 1.5x height, 75% = 0.75x height).</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceWidthCorrection">Width correction (%):</label>
+                                <input type="number" id="sequenceWidthCorrection" class="form-input" min="50" max="200" step="5" value="${settings.widthCorrection || 100}">
+                                <div class="help-text">Width scaling for gene indicators (100% = normal, 120% = 1.2x width, 80% = 0.8x width).</div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4>Gene Markers</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowStartMarkers" ${settings.showStartMarkers !== false ? 'checked' : ''}>
+                                    Show gene start markers (vertical lines)
+                                </label>
+                                <div class="help-text">Display vertical lines at gene start positions.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowEndArrows" ${settings.showEndArrows !== false ? 'checked' : ''}>
+                                    Show gene end arrows
+                                </label>
+                                <div class="help-text">Display directional arrows at gene end positions showing strand direction.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceStartMarkerWidth">Start marker width (px):</label>
+                                <input type="number" id="sequenceStartMarkerWidth" class="form-input" min="1" max="6" step="0.5" value="${settings.startMarkerWidth || 3}">
+                                <div class="help-text">Width of the vertical start marker lines.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceStartMarkerHeight">Start marker height (% of bar):</label>
+                                <input type="number" id="sequenceStartMarkerHeight" class="form-input" min="50" max="100" value="${settings.startMarkerHeight || 85}">
+                                <div class="help-text">Height of start markers as percentage of indicator bar height (50-100%).</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceArrowSize">End arrow size (px):</label>
+                                <input type="number" id="sequenceArrowSize" class="form-input" min="3" max="12" value="${settings.arrowSize || 6}">
+                                <div class="help-text">Size of the directional arrows at gene ends.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceArrowHeight">End arrow height (% of bar):</label>
+                                <input type="number" id="sequenceArrowHeight" class="form-input" min="50" max="100" value="${settings.arrowHeight || 85}">
+                                <div class="help-text">Height of end arrows as percentage of indicator bar height (50-100%).</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- FILTERS TAB -->
+                    <div class="tab-content" id="sequence-filters-tab">
+                        <div class="settings-section">
+                            <h4>Gene Type Filters</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowCDS" ${settings.showCDS !== false ? 'checked' : ''}>
+                                    Show CDS genes
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowRNA" ${settings.showRNA !== false ? 'checked' : ''}>
+                                    Show RNA genes (tRNA, rRNA, mRNA)
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowPromoter" ${settings.showPromoter !== false ? 'checked' : ''}>
+                                    Show promoters
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowTerminator" ${settings.showTerminator !== false ? 'checked' : ''}>
+                                    Show terminators
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowRegulatory" ${settings.showRegulatory !== false ? 'checked' : ''}>
+                                    Show regulatory elements
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- COLORS & CURSOR TAB -->
+                    <div class="tab-content" id="sequence-colors-tab">
+                        <div class="settings-section">
+                            <h4>DNA Base Colors</h4>
+                            <div class="form-group">
+                                <label for="sequenceColorMode">Color mode:</label>
+                                <select id="sequenceColorMode" class="form-select">
+                                    <option value="uniform" ${(settings.colorMode || 'uniform') === 'uniform' ? 'selected' : ''}>Uniform color (single color for all bases)</option>
+                                    <option value="geneColors" ${(settings.colorMode || 'uniform') === 'geneColors' ? 'selected' : ''}>Gene colors (use colors from Genes & Features Track)</option>
+                                    <option value="baseColors" ${(settings.colorMode || 'uniform') === 'baseColors' ? 'selected' : ''}>Individual base colors (ATGCN)</option>
+                                </select>
+                                <div class="help-text">Choose how DNA bases are colored in the sequence view.</div>
+                            </div>
+                            
+                            <!-- Uniform Color Settings -->
+                            <div id="uniformColorSettings" class="color-mode-settings" style="display: ${(settings.colorMode || 'uniform') === 'uniform' ? 'block' : 'none'};">
+                                <div class="form-group">
+                                    <label for="sequenceUniformColor">Base color:</label>
+                                    <input type="color" id="sequenceUniformColor" value="${settings.uniformColor || '#000000'}">
+                                    <div class="help-text">Single color used for all DNA bases (default: black).</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Gene Colors Settings -->
+                            <div id="geneColorSettings" class="color-mode-settings" style="display: ${(settings.colorMode || 'uniform') === 'geneColors' ? 'block' : 'none'};">
+                                <div class="form-group">
+                                    <div class="help-text">
+                                        <i class="fas fa-info-circle"></i>
+                                        DNA bases will be colored according to the gene they belong to, using the same colors as the Genes & Features Track. 
+                                        Non-coding regions will use the uniform color below.
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sequenceIntergenicColor">Intergenic region color:</label>
+                                    <input type="color" id="sequenceIntergenicColor" value="${settings.intergenicColor || '#666666'}">
+                                    <div class="help-text">Color for bases in intergenic regions (between genes).</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sequenceGeneColorOpacity">Gene color opacity:</label>
+                                    <input type="number" id="sequenceGeneColorOpacity" class="form-input" min="0.3" max="1" step="0.1" value="${settings.geneColorOpacity || 0.8}">
+                                    <div class="help-text">Transparency level for gene-based colors (0.3 = very transparent, 1.0 = opaque).</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Individual Base Colors Settings -->
+                            <div id="baseColorSettings" class="color-mode-settings" style="display: ${(settings.colorMode || 'uniform') === 'baseColors' ? 'block' : 'none'};">
+                                <div class="form-group">
+                                    <label for="sequenceColorA">Adenine (A) color:</label>
+                                    <input type="color" id="sequenceColorA" value="${settings.colorA || '#FF0000'}">
+                                    <div class="help-text">Color for adenine bases.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sequenceColorT">Thymine (T) color:</label>
+                                    <input type="color" id="sequenceColorT" value="${settings.colorT || '#0000FF'}">
+                                    <div class="help-text">Color for thymine bases.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sequenceColorG">Guanine (G) color:</label>
+                                    <input type="color" id="sequenceColorG" value="${settings.colorG || '#00FF00'}">
+                                    <div class="help-text">Color for guanine bases.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sequenceColorC">Cytosine (C) color:</label>
+                                    <input type="color" id="sequenceColorC" value="${settings.colorC || '#FFFF00'}">
+                                    <div class="help-text">Color for cytosine bases.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sequenceColorN">Unknown (N) color:</label>
+                                    <input type="color" id="sequenceColorN" value="${settings.colorN || '#888888'}">
+                                    <div class="help-text">Color for unknown or ambiguous bases.</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4>Cursor Settings</h4>
+                            <div class="form-group">
+                                <label for="sequenceCursorColor">Cursor color:</label>
+                                <input type="color" id="sequenceCursorColor" value="${settings.cursorColor || '#000000'}">
+                                <div class="help-text">Color of the blinking cursor when clicking on sequence positions.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4>Tooltips & Interaction</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowTooltips" ${settings.showTooltips !== false ? 'checked' : ''}>
+                                    Show tooltips on hover
+                                </label>
+                                <div class="help-text">Display gene information when hovering over indicator elements.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowHoverEffects" ${settings.showHoverEffects !== false ? 'checked' : ''}>
+                                    Enable hover effects
+                                </label>
+                                <div class="help-text">Highlight indicator elements when hovering over them.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
-
-    console.log('🎨 Final result length:', result.length);
-    console.log('🎨 Final result preview:', result.substring(0, 200) + '...');
-
-    return result;
   }
 
   /**
@@ -14661,6 +14645,155 @@ This action cannot be undone.`;
       colorModeSelect.addEventListener('change', toggleCustomColor);
       toggleCustomColor(); // Initial state
     }
+  }
+
+  /**
+   * Setup event listeners for sequence track settings
+   */
+  setupSequenceSettingsEventListeners(bodyElement) {
+    const tabButtons = bodyElement.querySelectorAll('.sequence-settings-tabs .tab-button');
+    const tabPanels = bodyElement.querySelectorAll('.sequence-settings-tabs .tab-content');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetTab = button.getAttribute('data-tab');
+
+        tabButtons.forEach((btn) => btn.classList.remove('active'));
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        button.classList.add('active');
+
+        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+
+    const colorModeSelect = bodyElement.querySelector('#sequenceColorMode');
+    const uniformColorSettings = bodyElement.querySelector('#uniformColorSettings');
+    const geneColorSettings = bodyElement.querySelector('#geneColorSettings');
+    const baseColorSettings = bodyElement.querySelector('#baseColorSettings');
+
+    if (colorModeSelect) {
+      colorModeSelect.addEventListener('change', () => {
+        const value = colorModeSelect.value;
+        if (uniformColorSettings) uniformColorSettings.style.display = value === 'uniform' ? 'block' : 'none';
+        if (geneColorSettings) geneColorSettings.style.display = value === 'geneColors' ? 'block' : 'none';
+        if (baseColorSettings) baseColorSettings.style.display = value === 'baseColors' ? 'block' : 'none';
+      });
+    }
+  }
+
+  /**
+   * Setup event listeners for GC track settings
+   */
+  setupGCSettingsEventListeners(bodyElement) {
+    const tabButtons = bodyElement.querySelectorAll('.gc-settings-tabs .tab-button');
+    const tabPanels = bodyElement.querySelectorAll('.gc-settings-tabs .tab-content');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetTab = button.getAttribute('data-tab');
+
+        tabButtons.forEach((btn) => btn.classList.remove('active'));
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        button.classList.add('active');
+
+        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+  }
+
+  /**
+   * Setup event listeners for WIG tracks settings
+   */
+  setupWIGTracksSettingsEventListeners(bodyElement) {
+    const tabButtons = bodyElement.querySelectorAll('.wig-settings-tabs .tab-button');
+    const tabPanels = bodyElement.querySelectorAll('.wig-settings-tabs .tab-content');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetTab = button.getAttribute('data-tab');
+
+        tabButtons.forEach((btn) => btn.classList.remove('active'));
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        button.classList.add('active');
+
+        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+  }
+
+  /**
+   * Setup event listeners for Actions track settings
+   */
+  setupActionsSettingsEventListeners(bodyElement) {
+    const tabButtons = bodyElement.querySelectorAll('.actions-settings-tabs .tab-button');
+    const tabPanels = bodyElement.querySelectorAll('.actions-settings-tabs .tab-content');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetTab = button.getAttribute('data-tab');
+
+        tabButtons.forEach((btn) => btn.classList.remove('active'));
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        button.classList.add('active');
+
+        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+  }
+
+  /**
+   * Setup event listeners for default / BLAST track settings
+   */
+  setupDefaultSettingsEventListeners(bodyElement) {
+    const tabButtons = bodyElement.querySelectorAll('.default-settings-tabs .tab-button');
+    const tabPanels = bodyElement.querySelectorAll('.default-settings-tabs .tab-content');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetTab = button.getAttribute('data-tab');
+
+        tabButtons.forEach((btn) => btn.classList.remove('active'));
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        button.classList.add('active');
+
+        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
   }
 
   /**
