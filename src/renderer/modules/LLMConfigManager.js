@@ -1955,8 +1955,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: messages,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -1972,8 +1972,8 @@ class LLMConfigManager {
       body: JSON.stringify({
         model: provider.model,
         messages: messages,
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       }),
     });
 
@@ -1998,8 +1998,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: conversationHistory,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2017,8 +2017,8 @@ class LLMConfigManager {
           body: JSON.stringify({
             model: provider.model,
             messages: conversationHistory,
-            max_tokens: 2000,
-            temperature: 0.7,
+            max_tokens: this.getMaxTokens(provider),
+            temperature: this.getTemperature(),
           }),
         });
 
@@ -2055,7 +2055,8 @@ class LLMConfigManager {
       JSON.stringify(
         {
           model: provider.model,
-          max_tokens: 2000,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
           messages: messages,
         },
         null,
@@ -2072,7 +2073,8 @@ class LLMConfigManager {
       },
       body: JSON.stringify({
         model: provider.model,
-        max_tokens: 2000,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
         messages: messages,
       }),
     });
@@ -2092,7 +2094,8 @@ class LLMConfigManager {
 
     const payload = {
       model: provider.model,
-      max_tokens: 2000,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
       messages: messages,
     };
 
@@ -2132,8 +2135,8 @@ class LLMConfigManager {
         },
       ],
       generationConfig: {
-        maxOutputTokens: 2000,
-        temperature: 0.7,
+        maxOutputTokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       },
     };
 
@@ -2201,8 +2204,8 @@ class LLMConfigManager {
     const payload = {
       contents: contents,
       generationConfig: {
-        maxOutputTokens: 2000,
-        temperature: 0.7,
+        maxOutputTokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       },
     };
 
@@ -2259,8 +2262,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: messages,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2276,8 +2279,8 @@ class LLMConfigManager {
       body: JSON.stringify({
         model: provider.model,
         messages: messages,
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       }),
     });
 
@@ -2302,8 +2305,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: conversationHistory,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2319,8 +2322,8 @@ class LLMConfigManager {
       body: JSON.stringify({
         model: provider.model,
         messages: conversationHistory,
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       }),
     });
 
@@ -2346,8 +2349,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: messages,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2363,8 +2366,8 @@ class LLMConfigManager {
       body: JSON.stringify({
         model: provider.model,
         messages: messages,
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       }),
     });
 
@@ -2476,8 +2479,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: conversationHistory,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2495,8 +2498,8 @@ class LLMConfigManager {
           body: JSON.stringify({
             model: provider.model,
             messages: conversationHistory,
-            max_tokens: 2000,
-            temperature: 0.7,
+            max_tokens: this.getMaxTokens(provider),
+            temperature: this.getTemperature(),
           }),
         });
 
@@ -2547,6 +2550,28 @@ class LLMConfigManager {
     );
   }
 
+  getMaxTokens(provider) {
+    // 1. Try chatboxSettings override first
+    const chatboxSettings = this.configManager ? this.configManager.get('chatboxSettings') : null;
+    if (chatboxSettings && chatboxSettings.chatboxLLMMaxTokens) {
+      return parseInt(chatboxSettings.chatboxLLMMaxTokens, 10);
+    }
+    // 2. Try provider config
+    if (provider && provider.maxTokens) {
+      return parseInt(provider.maxTokens, 10);
+    }
+    // 3. Fallback to a safe default
+    return 4000;
+  }
+
+  getTemperature() {
+    const chatboxSettings = this.configManager ? this.configManager.get('chatboxSettings') : null;
+    if (chatboxSettings && chatboxSettings.chatboxLLMTemperature !== undefined) {
+      return parseFloat(chatboxSettings.chatboxLLMTemperature);
+    }
+    return 0.7;
+  }
+
   async sendOpenRouterMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'openai', memoryContext);
     console.log(
@@ -2555,8 +2580,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: messages,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2575,8 +2600,8 @@ class LLMConfigManager {
         body: JSON.stringify({
           model: modelToUse,
           messages: messages,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         }),
       });
       return resp;
@@ -2631,8 +2656,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: conversationHistory,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2651,8 +2676,8 @@ class LLMConfigManager {
         body: JSON.stringify({
           model: modelToUse,
           messages: conversationHistory,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         }),
       });
       return resp;
@@ -2763,8 +2788,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: messages,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2780,8 +2805,8 @@ class LLMConfigManager {
       body: JSON.stringify({
         model: provider.model,
         messages: messages,
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       }),
     });
 
@@ -2807,8 +2832,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: conversationHistory,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2824,8 +2849,8 @@ class LLMConfigManager {
       body: JSON.stringify({
         model: provider.model,
         messages: conversationHistory,
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       }),
     });
 
@@ -2852,8 +2877,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: messages,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2869,8 +2894,8 @@ class LLMConfigManager {
       body: JSON.stringify({
         model: provider.model,
         messages: messages,
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       }),
     });
 
@@ -2896,8 +2921,8 @@ class LLMConfigManager {
         {
           model: provider.model,
           messages: conversationHistory,
-          max_tokens: 2000,
-          temperature: 0.7,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
         },
         null,
         2
@@ -2913,8 +2938,8 @@ class LLMConfigManager {
       body: JSON.stringify({
         model: provider.model,
         messages: conversationHistory,
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
       }),
     });
 
@@ -2946,8 +2971,8 @@ class LLMConfigManager {
     const payload = {
       model: provider.model,
       messages: messages,
-      max_tokens: 2000,
-      temperature: 0.7,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
       stream: false, // Assuming stream is false for now based on previous setup
     };
     console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
@@ -3017,8 +3042,8 @@ class LLMConfigManager {
     const payload = {
       model: provider.model,
       messages: messages,
-      max_tokens: 2000,
-      temperature: 0.7,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
       stream: false,
     };
 
