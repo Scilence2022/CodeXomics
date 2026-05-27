@@ -8,6 +8,7 @@ keywords:
   - clipboard
   - position
 priority: 1
+resident: true
 execution:
   type: client
   timeout: 15000

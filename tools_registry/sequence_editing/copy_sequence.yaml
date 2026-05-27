@@ -5,6 +5,7 @@ description: 'Copy a sequence region to clipboard for later use in sequence edit
 category: 'sequence_editing'
 keywords: ['copy', 'sequence', 'clipboard', 'edit', 'manipulation', 'action', 'queue']
 priority: 1
+resident: true
 
 # Tool execution metadata
 execution:

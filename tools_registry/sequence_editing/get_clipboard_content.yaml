@@ -15,6 +15,7 @@ keywords:
   - what
   - sequence
 priority: 2
+resident: true
 execution:
   type: client
   timeout: 15000

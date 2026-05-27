@@ -9,6 +9,7 @@ keywords:
   - pending
   - completed
 priority: 2
+resident: true
 execution:
   type: client
   timeout: 15000

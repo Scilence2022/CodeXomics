@@ -30,9 +30,38 @@ class ToolsRegistryManager {
     try {
       await this.loadCategories();
       await this.preloadCriticalTools();
+      await this.scanAndCacheResidentTools();
       console.log('✅ Tools Registry Manager initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize Tools Registry Manager:', error);
+    }
+  }
+
+  /**
+   * Scan all tools in the registry and cache the names of resident tools
+   */
+  async scanAndCacheResidentTools() {
+    this.residentToolNames = new Set();
+    try {
+      const allTools = await this.getAllTools();
+      for (const tool of allTools) {
+        if (tool && tool.resident === true) {
+          this.residentToolNames.add(tool.name);
+          // Preload resident tools in cache to make getToolDefinition super fast
+          if (!this.toolsCache.has(tool.name)) {
+            this.toolsCache.set(tool.name, {
+              definition: tool,
+              timestamp: Date.now(),
+            });
+          }
+        }
+      }
+      console.log(
+        `🔍 [Dynamic Tools] Cached ${this.residentToolNames.size} resident tools:`,
+        Array.from(this.residentToolNames)
+      );
+    } catch (error) {
+      console.error('Failed to scan and cache resident tools:', error);
     }
   }
 
@@ -108,7 +137,7 @@ class ToolsRegistryManager {
   async findToolFile(toolName) {
     const categories = this.categoriesCache?.categories || {};
 
-    for (const [categoryName, categoryInfo] of Object.entries(categories)) {
+    for (const categoryName of Object.keys(categories)) {
       const categoryPath = path.join(this.registryPath, categoryName);
 
       try {
@@ -240,6 +269,21 @@ class ToolsRegistryManager {
         .sort((a, b) => b.score - a.score)
         .slice(0, 10) // Top 10 most relevant tools
         .map(item => item.tool);
+
+      // Append resident tools if not already present
+      if (this.residentToolNames) {
+        for (const toolName of this.residentToolNames) {
+          if (!relevantTools.some(t => t.name === toolName)) {
+            try {
+              const residentToolDef = await this.getToolDefinition(toolName);
+              relevantTools.push(residentToolDef);
+              console.log(`🔍 [Dynamic Tools] Added resident tool to prompt: ${toolName}`);
+            } catch (err) {
+              console.warn(`Failed to append resident tool ${toolName}:`, err);
+            }
+          }
+        }
+      }
 
       console.log('🔍 [Dynamic Tools] Final relevant tools count:', relevantTools.length);
       return relevantTools;
@@ -386,16 +430,42 @@ class ToolsRegistryManager {
       pathway: ['pathway', 'metabolic', 'kegg', 'reaction', 'enzyme'],
       blast: ['blast', 'similarity', 'align', 'match', 'homolog'],
       plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace'],
-      primer_design: ['primer', 'design primer', 'pcr', 'binding site', 'melting temperature', 'tm ', 'oligo', 'amplicon'],
-      sequence_metrics: ['entropy', 'molecular weight', 'molar mass', 'complexity', 'information content', 'dalton', 'mw '],
-      benchmark: ['benchmark', 'benchmarks', 'benchmark run', 'benchmark results', 'benchmark status', 'llm benchmark', 'performance test', 'test suite'],
+      primer_design: [
+        'primer',
+        'design primer',
+        'pcr',
+        'binding site',
+        'melting temperature',
+        'tm ',
+        'oligo',
+        'amplicon',
+      ],
+      sequence_metrics: [
+        'entropy',
+        'molecular weight',
+        'molar mass',
+        'complexity',
+        'information content',
+        'dalton',
+        'mw ',
+      ],
+      benchmark: [
+        'benchmark',
+        'benchmarks',
+        'benchmark run',
+        'benchmark results',
+        'benchmark status',
+        'llm benchmark',
+        'performance test',
+        'test suite',
+      ],
     };
 
     const detectedIntents = [];
 
     // Enhanced file loading detection with specific patterns
     const fileLoadingPatterns = {
-      direct_path: /\/?(?:[\w\-\.]+\/)*[\w\-\.]+\.[a-z]{2,5}/i, // File path patterns
+      direct_path: /\/?(?:[\w.-]+\/)*[\w.-]+\.[a-z]{2,5}/i, // File path patterns
       genome_loading: /(load|open|import)\s+(genome|fasta|genbank|gbk|gb)/i,
       annotation_loading: /(load|open|import)\s+(annotation|gff|bed|gtf)/i,
       variant_loading: /(load|open|import)\s+(variant|vcf|mutation)/i,
@@ -724,7 +794,22 @@ class ToolsRegistryManager {
       ],
       search: ['search', 'find', 'query', 'lookup', 'annotation', 'function', 'features'],
       analysis: ['analyze', 'calculate', 'compute', 'measure'],
-      sequence: ['sequence', 'dna', 'rna', 'protein', 'restriction', 'enzyme', 'digest', 'cleavage', 'recognition site', 'gel', 'electrophoresis', 'agarose', 'marker', 'ladder'],
+      sequence: [
+        'sequence',
+        'dna',
+        'rna',
+        'protein',
+        'restriction',
+        'enzyme',
+        'digest',
+        'cleavage',
+        'recognition site',
+        'gel',
+        'electrophoresis',
+        'agarose',
+        'marker',
+        'ladder',
+      ],
       structure: ['structure', '3d', 'pdb', 'alphafold'],
       database: ['database', 'uniprot', 'interpro'],
       editing: ['edit', 'modify', 'change', 'replace', 'copy', 'cut', 'paste', 'insert', 'delete', 'clipboard'],
@@ -732,7 +817,20 @@ class ToolsRegistryManager {
       blast: ['blast', 'similarity', 'align'],
       plugin: ['plugin', 'install', 'enable'],
       primer_design: ['primer', 'design', 'pcr', 'binding', 'tm', 'oligo', 'amplicon', 'properties'],
-      benchmark: ['benchmark', 'benchmarks', 'start', 'stop', 'pause', 'resume', 'results', 'status', 'export', 'performance', 'test suite', 'llm'],
+      benchmark: [
+        'benchmark',
+        'benchmarks',
+        'start',
+        'stop',
+        'pause',
+        'resume',
+        'results',
+        'status',
+        'export',
+        'performance',
+        'test suite',
+        'llm',
+      ],
     };
 
     return intentKeywordMap[intent] || [];
