@@ -107,7 +107,14 @@ When adding a new UI Style preset:
 4. **File Operations**: Always use `fs.promises` internally. Handle cross-platform paths using Node's `path` module.
 5. **camelCase naming**: Use camelCase for variables and functions.
 
-## 13. Editing Reminders
+## 13. Sequence Editing Actions vs. Task Checklist Rules
+
+- **Rule**: Never confuse "sequence editing actions" with "task checklist management".
+  - When the user asks to "run tasks", "execute actions", or "run queue" referring to sequence modifications (e.g., copy, paste, delete sequence), use the `execute_actions` tool.
+  - When organizing or updating the agent's progress checklist, use task management tools (`add_task`, `update_task`, `list_tasks`, `clear_tasks`, `delete_task`).
+  - Never call `execute_actions` to execute checklist items, and never call task management tools to perform sequence editing.
+
+## 14. Editing Reminders
 
 - Commit all changes in a concise conventional commit style (e.g., `feat(primer): add advanced parameters for biological directions`).
 - Maintain strict adherence to semantic versioning in `package.json` and `CHANGELOG.md`.

@@ -219,12 +219,26 @@ Navigation source values: `'ruler'`, `'zoom'`, `'drag'`, `'navigation'`. Gene na
 
 ### 3.10 Annotation Track Management (Dynamic Tracks)
 
-Custom annotation tracks (GFF/BED) are managed dynamically outside the `multiFileManager` (which is reserved for BAM/VCF). 
+Custom annotation tracks (GFF/BED) are managed dynamically outside the `multiFileManager` (which is reserved for BAM/VCF).
 
 - **ID Pattern**: The internal `id` (e.g., `annotation_track_123`) is stored in `genomeBrowser.annotationTracks`. However, for rendering and visibility tracking, a double-prefixed ID is used: `annotation_annotation_track_123`.
 - **Visibility Control**: The `visibleTracks` set must contain the full prefixed ID (`annotation_${at.id}`) to be correctly rendered by `displayGenomeView`.
 - **Track Identification**: Tracks in the DOM are identified by `data-track-type`. For custom tracks, this attribute must match the full prefixed ID to prevent them from being lost or misidentified as generic "genes" tracks during DOM-based order updates.
 - **State Persistence**: `TabManager` explicitly synchronizes both the `annotationTracks` data list and the `visibleTracks` set per tab to ensure custom tracks survive navigation, tab switching, and ruler interactions.
+
+### 3.11 Sequence Editing Actions vs. Task Checklist Systems
+
+The CodeXomics codebase manages two separate workflow queues that must not be confused:
+
+1. **Sequence Editing Actions (Genome Browser Operations)**:
+   - **Purpose**: Represents queued sequence mutation operations (e.g., copying, cutting, pasting, deleting, inserting, or replacing bases on a chromosome).
+   - **Management**: Handled by the browser's `ActionManager` and triggered via the `execute_actions` tool.
+   - **Tools**: `copy_sequence`, `cut_sequence`, `paste_sequence`, `delete_sequence`, `insert_sequence`, `replace_sequence`, `get_action_list`, `clear_actions`, and `execute_actions`.
+2. **Task Checklist System (AI Progress Tracking)**:
+   - **Purpose**: Represents human-readable workflow checklists used by the Coordinator and other agents to track execution progress of a complex user request.
+   - **Management**: Handled by the `TaskService` and updated dynamically in the ChatBox panel.
+   - **Tools**: `add_task`, `update_task`, `list_tasks`, `clear_tasks`, and `delete_task`.
+   - **Constraint**: These tasks are only for tracking state and _cannot_ be run by the `execute_actions` tool.
 
 ## 4. Historical Decisions
 
