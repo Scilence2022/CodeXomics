@@ -595,7 +595,27 @@ class ToolsRegistryManager {
     const allTools = await this.getAllTools();
 
     // FIX: Filter out any undefined/null tools before processing
-    const validTools = allTools.filter(tool => tool && typeof tool === 'object' && tool.name);
+    let validTools = allTools.filter(tool => tool && typeof tool === 'object' && tool.name);
+
+    // Filter out coordination tools if agentSystemEnabled is false/not enabled
+    const isAgentSystemEnabled = (ctx) => {
+      if (ctx && typeof ctx.agentSystemEnabled === 'boolean') {
+        return ctx.agentSystemEnabled;
+      }
+      if (typeof window !== 'undefined' && window.genomeBrowser?.chatManager) {
+        return !!window.genomeBrowser.chatManager.agentSystemEnabled;
+      }
+      return false; // Default to false
+    };
+
+    if (!isAgentSystemEnabled(context)) {
+      const beforeCount = validTools.length;
+      validTools = validTools.filter(tool => tool.category !== 'coordination');
+      const filteredCount = beforeCount - validTools.length;
+      if (filteredCount > 0) {
+        console.log(`🔍 [Dynamic Tools] Excluded ${filteredCount} coordination tools because agentSystemEnabled is false`);
+      }
+    }
 
     if (validTools.length < allTools.length) {
       console.warn(`🔍 [Dynamic Tools] Filtered out ${allTools.length - validTools.length} invalid tool(s)`);

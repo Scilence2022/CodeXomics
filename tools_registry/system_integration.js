@@ -7,7 +7,6 @@
 const ToolsRegistryManager = require('./registry_manager');
 const BuiltInToolsIntegration = require('./builtin_tools_integration');
 const PluginToolsBridge = require('./plugin_tools_bridge');
-const path = require('path');
 
 class SystemIntegration {
   constructor() {
@@ -80,6 +79,18 @@ class SystemIntegration {
     try {
       console.log('🎯 [System Integration] Generating non-dynamic system prompt with comprehensive tools integration');
 
+      // Helper to check if the agent system is enabled
+      const isAgentSystemEnabled = (ctx) => {
+        if (ctx && typeof ctx.agentSystemEnabled === 'boolean') {
+          return ctx.agentSystemEnabled;
+        }
+        if (typeof window !== 'undefined' && window.genomeBrowser?.chatManager) {
+          return !!window.genomeBrowser.chatManager.agentSystemEnabled;
+        }
+        return false; // Default to false
+      };
+      const agentSystemEnabled = isAgentSystemEnabled(context);
+
       // Get all tools from registry for comprehensive integration
       const allRegistryTools = await this.registryManager.getAllTools();
       const builtInToolsInfo = this.builtInTools.getBuiltInToolsStats();
@@ -90,6 +101,9 @@ class SystemIntegration {
 
       // Add built-in tools first (highest priority)
       for (const [toolName, toolInfo] of this.builtInTools.builtInToolsMap.entries()) {
+        if (toolInfo.category === 'coordination' && !agentSystemEnabled) {
+          continue;
+        }
         if (!toolsByCategory[toolInfo.category]) {
           toolsByCategory[toolInfo.category] = [];
         }
@@ -106,6 +120,10 @@ class SystemIntegration {
       for (const tool of allRegistryTools) {
         // Skip if it's already included as built-in
         if (builtInToolNames.has(tool.name)) {
+          continue;
+        }
+
+        if (tool.category === 'coordination' && !agentSystemEnabled) {
           continue;
         }
 
@@ -234,6 +252,18 @@ class SystemIntegration {
       }
 
       console.log('🎯 [System Integration] Generating dynamic system prompt for query:', userQuery);
+
+      // Helper to check if the agent system is enabled
+      const isAgentSystemEnabled = (ctx) => {
+        if (ctx && typeof ctx.agentSystemEnabled === 'boolean') {
+          return ctx.agentSystemEnabled;
+        }
+        if (typeof window !== 'undefined' && window.genomeBrowser?.chatManager) {
+          return !!window.genomeBrowser.chatManager.agentSystemEnabled;
+        }
+        return false; // Default to false
+      };
+      const agentSystemEnabled = isAgentSystemEnabled(context);
 
       // Get relevant tools from registry
       const registryPromptData = await this.registryManager.generateSystemPrompt(userQuery, context);
@@ -385,7 +415,8 @@ class SystemIntegration {
         relevantBuiltInTools,
         registryPromptData.tools,
         mcpServerTools,
-        pluginTools
+        pluginTools,
+        agentSystemEnabled
       );
 
       // Generate plugin tools prompt section
@@ -474,12 +505,21 @@ class SystemIntegration {
    *
    * Priority: built-in > registry > mcp (by original source)
    */
-  _deduplicateAndClassifyTools(builtInTools, registryTools, mcpTools, pluginTools) {
+  _deduplicateAndClassifyTools(builtInTools, registryTools, mcpTools, pluginTools, agentSystemEnabled = false) {
     const toolMap = new Map();
     const builtInToolNames = this.builtInTools.builtInToolsMap;
 
+    // Filter helper
+    const shouldKeep = (tool) => {
+      if (tool && tool.category === 'coordination' && !agentSystemEnabled) {
+        return false;
+      }
+      return true;
+    };
+
     // Add built-in tools first (highest priority)
     for (const tool of builtInTools) {
+      if (!shouldKeep(tool)) continue;
       if (!toolMap.has(tool.name)) {
         toolMap.set(tool.name, { ...tool, execution_type: 'built-in', _source: 'builtin-detection' });
       }
@@ -487,6 +527,7 @@ class SystemIntegration {
 
     // Add registry tools - classify as built-in if they exist in builtInToolsMap
     for (const tool of registryTools) {
+      if (!shouldKeep(tool)) continue;
       if (!toolMap.has(tool.name)) {
         // Check if this tool is actually a built-in tool
         if (builtInToolNames.has(tool.name)) {
@@ -524,6 +565,7 @@ class SystemIntegration {
 
     // Add MCP tools - classify as built-in if they exist in builtInToolsMap
     for (const tool of mcpTools) {
+      if (!shouldKeep(tool)) continue;
       if (!toolMap.has(tool.name)) {
         // Check if this tool is actually a built-in tool that's also exposed via MCP
         if (builtInToolNames.has(tool.name)) {
@@ -550,6 +592,7 @@ class SystemIntegration {
 
     // Add plugin tools - these are always separate
     for (const tool of pluginTools) {
+      if (!shouldKeep(tool)) continue;
       if (!toolMap.has(tool.name)) {
         toolMap.set(tool.name, { ...tool, _source: 'plugin' });
       }
@@ -563,7 +606,7 @@ class SystemIntegration {
    * ENHANCED: Improved categorization - tools in builtInToolsMap are always classified as built-in
    */
   buildSystemPrompt(promptData, context) {
-    const { tools, toolDescriptions, sampleUsages, pluginToolsSection } = promptData;
+    const { tools, sampleUsages, pluginToolsSection } = promptData;
 
     // ENHANCED: Separate tools using the authoritative builtInToolsMap
     // Tools in builtInToolsMap are ALWAYS built-in, regardless of original source

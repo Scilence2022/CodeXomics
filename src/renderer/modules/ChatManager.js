@@ -1607,6 +1607,7 @@ class ChatManager {
       hasData: hasData,
       hasNetwork: navigator.onLine,
       hasAuth: hasAuth,
+      agentSystemEnabled: this.agentSystemEnabled,
       currentCategory: this.getCurrentCategory(),
 
       // Detailed genome browser state
