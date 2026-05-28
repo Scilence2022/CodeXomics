@@ -702,3 +702,208 @@
   font-size: 12px;
   padding: 6px 12px;
 }
+
+/* ==========================================================================
+   Tasks Panel Styles
+   ========================================================================== */
+.chat-tasks-panel {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  font-size: 13px;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.tasks-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tasks-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.tasks-summary i {
+  color: var(--primary-color);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.tasks-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.tasks-progress-text {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.tasks-progress-bar-container {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  flex-grow: 1;
+  max-width: 120px;
+  overflow: hidden;
+  margin-left: 8px;
+}
+
+.tasks-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-violet, #8b5cf6) 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.tasks-controls {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.tasks-controls .btn-icon {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.tasks-controls .btn-icon:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.tasks-list-container {
+  margin-top: 10px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+  min-width: 0;
+}
+
+.task-item:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.task-checkbox-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.task-status-icon {
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.task-item.pending .task-status-icon {
+  color: var(--text-muted);
+}
+
+.task-item.in-progress .task-status-icon {
+  color: var(--primary-color);
+  animation: task-spin 1.5s infinite linear;
+}
+
+.task-item.completed .task-status-icon {
+  color: #10b981;
+}
+
+.task-item.failed .task-status-icon {
+  color: #ef4444;
+}
+
+.task-text {
+  flex-grow: 1;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.task-item.completed .task-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.task-progress-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.task-item.pending .task-progress-badge {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.task-item.in-progress .task-progress-badge {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--primary-color);
+}
+
+.task-item.completed .task-progress-badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.task-item.failed .task-progress-badge {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+@keyframes task-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

@@ -1,0 +1,68 @@
+# add_task.yaml
+name: 'add_task'
+version: '1.0.0'
+description: 'Add a new task to the workspace tasks list for tracking progress during complex operations.'
+category: 'task_management'
+keywords: ['task', 'todo', 'add', 'create', 'track', 'step']
+priority: 1
+resident: true
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    title:
+      type: 'string'
+      description: 'The description or title of the task to be added'
+      required: true
+    status:
+      type: 'string'
+      description: 'The initial status of the task'
+      enum: ['pending', 'in_progress', 'completed', 'failed']
+      default: 'pending'
+      required: false
+    progress:
+      type: 'number'
+      description: 'Optional progress percentage (0-100)'
+      minimum: 0
+      maximum: 100
+      required: false
+    parentId:
+      type: 'string'
+      description: 'Optional ID of the parent task if this is a subtask'
+      required: false
+  required: ['title']
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Add a task to delete the yaaJ gene'
+    tool_call: "add_task(title='Delete yaaJ gene', status='pending')"
+    thought: 'User wants to track the deletion of a gene as a task. I will add it to the tasks list.'
+    expected_result: 'Task "Delete yaaJ gene" is added successfully.'
+  - user_query: 'Create a task for BLAST search'
+    tool_call: "add_task(title='Perform BLAST search on lysC', status='in_progress')"
+    thought: 'User wants to search for a sequence. I will add an in-progress task for BLAST search.'
+    expected_result: 'Task "Perform BLAST search on lysC" is added with status in_progress.'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['update_task']
+  alternatives: []
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 100
+  last_used: null
+  tags: ['task', 'tracking', 'coordination']

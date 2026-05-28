@@ -52,6 +52,10 @@ class FunctionCallsOrganizer {
           'select_sequence_region',
           'view_markdown_file',
           'list_available_tools',
+          'add_task',
+          'update_task',
+          'list_tasks',
+          'clear_tasks',
         ],
       },
 

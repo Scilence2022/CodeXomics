@@ -1,0 +1,49 @@
+# clear_tasks.yaml
+name: 'clear_tasks'
+version: '1.0.0'
+description: 'Remove all tasks from the workspace task tracking system.'
+category: 'task_management'
+keywords: ['tasks', 'todo', 'clear', 'reset', 'remove', 'delete']
+priority: 1
+resident: true
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    confirm:
+      type: 'boolean'
+      description: 'Confirm clearing all tasks'
+      default: true
+      required: false
+  required: []
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Clear the task list'
+    tool_call: "clear_tasks(confirm=true)"
+    thought: 'User wants to reset the tasks list. I will call clear_tasks.'
+    expected_result: 'Task list cleared.'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 100
+  last_used: null
+  tags: ['task', 'tracking', 'coordination']

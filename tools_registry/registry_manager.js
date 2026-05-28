@@ -459,6 +459,19 @@ class ToolsRegistryManager {
         'performance test',
         'test suite',
       ],
+      task_management: [
+        'task',
+        'tasks',
+        'todo',
+        'todos',
+        'add task',
+        'update task',
+        'create task',
+        'list tasks',
+        'clear tasks',
+        'complete task',
+        'pending task',
+      ],
     };
 
     const detectedIntents = [];
@@ -830,6 +843,19 @@ class ToolsRegistryManager {
         'performance',
         'test suite',
         'llm',
+      ],
+      task_management: [
+        'task',
+        'tasks',
+        'todo',
+        'todos',
+        'add',
+        'update',
+        'create',
+        'list',
+        'clear',
+        'complete',
+        'pending',
       ],
     };
 

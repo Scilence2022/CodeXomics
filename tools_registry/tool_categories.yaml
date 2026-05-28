@@ -219,6 +219,16 @@ categories:
       - 'helper_functions'
     tools_count: 2
 
+  task_management:
+    name: 'Task Management'
+    description: 'Tools for setting, updating, and tracking task lists during complex workflow execution'
+    icon: '🎯'
+    priority: 1
+    color: '#3b82f6'
+    subcategories:
+      - 'task_tracking'
+    tools_count: 4
+
 # Tool priority levels
 priority_levels:
   1: 'Critical - Core functionality tools'

@@ -1,0 +1,54 @@
+# list_tasks.yaml
+name: 'list_tasks'
+version: '1.0.0'
+description: 'List current tasks in the workspace task tracking system, optionally filtered by status.'
+category: 'task_management'
+keywords: ['tasks', 'todo', 'list', 'show', 'get', 'status']
+priority: 1
+resident: true
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    status:
+      type: 'string'
+      description: 'Filter tasks by status. Defaults to all.'
+      enum: ['all', 'pending', 'in_progress', 'completed', 'failed']
+      default: 'all'
+      required: false
+  required: []
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Show me all current tasks'
+    tool_call: "list_tasks()"
+    thought: 'User wants to see all tasks. I will call list_tasks.'
+    expected_result: 'Returns list of all active tasks.'
+  - user_query: 'What tasks are in progress?'
+    tool_call: "list_tasks(status='in_progress')"
+    thought: 'User wants to see only in-progress tasks. I will filter list_tasks by status.'
+    expected_result: 'Returns only in-progress tasks.'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 100
+  last_used: null
+  tags: ['task', 'tracking', 'coordination']

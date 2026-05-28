@@ -137,6 +137,7 @@ class ChatManager {
       ui: new window.UIService(this.app, this),
       restriction: new window.RestrictionDigestService(this.app, this),
       gel: new window.GelElectrophoresisService(this.app, this),
+      task: new window.TaskService(this.app, this),
     };
 
     // Legacy MCP connection check (kept for backward compatibility)
@@ -7645,6 +7646,12 @@ ${coreTools}
       // Multi-window management tools (IPC-based, no MCP server required)
       list_genome_windows: () => this.listGenomeWindows(parameters),
       switch_active_window: () => this.switchActiveWindow(parameters),
+
+      // Task management tools
+      add_task: () => this.addTask(parameters),
+      update_task: () => this.updateTask(parameters),
+      list_tasks: () => this.listTasks(parameters),
+      clear_tasks: () => this.clearTasks(parameters),
 
       // Settings modal tools
       toggle_settings_modal: () => this.toggleSettingsModal(parameters),
@@ -15595,5 +15602,22 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     } catch (err) {
       return {success: false, error: `Export failed: ${err.message}`};
     }
+  }
+
+  // --- Task Service Delegations ---
+  addTask(params) {
+    return this.services.task.addTask(params);
+  }
+
+  updateTask(params) {
+    return this.services.task.updateTask(params);
+  }
+
+  listTasks(params) {
+    return this.services.task.listTasks(params);
+  }
+
+  clearTasks(params) {
+    return this.services.task.clearTasks(params);
   }
 }

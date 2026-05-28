@@ -239,4 +239,11 @@ const TOOL_NAMES = {
     LIST_PRIMER_ANNOTATIONS: 'list_primer_annotations',
     CLEAR_PRIMER_ANNOTATIONS: 'clear_primer_annotations',
   },
+
+  TASK: {
+    ADD_TASK: 'add_task',
+    UPDATE_TASK: 'update_task',
+    LIST_TASKS: 'list_tasks',
+    CLEAR_TASKS: 'clear_tasks',
+  },
 };

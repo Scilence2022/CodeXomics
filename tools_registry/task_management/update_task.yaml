@@ -1,0 +1,67 @@
+# update_task.yaml
+name: 'update_task'
+version: '1.0.0'
+description: 'Update the status, title, or progress of an existing task in the tasks list.'
+category: 'task_management'
+keywords: ['task', 'todo', 'update', 'status', 'progress', 'complete', 'finish']
+priority: 1
+resident: true
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    id:
+      type: 'string'
+      description: 'The ID of the task to be updated'
+      required: true
+    title:
+      type: 'string'
+      description: 'Optional new description or title for the task'
+      required: false
+    status:
+      type: 'string'
+      description: 'The new status for the task'
+      enum: ['pending', 'in_progress', 'completed', 'failed']
+      required: false
+    progress:
+      type: 'number'
+      description: 'Optional progress percentage (0-100)'
+      minimum: 0
+      maximum: 100
+      required: false
+  required: ['id']
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Mark task task-1 as completed'
+    tool_call: "update_task(id='task-1', status='completed', progress=100)"
+    thought: 'The task with ID task-1 is finished, so I will update its status to completed and set progress to 100.'
+    expected_result: 'Task with ID task-1 updated successfully to completed.'
+  - user_query: 'Set task-2 status to in_progress'
+    tool_call: "update_task(id='task-2', status='in_progress', progress=50)"
+    thought: 'The task with ID task-2 is now running, so I will update its status to in_progress.'
+    expected_result: 'Task with ID task-2 updated successfully to in_progress.'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ['add_task']
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 100
+  last_used: null
+  tags: ['task', 'tracking', 'coordination']

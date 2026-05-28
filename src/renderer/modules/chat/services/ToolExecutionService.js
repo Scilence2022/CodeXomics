@@ -80,6 +80,12 @@ class ToolExecutionService {
         }
       }
 
+      // 7. Task Services
+      const taskService = this.chatManager.services?.task;
+      if (taskService && typeof taskService[this._toCamelCase(toolName)] === 'function') {
+        return await taskService[this._toCamelCase(toolName)](parameters);
+      }
+
       // --- PRIORITY 3: MULTI-AGENT ROUTING (when enabled) ---
       if (
         this.chatManager.agentSystemEnabled &&

@@ -105,7 +105,9 @@ describe('Tool Registry YAML Definitions', () => {
     // YAML descriptions vary in format; allow reasonable gap
     expect(missingDesc.length).toBeLessThan(definitions.length * 0.6);
     if (missingDesc.length > 0) {
-      console.info(`${missingDesc.length}/${definitions.length} tools have no parseable description (may need YAML format fix)`);
+      console.info(
+        `${missingDesc.length}/${definitions.length} tools have no parseable description (may need YAML format fix)`
+      );
     }
   });
 
@@ -137,7 +139,8 @@ describe('Tool Registry YAML Definitions', () => {
       'file_operations', 'file_loading', 'database', 'data_management',
       'protein', 'annotation', 'blast', 'pathway', 'primer_design',
       'track_settings', 'benchmark', 'actions', 'system', 'state',
-      'utility', 'external_apis', 'export',
+      'utility', 'external_apis', 'export', 'task_management', 'coordination',
+      'plugin_management',
     ]);
     const uniqueCategories = new Set(
       definitions.map(d => d.category).filter(Boolean)

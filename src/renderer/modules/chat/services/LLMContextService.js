@@ -964,6 +964,13 @@ class LLMContextService {
         condition: () => true,
       },
 
+      // Task management operations - always allowed to run sequentially
+      task_management: {
+        tools: ['add_task', 'update_task', 'list_tasks', 'clear_tasks'],
+        policy: 'always_allowed',
+        condition: () => true,
+      },
+
       // Zoom operations - prevent rapid repetition
       zoom_operations: {
         tools: ['zoom_in', 'zoom_out'],
@@ -2144,9 +2151,11 @@ Primer Tools:
 
   getOptimizedSystemMessage() {
     const toolPriority = this.chatManager.getToolPriorityString();
+    const tasksString = this.chatManager.services?.task ? this.chatManager.services.task.getTasksContextString() : '';
 
     return `You are an AI assistant for CodeXomics, a comprehensive bioinformatics application. You have access to powerful genomic analysis, protein structure, and sequence analysis tools.
 
+${tasksString}
 IMPORTANT: Task Completion Instructions
 When you complete a user's task or fully answer their question, end with a clear completion indicator like "Task completed", "Analysis finished", or "In summary" to signal completion efficiently.
 

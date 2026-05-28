@@ -122,6 +122,35 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // Task Management tools
+    this.builtInToolsMap.set('add_task', {
+      method: 'addTask',
+      category: 'task_management',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('update_task', {
+      method: 'updateTask',
+      category: 'task_management',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('list_tasks', {
+      method: 'listTasks',
+      category: 'task_management',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('clear_tasks', {
+      method: 'clearTasks',
+      category: 'task_management',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Database tools - UniProt
     this.builtInToolsMap.set('search_uniprot_database', {
       method: 'searchUniProtDatabase',
@@ -1158,6 +1187,30 @@ class BuiltInToolsIntegration {
         name: 'view_markdown_file',
         confidence: 0.9,
         reason: 'Markdown file viewing keywords detected',
+      });
+    }
+
+    // Check for task tracking/management patterns
+    if (
+      /\b(task|tasks|todo|todos)\b/i.test(query) ||
+      /\b(add|update|clear|list|show)\s+.*?\b(tasks?|todos?)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'add_task',
+        confidence: 0.9,
+        reason: 'Task management keywords detected',
+      }, {
+        name: 'update_task',
+        confidence: 0.9,
+        reason: 'Task management keywords detected',
+      }, {
+        name: 'list_tasks',
+        confidence: 0.9,
+        reason: 'Task management keywords detected',
+      }, {
+        name: 'clear_tasks',
+        confidence: 0.9,
+        reason: 'Task management keywords detected',
       });
     }
 
