@@ -163,6 +163,22 @@ describe('TaskService - Core State and CRUD', () => {
     expect(taskService.tasks[0].status).toBe('pending');
     expect(taskService.tasks[0].progress).toBe(0);
   });
+
+  it('should delete a task successfully', async () => {
+    const addResult = await taskService.addTask({ title: 'Task to delete' });
+    const taskId = addResult.id;
+
+    expect(taskService.tasks).toHaveLength(1);
+    const deleteResult = await taskService.deleteTask({ id: taskId });
+    expect(deleteResult.success).toBe(true);
+    expect(taskService.tasks).toHaveLength(0);
+  });
+
+  it('should throw error when deleting task with invalid ID', async () => {
+    const result = await taskService.deleteTask({ id: 'non-existent' });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Task not found');
+  });
 });
 
 describe('TaskService - LLM prompt formatting', () => {

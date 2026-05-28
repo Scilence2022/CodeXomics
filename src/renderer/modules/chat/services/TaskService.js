@@ -9,6 +9,7 @@ class TaskService {
     this.chatManager = chatManager;
     this.tasks = [];
     this.isCollapsed = false;
+    this.activeFilter = 'all'; // 'all', 'active', 'completed'
   }
 
   // --- Core CRUD operations ---
@@ -97,6 +98,37 @@ class TaskService {
       };
     } catch (error) {
       console.error('[TaskService] updateTask error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Delete a task
+   */
+  async deleteTask(params) {
+    try {
+      const { id } = params;
+      if (!id) {
+        throw new Error('Missing required parameter: id');
+      }
+
+      const index = this.tasks.findIndex(t => t.id === id);
+      if (index === -1) {
+        throw new Error(`Task not found with ID: ${id}`);
+      }
+
+      const task = this.tasks[index];
+      this.tasks.splice(index, 1);
+      
+      this.updateUI();
+
+      return {
+        success: true,
+        message: `Task "${task.title}" deleted successfully.`,
+        id
+      };
+    } catch (error) {
+      console.error('[TaskService] deleteTask error:', error);
       return { success: false, error: error.message };
     }
   }
@@ -194,7 +226,7 @@ class TaskService {
 
     tasksPanel.style.display = 'flex';
 
-    // Calculate progress
+    // Calculate overall stats
     const total = this.tasks.length;
     const completed = this.tasks.filter(t => t.status === 'completed').length;
     const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -215,11 +247,19 @@ class TaskService {
     const toggleIconEl = tasksPanel.querySelector('#toggleTasksCollapseBtn i');
     
     if (containerEl) {
-      containerEl.style.display = this.isCollapsed ? 'none' : 'block';
+      containerEl.style.display = this.isCollapsed ? 'none' : 'flex';
     }
 
     if (toggleIconEl) {
       toggleIconEl.className = this.isCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+    }
+
+    // Filter display list
+    let displayTasks = this.tasks;
+    if (this.activeFilter === 'active') {
+      displayTasks = this.tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
+    } else if (this.activeFilter === 'completed') {
+      displayTasks = this.tasks.filter(t => t.status === 'completed');
     }
 
     // Render task items
@@ -234,25 +274,125 @@ class TaskService {
         failed: '<i class="fas fa-times-circle task-status-icon"></i>',
       };
 
-      this.tasks.forEach(task => {
+      displayTasks.forEach(task => {
         const itemEl = document.createElement('div');
         itemEl.className = `task-item ${task.status}`;
         itemEl.setAttribute('data-id', task.id);
 
         itemEl.innerHTML = `
-          <div class="task-checkbox-container">
+          <div class="task-checkbox-container" title="Change status">
             ${statusIcons[task.status] || statusIcons.pending}
           </div>
-          <div class="task-text">${this._escapeHTML(task.title)}</div>
-          ${task.progress !== undefined ? `<div class="task-progress-badge">${task.progress}%</div>` : ''}
+          <div class="task-content-wrapper">
+            <div class="task-text" title="Double click to edit title">${this._escapeHTML(task.title)}</div>
+          </div>
+          ${task.progress !== undefined && task.status !== 'completed' && task.status !== 'pending' ? `<div class="task-progress-badge">${task.progress}%</div>` : ''}
+          <div class="task-item-actions">
+            <button class="task-action-btn edit-btn" title="Edit task"><i class="fas fa-pencil-alt"></i></button>
+            <button class="task-action-btn delete-btn" title="Delete task"><i class="fas fa-trash-alt"></i></button>
+          </div>
         `;
 
-        // Click checkbox or text to toggle completion
+        // Click checkbox icon to trigger status floating dropdown
         const cbContainer = itemEl.querySelector('.task-checkbox-container');
         if (cbContainer) {
           cbContainer.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.toggleTaskStatus(task.id);
+            document.querySelectorAll('.task-status-dropdown').forEach(d => d.remove());
+            
+            const dropdown = document.createElement('div');
+            dropdown.className = 'task-status-dropdown';
+            dropdown.innerHTML = `
+              <div class="status-option pending ${task.status === 'pending' ? 'selected' : ''}" data-status="pending">
+                <i class="far fa-circle"></i> Pending
+              </div>
+              <div class="status-option in_progress ${task.status === 'in_progress' ? 'selected' : ''}" data-status="in_progress">
+                <i class="fas fa-spinner"></i> In Progress
+              </div>
+              <div class="status-option completed ${task.status === 'completed' ? 'selected' : ''}" data-status="completed">
+                <i class="fas fa-check-circle"></i> Completed
+              </div>
+              <div class="status-option failed ${task.status === 'failed' ? 'selected' : ''}" data-status="failed">
+                <i class="fas fa-times-circle"></i> Failed
+              </div>
+            `;
+            
+            itemEl.appendChild(dropdown);
+            
+            dropdown.querySelectorAll('.status-option').forEach(opt => {
+              opt.addEventListener('click', (optEvent) => {
+                optEvent.stopPropagation();
+                const newStatus = opt.getAttribute('data-status');
+                dropdown.remove();
+                this.updateTask({ id: task.id, status: newStatus });
+              });
+            });
+            
+            const closeDropdown = () => {
+              dropdown.remove();
+              document.removeEventListener('click', closeDropdown);
+            };
+            setTimeout(() => {
+              document.addEventListener('click', closeDropdown);
+            }, 0);
+          });
+        }
+
+        // Editing Title
+        const textEl = itemEl.querySelector('.task-text');
+        const editBtn = itemEl.querySelector('.edit-btn');
+        const wrapper = itemEl.querySelector('.task-content-wrapper');
+
+        const startEdit = () => {
+          if (!wrapper || wrapper.querySelector('input')) return;
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'task-edit-input';
+          input.value = task.title;
+          
+          wrapper.innerHTML = '';
+          wrapper.appendChild(input);
+          input.focus();
+          
+          const saveEdit = async () => {
+            const newTitle = input.value.trim();
+            if (newTitle && newTitle !== task.title) {
+              await this.updateTask({ id: task.id, title: newTitle });
+            } else {
+              this.updateUI();
+            }
+          };
+          
+          input.addEventListener('blur', saveEdit);
+          input.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') {
+              saveEdit();
+            } else if (e.key === 'Escape') {
+              this.updateUI();
+            }
+          });
+        };
+
+        if (textEl) {
+          textEl.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            startEdit();
+          });
+        }
+        if (editBtn) {
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startEdit();
+          });
+        }
+
+        // Delete button
+        const deleteBtn = itemEl.querySelector('.delete-btn');
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteTask({ id: task.id });
           });
         }
 
@@ -293,6 +433,24 @@ class TaskService {
         </div>
       </div>
       <div class="tasks-list-container" id="tasksListContainer" style="display: none;">
+        <div class="tasks-toolbar">
+          <div class="tasks-filters">
+            <button class="task-filter-btn active" data-filter="all">All</button>
+            <button class="task-filter-btn" data-filter="active">Active</button>
+            <button class="task-filter-btn" data-filter="completed">Completed</button>
+          </div>
+          <button id="clearTasksBtn" class="tasks-clear-btn" title="Clear all tasks">
+            <i class="fas fa-trash-alt"></i> Clear All
+          </button>
+        </div>
+        
+        <div class="tasks-add-form">
+          <input type="text" id="inlineAddTaskInput" placeholder="Add a new task..." />
+          <button id="inlineAddTaskBtn" class="btn-inline-add">
+            <i class="fas fa-plus"></i> Add
+          </button>
+        </div>
+        
         <div class="tasks-list" id="tasksList"></div>
       </div>
     `;
@@ -300,12 +458,56 @@ class TaskService {
     // Insert directly above the chatMessages block
     chatMessages.parentNode.insertBefore(tasksPanel, chatMessages);
 
-    // Bind expand/collapse events
+    // Expand/collapse click listener on header
     const header = tasksPanel.querySelector('.tasks-panel-header');
     if (header) {
       header.addEventListener('click', () => {
         this.isCollapsed = !this.isCollapsed;
         this.updateUI();
+      });
+    }
+
+    // Inline Add task inputs
+    const addBtn = tasksPanel.querySelector('#inlineAddTaskBtn');
+    const addInput = tasksPanel.querySelector('#inlineAddTaskInput');
+    if (addBtn && addInput) {
+      const handleAdd = () => {
+        const title = addInput.value.trim();
+        if (title) {
+          this.addTask({ title });
+          addInput.value = '';
+        }
+      };
+      addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleAdd();
+      });
+      addInput.addEventListener('keydown', (e) => {
+        e.stopPropagation(); // prevent input bubbling to chat manager text input
+        if (e.key === 'Enter') {
+          handleAdd();
+        }
+      });
+    }
+
+    // Filters event listeners
+    const filterBtns = tasksPanel.querySelectorAll('.task-filter-btn');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.activeFilter = btn.getAttribute('data-filter');
+        this.updateUI();
+      });
+    });
+
+    // Clear all click listener
+    const clearBtn = tasksPanel.querySelector('#clearTasksBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.clearTasks();
       });
     }
   }

@@ -151,6 +151,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('delete_task', {
+      method: 'deleteTask',
+      category: 'task_management',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Database tools - UniProt
     this.builtInToolsMap.set('search_uniprot_database', {
       method: 'searchUniProtDatabase',
@@ -1209,6 +1216,10 @@ class BuiltInToolsIntegration {
         reason: 'Task management keywords detected',
       }, {
         name: 'clear_tasks',
+        confidence: 0.9,
+        reason: 'Task management keywords detected',
+      }, {
+        name: 'delete_task',
         confidence: 0.9,
         reason: 'Task management keywords detected',
       });

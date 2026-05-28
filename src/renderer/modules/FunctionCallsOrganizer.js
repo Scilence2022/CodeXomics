@@ -56,6 +56,7 @@ class FunctionCallsOrganizer {
           'update_task',
           'list_tasks',
           'clear_tasks',
+          'delete_task',
         ],
       },
 

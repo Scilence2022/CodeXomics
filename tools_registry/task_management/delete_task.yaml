@@ -1,0 +1,48 @@
+# delete_task.yaml
+name: 'delete_task'
+version: '1.0.0'
+description: 'Delete a task from the workspace tasks list.'
+category: 'task_management'
+keywords: ['task', 'todo', 'delete', 'remove', 'clear']
+priority: 1
+resident: true
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    id:
+      type: 'string'
+      description: 'The ID of the task to be deleted'
+      required: true
+  required: ['id']
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Delete task task-123'
+    tool_call: "delete_task(id='task-123')"
+    thought: 'The user wants to remove the task with ID task-123. I will delete it.'
+    expected_result: 'Task with ID task-123 deleted successfully.'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ['add_task']
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 100
+  last_used: null
+  tags: ['task', 'tracking', 'coordination']

@@ -245,5 +245,6 @@ const TOOL_NAMES = {
     UPDATE_TASK: 'update_task',
     LIST_TASKS: 'list_tasks',
     CLEAR_TASKS: 'clear_tasks',
+    DELETE_TASK: 'delete_task',
   },
 };

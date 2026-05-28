@@ -966,7 +966,7 @@ class LLMContextService {
 
       // Task management operations - always allowed to run sequentially
       task_management: {
-        tools: ['add_task', 'update_task', 'list_tasks', 'clear_tasks'],
+        tools: ['add_task', 'update_task', 'list_tasks', 'clear_tasks', 'delete_task'],
         policy: 'always_allowed',
         condition: () => true,
       },

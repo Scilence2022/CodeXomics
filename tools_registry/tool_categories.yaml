@@ -227,7 +227,7 @@ categories:
     color: '#3b82f6'
     subcategories:
       - 'task_tracking'
-    tools_count: 4
+    tools_count: 5
 
 # Tool priority levels
 priority_levels:

@@ -15620,4 +15620,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   clearTasks(params) {
     return this.services.task.clearTasks(params);
   }
+
+  deleteTask(params) {
+    return this.services.task.deleteTask(params);
+  }
 }
