@@ -3,10 +3,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-const BASE_EVALUATOR_PATH = path.join(
-  process.cwd(),
-  'src/renderer/modules/benchmark-suites/BenchmarkEvaluatorBase.js'
-);
+const BASE_EVALUATOR_PATH = path.join(process.cwd(), 'src/renderer/modules/benchmark-suites/BenchmarkEvaluatorBase.js');
 const AUTOMATIC_COMPLEX_PATH = path.join(
   process.cwd(),
   'src/renderer/modules/benchmark-suites/AutomaticComplexSuite.js'
@@ -23,16 +20,13 @@ function loadAutomaticComplexSuite() {
       toolExecutionTracker: {
         getSessionExecutions() {
           return [];
-        }
-      }
-    }
+        },
+      },
+    },
   };
 
   // Run the base evaluator code
-  const runBase = new Function(
-    'window',
-    `${baseCode}; return window.BenchmarkEvaluatorBase;`
-  );
+  const runBase = new Function('window', `${baseCode}; return window.BenchmarkEvaluatorBase;`);
   global.BenchmarkEvaluatorBase = runBase(global.window);
 
   // Run the suite evaluator code
@@ -108,13 +102,10 @@ describe('AutomaticComplexSuite', () => {
         'nested-object-kebab': {
           uniprot_id: 'P04637',
           another_nested: {
-            'max-mismatches': 2
-          }
+            'max-mismatches': 2,
+          },
         },
-        array_val: [
-          { 'item-id-kebab': 1, detailed_info: 'test' },
-          { item_id: 2 }
-        ]
+        array_val: [{ 'item-id-kebab': 1, detailed_info: 'test' }, { item_id: 2 }],
       };
 
       const expected = {
@@ -124,13 +115,10 @@ describe('AutomaticComplexSuite', () => {
         nestedObjectKebab: {
           uniprotId: 'P04637',
           anotherNested: {
-            maxMismatches: 2
-          }
+            maxMismatches: 2,
+          },
         },
-        arrayVal: [
-          { itemIdKebab: 1, detailedInfo: 'test' },
-          { itemId: 2 }
-        ]
+        arrayVal: [{ itemIdKebab: 1, detailedInfo: 'test' }, { itemId: 2 }],
       };
 
       const result = suite.normalizeParameterKeys(input);
@@ -140,15 +128,16 @@ describe('AutomaticComplexSuite', () => {
     it('normalizeResultParameters should normalize parameters, handling alternative properties/JSON', () => {
       const singleCall = {
         tool_name: 'toggle_track',
-        params: { // using 'params' instead of 'parameters'
+        params: {
+          // using 'params' instead of 'parameters'
           'track-name': 'GC Content',
-          action_type: 'show'
-        }
+          action_type: 'show',
+        },
       };
 
       const jsonParamsCall = {
         tool_name: 'design_primers',
-        arguments: '{"gene-name": "lacZ", "max_mismatches": 2}' // JSON string in 'arguments'
+        arguments: '{"gene-name": "lacZ", "max_mismatches": 2}', // JSON string in 'arguments'
       };
 
       // Serialized JSON string of the whole result
@@ -170,9 +159,7 @@ describe('AutomaticComplexSuite', () => {
     it('normalizeExpectedParameters should normalize expected parameters object or array', () => {
       const expected = {
         tool_sequence: ['design_primers'],
-        parameters: [
-          { gene_name: 'lacZ', max_mismatches: 2 }
-        ]
+        parameters: [{ gene_name: 'lacZ', max_mismatches: 2 }],
       };
 
       const normalized = suite.normalizeExpectedParameters(expected);
@@ -188,16 +175,16 @@ describe('AutomaticComplexSuite', () => {
           tool_name: 'toggle_track',
           parameters: {
             track_name: 'GC Content',
-            action: 'show'
-          }
+            action: 'show',
+          },
         },
         {
           tool_name: 'toggle_track',
           parameters: {
             track_name: 'Variants',
-            action: 'hide'
-          }
-        }
+            action: 'hide',
+          },
+        },
       ];
 
       const expectedResult = {
@@ -205,20 +192,20 @@ describe('AutomaticComplexSuite', () => {
         parameters: [
           {
             trackName: 'GC Content',
-            action: 'show'
+            action: 'show',
           },
           {
             trackName: 'Variants',
-            action: 'hide'
-          }
-        ]
+            action: 'hide',
+          },
+        ],
       };
 
       const testResult = {
         id: 'track_auto_complex_01',
         maxScore: 15,
         bonusScore: 3,
-        category: 'track_control'
+        category: 'track_control',
       };
 
       const evalResult = await suite.evaluateWorkflowCall(actualResult, expectedResult, testResult);
@@ -233,15 +220,12 @@ describe('AutomaticComplexSuite', () => {
       const actualResult = 'Navigated to position 1230000 to 1300000 and zoom in 10x';
       const expectedResult = {
         tool_sequence: ['navigate_to_position', 'zoom_in'],
-        parameters: [
-          { start: 1230000, end: 1300000 },
-          { factor: 10 }
-        ]
+        parameters: [{ start: 1230000, end: 1300000 }, { factor: 10 }],
       };
       const testResult = {
         id: 'nav_auto_01',
         category: 'navigation',
-        maxScore: 10
+        maxScore: 10,
       };
 
       const evalResult = await suite.evaluateWorkflowCall(actualResult, expectedResult, testResult);
@@ -250,16 +234,17 @@ describe('AutomaticComplexSuite', () => {
     });
 
     it('should route non-navigation category to parseNaturalLanguageWorkflowResponse', async () => {
-      const actualResult = 'I have successfully created annotation regulatory_region_a, ' +
+      const actualResult =
+        'I have successfully created annotation regulatory_region_a, ' +
         'then description was updated, and listed annotations';
       const expectedResult = {
         tool_sequence: ['create_annotation', 'update_annotation', 'list_annotations'],
-        parameters: [{}, {}, {}]
+        parameters: [{}, {}, {}],
       };
       const testResult = {
         id: 'annotation_auto_complex_01',
         category: 'annotations',
-        maxScore: 15
+        maxScore: 15,
       };
 
       const evalResult = await suite.evaluateWorkflowCall(actualResult, expectedResult, testResult);
@@ -273,12 +258,12 @@ describe('AutomaticComplexSuite', () => {
       const actualResult = 'Created annotation regulatory_region_a successfully.';
       const expectedResult = {
         tool_sequence: ['create_annotation', 'update_annotation', 'list_annotations'],
-        parameters: [{}, {}, {}]
+        parameters: [{}, {}, {}],
       };
       const testResult = {
         id: 'annotation_auto_complex_01',
         category: 'annotations',
-        maxScore: 15
+        maxScore: 15,
       };
 
       const evalResult = await suite.evaluateWorkflowCall(actualResult, expectedResult, testResult);

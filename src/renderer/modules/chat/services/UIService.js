@@ -755,8 +755,6 @@ class UIService {
       };
     }
   }
-
-
 }
 
 window.UIService = UIService;

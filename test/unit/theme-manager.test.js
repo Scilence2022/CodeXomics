@@ -36,10 +36,18 @@ class ThemeManager {
     this._applyCSSVars(this._currentPreset);
   }
 
-  get currentPreset() { return this._currentPreset; }
-  get currentMode() { return this._currentMode; }
-  get presets() { return [...this._presets]; }
-  get modes() { return [...this._modes]; }
+  get currentPreset() {
+    return this._currentPreset;
+  }
+  get currentMode() {
+    return this._currentMode;
+  }
+  get presets() {
+    return [...this._presets];
+  }
+  get modes() {
+    return [...this._modes];
+  }
 
   // CSS var propagation via data-ui-style attribute
   _applyCSSVars(preset) {

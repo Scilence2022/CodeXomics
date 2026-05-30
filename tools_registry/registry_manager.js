@@ -598,7 +598,7 @@ class ToolsRegistryManager {
     let validTools = allTools.filter(tool => tool && typeof tool === 'object' && tool.name);
 
     // Filter out coordination tools if agentSystemEnabled is false/not enabled
-    const isAgentSystemEnabled = (ctx) => {
+    const isAgentSystemEnabled = ctx => {
       if (ctx && typeof ctx.agentSystemEnabled === 'boolean') {
         return ctx.agentSystemEnabled;
       }
@@ -613,7 +613,9 @@ class ToolsRegistryManager {
       validTools = validTools.filter(tool => tool.category !== 'coordination');
       const filteredCount = beforeCount - validTools.length;
       if (filteredCount > 0) {
-        console.log(`🔍 [Dynamic Tools] Excluded ${filteredCount} coordination tools because agentSystemEnabled is false`);
+        console.log(
+          `🔍 [Dynamic Tools] Excluded ${filteredCount} coordination tools because agentSystemEnabled is false`
+        );
       }
     }
 

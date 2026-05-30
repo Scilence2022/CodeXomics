@@ -1,17 +1,16 @@
 # CodeXomics Agent Skills Registry
 # This file is the machine-readable index of all available agent skills.
-# AI agents and orchestration frameworks should parse this file to discover 
+# AI agents and orchestration frameworks should parse this file to discover
 # what skills are available before choosing a tool chain.
 #
 # Format version: 1.0.0
 # Directory: .agent/skills/
 
 registry_version: 1.0.0
-last_updated: "2026-03-17"
+last_updated: '2026-03-17'
 
 # ─── Skill Index ──────────────────────────────────────────────────────────────
 skills:
-
   - id: primer_design
     file: primer_design.md
     version: 1.0.0
@@ -19,14 +18,14 @@ skills:
     complexity: moderate
     typical_duration_seconds: 30
     requires_genome: true
-    requires_network: true      # BLAST validation needs internet
+    requires_network: true # BLAST validation needs internet
     tags: [primers, pcr, amplification, cloning, qpcr]
     triggers:
-      - "design primers"
-      - "PCR primers"
-      - "primer pair"
-      - "amplify"
-      - "qPCR primers"
+      - 'design primers'
+      - 'PCR primers'
+      - 'primer pair'
+      - 'amplify'
+      - 'qPCR primers'
     mcp_tools_used:
       - get_current_state
       - search_gene_by_name
@@ -49,13 +48,13 @@ skills:
     requires_network: true
     tags: [annotation, gene_function, uniprot, interpro, protein_domains]
     triggers:
-      - "improve annotation"
-      - "gene function"
-      - "what does this gene do"
-      - "what protein is this"
-      - "annotate using databases"
-      - "enrich annotation"
-      - "protein domains"
+      - 'improve annotation'
+      - 'gene function'
+      - 'what does this gene do'
+      - 'what protein is this'
+      - 'annotate using databases'
+      - 'enrich annotation'
+      - 'protein domains'
     mcp_tools_used:
       - jump_to_gene
       - get_gene_details
@@ -78,18 +77,18 @@ skills:
     requires_network: true
     tags: [research, comprehensive_analysis, gene_function, structural_biology, pathways]
     triggers:
-      - "research this gene"
-      - "comprehensive analysis"
-      - "full analysis"
-      - "research report"
-      - "deep dive"
-      - "investigate"
-      - "what do we know about"
+      - 'research this gene'
+      - 'comprehensive analysis'
+      - 'full analysis'
+      - 'research report'
+      - 'deep dive'
+      - 'investigate'
+      - 'what do we know about'
     input_variants:
       depth:
-        quick: "Phases 1-3 only (~15s): genomic context + sequence"
-        standard: "All phases (~60s): adds database queries and evolutionary context"
-        deep: "All phases + structure viewer (~120s): for publication-quality output"
+        quick: 'Phases 1-3 only (~15s): genomic context + sequence'
+        standard: 'All phases (~60s): adds database queries and evolutionary context'
+        deep: 'All phases + structure viewer (~120s): for publication-quality output'
     mcp_tools_used:
       - get_current_state
       - get_genome_info
@@ -120,12 +119,12 @@ skills:
     requires_network: true
     tags: [variants, snp, mutation, functional_impact, vcf]
     triggers:
-      - "analyse variant"
-      - "SNP analysis"
-      - "mutation impact"
-      - "is this variant functional"
-      - "variant annotation"
-      - "what does this SNP do"
+      - 'analyse variant'
+      - 'SNP analysis'
+      - 'mutation impact'
+      - 'is this variant functional'
+      - 'variant annotation'
+      - 'what does this SNP do'
     mcp_tools_used:
       - navigate_to_position
       - get_current_state
@@ -150,13 +149,13 @@ skills:
     requires_network: true
     tags: [operon, co-regulation, prokaryote, gene_cluster, transcription]
     triggers:
-      - "operon analysis"
-      - "co-regulated genes"
-      - "operon containing"
-      - "genes in same operon"
-      - "is this gene in an operon"
-      - "transcription unit"
-    note: "Primarily useful for prokaryotic genomes. Eukaryotic genomes rarely have operons."
+      - 'operon analysis'
+      - 'co-regulated genes'
+      - 'operon containing'
+      - 'genes in same operon'
+      - 'is this gene in an operon'
+      - 'transcription unit'
+    note: 'Primarily useful for prokaryotic genomes. Eukaryotic genomes rarely have operons.'
     mcp_tools_used:
       - jump_to_gene
       - get_gene_details
@@ -180,11 +179,11 @@ skills:
     requires_network: false
     tags: [multi_window, connections, workspace, comparative_genomics]
     triggers:
-      - "list open windows"
-      - "what genomes are open"
-      - "switch to window"
-      - "compare genomes"
-      - "search in all open genomes"
+      - 'list open windows'
+      - 'what genomes are open'
+      - 'switch to window'
+      - 'compare genomes'
+      - 'search in all open genomes'
     mcp_tools_used:
       - list_genome_windows
       - switch_active_window
@@ -192,36 +191,36 @@ skills:
 # ─── Skill Selection Logic ────────────────────────────────────────────────────
 # Guidance for AI agents on how to choose between skills when triggers overlap:
 selection_guidance:
-  - scenario: "User asks about gene function with clear annotation gap"
+  - scenario: 'User asks about gene function with clear annotation gap'
     prefer: gene_annotation_improvement
     reason: "Targeted and fast; focused on improving a single gene's annotation"
 
-  - scenario: "User wants a comprehensive, publishable analysis of a gene"
+  - scenario: 'User wants a comprehensive, publishable analysis of a gene'
     prefer: automated_research
-    reason: "Covers all evidence types across multiple phases"
+    reason: 'Covers all evidence types across multiple phases'
 
-  - scenario: "User wants to amplify a specific region in the lab"
+  - scenario: 'User wants to amplify a specific region in the lab'
     prefer: primer_design
-    reason: "Includes experimental validation (BLAST, Tm, GC checks)"
+    reason: 'Includes experimental validation (BLAST, Tm, GC checks)'
 
-  - scenario: "User provides VCF coordinates or mentions SNP/mutation"
+  - scenario: 'User provides VCF coordinates or mentions SNP/mutation'
     prefer: variant_context_analysis
-    reason: "Specifically designed for positional variant interpretation"
+    reason: 'Specifically designed for positional variant interpretation'
 
-  - scenario: "User asks about gene clusters or co-regulation in bacteria"
+  - scenario: 'User asks about gene clusters or co-regulation in bacteria'
     prefer: operon_analysis
-    reason: "Operons are prokaryote-specific; this skill handles the full workflow"
+    reason: 'Operons are prokaryote-specific; this skill handles the full workflow'
 
-  - scenario: "User asks what function a gene has (quick question)"
+  - scenario: 'User asks what function a gene has (quick question)'
     prefer: gene_annotation_improvement
     depth: null
-    reason: "More targeted than automated_research for single function queries"
+    reason: 'More targeted than automated_research for single function queries'
 
-  - scenario: "User wants to write a manuscript section about a gene"
+  - scenario: 'User wants to write a manuscript section about a gene'
     prefer: automated_research
     depth: deep
-    reason: "Produces publication-ready, structured output with citations"
+    reason: 'Produces publication-ready, structured output with citations'
 
-  - scenario: "User wants to query multiple open genomes or compare regions across different windows"
+  - scenario: 'User wants to query multiple open genomes or compare regions across different windows'
     prefer: multi_window_routing
-    reason: "Handles the necessary context switching between different MCP client connections"
+    reason: 'Handles the necessary context switching between different MCP client connections'

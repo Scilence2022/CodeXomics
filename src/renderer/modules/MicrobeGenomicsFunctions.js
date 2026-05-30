@@ -319,11 +319,14 @@ class MicrobeGenomicsFunctions {
    */
   static calculateMolecularWeight(sequence, type = 'auto') {
     if (!sequence || typeof sequence !== 'string') return 0;
-    
+
     // Clean sequence (remove whitespace, numbers, hyphens)
-    const cleanSeq = sequence.trim().toUpperCase().replace(/[\s\d-]/g, '');
+    const cleanSeq = sequence
+      .trim()
+      .toUpperCase()
+      .replace(/[\s\d-]/g, '');
     if (cleanSeq.length === 0) return 0;
-    
+
     let detectedType = type;
     if (type === 'auto') {
       // Heuristic: If it contains only standard DNA/RNA characters (A, T, G, C, N, U), treat as DNA.
@@ -334,7 +337,7 @@ class MicrobeGenomicsFunctions {
         detectedType = 'protein';
       }
     }
-    
+
     if (detectedType === 'dna' || detectedType === 'rna') {
       // DNA/RNA nucleotide weights (standard Average nucleotide weights in Da)
       // A=331.2, T=322.2, G=347.2, C=307.2, U=308.2, N=327.0 (average)
@@ -347,11 +350,30 @@ class MicrobeGenomicsFunctions {
     } else {
       // Protein average amino acid residue weights (Da)
       const weights = {
-        A: 71.08, R: 156.19, N: 114.10, D: 115.09, C: 103.14,
-        E: 129.12, Q: 128.13, G: 57.05, H: 137.14, I: 113.16,
-        L: 113.16, K: 128.17, M: 131.20, F: 147.18, P: 97.12,
-        S: 87.08, T: 101.11, W: 186.21, Y: 163.18, V: 99.13,
-        U: 150.03, O: 237.30, '*': 0, X: 110.0
+        A: 71.08,
+        R: 156.19,
+        N: 114.1,
+        D: 115.09,
+        C: 103.14,
+        E: 129.12,
+        Q: 128.13,
+        G: 57.05,
+        H: 137.14,
+        I: 113.16,
+        L: 113.16,
+        K: 128.17,
+        M: 131.2,
+        F: 147.18,
+        P: 97.12,
+        S: 87.08,
+        T: 101.11,
+        W: 186.21,
+        Y: 163.18,
+        V: 99.13,
+        U: 150.03,
+        O: 237.3,
+        '*': 0,
+        X: 110.0,
       };
       let weight = 0;
       for (const aa of cleanSeq) {
@@ -498,10 +520,21 @@ class MicrobeGenomicsFunctions {
    * IUPAC ambiguity code map for motif expansion
    */
   static IUPAC_CODES = {
-    A: 'A', C: 'C', G: 'G', T: 'T',
-    R: '[AG]', Y: '[CT]', S: '[GC]', W: '[AT]',
-    K: '[GT]', M: '[AC]', B: '[CGT]', D: '[AGT]',
-    H: '[ACT]', V: '[ACG]', N: '[ACGT]',
+    A: 'A',
+    C: 'C',
+    G: 'G',
+    T: 'T',
+    R: '[AG]',
+    Y: '[CT]',
+    S: '[GC]',
+    W: '[AT]',
+    K: '[GT]',
+    M: '[AC]',
+    B: '[CGT]',
+    D: '[AGT]',
+    H: '[ACT]',
+    V: '[ACG]',
+    N: '[ACGT]',
   };
 
   /**
@@ -533,12 +566,28 @@ class MicrobeGenomicsFunctions {
    */
   static _reverseComplement(seq) {
     const complement = {
-      A: 'T', T: 'A', G: 'C', C: 'G',
-      R: 'Y', Y: 'R', S: 'S', W: 'W',
-      K: 'M', M: 'K', B: 'V', D: 'H',
-      H: 'D', V: 'B', N: 'N',
+      A: 'T',
+      T: 'A',
+      G: 'C',
+      C: 'G',
+      R: 'Y',
+      Y: 'R',
+      S: 'S',
+      W: 'W',
+      K: 'M',
+      M: 'K',
+      B: 'V',
+      D: 'H',
+      H: 'D',
+      V: 'B',
+      N: 'N',
     };
-    return seq.toUpperCase().split('').reverse().map(b => complement[b] || b).join('');
+    return seq
+      .toUpperCase()
+      .split('')
+      .reverse()
+      .map(b => complement[b] || b)
+      .join('');
   }
 
   /**
@@ -552,7 +601,15 @@ class MicrobeGenomicsFunctions {
    * @param {boolean} [caseSensitive=false] - Case-sensitive search
    * @returns {Object} Search result with matches and summary
    */
-  static searchSequenceMotif(pattern, chromosome = null, start = null, end = null, strand = 'both', maxMismatches = 0, caseSensitive = false) {
+  static searchSequenceMotif(
+    pattern,
+    chromosome = null,
+    start = null,
+    end = null,
+    strand = 'both',
+    maxMismatches = 0,
+    caseSensitive = false
+  ) {
     const gb = window.genomeBrowser;
     if (!gb) throw new Error('GenomeBrowser not initialised');
 
@@ -605,7 +662,7 @@ class MicrobeGenomicsFunctions {
           while ((m = regex.exec(seq)) !== null && allMatches.length < maxResults) {
             allMatches.push({
               chromosome: chr,
-              position: seqStart + m.index + 1,  // 1-based
+              position: seqStart + m.index + 1, // 1-based
               end: seqStart + m.index + m[0].length,
               sequence: m[0],
               strand: '+',
@@ -688,10 +745,10 @@ class MicrobeGenomicsFunctions {
     const revCount = allMatches.filter(m => m.strand === '-').length;
     const totalRegionLen = chromosomes.reduce((sum, chr) => {
       const s = start != null ? start : 0;
-      const e = end != null ? end : (gb.currentSequence[chr]?.length || 0);
+      const e = end != null ? end : gb.currentSequence[chr]?.length || 0;
       return sum + (e - s);
     }, 0);
-    const density = totalRegionLen > 0 ? (allMatches.length / totalRegionLen * 1000).toFixed(3) : 0;
+    const density = totalRegionLen > 0 ? ((allMatches.length / totalRegionLen) * 1000).toFixed(3) : 0;
 
     return {
       success: true,

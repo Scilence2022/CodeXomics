@@ -5,7 +5,8 @@ author: 'CodeXomics'
 category: 'benchmark'
 intent: 'benchmark_management'
 priority: 1
-keywords: ['benchmark', 'results', 'history', 'statistics', 'stats', 'performance', 'report', 'score', 'success', 'rate']
+keywords:
+  ['benchmark', 'results', 'history', 'statistics', 'stats', 'performance', 'report', 'score', 'success', 'rate']
 aliases: ['benchmark_results', 'benchmark_stats', 'benchmark_history', 'get_benchmark_stats']
 enabled: true
 

@@ -38,12 +38,12 @@ class TaskService {
       };
 
       this.tasks.push(newTask);
-      
+
       // Auto-expand panel when a new task is added
       this.isCollapsed = false;
 
       this.updateUI();
-      
+
       return {
         success: true,
         message: `Task "${title}" added successfully.`,
@@ -119,13 +119,13 @@ class TaskService {
 
       const task = this.tasks[index];
       this.tasks.splice(index, 1);
-      
+
       this.updateUI();
 
       return {
         success: true,
         message: `Task "${task.title}" deleted successfully.`,
-        id
+        id,
       };
     } catch (error) {
       console.error('[TaskService] deleteTask error:', error);
@@ -191,9 +191,10 @@ class TaskService {
     if (this.tasks.length === 0) return '';
 
     let str = '\n=== CURRENT TASK CHECKLIST ===\n';
-    str += 'The following checklist tracks your execution progress. ' +
+    str +=
+      'The following checklist tracks your execution progress. ' +
       'Keep it updated using the update_task tool as you work.\n';
-    
+
     this.tasks.forEach(t => {
       let mark = ' ';
       if (t.status === 'completed') mark = 'x';
@@ -245,7 +246,7 @@ class TaskService {
     // Toggle collapse class and toggle icon
     const containerEl = document.getElementById('tasksListContainer');
     const toggleIconEl = tasksPanel.querySelector('#toggleTasksCollapseBtn i');
-    
+
     if (containerEl) {
       containerEl.style.display = this.isCollapsed ? 'none' : 'flex';
     }
@@ -266,7 +267,7 @@ class TaskService {
     const listEl = document.getElementById('tasksList');
     if (listEl) {
       listEl.innerHTML = '';
-      
+
       const statusIcons = {
         pending: '<i class="far fa-circle task-status-icon"></i>',
         in_progress: '<i class="fas fa-spinner task-status-icon"></i>',
@@ -296,10 +297,10 @@ class TaskService {
         // Click checkbox icon to trigger status floating dropdown
         const cbContainer = itemEl.querySelector('.task-checkbox-container');
         if (cbContainer) {
-          cbContainer.addEventListener('click', (e) => {
+          cbContainer.addEventListener('click', e => {
             e.stopPropagation();
             document.querySelectorAll('.task-status-dropdown').forEach(d => d.remove());
-            
+
             const dropdown = document.createElement('div');
             dropdown.className = 'task-status-dropdown';
             dropdown.innerHTML = `
@@ -316,18 +317,18 @@ class TaskService {
                 <i class="fas fa-times-circle"></i> Failed
               </div>
             `;
-            
+
             itemEl.appendChild(dropdown);
-            
+
             dropdown.querySelectorAll('.status-option').forEach(opt => {
-              opt.addEventListener('click', (optEvent) => {
+              opt.addEventListener('click', optEvent => {
                 optEvent.stopPropagation();
                 const newStatus = opt.getAttribute('data-status');
                 dropdown.remove();
                 this.updateTask({ id: task.id, status: newStatus });
               });
             });
-            
+
             const closeDropdown = () => {
               dropdown.remove();
               document.removeEventListener('click', closeDropdown);
@@ -349,11 +350,11 @@ class TaskService {
           input.type = 'text';
           input.className = 'task-edit-input';
           input.value = task.title;
-          
+
           wrapper.innerHTML = '';
           wrapper.appendChild(input);
           input.focus();
-          
+
           const saveEdit = async () => {
             const newTitle = input.value.trim();
             if (newTitle && newTitle !== task.title) {
@@ -362,9 +363,9 @@ class TaskService {
               this.updateUI();
             }
           };
-          
+
           input.addEventListener('blur', saveEdit);
-          input.addEventListener('keydown', (e) => {
+          input.addEventListener('keydown', e => {
             e.stopPropagation();
             if (e.key === 'Enter') {
               saveEdit();
@@ -375,13 +376,13 @@ class TaskService {
         };
 
         if (textEl) {
-          textEl.addEventListener('dblclick', (e) => {
+          textEl.addEventListener('dblclick', e => {
             e.stopPropagation();
             startEdit();
           });
         }
         if (editBtn) {
-          editBtn.addEventListener('click', (e) => {
+          editBtn.addEventListener('click', e => {
             e.stopPropagation();
             startEdit();
           });
@@ -390,7 +391,7 @@ class TaskService {
         // Delete button
         const deleteBtn = itemEl.querySelector('.delete-btn');
         if (deleteBtn) {
-          deleteBtn.addEventListener('click', (e) => {
+          deleteBtn.addEventListener('click', e => {
             e.stopPropagation();
             this.deleteTask({ id: task.id });
           });
@@ -478,11 +479,11 @@ class TaskService {
           addInput.value = '';
         }
       };
-      addBtn.addEventListener('click', (e) => {
+      addBtn.addEventListener('click', e => {
         e.stopPropagation();
         handleAdd();
       });
-      addInput.addEventListener('keydown', (e) => {
+      addInput.addEventListener('keydown', e => {
         e.stopPropagation(); // prevent input bubbling to chat manager text input
         if (e.key === 'Enter') {
           handleAdd();
@@ -493,7 +494,7 @@ class TaskService {
     // Filters event listeners
     const filterBtns = tasksPanel.querySelectorAll('.task-filter-btn');
     filterBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
         filterBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -505,7 +506,7 @@ class TaskService {
     // Clear all click listener
     const clearBtn = tasksPanel.querySelector('#clearTasksBtn');
     if (clearBtn) {
-      clearBtn.addEventListener('click', (e) => {
+      clearBtn.addEventListener('click', e => {
         e.stopPropagation();
         this.clearTasks();
       });

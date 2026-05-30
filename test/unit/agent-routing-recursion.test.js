@@ -94,7 +94,7 @@ describe('Agent Routing & Recursion Guards', () => {
       expect(() => capability.validateParameters({ visible: true })).toThrow(
         'trackName or track_name parameter required'
       );
-      
+
       // Invalid visible type
       expect(() => capability.validateParameters({ trackName: 'genes', visible: 'yes' })).toThrow(
         'visible parameter must be boolean'
@@ -118,12 +118,12 @@ describe('Agent Routing & Recursion Guards', () => {
             passedTrackName = trackName;
             passedVisible = visible;
             return { success: true };
-          }
-        }
+          },
+        },
       };
 
       const agent = new NavigationAgent({});
-      
+
       // Case 1: camelCase and visible boolean
       await agent.executeToggleTrack({ trackName: 'genes', visible: true }, mockApp);
       expect(passedTrackName).toBe('genes');
@@ -155,7 +155,7 @@ describe('Agent Routing & Recursion Guards', () => {
             // Simulator of agent behavior: delegates back to ChatManager.executeToolByName
             // under normal routing this would recurse infinitely
             return await mockChatManager.executeToolByName(toolName, parameters);
-          }
+          },
         },
         services: {
           file: {},
@@ -166,12 +166,12 @@ describe('Agent Routing & Recursion Guards', () => {
           primer: {},
         },
         // Native fallback implementation for get_track_status
-        getTrackStatus: async (parameters) => {
+        getTrackStatus: async parameters => {
           return { success: true, tracks: ['genes', 'variants'] };
         },
         executeToolByName: async (toolName, parameters, options = {}) => {
           return await service.execute(toolName, parameters, options);
-        }
+        },
       };
 
       const service = new ToolExecutionService({}, mockChatManager);
@@ -190,7 +190,7 @@ describe('Agent Routing & Recursion Guards', () => {
           executeTool: async (toolName, parameters) => {
             agentCalled = true;
             return { success: true };
-          }
+          },
         },
         services: {
           file: {},
@@ -200,9 +200,9 @@ describe('Agent Routing & Recursion Guards', () => {
           analysis: {},
           primer: {},
         },
-        getTrackStatus: async (parameters) => {
+        getTrackStatus: async parameters => {
           return { success: true, tracks: ['genes'] };
-        }
+        },
       };
 
       const service = new ToolExecutionService({}, mockChatManager);

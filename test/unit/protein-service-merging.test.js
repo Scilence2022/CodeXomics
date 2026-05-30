@@ -1,14 +1,12 @@
 /* eslint-disable no-new-func */
-import {describe, it, expect, beforeEach, vi} from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
 const SERVICE_PATH = path.join(process.cwd(), 'src/renderer/modules/chat/services/ProteinService.js');
 
 function createService(mockApp, mockChatManager) {
-  const code = fs
-      .readFileSync(SERVICE_PATH, 'utf-8')
-      .replace('window.ProteinService = ProteinService;', '');
+  const code = fs.readFileSync(SERVICE_PATH, 'utf-8').replace('window.ProteinService = ProteinService;', '');
   const body = `${code}; return new ProteinService(mockApp, mockChatManager);`;
   const fn = new Function('mockApp', 'mockChatManager', body);
   return fn(mockApp, mockChatManager);
@@ -33,7 +31,7 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
     mockApp = {};
     mockChatManager = {
       performAlphaFoldSearch: vi.fn(),
-      openProteinViewer: vi.fn().mockResolvedValue({success: true}),
+      openProteinViewer: vi.fn().mockResolvedValue({ success: true }),
       services: {
         ui: {
           addAlphaFoldSidebarStyles: vi.fn(),
@@ -51,7 +49,7 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
 
   it('should create a new tab for AlphaFold results if no tab exists', async () => {
     const results = [
-      {uniprotId: 'P04637', proteinName: 'Cellular tumor antigen p53', geneNames: ['TP53'], organism: 'Homo sapiens'},
+      { uniprotId: 'P04637', proteinName: 'Cellular tumor antigen p53', geneNames: ['TP53'], organism: 'Homo sapiens' },
     ];
 
     const renderResult = await service.renderProteinStructureResults({
@@ -76,9 +74,7 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
   });
 
   it('should create a new tab for PDB results if no tab exists', async () => {
-    const results = [
-      {pdbId: '1A2B', title: 'Structure of tumor suppressor p53', organism: 'Homo sapiens'},
-    ];
+    const results = [{ pdbId: '1A2B', title: 'Structure of tumor suppressor p53', organism: 'Homo sapiens' }];
 
     const renderResult = await service.renderProteinStructureResults({
       results,
@@ -96,9 +92,7 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
 
   it('should create separate tabs for PDB and AlphaFold searches of the same gene', async () => {
     // 1. Initial AlphaFold search
-    const afResults = [
-      {uniprotId: 'P04637', proteinName: 'p53', geneNames: ['TP53'], organism: 'Homo sapiens'},
-    ];
+    const afResults = [{ uniprotId: 'P04637', proteinName: 'p53', geneNames: ['TP53'], organism: 'Homo sapiens' }];
     await service.renderProteinStructureResults({
       results: afResults,
       searchType: 'AlphaFold',
@@ -106,9 +100,7 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
     });
 
     // 2. Incoming PDB search for the same gene, with different case ("tp53")
-    const pdbResults = [
-      {pdbId: '1A2B', title: 'Structure of p53', organism: 'Homo sapiens'},
-    ];
+    const pdbResults = [{ pdbId: '1A2B', title: 'Structure of p53', organism: 'Homo sapiens' }];
     const pdbResult = await service.renderProteinStructureResults({
       results: pdbResults,
       searchType: 'PDB',
@@ -126,9 +118,7 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
 
   it('should update results if same search type runs for same gene (case-insensitive)', async () => {
     // 1. Initial PDB search
-    const initialPdbResults = [
-      {pdbId: '1A2B', title: 'Structure of p53', organism: 'Homo sapiens'},
-    ];
+    const initialPdbResults = [{ pdbId: '1A2B', title: 'Structure of p53', organism: 'Homo sapiens' }];
     await service.renderProteinStructureResults({
       results: initialPdbResults,
       searchType: 'PDB',
@@ -140,9 +130,7 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
     expect(service.tabs[0].results[0].pdbId).toBe('1A2B');
 
     // 2. New PDB search for the same gene with different case ("tp53") and different results
-    const newPdbResults = [
-      {pdbId: '3C4D', title: 'New Structure of p53', organism: 'Homo sapiens'},
-    ];
+    const newPdbResults = [{ pdbId: '3C4D', title: 'New Structure of p53', organism: 'Homo sapiens' }];
     await service.renderProteinStructureResults({
       results: newPdbResults,
       searchType: 'PDB',
@@ -157,14 +145,14 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
   it('should render distinct badges for PDB and AlphaFold items in their respective tabs', async () => {
     // 1. AlphaFold search
     await service.renderProteinStructureResults({
-      results: [{uniprotId: 'P04637', proteinName: 'p53 AF'}],
+      results: [{ uniprotId: 'P04637', proteinName: 'p53 AF' }],
       searchType: 'AlphaFold',
       geneName: 'TP53',
     });
 
     // 2. PDB search
     await service.renderProteinStructureResults({
-      results: [{pdbId: '1A2B', title: 'p53 PDB'}],
+      results: [{ pdbId: '1A2B', title: 'p53 PDB' }],
       searchType: 'PDB',
       geneName: 'TP53',
     });
@@ -190,14 +178,14 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
   it('should pass correct viewer parameters when clicking View 3D Structure for either type of tab', async () => {
     // 1. AlphaFold search
     await service.renderProteinStructureResults({
-      results: [{uniprotId: 'P04637', proteinName: 'p53 AF', geneName: 'TP53'}],
+      results: [{ uniprotId: 'P04637', proteinName: 'p53 AF', geneName: 'TP53' }],
       searchType: 'AlphaFold',
       geneName: 'TP53',
     });
 
     // 2. PDB search
     await service.renderProteinStructureResults({
-      results: [{pdbId: '1A2B', title: 'p53 PDB', geneName: 'TP53'}],
+      results: [{ pdbId: '1A2B', title: 'p53 PDB', geneName: 'TP53' }],
       searchType: 'PDB',
       geneName: 'TP53',
     });
@@ -226,14 +214,14 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
 
   it('should close sidebar tabs and update activeTabId', async () => {
     await service.renderProteinStructureResults({
-      results: [{uniprotId: 'P04637', proteinName: 'p53'}],
+      results: [{ uniprotId: 'P04637', proteinName: 'p53' }],
       searchType: 'AlphaFold',
       geneName: 'TP53',
     });
     const tab1Id = service.activeTabId;
 
     await service.renderProteinStructureResults({
-      results: [{pdbId: '2H1L', title: 'BRCA1 structure'}],
+      results: [{ pdbId: '2H1L', title: 'BRCA1 structure' }],
       searchType: 'PDB',
       geneName: 'BRCA1',
     });
@@ -260,14 +248,14 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
   it('should display different genes as separate tabs in the same sidebar', async () => {
     // 1. Search for TP53
     await service.renderProteinStructureResults({
-      results: [{uniprotId: 'P04637', proteinName: 'p53'}],
+      results: [{ uniprotId: 'P04637', proteinName: 'p53' }],
       searchType: 'AlphaFold',
       geneName: 'TP53',
     });
 
     // 2. Search for BRCA1
     await service.renderProteinStructureResults({
-      results: [{pdbId: '2H1L', title: 'BRCA1 structure'}],
+      results: [{ pdbId: '2H1L', title: 'BRCA1 structure' }],
       searchType: 'PDB',
       geneName: 'BRCA1',
     });
@@ -283,46 +271,41 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
     expect(tabButtons[1].textContent).toContain('BRCA1');
   });
 
-  it(
-      'should reuse persistent ProteinService instance inside ToolExecutionService',
-      async () => {
-        const execServicePath = path.join(
-            process.cwd(),
-            'src/renderer/modules/chat/services/ToolExecutionService.js',
-        );
-        const execCode = fs.readFileSync(execServicePath, 'utf-8')
-            .replace('window.ToolExecutionService = ToolExecutionService;', '');
-        const execBody = `${execCode}; return new ToolExecutionService(mockApp, mockChatManager);`;
-        const execFn = new Function('mockApp', 'mockChatManager', execBody);
+  it('should reuse persistent ProteinService instance inside ToolExecutionService', async () => {
+    const execServicePath = path.join(process.cwd(), 'src/renderer/modules/chat/services/ToolExecutionService.js');
+    const execCode = fs
+      .readFileSync(execServicePath, 'utf-8')
+      .replace('window.ToolExecutionService = ToolExecutionService;', '');
+    const execBody = `${execCode}; return new ToolExecutionService(mockApp, mockChatManager);`;
+    const execFn = new Function('mockApp', 'mockChatManager', execBody);
 
-        // Set up window.ProteinService mock constructor/class
-        const mockProteinServiceInstance = service;
-        window.ProteinService = vi.fn().mockImplementation(() => mockProteinServiceInstance);
-        window.FileOperationService = vi.fn();
-        window.AnnotationService = vi.fn();
-        window.BlastService = vi.fn();
-        window.GenomeAnalysisService = vi.fn();
+    // Set up window.ProteinService mock constructor/class
+    const mockProteinServiceInstance = service;
+    window.ProteinService = vi.fn().mockImplementation(() => mockProteinServiceInstance);
+    window.FileOperationService = vi.fn();
+    window.AnnotationService = vi.fn();
+    window.BlastService = vi.fn();
+    window.GenomeAnalysisService = vi.fn();
 
-        // Attach service to mockChatManager.services.protein
-        mockChatManager.services.protein = mockProteinServiceInstance;
+    // Attach service to mockChatManager.services.protein
+    mockChatManager.services.protein = mockProteinServiceInstance;
 
-        const execService = execFn(mockApp, mockChatManager);
+    const execService = execFn(mockApp, mockChatManager);
 
-        // Spy on searchPdbStructures
-        vi.spyOn(mockProteinServiceInstance, 'searchPdbStructures').mockResolvedValue({success: true});
+    // Spy on searchPdbStructures
+    vi.spyOn(mockProteinServiceInstance, 'searchPdbStructures').mockResolvedValue({ success: true });
 
-        // Execute tool search_pdb_structures
-        await execService.execute('search_pdb_structures', {geneName: 'TP53'});
+    // Execute tool search_pdb_structures
+    await execService.execute('search_pdb_structures', { geneName: 'TP53' });
 
-        // Verify it called searchPdbStructures on the persistent instance
-        expect(mockProteinServiceInstance.searchPdbStructures).toHaveBeenCalledWith({geneName: 'TP53'});
+    // Verify it called searchPdbStructures on the persistent instance
+    expect(mockProteinServiceInstance.searchPdbStructures).toHaveBeenCalledWith({ geneName: 'TP53' });
 
-        // Clean up window globals
-        delete window.ProteinService;
-        delete window.FileOperationService;
-        delete window.AnnotationService;
-        delete window.BlastService;
-        delete window.GenomeAnalysisService;
-      },
-  );
+    // Clean up window globals
+    delete window.ProteinService;
+    delete window.FileOperationService;
+    delete window.AnnotationService;
+    delete window.BlastService;
+    delete window.GenomeAnalysisService;
+  });
 });

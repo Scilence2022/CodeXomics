@@ -55,12 +55,12 @@ sample_usages:
     expected_result: 'Features within 5000bp of position 500000, sorted by distance'
 
   - user_query: 'Find genes within 10000bp of position 200000 on NC_000913'
-    tool_call: 'get_nearby_features(position=200000, chromosome=''NC_000913'', distance=10000)'
+    tool_call: "get_nearby_features(position=200000, chromosome='NC_000913', distance=10000)"
     thought: 'User wants nearby features with specific chromosome and distance'
     expected_result: 'Features within 10000bp of position 200000 on NC_000913'
 
   - user_query: 'What genes are near position 500000 within 5000bp range?'
-    tool_call: 'get_nearby_features(position=500000, distance=5000, featureTypes=[''gene''])'
+    tool_call: "get_nearby_features(position=500000, distance=5000, featureTypes=['gene'])"
     thought: 'User wants nearby genes with specific range'
     expected_result: 'Gene features within 5000bp of position 500000'
 

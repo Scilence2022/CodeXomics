@@ -9,16 +9,10 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-const SERVICE_PATH = path.join(
-  process.cwd(),
-  'src/renderer/modules/chat/services/IntentParserService.js'
-);
+const SERVICE_PATH = path.join(process.cwd(), 'src/renderer/modules/chat/services/IntentParserService.js');
 
 function createParser() {
-  const code = fs.readFileSync(SERVICE_PATH, 'utf-8').replace(
-    'window.IntentParserService = IntentParserService;',
-    ''
-  );
+  const code = fs.readFileSync(SERVICE_PATH, 'utf-8').replace('window.IntentParserService = IntentParserService;', '');
   const fn = new Function(code + '; return IntentParserService;');
   const IntentParserService = fn();
   return new IntentParserService({}, {});
@@ -63,9 +57,7 @@ describe('IntentParserService - parseToolCall', () => {
   });
 
   it('should parse "Navigated to" before JSON (was short-circuited by old code)', () => {
-    const result = parser.parseToolCall(
-      'Navigated to chr1.\n{"tool_name":"zoom_in","parameters":{"factor":2}}'
-    );
+    const result = parser.parseToolCall('Navigated to chr1.\n{"tool_name":"zoom_in","parameters":{"factor":2}}');
     expect(result).not.toBeNull();
     expect(result.tool_name).toBe('zoom_in');
   });
@@ -97,9 +89,7 @@ describe('IntentParserService - parseToolCall', () => {
   });
 
   it('should return null for confirmation-only text with no tool call', () => {
-    const result = parser.parseToolCall(
-      '✅ Navigated to chr1:1000-2000 successfully.'
-    );
+    const result = parser.parseToolCall('✅ Navigated to chr1:1000-2000 successfully.');
     expect(result).toBeNull();
   });
 
@@ -109,9 +99,7 @@ describe('IntentParserService - parseToolCall', () => {
   });
 
   it('should fix set_working_directory malformed parameters', () => {
-    const result = parser.parseToolCall(
-      '{"tool_name":"set_working_directory","parameters":{"/home/user/data":true}}'
-    );
+    const result = parser.parseToolCall('{"tool_name":"set_working_directory","parameters":{"/home/user/data":true}}');
     expect(result).not.toBeNull();
     expect(result.parameters.directory_path).toBe('/home/user/data');
   });
@@ -132,7 +120,8 @@ describe('IntentParserService - parseToolCall with think tags', () => {
   });
 
   it('should strip think tags with actual XML-style tags', () => {
-    const input = 'I need to navigate.\n{"tool_name":"navigate_to_position","parameters":{"chromosome":"chr1","start":1}}';
+    const input =
+      'I need to navigate.\n{"tool_name":"navigate_to_position","parameters":{"chromosome":"chr1","start":1}}';
     const result = parser.parseToolCall(input);
     expect(result).not.toBeNull();
     expect(result.tool_name).toBe('navigate_to_position');
@@ -195,16 +184,12 @@ describe('IntentParserService - _extractBalancedJsonBlocks', () => {
   });
 
   it('should find multiple balanced blocks in mixed text', () => {
-    const blocks = parser._extractBalancedJsonBlocks(
-      'Some text {"a":1} more text {"b":2} end'
-    );
+    const blocks = parser._extractBalancedJsonBlocks('Some text {"a":1} more text {"b":2} end');
     expect(blocks).toHaveLength(2);
   });
 
   it('should handle nested objects', () => {
-    const blocks = parser._extractBalancedJsonBlocks(
-      '{"outer":{"inner":"value"}}'
-    );
+    const blocks = parser._extractBalancedJsonBlocks('{"outer":{"inner":"value"}}');
     expect(blocks).toHaveLength(1);
     const parsed = JSON.parse(blocks[0]);
     expect(parsed.outer.inner).toBe('value');

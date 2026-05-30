@@ -302,7 +302,6 @@
 }
 
 @keyframes position-pulse {
-
   0%,
   100% {
     opacity: 0.8;
@@ -376,7 +375,6 @@
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-
   .genome-tab .position-indicator,
   .chromosome-track,
   .tab-position-visualization {
@@ -574,11 +572,11 @@
   border-radius: 50%;
 }
 
-input:checked+.slider {
+input:checked + .slider {
   background-color: #3b82f6;
 }
 
-input:checked+.slider:before {
+input:checked + .slider:before {
   transform: translateX(26px);
 }
 

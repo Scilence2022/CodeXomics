@@ -92,7 +92,9 @@ class InternalMCPServer {
         throw error;
       }
     } else {
-      console.warn(`⚠️ [InternalMCPServer] ChatManager not available on genomeStudio (chatManager=${this.genomeStudio.chatManager}, window.chatManager=${window.chatManager})`);
+      console.warn(
+        `⚠️ [InternalMCPServer] ChatManager not available on genomeStudio (chatManager=${this.genomeStudio.chatManager}, window.chatManager=${window.chatManager})`
+      );
     }
 
     // Fallback: Direct handlers for core methods that may not be in ChatManager
@@ -211,7 +213,7 @@ class InternalMCPServer {
         console.warn(`⚠️ [InternalMCPServer] Method '${method}' not found in fallback handlers or ChatManager`);
         throw new Error(
           `Unknown method: ${method}. Tool '${toolName}' was not found in ChatManager or fallback handlers. ` +
-          `ChatManager available: ${!!chatManager}, genomeStudio.chatManager: ${!!this.genomeStudio.chatManager}`
+            `ChatManager available: ${!!chatManager}, genomeStudio.chatManager: ${!!this.genomeStudio.chatManager}`
         );
     }
   }
@@ -285,7 +287,7 @@ class InternalMCPServer {
 
     // Create onProgress callback that sends notifications via IPC to main process
     // This allows the MCP server to forward progress to the MCP client
-    const onProgress = (progress) => {
+    const onProgress = progress => {
       try {
         mcpServerIpc.send('mcp-agent-progress', {
           type: progress.type,
@@ -298,14 +300,11 @@ class InternalMCPServer {
       }
     };
 
-    const result = await chatManager.processAgentPrompt(
-      parameters.prompt,
-      {
-        activateMultiAgent: parameters.activate_multi_agent || false,
-        context: parameters.context || {},
-        onProgress,
-      }
-    );
+    const result = await chatManager.processAgentPrompt(parameters.prompt, {
+      activateMultiAgent: parameters.activate_multi_agent || false,
+      context: parameters.context || {},
+      onProgress,
+    });
 
     return result;
   }
@@ -448,51 +447,51 @@ class InternalMCPServer {
     if (include_annotations && this.genomeStudio.currentAnnotations) {
       let totalFeatures = 0;
       let featureCounts = {};
-      
+
       const chromosomes = Object.keys(this.genomeStudio.currentAnnotations);
       for (const chr of chromosomes) {
         const features = this.genomeStudio.currentAnnotations[chr] || [];
         totalFeatures += features.length;
-        
+
         for (const feature of features) {
           const type = feature.type || 'unknown';
           featureCounts[type] = (featureCounts[type] || 0) + 1;
         }
       }
-      
+
       genomeInfo.annotations = {
         hasData: true,
         totalFeatures,
-        featureCounts
+        featureCounts,
       };
     } else {
       genomeInfo.annotations = {
         hasData: false,
         totalFeatures: 0,
-        featureCounts: {}
+        featureCounts: {},
       };
     }
 
     // Comprehensive sequence statistics per chromosome
     if (include_statistics) {
-       const chromosomeStats = {};
-       const chroms = Object.keys(this.genomeStudio.currentSequence);
-       for (const chr of chroms) {
-          const seq = this.genomeStudio.currentSequence[chr];
-          const gcCount = (seq.match(/[GgCc]/g) || []).length;
-          const gcPercent = Math.round((gcCount / seq.length) * 10000) / 100;
-          
-          chromosomeStats[chr] = {
-             length: seq.length,
-             gcPercent: gcPercent
-          };
-       }
-       genomeInfo.statistics = { chromosomeStats };
+      const chromosomeStats = {};
+      const chroms = Object.keys(this.genomeStudio.currentSequence);
+      for (const chr of chroms) {
+        const seq = this.genomeStudio.currentSequence[chr];
+        const gcCount = (seq.match(/[GgCc]/g) || []).length;
+        const gcPercent = Math.round((gcCount / seq.length) * 10000) / 100;
+
+        chromosomeStats[chr] = {
+          length: seq.length,
+          gcPercent: gcPercent,
+        };
+      }
+      genomeInfo.statistics = { chromosomeStats };
     }
 
     return {
       success: true,
-      genomeInfo
+      genomeInfo,
     };
   }
 
@@ -768,11 +767,11 @@ class InternalMCPServer {
       genomeStudioReady: !!this.genomeStudio,
       modules: this.genomeStudio
         ? {
-          navigationManager: !!this.genomeStudio.navigationManager,
-          fileManager: !!this.genomeStudio.fileManager,
-          trackRenderer: !!this.genomeStudio.trackRenderer,
-          sequenceUtils: !!this.genomeStudio.sequenceUtils,
-        }
+            navigationManager: !!this.genomeStudio.navigationManager,
+            fileManager: !!this.genomeStudio.fileManager,
+            trackRenderer: !!this.genomeStudio.trackRenderer,
+            sequenceUtils: !!this.genomeStudio.sequenceUtils,
+          }
         : {},
     };
   }

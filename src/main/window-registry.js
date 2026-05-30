@@ -93,7 +93,9 @@ function registerGenomeWindow(windowId, browserWindow, options = {}) {
     registrationInfo.status = 'registered';
     pendingRegistrations.delete(windowId);
 
-    console.log(`📋 [WindowRegistry] Registered window: ${windowId} (total: ${windowRegistry.size}, status: ${registrationInfo.status})`);
+    console.log(
+      `📋 [WindowRegistry] Registered window: ${windowId} (total: ${windowRegistry.size}, status: ${registrationInfo.status})`
+    );
 
     if (!skipResolve) resolve({ windowId, status: 'registered', isNew: true });
   });
@@ -170,11 +172,15 @@ function registerGenomeWindowDeferred(windowId, browserWindow, maxRetries = MAX_
       if (!browserWindow.webContents || browserWindow.webContents.isLoading()) {
         if (retryCount < maxRetries) {
           retryCount++;
-          console.log(`📋 [WindowRegistry] Deferred registration attempt ${retryCount}/${maxRetries} for ${windowId} (window still loading)`);
+          console.log(
+            `📋 [WindowRegistry] Deferred registration attempt ${retryCount}/${maxRetries} for ${windowId} (window still loading)`
+          );
           setTimeout(attemptRegistration, REGISTRATION_RETRY_DELAY_MS);
           return;
         } else {
-          console.warn(`📋 [WindowRegistry] Deferred registration max retries reached for ${windowId}, registering anyway`);
+          console.warn(
+            `📋 [WindowRegistry] Deferred registration max retries reached for ${windowId}, registering anyway`
+          );
         }
       }
 

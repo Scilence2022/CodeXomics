@@ -16,12 +16,12 @@ CodeXomics now supports switching between multiple interface style presets at ru
 
 Switch interface styles via **Options → General Settings → Appearance → UI Style**. Four presets are available:
 
-| Preset | Accent Color | Philosophy | Inspired By |
-| ------ | ------------ | ---------- | ----------- |
-| **AI Dynamic** (default) | Blue-violet `#3b82f6` | Vibrant, energetic, futuristic AI aesthetic | Default Electron apps, Vercel |
-| **Professional** | Deep teal `#0d7377` | Clean, muted tones for scientific work | SnapGene, Benchling |
-| **Minimal** | Warm amber `#c87d2f` | Elegant warm-gray with understated accent | Notion, Linear, Bear |
-| **Pastel** | Soft lavender-rose `#b07fb0` | Light, airy, dreamy feel | Figma, pastel design systems |
+| Preset                   | Accent Color                 | Philosophy                                  | Inspired By                   |
+| ------------------------ | ---------------------------- | ------------------------------------------- | ----------------------------- |
+| **AI Dynamic** (default) | Blue-violet `#3b82f6`        | Vibrant, energetic, futuristic AI aesthetic | Default Electron apps, Vercel |
+| **Professional**         | Deep teal `#0d7377`          | Clean, muted tones for scientific work      | SnapGene, Benchling           |
+| **Minimal**              | Warm amber `#c87d2f`         | Elegant warm-gray with understated accent   | Notion, Linear, Bear          |
+| **Pastel**               | Soft lavender-rose `#b07fb0` | Light, airy, dreamy feel                    | Figma, pastel design systems  |
 
 Each preset includes:
 
@@ -51,27 +51,27 @@ Each preset includes:
 
 ### New Files
 
-| File | Purpose |
-| ---- | ------- |
-| `src/renderer/modules/ThemeManager.js` | Preset definitions, CSS variable injection, style switching, dark mode |
-| `src/renderer/css/themes/professional.css` | Professional theme override rules (753 lines) |
-| `src/renderer/css/themes/minimal.css` | Minimal theme override rules (775 lines) |
-| `src/renderer/css/themes/pastel.css` | Pastel theme override rules (775 lines) |
+| File                                       | Purpose                                                                |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| `src/renderer/modules/ThemeManager.js`     | Preset definitions, CSS variable injection, style switching, dark mode |
+| `src/renderer/css/themes/professional.css` | Professional theme override rules (753 lines)                          |
+| `src/renderer/css/themes/minimal.css`      | Minimal theme override rules (775 lines)                               |
+| `src/renderer/css/themes/pastel.css`       | Pastel theme override rules (775 lines)                                |
 
 ### Modified Files
 
-| File | Change |
-| ---- | ------ |
-| `src/renderer/css/base.css` | Added CSS variables for gradients, accents, chat colors, button gradients, focus rings |
-| `src/renderer/css/buttons.css` | Replaced hardcoded `rgba(59,130,246)` with `var(--primary-rgb)` |
-| `src/renderer/css/components.css` | Replaced hardcoded rgba values with `var(--primary-rgb)` |
-| `src/renderer/css/layout.css` | Replaced hardcoded gradients with CSS variables |
-| `src/renderer/css/chatbox-enhancements.css` | Replaced hardcoded gradients with CSS variables |
+| File                                             | Change                                                                                  |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `src/renderer/css/base.css`                      | Added CSS variables for gradients, accents, chat colors, button gradients, focus rings  |
+| `src/renderer/css/buttons.css`                   | Replaced hardcoded `rgba(59,130,246)` with `var(--primary-rgb)`                         |
+| `src/renderer/css/components.css`                | Replaced hardcoded rgba values with `var(--primary-rgb)`                                |
+| `src/renderer/css/layout.css`                    | Replaced hardcoded gradients with CSS variables                                         |
+| `src/renderer/css/chatbox-enhancements.css`      | Replaced hardcoded gradients with CSS variables                                         |
 | `src/renderer/modules/GeneralSettingsManager.js` | `applyUIStyle()` syncs accentColor; `applyAccentColor()` guarded; execution order fixed |
-| `src/renderer/index.html` | Style preset cards UI, theme CSS links, Mac-style sidebar toggle |
-| `src/renderer/renderer-modular.js` | Sidebar toggle event handler, ThemeManager initialization |
-| `src/renderer/modules/UIManager.js` | `toggleSidebar()` with checkbox sync, `updateToggleButtonStates()` for checkbox |
-| `AGENTS.md` | UI Style System documentation with step-by-step guide for adding presets |
+| `src/renderer/index.html`                        | Style preset cards UI, theme CSS links, Mac-style sidebar toggle                        |
+| `src/renderer/renderer-modular.js`               | Sidebar toggle event handler, ThemeManager initialization                               |
+| `src/renderer/modules/UIManager.js`              | `toggleSidebar()` with checkbox sync, `updateToggleButtonStates()` for checkbox         |
+| `AGENTS.md`                                      | UI Style System documentation with step-by-step guide for adding presets                |
 
 ### Architecture
 

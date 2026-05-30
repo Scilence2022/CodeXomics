@@ -33,7 +33,21 @@ parameters:
         - 'reads'
         - 'proteins'
         - 'primers'
-      enum: ['genes', 'gc', 'gc_content', 'GC Content', 'sequence', 'variants', 'reads', 'proteins', 'primers', 'actions', 'wigTracks', 'blast']
+      enum:
+        [
+          'genes',
+          'gc',
+          'gc_content',
+          'GC Content',
+          'sequence',
+          'variants',
+          'reads',
+          'proteins',
+          'primers',
+          'actions',
+          'wigTracks',
+          'blast',
+        ]
     trackName:
       type: string
       description: 'Name of the track to toggle (camelCase alternative to track_name)'

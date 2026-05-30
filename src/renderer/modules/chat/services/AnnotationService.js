@@ -15,16 +15,11 @@ class AnnotationService {
 
   // 1. ANNOTATION SEARCH AND RETRIEVAL
   async listAnnotations(params) {
-    const { 
-      chromosome, chrom, chr: chrAlias,
-      start, begin,
-      end, stop,
-      type, limit = 100, offset = 0 
-    } = params;
-    
+    const { chromosome, chrom, chr: chrAlias, start, begin, end, stop, type, limit = 100, offset = 0 } = params;
+
     const targetChr = chromosome || chrom || chrAlias || this.app.currentChromosome;
-    const targetStart = start !== undefined ? start : (begin !== undefined ? begin : null);
-    const targetEnd = end !== undefined ? end : (stop !== undefined ? stop : null);
+    const targetStart = start !== undefined ? start : begin !== undefined ? begin : null;
+    const targetEnd = end !== undefined ? end : stop !== undefined ? stop : null;
 
     if (!this.app.currentAnnotations) {
       throw new Error('No annotations loaded');
@@ -32,23 +27,19 @@ class AnnotationService {
 
     const chr = targetChr;
     const annotations = chr
-      ? (this.app.currentAnnotations[chr] || [])
+      ? this.app.currentAnnotations[chr] || []
       : Object.values(this.app.currentAnnotations).flat();
 
     let filtered = annotations;
 
     // Filter by region
     if (targetStart !== null && targetEnd !== null) {
-      filtered = filtered.filter(a =>
-        a.start <= targetEnd && a.end >= targetStart
-      );
+      filtered = filtered.filter(a => a.start <= targetEnd && a.end >= targetStart);
     }
 
     // Filter by type
     if (type) {
-      filtered = filtered.filter(a =>
-        a.type && a.type.toLowerCase() === type.toLowerCase()
-      );
+      filtered = filtered.filter(a => a.type && a.type.toLowerCase() === type.toLowerCase());
     }
 
     const total = filtered.length;
@@ -78,9 +69,7 @@ class AnnotationService {
    * Find annotation by identifier (gene name, locus tag, or protein ID)
    */
   _findAnnotation(identifier, chromosome) {
-    const chromosomes = chromosome
-      ? [chromosome]
-      : Object.keys(this.app.currentAnnotations);
+    const chromosomes = chromosome ? [chromosome] : Object.keys(this.app.currentAnnotations);
 
     for (const chr of chromosomes) {
       const annotations = this.app.currentAnnotations[chr];
@@ -94,10 +83,15 @@ class AnnotationService {
         const locusTag = Array.isArray(qualifiers.locus_tag) ? qualifiers.locus_tag[0] : qualifiers.locus_tag || '';
         const proteinId = Array.isArray(qualifiers.protein_id) ? qualifiers.protein_id[0] : qualifiers.protein_id || '';
 
-        if (identifier === annotation.id || identifier === geneName || identifier === locusTag || identifier === proteinId) {
+        if (
+          identifier === annotation.id ||
+          identifier === geneName ||
+          identifier === locusTag ||
+          identifier === proteinId
+        ) {
           return {
             chromosome: chr,
-            annotation: annotation
+            annotation: annotation,
           };
         }
       }
@@ -107,7 +101,14 @@ class AnnotationService {
   }
 
   async getAnnotation(params) {
-    const identifier = params.identifier || params.annotationId || params.gene || params.gene_name || params.geneName || params.locus_tag || params.locusTag;
+    const identifier =
+      params.identifier ||
+      params.annotationId ||
+      params.gene ||
+      params.gene_name ||
+      params.geneName ||
+      params.locus_tag ||
+      params.locusTag;
     const chromosome = params.chromosome || params.chrom || params.chr || this.app.currentChromosome;
 
     if (!this.app.currentAnnotations) {
@@ -124,15 +125,17 @@ class AnnotationService {
       success: true,
       identifier,
       chromosome: found.chromosome,
-      annotation: params.full_details ? a : {
-        id: a.id,
-        type: a.type,
-        start: a.start,
-        end: a.end,
-        strand: a.strand,
-        qualifiers: a.qualifiers || {},
-        length: a.end - a.start + 1,
-      },
+      annotation: params.full_details
+        ? a
+        : {
+            id: a.id,
+            type: a.type,
+            start: a.start,
+            end: a.end,
+            strand: a.strand,
+            qualifiers: a.qualifiers || {},
+            length: a.end - a.start + 1,
+          },
     };
   }
 
@@ -147,9 +150,7 @@ class AnnotationService {
     const searchFields = fields || ['product', 'gene', 'note', 'locus_tag', 'db_xref', 'protein_id', 'EC_number'];
     const results = [];
 
-    const chromosomes = chromosome
-      ? [chromosome]
-      : Object.keys(this.app.currentAnnotations);
+    const chromosomes = chromosome ? [chromosome] : Object.keys(this.app.currentAnnotations);
 
     for (const chr of chromosomes) {
       const annotations = this.app.currentAnnotations[chr] || [];
@@ -197,7 +198,14 @@ class AnnotationService {
 
   // 2. ANNOTATION MODIFICATION
   async updateAnnotation(params) {
-    const identifier = params.identifier || params.annotationId || params.gene || params.gene_name || params.geneName || params.locus_tag || params.locusTag;
+    const identifier =
+      params.identifier ||
+      params.annotationId ||
+      params.gene ||
+      params.gene_name ||
+      params.geneName ||
+      params.locus_tag ||
+      params.locusTag;
     const { chromosome, updates, agent = 'mcp-agent', evidence = [] } = params;
 
     if (!this.app.currentAnnotations) {
@@ -231,8 +239,7 @@ class AnnotationService {
         const locusTag = Array.isArray(qualifiers.locus_tag) ? qualifiers.locus_tag[0] : qualifiers.locus_tag || '';
 
         // Match by locus_tag or gene name
-        if ((targetLocusTag && locusTag === targetLocusTag) ||
-          (targetGeneName && geneName === targetGeneName)) {
+        if ((targetLocusTag && locusTag === targetLocusTag) || (targetGeneName && geneName === targetGeneName)) {
           annotationsToUpdate.push({ chromosome: chr, annotation });
         }
       }
@@ -258,15 +265,7 @@ class AnnotationService {
 
       // Record changes for each annotation
       const tracker = this._getChangeTracker();
-      tracker.recordMultiFieldUpdate(
-        identifier,
-        found.chromosome,
-        updates,
-        oldValues,
-        agent,
-        'mcp',
-        evidence
-      );
+      tracker.recordMultiFieldUpdate(identifier, found.chromosome, updates, oldValues, agent, 'mcp', evidence);
     }
 
     return {
@@ -360,10 +359,8 @@ class AnnotationService {
     // Find and update annotation across all chromosomes
     Object.keys(this.app.currentAnnotations).forEach(chr => {
       const annotations = this.app.currentAnnotations[chr];
-      const annotationIndex = annotations.findIndex(a =>
-        a.id === annotationId ||
-        a.qualifiers?.locus_tag === annotationId ||
-        a.qualifiers?.gene === annotationId
+      const annotationIndex = annotations.findIndex(
+        a => a.id === annotationId || a.qualifiers?.locus_tag === annotationId || a.qualifiers?.gene === annotationId
       );
 
       if (annotationIndex !== -1) {
@@ -406,7 +403,7 @@ class AnnotationService {
       success: true,
       annotationId: annotationId,
       updatedAnnotation: updatedAnnotation,
-      message: `Updated annotation "${annotationId}"`
+      message: `Updated annotation "${annotationId}"`,
     };
   }
 
@@ -425,11 +422,12 @@ class AnnotationService {
     // Find and delete annotation across all chromosomes
     Object.keys(this.app.currentAnnotations).forEach(chr => {
       const annotations = this.app.currentAnnotations[chr];
-      const annotationIndex = annotations.findIndex(a =>
-        a.id === annotationId ||
-        a.qualifiers?.locus_tag === annotationId ||
-        a.qualifiers?.gene === annotationId ||
-        a.qualifiers?.protein_id === annotationId
+      const annotationIndex = annotations.findIndex(
+        a =>
+          a.id === annotationId ||
+          a.qualifiers?.locus_tag === annotationId ||
+          a.qualifiers?.gene === annotationId ||
+          a.qualifiers?.protein_id === annotationId
       );
 
       if (annotationIndex !== -1) {
@@ -459,7 +457,7 @@ class AnnotationService {
       success: true,
       annotationId: annotationId,
       deletedAnnotation: deletedAnnotation,
-      message: `Deleted annotation "${annotationId}"`
+      message: `Deleted annotation "${annotationId}"`,
     };
   }
 

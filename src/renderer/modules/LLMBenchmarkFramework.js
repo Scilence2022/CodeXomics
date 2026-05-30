@@ -195,7 +195,7 @@ class LLMBenchmarkFramework {
         if (options.suites && !options.suites.includes(suiteId)) {
           continue; // Skip if specific suites requested and this isn't one
         }
-        
+
         let suiteTests = testSuite.getTests();
         if (options.tests) {
           suiteTests = suiteTests.filter(test => options.tests.includes(test.id));
@@ -221,7 +221,9 @@ class LLMBenchmarkFramework {
         // MEMORY OPTIMIZATION: Clear stale thinking process DOM elements
         try {
           document.querySelectorAll('[id^="thinkingProcess_"]').forEach(el => el.remove());
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          /* ignore */
+        }
       }
 
       // Store for progress calculation
@@ -512,7 +514,9 @@ class LLMBenchmarkFramework {
           const staleThinking = document.querySelectorAll('[id^="thinkingProcess_"]');
           staleThinking.forEach(el => el.remove());
           if (staleThinking.length > 0) {
-            console.log(`🧹 [Benchmark] Removed ${staleThinking.length} stale thinking DOM elements before test ${test.id}`);
+            console.log(
+              `🧹 [Benchmark] Removed ${staleThinking.length} stale thinking DOM elements before test ${test.id}`
+            );
           }
         } catch (domError) {
           // Ignore DOM errors in non-browser contexts
@@ -1485,9 +1489,12 @@ class LLMBenchmarkFramework {
             success: r.success,
             executionTime: r.executionTime,
             // Truncate large result data to first 200 chars
-            resultPreview: typeof r.result === 'string'
-              ? r.result.substring(0, 200) + (r.result.length > 200 ? '...[TRUNCATED]' : '')
-              : (r.result ? JSON.stringify(r.result).substring(0, 200) + '...[TRUNCATED]' : null),
+            resultPreview:
+              typeof r.result === 'string'
+                ? r.result.substring(0, 200) + (r.result.length > 200 ? '...[TRUNCATED]' : '')
+                : r.result
+                  ? JSON.stringify(r.result).substring(0, 200) + '...[TRUNCATED]'
+                  : null,
           }));
           interactionData.response.executionRounds = executionData.rounds || 0;
           interactionData.response.totalExecutionTime = executionData.totalExecutionTime || 0;
@@ -2610,13 +2617,27 @@ class LLMBenchmarkFramework {
     // Fix Problem 6: Dynamic knownFunctions from builtInToolsMap instead of hardcoded list
     // Fallback list for when ChatManager is not available
     const DEFAULT_KNOWN_FUNCTIONS = [
-      'find_gene_by_name', 'search_features', 'search_by_position',
-      'navigate_to_position', 'jump_to_gene', 'get_gene_sequence',
-      'run_blast_search', 'zoom_in', 'zoom_out', 'set_zoom_level',
-      'show_gene_details', 'export_sequence', 'save_current_view',
-      'load_genome_file', 'switch_chromosome', 'toggle_track_visibility',
-      'get_current_state', 'compute_gc', 'reverse_complement',
-      'translate_dna', 'codon_usage_analysis',
+      'find_gene_by_name',
+      'search_features',
+      'search_by_position',
+      'navigate_to_position',
+      'jump_to_gene',
+      'get_gene_sequence',
+      'run_blast_search',
+      'zoom_in',
+      'zoom_out',
+      'set_zoom_level',
+      'show_gene_details',
+      'export_sequence',
+      'save_current_view',
+      'load_genome_file',
+      'switch_chromosome',
+      'toggle_track_visibility',
+      'get_current_state',
+      'compute_gc',
+      'reverse_complement',
+      'translate_dna',
+      'codon_usage_analysis',
     ];
 
     let knownFunctions;
@@ -4589,7 +4610,10 @@ class LLMBenchmarkFramework {
     // Handle parsing errors (or execution errors from perfectly parsed tools)
     if (actualResult.error && actualResult.error !== 'No function calls detected') {
       if (actualResult.tool_name) {
-        console.log('⚠️ [Function Call Eval] Tool executed but returned error. Scoring tool selection and parameters anyway:', actualResult.error);
+        console.log(
+          '⚠️ [Function Call Eval] Tool executed but returned error. Scoring tool selection and parameters anyway:',
+          actualResult.error
+        );
         evaluation.warnings.push(`Execution error: ${actualResult.error}`);
         // Do NOT return here. Continue to evaluate the tool name and parameters.
       } else {
@@ -4618,10 +4642,10 @@ class LLMBenchmarkFramework {
         if (matchingCall) {
           console.log('✅ [Function Call Eval] Expected tool found among multiple calls:', matchingCall.tool_name);
           const functionScore = this.evaluateSingleFunctionCall(matchingCall, expectedResult);
-          
+
           // CRITICAL FIX: Scale the 0-100 score from evaluateSingleFunctionCall to the test's maxScore
           const scaledScore = Math.round((functionScore.score / 100) * evaluation.maxScore);
-          
+
           evaluation.score = scaledScore;
           evaluation.success = functionScore.success;
           evaluation.errors.push(...functionScore.errors);
@@ -4659,16 +4683,20 @@ class LLMBenchmarkFramework {
 
           if (expected) {
             const functionScore = this.evaluateSingleFunctionCall(call, expected);
-            
+
             // CRITICAL FIX: Scale the score proportionally for multiple expected tools
             const callMaxScore = evaluation.maxScore / expectedResult.length;
             const scaledScore = Math.round((functionScore.score / 100) * callMaxScore);
-            
+
             evaluation.score += scaledScore;
             evaluation.errors.push(...functionScore.errors);
             evaluation.warnings.push(...functionScore.warnings);
 
-            console.log(`📋 [Function Call Eval] Call ${i + 1} scored:`, functionScore.score, `points (scaled: ${scaledScore})`);
+            console.log(
+              `📋 [Function Call Eval] Call ${i + 1} scored:`,
+              functionScore.score,
+              `points (scaled: ${scaledScore})`
+            );
           }
         }
 
@@ -4679,16 +4707,18 @@ class LLMBenchmarkFramework {
       // Single function call
       console.log('🎯 [Function Call Eval] Single function call evaluation');
       const functionScore = this.evaluateSingleFunctionCall(actualResult, expectedResult);
-      
+
       // CRITICAL FIX: Scale the 0-100 score from evaluateSingleFunctionCall to the test's maxScore
       const scaledScore = Math.round((functionScore.score / 100) * evaluation.maxScore);
-      
+
       evaluation.score = scaledScore;
       evaluation.success = functionScore.success;
       evaluation.errors.push(...functionScore.errors);
       evaluation.warnings.push(...functionScore.warnings);
 
-      console.log(`📋 [Function Call Eval] Single call scored: ${functionScore.score} points (scaled: ${scaledScore}/${evaluation.maxScore})`);
+      console.log(
+        `📋 [Function Call Eval] Single call scored: ${functionScore.score} points (scaled: ${scaledScore}/${evaluation.maxScore})`
+      );
     }
 
     console.log('🏁 [Function Call Eval] FINAL EVALUATION RESULT:');
@@ -4747,7 +4777,7 @@ class LLMBenchmarkFramework {
 
     // Check function name (50 points out of 100)
     console.log('🔍 [Single Call Eval] Checking function name match...');
-    const normalizeToolName = (name) => {
+    const normalizeToolName = name => {
       if (!name || typeof name !== 'string') return '';
       let normalized = name.replace(/([a-z])([A-Z])/g, '$1_$2'); // camelCase → snake_case
       normalized = normalized.replace(/-/g, '_'); // kebab-case → snake_case
@@ -4760,8 +4790,14 @@ class LLMBenchmarkFramework {
     } else if (normalizeToolName(actualCall.tool_name) === normalizeToolName(expectedCall.tool_name)) {
       // Name matches after normalization (camelCase/kebab/snake_case variants)
       result.score += 45;
-      result.warnings.push(`Function name matches after normalization: ${actualCall.tool_name} ≈ ${expectedCall.tool_name}`);
-      console.log('✅ [Single Call Eval] Function name matches after normalization! +45 points (Total:', result.score, '/100)');
+      result.warnings.push(
+        `Function name matches after normalization: ${actualCall.tool_name} ≈ ${expectedCall.tool_name}`
+      );
+      console.log(
+        '✅ [Single Call Eval] Function name matches after normalization! +45 points (Total:',
+        result.score,
+        '/100)'
+      );
     } else {
       result.errors.push(`Expected function ${expectedCall.tool_name}, got ${actualCall.tool_name}`);
       console.log('❌ [Single Call Eval] Function name mismatch! +0 points (Total:', result.score, '/100)');
@@ -4961,8 +4997,17 @@ class LLMBenchmarkFramework {
    */
   hasCriticalParams(actualParams, expectedParams) {
     const criticalParamNames = [
-      'geneName', 'name', 'filePath', 'file_path', 'filePaths', 'file_paths',
-      'chromosome', 'position', 'start', 'end', 'factor',
+      'geneName',
+      'name',
+      'filePath',
+      'file_path',
+      'filePaths',
+      'file_paths',
+      'chromosome',
+      'position',
+      'start',
+      'end',
+      'factor',
     ];
     const expectedKeys = Object.keys(expectedParams);
     const criticalKeys = expectedKeys.filter(k => criticalParamNames.includes(k));
@@ -5008,11 +5053,7 @@ class LLMBenchmarkFramework {
         if (b.charAt(i - 1) === a.charAt(j - 1)) {
           matrix[i][j] = matrix[i - 1][j - 1];
         } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
+          matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
         }
       }
     }
@@ -5067,15 +5108,23 @@ class LLMBenchmarkFramework {
           const similarity = this.calculateStringSimilarity(actualValue, expectedValue);
           if (similarity >= 0.8) {
             score += 35; // High similarity
-            console.log(`✅ High similarity match for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`);
+            console.log(
+              `✅ High similarity match for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`
+            );
           } else if (similarity >= 0.5) {
             score += 20; // Moderate similarity
-            console.log(`⚠️ Moderate similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`);
+            console.log(
+              `⚠️ Moderate similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`
+            );
           } else if (similarity >= 0.3) {
             score += 8; // Low similarity - minimal credit
-            console.log(`⚠️ Low similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`);
+            console.log(
+              `⚠️ Low similarity for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`
+            );
           } else {
-            console.log(`❌ No meaningful match for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`);
+            console.log(
+              `❌ No meaningful match for ${key}: ${actualValue} vs ${expectedValue} (${(similarity * 100).toFixed(0)}%)`
+            );
           }
         }
       } else if (typeof expectedValue === 'number' && typeof actualValue === 'number') {
@@ -5577,25 +5626,27 @@ class LLMBenchmarkFramework {
       warnings: result.warnings || [],
       metrics: result.metrics || {},
       // Keep actualResult for scoring verification (it's small — just tool_name + params)
-      actualResult: result.actualResult ? {
-        tool_name: result.actualResult.tool_name,
-        parameters: result.actualResult.parameters,
-        confidence: result.actualResult.confidence,
-        detectionMethod: result.actualResult.detectionMethod,
-        functionCalls: result.actualResult.functionCalls
-          ? result.actualResult.functionCalls.map(c => ({
-              tool_name: c.tool_name,
-              confidence: c.confidence,
-              detectionMethod: c.detectionMethod,
-            }))
-          : undefined,
-      } : null,
+      actualResult: result.actualResult
+        ? {
+            tool_name: result.actualResult.tool_name,
+            parameters: result.actualResult.parameters,
+            confidence: result.actualResult.confidence,
+            detectionMethod: result.actualResult.detectionMethod,
+            functionCalls: result.actualResult.functionCalls
+              ? result.actualResult.functionCalls.map(c => ({
+                  tool_name: c.tool_name,
+                  confidence: c.confidence,
+                  detectionMethod: c.detectionMethod,
+                }))
+              : undefined,
+          }
+        : null,
       expectedResult: result.expectedResult,
       // Preserve fields needed by BenchmarkUI.reconstructLLMInteractionFromTest fallback
       llmResponse: result.llmResponse
-        ? (result.llmResponse.length > 500
-            ? result.llmResponse.substring(0, 500) + '...[TRUNCATED]'
-            : result.llmResponse)
+        ? result.llmResponse.length > 500
+          ? result.llmResponse.substring(0, 500) + '...[TRUNCATED]'
+          : result.llmResponse
         : null,
       details: result.details ? { instruction: result.details.instruction } : null,
     };
@@ -5659,15 +5710,18 @@ class LLMBenchmarkFramework {
       if (window.electronAPI?.writeFile) {
         // Ensure directory exists before writing
         const ensureDir = window.electronAPI.ensureDirectory;
-        const writeOp = (ensureDir
+        const writeOp = ensureDir
           ? ensureDir(benchmarkDir).then(() => window.electronAPI.writeFile(filePath, jsonContent))
-          : window.electronAPI.writeFile(filePath, jsonContent)
-        );
-        writeOp.then(() => {
-          console.log(`💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`);
-        }).catch(err => {
-          console.warn(`[Benchmark] Failed to persist interaction data via IPC: ${err.message}`);
-        });
+          : window.electronAPI.writeFile(filePath, jsonContent);
+        writeOp
+          .then(() => {
+            console.log(
+              `💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`
+            );
+          })
+          .catch(err => {
+            console.warn(`[Benchmark] Failed to persist interaction data via IPC: ${err.message}`);
+          });
         return filePath;
       } else {
         // Fallback: use fs directly (works in main process or Node.js context)
@@ -5677,7 +5731,9 @@ class LLMBenchmarkFramework {
             fs.mkdirSync(benchmarkDir, { recursive: true });
           }
           fs.writeFileSync(filePath, jsonContent, 'utf8');
-          console.log(`💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`);
+          console.log(
+            `💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`
+          );
           return filePath;
         } catch (fsError) {
           console.warn(`[Benchmark] Failed to persist interaction data via fs: ${fsError.message}`);

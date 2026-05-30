@@ -108,7 +108,8 @@ class GelElectrophoresisRenderer {
     const totalLanes = lanes.length;
     const totalWidth = this.leftMargin + totalLanes * (this.laneWidth + this.laneGap) + this.laneGap;
 
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${this.gelHeight + 30}" ` +
+    let svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${this.gelHeight + 30}" ` +
       `viewBox="0 0 ${totalWidth} ${this.gelHeight + 30}" ` +
       `style="background:${this.gelBgColor};border-radius:8px;font-family:'Courier New',monospace;">\n`;
 
@@ -126,7 +127,8 @@ class GelElectrophoresisRenderer {
 
     svg += `  <rect x="0" y="0" width="${totalWidth}" height="${this.gelHeight + 30}" fill="url(#gelGrad)"/>\n`;
 
-    svg += `  <text x="${this.leftMargin / 2}" y="25" text-anchor="middle" ` +
+    svg +=
+      `  <text x="${this.leftMargin / 2}" y="25" text-anchor="middle" ` +
       `fill="${this.labelColor}" font-size="11" font-weight="bold">Virtual Gel</text>\n`;
 
     const allSizes = lanes.flatMap(l => l.fragments.map(f => f.length));
@@ -134,9 +136,11 @@ class GelElectrophoresisRenderer {
 
     for (const rungSize of this.ladderRungs) {
       const y = this._sizeToY(rungSize, maxSize, gelDrawHeight);
-      svg += `  <line x1="${this.leftMargin - 5}" y1="${y}" x2="${this.leftMargin + lanes.length * (this.laneWidth + this.laneGap)}" y2="${y}" ` +
+      svg +=
+        `  <line x1="${this.leftMargin - 5}" y1="${y}" x2="${this.leftMargin + lanes.length * (this.laneWidth + this.laneGap)}" y2="${y}" ` +
         `stroke="#333" stroke-width="0.3" stroke-dasharray="2,4"/>\n`;
-      svg += `  <text x="${this.leftMargin - 8}" y="${y + 4}" text-anchor="end" ` +
+      svg +=
+        `  <text x="${this.leftMargin - 8}" y="${y + 4}" text-anchor="end" ` +
         `fill="${this.labelColor}" font-size="9" opacity="0.7">${this._formatSize(rungSize)}</text>\n`;
     }
 
@@ -144,17 +148,20 @@ class GelElectrophoresisRenderer {
       const lane = lanes[laneIdx];
       const laneX = this.leftMargin + laneIdx * (this.laneWidth + this.laneGap) + this.laneGap / 2;
 
-      svg += `  <rect x="${laneX}" y="${this.topMargin}" width="${this.laneWidth}" height="${gelDrawHeight}" ` +
+      svg +=
+        `  <rect x="${laneX}" y="${this.topMargin}" width="${this.laneWidth}" height="${gelDrawHeight}" ` +
         `fill="#0d0d1a" rx="2" opacity="0.8"/>\n`;
 
-      svg += `  <text x="${laneX + this.laneWidth / 2}" y="${this.gelHeight - this.bottomMargin + 18}" ` +
+      svg +=
+        `  <text x="${laneX + this.laneWidth / 2}" y="${this.gelHeight - this.bottomMargin + 18}" ` +
         `text-anchor="middle" fill="${this.labelColor}" font-size="8" font-weight="bold">` +
         `${this._truncateLabel(lane.label, 10)}</text>\n`;
 
       if (lane.isLadder) {
         for (const frag of lane.fragments) {
           const y = this._sizeToY(frag.length, maxSize, gelDrawHeight);
-          svg += `  <rect x="${laneX + 4}" y="${y - 1.5}" width="${this.laneWidth - 8}" height="3" ` +
+          svg +=
+            `  <rect x="${laneX + 4}" y="${y - 1.5}" width="${this.laneWidth - 8}" height="3" ` +
             `fill="${this.markerColor}" opacity="0.9" rx="1"/>\n`;
         }
       } else {
@@ -180,11 +187,13 @@ class GelElectrophoresisRenderer {
           const bandHeight = 2 + intensityBoost * 1.5;
           const opacity = this.bandOpacity + intensityBoost * 0.1;
 
-          svg += `  <rect x="${laneX + 6}" y="${y - bandHeight / 2}" width="${this.laneWidth - 12}" height="${bandHeight}" ` +
+          svg +=
+            `  <rect x="${laneX + 6}" y="${y - bandHeight / 2}" width="${this.laneWidth - 12}" height="${bandHeight}" ` +
             `fill="${this.bandColor}" opacity="${Math.min(opacity, 1)}" rx="1" filter="url(#bandGlow)"/>\n`;
 
           if (frag.length > 5000 || sortedFrags.indexOf(frag) < 3) {
-            svg += `  <text x="${laneX + this.laneWidth - 4}" y="${y + 3}" text-anchor="end" ` +
+            svg +=
+              `  <text x="${laneX + this.laneWidth - 4}" y="${y + 3}" text-anchor="end" ` +
               `fill="#aaa" font-size="7">${this._formatSize(frag.length)}</text>\n`;
           }
         }
@@ -192,7 +201,8 @@ class GelElectrophoresisRenderer {
     }
 
     if (digestResult.enzymes) {
-      svg += `  <text x="${totalWidth / 2}" y="${this.gelHeight + 25}" text-anchor="middle" ` +
+      svg +=
+        `  <text x="${totalWidth / 2}" y="${this.gelHeight + 25}" text-anchor="middle" ` +
         `fill="${this.labelColor}" font-size="9" opacity="0.6">` +
         `${digestResult.chromosome || ''} | ${digestResult.totalFragments || '?'} fragments | ` +
         `${digestResult.sizeRange || '?'}</text>\n`;

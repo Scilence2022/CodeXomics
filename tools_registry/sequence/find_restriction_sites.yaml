@@ -1,5 +1,5 @@
 name: 'find_restriction_sites'
-description: 'Locates recognition and cleavage sites for restriction endonucleases in a genomic region. Supports 80+ enzymes with IUPAC ambiguity codes, staggered cut positions (5'' overhang, 3'' overhang, blunt end), and HF variants.'
+description: "Locates recognition and cleavage sites for restriction endonucleases in a genomic region. Supports 80+ enzymes with IUPAC ambiguity codes, staggered cut positions (5' overhang, 3' overhang, blunt end), and HF variants."
 parameters:
   type: 'object'
   properties:

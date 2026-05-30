@@ -1,6 +1,6 @@
 /**
  * GeneShapeCreators Module Validation Tests
- * 
+ *
  * Validates the extracted GeneShapeCreators module from TrackRenderer.js.
  * Tests that all 24 static methods load correctly, shape type detection
  * works, and SVG generation produces valid output.
@@ -104,9 +104,8 @@ describe('GeneShapeCreators Module', () => {
 
   describe('Shape type detection logic', () => {
     // Verify shouldUseSpecializedShape recognizes known types
-    const shapeTypes = ['promoter', 'terminator', 'regulatory', 'repeat',
-                        'tRNA', 'rRNA', 'mRNA', 'comment'];
-    
+    const shapeTypes = ['promoter', 'terminator', 'regulatory', 'repeat', 'tRNA', 'rRNA', 'mRNA', 'comment'];
+
     it('content should reference all specialized shape types', () => {
       for (const type of shapeTypes) {
         expect(content.includes(type), `Should reference ${type}`).toBe(true);
@@ -117,8 +116,8 @@ describe('GeneShapeCreators Module', () => {
   describe('SVG path generation', () => {
     it('should generate SVG path strings (contains d= attribute patterns)', () => {
       // All path creators should output SVG path 'd' attributes
-      expect(content).toContain("M ");
-      expect(content).toContain("L ");
+      expect(content).toContain('M ');
+      expect(content).toContain('L ');
     });
 
     it('should handle forward/reverse strand in jagged paths', () => {

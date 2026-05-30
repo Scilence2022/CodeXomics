@@ -26,8 +26,8 @@
 
 #### 2. 跨平台路径支持
 
-| 操作系统    | 默认数据库路径                                          |
-| ----------- | ------------------------------------------------------- |
+| 操作系统    | 默认数据库路径                                      |
+| ----------- | --------------------------------------------------- |
 | **Windows** | `%LOCALAPPDATA%\CodeXomics\blast\db`                |
 | **macOS**   | `~/Library/Application Support/CodeXomics/blast/db` |
 | **Linux**   | `~/.local/share/CodeXomics/blast/db`                |

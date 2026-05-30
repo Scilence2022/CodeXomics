@@ -45,7 +45,9 @@ class DeepResearchAgent extends AgentBase {
       // 获取MCP服务器管理器
       this.mcpServerManager = this.app.chatManager?.mcpServerManager || null;
       if (!this.mcpServerManager) {
-        console.warn('⚠️ DeepResearchAgent: MCP Server Manager not available, deep research tools will rely on ChatManager fallback');
+        console.warn(
+          '⚠️ DeepResearchAgent: MCP Server Manager not available, deep research tools will rely on ChatManager fallback'
+        );
       } else {
         // 检查Deep Research服务器连接（非阻塞）
         try {
@@ -74,10 +76,12 @@ class DeepResearchAgent extends AgentBase {
     // Try ChatManager first (authoritative execution path)
     if (chatManager && typeof chatManager.executeToolByName === 'function') {
       try {
-        const result = await chatManager.executeToolByName(functionName, parameters, {bypassAgent: true});
+        const result = await chatManager.executeToolByName(functionName, parameters, { bypassAgent: true });
         return result;
       } catch (error) {
-        console.warn(`DeepResearchAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+        console.warn(
+          `DeepResearchAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`
+        );
       }
     }
 
@@ -166,7 +170,7 @@ class DeepResearchAgent extends AgentBase {
     try {
       const savedConfig = this.configManager?.get('deepResearchConfig');
       if (savedConfig) {
-        this.researchConfig = {...this.researchConfig, ...savedConfig};
+        this.researchConfig = { ...this.researchConfig, ...savedConfig };
       }
 
       console.log(`📋 Research configuration loaded:`, this.researchConfig);
@@ -261,9 +265,9 @@ class DeepResearchAgent extends AgentBase {
 
       // 执行MCP工具
       const result = await this.mcpServerManager.executeToolOnServer(
-          deepResearchServer.id,
-          'deep-research',
-          parameters,
+        deepResearchServer.id,
+        'deep-research',
+        parameters
       );
 
       return result;
@@ -331,9 +335,9 @@ class DeepResearchAgent extends AgentBase {
     const content = result.content || result.result?.content || JSON.stringify(result);
     const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
     const urls = content.match(urlRegex) || [];
-    sources.push(...urls.map((url) => ({url, type: 'extracted'})));
+    sources.push(...urls.map(url => ({ url, type: 'extracted' })));
 
-    return [...new Set(sources.map((s) => (typeof s === 'string' ? s : s.url)))];
+    return [...new Set(sources.map(s => (typeof s === 'string' ? s : s.url)))];
   }
 
   /**
@@ -403,7 +407,7 @@ class DeepResearchAgent extends AgentBase {
    */
   async analyzeResearchResults(parameters, strategy) {
     try {
-      const {researchId, analysisType = 'comprehensive'} = parameters;
+      const { researchId, analysisType = 'comprehensive' } = parameters;
 
       if (!researchId) {
         throw new Error('Research ID is required');
@@ -444,7 +448,7 @@ class DeepResearchAgent extends AgentBase {
    */
   async synthesizeInformation(parameters, strategy) {
     try {
-      const {sources, synthesisType = 'comprehensive', focusAreas = [], outputFormat = 'structured'} = parameters;
+      const { sources, synthesisType = 'comprehensive', focusAreas = [], outputFormat = 'structured' } = parameters;
 
       if (!sources || sources.length === 0) {
         throw new Error('Sources are required for synthesis');
@@ -715,7 +719,7 @@ class DeepResearchAgent extends AgentBase {
   // 辅助方法
   countWords(text) {
     if (!text) return 0;
-    return text.split(/\s+/).filter((word) => word.length > 0).length;
+    return text.split(/\s+/).filter(word => word.length > 0).length;
   }
 
   extractKeyTopics(content) {
@@ -723,16 +727,16 @@ class DeepResearchAgent extends AgentBase {
     // 简单的关键词提取
     const words = content.toLowerCase().split(/\s+/);
     const wordFreq = {};
-    words.forEach((word) => {
+    words.forEach(word => {
       if (word.length > 4) {
         wordFreq[word] = (wordFreq[word] || 0) + 1;
       }
     });
 
     return Object.entries(wordFreq)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 10)
-        .map(([word]) => word);
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([word]) => word);
   }
 
   analyzeSentiment(content) {
@@ -742,8 +746,8 @@ class DeepResearchAgent extends AgentBase {
     const negativeWords = ['bad', 'poor', 'negative', 'harmful', 'ineffective'];
 
     const words = content.toLowerCase().split(/\s+/);
-    const positiveCount = words.filter((word) => positiveWords.includes(word)).length;
-    const negativeCount = words.filter((word) => negativeWords.includes(word)).length;
+    const positiveCount = words.filter(word => positiveWords.includes(word)).length;
+    const negativeCount = words.filter(word => negativeWords.includes(word)).length;
 
     if (positiveCount > negativeCount) return 'positive';
     if (negativeCount > positiveCount) return 'negative';
@@ -765,7 +769,7 @@ class DeepResearchAgent extends AgentBase {
     if (!sources || sources.length === 0) return 'unknown';
 
     const credibleDomains = ['edu', 'gov', 'org', 'nature.com', 'science.org'];
-    const credibleCount = sources.filter((source) => credibleDomains.some((domain) => source.includes(domain))).length;
+    const credibleCount = sources.filter(source => credibleDomains.some(domain => source.includes(domain))).length;
 
     const credibilityRatio = credibleCount / sources.length;
 
@@ -779,9 +783,9 @@ class DeepResearchAgent extends AgentBase {
     // 简单的关键洞察提取
     const sentences = content.split(/[.!?]+/);
     return sentences
-        .filter((sentence) => sentence.length > 50)
-        .slice(0, 5)
-        .map((sentence) => sentence.trim());
+      .filter(sentence => sentence.length > 50)
+      .slice(0, 5)
+      .map(sentence => sentence.trim());
   }
 
   extractPatterns(content) {
@@ -793,14 +797,14 @@ class DeepResearchAgent extends AgentBase {
     // 简单的结论提取
     const sentences = content.split(/[.!?]+/);
     return sentences
-        .filter(
-            (sentence) =>
-              sentence.toLowerCase().includes('conclusion') ||
+      .filter(
+        sentence =>
+          sentence.toLowerCase().includes('conclusion') ||
           sentence.toLowerCase().includes('therefore') ||
-          sentence.toLowerCase().includes('thus'),
-        )
-        .slice(0, 3)
-        .map((sentence) => sentence.trim());
+          sentence.toLowerCase().includes('thus')
+      )
+      .slice(0, 3)
+      .map(sentence => sentence.trim());
   }
 
   async generateVisualizations(researchResult) {
@@ -813,11 +817,11 @@ class DeepResearchAgent extends AgentBase {
   }
 
   async performComprehensiveAnalysis(researchResult) {
-    return {success: true, message: 'Comprehensive analysis not fully implemented yet'};
+    return { success: true, message: 'Comprehensive analysis not fully implemented yet' };
   }
 
   async performBasicAnalysis(researchResult) {
-    return {success: true, message: 'Basic analysis not fully implemented yet'};
+    return { success: true, message: 'Basic analysis not fully implemented yet' };
   }
 }
 

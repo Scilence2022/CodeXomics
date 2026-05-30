@@ -217,41 +217,48 @@ agent_notes: |
 
 ## Overview
 
-This skill places a genomic variant in its full biological and molecular context: what gene, 
-what codon, what protein domain, what regulatory region, and what molecular consequences. It 
-is designed to answer the central question in variant analysis: *"Is this variant functional?"*
+This skill places a genomic variant in its full biological and molecular context: what gene,
+what codon, what protein domain, what regulatory region, and what molecular consequences. It
+is designed to answer the central question in variant analysis: _"Is this variant functional?"_
 
 ## Step-by-Step Explanation
 
 ### Step 1 — Navigation
+
 Centres the genome viewer on the variant so the user has immediate visual context.
 
 ### Step 2 — `get_nearby_features`
-The pivotal step: determines whether the variant falls in a coding region, UTR, intron, 
+
+The pivotal step: determines whether the variant falls in a coding region, UTR, intron,
 intergenic region, or regulatory element.
 
 ### Steps 3–4 — Sequence Extraction & GC Context
+
 Retrieves 200 bp of reference sequence around the variant to enable downstream analyses.
 
 ### Steps 5–6 — Gene & CDS
+
 If the variant overlaps a gene, retrieves its annotation and coding sequence for protein
 consequence prediction.
 
 ### Step 7 — `translate_dna`
-Determines whether the variant would cause a synonymous, missense, nonsense, or frameshift 
+
+Determines whether the variant would cause a synonymous, missense, nonsense, or frameshift
 change at the protein level.
 
 ### Steps 8–9 — Restriction Sites & Motifs (parallel)
-Often-overlooked but important: restriction site changes affect genotyping assays; motif 
+
+Often-overlooked but important: restriction site changes affect genotyping assays; motif
 disruption affects transcription factor binding.
 
 ### Steps 10–11 — Domain Mapping
+
 Maps the variant position to known protein domains to determine structural/functional impact.
 
 ## Common Issues & Troubleshooting
 
-| Problem | Likely Cause | Solution |
-|---|---|---|
-| No overlapping features | Truly intergenic | Report distance to nearest gene (upstream/downstream) |
-| Protein translation mismatch | Variant at exon-intron boundary | Flag as potential splice site variant |
-| Multiple overlapping genes | Overlapping annotation | Report all and let user select |
+| Problem                      | Likely Cause                    | Solution                                              |
+| ---------------------------- | ------------------------------- | ----------------------------------------------------- |
+| No overlapping features      | Truly intergenic                | Report distance to nearest gene (upstream/downstream) |
+| Protein translation mismatch | Variant at exon-intron boundary | Flag as potential splice site variant                 |
+| Multiple overlapping genes   | Overlapping annotation          | Report all and let user select                        |

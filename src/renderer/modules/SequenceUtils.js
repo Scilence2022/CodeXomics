@@ -3527,15 +3527,21 @@ class SequenceUtils {
    * @returns {number} Molecular weight in Daltons
    */
   calculateMolecularWeight(sequence, type = 'auto') {
-    if (window.MicrobeGenomicsFunctions && typeof window.MicrobeGenomicsFunctions.calculateMolecularWeight === 'function') {
+    if (
+      window.MicrobeGenomicsFunctions &&
+      typeof window.MicrobeGenomicsFunctions.calculateMolecularWeight === 'function'
+    ) {
       return window.MicrobeGenomicsFunctions.calculateMolecularWeight(sequence, type);
     }
-    
+
     // Self-contained fallback
     if (!sequence || typeof sequence !== 'string') return 0;
-    const cleanSeq = sequence.trim().toUpperCase().replace(/[\s\d-]/g, '');
+    const cleanSeq = sequence
+      .trim()
+      .toUpperCase()
+      .replace(/[\s\d-]/g, '');
     if (cleanSeq.length === 0) return 0;
-    
+
     let detectedType = type;
     if (type === 'auto') {
       if (/^[ATGCNU]+$/.test(cleanSeq)) {
@@ -3544,7 +3550,7 @@ class SequenceUtils {
         detectedType = 'protein';
       }
     }
-    
+
     if (detectedType === 'dna' || detectedType === 'rna') {
       const weights = { A: 331.2, T: 322.2, G: 347.2, C: 307.2, U: 308.2, N: 327.0 };
       let weight = 0;
@@ -3554,11 +3560,30 @@ class SequenceUtils {
       return weight - (cleanSeq.length - 1) * 18.01;
     } else {
       const weights = {
-        A: 71.08, R: 156.19, N: 114.10, D: 115.09, C: 103.14,
-        E: 129.12, Q: 128.13, G: 57.05, H: 137.14, I: 113.16,
-        L: 113.16, K: 128.17, M: 131.20, F: 147.18, P: 97.12,
-        S: 87.08, T: 101.11, W: 186.21, Y: 163.18, V: 99.13,
-        U: 150.03, O: 237.30, '*': 0, X: 110.0
+        A: 71.08,
+        R: 156.19,
+        N: 114.1,
+        D: 115.09,
+        C: 103.14,
+        E: 129.12,
+        Q: 128.13,
+        G: 57.05,
+        H: 137.14,
+        I: 113.16,
+        L: 113.16,
+        K: 128.17,
+        M: 131.2,
+        F: 147.18,
+        P: 97.12,
+        S: 87.08,
+        T: 101.11,
+        W: 186.21,
+        Y: 163.18,
+        V: 99.13,
+        U: 150.03,
+        O: 237.3,
+        '*': 0,
+        X: 110.0,
       };
       let weight = 0;
       for (const aa of cleanSeq) {

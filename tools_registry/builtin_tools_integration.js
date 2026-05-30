@@ -1209,27 +1209,33 @@ class BuiltInToolsIntegration {
       /\b(task|tasks|todo|todos)\b/i.test(query) ||
       /\b(add|update|clear|list|show)\s+.*?\b(tasks?|todos?)\b/i.test(query)
     ) {
-      relevantTools.push({
-        name: 'add_task',
-        confidence: 0.9,
-        reason: 'Task management keywords detected',
-      }, {
-        name: 'update_task',
-        confidence: 0.9,
-        reason: 'Task management keywords detected',
-      }, {
-        name: 'list_tasks',
-        confidence: 0.9,
-        reason: 'Task management keywords detected',
-      }, {
-        name: 'clear_tasks',
-        confidence: 0.9,
-        reason: 'Task management keywords detected',
-      }, {
-        name: 'delete_task',
-        confidence: 0.9,
-        reason: 'Task management keywords detected',
-      });
+      relevantTools.push(
+        {
+          name: 'add_task',
+          confidence: 0.9,
+          reason: 'Task management keywords detected',
+        },
+        {
+          name: 'update_task',
+          confidence: 0.9,
+          reason: 'Task management keywords detected',
+        },
+        {
+          name: 'list_tasks',
+          confidence: 0.9,
+          reason: 'Task management keywords detected',
+        },
+        {
+          name: 'clear_tasks',
+          confidence: 0.9,
+          reason: 'Task management keywords detected',
+        },
+        {
+          name: 'delete_task',
+          confidence: 0.9,
+          reason: 'Task management keywords detected',
+        }
+      );
     }
 
     // Check for file loading patterns
@@ -1761,18 +1767,25 @@ class BuiltInToolsIntegration {
     }
 
     if (
-      /\b(show|display|open|view|inspect|get|list)\s+.*?\b(action\s+list|actions?\s+queue|sequence\s+editing\s+queue)\b/i.test(query) ||
-      /\b(action\s+list|actions?\s+queue|sequence\s+editing\s+queue)\s+.*?\b(show|display|open|view|inspect|get|list)\b/i.test(query)
+      /\b(show|display|open|view|inspect|get|list)\s+.*?\b(action\s+list|actions?\s+queue|sequence\s+editing\s+queue)\b/i.test(
+        query
+      ) ||
+      /\b(action\s+list|actions?\s+queue|sequence\s+editing\s+queue)\s+.*?\b(show|display|open|view|inspect|get|list)\b/i.test(
+        query
+      )
     ) {
-      relevantTools.push({
-        name: 'show_action_list',
-        confidence: 0.95,
-        reason: 'Action list interface keywords detected',
-      }, {
-        name: 'get_action_list',
-        confidence: 0.9,
-        reason: 'Action queue inspection keywords detected',
-      });
+      relevantTools.push(
+        {
+          name: 'show_action_list',
+          confidence: 0.95,
+          reason: 'Action list interface keywords detected',
+        },
+        {
+          name: 'get_action_list',
+          confidence: 0.9,
+          reason: 'Action queue inspection keywords detected',
+        }
+      );
     }
 
     // Check for clipboard content patterns

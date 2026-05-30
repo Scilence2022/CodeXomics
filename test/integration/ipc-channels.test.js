@@ -53,14 +53,7 @@ describe('IPC Channel Security & Consistency', () => {
 
     it('IPC channel names should not contain dangerous patterns', () => {
       const channelNames = mainContent.match(/ipcMain\.(?:handle|on)\(\s*['"]([^'"]+)['"]/g) || [];
-      const dangerousPatterns = [
-        /eval/i,
-        /exec/i,
-        /shell/i,
-        /command/i,
-        /spawn/i,
-        /child_process/i,
-      ];
+      const dangerousPatterns = [/eval/i, /exec/i, /shell/i, /command/i, /spawn/i, /child_process/i];
 
       const dangerous = channelNames.filter(ch => dangerousPatterns.some(p => p.test(ch)));
       if (dangerous.length > 0) {
@@ -75,14 +68,7 @@ describe('IPC Channel Security & Consistency', () => {
     });
 
     it('preload should not expose dangerous Node.js APIs directly', () => {
-      const dangerousApis = [
-        'require(',
-        'child_process',
-        'fs.',
-        'process.exit',
-        'net.connect',
-        'net.createServer',
-      ];
+      const dangerousApis = ['require(', 'child_process', 'fs.', 'process.exit', 'net.connect', 'net.createServer'];
 
       for (const api of dangerousApis) {
         // Check if the API is exposed outside of comments
@@ -101,9 +87,10 @@ describe('IPC Channel Security & Consistency', () => {
       // The current implementation doesn't validate channels - this is a known issue
       const hasRemoveAllListeners = preloadContent.includes('removeAllListeners');
       if (hasRemoveAllListeners) {
-        const hasValidation = preloadContent.includes('allowedChannels') ||
-                             preloadContent.includes('validChannels') ||
-                             preloadContent.includes('whitelist');
+        const hasValidation =
+          preloadContent.includes('allowedChannels') ||
+          preloadContent.includes('validChannels') ||
+          preloadContent.includes('whitelist');
         if (!hasValidation) {
           console.warn('SECURITY: removeAllListeners is exposed without channel validation in preload.js');
         }
@@ -138,7 +125,9 @@ describe('IPC Channel Security & Consistency', () => {
     it('should flag enableRemoteModule:true as a known security issue', () => {
       const remoteModuleTrue = (mainContent.match(/enableRemoteModule:\s*true/g) || []).length;
       if (remoteModuleTrue > 0) {
-        console.warn(`SECURITY: Found ${remoteModuleTrue} windows with enableRemoteModule:true (deprecated, known P1 issue)`);
+        console.warn(
+          `SECURITY: Found ${remoteModuleTrue} windows with enableRemoteModule:true (deprecated, known P1 issue)`
+        );
       }
     });
   });

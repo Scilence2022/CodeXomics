@@ -47,27 +47,27 @@ parameters:
     - geneName
 sample_usages:
   - user_query: 'Zoom to the lacZ gene'
-    tool_call: 'zoom_to_gene(geneName=''lacZ'')'
+    tool_call: "zoom_to_gene(geneName='lacZ')"
     thought: 'User wants to zoom the view to fit the lacZ gene'
     expected_result: 'Genome view centers on lacZ gene with 1000bp padding'
 
   - user_query: 'Focus on gene dnaA'
-    tool_call: 'zoom_to_gene(geneName=''dnaA'')'
+    tool_call: "zoom_to_gene(geneName='dnaA')"
     thought: 'User wants to center the view on dnaA gene'
     expected_result: 'View zooms to fit dnaA gene with surrounding context'
 
   - user_query: 'Zoom to fit the thrA gene in view'
-    tool_call: 'zoom_to_gene(geneName=''thrA'')'
+    tool_call: "zoom_to_gene(geneName='thrA')"
     thought: 'User explicitly asks to zoom/fit a gene in the view'
     expected_result: 'Genome view adjusts to show thrA gene completely'
 
   - user_query: 'Show me the araA gene region'
-    tool_call: 'zoom_to_gene(geneName=''araA'')'
+    tool_call: "zoom_to_gene(geneName='araA')"
     thought: 'User wants to see the araA gene region, which requires zooming to it'
     expected_result: 'View navigates and zooms to araA gene'
 
   - user_query: 'Center view on lacZ with 2000bp padding'
-    tool_call: 'zoom_to_gene(geneName=''lacZ'', padding=2000)'
+    tool_call: "zoom_to_gene(geneName='lacZ', padding=2000)"
     thought: 'User wants to zoom to lacZ with specific padding'
     expected_result: 'View centers on lacZ with 2000bp padding on each side'
 

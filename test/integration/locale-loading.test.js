@@ -8,7 +8,8 @@ import path from 'path';
 const LOCALES_PATH = path.join(process.cwd(), 'src', 'locales');
 
 describe('Locale Loading Integration', () => {
-  const languages = fs.readdirSync(LOCALES_PATH, { withFileTypes: true })
+  const languages = fs
+    .readdirSync(LOCALES_PATH, { withFileTypes: true })
     .filter(e => e.isDirectory())
     .map(e => e.name);
 
@@ -44,12 +45,14 @@ describe('Locale Loading Integration', () => {
   });
 
   it('en and zh-CN should have the same namespace keys', () => {
-    const enFiles = fs.readdirSync(path.join(LOCALES_PATH, 'en'))
+    const enFiles = fs
+      .readdirSync(path.join(LOCALES_PATH, 'en'))
       .filter(f => f.endsWith('.json'))
       .map(f => f.replace('.json', ''))
       .sort();
 
-    const zhFiles = fs.readdirSync(path.join(LOCALES_PATH, 'zh-CN'))
+    const zhFiles = fs
+      .readdirSync(path.join(LOCALES_PATH, 'zh-CN'))
       .filter(f => f.endsWith('.json'))
       .map(f => f.replace('.json', ''))
       .sort();
@@ -58,9 +61,7 @@ describe('Locale Loading Integration', () => {
   });
 
   it('common.json should have essential translation keys', () => {
-    const enCommon = JSON.parse(
-      fs.readFileSync(path.join(LOCALES_PATH, 'en', 'common.json'), 'utf-8')
-    );
+    const enCommon = JSON.parse(fs.readFileSync(path.join(LOCALES_PATH, 'en', 'common.json'), 'utf-8'));
     // Verify common.json has expected structure
     expect(enCommon).toHaveProperty('app');
     expect(enCommon.app).toHaveProperty('name');

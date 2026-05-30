@@ -210,63 +210,73 @@ agent_notes: |
 
 ## Overview
 
-Many genome annotations contain a significant proportion of genes labelled as "hypothetical 
-protein" or with low-confidence functional descriptions. This skill systematically interrogates 
+Many genome annotations contain a significant proportion of genes labelled as "hypothetical
+protein" or with low-confidence functional descriptions. This skill systematically interrogates
 UniProt (curated protein function), InterPro (domain architecture), and AlphaFold (3D structure)
 to upgrade these annotations with evidence-based functional descriptions.
 
-The skill follows the principle of **evidence hierarchy**: experimental > reviewed (Swiss-Prot) > 
+The skill follows the principle of **evidence hierarchy**: experimental > reviewed (Swiss-Prot) >
 computational (TrEMBL) > domain-only evidence.
 
 ## Step-by-Step Explanation
 
 ### Step 1 — `jump_to_gene`
-Visual navigation to the target locus — gives the user immediate context before 
+
+Visual navigation to the target locus — gives the user immediate context before
 the database queries complete.
 
 ### Step 2 — `get_gene_details`
-Retrieves coordinates, strand, product name, and any existing qualifiers already in the 
+
+Retrieves coordinates, strand, product name, and any existing qualifiers already in the
 annotation file. This is the baseline we are trying to improve.
 
 ### Steps 3–4 — `get_coding_sequence` → `translate_dna`
-Extracts CDS and protein sequence — essential for sequence-based database searches if the 
+
+Extracts CDS and protein sequence — essential for sequence-based database searches if the
 gene ID alone doesn't return a UniProt hit.
 
 ### Step 5 — `search_uniprot_database`
+
 Queries UniProt by gene name (± organism). Returns a ranked list of homologs.
 
 ### Step 6 — `get_uniprot_entry`
-Fetches the full annotated record for the top UniProt hit, including function text, 
+
+Fetches the full annotated record for the top UniProt hit, including function text,
 GO terms, subcellular location, and literature references.
 
 ### Step 7 — `analyze_interpro_domains`
-Catalogues the protein's domain architecture — often the most reliable functional evidence 
+
+Catalogues the protein's domain architecture — often the most reliable functional evidence
 for un-characterized genes.
 
 ### Step 8 — `search_alphafold_by_gene` (conditional)
-Retrieves structural information. AlphaFold structure can reveal functional sites even when 
+
+Retrieves structural information. AlphaFold structure can reveal functional sites even when
 sequence similarity is low (structural analogues).
 
 ### Step 9 — `codon_usage_analysis`
-Codon bias analysis can reveal genes acquired by horizontal gene transfer (unusual codon 
+
+Codon bias analysis can reveal genes acquired by horizontal gene transfer (unusual codon
 usage compared to the rest of the genome).
 
 ### Step 10 — `get_nearby_features`
-Genomic neighbourhood (flanking genes, operon context) provides indirect functional evidence 
+
+Genomic neighbourhood (flanking genes, operon context) provides indirect functional evidence
 through the principle of "guilt by association".
 
 ## Interpreting Results
 
 Always present:
+
 1. A comparison of the **original annotation** vs. **suggested new annotation**
 2. The **evidence chain** (which database, which accession, how confident)
 3. A note on whether the top UniProt hit is **reviewed (Swiss-Prot)** or unreviewed (TrEMBL)
 
 ## Common Issues & Troubleshooting
 
-| Problem | Likely Cause | Solution |
-|---|---|---|
-| No UniProt hits | Novel protein or unusual name | Try `advanced_uniprot_search` with protein sequence |
-| InterPro returns no domains | Very short gene or non-coding | Report protein length; check if annotation is correct |
-| AlphaFold model not found | Non-model organism | Try `search_alphafold_by_sequence` with the protein sequence |
-| Gene truly novel | No homologs anywhere | Report as "novel protein, no known homologs" with supporting evidence |
+| Problem                     | Likely Cause                  | Solution                                                              |
+| --------------------------- | ----------------------------- | --------------------------------------------------------------------- |
+| No UniProt hits             | Novel protein or unusual name | Try `advanced_uniprot_search` with protein sequence                   |
+| InterPro returns no domains | Very short gene or non-coding | Report protein length; check if annotation is correct                 |
+| AlphaFold model not found   | Non-model organism            | Try `search_alphafold_by_sequence` with the protein sequence          |
+| Gene truly novel            | No homologs anywhere          | Report as "novel protein, no known homologs" with supporting evidence |

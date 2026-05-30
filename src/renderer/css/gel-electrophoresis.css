@@ -65,7 +65,9 @@
   font-size: 14px;
   padding: 4px 8px;
   border-radius: 4px;
-  transition: color 0.2s, background 0.2s;
+  transition:
+    color 0.2s,
+    background 0.2s;
 }
 
 #gelElectrophoresisModal .modal-header .modal-controls button:hover,

@@ -19,23 +19,46 @@ describe('Window Management Module', () => {
   });
 
   it('should have 21 window creation functions', () => {
-    const funcs = ['createWindow', 'createCircosWindow', 'createKEGGWindow',
-      'createGOWindow', 'createUniProtWindow', 'createInterProWindow',
-      'createNCBIWindow', 'createSTRINGWindow', 'createDAVIDWindow',
-      'createReactomeWindow', 'createPDBWindow', 'createGeneAnnotationRefineWindow',
-      'createBlastDownloaderWindow', 'createBlastConfigWindow',
-      'createProGenFixerWindow', 'createDeepGeneResearchWindow',
-      'createChopchopWindow', 'createCustomExternalToolWindow',
-      'createProjectManagerWindow', 'getCurrentMainWindow', 'sendToCurrentMainWindow'];
+    const funcs = [
+      'createWindow',
+      'createCircosWindow',
+      'createKEGGWindow',
+      'createGOWindow',
+      'createUniProtWindow',
+      'createInterProWindow',
+      'createNCBIWindow',
+      'createSTRINGWindow',
+      'createDAVIDWindow',
+      'createReactomeWindow',
+      'createPDBWindow',
+      'createGeneAnnotationRefineWindow',
+      'createBlastDownloaderWindow',
+      'createBlastConfigWindow',
+      'createProGenFixerWindow',
+      'createDeepGeneResearchWindow',
+      'createChopchopWindow',
+      'createCustomExternalToolWindow',
+      'createProjectManagerWindow',
+      'getCurrentMainWindow',
+      'sendToCurrentMainWindow',
+    ];
     for (const fn of funcs) {
       expect(content.includes(fn), `Missing ${fn}`).toBe(true);
     }
   });
 
   it('should have 9 layout functions', () => {
-    const layouts = ['getDisplayWorkArea', 'getMainWindows', 'arrangeWindowsOptimal',
-      'arrangeWindowsSideBySide', 'arrangeMainWindowFocus', 'arrangeProjectManagerFocus',
-      'arrangeWindowsVertical', 'arrangeWindowsCascade', 'resetWindowPositions'];
+    const layouts = [
+      'getDisplayWorkArea',
+      'getMainWindows',
+      'arrangeWindowsOptimal',
+      'arrangeWindowsSideBySide',
+      'arrangeMainWindowFocus',
+      'arrangeProjectManagerFocus',
+      'arrangeWindowsVertical',
+      'arrangeWindowsCascade',
+      'resetWindowPositions',
+    ];
     for (const ln of layouts) {
       expect(content.includes(`function ${ln}`), `Missing ${ln}`).toBe(true);
     }

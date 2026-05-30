@@ -38,10 +38,12 @@ class DataAgent extends AgentBase {
     // Try ChatManager first (authoritative execution path)
     if (chatManager && typeof chatManager.executeToolByName === 'function') {
       try {
-        const result = await chatManager.executeToolByName(functionName, parameters, {bypassAgent: true});
+        const result = await chatManager.executeToolByName(functionName, parameters, { bypassAgent: true });
         return result;
       } catch (error) {
-        console.warn(`DataAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+        console.warn(
+          `DataAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`
+        );
       }
     }
 
@@ -127,7 +129,7 @@ class DataAgent extends AgentBase {
    */
   async getSequenceData(parameters, strategy) {
     try {
-      const {chromosome, start, end, format = 'fasta'} = parameters;
+      const { chromosome, start, end, format = 'fasta' } = parameters;
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
@@ -160,7 +162,7 @@ class DataAgent extends AgentBase {
         success: true,
         data: formattedData,
         format,
-        region: {chromosome, start, end},
+        region: { chromosome, start, end },
         length: sequence.length,
       };
     } catch (error) {
@@ -176,7 +178,7 @@ class DataAgent extends AgentBase {
    */
   async getGeneData(parameters, strategy) {
     try {
-      const {geneName, includeSequence = false} = parameters;
+      const { geneName, includeSequence = false } = parameters;
 
       if (!geneName) {
         throw new Error('Gene name is required');
@@ -221,7 +223,7 @@ class DataAgent extends AgentBase {
    */
   async getAnnotationData(parameters, strategy) {
     try {
-      const {chromosome, start, end, type = 'all'} = parameters;
+      const { chromosome, start, end, type = 'all' } = parameters;
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
@@ -232,7 +234,7 @@ class DataAgent extends AgentBase {
 
       return {
         success: true,
-        annotations: annotations.map((ann) => ({
+        annotations: annotations.map(ann => ({
           id: ann.id,
           type: ann.type,
           start: ann.start,
@@ -241,7 +243,7 @@ class DataAgent extends AgentBase {
           attributes: ann.attributes,
         })),
         count: annotations.length,
-        region: {chromosome, start, end},
+        region: { chromosome, start, end },
       };
     } catch (error) {
       return {
@@ -256,7 +258,7 @@ class DataAgent extends AgentBase {
    */
   async getTrackData(parameters, strategy) {
     try {
-      const {trackName, chromosome, start, end} = parameters;
+      const { trackName, chromosome, start, end } = parameters;
 
       if (!trackName) {
         throw new Error('Track name is required');
@@ -273,7 +275,7 @@ class DataAgent extends AgentBase {
         success: true,
         trackName,
         data: trackData,
-        region: {chromosome, start, end},
+        region: { chromosome, start, end },
       };
     } catch (error) {
       return {
@@ -288,7 +290,7 @@ class DataAgent extends AgentBase {
    */
   async exportSequence(parameters, strategy) {
     try {
-      const {chromosome, start, end, format = 'fasta', filename} = parameters;
+      const { chromosome, start, end, format = 'fasta', filename } = parameters;
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
@@ -319,7 +321,7 @@ class DataAgent extends AgentBase {
         message: `Sequence exported to ${savedFile}`,
         file: savedFile,
         format,
-        region: {chromosome, start, end},
+        region: { chromosome, start, end },
       };
     } catch (error) {
       return {
@@ -334,7 +336,7 @@ class DataAgent extends AgentBase {
    */
   async exportRegion(parameters, strategy) {
     try {
-      const {chromosome, start, end, includeAnnotations = true, format = 'gff'} = parameters;
+      const { chromosome, start, end, includeAnnotations = true, format = 'gff' } = parameters;
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
@@ -361,7 +363,7 @@ class DataAgent extends AgentBase {
         message: `Region exported to ${savedFile}`,
         file: savedFile,
         format,
-        region: {chromosome, start, end},
+        region: { chromosome, start, end },
       };
     } catch (error) {
       return {
@@ -376,7 +378,7 @@ class DataAgent extends AgentBase {
    */
   async exportGeneList(parameters, strategy) {
     try {
-      const {chromosome, start, end, format = 'csv'} = parameters;
+      const { chromosome, start, end, format = 'csv' } = parameters;
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
@@ -387,7 +389,7 @@ class DataAgent extends AgentBase {
       let content;
       if (format.toLowerCase() === 'csv') {
         content = 'Gene,Start,End,Strand,Type,Description\n';
-        annotations.forEach((gene) => {
+        annotations.forEach(gene => {
           content += `${gene.id},${gene.start},${gene.end},${gene.strand},${gene.type},${gene.attributes.description || ''}\n`;
         });
       } else if (format.toLowerCase() === 'json') {
@@ -422,7 +424,7 @@ class DataAgent extends AgentBase {
    */
   async exportTrackData(parameters, strategy) {
     try {
-      const {trackName, chromosome, start, end, format = 'wig'} = parameters;
+      const { trackName, chromosome, start, end, format = 'wig' } = parameters;
 
       if (!trackName) {
         throw new Error('Track name is required');
@@ -470,21 +472,21 @@ class DataAgent extends AgentBase {
    * 导出FASTA序列
    */
   async exportFastaSequence(parameters) {
-    return await this.exportSequence({...parameters, format: 'fasta'});
+    return await this.exportSequence({ ...parameters, format: 'fasta' });
   }
 
   /**
    * 导出GenBank格式
    */
   async exportGenbankFormat(parameters) {
-    return await this.exportSequence({...parameters, format: 'genbank'});
+    return await this.exportSequence({ ...parameters, format: 'genbank' });
   }
 
   /**
    * 导出GFF注释
    */
   async exportGffAnnotations(parameters) {
-    return await this.exportRegion({...parameters, format: 'gff', includeAnnotations: true});
+    return await this.exportRegion({ ...parameters, format: 'gff', includeAnnotations: true });
   }
 
   /**
@@ -495,12 +497,12 @@ class DataAgent extends AgentBase {
       if (this.services?.file?.exportBedFormat) {
         return await this.services.file.exportBedFormat(parameters);
       }
-      const {chromosome, start, end} = parameters;
+      const { chromosome, start, end } = parameters;
       const content = `${chromosome}\t${start}\t${end}\n`;
       const filename = `${chromosome}_${start}-${end}.bed`;
-      return {success: true, message: `BED exported to ${filename}`, file: filename, format: 'bed'};
+      return { success: true, message: `BED exported to ${filename}`, file: filename, format: 'bed' };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -509,12 +511,12 @@ class DataAgent extends AgentBase {
    */
   async exportCdsFasta(parameters) {
     try {
-      const {geneName, chromosome, start, end} = parameters;
+      const { geneName, chromosome, start, end } = parameters;
       const sequence = await this.app.sequenceUtils.getSequence(chromosome, start, end);
       const content = `>${geneName || 'CDS'}:${chromosome}:${start}-${end}\n${sequence}`;
-      return {success: true, content, format: 'fasta'};
+      return { success: true, content, format: 'fasta' };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -523,11 +525,11 @@ class DataAgent extends AgentBase {
    */
   async exportProteinFasta(parameters) {
     try {
-      const {geneName, proteinSequence} = parameters;
+      const { geneName, proteinSequence } = parameters;
       const content = `>${geneName || 'protein'}\n${proteinSequence || ''}`;
-      return {success: true, content, format: 'fasta'};
+      return { success: true, content, format: 'fasta' };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -538,9 +540,15 @@ class DataAgent extends AgentBase {
     try {
       const app = this.app;
       const state = await app.genomeBrowser.getCurrentState();
-      return await this.exportSequence({...parameters, chromosome: state.chromosome, start: state.start, end: state.end, format: 'fasta'});
+      return await this.exportSequence({
+        ...parameters,
+        chromosome: state.chromosome,
+        start: state.start,
+        end: state.end,
+        format: 'fasta',
+      });
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -550,14 +558,14 @@ class DataAgent extends AgentBase {
    * 加载基因组文件
    */
   async loadGenomeFile(parameters) {
-    return await this.importSequence({...parameters, format: 'auto'});
+    return await this.importSequence({ ...parameters, format: 'auto' });
   }
 
   /**
    * 加载注释文件
    */
   async loadAnnotationFile(parameters) {
-    return await this.importAnnotation({...parameters, format: 'gff'});
+    return await this.importAnnotation({ ...parameters, format: 'gff' });
   }
 
   /**
@@ -565,11 +573,11 @@ class DataAgent extends AgentBase {
    */
   async loadVariantFile(parameters) {
     try {
-      const {filePath} = parameters;
+      const { filePath } = parameters;
       if (!filePath) throw new Error('File path is required');
-      return {success: true, message: `Variant file loaded: ${filePath}`};
+      return { success: true, message: `Variant file loaded: ${filePath}` };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -578,11 +586,11 @@ class DataAgent extends AgentBase {
    */
   async loadReadsFile(parameters) {
     try {
-      const {filePath} = parameters;
+      const { filePath } = parameters;
       if (!filePath) throw new Error('File path is required');
-      return {success: true, message: `Reads file loaded: ${filePath}`};
+      return { success: true, message: `Reads file loaded: ${filePath}` };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -590,7 +598,7 @@ class DataAgent extends AgentBase {
    * 加载WIG轨道
    */
   async loadWigTracks(parameters) {
-    return await this.importTrackData({...parameters, format: 'wig'});
+    return await this.importTrackData({ ...parameters, format: 'wig' });
   }
 
   // === BuiltInToolsMap-aligned retrieval methods ===
@@ -600,14 +608,14 @@ class DataAgent extends AgentBase {
    */
   async getOperons(parameters) {
     try {
-      const {chromosome, start, end} = parameters;
+      const { chromosome, start, end } = parameters;
       if (this.app.annotationManager && typeof this.app.annotationManager.getOperons === 'function') {
         const operons = await this.app.annotationManager.getOperons(chromosome, start, end);
-        return {success: true, operons, count: operons.length};
+        return { success: true, operons, count: operons.length };
       }
-      return {success: false, error: 'get_operons requires ChatManager or annotationManager implementation'};
+      return { success: false, error: 'get_operons requires ChatManager or annotationManager implementation' };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -616,14 +624,14 @@ class DataAgent extends AgentBase {
    */
   async getNearbyFeatures(parameters) {
     try {
-      const {chromosome, position, distance = 1000} = parameters;
+      const { chromosome, position, distance = 1000 } = parameters;
       if (this.app.annotationManager && typeof this.app.annotationManager.getNearbyFeatures === 'function') {
         const features = await this.app.annotationManager.getNearbyFeatures(chromosome, position, distance);
-        return {success: true, features, count: features.length};
+        return { success: true, features, count: features.length };
       }
-      return {success: false, error: 'get_nearby_features requires ChatManager or annotationManager implementation'};
+      return { success: false, error: 'get_nearby_features requires ChatManager or annotationManager implementation' };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -632,14 +640,17 @@ class DataAgent extends AgentBase {
    */
   async findIntergenicRegions(parameters) {
     try {
-      const {chromosome, start, end} = parameters;
+      const { chromosome, start, end } = parameters;
       if (this.app.annotationManager && typeof this.app.annotationManager.findIntergenicRegions === 'function') {
         const regions = await this.app.annotationManager.findIntergenicRegions(chromosome, start, end);
-        return {success: true, regions, count: regions.length};
+        return { success: true, regions, count: regions.length };
       }
-      return {success: false, error: 'find_intergenic_regions requires ChatManager or annotationManager implementation'};
+      return {
+        success: false,
+        error: 'find_intergenic_regions requires ChatManager or annotationManager implementation',
+      };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -655,7 +666,7 @@ class DataAgent extends AgentBase {
    */
   async importSequence(parameters, strategy) {
     try {
-      const {filePath, format = 'auto'} = parameters;
+      const { filePath, format = 'auto' } = parameters;
 
       if (!filePath) {
         throw new Error('File path is required');
@@ -676,7 +687,7 @@ class DataAgent extends AgentBase {
       return {
         success: true,
         message: `Imported ${sequences.length} sequences`,
-        sequences: sequences.map((s) => ({chromosome: s.chromosome, start: s.start, end: s.end})),
+        sequences: sequences.map(s => ({ chromosome: s.chromosome, start: s.start, end: s.end })),
       };
     } catch (error) {
       return {
@@ -691,7 +702,7 @@ class DataAgent extends AgentBase {
    */
   async importAnnotation(parameters, strategy) {
     try {
-      const {filePath, format = 'gff'} = parameters;
+      const { filePath, format = 'gff' } = parameters;
 
       if (!filePath) {
         throw new Error('File path is required');
@@ -727,7 +738,7 @@ class DataAgent extends AgentBase {
    */
   async importTrackData(parameters, strategy) {
     try {
-      const {filePath, trackName, format = 'wig'} = parameters;
+      const { filePath, trackName, format = 'wig' } = parameters;
 
       if (!filePath || !trackName) {
         throw new Error('File path and track name are required');
@@ -762,7 +773,7 @@ class DataAgent extends AgentBase {
    */
   async searchGenes(parameters, strategy) {
     try {
-      const {query, chromosome, type = 'all'} = parameters;
+      const { query, chromosome, type = 'all' } = parameters;
 
       if (!query) {
         throw new Error('Search query is required');
@@ -772,7 +783,7 @@ class DataAgent extends AgentBase {
 
       return {
         success: true,
-        genes: genes.map((gene) => ({
+        genes: genes.map(gene => ({
           id: gene.id,
           name: gene.name,
           chromosome: gene.chromosome,
@@ -797,7 +808,7 @@ class DataAgent extends AgentBase {
    */
   async searchSequences(parameters, strategy) {
     try {
-      const {sequence, chromosome, maxMismatches = 0} = parameters;
+      const { sequence, chromosome, maxMismatches = 0 } = parameters;
 
       if (!sequence) {
         throw new Error('Search sequence is required');
@@ -807,7 +818,7 @@ class DataAgent extends AgentBase {
 
       return {
         success: true,
-        matches: matches.map((match) => ({
+        matches: matches.map(match => ({
           chromosome: match.chromosome,
           start: match.start,
           end: match.end,
@@ -830,7 +841,7 @@ class DataAgent extends AgentBase {
    */
   async searchAnnotations(parameters, strategy) {
     try {
-      const {query, type = 'all', chromosome} = parameters;
+      const { query, type = 'all', chromosome } = parameters;
 
       if (!query) {
         throw new Error('Search query is required');
@@ -840,7 +851,7 @@ class DataAgent extends AgentBase {
 
       return {
         success: true,
-        annotations: annotations.map((ann) => ({
+        annotations: annotations.map(ann => ({
           id: ann.id,
           type: ann.type,
           chromosome: ann.chromosome,
@@ -864,7 +875,7 @@ class DataAgent extends AgentBase {
    */
   async getDataStatistics(parameters, strategy) {
     try {
-      const {chromosome} = parameters;
+      const { chromosome } = parameters;
 
       const stats = await this.app.dataManager.getStatistics(chromosome);
 
@@ -924,9 +935,9 @@ class DataAgent extends AgentBase {
       `VERSION     ${chromosome}_${start}_${end}.1\n` +
       `ORIGIN\n` +
       sequence
-          .match(/.{1,60}/g)
-          .map((line, i) => `${String(i * 60 + 1).padStart(9)} ${line}`)
-          .join('\n') +
+        .match(/.{1,60}/g)
+        .map((line, i) => `${String(i * 60 + 1).padStart(9)} ${line}`)
+        .join('\n') +
       '\n' +
       `//\n`
     );
@@ -938,7 +949,7 @@ class DataAgent extends AgentBase {
   formatGFF(chromosome, start, end, sequence, annotations) {
     let gff = `##gff-version 3\n` + `##sequence-region ${chromosome} ${start} ${end}\n`;
 
-    annotations.forEach((ann) => {
+    annotations.forEach(ann => {
       gff += `${chromosome}\t.\t${ann.type}\t${ann.start}\t${ann.end}\t.\t${ann.strand}\t.\tID=${ann.id};Name=${ann.attributes.name || ann.id}\n`;
     });
 
@@ -951,7 +962,7 @@ class DataAgent extends AgentBase {
   formatWIG(trackName, chromosome, trackData) {
     let wig = `track type=wiggle_0 name="${trackName}"\n` + `fixedStep chrom=${chromosome} start=1 step=1\n`;
 
-    trackData.forEach((point) => {
+    trackData.forEach(point => {
       wig += `${point.value}\n`;
     });
 
@@ -964,7 +975,7 @@ class DataAgent extends AgentBase {
   formatBedGraph(trackName, trackData) {
     let bedgraph = `track type=bedGraph name="${trackName}"\n`;
 
-    trackData.forEach((point) => {
+    trackData.forEach(point => {
       bedgraph += `${point.chromosome}\t${point.start}\t${point.end}\t${point.value}\n`;
     });
 
@@ -1008,7 +1019,7 @@ class DataAgent extends AgentBase {
 
     if (format === 'gff') {
       const lines = content.split('\n');
-      lines.forEach((line) => {
+      lines.forEach(line => {
         if (line.startsWith('#') || !line.trim()) return;
 
         const fields = line.split('\t');
@@ -1039,7 +1050,7 @@ class DataAgent extends AgentBase {
     const attributes = {};
     const pairs = attributesString.split(';');
 
-    pairs.forEach((pair) => {
+    pairs.forEach(pair => {
       const [key, value] = pair.split('=');
       if (key && value) {
         attributes[key.trim()] = value.trim();
@@ -1061,7 +1072,7 @@ class DataAgent extends AgentBase {
       let currentStart = null;
       let currentStep = null;
 
-      lines.forEach((line) => {
+      lines.forEach(line => {
         if (line.startsWith('track')) return;
 
         if (line.startsWith('fixedStep')) {
@@ -1092,12 +1103,22 @@ class DataAgent extends AgentBase {
    */
   async createAnnotation(parameters) {
     if (this.multiAgentSystem.chatManager) {
-      return await this.multiAgentSystem.chatManager.executeToolByName('create_annotation', parameters, {bypassAgent: true});
+      return await this.multiAgentSystem.chatManager.executeToolByName('create_annotation', parameters, {
+        bypassAgent: true,
+      });
     }
-    const {chromosome, start, end, type, name, attributes} = parameters;
-    const annotation = {id: name, chromosome, start, end, type, strand: parameters.strand || '+', attributes: attributes || {}};
+    const { chromosome, start, end, type, name, attributes } = parameters;
+    const annotation = {
+      id: name,
+      chromosome,
+      start,
+      end,
+      type,
+      strand: parameters.strand || '+',
+      attributes: attributes || {},
+    };
     await this.app.annotationManager.addAnnotation(annotation);
-    return {success: true, annotation};
+    return { success: true, annotation };
   }
 
   /**
@@ -1105,7 +1126,9 @@ class DataAgent extends AgentBase {
    */
   async updateAnnotation(parameters) {
     if (this.multiAgentSystem.chatManager) {
-      return await this.multiAgentSystem.chatManager.executeToolByName('update_annotation', parameters, {bypassAgent: true});
+      return await this.multiAgentSystem.chatManager.executeToolByName('update_annotation', parameters, {
+        bypassAgent: true,
+      });
     }
     throw new Error('update_annotation requires ChatManager execution');
   }
@@ -1115,7 +1138,9 @@ class DataAgent extends AgentBase {
    */
   async deleteAnnotation(parameters) {
     if (this.multiAgentSystem.chatManager) {
-      return await this.multiAgentSystem.chatManager.executeToolByName('delete_annotation', parameters, {bypassAgent: true});
+      return await this.multiAgentSystem.chatManager.executeToolByName('delete_annotation', parameters, {
+        bypassAgent: true,
+      });
     }
     throw new Error('delete_annotation requires ChatManager execution');
   }
@@ -1125,7 +1150,9 @@ class DataAgent extends AgentBase {
    */
   async bulkUpdateAnnotations(parameters) {
     if (this.multiAgentSystem.chatManager) {
-      return await this.multiAgentSystem.chatManager.executeToolByName('bulk_update_annotations', parameters, {bypassAgent: true});
+      return await this.multiAgentSystem.chatManager.executeToolByName('bulk_update_annotations', parameters, {
+        bypassAgent: true,
+      });
     }
     throw new Error('bulk_update_annotations requires ChatManager execution');
   }
@@ -1135,7 +1162,9 @@ class DataAgent extends AgentBase {
    */
   async getAnnotationHistory(parameters) {
     if (this.multiAgentSystem.chatManager) {
-      return await this.multiAgentSystem.chatManager.executeToolByName('get_annotation_history', parameters, {bypassAgent: true});
+      return await this.multiAgentSystem.chatManager.executeToolByName('get_annotation_history', parameters, {
+        bypassAgent: true,
+      });
     }
     throw new Error('get_annotation_history requires ChatManager execution');
   }

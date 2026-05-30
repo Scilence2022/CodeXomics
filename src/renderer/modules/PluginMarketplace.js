@@ -1199,7 +1199,11 @@ class PluginMarketplace {
           // Use new Function instead of eval — while not fully sandboxed,
           // it avoids eval's scope access and is slightly more controlled
           const pluginFactory = new Function(
-            'module', 'exports', 'console', 'document', 'window',
+            'module',
+            'exports',
+            'console',
+            'document',
+            'window',
             pluginCode + '\nreturn module.exports;'
           );
 

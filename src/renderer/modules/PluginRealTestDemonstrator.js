@@ -36,10 +36,11 @@ class PluginRealTestDemonstrator {
     let basePath = null;
 
     // Helper: check if a directory looks like the project root
-    const isProjectRoot = (dir) => {
+    const isProjectRoot = dir => {
       try {
-        return fs.existsSync(path.join(dir, 'package.json')) &&
-               fs.existsSync(path.join(dir, 'src', 'renderer', 'modules'));
+        return (
+          fs.existsSync(path.join(dir, 'package.json')) && fs.existsSync(path.join(dir, 'src', 'renderer', 'modules'))
+        );
       } catch (e) {
         return false;
       }

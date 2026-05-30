@@ -36,9 +36,7 @@ class NotificationService {
    */
   toast(message, type = 'info', options = {}) {
     // Don't show duplicates of the same message within 1 second
-    const recentDuplicate = this._activeToasts.find(
-      t => t.message === message && Date.now() - t.timestamp < 1000
-    );
+    const recentDuplicate = this._activeToasts.find(t => t.message === message && Date.now() - t.timestamp < 1000);
     if (recentDuplicate) return recentDuplicate.element;
 
     // Remove oldest toast if we've reached max
@@ -74,7 +72,7 @@ class NotificationService {
    * @returns {Promise<boolean>} True if confirmed
    */
   confirm(message, title = 'Confirm') {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const overlay = this._createConfirmOverlay(message, title, resolve);
       document.body.appendChild(overlay);
       requestAnimationFrame(() => overlay.classList.add('show'));
@@ -88,7 +86,7 @@ class NotificationService {
    * @returns {Promise<string|null>} Input value or null if cancelled
    */
   prompt(message, defaultValue = '') {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const overlay = this._createPromptOverlay(message, defaultValue, resolve);
       document.body.appendChild(overlay);
       requestAnimationFrame(() => overlay.classList.add('show'));
@@ -182,7 +180,7 @@ class NotificationService {
       this._removeOverlay(overlay);
       resolve(false);
     });
-    overlay.addEventListener('click', (e) => {
+    overlay.addEventListener('click', e => {
       if (e.target === overlay) {
         this._removeOverlay(overlay);
         resolve(false);
@@ -190,7 +188,7 @@ class NotificationService {
     });
 
     // Escape key closes
-    const escHandler = (e) => {
+    const escHandler = e => {
       if (e.key === 'Escape') {
         this._removeOverlay(overlay);
         resolve(false);
@@ -235,7 +233,7 @@ class NotificationService {
     });
 
     // Enter key confirms
-    input.addEventListener('keydown', (e) => {
+    input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         this._removeOverlay(overlay);
         resolve(input.value);
@@ -291,10 +289,14 @@ class NotificationService {
    */
   _getIcon(type) {
     switch (type) {
-      case 'success': return '✓';
-      case 'error':   return '✕';
-      case 'warn':    return '⚠';
-      default:        return 'ℹ';
+      case 'success':
+        return '✓';
+      case 'error':
+        return '✕';
+      case 'warn':
+        return '⚠';
+      default:
+        return 'ℹ';
     }
   }
 

@@ -41,7 +41,7 @@ class BenchmarkEvaluatorBase {
       total: this.results.length,
       passed,
       failed,
-      passRate: this.results.length > 0 ? (passed / this.results.length * 100).toFixed(1) + '%' : '0%',
+      passRate: this.results.length > 0 ? ((passed / this.results.length) * 100).toFixed(1) + '%' : '0%',
     };
   }
 
@@ -94,16 +94,14 @@ describe('BenchmarkEvaluatorBase', () => {
   it('should track running state', async () => {
     const evaluator = new LLMBenchmarkEvaluator();
     expect(evaluator.isRunning).toBe(false);
-    
+
     // Use a test that takes time to verify running state
-    const task = evaluator.run([
-      { id: '1', expected: 'a', actual: 'a' },
-    ]);
-    
+    const task = evaluator.run([{ id: '1', expected: 'a', actual: 'a' }]);
+
     // Immediately after starting, should be running (or already done in fast sync)
     const runState = evaluator.isRunning;
     expect(typeof runState).toBe('boolean');
-    
+
     await task;
     expect(evaluator.isRunning).toBe(false);
   });
@@ -128,8 +126,10 @@ describe('BenchmarkEvaluatorBase', () => {
 
   it('4 subclasses should exist and extend base', () => {
     const subclasses = [
-      LLMBenchmarkEvaluator, ToolBenchmarkEvaluator,
-      PerformanceBenchmarkEvaluator, AccuracyBenchmarkEvaluator,
+      LLMBenchmarkEvaluator,
+      ToolBenchmarkEvaluator,
+      PerformanceBenchmarkEvaluator,
+      AccuracyBenchmarkEvaluator,
     ];
     for (const Subclass of subclasses) {
       const instance = new Subclass();

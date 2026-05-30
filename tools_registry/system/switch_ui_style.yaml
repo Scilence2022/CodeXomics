@@ -3,7 +3,25 @@ name: 'switch_ui_style'
 version: '1.0.0'
 description: "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 6 preset styles and dark/light mode toggle."
 category: 'system'
-keywords: ['ui style', 'theme', 'style', 'appearance', 'dark mode', 'light mode', 'color scheme', 'visual style', 'switch style', 'change theme', 'change appearance', 'switch theme', 'toggle dark', 'toggle light', 'ui style', 'look and feel']
+keywords:
+  [
+    'ui style',
+    'theme',
+    'style',
+    'appearance',
+    'dark mode',
+    'light mode',
+    'color scheme',
+    'visual style',
+    'switch style',
+    'change theme',
+    'change appearance',
+    'switch theme',
+    'toggle dark',
+    'toggle light',
+    'ui style',
+    'look and feel',
+  ]
 priority: 1
 
 # Tool execution metadata

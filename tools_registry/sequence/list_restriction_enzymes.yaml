@@ -1,5 +1,5 @@
 name: 'list_restriction_enzymes'
-description: 'List available restriction enzymes from the built-in database (80+ enzymes). Supports filtering by name query, recognition sequence length, overhang type (5'' overhang, 3'' overhang, blunt), and commercial availability. Also shows isoschizomers and HF variants.'
+description: "List available restriction enzymes from the built-in database (80+ enzymes). Supports filtering by name query, recognition sequence length, overhang type (5' overhang, 3' overhang, blunt), and commercial availability. Also shows isoschizomers and HF variants."
 parameters:
   type: 'object'
   properties:

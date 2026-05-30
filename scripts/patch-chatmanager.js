@@ -13,7 +13,7 @@ const nextMethodIndex = content.indexOf(endMarker, startIndex);
 if (startIndex !== -1 && nextMethodIndex !== -1) {
   const before = content.substring(0, startIndex);
   const after = content.substring(nextMethodIndex);
-  
+
   const newMethod = `async executeToolByName(toolName, parameters) {
     if (!this.services || !this.services.execution) {
        console.error('[ChatManager] ToolExecutionService not initialized!');
@@ -23,7 +23,7 @@ if (startIndex !== -1 && nextMethodIndex !== -1) {
   }
 
 `;
-  
+
   content = before + newMethod + after;
   fs.writeFileSync(targetFile, content, 'utf8');
   console.log('Successfully replaced executeToolByName!');

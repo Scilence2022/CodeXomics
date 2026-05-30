@@ -48,10 +48,10 @@ class CircosPlotter {
     // Unified data interface
     this.dataProcessor = new CircosDataProcessor(this);
 
-  // Pre-computed data tracks from real genome (populated via IPC)
-  // Computed at gcWindowSize=10000 in the main window; used when available
-  // regardless of current gcWindowSize slider (which affects synthetic fallback)
-  this.preComputedTracks = null;
+    // Pre-computed data tracks from real genome (populated via IPC)
+    // Computed at gcWindowSize=10000 in the main window; used when available
+    // regardless of current gcWindowSize slider (which affects synthetic fallback)
+    this.preComputedTracks = null;
 
     // Legend properties
     this.showLegend = true;
@@ -68,24 +68,53 @@ class CircosPlotter {
         name: 'Scientific',
         description: 'Professional academic style for high-impact publications',
         chromosomes: [
-          '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
-          '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#aec7e8', '#ffbb78',
-          '#98df8a', '#ff9896', '#c5b0d5', '#c49c94', '#f7b6d3', '#c7c7c7',
-          '#dbdb8d', '#9edae5', '#393b79', '#637939', '#8c6d31', '#843c39',
+          '#1f77b4',
+          '#ff7f0e',
+          '#2ca02c',
+          '#d62728',
+          '#9467bd',
+          '#8c564b',
+          '#e377c2',
+          '#7f7f7f',
+          '#bcbd22',
+          '#17becf',
+          '#aec7e8',
+          '#ffbb78',
+          '#98df8a',
+          '#ff9896',
+          '#c5b0d5',
+          '#c49c94',
+          '#f7b6d3',
+          '#c7c7c7',
+          '#dbdb8d',
+          '#9edae5',
+          '#393b79',
+          '#637939',
+          '#8c6d31',
+          '#843c39',
         ],
         background: '#ffffff',
         stroke: '#2c3e50',
         genes: {
-          protein_coding: '#27ae60', non_coding: '#f39c12',
-          pseudogene: '#e74c3c', regulatory: '#8e44ad', default: '#7f8c8d',
+          protein_coding: '#27ae60',
+          non_coding: '#f39c12',
+          pseudogene: '#e74c3c',
+          regulatory: '#8e44ad',
+          default: '#7f8c8d',
         },
         tracks: {
-          gc_content: '#27ae60', gc_skew: '#e74c3c', wig_data: '#9b59b6',
-          expression_high: '#e74c3c', expression_medium: '#f39c12',
-          expression_low: '#3498db', baseline: '#bdc3c7',
+          gc_content: '#27ae60',
+          gc_skew: '#e74c3c',
+          wig_data: '#9b59b6',
+          expression_high: '#e74c3c',
+          expression_medium: '#f39c12',
+          expression_low: '#3498db',
+          baseline: '#bdc3c7',
         },
         links: {
-          strong: '#2c3e50', medium: '#34495e', weak: '#7f8c8d',
+          strong: '#2c3e50',
+          medium: '#34495e',
+          weak: '#7f8c8d',
           gradient: ['#3498db', '#e74c3c'],
         },
         text: '#2c3e50',
@@ -96,184 +125,399 @@ class CircosPlotter {
         name: 'Nature',
         description: 'Earth-tone palette for ecological and plant genomics',
         chromosomes: [
-          '#2d5016', '#4a7c59', '#6b9080', '#a4c3a2', '#84a98c', '#52796f',
-          '#354f52', '#2f3e46', '#588157', '#3a5a40', '#344e41', '#dad7cd',
-          '#a3b18a', '#588157', '#3a5a40', '#606c38', '#283618', '#fefae0',
-          '#dda15e', '#bc6c25', '#8b5cf6', '#a855f7', '#9333ea', '#7c3aed',
+          '#2d5016',
+          '#4a7c59',
+          '#6b9080',
+          '#a4c3a2',
+          '#84a98c',
+          '#52796f',
+          '#354f52',
+          '#2f3e46',
+          '#588157',
+          '#3a5a40',
+          '#344e41',
+          '#dad7cd',
+          '#a3b18a',
+          '#588157',
+          '#3a5a40',
+          '#606c38',
+          '#283618',
+          '#fefae0',
+          '#dda15e',
+          '#bc6c25',
+          '#8b5cf6',
+          '#a855f7',
+          '#9333ea',
+          '#7c3aed',
         ],
         background: '#fefae0',
         stroke: '#283618',
         genes: {
-          protein_coding: '#2d5016', non_coding: '#bc6c25',
-          pseudogene: '#8b5cf6', regulatory: '#6b9080', default: '#606c38',
+          protein_coding: '#2d5016',
+          non_coding: '#bc6c25',
+          pseudogene: '#8b5cf6',
+          regulatory: '#6b9080',
+          default: '#606c38',
         },
         tracks: {
-          gc_content: '#2d5016', gc_skew: '#bc6c25', wig_data: '#8b5cf6',
-          expression_high: '#8b5cf6', expression_medium: '#bc6c25',
-          expression_low: '#6b9080', baseline: '#a3b18a',
+          gc_content: '#2d5016',
+          gc_skew: '#bc6c25',
+          wig_data: '#8b5cf6',
+          expression_high: '#8b5cf6',
+          expression_medium: '#bc6c25',
+          expression_low: '#6b9080',
+          baseline: '#a3b18a',
         },
         links: {
-          strong: '#2d5016', medium: '#4a7c59', weak: '#84a98c',
+          strong: '#2d5016',
+          medium: '#4a7c59',
+          weak: '#84a98c',
           gradient: ['#6b9080', '#bc6c25'],
         },
-        text: '#283618', ticks: '#606c38',
+        text: '#283618',
+        ticks: '#606c38',
         legend: { background: '#f7f3e9', border: '#d4c5a9', text: '#283618' },
       },
       ocean: {
         name: 'Ocean',
         description: 'Deep blue gradient for marine biology and aquatic genomics',
         chromosomes: [
-          '#003f5c', '#2f4b7c', '#665191', '#a05195', '#d45087', '#f95d6a',
-          '#ff7c43', '#ffa600', '#0077be', '#00a8cc', '#7dd3c0', '#d4f1f4',
-          '#006ba6', '#0496c7', '#5fbdbd', '#7dd3c0', '#a2d5f2', '#bee9e8',
-          '#62b6cb', '#1b4965', '#cae9ff', '#5fa8d3', '#1b4965', '#bee9e8',
+          '#003f5c',
+          '#2f4b7c',
+          '#665191',
+          '#a05195',
+          '#d45087',
+          '#f95d6a',
+          '#ff7c43',
+          '#ffa600',
+          '#0077be',
+          '#00a8cc',
+          '#7dd3c0',
+          '#d4f1f4',
+          '#006ba6',
+          '#0496c7',
+          '#5fbdbd',
+          '#7dd3c0',
+          '#a2d5f2',
+          '#bee9e8',
+          '#62b6cb',
+          '#1b4965',
+          '#cae9ff',
+          '#5fa8d3',
+          '#1b4965',
+          '#bee9e8',
         ],
-        background: '#f0f9ff', stroke: '#1b4965',
+        background: '#f0f9ff',
+        stroke: '#1b4965',
         genes: {
-          protein_coding: '#0077be', non_coding: '#ff7c43',
-          pseudogene: '#a05195', regulatory: '#665191', default: '#5fbdbd',
+          protein_coding: '#0077be',
+          non_coding: '#ff7c43',
+          pseudogene: '#a05195',
+          regulatory: '#665191',
+          default: '#5fbdbd',
         },
         tracks: {
-          gc_content: '#0077be', gc_skew: '#ff7c43', wig_data: '#a05195',
-          expression_high: '#d45087', expression_medium: '#ff7c43',
-          expression_low: '#7dd3c0', baseline: '#bee9e8',
+          gc_content: '#0077be',
+          gc_skew: '#ff7c43',
+          wig_data: '#a05195',
+          expression_high: '#d45087',
+          expression_medium: '#ff7c43',
+          expression_low: '#7dd3c0',
+          baseline: '#bee9e8',
         },
         links: {
-          strong: '#003f5c', medium: '#2f4b7c', weak: '#7dd3c0',
+          strong: '#003f5c',
+          medium: '#2f4b7c',
+          weak: '#7dd3c0',
           gradient: ['#0077be', '#ff7c43'],
         },
-        text: '#1b4965', ticks: '#006ba6',
+        text: '#1b4965',
+        ticks: '#006ba6',
         legend: { background: '#e6f3ff', border: '#b3d9ff', text: '#1b4965' },
       },
       sunset: {
         name: 'Sunset',
         description: 'Warm gradient palette for presentations and outreach',
         chromosomes: [
-          '#ff6b35', '#f7931e', '#ffd23f', '#06ffa5', '#1fb3d3', '#5d737e',
-          '#64b6ac', '#c0fdfb', '#daffef', '#fcf5c7', '#aafcb8', '#cf1259',
-          '#f71735', '#fb8500', '#ffb700', '#8ecae6', '#219ebc', '#023047',
-          '#ffb3c6', '#fb8500', '#8ecae6', '#219ebc', '#023047', '#ffb3c6',
+          '#ff6b35',
+          '#f7931e',
+          '#ffd23f',
+          '#06ffa5',
+          '#1fb3d3',
+          '#5d737e',
+          '#64b6ac',
+          '#c0fdfb',
+          '#daffef',
+          '#fcf5c7',
+          '#aafcb8',
+          '#cf1259',
+          '#f71735',
+          '#fb8500',
+          '#ffb700',
+          '#8ecae6',
+          '#219ebc',
+          '#023047',
+          '#ffb3c6',
+          '#fb8500',
+          '#8ecae6',
+          '#219ebc',
+          '#023047',
+          '#ffb3c6',
         ],
-        background: '#fff8f0', stroke: '#8b4513',
+        background: '#fff8f0',
+        stroke: '#8b4513',
         genes: {
-          protein_coding: '#06ffa5', non_coding: '#ff6b35',
-          pseudogene: '#cf1259', regulatory: '#1fb3d3', default: '#5d737e',
+          protein_coding: '#06ffa5',
+          non_coding: '#ff6b35',
+          pseudogene: '#cf1259',
+          regulatory: '#1fb3d3',
+          default: '#5d737e',
         },
         tracks: {
-          gc_content: '#06ffa5', gc_skew: '#ff6b35', wig_data: '#cf1259',
-          expression_high: '#f71735', expression_medium: '#f7931e',
-          expression_low: '#64b6ac', baseline: '#c0fdfb',
+          gc_content: '#06ffa5',
+          gc_skew: '#ff6b35',
+          wig_data: '#cf1259',
+          expression_high: '#f71735',
+          expression_medium: '#f7931e',
+          expression_low: '#64b6ac',
+          baseline: '#c0fdfb',
         },
         links: {
-          strong: '#8b4513', medium: '#cf1259', weak: '#64b6ac',
+          strong: '#8b4513',
+          medium: '#cf1259',
+          weak: '#64b6ac',
           gradient: ['#ff6b35', '#06ffa5'],
         },
-        text: '#8b4513', ticks: '#023047',
+        text: '#8b4513',
+        ticks: '#023047',
         legend: { background: '#fef7f0', border: '#f4d1ae', text: '#8b4513' },
       },
       arctic: {
         name: 'Arctic',
         description: 'Cool blue monochrome for cold adaptation studies',
         chromosomes: [
-          '#e8f4f8', '#d1ecf1', '#b8e0ea', '#9fd3e2', '#85c5da', '#6bb6d2',
-          '#52a6ca', '#3895c2', '#1f83ba', '#0570b0', '#045a8d', '#023858',
-          '#74a9cf', '#2b8cbe', '#045a8d', '#023858', '#a6bddb', '#74a9cf',
-          '#3690c0', '#0570b0', '#034e7b', '#012840', '#41b6c4', '#2c7fb8',
+          '#e8f4f8',
+          '#d1ecf1',
+          '#b8e0ea',
+          '#9fd3e2',
+          '#85c5da',
+          '#6bb6d2',
+          '#52a6ca',
+          '#3895c2',
+          '#1f83ba',
+          '#0570b0',
+          '#045a8d',
+          '#023858',
+          '#74a9cf',
+          '#2b8cbe',
+          '#045a8d',
+          '#023858',
+          '#a6bddb',
+          '#74a9cf',
+          '#3690c0',
+          '#0570b0',
+          '#034e7b',
+          '#012840',
+          '#41b6c4',
+          '#2c7fb8',
         ],
-        background: '#f7fcfd', stroke: '#023858',
+        background: '#f7fcfd',
+        stroke: '#023858',
         genes: {
-          protein_coding: '#0570b0', non_coding: '#41b6c4',
-          pseudogene: '#2c7fb8', regulatory: '#3895c2', default: '#74a9cf',
+          protein_coding: '#0570b0',
+          non_coding: '#41b6c4',
+          pseudogene: '#2c7fb8',
+          regulatory: '#3895c2',
+          default: '#74a9cf',
         },
         tracks: {
-          gc_content: '#0570b0', gc_skew: '#41b6c4', wig_data: '#2c7fb8',
-          expression_high: '#023858', expression_medium: '#045a8d',
-          expression_low: '#b8e0ea', baseline: '#d1ecf1',
+          gc_content: '#0570b0',
+          gc_skew: '#41b6c4',
+          wig_data: '#2c7fb8',
+          expression_high: '#023858',
+          expression_medium: '#045a8d',
+          expression_low: '#b8e0ea',
+          baseline: '#d1ecf1',
         },
         links: {
-          strong: '#023858', medium: '#0570b0', weak: '#85c5da',
+          strong: '#023858',
+          medium: '#0570b0',
+          weak: '#85c5da',
           gradient: ['#023858', '#41b6c4'],
         },
-        text: '#023858', ticks: '#045a8d',
+        text: '#023858',
+        ticks: '#045a8d',
         legend: { background: '#f0f8ff', border: '#c6e2ff', text: '#023858' },
       },
       cosmic: {
         name: 'Cosmic',
         description: 'Dark space theme for presentations and night mode',
         chromosomes: [
-          '#0d1b2a', '#1b263b', '#415a77', '#778da9', '#e0e1dd', '#7209b7',
-          '#a663cc', '#4cc9f0', '#7209b7', '#f72585', '#b5179e', '#7209b7',
-          '#480ca8', '#3a0ca3', '#3f37c9', '#7209b7', '#f72585', '#4cc9f0',
-          '#4361ee', '#4895ef', '#4cc9f0', '#00f5ff', '#7209b7', '#f72585',
+          '#0d1b2a',
+          '#1b263b',
+          '#415a77',
+          '#778da9',
+          '#e0e1dd',
+          '#7209b7',
+          '#a663cc',
+          '#4cc9f0',
+          '#7209b7',
+          '#f72585',
+          '#b5179e',
+          '#7209b7',
+          '#480ca8',
+          '#3a0ca3',
+          '#3f37c9',
+          '#7209b7',
+          '#f72585',
+          '#4cc9f0',
+          '#4361ee',
+          '#4895ef',
+          '#4cc9f0',
+          '#00f5ff',
+          '#7209b7',
+          '#f72585',
         ],
-        background: '#0d1b2a', stroke: '#e0e1dd',
+        background: '#0d1b2a',
+        stroke: '#e0e1dd',
         genes: {
-          protein_coding: '#4cc9f0', non_coding: '#f72585',
-          pseudogene: '#7209b7', regulatory: '#a663cc', default: '#778da9',
+          protein_coding: '#4cc9f0',
+          non_coding: '#f72585',
+          pseudogene: '#7209b7',
+          regulatory: '#a663cc',
+          default: '#778da9',
         },
         tracks: {
-          gc_content: '#4cc9f0', gc_skew: '#f72585', wig_data: '#7209b7',
-          expression_high: '#f72585', expression_medium: '#a663cc',
-          expression_low: '#4cc9f0', baseline: '#415a77',
+          gc_content: '#4cc9f0',
+          gc_skew: '#f72585',
+          wig_data: '#7209b7',
+          expression_high: '#f72585',
+          expression_medium: '#a663cc',
+          expression_low: '#4cc9f0',
+          baseline: '#415a77',
         },
         links: {
-          strong: '#e0e1dd', medium: '#a663cc', weak: '#778da9',
+          strong: '#e0e1dd',
+          medium: '#a663cc',
+          weak: '#778da9',
           gradient: ['#4cc9f0', '#f72585'],
         },
-        text: '#e0e1dd', ticks: '#778da9',
+        text: '#e0e1dd',
+        ticks: '#778da9',
         legend: { background: '#1b263b', border: '#415a77', text: '#e0e1dd' },
       },
       forest: {
         name: 'Forest',
         description: 'Rich green palette for plant genomics and ecology',
         chromosomes: [
-          '#2d5016', '#52734d', '#91c788', '#b7d3aa', '#c7d59f', '#e0e5b6',
-          '#f3e8d0', '#8b5a3c', '#a0522d', '#cd853f', '#daa520', '#228b22',
-          '#32cd32', '#9acd32', '#adff2f', '#7cfc00', '#00ff00', '#00ff7f',
-          '#00fa9a', '#90ee90', '#98fb98', '#f0fff0', '#006400', '#008000',
+          '#2d5016',
+          '#52734d',
+          '#91c788',
+          '#b7d3aa',
+          '#c7d59f',
+          '#e0e5b6',
+          '#f3e8d0',
+          '#8b5a3c',
+          '#a0522d',
+          '#cd853f',
+          '#daa520',
+          '#228b22',
+          '#32cd32',
+          '#9acd32',
+          '#adff2f',
+          '#7cfc00',
+          '#00ff00',
+          '#00ff7f',
+          '#00fa9a',
+          '#90ee90',
+          '#98fb98',
+          '#f0fff0',
+          '#006400',
+          '#008000',
         ],
-        background: '#f5f5dc', stroke: '#2d5016',
+        background: '#f5f5dc',
+        stroke: '#2d5016',
         genes: {
-          protein_coding: '#228b22', non_coding: '#cd853f',
-          pseudogene: '#8b5a3c', regulatory: '#91c788', default: '#52734d',
+          protein_coding: '#228b22',
+          non_coding: '#cd853f',
+          pseudogene: '#8b5a3c',
+          regulatory: '#91c788',
+          default: '#52734d',
         },
         tracks: {
-          gc_content: '#228b22', gc_skew: '#cd853f', wig_data: '#8b5a3c',
-          expression_high: '#006400', expression_medium: '#32cd32',
-          expression_low: '#b7d3aa', baseline: '#c7d59f',
+          gc_content: '#228b22',
+          gc_skew: '#cd853f',
+          wig_data: '#8b5a3c',
+          expression_high: '#006400',
+          expression_medium: '#32cd32',
+          expression_low: '#b7d3aa',
+          baseline: '#c7d59f',
         },
         links: {
-          strong: '#2d5016', medium: '#52734d', weak: '#91c788',
+          strong: '#2d5016',
+          medium: '#52734d',
+          weak: '#91c788',
           gradient: ['#228b22', '#cd853f'],
         },
-        text: '#2d5016', ticks: '#006400',
+        text: '#2d5016',
+        ticks: '#006400',
         legend: { background: '#f0f8f0', border: '#c8e6c8', text: '#2d5016' },
       },
       monochrome: {
         name: 'Monochrome',
         description: 'Grayscale palette for print publications and accessibility',
         chromosomes: [
-          '#000000', '#1a1a1a', '#333333', '#4d4d4d', '#666666',
-          '#808080', '#999999', '#b3b3b3', '#cccccc', '#e6e6e6',
-          '#f2f2f2', '#0f0f0f', '#262626', '#404040', '#595959',
-          '#737373', '#8c8c8c', '#a6a6a6', '#bfbfbf', '#d9d9d9',
-          '#f0f0f0', '#1f1f1f', '#383838', '#525252',
+          '#000000',
+          '#1a1a1a',
+          '#333333',
+          '#4d4d4d',
+          '#666666',
+          '#808080',
+          '#999999',
+          '#b3b3b3',
+          '#cccccc',
+          '#e6e6e6',
+          '#f2f2f2',
+          '#0f0f0f',
+          '#262626',
+          '#404040',
+          '#595959',
+          '#737373',
+          '#8c8c8c',
+          '#a6a6a6',
+          '#bfbfbf',
+          '#d9d9d9',
+          '#f0f0f0',
+          '#1f1f1f',
+          '#383838',
+          '#525252',
         ],
-        background: '#ffffff', stroke: '#000000',
+        background: '#ffffff',
+        stroke: '#000000',
         genes: {
-          protein_coding: '#000000', non_coding: '#4d4d4d',
-          pseudogene: '#808080', regulatory: '#333333', default: '#999999',
+          protein_coding: '#000000',
+          non_coding: '#4d4d4d',
+          pseudogene: '#808080',
+          regulatory: '#333333',
+          default: '#999999',
         },
         tracks: {
-          gc_content: '#000000', gc_skew: '#4d4d4d', wig_data: '#666666',
-          expression_high: '#000000', expression_medium: '#4d4d4d',
-          expression_low: '#b3b3b3', baseline: '#cccccc',
+          gc_content: '#000000',
+          gc_skew: '#4d4d4d',
+          wig_data: '#666666',
+          expression_high: '#000000',
+          expression_medium: '#4d4d4d',
+          expression_low: '#b3b3b3',
+          baseline: '#cccccc',
         },
         links: {
-          strong: '#000000', medium: '#4d4d4d', weak: '#999999',
+          strong: '#000000',
+          medium: '#4d4d4d',
+          weak: '#999999',
           gradient: ['#000000', '#808080'],
         },
-        text: '#000000', ticks: '#333333',
+        text: '#000000',
+        ticks: '#333333',
         legend: { background: '#f8f8f8', border: '#cccccc', text: '#000000' },
       },
     };
@@ -477,18 +721,80 @@ class CircosPlotter {
 
     // Slider controls - all use debounced redraw for performance
     const sliderBindings = [
-      ['radiusSlider', v => { this.radius = parseInt(v); this.innerRadius = this.radius * this.innerRadiusRatio; }],
-      ['innerRadiusSlider', v => { this.innerRadiusRatio = parseFloat(v); this.innerRadius = this.radius * this.innerRadiusRatio; }],
-      ['startAngleSlider', v => { this.startAngle = parseInt(v); }],
-      ['chrWidthSlider', v => { this.chromosomeWidth = parseInt(v); }],
-      ['gapSlider', v => { this.chromosomeGap = parseFloat(v); }],
-      ['labelDistanceSlider', v => { this.labelDistance = parseInt(v); }],
-      ['strokeWidthSlider', v => { this.strokeWidth = parseFloat(v); }],
-      ['geneHeightSlider', v => { this.geneHeight = parseInt(v); }],
-      ['linkOpacitySlider', v => { this.linkOpacity = parseFloat(v); }],
-      ['gcWindowSlider', v => { this.gcWindowSize = parseInt(v); }],
-      ['wigHeightSlider', v => { this.wigTrackHeight = parseInt(v); }],
-      ['legendOpacitySlider', v => { this.legendOpacity = parseFloat(v); }],
+      [
+        'radiusSlider',
+        v => {
+          this.radius = parseInt(v);
+          this.innerRadius = this.radius * this.innerRadiusRatio;
+        },
+      ],
+      [
+        'innerRadiusSlider',
+        v => {
+          this.innerRadiusRatio = parseFloat(v);
+          this.innerRadius = this.radius * this.innerRadiusRatio;
+        },
+      ],
+      [
+        'startAngleSlider',
+        v => {
+          this.startAngle = parseInt(v);
+        },
+      ],
+      [
+        'chrWidthSlider',
+        v => {
+          this.chromosomeWidth = parseInt(v);
+        },
+      ],
+      [
+        'gapSlider',
+        v => {
+          this.chromosomeGap = parseFloat(v);
+        },
+      ],
+      [
+        'labelDistanceSlider',
+        v => {
+          this.labelDistance = parseInt(v);
+        },
+      ],
+      [
+        'strokeWidthSlider',
+        v => {
+          this.strokeWidth = parseFloat(v);
+        },
+      ],
+      [
+        'geneHeightSlider',
+        v => {
+          this.geneHeight = parseInt(v);
+        },
+      ],
+      [
+        'linkOpacitySlider',
+        v => {
+          this.linkOpacity = parseFloat(v);
+        },
+      ],
+      [
+        'gcWindowSlider',
+        v => {
+          this.gcWindowSize = parseInt(v);
+        },
+      ],
+      [
+        'wigHeightSlider',
+        v => {
+          this.wigTrackHeight = parseInt(v);
+        },
+      ],
+      [
+        'legendOpacitySlider',
+        v => {
+          this.legendOpacity = parseFloat(v);
+        },
+      ],
     ];
 
     sliderBindings.forEach(([id, setter]) => {
@@ -504,14 +810,54 @@ class CircosPlotter {
 
     // Checkbox controls
     const checkboxBindings = [
-      ['showLabelsCheck', v => { this.showLabels = v; }],
-      ['showTicksCheck', v => { this.showTicks = v; }],
-      ['showGenesCheck', v => { this.showGenes = v; }],
-      ['showLinksCheck', v => { this.showLinks = v; }],
-      ['showGCContentCheck', v => { this.showGCContent = v; }],
-      ['showGCSkewCheck', v => { this.showGCSkew = v; }],
-      ['showWigDataCheck', v => { this.showWigData = v; }],
-      ['showLegendCheck', v => { this.showLegend = v; }],
+      [
+        'showLabelsCheck',
+        v => {
+          this.showLabels = v;
+        },
+      ],
+      [
+        'showTicksCheck',
+        v => {
+          this.showTicks = v;
+        },
+      ],
+      [
+        'showGenesCheck',
+        v => {
+          this.showGenes = v;
+        },
+      ],
+      [
+        'showLinksCheck',
+        v => {
+          this.showLinks = v;
+        },
+      ],
+      [
+        'showGCContentCheck',
+        v => {
+          this.showGCContent = v;
+        },
+      ],
+      [
+        'showGCSkewCheck',
+        v => {
+          this.showGCSkew = v;
+        },
+      ],
+      [
+        'showWigDataCheck',
+        v => {
+          this.showWigData = v;
+        },
+      ],
+      [
+        'showLegendCheck',
+        v => {
+          this.showLegend = v;
+        },
+      ],
     ];
 
     checkboxBindings.forEach(([id, setter]) => {
@@ -606,10 +952,14 @@ class CircosPlotter {
     });
 
     // Window resize handler
-    window.addEventListener('resize', () => {
-      this.calculateOptimalSize();
-      this.redrawPlot();
-    }, { passive: true });
+    window.addEventListener(
+      'resize',
+      () => {
+        this.calculateOptimalSize();
+        this.redrawPlot();
+      },
+      { passive: true }
+    );
   }
 
   updateParameterDisplays() {
@@ -698,8 +1048,7 @@ class CircosPlotter {
       .style('justify-content', 'center')
       .style('height', '100%')
       .style('color', '#6b7280')
-      .style('text-align', 'center')
-      .html(`
+      .style('text-align', 'center').html(`
         <i class="fas fa-dna" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
         <h3 style="margin-bottom: 8px; font-weight: 500;">No Genome Data</h3>
         <p style="margin-bottom: 16px;">Load genome data to create a Circos plot</p>
@@ -743,7 +1092,8 @@ class CircosPlotter {
     this.currentPan = { x: transform.x, y: transform.y };
 
     const g = this.svg.select('g');
-    g.attr('transform',
+    g.attr(
+      'transform',
       `translate(${this.width / 2 + transform.x}, ${this.height / 2 + transform.y}) rotate(${this.startAngle}) scale(${transform.k})`
     );
 
@@ -787,18 +1137,30 @@ class CircosPlotter {
     this.data = {
       title: 'Human Genome (Homo sapiens)',
       chromosomes: [
-        { name: 'chr1', length: 248956422 }, { name: 'chr2', length: 242193529 },
-        { name: 'chr3', length: 198295559 }, { name: 'chr4', length: 190214555 },
-        { name: 'chr5', length: 181538259 }, { name: 'chr6', length: 170805979 },
-        { name: 'chr7', length: 159345973 }, { name: 'chr8', length: 145138636 },
-        { name: 'chr9', length: 138394717 }, { name: 'chr10', length: 133797422 },
-        { name: 'chr11', length: 135086622 }, { name: 'chr12', length: 133275309 },
-        { name: 'chr13', length: 114364328 }, { name: 'chr14', length: 107043718 },
-        { name: 'chr15', length: 101991189 }, { name: 'chr16', length: 90338345 },
-        { name: 'chr17', length: 83257441 }, { name: 'chr18', length: 80373285 },
-        { name: 'chr19', length: 58617616 }, { name: 'chr20', length: 64444167 },
-        { name: 'chr21', length: 46709983 }, { name: 'chr22', length: 50818468 },
-        { name: 'chrX', length: 156040895 }, { name: 'chrY', length: 57227415 },
+        { name: 'chr1', length: 248956422 },
+        { name: 'chr2', length: 242193529 },
+        { name: 'chr3', length: 198295559 },
+        { name: 'chr4', length: 190214555 },
+        { name: 'chr5', length: 181538259 },
+        { name: 'chr6', length: 170805979 },
+        { name: 'chr7', length: 159345973 },
+        { name: 'chr8', length: 145138636 },
+        { name: 'chr9', length: 138394717 },
+        { name: 'chr10', length: 133797422 },
+        { name: 'chr11', length: 135086622 },
+        { name: 'chr12', length: 133275309 },
+        { name: 'chr13', length: 114364328 },
+        { name: 'chr14', length: 107043718 },
+        { name: 'chr15', length: 101991189 },
+        { name: 'chr16', length: 90338345 },
+        { name: 'chr17', length: 83257441 },
+        { name: 'chr18', length: 80373285 },
+        { name: 'chr19', length: 58617616 },
+        { name: 'chr20', length: 64444167 },
+        { name: 'chr21', length: 46709983 },
+        { name: 'chr22', length: 50818468 },
+        { name: 'chrX', length: 156040895 },
+        { name: 'chrY', length: 57227415 },
       ],
       genes: [],
       links: [],
@@ -850,14 +1212,22 @@ class CircosPlotter {
     this.data = {
       title: 'Saccharomyces cerevisiae',
       chromosomes: [
-        { name: 'chrI', length: 230218 }, { name: 'chrII', length: 813184 },
-        { name: 'chrIII', length: 316620 }, { name: 'chrIV', length: 1531933 },
-        { name: 'chrV', length: 576874 }, { name: 'chrVI', length: 270161 },
-        { name: 'chrVII', length: 1090940 }, { name: 'chrVIII', length: 562643 },
-        { name: 'chrIX', length: 439888 }, { name: 'chrX', length: 745751 },
-        { name: 'chrXI', length: 666816 }, { name: 'chrXII', length: 1078177 },
-        { name: 'chrXIII', length: 924431 }, { name: 'chrXIV', length: 784333 },
-        { name: 'chrXV', length: 1091291 }, { name: 'chrXVI', length: 948066 },
+        { name: 'chrI', length: 230218 },
+        { name: 'chrII', length: 813184 },
+        { name: 'chrIII', length: 316620 },
+        { name: 'chrIV', length: 1531933 },
+        { name: 'chrV', length: 576874 },
+        { name: 'chrVI', length: 270161 },
+        { name: 'chrVII', length: 1090940 },
+        { name: 'chrVIII', length: 562643 },
+        { name: 'chrIX', length: 439888 },
+        { name: 'chrX', length: 745751 },
+        { name: 'chrXI', length: 666816 },
+        { name: 'chrXII', length: 1078177 },
+        { name: 'chrXIII', length: 924431 },
+        { name: 'chrXIV', length: 784333 },
+        { name: 'chrXV', length: 1091291 },
+        { name: 'chrXVI', length: 948066 },
       ],
       genes: [],
       links: [],
@@ -879,9 +1249,12 @@ class CircosPlotter {
     this.data = {
       title: 'Drosophila melanogaster',
       chromosomes: [
-        { name: 'chrX', length: 23542271 }, { name: 'chr2L', length: 23513712 },
-        { name: 'chr2R', length: 25286936 }, { name: 'chr3L', length: 28110227 },
-        { name: 'chr3R', length: 32079331 }, { name: 'chr4', length: 1348131 },
+        { name: 'chrX', length: 23542271 },
+        { name: 'chr2L', length: 23513712 },
+        { name: 'chr2R', length: 25286936 },
+        { name: 'chr3L', length: 28110227 },
+        { name: 'chr3R', length: 32079331 },
+        { name: 'chr4', length: 1348131 },
       ],
       genes: [],
       links: [],
@@ -903,8 +1276,10 @@ class CircosPlotter {
     this.data = {
       title: 'Arabidopsis thaliana',
       chromosomes: [
-        { name: 'chr1', length: 30427671 }, { name: 'chr2', length: 19698289 },
-        { name: 'chr3', length: 23459830 }, { name: 'chr4', length: 18585056 },
+        { name: 'chr1', length: 30427671 },
+        { name: 'chr2', length: 19698289 },
+        { name: 'chr3', length: 23459830 },
+        { name: 'chr4', length: 18585056 },
         { name: 'chr5', length: 26975502 },
       ],
       genes: [],
@@ -957,9 +1332,31 @@ class CircosPlotter {
   generateHumanGenes() {
     const genes = [];
     const geneNames = [
-      'BRCA1', 'TP53', 'EGFR', 'MYC', 'KRAS', 'PIK3CA', 'PTEN', 'RB1',
-      'APC', 'VHL', 'CDKN2A', 'MLH1', 'BRCA2', 'ATM', 'CHEK2', 'PALB2',
-      'CDH1', 'STK11', 'SMAD4', 'DCC', 'TERT', 'IDH1', 'ARID1A', 'CTNNB1', 'FBXW7',
+      'BRCA1',
+      'TP53',
+      'EGFR',
+      'MYC',
+      'KRAS',
+      'PIK3CA',
+      'PTEN',
+      'RB1',
+      'APC',
+      'VHL',
+      'CDKN2A',
+      'MLH1',
+      'BRCA2',
+      'ATM',
+      'CHEK2',
+      'PALB2',
+      'CDH1',
+      'STK11',
+      'SMAD4',
+      'DCC',
+      'TERT',
+      'IDH1',
+      'ARID1A',
+      'CTNNB1',
+      'FBXW7',
     ];
     const geneTypes = ['protein_coding', 'non_coding', 'pseudogene', 'regulatory'];
     const typeWeights = [0.6, 0.2, 0.15, 0.05];
@@ -975,12 +1372,16 @@ class CircosPlotter {
         let cumWeight = 0;
         for (let j = 0; j < geneTypes.length; j++) {
           cumWeight += typeWeights[j];
-          if (rand <= cumWeight) { geneType = geneTypes[j]; break; }
+          if (rand <= cumWeight) {
+            geneType = geneTypes[j];
+            break;
+          }
         }
 
         genes.push({
           chromosome: chr.name,
-          start, end: start + length,
+          start,
+          end: start + length,
           name: geneNames[Math.floor(Math.random() * geneNames.length)] + `_${chrIndex + 1}_${i + 1}`,
           type: geneType,
           expression: Math.random(),
@@ -1023,15 +1424,20 @@ class CircosPlotter {
       const start = Math.floor(Math.random() * (this.data.chromosomes[0].length - 5000));
       const length = Math.floor(Math.random() * 3000) + 500;
       genes.push({
-        chromosome: 'chromosome', start, end: start + length,
+        chromosome: 'chromosome',
+        start,
+        end: start + length,
         name: geneNames[i % geneNames.length] + `_${Math.floor(i / geneNames.length) + 1}`,
-        type: 'protein_coding', value: Math.random() * 0.5 + 0.5,
+        type: 'protein_coding',
+        value: Math.random() * 0.5 + 0.5,
       });
     }
     return genes;
   }
 
-  generateEcoliLinks() { return []; }
+  generateEcoliLinks() {
+    return [];
+  }
 
   generateYeastGenes() {
     const genes = [];
@@ -1041,9 +1447,12 @@ class CircosPlotter {
         const start = Math.floor(Math.random() * (chr.length - 2000));
         const length = Math.floor(Math.random() * 1500) + 500;
         genes.push({
-          chromosome: chr.name, start, end: start + length,
+          chromosome: chr.name,
+          start,
+          end: start + length,
           name: `Y${chr.name.replace('chr', '')}${String(i + 1).padStart(3, '0')}C`,
-          type: 'protein_coding', value: Math.random(),
+          type: 'protein_coding',
+          value: Math.random(),
         });
       }
     });
@@ -1057,9 +1466,18 @@ class CircosPlotter {
       const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       if (chr1.name !== chr2.name) {
         links.push({
-          source: { chromosome: chr1.name, start: Math.floor(Math.random() * (chr1.length - 50000)), end: Math.floor(Math.random() * 50000) + 25000 },
-          target: { chromosome: chr2.name, start: Math.floor(Math.random() * (chr2.length - 50000)), end: Math.floor(Math.random() * 50000) + 25000 },
-          type: 'duplication', value: Math.random(),
+          source: {
+            chromosome: chr1.name,
+            start: Math.floor(Math.random() * (chr1.length - 50000)),
+            end: Math.floor(Math.random() * 50000) + 25000,
+          },
+          target: {
+            chromosome: chr2.name,
+            start: Math.floor(Math.random() * (chr2.length - 50000)),
+            end: Math.floor(Math.random() * 50000) + 25000,
+          },
+          type: 'duplication',
+          value: Math.random(),
         });
       }
     }
@@ -1074,9 +1492,12 @@ class CircosPlotter {
         const start = Math.floor(Math.random() * (chr.length - 10000));
         const length = Math.floor(Math.random() * 8000) + 2000;
         genes.push({
-          chromosome: chr.name, start, end: start + length,
+          chromosome: chr.name,
+          start,
+          end: start + length,
           name: `Dm${chr.name.replace('chr', '')}${String(i + 1).padStart(4, '0')}`,
-          type: Math.random() > 0.8 ? 'non_coding' : 'protein_coding', value: Math.random(),
+          type: Math.random() > 0.8 ? 'non_coding' : 'protein_coding',
+          value: Math.random(),
         });
       }
     });
@@ -1090,9 +1511,18 @@ class CircosPlotter {
       const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       if (chr1.name !== chr2.name) {
         links.push({
-          source: { chromosome: chr1.name, start: Math.floor(Math.random() * (chr1.length - 100000)), end: Math.floor(Math.random() * 100000) + 50000 },
-          target: { chromosome: chr2.name, start: Math.floor(Math.random() * (chr2.length - 100000)), end: Math.floor(Math.random() * 100000) + 50000 },
-          type: 'inversion', value: Math.random(),
+          source: {
+            chromosome: chr1.name,
+            start: Math.floor(Math.random() * (chr1.length - 100000)),
+            end: Math.floor(Math.random() * 100000) + 50000,
+          },
+          target: {
+            chromosome: chr2.name,
+            start: Math.floor(Math.random() * (chr2.length - 100000)),
+            end: Math.floor(Math.random() * 100000) + 50000,
+          },
+          type: 'inversion',
+          value: Math.random(),
         });
       }
     }
@@ -1107,9 +1537,12 @@ class CircosPlotter {
         const start = Math.floor(Math.random() * (chr.length - 5000));
         const length = Math.floor(Math.random() * 4000) + 1000;
         genes.push({
-          chromosome: chr.name, start, end: start + length,
+          chromosome: chr.name,
+          start,
+          end: start + length,
           name: `AT${chrIndex + 1}G${String(i + 1).padStart(5, '0')}`,
-          type: 'protein_coding', value: Math.random(),
+          type: 'protein_coding',
+          value: Math.random(),
         });
       }
     });
@@ -1123,9 +1556,18 @@ class CircosPlotter {
       const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
       if (chr1.name !== chr2.name) {
         links.push({
-          source: { chromosome: chr1.name, start: Math.floor(Math.random() * (chr1.length - 200000)), end: Math.floor(Math.random() * 200000) + 100000 },
-          target: { chromosome: chr2.name, start: Math.floor(Math.random() * (chr2.length - 200000)), end: Math.floor(Math.random() * 200000) + 100000 },
-          type: 'synteny', value: Math.random(),
+          source: {
+            chromosome: chr1.name,
+            start: Math.floor(Math.random() * (chr1.length - 200000)),
+            end: Math.floor(Math.random() * 200000) + 100000,
+          },
+          target: {
+            chromosome: chr2.name,
+            start: Math.floor(Math.random() * (chr2.length - 200000)),
+            end: Math.floor(Math.random() * 200000) + 100000,
+          },
+          type: 'synteny',
+          value: Math.random(),
         });
       }
     }
@@ -1140,10 +1582,18 @@ class CircosPlotter {
     const originalOrder = [...this.data.chromosomes];
 
     switch (this.chromosomeOrder) {
-      case 'size': this.data.chromosomes.sort((a, b) => b.length - a.length); break;
-      case 'size_asc': this.data.chromosomes.sort((a, b) => a.length - b.length); break;
-      case 'name': this.data.chromosomes.sort((a, b) => a.name.localeCompare(b.name)); break;
-      case 'reverse': this.data.chromosomes.reverse(); break;
+      case 'size':
+        this.data.chromosomes.sort((a, b) => b.length - a.length);
+        break;
+      case 'size_asc':
+        this.data.chromosomes.sort((a, b) => a.length - b.length);
+        break;
+      case 'name':
+        this.data.chromosomes.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'reverse':
+        this.data.chromosomes.reverse();
+        break;
       case 'default':
       default:
         if (this.originalChromosomeOrder) {
@@ -1263,7 +1713,7 @@ class CircosPlotter {
         const windowSeq = sequence.substring(start, end);
         const gCount = (windowSeq.match(/G/g) || []).length;
         const cCount = (windowSeq.match(/C/g) || []).length;
-        gcSkew = (gCount + cCount) > 0 ? (gCount - cCount) / (gCount + cCount) : 0;
+        gcSkew = gCount + cCount > 0 ? (gCount - cCount) / (gCount + cCount) : 0;
       } else {
         const baseSkew = 0.1 * Math.sin(position / 200000) + 0.05 * Math.cos(position / 50000);
         gcSkew = Math.max(-0.3, Math.min(0.3, baseSkew + (Math.random() - 0.5) * 0.1));
@@ -1570,10 +2020,14 @@ class CircosPlotter {
 
   _calculateTrackHeight(value, trackType) {
     switch (trackType) {
-      case 'gc_content': return (value / 100) * this.wigTrackHeight;
-      case 'gc_skew': return ((value + 0.3) / 0.6) * this.wigTrackHeight;
-      case 'wig': return Math.min(value / 100, 1) * this.wigTrackHeight;
-      default: return (value / 100) * this.wigTrackHeight;
+      case 'gc_content':
+        return (value / 100) * this.wigTrackHeight;
+      case 'gc_skew':
+        return ((value + 0.3) / 0.6) * this.wigTrackHeight;
+      case 'wig':
+        return Math.min(value / 100, 1) * this.wigTrackHeight;
+      default:
+        return (value / 100) * this.wigTrackHeight;
     }
   }
 
@@ -1593,8 +2047,10 @@ class CircosPlotter {
       const targetChr = this.data.chromosomes.find(c => c.name === link.target.chromosome);
       if (!sourceChr || !targetChr) return;
 
-      const sourceAngle = sourceChr.startAngle + (link.source.start / sourceChr.length) * (sourceChr.endAngle - sourceChr.startAngle);
-      const targetAngle = targetChr.startAngle + (link.target.start / targetChr.length) * (targetChr.endAngle - targetChr.startAngle);
+      const sourceAngle =
+        sourceChr.startAngle + (link.source.start / sourceChr.length) * (sourceChr.endAngle - sourceChr.startAngle);
+      const targetAngle =
+        targetChr.startAngle + (link.target.start / targetChr.length) * (targetChr.endAngle - targetChr.startAngle);
 
       const sourceRadians = (sourceAngle * Math.PI) / 180;
       const targetRadians = (targetAngle * Math.PI) / 180;
@@ -1604,7 +2060,9 @@ class CircosPlotter {
       const targetX = Math.cos(targetRadians) * linkRadius;
       const targetY = Math.sin(targetRadians) * linkRadius;
 
-      let linkColor, strokeWidth, dashPattern = [];
+      let linkColor,
+        strokeWidth,
+        dashPattern = [];
       if (link.value >= 0.7) {
         linkColor = theme.links.strong;
         strokeWidth = Math.max(3, link.value * 5);
@@ -1741,12 +2199,16 @@ class CircosPlotter {
       this.canvas.style.cursor = 'grab';
     });
 
-    this.canvas.addEventListener('wheel', e => {
-      e.preventDefault();
-      const scale = e.deltaY > 0 ? 0.9 : 1.1;
-      this.ctx.scale(scale, scale);
-      this.drawCanvasPlot(this.getCurrentTheme());
-    }, { passive: false });
+    this.canvas.addEventListener(
+      'wheel',
+      e => {
+        e.preventDefault();
+        const scale = e.deltaY > 0 ? 0.9 : 1.1;
+        this.ctx.scale(scale, scale);
+        this.drawCanvasPlot(this.getCurrentTheme());
+      },
+      { passive: false }
+    );
   }
 
   // ─── SVG Rendering ──────────────────────────────────────
@@ -1882,7 +2344,10 @@ class CircosPlotter {
       .on('mouseover', (event, d) => {
         const length = d.length || 0;
         const label = d.name || d.label || d.id || 'Unknown';
-        this.showTooltip(event, `${label}<br/>Length: ${length.toLocaleString()} bp<br/>Coverage: ${(((d.endAngle - d.startAngle) / 360) * 100).toFixed(1)}%`);
+        this.showTooltip(
+          event,
+          `${label}<br/>Length: ${length.toLocaleString()} bp<br/>Coverage: ${(((d.endAngle - d.startAngle) / 360) * 100).toFixed(1)}%`
+        );
       })
       .on('mouseout', () => this.hideTooltip())
       .on('click', (event, d) => {
@@ -1911,8 +2376,12 @@ class CircosPlotter {
 
         g.append('line')
           .attr('class', 'tick')
-          .attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
-          .attr('stroke', theme.ticks).attr('stroke-width', 1);
+          .attr('x1', x1)
+          .attr('y1', y1)
+          .attr('x2', x2)
+          .attr('y2', y2)
+          .attr('stroke', theme.ticks)
+          .attr('stroke-width', 1);
 
         if (i % 2 === 0) {
           const labelRadius = this.innerRadius - 15;
@@ -1920,8 +2389,10 @@ class CircosPlotter {
             .attr('class', 'tick-label')
             .attr('x', Math.cos(radians) * labelRadius)
             .attr('y', Math.sin(radians) * labelRadius)
-            .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-            .attr('fill', theme.text).attr('font-size', '10px')
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle')
+            .attr('fill', theme.text)
+            .attr('font-size', '10px')
             .text(`${(position / 1000000).toFixed(0)}M`);
         }
       }
@@ -1951,7 +2422,9 @@ class CircosPlotter {
       .attr('text-anchor', 'middle')
       .style('cursor', 'pointer')
       .on('click', (event, d) => {
-        this.updateStatus(`Chromosome ${d.name}: ${(d.length / 1000000).toFixed(1)} Mb, ${(((d.endAngle - d.startAngle) / 360) * 100).toFixed(1)}% coverage`);
+        this.updateStatus(
+          `Chromosome ${d.name}: ${(d.length / 1000000).toFixed(1)} Mb, ${(((d.endAngle - d.startAngle) / 360) * 100).toFixed(1)}% coverage`
+        );
       });
   }
 
@@ -1988,10 +2461,7 @@ class CircosPlotter {
           pathData.push(`L${points[i].x * trackRadius},${points[i].y * trackRadius}`);
         }
         pathData.push('Z');
-        trackGroup.append('path')
-          .attr('d', pathData.join(' '))
-          .attr('fill', trackData.color)
-          .attr('opacity', 0.7);
+        trackGroup.append('path').attr('d', pathData.join(' ')).attr('fill', trackData.color).attr('opacity', 0.7);
       } else {
         const pathData = [];
         pathData.push(`M${points[0].x * trackRadius},${points[0].y * trackRadius}`);
@@ -2000,7 +2470,8 @@ class CircosPlotter {
           const outerR = trackRadius + height;
           pathData.push(`L${points[i].x * outerR},${points[i].y * outerR}`);
         }
-        trackGroup.append('path')
+        trackGroup
+          .append('path')
           .attr('d', pathData.join(' '))
           .attr('fill', 'none')
           .attr('stroke', trackData.color)
@@ -2021,8 +2492,10 @@ class CircosPlotter {
       const targetChr = this.data.chromosomes.find(c => c.name === link.target.chromosome);
       if (!sourceChr || !targetChr) return;
 
-      const sourceAngle = sourceChr.startAngle + (link.source.start / sourceChr.length) * (sourceChr.endAngle - sourceChr.startAngle);
-      const targetAngle = targetChr.startAngle + (link.target.start / targetChr.length) * (targetChr.endAngle - targetChr.startAngle);
+      const sourceAngle =
+        sourceChr.startAngle + (link.source.start / sourceChr.length) * (sourceChr.endAngle - sourceChr.startAngle);
+      const targetAngle =
+        targetChr.startAngle + (link.target.start / targetChr.length) * (targetChr.endAngle - targetChr.startAngle);
 
       const sourceRadians = (sourceAngle * Math.PI) / 180;
       const targetRadians = (targetAngle * Math.PI) / 180;
@@ -2037,7 +2510,9 @@ class CircosPlotter {
       path.moveTo(sourceX, sourceY);
       path.quadraticCurveTo(0, 0, targetX, targetY);
 
-      let linkColor, strokeWidth, strokeDasharray = 'none';
+      let linkColor,
+        strokeWidth,
+        strokeDasharray = 'none';
 
       if (link.value >= 0.7) {
         linkColor = theme.links.strong;
@@ -2054,12 +2529,15 @@ class CircosPlotter {
 
       if (link.value >= 0.8) {
         const gradientId = `linkGradient${Math.random().toString(36).substr(2, 9)}`;
-        const gradient = g.append('defs')
+        const gradient = g
+          .append('defs')
           .append('linearGradient')
           .attr('id', gradientId)
           .attr('gradientUnits', 'userSpaceOnUse')
-          .attr('x1', sourceX).attr('y1', sourceY)
-          .attr('x2', targetX).attr('y2', targetY);
+          .attr('x1', sourceX)
+          .attr('y1', sourceY)
+          .attr('x2', targetX)
+          .attr('y2', targetY);
 
         gradient.append('stop').attr('offset', '0%').attr('stop-color', theme.links.gradient[0]);
         gradient.append('stop').attr('offset', '100%').attr('stop-color', theme.links.gradient[1]);
@@ -2080,7 +2558,10 @@ class CircosPlotter {
         .style('cursor', 'pointer')
         .on('mouseover', event => {
           const strengthLabel = link.value >= 0.7 ? 'Strong' : link.value >= 0.4 ? 'Medium' : 'Weak';
-          this.showTooltip(event, `<strong>Genomic Link</strong><br/>${link.source.chromosome} → ${link.target.chromosome}<br/>Strength: ${strengthLabel} (${(link.value * 100).toFixed(1)}%)<br/>Type: ${link.type || 'Synteny'}`);
+          this.showTooltip(
+            event,
+            `<strong>Genomic Link</strong><br/>${link.source.chromosome} → ${link.target.chromosome}<br/>Strength: ${strengthLabel} (${(link.value * 100).toFixed(1)}%)<br/>Type: ${link.type || 'Synteny'}`
+          );
         })
         .on('mouseout', () => this.hideTooltip());
     });
@@ -2094,10 +2575,17 @@ class CircosPlotter {
 
     let positionStyles = {};
     switch (this.legendPosition) {
-      case 'top-left': positionStyles = { top: '20px', left: '20px' }; break;
-      case 'bottom-left': positionStyles = { bottom: '20px', left: '20px' }; break;
-      case 'bottom-right': positionStyles = { bottom: '20px', right: '20px' }; break;
-      default: positionStyles = { top: '20px', right: '20px' };
+      case 'top-left':
+        positionStyles = { top: '20px', left: '20px' };
+        break;
+      case 'bottom-left':
+        positionStyles = { bottom: '20px', left: '20px' };
+        break;
+      case 'bottom-right':
+        positionStyles = { bottom: '20px', right: '20px' };
+        break;
+      default:
+        positionStyles = { top: '20px', right: '20px' };
     }
 
     const legendContainer = container
@@ -2121,26 +2609,38 @@ class CircosPlotter {
       .style('z-index', '1000');
 
     // Title
-    legendContainer.append('div')
-      .style('font-weight', 'bold').style('font-size', '14px')
-      .style('margin-bottom', '12px').text(`${theme.name} Theme`);
+    legendContainer
+      .append('div')
+      .style('font-weight', 'bold')
+      .style('font-size', '14px')
+      .style('margin-bottom', '12px')
+      .text(`${theme.name} Theme`);
 
-    legendContainer.append('div')
-      .style('font-size', '11px').style('opacity', '0.8')
-      .style('margin-bottom', '16px').style('line-height', '1.4')
+    legendContainer
+      .append('div')
+      .style('font-size', '11px')
+      .style('opacity', '0.8')
+      .style('margin-bottom', '16px')
+      .style('line-height', '1.4')
       .text(theme.description);
 
     // Chromosomes
     const chromSection = legendContainer.append('div').style('margin-bottom', '16px');
     chromSection.append('div').style('font-weight', '600').style('margin-bottom', '8px').text('Chromosomes');
 
-    const chromGrid = chromSection.append('div')
-      .style('display', 'grid').style('grid-template-columns', 'repeat(6, 1fr)').style('gap', '4px');
+    const chromGrid = chromSection
+      .append('div')
+      .style('display', 'grid')
+      .style('grid-template-columns', 'repeat(6, 1fr)')
+      .style('gap', '4px');
 
     theme.chromosomes.slice(0, 12).forEach((color, i) => {
-      chromGrid.append('div')
-        .style('width', '16px').style('height', '16px')
-        .style('background-color', color).style('border-radius', '2px')
+      chromGrid
+        .append('div')
+        .style('width', '16px')
+        .style('height', '16px')
+        .style('background-color', color)
+        .style('border-radius', '2px')
         .style('border', `1px solid ${theme.legend.border}`)
         .attr('title', `Chromosome ${i + 1}`);
     });
@@ -2158,12 +2658,19 @@ class CircosPlotter {
       ];
 
       geneTypes.forEach(gene => {
-        const geneItem = geneSection.append('div')
-          .style('display', 'flex').style('align-items', 'center').style('margin-bottom', '4px');
-        geneItem.append('div')
-          .style('width', '12px').style('height', '12px')
-          .style('background-color', gene.color).style('border-radius', '2px')
-          .style('margin-right', '8px').style('border', `1px solid ${theme.legend.border}`);
+        const geneItem = geneSection
+          .append('div')
+          .style('display', 'flex')
+          .style('align-items', 'center')
+          .style('margin-bottom', '4px');
+        geneItem
+          .append('div')
+          .style('width', '12px')
+          .style('height', '12px')
+          .style('background-color', gene.color)
+          .style('border-radius', '2px')
+          .style('margin-right', '8px')
+          .style('border', `1px solid ${theme.legend.border}`);
         geneItem.append('span').style('font-size', '11px').text(gene.label);
       });
     }
@@ -2178,12 +2685,19 @@ class CircosPlotter {
         { level: 'Medium (40-70%)', color: theme.tracks.expression_medium, height: '12px' },
         { level: 'Low (<40%)', color: theme.tracks.expression_low, height: '8px' },
       ].forEach(expr => {
-        const exprItem = exprSection.append('div')
-          .style('display', 'flex').style('align-items', 'center').style('margin-bottom', '4px');
-        exprItem.append('div')
-          .style('width', '20px').style('height', expr.height)
-          .style('background-color', expr.color).style('border-radius', '2px')
-          .style('margin-right', '8px').style('border', `1px solid ${theme.legend.border}`);
+        const exprItem = exprSection
+          .append('div')
+          .style('display', 'flex')
+          .style('align-items', 'center')
+          .style('margin-bottom', '4px');
+        exprItem
+          .append('div')
+          .style('width', '20px')
+          .style('height', expr.height)
+          .style('background-color', expr.color)
+          .style('border-radius', '2px')
+          .style('margin-right', '8px')
+          .style('border', `1px solid ${theme.legend.border}`);
         exprItem.append('span').style('font-size', '11px').text(expr.level);
       });
     }
@@ -2198,12 +2712,21 @@ class CircosPlotter {
         { type: 'Medium (40-70%)', color: theme.links.medium, width: '2px', dash: '5,2' },
         { type: 'Weak (<40%)', color: theme.links.weak, width: '1px', dash: '3,3' },
       ].forEach(link => {
-        const linkItem = linkSection.append('div')
-          .style('display', 'flex').style('align-items', 'center').style('margin-bottom', '6px');
+        const linkItem = linkSection
+          .append('div')
+          .style('display', 'flex')
+          .style('align-items', 'center')
+          .style('margin-bottom', '6px');
         const linkSvg = linkItem.append('svg').attr('width', '24').attr('height', '8').style('margin-right', '8px');
-        linkSvg.append('line')
-          .attr('x1', '2').attr('y1', '4').attr('x2', '22').attr('y2', '4')
-          .attr('stroke', link.color).attr('stroke-width', link.width).attr('stroke-dasharray', link.dash);
+        linkSvg
+          .append('line')
+          .attr('x1', '2')
+          .attr('y1', '4')
+          .attr('x2', '22')
+          .attr('y2', '4')
+          .attr('stroke', link.color)
+          .attr('stroke-width', link.width)
+          .attr('stroke-dasharray', link.dash);
         linkItem.append('span').style('font-size', '11px').text(link.type);
       });
     }
@@ -2219,30 +2742,48 @@ class CircosPlotter {
       if (this.showWigData) tracks.push({ name: 'Expression Data', color: theme.tracks.wig_data });
 
       tracks.forEach(track => {
-        const trackItem = trackSection.append('div')
-          .style('display', 'flex').style('align-items', 'center').style('margin-bottom', '4px');
-        trackItem.append('div')
-          .style('width', '16px').style('height', '3px')
-          .style('background-color', track.color).style('margin-right', '8px').style('border-radius', '1px');
+        const trackItem = trackSection
+          .append('div')
+          .style('display', 'flex')
+          .style('align-items', 'center')
+          .style('margin-bottom', '4px');
+        trackItem
+          .append('div')
+          .style('width', '16px')
+          .style('height', '3px')
+          .style('background-color', track.color)
+          .style('margin-right', '8px')
+          .style('border-radius', '1px');
         trackItem.append('span').style('font-size', '11px').text(track.name);
       });
     }
 
     // Scale info
-    const scaleSection = legendContainer.append('div')
+    const scaleSection = legendContainer
+      .append('div')
       .style('border-top', `1px solid ${theme.legend.border}`)
-      .style('padding-top', '12px').style('margin-top', '16px');
+      .style('padding-top', '12px')
+      .style('margin-top', '16px');
 
     scaleSection.append('div').style('font-weight', '600').style('margin-bottom', '8px').text('Scale Information');
 
     const totalLength = this.data.chromosomes.reduce((sum, chr) => sum + chr.length, 0);
     const avgLength = totalLength / this.data.chromosomes.length;
 
-    scaleSection.append('div').style('font-size', '11px').style('margin-bottom', '4px')
+    scaleSection
+      .append('div')
+      .style('font-size', '11px')
+      .style('margin-bottom', '4px')
       .text(`Total genome: ${(totalLength / 1e9).toFixed(2)} Gb`);
-    scaleSection.append('div').style('font-size', '11px').style('margin-bottom', '4px')
+    scaleSection
+      .append('div')
+      .style('font-size', '11px')
+      .style('margin-bottom', '4px')
       .text(`Avg chromosome: ${(avgLength / 1e6).toFixed(1)} Mb`);
-    scaleSection.append('div').style('font-size', '11px').style('opacity', '0.7')
+    scaleSection
+      .append('div')
+      .style('font-size', '11px')
+      .style('opacity', '0.7')
       .text(`Window size: ${(this.gcWindowSize / 1000).toFixed(0)} kb`);
   }
 
@@ -2348,8 +2889,10 @@ class CircosPlotter {
         timestamp: new Date().toISOString(),
         version: '1.0',
         parameters: {
-          radius: this.radius, innerRadiusRatio: this.innerRadiusRatio,
-          chromosomeWidth: this.chromosomeWidth, geneHeight: this.geneHeight,
+          radius: this.radius,
+          innerRadiusRatio: this.innerRadiusRatio,
+          chromosomeWidth: this.chromosomeWidth,
+          geneHeight: this.geneHeight,
           theme: this.currentTheme,
         },
       },
@@ -2396,8 +2939,13 @@ class CircosPlotter {
         const content = e.target.result;
 
         const fileNameLower = file.name.toLowerCase();
-        
-        if (fileNameLower.endsWith('.gbk') || fileNameLower.endsWith('.gb') || fileNameLower.endsWith('.fasta') || fileNameLower.endsWith('.fa')) {
+
+        if (
+          fileNameLower.endsWith('.gbk') ||
+          fileNameLower.endsWith('.gb') ||
+          fileNameLower.endsWith('.fasta') ||
+          fileNameLower.endsWith('.fa')
+        ) {
           throw new Error('Please load genome files (.gbk/.fasta) in the main window and click "Load Current Genome".');
         }
 
@@ -2484,7 +3032,9 @@ class CircosPlotter {
     `;
 
     document.body.appendChild(notification);
-    setTimeout(() => { if (notification.parentNode) notification.parentNode.removeChild(notification); }, 5000);
+    setTimeout(() => {
+      if (notification.parentNode) notification.parentNode.removeChild(notification);
+    }, 5000);
   }
 
   // ─── Performance ────────────────────────────────────────
@@ -2534,8 +3084,10 @@ class CircosPlotter {
       if (typeof require !== 'undefined' && require('electron')) {
         const { ipcRenderer } = require('electron');
         await ipcRenderer.invoke('navigate-to-gene', {
-          chromosome: gene.chromosome, start: gene.start,
-          end: gene.end, name: gene.name || gene.id,
+          chromosome: gene.chromosome,
+          start: gene.start,
+          end: gene.end,
+          name: gene.name || gene.id,
         });
         this.updateStatus(`Navigated to gene ${gene.name || gene.id} in main window`);
       }
@@ -2565,16 +3117,31 @@ class CircosPlotter {
     this.applyTheme('scientific');
 
     const controls = {
-      radiusSlider: 300, innerRadiusSlider: 0.8, startAngleSlider: -90,
-      chrWidthSlider: 15, gapSlider: 2, labelDistanceSlider: 20,
-      strokeWidthSlider: 1, geneHeightSlider: 8, linkOpacitySlider: 0.6,
-      
-      showLabelsCheck: true, showTicksCheck: false, showGenesCheck: true,
-      showLinksCheck: true, showGCContentCheck: false, showGCSkewCheck: false,
-      showWigDataCheck: false, gcWindowSlider: 10000, wigHeightSlider: 30,
-      themeSelect: 'scientific', chromosomeOrderSelect: 'default',
-      exportResolutionSelect: '1', showLegendCheck: true,
-      legendPositionSelect: 'top-right', legendOpacitySlider: '0.95',
+      radiusSlider: 300,
+      innerRadiusSlider: 0.8,
+      startAngleSlider: -90,
+      chrWidthSlider: 15,
+      gapSlider: 2,
+      labelDistanceSlider: 20,
+      strokeWidthSlider: 1,
+      geneHeightSlider: 8,
+      linkOpacitySlider: 0.6,
+
+      showLabelsCheck: true,
+      showTicksCheck: false,
+      showGenesCheck: true,
+      showLinksCheck: true,
+      showGCContentCheck: false,
+      showGCSkewCheck: false,
+      showWigDataCheck: false,
+      gcWindowSlider: 10000,
+      wigHeightSlider: 30,
+      themeSelect: 'scientific',
+      chromosomeOrderSelect: 'default',
+      exportResolutionSelect: '1',
+      showLegendCheck: true,
+      legendPositionSelect: 'top-right',
+      legendOpacitySlider: '0.95',
     };
 
     Object.entries(controls).forEach(([id, value]) => {
@@ -2671,7 +3238,9 @@ class CircosDataProcessor {
       return {
         ...chr,
         index,
-        startAngle, endAngle, length,
+        startAngle,
+        endAngle,
+        length,
         midAngle: (startAngle + endAngle) / 2,
         color: chr.color || theme.chromosomes[index % theme.chromosomes.length],
         startRadians: (startAngle * Math.PI) / 180,
@@ -2708,7 +3277,8 @@ class CircosDataProcessor {
         return {
           ...gene,
           chromosome: chr,
-          startAngle: geneStartAngle, endAngle: geneEndAngle,
+          startAngle: geneStartAngle,
+          endAngle: geneEndAngle,
           midAngle: (geneStartAngle + geneEndAngle) / 2,
           startRadians: (geneStartAngle * Math.PI) / 180,
           endRadians: (geneEndAngle * Math.PI) / 180,
@@ -2742,9 +3312,15 @@ class CircosDataProcessor {
       let data = [];
 
       switch (trackType) {
-        case 'gc_content': data = this.plotter.generateRealGCData(chr); break;
-        case 'gc_skew': data = this.plotter.generateRealGCSkew(chr); break;
-        case 'wig': data = this.plotter.generateRealWigData(chr); break;
+        case 'gc_content':
+          data = this.plotter.generateRealGCData(chr);
+          break;
+        case 'gc_skew':
+          data = this.plotter.generateRealGCSkew(chr);
+          break;
+        case 'wig':
+          data = this.plotter.generateRealWigData(chr);
+          break;
       }
 
       const processedData = data.map(d => {
@@ -2753,7 +3329,8 @@ class CircosDataProcessor {
 
         return {
           ...d,
-          angle, radians,
+          angle,
+          radians,
           x: Math.cos(radians),
           y: Math.sin(radians),
           value: d.value || 0,
@@ -2787,8 +3364,10 @@ class CircosDataProcessor {
         const sourcePos = link.source.start ?? link.source.position ?? 0;
         const targetPos = link.target.start ?? link.target.position ?? 0;
 
-        const sourceAngle = sourceChr.startAngle + (sourcePos / sourceChr.length) * (sourceChr.endAngle - sourceChr.startAngle);
-        const targetAngle = targetChr.startAngle + (targetPos / targetChr.length) * (targetChr.endAngle - targetChr.startAngle);
+        const sourceAngle =
+          sourceChr.startAngle + (sourcePos / sourceChr.length) * (sourceChr.endAngle - sourceChr.startAngle);
+        const targetAngle =
+          targetChr.startAngle + (targetPos / targetChr.length) * (targetChr.endAngle - targetChr.startAngle);
 
         const sourceRadians = (sourceAngle * Math.PI) / 180;
         const targetRadians = (targetAngle * Math.PI) / 180;
@@ -2798,14 +3377,16 @@ class CircosDataProcessor {
           source: {
             ...link.source,
             chromosome: sourceChr,
-            angle: sourceAngle, radians: sourceRadians,
+            angle: sourceAngle,
+            radians: sourceRadians,
             x: Math.cos(sourceRadians) * this.plotter.innerRadius,
             y: Math.sin(sourceRadians) * this.plotter.innerRadius,
           },
           target: {
             ...link.target,
             chromosome: targetChr,
-            angle: targetAngle, radians: targetRadians,
+            angle: targetAngle,
+            radians: targetRadians,
             x: Math.cos(targetRadians) * this.plotter.innerRadius,
             y: Math.sin(targetRadians) * this.plotter.innerRadius,
           },
@@ -2829,7 +3410,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof d3 === 'undefined') {
     const loadingEl = document.getElementById('loadingIndicator');
     if (loadingEl) {
-      loadingEl.innerHTML = '<div class="spinner"></div><span style="color: red;">Error: D3.js library not found</span>';
+      loadingEl.innerHTML =
+        '<div class="spinner"></div><span style="color: red;">Error: D3.js library not found</span>';
     }
     return;
   }

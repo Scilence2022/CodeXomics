@@ -81,4 +81,4 @@ window.FileOperationService = FileOperationService;
 `;
 fs.writeFileSync(fileOpPath, fileOpCode);
 
-console.log("Successfully extracted manual exceptions!");
+console.log('Successfully extracted manual exceptions!');

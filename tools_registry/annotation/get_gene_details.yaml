@@ -40,7 +40,7 @@ parameters:
 
 sample_usages:
   - user_query: 'Get gene details for lacZ'
-    tool_call: 'get_gene_details(geneName=''lacZ'')'
+    tool_call: "get_gene_details(geneName='lacZ')"
     thought: 'User wants details about the lacZ gene'
     expected_result: 'Structured information about lacZ including coordinates, strand, product, locusTag, and note'
 

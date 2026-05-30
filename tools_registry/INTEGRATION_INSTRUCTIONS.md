@@ -3,19 +3,21 @@
 ## Quick Start
 
 1. **Install Dependencies**
+
    ```bash
    npm install js-yaml
    ```
 
 2. **Update ChatManager**
    Add to your ChatManager.js:
+
    ```javascript
    const SystemIntegration = require('./tools_registry/system_integration');
-   
+
    // In constructor
    this.dynamicTools = new SystemIntegration();
    await this.dynamicTools.initialize();
-   
+
    // Replace getBaseSystemMessage()
    async getBaseSystemMessage() {
        const context = this.getCurrentContext();

@@ -223,7 +223,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         category: 'annotation',
         complexity: 'simple',
         evaluation: 'manual',
-        instruction: 'Create a gene annotation named "my_custom_gene" of type "gene" at position 600000 to 602000 on the current chromosome.',
+        instruction:
+          'Create a gene annotation named "my_custom_gene" of type "gene" at position 600000 to 602000 on the current chromosome.',
         expectedResult: {
           tool_name: 'create_annotation',
           parameters: {
@@ -237,7 +238,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) New annotation appears on the genome browser at the correct position, 2) Annotation name and type are correct in the sidebar.',
+        manualVerification:
+          'Please verify: 1) New annotation appears on the genome browser at the correct position, 2) Annotation name and type are correct in the sidebar.',
       },
       {
         id: 'annot_manual_02',
@@ -257,7 +259,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) Search returns CDS annotations correctly, 2) Results are relevant and complete.',
+        manualVerification:
+          'Please verify: 1) Search returns CDS annotations correctly, 2) Results are relevant and complete.',
       },
 
       // TRACK CONTROL TASKS - Manual + Simple
@@ -279,7 +282,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) GC content track appears or disappears in the browser, 2) Track toggle is responsive.',
+        manualVerification:
+          'Please verify: 1) GC content track appears or disappears in the browser, 2) Track toggle is responsive.',
       },
 
       // PROTEIN STRUCTURE TASKS - Manual + Simple
@@ -301,7 +305,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) AlphaFold 3D structure viewer opens, 2) Protein structure renders correctly.',
+        manualVerification:
+          'Please verify: 1) AlphaFold 3D structure viewer opens, 2) Protein structure renders correctly.',
       },
 
       // GENE ANALYSIS TASKS - Manual + Simple
@@ -312,7 +317,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         category: 'gene_analysis',
         complexity: 'simple',
         evaluation: 'manual',
-        instruction: 'Get detailed information about the lacZ gene including its product, function, and genomic context.',
+        instruction:
+          'Get detailed information about the lacZ gene including its product, function, and genomic context.',
         expectedResult: {
           tool_name: 'get_gene_details',
           parameters: {
@@ -323,7 +329,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) Gene details are displayed correctly, 2) Information includes product, function, and genomic context.',
+        manualVerification:
+          'Please verify: 1) Gene details are displayed correctly, 2) Information includes product, function, and genomic context.',
       },
       {
         id: 'gene_manual_02',
@@ -341,7 +348,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) Intergenic regions are identified, 2) Region boundaries match gene annotations.',
+        manualVerification:
+          'Please verify: 1) Intergenic regions are identified, 2) Region boundaries match gene annotations.',
       },
 
       // PRIMER DESIGN TASKS - Manual + Simple
@@ -365,7 +373,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         earlyReturn: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) design_primers tool is called with geneName=lacZ and targetTm=60, 2) Task is submitted successfully.',
+        manualVerification:
+          'Please verify: 1) design_primers tool is called with geneName=lacZ and targetTm=60, 2) Task is submitted successfully.',
       },
 
       // RESTRICTION ANALYSIS TASKS - Manual + Simple
@@ -387,7 +396,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) Restriction sites are found and listed, 2) Enzyme names and cut positions are correct.',
+        manualVerification:
+          'Please verify: 1) Restriction sites are found and listed, 2) Enzyme names and cut positions are correct.',
       },
 
       // BLAST TASKS - Manual + Simple
@@ -398,7 +408,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         category: 'blast',
         complexity: 'simple',
         evaluation: 'manual',
-        instruction: 'Perform a BLAST search online with the sequence ATGAAAGCGCTGAAAGCGCTG using blastn program against the nr database with e-value threshold 0.001.',
+        instruction:
+          'Perform a BLAST search online with the sequence ATGAAAGCGCTGAAAGCGCTG using blastn program against the nr database with e-value threshold 0.001.',
         expectedResult: {
           tool_name: 'blast_search_online',
           parameters: {
@@ -413,7 +424,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         earlyReturn: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) BLAST search tool call is issued with correct parameters (sequence, program=blastn, database=nr, evalue=0.001), 2) Task is submitted successfully (do not wait for completion as online search time is variable).',
+        manualVerification:
+          'Please verify: 1) BLAST search tool call is issued with correct parameters (sequence, program=blastn, database=nr, evalue=0.001), 2) Task is submitted successfully (do not wait for completion as online search time is variable).',
       },
 
       // DATABASE INTEGRATION TASKS - Manual + Simple
@@ -436,7 +448,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
-        manualVerification: 'Please verify: 1) InterPro domain analysis executes, 2) Domain families and functional sites are identified.',
+        manualVerification:
+          'Please verify: 1) InterPro domain analysis executes, 2) Domain families and functional sites are identified.',
       },
 
       // COMPLEX NAVIGATION WORKFLOW - Manual + Complex

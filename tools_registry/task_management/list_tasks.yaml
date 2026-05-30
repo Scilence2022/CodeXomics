@@ -30,7 +30,7 @@ parameters:
 # High-quality examples for few-shot learning
 sample_usages:
   - user_query: 'Show me all current tasks'
-    tool_call: "list_tasks()"
+    tool_call: 'list_tasks()'
     thought: 'User wants to see all tasks. I will call list_tasks.'
     expected_result: 'Returns list of all active tasks.'
   - user_query: 'What tasks are in progress?'

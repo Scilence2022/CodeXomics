@@ -5,7 +5,8 @@ author: 'CodeXomics'
 category: 'benchmark'
 intent: 'benchmark_management'
 priority: 1
-keywords: ['benchmark', 'start', 'run', 'execute', 'performance', 'test', 'evaluation', 'suite', 'llm', 'automatic', 'quick']
+keywords:
+  ['benchmark', 'start', 'run', 'execute', 'performance', 'test', 'evaluation', 'suite', 'llm', 'automatic', 'quick']
 aliases: ['run_benchmark', 'execute_benchmark', 'launch_benchmark_run']
 enabled: true
 

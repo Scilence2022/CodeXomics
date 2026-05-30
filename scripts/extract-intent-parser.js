@@ -5,7 +5,7 @@ const targetFile = path.resolve('/Users/song/Github-Repos/GenomeAIStudio_1/src/r
 let content = fs.readFileSync(targetFile, 'utf8');
 
 function extractMethod(contentStr, methodName) {
-  const startMarker = "  " + methodName + "(";
+  const startMarker = '  ' + methodName + '(';
   const startIndex = contentStr.indexOf(startMarker);
   if (startIndex === -1) return null;
 
@@ -21,19 +21,19 @@ function extractMethod(contentStr, methodName) {
 
   for (let i = bodyStartIndex; i < contentStr.length; i++) {
     const char = contentStr[i];
-    const prevChar = i > 0 ? contentStr[i-1] : '';
-    const nextChar = i < contentStr.length - 1 ? contentStr[i+1] : '';
+    const prevChar = i > 0 ? contentStr[i - 1] : '';
+    const nextChar = i < contentStr.length - 1 ? contentStr[i + 1] : '';
 
     if (inString) {
       if (char === stringChar && prevChar !== '\\\\') inString = false;
       continue;
     }
-    
+
     if (inLineComment) {
       if (char === '\n') inLineComment = false;
       continue;
     }
-    
+
     if (inComment) {
       if (char === '*' && nextChar === '/') {
         inComment = false;
@@ -42,7 +42,7 @@ function extractMethod(contentStr, methodName) {
       continue;
     }
 
-    if (char === "'" || char === '"' || char === "\`") {
+    if (char === "'" || char === '"' || char === '\`') {
       inString = true;
       stringChar = char;
     } else if (char === '/' && nextChar === '/') {
@@ -67,7 +67,7 @@ function extractMethod(contentStr, methodName) {
       name: methodName,
       startIndex,
       endIndex,
-      body: contentStr.substring(startIndex, endIndex + 1)
+      body: contentStr.substring(startIndex, endIndex + 1),
     };
   }
   return null;
@@ -76,48 +76,56 @@ function extractMethod(contentStr, methodName) {
 const parseSingle = extractMethod(content, 'parseToolCall');
 if (parseSingle) {
   let parsedBodies = parseSingle.body;
-  
-  let newContent = content.substring(0, parseSingle.startIndex) +
-    "  parseToolCall(response) {\n" +
-    "    if (!this.services || !this.services.intent) {\n" +
+
+  let newContent =
+    content.substring(0, parseSingle.startIndex) +
+    '  parseToolCall(response) {\n' +
+    '    if (!this.services || !this.services.intent) {\n' +
     "      console.error('[ChatManager] IntentParserService not initialized');\n" +
-    "      return null;\n" +
-    "    }\n" +
-    "    return this.services.intent.parseToolCall(response);\n" +
-    "  }" + content.substring(parseSingle.endIndex + 1);
-  
+    '      return null;\n' +
+    '    }\n' +
+    '    return this.services.intent.parseToolCall(response);\n' +
+    '  }' +
+    content.substring(parseSingle.endIndex + 1);
+
   // Now extract parseMultipleToolCalls from the NEW content
   const parseMultiple = extractMethod(newContent, 'parseMultipleToolCalls');
   if (parseMultiple) {
     parsedBodies += '\n\n' + parseMultiple.body;
-    
-    newContent = newContent.substring(0, parseMultiple.startIndex) +
-      "  parseMultipleToolCalls(response) {\n" +
-      "    if (!this.services || !this.services.intent) {\n" +
+
+    newContent =
+      newContent.substring(0, parseMultiple.startIndex) +
+      '  parseMultipleToolCalls(response) {\n' +
+      '    if (!this.services || !this.services.intent) {\n' +
       "      console.error('[ChatManager] IntentParserService not initialized');\n" +
-      "      return [];\n" +
-      "    }\n" +
-      "    return this.services.intent.parseMultipleToolCalls(response);\n" +
-      "  }" + newContent.substring(parseMultiple.endIndex + 1);
+      '      return [];\n' +
+      '    }\n' +
+      '    return this.services.intent.parseMultipleToolCalls(response);\n' +
+      '  }' +
+      newContent.substring(parseMultiple.endIndex + 1);
   }
 
-  const serviceCode = "/**\n" +
-    " * IntentParserService - Extracted from ChatManager\n" +
-    " * Handles parsing LLM natural language responses into exact tool calls based on massive rulesets.\n" +
-    " */\n" +
-    "class IntentParserService {\n" +
-    "  constructor(app, chatManager) {\n" +
-    "    this.app = app;\n" +
-    "    this.chatManager = chatManager;\n" +
-    "  }\n\n" +
-    parsedBodies + "\n\n" +
-    "}\n\n" +
-    "window.IntentParserService = IntentParserService;\n";
-  
-  const servicePath = path.resolve('/Users/song/Github-Repos/GenomeAIStudio_1/src/renderer/modules/chat/services/IntentParserService.js');
+  const serviceCode =
+    '/**\n' +
+    ' * IntentParserService - Extracted from ChatManager\n' +
+    ' * Handles parsing LLM natural language responses into exact tool calls based on massive rulesets.\n' +
+    ' */\n' +
+    'class IntentParserService {\n' +
+    '  constructor(app, chatManager) {\n' +
+    '    this.app = app;\n' +
+    '    this.chatManager = chatManager;\n' +
+    '  }\n\n' +
+    parsedBodies +
+    '\n\n' +
+    '}\n\n' +
+    'window.IntentParserService = IntentParserService;\n';
+
+  const servicePath = path.resolve(
+    '/Users/song/Github-Repos/GenomeAIStudio_1/src/renderer/modules/chat/services/IntentParserService.js'
+  );
   fs.writeFileSync(servicePath, serviceCode, 'utf8');
   console.log('Successfully created IntentParserService.js! Output size:', serviceCode.length);
-  
+
   fs.writeFileSync(targetFile, newContent, 'utf8');
   console.log('Successfully patched ChatManager.js!');
 } else {

@@ -28,7 +28,10 @@ class DNAMarkerDatabase {
         brand: 'NEB',
         category: 'ladder',
         sizeRange: [100, 12000],
-        sizes: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000],
+        sizes: [
+          100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000,
+          9000, 10000, 11000, 12000,
+        ],
         recommendedGel: [0.8, 1.5],
         description: 'Dense ladder, 24 bands from 100 bp–12 kb, wide range',
         tags: ['quick-load', 'tri-dye'],
@@ -74,7 +77,10 @@ class DNAMarkerDatabase {
         brand: 'Thermo Fisher',
         category: 'ladder',
         sizeRange: [100, 12000],
-        sizes: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000],
+        sizes: [
+          100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000,
+          9000, 10000, 11000, 12000,
+        ],
         recommendedGel: [0.8, 1.5],
         description: 'Ready-to-use pre-stained ladder, 100 bp–12 kb',
         tags: ['pre-stained', 'ready-to-use'],
@@ -96,7 +102,10 @@ class DNAMarkerDatabase {
         brand: 'Thermo Fisher',
         category: 'ladder',
         sizeRange: [100, 10000],
-        sizes: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000],
+        sizes: [
+          100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
+          10000,
+        ],
         recommendedGel: [0.8, 1.5],
         description: 'GeneRuler mid range, 100 bp–10 kb',
         tags: ['pre-stained'],
@@ -118,7 +127,10 @@ class DNAMarkerDatabase {
         brand: 'Thermo Fisher',
         category: 'ladder',
         sizeRange: [75, 20000],
-        sizes: [75, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000, 20000],
+        sizes: [
+          75, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
+          10000, 12000, 15000, 20000,
+        ],
         recommendedGel: [0.5, 1.2],
         description: 'GeneRuler wide range, 75 bp–20 kb',
         tags: ['pre-stained'],
@@ -375,19 +387,18 @@ class DNAMarkerDatabase {
 
   search(query) {
     const q = query.toLowerCase();
-    return this.getAll().filter(m =>
-      m.id.toLowerCase().includes(q) ||
-      m.name.toLowerCase().includes(q) ||
-      m.brand.toLowerCase().includes(q) ||
-      (m.description && m.description.toLowerCase().includes(q)) ||
-      (m.tags && m.tags.some(t => t.toLowerCase().includes(q)))
+    return this.getAll().filter(
+      m =>
+        m.id.toLowerCase().includes(q) ||
+        m.name.toLowerCase().includes(q) ||
+        m.brand.toLowerCase().includes(q) ||
+        (m.description && m.description.toLowerCase().includes(q)) ||
+        (m.tags && m.tags.some(t => t.toLowerCase().includes(q)))
     );
   }
 
   findBySizeRange(minSize, maxSize) {
-    return this.getAll().filter(m =>
-      m.sizeRange[0] <= maxSize && m.sizeRange[1] >= minSize
-    );
+    return this.getAll().filter(m => m.sizeRange[0] <= maxSize && m.sizeRange[1] >= minSize);
   }
 
   getLegacyMappings() {
@@ -395,8 +406,8 @@ class DNAMarkerDatabase {
       '1kb': '1kb',
       '100bp': '100bp',
       '2log': '2log',
-      'lambda_hindiii': 'lambda_hindiii',
-      'lambda_ecori': 'lambda_ecori',
+      lambda_hindiii: 'lambda_hindiii',
+      lambda_ecori: 'lambda_ecori',
     };
   }
 }

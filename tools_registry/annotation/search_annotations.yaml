@@ -54,22 +54,22 @@ parameters:
 
 sample_usages:
   - user_query: 'Search for annotations matching ligase'
-    tool_call: 'search_annotations(query=''ligase'')'
+    tool_call: "search_annotations(query='ligase')"
     thought: 'User wants to search annotations by keyword'
     expected_result: 'List of annotations whose product/gene/note fields contain "ligase"'
 
   - user_query: 'Find genes with kinase in their description'
-    tool_call: 'search_annotations(query=''kinase'')'
+    tool_call: "search_annotations(query='kinase')"
     thought: 'User wants to search annotation product descriptions for keyword'
     expected_result: 'Annotations with kinase in product or gene name'
 
   - user_query: 'Search for DNA polymerase annotations'
-    tool_call: 'search_annotations(query=''DNA polymerase'')'
+    tool_call: "search_annotations(query='DNA polymerase')"
     thought: 'User wants to search annotations for a multi-word query'
     expected_result: 'Annotations matching "DNA polymerase" in any field'
 
   - user_query: 'Find tRNA annotations on chromosome NC_000913'
-    tool_call: 'search_annotations(query=''tRNA'', chromosome=''NC_000913'')'
+    tool_call: "search_annotations(query='tRNA', chromosome='NC_000913')"
     thought: 'User wants to search annotations on a specific chromosome'
     expected_result: 'tRNA annotations on the specified chromosome'
 

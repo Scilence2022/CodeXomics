@@ -226,35 +226,42 @@ Operons are the fundamental unit of prokaryotic gene regulation — a cluster of
 as a single polycistronic mRNA and sharing a promoter. Understanding operon structure provides
 insight into co-regulation, metabolic pathway organization, and functional gene clusters.
 
-This skill goes beyond simple operon detection by characterising the *biological logic* of the
-gene grouping — are the members sequential steps in a metabolic pathway? Components of the 
+This skill goes beyond simple operon detection by characterising the _biological logic_ of the
+gene grouping — are the members sequential steps in a metabolic pathway? Components of the
 same protein complex? Stress response genes?
 
 ## Step-by-Step Explanation
 
 ### Step 1 — Navigation + Seed Gene
+
 Establishes the starting point from the user-provided gene.
 
 ### Step 2 — `get_operons`
-The core step: returns operon membership based on strand, intergenic distance, and 
+
+The core step: returns operon membership based on strand, intergenic distance, and
 annotation clustering patterns.
 
 ### Step 3 — `get_gene_details` (batch)
+
 Retrieves annotations for all operon members simultaneously.
 
 ### Steps 4–5 — Sequence & Intergenic Analysis (parallel)
-Maps the exact operon boundaries and flags any unusually large intergenic gaps that might 
+
+Maps the exact operon boundaries and flags any unusually large intergenic gaps that might
 indicate internal promoters or operon sub-structure.
 
 ### Step 6 — `predict_promoter`
-Identifies the primary promoter elements (-10 and -35 hexamers, TSS) at the 5' end of the 
+
+Identifies the primary promoter elements (-10 and -35 hexamers, TSS) at the 5' end of the
 operon — essential for confirming that genes are a single transcriptional unit.
 
 ### Steps 7–8 — UniProt + InterPro (conditional, parallel)
-When `include_function_annotation=true`, enriches each member with curated protein function 
+
+When `include_function_annotation=true`, enriches each member with curated protein function
 and domain architecture data.
 
 ### Step 9 — Motif Search
+
 Searches for regulatory motifs (sigma factor binding sites, ribosome binding sites) within
 the operon sequence.
 
@@ -262,15 +269,16 @@ the operon sequence.
 
 The most important deliverable is the **functional synthesis**: what is the collective job of
 this operon? Look for:
+
 - **Metabolic pathway logic** — genes encoding sequential enzymatic steps
 - **Structural complex logic** — protein subunits that assemble together
 - **Regulatory logic** — regulators + their target genes in the same operon
 
 ## Common Issues & Troubleshooting
 
-| Problem | Likely Cause | Solution |
-|---|---|---|
-| Only one gene returned | Monocistronic gene | Report as monocistronic; not an operon |
-| Mixed-strand genes returned | Divergent promoter or error | Check geometry carefully; report to user |
-| Very large intergenic gap | Internal promoter or operon boundary | Flag explicitly; may be two operons |
-| No promoter predicted | Non-standard sigma factor | Report; may be regulated by alternative sigma |
+| Problem                     | Likely Cause                         | Solution                                      |
+| --------------------------- | ------------------------------------ | --------------------------------------------- |
+| Only one gene returned      | Monocistronic gene                   | Report as monocistronic; not an operon        |
+| Mixed-strand genes returned | Divergent promoter or error          | Check geometry carefully; report to user      |
+| Very large intergenic gap   | Internal promoter or operon boundary | Flag explicitly; may be two operons           |
+| No promoter predicted       | Non-standard sigma factor            | Report; may be regulated by alternative sigma |

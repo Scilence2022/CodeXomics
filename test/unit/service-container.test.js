@@ -4,7 +4,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 // Import the ServiceContainer class
-const ServiceContainer = (await import('../../src/renderer/modules/core/ServiceContainer.js')).default || (await import('../../src/renderer/modules/core/ServiceContainer.js'));
+const ServiceContainer =
+  (await import('../../src/renderer/modules/core/ServiceContainer.js')).default ||
+  (await import('../../src/renderer/modules/core/ServiceContainer.js'));
 
 describe('ServiceContainer', () => {
   let container;
@@ -66,22 +68,22 @@ describe('ServiceContainer', () => {
     });
 
     it('should detect circular dependencies', () => {
-      container.register('a', (c) => c.get('b'));
-      container.register('b', (c) => c.get('a'));
+      container.register('a', c => c.get('b'));
+      container.register('b', c => c.get('a'));
       expect(() => container.get('a')).toThrow(/circular/i);
     });
 
     it('should pass container to factory for dependency resolution', () => {
       container.register('db', () => ({ connected: true }));
-      container.register('service', (c) => ({ db: c.get('db') }));
+      container.register('service', c => ({ db: c.get('db') }));
       const svc = container.get('service');
       expect(svc.db).toEqual({ connected: true });
     });
 
     it('should support chain of 3+ dependencies', () => {
       container.register('config', () => ({ env: 'prod' }));
-      container.register('logger', (c) => ({ config: c.get('config') }));
-      container.register('app', (c) => ({ logger: c.get('logger') }));
+      container.register('logger', c => ({ config: c.get('config') }));
+      container.register('app', c => ({ logger: c.get('logger') }));
 
       const app = container.get('app');
       expect(app.logger.config.env).toBe('prod');
@@ -130,8 +132,14 @@ describe('ServiceContainer', () => {
   describe('initializeAll()', () => {
     it('should eagerly initialize all services', () => {
       let initCount = 0;
-      container.register('s1', () => { initCount++; return 'a'; });
-      container.register('s2', () => { initCount++; return 'b'; });
+      container.register('s1', () => {
+        initCount++;
+        return 'a';
+      });
+      container.register('s2', () => {
+        initCount++;
+        return 'b';
+      });
 
       const names = container.initializeAll();
       expect(names.sort()).toEqual(['s1', 's2']);
@@ -140,7 +148,9 @@ describe('ServiceContainer', () => {
 
     it('should throw if any service fails to initialize', () => {
       container.register('good', () => 'ok');
-      container.register('bad', () => { throw new Error('init failed'); });
+      container.register('bad', () => {
+        throw new Error('init failed');
+      });
       expect(() => container.initializeAll()).toThrow('init failed');
     });
   });

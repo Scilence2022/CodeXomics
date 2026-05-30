@@ -165,9 +165,7 @@ function getCurrentMainWindow() {
   }
 
   // Last resort: find any main window using the windowId marker
-  const mainWindows = BrowserWindow.getAllWindows().filter(
-    win => !win.isDestroyed() && win.windowId
-  );
+  const mainWindows = BrowserWindow.getAllWindows().filter(win => !win.isDestroyed() && win.windowId);
 
   return mainWindows.length > 0 ? mainWindows[0] : null;
 }
@@ -667,7 +665,6 @@ function createPDBWindow() {
     console.error('Failed to open PDB Structure Viewer:', error);
   }
 }
-
 
 // Create Gene Annotation Refine Window
 
@@ -2208,7 +2205,6 @@ function openTestFile(filename) {
   }
 }
 
-
 function getCurrentActiveWindow() {
   return currentActiveWindow;
 }
@@ -2252,5 +2248,5 @@ module.exports = {
   arrangeWindowsCascade,
   resetWindowPositions,
   openTestFile,
-  setWindowMgmtDependencies
+  setWindowMgmtDependencies,
 };

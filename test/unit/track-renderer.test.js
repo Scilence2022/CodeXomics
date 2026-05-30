@@ -111,13 +111,16 @@ describe('Circular Viewport Handling', () => {
     const renderer = createRenderer();
     renderer.trackSettings.genes = { circularMode: true };
 
-    const visible = renderer.filterFeaturesByViewport([
-      { id: 'tail', start: 94, end: 98 },
-      { id: 'head', start: 4, end: 8 },
-      { id: 'outside', start: 40, end: 50 },
-    ], { start: 90, end: 110 });
+    const visible = renderer.filterFeaturesByViewport(
+      [
+        { id: 'tail', start: 94, end: 98 },
+        { id: 'head', start: 4, end: 8 },
+        { id: 'outside', start: 40, end: 50 },
+      ],
+      { start: 90, end: 110 }
+    );
 
-    expect(visible.map((feature) => feature.id)).toEqual(['tail', 'head']);
+    expect(visible.map(feature => feature.id)).toEqual(['tail', 'head']);
     expect(visible[1].start).toBe(104);
     expect(visible[1].end).toBe(108);
     expect(visible[1]._sourceStart).toBe(4);
@@ -129,7 +132,7 @@ describe('Circular Viewport Handling', () => {
 
     const reads = await renderer.getReadsForViewport('chr1', { start: 90, end: 110 }, {});
 
-    expect(reads.map((read) => read.id)).toEqual(['tail', 'head']);
+    expect(reads.map(read => read.id)).toEqual(['tail', 'head']);
     expect(reads[1].start).toBe(106);
     expect(reads[1].end).toBe(109);
     expect(reads[1]._sourceStart).toBe(6);
@@ -138,8 +141,12 @@ describe('Circular Viewport Handling', () => {
 
 describe('Track Creation Methods', () => {
   const trackMethods = [
-    'createGeneTrack', 'createAnnotationTrack', 'createBlastTrack',
-    'createTrackBase', 'createTrackHeader', 'createTrackContent',
+    'createGeneTrack',
+    'createAnnotationTrack',
+    'createBlastTrack',
+    'createTrackBase',
+    'createTrackHeader',
+    'createTrackContent',
   ];
 
   it('should define all track creation methods', () => {
@@ -152,8 +159,10 @@ describe('Track Creation Methods', () => {
 
 describe('Blast Track Subsystem', () => {
   const blastMethods = [
-    'createBlastTrack', 'createOutOfViewBlastSection',
-    'createOutOfViewBlastItem', 'filterBlastResultsByViewport',
+    'createBlastTrack',
+    'createOutOfViewBlastSection',
+    'createOutOfViewBlastItem',
+    'filterBlastResultsByViewport',
     'renderBlastElements',
   ];
 
@@ -173,8 +182,10 @@ describe('Blast Track Subsystem', () => {
 
 describe('Layout Management', () => {
   const layoutMethods = [
-    'toggleTrackLayout', 'toggleCircularMode',
-    'updateCircularModeButton', 'updateLayoutButtonAppearance',
+    'toggleTrackLayout',
+    'toggleCircularMode',
+    'updateCircularModeButton',
+    'updateLayoutButtonAppearance',
   ];
 
   it('should define layout management methods', () => {
@@ -231,14 +242,14 @@ describe('Genes Track Settings Tabs & Style Consistency', () => {
 
   it('loadTrackSpecificSettings should add llm-config-modal class on the modal content wrapper for all track types', () => {
     expect(content).toContain('llm-config-modal');
-    expect(content).toContain('modal.querySelector(\'.modal-content\')');
-    expect(content).toContain('modalContent.classList.add(\'llm-config-modal\')');
+    expect(content).toContain("modal.querySelector('.modal-content')");
+    expect(content).toContain("modalContent.classList.add('llm-config-modal')");
   });
 
   it('resetTrackSettingsToDefaults should support prefix matching for track types', () => {
     expect(content).toContain('this._getDefaultTrackSettings(trackType)');
     expect(content).toContain('capitalizedKey');
-    expect(content).toContain('dispatchEvent(new Event(\'change\'))');
+    expect(content).toContain("dispatchEvent(new Event('change'))");
   });
 });
 

@@ -208,50 +208,60 @@ can produce publication-quality primers without deep bioinformatics expertise.
 ## Step-by-Step Explanation
 
 ### Step 1 — `get_current_state`
+
 Ensures a genome is loaded before attempting any sequence operations. Aborts gracefully if not.
 
 ### Step 2 — `search_gene_by_name` → `jump_to_gene`
+
 Resolves the gene name to genomic coordinates and navigates the viewer for visual context.
 
 ### Step 3 — `get_sequence`
+
 Extracts the target region with 200 bp of flanking sequence on each side to give the primer
 design algorithm adequate sequence context around the amplicon target.
 
 ### Step 4 — `compute_gc`
+
 Pre-screens the region for primer-ability. GC content outside 40–60% is a warning sign.
 
 ### Step 5 — `design_primers`
+
 Calls the primer3-based engine with the user's Tm and size constraints to generate the optimal
 forward/reverse pair.
 
 ### Steps 6–7 — `calculate_primer_properties` (parallel)
+
 Computes precise Tm, GC%, self-complementarity, and hairpin delta-G for each primer separately
 and simultaneously for efficiency.
 
 ### Step 8 — `find_primer_binding_sites`
+
 Scans the loaded genome for all locations where the primers could bind, detecting potential
 off-target amplification.
 
 ### Step 9 — `blast_search` (optional)
+
 Validates specificity against public databases — critical for eukaryotic genomes or when the
 loaded sequence is a plasmid/construct.
 
 ### Step 10 — `add_primer_annotation`
+
 Saves the primer positions as visual annotations in the genome viewer so the user can see the
 amplicon in its genomic context.
 
 ## Interpreting Results
 
 Present results as a formatted table showing both primers side-by-side. Highlight any warnings:
+
 - Tm difference >3°C between primers
 - GC% outside 40–60%
 - Multiple BLAST hits (possible off-targets)
 
 ## Common Issues & Troubleshooting
 
-| Problem | Likely Cause | Solution |
-|---|---|---|
-| `design_primers` returns no result | Sequence too short (<150 bp) | Increase flanking padding or use a longer region |
-| BLAST returns many hits | Repetitive region or very short primers | Increase primer length constraints |
-| Gene not found | Name/locus_tag mismatch | Ask user for exact locus_tag or coordinates |
-| GC% very high or low | AT-rich or GC-rich region | Report to user; suggest degenerate primer strategies |
+| Problem                            | Likely Cause                            | Solution                                             |
+| ---------------------------------- | --------------------------------------- | ---------------------------------------------------- |
+| `design_primers` returns no result | Sequence too short (<150 bp)            | Increase flanking padding or use a longer region     |
+| BLAST returns many hits            | Repetitive region or very short primers | Increase primer length constraints                   |
+| Gene not found                     | Name/locus_tag mismatch                 | Ask user for exact locus_tag or coordinates          |
+| GC% very high or low               | AT-rich or GC-rich region               | Report to user; suggest degenerate primer strategies |

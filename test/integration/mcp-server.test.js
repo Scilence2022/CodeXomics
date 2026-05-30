@@ -20,7 +20,9 @@ describe('MCP Server Structure', () => {
   });
 
   it('mcp-server.js should define MCP server class', () => {
-    expect(mcpContent.includes('class StandardClaudeMCPServer') || mcpContent.includes('class UnifiedMCPServer')).toBe(true);
+    expect(mcpContent.includes('class StandardClaudeMCPServer') || mcpContent.includes('class UnifiedMCPServer')).toBe(
+      true
+    );
   });
 
   it('mcp-server.js should export the class', () => {
@@ -41,7 +43,7 @@ describe('MCP Tool Modules', () => {
 
   beforeAll(() => {
     // Collect all .js files in mcp-tools/ recursively
-    const collect = (dir) => {
+    const collect = dir => {
       const results = [];
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
@@ -95,10 +97,18 @@ describe('MCP Tool Modules', () => {
   it('should have required tool categories', () => {
     const filenames = toolModules.map(f => path.basename(f));
     const expected = [
-      'NavigationTools.js', 'SequenceTools.js', 'ProteinTools.js',
-      'DatabaseTools.js', 'DataTools.js', 'PathwayTools.js',
-      'ActionTools.js', 'UtilityTools.js', 'FileTools.js',
-      'TrackSettingsTools.js', 'PrimerTools.js', 'AnnotationTools.js',
+      'NavigationTools.js',
+      'SequenceTools.js',
+      'ProteinTools.js',
+      'DatabaseTools.js',
+      'DataTools.js',
+      'PathwayTools.js',
+      'ActionTools.js',
+      'UtilityTools.js',
+      'FileTools.js',
+      'TrackSettingsTools.js',
+      'PrimerTools.js',
+      'AnnotationTools.js',
     ];
     for (const name of expected) {
       expect(filenames, `Should include ${name}`).toContain(name);
@@ -113,10 +123,7 @@ describe('MCP System Integration', () => {
   });
 
   it('system_integration.js should have tool merge logic', () => {
-    const content = fs.readFileSync(
-      path.join(process.cwd(), 'tools_registry/system_integration.js'),
-      'utf-8'
-    );
+    const content = fs.readFileSync(path.join(process.cwd(), 'tools_registry/system_integration.js'), 'utf-8');
     expect(content.includes('merge') || content.includes('deduplicat')).toBe(true);
   });
 });

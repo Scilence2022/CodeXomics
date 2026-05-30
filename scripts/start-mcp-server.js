@@ -33,7 +33,9 @@ const currentMode = process.env.CODEXOMICS_MCP_MODE || 'tools';
 
 // Use stderr for all output to avoid interfering with JSON-RPC on stdout
 process.stderr.write('🧬 Starting CodeXomics MCP Server...\n');
-process.stderr.write(`📋 Mode: ${currentMode}${currentMode === 'agent' ? ' (AI agent will handle prompts autonomously)' : ' (direct tool execution)'}\n`);
+process.stderr.write(
+  `📋 Mode: ${currentMode}${currentMode === 'agent' ? ' (AI agent will handle prompts autonomously)' : ' (direct tool execution)'}\n`
+);
 process.stderr.write('📋 Using official Claude MCP TypeScript SDK\n');
 process.stderr.write('\n');
 

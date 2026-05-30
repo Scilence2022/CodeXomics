@@ -34,14 +34,16 @@ describe('ToolNames Constants', () => {
 
   it('should define navigation tool constants', () => {
     const content = fs.readFileSync(TOOL_NAMES_PATH, 'utf-8');
-    const hasNavCategories = content.includes('NAVIGATION') && 
+    const hasNavCategories =
+      content.includes('NAVIGATION') &&
       (content.includes('go_to') || content.includes('scroll') || content.includes('switch'));
     expect(hasNavCategories).toBe(true);
   });
 
   it('should define file loading tool constants', () => {
     const content = fs.readFileSync(TOOL_NAMES_PATH, 'utf-8');
-    const hasFileCategory = content.includes('FILE_LOADING') || content.includes('load_genome') || content.includes('load_annotation');
+    const hasFileCategory =
+      content.includes('FILE_LOADING') || content.includes('load_genome') || content.includes('load_annotation');
     expect(hasFileCategory).toBe(true);
   });
 

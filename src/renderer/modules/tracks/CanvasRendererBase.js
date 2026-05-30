@@ -80,7 +80,9 @@ class CanvasRendererBase {
   _setupCanvas(options = {}) {
     this.canvas = document.createElement('canvas');
     this.canvas.className = options.canvasClassName || 'genome-canvas';
-    this.canvas.style.cssText = options.canvasStyle || `
+    this.canvas.style.cssText =
+      options.canvasStyle ||
+      `
       position: absolute;
       top: 0;
       left: 0;
@@ -167,7 +169,7 @@ class CanvasRendererBase {
    */
   _setupResizeObserver() {
     if (typeof ResizeObserver !== 'undefined' && this.container) {
-      this._resizeObserver = new ResizeObserver((entries) => {
+      this._resizeObserver = new ResizeObserver(entries => {
         for (const entry of entries) {
           if (entry.target === this.container) {
             this._onResize();

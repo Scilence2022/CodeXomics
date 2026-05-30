@@ -10,7 +10,7 @@ class ProteinService {
     this.activeTabId = null;
     this.isDragging = false;
     this.isResizing = false;
-    this.dragOffset = {x: 0, y: 0};
+    this.dragOffset = { x: 0, y: 0 };
     this._boundHandlers = null; // track active handlers for cleanup
 
     // Cache for large structure data (PDB, etc.) to prevent LLM context overflow
@@ -44,9 +44,10 @@ class ProteinService {
         results: searchResults,
         count: searchResults.length,
         timestamp: new Date().toISOString(),
-        message: searchResults.length > 0 ?
-          `Found ${searchResults.length} AlphaFold structure(s) for ${geneName}. Results displayed in sidebar.` :
-          `No AlphaFold structures found for ${geneName}.`,
+        message:
+          searchResults.length > 0
+            ? `Found ${searchResults.length} AlphaFold structure(s) for ${geneName}. Results displayed in sidebar.`
+            : `No AlphaFold structures found for ${geneName}.`,
       };
     } catch (error) {
       console.error('AlphaFold search error:', error);
@@ -77,7 +78,7 @@ class ProteinService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-      const response = await fetch(downloadUrl, {signal: controller.signal});
+      const response = await fetch(downloadUrl, { signal: controller.signal });
       clearTimeout(timeoutId);
 
       if (!response.ok) {
@@ -150,7 +151,9 @@ class ProteinService {
       console.log(`[ProteinService] Cache evicted oldest entry: ${oldestKey}`);
     }
     this._structureDataCache.set(key, data);
-    console.log(`[ProteinService] Cached structure data: ${key} (${data.length} chars, ${this._structureDataCache.size}/${this._structureDataCacheMaxSize} entries)`);
+    console.log(
+      `[ProteinService] Cached structure data: ${key} (${data.length} chars, ${this._structureDataCache.size}/${this._structureDataCacheMaxSize} entries)`
+    );
   }
 
   /**
@@ -195,7 +198,7 @@ class ProteinService {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-        const response = await fetch(pdbUrl, {signal: controller.signal});
+        const response = await fetch(pdbUrl, { signal: controller.signal });
         clearTimeout(timeoutId);
 
         if (!response.ok) {
@@ -232,7 +235,7 @@ class ProteinService {
 
       // If UniProt ID provided, delegate to AlphaFold fetch (which already uses cache)
       if (uniprotId) {
-        return await this.fetchAlphaFoldStructure({uniprotId, geneName});
+        return await this.fetchAlphaFoldStructure({ uniprotId, geneName });
       }
 
       throw new Error('Either pdbId or uniprotId must be provided');
@@ -259,15 +262,15 @@ class ProteinService {
 
       // Search RCSB PDB API
       const searchUrl = `https://search.rcsb.org/rcsbsearch/v2/query?json=${encodeURIComponent(
-          JSON.stringify({
-            query: {
-              type: 'terminal',
-              service: 'full_text',
-              parameters: {value: `${geneName} ${organism}`},
-            },
-            return_type: 'entry',
-            request_options: {paginate: {start: 0, rows: maxResults}},
-          }),
+        JSON.stringify({
+          query: {
+            type: 'terminal',
+            service: 'full_text',
+            parameters: { value: `${geneName} ${organism}` },
+          },
+          return_type: 'entry',
+          request_options: { paginate: { start: 0, rows: maxResults } },
+        })
       )}`;
 
       const response = await fetch(searchUrl);
@@ -276,7 +279,7 @@ class ProteinService {
       }
 
       const data = await response.json();
-      const results = (data.result_set || []).map((entry) => ({
+      const results = (data.result_set || []).map(entry => ({
         pdbId: entry.identifier,
         pdbUrl: `https://www.rcsb.org/structure/${entry.identifier}`,
         downloadUrl: `https://files.rcsb.org/download/${entry.identifier}.pdb`,
@@ -289,7 +292,7 @@ class ProteinService {
       // Fetch detailed metadata via GraphQL if results found
       if (results.length > 0) {
         try {
-          const pdbIds = results.map((r) => r.pdbId);
+          const pdbIds = results.map(r => r.pdbId);
           const graphqlQuery = {
             query: `{
               entries(entry_ids: ${JSON.stringify(pdbIds)}) {
@@ -310,26 +313,28 @@ class ProteinService {
 
           const gqlResponse = await fetch('https://data.rcsb.org/graphql', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(graphqlQuery),
           });
 
           if (gqlResponse.ok) {
             const gqlData = await gqlResponse.json();
             const detailsMap = {};
-            (gqlData.data?.entries || []).forEach((entry) => {
+            (gqlData.data?.entries || []).forEach(entry => {
               detailsMap[entry.rcsb_id] = entry;
             });
 
             // Update results with detailed data
-            results.forEach((res) => {
+            results.forEach(res => {
               const details = detailsMap[res.pdbId];
               if (details) {
                 res.title = details.struct?.title || res.pdbId;
                 res.method = details.rcsb_entry_info?.experimental_method || 'N/A';
-                res.resolution = details.rcsb_entry_info?.resolution_combined ?
-                  details.rcsb_entry_info.resolution_combined[0] : 'N/A';
-                res.organism = details.polymer_entities?.[0]?.rcsb_entity_source_organism?.[0]?.scientific_name || 'N/A';
+                res.resolution = details.rcsb_entry_info?.resolution_combined
+                  ? details.rcsb_entry_info.resolution_combined[0]
+                  : 'N/A';
+                res.organism =
+                  details.polymer_entities?.[0]?.rcsb_entity_source_organism?.[0]?.scientific_name || 'N/A';
               }
             });
           }
@@ -352,9 +357,9 @@ class ProteinService {
         count: results.length,
         timestamp: new Date().toISOString(),
         message:
-          results.length > 0 ?
-            `Found ${results.length} PDB structure(s) for ${geneName}. Results displayed in sidebar.` :
-            `No PDB structures found for ${geneName}.`,
+          results.length > 0
+            ? `Found ${results.length} PDB structure(s) for ${geneName}. Results displayed in sidebar.`
+            : `No PDB structures found for ${geneName}.`,
       };
     } catch (error) {
       console.error('PDB search error:', error);
@@ -373,7 +378,7 @@ class ProteinService {
       const checkUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const response = await fetch(checkUrl, {method: 'HEAD', signal: controller.signal});
+      const response = await fetch(checkUrl, { method: 'HEAD', signal: controller.signal });
       clearTimeout(timeoutId);
       if (response.ok) return true;
       if (response.status === 404) return false;
@@ -389,19 +394,22 @@ class ProteinService {
    * Unified renderer for Protein structure search results (PDB or AlphaFold)
    */
   async renderProteinStructureResults(parameters) {
-    const {results, searchType, geneName} = parameters;
+    const { results, searchType, geneName } = parameters;
     try {
       console.log(`Adding ${searchType} results in sidebar for ${geneName}:`, results);
 
       // Check if a tab for this geneName and searchType already exists (case-insensitive)
       const existingTab = this.tabs.find(
-          (t) => t.geneName && t.geneName.toLowerCase() === geneName.toLowerCase() &&
-                 t.searchType && t.searchType.toLowerCase() === searchType.toLowerCase(),
+        t =>
+          t.geneName &&
+          t.geneName.toLowerCase() === geneName.toLowerCase() &&
+          t.searchType &&
+          t.searchType.toLowerCase() === searchType.toLowerCase()
       );
 
       if (existingTab) {
         // Replace existing results with the new results
-        existingTab.results = results.map((r) => ({
+        existingTab.results = results.map(r => ({
           ...r,
           structureType: r.structureType || searchType,
         }));
@@ -413,7 +421,7 @@ class ProteinService {
           title: `${geneName} (${searchType})`,
           searchType,
           geneName,
-          results: results.map((r) => ({...r, structureType: searchType})),
+          results: results.map(r => ({ ...r, structureType: searchType })),
         };
 
         this.tabs.push(newTab);
@@ -448,14 +456,14 @@ class ProteinService {
 
     // Update Tabs UI
     tabBar.innerHTML = '';
-    this.tabs.forEach((tab) => {
+    this.tabs.forEach(tab => {
       const tabButton = document.createElement('div');
       tabButton.className = `tab-button ${tab.id === this.activeTabId ? 'active' : ''}`;
       tabButton.innerHTML = `
         <span class="tab-title" title="${tab.title}">${tab.title}</span>
         <span class="tab-close" data-id="${tab.id}">&times;</span>
       `;
-      tabButton.onclick = (e) => {
+      tabButton.onclick = e => {
         if (e.target.classList.contains('tab-close')) {
           this.closeProteinSidebarTab(tab.id);
         } else {
@@ -468,7 +476,7 @@ class ProteinService {
 
     // Update Content UI
     resultsContainer.innerHTML = '';
-    const activeTab = this.tabs.find((t) => t.id === this.activeTabId);
+    const activeTab = this.tabs.find(t => t.id === this.activeTabId);
 
     if (activeTab) {
       activeTab.results.forEach((result, index) => {
@@ -487,7 +495,7 @@ class ProteinService {
   }
 
   closeProteinSidebarTab(tabId) {
-    const index = this.tabs.findIndex((t) => t.id === tabId);
+    const index = this.tabs.findIndex(t => t.id === tabId);
     if (index !== -1) {
       this.tabs.splice(index, 1);
       if (this.activeTabId === tabId) {
@@ -548,8 +556,14 @@ class ProteinService {
     const MAX_HEIGHT = Math.max(window.innerHeight * 2, 1200);
 
     const cursorMap = {
-      n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize',
-      ne: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize', sw: 'nesw-resize',
+      n: 'ns-resize',
+      s: 'ns-resize',
+      e: 'ew-resize',
+      w: 'ew-resize',
+      ne: 'nesw-resize',
+      nw: 'nwse-resize',
+      se: 'nwse-resize',
+      sw: 'nesw-resize',
     };
 
     const startResize = (dir, startX, startY) => {
@@ -559,9 +573,12 @@ class ProteinService {
 
       const rect = sidebar.getBoundingClientRect();
       this._resizeStart = {
-        x: startX, y: startY,
-        width: rect.width, height: rect.height,
-        left: rect.left, top: rect.top,
+        x: startX,
+        y: startY,
+        width: rect.width,
+        height: rect.height,
+        left: rect.left,
+        top: rect.top,
       };
 
       // Ensure left/top are set in px for position adjustments
@@ -579,19 +596,24 @@ class ProteinService {
         const s = this._resizeStart;
         const dx = clientX - s.x;
         const dy = clientY - s.y;
-        let newW = s.width; let newH = s.height; let newL = s.left; let newT = s.top;
+        let newW = s.width;
+        let newH = s.height;
+        let newL = s.left;
+        let newT = s.top;
 
         if (dir.includes('e')) {
           newW = s.width + dx;
         }
         if (dir.includes('w')) {
-          newW = s.width - dx; newL = s.left + dx;
+          newW = s.width - dx;
+          newL = s.left + dx;
         }
         if (dir.includes('s')) {
           newH = s.height + dy;
         }
         if (dir.includes('n')) {
-          newH = s.height - dy; newT = s.top + dy;
+          newH = s.height - dy;
+          newT = s.top + dy;
         }
 
         // Apply constraints
@@ -612,7 +634,7 @@ class ProteinService {
           newH = MAX_HEIGHT;
         }
 
-        return {newW, newH, newL, newT};
+        return { newW, newH, newL, newT };
       };
 
       const applyResize = (newW, newH, newL, newT) => {
@@ -624,18 +646,18 @@ class ProteinService {
         }
       };
 
-      const onMouseMove = (e) => {
+      const onMouseMove = e => {
         if (!this.isResizing) return;
         e.preventDefault();
-        const {newW, newH, newL, newT} = calcResize(e.clientX, e.clientY);
+        const { newW, newH, newL, newT } = calcResize(e.clientX, e.clientY);
         applyResize(newW, newH, newL, newT);
       };
 
-      const onTouchMove = (e) => {
+      const onTouchMove = e => {
         if (!this.isResizing) return;
         e.preventDefault();
         const touch = e.touches[0];
-        const {newW, newH, newL, newT} = calcResize(touch.clientX, touch.clientY);
+        const { newW, newH, newL, newT } = calcResize(touch.clientX, touch.clientY);
         applyResize(newW, newH, newL, newT);
       };
 
@@ -654,23 +676,27 @@ class ProteinService {
 
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', endResize);
-      document.addEventListener('touchmove', onTouchMove, {passive: false});
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
       document.addEventListener('touchend', endResize);
     };
 
     // Bind all 8 resize handles
-    sidebar.querySelectorAll('.resize-handle').forEach((handle) => {
+    sidebar.querySelectorAll('.resize-handle').forEach(handle => {
       const dir = handle.dataset.dir;
-      handle.addEventListener('mousedown', (e) => {
+      handle.addEventListener('mousedown', e => {
         e.preventDefault();
         e.stopPropagation();
         startResize(dir, e.clientX, e.clientY);
       });
-      handle.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        startResize(dir, e.touches[0].clientX, e.touches[0].clientY);
-      }, {passive: false});
+      handle.addEventListener(
+        'touchstart',
+        e => {
+          e.preventDefault();
+          e.stopPropagation();
+          startResize(dir, e.touches[0].clientX, e.touches[0].clientY);
+        },
+        { passive: false }
+      );
     });
 
     // Implement Dragging (using addEventListener, with mutual exclusion, viewport clamping, and touch support)
@@ -689,7 +715,7 @@ class ProteinService {
       // Visual feedback
       document.body.style.userSelect = 'none';
 
-      const onMouseMove = (e) => {
+      const onMouseMove = e => {
         if (!this.isDragging) return;
         e.preventDefault();
         const x = e.clientX - this.dragOffset.x;
@@ -709,7 +735,7 @@ class ProteinService {
         sidebar.style.bottom = 'auto';
       };
 
-      const onTouchMove = (e) => {
+      const onTouchMove = e => {
         if (!this.isDragging) return;
         e.preventDefault();
         const touch = e.touches[0];
@@ -741,20 +767,24 @@ class ProteinService {
 
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', endDrag);
-      document.addEventListener('touchmove', onTouchMove, {passive: false});
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
       document.addEventListener('touchend', endDrag);
     };
 
-    dragHandle.addEventListener('mousedown', (e) => {
+    dragHandle.addEventListener('mousedown', e => {
       if (e.target.closest('.sidebar-close')) return;
       e.preventDefault();
       startDrag(e.clientX, e.clientY);
     });
-    dragHandle.addEventListener('touchstart', (e) => {
-      if (e.target.closest('.sidebar-close')) return;
-      e.preventDefault();
-      startDrag(e.touches[0].clientX, e.touches[0].clientY);
-    }, {passive: false});
+    dragHandle.addEventListener(
+      'touchstart',
+      e => {
+        if (e.target.closest('.sidebar-close')) return;
+        e.preventDefault();
+        startDrag(e.touches[0].clientX, e.touches[0].clientY);
+      },
+      { passive: false }
+    );
 
     // Close button
     const closeBtn = sidebar.querySelector('.sidebar-close');
@@ -858,20 +888,20 @@ class ProteinService {
     element.className = 'protein-result-item';
 
     // Unify variables
-    const titleOrName = isAlphaFold ? result.proteinName : (result.title || `PDB Structure ${result.pdbId}`);
+    const titleOrName = isAlphaFold ? result.proteinName : result.title || `PDB Structure ${result.pdbId}`;
     const primaryId = isAlphaFold ? result.uniprotId : result.pdbId;
     const structureUrl = isAlphaFold ? result.alphaFoldUrl : result.pdbUrl;
     const urlLabel = isAlphaFold ? 'AlphaFold Page' : 'PDB Page';
 
-    const badgeHtml = isAlphaFold ?
-      '<span class="structure-badge badge-alphafold"><i class="fas fa-magic"></i> AlphaFold</span>' :
-      '<span class="structure-badge badge-pdb"><i class="fas fa-flask"></i> PDB</span>';
+    const badgeHtml = isAlphaFold
+      ? '<span class="structure-badge badge-alphafold"><i class="fas fa-magic"></i> AlphaFold</span>'
+      : '<span class="structure-badge badge-pdb"><i class="fas fa-flask"></i> PDB</span>';
 
     // Build specific details
     let specificDetailsHtml = '';
     if (isAlphaFold) {
       specificDetailsHtml = `
-        <div class="detail-row"><span class="label">Genes:</span><span class="value">${Array.isArray(result.geneNames) ? result.geneNames.join(', ') : (result.geneNames || 'N/A')}</span></div>
+        <div class="detail-row"><span class="label">Genes:</span><span class="value">${Array.isArray(result.geneNames) ? result.geneNames.join(', ') : result.geneNames || 'N/A'}</span></div>
         <div class="detail-row"><span class="label">Organism:</span><span class="value">${result.organism || 'N/A'}</span></div>
         <div class="detail-row"><span class="label">Length:</span><span class="value">${result.length || 'N/A'} AA</span></div>
       `;
@@ -975,15 +1005,15 @@ class ProteinService {
       // If we have MCP server available, try to use it first
       if (this.chatManager.mcpServerManager) {
         const mcpTools = this.chatManager.mcpServerManager.getAllAvailableTools();
-        const mcpTool = mcpTools.find((t) => t.name === 'analyze_interpro_domains');
+        const mcpTool = mcpTools.find(t => t.name === 'analyze_interpro_domains');
 
         if (mcpTool) {
           console.log('🌐 [ChatManager] Using MCP server for InterPro analysis');
           try {
             return await this.chatManager.mcpServerManager.executeToolOnServer(
-                mcpTool.serverId,
-                'analyze_interpro_domains',
-                parameters,
+              mcpTool.serverId,
+              'analyze_interpro_domains',
+              parameters
             );
           } catch (mcpError) {
             console.warn('🔄 [ChatManager] MCP execution failed, using fallback:', mcpError.message);
@@ -1109,11 +1139,11 @@ class ProteinService {
         };
 
         // Convert application names using the mapping (case-insensitive)
-        const applCodes = applications.map((app) => {
+        const applCodes = applications.map(app => {
           const mappedCode = applMapping[app];
           if (mappedCode) return mappedCode;
           // Try case-insensitive match
-          const key = Object.keys(applMapping).find((k) => k.toLowerCase() === app.toLowerCase());
+          const key = Object.keys(applMapping).find(k => k.toLowerCase() === app.toLowerCase());
           return key ? applMapping[key] : app;
         });
         formData.append('appl', applCodes.join(','));
@@ -1133,7 +1163,7 @@ class ProteinService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'text/plain',
+            Accept: 'text/plain',
           },
           body: formData.toString(),
         });
@@ -1142,7 +1172,7 @@ class ProteinService {
           const errorText = await submitResponse.text();
           console.error('❌ [ChatManager] InterPro API error response:', errorText);
           throw new Error(
-              `InterPro API submission failed (${submitResponse.status}): ${errorText || submitResponse.statusText}`,
+            `InterPro API submission failed (${submitResponse.status}): ${errorText || submitResponse.statusText}`
           );
         }
 
@@ -1155,7 +1185,7 @@ class ProteinService {
         let status = 'RUNNING';
 
         while (status === 'RUNNING' && attempts < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
 
           const statusUrl = `https://www.ebi.ac.uk/Tools/services/rest/iprscan5/status/${jobId}`;
           const statusResponse = await fetch(statusUrl);
@@ -1193,11 +1223,11 @@ class ProteinService {
         if (interproData.results && interproData.results[0]) {
           const matches = interproData.results[0].matches || [];
 
-          matches.forEach((match) => {
+          matches.forEach(match => {
             const signature = match.signature || {};
             const locations = match.locations || [];
 
-            locations.forEach((loc) => {
+            locations.forEach(loc => {
               domains.push({
                 accession: signature.accession,
                 name: signature.name || signature.description || 'Unknown',
@@ -1213,7 +1243,7 @@ class ProteinService {
 
             // Extract GO terms
             if (match.entry && match.entry.goXRefs) {
-              match.entry.goXRefs.forEach((go) => {
+              match.entry.goXRefs.forEach(go => {
                 goTerms.push({
                   id: go.id,
                   category: go.category,
@@ -1224,7 +1254,7 @@ class ProteinService {
 
             // Extract pathway data
             if (match.entry && match.entry.pathwayXRefs) {
-              match.entry.pathwayXRefs.forEach((pathway) => {
+              match.entry.pathwayXRefs.forEach(pathway => {
                 pathwayData.push({
                   id: pathway.id,
                   name: pathway.name,
@@ -1237,7 +1267,7 @@ class ProteinService {
 
         // Calculate coverage
         const coveredPositions = new Set();
-        domains.forEach((d) => {
+        domains.forEach(d => {
           for (let i = d.start; i <= d.end; i++) {
             coveredPositions.add(i);
           }
@@ -1325,7 +1355,7 @@ class ProteinService {
     }
 
     console.log(
-        `Processing ${data.results.length} UniProt results for gene ${geneName}, checking AlphaFold availability...`,
+      `Processing ${data.results.length} UniProt results for gene ${geneName}, checking AlphaFold availability...`
     );
 
     // Sort results to prioritize reviewed entries and those with gene names matching our search
@@ -1336,8 +1366,8 @@ class ProteinService {
       if (aReviewed !== bReviewed) return bReviewed - aReviewed;
 
       // Prioritize entries with matching gene names
-      const aHasGene = a.genes?.some((g) => g.geneName?.value?.toLowerCase() === geneName.toLowerCase()) ? 1 : 0;
-      const bHasGene = b.genes?.some((g) => g.geneName?.value?.toLowerCase() === geneName.toLowerCase()) ? 1 : 0;
+      const aHasGene = a.genes?.some(g => g.geneName?.value?.toLowerCase() === geneName.toLowerCase()) ? 1 : 0;
+      const bHasGene = b.genes?.some(g => g.geneName?.value?.toLowerCase() === geneName.toLowerCase()) ? 1 : 0;
       if (aHasGene !== bHasGene) return bHasGene - aHasGene;
 
       return 0;
@@ -1354,7 +1384,7 @@ class ProteinService {
         protein.proteinDescription?.recommendedName?.fullName?.value ||
         protein.proteinDescription?.submissionNames?.[0]?.fullName?.value ||
         'Unknown protein';
-      const geneNames = protein.genes?.map((g) => g.geneName?.value).filter(Boolean) || [];
+      const geneNames = protein.genes?.map(g => g.geneName?.value).filter(Boolean) || [];
 
       checkedCount++;
       console.log(`[${checkedCount}/${maxChecks}] Checking ${uniprotId} (${proteinName})...`);
@@ -1442,12 +1472,19 @@ class ProteinService {
     }
 
     console.log(
-        `✓ Found ${alphaFoldResults.length} AlphaFold structures for gene ${geneName} (checked ${checkedCount} proteins)`,
+      `✓ Found ${alphaFoldResults.length} AlphaFold structures for gene ${geneName} (checked ${checkedCount} proteins)`
     );
     return alphaFoldResults;
   }
   async searchUniProtDatabase(parameters) {
-    const {query, searchType = 'keyword', organism, reviewedOnly = false, limit = 20, includeSequence = false} = parameters;
+    const {
+      query,
+      searchType = 'keyword',
+      organism,
+      reviewedOnly = false,
+      limit = 20,
+      includeSequence = false,
+    } = parameters;
     try {
       if (!query && !organism) {
         throw new Error('Query or organism is required for UniProt search');
@@ -1469,7 +1506,9 @@ class ProteinService {
       }
 
       const queryString = queryParts.join(' AND ');
-      const fields = 'accession,id,protein_name,gene_names,organism_name,length,reviewed,cc_function,cc_subcellular_location' + (includeSequence ? ',sequence' : '');
+      const fields =
+        'accession,id,protein_name,gene_names,organism_name,length,reviewed,cc_function,cc_subcellular_location' +
+        (includeSequence ? ',sequence' : '');
       const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(queryString)}&fields=${fields}&size=${limit}&format=json`;
 
       console.log(`[ProteinService] searchUniProtDatabase: ${searchUrl}`);
@@ -1482,25 +1521,28 @@ class ProteinService {
       const data = await response.json();
 
       // Prune to avoid giant context hits
-      const results = (data.results || []).map((protein) => {
+      const results = (data.results || []).map(protein => {
         let functionDescription = '';
         let subcellularLocation = '';
 
         if (protein.comments) {
-          const fn = protein.comments.find((c) => c.commentType === 'FUNCTION');
+          const fn = protein.comments.find(c => c.commentType === 'FUNCTION');
           if (fn && fn.texts && fn.texts.length > 0) functionDescription = fn.texts[0].value;
 
-          const loc = protein.comments.find((c) => c.commentType === 'SUBCELLULAR LOCATION');
+          const loc = protein.comments.find(c => c.commentType === 'SUBCELLULAR LOCATION');
           if (loc && loc.subcellularLocations && loc.subcellularLocations.length > 0) {
-            subcellularLocation = loc.subcellularLocations.map((l) => l.location.value).join(', ');
+            subcellularLocation = loc.subcellularLocations.map(l => l.location.value).join(', ');
           }
         }
 
         const pruned = {
           uniprotId: protein.primaryAccession,
           entryName: protein.uniProtkbId,
-          proteinName: protein.proteinDescription?.recommendedName?.fullName?.value || protein.proteinDescription?.submissionNames?.[0]?.fullName?.value || 'Unknown',
-          genes: (protein.genes || []).map((g) => g.geneName?.value).filter(Boolean),
+          proteinName:
+            protein.proteinDescription?.recommendedName?.fullName?.value ||
+            protein.proteinDescription?.submissionNames?.[0]?.fullName?.value ||
+            'Unknown',
+          genes: (protein.genes || []).map(g => g.geneName?.value).filter(Boolean),
           organism: protein.organism?.scientificName || 'Unknown',
           length: protein.sequence?.length || 0,
           reviewed: protein.entryType === 'UniProtKB reviewed (Swiss-Prot)',
@@ -1521,12 +1563,21 @@ class ProteinService {
       };
     } catch (error) {
       console.error('searchUniProtDatabase error:', error);
-      return {success: false, tool: 'search_uniprot_database', error: error.message};
+      return { success: false, tool: 'search_uniprot_database', error: error.message };
     }
   }
 
   async advancedUniprotSearch(parameters) {
-    const {proteinName, geneName, organism, keywords, subcellularLocation, function: fnLocation, reviewedOnly = false, limit = 20} = parameters;
+    const {
+      proteinName,
+      geneName,
+      organism,
+      keywords,
+      subcellularLocation,
+      function: fnLocation,
+      reviewedOnly = false,
+      limit = 20,
+    } = parameters;
     try {
       const queryParts = [];
       if (proteinName) queryParts.push(`(protein_name:"${proteinName}")`);
@@ -1554,10 +1605,10 @@ class ProteinService {
 
       const data = await response.json();
 
-      const results = (data.results || []).map((protein) => ({
+      const results = (data.results || []).map(protein => ({
         uniprotId: protein.primaryAccession,
         proteinName: protein.proteinDescription?.recommendedName?.fullName?.value || 'Unknown',
-        genes: (protein.genes || []).map((g) => g.geneName?.value).filter(Boolean),
+        genes: (protein.genes || []).map(g => g.geneName?.value).filter(Boolean),
         organism: protein.organism?.scientificName || 'Unknown',
         length: protein.sequence?.length || 0,
         reviewed: protein.entryType === 'UniProtKB reviewed (Swiss-Prot)',
@@ -1571,12 +1622,12 @@ class ProteinService {
       };
     } catch (error) {
       console.error('advancedUniprotSearch error:', error);
-      return {success: false, tool: 'advanced_uniprot_search', error: error.message};
+      return { success: false, tool: 'advanced_uniprot_search', error: error.message };
     }
   }
 
   async searchInterproEntry(parameters) {
-    const {search_term, search_terms, search_type = 'any', entry_type, max_results = 20} = parameters;
+    const { search_term, search_terms, search_type = 'any', entry_type, max_results = 20 } = parameters;
     try {
       let term = search_term;
       if (!term && search_terms && search_terms.length > 0) {
@@ -1597,7 +1648,7 @@ class ProteinService {
 
       const data = await response.json();
 
-      const results = (data.results || []).map((entry) => ({
+      const results = (data.results || []).map(entry => ({
         interproId: entry.metadata?.accession || entry.accession,
         name: entry.metadata?.name?.name || entry.metadata?.name || 'Unknown',
         type: entry.metadata?.type || 'Unknown',
@@ -1614,12 +1665,12 @@ class ProteinService {
       };
     } catch (error) {
       console.error('searchInterproEntry error:', error);
-      return {success: false, tool: 'search_interpro_entry', error: error.message};
+      return { success: false, tool: 'search_interpro_entry', error: error.message };
     }
   }
 
   async getInterproEntryDetails(parameters) {
-    const {interproId, includeProteins = false, includeStructures = false} = parameters;
+    const { interproId, includeProteins = false, includeStructures = false } = parameters;
     try {
       if (!interproId) throw new Error('interproId is required');
 
@@ -1641,11 +1692,15 @@ class ProteinService {
         name: meta.name?.name || meta.name || 'Unknown',
         shortName: meta.name?.short || '',
         type: meta.type || 'Unknown',
-        description: (meta.description || []).map((d) => d.text).join(' '),
+        description: (meta.description || []).map(d => d.text).join(' '),
         proteinCount: data.protein_count || 0,
-        goTerms: (meta.go_terms || []).map((go) => ({id: go.identifier, name: go.name, category: go.category})),
+        goTerms: (meta.go_terms || []).map(go => ({ id: go.identifier, name: go.name, category: go.category })),
         integratedSignatures: Object.keys(meta.member_databases || {}),
-        literature: Object.values(meta.literature || {}).map((lit) => ({pmid: lit.PMID, title: lit.title, author: lit.author})),
+        literature: Object.values(meta.literature || {}).map(lit => ({
+          pmid: lit.PMID,
+          title: lit.title,
+          author: lit.author,
+        })),
       };
 
       return {
@@ -1655,7 +1710,7 @@ class ProteinService {
       };
     } catch (error) {
       console.error('getInterproEntryDetails error:', error);
-      return {success: false, tool: 'get_interpro_entry_details', error: error.message};
+      return { success: false, tool: 'get_interpro_entry_details', error: error.message };
     }
   }
 }

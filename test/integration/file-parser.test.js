@@ -45,8 +45,10 @@ describe('File Format Validation', () => {
         const content = fs.readFileSync(path.join(wigDir, file), 'utf-8');
         const hasTrack = content.includes('track') || content.includes('type=');
         // Some WIG files use variableStep or fixedStep
-        expect(hasTrack || content.includes('fixedStep') || content.includes('variableStep'),
-          `${file} should be a valid WIG file`).toBe(true);
+        expect(
+          hasTrack || content.includes('fixedStep') || content.includes('variableStep'),
+          `${file} should be a valid WIG file`
+        ).toBe(true);
       }
     });
 

@@ -204,7 +204,9 @@
 
       .settings-content {
         overflow: hidden;
-        transition: max-height 0.3s ease, opacity 0.3s ease;
+        transition:
+          max-height 0.3s ease,
+          opacity 0.3s ease;
       }
 
       .settings-content.collapsed {
@@ -418,7 +420,9 @@
         padding: 16px;
         border: 1px solid var(--mcp-border);
         border-left: 3px solid var(--mcp-accent);
-        transition: transform 0.2s, border-color 0.2s;
+        transition:
+          transform 0.2s,
+          border-color 0.2s;
       }
 
       .info-card:hover {
@@ -702,7 +706,9 @@
       <div class="settings-panel">
         <h2>
           Server Settings
-          <button id="toggle-settings-btn" class="btn btn-secondary" style="padding:6px 14px;font-size:12px;">Configure</button>
+          <button id="toggle-settings-btn" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px">
+            Configure
+          </button>
         </h2>
         <div id="settings-content" class="settings-content collapsed">
           <div class="settings-form">
@@ -720,13 +726,17 @@
               <span>⚠️</span>
               <span id="port-conflict-message">Port conflict detected</span>
             </div>
-            <div id="restart-hint" class="restart-hint">
-              ⚡ Settings saved. Restart the server to apply changes.
-            </div>
+            <div id="restart-hint" class="restart-hint">⚡ Settings saved. Restart the server to apply changes.</div>
             <div class="settings-actions">
-              <button id="save-settings-btn" class="btn btn-primary" style="padding:8px 16px;font-size:12px;">Save Settings</button>
-              <button id="check-ports-btn" class="btn btn-secondary" style="padding:8px 16px;font-size:12px;">Check Ports</button>
-              <button id="reset-settings-btn" class="btn btn-secondary" style="padding:8px 16px;font-size:12px;">Reset Defaults</button>
+              <button id="save-settings-btn" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px">
+                Save Settings
+              </button>
+              <button id="check-ports-btn" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px">
+                Check Ports
+              </button>
+              <button id="reset-settings-btn" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px">
+                Reset Defaults
+              </button>
             </div>
             <div id="settings-message" class="settings-message"></div>
           </div>
@@ -928,12 +938,14 @@
         }
 
         logContainer.innerHTML = logs
-          .map(log => `
+          .map(
+            log => `
             <div class="log-entry">
               <span class="timestamp">${log.timestamp}</span>
               <span class="level ${log.level}">${log.level}</span>
               <span class="message">${log.message}</span>
-            </div>`)
+            </div>`
+          )
           .join('');
 
         logContainer.scrollTop = logContainer.scrollHeight;
@@ -1095,11 +1107,11 @@
 
       // ===== Real-time Log Streaming from Server =====
       if (window.electronAPI && window.electronAPI.on) {
-        window.electronAPI.on('mcp-server-log', (logEntry) => {
+        window.electronAPI.on('mcp-server-log', logEntry => {
           addLog(logEntry.level || 'info', logEntry.message || '');
         });
 
-        window.electronAPI.on('mcp-server-client-update', (data) => {
+        window.electronAPI.on('mcp-server-client-update', data => {
           // Refresh status to update client count
           refreshBtn.click();
         });
@@ -1117,9 +1129,10 @@
       // ===== Theme Integration =====
       function applyThemeVariables(themeData) {
         const root = document.documentElement;
-        const vars = themeData.isDark && themeData.darkVariables
-          ? { ...themeData.variables, ...themeData.darkVariables }
-          : themeData.variables;
+        const vars =
+          themeData.isDark && themeData.darkVariables
+            ? { ...themeData.variables, ...themeData.darkVariables }
+            : themeData.variables;
         const isDark = !!themeData.isDark;
 
         const directMap = {
@@ -1227,41 +1240,50 @@
           case 'copy': {
             const selection = window.getSelection();
             if (selection && selection.toString()) {
-              navigator.clipboard.writeText(selection.toString()).then(() => {
-                showToast('Copied to clipboard');
-              }).catch(() => {
-                document.execCommand('copy');
-              });
+              navigator.clipboard
+                .writeText(selection.toString())
+                .then(() => {
+                  showToast('Copied to clipboard');
+                })
+                .catch(() => {
+                  document.execCommand('copy');
+                });
             }
             break;
           }
           case 'paste': {
             const active = document.activeElement;
             if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-              navigator.clipboard.readText().then(text => {
-                const start = active.selectionStart;
-                const end = active.selectionEnd;
-                active.value = active.value.substring(0, start) + text + active.value.substring(end);
-                active.selectionStart = active.selectionEnd = start + text.length;
-                active.dispatchEvent(new Event('input', { bubbles: true }));
-              }).catch(() => {
-                document.execCommand('paste');
-              });
+              navigator.clipboard
+                .readText()
+                .then(text => {
+                  const start = active.selectionStart;
+                  const end = active.selectionEnd;
+                  active.value = active.value.substring(0, start) + text + active.value.substring(end);
+                  active.selectionStart = active.selectionEnd = start + text.length;
+                  active.dispatchEvent(new Event('input', { bubbles: true }));
+                })
+                .catch(() => {
+                  document.execCommand('paste');
+                });
             }
             break;
           }
           case 'cut': {
             const selection = window.getSelection();
             if (selection && selection.toString()) {
-              navigator.clipboard.writeText(selection.toString()).then(() => {
-                const active = document.activeElement;
-                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-                  document.execCommand('delete');
-                }
-                showToast('Cut to clipboard');
-              }).catch(() => {
-                document.execCommand('cut');
-              });
+              navigator.clipboard
+                .writeText(selection.toString())
+                .then(() => {
+                  const active = document.activeElement;
+                  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                    document.execCommand('delete');
+                  }
+                  showToast('Cut to clipboard');
+                })
+                .catch(() => {
+                  document.execCommand('cut');
+                });
             }
             break;
           }
@@ -1279,7 +1301,9 @@
             break;
           }
           case 'about': {
-            alert('CodeXomics MCP Server Manager\n\nVersion: 0.2.0\n\nManage the MCP server for AI-powered bioinformatics tools.');
+            alert(
+              'CodeXomics MCP Server Manager\n\nVersion: 0.2.0\n\nManage the MCP server for AI-powered bioinformatics tools.'
+            );
             break;
           }
         }

@@ -117,12 +117,8 @@ class ErrorHandler {
       };
 
       // Unhandled Promise rejection
-      window.addEventListener('unhandledrejection', (event) => {
-        this.handle(
-          event.reason || new Error('Unhandled Promise rejection'),
-          'Unhandled Promise',
-          'error'
-        );
+      window.addEventListener('unhandledrejection', event => {
+        this.handle(event.reason || new Error('Unhandled Promise rejection'), 'Unhandled Promise', 'error');
         event.preventDefault(); // Prevent console noise after we handle it
       });
     }
@@ -138,7 +134,7 @@ class ErrorHandler {
       });
 
       // Node.js uncaught exception
-      process.on('uncaughtException', (error) => {
+      process.on('uncaughtException', error => {
         this.handle(error, 'Node.js uncaughtException', 'fatal');
         // Don't exit — let the app decide
       });
@@ -157,7 +153,7 @@ class ErrorHandler {
         const result = fn(...args);
         // Handle async functions
         if (result instanceof Promise) {
-          return result.catch((error) => {
+          return result.catch(error => {
             this.handle(error, context);
             throw error; // Re-throw for caller to handle if needed
           });
@@ -261,7 +257,11 @@ class ErrorHandler {
     }
 
     // Fall back to window.NotificationService if globally available
-    if (typeof window !== 'undefined' && window.NotificationService && typeof window.NotificationService.toast === 'function') {
+    if (
+      typeof window !== 'undefined' &&
+      window.NotificationService &&
+      typeof window.NotificationService.toast === 'function'
+    ) {
       window.NotificationService.toast(errorObj.message, level === 'fatal' ? 'error' : level);
       return;
     }

@@ -312,37 +312,42 @@ This skill orchestrates a complete gene research pipeline, analogous to what a b
 analyst would do over several hours. The agent runs it in minutes by parallelising independent
 database queries. The output is a structured, citation-backed research summary.
 
-Key design principle: **evidence convergence** — multiple independent lines of evidence 
+Key design principle: **evidence convergence** — multiple independent lines of evidence
 (sequence, structure, domain, evolutionary) are gathered and synthesised into a single confident
 conclusion.
 
 ## Research Depth Modes
 
-| Mode | Steps Run | Typical Duration | Use Case |
-|---|---|---|---|
-| `quick` | Phases 1–3 only | 15–30s | Fast context check |
-| `standard` | All phases, no viewer | 30–90s | Routine research |
-| `deep` | All phases + structure viewer | 60–180s | Publication preparation |
+| Mode       | Steps Run                     | Typical Duration | Use Case                |
+| ---------- | ----------------------------- | ---------------- | ----------------------- |
+| `quick`    | Phases 1–3 only               | 15–30s           | Fast context check      |
+| `standard` | All phases, no viewer         | 30–90s           | Routine research        |
+| `deep`     | All phases + structure viewer | 60–180s          | Publication preparation |
 
 ## Step-by-Step Explanation
 
 ### Phase 1 — Orientation
-Ensures the application is in the right state, navigates to the gene, and establishes 
+
+Ensures the application is in the right state, navigates to the gene, and establishes
 the genomic coordinate baseline.
 
 ### Phase 2 — Sequence Analysis (parallel)
-GC content, codon bias, and promoter prediction all run simultaneously since they are 
+
+GC content, codon bias, and promoter prediction all run simultaneously since they are
 computationally independent. Unusual codon bias is a horizontal gene transfer signal.
 
 ### Phase 3 — Genomic Context (parallel)
+
 Operon membership, intergenic regions, and flanking genes run in parallel. This provides
 "guilt by association" functional evidence — co-operonic genes are often functionally related.
 
 ### Phase 4 — Database Analysis (parallel)
+
 UniProt and AlphaFold searches launch simultaneously. InterPro domain analysis runs after
 UniProt since it needs the accession number.
 
 ### Phase 5 — BLAST (conditional)
+
 Only runs in `standard` or `deep` modes. Identifies the closest characterized homologs
 across all sequenced organisms.
 
@@ -354,9 +359,9 @@ section in proper scientific language rather than just filling in template slots
 
 ## Common Issues & Troubleshooting
 
-| Problem | Likely Cause | Solution |
-|---|---|---|
-| Phases 4–5 return empty | Non-model organism protein | Try sequence-based UniProt search |
+| Problem                                       | Likely Cause                | Solution                               |
+| --------------------------------------------- | --------------------------- | -------------------------------------- |
+| Phases 4–5 return empty                       | Non-model organism protein  | Try sequence-based UniProt search      |
 | Contradictory function from different sources | Paralogous proteins matched | Report all candidates; let user choose |
-| Very long runtime | BLAST + many database calls | Use `depth=quick` for exploratory work |
-| Gene not in operons | Monocistronic gene | Report this as biologically meaningful |
+| Very long runtime                             | BLAST + many database calls | Use `depth=quick` for exploratory work |
+| Gene not in operons                           | Monocistronic gene          | Report this as biologically meaningful |

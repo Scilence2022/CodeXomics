@@ -19,9 +19,14 @@ describe('Menu Builder Module', () => {
   });
 
   it('should define all 6 menu functions', () => {
-    const funcs = ['createCircosPlotterMenu', 'createToolWindowMenu',
-      'createMenu', 'createDeepGeneResearchMenu', 'createProjectManagerMenu',
-      'createMCPServerManagerMenu'];
+    const funcs = [
+      'createCircosPlotterMenu',
+      'createToolWindowMenu',
+      'createMenu',
+      'createDeepGeneResearchMenu',
+      'createProjectManagerMenu',
+      'createMCPServerManagerMenu',
+    ];
     for (const fn of funcs) {
       expect(content.includes(`function ${fn}`), `Missing ${fn}`).toBe(true);
     }

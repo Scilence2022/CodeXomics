@@ -22,7 +22,7 @@ parameters:
   properties: {}
 sample_usages:
   - user_query: 'What settings can I change on tracks?'
-    tool_call: "get_track_settings_schema()"
+    tool_call: 'get_track_settings_schema()'
     thought: 'User is asking about the available fields and limits of track settings'
     expected_result: 'Full JSON schema of settings for all tracks'
 relationships:

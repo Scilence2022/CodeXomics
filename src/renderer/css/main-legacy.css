@@ -240,8 +240,6 @@
   border-color: var(--primary-color);
 }
 
-
-
 /* Legacy mobile responsive adjustments */
 @media (max-width: 1200px) {
   .track-checkboxes {

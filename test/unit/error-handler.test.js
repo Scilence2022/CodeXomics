@@ -3,7 +3,9 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const ErrorHandler = (await import('../../src/renderer/modules/core/ErrorHandler.js')).default || (await import('../../src/renderer/modules/core/ErrorHandler.js'));
+const ErrorHandler =
+  (await import('../../src/renderer/modules/core/ErrorHandler.js')).default ||
+  (await import('../../src/renderer/modules/core/ErrorHandler.js'));
 
 describe('ErrorHandler', () => {
   let handler;
@@ -98,7 +100,9 @@ describe('ErrorHandler', () => {
     });
 
     it('should catch errors in callback gracefully', () => {
-      const callback = vi.fn(() => { throw new Error('callback error'); });
+      const callback = vi.fn(() => {
+        throw new Error('callback error');
+      });
       const h = new ErrorHandler({ onError: callback, showToasts: false });
       expect(() => h.handle(new Error('test'))).not.toThrow();
     });
@@ -106,7 +110,9 @@ describe('ErrorHandler', () => {
 
   describe('wrap()', () => {
     it('should wrap sync functions with error handling', () => {
-      const badFn = () => { throw new Error('fail'); };
+      const badFn = () => {
+        throw new Error('fail');
+      };
       const wrapped = handler.wrap(badFn, 'testFn');
       expect(() => wrapped()).toThrow('fail');
       expect(handler.getStats().total).toBe(1);

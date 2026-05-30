@@ -412,7 +412,7 @@ Your response:
 
 | Error                 | Likely Cause            | Solution                                       |
 | --------------------- | ----------------------- | ---------------------------------------------- |
-| "Gene not found"      | Exact name mismatch     | Use `find_gene_by_name` with partial match   |
+| "Gene not found"      | Exact name mismatch     | Use `find_gene_by_name` with partial match     |
 | "No genome loaded"    | User hasn't loaded data | Guide them to use `load_genome_file`           |
 | "Track not visible"   | Track is hidden         | Use `toggle_track` to show it                  |
 | "Invalid coordinates" | Out of bounds           | Check genome length with `get_genome_info`     |

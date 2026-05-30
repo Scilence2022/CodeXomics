@@ -80,7 +80,7 @@ class SystemIntegration {
       console.log('🎯 [System Integration] Generating non-dynamic system prompt with comprehensive tools integration');
 
       // Helper to check if the agent system is enabled
-      const isAgentSystemEnabled = (ctx) => {
+      const isAgentSystemEnabled = ctx => {
         if (ctx && typeof ctx.agentSystemEnabled === 'boolean') {
           return ctx.agentSystemEnabled;
         }
@@ -254,7 +254,7 @@ class SystemIntegration {
       console.log('🎯 [System Integration] Generating dynamic system prompt for query:', userQuery);
 
       // Helper to check if the agent system is enabled
-      const isAgentSystemEnabled = (ctx) => {
+      const isAgentSystemEnabled = ctx => {
         if (ctx && typeof ctx.agentSystemEnabled === 'boolean') {
           return ctx.agentSystemEnabled;
         }
@@ -434,9 +434,7 @@ class SystemIntegration {
 
       // Count built-in vs extended tools
       const builtInCount = combinedTools.filter(t => t.execution_type === 'built-in').length;
-      const extendedCount = combinedTools.filter(
-        t => t.execution_type !== 'built-in' && t.source !== 'plugin'
-      ).length;
+      const extendedCount = combinedTools.filter(t => t.execution_type !== 'built-in' && t.source !== 'plugin').length;
 
       console.log(
         '🎯 [System Integration] Final tool count:',
@@ -461,17 +459,21 @@ class SystemIntegration {
           systemPromptGenerated: true,
           toolSelection: {
             totalTools: enhancedPromptData.totalTools,
-            builtInTools: combinedTools.filter(t => t.execution_type === 'built-in').map(t => ({
-              name: t.name,
-              category: t.category,
-              confidence: t.confidence,
-              executionType: t.execution_type,
-            })),
-            extendedTools: combinedTools.filter(t => t.execution_type !== 'built-in' && t.source !== 'plugin').map(t => ({
-              name: t.name,
-              category: t.category || 'unknown',
-              executionType: t.execution_type,
-            })),
+            builtInTools: combinedTools
+              .filter(t => t.execution_type === 'built-in')
+              .map(t => ({
+                name: t.name,
+                category: t.category,
+                confidence: t.confidence,
+                executionType: t.execution_type,
+              })),
+            extendedTools: combinedTools
+              .filter(t => t.execution_type !== 'built-in' && t.source !== 'plugin')
+              .map(t => ({
+                name: t.name,
+                category: t.category || 'unknown',
+                executionType: t.execution_type,
+              })),
           },
           context: context,
           detection_source: 'dynamic-prompt-generation',
@@ -510,7 +512,7 @@ class SystemIntegration {
     const builtInToolNames = this.builtInTools.builtInToolsMap;
 
     // Filter helper
-    const shouldKeep = (tool) => {
+    const shouldKeep = tool => {
       if (tool && tool.category === 'coordination' && !agentSystemEnabled) {
         return false;
       }
@@ -553,8 +555,12 @@ class SystemIntegration {
         const existing = toolMap.get(tool.name);
         if (
           existing.execution_type === 'built-in' &&
-          (!existing.parameters || !existing.parameters.properties || Object.keys(existing.parameters.properties).length === 0) &&
-          tool.parameters && tool.parameters.properties && Object.keys(tool.parameters.properties).length > 0
+          (!existing.parameters ||
+            !existing.parameters.properties ||
+            Object.keys(existing.parameters.properties).length === 0) &&
+          tool.parameters &&
+          tool.parameters.properties &&
+          Object.keys(tool.parameters.properties).length > 0
         ) {
           // Enrich built-in tool with full parameter definition from registry
           existing.parameters = tool.parameters;

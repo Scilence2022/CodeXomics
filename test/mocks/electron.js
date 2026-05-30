@@ -5,7 +5,7 @@
 
 module.exports = {
   app: {
-    getPath: vi.fn((name) => `/mock/${name}`),
+    getPath: vi.fn(name => `/mock/${name}`),
     getVersion: vi.fn(() => '0.6.0-beta'),
     getName: vi.fn(() => 'CodeXomics'),
     quit: vi.fn(),
@@ -60,11 +60,22 @@ const vi = {
 };
 
 function jest_fn() {
-  const fn = function(...args) { fn._calls.push(args); return fn._returnVal; };
+  const fn = function (...args) {
+    fn._calls.push(args);
+    return fn._returnVal;
+  };
   fn._calls = [];
   fn._returnVal = undefined;
-  fn.mockReturnValue = (val) => { fn._returnVal = val; return fn; };
-  fn.mockResolvedValue = (val) => { fn._returnVal = Promise.resolve(val); return fn; };
-  fn.mockImplementation = (impl) => { return Object.assign(fn, impl); };
+  fn.mockReturnValue = val => {
+    fn._returnVal = val;
+    return fn;
+  };
+  fn.mockResolvedValue = val => {
+    fn._returnVal = Promise.resolve(val);
+    return fn;
+  };
+  fn.mockImplementation = impl => {
+    return Object.assign(fn, impl);
+  };
   return fn;
 }

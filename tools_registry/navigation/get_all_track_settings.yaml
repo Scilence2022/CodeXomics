@@ -21,7 +21,7 @@ parameters:
   properties: {}
 sample_usages:
   - user_query: 'Get all track configurations'
-    tool_call: "get_all_track_settings()"
+    tool_call: 'get_all_track_settings()'
     thought: 'User wants to inspect settings of all tracks'
     expected_result: 'Object containing all track settings returned'
 relationships:

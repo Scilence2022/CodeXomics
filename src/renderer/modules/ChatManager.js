@@ -97,12 +97,14 @@ class ChatManager {
     this.dynamicTools = null;
     this.dynamicToolsEnabled = true;
     this._dynamicToolsReady = false;
-    this.initializeDynamicTools().then(() => {
-      this._dynamicToolsReady = true;
-    }).catch((err) => {
-      console.error('❌ Failed to initialize dynamic tools:', err);
-      this._dynamicToolsReady = true;
-    });
+    this.initializeDynamicTools()
+      .then(() => {
+        this._dynamicToolsReady = true;
+      })
+      .catch(err => {
+        console.error('❌ Failed to initialize dynamic tools:', err);
+        this._dynamicToolsReady = true;
+      });
 
     // Initialize Tool Execution Tracker
     this.toolExecutionTracker = null;
@@ -189,13 +191,13 @@ class ChatManager {
         this.renderWelcomeCards();
 
         // Listen for settings changes
-        window.addEventListener('chatbox-settingsChanged', (event) => {
+        window.addEventListener('chatbox-settingsChanged', event => {
           this.updateSettingsFromManager();
 
           // Check if Dynamic Tools Registry setting changed
           const dynamicToolsRegistryEnabled = this.configManager.get(
-              'chatboxSettings.enableDynamicToolsRegistry',
-              true,
+            'chatboxSettings.enableDynamicToolsRegistry',
+            true
           );
         });
 
@@ -203,7 +205,7 @@ class ChatManager {
         window.chatBoxSettingsManager = this.chatBoxSettingsManager;
 
         // Listen for Multi-Agent Settings changes
-        window.addEventListener('multiAgentSettingsChanged', (event) => {
+        window.addEventListener('multiAgentSettingsChanged', event => {
           this.updateMultiAgentToggleButton();
         });
       } else {
@@ -223,28 +225,34 @@ class ChatManager {
     const container = document.getElementById('welcomeCardsGrid');
     if (!container) return;
 
-    const manager = this.welcomeExamplesManager ||
-      (typeof WelcomeExamplesManager !== 'undefined' && window.welcomeExamplesManager);
+    const manager =
+      this.welcomeExamplesManager || (typeof WelcomeExamplesManager !== 'undefined' && window.welcomeExamplesManager);
     if (!manager) return;
 
     const categories = manager.getAll();
 
-    container.innerHTML = categories.map((cat) => `
+    container.innerHTML = categories
+      .map(
+        cat => `
       <div class="welcome-card ${cat.cssClass || 'welcome-card-search'}">
         <div class="welcome-card-header">
           <span class="welcome-card-icon">${cat.icon || '💬'}</span>
           <span class="welcome-card-title">${cat.title || ''}</span>
         </div>
         <div class="welcome-card-examples">
-          ${(cat.examples || []).map((ex) => {
-    // Handle both legacy string format and new object format gracefully
-    const promptStr = typeof ex === 'string' ? ex : (ex.prompt || '');
-    const titleStr = typeof ex === 'string' ? ex : (ex.title || promptStr);
-    return `<button class="welcome-example-btn" data-prompt="${promptStr.replace(/"/g, '&quot;')}">${titleStr}</button>`;
-  }).join('')}
+          ${(cat.examples || [])
+            .map(ex => {
+              // Handle both legacy string format and new object format gracefully
+              const promptStr = typeof ex === 'string' ? ex : ex.prompt || '';
+              const titleStr = typeof ex === 'string' ? ex : ex.title || promptStr;
+              return `<button class="welcome-example-btn" data-prompt="${promptStr.replace(/"/g, '&quot;')}">${titleStr}</button>`;
+            })
+            .join('')}
         </div>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
   }
 
   /**
@@ -257,8 +265,8 @@ class ChatManager {
       this.showToolCallSource = this.chatBoxSettingsManager.getSetting('showToolCallSource', true);
       this.showDetailedToolData = this.chatBoxSettingsManager.getSetting('showDetailedToolData', true);
       this.hideThinkingAfterConversation = this.chatBoxSettingsManager.getSetting(
-          'hideThinkingAfterConversation',
-          false,
+        'hideThinkingAfterConversation',
+        false
       );
       this.autoScrollToBottom = this.chatBoxSettingsManager.getSetting('autoScrollToBottom', true);
       this.showTimestamps = this.chatBoxSettingsManager.getSetting('showTimestamps', false);
@@ -286,12 +294,12 @@ class ChatManager {
       this.agentSystemSettings.llmTimeout = this.chatBoxSettingsManager.getSetting('agentLLMTimeout', 30000);
       this.agentSystemSettings.llmRetryAttempts = this.chatBoxSettingsManager.getSetting('agentLLMRetryAttempts', 3);
       this.agentSystemSettings.llmUseSystemPrompt = this.chatBoxSettingsManager.getSetting(
-          'agentLLMUseSystemPrompt',
-          true,
+        'agentLLMUseSystemPrompt',
+        true
       );
       this.agentSystemSettings.llmEnableFunctionCalling = this.chatBoxSettingsManager.getSetting(
-          'agentLLMEnableFunctionCalling',
-          true,
+        'agentLLMEnableFunctionCalling',
+        true
       );
 
       // Settings updated from ChatBoxSettingsManager
@@ -329,19 +337,19 @@ class ChatManager {
         console.log('✅ PluginManagerV2 fully initialized');
 
         // Listen to enhanced plugin events
-        this.pluginManager.on('system-initialized', (data) => {
+        this.pluginManager.on('system-initialized', data => {
           // Plugin system initialized
         });
 
-        this.pluginManager.on('function-executed', (data) => {
+        this.pluginManager.on('function-executed', data => {
           // Plugin function executed
         });
 
-        this.pluginManager.on('function-error', (data) => {
+        this.pluginManager.on('function-error', data => {
           // Plugin function error
         });
 
-        this.pluginManager.on('plugin-registered', (data) => {
+        this.pluginManager.on('plugin-registered', data => {
           // Plugin registered
           // Notify Dynamic Tools about plugin state change
           this.onPluginStateChanged();
@@ -704,7 +712,7 @@ class ChatManager {
    * @returns {Object} Execution result with response and mode
    */
   async processAgentPrompt(prompt, options = {}) {
-    const {activateMultiAgent = false, onProgress = null} = options;
+    const { activateMultiAgent = false, onProgress = null } = options;
 
     // Save current agent state
     const previousAgentState = this.agentSystemEnabled;
@@ -726,7 +734,11 @@ class ChatManager {
 
       // Notify progress: starting
       if (onProgress) {
-        onProgress({type: 'round_start', message: `Starting agent execution in ChatBox`, data: {mode: activateMultiAgent ? 'multi-agent' : 'single-agent'}});
+        onProgress({
+          type: 'round_start',
+          message: `Starting agent execution in ChatBox`,
+          data: { mode: activateMultiAgent ? 'multi-agent' : 'single-agent' },
+        });
       }
 
       // Mark the prompt with MCP source so user knows where it came from
@@ -735,7 +747,7 @@ class ChatManager {
       // Check if ChatBox is busy — if so, wait briefly
       if (this.conversationState.isProcessing) {
         if (onProgress) {
-          onProgress({type: 'error', message: 'ChatBox is busy with another request'});
+          onProgress({ type: 'error', message: 'ChatBox is busy with another request' });
         }
         return {
           success: false,
@@ -764,7 +776,11 @@ class ChatManager {
 
         // Notify progress: completion
         if (onProgress) {
-          onProgress({type: 'completion', message: `Agent execution completed in ChatBox`, data: {responseLength: response ? response.length : 0}});
+          onProgress({
+            type: 'completion',
+            message: `Agent execution completed in ChatBox`,
+            data: { responseLength: response ? response.length : 0 },
+          });
         }
 
         return {
@@ -789,7 +805,7 @@ class ChatManager {
 
       // Notify progress: error
       if (onProgress) {
-        onProgress({type: 'error', message: `Agent execution failed: ${error.message}`});
+        onProgress({ type: 'error', message: `Agent execution failed: ${error.message}` });
       }
 
       return {
@@ -1070,7 +1086,7 @@ class ChatManager {
    */
   async viewMarkdownFile(parameters = {}) {
     try {
-      const {filePath, title} = parameters;
+      const { filePath, title } = parameters;
 
       console.log(`📄 [ChatManager] Opening markdown file: ${filePath}`);
 
@@ -1080,8 +1096,8 @@ class ChatManager {
 
       // Main renderer window uses nodeIntegration:true / contextIsolation:false (no preload),
       // so window.electronAPI is undefined here. Use require('electron').ipcRenderer directly.
-      const {ipcRenderer} = require('electron');
-      const result = await ipcRenderer.invoke('open-markdown-viewer', {filePath, title});
+      const { ipcRenderer } = require('electron');
+      const result = await ipcRenderer.invoke('open-markdown-viewer', { filePath, title });
 
       if (result.success) {
         return {
@@ -1115,7 +1131,7 @@ class ChatManager {
 
   async getLoadedFilesList(parameters = {}) {
     try {
-      const {includeMetadata = true} = parameters;
+      const { includeMetadata = true } = parameters;
 
       // [ChatManager] Getting loaded files list
 
@@ -1127,7 +1143,7 @@ class ChatManager {
       const loadedFiles = this.app.loadedFiles || [];
 
       // Format the file list
-      const filesList = loadedFiles.map((file) => {
+      const filesList = loadedFiles.map(file => {
         const baseInfo = {
           name: file.name,
           path: file.path,
@@ -1186,7 +1202,7 @@ class ChatManager {
   async setWorkingDirectory(parameters = {}) {
     // Support both parameter names for compatibility
     const directory_path = parameters.directory_path || parameters.working_directory;
-    const {use_home_directory = false, create_if_missing = false, validate_permissions = true} = parameters;
+    const { use_home_directory = false, create_if_missing = false, validate_permissions = true } = parameters;
 
     // [ChatManager] Setting working directory
 
@@ -1216,7 +1232,7 @@ class ChatManager {
       if (!fs.existsSync(targetPath)) {
         if (create_if_missing) {
           // [ChatManager] Creating directory
-          fs.mkdirSync(targetPath, {recursive: true});
+          fs.mkdirSync(targetPath, { recursive: true });
         } else {
           throw new Error(`Directory '${targetPath}' does not exist`);
         }
@@ -1229,7 +1245,7 @@ class ChatManager {
       }
 
       // Check permissions if requested
-      const permissions = {readable: false, writable: false};
+      const permissions = { readable: false, writable: false };
       if (validate_permissions) {
         try {
           fs.accessSync(targetPath, fs.constants.R_OK);
@@ -1264,9 +1280,9 @@ class ChatManager {
       const result = {
         success: true,
         message:
-          create_if_missing && !fs.existsSync(targetPath) ?
-            `Working directory set to ${targetPath} (created)` :
-            `Working directory set to ${targetPath}`,
+          create_if_missing && !fs.existsSync(targetPath)
+            ? `Working directory set to ${targetPath} (created)`
+            : `Working directory set to ${targetPath}`,
         current_directory: targetPath,
         previous_directory: previousDirectory,
         permissions: permissions,
@@ -1343,9 +1359,9 @@ class ChatManager {
    * @returns {Object} List of available tools organized by category
    */
   async listAvailableTools(parameters = {}) {
-    const {category = null, include_details = false, format = 'summary'} = parameters;
+    const { category = null, include_details = false, format = 'summary' } = parameters;
 
-    console.log('📋 [ChatManager] Listing available tools', {category, include_details, format});
+    console.log('📋 [ChatManager] Listing available tools', { category, include_details, format });
 
     try {
       const result = {
@@ -1455,11 +1471,7 @@ class ChatManager {
       },
       protein: {
         name: 'Protein Structure',
-        tools: [
-          'search_pdb_structures',
-          'fetch_protein_structure',
-          'search_alphafold_structures',
-        ],
+        tools: ['search_pdb_structures', 'fetch_protein_structure', 'search_alphafold_structures'],
       },
       file_loading: {
         name: 'File Loading',
@@ -1475,7 +1487,7 @@ class ChatManager {
       },
     };
 
-    const result = {categories: {}, tools: [], total: 0};
+    const result = { categories: {}, tools: [], total: 0 };
 
     for (const [catKey, catInfo] of Object.entries(coreCategories)) {
       if (category && catKey !== category) continue;
@@ -1483,7 +1495,7 @@ class ChatManager {
       result.categories[catKey] = {
         name: catInfo.name,
         count: catInfo.tools.length,
-        tools: catInfo.tools.map((name) => ({
+        tools: catInfo.tools.map(name => ({
           name,
           description: `${catInfo.name} tool`,
         })),
@@ -1505,7 +1517,7 @@ class ChatManager {
 
     for (const [catKey, catInfo] of Object.entries(result.categories)) {
       message += `### ${catInfo.name || catKey} (${catInfo.count} tools)\n`;
-      message += catInfo.tools.map((t) => `- ${t.name}`).join('\n');
+      message += catInfo.tools.map(t => `- ${t.name}`).join('\n');
       message += '\n\n';
     }
 
@@ -1646,7 +1658,7 @@ class ChatManager {
     if (this.dynamicToolsEnabled && this.dynamicTools) {
       return await this.dynamicTools.getRegistryStats();
     }
-    return {total_tools: 0, total_categories: 0};
+    return { total_tools: 0, total_categories: 0 };
   }
 
   /**
@@ -1694,12 +1706,12 @@ class ChatManager {
   }
 
   setupMCPServerEventHandlers() {
-    this.mcpServerManager.on('serverConnected', (data) => {
+    this.mcpServerManager.on('serverConnected', data => {
       // [ChatManager] MCP Server connected
       this.updateMCPStatus('connected');
     });
 
-    this.mcpServerManager.on('serverDisconnected', (data) => {
+    this.mcpServerManager.on('serverDisconnected', data => {
       // [ChatManager] MCP Server disconnected
       // Only update status to disconnected if no servers are connected
       if (this.mcpServerManager.getConnectedServersCount() === 0) {
@@ -1710,12 +1722,12 @@ class ChatManager {
       }
     });
 
-    this.mcpServerManager.on('serverError', (data) => {
+    this.mcpServerManager.on('serverError', data => {
       const serverName = data.server?.name || data.serverId || 'Unknown Server';
       // [ChatManager] MCP Server error
     });
 
-    this.mcpServerManager.on('toolsUpdated', (data) => {
+    this.mcpServerManager.on('toolsUpdated', data => {
       // [ChatManager] Tools updated for server
       // Refresh the MCP tools list in the UI
       if (window.genomeBrowser && window.genomeBrowser.populateMCPToolsList) {
@@ -1763,11 +1775,11 @@ class ChatManager {
         this.updateMCPStatus('connected');
 
         // Send any pending messages
-        this.pendingMessages.forEach((msg) => this.sendToMCP(msg));
+        this.pendingMessages.forEach(msg => this.sendToMCP(msg));
         this.pendingMessages = [];
       };
 
-      this.mcpSocket.onmessage = (event) => {
+      this.mcpSocket.onmessage = event => {
         try {
           const data = JSON.parse(event.data);
           this.handleMCPMessage(data);
@@ -1783,9 +1795,9 @@ class ChatManager {
 
         // Only attempt to reconnect if this is not a manual connection and auto-activation is enabled
         if (!manualConnection) {
-          const currentSettings = this.configManager ?
-            this.configManager.get('mcpSettings', defaultSettings) :
-            defaultSettings;
+          const currentSettings = this.configManager
+            ? this.configManager.get('mcpSettings', defaultSettings)
+            : defaultSettings;
 
           if (currentSettings.allowAutoActivation && currentSettings.autoConnect) {
             setTimeout(() => this.setupMCPConnection(), mcpSettings.reconnectDelay * 1000);
@@ -1793,7 +1805,7 @@ class ChatManager {
         }
       };
 
-      this.mcpSocket.onerror = (error) => {
+      this.mcpSocket.onerror = error => {
         // [ChatManager] Legacy MCP connection error
         this.updateMCPStatus('disconnected');
       };
@@ -1920,7 +1932,7 @@ class ChatManager {
 
     serverList.innerHTML = '';
 
-    servers.forEach((server) => {
+    servers.forEach(server => {
       const serverItem = document.createElement('div');
       serverItem.className = 'mcp-server-list-item';
       serverItem.innerHTML = `
@@ -1953,8 +1965,8 @@ class ChatManager {
 
     // Add event listeners for enable/disable toggles
     const toggles = serverList.querySelectorAll('.mcp-server-toggle');
-    toggles.forEach((toggle) => {
-      toggle.addEventListener('change', (e) => {
+    toggles.forEach(toggle => {
+      toggle.addEventListener('change', e => {
         const serverId = e.target.dataset.serverId;
         const enabled = e.target.checked;
         this.toggleMCPServerEnabled(serverId, enabled);
@@ -1970,7 +1982,7 @@ class ChatManager {
    */
   toggleMCPServerEnabled(serverId, enabled) {
     if (this.mcpServerManager) {
-      this.mcpServerManager.updateServer(serverId, {enabled});
+      this.mcpServerManager.updateServer(serverId, { enabled });
       this.showNotification(`${enabled ? 'Enabled' : 'Disabled'} server ${serverId}`, 'info');
     }
   }
@@ -2110,7 +2122,7 @@ class ChatManager {
   emit(eventType, data) {
     // Call local handlers
     if (this.eventHandlers.has(eventType)) {
-      this.eventHandlers.get(eventType).forEach((handler) => {
+      this.eventHandlers.get(eventType).forEach(handler => {
         try {
           handler(data);
         } catch (error) {
@@ -2122,9 +2134,9 @@ class ChatManager {
     // Emit to window for global event handling
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
-          new CustomEvent(`chatmanager-${eventType}`, {
-            detail: data,
-          }),
+        new CustomEvent(`chatmanager-${eventType}`, {
+          detail: data,
+        })
       );
     }
 
@@ -2154,7 +2166,7 @@ class ChatManager {
   }
 
   async executeToolRequest(data) {
-    const {requestId, toolName, parameters} = data;
+    const { requestId, toolName, parameters } = data;
 
     try {
       console.log(`📡 [MCP] Executing tool request: ${toolName}`);
@@ -2198,11 +2210,24 @@ class ChatManager {
       if (!parameters || Object.keys(parameters).length === 0) {
         // No parameters
         result = this.MicrobeFns[methodName]();
-      } else if (parameters.sequence || parameters.dna || parameters.dna_sequence || parameters.protein || parameters.protein_sequence) {
+      } else if (
+        parameters.sequence ||
+        parameters.dna ||
+        parameters.dna_sequence ||
+        parameters.protein ||
+        parameters.protein_sequence
+      ) {
         // Single sequence parameter — extract the actual string value
-        const seq = parameters.sequence || parameters.dna || parameters.dna_sequence || parameters.protein || parameters.protein_sequence;
+        const seq =
+          parameters.sequence ||
+          parameters.dna ||
+          parameters.dna_sequence ||
+          parameters.protein ||
+          parameters.protein_sequence;
         if (typeof seq !== 'string') {
-          throw new Error(`Expected a sequence string but received ${typeof seq}. Provide a 'sequence' parameter with a string value.`);
+          throw new Error(
+            `Expected a sequence string but received ${typeof seq}. Provide a 'sequence' parameter with a string value.`
+          );
         }
         if (methodName === 'calculateMolecularWeight') {
           result = this.MicrobeFns[methodName](seq, parameters.type || 'auto');
@@ -2253,7 +2278,7 @@ class ChatManager {
 
   // Tool implementations
   async navigateToPosition(params) {
-    let {chromosome, start, end, position} = params;
+    let { chromosome, start, end, position } = params;
 
     if (!this.app || !this.app.navigationManager) {
       throw new Error('NavigationManager not available');
@@ -2270,7 +2295,9 @@ class ChatManager {
         }
       }
       if (!chromosome) {
-        throw new Error('No chromosome specified and unable to auto-detect current chromosome. Please load genome data first.');
+        throw new Error(
+          'No chromosome specified and unable to auto-detect current chromosome. Please load genome data first.'
+        );
       }
     }
 
@@ -2303,7 +2330,7 @@ class ChatManager {
   }
 
   async openNewTab(params) {
-    const {chromosome, start, end, position, title, geneName} = params;
+    const { chromosome, start, end, position, title, geneName } = params;
 
     console.log('🔧 [ChatManager] openNewTab called with params:', params);
 
@@ -2321,7 +2348,7 @@ class ChatManager {
         let retries = 0;
         const maxRetries = 10;
         while (!genomeBrowser.tabManager && retries < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 200));
           retries++;
           console.log(`⏳ Waiting for TabManager... attempt ${retries}/${maxRetries}`);
         }
@@ -2338,7 +2365,7 @@ class ChatManager {
       // Handle different ways to create a new tab
       if (geneName) {
         // Open tab for specific gene
-        const geneResults = await this.searchFeatures({query: geneName, caseSensitive: false});
+        const geneResults = await this.searchFeatures({ query: geneName, caseSensitive: false });
         if (geneResults.count > 0 && geneResults.results.length > 0) {
           const gene = geneResults.results[0];
           // Use the UI response function instead of direct manager access
@@ -2430,7 +2457,7 @@ class ChatManager {
    * @returns {Object} Close result
    */
   async closeTab(params = {}) {
-    const {tab_id, tab_name, tab_index, clientId} = params || {};
+    const { tab_id, tab_name, tab_index, clientId } = params || {};
 
     console.log('🔧 [ChatManager] closeTab called with params:', params);
 
@@ -2447,7 +2474,7 @@ class ChatManager {
         let retries = 0;
         const maxRetries = 10;
         while (!genomeBrowser.tabManager && retries < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 200));
           retries++;
           console.log(`⏳ Waiting for TabManager... attempt ${retries}/${maxRetries}`);
         }
@@ -2548,7 +2575,7 @@ class ChatManager {
    * Switch to a specific tab by ID, name, or index
    */
   async switchToTab(params) {
-    const {tab_id, tab_name, tab_index, clientId} = params;
+    const { tab_id, tab_name, tab_index, clientId } = params;
 
     console.log('🔧 [ChatManager] switchToTab called with params:', params);
 
@@ -2565,7 +2592,7 @@ class ChatManager {
         let retries = 0;
         const maxRetries = 10;
         while (!genomeBrowser.tabManager && retries < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 200));
           retries++;
           console.log(`⏳ Waiting for TabManager... attempt ${retries}/${maxRetries}`);
         }
@@ -2594,7 +2621,7 @@ class ChatManager {
       else if (tab_name) {
         const tabEntries = Array.from(genomeBrowser.tabManager.tabStates.entries());
         const foundTab = tabEntries.find(
-            ([tabId, tabState]) => tabState.title && tabState.title.toLowerCase().includes(tab_name.toLowerCase()),
+          ([tabId, tabState]) => tabState.title && tabState.title.toLowerCase().includes(tab_name.toLowerCase())
         );
 
         if (foundTab) {
@@ -2637,15 +2664,15 @@ class ChatManager {
   }
 
   async searchFeatures(params) {
-    const {query, caseSensitive} = params;
+    const { query, caseSensitive } = params;
 
     // Log tool detection as requested by Song
     console.log('🔍 [Tool Detection] search_features tool called with params:', params);
     console.log(
-        '🔍 [Tool Detection] Detected tool: search_features, parameters: query="' +
-      query +
-      '", caseSensitive=' +
-      (caseSensitive || false),
+      '🔍 [Tool Detection] Detected tool: search_features, parameters: query="' +
+        query +
+        '", caseSensitive=' +
+        (caseSensitive || false)
     );
 
     console.log('searchFeatures called with params:', params);
@@ -2686,7 +2713,7 @@ class ChatManager {
       console.log('Search completed, results:', searchResults);
 
       // CRITICAL FIX: Filter results to remove verbose data and prevent token overflow
-      const optimizedResults = searchResults.map((result) => {
+      const optimizedResults = searchResults.map(result => {
         if (result.annotation) {
           // Return only essential annotation data, excluding verbose note field
           return {
@@ -2709,9 +2736,9 @@ class ChatManager {
       });
 
       console.log(
-          '🔍 [Tool Detection] search_features completed, returning',
-          optimizedResults.length,
-          'optimized results (note fields excluded)',
+        '🔍 [Tool Detection] search_features completed, returning',
+        optimizedResults.length,
+        'optimized results (note fields excluded)'
       );
 
       return {
@@ -2727,7 +2754,7 @@ class ChatManager {
   }
 
   async searchGeneByName(params) {
-    const {name} = params;
+    const { name } = params;
 
     console.log('searchGeneByName called with params:', params);
 
@@ -2781,7 +2808,7 @@ class ChatManager {
     console.log(`🔍 Intelligent search for gene: "${geneName}"`);
     console.log(`📊 Searching in ${annotations.length} annotations`);
 
-    annotations.forEach((annotation) => {
+    annotations.forEach(annotation => {
       if (!annotation.qualifiers) return;
 
       const geneNameValue = this.app.getQualifierValue(annotation.qualifiers, 'gene') || '';
@@ -2797,10 +2824,10 @@ class ChatManager {
         typeof note !== 'string'
       ) {
         console.warn('Non-string qualifier values found:', {
-          gene: {value: geneNameValue, type: typeof geneNameValue},
-          locus_tag: {value: locusTag, type: typeof locusTag},
-          product: {value: product, type: typeof product},
-          note: {value: note, type: typeof note},
+          gene: { value: geneNameValue, type: typeof geneNameValue },
+          locus_tag: { value: locusTag, type: typeof locusTag },
+          product: { value: product, type: typeof product },
+          note: { value: note, type: typeof note },
         });
       }
 
@@ -2808,11 +2835,11 @@ class ChatManager {
       let relevanceScore;
       try {
         relevanceScore = this.calculateGeneRelevanceScore(
-            searchTerm,
-            geneNameValue,
-            locusTag,
-            product,
-            // Note: removed note parameter to reduce token usage
+          searchTerm,
+          geneNameValue,
+          locusTag,
+          product
+          // Note: removed note parameter to reduce token usage
         );
       } catch (error) {
         console.error('Error calculating relevance score for annotation:', {
@@ -2855,7 +2882,7 @@ class ChatManager {
 
         results.push(result);
         console.log(
-            `✅ Found match: ${result.name} (score: ${relevanceScore.score}, type: ${relevanceScore.matchType})`,
+          `✅ Found match: ${result.name} (score: ${relevanceScore.score}, type: ${relevanceScore.matchType})`
         );
       }
     });
@@ -2873,8 +2900,8 @@ class ChatManager {
 
     console.log(`📈 Search completed: ${limitedResults.length} relevant results found`);
     console.log(
-        `🎯 Top results:`,
-        limitedResults.slice(0, 5).map((r) => `${r.name} (${r.relevanceScore})`),
+      `🎯 Top results:`,
+      limitedResults.slice(0, 5).map(r => `${r.name} (${r.relevanceScore})`)
     );
 
     return limitedResults;
@@ -2889,13 +2916,13 @@ class ChatManager {
     let matchedField = '';
 
     const fields = [
-      {name: 'gene', value: geneName, weight: 100},
-      {name: 'locus_tag', value: locusTag, weight: 80},
-      {name: 'product', value: product, weight: 20},
+      { name: 'gene', value: geneName, weight: 100 },
+      { name: 'locus_tag', value: locusTag, weight: 80 },
+      { name: 'product', value: product, weight: 20 },
       // Note: removed 'note' field to reduce token usage and improve search relevance
     ];
 
-    fields.forEach((field) => {
+    fields.forEach(field => {
       if (!field.value) return;
 
       // Ensure field.value is a string and convert to lowercase
@@ -2989,9 +3016,9 @@ class ChatManager {
           matrix[i][j] = matrix[i - 1][j - 1];
         } else {
           matrix[i][j] = Math.min(
-              matrix[i - 1][j - 1] + 1, // substitution
-              matrix[i][j - 1] + 1, // insertion
-              matrix[i - 1][j] + 1, // deletion
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1, // insertion
+            matrix[i - 1][j] + 1 // deletion
           );
         }
       }
@@ -3030,41 +3057,41 @@ class ChatManager {
       },
 
       // Enhanced: Add selected gene information
-      selectedGene: this.app.selectedGene ?
-        {
-          geneName: this.app.selectedGene.gene?.qualifiers?.gene || 'Unknown',
-          locusTag: this.app.selectedGene.gene?.qualifiers?.locus_tag || 'Unknown',
-          product: this.app.selectedGene.gene?.qualifiers?.product || 'Unknown',
-          position: `${this.app.selectedGene.gene?.start}-${this.app.selectedGene.gene?.end}`,
-          strand: this.app.selectedGene.gene?.strand === -1 ? '-' : '+',
-          type: this.app.selectedGene.gene?.type || 'Unknown',
-          hasOperonInfo: !!this.app.selectedGene.operonInfo,
-        } :
-        null,
+      selectedGene: this.app.selectedGene
+        ? {
+            geneName: this.app.selectedGene.gene?.qualifiers?.gene || 'Unknown',
+            locusTag: this.app.selectedGene.gene?.qualifiers?.locus_tag || 'Unknown',
+            product: this.app.selectedGene.gene?.qualifiers?.product || 'Unknown',
+            position: `${this.app.selectedGene.gene?.start}-${this.app.selectedGene.gene?.end}`,
+            strand: this.app.selectedGene.gene?.strand === -1 ? '-' : '+',
+            type: this.app.selectedGene.gene?.type || 'Unknown',
+            hasOperonInfo: !!this.app.selectedGene.operonInfo,
+          }
+        : null,
 
       // Enhanced: Add sequence selection information
-      sequenceSelection: this.app.sequenceSelection ?
-        {
-          active: this.app.sequenceSelection.active,
-          start: this.app.sequenceSelection.start,
-          end: this.app.sequenceSelection.end,
-          length:
-            this.app.sequenceSelection.active && this.app.sequenceSelection.start && this.app.sequenceSelection.end ?
-              this.app.sequenceSelection.end - this.app.sequenceSelection.start + 1 :
-              null,
-        } :
-        null,
+      sequenceSelection: this.app.sequenceSelection
+        ? {
+            active: this.app.sequenceSelection.active,
+            start: this.app.sequenceSelection.start,
+            end: this.app.sequenceSelection.end,
+            length:
+              this.app.sequenceSelection.active && this.app.sequenceSelection.start && this.app.sequenceSelection.end
+                ? this.app.sequenceSelection.end - this.app.sequenceSelection.start + 1
+                : null,
+          }
+        : null,
 
       // Enhanced: Add current viewing region details
-      viewingRegion: this.app.currentPosition ?
-        {
-          chromosome: this.app.currentChromosome,
-          start: this.app.currentPosition.start,
-          end: this.app.currentPosition.end,
-          length: this.app.currentPosition.end - this.app.currentPosition.start + 1,
-          centerPosition: Math.floor((this.app.currentPosition.start + this.app.currentPosition.end) / 2),
-        } :
-        null,
+      viewingRegion: this.app.currentPosition
+        ? {
+            chromosome: this.app.currentChromosome,
+            start: this.app.currentPosition.start,
+            end: this.app.currentPosition.end,
+            length: this.app.currentPosition.end - this.app.currentPosition.start + 1,
+            centerPosition: Math.floor((this.app.currentPosition.start + this.app.currentPosition.end) / 2),
+          }
+        : null,
 
       // Enhanced: Add open tabs information
       openTabs: this.getOpenTabsInfo(),
@@ -3092,12 +3119,12 @@ class ChatManager {
           id: tabId,
           title: tabState.title || `Tab ${tabId}`,
           chromosome: tabState.chromosome || this.app.currentChromosome,
-          position: tabState.position ?
-            {
-              start: tabState.position.start,
-              end: tabState.position.end,
-            } :
-            null,
+          position: tabState.position
+            ? {
+                start: tabState.position.start,
+                end: tabState.position.end,
+              }
+            : null,
           isActive: tabId === activeTabId,
           index: tabs.length,
         });
@@ -3168,7 +3195,10 @@ class ChatManager {
       blast_results: 'trackBlast',
     };
 
-    const normalizedTrackName = String(trackName).trim().toLowerCase().replace(/[\s-]+/g, '_');
+    const normalizedTrackName = String(trackName)
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
     const trackAliases = {
       gccontent: 'gc_content',
       gc_content_track: 'gc_content',
@@ -3223,14 +3253,14 @@ class ChatManager {
     }
 
     trackCheckbox.checked = visible;
-    trackCheckbox.dispatchEvent(new Event('change', {bubbles: true}));
+    trackCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
 
     // Also sync with sidebar checkbox
     const sidebarCheckboxId = 'sidebar' + checkboxId.charAt(0).toUpperCase() + checkboxId.slice(1);
     const sidebarCheckbox = document.getElementById(sidebarCheckboxId);
     if (sidebarCheckbox) {
       sidebarCheckbox.checked = visible;
-      sidebarCheckbox.dispatchEvent(new Event('change', {bubbles: true}));
+      sidebarCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     return {
@@ -3269,7 +3299,7 @@ class ChatManager {
     // Normalize coordinates: start must be <= end
     const parsedStart = Math.min(parseInt(start), parseInt(end));
     const parsedEnd = Math.max(parseInt(start), parseInt(end));
-    const parsedStrand = (strand === -1 || strand === '-1') ? -1 : 1;
+    const parsedStrand = strand === -1 || strand === '-1' ? -1 : 1;
 
     if (this.app && this.app.addUserDefinedFeature) {
       const finalQualifiers = {
@@ -3373,8 +3403,12 @@ class ChatManager {
             const dnaSeq = await this.app.getSequenceForRegion(chromosome, parsedStart, parsedEnd);
             if (dnaSeq) {
               if (parsedStrand === -1) {
-                const comp = {A: 'T', T: 'A', G: 'C', C: 'G', N: 'N', a: 't', t: 'a', g: 'c', c: 'g'};
-                finalSeq = dnaSeq.split('').reverse().map((b) => comp[b] || b).join('');
+                const comp = { A: 'T', T: 'A', G: 'C', C: 'G', N: 'N', a: 't', t: 'a', g: 'c', c: 'g' };
+                finalSeq = dnaSeq
+                  .split('')
+                  .reverse()
+                  .map(b => comp[b] || b)
+                  .join('');
               } else {
                 finalSeq = dnaSeq;
               }
@@ -3437,7 +3471,7 @@ class ChatManager {
   }
 
   async analyzeRegion(params) {
-    const {chromosome, start, end, includeFeatures, includeGC} = params;
+    const { chromosome, start, end, includeFeatures, includeGC } = params;
 
     const analysis = {
       chromosome: chromosome,
@@ -3454,7 +3488,7 @@ class ChatManager {
     // Get features if requested
     if (includeFeatures && this.app.currentAnnotations) {
       analysis.features = this.app.currentAnnotations.filter(
-          (feature) => feature.chromosome === chromosome && feature.start >= start && feature.end <= end,
+        feature => feature.chromosome === chromosome && feature.start >= start && feature.end <= end
       );
     }
 
@@ -3468,7 +3502,7 @@ class ChatManager {
   }
 
   async exportData(params) {
-    const {format, chromosome, start, end} = params;
+    const { format, chromosome, start, end } = params;
 
     if (this.app && this.app.exportManager) {
       try {
@@ -3480,7 +3514,7 @@ class ChatManager {
               // Export specific region
               const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
               const fastaContent = `>${chromosome}:${start}-${end}\n${sequence}`;
-              exportResult = {content: fastaContent, type: 'text'};
+              exportResult = { content: fastaContent, type: 'text' };
             } else {
               exportResult = await this.app.exportManager.exportFASTA();
             }
@@ -3583,7 +3617,7 @@ class ChatManager {
    * Helper method for browser-based file download (fallback)
    */
   downloadFileAsBrowser(content, filename, mimeType = 'text/plain') {
-    const blob = new Blob([content], {type: mimeType});
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');
@@ -3610,21 +3644,21 @@ class ChatManager {
 
     // Define track mappings with their checkbox IDs
     const trackMappings = [
-      {name: 'genes', id: 'trackGenes'},
-      {name: 'gc', id: 'trackGC'},
-      {name: 'variants', id: 'trackVariants'},
-      {name: 'reads', id: 'trackReads'},
-      {name: 'proteins', id: 'trackProteins'},
-      {name: 'primers', id: 'trackPrimers'},
-      {name: 'wigTracks', id: 'trackWIG'},
-      {name: 'sequence', id: 'trackSequence'},
-      {name: 'actions', id: 'trackActions'},
-      {name: 'blast', id: 'trackBlast'},
-      {name: 'blast_results', id: 'trackBlast'},
+      { name: 'genes', id: 'trackGenes' },
+      { name: 'gc', id: 'trackGC' },
+      { name: 'variants', id: 'trackVariants' },
+      { name: 'reads', id: 'trackReads' },
+      { name: 'proteins', id: 'trackProteins' },
+      { name: 'primers', id: 'trackPrimers' },
+      { name: 'wigTracks', id: 'trackWIG' },
+      { name: 'sequence', id: 'trackSequence' },
+      { name: 'actions', id: 'trackActions' },
+      { name: 'blast', id: 'trackBlast' },
+      { name: 'blast_results', id: 'trackBlast' },
     ];
 
     // Check each track checkbox
-    trackMappings.forEach((track) => {
+    trackMappings.forEach(track => {
       const checkbox = document.getElementById(track.id);
       if (checkbox && checkbox.checked) {
         tracks.push(track.name);
@@ -3687,7 +3721,7 @@ class ChatManager {
 
   createChatInterface() {
     // Calculate right-bottom position
-    const defaultSize = {width: 400, height: 600};
+    const defaultSize = { width: 400, height: 600 };
     const defaultPosition = this.getDefaultChatPosition();
 
     // Load saved position and size
@@ -3862,7 +3896,7 @@ class ChatManager {
    * Calculate default right-bottom position
    */
   getDefaultChatPosition() {
-    const defaultSize = {width: 400, height: 600};
+    const defaultSize = { width: 400, height: 600 };
 
     // Get the actual available viewport dimensions - use document.documentElement for better accuracy
     const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
@@ -3872,9 +3906,9 @@ class ChatManager {
     const x = Math.max(20, viewportWidth - defaultSize.width - 20);
     const y = Math.max(20, viewportHeight - defaultSize.height - 20);
 
-    console.log('Chat position calculation:', {viewportWidth, viewportHeight, x, y, defaultSize});
+    console.log('Chat position calculation:', { viewportWidth, viewportHeight, x, y, defaultSize });
 
-    return {x, y};
+    return { x, y };
   }
 
   /**
@@ -3914,7 +3948,7 @@ class ChatManager {
         if (needsUpdate) {
           chatPanel.style.left = newLeft + 'px';
           chatPanel.style.top = newTop + 'px';
-          console.log('Chat position adjusted on resize:', {newLeft, newTop});
+          console.log('Chat position adjusted on resize:', { newLeft, newTop });
         }
       }
     });
@@ -3941,7 +3975,7 @@ class ChatManager {
       });
 
       // Send on Enter (Shift+Enter for new line) and handle arrow keys for history
-      chatInput.addEventListener('keydown', (e) => {
+      chatInput.addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           this.sendMessage();
@@ -4011,7 +4045,7 @@ class ChatManager {
     });
 
     // Context mode toggle
-    document.getElementById('contextModeToggle')?.addEventListener('change', (e) => {
+    document.getElementById('contextModeToggle')?.addEventListener('change', e => {
       this.contextModeEnabled = e.target.checked;
       console.log('Context mode changed:', this.contextModeEnabled ? 'Current message only' : 'Full conversation');
     });
@@ -4019,7 +4053,7 @@ class ChatManager {
     // Welcome example buttons - click to auto-fill and send
     const messagesContainer = document.getElementById('chatMessages');
     if (messagesContainer) {
-      messagesContainer.addEventListener('click', (e) => {
+      messagesContainer.addEventListener('click', e => {
         const exampleBtn = e.target.closest('.welcome-example-btn');
         if (exampleBtn) {
           const prompt = exampleBtn.getAttribute('data-prompt');
@@ -4198,7 +4232,7 @@ class ChatManager {
 
     // Restore floating position and size
     const savedPos = this.configManager.get('chat.floatingPosition', this.getDefaultChatPosition());
-    const savedSize = this.configManager.get('chat.floatingSize', {width: 400, height: 600});
+    const savedSize = this.configManager.get('chat.floatingSize', { width: 400, height: 600 });
 
     chatPanel.style.left = savedPos.x + 'px';
     chatPanel.style.top = savedPos.y + 'px';
@@ -4245,7 +4279,7 @@ class ChatManager {
     let startX = 0;
     let startWidth = 0;
 
-    const onMouseDown = (e) => {
+    const onMouseDown = e => {
       if (e.button !== 0) return;
       isResizing = true;
       startX = e.clientX;
@@ -4258,7 +4292,7 @@ class ChatManager {
       e.preventDefault();
     };
 
-    const onMouseMove = (e) => {
+    const onMouseMove = e => {
       if (!isResizing) return;
 
       const deltaX = startX - e.clientX; // dragging left increases width
@@ -4482,12 +4516,12 @@ class ChatManager {
 
         if (showAgentInfo) {
           this.addThinkingMessage(
-              `🤖 **Multi-Agent System Activated**\n\n` +
-            `🔄 **Agent Coordination Mode**: Enabled\n` +
-            `📊 **Available Agents**: 8 specialized agents\n` +
-            `🧠 **Decision Process**: Intelligent agent selection and coordination\n` +
-            `⚡ **Performance**: Optimized execution with caching\n\n` +
-            `*Multi-agent system will now coordinate tool execution across specialized agents...*`,
+            `🤖 **Multi-Agent System Activated**\n\n` +
+              `🔄 **Agent Coordination Mode**: Enabled\n` +
+              `📊 **Available Agents**: 8 specialized agents\n` +
+              `🧠 **Decision Process**: Intelligent agent selection and coordination\n` +
+              `⚡ **Performance**: Optimized execution with caching\n\n` +
+              `*Multi-agent system will now coordinate tool execution across specialized agents...*`
           );
         }
       }
@@ -4502,8 +4536,8 @@ class ChatManager {
       // 显示详细的思考过程
       this.showThinkingProcess &&
         this.addThinkingMessage(
-            `🔄 <strong>Starting request processing</strong> (max rounds: ${maxRounds})<br>` +
-          `📝 <strong>User Query:</strong> ${message.substring(0, 200)}${message.length > 200 ? '...' : ''}`,
+          `🔄 <strong>Starting request processing</strong> (max rounds: ${maxRounds})<br>` +
+            `📝 <strong>User Query:</strong> ${message.substring(0, 200)}${message.length > 200 ? '...' : ''}`
         );
 
       // Get current studio context
@@ -4520,7 +4554,7 @@ class ChatManager {
         if (context.genomeLoaded) contextInfo.push(`🧬 Genome loaded: Yes`);
         if (contextInfo.length > 0) {
           this.updateThinkingMessage(
-              `<br>📊 <strong>Current Context:</strong><br>&nbsp;&nbsp;${contextInfo.join('<br>&nbsp;&nbsp;')}`,
+            `<br>📊 <strong>Current Context:</strong><br>&nbsp;&nbsp;${contextInfo.join('<br>&nbsp;&nbsp;')}`
           );
         }
       }
@@ -4533,7 +4567,7 @@ class ChatManager {
           console.log('🧠 Retrieved memory context for conversation');
           this.showThinkingProcess &&
             this.updateThinkingMessage(
-                `<br>🧠 Memory context retrieved: ${Object.keys(memoryContext).length} memory items`,
+              `<br>🧠 Memory context retrieved: ${Object.keys(memoryContext).length} memory items`
             );
         }
       } catch (error) {
@@ -4578,9 +4612,9 @@ class ChatManager {
         // Send conversation history to configured LLM
         console.log('Sending to LLM...');
         const response = await this.llmConfigManager.sendMessageWithHistory(
-            conversationHistory,
-            context,
-            memoryContext,
+          conversationHistory,
+          context,
+          memoryContext
         );
 
         // 检查响应是否被中止
@@ -4616,9 +4650,9 @@ class ChatManager {
         const detectedToolCount = toolsToExecute.length;
 
         const executionFilter = this.filterExecutableToolInstances(
-            toolsToExecute,
-            successfulToolExecutionCounts,
-            message,
+          toolsToExecute,
+          successfulToolExecutionCounts,
+          message
         );
         toolsToExecute = executionFilter.executableTools;
         const alreadyExecutedToolCount = executionFilter.suppressedTools.length;
@@ -4627,21 +4661,21 @@ class ChatManager {
         if (this.showThinkingProcess) {
           if (toolsToExecute.length > 0) {
             this.updateThinkingMessage(
-                `🔍 Detected ${toolsToExecute.length} tool call(s): ${toolsToExecute.map((t) => t.tool_name).join(', ')}`,
+              `🔍 Detected ${toolsToExecute.length} tool call(s): ${toolsToExecute.map(t => t.tool_name).join(', ')}`
             );
           } else {
             this.updateThinkingMessage(`💬 No tool calls detected - conversational response`);
           }
           if (alreadyExecutedToolCount > 0) {
             this.updateThinkingMessage(
-                `♻️ Ignored ${alreadyExecutedToolCount} already-completed tool call(s) from this request`,
+              `♻️ Ignored ${alreadyExecutedToolCount} already-completed tool call(s) from this request`
             );
           }
         }
 
         // Apply intelligent tool execution policies instead of simple re-executable sets
         const toolsBeforeFilter = toolsToExecute.length;
-        toolsToExecute = toolsToExecute.filter((tool) => {
+        toolsToExecute = toolsToExecute.filter(tool => {
           const shouldAllow = this.shouldAllowToolExecution(tool, conversationHistory, currentRound, []);
           if (!shouldAllow) {
             console.log(`🚫 [Policy] Blocking execution of: ${tool.tool_name}`);
@@ -4654,20 +4688,24 @@ class ChatManager {
 
         if (this.showThinkingProcess && toolsBeforeFilter > toolsToExecute.length) {
           this.updateThinkingMessage(
-              `⚠️ Filtered ${toolsBeforeFilter - toolsToExecute.length} tool(s) by execution policy`,
+            `⚠️ Filtered ${toolsBeforeFilter - toolsToExecute.length} tool(s) by execution policy`
           );
         }
 
         if (detectedToolCount > 0 && toolsToExecute.length === 0 && alreadyExecutedToolCount > 0) {
           console.log('=== DUPLICATE TOOL CALLS SUPPRESSED ===');
           console.log('The LLM repeated tool calls that already completed in this user request.');
-          console.log('Suppressed tools:', executionFilter.suppressedTools.map((tool) => tool.tool_name));
+          console.log(
+            'Suppressed tools:',
+            executionFilter.suppressedTools.map(tool => tool.tool_name)
+          );
           console.log('=======================================');
 
           taskCompleted = true;
-          finalResponse = lastSuccessfulResults.length > 0 ?
-            this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools) :
-            'The requested action has already been completed.';
+          finalResponse =
+            lastSuccessfulResults.length > 0
+              ? this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools)
+              : 'The requested action has already been completed.';
           break;
         }
 
@@ -4682,7 +4720,7 @@ class ChatManager {
           // Log the entire conversation history for debugging
           conversationHistory.forEach((msg, index) => {
             console.log(
-                `History[${index}] Role: ${msg.role}, Content length: ${msg.content ? msg.content.length : 'null'}`,
+              `History[${index}] Role: ${msg.role}, Content length: ${msg.content ? msg.content.length : 'null'}`
             );
             if (msg.content && msg.content.length < 200) {
               console.log(`History[${index}] Content preview:`, msg.content);
@@ -4690,7 +4728,7 @@ class ChatManager {
           });
 
           // Look for tool results in history to mark as executed
-          conversationHistory.forEach((msg) => {
+          conversationHistory.forEach(msg => {
             if (msg.role === 'system' && msg.content && msg.content.includes('executed successfully')) {
               // Extract tool name from result message
               const toolMatch = msg.content.match(/(\w+) executed successfully/);
@@ -4711,20 +4749,19 @@ class ChatManager {
               console.log(`Parse result for message ${i}:`, previousToolCall);
               if (previousToolCall) {
                 const prevToolKey = `${previousToolCall.tool_name}:${JSON.stringify(previousToolCall.parameters)}`;
-                const wasSuccessful = this.wasToolExecutedSuccessfully(prevToolKey, conversationHistory) ||
-                                      executedTools.has(previousToolCall.tool_name);
+                const wasSuccessful =
+                  this.wasToolExecutedSuccessfully(prevToolKey, conversationHistory) ||
+                  executedTools.has(previousToolCall.tool_name);
                 if (wasSuccessful) {
                   // eslint-disable-next-line no-console
-                  console.log(
-                      `🚫 [Policy] Already executed successfully: ${previousToolCall.tool_name}`,
-                  );
+                  console.log(`🚫 [Policy] Already executed successfully: ${previousToolCall.tool_name}`);
                   continue;
                 }
                 const shouldAllow = this.shouldAllowToolExecution(
-                    previousToolCall,
-                    conversationHistory,
-                    currentRound,
-                    [],
+                  previousToolCall,
+                  conversationHistory,
+                  currentRound,
+                  []
                 );
                 if (shouldAllow) {
                   console.log('✅ [Policy] Found allowed tool call from previous round:', previousToolCall);
@@ -4757,8 +4794,8 @@ class ChatManager {
             taskCompleted = true;
             finalResponse = completionResult.summary || response;
             this.showNotification(
-                `Task completed early (Round ${currentRound}/${maxRounds}): ${completionResult.reason}`,
-                'success',
+              `Task completed early (Round ${currentRound}/${maxRounds}): ${completionResult.reason}`,
+              'success'
             );
             break;
           }
@@ -4771,15 +4808,15 @@ class ChatManager {
         if (toolsToExecute.length > 0) {
           console.log(`=== ${toolsToExecute.length} TOOL CALL(S) DETECTED ===`);
           console.log(
-              'Tools to execute:',
-              toolsToExecute.map((t) => t.tool_name),
+            'Tools to execute:',
+            toolsToExecute.map(t => t.tool_name)
           );
           console.log('==========================');
 
           // Show thinking process for tool execution
           if (this.showThinkingProcess) {
             this.updateThinkingMessage(`<br><br>⚡ <strong>Preparing tool execution...</strong>`);
-            this.updateThinkingMessage(`🛠️ Tools to execute: ${toolsToExecute.map((t) => t.tool_name).join(', ')}`);
+            this.updateThinkingMessage(`🛠️ Tools to execute: ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
           }
 
           // 显示工具调用信息
@@ -4810,12 +4847,13 @@ class ChatManager {
 
                 // Provide comprehensive feedback
                 if (smartResult.report) {
-                  const {summary, categorySummary} = smartResult.report;
+                  const { summary, categorySummary } = smartResult.report;
 
                   // Show quick feedback for different categories
                   for (const category of categorySummary) {
                     if (category.successful > 0) {
-                      let icon; let message;
+                      let icon;
+                      let message;
                       switch (category.name) {
                         case 'browserActions':
                           icon = '✓';
@@ -4838,8 +4876,8 @@ class ChatManager {
                           message = 'Operations completed';
                       }
                       this.showNotification(
-                          `${icon} ${message} (${category.successful}/${category.successful + category.failed})`,
-                          'success',
+                        `${icon} ${message} (${category.successful}/${category.successful + category.failed})`,
+                        'success'
                       );
                     }
                   }
@@ -4905,12 +4943,12 @@ class ChatManager {
 
             // Show execution results in thinking process
             if (this.showThinkingProcess) {
-              const successCount = toolResults.filter((r) => r.success).length;
-              const failCount = toolResults.filter((r) => !r.success).length;
+              const successCount = toolResults.filter(r => r.success).length;
+              const failCount = toolResults.filter(r => !r.success).length;
               this.updateThinkingMessage(`✅ Execution completed: ${successCount} successful, ${failCount} failed`);
 
               // Show details for each tool
-              toolResults.forEach((result) => {
+              toolResults.forEach(result => {
                 if (result.success) {
                   this.updateThinkingMessage(`&nbsp;&nbsp;✅ ${result.tool}: Success`);
                 } else {
@@ -4922,7 +4960,7 @@ class ChatManager {
             // BENCHMARK INTEGRATION: Track function calls and results for benchmark access
             if (this.lastExecutionData) {
               // Track function calls
-              toolsToExecute.forEach((tool) => {
+              toolsToExecute.forEach(tool => {
                 this.lastExecutionData.functionCalls.push({
                   tool_name: tool.tool_name,
                   parameters: tool.parameters,
@@ -4957,7 +4995,7 @@ class ChatManager {
               'load_operon_file',
             ]);
 
-            toolsToExecute.forEach((tool) => {
+            toolsToExecute.forEach(tool => {
               const toolKey = this.getToolExecutionKey(tool.tool_name, tool.parameters);
 
               // Track non-re-executable tools and successful file loading operations
@@ -4966,7 +5004,7 @@ class ChatManager {
                 console.log(`🔒 Tracking execution for non-re-executable tool: ${tool.tool_name}`);
               } else if (fileLoadingTools.has(tool.tool_name)) {
                 // Only track file loading tools if they succeed
-                const result = toolResults.find((r) => r.tool === tool.tool_name);
+                const result = toolResults.find(r => r.tool === tool.tool_name);
                 if (result && result.success) {
                   executedTools.add(toolKey);
                   console.log(`🔒 Tracking successful file loading execution: ${tool.tool_name}`);
@@ -4985,46 +5023,43 @@ class ChatManager {
             conversationHistory.push({
               role: 'assistant',
               content: JSON.stringify(
-                toolsToExecute.length === 1 ?
-                  {
-                    tool_name: toolsToExecute[0].tool_name,
-                    parameters: this.normalizeToolParams(toolsToExecute[0].tool_name, toolsToExecute[0].parameters),
-                  } :
-                  toolsToExecute.map((t) => ({
-                    tool_name: t.tool_name,
-                    parameters: this.normalizeToolParams(t.tool_name, t.parameters),
-                  })),
+                toolsToExecute.length === 1
+                  ? {
+                      tool_name: toolsToExecute[0].tool_name,
+                      parameters: this.normalizeToolParams(toolsToExecute[0].tool_name, toolsToExecute[0].parameters),
+                    }
+                  : toolsToExecute.map(t => ({
+                      tool_name: t.tool_name,
+                      parameters: this.normalizeToolParams(t.tool_name, t.parameters),
+                    }))
               ),
             });
 
             // Process results
-            const successfulResults = toolResults.filter((r) => r.success);
-            const failedResults = toolResults.filter((r) => !r.success);
+            const successfulResults = toolResults.filter(r => r.success);
+            const failedResults = toolResults.filter(r => !r.success);
 
             if (successfulResults.length > 0) {
-              successfulResults.forEach((result) => {
+              successfulResults.forEach(result => {
                 const toolKey = this.getToolExecutionKey(result.tool, result.parameters);
-                successfulToolExecutionCounts.set(
-                    toolKey,
-                    (successfulToolExecutionCounts.get(toolKey) || 0) + 1,
-                );
+                successfulToolExecutionCounts.set(toolKey, (successfulToolExecutionCounts.get(toolKey) || 0) + 1);
               });
               lastSuccessfulResults = successfulResults;
-              lastSuccessfulTools = successfulResults.map((result) => ({
+              lastSuccessfulTools = successfulResults.map(result => ({
                 tool_name: result.tool,
                 parameters: this.normalizeToolParams(result.tool, result.parameters),
               }));
 
               // Add successful tool results to conversation with SYSTEM role to prevent re-execution
               // IMPORTANT: Sanitize results before sending to LLM to prevent context overflow
-              const successMessages = successfulResults.map((result) => {
+              const successMessages = successfulResults.map(result => {
                 const sanitizedResult = this.sanitizeResultForLLM(result.result, result.tool);
                 const sanitizedStr = JSON.stringify(sanitizedResult) || 'null';
                 // Log warning if sanitized result is still large (helps identify tools needing better sanitization)
                 if (sanitizedStr.length > 10000) {
                   console.warn(
-                      `⚠️ [Context Overflow Risk] Sanitized result for "${result.tool}" is still large: ` +
-                    `${(sanitizedStr.length / 1024).toFixed(1)}KB. Consider adding tool-specific sanitization rules.`,
+                    `⚠️ [Context Overflow Risk] Sanitized result for "${result.tool}" is still large: ` +
+                      `${(sanitizedStr.length / 1024).toFixed(1)}KB. Consider adding tool-specific sanitization rules.`
                   );
                 }
                 return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.normalizeToolParams(result.tool, result.parameters))}: ${sanitizedStr}`;
@@ -5036,9 +5071,9 @@ class ChatManager {
 
               // ENHANCED: Check for simple task completion after successful tool execution
               const shouldTerminateEarly = this.shouldTerminateAfterToolExecution(
-                  toolsToExecute,
-                  successfulResults,
-                  message,
+                toolsToExecute,
+                successfulResults,
+                message
               );
               if (shouldTerminateEarly) {
                 console.log('=== EARLY TERMINATION AFTER SUCCESSFUL TOOL EXECUTION ===');
@@ -5052,14 +5087,14 @@ class ChatManager {
               }
 
               console.log(
-                  `${successfulResults.length} tool(s) executed successfully. Continuing to round ${currentRound + 1} to check for follow-up actions.`,
+                `${successfulResults.length} tool(s) executed successfully. Continuing to round ${currentRound + 1} to check for follow-up actions.`
               );
             }
 
             if (failedResults.length > 0) {
               // Add failed tool results to conversation with SYSTEM role
               const errorMessages = failedResults.map(
-                  (result) => `${result.tool} failed: ${result.error || 'Unknown error'}`,
+                result => `${result.tool} failed: ${result.error || 'Unknown error'}`
               );
               conversationHistory.push({
                 role: 'system',
@@ -5071,12 +5106,12 @@ class ChatManager {
               if (successfulResults.length === 0) {
                 console.log('=== ALL TOOLS FAILED - TERMINATING TO PREVENT INFINITE RETRY ===');
                 console.log(
-                    'Failed tools:',
-                    failedResults.map((r) => r.tool),
+                  'Failed tools:',
+                  failedResults.map(r => r.tool)
                 );
                 console.log(
-                    'Errors:',
-                    failedResults.map((r) => r.error),
+                  'Errors:',
+                  failedResults.map(r => r.error)
                 );
                 console.log('This prevents infinite retry loops when tools consistently fail');
                 console.log('================================================================');
@@ -5096,7 +5131,7 @@ class ChatManager {
                   finalResponse =
                     `❌ **Tool Execution Failed**\n\n` +
                     `The following tool(s) could not be executed:\n` +
-                    failedResults.map((r) => `- **${r.tool}**: ${r.error || 'Unknown error'}`).join('\n') +
+                    failedResults.map(r => `- **${r.tool}**: ${r.error || 'Unknown error'}`).join('\n') +
                     `\n\nPlease check your system configuration or try a different approach.`;
                 }
                 break;
@@ -5234,7 +5269,7 @@ class ChatManager {
     }
 
     // Create a shallow copy to avoid modifying the original
-    const sanitized = {...result};
+    const sanitized = { ...result };
 
     // ─── Tool-specific sanitization rules ───────────────────────────────
 
@@ -5264,7 +5299,7 @@ class ChatManager {
           sanitized.analyzedGenes = {
             totalCount: geneCount,
             note: `Full list omitted (${geneCount} genes analyzed)`,
-            sample: sanitized.analyzedGenes.slice(0, sampleSize).map((g) => ({
+            sample: sanitized.analyzedGenes.slice(0, sampleSize).map(g => ({
               name: g.name,
               length: g.length,
               chromosome: g.chromosome,
@@ -5274,9 +5309,9 @@ class ChatManager {
         // Truncate codonPreferences to top amino acids only
         if (sanitized.codonPreferences && typeof sanitized.codonPreferences === 'object') {
           const aaEntries = Object.entries(sanitized.codonPreferences)
-              .filter(([aa]) => aa !== '*')
-              .sort(([, a], [, b]) => (b.totalCount || 0) - (a.totalCount || 0))
-              .slice(0, 10); // Keep only top 10 amino acids
+            .filter(([aa]) => aa !== '*')
+            .sort(([, a], [, b]) => (b.totalCount || 0) - (a.totalCount || 0))
+            .slice(0, 10); // Keep only top 10 amino acids
           sanitized.codonPreferences = {
             note: `Showing top 10 amino acids by usage`,
             data: Object.fromEntries(aaEntries),
@@ -5329,18 +5364,19 @@ class ChatManager {
           const compact = {};
           for (const [trackType, trackDef] of Object.entries(sanitized.schema)) {
             if (!trackDef || typeof trackDef !== 'object') continue;
-            compact[trackType] = {description: trackDef.description, settings: {}};
+            compact[trackType] = { description: trackDef.description, settings: {} };
             const settings = trackDef.settings || {};
             for (const [key, meta] of Object.entries(settings)) {
               compact[trackType].settings[key] = {
                 type: meta.type,
                 default: meta.default,
-                ...(meta.enum ? {enum: meta.enum} : {}),
+                ...(meta.enum ? { enum: meta.enum } : {}),
               };
             }
           }
           sanitized.schema = compact;
-          sanitized._schemaNormalized = 'Descriptions stripped to reduce context size. Use get_track_settings for live values.';
+          sanitized._schemaNormalized =
+            'Descriptions stripped to reduce context size. Use get_track_settings for live values.';
         }
         break;
       }
@@ -5348,10 +5384,26 @@ class ChatManager {
       case 'get_all_track_settings': {
         // Keep only the most useful fields per track; skip deep nested objects.
         if (sanitized.settings && typeof sanitized.settings === 'object') {
-          const KEY_FIELDS = ['height', 'renderingMode', 'layoutMode', 'colorMode', 'fontSize',
-            'maxRows', 'showCoverage', 'showIndicators', 'contentColor', 'lineWidth',
-            'defaultTrackHeight', 'trackSpacing', 'resultHeight', 'resultSpacing',
-            'showRuler', 'adaptiveHeight', 'error', '_note'];
+          const KEY_FIELDS = [
+            'height',
+            'renderingMode',
+            'layoutMode',
+            'colorMode',
+            'fontSize',
+            'maxRows',
+            'showCoverage',
+            'showIndicators',
+            'contentColor',
+            'lineWidth',
+            'defaultTrackHeight',
+            'trackSpacing',
+            'resultHeight',
+            'resultSpacing',
+            'showRuler',
+            'adaptiveHeight',
+            'error',
+            '_note',
+          ];
           const compact = {};
           for (const [trackType, trackSettings] of Object.entries(sanitized.settings)) {
             if (!trackSettings || typeof trackSettings !== 'object') {
@@ -5364,7 +5416,8 @@ class ChatManager {
             }
           }
           sanitized.settings = compact;
-          sanitized._settingsNormalized = 'Only key fields shown. Use get_track_settings with a specific track_type for full details.';
+          sanitized._settingsNormalized =
+            'Only key fields shown. Use get_track_settings with a specific track_type for full details.';
         }
         break;
       }
@@ -5401,7 +5454,7 @@ class ChatManager {
 
     // General large-string guard: truncate any string field > 5000 chars
     const LARGE_STRING_THRESHOLD = 5000;
-    Object.keys(sanitized).forEach((key) => {
+    Object.keys(sanitized).forEach(key => {
       if (typeof sanitized[key] === 'string' && sanitized[key].length > LARGE_STRING_THRESHOLD) {
         const originalLength = sanitized[key].length;
         sanitized[key] =
@@ -5413,7 +5466,7 @@ class ChatManager {
     });
 
     // Limit any large arrays not caught by specific rules
-    Object.keys(sanitized).forEach((key) => {
+    Object.keys(sanitized).forEach(key => {
       if (Array.isArray(sanitized[key]) && sanitized[key].length > 50) {
         const originalLength = sanitized[key].length;
         sanitized[key] = sanitized[key].slice(0, 50);
@@ -5429,19 +5482,20 @@ class ChatManager {
       let serialized = JSON.stringify(sanitized);
       if (serialized.length > MAX_RESULT_SIZE_BYTES) {
         console.warn(
-            `[sanitizeResultForLLM] Result for "${toolName}" exceeds ${MAX_RESULT_SIZE_BYTES / 1024}KB budget ` +
-          `(${(serialized.length / 1024).toFixed(1)}KB). Applying aggressive truncation.`,
+          `[sanitizeResultForLLM] Result for "${toolName}" exceeds ${MAX_RESULT_SIZE_BYTES / 1024}KB budget ` +
+            `(${(serialized.length / 1024).toFixed(1)}KB). Applying aggressive truncation.`
         );
 
         // Find all string fields sorted by length (largest first)
         const stringFields = Object.keys(sanitized)
-            .filter((k) => typeof sanitized[k] === 'string' && sanitized[k].length > 200)
-            .sort((a, b) => sanitized[b].length - sanitized[a].length);
+          .filter(k => typeof sanitized[k] === 'string' && sanitized[k].length > 200)
+          .sort((a, b) => sanitized[b].length - sanitized[a].length);
 
         for (const field of stringFields) {
           if (serialized.length <= MAX_RESULT_SIZE_BYTES) break;
           const originalLength = sanitized[field].length;
-          sanitized[field] = sanitized[field].substring(0, 200) +
+          sanitized[field] =
+            sanitized[field].substring(0, 200) +
             `\n...[aggressively truncated from ${originalLength} chars to fit context budget]...\n`;
           sanitized[`_${field}_originalLength`] = originalLength;
           serialized = JSON.stringify(sanitized);
@@ -5450,14 +5504,18 @@ class ChatManager {
         // If still over budget after string truncation, convert large objects to summaries
         if (serialized.length > MAX_RESULT_SIZE_BYTES) {
           const objectFields = Object.keys(sanitized)
-              .filter((k) => typeof sanitized[k] === 'object' && sanitized[k] !== null)
-              .sort((a, b) => JSON.stringify(sanitized[b]).length - JSON.stringify(sanitized[a]).length);
+            .filter(k => typeof sanitized[k] === 'object' && sanitized[k] !== null)
+            .sort((a, b) => JSON.stringify(sanitized[b]).length - JSON.stringify(sanitized[a]).length);
 
           for (const field of objectFields) {
             if (serialized.length <= MAX_RESULT_SIZE_BYTES) break;
             const fieldSize = JSON.stringify(sanitized[field]).length;
             if (fieldSize > 500) {
-              sanitized[field] = {_truncated: true, originalSize: fieldSize, note: 'Object truncated to fit context budget'};
+              sanitized[field] = {
+                _truncated: true,
+                originalSize: fieldSize,
+                note: 'Object truncated to fit context budget',
+              };
               serialized = JSON.stringify(sanitized);
             }
           }
@@ -5483,13 +5541,13 @@ class ChatManager {
 
     // Add system context message
     const systemMessage = await this.buildSystemMessage();
-    history.push({role: 'system', content: systemMessage});
+    history.push({ role: 'system', content: systemMessage });
 
     // If context mode is enabled (current message only), skip conversation history
     if (this.contextModeEnabled) {
       console.log('Context mode enabled: sending only current message');
       // Add only the new user message
-      history.push({role: 'user', content: newMessage});
+      history.push({ role: 'user', content: newMessage });
       return history;
     }
 
@@ -5517,15 +5575,15 @@ class ChatManager {
     // Add conversation messages to history (exclude system messages and separators)
     for (const msg of currentConversationMessages.slice(-conversationMemory * 2)) {
       if (msg.sender === 'user') {
-        history.push({role: 'user', content: msg.message});
+        history.push({ role: 'user', content: msg.message });
       } else if (msg.sender === 'assistant') {
-        history.push({role: 'assistant', content: msg.message});
+        history.push({ role: 'assistant', content: msg.message });
       }
       // Skip system messages and separators
     }
 
     // Add the new user message
-    history.push({role: 'user', content: newMessage});
+    history.push({ role: 'user', content: newMessage });
 
     return history;
   }
@@ -5536,10 +5594,10 @@ class ChatManager {
       for (const [serverId, prompts] of this.mcpServerManager.serverPrompts) {
         // Look for Deep Gene Research Assistant prompt
         const deepGenePrompt = prompts.find(
-            (p) =>
-              p.name === 'Deep Gene Research Assistant' ||
+          p =>
+            p.name === 'Deep Gene Research Assistant' ||
             p.name === 'deep-gene-research-assistant' ||
-            p.name === 'deep_gene_research_assistant',
+            p.name === 'deep_gene_research_assistant'
         );
 
         if (deepGenePrompt) {
@@ -5577,8 +5635,8 @@ class ChatManager {
                 // But we still need our tools available.
 
                 const useOptimizedPrompt = this.configManager.get(
-                    'chatboxSettings.useOptimizedPrompt',
-                    this.configManager.get('llm.useOptimizedPrompt', true),
+                  'chatboxSettings.useOptimizedPrompt',
+                  this.configManager.get('llm.useOptimizedPrompt', true)
                 );
                 const toolContext = useOptimizedPrompt ? this.getOptimizedToolContext() : this.getCompleteToolContext();
 
@@ -5595,14 +5653,15 @@ class ChatManager {
 
     // Get user-defined system prompt
     // Check chatboxSettings.customSystemPrompt first, then llm.systemPrompt for backward compatibility
-    const userSystemPrompt = this.configManager.get('chatboxSettings.customSystemPrompt', '') ||
+    const userSystemPrompt =
+      this.configManager.get('chatboxSettings.customSystemPrompt', '') ||
       this.configManager.get('llm.systemPrompt', '');
 
     // Get system message format preference (optimized or complete)
     // Check both chatboxSettings and llm settings for backward compatibility
     const useOptimizedPrompt = this.configManager.get(
-        'chatboxSettings.useOptimizedPrompt',
-        this.configManager.get('llm.useOptimizedPrompt', true),
+      'chatboxSettings.useOptimizedPrompt',
+      this.configManager.get('llm.useOptimizedPrompt', true)
     );
 
     // Get system prompt section configuration
@@ -5648,7 +5707,11 @@ class ChatManager {
         console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
 
         // Apply section configuration filtering to dynamic prompt
-        const filteredPrompt = this.applySystemPromptSectionConfig(promptData.systemPrompt, sectionConfig, currentUserQuery);
+        const filteredPrompt = this.applySystemPromptSectionConfig(
+          promptData.systemPrompt,
+          sectionConfig,
+          currentUserQuery
+        );
         return filteredPrompt;
       } catch (error) {
         console.warn('Dynamic Tools Registry failed, falling back to standard system message:', error);
@@ -5684,13 +5747,24 @@ class ChatManager {
    */
   getSystemPromptSectionConfig() {
     const defaultOrder = [
-      'systemInstructions', 'currentContext', 'dynamicTools', 'toolExamples',
-      'toolGuidelines', 'responseFormat', 'toolCategories', 'memoryContext',
+      'systemInstructions',
+      'currentContext',
+      'dynamicTools',
+      'toolExamples',
+      'toolGuidelines',
+      'responseFormat',
+      'toolCategories',
+      'memoryContext',
     ];
     const defaultToggles = {
-      systemInstructions: true, currentContext: true, dynamicTools: true,
-      toolExamples: true, toolGuidelines: true, responseFormat: true,
-      toolCategories: true, memoryContext: true,
+      systemInstructions: true,
+      currentContext: true,
+      dynamicTools: true,
+      toolExamples: true,
+      toolGuidelines: true,
+      responseFormat: true,
+      toolCategories: true,
+      memoryContext: true,
     };
 
     const order = this.configManager.get('chatboxSettings.systemPromptSectionOrder', defaultOrder);
@@ -5700,7 +5774,7 @@ class ChatManager {
       toggles[key] = this.configManager.get(settingKey, true);
     }
 
-    return {order, toggles};
+    return { order, toggles };
   }
 
   /**
@@ -5712,7 +5786,7 @@ class ChatManager {
    * @returns {Promise<string>} - Filtered and reordered system prompt
    */
   async applySystemPromptSectionConfig(prompt, sectionConfig, userQuery) {
-    const {order, toggles} = sectionConfig;
+    const { order, toggles } = sectionConfig;
 
     // Parse the dynamic prompt into sections by markdown headers
     const sections = this.parseSystemPromptSections(prompt);
@@ -5797,11 +5871,21 @@ class ChatManager {
     const headerMappings = {
       systemInstructions: ['CodeXomics', 'Enhanced Dynamic Tools System', 'Comprehensive Tools System'],
       currentContext: ['Current Context', '🧬 Current Context'],
-      dynamicTools: ['Directly Available Tools', '🔧 Directly Available Tools', '🔧 Directly Available Tools (Built-in)', 'Built-in Tools'],
+      dynamicTools: [
+        'Directly Available Tools',
+        '🔧 Directly Available Tools',
+        '🔧 Directly Available Tools (Built-in)',
+        'Built-in Tools',
+      ],
       toolExamples: ['Tool Usage Examples', '📚 Tool Usage Examples'],
       toolGuidelines: ['Tool Selection Guidelines', '🎯 Enhanced Tool Selection Guidelines', 'Tool Usage Guidelines'],
       responseFormat: ['Response Format', '⚡ Response Format'],
-      toolCategories: ['Tool Categories', '🔄 Tool Categories', 'Tool Categories & Relationships', '🔄 Tool Categories & Relationships'],
+      toolCategories: [
+        'Tool Categories',
+        '🔄 Tool Categories',
+        'Tool Categories & Relationships',
+        '🔄 Tool Categories & Relationships',
+      ],
     };
 
     // For systemInstructions, combine _preamble (role definition) with any matched header content
@@ -5856,9 +5940,17 @@ class ChatManager {
    * @returns {string|null} - Section key or null
    */
   mapHeaderToSectionKey(header) {
-    const normalizedHeader = header.toLowerCase().replace(/[^\w\s]/g, '').trim();
+    const normalizedHeader = header
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .trim();
     if (normalizedHeader.includes('context')) return 'currentContext';
-    if (normalizedHeader.includes('built-in') || normalizedHeader.includes('directly available') || normalizedHeader.includes('extended tools')) return 'dynamicTools';
+    if (
+      normalizedHeader.includes('built-in') ||
+      normalizedHeader.includes('directly available') ||
+      normalizedHeader.includes('extended tools')
+    )
+      return 'dynamicTools';
     if (normalizedHeader.includes('example')) return 'toolExamples';
     if (normalizedHeader.includes('guideline') || normalizedHeader.includes('selection')) return 'toolGuidelines';
     if (normalizedHeader.includes('response format')) return 'responseFormat';
@@ -6043,7 +6135,7 @@ class ChatManager {
       local_tools: context.genomeBrowser.toolSources.local,
       plugin_tools: context.genomeBrowser.toolSources.plugins,
       mcp_tools: context.genomeBrowser.toolSources.mcp,
-      all_available_tools: context.genomeBrowser.availableTools.map((tool) => `- ${tool}`).join('\n'),
+      all_available_tools: context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n'),
       mcp_servers: this.getMCPServersSummary(),
       plugin_functions: this.getPluginFunctionsSummary(),
       microbe_functions: this.getMicrobeGenomicsFunctionsDetailed(),
@@ -6104,7 +6196,7 @@ class ChatManager {
       return JSON.parse(JSON.stringify(parameters));
     } catch (error) {
       console.warn('[ChatManager] Failed to clone tool parameters, using shallow copy:', error);
-      return {...parameters};
+      return { ...parameters };
     }
   }
 
@@ -6161,9 +6253,10 @@ class ChatManager {
     }
 
     for (const [word, count] of Object.entries(numberWords)) {
-      const pattern = word === 'once' || word === 'twice' || word === 'thrice' ?
-        new RegExp(`\\b${word}\\b`) :
-        new RegExp(`\\b${word}\\s+(?:times?|rounds?|steps?)\\b`);
+      const pattern =
+        word === 'once' || word === 'twice' || word === 'thrice'
+          ? new RegExp(`\\b${word}\\b`)
+          : new RegExp(`\\b${word}\\s+(?:times?|rounds?|steps?)\\b`);
       if (pattern.test(message)) {
         return count;
       }
@@ -6185,8 +6278,8 @@ class ChatManager {
 
       if (alreadySucceeded + alreadyPlanned >= requestedLimit) {
         console.log(
-            `♻️ [ToolLoop] Suppressing duplicate tool instance: ${tool.tool_name} ` +
-            `(completed/planned ${alreadySucceeded + alreadyPlanned}/${requestedLimit})`,
+          `♻️ [ToolLoop] Suppressing duplicate tool instance: ${tool.tool_name} ` +
+            `(completed/planned ${alreadySucceeded + alreadyPlanned}/${requestedLimit})`
         );
         suppressedTools.push(tool);
         continue;
@@ -6196,18 +6289,20 @@ class ChatManager {
       executableTools.push(tool);
     }
 
-    return {executableTools, suppressedTools};
+    return { executableTools, suppressedTools };
   }
 
   normalizeParams(params) {
     if (!params || typeof params !== 'object') return {};
     const sorted = {};
-    Object.keys(params).sort().forEach((key) => {
-      const val = params[key];
-      if (val !== undefined) {
-        sorted[key] = (val && typeof val === 'object') ? this.normalizeParams(val) : val;
-      }
-    });
+    Object.keys(params)
+      .sort()
+      .forEach(key => {
+        const val = params[key];
+        if (val !== undefined) {
+          sorted[key] = val && typeof val === 'object' ? this.normalizeParams(val) : val;
+        }
+      });
     if (sorted.primerSequence && (!sorted.sequence || sorted.sequence === sorted.primerSequence)) {
       sorted.sequence = sorted.primerSequence;
       delete sorted.primerSequence;
@@ -6307,7 +6402,9 @@ class ChatManager {
               try {
                 const parsedMsgParams = JSON.parse(msgParamsStr);
                 if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
-                  console.log(`🔍 Found successful execution record for: ${toolName} with matching parameters (robust check)`);
+                  console.log(
+                    `🔍 Found successful execution record for: ${toolName} with matching parameters (robust check)`
+                  );
                   return true;
                 }
               } catch (e) {
@@ -6379,7 +6476,7 @@ class ChatManager {
           // Try to parse as multiple tool calls
           try {
             const multipleToolCalls = this.parseMultipleToolCalls(msg.content);
-            const matchingTool = multipleToolCalls.find((t) => t.tool_name === toolName);
+            const matchingTool = multipleToolCalls.find(t => t.tool_name === toolName);
             if (matchingTool) {
               const estimatedTimestamp = now - (conversationHistory.length - 1 - i) * 1000;
 
@@ -6541,14 +6638,14 @@ class ChatManager {
       // Try MCP server first
       if (this.mcpServerManager) {
         const mcpTools = this.mcpServerManager.getAllAvailableTools();
-        const mcpTool = mcpTools.find((t) => t.name === 'search_interpro_entry');
+        const mcpTool = mcpTools.find(t => t.name === 'search_interpro_entry');
 
         if (mcpTool) {
           try {
             return await this.mcpServerManager.executeToolOnServer(
-                mcpTool.serverId,
-                'search_interpro_entry',
-                parameters,
+              mcpTool.serverId,
+              'search_interpro_entry',
+              parameters
             );
           } catch (mcpError) {
             console.warn('🔄 [ChatManager] MCP execution failed, using fallback:', mcpError.message);
@@ -6558,7 +6655,7 @@ class ChatManager {
 
       // Fallback implementation
       const terms = search_terms || [search_term];
-      const mockEntries = terms.flatMap((term) => [
+      const mockEntries = terms.flatMap(term => [
         {
           accession: 'IPR000719',
           name: `${term} domain`,
@@ -6575,7 +6672,7 @@ class ChatManager {
         timestamp: new Date().toISOString(),
         results_count: mockEntries.length,
         entries: mockEntries,
-        search_parameters: {search_term, search_type, entry_type},
+        search_parameters: { search_term, search_type, entry_type },
         message: `Found ${mockEntries.length} InterPro entries`,
         note: 'This is a demonstration result. Real implementation would connect to InterPro API.',
       };
@@ -6611,14 +6708,14 @@ class ChatManager {
       // Try MCP server first
       if (this.mcpServerManager) {
         const mcpTools = this.mcpServerManager.getAllAvailableTools();
-        const mcpTool = mcpTools.find((t) => t.name === 'get_interpro_entry_details');
+        const mcpTool = mcpTools.find(t => t.name === 'get_interpro_entry_details');
 
         if (mcpTool) {
           try {
             return await this.mcpServerManager.executeToolOnServer(
-                mcpTool.serverId,
-                'get_interpro_entry_details',
-                parameters,
+              mcpTool.serverId,
+              'get_interpro_entry_details',
+              parameters
             );
           } catch (mcpError) {
             console.warn('🔄 [ChatManager] MCP execution failed, using fallback:', mcpError.message);
@@ -6641,12 +6738,12 @@ class ChatManager {
           description: 'Serine/threonine/tyrosine protein kinase catalytic domain',
         },
         member_databases: ['Pfam', 'SMART', 'PROSITE'],
-        protein_matches: include_proteins ?
-          [
-            {uniprot_id: 'P12345', name: 'Example protein 1', organism: 'Homo sapiens'},
-            {uniprot_id: 'P67890', name: 'Example protein 2', organism: 'Mus musculus'},
-          ] :
-          [],
+        protein_matches: include_proteins
+          ? [
+              { uniprot_id: 'P12345', name: 'Example protein 1', organism: 'Homo sapiens' },
+              { uniprot_id: 'P67890', name: 'Example protein 2', organism: 'Mus musculus' },
+            ]
+          : [],
         statistics: {
           protein_count: 15000,
           organism_count: 500,
@@ -6687,14 +6784,14 @@ class ChatManager {
       // Try MCP server first
       if (this.mcpServerManager) {
         const mcpTools = this.mcpServerManager.getAllAvailableTools();
-        const mcpTool = mcpTools.find((t) => t.name === 'advanced_uniprot_search');
+        const mcpTool = mcpTools.find(t => t.name === 'advanced_uniprot_search');
 
         if (mcpTool) {
           try {
             return await this.mcpServerManager.executeToolOnServer(
-                mcpTool.serverId,
-                'advanced_uniprot_search',
-                parameters,
+              mcpTool.serverId,
+              'advanced_uniprot_search',
+              parameters
             );
           } catch (mcpError) {
             console.warn('🔄 [ChatManager] MCP execution failed, using fallback:', mcpError.message);
@@ -6721,7 +6818,7 @@ class ChatManager {
         entries: mockEntries,
         reviewed_count: 1,
         unreviewed_count: 0,
-        search_summary: {query_fields, boolean_operator, filters},
+        search_summary: { query_fields, boolean_operator, filters },
         message: `Found ${mockEntries.length} UniProt entries`,
         note: 'This is a demonstration result. Real implementation would connect to UniProt API.',
       };
@@ -6760,7 +6857,7 @@ class ChatManager {
       // Try MCP server first
       if (this.mcpServerManager) {
         const mcpTools = this.mcpServerManager.getAllAvailableTools();
-        const mcpTool = mcpTools.find((t) => t.name === 'get_uniprot_entry');
+        const mcpTool = mcpTools.find(t => t.name === 'get_uniprot_entry');
 
         if (mcpTool) {
           try {
@@ -6797,8 +6894,8 @@ class ChatManager {
 
       if (include_features) {
         result.features = [
-          {type: 'Domain', description: 'DNA-binding', start: 102, end: 292},
-          {type: 'Region', description: 'Transactivation', start: 1, end: 61},
+          { type: 'Domain', description: 'DNA-binding', start: 102, end: 292 },
+          { type: 'Region', description: 'Transactivation', start: 1, end: 61 },
         ];
       }
 
@@ -6854,7 +6951,7 @@ class ChatManager {
 
       // Combine all responses
       if (processedResults.length > 0) {
-        combinedResponse = processedResults.map((r) => r.response).join('\n\n---\n\n');
+        combinedResponse = processedResults.map(r => r.response).join('\n\n---\n\n');
         return combinedResponse;
       }
     }
@@ -6918,7 +7015,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
     // Expected result
     const expectedResult = {
       tool_name: 'find_gene_by_name',
-      parameters: {name: 'lacZ'},
+      parameters: { name: 'lacZ' },
     };
 
     // Verify result
@@ -7212,7 +7309,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
     const state = context.genomeBrowser.currentState;
     const tracks = this.getVisibleTracks();
     const mcpServers = this.mcpServerManager.getServerStatus();
-    const connectedServers = mcpServers.filter((s) => s.connected);
+    const connectedServers = mcpServers.filter(s => s.connected);
 
     const detailedState = `GENOME BROWSER CURRENT STATE:
 
@@ -7229,7 +7326,7 @@ DATA STATUS:
 - Visible Tracks: ${tracks.length > 0 ? tracks.join(', ') : 'None'}
 
 SYSTEM STATUS:
-- MCP Servers Connected: ${connectedServers.length}${connectedServers.length > 0 ? ` (${connectedServers.map((s) => s.name).join(', ')})` : ''}
+- MCP Servers Connected: ${connectedServers.length}${connectedServers.length > 0 ? ` (${connectedServers.map(s => s.name).join(', ')})` : ''}
 - Plugin System: ${this.pluginFunctionCallsIntegrator ? 'Active' : 'Inactive'}
 - MicrobeGenomics Functions: ${this.MicrobeFns ? 'Available' : 'Not Available'}
 
@@ -7396,11 +7493,11 @@ TOOL AVAILABILITY:
 
     // Add plugin tool categories dynamically
     const pluginCategories = this.getPluginToolCategories();
-    const allCategories = {...categories, ...pluginCategories};
+    const allCategories = { ...categories, ...pluginCategories };
 
     return Object.entries(allCategories)
-        .map(([category, tools]) => `${category}: ${tools.join(', ')}`)
-        .join('\n');
+      .map(([category, tools]) => `${category}: ${tools.join(', ')}`)
+      .join('\n');
   }
 
   /**
@@ -7428,7 +7525,7 @@ TOOL AVAILABILITY:
 
     // Get MCP server information (simplified)
     const mcpServers = this.mcpServerManager.getServerStatus();
-    const connectedServers = mcpServers.filter((s) => s.connected);
+    const connectedServers = mcpServers.filter(s => s.connected);
 
     // Core tool categories for better organization
     const coreTools = this.getCoreToolsByCategory();
@@ -7440,14 +7537,16 @@ TOOL AVAILABILITY:
 CURRENT GENOME STATE:
 - Chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None loaded'}
 - Position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
-- Selected Gene: ${context.genomeBrowser.currentState.selectedGene ?
-        `${context.genomeBrowser.currentState.selectedGene.geneName} (${context.genomeBrowser.currentState.selectedGene.locusTag})` :
-        'None'
-}
-- Sequence Selection: ${context.genomeBrowser.currentState.sequenceSelection?.active ?
-        `${context.genomeBrowser.currentState.sequenceSelection.start}-${context.genomeBrowser.currentState.sequenceSelection.end} (${context.genomeBrowser.currentState.sequenceSelection.length} bp)` :
-        'None'
-}
+- Selected Gene: ${
+      context.genomeBrowser.currentState.selectedGene
+        ? `${context.genomeBrowser.currentState.selectedGene.geneName} (${context.genomeBrowser.currentState.selectedGene.locusTag})`
+        : 'None'
+    }
+- Sequence Selection: ${
+      context.genomeBrowser.currentState.sequenceSelection?.active
+        ? `${context.genomeBrowser.currentState.sequenceSelection.start}-${context.genomeBrowser.currentState.sequenceSelection.end} (${context.genomeBrowser.currentState.sequenceSelection.length} bp)`
+        : 'None'
+    }
 - Visible Tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
 - Loaded Files: ${context.genomeBrowser.currentState.loadedFiles.length} files
 - Sequence Length: ${context.genomeBrowser.currentState.sequenceLength?.toLocaleString() || 'Unknown'}
@@ -7457,7 +7556,7 @@ AVAILABLE TOOLS: ${context.genomeBrowser.toolSources.total} total
 - Local: ${context.genomeBrowser.toolSources.local}
 - Genomics: Available (MicrobeGenomicsFunctions)
 - Plugins: ${context.genomeBrowser.toolSources.plugins}
-- MCP: ${context.genomeBrowser.toolSources.mcp} ${connectedServers.length > 0 ? `(${connectedServers.map((s) => s.name).join(', ')})` : '(disconnected)'}
+- MCP: ${context.genomeBrowser.toolSources.mcp} ${connectedServers.length > 0 ? `(${connectedServers.map(s => s.name).join(', ')})` : '(disconnected)'}
 
 CORE TOOL CATEGORIES:
 ${coreTools}
@@ -7583,7 +7682,6 @@ ${coreTools}
       bulk_update_annotations: () => this.bulkUpdateAnnotations(parameters),
       get_annotation_history: () => this.getAnnotationHistory(parameters),
 
-
       // Export tools - built-in equivalents for Export As dropdown menu
       export_fasta_sequence: () => this.exportFastaSequence(parameters),
       export_genbank_format: () => this.exportGenBankFormat(parameters),
@@ -7678,7 +7776,8 @@ ${coreTools}
       blast_delete_database: () => this.services.blast.blastDeleteDatabase(parameters),
       blast_create_db_from_genome: () => this.services.blast.blastCreateDbFromGenome(parameters),
       blast_create_protein_db_from_genome: () => this.services.blast.blastCreateProteinDbFromGenome(parameters),
-      blast_create_quick_db_for_current_genome: () => this.services.blast.blastCreateQuickDbForCurrentGenome(parameters),
+      blast_create_quick_db_for_current_genome: () =>
+        this.services.blast.blastCreateQuickDbForCurrentGenome(parameters),
       blast_filter_results: () => this.services.blast.blastFilterResults(parameters),
       blast_export_results: () => this.services.blast.blastExportResults(parameters),
       blast_detect_sequence_type: () => this.services.blast.blastDetectSequenceType(parameters),
@@ -7740,7 +7839,7 @@ ${coreTools}
     const amount = parameters.amount || null; // NavigationManager handles default
     this.app.navigationManager.navigatePrevious(amount);
     const state = this.getCurrentState();
-    return {success: true, message: 'Panned left', newRange: state.viewingRegion};
+    return { success: true, message: 'Panned left', newRange: state.viewingRegion };
   }
 
   /**
@@ -7751,7 +7850,7 @@ ${coreTools}
     const amount = parameters.amount || null;
     this.app.navigationManager.navigateNext(amount);
     const state = this.getCurrentState();
-    return {success: true, message: 'Panned right', newRange: state.viewingRegion};
+    return { success: true, message: 'Panned right', newRange: state.viewingRegion };
   }
 
   /**
@@ -7796,9 +7895,9 @@ ${coreTools}
    * Works without MCP server - directly sends focus command to main process
    */
   async switchActiveWindow(parameters = {}) {
-    const {windowId} = parameters;
+    const { windowId } = parameters;
     if (!windowId) {
-      return {success: false, error: 'windowId parameter is required. Use list_genome_windows to see available IDs.'};
+      return { success: false, error: 'windowId parameter is required. Use list_genome_windows to see available IDs.' };
     }
 
     try {
@@ -7813,7 +7912,7 @@ ${coreTools}
       return result;
     } catch (error) {
       console.error('[ChatManager] switchActiveWindow error:', error);
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -7822,12 +7921,13 @@ ${coreTools}
    * Provides a unified interface for opening, closing, or toggling any settings modal
    */
   async toggleSettingsModal(parameters = {}) {
-    const {modal_name: modalName, action = 'toggle'} = parameters;
+    const { modal_name: modalName, action = 'toggle' } = parameters;
 
     if (!modalName) {
       return {
         success: false,
-        error: 'modal_name parameter is required. Supported: llm_config, chatbox_settings, general_settings, track_settings, mcp_settings, multi_agent_settings, tab_settings, search_settings, gene_detail_settings, external_tools, plugin_management, action_list, literature_settings',
+        error:
+          'modal_name parameter is required. Supported: llm_config, chatbox_settings, general_settings, track_settings, mcp_settings, multi_agent_settings, tab_settings, search_settings, gene_detail_settings, external_tools, plugin_management, action_list, literature_settings',
       };
     }
 
@@ -7885,7 +7985,11 @@ ${coreTools}
       track_settings: {
         id: 'trackSettingsModal',
         open: () => {
-          if (window.genomeBrowser && window.genomeBrowser.trackRenderer && window.genomeBrowser.trackRenderer.openTrackSettings) {
+          if (
+            window.genomeBrowser &&
+            window.genomeBrowser.trackRenderer &&
+            window.genomeBrowser.trackRenderer.openTrackSettings
+          ) {
             window.genomeBrowser.trackRenderer.openTrackSettings('genes');
           }
         },
@@ -7931,7 +8035,11 @@ ${coreTools}
       tab_settings: {
         id: 'tabSettingsModal',
         open: () => {
-          if (window.genomeBrowser && window.genomeBrowser.tabManager && window.genomeBrowser.tabManager.openTabSettingsModal) {
+          if (
+            window.genomeBrowser &&
+            window.genomeBrowser.tabManager &&
+            window.genomeBrowser.tabManager.openTabSettingsModal
+          ) {
             window.genomeBrowser.tabManager.openTabSettingsModal();
           } else {
             const modal = document.getElementById('tabSettingsModal');
@@ -7939,7 +8047,11 @@ ${coreTools}
           }
         },
         close: () => {
-          if (window.genomeBrowser && window.genomeBrowser.tabManager && window.genomeBrowser.tabManager.closeTabSettingsModal) {
+          if (
+            window.genomeBrowser &&
+            window.genomeBrowser.tabManager &&
+            window.genomeBrowser.tabManager.closeTabSettingsModal
+          ) {
             window.genomeBrowser.tabManager.closeTabSettingsModal();
           } else {
             const modal = document.getElementById('tabSettingsModal');
@@ -7950,7 +8062,11 @@ ${coreTools}
       search_settings: {
         id: 'searchSettingsModal',
         open: () => {
-          if (window.genomeBrowser && window.genomeBrowser.navigationManager && window.genomeBrowser.navigationManager.showSearchSettingsModal) {
+          if (
+            window.genomeBrowser &&
+            window.genomeBrowser.navigationManager &&
+            window.genomeBrowser.navigationManager.showSearchSettingsModal
+          ) {
             window.genomeBrowser.navigationManager.showSearchSettingsModal();
           } else {
             const modal = document.getElementById('searchSettingsModal');
@@ -8068,7 +8184,9 @@ ${coreTools}
     try {
       // Determine current state and action to perform
       const modal = document.getElementById(entry.id);
-      const isOpen = modal ? modal.classList.contains('show') || modal.style.display === 'flex' || modal.style.display === 'block' : false;
+      const isOpen = modal
+        ? modal.classList.contains('show') || modal.style.display === 'flex' || modal.style.display === 'block'
+        : false;
 
       let effectiveAction = action;
       if (action === 'toggle') {
@@ -8112,7 +8230,7 @@ ${coreTools}
    * Changes the application's visual style preset and/or dark/light mode
    */
   async switchUiStyle(parameters = {}) {
-    const {style_name: styleName, dark_mode: darkMode} = parameters;
+    const { style_name: styleName, dark_mode: darkMode } = parameters;
     const themeManager = window.themeManager;
     const generalSettingsManager = window.generalSettingsManager;
 
@@ -8123,7 +8241,7 @@ ${coreTools}
       };
     }
 
-    const availableStyles = themeManager.getAvailableStyles().map((s) => s.id);
+    const availableStyles = themeManager.getAvailableStyles().map(s => s.id);
     const results = [];
 
     try {
@@ -8207,7 +8325,7 @@ ${coreTools}
   async executeActionTool(toolName, parameters) {
     if (!window.actionManager) {
       console.log(`⚡ Action Manager not available for '${toolName}'`);
-      return {error: 'Action system not available'};
+      return { error: 'Action system not available' };
     }
 
     try {
@@ -8227,7 +8345,9 @@ ${coreTools}
         case 'execute_actions':
           // Pass parameters directly — path resolution is handled by
           // resolveSaveFilePath() inside executeAllActionsInternal
-          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] ChatManager.executeActionTool execute_actions | parameters=${JSON.stringify(parameters)}`);
+          console.log(
+            `🔍 [TRACE-EXECUTE_ACTIONS] ChatManager.executeActionTool execute_actions | parameters=${JSON.stringify(parameters)}`
+          );
           return await window.actionManager.executeAllActions(parameters);
         case 'get_action_list':
           return await window.actionManager.getActionList(parameters);
@@ -8239,11 +8359,11 @@ ${coreTools}
           return await window.actionManager.getClipboardContent(parameters);
         default:
           console.warn(`Unknown action tool: ${toolName}`);
-          return {error: `Unknown action tool: ${toolName}`};
+          return { error: `Unknown action tool: ${toolName}` };
       }
     } catch (error) {
       console.error(`❌ Action tool '${toolName}' execution failed:`, error);
-      return {error: error.message};
+      return { error: error.message };
     }
   }
 
@@ -8359,9 +8479,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const sequences = Object.keys(this.app.currentSequence);
     const totalLength = Object.values(this.app.currentSequence).reduce((sum, seq) => sum + seq.length, 0);
-    const annotationCount = this.app.currentAnnotations ?
-      Object.values(this.app.currentAnnotations).reduce((sum, annotations) => sum + annotations.length, 0) :
-      0;
+    const annotationCount = this.app.currentAnnotations
+      ? Object.values(this.app.currentAnnotations).reduce((sum, annotations) => sum + annotations.length, 0)
+      : 0;
 
     let summary = `${sequences.length} sequence(s), ${totalLength.toLocaleString()} bp total, ${annotationCount} annotations`;
     if (this.app.windowId) {
@@ -8395,10 +8515,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   getMCPServersSummary() {
     const servers = this.mcpServerManager.getServerStatus();
-    const connected = servers.filter((s) => s.connected);
-    return connected.length > 0 ?
-      `${connected.length} connected: ${connected.map((s) => s.name).join(', ')}` :
-      'No MCP servers connected';
+    const connected = servers.filter(s => s.connected);
+    return connected.length > 0
+      ? `${connected.length} connected: ${connected.map(s => s.name).join(', ')}`
+      : 'No MCP servers connected';
   }
 
   getPluginFunctionsSummary() {
@@ -8453,7 +8573,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       if (pluginFunctions.length > 0) {
         info += 'Available Plugin Functions:\\n';
-        pluginFunctions.forEach((func) => {
+        pluginFunctions.forEach(func => {
           info += `- ${func.name}: ${func.description}\\n`;
         });
 
@@ -8489,7 +8609,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       if (visualizations.length > 0) {
         info += '\\nAvailable Visualization Plugins:\\n';
-        visualizations.forEach((viz) => {
+        visualizations.forEach(viz => {
           info += `- ${viz.id}: ${viz.description} (supports: ${viz.supportedDataTypes.join(', ')})\\n`;
         });
 
@@ -8535,7 +8655,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    */
   async executeDeleteSequence(parameters) {
     try {
-      const {chromosome, start, end, strand = '+'} = parameters;
+      const { chromosome, start, end, strand = '+' } = parameters;
 
       // Validate parameters
       if (!chromosome || start === undefined || end === undefined) {
@@ -8560,13 +8680,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       const target = `${chromosome}:${start}-${end}`;
       const length = end - start + 1;
-      const metadata = {chromosome, start, end, strand, selectionSource: 'function_call'};
+      const metadata = { chromosome, start, end, strand, selectionSource: 'function_call' };
 
       const actionId = genomeBrowser.actionManager.addAction(
-          genomeBrowser.actionManager.ACTION_TYPES.DELETE_SEQUENCE,
-          target,
-          `Delete ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
-          metadata,
+        genomeBrowser.actionManager.ACTION_TYPES.DELETE_SEQUENCE,
+        target,
+        `Delete ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
+        metadata
       );
 
       const result = {
@@ -8589,7 +8709,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    */
   async executeDeleteGene(parameters) {
     try {
-      const {geneName, chromosome} = parameters;
+      const { geneName, chromosome } = parameters;
 
       // Validate parameters
       if (!geneName) {
@@ -8597,16 +8717,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
 
       // First, find the gene using existing search functionality
-      const searchResult = await this.searchGeneByName({name: geneName, chromosome});
+      const searchResult = await this.searchGeneByName({ name: geneName, chromosome });
 
       if (!searchResult.found || !searchResult.genes || searchResult.genes.length === 0) {
         throw new Error(
-            `Gene/locus tag "${geneName}" not found${chromosome ? ` in chromosome ${chromosome}` : ''}. Make sure the gene name or locus tag is correct.`,
+          `Gene/locus tag "${geneName}" not found${chromosome ? ` in chromosome ${chromosome}` : ''}. Make sure the gene name or locus tag is correct.`
         );
       }
 
       // Get the first matching gene (prefer CDS over other features)
-      const targetGene = searchResult.genes.find((gene) => gene.type === 'CDS') || searchResult.genes[0];
+      const targetGene = searchResult.genes.find(gene => gene.type === 'CDS') || searchResult.genes[0];
 
       if (!targetGene || !targetGene.start || !targetGene.end) {
         throw new Error(`Invalid gene data for "${geneName}": missing coordinates`);
@@ -8810,7 +8930,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     if (this.mcpServerManager) {
       try {
         const allMcpTools = this.mcpServerManager.getAllAvailableTools();
-        mcpTools.push(...allMcpTools.map((tool) => tool.name));
+        mcpTools.push(...allMcpTools.map(tool => tool.name));
       } catch (error) {
         // Silently handle error
       }
@@ -8867,28 +8987,28 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // Copy to clipboard
       navigator.clipboard
-          .writeText(textContent)
-          .then(() => {
+        .writeText(textContent)
+        .then(() => {
           // Show brief success indication
-            const copyBtn = messageElement.parentElement.querySelector('.copy-message-btn');
-            const originalHTML = copyBtn.innerHTML;
-            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
-            copyBtn.style.color = '#10b981';
+          const copyBtn = messageElement.parentElement.querySelector('.copy-message-btn');
+          const originalHTML = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+          copyBtn.style.color = '#10b981';
 
-            setTimeout(() => {
-              copyBtn.innerHTML = originalHTML;
-              copyBtn.style.color = '';
-            }, 1000);
-          })
-          .catch((err) => {
-            console.error('Failed to copy message: ', err);
-            // Fallback: select the text
-            const range = document.createRange();
-            range.selectNodeContents(messageElement);
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(range);
-          });
+          setTimeout(() => {
+            copyBtn.innerHTML = originalHTML;
+            copyBtn.style.color = '';
+          }, 1000);
+        })
+        .catch(err => {
+          console.error('Failed to copy message: ', err);
+          // Fallback: select the text
+          const range = document.createRange();
+          range.selectNodeContents(messageElement);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+        });
     }
   }
 
@@ -8909,21 +9029,21 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Remove common leading whitespace while preserving relative indentation
     const lines = formattedMessage.split('\n');
     if (lines.length > 1) {
-      const nonEmptyLines = lines.filter((line) => line.trim().length > 0);
+      const nonEmptyLines = lines.filter(line => line.trim().length > 0);
       if (nonEmptyLines.length > 0) {
         const minIndent = Math.min(
-            ...nonEmptyLines.map((line) => {
-              const match = line.match(/^(\s*)/);
-              return match ? match[1].length : 0;
-            }),
+          ...nonEmptyLines.map(line => {
+            const match = line.match(/^(\s*)/);
+            return match ? match[1].length : 0;
+          })
         );
 
         if (minIndent > 0) {
           formattedMessage = lines
-              .map((line) => {
-                return line.length > 0 ? line.substring(minIndent) : line;
-              })
-              .join('\n');
+            .map(line => {
+              return line.length > 0 ? line.substring(minIndent) : line;
+            })
+            .join('\n');
         }
       }
     }
@@ -8974,28 +9094,28 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   basicMarkdownFormat(text) {
     return (
       text
-      // Code blocks (```)
-          .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-      // Inline code
-          .replace(/`([^`]+)`/g, '<code>$1</code>')
-      // Bold
-          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-          .replace(/__([^_]+)__/g, '<strong>$1</strong>')
-      // Italic
-          .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-          .replace(/_([^_]+)_/g, '<em>$1</em>')
-      // Headers
-          .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-          .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-          .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      // Links
-          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-      // Unordered lists
-          .replace(/^[*+-] (.+)$/gm, '<li>$1</li>')
-      // Ordered lists
-          .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-      // Line breaks
-          .replace(/\n/g, '<br>')
+        // Code blocks (```)
+        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+        // Inline code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Bold
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+        // Italic
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/_([^_]+)_/g, '<em>$1</em>')
+        // Headers
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        // Unordered lists
+        .replace(/^[*+-] (.+)$/gm, '<li>$1</li>')
+        // Ordered lists
+        .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+        // Line breaks
+        .replace(/\n/g, '<br>')
     );
   }
 
@@ -9068,16 +9188,48 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     if (typeof DOMPurify !== 'undefined' && DOMPurify.sanitize) {
       return DOMPurify.sanitize(html, {
         ALLOWED_TAGS: [
-          'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'code', 'pre',
-          'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li',
-          'a', 'img', 'blockquote', 'hr', 'table', 'thead', 'tbody',
-          'tr', 'th', 'td', 'div', 'span', 'del', 'ins', 'sup', 'sub',
-          'details', 'summary', 'mark', 'kbd', 'var', 'cite',
+          'p',
+          'br',
+          'strong',
+          'b',
+          'em',
+          'i',
+          'u',
+          'code',
+          'pre',
+          'h1',
+          'h2',
+          'h3',
+          'h4',
+          'h5',
+          'h6',
+          'ul',
+          'ol',
+          'li',
+          'a',
+          'img',
+          'blockquote',
+          'hr',
+          'table',
+          'thead',
+          'tbody',
+          'tr',
+          'th',
+          'td',
+          'div',
+          'span',
+          'del',
+          'ins',
+          'sup',
+          'sub',
+          'details',
+          'summary',
+          'mark',
+          'kbd',
+          'var',
+          'cite',
         ],
-        ALLOWED_ATTR: [
-          'href', 'title', 'target', 'rel', 'src', 'alt', 'width', 'height',
-          'class', 'id', 'style',
-        ],
+        ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'src', 'alt', 'width', 'height', 'class', 'id', 'style'],
         ALLOW_DATA_ATTR: true,
         FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
         ADD_ATTR: ['target'],
@@ -9087,10 +9239,40 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Last resort fallback: original manual sanitization (less secure than DOMPurify)
     console.warn('[Security] DOMPurify not available, falling back to manual HTML sanitization');
     const allowedTags = [
-      'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'code', 'pre',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li',
-      'a', 'img', 'blockquote', 'hr', 'table', 'thead', 'tbody',
-      'tr', 'th', 'td', 'div', 'span', 'del', 'ins', 'sup', 'sub',
+      'p',
+      'br',
+      'strong',
+      'b',
+      'em',
+      'i',
+      'u',
+      'code',
+      'pre',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'ul',
+      'ol',
+      'li',
+      'a',
+      'img',
+      'blockquote',
+      'hr',
+      'table',
+      'thead',
+      'tbody',
+      'tr',
+      'th',
+      'td',
+      'div',
+      'span',
+      'del',
+      'ins',
+      'sup',
+      'sub',
     ];
 
     const allowedAttributes = {
@@ -9105,7 +9287,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
 
-    const sanitizeNode = (node) => {
+    const sanitizeNode = node => {
       if (node.nodeType === Node.TEXT_NODE) {
         return node.cloneNode(true);
       }
@@ -9121,7 +9303,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         const newElement = document.createElement(tagName);
 
         if (allowedAttributes[tagName]) {
-          Array.from(node.attributes).forEach((attr) => {
+          Array.from(node.attributes).forEach(attr => {
             if (allowedAttributes[tagName].includes(attr.name)) {
               if (tagName === 'a' && attr.name === 'href') {
                 const href = attr.value;
@@ -9142,7 +9324,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           }
         }
 
-        Array.from(node.childNodes).forEach((child) => {
+        Array.from(node.childNodes).forEach(child => {
           const sanitizedChild = sanitizeNode(child);
           if (sanitizedChild) {
             newElement.appendChild(sanitizedChild);
@@ -9156,7 +9338,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     };
 
     const sanitizedDiv = document.createElement('div');
-    Array.from(tempDiv.childNodes).forEach((child) => {
+    Array.from(tempDiv.childNodes).forEach(child => {
       const sanitizedChild = sanitizeNode(child);
       if (sanitizedChild) {
         sanitizedDiv.appendChild(sanitizedChild);
@@ -9286,10 +9468,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    */
   formatToolName(toolName) {
     return toolName
-        .split('.')
-        .map((part) => part.replace(/-/g, ' '))
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' → ');
+      .split('.')
+      .map(part => part.replace(/-/g, ' '))
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' → ');
   }
 
   /**
@@ -9346,7 +9528,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     document.body.appendChild(modal);
 
     // Close on escape key
-    const escHandler = (e) => {
+    const escHandler = e => {
       if (e.key === 'Escape' && document.body.contains(modal)) {
         document.body.removeChild(modal);
         document.removeEventListener('keydown', escHandler);
@@ -9416,7 +9598,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         messages: history,
       };
 
-      let content; let filename; let mimeType;
+      let content;
+      let filename;
+      let mimeType;
 
       switch (format.toLowerCase()) {
         case 'json':
@@ -9427,11 +9611,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
         case 'txt':
           content = history
-              .map((msg) => {
-                const time = new Date(msg.timestamp).toLocaleString();
-                return `[${time}] ${msg.sender.toUpperCase()}: ${msg.message}`;
-              })
-              .join('\n\n');
+            .map(msg => {
+              const time = new Date(msg.timestamp).toLocaleString();
+              return `[${time}] ${msg.sender.toUpperCase()}: ${msg.message}`;
+            })
+            .join('\n\n');
           filename = `chat-history-${new Date().toISOString().split('T')[0]}.txt`;
           mimeType = 'text/plain';
           break;
@@ -9439,11 +9623,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         case 'csv':
           const csvHeader = 'Timestamp,Sender,Message\n';
           const csvContent = history
-              .map((msg) => {
-                const escapedMessage = msg.message.replace(/"/g, '""');
-                return `"${msg.timestamp}","${msg.sender}","${escapedMessage}"`;
-              })
-              .join('\n');
+            .map(msg => {
+              const escapedMessage = msg.message.replace(/"/g, '""');
+              return `"${msg.timestamp}","${msg.sender}","${escapedMessage}"`;
+            })
+            .join('\n');
           content = csvHeader + csvContent;
           filename = `chat-history-${new Date().toISOString().split('T')[0]}.csv`;
           mimeType = 'text/csv';
@@ -9454,7 +9638,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
 
       // Download the file
-      const blob = new Blob([content], {type: mimeType});
+      const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -9510,7 +9694,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     // Clear all messages except welcome
     const existingMessages = messagesContainer.querySelectorAll('.message:not(.welcome-message .message)');
-    existingMessages.forEach((msg) => msg.remove());
+    existingMessages.forEach(msg => msg.remove());
 
     // Display historical messages
     history.forEach((msg, index) => {
@@ -9557,18 +9741,18 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     ];
 
     const optionsHTML = options
-        .map(
-            (option, index) =>
-              `<button class="suggestion-btn" onclick="chatManager.handleConfigOption(${index})">${option}</button>`,
-        )
-        .join('');
+      .map(
+        (option, index) =>
+          `<button class="suggestion-btn" onclick="chatManager.handleConfigOption(${index})">${option}</button>`
+      )
+      .join('');
 
     this.addMessageToChat(
-        `<div class="config-options-container">
+      `<div class="config-options-container">
                 <p><i class="fas fa-cog"></i> Configuration Options:</p>
                 ${optionsHTML}
             </div>`,
-        'assistant',
+      'assistant'
     );
   }
 
@@ -9598,53 +9782,53 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         case 5: // Show summary
           const summary = this.configManager.getConfigSummary();
           this.addMessageToChat(
-              `📊 **Configuration Summary:**\n` +
-            `• Version: ${summary.version}\n` +
-            `• LLM Provider: ${summary.llmProvider || 'None'}\n` +
-            `• Enabled Providers: ${summary.llmProvidersEnabled.join(', ') || 'None'}\n` +
-            `• Theme: ${summary.theme}\n` +
-            `• Chat History: ${summary.chatHistoryLength} messages\n` +
-            `• Recent Files: ${summary.recentFilesCount}\n` +
-            `• Debug Mode: ${summary.debugMode ? 'On' : 'Off'}`,
-              'assistant',
+            `📊 **Configuration Summary:**\n` +
+              `• Version: ${summary.version}\n` +
+              `• LLM Provider: ${summary.llmProvider || 'None'}\n` +
+              `• Enabled Providers: ${summary.llmProvidersEnabled.join(', ') || 'None'}\n` +
+              `• Theme: ${summary.theme}\n` +
+              `• Chat History: ${summary.chatHistoryLength} messages\n` +
+              `• Recent Files: ${summary.recentFilesCount}\n` +
+              `• Debug Mode: ${summary.debugMode ? 'On' : 'Off'}`,
+            'assistant'
           );
           break;
         case 6: // Debug storage info
           const storageInfo = this.configManager.getStorageInfo();
           this.addMessageToChat(
-              `🔧 **Storage Debug Info:**\n` +
-            `• Is Electron: ${storageInfo.isElectron}\n` +
-            `• Using Files: ${storageInfo.usingFiles}\n` +
-            `• Using localStorage: ${storageInfo.usingLocalStorage}\n` +
-            `• Is Initialized: ${storageInfo.isInitialized}\n` +
-            `• Config Path: ${storageInfo.configPath ? 'Available' : 'None'}\n` +
-            `• Storage Method: ${storageInfo.usingFiles ? 'File-based' : 'localStorage'}`,
-              'assistant',
+            `🔧 **Storage Debug Info:**\n` +
+              `• Is Electron: ${storageInfo.isElectron}\n` +
+              `• Using Files: ${storageInfo.usingFiles}\n` +
+              `• Using localStorage: ${storageInfo.usingLocalStorage}\n` +
+              `• Is Initialized: ${storageInfo.isInitialized}\n` +
+              `• Config Path: ${storageInfo.configPath ? 'Available' : 'None'}\n` +
+              `• Storage Method: ${storageInfo.usingFiles ? 'File-based' : 'localStorage'}`,
+            'assistant'
           );
           break;
         case 7: // Test MicrobeGenomics integration
           const integrationResult = this.testMicrobeGenomicsIntegration();
           this.addMessageToChat(
-              `🧬 **MicrobeGenomics Integration Test:**\n` +
-            `• Integration: ${integrationResult.success ? '✅ Success' : '❌ Failed'}\n` +
-            `• Functions Available: ${integrationResult.totalFunctions || 0}\n` +
-            `• Categories Available: ${integrationResult.categoriesAvailable ? '✅' : '❌'}\n` +
-            `• Examples Available: ${integrationResult.examplesAvailable ? '✅' : '❌'}\n` +
-            `• Function Test: ${integrationResult.functionCallTest?.success ? '✅ Passed' : '❌ Failed'}\n` +
-            (integrationResult.error ? `• Error: ${integrationResult.error}` : ''),
-              'assistant',
+            `🧬 **MicrobeGenomics Integration Test:**\n` +
+              `• Integration: ${integrationResult.success ? '✅ Success' : '❌ Failed'}\n` +
+              `• Functions Available: ${integrationResult.totalFunctions || 0}\n` +
+              `• Categories Available: ${integrationResult.categoriesAvailable ? '✅' : '❌'}\n` +
+              `• Examples Available: ${integrationResult.examplesAvailable ? '✅' : '❌'}\n` +
+              `• Function Test: ${integrationResult.functionCallTest?.success ? '✅ Passed' : '❌ Failed'}\n` +
+              (integrationResult.error ? `• Error: ${integrationResult.error}` : ''),
+            'assistant'
           );
           break;
         case 8: // Test tool execution
           const executionResult = await this.testToolExecution();
           this.addMessageToChat(
-              `🔧 **Tool Execution Test:**\n` +
-            `• Status: ${executionResult.success ? '✅ All tests passed' : '❌ Tests failed'}\n` +
-            `• GC Calculation: ${executionResult.tests?.gc ? '✅ Working' : '❌ Failed'}\n` +
-            `• Reverse Complement: ${executionResult.tests?.reverseComplement ? '✅ Working' : '❌ Failed'}\n` +
-            `• Navigation: ${executionResult.tests?.currentRegion ? '✅ Working' : '❌ Failed'}\n` +
-            (executionResult.error ? `• Error: ${executionResult.error}` : ''),
-              'assistant',
+            `🔧 **Tool Execution Test:**\n` +
+              `• Status: ${executionResult.success ? '✅ All tests passed' : '❌ Tests failed'}\n` +
+              `• GC Calculation: ${executionResult.tests?.gc ? '✅ Working' : '❌ Failed'}\n` +
+              `• Reverse Complement: ${executionResult.tests?.reverseComplement ? '✅ Working' : '❌ Failed'}\n` +
+              `• Navigation: ${executionResult.tests?.currentRegion ? '✅ Working' : '❌ Failed'}\n` +
+              (executionResult.error ? `• Error: ${executionResult.error}` : ''),
+            'assistant'
           );
           break;
       }
@@ -9655,7 +9839,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   // New comprehensive function calls
   async getGeneDetails(params) {
-    const {geneName, chromosome} = params;
+    const { geneName, chromosome } = params;
 
     if (!this.app || !this.app.currentAnnotations) {
       throw new Error('No annotations loaded');
@@ -9667,7 +9851,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     const annotations = this.app.currentAnnotations[chr] || [];
-    const matchingGenes = annotations.filter((gene) => {
+    const matchingGenes = annotations.filter(gene => {
       const name = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || '';
       return name && typeof name === 'string' && name.toLowerCase().includes(geneName.toLowerCase());
     });
@@ -9681,7 +9865,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       };
     }
 
-    const geneDetails = matchingGenes.map((gene) => ({
+    const geneDetails = matchingGenes.map(gene => ({
       name: gene.qualifiers?.gene || gene.qualifiers?.locus_tag || 'Unknown',
       type: gene.type,
       start: gene.start,
@@ -9768,17 +9952,17 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       qualifiers: gene.qualifiers || {},
 
       // Operon information if available
-      operonInfo: operonInfo ?
-        {
-          operonName: operonInfo.name,
-          operonStart: operonInfo.start,
-          operonEnd: operonInfo.end,
-          operonStrand: operonInfo.strand === -1 ? '-' : '+',
-          geneCount: operonInfo.genes?.length || 0,
-          genePosition:
-            operonInfo.genes?.findIndex((g) => g.start === gene.start && g.end === gene.end) + 1 || 'Unknown',
-        } :
-        null,
+      operonInfo: operonInfo
+        ? {
+            operonName: operonInfo.name,
+            operonStart: operonInfo.start,
+            operonEnd: operonInfo.end,
+            operonStrand: operonInfo.strand === -1 ? '-' : '+',
+            geneCount: operonInfo.genes?.length || 0,
+            genePosition:
+              operonInfo.genes?.findIndex(g => g.start === gene.start && g.end === gene.end) + 1 || 'Unknown',
+          }
+        : null,
     };
   }
 
@@ -9816,32 +10000,32 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     let featuresInRegion = [];
     if (this.app.currentAnnotations && this.app.currentAnnotations[chromosome]) {
       featuresInRegion = this.app.currentAnnotations[chromosome]
-          .filter((feature) => feature.start <= end && feature.end >= start)
-          .map((feature) => ({
-            type: feature.type,
-            name: feature.qualifiers?.gene || feature.qualifiers?.locus_tag || 'Unknown',
-            product: feature.qualifiers?.product || 'Unknown',
-            start: feature.start,
-            end: feature.end,
-            strand: feature.strand === -1 ? '-' : '+',
-            length: feature.end - feature.start + 1,
-          }));
+        .filter(feature => feature.start <= end && feature.end >= start)
+        .map(feature => ({
+          type: feature.type,
+          name: feature.qualifiers?.gene || feature.qualifiers?.locus_tag || 'Unknown',
+          product: feature.qualifiers?.product || 'Unknown',
+          start: feature.start,
+          end: feature.end,
+          strand: feature.strand === -1 ? '-' : '+',
+          length: feature.end - feature.start + 1,
+        }));
     }
 
     // Get user-defined features in the region
     let userFeaturesInRegion = [];
     if (this.app.userDefinedFeatures && this.app.userDefinedFeatures[chromosome]) {
       userFeaturesInRegion = Object.values(this.app.userDefinedFeatures[chromosome])
-          .filter((feature) => feature.start <= end && feature.end >= start)
-          .map((feature) => ({
-            type: feature.type,
-            name: feature.name,
-            description: feature.description || '',
-            start: feature.start,
-            end: feature.end,
-            strand: feature.strand === -1 ? '-' : '+',
-            length: feature.end - feature.start + 1,
-          }));
+        .filter(feature => feature.start <= end && feature.end >= start)
+        .map(feature => ({
+          type: feature.type,
+          name: feature.name,
+          description: feature.description || '',
+          start: feature.start,
+          end: feature.end,
+          strand: feature.strand === -1 ? '-' : '+',
+          length: feature.end - feature.start + 1,
+        }));
     }
 
     return {
@@ -9866,8 +10050,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // Statistics
       statistics: {
         totalFeatures: featuresInRegion.length + userFeaturesInRegion.length,
-        geneCount: featuresInRegion.filter((f) => f.type === 'gene' || f.type === 'CDS').length,
-        rnaCount: featuresInRegion.filter((f) => f.type.includes('RNA')).length,
+        geneCount: featuresInRegion.filter(f => f.type === 'gene' || f.type === 'CDS').length,
+        rnaCount: featuresInRegion.filter(f => f.type.includes('RNA')).length,
       },
     };
   }
@@ -9881,7 +10065,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async getMultipleCodingSequences(params) {
-    const {identifiers, includeProtein = true, format = 'object'} = params;
+    const { identifiers, includeProtein = true, format = 'object' } = params;
 
     if (!identifiers || !Array.isArray(identifiers)) {
       throw new Error('Identifiers array is required');
@@ -9903,14 +10087,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     try {
       const results = window.MicrobeFns.getMultipleCodingSequences(identifiers);
 
-      const successful = results.filter((r) => r.success);
-      const failed = results.filter((r) => !r.success);
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
 
       const response = {
         totalRequested: identifiers.length,
         successful: successful.length,
         failed: failed.length,
-        results: successful.map((result) => ({
+        results: successful.map(result => ({
           identifier: result.identifier,
           geneName: result.geneName,
           locusTag: result.locusTag,
@@ -9921,22 +10105,22 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           gcContent: result.gcContent,
           geneType: result.geneType,
           codingSequence:
-            format === 'sequence_only' ?
-              result.codingSequence :
-              result.codingSequence.substring(0, 100) + (result.codingSequence.length > 100 ? '...' : ''),
-          proteinSequence: includeProtein ?
-            format === 'sequence_only' ?
-              result.proteinSequence :
-              result.proteinSequence.substring(0, 50) + (result.proteinSequence.length > 50 ? '...' : '') :
-            undefined,
+            format === 'sequence_only'
+              ? result.codingSequence
+              : result.codingSequence.substring(0, 100) + (result.codingSequence.length > 100 ? '...' : ''),
+          proteinSequence: includeProtein
+            ? format === 'sequence_only'
+              ? result.proteinSequence
+              : result.proteinSequence.substring(0, 50) + (result.proteinSequence.length > 50 ? '...' : '')
+            : undefined,
           proteinLength: result.proteinLength,
         })),
-        errors: failed.map((f) => ({identifier: f.identifier, error: f.error})),
+        errors: failed.map(f => ({ identifier: f.identifier, error: f.error })),
       };
 
       // Add full sequences if requested
       if (format === 'full_sequences') {
-        response.fullSequences = successful.map((result) => ({
+        response.fullSequences = successful.map(result => ({
           identifier: result.identifier,
           geneName: result.geneName,
           codingSequence: result.codingSequence,
@@ -9951,7 +10135,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async getOperons(params) {
-    const {chromosome} = params;
+    const { chromosome } = params;
 
     const chr = chromosome || this.app.currentChromosome;
     if (!chr) {
@@ -9965,13 +10149,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const annotations = this.app.currentAnnotations[chr];
     const operons = this.app.detectOperons(annotations, chr);
 
-    const operonSummary = operons.map((operon) => ({
+    const operonSummary = operons.map(operon => ({
       name: operon.name,
       start: operon.start,
       end: operon.end,
       strand: operon.strand === -1 ? '-' : '+',
       geneCount: operon.genes.length,
-      genes: operon.genes.map((g) => g.qualifiers?.gene || g.qualifiers?.locus_tag || 'Unknown').slice(0, 5),
+      genes: operon.genes.map(g => g.qualifiers?.gene || g.qualifiers?.locus_tag || 'Unknown').slice(0, 5),
       length: operon.end - operon.start + 1,
     }));
 
@@ -9983,9 +10167,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async zoomToGene(params) {
-    const {geneName, chromosome, padding = 1000} = params;
+    const { geneName, chromosome, padding = 1000 } = params;
 
-    const geneDetails = await this.getGeneDetails({geneName, chromosome});
+    const geneDetails = await this.getGeneDetails({ geneName, chromosome });
 
     if (!geneDetails.found || geneDetails.genes.length === 0) {
       throw new Error(`Gene "${geneName}" not found`);
@@ -10015,7 +10199,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Select a gene by name or locus tag, highlighting it in the genome view
    */
   async selectGene(params) {
-    const {geneName, chromosome} = params;
+    const { geneName, chromosome } = params;
 
     if (!this.app) {
       throw new Error('Genome browser not initialized');
@@ -10040,7 +10224,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         for (const chr of allChromosomes) {
           const chrResults = this._searchGeneInChromosome(geneName, chr);
           // Tag each result with its chromosome
-          chrResults.forEach((r) => {
+          chrResults.forEach(r => {
             r.chromosome = chr;
           });
           searchResults = searchResults.concat(chrResults);
@@ -10067,7 +10251,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Get the full annotation object for the gene (search results use a slim 'annotation' field)
     const geneAnnotation = bestMatch.annotation;
     if (!geneAnnotation || geneAnnotation.start === undefined) {
-      throw new Error(`Gene "${geneName}" found but annotation data is incomplete. Try using find_gene_by_name instead.`);
+      throw new Error(
+        `Gene "${geneName}" found but annotation data is incomplete. Try using find_gene_by_name instead.`
+      );
     }
 
     // If the gene is on a different chromosome, switch to it
@@ -10076,10 +10262,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       if (chromosomeSelect) {
         chromosomeSelect.value = targetChromosome;
         // Trigger the change event to actually switch the chromosome
-        const event = new Event('change', {bubbles: true});
+        const event = new Event('change', { bubbles: true });
         chromosomeSelect.dispatchEvent(event);
         // Wait for the chromosome switch to complete
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
 
@@ -10095,7 +10281,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       if (targetName) {
         // Find ALL annotations sharing this gene name/locus_tag at the same locus
-        const candidates = this.app.currentAnnotations[targetChromosome].filter((a) => {
+        const candidates = this.app.currentAnnotations[targetChromosome].filter(a => {
           if (!a.qualifiers) return false;
           const aGene = this.app.getQualifierValue(a.qualifiers, 'gene');
           const aLocus = this.app.getQualifierValue(a.qualifiers, 'locus_tag');
@@ -10104,12 +10290,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
         if (candidates.length > 0) {
           // Prefer CDS (richest qualifiers) > mRNA > others > gene (minimal qualifiers)
-          const typePriority = (type) => {
+          const typePriority = type => {
             switch ((type || '').toUpperCase()) {
-              case 'CDS': return 3;
-              case 'MRNA': return 2;
-              case 'GENE': return 0;
-              default: return 1;
+              case 'CDS':
+                return 3;
+              case 'MRNA':
+                return 2;
+              case 'GENE':
+                return 0;
+              default:
+                return 1;
             }
           };
           candidates.sort((a, b) => {
@@ -10122,11 +10312,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         }
       } else {
         // No gene name available — fall back to exact position match
-        const posMatch = this.app.currentAnnotations[targetChromosome].find((a) =>
-          a.start === geneAnnotation.start &&
-          a.end === geneAnnotation.end &&
-          a.type === geneAnnotation.type &&
-          a.strand === geneAnnotation.strand,
+        const posMatch = this.app.currentAnnotations[targetChromosome].find(
+          a =>
+            a.start === geneAnnotation.start &&
+            a.end === geneAnnotation.end &&
+            a.type === geneAnnotation.type &&
+            a.strand === geneAnnotation.strand
         );
         if (posMatch) fullGene = posMatch;
       }
@@ -10147,7 +10338,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // Wait for the genome view to finish rendering after navigation
       // This ensures DOM elements for the gene are available before highlighting
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await new Promise(resolve => setTimeout(resolve, 400));
     }
 
     // Use the same function as user click: TrackRenderer.showGeneDetails()
@@ -10160,7 +10351,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       if (typeof this.app.selectGene === 'function') {
         this.app.selectGene(fullGene, operonInfo);
       } else {
-        this.app.selectedGene = {gene: fullGene, operonInfo};
+        this.app.selectedGene = { gene: fullGene, operonInfo };
       }
       try {
         this.app.showGeneDetailsPanel?.();
@@ -10221,7 +10412,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const searchTerm = geneName.toLowerCase();
     const results = [];
 
-    annotations.forEach((annotation) => {
+    annotations.forEach(annotation => {
       if (!annotation.qualifiers) return;
 
       const geneNameValue = this.app.getQualifierValue(annotation.qualifiers, 'gene') || '';
@@ -10256,12 +10447,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Prioritize CDS > mRNA > gene > other feature types when relevance scores tie.
     // This ensures the richly-annotated CDS feature is selected rather than the
     // minimal 'gene' feature that only carries gene name and locus_tag qualifiers.
-    const featureTypePriority = (type) => {
+    const featureTypePriority = type => {
       switch ((type || '').toUpperCase()) {
-        case 'CDS': return 3;
-        case 'MRNA': return 2;
-        case 'GENE': return 1;
-        default: return 0;
+        case 'CDS':
+          return 3;
+        case 'MRNA':
+          return 2;
+        case 'GENE':
+          return 1;
+        default:
+          return 0;
       }
     };
 
@@ -10282,7 +10477,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Select a sequence region by genomic coordinates
    */
   async selectSequenceRegion(params) {
-    const {start, end, chromosome} = params;
+    const { start, end, chromosome } = params;
 
     if (!this.app) {
       throw new Error('Genome browser not initialized');
@@ -10385,7 +10580,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     const chromosomes = Object.keys(this.app.currentSequence);
-    const chromosomeInfo = chromosomes.map((chr) => ({
+    const chromosomeInfo = chromosomes.map(chr => ({
       name: chr,
       length: this.app.currentSequence[chr].length,
       isSelected: chr === this.app.currentChromosome,
@@ -10406,7 +10601,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const visibleTracks = this.getVisibleTracks();
     const allTracks = ['genes', 'primers', 'sequence', 'gc', 'variants', 'reads', 'proteins'];
 
-    const trackStatus = allTracks.map((track) => ({
+    const trackStatus = allTracks.map(track => ({
       name: track,
       visible: visibleTracks.includes(track),
       description: this.getTrackDescription(track),
@@ -10438,18 +10633,40 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   // IUPAC ambiguity code map for motif expansion
   static IUPAC_CODES = {
-    A: 'A', C: 'C', G: 'G', T: 'T',
-    R: '[AG]', Y: '[CT]', S: '[GC]', W: '[AT]',
-    K: '[GT]', M: '[AC]', B: '[CGT]', D: '[AGT]',
-    H: '[ACT]', V: '[ACG]', N: '[ACGT]',
+    A: 'A',
+    C: 'C',
+    G: 'G',
+    T: 'T',
+    R: '[AG]',
+    Y: '[CT]',
+    S: '[GC]',
+    W: '[AT]',
+    K: '[GT]',
+    M: '[AC]',
+    B: '[CGT]',
+    D: '[AGT]',
+    H: '[ACT]',
+    V: '[ACG]',
+    N: '[ACGT]',
   };
 
   // IUPAC complement map for reverse complementing IUPAC motifs
   static IUPAC_COMPLEMENT = {
-    A: 'T', T: 'A', G: 'C', C: 'G',
-    R: 'Y', Y: 'R', S: 'S', W: 'W',
-    K: 'M', M: 'K', B: 'V', D: 'H',
-    H: 'D', V: 'B', N: 'N',
+    A: 'T',
+    T: 'A',
+    G: 'C',
+    C: 'G',
+    R: 'Y',
+    Y: 'R',
+    S: 'S',
+    W: 'W',
+    K: 'M',
+    M: 'K',
+    B: 'V',
+    D: 'H',
+    H: 'D',
+    V: 'B',
+    N: 'N',
   };
 
   /**
@@ -10460,9 +10677,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * @returns {string} Reverse-complemented motif
    */
   _reverseComplementIUPAC(motif) {
-    return motif.toUpperCase().split('').reverse()
-        .map((b) => ChatManager.IUPAC_COMPLEMENT[b] || b)
-        .join('');
+    return motif
+      .toUpperCase()
+      .split('')
+      .reverse()
+      .map(b => ChatManager.IUPAC_COMPLEMENT[b] || b)
+      .join('');
   }
 
   /**
@@ -10510,12 +10730,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const maxMismatches = allowMismatches ?? max_mismatches ?? 0;
 
     if (!motifPattern) {
-      return {success: false, error: 'Motif pattern is required (use "motif" or "pattern" parameter)'};
+      return { success: false, error: 'Motif pattern is required (use "motif" or "pattern" parameter)' };
     }
 
     const chr = chromosome || this.app.currentChromosome;
     if (!chr) {
-      return {success: false, error: 'No chromosome specified and none currently selected'};
+      return { success: false, error: 'No chromosome specified and none currently selected' };
     }
 
     const regionStart = start || this.app.currentPosition?.start || 0;
@@ -10523,7 +10743,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
     if (!sequence || sequence.length === 0) {
-      return {success: false, error: 'No sequence data available for the specified region'};
+      return { success: false, error: 'No sequence data available for the specified region' };
     }
 
     const searchSeq = case_sensitive ? sequence : sequence.toUpperCase();
@@ -10558,9 +10778,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // Reverse strand
       if (strand === '-' || strand === 'both') {
         const rcMotif = this._reverseComplementIUPAC(motifPattern);
-        const rcRegexStr = iupacRegex ?
-          this._expandIUPACToRegex(rcMotif) || rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') :
-          rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rcRegexStr = iupacRegex
+          ? this._expandIUPACToRegex(rcMotif) || rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          : rcMotif.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const rcRegex = new RegExp(rcRegexStr, flags);
         const rcSeq = this.reverseComplement(searchSeq);
         rcRegex.lastIndex = 0;
@@ -10623,16 +10843,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     matches.sort((a, b) => a.position - b.position);
 
     // Compute summary statistics
-    const fwdCount = matches.filter((m) => m.strand === '+').length;
-    const revCount = matches.filter((m) => m.strand === '-').length;
+    const fwdCount = matches.filter(m => m.strand === '+').length;
+    const revCount = matches.filter(m => m.strand === '-').length;
     const regionLen = regionEnd - regionStart;
-    const density = regionLen > 0 ? (matches.length / regionLen * 1000).toFixed(3) : 0;
+    const density = regionLen > 0 ? ((matches.length / regionLen) * 1000).toFixed(3) : 0;
 
     return {
       success: true,
       motif: motifPattern,
       chromosome: chr,
-      searchRegion: {start: regionStart, end: regionEnd, length: regionLen},
+      searchRegion: { start: regionStart, end: regionEnd, length: regionLen },
       strandSearched: strand,
       allowedMismatches: maxMismatches,
       iupacExpanded: iupacRegex !== null,
@@ -10645,7 +10865,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async searchPattern(params) {
-    const {regex, chromosome, start, end, description = 'Custom pattern'} = params;
+    const { regex, chromosome, start, end, description = 'Custom pattern' } = params;
 
     const chr = chromosome || this.app.currentChromosome;
     if (!chr) {
@@ -10685,7 +10905,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   // 2. NEARBY FEATURES AND CONTEXT
   async getNearbyFeatures(params) {
-    const {chromosome, position, distance = 5000, featureTypes = []} = params;
+    const { chromosome, position, distance = 5000, featureTypes = [] } = params;
 
     const chr = chromosome || this.app.currentChromosome;
     if (!chr) {
@@ -10697,7 +10917,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     const annotations = this.app.currentAnnotations[chr];
-    const nearbyFeatures = annotations.filter((feature) => {
+    const nearbyFeatures = annotations.filter(feature => {
       if (featureTypes.length > 0 && !featureTypes.includes(feature.type)) {
         return false;
       }
@@ -10714,7 +10934,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       return distA - distB;
     });
 
-    const featureSummary = nearbyFeatures.map((feature) => ({
+    const featureSummary = nearbyFeatures.map(feature => ({
       name: feature.qualifiers?.gene || feature.qualifiers?.locus_tag || 'Unknown',
       type: feature.type,
       start: feature.start,
@@ -10734,7 +10954,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async findIntergenicRegions(params) {
-    const {chromosome, minLength = 100} = params;
+    const { chromosome, minLength = 100 } = params;
 
     const chr = chromosome || this.app.currentChromosome;
     if (!chr) {
@@ -10746,7 +10966,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     const annotations = this.app.currentAnnotations[chr];
-    const genes = annotations.filter((f) => f.type === 'gene' || f.type === 'CDS').sort((a, b) => a.start - b.start);
+    const genes = annotations.filter(f => f.type === 'gene' || f.type === 'CDS').sort((a, b) => a.start - b.start);
     const intergenicRegions = [];
 
     for (let i = 0; i < genes.length - 1; i++) {
@@ -10825,7 +11045,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   // 5. BOOKMARK AND SESSION MANAGEMENT
   async bookmarkPosition(params) {
-    const {name, chromosome, start, end, notes = ''} = params;
+    const { name, chromosome, start, end, notes = '' } = params;
 
     const chr = chromosome || this.app.currentChromosome;
     const bookmarkStart = start || this.app.currentPosition?.start;
@@ -10859,12 +11079,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   getBookmarks(params) {
-    const {chromosome} = params;
+    const { chromosome } = params;
     const bookmarks = this.configManager.get('bookmarks', []);
 
     let filteredBookmarks = bookmarks;
     if (chromosome) {
-      filteredBookmarks = bookmarks.filter((b) => b.chromosome === chromosome);
+      filteredBookmarks = bookmarks.filter(b => b.chromosome === chromosome);
     }
 
     return {
@@ -10876,7 +11096,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async saveViewState(params) {
-    const {name, description = ''} = params;
+    const { name, description = '' } = params;
 
     const visibleTracks = this.getVisibleTracks();
     const trackSettings = {};
@@ -10909,7 +11129,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       name: name,
       description: description,
       chromosome: this.app.currentChromosome,
-      position: this.app.currentPosition ? {...this.app.currentPosition} : null,
+      position: this.app.currentPosition ? { ...this.app.currentPosition } : null,
       visibleTracks: visibleTracks,
       trackSettings: trackSettings,
       activeTabId: activeTabId,
@@ -10959,14 +11179,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   // 6. SEQUENCE COMPARISON AND ANALYSIS
   async compareRegions(params) {
-    const {region1, region2, alignmentType = 'simple'} = params;
+    const { region1, region2, alignmentType = 'simple' } = params;
 
     // Parse regions (format: "chr:start-end")
-    const parseRegion = (regionStr) => {
+    const parseRegion = regionStr => {
       const parts = regionStr.split(':');
       const chromosome = parts[0];
       const [start, end] = parts[1].split('-').map(Number);
-      return {chromosome, start, end};
+      return { chromosome, start, end };
     };
 
     const reg1 = parseRegion(region1);
@@ -10994,7 +11214,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async findSimilarSequences(params) {
-    const {querySequence, chromosome, minSimilarity = 0.8, maxResults = 20} = params;
+    const { querySequence, chromosome, minSimilarity = 0.8, maxResults = 20 } = params;
 
     const chr = chromosome || this.app.currentChromosome;
     if (!chr) {
@@ -11050,9 +11270,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           recordMultiFieldUpdate: () => [],
           getHistory: () => [],
           getAllChanges: () => [],
-          getSummary: () => ({totalChanges: 0}),
+          getSummary: () => ({ totalChanges: 0 }),
           exportChangelog: () => '[]',
-          clearHistory: () => { },
+          clearHistory: () => {},
           size: 0,
         };
       }
@@ -11091,7 +11311,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     return this.services.annotation.getAnnotationHistory(params);
   }
 
-
   // 7. ANNOTATION MANAGEMENT (CRUD)
   async editAnnotation(params) {
     return this.services.annotation.editAnnotation(params);
@@ -11107,7 +11326,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   // 8. FILE AND DATA MANAGEMENT
   getFileInfo(params) {
-    const {fileType} = params;
+    const { fileType } = params;
 
     const fileInfo = {
       genome: null,
@@ -11134,8 +11353,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const totalFeatures = chromosomes.reduce((sum, chr) => sum + (this.app.currentAnnotations[chr]?.length || 0), 0);
 
       const featureTypes = new Set();
-      chromosomes.forEach((chr) => {
-        this.app.currentAnnotations[chr]?.forEach((feature) => {
+      chromosomes.forEach(chr => {
+        this.app.currentAnnotations[chr]?.forEach(feature => {
           featureTypes.add(feature.type);
         });
       });
@@ -11152,7 +11371,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     fileInfo.tracks = this.getTrackStatus();
 
     if (fileType && fileInfo[fileType]) {
-      return {fileType, info: fileInfo[fileType]};
+      return { fileType, info: fileInfo[fileType] };
     }
 
     return {
@@ -11162,7 +11381,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async exportRegionFeatures(params) {
-    const {chromosome, start, end, featureTypes = [], format = 'json'} = params;
+    const { chromosome, start, end, featureTypes = [], format = 'json' } = params;
 
     const chr = chromosome || this.app.currentChromosome;
     if (!chr) {
@@ -11177,7 +11396,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
 
     const annotations = this.app.currentAnnotations[chr];
-    const regionFeatures = annotations.filter((feature) => {
+    const regionFeatures = annotations.filter(feature => {
       // Filter by position overlap
       const overlaps = feature.start <= regionEnd && feature.end >= regionStart;
 
@@ -11260,10 +11479,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     // Add a new conversation indicator in UI only
     this.displayChatMessage(
-        '🆕 **New conversation started**',
-        'assistant',
-        new Date().toISOString(),
-        'new-conversation-' + Date.now(),
+      '🆕 **New conversation started**',
+      'assistant',
+      new Date().toISOString(),
+      'new-conversation-' + Date.now()
     );
 
     console.log('Started new chat conversation');
@@ -11458,7 +11677,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     modal.className = 'modal conversation-detail-modal show';
 
     let messagesHTML = '';
-    conversation.messages.forEach((msg) => {
+    conversation.messages.forEach(msg => {
       const time = new Date(msg.timestamp).toLocaleTimeString();
       messagesHTML += `
                 <div class="conversation-message ${msg.sender}">
@@ -11531,21 +11750,21 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     conversationText += `Messages: ${conversation.messages.length}\n\n`;
     conversationText += `${'='.repeat(50)}\n\n`;
 
-    conversation.messages.forEach((msg) => {
+    conversation.messages.forEach(msg => {
       const time = new Date(msg.timestamp).toLocaleTimeString();
       const sender = msg.sender === 'user' ? 'You' : 'AI Assistant';
       conversationText += `[${time}] ${sender}:\n${msg.message}\n\n`;
     });
 
     navigator.clipboard
-        .writeText(conversationText)
-        .then(() => {
-          this.showNotification('Conversation copied to clipboard', 'success');
-        })
-        .catch((err) => {
-          console.error('Failed to copy conversation:', err);
-          this.showNotification('❌ Failed to copy conversation', 'error');
-        });
+      .writeText(conversationText)
+      .then(() => {
+        this.showNotification('Conversation copied to clipboard', 'success');
+      })
+      .catch(err => {
+        console.error('Failed to copy conversation:', err);
+        this.showNotification('❌ Failed to copy conversation', 'error');
+      });
   }
 
   /**
@@ -11568,7 +11787,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       exportedAt: new Date().toISOString(),
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -11592,7 +11811,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     const confirmed = confirm(
-        `Are you sure you want to delete this conversation with ${conversation.messages.length} messages?`,
+      `Are you sure you want to delete this conversation with ${conversation.messages.length} messages?`
     );
     if (!confirmed) return;
 
@@ -11600,8 +11819,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       let history = this.configManager.getChatHistory();
 
       // Remove all messages from this conversation
-      const messageIds = conversation.messages.map((m) => m.id);
-      history = history.filter((msg) => !messageIds.includes(msg.id));
+      const messageIds = conversation.messages.map(m => m.id);
+      history = history.filter(msg => !messageIds.includes(msg.id));
 
       // Save updated history
       this.configManager.setChatHistory(history);
@@ -11643,7 +11862,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    */
   showFullMessage(messageId) {
     const history = this.configManager.getChatHistory();
-    const message = history.find((msg) => msg.id === messageId);
+    const message = history.find(msg => msg.id === messageId);
 
     if (!message) {
       this.showNotification('❌ Message not found', 'error');
@@ -11687,7 +11906,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    */
   copyHistoryMessage(messageId) {
     const history = this.configManager.getChatHistory();
-    const message = history.find((msg) => msg.id === messageId);
+    const message = history.find(msg => msg.id === messageId);
 
     if (!message) {
       this.showNotification('❌ Message not found', 'error');
@@ -11695,14 +11914,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     navigator.clipboard
-        .writeText(message.message)
-        .then(() => {
-          this.showNotification('Message copied to clipboard', 'success');
-        })
-        .catch((err) => {
-          console.error('Failed to copy message:', err);
-          this.showNotification('❌ Failed to copy message', 'error');
-        });
+      .writeText(message.message)
+      .then(() => {
+        this.showNotification('Message copied to clipboard', 'success');
+      })
+      .catch(err => {
+        console.error('Failed to copy message:', err);
+        this.showNotification('❌ Failed to copy message', 'error');
+      });
   }
 
   /**
@@ -11714,7 +11933,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     try {
       const history = this.configManager.getChatHistory();
-      const messageIndex = history.findIndex((msg) => msg.id === messageId);
+      const messageIndex = history.findIndex(msg => msg.id === messageId);
 
       if (messageIndex === -1) {
         this.showNotification('❌ Message not found', 'error');
@@ -11747,7 +11966,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     if (!confirmed) return;
 
     const doubleConfirmed = confirm(
-        'This will permanently delete all your chat conversations. Are you absolutely sure?',
+      'This will permanently delete all your chat conversations. Are you absolutely sure?'
     );
     if (!doubleConfirmed) return;
 
@@ -11774,7 +11993,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     if (!searchTerm) return;
 
     const history = this.configManager.getChatHistory();
-    const results = history.filter((msg) => msg.message.toLowerCase().includes(searchTerm.toLowerCase()));
+    const results = history.filter(msg => msg.message.toLowerCase().includes(searchTerm.toLowerCase()));
 
     if (results.length === 0) {
       this.showNotification(`🔍 No messages found containing "${searchTerm}"`, 'info');
@@ -11795,7 +12014,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     modal.className = 'modal chat-search-modal show';
 
     let resultsHTML = '';
-    results.forEach((msg) => {
+    results.forEach(msg => {
       const time = new Date(msg.timestamp).toLocaleString();
       const highlightedMessage = msg.message.replace(new RegExp(`(${searchTerm})`, 'gi'), '<mark>$1</mark>');
 
@@ -11953,10 +12172,15 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const resizeHandles = chatPanel.querySelectorAll('.resize-handle');
     let isResizing = false;
     let resizeDirection = '';
-    let startX; let startY; let startWidth; let startHeight; let startLeft; let startTop;
+    let startX;
+    let startY;
+    let startWidth;
+    let startHeight;
+    let startLeft;
+    let startTop;
 
-    resizeHandles.forEach((handle) => {
-      handle.addEventListener('mousedown', (e) => {
+    resizeHandles.forEach(handle => {
+      handle.addEventListener('mousedown', e => {
         isResizing = true;
         resizeDirection = handle.dataset.direction;
         startX = e.clientX;
@@ -11974,7 +12198,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       });
     });
 
-    document.addEventListener('mousemove', (e) => {
+    document.addEventListener('mousemove', e => {
       if (!isResizing) return;
 
       const deltaX = e.clientX - startX;
@@ -12068,7 +12292,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   async resetChatPosition() {
     try {
       const chatPanel = document.getElementById('llmChatPanel');
-      const defaultSize = {width: 400, height: 600};
+      const defaultSize = { width: 400, height: 600 };
       const defaultPosition = this.getDefaultChatPosition();
 
       chatPanel.style.left = defaultPosition.x + 'px';
@@ -12093,7 +12317,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Open protein structure viewer
    */
   async openProteinViewer(params) {
-    let {pdbData, proteinName, pdbId, uniprotId, geneName, _dataRef} = params;
+    let { pdbData, proteinName, pdbId, uniprotId, geneName, _dataRef } = params;
 
     try {
       // Check if protein structure viewer is available
@@ -12119,15 +12343,18 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // If no pdbData provided but uniprotId is available, fetch AlphaFold structure
       if (!pdbData && uniprotId) {
-        console.log('🔬 [openProteinViewer] No PDB data provided, fetching AlphaFold structure for UniProt ID:', uniprotId);
+        console.log(
+          '🔬 [openProteinViewer] No PDB data provided, fetching AlphaFold structure for UniProt ID:',
+          uniprotId
+        );
         try {
           const alphaFoldResult = await this.downloadAlphaFoldStructure(uniprotId, 'pdb');
           if (alphaFoldResult && alphaFoldResult.pdbData) {
             pdbData = alphaFoldResult.pdbData;
             proteinName = proteinName || uniprotId;
             console.log(
-                '🔬 [openProteinViewer] Successfully downloaded AlphaFold structure data, pdbData length:',
-                pdbData.length,
+              '🔬 [openProteinViewer] Successfully downloaded AlphaFold structure data, pdbData length:',
+              pdbData.length
             );
           } else {
             console.warn('🔬 [openProteinViewer] Failed to download AlphaFold data for', uniprotId);
@@ -12149,8 +12376,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             pdbData = pdbDataFromDownload;
             proteinName = proteinName || pdbId;
             console.log(
-                '🔬 [openProteinViewer] Successfully downloaded protein structure data, pdbData length:',
-                pdbData.length,
+              '🔬 [openProteinViewer] Successfully downloaded protein structure data, pdbData length:',
+              pdbData.length
             );
           } else {
             console.warn('🔬 [openProteinViewer] Failed to download PDB data for', pdbId);
@@ -12175,10 +12402,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           uniprotId: uniprotId,
           geneName: geneName,
           attemptedSources: attemptedSources,
-          message: `Could not retrieve protein structure for ${identifier}.` +
-            (attemptedSources.length > 0 ?
-              ` Attempted sources: ${attemptedSources.join(', ')}. This may be due to network issues, the structure not being available in the database, or an invalid identifier.` :
-              ' No structure source (PDB ID or UniProt ID) was provided.'),
+          message:
+            `Could not retrieve protein structure for ${identifier}.` +
+            (attemptedSources.length > 0
+              ? ` Attempted sources: ${attemptedSources.join(', ')}. This may be due to network issues, the structure not being available in the database, or an invalid identifier.`
+              : ' No structure source (PDB ID or UniProt ID) was provided.'),
           suggestions: [
             'Verify the PDB ID or UniProt ID is correct',
             'Check your internet connection',
@@ -12252,7 +12480,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
 
       console.log(
-          `✅ [downloadPDBFile] Successfully downloaded PDB file for ${pdbId}, size: ${pdbData.length} characters`,
+        `✅ [downloadPDBFile] Successfully downloaded PDB file for ${pdbId}, size: ${pdbData.length} characters`
       );
       return pdbData;
     } catch (error) {
@@ -12287,7 +12515,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   async getPDBDetails(pdbId) {
     return this.services.protein.getPDBDetails(pdbId);
   }
-
 
   /**
    * Search AlphaFold structures by gene name
@@ -12339,7 +12566,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
 
       if (uniprotId) {
-        return await this.fetchAlphaFoldStructure({uniprotId, geneName: parameters.geneName || parameters.gene_name});
+        return await this.fetchAlphaFoldStructure({ uniprotId, geneName: parameters.geneName || parameters.gene_name });
       }
 
       throw new Error('Either pdbId or uniprotId must be provided');
@@ -12373,7 +12600,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${sequence.substring(0, 50)}&format=json&size=${maxResults}`;
 
       const response = await fetch(searchUrl, {
-        headers: {Accept: 'application/json'},
+        headers: { Accept: 'application/json' },
       });
 
       if (!response.ok) {
@@ -12381,7 +12608,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
 
       const data = await response.json();
-      const results = (data.results || []).map((protein) => ({
+      const results = (data.results || []).map(protein => ({
         uniprotId: protein.primaryAccession,
         proteinName: protein.proteinDescription?.recommendedName?.fullName?.value || 'Unknown',
         organism: protein.organism?.scientificName,
@@ -12391,14 +12618,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       return {
         success: true,
         tool: 'search_alphafold_by_sequence',
-        parameters: {sequenceLength: sequence.length, maxResults},
+        parameters: { sequenceLength: sequence.length, maxResults },
         results: results,
         count: results.length,
         timestamp: new Date().toISOString(),
         message:
-          results.length > 0 ?
-            `Found ${results.length} potential AlphaFold match(es)` :
-            'No AlphaFold matches found for sequence',
+          results.length > 0
+            ? `Found ${results.length} potential AlphaFold match(es)`
+            : 'No AlphaFold matches found for sequence',
       };
     } catch (error) {
       console.error('AlphaFold sequence search error:', error);
@@ -12406,7 +12633,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         success: false,
         error: error.message,
         tool: 'search_alphafold_by_sequence',
-        parameters: {sequenceLength: sequence?.length},
+        parameters: { sequenceLength: sequence?.length },
         timestamp: new Date().toISOString(),
       };
     }
@@ -12426,7 +12653,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       const response = await fetch(uniprotSearchUrl, {
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'User-Agent': 'CodeXomics/1.0',
         },
       });
@@ -12438,7 +12665,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
         const altResponse = await fetch(altUrl, {
           headers: {
-            'Accept': 'application/json',
+            Accept: 'application/json',
             'User-Agent': 'CodeXomics/1.0',
           },
         });
@@ -12528,11 +12755,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     try {
       // AlphaFold stores confidence in the B-factor column
       const lines = pdbData.split('\n');
-      const atomLines = lines.filter((line) => line.startsWith('ATOM'));
+      const atomLines = lines.filter(line => line.startsWith('ATOM'));
 
       if (atomLines.length === 0) return null;
 
-      const confidenceValues = atomLines.map((line) => {
+      const confidenceValues = atomLines.map(line => {
         const bFactor = parseFloat(line.substring(60, 66).trim());
         return isNaN(bFactor) ? 0 : bFactor;
       });
@@ -12791,7 +13018,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify(searchQuery),
       });
@@ -12847,7 +13074,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify(simpleQuery),
     });
@@ -13041,7 +13268,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         'addVariant',
       ];
 
-      testFunctions.forEach((funcName) => {
+      testFunctions.forEach(funcName => {
         const isAvailable = typeof this.MicrobeFns[funcName] === 'function';
         testResults.functionsAvailable[funcName] = isAvailable;
         if (isAvailable) {
@@ -13057,10 +13284,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         const testSequence = 'ATGCGCTATCG';
         const gcResult = this.MicrobeFns.computeGC(testSequence);
         console.log(`✅ Function call test: computeGC("${testSequence}") = ${gcResult}%`);
-        testResults.functionCallTest = {success: true, result: gcResult};
+        testResults.functionCallTest = { success: true, result: gcResult };
       } catch (error) {
         console.log(`❌ Function call test failed: ${error.message}`);
-        testResults.functionCallTest = {success: false, error: error.message};
+        testResults.functionCallTest = { success: false, error: error.message };
       }
 
       console.log('=== Integration Test Summary ===');
@@ -13142,7 +13369,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async getGenomeInfo(params = {}) {
-    const {include_statistics = true, include_annotations = true, include_chromosomes = true} = params;
+    const { include_statistics = true, include_annotations = true, include_chromosomes = true } = params;
 
     if (!this.app || !this.app.currentSequence) {
       return {
@@ -13167,40 +13394,46 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     };
 
     if (include_chromosomes) {
-      result.chromosomes = sequences.map((chr) => ({
+      result.chromosomes = sequences.map(chr => ({
         name: chr,
         length: this.app.currentSequence[chr]?.length || 0,
       }));
     }
 
     if (include_statistics) {
-      const annotationCount = this.app.currentAnnotations ?
-        Object.values(this.app.currentAnnotations).reduce((sum, anns) => sum + (Array.isArray(anns) ? anns.length : 0), 0) :
-        0;
+      const annotationCount = this.app.currentAnnotations
+        ? Object.values(this.app.currentAnnotations).reduce(
+            (sum, anns) => sum + (Array.isArray(anns) ? anns.length : 0),
+            0
+          )
+        : 0;
       result.statistics = {
         total_length: totalLength,
         total_chromosomes: sequences.length,
         total_annotations: annotationCount,
         loaded_files: this.app.loadedFiles?.length || 0,
-        gc_content: this.calculateGCContent(
-            Object.values(this.app.currentSequence).join(''),
-        ),
+        gc_content: this.calculateGCContent(Object.values(this.app.currentSequence).join('')),
       };
     }
 
     if (include_annotations) {
-      const annotationCount = this.app.currentAnnotations ?
-        Object.values(this.app.currentAnnotations).reduce((sum, anns) => sum + (Array.isArray(anns) ? anns.length : 0), 0) :
-        0;
+      const annotationCount = this.app.currentAnnotations
+        ? Object.values(this.app.currentAnnotations).reduce(
+            (sum, anns) => sum + (Array.isArray(anns) ? anns.length : 0),
+            0
+          )
+        : 0;
       result.annotations = {
         total_count: annotationCount,
-        types: this.app.currentAnnotations ?
-          [...new Set(
-              Object.values(this.app.currentAnnotations)
+        types: this.app.currentAnnotations
+          ? [
+              ...new Set(
+                Object.values(this.app.currentAnnotations)
                   .flat()
-                  .map((a) => a.type || a.featureType || 'unknown'),
-          )] :
-          [],
+                  .map(a => a.type || a.featureType || 'unknown')
+              ),
+            ]
+          : [],
       };
     }
 
@@ -13229,10 +13462,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    */
   async findPathwayGenes(params) {
     try {
-      const {pathwayName, includeRegulation = false} = params;
+      const { pathwayName, includeRegulation = false } = params;
 
       // Use the same pathway templates
-      const result = await this.showMetabolicPathway({pathwayName});
+      const result = await this.showMetabolicPathway({ pathwayName });
 
       if (!result.success) {
         return result;
@@ -13255,7 +13488,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
         for (const term of regulatorySearchTerms) {
           try {
-            const regResult = await this.searchFeatures({query: term, caseSensitive: false});
+            const regResult = await this.searchFeatures({ query: term, caseSensitive: false });
             if (regResult.success && regResult.results.length > 0) {
               regulatoryGenes.push(...regResult.results.slice(0, 3)); // Limit to 3 per term
             }
@@ -13321,7 +13554,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         mcp: [],
       };
 
-      allTools.forEach((tool) => {
+      allTools.forEach(tool => {
         let category = 'other';
 
         if (tool.includes('navigate') || tool.includes('zoom') || tool.includes('scroll') || tool.includes('jump')) {
@@ -13361,7 +13594,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const microbeTools = [];
       if (window.MicrobeGenomicsFunctions) {
         const microbeFunctions = window.MicrobeGenomicsFunctions.getFunctionCategories();
-        Object.values(microbeFunctions).forEach((category) => {
+        Object.values(microbeFunctions).forEach(category => {
           microbeTools.push(...category.functions);
         });
       }
@@ -13376,9 +13609,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       report.details.plugins = {
         integratorAvailable: !!this.pluginFunctionCallsIntegrator,
         managerAvailable: !!this.pluginManager,
-        mappedFunctions: this.pluginFunctionCallsIntegrator ?
-          this.pluginFunctionCallsIntegrator.pluginFunctionMap.size :
-          0,
+        mappedFunctions: this.pluginFunctionCallsIntegrator
+          ? this.pluginFunctionCallsIntegrator.pluginFunctionMap.size
+          : 0,
       };
 
       // 检查MCP服务器
@@ -13683,17 +13916,18 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
                         <div class="reasoning-label">Decision Reasoning:</div>
                         <div class="reasoning-text">${reasoning}</div>
                     </div>
-                    ${Object.keys(parameters).length > 0 ?
-        `
+                    ${
+                      Object.keys(parameters).length > 0
+                        ? `
                         <div class="agent-parameters">
                             <div class="parameters-label">Parameters:</div>
                             <div class="parameters-content">
                                 <pre><code>${JSON.stringify(parameters, null, 2)}</code></pre>
                             </div>
                         </div>
-                    ` :
-        ''
-}
+                    `
+                        : ''
+                    }
                 </div>
             </div>
         `;
@@ -14015,7 +14249,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const thinkingContent = thinkingMatch[1].trim();
       // 格式化思考内容，使其更易读
       const formattedThinking = this.formatThinkingContent(thinkingContent);
-      
+
       // Render as a collapsible block using standard HTML details/summary
       const detailsHtml = `
 <details>
@@ -14062,8 +14296,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   formatThinkingContent(thinkingContent) {
     // 清理和格式化思考内容
     let formatted = thinkingContent
-        .replace(/\n\s*\n/g, '\n') // 移除多余的空行
-        .trim();
+      .replace(/\n\s*\n/g, '\n') // 移除多余的空行
+      .trim();
 
     // 如果内容很长，进行适当的换行处理
     if (formatted.length > 200) {
@@ -14093,7 +14327,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         source: 'tool_execution',
         requestId: this.conversationState.currentRequestId,
         toolCount: toolsToExecute.length,
-        toolNames: toolsToExecute.map((t) => t.tool_name),
+        toolNames: toolsToExecute.map(t => t.tool_name),
       },
     });
 
@@ -14104,45 +14338,45 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     // 为每个工具获取来源信息
     const toolsWithSource = await Promise.all(
-        toolsToExecute.map(async (tool) => {
-          const source = await this.getToolSource(tool.tool_name);
-          return {...tool, source};
-        }),
+      toolsToExecute.map(async tool => {
+        const source = await this.getToolSource(tool.tool_name);
+        return { ...tool, source };
+      })
     );
 
     const toolList = toolsWithSource
-        .map((tool) => {
-          let toolDisplay = `• <strong>${tool.tool_name}</strong>`;
+      .map(tool => {
+        let toolDisplay = `• <strong>${tool.tool_name}</strong>`;
 
-          // 显示智能体信息（如果启用）
-          if (this.agentSystemEnabled && this.agentSystemSettings.showAgentInfo && this.multiAgentSystem) {
-            try {
-              if (typeof this.multiAgentSystem.getAgentForTool === 'function') {
-                const agentInfo = this.multiAgentSystem.getAgentForTool(tool.tool_name);
-                if (agentInfo) {
-                  toolDisplay += ` <span class="agent-info" style="color: #4CAF50; font-size: 0.9em;"><i class="fas fa-robot"></i>[${agentInfo.name}]</span>`;
-                }
-              } else {
-                console.warn('multiAgentSystem.getAgentForTool is not a function');
+        // 显示智能体信息（如果启用）
+        if (this.agentSystemEnabled && this.agentSystemSettings.showAgentInfo && this.multiAgentSystem) {
+          try {
+            if (typeof this.multiAgentSystem.getAgentForTool === 'function') {
+              const agentInfo = this.multiAgentSystem.getAgentForTool(tool.tool_name);
+              if (agentInfo) {
+                toolDisplay += ` <span class="agent-info" style="color: #4CAF50; font-size: 0.9em;"><i class="fas fa-robot"></i>[${agentInfo.name}]</span>`;
               }
-            } catch (error) {
-              console.error('Error getting agent info for tool:', tool.tool_name, error);
+            } else {
+              console.warn('multiAgentSystem.getAgentForTool is not a function');
             }
+          } catch (error) {
+            console.error('Error getting agent info for tool:', tool.tool_name, error);
           }
+        }
 
-          // 显示来源信息（如果启用）
-          if (this.showToolCallSource && tool.source) {
-            const sourceColor = this.getSourceColor(tool.source.type);
-            toolDisplay += ` <span style="color: ${sourceColor}; font-size: 0.9em;">[${tool.source.display}]</span>`;
-          }
+        // 显示来源信息（如果启用）
+        if (this.showToolCallSource && tool.source) {
+          const sourceColor = this.getSourceColor(tool.source.type);
+          toolDisplay += ` <span style="color: ${sourceColor}; font-size: 0.9em;">[${tool.source.display}]</span>`;
+        }
 
-          // 显示参数
-          const paramsStr = JSON.stringify(tool.parameters, null, 2);
-          toolDisplay += `<br>&nbsp;&nbsp;<em>Parameters:</em> <code style="font-size: 0.8em;">${paramsStr}</code>`;
+        // 显示参数
+        const paramsStr = JSON.stringify(tool.parameters, null, 2);
+        toolDisplay += `<br>&nbsp;&nbsp;<em>Parameters:</em> <code style="font-size: 0.8em;">${paramsStr}</code>`;
 
-          return toolDisplay;
-        })
-        .join('<br><br>');
+        return toolDisplay;
+      })
+      .join('<br><br>');
 
     this.updateThinkingMessage(`⚡ Executing tool calls:<br><br>${toolList}`);
   }
@@ -14154,7 +14388,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     try {
       // 检查是否是MCP服务器工具
       const allMCPTools = this.mcpServerManager.getAllAvailableTools();
-      const mcpTool = allMCPTools.find((t) => t.name === toolName);
+      const mcpTool = allMCPTools.find(t => t.name === toolName);
 
       if (mcpTool) {
         return {
@@ -14240,7 +14474,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   removeThinkingMessages() {
     // 移除所有思考过程消息
     const thinkingDivs = document.querySelectorAll('.thinking-process');
-    thinkingDivs.forEach((thinkingDiv) => {
+    thinkingDivs.forEach(thinkingDiv => {
       // 添加淡出动画
       thinkingDiv.style.transition = 'opacity 0.5s ease-out';
       thinkingDiv.style.opacity = '0';
@@ -14274,7 +14508,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     let report = '';
     let geneSymbol = 'Unknown';
     let stepsCount = 0;
-    const statistics = {totalCitations: 0, processedPapers: 0};
+    const statistics = { totalCitations: 0, processedPapers: 0 };
     const images = [];
     let sources = [];
 
@@ -14296,12 +14530,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       if (parsedData.content && Array.isArray(parsedData.content)) {
         // Combine text parts
         const textContent = parsedData.content
-            .filter((item) => item.type === 'text' && item.text)
-            .map((item) => item.text)
-            .join('\n\n');
+          .filter(item => item.type === 'text' && item.text)
+          .map(item => item.text)
+          .join('\n\n');
 
         // Extract images and resources
-        parsedData.content.forEach((item) => {
+        parsedData.content.forEach(item => {
           if (item.type === 'image' && item.data) images.push(item);
           if (item.type === 'resource' && item.resource) sources.push(item.resource);
         });
@@ -14323,9 +14557,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         if (parsedData.result.content && Array.isArray(parsedData.result.content)) {
           // Similar logic for result.content
           const textContent = parsedData.result.content
-              .filter((item) => item.type === 'text' && item.text)
-              .map((item) => item.text)
-              .join('\n\n');
+            .filter(item => item.type === 'text' && item.text)
+            .map(item => item.text)
+            .join('\n\n');
 
           if (textContent.trim().startsWith('{')) {
             try {
@@ -14465,7 +14699,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       else if (!report) report = JSON.stringify(resultData, null, 2);
     }
 
-    return {report, geneSymbol, stepsCount, statistics, images, sources};
+    return { report, geneSymbol, stepsCount, statistics, images, sources };
   }
 
   /**
@@ -14525,17 +14759,17 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     // 表头
     table += '<thead><tr>';
-    keys.forEach((key) => {
+    keys.forEach(key => {
       table += `<th style="border: 1px solid #ddd; padding: 4px 8px; background: #f0f0f0; text-align: left;">${this.escapeHtml(key)}</th>`;
     });
     table += '</tr></thead>';
 
     // 表体
     table += '<tbody>';
-    array.slice(0, 100).forEach((item) => {
+    array.slice(0, 100).forEach(item => {
       // 限制显示前100行
       table += '<tr>';
-      keys.forEach((key) => {
+      keys.forEach(key => {
         const value = item[key];
         const displayValue = value !== null && value !== undefined ? String(value) : '';
         table += `<td style="border: 1px solid #ddd; padding: 4px 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.escapeHtml(displayValue)}">${this.escapeHtml(displayValue)}</td>`;
@@ -14573,9 +14807,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             html += JSON.stringify(value);
           } else {
             html += `[${value
-                .slice(0, 3)
-                .map((v) => JSON.stringify(v))
-                .join(', ')}, ... ${value.length - 3} more]`;
+              .slice(0, 3)
+              .map(v => JSON.stringify(v))
+              .join(', ')}, ... ${value.length - 3} more]`;
           }
         } else {
           const keys = Object.keys(value);
@@ -14699,7 +14933,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   updateUserMessageHistory() {
     try {
       const fullHistory = this.configManager?.getChatHistory() || [];
-      this.messageHistory.userMessages = fullHistory.filter((msg) => msg.sender === 'user').map((msg) => msg.message);
+      this.messageHistory.userMessages = fullHistory.filter(msg => msg.sender === 'user').map(msg => msg.message);
 
       console.log(`Updated user message history: ${this.messageHistory.userMessages.length} messages`);
     } catch (error) {
@@ -14750,7 +14984,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     chatInput.setSelectionRange(chatInput.value.length, chatInput.value.length);
 
     console.log(
-        `History browse up: ${this.messageHistory.currentIndex + 1}/${this.messageHistory.userMessages.length}`,
+      `History browse up: ${this.messageHistory.currentIndex + 1}/${this.messageHistory.userMessages.length}`
     );
   }
 
@@ -14783,7 +15017,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     if (this.messageHistory.isBrowsing) {
       console.log(
-          `History browse down: ${this.messageHistory.currentIndex + 1}/${this.messageHistory.userMessages.length}`,
+        `History browse down: ${this.messageHistory.currentIndex + 1}/${this.messageHistory.userMessages.length}`
       );
     } else {
       console.log('History browse ended, original content restored');
@@ -14829,7 +15063,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     this.addToEvolutionData({
       type: 'test_event',
       content: 'This is a test event for Evolution integration',
-      metadata: {source: 'integration_test'},
+      metadata: { source: 'integration_test' },
     });
 
     const updatedSummary = this.getEvolutionDataSummary();
@@ -14848,7 +15082,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Get settings for a specific track type
    */
   async getTrackSettings(parameters) {
-    const {track_type} = parameters;
+    const { track_type } = parameters;
 
     if (!track_type) {
       throw new Error('track_type parameter is required');
@@ -14888,7 +15122,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Set settings for a specific track type
    */
   async setTrackSettings(parameters) {
-    const {track_type, settings} = parameters;
+    const { track_type, settings } = parameters;
 
     if (!track_type) {
       throw new Error('track_type parameter is required');
@@ -14920,7 +15154,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     // Get current settings and merge with new settings
     const currentSettings = this.genomeBrowser.trackRenderer.getTrackSettings(track_type);
-    const mergedSettings = {...currentSettings, ...settings};
+    const mergedSettings = { ...currentSettings, ...settings };
 
     // Save and apply settings
     this.genomeBrowser.trackRenderer.saveTrackSettings(track_type, mergedSettings);
@@ -14959,7 +15193,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // still receives a useful (non-error) response during benchmark / early load.
       console.warn('[getAllTrackSettings] TrackRenderer not available — returning defaults');
       for (const trackType of trackTypes) {
-        allSettings[trackType] = {_note: 'TrackRenderer not available; showing defaults only', height: undefined};
+        allSettings[trackType] = { _note: 'TrackRenderer not available; showing defaults only', height: undefined };
       }
       return {
         success: true,
@@ -14975,7 +15209,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         allSettings[trackType] = trackRenderer.getTrackSettings(trackType);
       } catch (error) {
         console.warn(`Failed to get settings for ${trackType}:`, error.message);
-        allSettings[trackType] = {error: error.message};
+        allSettings[trackType] = { error: error.message };
       }
     }
 
@@ -14991,7 +15225,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Reset track settings to defaults
    */
   async resetTrackSettings(parameters) {
-    const {track_type} = parameters;
+    const { track_type } = parameters;
 
     if (!track_type) {
       throw new Error('track_type parameter is required');
@@ -15029,9 +15263,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           const defaultSettings = this.genomeBrowser.trackRenderer.getTrackSettings(type);
           this.genomeBrowser.trackRenderer.applySettingsToTrack(type, defaultSettings);
 
-          results[type] = {success: true};
+          results[type] = { success: true };
         } catch (error) {
-          results[type] = {success: false, error: error.message};
+          results[type] = { success: false, error: error.message };
         }
       }
 
@@ -15097,182 +15331,414 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       genes: {
         description: 'Genes and Features Track Settings',
         settings: {
-          renderingMode: {type: 'string', enum: ['svg', 'canvas'], default: 'svg', description: 'Rendering mode'},
-          maxRows: {type: 'number', min: 1, max: 20, default: 6, description: 'Maximum rows for displaying features'},
-          showOperonsSameRow: {type: 'boolean', default: false, description: 'Group genes in the same operon'},
-          height: {type: 'number', min: 60, max: 400, default: 120, description: 'Track height in pixels'},
-          geneHeight: {type: 'number', min: 12, max: 60, default: 24, description: 'Gene element height in pixels'},
-          fontSize: {type: 'number', min: 8, max: 48, default: 24, description: 'Gene name font size in pixels'},
-          geneNameColor: {type: 'string', format: 'color', default: '#333333', description: 'Gene name color'},
-          fontFamily: {type: 'string', default: 'Arial, sans-serif', description: 'Gene name font family'},
-          layoutMode: {type: 'string', enum: ['expanded', 'compact', 'groupByType'], default: 'compact', description: 'Layout mode'},
-          enableGlobalDragging: {type: 'boolean', default: true, description: 'Enable global track dragging'},
-          highlightEffect: {type: 'string', enum: ['pulse', 'border', 'both'], default: 'pulse', description: 'Highlight effect for selected genes'},
-          autoHighlightSequence: {type: 'boolean', default: false, description: 'Auto-highlight sequence region when gene is selected'},
-          showSequence: {type: 'boolean', default: false, description: 'Show reference sequence'},
-          sequenceHeight: {type: 'number', min: 15, max: 50, default: 25, description: 'Reference sequence height in pixels'},
-          circularMode: {type: 'boolean', default: false, description: 'Enable circular browsing mode for circular genomes'},
-          wheelZoomSensitivity: {type: 'number', min: 0.01, max: 0.5, default: 0.1, description: 'Mouse wheel zoom sensitivity'},
-          overrideGlobalZoom: {type: 'boolean', default: false, description: 'Override global zoom settings'},
-          maxBorderWidth: {type: 'number', min: 0.5, max: 5, default: 1, description: 'Maximum border width for gene elements'},
+          renderingMode: { type: 'string', enum: ['svg', 'canvas'], default: 'svg', description: 'Rendering mode' },
+          maxRows: { type: 'number', min: 1, max: 20, default: 6, description: 'Maximum rows for displaying features' },
+          showOperonsSameRow: { type: 'boolean', default: false, description: 'Group genes in the same operon' },
+          height: { type: 'number', min: 60, max: 400, default: 120, description: 'Track height in pixels' },
+          geneHeight: { type: 'number', min: 12, max: 60, default: 24, description: 'Gene element height in pixels' },
+          fontSize: { type: 'number', min: 8, max: 48, default: 24, description: 'Gene name font size in pixels' },
+          geneNameColor: { type: 'string', format: 'color', default: '#333333', description: 'Gene name color' },
+          fontFamily: { type: 'string', default: 'Arial, sans-serif', description: 'Gene name font family' },
+          layoutMode: {
+            type: 'string',
+            enum: ['expanded', 'compact', 'groupByType'],
+            default: 'compact',
+            description: 'Layout mode',
+          },
+          enableGlobalDragging: { type: 'boolean', default: true, description: 'Enable global track dragging' },
+          highlightEffect: {
+            type: 'string',
+            enum: ['pulse', 'border', 'both'],
+            default: 'pulse',
+            description: 'Highlight effect for selected genes',
+          },
+          autoHighlightSequence: {
+            type: 'boolean',
+            default: false,
+            description: 'Auto-highlight sequence region when gene is selected',
+          },
+          showSequence: { type: 'boolean', default: false, description: 'Show reference sequence' },
+          sequenceHeight: {
+            type: 'number',
+            min: 15,
+            max: 50,
+            default: 25,
+            description: 'Reference sequence height in pixels',
+          },
+          circularMode: {
+            type: 'boolean',
+            default: false,
+            description: 'Enable circular browsing mode for circular genomes',
+          },
+          wheelZoomSensitivity: {
+            type: 'number',
+            min: 0.01,
+            max: 0.5,
+            default: 0.1,
+            description: 'Mouse wheel zoom sensitivity',
+          },
+          overrideGlobalZoom: { type: 'boolean', default: false, description: 'Override global zoom settings' },
+          maxBorderWidth: {
+            type: 'number',
+            min: 0.5,
+            max: 5,
+            default: 1,
+            description: 'Maximum border width for gene elements',
+          },
         },
       },
       reads: {
         description: 'Aligned Reads Track Settings',
         settings: {
-          renderingMode: {type: 'string', enum: ['canvas', 'svg'], default: 'canvas', description: 'Rendering method'},
-          showCoverage: {type: 'boolean', default: true, description: 'Show coverage visualization'},
-          coverageHeight: {type: 'number', min: 30, max: 100, default: 50, description: 'Coverage track height in pixels'},
-          coverageColor: {type: 'string', format: 'color', default: '#4a90e2', description: 'Coverage area color'},
-          coverageStrokeColor: {type: 'string', format: 'color', default: '#2c5aa0', description: 'Coverage stroke/border color'},
-          showReference: {type: 'boolean', default: true, description: 'Show reference sequence'},
-          referenceHeight: {type: 'number', min: 15, max: 50, default: 25, description: 'Reference sequence height in pixels'},
-          referenceFontSize: {type: 'number', min: 8, max: 20, default: 12, description: 'Reference sequence font size'},
-          referenceFontFamily: {type: 'string', default: 'monospace', description: 'Reference sequence font family'},
-          readHeight: {type: 'number', min: 2, max: 30, default: 4, description: 'Height of each read in pixels'},
-          readSpacing: {type: 'number', min: 1, max: 10, default: 2, description: 'Spacing between reads in pixels'},
-          enableVerticalScroll: {type: 'boolean', default: false, description: 'Enable vertical scrolling'},
-          maxVisibleRows: {type: 'number', min: 5, max: 30, default: 10, description: 'Maximum visible rows when scrolling is enabled'},
-          maxRows: {type: 'number', min: 5, max: 50, default: 20, description: 'Maximum visible rows when scrolling is disabled'},
-          forwardColor: {type: 'string', format: 'color', default: '#00b894', description: 'Forward reads fill color'},
-          reverseColor: {type: 'string', format: 'color', default: '#f39c12', description: 'Reverse reads fill color'},
-          pairedColor: {type: 'string', format: 'color', default: '#6c5ce7', description: 'Paired reads fill color'},
-          borderColor: {type: 'string', format: 'color', default: '#ffffff', description: 'Border color for reads'},
-          borderWidth: {type: 'number', min: 0, max: 3, default: 0, description: 'Border width in pixels'},
-          opacity: {type: 'number', min: 0.1, max: 1, default: 0.9, description: 'Read opacity (0-1)'},
-          showDirectionArrows: {type: 'boolean', default: true, description: 'Show direction arrows'},
-          showQualityColors: {type: 'boolean', default: false, description: 'Color reads by mapping quality'},
-          showMutations: {type: 'boolean', default: false, description: 'Show mutations'},
-          minMappingQuality: {type: 'number', min: 0, max: 60, default: 0, description: 'Minimum mapping quality filter'},
-          showUnmapped: {type: 'boolean', default: false, description: 'Show unmapped reads'},
-          showSecondary: {type: 'boolean', default: true, description: 'Show secondary alignments'},
-          showSupplementary: {type: 'boolean', default: true, description: 'Show supplementary alignments'},
-          height: {type: 'number', min: 100, max: 500, default: 150, description: 'Total track height in pixels'},
-          enableSampling: {type: 'boolean', default: true, description: 'Enable read sampling for large datasets'},
-          samplingThreshold: {type: 'number', min: 1000, max: 100000, default: 10000, description: 'Sampling threshold'},
-          samplingMode: {type: 'string', enum: ['percentage', 'fixed'], default: 'percentage', description: 'Sampling mode'},
-          samplingPercentage: {type: 'number', min: 1, max: 100, default: 20, description: 'Sampling percentage'},
-          samplingCount: {type: 'number', min: 1000, max: 50000, default: 5000, description: 'Fixed sampling count'},
-          showSamplingInfo: {type: 'boolean', default: true, description: 'Show sampling information'},
-          showSequences: {type: 'boolean', default: true, description: 'Show read sequences when zoomed in'},
-          forceSequences: {type: 'boolean', default: false, description: 'Force show sequences regardless of zoom'},
-          autoFontSize: {type: 'boolean', default: true, description: 'Auto-adjust font size for sequences'},
-          sequenceThreshold: {type: 'number', min: 0.1, max: 10, default: 1.0, description: 'Sequence display threshold (bp/px)'},
-          sequenceFontSize: {type: 'number', min: 8, max: 16, default: 10, description: 'Sequence font size in pixels'},
-          sequenceHeight: {type: 'number', min: 10, max: 30, default: 14, description: 'Sequence text height in pixels'},
-          highlightMismatches: {type: 'boolean', default: true, description: 'Highlight mismatches'},
-          showMismatches: {type: 'boolean', default: true, description: 'Show mismatches (alias for highlightMismatches)'},
-          mismatchColor: {type: 'string', format: 'color', default: '#ff6b6b', description: 'Mismatch highlight color'},
+          renderingMode: {
+            type: 'string',
+            enum: ['canvas', 'svg'],
+            default: 'canvas',
+            description: 'Rendering method',
+          },
+          showCoverage: { type: 'boolean', default: true, description: 'Show coverage visualization' },
+          coverageHeight: {
+            type: 'number',
+            min: 30,
+            max: 100,
+            default: 50,
+            description: 'Coverage track height in pixels',
+          },
+          coverageColor: { type: 'string', format: 'color', default: '#4a90e2', description: 'Coverage area color' },
+          coverageStrokeColor: {
+            type: 'string',
+            format: 'color',
+            default: '#2c5aa0',
+            description: 'Coverage stroke/border color',
+          },
+          showReference: { type: 'boolean', default: true, description: 'Show reference sequence' },
+          referenceHeight: {
+            type: 'number',
+            min: 15,
+            max: 50,
+            default: 25,
+            description: 'Reference sequence height in pixels',
+          },
+          referenceFontSize: {
+            type: 'number',
+            min: 8,
+            max: 20,
+            default: 12,
+            description: 'Reference sequence font size',
+          },
+          referenceFontFamily: { type: 'string', default: 'monospace', description: 'Reference sequence font family' },
+          readHeight: { type: 'number', min: 2, max: 30, default: 4, description: 'Height of each read in pixels' },
+          readSpacing: { type: 'number', min: 1, max: 10, default: 2, description: 'Spacing between reads in pixels' },
+          enableVerticalScroll: { type: 'boolean', default: false, description: 'Enable vertical scrolling' },
+          maxVisibleRows: {
+            type: 'number',
+            min: 5,
+            max: 30,
+            default: 10,
+            description: 'Maximum visible rows when scrolling is enabled',
+          },
+          maxRows: {
+            type: 'number',
+            min: 5,
+            max: 50,
+            default: 20,
+            description: 'Maximum visible rows when scrolling is disabled',
+          },
+          forwardColor: {
+            type: 'string',
+            format: 'color',
+            default: '#00b894',
+            description: 'Forward reads fill color',
+          },
+          reverseColor: {
+            type: 'string',
+            format: 'color',
+            default: '#f39c12',
+            description: 'Reverse reads fill color',
+          },
+          pairedColor: { type: 'string', format: 'color', default: '#6c5ce7', description: 'Paired reads fill color' },
+          borderColor: { type: 'string', format: 'color', default: '#ffffff', description: 'Border color for reads' },
+          borderWidth: { type: 'number', min: 0, max: 3, default: 0, description: 'Border width in pixels' },
+          opacity: { type: 'number', min: 0.1, max: 1, default: 0.9, description: 'Read opacity (0-1)' },
+          showDirectionArrows: { type: 'boolean', default: true, description: 'Show direction arrows' },
+          showQualityColors: { type: 'boolean', default: false, description: 'Color reads by mapping quality' },
+          showMutations: { type: 'boolean', default: false, description: 'Show mutations' },
+          minMappingQuality: {
+            type: 'number',
+            min: 0,
+            max: 60,
+            default: 0,
+            description: 'Minimum mapping quality filter',
+          },
+          showUnmapped: { type: 'boolean', default: false, description: 'Show unmapped reads' },
+          showSecondary: { type: 'boolean', default: true, description: 'Show secondary alignments' },
+          showSupplementary: { type: 'boolean', default: true, description: 'Show supplementary alignments' },
+          height: { type: 'number', min: 100, max: 500, default: 150, description: 'Total track height in pixels' },
+          enableSampling: { type: 'boolean', default: true, description: 'Enable read sampling for large datasets' },
+          samplingThreshold: {
+            type: 'number',
+            min: 1000,
+            max: 100000,
+            default: 10000,
+            description: 'Sampling threshold',
+          },
+          samplingMode: {
+            type: 'string',
+            enum: ['percentage', 'fixed'],
+            default: 'percentage',
+            description: 'Sampling mode',
+          },
+          samplingPercentage: { type: 'number', min: 1, max: 100, default: 20, description: 'Sampling percentage' },
+          samplingCount: { type: 'number', min: 1000, max: 50000, default: 5000, description: 'Fixed sampling count' },
+          showSamplingInfo: { type: 'boolean', default: true, description: 'Show sampling information' },
+          showSequences: { type: 'boolean', default: true, description: 'Show read sequences when zoomed in' },
+          forceSequences: { type: 'boolean', default: false, description: 'Force show sequences regardless of zoom' },
+          autoFontSize: { type: 'boolean', default: true, description: 'Auto-adjust font size for sequences' },
+          sequenceThreshold: {
+            type: 'number',
+            min: 0.1,
+            max: 10,
+            default: 1.0,
+            description: 'Sequence display threshold (bp/px)',
+          },
+          sequenceFontSize: {
+            type: 'number',
+            min: 8,
+            max: 16,
+            default: 10,
+            description: 'Sequence font size in pixels',
+          },
+          sequenceHeight: {
+            type: 'number',
+            min: 10,
+            max: 30,
+            default: 14,
+            description: 'Sequence text height in pixels',
+          },
+          highlightMismatches: { type: 'boolean', default: true, description: 'Highlight mismatches' },
+          showMismatches: {
+            type: 'boolean',
+            default: true,
+            description: 'Show mismatches (alias for highlightMismatches)',
+          },
+          mismatchColor: {
+            type: 'string',
+            format: 'color',
+            default: '#ff6b6b',
+            description: 'Mismatch highlight color',
+          },
         },
       },
       sequence: {
         description: 'Sequence Track Settings',
         settings: {
-          showIndicators: {type: 'boolean', default: true, description: 'Show gene indicator bars'},
-          indicatorHeight: {type: 'number', min: 6, max: 20, default: 8, description: 'Indicator bar height in pixels'},
-          indicatorOpacity: {type: 'number', min: 0.3, max: 1, default: 0.7, description: 'Indicator opacity (0-1)'},
-          showStartMarkers: {type: 'boolean', default: true, description: 'Show gene start markers'},
-          showEndArrows: {type: 'boolean', default: true, description: 'Show gene end arrows'},
-          startMarkerWidth: {type: 'number', min: 1, max: 6, default: 3, description: 'Start marker width in pixels'},
-          startMarkerHeight: {type: 'number', min: 50, max: 100, default: 85, description: 'Start marker height (% of bar)'},
-          arrowSize: {type: 'number', min: 3, max: 12, default: 6, description: 'End arrow size in pixels'},
-          arrowHeight: {type: 'number', min: 50, max: 100, default: 85, description: 'End arrow height (% of bar)'},
-          showCDS: {type: 'boolean', default: true, description: 'Show CDS genes'},
-          showRNA: {type: 'boolean', default: true, description: 'Show RNA genes'},
-          showPromoter: {type: 'boolean', default: true, description: 'Show promoters'},
-          showTerminator: {type: 'boolean', default: true, description: 'Show terminators'},
-          showRegulatory: {type: 'boolean', default: true, description: 'Show regulatory elements'},
-          showTooltips: {type: 'boolean', default: true, description: 'Show tooltips on hover'},
-          showHoverEffects: {type: 'boolean', default: true, description: 'Enable hover effects'},
-          cursorColor: {type: 'string', format: 'color', default: '#000000', description: 'Cursor color'},
-          horizontalOffset: {type: 'number', min: -50, max: 50, default: 0, description: 'Horizontal offset in pixels'},
-          verticalOffset: {type: 'number', min: -20, max: 20, default: 0, description: 'Vertical offset in pixels'},
-          heightCorrection: {type: 'number', min: 50, max: 200, default: 100, description: 'Height correction (%)'},
-          widthCorrection: {type: 'number', min: 50, max: 200, default: 100, description: 'Width correction (%)'},
-          colorMode: {type: 'string', enum: ['uniform', 'geneColors', 'baseColors'], default: 'uniform', description: 'Color mode for DNA bases'},
-          uniformColor: {type: 'string', format: 'color', default: '#000000', description: 'Uniform color for all bases'},
-          intergenicColor: {type: 'string', format: 'color', default: '#666666', description: 'Intergenic region color'},
-          geneColorOpacity: {type: 'number', min: 0.3, max: 1, default: 0.8, description: 'Gene color opacity'},
-          colorA: {type: 'string', format: 'color', default: '#FF0000', description: 'Adenine color'},
-          colorT: {type: 'string', format: 'color', default: '#0000FF', description: 'Thymine color'},
-          colorG: {type: 'string', format: 'color', default: '#00FF00', description: 'Guanine color'},
-          colorC: {type: 'string', format: 'color', default: '#FFFF00', description: 'Cytosine color'},
-          colorN: {type: 'string', format: 'color', default: '#888888', description: 'Unknown base color'},
+          showIndicators: { type: 'boolean', default: true, description: 'Show gene indicator bars' },
+          indicatorHeight: {
+            type: 'number',
+            min: 6,
+            max: 20,
+            default: 8,
+            description: 'Indicator bar height in pixels',
+          },
+          indicatorOpacity: { type: 'number', min: 0.3, max: 1, default: 0.7, description: 'Indicator opacity (0-1)' },
+          showStartMarkers: { type: 'boolean', default: true, description: 'Show gene start markers' },
+          showEndArrows: { type: 'boolean', default: true, description: 'Show gene end arrows' },
+          startMarkerWidth: { type: 'number', min: 1, max: 6, default: 3, description: 'Start marker width in pixels' },
+          startMarkerHeight: {
+            type: 'number',
+            min: 50,
+            max: 100,
+            default: 85,
+            description: 'Start marker height (% of bar)',
+          },
+          arrowSize: { type: 'number', min: 3, max: 12, default: 6, description: 'End arrow size in pixels' },
+          arrowHeight: { type: 'number', min: 50, max: 100, default: 85, description: 'End arrow height (% of bar)' },
+          showCDS: { type: 'boolean', default: true, description: 'Show CDS genes' },
+          showRNA: { type: 'boolean', default: true, description: 'Show RNA genes' },
+          showPromoter: { type: 'boolean', default: true, description: 'Show promoters' },
+          showTerminator: { type: 'boolean', default: true, description: 'Show terminators' },
+          showRegulatory: { type: 'boolean', default: true, description: 'Show regulatory elements' },
+          showTooltips: { type: 'boolean', default: true, description: 'Show tooltips on hover' },
+          showHoverEffects: { type: 'boolean', default: true, description: 'Enable hover effects' },
+          cursorColor: { type: 'string', format: 'color', default: '#000000', description: 'Cursor color' },
+          horizontalOffset: {
+            type: 'number',
+            min: -50,
+            max: 50,
+            default: 0,
+            description: 'Horizontal offset in pixels',
+          },
+          verticalOffset: { type: 'number', min: -20, max: 20, default: 0, description: 'Vertical offset in pixels' },
+          heightCorrection: { type: 'number', min: 50, max: 200, default: 100, description: 'Height correction (%)' },
+          widthCorrection: { type: 'number', min: 50, max: 200, default: 100, description: 'Width correction (%)' },
+          colorMode: {
+            type: 'string',
+            enum: ['uniform', 'geneColors', 'baseColors'],
+            default: 'uniform',
+            description: 'Color mode for DNA bases',
+          },
+          uniformColor: {
+            type: 'string',
+            format: 'color',
+            default: '#000000',
+            description: 'Uniform color for all bases',
+          },
+          intergenicColor: {
+            type: 'string',
+            format: 'color',
+            default: '#666666',
+            description: 'Intergenic region color',
+          },
+          geneColorOpacity: { type: 'number', min: 0.3, max: 1, default: 0.8, description: 'Gene color opacity' },
+          colorA: { type: 'string', format: 'color', default: '#FF0000', description: 'Adenine color' },
+          colorT: { type: 'string', format: 'color', default: '#0000FF', description: 'Thymine color' },
+          colorG: { type: 'string', format: 'color', default: '#00FF00', description: 'Guanine color' },
+          colorC: { type: 'string', format: 'color', default: '#FFFF00', description: 'Cytosine color' },
+          colorN: { type: 'string', format: 'color', default: '#888888', description: 'Unknown base color' },
         },
       },
       gc: {
         description: 'GC Content Track Settings',
         settings: {
-          contentColor: {type: 'string', format: 'color', default: '#3b82f6', description: 'GC content color'},
-          skewPositiveColor: {type: 'string', format: 'color', default: '#10b981', description: 'GC skew positive color'},
-          skewNegativeColor: {type: 'string', format: 'color', default: '#ef4444', description: 'GC skew negative color'},
-          lineWidth: {type: 'number', min: 1, max: 5, default: 2, description: 'Line width'},
-          height: {type: 'number', min: 80, max: 300, default: 140, description: 'Track height in pixels'},
+          contentColor: { type: 'string', format: 'color', default: '#3b82f6', description: 'GC content color' },
+          skewPositiveColor: {
+            type: 'string',
+            format: 'color',
+            default: '#10b981',
+            description: 'GC skew positive color',
+          },
+          skewNegativeColor: {
+            type: 'string',
+            format: 'color',
+            default: '#ef4444',
+            description: 'GC skew negative color',
+          },
+          lineWidth: { type: 'number', min: 1, max: 5, default: 2, description: 'Line width' },
+          height: { type: 'number', min: 80, max: 300, default: 140, description: 'Track height in pixels' },
         },
       },
       variants: {
         description: 'Variants Track Settings',
         settings: {
-          height: {type: 'number', min: 50, max: 300, default: 80, description: 'Track height in pixels'},
-          elementHeight: {type: 'number', min: 8, max: 30, default: 12, description: 'Variant element height in pixels'},
-          rowSpacing: {type: 'number', min: 2, max: 20, default: 8, description: 'Row spacing in pixels'},
-          colorMode: {type: 'string', enum: ['type', 'impact', 'quality', 'custom'], default: 'type', description: 'Color mode'},
-          customColor: {type: 'string', format: 'color', default: '#e74c3c', description: 'Custom variant color'},
-          snpColor: {type: 'string', format: 'color', default: '#e74c3c', description: 'SNP color'},
-          indelColor: {type: 'string', format: 'color', default: '#3498db', description: 'INDEL color'},
-          svColor: {type: 'string', format: 'color', default: '#9b59b6', description: 'Structural variant color'},
-          highImpactColor: {type: 'string', format: 'color', default: '#e74c3c', description: 'HIGH impact color'},
-          moderateImpactColor: {type: 'string', format: 'color', default: '#f39c12', description: 'MODERATE impact color'},
-          lowImpactColor: {type: 'string', format: 'color', default: '#2ecc71', description: 'LOW impact color'},
-          modifierImpactColor: {type: 'string', format: 'color', default: '#95a5a6', description: 'MODIFIER impact color'},
-          minQuality: {type: 'number', min: 0, max: 1000, default: 0, description: 'Minimum quality score filter'},
-          maxDisplayCount: {type: 'number', min: 10, max: 1000, default: 200, description: 'Maximum number of variants to display'},
-          showLabels: {type: 'boolean', default: true, description: 'Show variant labels'},
-          labelFontSize: {type: 'number', min: 8, max: 16, default: 10, description: 'Label font size in pixels'},
-          groupByFile: {type: 'boolean', default: false, description: 'Group variants by VCF file'},
-          fileSpacing: {type: 'number', min: 0, max: 30, default: 10, description: 'Spacing between files in pixels'},
+          height: { type: 'number', min: 50, max: 300, default: 80, description: 'Track height in pixels' },
+          elementHeight: {
+            type: 'number',
+            min: 8,
+            max: 30,
+            default: 12,
+            description: 'Variant element height in pixels',
+          },
+          rowSpacing: { type: 'number', min: 2, max: 20, default: 8, description: 'Row spacing in pixels' },
+          colorMode: {
+            type: 'string',
+            enum: ['type', 'impact', 'quality', 'custom'],
+            default: 'type',
+            description: 'Color mode',
+          },
+          customColor: { type: 'string', format: 'color', default: '#e74c3c', description: 'Custom variant color' },
+          snpColor: { type: 'string', format: 'color', default: '#e74c3c', description: 'SNP color' },
+          indelColor: { type: 'string', format: 'color', default: '#3498db', description: 'INDEL color' },
+          svColor: { type: 'string', format: 'color', default: '#9b59b6', description: 'Structural variant color' },
+          highImpactColor: { type: 'string', format: 'color', default: '#e74c3c', description: 'HIGH impact color' },
+          moderateImpactColor: {
+            type: 'string',
+            format: 'color',
+            default: '#f39c12',
+            description: 'MODERATE impact color',
+          },
+          lowImpactColor: { type: 'string', format: 'color', default: '#2ecc71', description: 'LOW impact color' },
+          modifierImpactColor: {
+            type: 'string',
+            format: 'color',
+            default: '#95a5a6',
+            description: 'MODIFIER impact color',
+          },
+          minQuality: { type: 'number', min: 0, max: 1000, default: 0, description: 'Minimum quality score filter' },
+          maxDisplayCount: {
+            type: 'number',
+            min: 10,
+            max: 1000,
+            default: 200,
+            description: 'Maximum number of variants to display',
+          },
+          showLabels: { type: 'boolean', default: true, description: 'Show variant labels' },
+          labelFontSize: { type: 'number', min: 8, max: 16, default: 10, description: 'Label font size in pixels' },
+          groupByFile: { type: 'boolean', default: false, description: 'Group variants by VCF file' },
+          fileSpacing: { type: 'number', min: 0, max: 30, default: 10, description: 'Spacing between files in pixels' },
         },
       },
       actions: {
         description: 'Actions Track Settings',
         settings: {
-          height: {type: 'number', min: 60, max: 300, default: 120, description: 'Track height in pixels'},
-          actionHeight: {type: 'number', min: 5, max: 30, default: 10, description: 'Action element height in pixels'},
-          rowSpacing: {type: 'number', min: 0, max: 10, default: 2, description: 'Row spacing in pixels'},
-          topPadding: {type: 'number', min: 0, max: 20, default: 5, description: 'Top padding in pixels'},
-          bottomPadding: {type: 'number', min: 0, max: 20, default: 5, description: 'Bottom padding in pixels'},
-          fontSize: {type: 'number', min: 8, max: 16, default: 10, description: 'Font size in pixels'},
-          fontFamily: {type: 'string', default: 'Arial, sans-serif', description: 'Font family'},
+          height: { type: 'number', min: 60, max: 300, default: 120, description: 'Track height in pixels' },
+          actionHeight: {
+            type: 'number',
+            min: 5,
+            max: 30,
+            default: 10,
+            description: 'Action element height in pixels',
+          },
+          rowSpacing: { type: 'number', min: 0, max: 10, default: 2, description: 'Row spacing in pixels' },
+          topPadding: { type: 'number', min: 0, max: 20, default: 5, description: 'Top padding in pixels' },
+          bottomPadding: { type: 'number', min: 0, max: 20, default: 5, description: 'Bottom padding in pixels' },
+          fontSize: { type: 'number', min: 8, max: 16, default: 10, description: 'Font size in pixels' },
+          fontFamily: { type: 'string', default: 'Arial, sans-serif', description: 'Font family' },
         },
       },
       blast: {
         description: 'BLAST Results Track Settings',
         settings: {
-          height: {type: 'number', min: 60, max: 300, default: 120, description: 'Track height in pixels'},
-          showRuler: {type: 'boolean', default: false, description: 'Show ruler'},
-          resultHeight: {type: 'number', min: 8, max: 30, default: 12, description: 'Result height in pixels'},
-          resultSpacing: {type: 'number', min: 5, max: 30, default: 14, description: 'Result spacing in pixels'},
+          height: { type: 'number', min: 60, max: 300, default: 120, description: 'Track height in pixels' },
+          showRuler: { type: 'boolean', default: false, description: 'Show ruler' },
+          resultHeight: { type: 'number', min: 8, max: 30, default: 12, description: 'Result height in pixels' },
+          resultSpacing: { type: 'number', min: 5, max: 30, default: 14, description: 'Result spacing in pixels' },
         },
       },
       sequenceLine: {
         description: 'Single-line Sequence Track Settings',
         settings: {
-          fontSize: {type: 'number', min: 10, max: 20, default: 14, description: 'Font size in pixels'},
-          fontFamily: {type: 'string', default: 'Courier New, monospace', description: 'Font family'},
-          maxHeight: {type: 'number', min: 30, max: 200, default: 50, description: 'Maximum height in pixels'},
-          adaptiveHeight: {type: 'boolean', default: true, description: 'Adaptive height based on content'},
-          showProteinTranslation: {type: 'boolean', default: false, description: 'Show protein translation sequences'},
-          proteinTranslationMode: {type: 'string', enum: ['all_frames', 'cds_only'], default: 'all_frames', description: 'Translation mode'},
-          proteinFramesToShow: {type: 'array', items: {type: 'number', enum: [1, 2, 3]}, default: [1, 2, 3], description: 'Reading frames to display'},
-          proteinFontSize: {type: 'number', min: 8, max: 16, default: 12, description: 'Protein font size in pixels'},
+          fontSize: { type: 'number', min: 10, max: 20, default: 14, description: 'Font size in pixels' },
+          fontFamily: { type: 'string', default: 'Courier New, monospace', description: 'Font family' },
+          maxHeight: { type: 'number', min: 30, max: 200, default: 50, description: 'Maximum height in pixels' },
+          adaptiveHeight: { type: 'boolean', default: true, description: 'Adaptive height based on content' },
+          showProteinTranslation: {
+            type: 'boolean',
+            default: false,
+            description: 'Show protein translation sequences',
+          },
+          proteinTranslationMode: {
+            type: 'string',
+            enum: ['all_frames', 'cds_only'],
+            default: 'all_frames',
+            description: 'Translation mode',
+          },
+          proteinFramesToShow: {
+            type: 'array',
+            items: { type: 'number', enum: [1, 2, 3] },
+            default: [1, 2, 3],
+            description: 'Reading frames to display',
+          },
+          proteinFontSize: { type: 'number', min: 8, max: 16, default: 12, description: 'Protein font size in pixels' },
         },
       },
       wigTracks: {
         description: 'WIG Tracks Settings',
         settings: {
-          trackSpacing: {type: 'number', min: 0, max: 20, default: 5, description: 'Spacing between tracks in pixels'},
-          defaultTrackHeight: {type: 'number', min: 20, max: 100, default: 30, description: 'Default track height in pixels'},
-          trackHeights: {type: 'object', description: 'Individual track heights (trackName -> height)'},
+          trackSpacing: {
+            type: 'number',
+            min: 0,
+            max: 20,
+            default: 5,
+            description: 'Spacing between tracks in pixels',
+          },
+          defaultTrackHeight: {
+            type: 'number',
+            min: 20,
+            max: 100,
+            default: 30,
+            description: 'Default track height in pixels',
+          },
+          trackHeights: { type: 'object', description: 'Individual track heights (trackName -> height)' },
         },
       },
     };
@@ -15289,7 +15755,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Batch set track settings for multiple tracks
    */
   async batchSetTrackSettings(parameters) {
-    const {settings_map} = parameters;
+    const { settings_map } = parameters;
 
     if (!settings_map || typeof settings_map !== 'object') {
       throw new Error('settings_map parameter must be an object');
@@ -15306,7 +15772,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         });
         results[trackType] = result;
       } catch (error) {
-        results[trackType] = {success: false, error: error.message};
+        results[trackType] = { success: false, error: error.message };
         errors.push(`${trackType}: ${error.message}`);
       }
     }
@@ -15345,14 +15811,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           bm = await this.app.initializeBenchmarkSystemOnDemand();
         } catch (e) {
           console.error('[openBenchmark] On-demand initialization failed:', e);
-          return {success: false, error: 'Failed to initialize benchmark system: ' + e.message};
+          return { success: false, error: 'Failed to initialize benchmark system: ' + e.message };
         }
       } else {
-        return {success: false, error: 'Benchmark system not available. Please open it manually from the menu.'};
+        return { success: false, error: 'Benchmark system not available. Please open it manually from the menu.' };
       }
     }
     await bm.showBenchmarkInterface();
-    return {success: true, message: 'Benchmark interface opened'};
+    return { success: true, message: 'Benchmark interface opened' };
   }
 
   /**
@@ -15367,10 +15833,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           bm = await this.app.initializeBenchmarkSystemOnDemand();
         } catch (e) {
           console.error('[startBenchmark] On-demand initialization failed:', e);
-          return {success: false, error: 'Failed to initialize benchmark system: ' + e.message};
+          return { success: false, error: 'Failed to initialize benchmark system: ' + e.message };
         }
       } else {
-        return {success: false, error: 'Benchmark system not available. Please open it manually from the menu.'};
+        return { success: false, error: 'Benchmark system not available. Please open it manually from the menu.' };
       }
     }
 
@@ -15423,10 +15889,20 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         if (bm.ui && typeof bm.ui.startMainWindowBenchmark === 'function') {
           bm.ui.startMainWindowBenchmark();
         } else {
-          console.warn('[startBenchmark] BenchmarkUI.startMainWindowBenchmark not available — falling back to direct run');
-          bm.framework.runAllBenchmarks({
-            suites, timeout, testDelay, generateReport, includeCharts, includeRawData, stopOnError,
-          }).catch((err) => console.error('[startBenchmark] Fallback run error:', err));
+          console.warn(
+            '[startBenchmark] BenchmarkUI.startMainWindowBenchmark not available — falling back to direct run'
+          );
+          bm.framework
+            .runAllBenchmarks({
+              suites,
+              timeout,
+              testDelay,
+              generateReport,
+              includeCharts,
+              includeRawData,
+              stopOnError,
+            })
+            .catch(err => console.error('[startBenchmark] Fallback run error:', err));
         }
       } catch (e) {
         console.error('[startBenchmark] Failed to configure and start benchmark via UI:', e);
@@ -15446,13 +15922,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   async stopBenchmark(_parameters = {}) {
     const bm = this._getBenchmarkManager();
     if (!bm || !bm.framework) {
-      return {success: false, error: 'Benchmark system not available'};
+      return { success: false, error: 'Benchmark system not available' };
     }
     if (!bm.framework.isRunning) {
-      return {success: false, error: 'No benchmark is currently running'};
+      return { success: false, error: 'No benchmark is currently running' };
     }
     bm.framework.stopBenchmark();
-    return {success: true, message: 'Benchmark stopped'};
+    return { success: true, message: 'Benchmark stopped' };
   }
 
   /**
@@ -15461,13 +15937,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   async pauseBenchmark(_parameters = {}) {
     const bm = this._getBenchmarkManager();
     if (!bm || !bm.framework) {
-      return {success: false, error: 'Benchmark system not available'};
+      return { success: false, error: 'Benchmark system not available' };
     }
     if (!bm.framework.isRunning) {
-      return {success: false, error: 'No benchmark is currently running'};
+      return { success: false, error: 'No benchmark is currently running' };
     }
     bm.framework.pauseBenchmark();
-    return {success: true, message: 'Benchmark paused'};
+    return { success: true, message: 'Benchmark paused' };
   }
 
   /**
@@ -15476,13 +15952,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   async resumeBenchmark(_parameters = {}) {
     const bm = this._getBenchmarkManager();
     if (!bm || !bm.framework) {
-      return {success: false, error: 'Benchmark system not available'};
+      return { success: false, error: 'Benchmark system not available' };
     }
     if (!bm.framework.isPaused) {
-      return {success: false, error: 'No benchmark is paused'};
+      return { success: false, error: 'No benchmark is paused' };
     }
     bm.framework.resumeBenchmark();
-    return {success: true, message: 'Benchmark resumed'};
+    return { success: true, message: 'Benchmark resumed' };
   }
 
   /**
@@ -15491,12 +15967,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   async getBenchmarkResults(parameters = {}) {
     const bm = this._getBenchmarkManager();
     if (!bm || !bm.framework) {
-      return {success: false, error: 'Benchmark system not available'};
+      return { success: false, error: 'Benchmark system not available' };
     }
 
     const history = bm.framework.getBenchmarkHistory();
     if (!history || history.length === 0) {
-      return {success: false, error: 'No benchmark history available. Run a benchmark first.'};
+      return { success: false, error: 'No benchmark history available. Run a benchmark first.' };
     }
 
     // If a specific index requested
@@ -15504,7 +15980,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const idx = parameters.index === -1 ? history.length - 1 : parameters.index;
       const run = history[idx];
       if (!run) {
-        return {success: false, error: `No benchmark run at index ${parameters.index}`};
+        return { success: false, error: `No benchmark run at index ${parameters.index}` };
       }
       return {
         success: true,
@@ -15581,25 +16057,25 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   async exportBenchmarkResults(parameters = {}) {
     const bm = this._getBenchmarkManager();
     if (!bm || !bm.framework) {
-      return {success: false, error: 'Benchmark system not available'};
+      return { success: false, error: 'Benchmark system not available' };
     }
 
     const history = bm.framework.getBenchmarkHistory();
     if (!history || history.length === 0) {
-      return {success: false, error: 'No benchmark results available to export. Run a benchmark first.'};
+      return { success: false, error: 'No benchmark results available to export. Run a benchmark first.' };
     }
 
     const format = (parameters.format || 'json').toLowerCase();
     const validFormats = ['json', 'csv', 'html'];
     if (!validFormats.includes(format)) {
-      return {success: false, error: `Invalid format '${format}'. Supported formats: json, csv, html`};
+      return { success: false, error: `Invalid format '${format}'. Supported formats: json, csv, html` };
     }
 
     try {
       await bm.framework.exportResults(format);
-      return {success: true, message: `Benchmark results exported as ${format}`};
+      return { success: true, message: `Benchmark results exported as ${format}` };
     } catch (err) {
-      return {success: false, error: `Export failed: ${err.message}`};
+      return { success: false, error: `Export failed: ${err.message}` };
     }
   }
 

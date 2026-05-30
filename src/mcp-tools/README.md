@@ -163,7 +163,6 @@ Tools for accessing biological databases:
 - `search_interpro_entry` - Search InterPro entries
 - `get_interpro_entry_details` - Get InterPro details
 
-
 ### 5. Data Management (4 tools)
 
 **Location:** `data/DataTools.js`

@@ -160,9 +160,12 @@ class PluginManagerV2 {
 
       // 5. Initialize Plugin Marketplace
       if (this.options.enableMarketplace !== false) {
-        const MarketplaceClass = (typeof PluginMarketplace !== 'undefined')
-          ? PluginMarketplace
-          : (typeof window !== 'undefined' ? window.PluginMarketplace : undefined);
+        const MarketplaceClass =
+          typeof PluginMarketplace !== 'undefined'
+            ? PluginMarketplace
+            : typeof window !== 'undefined'
+              ? window.PluginMarketplace
+              : undefined;
 
         if (MarketplaceClass) {
           this.marketplace = new MarketplaceClass(this, this.configManager, {
@@ -1303,12 +1306,16 @@ class PluginManagerV2 {
         let searchPath = __dirname;
         for (let i = 0; i < 15; i++) {
           try {
-            if (fs.existsSync(path.join(searchPath, 'package.json')) &&
-                fs.existsSync(path.join(searchPath, 'src', 'renderer', 'modules'))) {
+            if (
+              fs.existsSync(path.join(searchPath, 'package.json')) &&
+              fs.existsSync(path.join(searchPath, 'src', 'renderer', 'modules'))
+            ) {
               basePath = searchPath;
               break;
             }
-          } catch (e) { /* ignore */ }
+          } catch (e) {
+            /* ignore */
+          }
           const parent = path.dirname(searchPath);
           if (parent === searchPath) break;
           searchPath = parent;
@@ -1329,7 +1336,9 @@ class PluginManagerV2 {
               indexPath = candidate;
               break;
             }
-          } catch (e) { /* ignore */ }
+          } catch (e) {
+            /* ignore */
+          }
         }
       }
 
@@ -1391,20 +1400,15 @@ class PluginManagerV2 {
    * @private
    */
   _resolvePluginMethodNames(functionName) {
-    const names = [
-      functionName,
-      functionName + 'Network',
-      functionName + 'Visualization',
-      functionName + 'Data',
-    ];
+    const names = [functionName, functionName + 'Network', functionName + 'Visualization', functionName + 'Data'];
 
     // Specific known patterns from common plugins
     const knownPatterns = {
-      'visualize': ['visualizeNetwork', 'visualize'],
-      'renderNetwork': ['renderNetwork', 'visualizeNetwork'],
-      'layout': ['changeLayout', 'setLayout', 'updateLayout'],
-      'search': ['searchProteins', 'search'],
-      'analyze': ['analyzeNetwork', 'analyze'],
+      visualize: ['visualizeNetwork', 'visualize'],
+      renderNetwork: ['renderNetwork', 'visualizeNetwork'],
+      layout: ['changeLayout', 'setLayout', 'updateLayout'],
+      search: ['searchProteins', 'search'],
+      analyze: ['analyzeNetwork', 'analyze'],
     };
 
     if (knownPatterns[functionName]) {

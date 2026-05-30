@@ -9,10 +9,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-const SERVICE_PATH = path.join(
-  process.cwd(),
-  'src/renderer/modules/chat/services/GelRenderer.js'
-);
+const SERVICE_PATH = path.join(process.cwd(), 'src/renderer/modules/chat/services/GelRenderer.js');
 
 describe('GelRenderer - structure', () => {
   let code;

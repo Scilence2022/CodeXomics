@@ -36,9 +36,7 @@ function getAllToolDefinitions() {
     const content = fs.readFileSync(filePath, 'utf-8');
 
     // Skip non-tool-definition files (like tool_categories.yaml, README yaml, etc.)
-    if (filePath.includes('tool_categories.yaml') ||
-        filePath.includes('README') ||
-        filePath.includes('.qoder')) {
+    if (filePath.includes('tool_categories.yaml') || filePath.includes('README') || filePath.includes('.qoder')) {
       continue;
     }
 
@@ -46,9 +44,10 @@ function getAllToolDefinitions() {
     const nameMatch = content.match(/^name:\s*['"]?([^'"\n]+)['"]?/m);
     const versionMatch = content.match(/^version:\s*['"]?([^'"\n]+)['"]?/m);
     // Description can use single or double quotes, and may be multi-line
-    const descMatch = content.match(/^description:\s*'([\s\S]*?)'/m) ||
-                      content.match(/^description:\s*"([\s\S]*?)"/m) ||
-                      content.match(/^description:\s*(.+)/m);
+    const descMatch =
+      content.match(/^description:\s*'([\s\S]*?)'/m) ||
+      content.match(/^description:\s*"([\s\S]*?)"/m) ||
+      content.match(/^description:\s*(.+)/m);
     const categoryMatch = content.match(/^category:\s*['"]?([^'"\n]+)['"]?/m);
     const priorityMatch = content.match(/^priority:\s*(\d+)/m);
 
@@ -83,9 +82,7 @@ describe('Tool Registry YAML Definitions', () => {
   });
 
   it('tool names should be snake_case', () => {
-    const invalidNames = definitions
-      .filter(d => d.name && !/^[a-z][a-z0-9_]*$/.test(d.name))
-      .map(d => d.name);
+    const invalidNames = definitions.filter(d => d.name && !/^[a-z][a-z0-9_]*$/.test(d.name)).map(d => d.name);
     expect(invalidNames.length, `Non-snake_case tool names: ${invalidNames.join(', ')}`).toBe(0);
   });
 
@@ -116,7 +113,10 @@ describe('Tool Registry YAML Definitions', () => {
     // Allow some missing categories (different YAML formats)
     expect(missingCat.length).toBeLessThan(definitions.length * 0.1);
     if (missingCat.length > 0) {
-      console.warn('Tools missing categories:', missingCat.map(d => d.filePath));
+      console.warn(
+        'Tools missing categories:',
+        missingCat.map(d => d.filePath)
+      );
     }
   });
 
@@ -124,7 +124,10 @@ describe('Tool Registry YAML Definitions', () => {
     const missingParams = definitions.filter(d => !d.hasParameters);
     expect(missingParams.length).toBeLessThan(definitions.length * 0.05);
     if (missingParams.length > 0) {
-      console.warn('Tools missing parameters:', missingParams.map(d => d.filePath));
+      console.warn(
+        'Tools missing parameters:',
+        missingParams.map(d => d.filePath)
+      );
     }
   });
 
@@ -135,16 +138,32 @@ describe('Tool Registry YAML Definitions', () => {
 
   it('categories should be from known set', () => {
     const validCategories = new Set([
-      'navigation', 'search', 'sequence', 'sequence_editing',
-      'file_operations', 'file_loading', 'database', 'data_management',
-      'protein', 'annotation', 'blast', 'pathway', 'primer_design',
-      'track_settings', 'benchmark', 'actions', 'system', 'state',
-      'utility', 'external_apis', 'export', 'task_management', 'coordination',
+      'navigation',
+      'search',
+      'sequence',
+      'sequence_editing',
+      'file_operations',
+      'file_loading',
+      'database',
+      'data_management',
+      'protein',
+      'annotation',
+      'blast',
+      'pathway',
+      'primer_design',
+      'track_settings',
+      'benchmark',
+      'actions',
+      'system',
+      'state',
+      'utility',
+      'external_apis',
+      'export',
+      'task_management',
+      'coordination',
       'plugin_management',
     ]);
-    const uniqueCategories = new Set(
-      definitions.map(d => d.category).filter(Boolean)
-    );
+    const uniqueCategories = new Set(definitions.map(d => d.category).filter(Boolean));
     // Most categories should be known
     const unknown = [...uniqueCategories].filter(c => !validCategories.has(c));
     if (unknown.length > 0) {

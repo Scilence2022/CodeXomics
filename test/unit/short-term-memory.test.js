@@ -1,6 +1,6 @@
 /**
  * ShortTermMemory Tests
- * 
+ *
  * Validates the in-memory cache used for function call caching
  * with TTL-based eviction in the renderer process.
  */
@@ -119,7 +119,7 @@ describe('ShortTermMemory', () => {
     const ttl = 50; // 50ms
     const short = new ShortTermMemory(100, ttl);
     short.set('expires', 'soon');
-    
+
     // Use vi.advanceTimers to simulate time
     return new Promise(resolve => {
       setTimeout(() => {
@@ -133,7 +133,7 @@ describe('ShortTermMemory', () => {
     const ttl = 20;
     const short = new ShortTermMemory(100, ttl);
     short.set('fresh', 'value');
-    
+
     return new Promise(resolve => {
       setTimeout(() => {
         // Set another after TTL expired for first
@@ -151,7 +151,7 @@ describe('ShortTermMemory', () => {
     memory.set('num', 42);
     memory.set('obj', { nested: true });
     memory.set('arr', [1, 2, 3]);
-    
+
     expect(memory.get('num')).toBe(42);
     expect(memory.get('obj')).toEqual({ nested: true });
     expect(memory.get('arr')).toEqual([1, 2, 3]);

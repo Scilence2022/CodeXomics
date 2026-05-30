@@ -57,12 +57,12 @@ sample_usages:
     expected_result: 'Array of annotations with gene names, positions, types'
 
   - user_query: 'Show all genes on this chromosome'
-    tool_call: 'list_annotations(type=''gene'')'
+    tool_call: "list_annotations(type='gene')"
     thought: 'User wants to list gene annotations'
     expected_result: 'Array of gene annotations'
 
   - user_query: 'List CDS features between position 1000 and 5000'
-    tool_call: 'list_annotations(start=1000, end=5000, type=''CDS'')'
+    tool_call: "list_annotations(start=1000, end=5000, type='CDS')"
     thought: 'User wants CDS annotations in a specific range'
     expected_result: 'Array of CDS annotations in the specified region'
 

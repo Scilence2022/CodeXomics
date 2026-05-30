@@ -70,7 +70,7 @@ class FileOperationService {
         showFileDialog = false,
         fileType = 'auto',
         loadMode,
-        mergeWithExisting: mergeParam
+        mergeWithExisting: mergeParam,
       } = parameters;
 
       // Determine merge strategy
@@ -305,7 +305,10 @@ class FileOperationService {
         genbankContent += `FEATURES             Location/Qualifiers\n`;
         genbankContent += `     source          1..${sequence.length}\n`;
         features.forEach(feature => {
-          const loc = feature.strand === '-' ? `complement(${feature.start}..${feature.end})` : `${feature.start}..${feature.end}`;
+          const loc =
+            feature.strand === '-'
+              ? `complement(${feature.start}..${feature.end})`
+              : `${feature.start}..${feature.end}`;
           genbankContent += `     ${feature.type.padEnd(15)} ${loc}\n`;
         });
         genbankContent += `ORIGIN\n`;
@@ -326,7 +329,13 @@ class FileOperationService {
         writeResult = await this.showExportSaveDialog(genbankContent, outputFilename, 'GenBank format', 'text/plain');
       }
 
-      return { success: true, tool: 'export_genbank_format', exported_format: 'GenBank', filename: outputFilename, file_path: writeResult?.filePath || outputFilename };
+      return {
+        success: true,
+        tool: 'export_genbank_format',
+        exported_format: 'GenBank',
+        filename: outputFilename,
+        file_path: writeResult?.filePath || outputFilename,
+      };
     } catch (error) {
       throw new Error(`GenBank export failed: ${error.message}`);
     }
@@ -345,7 +354,11 @@ class FileOperationService {
         cdsFeatures.forEach(feature => {
           let sequence = this.app.currentSequence[chr].substring(feature.start - 1, feature.end);
           if (feature.strand === '-') {
-            sequence = sequence.split('').reverse().map(base => ({A:'T',T:'A',C:'G',G:'C'}[base] || base)).join('');
+            sequence = sequence
+              .split('')
+              .reverse()
+              .map(base => ({ A: 'T', T: 'A', C: 'G', G: 'C' })[base] || base)
+              .join('');
           }
           cdsContent += `>${feature.attributes?.name || feature.attributes?.ID || 'CDS'}_${chr}:${feature.start}-${feature.end}\n`;
           for (let i = 0; i < sequence.length; i += 80) cdsContent += sequence.substring(i, i + 80) + '\n';
@@ -363,7 +376,14 @@ class FileOperationService {
         writeResult = await this.showExportSaveDialog(cdsContent, outputFilename, 'CDS FASTA', 'text/plain');
       }
 
-      return { success: true, tool: 'export_cds_fasta', exported_format: 'CDS FASTA', count: totalCDS, filename: outputFilename, file_path: writeResult?.filePath || outputFilename };
+      return {
+        success: true,
+        tool: 'export_cds_fasta',
+        exported_format: 'CDS FASTA',
+        count: totalCDS,
+        filename: outputFilename,
+        file_path: writeResult?.filePath || outputFilename,
+      };
     } catch (error) {
       throw new Error(`CDS export failed: ${error.message}`);
     }
@@ -377,7 +397,9 @@ class FileOperationService {
       chromosomes.forEach(chr => {
         const features = this.app.currentAnnotations[chr];
         features.forEach(f => {
-          const attrs = Object.entries(f.attributes || {}).map(([k,v]) => `${k}=${v}`).join(';');
+          const attrs = Object.entries(f.attributes || {})
+            .map(([k, v]) => `${k}=${v}`)
+            .join(';');
           gffContent += `${chr}\tCodeXomics\t${f.type}\t${f.start}\t${f.end}\t.\t${f.strand || '+'}\t.\t${attrs}\n`;
         });
       });
@@ -390,7 +412,13 @@ class FileOperationService {
         writeResult = await this.showExportSaveDialog(gffContent, outputFilename, 'GFF annotations', 'text/plain');
       }
 
-      return { success: true, tool: 'export_gff_annotations', exported_format: 'GFF', filename: outputFilename, file_path: writeResult?.filePath || outputFilename };
+      return {
+        success: true,
+        tool: 'export_gff_annotations',
+        exported_format: 'GFF',
+        filename: outputFilename,
+        file_path: writeResult?.filePath || outputFilename,
+      };
     } catch (error) {
       throw new Error(`GFF export failed: ${error.message}`);
     }
@@ -413,14 +441,15 @@ class FileOperationService {
       const chromosomes = Object.keys(this.app.currentAnnotations || {});
       let bedContent = '';
       let exportedCount = 0;
-      const hasRangeFilter = (export_range === 'custom_range' && start_position != null && end_position != null);
+      const hasRangeFilter = export_range === 'custom_range' && start_position != null && end_position != null;
       const rangeStart = hasRangeFilter ? start_position : null;
       const rangeEnd = hasRangeFilter ? end_position : null;
       const includeAllTypes = feature_types.includes('all');
 
-      const filteredChromosomes = filterChromosome && export_range === 'by_chromosome'
-        ? chromosomes.filter(chr => chr === filterChromosome)
-        : chromosomes;
+      const filteredChromosomes =
+        filterChromosome && export_range === 'by_chromosome'
+          ? chromosomes.filter(chr => chr === filterChromosome)
+          : chromosomes;
 
       filteredChromosomes.forEach(chr => {
         const features = this.app.currentAnnotations[chr];
@@ -485,11 +514,21 @@ class FileOperationService {
           if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
         }
         await this.app.fileManager.loadFile(filePath);
-        return { success: true, message: `Successfully loaded variant file: ${filePath}`, filePath, fileType: 'variant' };
+        return {
+          success: true,
+          message: `Successfully loaded variant file: ${filePath}`,
+          filePath,
+          fileType: 'variant',
+        };
       } else {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('variant');
-        return { success: true, message: 'File dialog opened for variant file selection', action: 'dialog_opened', fileType: 'variant' };
+        return {
+          success: true,
+          message: 'File dialog opened for variant file selection',
+          action: 'dialog_opened',
+          fileType: 'variant',
+        };
       }
     } catch (error) {
       console.error('❌ [FileOperationService] loadVariantFile failed:', error);
@@ -511,7 +550,12 @@ class FileOperationService {
       } else {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('reads');
-        return { success: true, message: 'File dialog opened for reads file selection', action: 'dialog_opened', fileType: 'reads' };
+        return {
+          success: true,
+          message: 'File dialog opened for reads file selection',
+          action: 'dialog_opened',
+          fileType: 'reads',
+        };
       }
     } catch (error) {
       console.error('❌ [FileOperationService] loadReadsFile failed:', error);
@@ -533,11 +577,23 @@ class FileOperationService {
         }
         if (pathsArray.length > 1) await this.app.fileManager.loadMultipleWIGFiles(pathsArray);
         else await this.app.fileManager.loadFile(pathsArray[0]);
-        return { success: true, message: `Successfully loaded ${pathsArray.length} WIG track(s)`, filePaths: pathsArray, fileType: 'wig', count: pathsArray.length };
+        return {
+          success: true,
+          message: `Successfully loaded ${pathsArray.length} WIG track(s)`,
+          filePaths: pathsArray,
+          fileType: 'wig',
+          count: pathsArray.length,
+        };
       } else {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('tracks');
-        return { success: true, message: 'File dialog opened for WIG tracks selection', action: 'dialog_opened', fileType: 'wig', multiple };
+        return {
+          success: true,
+          message: 'File dialog opened for WIG tracks selection',
+          action: 'dialog_opened',
+          fileType: 'wig',
+          multiple,
+        };
       }
     } catch (error) {
       console.error('❌ [FileOperationService] loadWigTracks failed:', error);
@@ -555,11 +611,22 @@ class FileOperationService {
           if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
         }
         await this.app.fileManager.loadOperonFile(filePath);
-        return { success: true, message: `Successfully loaded operon file: ${filePath}`, filePath, fileType: 'operon', format };
+        return {
+          success: true,
+          message: `Successfully loaded operon file: ${filePath}`,
+          filePath,
+          fileType: 'operon',
+          format,
+        };
       } else {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('operon');
-        return { success: true, message: 'File dialog opened for operon file selection', action: 'dialog_opened', fileType: 'operon' };
+        return {
+          success: true,
+          message: 'File dialog opened for operon file selection',
+          action: 'dialog_opened',
+          fileType: 'operon',
+        };
       }
     } catch (error) {
       console.error('❌ [FileOperationService] loadOperonFile failed:', error);
@@ -583,11 +650,29 @@ class FileOperationService {
 
       if (window.electronAPI?.downloadInternetFile) {
         const result = await window.electronAPI.downloadInternetFile({ url, destinationPath, filename });
-        if (result.success) return { success: true, message: `Successfully downloaded file to: ${result.filePath}`, filePath: result.filePath, filename: result.filename, fileSize: result.fileSize, url, tool: 'download_internet_file' };
+        if (result.success)
+          return {
+            success: true,
+            message: `Successfully downloaded file to: ${result.filePath}`,
+            filePath: result.filePath,
+            filename: result.filename,
+            fileSize: result.fileSize,
+            url,
+            tool: 'download_internet_file',
+          };
         throw new Error(result.error || 'Download failed');
       } else if (window.ipcRenderer) {
         const result = await window.ipcRenderer.invoke('download-internet-file', { url, destinationPath, filename });
-        if (result.success) return { success: true, message: `Successfully downloaded file to: ${result.filePath}`, filePath: result.filePath, filename: result.filename, fileSize: result.fileSize, url, tool: 'download_internet_file' };
+        if (result.success)
+          return {
+            success: true,
+            message: `Successfully downloaded file to: ${result.filePath}`,
+            filePath: result.filePath,
+            filename: result.filename,
+            fileSize: result.fileSize,
+            url,
+            tool: 'download_internet_file',
+          };
         throw new Error(result.error || 'Download failed');
       } else {
         throw new Error('electronAPI.downloadInternetFile not available');
@@ -609,7 +694,9 @@ class FileOperationService {
           try {
             const urlObj = new URL(deepGeneServer.url);
             baseUrl = `${urlObj.protocol}//${urlObj.host}`;
-          } catch (e) { console.warn('Failed to parse MCP server URL:', e); }
+          } catch (e) {
+            console.warn('Failed to parse MCP server URL:', e);
+          }
         }
       }
       text = text.replace(/🔗\s*(\/api\/mcp\/download\/[^\s\n`"<>]+)/g, (m, p) => `🔗 [Download](${baseUrl}${p})`);
@@ -639,11 +726,16 @@ class FileOperationService {
         const filters = extensionMap[formatType] || [{ name: 'Text Files', extensions: ['txt'] }];
         filters.push({ name: 'All Files', extensions: ['*'] });
 
-        const result = await window.electronAPI.showSaveDialog({ title: `Save ${formatType}`, defaultPath: defaultFilename, filters: filters });
+        const result = await window.electronAPI.showSaveDialog({
+          title: `Save ${formatType}`,
+          defaultPath: defaultFilename,
+          filters: filters,
+        });
         if (!result.canceled && result.filePath) {
           const writeResult = await window.electronAPI.writeFile(result.filePath, content);
           if (writeResult.success) {
-            if (this.chatManager.showNotification) this.chatManager.showNotification(`${formatType} saved successfully`, 'success');
+            if (this.chatManager.showNotification)
+              this.chatManager.showNotification(`${formatType} saved successfully`, 'success');
             return { success: true, filePath: result.filePath };
           } else throw new Error(`Failed to write file: ${writeResult.error}`);
         }
@@ -653,7 +745,8 @@ class FileOperationService {
         return { success: true, method: 'browser_download' };
       }
     } catch (error) {
-      if (this.chatManager.showNotification) this.chatManager.showNotification(`Failed to save ${formatType}: ${error.message}`, 'error');
+      if (this.chatManager.showNotification)
+        this.chatManager.showNotification(`Failed to save ${formatType}: ${error.message}`, 'error');
       throw error;
     }
   }
@@ -662,8 +755,11 @@ class FileOperationService {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 
@@ -681,17 +777,20 @@ class FileOperationService {
 
       if (window.electronAPI?.writeFile) {
         const result = await window.electronAPI.writeFile(resolvedPath, content);
-        if (this.chatManager.showNotification) this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
+        if (this.chatManager.showNotification)
+          this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
         return { success: true, filePath: result.filePath || resolvedPath };
       } else {
         const fs = require('fs').promises;
         const path = require('path');
         await fs.writeFile(resolvedPath, content, 'utf8');
-        if (this.chatManager.showNotification) this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
+        if (this.chatManager.showNotification)
+          this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
         return { success: true, filePath: resolvedPath };
       }
     } catch (error) {
-      if (this.chatManager.showNotification) this.chatManager.showNotification(`Failed to export ${formatType}: ${error.message}`, 'error');
+      if (this.chatManager.showNotification)
+        this.chatManager.showNotification(`Failed to export ${formatType}: ${error.message}`, 'error');
       throw error;
     }
   }
@@ -701,10 +800,18 @@ class FileOperationService {
   }
 
   // Aliases for ToolExecutionService
-  async exportCDSFasta(p) { return this.exportCdsFasta(p); }
-  async exportGFFAnnotations(p) { return this.exportGffAnnotations(p); }
-  async exportBEDFormat(p) { return this.exportBedFormat(p); }
-  async exportGenbankFormat(p) { return this.exportGenBankFormat(p); }
+  async exportCDSFasta(p) {
+    return this.exportCdsFasta(p);
+  }
+  async exportGFFAnnotations(p) {
+    return this.exportGffAnnotations(p);
+  }
+  async exportBEDFormat(p) {
+    return this.exportBedFormat(p);
+  }
+  async exportGenbankFormat(p) {
+    return this.exportGenBankFormat(p);
+  }
 }
 
 window.FileOperationService = FileOperationService;

@@ -77,7 +77,9 @@ class NavigationManager {
 
       // Update current tab title with new position (from navigation buttons)
       if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'navigation' });
+        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, {
+          source: 'navigation',
+        });
       }
     }
   }
@@ -100,7 +102,9 @@ class NavigationManager {
 
       // Update current tab title with new position (from navigation buttons)
       if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'navigation' });
+        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, {
+          source: 'navigation',
+        });
       }
     }
   }
@@ -221,14 +225,16 @@ class NavigationManager {
     gb.displayGenomeView(chromosome, sequence);
 
     if (gb.genomeNavigationBar) gb.genomeNavigationBar.update();
-    if (gb.tabManager) gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validatedEnd, { source: 'navigation' });
+    if (gb.tabManager)
+      gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validatedEnd, { source: 'navigation' });
 
     return { success: true, chromosome, start: validatedStart, end: validatedEnd };
   }
 
   jumpToGene(geneName) {
-    const searchFn = (window.MicrobeGenomicsFunctions && window.MicrobeGenomicsFunctions.searchGeneByName)
-      || (this.genomeBrowser.searchGeneByName);
+    const searchFn =
+      (window.MicrobeGenomicsFunctions && window.MicrobeGenomicsFunctions.searchGeneByName) ||
+      this.genomeBrowser.searchGeneByName;
     if (typeof searchFn !== 'function') {
       return { success: false, error: 'Gene search function not available' };
     }
@@ -1494,7 +1500,9 @@ class NavigationManager {
 
     // Update current tab title with new position (from drag)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, finalNewStart + 1, finalNewEnd, { source: 'drag' });
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, finalNewStart + 1, finalNewEnd, {
+        source: 'drag',
+      });
     }
 
     // Update all detailed rulers after re-render (force update for final position)

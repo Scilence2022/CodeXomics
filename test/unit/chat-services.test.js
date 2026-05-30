@@ -72,7 +72,12 @@ describe('Chat Services Structure', () => {
   it('all services should use strict mode', () => {
     for (const file of serviceFiles) {
       const content = fs.readFileSync(path.join(SERVICES_DIR, file), 'utf-8');
-      if (content.startsWith("'use strict'") || content.startsWith('"use strict"') || content.startsWith('//') || content.startsWith('/*')) {
+      if (
+        content.startsWith("'use strict'") ||
+        content.startsWith('"use strict"') ||
+        content.startsWith('//') ||
+        content.startsWith('/*')
+      ) {
         // Good
       } else {
         console.log(`${file} does not start with 'use strict'`);

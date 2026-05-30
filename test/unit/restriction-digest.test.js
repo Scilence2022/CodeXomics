@@ -2,7 +2,7 @@
 /**
  * Restriction Digest Service Tests
  */
-import {describe, it, expect, beforeAll, afterAll} from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -15,8 +15,8 @@ describe('RestrictionEnzymeDatabase', () => {
     const dbPath = path.join(SERVICES_DIR, 'RestrictionEnzymeDatabase.js');
     const code = fs.readFileSync(dbPath, 'utf-8');
     const classOnly = code
-        .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
-        .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
+      .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
+      .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
     const RestrictionEnzymeDatabase = eval(`(function() { ${classOnly}; return RestrictionEnzymeDatabase; })()`);
     db = new RestrictionEnzymeDatabase();
   });
@@ -31,7 +31,7 @@ describe('RestrictionEnzymeDatabase', () => {
     const ecori = db.get('EcoRI');
     expect(ecori).not.toBeNull();
     expect(ecori.recognition).toBe('GAATTC');
-    expect(ecori.overhangType).toBe('5\'_overhang');
+    expect(ecori.overhangType).toBe("5'_overhang");
     expect(ecori.topCut).toBe(1);
     expect(ecori.bottomCut).toBe(5);
   });
@@ -49,7 +49,7 @@ describe('RestrictionEnzymeDatabase', () => {
   it('should resolve 3-prime overhang enzymes', () => {
     const kpni = db.get('KpnI');
     expect(kpni).not.toBeNull();
-    expect(kpni.overhangType).toBe('3\'_overhang');
+    expect(kpni.overhangType).toBe("3'_overhang");
   });
 
   it('should resolve isoschizomers', () => {
@@ -102,13 +102,13 @@ describe('RestrictionEnzymeDatabase', () => {
   it('should support search', () => {
     const results = db.search('Eco');
     expect(results.length).toBeGreaterThanOrEqual(2);
-    expect(results.some((e) => e.name === 'EcoRI')).toBe(true);
+    expect(results.some(e => e.name === 'EcoRI')).toBe(true);
   });
 
   it('should filter by overhang type', () => {
     const blunt = db.getByOverhangType('blunt');
     expect(blunt.length).toBeGreaterThanOrEqual(5);
-    const fivePrime = db.getByOverhangType('5\'_overhang');
+    const fivePrime = db.getByOverhangType("5'_overhang");
     expect(fivePrime.length).toBeGreaterThanOrEqual(5);
   });
 
@@ -188,11 +188,11 @@ describe('RestrictionDigestService - Core Algorithm', () => {
     const fragments = [];
     let lastEnd = regionStart;
     for (const pos of cutPositions) {
-      fragments.push({start: lastEnd, end: pos, length: pos - lastEnd});
+      fragments.push({ start: lastEnd, end: pos, length: pos - lastEnd });
       lastEnd = pos;
     }
     if (lastEnd < regionEnd) {
-      fragments.push({start: lastEnd, end: regionEnd, length: regionEnd - lastEnd});
+      fragments.push({ start: lastEnd, end: regionEnd, length: regionEnd - lastEnd });
     }
 
     expect(fragments.length).toBe(4);
@@ -210,8 +210,13 @@ describe('RestrictionDigestService - Core Algorithm', () => {
   });
 
   it('should handle reverse complement correctly', () => {
-    const complement = {A: 'T', T: 'A', G: 'C', C: 'G'};
-    const rc = (seq) => seq.split('').reverse().map((b) => complement[b] || b).join('');
+    const complement = { A: 'T', T: 'A', G: 'C', C: 'G' };
+    const rc = seq =>
+      seq
+        .split('')
+        .reverse()
+        .map(b => complement[b] || b)
+        .join('');
 
     expect(rc('GAATTC')).toBe('GAATTC');
     expect(rc('AAGCTT')).toBe('AAGCTT');
@@ -227,8 +232,8 @@ describe('GelElectrophoresisRenderer', () => {
     const rendererPath = path.join(process.cwd(), 'src/renderer/modules/GelElectrophoresisRenderer.js');
     const code = fs.readFileSync(rendererPath, 'utf-8');
     const classOnly = code
-        .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
-        .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
+      .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
+      .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
     GelElectrophoresisRenderer = eval(`(function() { ${classOnly}; return GelElectrophoresisRenderer; })()`);
   });
 
@@ -248,11 +253,11 @@ describe('GelElectrophoresisRenderer', () => {
       totalSites: 4,
       sizeRange: '500 - 15000 bp',
       fragmentDetails: [
-        {index: 1, start: 0, end: 500, length: 500},
-        {index: 2, start: 500, end: 3000, length: 2500},
-        {index: 3, start: 3000, end: 8000, length: 5000},
-        {index: 4, start: 8000, end: 15000, length: 7000},
-        {index: 5, start: 15000, end: 30000, length: 15000},
+        { index: 1, start: 0, end: 500, length: 500 },
+        { index: 2, start: 500, end: 3000, length: 2500 },
+        { index: 3, start: 3000, end: 8000, length: 5000 },
+        { index: 4, start: 8000, end: 15000, length: 7000 },
+        { index: 5, start: 15000, end: 30000, length: 15000 },
       ],
     };
 
@@ -282,8 +287,8 @@ describe('RestrictionDigestService Integration', () => {
     const dbPath = path.join(SERVICES_DIR, 'RestrictionEnzymeDatabase.js');
     const dbCode = fs.readFileSync(dbPath, 'utf-8');
     const dbClassOnly = dbCode
-        .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
-        .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
+      .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
+      .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
     const RestrictionEnzymeDatabase = eval(`(function() { ${dbClassOnly}; return RestrictionEnzymeDatabase; })()`);
 
     // Set global window.RestrictionEnzymeDatabase
@@ -293,13 +298,13 @@ describe('RestrictionDigestService Integration', () => {
     const servicePath = path.join(SERVICES_DIR, 'RestrictionDigestService.js');
     const serviceCode = fs.readFileSync(servicePath, 'utf-8');
     const serviceClassOnly = serviceCode
-        .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
-        .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
+      .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
+      .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
     const RestrictionDigestService = eval(`(function() { ${serviceClassOnly}; return RestrictionDigestService; })()`);
 
     mockApp = {
       currentChromosome: 'chr1',
-      currentPosition: {start: 0, end: 18},
+      currentPosition: { start: 0, end: 18 },
       currentSequence: {
         chr1: 'AAGAATTCAAGAATTCAA',
       },
@@ -316,7 +321,7 @@ describe('RestrictionDigestService Integration', () => {
   });
 
   it('should run in chromosome position mode using defaults when no parameters are provided', async () => {
-    const result = await service.findRestrictionSites({enzyme: 'EcoRI'});
+    const result = await service.findRestrictionSites({ enzyme: 'EcoRI' });
     expect(result.chromosome).toBe('chr1');
     expect(result.sitesFound).toBe(2);
     expect(result.sites[0].position).toBe(2);
@@ -370,10 +375,12 @@ describe('RestrictionDigestService Integration', () => {
   });
 
   it('should fail in direct sequence mode if invalid region length arises', async () => {
-    await expect(service.virtualDigest({
-      enzymes: ['EcoRI'],
-      sequence: '',
-    })).rejects.toThrow();
+    await expect(
+      service.virtualDigest({
+        enzymes: ['EcoRI'],
+        sequence: '',
+      })
+    ).rejects.toThrow();
   });
 
   it('should run findRestrictionSites in direct sequence mode when sequence is provided', async () => {
@@ -412,9 +419,9 @@ describe('Restriction Digest Tool Registry Integration', () => {
   it('builtin_tools_integration should register all three tools', () => {
     const filePath = path.join(process.cwd(), 'tools_registry/builtin_tools_integration.js');
     const content = fs.readFileSync(filePath, 'utf-8');
-    expect(content).toContain('\'find_restriction_sites\'');
-    expect(content).toContain('\'virtual_digest\'');
-    expect(content).toContain('\'list_restriction_enzymes\'');
+    expect(content).toContain("'find_restriction_sites'");
+    expect(content).toContain("'virtual_digest'");
+    expect(content).toContain("'list_restriction_enzymes'");
   });
 
   it('ToolNames.js should contain all three constants', () => {
@@ -428,15 +435,15 @@ describe('Restriction Digest Tool Registry Integration', () => {
   it('FunctionCallsOrganizer should contain all three tools', () => {
     const filePath = path.join(process.cwd(), 'src/renderer/modules/FunctionCallsOrganizer.js');
     const content = fs.readFileSync(filePath, 'utf-8');
-    expect(content).toContain('\'find_restriction_sites\'');
-    expect(content).toContain('\'virtual_digest\'');
-    expect(content).toContain('\'list_restriction_enzymes\'');
+    expect(content).toContain("'find_restriction_sites'");
+    expect(content).toContain("'virtual_digest'");
+    expect(content).toContain("'list_restriction_enzymes'");
   });
 
   it('MultiAgentSystem should have list_restriction_enzymes in isSpecializedAgent', () => {
     const filePath = path.join(process.cwd(), 'src/renderer/modules/MultiAgentSystem.js');
     const content = fs.readFileSync(filePath, 'utf-8');
-    expect(content).toContain('\'list_restriction_enzymes\'');
+    expect(content).toContain("'list_restriction_enzymes'");
   });
 
   it('MCP SequenceTools should expose restriction tools', () => {

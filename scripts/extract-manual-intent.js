@@ -42,4 +42,4 @@ const stub2 = `  parseMultipleToolCalls(response) {
 lines.splice(9972, 10241 - 9972, stub1, '', stub2);
 fs.writeFileSync('src/renderer/modules/ChatManager.js', lines.join('\n'));
 
-console.log("Successfully extracted IntentParserService manually!");
+console.log('Successfully extracted IntentParserService manually!');

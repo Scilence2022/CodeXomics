@@ -2996,7 +2996,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 // Global debugging function for position indicators
-window.debugPositionIndicators = function() {
+window.debugPositionIndicators = function () {
   console.log('=== Position Indicators Debug ===');
 
   const tabs = document.querySelectorAll('.genome-tab');
@@ -3059,7 +3059,7 @@ window.debugPositionIndicators = function() {
 };
 
 // Add to global scope for easy access
-window.forcePositionIndicatorVisibility = function() {
+window.forcePositionIndicatorVisibility = function () {
   if (window.genomeBrowser && window.genomeBrowser.tabManager) {
     window.genomeBrowser.tabManager.forcePositionIndicatorVisibility();
   } else {

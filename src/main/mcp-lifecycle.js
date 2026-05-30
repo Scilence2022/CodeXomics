@@ -97,7 +97,9 @@ async function startUnifiedMCPServer() {
     await unifiedMCPServer.start();
 
     unifiedServerStatus = 'running';
-    console.log(`Unified Claude MCP Server started successfully on ports ${settings.httpPort} (HTTP) and ${settings.wsPort} (WebSocket)`);
+    console.log(
+      `Unified Claude MCP Server started successfully on ports ${settings.httpPort} (HTTP) and ${settings.wsPort} (WebSocket)`
+    );
 
     // Start periodic window cleanup to handle any windows that weren't properly unregistered
     startWindowCleanupInterval();
@@ -120,7 +122,11 @@ async function startUnifiedMCPServer() {
     unifiedServerStatus = 'stopped';
     // Clean up the server instance
     if (unifiedMCPServer) {
-      try { await unifiedMCPServer.stop(); } catch (e) { /* ignore stop errors */ }
+      try {
+        await unifiedMCPServer.stop();
+      } catch (e) {
+        /* ignore stop errors */
+      }
     }
     unifiedMCPServer = null;
     console.error('Failed to start Unified Claude MCP Server:', error);

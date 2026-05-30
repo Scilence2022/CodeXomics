@@ -1085,15 +1085,21 @@
             break;
           }
           case 'paste':
-            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
-              navigator.clipboard.readText().then(text => {
-                const el = document.activeElement;
-                const start = el.selectionStart;
-                const end = el.selectionEnd;
-                el.value = el.value.substring(0, start) + text + el.value.substring(end);
-                el.selectionStart = el.selectionEnd = start + text.length;
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-              }).catch(() => {});
+            if (
+              document.activeElement &&
+              (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')
+            ) {
+              navigator.clipboard
+                .readText()
+                .then(text => {
+                  const el = document.activeElement;
+                  const start = el.selectionStart;
+                  const end = el.selectionEnd;
+                  el.value = el.value.substring(0, start) + text + el.value.substring(end);
+                  el.selectionStart = el.selectionEnd = start + text.length;
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                })
+                .catch(() => {});
             }
             break;
           case 'cut': {
@@ -1111,7 +1117,10 @@
             break;
           }
           case 'select-all':
-            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+            if (
+              document.activeElement &&
+              (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')
+            ) {
               document.activeElement.select();
             } else {
               window.getSelection().selectAllChildren(document.body);
@@ -1139,9 +1148,10 @@
       // ===== Theme Integration =====
       function applyBlastDownloaderTheme(themeData) {
         const root = document.documentElement;
-        const vars = themeData.isDark && themeData.darkVariables
-          ? { ...themeData.variables, ...themeData.darkVariables }
-          : themeData.variables;
+        const vars =
+          themeData.isDark && themeData.darkVariables
+            ? { ...themeData.variables, ...themeData.darkVariables }
+            : themeData.variables;
 
         if (vars['--header-gradient']) {
           document.body.style.background = vars['--header-gradient'];

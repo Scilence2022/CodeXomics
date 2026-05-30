@@ -112,7 +112,7 @@ class ThemeManager {
 
           // Selection
           '--selection-bg': '#60a5fa',
-        }
+        },
       },
       professional: {
         name: 'Professional',
@@ -205,7 +205,7 @@ class ThemeManager {
 
           // Selection
           '--selection-bg': '#14b8a6',
-        }
+        },
       },
       minimal: {
         name: 'Minimal',
@@ -298,7 +298,7 @@ class ThemeManager {
 
           // Selection
           '--selection-bg': '#d4a054',
-        }
+        },
       },
       elegant: {
         name: 'Elegant Gray',
@@ -391,7 +391,7 @@ class ThemeManager {
 
           // Selection
           '--selection-bg': '#9e9e9e',
-        }
+        },
       },
       midnight: {
         name: 'Midnight',
@@ -484,7 +484,7 @@ class ThemeManager {
 
           // Selection
           '--selection-bg': '#22d3ee',
-        }
+        },
       },
       pastel: {
         name: 'Pastel',
@@ -577,8 +577,8 @@ class ThemeManager {
 
           // Selection
           '--selection-bg': '#d4a5d4',
-        }
-      }
+        },
+      },
     };
 
     this.isInitialized = false;
@@ -642,7 +642,14 @@ class ThemeManager {
     this.currentStyle = styleName;
 
     // Remove any previous style class from body
-    document.body.classList.remove('style-default', 'style-professional', 'style-minimal', 'style-pastel', 'style-elegant', 'style-midnight');
+    document.body.classList.remove(
+      'style-default',
+      'style-professional',
+      'style-minimal',
+      'style-pastel',
+      'style-elegant',
+      'style-midnight'
+    );
     document.body.classList.add(`style-${styleName}`);
 
     // Set data attribute for CSS selectors
@@ -726,9 +733,11 @@ class ThemeManager {
     } catch (_) {}
 
     // Dispatch event so other windows (e.g., Project Manager) can sync
-    window.dispatchEvent(new CustomEvent('uiStyleChanged', {
-      detail: { style: this.currentStyle, preset: preset, isDark: isDark }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('uiStyleChanged', {
+        detail: { style: this.currentStyle, preset: preset, isDark: isDark },
+      })
+    );
   }
 
   /**
@@ -779,9 +788,11 @@ class ThemeManager {
     }
 
     // Emit event for other components to react
-    window.dispatchEvent(new CustomEvent('uiStyleChanged', {
-      detail: { style: styleName, preset: this.stylePresets[styleName] }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('uiStyleChanged', {
+        detail: { style: styleName, preset: this.stylePresets[styleName] },
+      })
+    );
 
     console.log(`✅ [ThemeManager] Switched to style: ${styleName}`);
   }

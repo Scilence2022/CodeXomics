@@ -118,10 +118,7 @@ class IntentParserService {
    * @returns {object}
    */
   _fixMalformedParameters(parsed) {
-    if (
-      parsed.tool_name === 'set_working_directory' &&
-      typeof parsed.parameters === 'object'
-    ) {
+    if (parsed.tool_name === 'set_working_directory' && typeof parsed.parameters === 'object') {
       const paramKeys = Object.keys(parsed.parameters);
       if (
         paramKeys.length === 1 &&
@@ -143,12 +140,7 @@ class IntentParserService {
    * @returns {boolean}
    */
   _isValidToolCall(obj) {
-    return (
-      obj &&
-      typeof obj === 'object' &&
-      typeof obj.tool_name === 'string' &&
-      obj.parameters !== undefined
-    );
+    return obj && typeof obj === 'object' && typeof obj.tool_name === 'string' && obj.parameters !== undefined;
   }
 
   parseToolCall(response) {

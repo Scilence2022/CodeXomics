@@ -5,7 +5,7 @@ import SequenceTools from '../../src/mcp-tools/sequence/SequenceTools.js';
 describe('Molecular Weight Calculation Tests', () => {
   const dnaSeq = 'ATGCGCTATCG'; // A:3, T:3, G:3, C:2
   const rnaSeq = 'AUGCGCUAUCG'; // A:3, U:3, G:3, C:2
-  const proteinSeq = 'MSKGPAVGI';   // M, S, K, G, P, A, V, G, I
+  const proteinSeq = 'MSKGPAVGI'; // M, S, K, G, P, A, V, G, I
 
   describe('MicrobeGenomicsFunctions.calculateMolecularWeight', () => {
     it('should return 0 for empty or invalid input', () => {

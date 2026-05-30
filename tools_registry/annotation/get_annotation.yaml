@@ -50,22 +50,22 @@ parameters:
 
 sample_usages:
   - user_query: 'Get annotation details for the lacZ gene'
-    tool_call: 'get_annotation(identifier=''lacZ'')'
+    tool_call: "get_annotation(identifier='lacZ')"
     thought: 'User wants detailed information about the lacZ gene annotation'
     expected_result: 'Complete annotation record for lacZ with position, type, strand, product, etc.'
 
   - user_query: 'Get details for locus tag b0343'
-    tool_call: 'get_annotation(identifier=''b0343'')'
+    tool_call: "get_annotation(identifier='b0343')"
     thought: 'User wants annotation details by locus tag'
     expected_result: 'Annotation record for the gene with locus_tag b0343'
 
   - user_query: 'Get full annotation information for dnaA'
-    tool_call: 'get_annotation(identifier=''dnaA'', full_details=true)'
+    tool_call: "get_annotation(identifier='dnaA', full_details=true)"
     thought: 'User wants complete raw annotation data for dnaA'
     expected_result: 'Full annotation object with all available fields'
 
   - user_query: 'Look up protein NP_414765.1'
-    tool_call: 'get_annotation(identifier=''NP_414765.1'')'
+    tool_call: "get_annotation(identifier='NP_414765.1')"
     thought: 'User wants annotation by protein ID'
     expected_result: 'Annotation record matching the protein ID'
 

@@ -46,7 +46,7 @@ parameters:
   anyOf:
     - required: ['start', 'end']
     - required: ['position']
-    - required: ['start']  # start-only: center on position with ±1kb window
+    - required: ['start'] # start-only: center on position with ±1kb window
 
 # High-quality examples for few-shot learning
 sample_usages:

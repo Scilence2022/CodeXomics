@@ -102,10 +102,12 @@ class ProteinNetworkPlugin {
    */
   parseNetworkData(input) {
     // Handle wrapped data (parameters.data) or direct data
-    let data = (input && typeof input === 'object' && input.data) ? input.data : input;
+    let data = input && typeof input === 'object' && input.data ? input.data : input;
 
     if (!data) {
-      throw new Error('Invalid network data: data is null or undefined. Expected an object with "nodes" and "edges" arrays.');
+      throw new Error(
+        'Invalid network data: data is null or undefined. Expected an object with "nodes" and "edges" arrays.'
+      );
     }
 
     // Handle different data formats
@@ -120,13 +122,21 @@ class ProteinNetworkPlugin {
 
     // Check if the LLM passed a single protein or identifier instead of a network
     if (!data.nodes && (data.protein || data.gene || data.identifier || data.proteins)) {
-      const hint = data.protein || data.gene || data.identifier || (Array.isArray(data.proteins) ? data.proteins.join(', ') : data.proteins);
-      throw new Error(`Invalid network data: received identifier(s) "${hint}" but no network structure. This plugin ONLY visualizes existing network data. Please use a search tool (like 'string-network-explorer.search') first to fetch the interaction data, then pass the result to this tool's "data" parameter.`);
+      const hint =
+        data.protein ||
+        data.gene ||
+        data.identifier ||
+        (Array.isArray(data.proteins) ? data.proteins.join(', ') : data.proteins);
+      throw new Error(
+        `Invalid network data: received identifier(s) "${hint}" but no network structure. This plugin ONLY visualizes existing network data. Please use a search tool (like 'string-network-explorer.search') first to fetch the interaction data, then pass the result to this tool's "data" parameter.`
+      );
     }
 
     // Validate required fields
     if (!data.nodes || !Array.isArray(data.nodes)) {
-      throw new Error('Invalid network data: missing "nodes" array. The data object must contain a "nodes" array (e.g., {"nodes": [{"id": "P1"}], "edges": [...]}).');
+      throw new Error(
+        'Invalid network data: missing "nodes" array. The data object must contain a "nodes" array (e.g., {"nodes": [{"id": "P1"}], "edges": [...]}).'
+      );
     }
 
     // Ensure edges array exists

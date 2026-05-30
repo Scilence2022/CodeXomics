@@ -4969,7 +4969,9 @@ class PluginManagementUI {
             resolve();
             return;
           } else {
-            console.warn(`⚠️ Script ${src} exists but module ${moduleKey} not available — removing stale tag and reloading`);
+            console.warn(
+              `⚠️ Script ${src} exists but module ${moduleKey} not available — removing stale tag and reloading`
+            );
             existingScript.remove();
           }
         }

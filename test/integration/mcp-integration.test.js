@@ -59,9 +59,10 @@ describe('MCP Tool Modules Integration', () => {
     let issues = [];
     for (const mod of modules) {
       const content = fs.readFileSync(mod.path, 'utf-8');
-      const acceptsServer = content.includes('constructor(server)') ||
-                            content.includes('constructor(options)') ||
-                            content.includes('(server)');
+      const acceptsServer =
+        content.includes('constructor(server)') ||
+        content.includes('constructor(options)') ||
+        content.includes('(server)');
       if (!acceptsServer) {
         issues.push(`${mod.category}/${mod.name}: doesn't accept server parameter`);
       }
@@ -77,10 +78,11 @@ describe('MCP Tool Modules Integration', () => {
       const hasName = content.includes('name:');
       const hasDescription = content.includes('description:');
       // MCP tools use various schema keywords: inputSchema, input, parameters
-      const hasInputSchema = content.includes('inputSchema') ||
-                             content.includes('input_schema') ||
-                             content.includes('input:') ||
-                             content.includes('parameters:');
+      const hasInputSchema =
+        content.includes('inputSchema') ||
+        content.includes('input_schema') ||
+        content.includes('input:') ||
+        content.includes('parameters:');
 
       if (!hasName) issues.push(`${mod.category}/${mod.name}: missing tool name`);
       if (!hasDescription) issues.push(`${mod.category}/${mod.name}: missing tool description`);
@@ -104,9 +106,18 @@ describe('MCP Tool Modules Integration', () => {
   it('expected tool categories should exist', () => {
     const categories = new Set(modules.map(m => m.category));
     const expectedCategories = [
-      'navigation', 'sequence', 'protein', 'database',
-      'data', 'pathway', 'action', 'utility',
-      'file', 'track', 'primer', 'annotation',
+      'navigation',
+      'sequence',
+      'protein',
+      'database',
+      'data',
+      'pathway',
+      'action',
+      'utility',
+      'file',
+      'track',
+      'primer',
+      'annotation',
     ];
     for (const cat of expectedCategories) {
       expect(categories.has(cat), `Expected category '${cat}' not found`).toBe(true);

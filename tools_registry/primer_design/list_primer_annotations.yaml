@@ -1,6 +1,6 @@
 name: list_primer_annotations
 version: 1.0.0
-description: "List primer annotations currently displayed in the dedicated Primers track."
+description: 'List primer annotations currently displayed in the dedicated Primers track.'
 category: primer_design
 subcategory: display
 keywords:
@@ -28,23 +28,23 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: "Optional chromosome/replicon ID to filter primers"
+      description: 'Optional chromosome/replicon ID to filter primers'
     start:
       type: number
-      description: "Optional interval start position"
+      description: 'Optional interval start position'
     end:
       type: number
-      description: "Optional interval end position"
+      description: 'Optional interval end position'
   required: []
 sample_usages:
-  - user_query: "List primers on the current genome"
-    tool_call: "list_primer_annotations()"
-    thought: "User wants to inspect primer annotations displayed in the Primers track"
-    expected_result: "Primer annotations are returned with coordinates and strand"
-  - user_query: "Show primer annotations on chr1 between 1000 and 2000"
+  - user_query: 'List primers on the current genome'
+    tool_call: 'list_primer_annotations()'
+    thought: 'User wants to inspect primer annotations displayed in the Primers track'
+    expected_result: 'Primer annotations are returned with coordinates and strand'
+  - user_query: 'Show primer annotations on chr1 between 1000 and 2000'
     tool_call: "list_primer_annotations(chromosome='chr1', start=1000, end=2000)"
-    thought: "User wants primer annotations filtered to a region"
-    expected_result: "Only primers overlapping chr1:1000-2000 are returned"
+    thought: 'User wants primer annotations filtered to a region'
+    expected_result: 'Only primers overlapping chr1:1000-2000 are returned'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -63,7 +63,7 @@ metadata:
     - annotation
   complexity: simple
   usage_pattern: common
-  recommendation: "Use to inspect currently displayed primer visualizations"
+  recommendation: 'Use to inspect currently displayed primer visualizations'
 returns:
   success: boolean
   count: number

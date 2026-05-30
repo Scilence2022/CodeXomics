@@ -9,30 +9,14 @@
       "author": "NetworkBioLab",
       "category": "network-analysis",
       "type": "visualization",
-      "tags": [
-        "protein",
-        "interaction",
-        "network",
-        "ppi",
-        "visualization",
-        "p53",
-        "pathway"
-      ],
+      "tags": ["protein", "interaction", "network", "ppi", "visualization", "p53", "pathway"],
       "size": 3240000,
       "homepage": "https://github.com/genomeexplorer/protein-networks",
       "repository": "https://github.com/genomeexplorer/protein-networks.git",
       "license": "Apache-2.0",
-      "keywords": [
-        "protein",
-        "network",
-        "interaction",
-        "visualization",
-        "biological-pathways"
-      ],
+      "keywords": ["protein", "network", "interaction", "visualization", "biological-pathways"],
       "dependencies": [],
-      "screenshots": [
-        "https://example.com/screenshots/protein-network-1.png"
-      ],
+      "screenshots": ["https://example.com/screenshots/protein-network-1.png"],
       "rating": 4.9,
       "downloads": 8988,
       "lastUpdated": "2024-12-03T14:22:00Z",
@@ -46,11 +30,7 @@
       },
       "compatibility": {
         "genomeExplorer": ">=2.0.0",
-        "platforms": [
-          "windows",
-          "macos",
-          "linux"
-        ]
+        "platforms": ["windows", "macos", "linux"]
       },
       "security": {
         "checksum": "sha256:def789ghi012...",
@@ -70,28 +50,12 @@
       "author": "CodeXomics Team",
       "category": "database-integration",
       "type": "visualization",
-      "tags": [
-        "protein",
-        "interaction",
-        "network",
-        "ppi",
-        "STRING",
-        "database",
-        "visualization"
-      ],
+      "tags": ["protein", "interaction", "network", "ppi", "STRING", "database", "visualization"],
       "size": 158000,
       "homepage": "https://github.com/codexomics/string-network-explorer",
       "repository": "https://github.com/codexomics/string-network-explorer.git",
       "license": "MIT",
-      "keywords": [
-        "protein",
-        "network",
-        "interaction",
-        "STRING",
-        "database",
-        "visualization",
-        "enrichment"
-      ],
+      "keywords": ["protein", "network", "interaction", "STRING", "database", "visualization", "enrichment"],
       "dependencies": [],
       "screenshots": [],
       "rating": 0,
@@ -105,11 +69,7 @@
       },
       "compatibility": {
         "genomeExplorer": ">=2.0.0",
-        "platforms": [
-          "windows",
-          "macos",
-          "linux"
-        ]
+        "platforms": ["windows", "macos", "linux"]
       },
       "security": {
         "checksum": "sha256:str123abc456...",
@@ -129,29 +89,12 @@
       "author": "CodeXomics Team",
       "category": "database-integration",
       "type": "visualization",
-      "tags": [
-        "KEGG",
-        "pathway",
-        "metabolism",
-        "metabolic",
-        "visualization",
-        "database",
-        "biochemical"
-      ],
+      "tags": ["KEGG", "pathway", "metabolism", "metabolic", "visualization", "database", "biochemical"],
       "size": 225000,
       "homepage": "https://github.com/codexomics/kegg-pathway-viewer",
       "repository": "https://github.com/codexomics/kegg-pathway-viewer.git",
       "license": "MIT",
-      "keywords": [
-        "KEGG",
-        "pathway",
-        "metabolism",
-        "metabolic",
-        "visualization",
-        "database",
-        "gene",
-        "compound"
-      ],
+      "keywords": ["KEGG", "pathway", "metabolism", "metabolic", "visualization", "database", "gene", "compound"],
       "dependencies": [],
       "screenshots": [],
       "rating": 0,
@@ -165,11 +108,7 @@
       },
       "compatibility": {
         "genomeExplorer": ">=2.0.0",
-        "platforms": [
-          "windows",
-          "macos",
-          "linux"
-        ]
+        "platforms": ["windows", "macos", "linux"]
       },
       "security": {
         "checksum": "sha256:keg789def012...",
@@ -189,16 +128,7 @@
       "author": "CodeXomics Team",
       "category": "database-integration",
       "type": "visualization",
-      "tags": [
-        "EcoCyc",
-        "pathway",
-        "biochemical",
-        "E.coli",
-        "metabolism",
-        "visualization",
-        "database",
-        "BioCyc"
-      ],
+      "tags": ["EcoCyc", "pathway", "biochemical", "E.coli", "metabolism", "visualization", "database", "BioCyc"],
       "size": 283000,
       "homepage": "https://github.com/codexomics/ecocyc-pathway-analyzer",
       "repository": "https://github.com/codexomics/ecocyc-pathway-analyzer.git",
@@ -227,11 +157,7 @@
       },
       "compatibility": {
         "genomeExplorer": ">=2.0.0",
-        "platforms": [
-          "windows",
-          "macos",
-          "linux"
-        ]
+        "platforms": ["windows", "macos", "linux"]
       },
       "security": {
         "checksum": "sha256:eco345ghi678...",

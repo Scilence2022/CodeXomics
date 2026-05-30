@@ -44,7 +44,7 @@ sample_usages:
     expected_result: 'A summary of detected operons with coordinates, strand, gene count, and member genes.'
 
   - user_query: 'List operons on chromosome NC_000913'
-    tool_call: 'get_operons(chromosome=''NC_000913'')'
+    tool_call: "get_operons(chromosome='NC_000913')"
     thought: 'User wants operon information for a specific chromosome.'
     expected_result: 'Operons detected on NC_000913 with genomic coordinates and gene summaries.'
 

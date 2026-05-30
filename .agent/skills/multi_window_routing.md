@@ -13,13 +13,13 @@ tags:
 
 # When should an agent invoke this skill?
 triggers:
-  - "list open windows"
-  - "what genomes are open"
-  - "switch to window"
-  - "switch genome"
-  - "compare between windows"
-  - "search in all open genomes"
-  - "route commands to"
+  - 'list open windows'
+  - 'what genomes are open'
+  - 'switch to window'
+  - 'switch genome'
+  - 'compare between windows'
+  - 'search in all open genomes'
+  - 'route commands to'
 
 # What must be true before this skill can run
 preconditions:
@@ -31,7 +31,7 @@ preconditions:
 # The ordered steps of the skill workflow
 steps:
   - id: list_windows
-    description: "Discover all currently active CodeXomics windows and their loaded genomes."
+    description: 'Discover all currently active CodeXomics windows and their loaded genomes.'
     tool: list_genome_windows
     parameters: {}
     on_error: abort
@@ -40,9 +40,9 @@ steps:
   - id: target_selection
     description: "Select the target window based on the user's request and the available genomes."
     tool: switch_active_window
-    condition: "{{input.target_window_id}} != null"
+    condition: '{{input.target_window_id}} != null'
     parameters:
-      windowId: "{{input.target_window_id}}"
+      windowId: '{{input.target_window_id}}'
     on_error: abort
     store_result_as: active_window_focus
 
@@ -52,14 +52,14 @@ outputs:
     ## Multi-Window Execution
     - **Found Windows**: {{steps.active_windows.windowCount}}
     - **Active Window**: Switched to `{{steps.active_window_focus.genomeName}}` (ID: `{{steps.active_window_focus.windowId}}`)
-  
+
   actions_on_success: []
 
 # How long this skill typically takes
 expected_duration:
   min_seconds: 1
   max_seconds: 5
-  note: "Window switching is instantaneous."
+  note: 'Window switching is instantaneous.'
 
 # Additional guidance for the AI agent
 agent_notes: |
@@ -82,14 +82,17 @@ This skill teaches the AI agent how to dynamically route its tool calls to diffe
 ## Step-by-Step Explanation
 
 ### Step 1 — `list_genome_windows`
+
 Before attempting to interact with a genome, the agent needs to know what is available. This tool returns an array of open windows, including their `windowId`, the name of the loaded genome (`genomeName`), and which window is currently focused.
 
 ### Step 2 — `switch_active_window`
+
 This tool instructs the MCP server to route all subsequent client-side tool calls (like `get_sequence`, `jump_to_gene`, `get_current_state`) to the specified `windowId`. It also physically focuses the window on the user's screen.
 
 ## Cross-Genome Comparison Pattern
 
 To perform comparisons between two loaded genomes, use the following pattern:
+
 1. Execute `list_genome_windows` to find standard IDs.
 2. Execute `switch_active_window` for the first genome.
 3. Call extraction tools (e.g., `get_coding_sequence`).
@@ -99,8 +102,8 @@ To perform comparisons between two loaded genomes, use the following pattern:
 
 ## Common Issues & Troubleshooting
 
-| Problem | Likely Cause | Solution |
-|---|---|---|
-| `switch_active_window` fails | Invalid `windowId` | Ensure you used the exact `windowId` string returned by `list_genome_windows`. |
-| Tools target the wrong genome | Forgot to switch window | Always call `switch_active_window` before executing localized tools if you are working with multiple genomes. |
-| Window count is 0 | No CodeXomics windows connected | Ask the user to open a genome in CodeXomics. |
+| Problem                       | Likely Cause                    | Solution                                                                                                      |
+| ----------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `switch_active_window` fails  | Invalid `windowId`              | Ensure you used the exact `windowId` string returned by `list_genome_windows`.                                |
+| Tools target the wrong genome | Forgot to switch window         | Always call `switch_active_window` before executing localized tools if you are working with multiple genomes. |
+| Window count is 0             | No CodeXomics windows connected | Ask the user to open a genome in CodeXomics.                                                                  |

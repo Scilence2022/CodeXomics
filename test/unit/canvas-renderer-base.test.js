@@ -73,10 +73,17 @@ class CanvasRendererBase {
     }
   }
 
-  _onResize() { this._applySize(); }
+  _onResize() {
+    this._applySize();
+  }
 
-  _startTiming() { this.renderCount++; return performance.now(); }
-  _endTiming(startTime) { this.lastRenderTime = performance.now() - startTime; }
+  _startTiming() {
+    this.renderCount++;
+    return performance.now();
+  }
+  _endTiming(startTime) {
+    this.lastRenderTime = performance.now() - startTime;
+  }
 
   getPerformanceReport() {
     return { renderCount: this.renderCount, lastRenderTime: this.lastRenderTime };
@@ -91,8 +98,14 @@ class CanvasRendererBase {
       cancelAnimationFrame(this._pendingInitialRender);
       this._pendingInitialRender = null;
     }
-    if (this._resizeObserver) { this._resizeObserver.disconnect(); this._resizeObserver = null; }
-    if (this._resizeHandler) { window.removeEventListener('resize', this._resizeHandler); this._resizeHandler = null; }
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
+    if (this._resizeHandler) {
+      window.removeEventListener('resize', this._resizeHandler);
+      this._resizeHandler = null;
+    }
     if (this.canvas && this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
     this.canvas = null;
     this.ctx = null;
@@ -108,10 +121,16 @@ class TestCanvasRenderer extends CanvasRendererBase {
   render() {
     this.rendered = true;
     const start = this._startTiming();
-    if (this.ctx) { this.ctx.fillStyle = 'red'; this.ctx.fillRect(0, 0, 10, 10); }
+    if (this.ctx) {
+      this.ctx.fillStyle = 'red';
+      this.ctx.fillRect(0, 0, 10, 10);
+    }
     this._endTiming(start);
   }
-  _onResize() { this._applySize(); this.render(); }
+  _onResize() {
+    this._applySize();
+    this.render();
+  }
 }
 
 function mockContainer() {
@@ -128,7 +147,10 @@ describe('CanvasRendererBase', () => {
   beforeEach(() => {
     container = mockContainer();
     document.body.appendChild(container);
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => { cb(0); return 1; });
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => {
+      cb(0);
+      return 1;
+    });
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
   });
 
@@ -181,7 +203,9 @@ describe('CanvasRendererBase', () => {
 
   it('should throw if render() not implemented', () => {
     class Bad extends CanvasRendererBase {
-      constructor(c) { super(c, { start: 0, end: 1 }, null); }
+      constructor(c) {
+        super(c, { start: 0, end: 1 }, null);
+      }
     }
     expect(() => new Bad(mockContainer()).render()).toThrow('must be implemented');
   });

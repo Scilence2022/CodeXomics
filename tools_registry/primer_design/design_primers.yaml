@@ -1,6 +1,6 @@
 name: design_primers
-version: "1.2.0"
-description: "Design a forward and reverse primer pair to amplify a target DNA sequence. Use upstreamBp/downstreamBp when the amplicon must include flanking bases; both are interpreted relative to gene strand, so reverse-strand upstream is higher genomic coordinates and reverse-strand downstream is lower genomic coordinates. Provide at least 150bp of sequence, or use geneName or chromosome/start/end to fetch it."
+version: '1.2.0'
+description: 'Design a forward and reverse primer pair to amplify a target DNA sequence. Use upstreamBp/downstreamBp when the amplicon must include flanking bases; both are interpreted relative to gene strand, so reverse-strand upstream is higher genomic coordinates and reverse-strand downstream is lower genomic coordinates. Provide at least 150bp of sequence, or use geneName or chromosome/start/end to fetch it.'
 category: primer_design
 subcategory: design
 execution_type: hybrid
@@ -26,119 +26,119 @@ parameters:
   properties:
     targetSequence:
       type: string
-      description: "The full DNA sequence region containing the desired amplicon. If not provided, use geneName or chromosome/start/end."
+      description: 'The full DNA sequence region containing the desired amplicon. If not provided, use geneName or chromosome/start/end.'
     geneName:
       type: string
-      description: "Name of the gene to fetch the coding sequence for primer design"
+      description: 'Name of the gene to fetch the coding sequence for primer design'
     upstreamBp:
       type: number
-      description: "Number of bases upstream of the gene translation/start boundary that must be included in the PCR product. For reverse-strand genes, upstream means higher genomic coordinates."
+      description: 'Number of bases upstream of the gene translation/start boundary that must be included in the PCR product. For reverse-strand genes, upstream means higher genomic coordinates.'
       minimum: 0
     upstreamBases:
       type: number
-      description: "Alias for upstreamBp; number of biologically upstream bases to include in the amplicon."
+      description: 'Alias for upstreamBp; number of biologically upstream bases to include in the amplicon.'
       minimum: 0
     upstream:
       type: number
-      description: "Alias for upstreamBp for natural language phrases like \"50 up\" or \"50 upstream\"."
+      description: 'Alias for upstreamBp for natural language phrases like "50 up" or "50 upstream".'
       minimum: 0
     downstreamBp:
       type: number
-      description: "Number of bases downstream of the gene stop/end boundary that must be included in the PCR product. For reverse-strand genes, downstream means lower genomic coordinates."
+      description: 'Number of bases downstream of the gene stop/end boundary that must be included in the PCR product. For reverse-strand genes, downstream means lower genomic coordinates.'
       minimum: 0
     downstreamBases:
       type: number
-      description: "Alias for downstreamBp; number of biologically downstream bases to include in the amplicon."
+      description: 'Alias for downstreamBp; number of biologically downstream bases to include in the amplicon.'
       minimum: 0
     downstream:
       type: number
-      description: "Alias for downstreamBp for natural language phrases like \"50 downstream\"."
+      description: 'Alias for downstreamBp for natural language phrases like "50 downstream".'
       minimum: 0
     upstreamPrimerBuffer:
       type: number
-      description: "Extra biologically upstream bases to search before the required upstream interval so primers can bind while still including upstreamBp bases (default: 75)."
+      description: 'Extra biologically upstream bases to search before the required upstream interval so primers can bind while still including upstreamBp bases (default: 75).'
       minimum: 0
     downstreamPrimerBuffer:
       type: number
-      description: "Extra biologically downstream bases to search past the gene end so the reverse primer can bind outside the CDS when possible (default: 75)."
+      description: 'Extra biologically downstream bases to search past the gene end so the reverse primer can bind outside the CDS when possible (default: 75).'
       minimum: 0
     chromosome:
       type: string
-      description: "Chromosome/replicon ID for the target region"
+      description: 'Chromosome/replicon ID for the target region'
     start:
       type: number
-      description: "Start position of the target region (used with chromosome)"
+      description: 'Start position of the target region (used with chromosome)'
     end:
       type: number
-      description: "End position of the target region (used with chromosome)"
+      description: 'End position of the target region (used with chromosome)'
     targetTm:
       type: number
-      description: "Target melting temperature (default: 60.0)"
+      description: 'Target melting temperature (default: 60.0)'
     tmTolerance:
       type: number
-      description: "Allowed Tm deviation from targetTm in Celsius before relaxed search tiers are tried (default: 2.0)."
+      description: 'Allowed Tm deviation from targetTm in Celsius before relaxed search tiers are tried (default: 2.0).'
       minimum: 0
     primerLength:
       type: number
-      description: "Exact primer length to use. Sets both minPrimerLength and maxPrimerLength unless those are provided."
+      description: 'Exact primer length to use. Sets both minPrimerLength and maxPrimerLength unless those are provided.'
       minimum: 1
     primerLengthBp:
       type: number
-      description: "Alias for primerLength."
+      description: 'Alias for primerLength.'
       minimum: 1
     minPrimerLength:
       type: number
-      description: "Minimum primer length in bases (default: 18)."
+      description: 'Minimum primer length in bases (default: 18).'
       minimum: 1
     maxPrimerLength:
       type: number
-      description: "Maximum primer length in bases (default: 25)."
+      description: 'Maximum primer length in bases (default: 25).'
       minimum: 1
     minProductSize:
       type: number
-      description: "Minimum PCR product size (default: 100)"
+      description: 'Minimum PCR product size (default: 100)'
     maxProductSize:
       type: number
-      description: "Maximum PCR product size (default: full target sequence length)."
+      description: 'Maximum PCR product size (default: full target sequence length).'
       minimum: 1
     minGcContent:
       type: number
-      description: "Minimum primer GC percentage. If set, the GC range is treated as a hard constraint."
+      description: 'Minimum primer GC percentage. If set, the GC range is treated as a hard constraint.'
       minimum: 0
       maximum: 100
     maxGcContent:
       type: number
-      description: "Maximum primer GC percentage. If set, the GC range is treated as a hard constraint."
+      description: 'Maximum primer GC percentage. If set, the GC range is treated as a hard constraint.'
       minimum: 0
       maximum: 100
     requireGcClamp:
       type: boolean
-      description: "Whether primer candidates must end in G/C. Defaults to true in strict tiers and false in relaxed tiers."
+      description: 'Whether primer candidates must end in G/C. Defaults to true in strict tiers and false in relaxed tiers.'
     avoidHairpin:
       type: boolean
-      description: "Whether to reject primers with simple hairpin potential. Defaults to true in strict tiers and false in the most relaxed tier."
+      description: 'Whether to reject primers with simple hairpin potential. Defaults to true in strict tiers and false in the most relaxed tier.'
     requiredAmpliconStart:
       type: number
-      description: "Advanced use with targetSequence: 0-based sequence offset that the primer product must start at or before."
+      description: 'Advanced use with targetSequence: 0-based sequence offset that the primer product must start at or before.'
       minimum: 0
     requiredAmpliconEnd:
       type: number
-      description: "Advanced use with targetSequence: 0-based exclusive sequence offset that the primer product must end at or after."
+      description: 'Advanced use with targetSequence: 0-based exclusive sequence offset that the primer product must end at or after.'
       minimum: 0
   required: []
 sample_usages:
-  - user_query: "Design primers to amplify lysC and include at least 50 bp upstream"
+  - user_query: 'Design primers to amplify lysC and include at least 50 bp upstream'
     tool_call: "design_primers(geneName='lysC', upstreamBp=50)"
-    thought: "The user needs a gene amplicon that includes the upstream/RBS region; upstreamBp must be explicit so reverse-strand genes are handled correctly."
-    expected_result: "Primer pair with genomic binding coordinates and target.coversRequestedUpstream=true"
-  - user_query: "Design 22 bp primers for lysC including 50 bp upstream and 30 bp downstream"
+    thought: 'The user needs a gene amplicon that includes the upstream/RBS region; upstreamBp must be explicit so reverse-strand genes are handled correctly.'
+    expected_result: 'Primer pair with genomic binding coordinates and target.coversRequestedUpstream=true'
+  - user_query: 'Design 22 bp primers for lysC including 50 bp upstream and 30 bp downstream'
     tool_call: "design_primers(geneName='lysC', upstreamBp=50, downstreamBp=30, primerLength=22)"
-    thought: "Both flanks are biological directions, so the resolver must account for gene strand before fetching sequence."
-    expected_result: "Primer pair with target.coversRequestedUpstream=true and target.coversRequestedDownstream=true"
-  - user_query: "Design primers for this sequence but make sure the product covers offsets 75 through 526"
+    thought: 'Both flanks are biological directions, so the resolver must account for gene strand before fetching sequence.'
+    expected_result: 'Primer pair with target.coversRequestedUpstream=true and target.coversRequestedDownstream=true'
+  - user_query: 'Design primers for this sequence but make sure the product covers offsets 75 through 526'
     tool_call: "design_primers(targetSequence='ATGC...', requiredAmpliconStart=75, requiredAmpliconEnd=526)"
-    thought: "The caller supplied a custom sequence and explicit coverage constraints."
-    expected_result: "Primer pair whose product starts at or before offset 75 and ends at or after offset 526"
+    thought: 'The caller supplied a custom sequence and explicit coverage constraints.'
+    expected_result: 'Primer pair whose product starts at or before offset 75 and ends at or after offset 526'
 relationships:
   depends_on:
     - get_sequence

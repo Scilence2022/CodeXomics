@@ -311,7 +311,6 @@ class ProteinStructureViewer {
     }
   }
 
-
   /**
    * Search for protein structures
    */

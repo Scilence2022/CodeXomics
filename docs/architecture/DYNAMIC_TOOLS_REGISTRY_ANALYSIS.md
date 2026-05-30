@@ -194,6 +194,7 @@ categories:
    ```
 
 3. **基于意图的智能检索**
+
    ```javascript
    async getRelevantTools(userQuery, context = {}) {
      // 1. 分析用户意图

@@ -6,16 +6,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-const SERVICE_PATH = path.join(
-  process.cwd(),
-  'src/renderer/modules/chat/services/TaskService.js'
-);
+const SERVICE_PATH = path.join(process.cwd(), 'src/renderer/modules/chat/services/TaskService.js');
 
 function createTaskService() {
-  const code = fs.readFileSync(SERVICE_PATH, 'utf-8').replace(
-    'window.TaskService = TaskService;',
-    ''
-  );
+  const code = fs.readFileSync(SERVICE_PATH, 'utf-8').replace('window.TaskService = TaskService;', '');
   // Execute code to get TaskService class (safe mock environment since document is undefined)
   const fn = new Function(code + '; return TaskService;');
   const TaskService = fn();
@@ -48,7 +42,7 @@ describe('TaskService - Core State and CRUD', () => {
     const result = await taskService.addTask({
       title: 'Run BLAST Search',
       status: 'in_progress',
-      progress: 45
+      progress: 45,
     });
     expect(result.success).toBe(true);
     expect(result.task.status).toBe('in_progress');
@@ -69,7 +63,7 @@ describe('TaskService - Core State and CRUD', () => {
       id: taskId,
       title: 'Updated Task Title',
       status: 'in_progress',
-      progress: 60
+      progress: 60,
     });
 
     expect(updateResult.success).toBe(true);
@@ -87,7 +81,7 @@ describe('TaskService - Core State and CRUD', () => {
 
     const updateResult = await taskService.updateTask({
       id: taskId,
-      status: 'completed'
+      status: 'completed',
     });
 
     expect(updateResult.success).toBe(true);
@@ -101,7 +95,7 @@ describe('TaskService - Core State and CRUD', () => {
 
     const updateResult = await taskService.updateTask({
       id: taskId,
-      status: 'pending'
+      status: 'pending',
     });
 
     expect(updateResult.success).toBe(true);
@@ -115,7 +109,7 @@ describe('TaskService - Core State and CRUD', () => {
 
     const updateResult = await taskService.updateTask({
       id: taskId,
-      progress: 100
+      progress: 100,
     });
 
     expect(updateResult.success).toBe(true);
@@ -198,7 +192,7 @@ describe('TaskService - LLM prompt formatting', () => {
     const task3 = await taskService.addTask({ title: 'Task C', status: 'completed' });
 
     const contextStr = taskService.getTasksContextString();
-    
+
     expect(contextStr).toContain('=== CURRENT TASK CHECKLIST ===');
     expect(contextStr).toContain(`- [ ] Task A [ID: ${task1.id}] (0%)`);
     expect(contextStr).toContain(`- [/] Task B [ID: ${task2.id}] (50%)`);

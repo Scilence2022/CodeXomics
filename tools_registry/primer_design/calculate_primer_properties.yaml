@@ -1,6 +1,6 @@
 name: calculate_primer_properties
 version: 1.0.0
-description: "Calculate biochemical properties like melting temperature (Tm), GC content, and length for a given DNA primer sequence (18-35 bp). Use this to check if a sequence is suitable as a PCR or sequencing primer."
+description: 'Calculate biochemical properties like melting temperature (Tm), GC content, and length for a given DNA primer sequence (18-35 bp). Use this to check if a sequence is suitable as a PCR or sequencing primer.'
 category: primer_design
 subcategory: analysis
 execution_type: hybrid
@@ -26,6 +26,6 @@ parameters:
   properties:
     sequence:
       type: string
-      description: "The DNA primer sequence to analyze (only containing A, T, C, G)"
+      description: 'The DNA primer sequence to analyze (only containing A, T, C, G)'
   required:
     - sequence

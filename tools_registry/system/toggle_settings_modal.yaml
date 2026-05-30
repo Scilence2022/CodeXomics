@@ -3,7 +3,30 @@ name: 'toggle_settings_modal'
 version: '1.0.0'
 description: 'Open or close application settings modals/panels. Use this when users ask to open, close, show, hide, or toggle any settings interface such as LLM configuration, ChatBox settings, General settings, Track settings, MCP server settings, Multi-Agent settings, etc.'
 category: 'system'
-keywords: ['settings', 'modal', 'open settings', 'close settings', 'configure', 'configuration', 'preferences', 'show settings', 'hide settings', 'toggle settings', 'llm config', 'chatbox settings', 'general settings', 'track settings', 'mcp settings', 'agent settings', 'tab settings', 'search settings', 'gene detail settings', 'external tools', 'plugin settings']
+keywords:
+  [
+    'settings',
+    'modal',
+    'open settings',
+    'close settings',
+    'configure',
+    'configuration',
+    'preferences',
+    'show settings',
+    'hide settings',
+    'toggle settings',
+    'llm config',
+    'chatbox settings',
+    'general settings',
+    'track settings',
+    'mcp settings',
+    'agent settings',
+    'tab settings',
+    'search settings',
+    'gene detail settings',
+    'external tools',
+    'plugin settings',
+  ]
 priority: 1
 
 # Tool execution metadata

@@ -23,11 +23,7 @@
     },
     "types": ["node", "electron", "dom"]
   },
-  "include": [
-    "src/**/*.js",
-    "test/**/*.js",
-    "tools_registry/**/*.js"
-  ],
+  "include": ["src/**/*.js", "test/**/*.js", "tools_registry/**/*.js"],
   "exclude": [
     "node_modules",
     "dist",

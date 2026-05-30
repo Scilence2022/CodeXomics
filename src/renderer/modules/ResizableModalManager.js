@@ -19,12 +19,12 @@ class ResizableModalManager {
 
   initializeEventListeners() {
     // Handle mouse events for resizing
-    document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-    document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-    document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+    document.addEventListener('mousedown', e => this.handleMouseDown(e));
+    document.addEventListener('mousemove', e => this.handleMouseMove(e));
+    document.addEventListener('mouseup', e => this.handleMouseUp(e));
 
     // Prevent text selection during resize
-    document.addEventListener('selectstart', (e) => {
+    document.addEventListener('selectstart', e => {
       if (this.resizing) {
         e.preventDefault();
       }
@@ -236,20 +236,22 @@ class ResizableModalManager {
 
     const defaultMaxWidth = Math.max(window.innerWidth * 3, 2000);
     const defaultMaxHeight = Math.max(window.innerHeight * 2, 1200);
-    const cssMaxWidth = style.maxWidth && style.maxWidth !== 'none' ?
-      this.parsePositiveInteger(style.maxWidth, defaultMaxWidth) :
-      defaultMaxWidth;
-    const cssMaxHeight = style.maxHeight && style.maxHeight !== 'none' ?
-      this.parsePositiveInteger(style.maxHeight, defaultMaxHeight) :
-      defaultMaxHeight;
+    const cssMaxWidth =
+      style.maxWidth && style.maxWidth !== 'none'
+        ? this.parsePositiveInteger(style.maxWidth, defaultMaxWidth)
+        : defaultMaxWidth;
+    const cssMaxHeight =
+      style.maxHeight && style.maxHeight !== 'none'
+        ? this.parsePositiveInteger(style.maxHeight, defaultMaxHeight)
+        : defaultMaxHeight;
 
     const configuredMinWidth = this.parsePositiveInteger(
-        modalContent.getAttribute('data-min-width'),
-        this.parsePositiveInteger(style.minWidth, 400),
+      modalContent.getAttribute('data-min-width'),
+      this.parsePositiveInteger(style.minWidth, 400)
     );
     const configuredMinHeight = this.parsePositiveInteger(
-        modalContent.getAttribute('data-min-height'),
-        this.parsePositiveInteger(style.minHeight, 300),
+      modalContent.getAttribute('data-min-height'),
+      this.parsePositiveInteger(style.minHeight, 300)
     );
     const configuredMaxWidth = this.parsePositiveInteger(modalContent.getAttribute('data-max-width'), cssMaxWidth);
     const configuredMaxHeight = this.parsePositiveInteger(modalContent.getAttribute('data-max-height'), cssMaxHeight);

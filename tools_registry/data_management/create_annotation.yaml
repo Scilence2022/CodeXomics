@@ -21,7 +21,20 @@ parameters:
     type:
       type: string
       description: 'The type of the biological feature to create (e.g., gene, CDS, mRNA, tRNA, rRNA, promoter, regulatory, terminator, ribosome_binding_site, primer)'
-      enum: ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'promoter', 'regulatory', 'terminator', 'ribosome_binding_site', 'primer', 'other']
+      enum:
+        [
+          'gene',
+          'CDS',
+          'mRNA',
+          'tRNA',
+          'rRNA',
+          'promoter',
+          'regulatory',
+          'terminator',
+          'ribosome_binding_site',
+          'primer',
+          'other',
+        ]
     name:
       type: string
       description: 'The name or identifier of the feature (e.g., gene name like lacZ, primer name, etc.)'

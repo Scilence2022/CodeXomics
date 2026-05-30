@@ -9,9 +9,10 @@
     <script>
       function applyThemeVariables(themeData) {
         const root = document.documentElement;
-        const vars = themeData.isDark && themeData.darkVariables
-          ? { ...themeData.variables, ...themeData.darkVariables }
-          : themeData.variables;
+        const vars =
+          themeData.isDark && themeData.darkVariables
+            ? { ...themeData.variables, ...themeData.darkVariables }
+            : themeData.variables;
         const isDark = !!themeData.isDark;
 
         // Map global variables to --circos-* variables
@@ -181,7 +182,9 @@
         height: 40px;
         border-radius: 2px;
         background: var(--circos-border, #ddd);
-        transition: background 0.2s ease, height 0.2s ease;
+        transition:
+          background 0.2s ease,
+          height 0.2s ease;
       }
 
       .panel-splitter:hover::before {
@@ -342,7 +345,9 @@
         justify-content: center;
         cursor: pointer;
         font-size: 12px;
-        transition: background 0.2s ease, transform 0.15s ease;
+        transition:
+          background 0.2s ease,
+          transform 0.15s ease;
         flex-shrink: 0;
       }
 
@@ -367,7 +372,10 @@
         cursor: pointer;
         font-size: 13px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease,
+          box-shadow 0.2s ease;
         padding: 0;
         flex-shrink: 0;
         align-self: center;
@@ -397,15 +405,17 @@
       }
 
       .parameters-panel.collapsed.animated {
-        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    box-shadow 0.3s ease;
+        transition:
+          width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+          min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+          padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+          box-shadow 0.3s ease;
       }
 
       .parameters-panel:not(.collapsed) {
-        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition:
+          width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+          min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .panel-content {
@@ -759,7 +769,9 @@
 
       .track-color-btn {
         cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
         position: relative;
       }
 
@@ -1125,7 +1137,6 @@
               <input type="range" class="range-input" id="linkOpacitySlider" min="0.1" max="1" value="0.6" step="0.1" />
               <div class="range-value" id="linkOpacityValue">60%</div>
             </div>
-
           </div>
 
           <!-- Data Tracks -->
@@ -1147,7 +1158,12 @@
             <div class="checkbox-group">
               <input type="checkbox" class="checkbox-input" id="showGCContentCheck" />
               <label class="checkbox-label" for="showGCContentCheck">
-                <span class="track-color track-color-btn" id="gcContentColorBtn" style="background-color: #27ae60" title="Change GC Content color"></span>
+                <span
+                  class="track-color track-color-btn"
+                  id="gcContentColorBtn"
+                  style="background-color: #27ae60"
+                  title="Change GC Content color"
+                ></span>
                 Show GC Content
               </label>
               <input type="color" class="hidden-color-input" id="gcContentColorPicker" value="#27ae60" />
@@ -1156,7 +1172,12 @@
             <div class="checkbox-group">
               <input type="checkbox" class="checkbox-input" id="showGCSkewCheck" />
               <label class="checkbox-label" for="showGCSkewCheck">
-                <span class="track-color track-color-btn" id="gcSkewColorBtn" style="background-color: #e74c3c" title="Change GC Skew color"></span>
+                <span
+                  class="track-color track-color-btn"
+                  id="gcSkewColorBtn"
+                  style="background-color: #e74c3c"
+                  title="Change GC Skew color"
+                ></span>
                 Show GC Skew
               </label>
               <input type="color" class="hidden-color-input" id="gcSkewColorPicker" value="#e74c3c" />
@@ -1165,7 +1186,12 @@
             <div class="checkbox-group">
               <input type="checkbox" class="checkbox-input" id="showWigDataCheck" />
               <label class="checkbox-label" for="showWigDataCheck">
-                <span class="track-color track-color-btn" id="wigDataColorBtn" style="background-color: #9b59b6" title="Change WIG Data color"></span>
+                <span
+                  class="track-color track-color-btn"
+                  id="wigDataColorBtn"
+                  style="background-color: #9b59b6"
+                  title="Change WIG Data color"
+                ></span>
                 Show WIG Data
               </label>
               <input type="color" class="hidden-color-input" id="wigDataColorPicker" value="#9b59b6" />
@@ -1483,7 +1509,6 @@
             }
             break;
 
-
           case 'rendering-mode':
             if (window.circosPlotter) {
               // Toggle between canvas and SVG
@@ -1642,7 +1667,8 @@
 
         // Request initial theme from the main window on load
         if (typeof ipcRenderer !== 'undefined' && ipcRenderer.invoke) {
-          ipcRenderer.invoke('request-current-theme')
+          ipcRenderer
+            .invoke('request-current-theme')
             .then(res => {
               console.log('Initial theme request status:', res);
             })
@@ -1654,4 +1680,3 @@
     </script>
   </body>
 </html>
-

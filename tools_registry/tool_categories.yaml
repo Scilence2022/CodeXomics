@@ -68,8 +68,6 @@ categories:
       - 'cross_references'
     tools_count: 6
 
-
-
   data_management:
     name: 'Data Management'
     description: 'Tools for data annotation, export, and codon usage analysis'
@@ -84,16 +82,16 @@ categories:
     tools_count: 3
 
   annotation:
-    name: "Annotation Management"
-    description: "CRUD operations for genome annotations with full-text search and change tracking for AI agent integration"
-    icon: "🏷️"
+    name: 'Annotation Management'
+    description: 'CRUD operations for genome annotations with full-text search and change tracking for AI agent integration'
+    icon: '🏷️'
     priority: 1
-    color: "#8E24AA"
+    color: '#8E24AA'
     subcategories:
-      - "annotation_crud"
-      - "annotation_search"
-      - "change_tracking"
-      - "operon_analysis"
+      - 'annotation_crud'
+      - 'annotation_search'
+      - 'change_tracking'
+      - 'operon_analysis'
     tools_count: 10
 
   file_operations:

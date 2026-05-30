@@ -254,7 +254,7 @@ class BenchmarkManager {
     // Create custom benchmark dialog
     const dialog = this.createCustomBenchmarkDialog();
     dialog.style.display = 'block';
-    
+
     // Update test counts dynamically
     this.updateDialogSuiteCounts();
   }
@@ -270,10 +270,10 @@ class BenchmarkManager {
     }
 
     const suiteCountMap = {
-      'automatic_simple': 'dialog-count-automatic_simple',
-      'automatic_complex': 'dialog-count-automatic_complex',
-      'manual_suite': 'dialog-count-manual_suite',
-      'manual_complex': 'dialog-count-manual_complex',
+      automatic_simple: 'dialog-count-automatic_simple',
+      automatic_complex: 'dialog-count-automatic_complex',
+      manual_suite: 'dialog-count-manual_suite',
+      manual_complex: 'dialog-count-manual_complex',
     };
 
     for (const [suiteId, elementId] of Object.entries(suiteCountMap)) {
@@ -585,19 +585,23 @@ class BenchmarkManager {
       try {
         safeData = JSON.parse(JSON.stringify(results));
       } catch (e) {
-        console.warn('[BenchmarkManager] Failed to fully serialize results for postMessage, sending summary:', e.message);
+        console.warn(
+          '[BenchmarkManager] Failed to fully serialize results for postMessage, sending summary:',
+          e.message
+        );
         safeData = {
           startTime: results && results.startTime,
           endTime: results && results.endTime,
           duration: results && results.duration,
           overallStats: results && results.overallStats,
-          testSuiteResults: results && results.testSuiteResults
-            ? results.testSuiteResults.map(sr => ({
-                suiteId: sr.suiteId,
-                stats: sr.stats,
-                duration: sr.duration,
-              }))
-            : [],
+          testSuiteResults:
+            results && results.testSuiteResults
+              ? results.testSuiteResults.map(sr => ({
+                  suiteId: sr.suiteId,
+                  stats: sr.stats,
+                  duration: sr.duration,
+                }))
+              : [],
           _truncated: true,
         };
       }

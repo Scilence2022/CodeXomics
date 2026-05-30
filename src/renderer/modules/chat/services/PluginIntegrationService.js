@@ -27,10 +27,7 @@ class PluginIntegrationService {
 
     try {
       if (typeof PluginManagerV2 !== 'undefined') {
-        this.chatManager.pluginManager = new PluginManagerV2(
-          this.chatManager.app,
-          this.chatManager.configManager
-        );
+        this.chatManager.pluginManager = new PluginManagerV2(this.chatManager.app, this.chatManager.configManager);
 
         await this.chatManager.pluginManager.waitForInitialization();
         console.log('✅ PluginManagerV2 fully initialized');

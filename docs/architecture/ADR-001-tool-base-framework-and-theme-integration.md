@@ -11,6 +11,7 @@
 ### Problem 1: Circos Plotter ignores UI Style system
 
 The Circos Genome Plotter (`src/circos-plotter.js`) operates in a separate BrowserWindow with:
+
 - **8 internal themes** (scientific, nature, ocean, sunset, arctic, cosmic, forest, monochrome) — completely independent of ThemeManager
 - **No CSS custom properties** — all styling is JS object-based, applied programmatically
 - **No `uiStyleChanged` event listener** — when the user switches UI style in the main window, Circos is unaffected
@@ -23,21 +24,23 @@ This creates a disjointed user experience: switching from "Midnight" to "Profess
 
 Across the entire CodeXomics tool ecosystem, there are **5 independent tool silos** with no shared base:
 
-| Silo | Count | Shared Base | Duplicated Code |
-|------|-------|-------------|-----------------|
-| Canvas Renderers | 3 classes | None | ~7 properties, ~4 methods |
-| MCP Tool Modules | 13 modules | None | Identical interface, no enforcement |
-| YAML Registry | 155 defs | Schema only | Schema drifts from MCP definitions |
-| AgentBase hierarchy | 7 agents | AgentBase | Only working hierarchy |
-| Circos Plotter | 1 standalone | None | Own theme system, own lifecycle |
+| Silo                | Count        | Shared Base | Duplicated Code                     |
+| ------------------- | ------------ | ----------- | ----------------------------------- |
+| Canvas Renderers    | 3 classes    | None        | ~7 properties, ~4 methods           |
+| MCP Tool Modules    | 13 modules   | None        | Identical interface, no enforcement |
+| YAML Registry       | 155 defs     | Schema only | Schema drifts from MCP definitions  |
+| AgentBase hierarchy | 7 agents     | AgentBase   | Only working hierarchy              |
+| Circos Plotter      | 1 standalone | None        | Own theme system, own lifecycle     |
 
 **Concrete duplication examples:**
+
 - `setupCanvas()` logic (devicePixelRatio, canvas sizing, transform) is **byte-for-byte identical** across CanvasGenesRenderer, CanvasSequenceRenderer, CanvasReadsRenderer
 - `baseColors` map (A/T/G/C/N colors) is **duplicated** in CanvasSequenceRenderer and CanvasReadsRenderer
 - `executeClientTool()` method is **identical** across all 13 MCP modules
 - Canvas CSS template (`position: absolute; top: 0; left: 0; ...`) is **duplicated** across all renderers
 
 **What we already have that works:**
+
 - `AgentBase` — proves the inheritance pattern works in this codebase (7 subclasses)
 - `BenchmarkEvaluatorBase` — proves domain-specific base classes work (4 subclasses)
 - `Disposable` system — proves VS Code-style composition patterns work
@@ -136,6 +139,7 @@ class ToolBase {
 ```
 
 **Key design decisions:**
+
 - Uses **private fields** (`#state`) to enforce lifecycle invariants — subclasses cannot bypass state transitions
 - **Template method pattern** — `initialize()` calls abstract `performInitialization()` that subclasses must implement
 - **Theme subscription is opt-in but automatic** — `connectThemeManager()` wires up the listener; the base class handles unsubscription on dispose
@@ -228,23 +232,23 @@ class CanvasGenesRenderer extends VisualizationToolBase {
 
 ### What becomes easier
 
-| Before | After |
-|--------|-------|
+| Before                                                              | After                                                        |
+| ------------------------------------------------------------------- | ------------------------------------------------------------ |
 | Adding theme support to a new renderer = 100+ lines of event wiring | `extends VisualizationToolBase` → theme support is automatic |
-| Creating a new MCP module = copy-paste + miss `executeClientTool` | `extends McpToolModuleBase` → interface enforced |
-| Fixing a canvas setup bug = change in 3 files | Change in 1 file (VisualizationToolBase) |
-| Circos ignores UI style switch entirely | Circos responds via IPC bridge + theme bridge |
-| YAML schema drifts from MCP definitions silently | McpToolModuleBase validates schema at registration |
+| Creating a new MCP module = copy-paste + miss `executeClientTool`   | `extends McpToolModuleBase` → interface enforced             |
+| Fixing a canvas setup bug = change in 3 files                       | Change in 1 file (VisualizationToolBase)                     |
+| Circos ignores UI style switch entirely                             | Circos responds via IPC bridge + theme bridge                |
+| YAML schema drifts from MCP definitions silently                    | McpToolModuleBase validates schema at registration           |
 
 ### What becomes harder
 
-| Risk | Mitigation |
-|------|-----------|
-| Deep inheritance hierarchies are fragile | **Hard limit: 3 layers.** No ToolBase → VisualizationToolBase → SpecializedBase → Concrete. If you need a 4th layer, you need the wrong abstraction. |
-| Breaking changes in ToolBase cascade everywhere | Use **template methods** not hook callbacks. Base class controls flow; subclasses fill in blanks. Never change the signature of a template method. |
-| Private fields (`#state`) prevent monkey-patching in tests | Provide `getState()` accessor. Tests can read state but not mutate it directly. |
-| Migration cost: refactoring 17+ existing classes | **Incremental adoption**: new tools extend base classes immediately; existing tools migrate one at a time. No big-bang rewrite. |
-| Circos in separate BrowserWindow — CSS variables don't propagate across windows | Use IPC bridge (already proven pattern for Project Manager). Theme bridge extracts CSS vars on main side, sends color values via IPC. |
+| Risk                                                                            | Mitigation                                                                                                                                           |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deep inheritance hierarchies are fragile                                        | **Hard limit: 3 layers.** No ToolBase → VisualizationToolBase → SpecializedBase → Concrete. If you need a 4th layer, you need the wrong abstraction. |
+| Breaking changes in ToolBase cascade everywhere                                 | Use **template methods** not hook callbacks. Base class controls flow; subclasses fill in blanks. Never change the signature of a template method.   |
+| Private fields (`#state`) prevent monkey-patching in tests                      | Provide `getState()` accessor. Tests can read state but not mutate it directly.                                                                      |
+| Migration cost: refactoring 17+ existing classes                                | **Incremental adoption**: new tools extend base classes immediately; existing tools migrate one at a time. No big-bang rewrite.                      |
+| Circos in separate BrowserWindow — CSS variables don't propagate across windows | Use IPC bridge (already proven pattern for Project Manager). Theme bridge extracts CSS vars on main side, sends color values via IPC.                |
 
 ### What we're giving up
 
@@ -261,6 +265,7 @@ class CanvasGenesRenderer extends VisualizationToolBase {
 ### A. Composition-only (no inheritance)
 
 Use mixins/traits instead of base classes:
+
 ```javascript
 class CanvasGenesRenderer {
   // Mix in lifecycle
@@ -277,6 +282,7 @@ class CanvasGenesRenderer {
 ### B. Event-driven microkernel
 
 Make everything a plugin that registers with a central kernel:
+
 ```javascript
 kernel.register('canvas-gene-renderer', {
   type: 'visualization',
@@ -299,6 +305,7 @@ Continue with independent classes and copy-paste patterns. When a bug is found, 
 ## Implementation Roadmap
 
 ### Phase 1: Circos Theme Bridge (1-2 days)
+
 1. Add `broadcast-theme-to-circos` IPC handler in `main.js`
 2. Create `CircosThemeBridge` class in `src/circos-plotter.html`
 3. Map ThemeManager presets to Circos theme selections
@@ -306,12 +313,14 @@ Continue with independent classes and copy-paste patterns. When a bug is found, 
 5. Test: switch UI style → Circos updates within 1 second
 
 ### Phase 2: ToolBase Foundation (2-3 days)
+
 1. Create `src/renderer/modules/core/ToolBase.js`
 2. Implement lifecycle state machine, theme subscription, event bus
 3. Write tests for ToolBase in isolation
 4. No existing classes changed yet
 
 ### Phase 3: VisualizationToolBase (3-5 days)
+
 1. Extract shared Canvas boilerplate into VisualizationToolBase
 2. Migrate CanvasSequenceRenderer (simplest renderer) first
 3. Migrate CanvasReadsRenderer
@@ -319,12 +328,14 @@ Continue with independent classes and copy-paste patterns. When a bug is found, 
 5. Migrate CircosPlotter (requires dual-render support)
 
 ### Phase 4: McpToolModuleBase (2-3 days)
+
 1. Create McpToolModuleBase
 2. Migrate all 13 MCP tool modules
 3. Add schema validation hook
 4. Update ToolsIntegrator to verify all modules extend base
 
 ### Phase 5: Integration & Cleanup (1-2 days)
+
 1. Remove duplicated code from migrated classes
 2. Update AGENTS.md with new tool authoring guide
 3. Add base class references to existing tool documentation

@@ -98,7 +98,8 @@ class ChatBoxSettingsManager {
       systemPromptIncludeResponseFormat: true, // Response format instructions
       systemPromptIncludeToolCategories: true, // Tool categories & relationships
       systemPromptIncludeMemoryContext: true, // Memory context from memory system
-      systemPromptSectionOrder: [ // Order of prompt sections
+      systemPromptSectionOrder: [
+        // Order of prompt sections
         'systemInstructions',
         'currentContext',
         'dynamicTools',
@@ -1348,7 +1349,7 @@ class ChatBoxSettingsManager {
         if (manager) {
           manager.addCategory();
           this.populateWelcomeExamplesForm(modal);
-          
+
           // Scroll to the bottom of the container to show the new category
           const container = modal.querySelector('#welcomeExamplesContainer');
           if (container) {
@@ -1696,7 +1697,7 @@ class ChatBoxSettingsManager {
       // Build the preview header with config summary
       let preview = '=== System Prompt Preview ===\n';
       preview += `Sample Query: "Search DNA polymerase"\n`;
-      preview += `Prompt Mode: ${dynamicEnabled ? 'Dynamic Tools Registry' : (optimizedEnabled ? 'Optimized' : 'Complete')}\n`;
+      preview += `Prompt Mode: ${dynamicEnabled ? 'Dynamic Tools Registry' : optimizedEnabled ? 'Optimized' : 'Complete'}\n`;
       if (customPrompt) {
         preview += `Custom Prompt: Active (overrides default)\n`;
       }
@@ -1754,10 +1755,7 @@ class ChatBoxSettingsManager {
     const charCount = previewContent.length;
     const estimatedTokens = Math.round(charCount / 4);
 
-    const escapedContent = previewContent
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    const escapedContent = previewContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const modalHtml = `
       <div class="modal" id="systemPromptConfigPreviewModal" style="z-index: 10001;">
@@ -1801,24 +1799,27 @@ class ChatBoxSettingsManager {
     const copyBtn = modal.querySelector('#copySystemPromptBtn');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(previewContent).then(() => {
-          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-          setTimeout(() => {
-            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-          }, 2000);
-        }).catch(() => {
-          // Fallback for older browsers
-          const textarea = document.createElement('textarea');
-          textarea.value = previewContent;
-          document.body.appendChild(textarea);
-          textarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textarea);
-          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-          setTimeout(() => {
-            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-          }, 2000);
-        });
+        navigator.clipboard
+          .writeText(previewContent)
+          .then(() => {
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            setTimeout(() => {
+              copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+            }, 2000);
+          })
+          .catch(() => {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = previewContent;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            setTimeout(() => {
+              copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+            }, 2000);
+          });
       });
     }
 
@@ -2032,14 +2033,16 @@ class ChatBoxSettingsManager {
         const icon = card.querySelector('.cat-icon-input').value;
         const title = card.querySelector('.cat-title-input').value;
         const cssClass = card.querySelector('.cat-style-select').value;
-        
+
         const promptItems = card.querySelectorAll('.editor-prompt-item');
-        const examples = Array.from(promptItems).map(item => {
-          const promptTitle = item.querySelector('.prompt-title-input')?.value.trim() || '';
-          const promptText = item.querySelector('.prompt-text-input')?.value.trim() || '';
-          return { title: promptTitle, prompt: promptText };
-        }).filter(ex => ex.title !== '' || ex.prompt !== '');
-        
+        const examples = Array.from(promptItems)
+          .map(item => {
+            const promptTitle = item.querySelector('.prompt-title-input')?.value.trim() || '';
+            const promptText = item.querySelector('.prompt-text-input')?.value.trim() || '';
+            return { title: promptTitle, prompt: promptText };
+          })
+          .filter(ex => ex.title !== '' || ex.prompt !== '');
+
         data.push({ id, icon, title, cssClass, examples });
       });
       window.welcomeExamplesManager.saveAll(data);
@@ -2212,7 +2215,8 @@ class ChatBoxSettingsManager {
 
     const manager = window.welcomeExamplesManager;
     if (!manager) {
-      container.innerHTML = '<div style="color: #ef4444; padding: 10px;">Welcome Examples Manager not loaded yet.</div>';
+      container.innerHTML =
+        '<div style="color: #ef4444; padding: 10px;">Welcome Examples Manager not loaded yet.</div>';
       return;
     }
 
@@ -2228,7 +2232,9 @@ class ChatBoxSettingsManager {
       return;
     }
 
-    container.innerHTML = categories.map((cat, catIdx) => `
+    container.innerHTML = categories
+      .map(
+        (cat, catIdx) => `
       <div class="welcome-editor-card" data-id="${cat.id}" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 8px;">
         <div style="display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
           <input type="text" class="cat-icon-input" value="${cat.icon || '💬'}" placeholder="Emoji" title="Category Emoji" style="width: 40px; text-align: center; font-size: 14px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; color: #1e293b;">
@@ -2253,10 +2259,11 @@ class ChatBoxSettingsManager {
         </div>
         
         <div class="editor-prompts-list" style="display: flex; flex-direction: column; gap: 6px;">
-          ${(cat.examples || []).map((exObj, prIdx) => {
-            const titleStr = typeof exObj === 'string' ? exObj : (exObj.title || '');
-            const promptStr = typeof exObj === 'string' ? exObj : (exObj.prompt || '');
-            return `
+          ${(cat.examples || [])
+            .map((exObj, prIdx) => {
+              const titleStr = typeof exObj === 'string' ? exObj : exObj.title || '';
+              const promptStr = typeof exObj === 'string' ? exObj : exObj.prompt || '';
+              return `
             <div class="editor-prompt-item" data-index="${prIdx}" style="display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
               <div style="display: flex; gap: 6px; align-items: center;">
                 <span style="color: #94a3b8; font-size: 10px; width: 14px; text-align: right; font-weight: 500;">${prIdx + 1}</span>
@@ -2277,13 +2284,17 @@ class ChatBoxSettingsManager {
                 <input type="text" class="prompt-text-input" value="${promptStr.replace(/"/g, '&quot;')}" placeholder="Actual prompt sent to AI (e.g. Find genes near position 123)" title="Prompt sent to the AI when clicked" style="flex: 1; padding: 4px 8px; border: 1px dashed #cbd5e1; border-radius: 4px; font-size: 11px; background: #ffffff; color: #475569;">
               </div>
             </div>
-          `}).join('')}
+          `;
+            })
+            .join('')}
           <button type="button" class="btn btn-sm btn-secondary add-prompt-btn" style="align-self: flex-start; margin-top: 4px; border-style: dashed; padding: 2px 8px; font-size: 11px; background: #ffffff; border-color: #cbd5e1;">
             <i class="fas fa-plus" style="font-size: 9px; margin-right: 3px;"></i> Add Example
           </button>
         </div>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     this.setupWelcomeExamplesEditorEvents(modal);
   }
@@ -2307,20 +2318,22 @@ class ChatBoxSettingsManager {
         const iconInput = card.querySelector('.cat-icon-input');
         const titleInput = card.querySelector('.cat-title-input');
         const cssClassSelect = card.querySelector('.cat-style-select');
-        
+
         if (!iconInput || !titleInput || !cssClassSelect) return;
-        
+
         const icon = iconInput.value;
         const title = titleInput.value;
         const cssClass = cssClassSelect.value;
-        
+
         const promptItems = card.querySelectorAll('.editor-prompt-item');
-        const examples = Array.from(promptItems).map(item => {
-          const promptTitle = item.querySelector('.prompt-title-input')?.value.trim() || '';
-          const promptText = item.querySelector('.prompt-text-input')?.value.trim() || '';
-          return { title: promptTitle, prompt: promptText };
-        }).filter(ex => ex.title !== '' || ex.prompt !== '');
-        
+        const examples = Array.from(promptItems)
+          .map(item => {
+            const promptTitle = item.querySelector('.prompt-title-input')?.value.trim() || '';
+            const promptText = item.querySelector('.prompt-text-input')?.value.trim() || '';
+            return { title: promptTitle, prompt: promptText };
+          })
+          .filter(ex => ex.title !== '' || ex.prompt !== '');
+
         data.push({ id, icon, title, cssClass, examples });
       });
       return data;
@@ -2375,7 +2388,7 @@ class ChatBoxSettingsManager {
           cat.examples.push({ title: 'New Example Title', prompt: 'New Example Prompt' });
           manager.saveAll(data);
           this.populateWelcomeExamplesForm(modal);
-          
+
           // Focus newly added title input
           const titleInputs = container.querySelectorAll(`[data-id="${categoryId}"] .prompt-title-input`);
           if (titleInputs.length > 0) {

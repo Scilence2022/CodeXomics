@@ -3,7 +3,9 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const NotificationService = (await import('../../src/renderer/modules/core/NotificationService.js')).default || (await import('../../src/renderer/modules/core/NotificationService.js'));
+const NotificationService =
+  (await import('../../src/renderer/modules/core/NotificationService.js')).default ||
+  (await import('../../src/renderer/modules/core/NotificationService.js'));
 
 describe('NotificationService', () => {
   let ns;

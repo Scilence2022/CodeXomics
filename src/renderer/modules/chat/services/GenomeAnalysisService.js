@@ -31,51 +31,51 @@ class GenomeAnalysisService {
     if (include_annotations && this.app.currentAnnotations) {
       let totalFeatures = 0;
       let featureCounts = {};
-      
+
       const chromosomes = Object.keys(this.app.currentAnnotations);
       for (const chr of chromosomes) {
         const features = this.app.currentAnnotations[chr] || [];
         totalFeatures += features.length;
-        
+
         for (const feature of features) {
           const type = feature.type || 'unknown';
           featureCounts[type] = (featureCounts[type] || 0) + 1;
         }
       }
-      
+
       genomeInfo.annotations = {
         hasData: true,
         totalFeatures,
-        featureCounts
+        featureCounts,
       };
     } else {
       genomeInfo.annotations = {
         hasData: false,
         totalFeatures: 0,
-        featureCounts: {}
+        featureCounts: {},
       };
     }
 
     // Comprehensive sequence statistics per chromosome
     if (include_statistics) {
-       const chromosomeStats = {};
-       const chroms = Object.keys(this.app.currentSequence);
-       for (const chr of chroms) {
-          const seq = this.app.currentSequence[chr];
-          const gcCount = (seq.match(/[GgCc]/g) || []).length;
-          const gcPercent = Math.round((gcCount / seq.length) * 10000) / 100;
-          
-          chromosomeStats[chr] = {
-             length: seq.length,
-             gcPercent: gcPercent
-          };
-       }
-       genomeInfo.statistics = { chromosomeStats };
+      const chromosomeStats = {};
+      const chroms = Object.keys(this.app.currentSequence);
+      for (const chr of chroms) {
+        const seq = this.app.currentSequence[chr];
+        const gcCount = (seq.match(/[GgCc]/g) || []).length;
+        const gcPercent = Math.round((gcCount / seq.length) * 10000) / 100;
+
+        chromosomeStats[chr] = {
+          length: seq.length,
+          gcPercent: gcPercent,
+        };
+      }
+      genomeInfo.statistics = { chromosomeStats };
     }
 
     return {
       success: true,
-      genomeInfo
+      genomeInfo,
     };
   }
 
@@ -89,11 +89,7 @@ class GenomeAnalysisService {
   }
 
   async sequenceStatistics(params) {
-    const {
-      include = ['basic', 'composition', 'complexity'],
-      sequence,
-      sequenceType = 'dna',
-    } = params;
+    const { include = ['basic', 'composition', 'complexity'], sequence, sequenceType = 'dna' } = params;
 
     const { chromosome, start, end } = this._normalizeRegionParams(params);
     const chr = chromosome;
@@ -763,7 +759,6 @@ class GenomeAnalysisService {
     };
   }
 
-
   /**
    * Normalize region parameters (chromosome, start, end) with aliases and fallbacks
    */
@@ -783,8 +778,8 @@ class GenomeAnalysisService {
     }
 
     // 3. Extract start/end with aliases
-    let start = params.start !== undefined ? params.start : (params.begin !== undefined ? params.begin : null);
-    let end = params.end !== undefined ? params.end : (params.stop !== undefined ? params.stop : null);
+    let start = params.start !== undefined ? params.start : params.begin !== undefined ? params.begin : null;
+    let end = params.end !== undefined ? params.end : params.stop !== undefined ? params.stop : null;
 
     // 4. Fallback to current browser position if positions are missing
     if (start === null && this.app && this.app.currentPosition) {

@@ -5,7 +5,8 @@ author: 'CodeXomics'
 category: 'system'
 intent: 'system_management'
 priority: 1
-keywords: ['directory', 'folder', 'path', 'working', 'current', 'set', 'change', 'cd', 'working directory', 'set directory']
+keywords:
+  ['directory', 'folder', 'path', 'working', 'current', 'set', 'change', 'cd', 'working directory', 'set directory']
 aliases: ['change_directory', 'cd', 'set_dir', 'change_working_dir']
 enabled: true
 

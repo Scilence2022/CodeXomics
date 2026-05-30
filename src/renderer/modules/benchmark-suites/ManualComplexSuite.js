@@ -169,10 +169,7 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
           'Perform comprehensive protein analysis for araA gene: retrieve UniProt annotation and AlphaFold structure prediction, then integrate results for functional characterization.',
         expectedResult: {
           tool_sequence: ['uniprot_search', 'alphafold_search'],
-          parameters: [
-            { geneName: 'araA' },
-            { geneName: 'araA' },
-          ],
+          parameters: [{ geneName: 'araA' }, { geneName: 'araA' }],
         },
         maxScore: 10,
         bonusScore: 2,
@@ -191,19 +188,18 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         category: 'annotation',
         complexity: 'complex',
         evaluation: 'manual',
-        instruction: 'Create a gene annotation named "test_workflow_gene" at position 700000 to 703000, then search for all annotations of type "gene" to verify it was created.',
+        instruction:
+          'Create a gene annotation named "test_workflow_gene" at position 700000 to 703000, then search for all annotations of type "gene" to verify it was created.',
         expectedResult: {
           tool_sequence: ['create_annotation', 'search_annotations'],
-          parameters: [
-            { start: 700000, end: 703000, name: 'test_workflow_gene', type: 'gene' },
-            { type: 'gene' },
-          ],
+          parameters: [{ start: 700000, end: 703000, name: 'test_workflow_gene', type: 'gene' }, { type: 'gene' }],
         },
         maxScore: 10,
         bonusScore: 2,
         timeout: 60000,
         evaluator: this.evaluateWorkflowCall.bind(this),
-        manualVerification: 'Please verify: 1) Annotation is created at correct position, 2) Search results include the new annotation, 3) Workflow executes in correct order.',
+        manualVerification:
+          'Please verify: 1) Annotation is created at correct position, 2) Search results include the new annotation, 3) Workflow executes in correct order.',
       },
 
       // TRACK SETTINGS WORKFLOW - Manual + Complex
@@ -214,20 +210,18 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         category: 'track_settings',
         complexity: 'complex',
         evaluation: 'manual',
-        instruction: 'Get current track settings, set the annotation track height to 80 pixels, then reset all track settings to defaults.',
+        instruction:
+          'Get current track settings, set the annotation track height to 80 pixels, then reset all track settings to defaults.',
         expectedResult: {
           tool_sequence: ['get_track_settings', 'set_track_settings', 'reset_track_settings'],
-          parameters: [
-            {},
-            { trackName: 'annotation', settings: { height: 80 } },
-            {},
-          ],
+          parameters: [{}, { trackName: 'annotation', settings: { height: 80 } }, {}],
         },
         maxScore: 10,
         bonusScore: 2,
         timeout: 60000,
         evaluator: this.evaluateWorkflowCall.bind(this),
-        manualVerification: 'Please verify: 1) Track settings are retrieved, 2) Annotation track height changes to 80px, 3) Settings reset to defaults correctly.',
+        manualVerification:
+          'Please verify: 1) Track settings are retrieved, 2) Annotation track height changes to 80px, 3) Settings reset to defaults correctly.',
       },
 
       // PRIMER DESIGN WORKFLOW - Manual + Complex
@@ -238,7 +232,8 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         category: 'primer_design',
         complexity: 'complex',
         evaluation: 'manual',
-        instruction: 'Design PCR primers for the lacZ gene, calculate the properties of the forward primer, then add the primer as an annotation on the genome.',
+        instruction:
+          'Design PCR primers for the lacZ gene, calculate the properties of the forward primer, then add the primer as an annotation on the genome.',
         expectedResult: {
           tool_sequence: ['design_primers', 'calculate_primer_properties', 'add_primer_annotation'],
           parameters: [
@@ -252,7 +247,8 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         earlyReturn: true,
         evaluator: this.evaluateWorkflowCall.bind(this),
-        manualVerification: 'Please verify: 1) design_primers is called for lacZ, 2) calculate_primer_properties is called, 3) add_primer_annotation is called, 4) All tasks are submitted successfully (do not wait for completion).',
+        manualVerification:
+          'Please verify: 1) design_primers is called for lacZ, 2) calculate_primer_properties is called, 3) add_primer_annotation is called, 4) All tasks are submitted successfully (do not wait for completion).',
       },
 
       // BLAST WORKFLOW - Manual + Complex
@@ -263,20 +259,19 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         category: 'blast',
         complexity: 'complex',
         evaluation: 'manual',
-        instruction: 'Create a BLAST database from the current genome, then perform a local BLAST search with sequence ATGAAAGCGCTGAAAGCGCTG against it.',
+        instruction:
+          'Create a BLAST database from the current genome, then perform a local BLAST search with sequence ATGAAAGCGCTGAAAGCGCTG against it.',
         expectedResult: {
           tool_sequence: ['blast_create_quick_db_for_current_genome', 'blast_search_local'],
-          parameters: [
-            {},
-            { sequence: 'ATGAAAGCGCTGAAAGCGCTG' },
-          ],
+          parameters: [{}, { sequence: 'ATGAAAGCGCTGAAAGCGCTG' }],
         },
         maxScore: 10,
         bonusScore: 2,
         timeout: 30000,
         earlyReturn: true,
         evaluator: this.evaluateWorkflowCall.bind(this),
-        manualVerification: 'Please verify: 1) blast_create_quick_db_for_current_genome is called, 2) blast_search_local is called with correct sequence, 3) Both tasks are submitted successfully (do not wait for completion).',
+        manualVerification:
+          'Please verify: 1) blast_create_quick_db_for_current_genome is called, 2) blast_search_local is called with correct sequence, 3) Both tasks are submitted successfully (do not wait for completion).',
       },
 
       // RESTRICTION ANALYSIS WORKFLOW - Manual + Complex
@@ -287,19 +282,18 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         category: 'restriction',
         complexity: 'complex',
         evaluation: 'manual',
-        instruction: 'Find restriction enzyme sites in the current region, then perform a virtual digest with EcoRI and BamHI enzymes.',
+        instruction:
+          'Find restriction enzyme sites in the current region, then perform a virtual digest with EcoRI and BamHI enzymes.',
         expectedResult: {
           tool_sequence: ['find_restriction_sites', 'virtual_digest'],
-          parameters: [
-            {},
-            { enzymes: ['EcoRI', 'BamHI'] },
-          ],
+          parameters: [{}, { enzymes: ['EcoRI', 'BamHI'] }],
         },
         maxScore: 10,
         bonusScore: 2,
         timeout: 60000,
         evaluator: this.evaluateWorkflowCall.bind(this),
-        manualVerification: 'Please verify: 1) Restriction sites are found, 2) Virtual digest shows fragment sizes, 3) Both analyses use the same genomic context.',
+        manualVerification:
+          'Please verify: 1) Restriction sites are found, 2) Virtual digest shows fragment sizes, 3) Both analyses use the same genomic context.',
       },
 
       // PROTEIN ANALYSIS WORKFLOW - Manual + Complex
@@ -310,7 +304,8 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         category: 'protein_structure',
         complexity: 'complex',
         evaluation: 'manual',
-        instruction: 'Search UniProt for lacZ protein from E. coli, fetch its AlphaFold structure, then analyze its InterPro domains.',
+        instruction:
+          'Search UniProt for lacZ protein from E. coli, fetch its AlphaFold structure, then analyze its InterPro domains.',
         expectedResult: {
           tool_sequence: ['search_uniprot_database', 'fetch_alphafold_structure', 'analyze_interpro_domains'],
           parameters: [
@@ -323,7 +318,8 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         bonusScore: 2,
         timeout: 90000,
         evaluator: this.evaluateWorkflowCall.bind(this),
-        manualVerification: 'Please verify: 1) UniProt search returns lacZ results, 2) AlphaFold structure is fetched, 3) InterPro domains are analyzed, 4) All steps form a coherent analysis.',
+        manualVerification:
+          'Please verify: 1) UniProt search returns lacZ results, 2) AlphaFold structure is fetched, 3) InterPro domains are analyzed, 4) All steps form a coherent analysis.',
       },
 
       // WORKFLOW INTEGRATION TASKS - Manual + Complex

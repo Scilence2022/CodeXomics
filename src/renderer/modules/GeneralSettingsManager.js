@@ -108,7 +108,9 @@ class GeneralSettingsManager {
     // Use a more robust approach with multiple attempts
     const initializeTabsWithRetry = (attempts = 0, maxAttempts = 5) => {
       // Ensure the first tab is active by default
-      const firstTab = document.querySelector('#generalSettingsModal .llm-provider-tabs .tab-button[data-tab="appearance"]');
+      const firstTab = document.querySelector(
+        '#generalSettingsModal .llm-provider-tabs .tab-button[data-tab="appearance"]'
+      );
       const firstContent = document.getElementById('appearance-tab');
 
       console.log(`🔍 [GeneralSettings] Attempt ${attempts + 1}: Found first tab:`, !!firstTab);
@@ -839,7 +841,8 @@ class GeneralSettingsManager {
 
     // Also notify ThemeManager about dark mode change
     if (window.themeManager) {
-      const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const isDark =
+        theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
       window.themeManager.applyDarkModeOverrides(isDark);
     }
   }

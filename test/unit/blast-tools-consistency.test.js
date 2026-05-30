@@ -40,7 +40,7 @@ const BLAST_LEGACY_ALIASES = [
 ];
 
 function toCamelCase(str) {
-  return str.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
+  return str.replace(/([-_][a-z])/gi, $1 => $1.toUpperCase().replace('-', '').replace('_', ''));
 }
 
 function readFile(relPath) {
@@ -69,15 +69,15 @@ describe('BLAST Tool Registry Consistency', () => {
 
     it('should have all 16 primary BLAST tools in builtInToolsMap', () => {
       for (const tool of BLAST_PRIMARY_TOOLS) {
-        const setPattern = `builtInToolsMap.set('${tool}'`;
-        expect(content, `builtInToolsMap missing '${tool}'`).toContain(setPattern);
+        const regex = new RegExp(`builtInToolsMap\\.set\\s*\\(\\s*['"]${tool}['"]`);
+        expect(regex.test(content), `builtInToolsMap missing '${tool}'`).toBe(true);
       }
     });
 
     it('should have all 5 legacy alias BLAST tools in builtInToolsMap', () => {
       for (const tool of BLAST_LEGACY_ALIASES) {
-        const setPattern = `builtInToolsMap.set('${tool}'`;
-        expect(content, `builtInToolsMap missing legacy alias '${tool}'`).toContain(setPattern);
+        const regex = new RegExp(`builtInToolsMap\\.set\\s*\\(\\s*['"]${tool}['"]`);
+        expect(regex.test(content), `builtInToolsMap missing legacy alias '${tool}'`).toBe(true);
       }
     });
 
@@ -101,8 +101,11 @@ describe('BLAST Tool Registry Consistency', () => {
 
     it('should have legacy alias methods', () => {
       const legacyMethods = [
-        'getBlastDatabases', 'batchBlastSearch', 'advancedBlastSearch',
-        'localBlastDatabaseInfo', 'blastSequenceFromRegion',
+        'getBlastDatabases',
+        'batchBlastSearch',
+        'advancedBlastSearch',
+        'localBlastDatabaseInfo',
+        'blastSequenceFromRegion',
       ];
       for (const method of legacyMethods) {
         const methodPattern = `async ${method}(`;
@@ -173,8 +176,8 @@ describe('BLAST Tool Registry Consistency', () => {
 
     it('should have all 16 primary BLAST tools in ExternalAgent toolMapping', () => {
       for (const tool of BLAST_PRIMARY_TOOLS) {
-        const pattern = `toolMapping.set('${tool}'`;
-        expect(agentContent, `ExternalAgent toolMapping missing '${tool}'`).toContain(pattern);
+        const regex = new RegExp(`toolMapping\\.set\\s*\\(\\s*['"]${tool}['"]`);
+        expect(regex.test(agentContent), `ExternalAgent toolMapping missing '${tool}'`).toBe(true);
       }
     });
 

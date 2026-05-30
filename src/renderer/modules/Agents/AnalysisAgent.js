@@ -44,11 +44,11 @@ class AnalysisAgent extends AgentBase {
     // Try ChatManager first (authoritative execution path)
     if (chatManager && typeof chatManager.executeToolByName === 'function') {
       try {
-        const result = await chatManager.executeToolByName(functionName, parameters, {bypassAgent: true});
+        const result = await chatManager.executeToolByName(functionName, parameters, { bypassAgent: true });
         return result;
       } catch (error) {
         console.warn(
-            `AnalysisAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`,
+          `AnalysisAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`
         );
       }
     }
@@ -141,7 +141,7 @@ class AnalysisAgent extends AgentBase {
    */
   async getSequence(parameters, strategy) {
     try {
-      const {chromosome, start, end} = parameters;
+      const { chromosome, start, end } = parameters;
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
@@ -157,7 +157,7 @@ class AnalysisAgent extends AgentBase {
         success: true,
         sequence,
         length: sequence.length,
-        region: {chromosome, start, end},
+        region: { chromosome, start, end },
       };
     } catch (error) {
       return {
@@ -172,7 +172,7 @@ class AnalysisAgent extends AgentBase {
    */
   async translateSequence(parameters, strategy) {
     try {
-      const {sequence, frame = 0} = parameters;
+      const { sequence, frame = 0 } = parameters;
 
       if (!sequence) {
         throw new Error('Sequence is required');
@@ -203,7 +203,7 @@ class AnalysisAgent extends AgentBase {
    */
   async translateDNA(parameters, strategy) {
     try {
-      const {dna, frame = 0} = parameters;
+      const { dna, frame = 0 } = parameters;
 
       if (!dna) {
         throw new Error('DNA sequence is required');
@@ -234,7 +234,7 @@ class AnalysisAgent extends AgentBase {
    */
   async reverseComplement(parameters, strategy) {
     try {
-      const {dna} = parameters;
+      const { dna } = parameters;
 
       if (!dna) {
         throw new Error('DNA sequence is required');
@@ -265,7 +265,7 @@ class AnalysisAgent extends AgentBase {
    */
   async calculateGCContent(parameters, strategy) {
     try {
-      const {sequence} = parameters;
+      const { sequence } = parameters;
 
       if (!sequence) {
         throw new Error('Sequence is required');
@@ -303,7 +303,7 @@ class AnalysisAgent extends AgentBase {
    */
   async calcRegionGC(parameters, strategy) {
     try {
-      const {chromosome, start, end, windowSize = 1000} = parameters;
+      const { chromosome, start, end, windowSize = 1000 } = parameters;
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
@@ -331,7 +331,7 @@ class AnalysisAgent extends AgentBase {
         success: true,
         overallGC: gcContent,
         windowGC: windowGC,
-        region: {chromosome, start, end},
+        region: { chromosome, start, end },
         windowSize,
       };
     } catch (error) {
@@ -347,7 +347,7 @@ class AnalysisAgent extends AgentBase {
    */
   async sequenceStatistics(parameters, strategy) {
     try {
-      const {sequence, include = ['composition', 'length', 'gc']} = parameters;
+      const { sequence, include = ['composition', 'length', 'gc'] } = parameters;
 
       if (!sequence) {
         throw new Error('Sequence is required');
@@ -389,7 +389,7 @@ class AnalysisAgent extends AgentBase {
    */
   async codonUsageAnalysis(parameters, strategy) {
     try {
-      const {dna} = parameters;
+      const { dna } = parameters;
 
       if (!dna) {
         throw new Error('DNA sequence is required');
@@ -426,7 +426,7 @@ class AnalysisAgent extends AgentBase {
    */
   async calculateEntropy(parameters, strategy) {
     try {
-      const {sequence} = parameters;
+      const { sequence } = parameters;
 
       if (!sequence) {
         throw new Error('Sequence is required');
@@ -457,7 +457,7 @@ class AnalysisAgent extends AgentBase {
    */
   async calculateMeltingTemp(parameters, strategy) {
     try {
-      const {dna, method = 'wallace'} = parameters;
+      const { dna, method = 'wallace' } = parameters;
 
       if (!dna) {
         throw new Error('DNA sequence is required');
@@ -526,7 +526,7 @@ class AnalysisAgent extends AgentBase {
    */
   async predictPromoter(parameters, strategy) {
     try {
-      const {seq} = parameters;
+      const { seq } = parameters;
 
       if (!seq) {
         throw new Error('Sequence is required');
@@ -557,7 +557,7 @@ class AnalysisAgent extends AgentBase {
    */
   async predictRBS(parameters, strategy) {
     try {
-      const {seq} = parameters;
+      const { seq } = parameters;
 
       if (!seq) {
         throw new Error('Sequence is required');
@@ -588,7 +588,7 @@ class AnalysisAgent extends AgentBase {
    */
   async predictTerminator(parameters, strategy) {
     try {
-      const {seq} = parameters;
+      const { seq } = parameters;
 
       if (!seq) {
         throw new Error('Sequence is required');
@@ -619,7 +619,7 @@ class AnalysisAgent extends AgentBase {
    */
   async analyzeRegion(parameters, strategy) {
     try {
-      const {chromosome, start, end} = parameters;
+      const { chromosome, start, end } = parameters;
 
       if (!chromosome || start === undefined || end === undefined) {
         throw new Error('Chromosome, start, and end are required');
@@ -635,11 +635,11 @@ class AnalysisAgent extends AgentBase {
 
       return {
         success: true,
-        region: {chromosome, start, end},
+        region: { chromosome, start, end },
         sequence: sequence,
         gcContent,
         orfCount: orfs.length,
-        orfs: orfs.map((orf) => ({
+        orfs: orfs.map(orf => ({
           start: orf.start,
           end: orf.end,
           length: orf.end - orf.start,
@@ -659,7 +659,7 @@ class AnalysisAgent extends AgentBase {
    */
   async compareRegions(parameters, strategy) {
     try {
-      const {regions} = parameters;
+      const { regions } = parameters;
 
       if (!regions || !Array.isArray(regions) || regions.length < 2) {
         throw new Error('At least 2 regions are required');
@@ -711,7 +711,7 @@ class AnalysisAgent extends AgentBase {
    */
   async findSimilarSequences(parameters, strategy) {
     try {
-      const {sequence, threshold = 0.8} = parameters;
+      const { sequence, threshold = 0.8 } = parameters;
 
       if (!sequence) {
         throw new Error('Sequence is required');
@@ -721,7 +721,7 @@ class AnalysisAgent extends AgentBase {
         {
           sequence: sequence,
           similarity: 1.0,
-          position: {chromosome: 'chr1', start: 1000, end: 1000 + sequence.length},
+          position: { chromosome: 'chr1', start: 1000, end: 1000 + sequence.length },
         },
       ];
 
@@ -746,7 +746,7 @@ class AnalysisAgent extends AgentBase {
     try {
       const chatManager = this.multiAgentSystem.chatManager;
       if (chatManager && typeof chatManager.executeToolByName === 'function') {
-        return await chatManager.executeToolByName('find_restriction_sites', parameters, {bypassAgent: true});
+        return await chatManager.executeToolByName('find_restriction_sites', parameters, { bypassAgent: true });
       }
       throw new Error('ChatManager not available for restriction site analysis');
     } catch (error) {
@@ -761,7 +761,7 @@ class AnalysisAgent extends AgentBase {
     try {
       const chatManager = this.multiAgentSystem.chatManager;
       if (chatManager && typeof chatManager.executeToolByName === 'function') {
-        return await chatManager.executeToolByName('virtual_digest', parameters, {bypassAgent: true});
+        return await chatManager.executeToolByName('virtual_digest', parameters, { bypassAgent: true });
       }
       throw new Error('ChatManager not available for virtual digest');
     } catch (error) {
@@ -776,7 +776,7 @@ class AnalysisAgent extends AgentBase {
     try {
       const chatManager = this.multiAgentSystem.chatManager;
       if (chatManager && typeof chatManager.executeToolByName === 'function') {
-        return await chatManager.executeToolByName('list_restriction_enzymes', parameters, {bypassAgent: true});
+        return await chatManager.executeToolByName('list_restriction_enzymes', parameters, { bypassAgent: true });
       }
       throw new Error('ChatManager not available for enzyme listing');
     } catch (error) {
@@ -791,7 +791,7 @@ class AnalysisAgent extends AgentBase {
     try {
       const chatManager = this.multiAgentSystem.chatManager;
       if (chatManager && typeof chatManager.executeToolByName === 'function') {
-        return await chatManager.executeToolByName('simulate_gel_electrophoresis', parameters, {bypassAgent: true});
+        return await chatManager.executeToolByName('simulate_gel_electrophoresis', parameters, { bypassAgent: true });
       }
       throw new Error('ChatManager not available for gel electrophoresis simulation');
     } catch (error) {
@@ -806,11 +806,11 @@ class AnalysisAgent extends AgentBase {
     try {
       const chatManager = this.multiAgentSystem.chatManager;
       if (chatManager && typeof chatManager.executeToolByName === 'function') {
-        return await chatManager.executeToolByName('list_dna_markers', parameters, {bypassAgent: true});
+        return await chatManager.executeToolByName('list_dna_markers', parameters, { bypassAgent: true });
       }
       throw new Error('ChatManager not available for DNA marker listing');
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -818,11 +818,11 @@ class AnalysisAgent extends AgentBase {
     try {
       const chatManager = this.multiAgentSystem.chatManager;
       if (chatManager && typeof chatManager.executeToolByName === 'function') {
-        return await chatManager.executeToolByName('get_dna_marker_info', parameters, {bypassAgent: true});
+        return await chatManager.executeToolByName('get_dna_marker_info', parameters, { bypassAgent: true });
       }
       throw new Error('ChatManager not available for DNA marker info');
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -879,7 +879,7 @@ class AnalysisAgent extends AgentBase {
         error: 'search_sequence_motif requires a sequence string, genome data via ChatManager, or sequenceUtils',
       };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -893,15 +893,15 @@ class AnalysisAgent extends AgentBase {
         (typeof require === 'function' && require('../../../renderer/modules/PrimerDesigner'));
       if (PrimerDesigner) {
         const properties = PrimerDesigner.calculateProperties(parameters.sequence);
-        return {success: true, properties};
+        return { success: true, properties };
       }
       if (!parameters.sequence) throw new Error('Primer sequence is required');
       if (this.sequenceUtils?.calculatePrimerProperties) {
-        return {success: true, properties: this.sequenceUtils.calculatePrimerProperties(parameters.sequence)};
+        return { success: true, properties: this.sequenceUtils.calculatePrimerProperties(parameters.sequence) };
       }
       throw new Error('No primer calculation engine available');
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -913,12 +913,12 @@ class AnalysisAgent extends AgentBase {
       const targetSequence = parameters.targetSequence || parameters.sequence || parameters.targetRegion;
       if (!targetSequence) throw new Error('targetSequence is required');
       if (PrimerDesigner) {
-        const toNumber = (value) => {
+        const toNumber = value => {
           const parsed = Number(value);
           return Number.isFinite(parsed) ? parsed : undefined;
         };
         const exactPrimerLength = toNumber(
-            parameters.primerLength ?? parameters.primerLengthBp ?? parameters.primerSize,
+          parameters.primerLength ?? parameters.primerLengthBp ?? parameters.primerSize
         );
         const options = {
           targetTm: toNumber(parameters.targetTm) ?? 60.0,
@@ -937,7 +937,7 @@ class AnalysisAgent extends AgentBase {
           requiredAmpliconEnd: parameters.requiredAmpliconEnd,
         };
         const pair = PrimerDesigner.designPrimerPair(targetSequence, options);
-        return {success: true, primers: pair || {note: 'No valid primer pair found'}};
+        return { success: true, primers: pair || { note: 'No valid primer pair found' } };
       }
       if (this.sequenceUtils?.designPrimers) {
         return {
@@ -947,7 +947,7 @@ class AnalysisAgent extends AgentBase {
       }
       throw new Error('No primer design engine available');
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -982,8 +982,8 @@ class AnalysisAgent extends AgentBase {
       if (!template) throw new Error('templateSequence is required');
       if (PrimerDesigner) {
         const sites = PrimerDesigner.findBindingSites(
-            primer,
-            template,
+          primer,
+          template,
           parameters.maxMismatches !== undefined ? parameters.maxMismatches : 3,
           {
             max3PrimeMismatches: parameters.max3PrimeMismatches,
@@ -991,17 +991,17 @@ class AnalysisAgent extends AgentBase {
             scoringMode: parameters.scoringMode || 'fast',
             naConcentration: parameters.naConcentration,
             primerConcentration: parameters.primerConcentration,
-          },
+          }
         );
-        return {success: true, sites, count: sites.length};
+        return { success: true, sites, count: sites.length };
       }
       if (this.sequenceUtils?.findPrimerBindingSites) {
         const sites = this.sequenceUtils.findPrimerBindingSites(primer, template);
-        return {success: true, sites, count: sites.length};
+        return { success: true, sites, count: sites.length };
       }
       throw new Error('No primer binding site engine available');
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -1010,13 +1010,13 @@ class AnalysisAgent extends AgentBase {
       if (this.chatManager && typeof this.chatManager.primerAddAnnotation === 'function') {
         return await this.chatManager.primerAddAnnotation(parameters);
       }
-      const {name, chromosome, start, end} = parameters;
+      const { name, chromosome, start, end } = parameters;
       if (!name || !chromosome || !start || !end) {
         throw new Error('name, chromosome, start, and end are required for primer annotation');
       }
-      return {success: true, annotation: {name, chromosome, start, end, strand: parameters.strand || '+'}};
+      return { success: true, annotation: { name, chromosome, start, end, strand: parameters.strand || '+' } };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -1025,9 +1025,9 @@ class AnalysisAgent extends AgentBase {
       if (this.chatManager?.services?.toolExecution) {
         return await this.chatManager.services.toolExecution.execute('list_primer_annotations', parameters);
       }
-      return {success: false, error: 'Primer annotation listing requires ChatBox tool execution'};
+      return { success: false, error: 'Primer annotation listing requires ChatBox tool execution' };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -1036,9 +1036,9 @@ class AnalysisAgent extends AgentBase {
       if (this.chatManager?.services?.toolExecution) {
         return await this.chatManager.services.toolExecution.execute('clear_primer_annotations', parameters);
       }
-      return {success: false, error: 'Primer annotation clearing requires ChatBox tool execution'};
+      return { success: false, error: 'Primer annotation clearing requires ChatBox tool execution' };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -1047,16 +1047,16 @@ class AnalysisAgent extends AgentBase {
    */
   async getCodingSequence(parameters, strategy) {
     try {
-      const {geneName, chromosome, start, end} = parameters;
+      const { geneName, chromosome, start, end } = parameters;
       if (!this.sequenceUtils) {
         throw new Error('SequenceUtils not available');
       }
-      const cds = this.sequenceUtils.getCodingSequence ?
-        await this.sequenceUtils.getCodingSequence(geneName || {chromosome, start, end}) :
-        null;
-      return {success: true, cds};
+      const cds = this.sequenceUtils.getCodingSequence
+        ? await this.sequenceUtils.getCodingSequence(geneName || { chromosome, start, end })
+        : null;
+      return { success: true, cds };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   }
 
@@ -1065,7 +1065,7 @@ class AnalysisAgent extends AgentBase {
    */
   async getUpstreamRegion(parameters, strategy) {
     try {
-      const {geneObj, length = 500} = parameters;
+      const { geneObj, length = 500 } = parameters;
 
       if (!geneObj) {
         throw new Error('Gene object is required');
@@ -1103,7 +1103,7 @@ class AnalysisAgent extends AgentBase {
    */
   async getDownstreamRegion(parameters, strategy) {
     try {
-      const {geneObj, length = 500} = parameters;
+      const { geneObj, length = 500 } = parameters;
 
       if (!geneObj) {
         throw new Error('Gene object is required');

@@ -1551,11 +1551,11 @@ class BamReader {
       },
       indexFile: this.hasIndex
         ? {
-          path: this.indexPath,
-          type: this.indexType,
-          size: this.indexSize,
-          formattedSize: this.getFormattedIndexSize(),
-        }
+            path: this.indexPath,
+            type: this.indexType,
+            size: this.indexSize,
+            formattedSize: this.getFormattedIndexSize(),
+          }
         : null,
       references: this.references.map(ref => ({
         name: ref.name,

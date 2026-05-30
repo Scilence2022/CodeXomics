@@ -183,13 +183,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // MCP Server APIs
   invoke: (channel, ...args) => {
-    const validChannels = ['mcp-server-start', 'mcp-server-stop', 'mcp-server-status', 'mcp-server-get-settings', 'mcp-server-save-settings', 'mcp-server-check-port', 'broadcast-theme-to-pm', 'request-current-theme'];
+    const validChannels = [
+      'mcp-server-start',
+      'mcp-server-stop',
+      'mcp-server-status',
+      'mcp-server-get-settings',
+      'mcp-server-save-settings',
+      'mcp-server-check-port',
+      'broadcast-theme-to-pm',
+      'request-current-theme',
+    ];
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);
     }
   },
   on: (channel, callback) => {
-    const validChannels = ['mcp-server-status-update', 'mcp-server-status-changed', 'mcp-server-log', 'mcp-server-client-update'];
+    const validChannels = [
+      'mcp-server-status-update',
+      'mcp-server-status-changed',
+      'mcp-server-log',
+      'mcp-server-client-update',
+    ];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (event, ...args) => callback(...args));
     }
@@ -292,48 +306,57 @@ contextBridge.exposeInMainWorld('electronAPI', {
     removeAllListeners: channel => {
       // Security: validate channel against whitelist before removing listeners
       const allowedChannels = [
-        'resource-update', 'resource-removed', 'resource-added',
-        'create-new-project', 'load-project-from-menu',
-        'set-download-type', 'set-active-project', 'before-window-close',
-        'mcp-server-status-update', 'mcp-server-status-changed',
-        'mcp-server-log', 'mcp-server-client-update', 'sync-theme',
-        'load-markdown', 'download-progress',
-        ...validChannels, ...validSendChannels,
+        'resource-update',
+        'resource-removed',
+        'resource-added',
+        'create-new-project',
+        'load-project-from-menu',
+        'set-download-type',
+        'set-active-project',
+        'before-window-close',
+        'mcp-server-status-update',
+        'mcp-server-status-changed',
+        'mcp-server-log',
+        'mcp-server-client-update',
+        'sync-theme',
+        'load-markdown',
+        'download-progress',
+        ...validChannels,
+        ...validSendChannels,
       ];
       if (allowedChannels.includes(channel)) {
         ipcRenderer.removeAllListeners(channel);
       } else {
         console.warn(`[preload] Blocked removeAllListeners for unapproved channel: ${channel}`);
       }
+    },
+
+    // ===========================================================================
+    // Application Infrastructure APIs (P1 — contextIsolation migration)
+    // ===========================================================================
+
+    // Locale data loading (replaces fs-based loading in renderer)
+    getLocaleData: (language, namespace) => ipcRenderer.invoke('get-locale-data', language, namespace),
+
+    // List available locale languages
+    getLocaleLanguages: () => ipcRenderer.invoke('get-locale-languages'),
+
+    // Application paths (replaces __dirname usage in renderer)
+    getAppPaths: () => ipcRenderer.invoke('get-app-paths'),
+
+    // DOMPurify configuration (for sanitization in contextIsolation mode)
+    getSanitizerConfig: () => ipcRenderer.invoke('get-sanitizer-config'),
+
+    // Notification relay (for error reporting from main process)
+    onAppNotification: callback => {
+      const validTypes = ['error', 'warning', 'info', 'success'];
+      ipcRenderer.on('app-notification', (event, data) => {
+        if (validTypes.includes(data.type)) {
+          callback(data);
+        }
+      });
+    },
   },
-
-  // ===========================================================================
-  // Application Infrastructure APIs (P1 — contextIsolation migration)
-  // ===========================================================================
-
-  // Locale data loading (replaces fs-based loading in renderer)
-  getLocaleData: (language, namespace) =>
-    ipcRenderer.invoke('get-locale-data', language, namespace),
-
-  // List available locale languages
-  getLocaleLanguages: () => ipcRenderer.invoke('get-locale-languages'),
-
-  // Application paths (replaces __dirname usage in renderer)
-  getAppPaths: () => ipcRenderer.invoke('get-app-paths'),
-
-  // DOMPurify configuration (for sanitization in contextIsolation mode)
-  getSanitizerConfig: () => ipcRenderer.invoke('get-sanitizer-config'),
-
-  // Notification relay (for error reporting from main process)
-  onAppNotification: callback => {
-    const validTypes = ['error', 'warning', 'info', 'success'];
-    ipcRenderer.on('app-notification', (event, data) => {
-      if (validTypes.includes(data.type)) {
-        callback(data);
-      }
-    });
-  },
-},
 });
 
 // Provide access to node process information (for development)

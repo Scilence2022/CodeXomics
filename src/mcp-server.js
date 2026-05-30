@@ -520,7 +520,8 @@ class StandardClaudeMCPServer extends EventEmitter {
               clearTimeout(authTimeout);
               authenticated = true;
               // Use a unique temporary ID if windowId is not yet available to avoid overwriting other connecting windows
-              const clientWindowId = message.windowId || `pending_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+              const clientWindowId =
+                message.windowId || `pending_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
               sessionId = `internal_${clientWindowId}_${Date.now()}`;
               connectionId = `internal_client_${sessionId}`;
 
@@ -551,7 +552,10 @@ class StandardClaudeMCPServer extends EventEmitter {
                 })
               );
 
-              this.serverLog('info', `✅ Internal CodeXomics client connected: ${connectionId} (windowId: ${clientWindowId})`);
+              this.serverLog(
+                'info',
+                `✅ Internal CodeXomics client connected: ${connectionId} (windowId: ${clientWindowId})`
+              );
               this.emit('client-connected', { type: 'internal', connectionId, windowId: clientWindowId });
               return;
             }
@@ -633,7 +637,10 @@ class StandardClaudeMCPServer extends EventEmitter {
           if (authenticated && message.type === 'internal-client') {
             const newWindowId = message.windowId;
             if (newWindowId && ws.windowId !== newWindowId) {
-              this.serverLog('info', `[MCP Server] Internal client re-identified from ${ws.windowId} to ${newWindowId}`);
+              this.serverLog(
+                'info',
+                `[MCP Server] Internal client re-identified from ${ws.windowId} to ${newWindowId}`
+              );
 
               // Remove old mapping if it was pointing to this exact websocket
               if (ws.windowId && this.internalClients.get(ws.windowId) === ws) {
@@ -683,7 +690,10 @@ class StandardClaudeMCPServer extends EventEmitter {
 
           // Handle genome loaded updates from internal client
           if (message.type === 'genome-loaded') {
-            this.serverLog('info', `[MCP Server] Client ${ws.windowId || connectionId} loaded genome: ${message.genomeName}`);
+            this.serverLog(
+              'info',
+              `[MCP Server] Client ${ws.windowId || connectionId} loaded genome: ${message.genomeName}`
+            );
             ws.genomeName = message.genomeName;
             return;
           }
@@ -1217,8 +1227,8 @@ class StandardClaudeMCPServer extends EventEmitter {
 
     throw new Error(
       `Tool '${toolName}' requires a connected CodeXomics client. ` +
-      `No local client, internal WebSocket client, or remote bridge available. ` +
-      `Please start CodeXomics application to enable this tool.`
+        `No local client, internal WebSocket client, or remote bridge available. ` +
+        `Please start CodeXomics application to enable this tool.`
     );
   }
 
@@ -1241,7 +1251,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     if (!targetClient || targetClient.readyState !== 1) {
       throw new Error(
         `No active WebSocket client for window '${targetWindowId || 'focused'}'. ` +
-        `Available windows: [${Array.from(this.internalClients.keys()).join(', ')}]`
+          `Available windows: [${Array.from(this.internalClients.keys()).join(', ')}]`
       );
     }
 
@@ -1265,7 +1275,8 @@ class StandardClaudeMCPServer extends EventEmitter {
       });
 
       // Send tool execution request via WebSocket to target window's client
-      this.serverLog('info', 
+      this.serverLog(
+        'info',
         `📡 [MCP Server] Sending tool execution via WebSocket: ${toolName} -> ${methodName} (window: ${resolvedWindowId})`
       );
       targetClient.send(
@@ -1341,7 +1352,8 @@ class StandardClaudeMCPServer extends EventEmitter {
       });
 
       // Send tool execution request to renderer process via IPC
-      this.serverLog('info', 
+      this.serverLog(
+        'info',
         `📡 [MCP Server] Sending tool execution via Electron IPC: ${toolName} -> ${methodName} (window: ${targetWindowId})`
       );
       targetWindow.webContents.send('mcp-tool-call', {
@@ -1522,9 +1534,10 @@ class StandardClaudeMCPServer extends EventEmitter {
     if (this._wsPortError) {
       const wsError = this._wsPortError;
       this._wsPortError = null;
-      const errMsg = wsError.code === 'EADDRINUSE'
-        ? `WebSocket port ${this.wsPort} is already in use`
-        : `Failed to bind WebSocket server on port ${this.wsPort}: ${wsError.message}`;
+      const errMsg =
+        wsError.code === 'EADDRINUSE'
+          ? `WebSocket port ${this.wsPort} is already in use`
+          : `Failed to bind WebSocket server on port ${this.wsPort}: ${wsError.message}`;
       this.serverLog('error', `❌ ${errMsg}`);
       this.emit('start-failed', { type: 'ws', port: this.wsPort, error: errMsg });
       throw new Error(errMsg);
@@ -1657,9 +1670,7 @@ class StandardClaudeMCPServer extends EventEmitter {
         const params = {
           level,
           logger: 'codexomics-agent',
-          data: data
-            ? `${message} | ${JSON.stringify(data)}`
-            : message,
+          data: data ? `${message} | ${JSON.stringify(data)}` : message,
         };
         this.mcpServer.sendLoggingMessage(params).catch(err => {
           // Silently ignore - client may not support logging notifications
@@ -1744,7 +1755,10 @@ class StandardClaudeMCPServer extends EventEmitter {
     // Log all windows in the registry
     for (const [windowId, entry] of registry.entries()) {
       const win = entry.window || entry;
-      this.serverLog('info', `📋 [MCP Server] Registry entry: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`);
+      this.serverLog(
+        'info',
+        `📋 [MCP Server] Registry entry: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`
+      );
     }
   }
 
@@ -1752,7 +1766,10 @@ class StandardClaudeMCPServer extends EventEmitter {
   registerWindow(windowId, browserWindow) {
     this.windowRegistry.set(windowId, { window: browserWindow, genomeName: null });
     this.serverLog('info', `📋 [MCP Server] Registered window: ${windowId} (total: ${this.windowRegistry.size})`);
-    this.serverLog('info', `📋 [MCP Server] Window isDestroyed: ${browserWindow.isDestroyed()}, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}`);
+    this.serverLog(
+      'info',
+      `📋 [MCP Server] Window isDestroyed: ${browserWindow.isDestroyed()}, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}`
+    );
   }
 
   // Multi-window support: Unregister a BrowserWindow
@@ -1785,12 +1802,18 @@ class StandardClaudeMCPServer extends EventEmitter {
   listWindows() {
     // Use the authoritative main.js registry if available, fall back to local copy
     const registry = this.mainWindowRegistry || this.windowRegistry;
-    this.serverLog('info', `[MCP Server] listWindows called, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}, windowRegistry: ${this.windowRegistry.size} entries, using: ${this.mainWindowRegistry ? 'mainWindowRegistry' : 'windowRegistry'}`);
+    this.serverLog(
+      'info',
+      `[MCP Server] listWindows called, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}, windowRegistry: ${this.windowRegistry.size} entries, using: ${this.mainWindowRegistry ? 'mainWindowRegistry' : 'windowRegistry'}`
+    );
     this.serverLog('info', `[MCP Server] Registry size: ${registry.size}`);
     const windows = [];
     for (const [windowId, entry] of registry.entries()) {
       const win = entry.window || entry;
-      this.serverLog('info', `[MCP Server] Checking window: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`);
+      this.serverLog(
+        'info',
+        `[MCP Server] Checking window: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`
+      );
       if (!win || win.isDestroyed()) continue;
       windows.push({
         windowId,
@@ -1803,7 +1826,10 @@ class StandardClaudeMCPServer extends EventEmitter {
 
     // Fall back to standalone WebSocket clients if no registries are available or populated
     if (windows.length === 0 && this.internalClients.size > 0) {
-      this.serverLog('info', `[MCP Server] Using fallback: listing ${this.internalClients.size} standalone internal clients as windows.`);
+      this.serverLog(
+        'info',
+        `[MCP Server] Using fallback: listing ${this.internalClients.size} standalone internal clients as windows.`
+      );
       for (const [windowId, ws] of this.internalClients.entries()) {
         windows.push({
           windowId,

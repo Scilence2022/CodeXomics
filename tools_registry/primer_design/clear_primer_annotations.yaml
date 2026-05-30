@@ -1,6 +1,6 @@
 name: clear_primer_annotations
 version: 1.0.0
-description: "Clear primer annotations from the dedicated Primers track. Requires confirm=true to avoid accidental deletion."
+description: 'Clear primer annotations from the dedicated Primers track. Requires confirm=true to avoid accidental deletion.'
 category: primer_design
 subcategory: display
 keywords:
@@ -29,21 +29,21 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: "Optional chromosome/replicon ID. If omitted, clears primer annotations from all chromosomes."
+      description: 'Optional chromosome/replicon ID. If omitted, clears primer annotations from all chromosomes.'
     confirm:
       type: boolean
-      description: "Must be true to clear primer annotations."
+      description: 'Must be true to clear primer annotations.'
   required:
     - confirm
 sample_usages:
-  - user_query: "Clear all primer annotations"
-    tool_call: "clear_primer_annotations(confirm=true)"
-    thought: "User wants to remove primer visualizations from all chromosomes"
-    expected_result: "All primer annotations are removed from the Primers track"
-  - user_query: "Remove primer annotations from chr1"
+  - user_query: 'Clear all primer annotations'
+    tool_call: 'clear_primer_annotations(confirm=true)'
+    thought: 'User wants to remove primer visualizations from all chromosomes'
+    expected_result: 'All primer annotations are removed from the Primers track'
+  - user_query: 'Remove primer annotations from chr1'
     tool_call: "clear_primer_annotations(chromosome='chr1', confirm=true)"
-    thought: "User wants to remove primer visualizations from one chromosome"
-    expected_result: "Primer annotations on chr1 are removed"
+    thought: 'User wants to remove primer visualizations from one chromosome'
+    expected_result: 'Primer annotations on chr1 are removed'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -62,9 +62,9 @@ metadata:
     - annotation
   complexity: moderate
   usage_pattern: occasional
-  recommendation: "Use only when the user explicitly asks to remove primer visualizations"
+  recommendation: 'Use only when the user explicitly asks to remove primer visualizations'
 error_handling:
-  missing_confirm: "Returns error unless confirm=true"
+  missing_confirm: 'Returns error unless confirm=true'
 returns:
   success: boolean
   removed: number

@@ -12,30 +12,47 @@ class DataTools {
     return {
       create_annotation: {
         name: 'create_annotation',
-        description: 'Create a new user-defined biological annotation (e.g. gene, CDS, tRNA, promoter, primer) with type-specific validation and processing.',
+        description:
+          'Create a new user-defined biological annotation (e.g. gene, CDS, tRNA, promoter, primer) with type-specific validation and processing.',
         parameters: {
           type: 'object',
           properties: {
             type: {
               type: 'string',
-              description: 'Feature type (gene, CDS, mRNA, tRNA, rRNA, promoter, regulatory, terminator, ribosome_binding_site, primer, other)',
+              description:
+                'Feature type (gene, CDS, mRNA, tRNA, rRNA, promoter, regulatory, terminator, ribosome_binding_site, primer, other)',
             },
-            name: {type: 'string', description: 'Feature name/identifier (e.g., lacZ)'},
-            chromosome: {type: 'string', description: 'Chromosome or contig name'},
-            start: {type: 'number', description: 'Genomic start position (1-based)'},
-            end: {type: 'number', description: 'Genomic end position (1-based inclusive)'},
-            strand: {type: 'number', description: 'Strand direction: 1 for forward (+), -1 for reverse (-)', default: 1},
-            description: {type: 'string', description: 'Description or notes'},
-            product: {type: 'string', description: 'Protein product or RNA product description'},
-            codonStart: {type: 'number', description: 'Codon start frame (1, 2, or 3) for CDS features', default: 1},
-            translTable: {type: 'number', description: 'Translation genetic code table ID (e.g. 11 for bacteria) for CDS features', default: 11},
-            translation: {type: 'string', description: 'Protein sequence for CDS features. Auto-translated from DNA if omitted.'},
-            anticodon: {type: 'string', description: 'Anticodon for tRNA features (e.g. GAA)'},
-            regulatoryClass: {type: 'string', description: 'Regulatory class (e.g. promoter, terminator, ribosome_binding_site) for regulatory features'},
-            sequence: {type: 'string', description: 'Specific nucleotide sequence for primer features'},
-            direction: {type: 'string', description: 'Primer direction (forward or reverse) for primer features'},
-            qualifiers: {type: 'object', description: 'Any custom key-value pairs/qualifiers to add to the feature'},
-            clientId: {type: 'string', description: 'Browser client ID'},
+            name: { type: 'string', description: 'Feature name/identifier (e.g., lacZ)' },
+            chromosome: { type: 'string', description: 'Chromosome or contig name' },
+            start: { type: 'number', description: 'Genomic start position (1-based)' },
+            end: { type: 'number', description: 'Genomic end position (1-based inclusive)' },
+            strand: {
+              type: 'number',
+              description: 'Strand direction: 1 for forward (+), -1 for reverse (-)',
+              default: 1,
+            },
+            description: { type: 'string', description: 'Description or notes' },
+            product: { type: 'string', description: 'Protein product or RNA product description' },
+            codonStart: { type: 'number', description: 'Codon start frame (1, 2, or 3) for CDS features', default: 1 },
+            translTable: {
+              type: 'number',
+              description: 'Translation genetic code table ID (e.g. 11 for bacteria) for CDS features',
+              default: 11,
+            },
+            translation: {
+              type: 'string',
+              description: 'Protein sequence for CDS features. Auto-translated from DNA if omitted.',
+            },
+            anticodon: { type: 'string', description: 'Anticodon for tRNA features (e.g. GAA)' },
+            regulatoryClass: {
+              type: 'string',
+              description:
+                'Regulatory class (e.g. promoter, terminator, ribosome_binding_site) for regulatory features',
+            },
+            sequence: { type: 'string', description: 'Specific nucleotide sequence for primer features' },
+            direction: { type: 'string', description: 'Primer direction (forward or reverse) for primer features' },
+            qualifiers: { type: 'object', description: 'Any custom key-value pairs/qualifiers to add to the feature' },
+            clientId: { type: 'string', description: 'Browser client ID' },
           },
           required: ['type', 'name', 'chromosome', 'start', 'end'],
         },
@@ -47,12 +64,12 @@ class DataTools {
         parameters: {
           type: 'object',
           properties: {
-            chromosome: {type: 'string', description: 'Chromosome name'},
-            start: {type: 'number', description: 'Start position'},
-            end: {type: 'number', description: 'End position'},
-            includeFeatures: {type: 'boolean', description: 'Include gene/feature annotations'},
-            includeGC: {type: 'boolean', description: 'Include GC content analysis'},
-            clientId: {type: 'string', description: 'Browser client ID'},
+            chromosome: { type: 'string', description: 'Chromosome name' },
+            start: { type: 'number', description: 'Start position' },
+            end: { type: 'number', description: 'End position' },
+            includeFeatures: { type: 'boolean', description: 'Include gene/feature annotations' },
+            includeGC: { type: 'boolean', description: 'Include GC content analysis' },
+            clientId: { type: 'string', description: 'Browser client ID' },
           },
           required: ['chromosome', 'start', 'end'],
         },
@@ -64,17 +81,22 @@ class DataTools {
         parameters: {
           type: 'object',
           properties: {
-            format: {type: 'string', description: 'Export format (fasta, genbank, gff, bed)'},
-            chromosome: {type: 'string', description: 'Chromosome (optional for full export)'},
-            start: {type: 'number', description: 'Start position (optional)'},
-            end: {type: 'number', description: 'End position (optional)'},
-            filename: {type: 'string', description: 'Output file path. Supports absolute paths (e.g., "/Users/user/output/genome.fasta") and relative paths (resolved against CWD). Uses default filename if not specified.'},
+            format: { type: 'string', description: 'Export format (fasta, genbank, gff, bed)' },
+            chromosome: { type: 'string', description: 'Chromosome (optional for full export)' },
+            start: { type: 'number', description: 'Start position (optional)' },
+            end: { type: 'number', description: 'End position (optional)' },
+            filename: {
+              type: 'string',
+              description:
+                'Output file path. Supports absolute paths (e.g., "/Users/user/output/genome.fasta") and relative paths (resolved against CWD). Uses default filename if not specified.',
+            },
             auto_save: {
               type: 'boolean',
-              description: 'When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.',
+              description:
+                'When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.',
               default: true,
             },
-            clientId: {type: 'string', description: 'Browser client ID'},
+            clientId: { type: 'string', description: 'Browser client ID' },
           },
           required: ['format'],
         },
@@ -86,11 +108,11 @@ class DataTools {
         parameters: {
           type: 'object',
           properties: {
-            sequence: {type: 'string', description: 'DNA coding sequence to analyze'},
-            geneName: {type: 'string', description: 'Gene name for context (optional)'},
-            organism: {type: 'string', description: 'Organism name for comparison (optional)', default: 'E. coli'},
-            includeStatistics: {type: 'boolean', description: 'Include detailed statistics', default: true},
-            clientId: {type: 'string', description: 'Browser client ID'},
+            sequence: { type: 'string', description: 'DNA coding sequence to analyze' },
+            geneName: { type: 'string', description: 'Gene name for context (optional)' },
+            organism: { type: 'string', description: 'Organism name for comparison (optional)', default: 'E. coli' },
+            includeStatistics: { type: 'boolean', description: 'Include detailed statistics', default: true },
+            clientId: { type: 'string', description: 'Browser client ID' },
           },
           required: ['sequence'],
         },
@@ -118,8 +140,8 @@ class DataTools {
               description: 'Minimum feature length in base pairs (default 300)',
               default: 300,
             },
-            maxGenes: {type: 'integer', description: 'Maximum number of genes to analyze (optional)'},
-            clientId: {type: 'string', description: 'Browser client ID'},
+            maxGenes: { type: 'integer', description: 'Maximum number of genes to analyze (optional)' },
+            clientId: { type: 'string', description: 'Browser client ID' },
           },
           required: [],
         },
@@ -285,26 +307,26 @@ class DataTools {
 
   getSynonymousCodons() {
     return {
-      'F': ['TTT', 'TTC'],
-      'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
-      'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
-      'Y': ['TAT', 'TAC'],
-      'C': ['TGT', 'TGC'],
-      'W': ['TGG'],
-      'P': ['CCT', 'CCC', 'CCA', 'CCG'],
-      'H': ['CAT', 'CAC'],
-      'Q': ['CAA', 'CAG'],
-      'R': ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
-      'I': ['ATT', 'ATC', 'ATA'],
-      'M': ['ATG'],
-      'T': ['ACT', 'ACC', 'ACA', 'ACG'],
-      'N': ['AAT', 'AAC'],
-      'K': ['AAA', 'AAG'],
-      'V': ['GTT', 'GTC', 'GTA', 'GTG'],
-      'A': ['GCT', 'GCC', 'GCA', 'GCG'],
-      'D': ['GAT', 'GAC'],
-      'E': ['GAA', 'GAG'],
-      'G': ['GGT', 'GGC', 'GGA', 'GGG'],
+      F: ['TTT', 'TTC'],
+      L: ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
+      S: ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
+      Y: ['TAT', 'TAC'],
+      C: ['TGT', 'TGC'],
+      W: ['TGG'],
+      P: ['CCT', 'CCC', 'CCA', 'CCG'],
+      H: ['CAT', 'CAC'],
+      Q: ['CAA', 'CAG'],
+      R: ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
+      I: ['ATT', 'ATC', 'ATA'],
+      M: ['ATG'],
+      T: ['ACT', 'ACC', 'ACA', 'ACG'],
+      N: ['AAT', 'AAC'],
+      K: ['AAA', 'AAG'],
+      V: ['GTT', 'GTC', 'GTA', 'GTG'],
+      A: ['GCT', 'GCC', 'GCA', 'GCG'],
+      D: ['GAT', 'GAC'],
+      E: ['GAA', 'GAG'],
+      G: ['GGT', 'GGC', 'GGA', 'GGG'],
       '*': ['TAA', 'TAG', 'TGA'],
     };
   }
@@ -318,7 +340,7 @@ class DataTools {
   }
 
   calculateCodonBiasLocal(rscu) {
-    const values = Object.values(rscu).filter((v) => v > 0);
+    const values = Object.values(rscu).filter(v => v > 0);
     if (values.length === 0) return 0;
 
     const mean = values.reduce((sum, v) => sum + v, 0) / values.length;

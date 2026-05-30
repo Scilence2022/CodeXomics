@@ -29,7 +29,7 @@ parameters:
 # High-quality examples for few-shot learning
 sample_usages:
   - user_query: 'Clear the task list'
-    tool_call: "clear_tasks(confirm=true)"
+    tool_call: 'clear_tasks(confirm=true)'
     thought: 'User wants to reset the tasks list. I will call clear_tasks.'
     expected_result: 'Task list cleared.'
 

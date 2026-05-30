@@ -21,11 +21,23 @@ class TrackSettingsTools {
             track_type: {
               type: 'string',
               description: 'Type of track to get settings for',
-              enum: ['genes', 'primers', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'],
+              enum: [
+                'genes',
+                'primers',
+                'reads',
+                'sequence',
+                'gc',
+                'variants',
+                'actions',
+                'blast',
+                'wigTracks',
+                'sequenceLine',
+              ],
             },
             file_id: {
               type: 'string',
-              description: 'Optional file ID for multi-instance tracks (genes, reads, variants). When provided, returns instance-specific settings merged with type defaults.',
+              description:
+                'Optional file ID for multi-instance tracks (genes, reads, variants). When provided, returns instance-specific settings merged with type defaults.',
             },
           },
           required: ['track_type'],
@@ -35,18 +47,31 @@ class TrackSettingsTools {
       // Set track settings
       set_track_settings: {
         name: 'set_track_settings',
-        description: 'Set settings for a specific track type. Only provided parameters will be updated. For multi-instance tracks (genes, reads, variants), provide file_id to update instance-specific settings.',
+        description:
+          'Set settings for a specific track type. Only provided parameters will be updated. For multi-instance tracks (genes, reads, variants), provide file_id to update instance-specific settings.',
         parameters: {
           type: 'object',
           properties: {
             track_type: {
               type: 'string',
               description: 'Type of track to configure',
-              enum: ['genes', 'primers', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'],
+              enum: [
+                'genes',
+                'primers',
+                'reads',
+                'sequence',
+                'gc',
+                'variants',
+                'actions',
+                'blast',
+                'wigTracks',
+                'sequenceLine',
+              ],
             },
             file_id: {
               type: 'string',
-              description: 'Optional file ID for multi-instance tracks. When provided, settings are saved for that specific track instance only.',
+              description:
+                'Optional file ID for multi-instance tracks. When provided, settings are saved for that specific track instance only.',
             },
             settings: {
               type: 'object',

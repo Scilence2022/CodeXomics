@@ -51,10 +51,7 @@ describe('Disposable Pattern', () => {
   it('Disposable.from should combine multiple disposables', () => {
     const fn1 = vi.fn();
     const fn2 = vi.fn();
-    const d = Disposable.from(
-      new Disposable(fn1),
-      new Disposable(fn2)
-    );
+    const d = Disposable.from(new Disposable(fn1), new Disposable(fn2));
     d.dispose();
     expect(fn1).toHaveBeenCalledTimes(1);
     expect(fn2).toHaveBeenCalledTimes(1);
@@ -62,12 +59,7 @@ describe('Disposable Pattern', () => {
 
   it('Disposable.from should handle null/undefined', () => {
     const fn = vi.fn();
-    const d = Disposable.from(
-      new Disposable(fn),
-      null,
-      undefined,
-      { dispose: 'not a function' }
-    );
+    const d = Disposable.from(new Disposable(fn), null, undefined, { dispose: 'not a function' });
     expect(() => d.dispose()).not.toThrow();
     expect(fn).toHaveBeenCalledTimes(1);
   });

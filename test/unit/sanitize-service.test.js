@@ -43,9 +43,14 @@ function createMockSanitizeService(mockSanitize) {
       if (!element || typeof dirty !== 'string') return element;
       let clean;
       switch (mode) {
-        case 'markdown': clean = this.sanitizeMarkdown(dirty); break;
-        case 'genome': clean = this.sanitizeForGenomeBrowser(dirty); break;
-        default: clean = this.sanitize(dirty);
+        case 'markdown':
+          clean = this.sanitizeMarkdown(dirty);
+          break;
+        case 'genome':
+          clean = this.sanitizeForGenomeBrowser(dirty);
+          break;
+        default:
+          clean = this.sanitize(dirty);
       }
       element.innerHTML = clean;
       return element;
@@ -66,7 +71,7 @@ describe('SanitizeService', () => {
   let service;
 
   beforeEach(() => {
-    mockSanitize = vi.fn((html) => html); // default: pass-through
+    mockSanitize = vi.fn(html => html); // default: pass-through
     service = createMockSanitizeService(mockSanitize);
   });
 
@@ -89,9 +94,12 @@ describe('SanitizeService', () => {
 
     it('should pass string to DOMPurify with default config', () => {
       service.sanitize('<p>Hello</p>');
-      expect(mockSanitize).toHaveBeenCalledWith('<p>Hello</p>', expect.objectContaining({
-        FORBID_TAGS: ['script', 'style'],
-      }));
+      expect(mockSanitize).toHaveBeenCalledWith(
+        '<p>Hello</p>',
+        expect.objectContaining({
+          FORBID_TAGS: ['script', 'style'],
+        })
+      );
     });
   });
 
@@ -102,9 +110,12 @@ describe('SanitizeService', () => {
 
     it('should use markdown config with ADD_ATTR: target', () => {
       service.sanitizeMarkdown('<h1>Title</h1>');
-      expect(mockSanitize).toHaveBeenCalledWith('<h1>Title</h1>', expect.objectContaining({
-        ADD_ATTR: ['target'],
-      }));
+      expect(mockSanitize).toHaveBeenCalledWith(
+        '<h1>Title</h1>',
+        expect.objectContaining({
+          ADD_ATTR: ['target'],
+        })
+      );
     });
   });
 
@@ -115,9 +126,12 @@ describe('SanitizeService', () => {
 
     it('should use restrictive config with limited tags', () => {
       service.sanitizeForGenomeBrowser('<b>gene</b>');
-      expect(mockSanitize).toHaveBeenCalledWith('<b>gene</b>', expect.objectContaining({
-        ALLOWED_TAGS: expect.arrayContaining(['b', 'i', 'em', 'strong']),
-      }));
+      expect(mockSanitize).toHaveBeenCalledWith(
+        '<b>gene</b>',
+        expect.objectContaining({
+          ALLOWED_TAGS: expect.arrayContaining(['b', 'i', 'em', 'strong']),
+        })
+      );
     });
   });
 
@@ -142,18 +156,24 @@ describe('SanitizeService', () => {
       const el = { innerHTML: '' };
       mockSanitize.mockReturnValueOnce('<h1>clean</h1>');
       service.safeSetInnerHTML(el, '<h1>title</h1>', 'markdown');
-      expect(mockSanitize).toHaveBeenCalledWith('<h1>title</h1>', expect.objectContaining({
-        ADD_ATTR: ['target'],
-      }));
+      expect(mockSanitize).toHaveBeenCalledWith(
+        '<h1>title</h1>',
+        expect.objectContaining({
+          ADD_ATTR: ['target'],
+        })
+      );
     });
 
     it('should use genome mode', () => {
       const el = { innerHTML: '' };
       mockSanitize.mockReturnValueOnce('<b>gene</b>');
       service.safeSetInnerHTML(el, '<b>gene</b>', 'genome');
-      expect(mockSanitize).toHaveBeenCalledWith('<b>gene</b>', expect.objectContaining({
-        ALLOWED_TAGS: expect.arrayContaining(['b', 'i', 'em']),
-      }));
+      expect(mockSanitize).toHaveBeenCalledWith(
+        '<b>gene</b>',
+        expect.objectContaining({
+          ALLOWED_TAGS: expect.arrayContaining(['b', 'i', 'em']),
+        })
+      );
     });
   });
 

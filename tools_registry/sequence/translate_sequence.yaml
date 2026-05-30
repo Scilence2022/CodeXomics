@@ -21,7 +21,7 @@ parameters:
   properties:
     sequence:
       type: string
-      description: 'DNA sequence to translate (alias for the ''dna'' parameter in translate_dna)'
+      description: "DNA sequence to translate (alias for the 'dna' parameter in translate_dna)"
     dna:
       type: string
       description: 'DNA sequence to translate (preferred parameter name)'
@@ -33,7 +33,7 @@ parameters:
   required: []
 sample_usages:
   - user_query: 'Translate this DNA sequence to protein'
-    tool_call: 'translate_dna(dna=''ATGCGCTATCGAAAG'', reading_frame=1)'
+    tool_call: "translate_dna(dna='ATGCGCTATCGAAAG', reading_frame=1)"
     thought: 'Prefer translate_dna over translate_sequence'
     expected_result: 'Amino acid sequence'
 relationships:

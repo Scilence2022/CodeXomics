@@ -38,10 +38,12 @@ class PluginAgent extends AgentBase {
     // Try ChatManager first (authoritative execution path)
     if (chatManager && typeof chatManager.executeToolByName === 'function') {
       try {
-        const result = await chatManager.executeToolByName(functionName, parameters, {bypassAgent: true});
+        const result = await chatManager.executeToolByName(functionName, parameters, { bypassAgent: true });
         return result;
       } catch (error) {
-        console.warn(`🔌 PluginAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`);
+        console.warn(
+          `🔌 PluginAgent: ChatManager execution failed for ${functionName}, falling back to local implementation`
+        );
       }
     }
 
@@ -96,7 +98,7 @@ class PluginAgent extends AgentBase {
    */
   async listPlugins(parameters, strategy) {
     try {
-      const {status = 'all'} = parameters;
+      const { status = 'all' } = parameters;
 
       if (!this.pluginManager) {
         throw new Error('PluginManager not available');
@@ -106,7 +108,7 @@ class PluginAgent extends AgentBase {
 
       return {
         success: true,
-        plugins: plugins.map((plugin) => ({
+        plugins: plugins.map(plugin => ({
           id: plugin.id,
           name: plugin.name,
           version: plugin.version,
@@ -131,7 +133,7 @@ class PluginAgent extends AgentBase {
    */
   async getPluginInfo(parameters, strategy) {
     try {
-      const {pluginId} = parameters;
+      const { pluginId } = parameters;
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
@@ -176,7 +178,7 @@ class PluginAgent extends AgentBase {
    */
   async installPlugin(parameters, strategy) {
     try {
-      const {pluginId, source = 'marketplace'} = parameters;
+      const { pluginId, source = 'marketplace' } = parameters;
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
@@ -211,7 +213,7 @@ class PluginAgent extends AgentBase {
    */
   async uninstallPlugin(parameters, strategy) {
     try {
-      const {pluginId} = parameters;
+      const { pluginId } = parameters;
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
@@ -240,7 +242,7 @@ class PluginAgent extends AgentBase {
    */
   async enablePlugin(parameters, strategy) {
     try {
-      const {pluginId} = parameters;
+      const { pluginId } = parameters;
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
@@ -269,7 +271,7 @@ class PluginAgent extends AgentBase {
    */
   async disablePlugin(parameters, strategy) {
     try {
-      const {pluginId} = parameters;
+      const { pluginId } = parameters;
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
@@ -298,7 +300,7 @@ class PluginAgent extends AgentBase {
    */
   async executePlugin(parameters, strategy) {
     try {
-      const {pluginId, functionName, parameters: funcParams = {}} = parameters;
+      const { pluginId, functionName, parameters: funcParams = {} } = parameters;
 
       if (!pluginId || !functionName) {
         throw new Error('Plugin ID and function name are required');
@@ -336,7 +338,7 @@ class PluginAgent extends AgentBase {
    */
   async getPluginFunctions(parameters, strategy) {
     try {
-      const {pluginId} = parameters;
+      const { pluginId } = parameters;
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
@@ -350,7 +352,7 @@ class PluginAgent extends AgentBase {
 
       return {
         success: true,
-        functions: functions.map((func) => ({
+        functions: functions.map(func => ({
           name: func.name,
           description: func.description,
           parameters: func.parameters,
@@ -373,7 +375,7 @@ class PluginAgent extends AgentBase {
    */
   async createPlugin(parameters, strategy) {
     try {
-      const {name, description, author, functions = []} = parameters;
+      const { name, description, author, functions = [] } = parameters;
 
       if (!name || !description || !author) {
         throw new Error('Name, description, and author are required');
@@ -416,7 +418,7 @@ class PluginAgent extends AgentBase {
    */
   async validatePlugin(parameters, strategy) {
     try {
-      const {pluginId} = parameters;
+      const { pluginId } = parameters;
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
@@ -451,7 +453,7 @@ class PluginAgent extends AgentBase {
    */
   async testPlugin(parameters, strategy) {
     try {
-      const {pluginId, testCases = []} = parameters;
+      const { pluginId, testCases = [] } = parameters;
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');
@@ -486,7 +488,7 @@ class PluginAgent extends AgentBase {
    */
   async searchPlugins(parameters, strategy) {
     try {
-      const {query, category = 'all', maxResults = 20} = parameters;
+      const { query, category = 'all', maxResults = 20 } = parameters;
 
       if (!query) {
         throw new Error('Search query is required');
@@ -500,7 +502,7 @@ class PluginAgent extends AgentBase {
 
       return {
         success: true,
-        results: searchResults.map((plugin) => ({
+        results: searchResults.map(plugin => ({
           id: plugin.id,
           name: plugin.name,
           description: plugin.description,
@@ -526,7 +528,7 @@ class PluginAgent extends AgentBase {
    */
   async getPluginMarketplace(parameters, strategy) {
     try {
-      const {category = 'all', sortBy = 'popularity', page = 1, pageSize = 20} = parameters;
+      const { category = 'all', sortBy = 'popularity', page = 1, pageSize = 20 } = parameters;
 
       if (!this.pluginManager) {
         throw new Error('PluginManager not available');
@@ -537,7 +539,7 @@ class PluginAgent extends AgentBase {
       return {
         success: true,
         marketplace: {
-          plugins: marketplace.plugins.map((plugin) => ({
+          plugins: marketplace.plugins.map(plugin => ({
             id: plugin.id,
             name: plugin.name,
             description: plugin.description,
@@ -566,7 +568,7 @@ class PluginAgent extends AgentBase {
    */
   async updatePlugin(parameters, strategy) {
     try {
-      const {pluginId, version} = parameters;
+      const { pluginId, version } = parameters;
 
       if (!pluginId) {
         throw new Error('Plugin ID is required');

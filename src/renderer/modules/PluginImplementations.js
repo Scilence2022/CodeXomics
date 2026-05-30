@@ -115,7 +115,7 @@ const PluginImplementations = {
           let match;
           while ((match = regex.exec(searchSeq)) !== null && results.length < maxResults) {
             results.push({
-              position: start + match.index + 1,  // 1-based
+              position: start + match.index + 1, // 1-based
               end: start + match.index + match[0].length,
               strand: '+',
               sequence: match[0],
@@ -166,7 +166,7 @@ const PluginImplementations = {
                 strand: '+',
                 sequence: sub,
                 motif: motifPattern,
-                score: 1 - (mm / motifLen),
+                score: 1 - mm / motifLen,
                 mismatches: mm,
               });
             }
@@ -186,7 +186,7 @@ const PluginImplementations = {
                 strand: '-',
                 sequence: sub,
                 motif: motifPattern,
-                score: 1 - (mm / rcLen),
+                score: 1 - mm / rcLen,
                 mismatches: mm,
               });
             }
@@ -194,7 +194,7 @@ const PluginImplementations = {
         }
       }
 
-      const regionLen = (end - start) || 1;
+      const regionLen = end - start || 1;
       return {
         chromosome,
         start,
@@ -699,10 +699,21 @@ const PluginImplementations = {
    */
   _expandIUPACToRegex(motif) {
     const iupacCodes = {
-      A: 'A', C: 'C', G: 'G', T: 'T',
-      R: '[AG]', Y: '[CT]', S: '[GC]', W: '[AT]',
-      K: '[GT]', M: '[AC]', B: '[CGT]', D: '[AGT]',
-      H: '[ACT]', V: '[ACG]', N: '[ACGT]',
+      A: 'A',
+      C: 'C',
+      G: 'G',
+      T: 'T',
+      R: '[AG]',
+      Y: '[CT]',
+      S: '[GC]',
+      W: '[AT]',
+      K: '[GT]',
+      M: '[AC]',
+      B: '[CGT]',
+      D: '[AGT]',
+      H: '[ACT]',
+      V: '[ACG]',
+      N: '[ACGT]',
     };
     const pureBases = /^[ACGTacgt]+$/;
     if (pureBases.test(motif)) return null;
@@ -728,12 +739,26 @@ const PluginImplementations = {
    */
   _reverseComplementIUPAC(motif) {
     const iupacComplement = {
-      A: 'T', T: 'A', G: 'C', C: 'G',
-      R: 'Y', Y: 'R', S: 'S', W: 'W',
-      K: 'M', M: 'K', B: 'V', D: 'H',
-      H: 'D', V: 'B', N: 'N',
+      A: 'T',
+      T: 'A',
+      G: 'C',
+      C: 'G',
+      R: 'Y',
+      Y: 'R',
+      S: 'S',
+      W: 'W',
+      K: 'M',
+      M: 'K',
+      B: 'V',
+      D: 'H',
+      H: 'D',
+      V: 'B',
+      N: 'N',
     };
-    return motif.toUpperCase().split('').reverse()
+    return motif
+      .toUpperCase()
+      .split('')
+      .reverse()
       .map(b => iupacComplement[b] || b)
       .join('');
   },

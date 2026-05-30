@@ -1,7 +1,7 @@
 /**
  * ChatManager Close Tab Tests
  */
-import {describe, it, expect} from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -20,6 +20,6 @@ describe('ChatManager - Close Tab Default Behavior', () => {
     // Verify it resolves tab title from targetTabId if available
     expect(content).toContain('targetTabTitle = tabState?.title || ' + '`Tab $' + '{targetTabId}`;');
     // Verify it throws an error if no active tab is found
-    expect(content).toContain('throw new Error(\'No active tab to close\');');
+    expect(content).toContain("throw new Error('No active tab to close');");
   });
 });

@@ -341,9 +341,9 @@ class FileManager {
       // Parse genes (semicolon-separated)
       const genes = genesStr
         ? genesStr
-          .split(';')
-          .map(g => g.trim())
-          .filter(g => g)
+            .split(';')
+            .map(g => g.trim())
+            .filter(g => g)
         : [];
 
       // Map confidence level to numeric score
@@ -1813,7 +1813,6 @@ Original error: ${error.message}`;
       console.log(`📋 File ${fileName} already in loaded files list`);
     }
   }
-
 
   /**
    * Create a new annotation track with the given annotations
