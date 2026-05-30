@@ -1,0 +1,93 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import path from 'path';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const SequenceUtils = require(path.join(process.cwd(), 'src/renderer/modules/SequenceUtils.js'));
+
+describe('SequenceUtils circular bottom sequence track', () => {
+  let utils;
+  let logSpy;
+
+  function createGenomeBrowser() {
+    return {
+      currentChromosome: 'chr1',
+      currentSequence: {
+        chr1: `${'A'.repeat(95)}TTTTT`,
+      },
+      currentPosition: { start: 95, end: 105 },
+      currentAnnotations: {
+        chr1: [
+          { type: 'gene', start: 97, end: 99, strand: 1, qualifiers: { gene: 'tail' } },
+          { type: 'CDS', start: 3, end: 5, strand: 1, qualifiers: { gene: 'head' } },
+        ],
+      },
+      navigationManager: { circularMode: false },
+      trackRenderer: {
+        getTrackSettings: name => (name === 'genes' ? { circularMode: true } : {}),
+      },
+      shouldShowGeneType: () => true,
+      getGeneOperonInfo: () => null,
+      getQualifierValue: (qualifiers, key) => qualifiers?.[key] || '',
+    };
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="sequenceContent"></div>';
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    utils = new SequenceUtils(createGenomeBrowser());
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+  });
+
+  it('extracts and labels sequence that crosses the circular junction', () => {
+    const sequence = utils.genomeBrowser.currentSequence.chr1;
+
+    expect(utils.getViewportSequence(sequence, 95, 105, 'chr1')).toBe('TTTTTAAAAA');
+    expect(utils.formatSequenceRange('chr1', 95, 105)).toBe('chr1:96-100 / 1-5 (10 bp)');
+    expect(utils.getLineDisplayLabel(100, 'chr1')).toBe('1');
+  });
+
+  it('renders wrapped bases with source positions for clicks and selection restore', () => {
+    const annotations = utils.genomeBrowser.currentAnnotations.chr1;
+    const subsequence = utils.getViewportSequence(utils.genomeBrowser.currentSequence.chr1, 95, 105, 'chr1');
+    const featureLookup = utils.buildFeatureLookup(annotations, 95, 105, 'chr1');
+    const lineElement = utils.renderSequenceLine(subsequence, 95, 'chr1', annotations, [], 10, {}, featureLookup);
+
+    document.getElementById('sequenceContent').appendChild(lineElement);
+
+    const positionLabel = lineElement.querySelector('.sequence-position');
+    const bases = Array.from(lineElement.querySelectorAll('.sequence-bases span[data-position]'));
+
+    expect(positionLabel.textContent).toBe('96');
+    expect(bases.map(base => base.textContent).join('')).toBe('TTTTTAAAAA');
+    expect(bases.map(base => Number(base.dataset.position))).toEqual([95, 96, 97, 98, 99, 0, 1, 2, 3, 4]);
+    expect(utils.getSequencePosition(bases[5])).toBe(0);
+
+    const headFeatureBase = bases.find(base => base.dataset.position === '2');
+    expect(headFeatureBase.getAttribute('title')).toContain('head (3-5)');
+
+    const restored = utils.findNodeAtGenomicPosition(2, document.getElementById('sequenceContent'));
+    expect(restored.node.textContent).toBe('A');
+    expect(restored.offset).toBe(0);
+  });
+
+  it('highlights source-coordinate search matches after the origin', () => {
+    const featureLookup = new Map();
+    const lineElement = utils.renderSequenceLine('TTTTTAAAAA', 95, 'chr1', [], [], 10, {}, featureLookup);
+    const basesDiv = lineElement.querySelector('.sequence-bases');
+
+    utils.searchHighlights = [{ start: 1, end: 3 }];
+    utils.applySearchHighlightToLine(basesDiv, 95, 10);
+
+    const highlightedBases = Array.from(basesDiv.querySelectorAll('span[data-position]')).filter(base =>
+      base.innerHTML.includes(utils.highlightColor)
+    );
+
+    expect(highlightedBases.map(base => Number(base.dataset.position))).toEqual([1, 2, 3]);
+    const highlightedText = highlightedBases[1].querySelector('span').firstChild;
+    expect(utils.extractGenomicPositionFromNode(highlightedText, 0)).toBe(2);
+  });
+});

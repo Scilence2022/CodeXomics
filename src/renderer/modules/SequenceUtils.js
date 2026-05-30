@@ -306,6 +306,37 @@ class SequenceUtils {
     const sequenceContent = document.getElementById('sequenceContent');
     if (!sequenceContent) return;
 
+    // Create cursor element
+    const cursorElement = document.createElement('span');
+    cursorElement.className = 'sequence-cursor';
+    cursorElement.style.cssText = `
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: ${this.cursor.color};
+            margin: 0 -1px;
+            vertical-align: text-bottom;
+            animation: cursor-blink 1s step-end infinite;
+        `;
+
+    const targetSpan = sequenceContent.querySelector(`.sequence-bases span[data-position="${this.cursor.position}"]`);
+    if (targetSpan) {
+      const basesDiv = targetSpan.closest('.sequence-bases');
+      const targetLine = targetSpan.closest('.sequence-line-group');
+      const baseSpans = Array.from(basesDiv.querySelectorAll('span[data-position]'));
+      const posInLine = baseSpans.indexOf(targetSpan);
+      const sequenceLines = Array.from(sequenceContent.querySelectorAll('.sequence-line-group'));
+      const lineIndex = sequenceLines.indexOf(targetLine);
+
+      basesDiv.insertBefore(cursorElement, targetSpan);
+      this.cursor.element = cursorElement;
+      this.cursor.lineNumber = lineIndex;
+      this.cursor.offset = posInLine;
+
+      console.log(`✅ [SequenceUtils] Cursor rendered at line ${lineIndex}, offset ${posInLine}`);
+      return;
+    }
+
     const start = this.genomeBrowser.currentPosition.start;
     const relativePos = this.cursor.position - start;
 
@@ -341,19 +372,6 @@ class SequenceUtils {
     if (!basesDiv) return;
 
     const baseSpans = basesDiv.querySelectorAll('span');
-
-    // Create cursor element
-    const cursorElement = document.createElement('span');
-    cursorElement.className = 'sequence-cursor';
-    cursorElement.style.cssText = `
-            display: inline-block;
-            width: 2px;
-            height: 1.2em;
-            background-color: ${this.cursor.color};
-            margin: 0 -1px;
-            vertical-align: text-bottom;
-            animation: cursor-blink 1s step-end infinite;
-        `;
 
     // Insert cursor before the target base
     if (posInLine < baseSpans.length) {
@@ -409,6 +427,13 @@ class SequenceUtils {
     if (!baseSpan) {
       console.warn('⚠️ [SequenceUtils] getSequencePosition called with null/undefined baseSpan');
       return null;
+    }
+
+    const positionedSpan =
+      baseSpan.dataset?.position !== undefined ? baseSpan : baseSpan.closest?.('span[data-position]');
+    if (positionedSpan?.dataset?.position !== undefined) {
+      const position = parseInt(positionedSpan.dataset.position, 10);
+      return Number.isNaN(position) ? null : position;
     }
 
     // Find the parent sequence line
@@ -494,12 +519,11 @@ class SequenceUtils {
   displayEnhancedSequence(chromosome, sequence) {
     const start = this.genomeBrowser.currentPosition.start;
     const end = this.genomeBrowser.currentPosition.end;
-    const windowSize = end - start;
 
     // Update sequence title
     const sequenceTitle = document.getElementById('sequenceTitle');
     if (sequenceTitle) {
-      sequenceTitle.textContent = `${chromosome}:${start + 1}-${end} (${windowSize} bp)`;
+      sequenceTitle.textContent = this.formatSequenceRange(chromosome, start, end);
     }
 
     // Show sequence display section and splitter if not already visible
@@ -544,6 +568,159 @@ class SequenceUtils {
         this.restoreManualSelection(this.genomeBrowser.currentSequenceSelection);
       }, 100);
     }
+  }
+
+  isCircularModeEnabled() {
+    if (this.genomeBrowser.trackRenderer?.isCircularModeEnabled) {
+      return this.genomeBrowser.trackRenderer.isCircularModeEnabled();
+    }
+
+    const genesSettings = this.genomeBrowser.trackRenderer?.getTrackSettings?.('genes');
+    return Boolean(genesSettings?.circularMode || this.genomeBrowser.navigationManager?.circularMode);
+  }
+
+  getSequenceLength(chromosome = null) {
+    const currentChr = chromosome || this.genomeBrowser.currentChromosome;
+    const sequence = this.genomeBrowser.currentSequence;
+    const chromosomeSequence = typeof sequence === 'object' && currentChr ? sequence[currentChr] : sequence;
+    return typeof chromosomeSequence === 'string' ? chromosomeSequence.length : 0;
+  }
+
+  normalizeCircularPosition(position, sequenceLength) {
+    if (!sequenceLength || sequenceLength <= 0) return position;
+    return ((position % sequenceLength) + sequenceLength) % sequenceLength;
+  }
+
+  displayToSourcePosition(displayPosition, chromosome = null) {
+    const sequenceLength = this.getSequenceLength(chromosome);
+    if (!this.isCircularModeEnabled() || sequenceLength <= 0) {
+      return displayPosition;
+    }
+
+    return this.normalizeCircularPosition(displayPosition, sequenceLength);
+  }
+
+  getViewportSequence(fullSequence, viewStart, viewEnd, chromosome = null) {
+    if (this.genomeBrowser.trackRenderer?.getWrappedSequence) {
+      return this.genomeBrowser.trackRenderer.getWrappedSequence(fullSequence, viewStart, viewEnd, chromosome);
+    }
+
+    if (!this.isCircularModeEnabled() || !fullSequence || viewEnd <= viewStart) {
+      return fullSequence.substring(Math.max(0, viewStart), Math.min(fullSequence.length, viewEnd));
+    }
+
+    const sequenceLength = fullSequence.length;
+    let cursor = viewStart;
+    let sequence = '';
+
+    while (cursor < viewEnd) {
+      const sourceStart = this.normalizeCircularPosition(cursor, sequenceLength);
+      const basesToBoundary = sourceStart === 0 ? sequenceLength : sequenceLength - sourceStart;
+      const displayEnd = Math.min(viewEnd, cursor + basesToBoundary);
+      sequence += fullSequence.substring(sourceStart, sourceStart + (displayEnd - cursor));
+      cursor = displayEnd;
+    }
+
+    return sequence;
+  }
+
+  formatSequenceRange(chromosome, viewStart, viewEnd) {
+    const windowSize = viewEnd - viewStart;
+    const sequenceLength = this.getSequenceLength(chromosome);
+
+    if (!this.isCircularModeEnabled() || sequenceLength <= 0) {
+      return `${chromosome}:${viewStart + 1}-${viewEnd} (${windowSize} bp)`;
+    }
+
+    const segments = this.genomeBrowser.trackRenderer?.getViewportSegments
+      ? this.genomeBrowser.trackRenderer.getViewportSegments({ start: viewStart, end: viewEnd }, chromosome)
+      : this.getViewportDisplaySegments(viewStart, viewEnd, sequenceLength);
+    const segmentLabels = segments.map(segment => `${segment.sourceStart + 1}-${segment.sourceEnd}`);
+
+    return `${chromosome}:${segmentLabels.join(' / ')} (${windowSize} bp)`;
+  }
+
+  getLineDisplayLabel(lineStartPos, chromosome = null) {
+    const sourcePosition = this.displayToSourcePosition(lineStartPos, chromosome);
+    return (sourcePosition + 1).toLocaleString();
+  }
+
+  getViewportDisplaySegments(viewStart, viewEnd, sequenceLength) {
+    const segments = [];
+    let cursor = viewStart;
+
+    while (cursor < viewEnd) {
+      const sourceStart = this.normalizeCircularPosition(cursor, sequenceLength);
+      const basesToBoundary = sourceStart === 0 ? sequenceLength : sequenceLength - sourceStart;
+      const displayEnd = Math.min(viewEnd, cursor + basesToBoundary);
+      segments.push({
+        sourceStart,
+        sourceEnd: sourceStart + (displayEnd - cursor),
+        displayStart: cursor,
+        displayEnd,
+      });
+      cursor = displayEnd;
+    }
+
+    return segments;
+  }
+
+  annotationOverlapsSourcePosition(annotation, sourcePosition1Based) {
+    if (!annotation || !this.genomeBrowser.shouldShowGeneType(annotation.type)) return false;
+
+    if (annotation.start <= annotation.end) {
+      return sourcePosition1Based >= annotation.start && sourcePosition1Based <= annotation.end;
+    }
+
+    return sourcePosition1Based >= annotation.start || sourcePosition1Based <= annotation.end;
+  }
+
+  getAnnotationDisplaySegments(annotation, lineStartAbs, lineEndAbs, chromosome = null) {
+    if (!this.isCircularModeEnabled()) return [annotation];
+
+    if (this.genomeBrowser.trackRenderer?.getFeatureRangeDisplaySegments) {
+      return this.genomeBrowser.trackRenderer
+        .getFeatureRangeDisplaySegments(
+          annotation.start - 1,
+          annotation.end,
+          { start: lineStartAbs, end: lineEndAbs },
+          {
+            includeZeroLength: false,
+            chromosome,
+          }
+        )
+        .map(segment => ({
+          ...annotation,
+          start: segment.start + 1,
+          end: segment.end,
+          _sourceStart: annotation.start,
+          _sourceEnd: annotation.end,
+        }));
+    }
+
+    const sequenceLength = this.getSequenceLength(chromosome);
+    if (sequenceLength <= 0) return [annotation];
+
+    const segments = [];
+    for (let displayPos = lineStartAbs; displayPos < lineEndAbs; displayPos++) {
+      const sourcePos1Based = this.normalizeCircularPosition(displayPos, sequenceLength) + 1;
+      if (!this.annotationOverlapsSourcePosition(annotation, sourcePos1Based)) continue;
+
+      const lastSegment = segments[segments.length - 1];
+      if (lastSegment && lastSegment.end === displayPos) {
+        lastSegment.end = displayPos + 1;
+      } else {
+        segments.push({
+          ...annotation,
+          start: displayPos + 1,
+          end: displayPos + 1,
+          _sourceStart: annotation.start,
+          _sourceEnd: annotation.end,
+        });
+      }
+    }
+
+    return segments;
   }
 
   /**
@@ -1032,7 +1209,7 @@ class SequenceUtils {
     container.style.removeProperty('height');
     container.className = '';
 
-    const subsequence = fullSequence.substring(viewStart, viewEnd);
+    const subsequence = this.getViewportSequence(fullSequence, viewStart, viewEnd, chromosome);
     const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
     const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations, chromosome) : [];
 
@@ -1099,7 +1276,7 @@ class SequenceUtils {
     }
 
     // Pre-compute feature lookups for better performance
-    const featureLookup = this.buildFeatureLookup(annotations, viewStart, viewEnd);
+    const featureLookup = this.buildFeatureLookup(annotations, viewStart, viewEnd, chromosome);
 
     // Enable virtual scrolling for sequences that actually need it
     const totalLines = Math.ceil(subsequence.length / optimalLineLength);
@@ -1155,8 +1332,15 @@ class SequenceUtils {
   /**
    * Build optimized feature lookup table
    */
-  buildFeatureLookup(annotations, viewStart, viewEnd) {
-    const lookupKey = `${viewStart}:${viewEnd}:${this.getAnnotationHash(annotations)}`;
+  buildFeatureLookup(annotations, viewStart, viewEnd, chromosome = null) {
+    const lookupKey = [
+      viewStart,
+      viewEnd,
+      chromosome || '',
+      this.isCircularModeEnabled() ? 'circular' : 'linear',
+      this.getSequenceLength(chromosome),
+      this.getAnnotationHash(annotations),
+    ].join(':');
 
     if (this.featureCache.has(lookupKey)) {
       this.performanceStats.cacheHits++;
@@ -1167,21 +1351,19 @@ class SequenceUtils {
 
     const lookup = new Map();
 
-    // Only process annotations that overlap with the view range
-    const relevantAnnotations = annotations.filter(
-      f => f.end >= viewStart && f.start <= viewEnd && this.genomeBrowser.shouldShowGeneType(f.type)
-    );
+    const relevantAnnotations = annotations.filter(f => this.genomeBrowser.shouldShowGeneType(f.type));
 
     // Build position-based lookup
-    for (let pos = viewStart; pos <= viewEnd; pos++) {
-      const overlapping = relevantAnnotations.filter(f => pos >= f.start && pos <= f.end);
+    for (let displayPos = viewStart; displayPos < viewEnd; displayPos++) {
+      const sourcePos1Based = this.displayToSourcePosition(displayPos, chromosome) + 1;
+      const overlapping = relevantAnnotations.filter(f => this.annotationOverlapsSourcePosition(f, sourcePos1Based));
       if (overlapping.length > 0) {
         // Sort by priority
         const sorted = overlapping.sort((a, b) => {
           const typeOrder = { CDS: 1, mRNA: 2, tRNA: 2, rRNA: 2, promoter: 3, terminator: 3, regulatory: 3, gene: 4 };
           return (typeOrder[a.type] || 5) - (typeOrder[b.type] || 5);
         });
-        lookup.set(pos, sorted[0]);
+        lookup.set(displayPos + 1, sorted[0]);
       }
     }
 
@@ -1367,6 +1549,8 @@ class SequenceUtils {
 
     const lineGroup = document.createElement('div');
     lineGroup.className = 'sequence-line-group';
+    lineGroup.dataset.displayStart = String(lineStartPos);
+    lineGroup.dataset.sourceStart = String(this.displayToSourcePosition(lineStartPos, chromosome));
     lineGroup.style.marginBottom = `${this.lineSpacing}px`;
 
     // Create sequence line with configurable height to prevent compression
@@ -1383,7 +1567,9 @@ class SequenceUtils {
     positionSpan.className = 'sequence-position';
     positionSpan.style.cssText =
       'width: 100px; color: #6c757d; font-weight: 600; margin-right: 15px; text-align: right; flex-shrink: 0;';
-    positionSpan.textContent = (lineStartPos + 1).toLocaleString();
+    positionSpan.dataset.displayStart = String(lineStartPos);
+    positionSpan.dataset.sourceStart = String(this.displayToSourcePosition(lineStartPos, chromosome));
+    positionSpan.textContent = this.getLineDisplayLabel(lineStartPos, chromosome);
 
     // Sequence bases
     const basesDiv = document.createElement('div');
@@ -1394,7 +1580,8 @@ class SequenceUtils {
       lineSubsequence,
       lineStartPos,
       featureLookup,
-      operons
+      operons,
+      chromosome
     );
 
     // Apply search highlighting if any highlights overlap with this line
@@ -1426,7 +1613,8 @@ class SequenceUtils {
       operons,
       charWidth,
       false,
-      sequenceSettings
+      sequenceSettings,
+      chromosome
     );
 
     lineGroup.appendChild(sequenceLine);
@@ -1441,31 +1629,35 @@ class SequenceUtils {
   /**
    * Optimized sequence colorization with feature lookup
    */
-  colorizeSequenceWithFeaturesOptimized(sequence, lineStartAbs, featureLookup, operons) {
+  colorizeSequenceWithFeaturesOptimized(sequence, lineStartAbs, featureLookup, operons, chromosome = null) {
     const baseFontSize = '14px';
     const fragments = [];
 
     for (let i = 0; i < sequence.length; i++) {
       const base = sequence[i];
-      const absPos = lineStartAbs + i + 1;
+      const displayPos = lineStartAbs + i;
+      const displayPos1Based = displayPos + 1;
+      const sourcePos = this.displayToSourcePosition(displayPos, chromosome);
       const baseTextColor = this.getBaseColor(base);
 
       let featureHexColor = null;
       let featureTitle = '';
 
       // Use optimized feature lookup
-      const mainFeature = featureLookup.get(absPos);
+      const mainFeature = featureLookup.get(displayPos1Based);
       if (mainFeature) {
         const operonInfo =
           operons && mainFeature.type !== 'promoter' && mainFeature.type !== 'terminator'
             ? this.genomeBrowser.getGeneOperonInfo(mainFeature, operons)
             : null;
         featureHexColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(mainFeature.type);
+        const featureStart = mainFeature._sourceStart || mainFeature.start;
+        const featureEnd = mainFeature._sourceEnd || mainFeature.end;
         featureTitle = `${
           this.genomeBrowser.getQualifierValue(mainFeature.qualifiers, 'gene') ||
           this.genomeBrowser.getQualifierValue(mainFeature.qualifiers, 'locus_tag') ||
           mainFeature.type
-        } (${mainFeature.start}-${mainFeature.end})`;
+        } (${featureStart}-${featureEnd})`;
       }
 
       // Use cached color calculations
@@ -1494,7 +1686,10 @@ class SequenceUtils {
       const className = `base-${base.toLowerCase()}`;
       const titleAttr = featureTitle ? ` title="${featureTitle}"` : '';
       // Removed click handler for cursor positioning
-      fragments.push(`<span class="${className}" style="${style}"${titleAttr}>${base}</span>`);
+      fragments.push(
+        `<span class="${className}" style="${style}" data-position="${sourcePos}" ` +
+          `data-display-position="${displayPos}"${titleAttr}>${base}</span>`
+      );
     }
 
     return fragments.join('');
@@ -1510,7 +1705,8 @@ class SequenceUtils {
     operons,
     charWidth,
     simplified = false,
-    settings = {}
+    settings = {},
+    chromosome = null
   ) {
     // Check if indicators should be shown
     if (settings.showIndicators === false) {
@@ -1519,7 +1715,16 @@ class SequenceUtils {
 
     // Include settings hash in cache key to ensure cache is invalidated when settings change
     const settingsHash = settings ? this.getSettingsHash(settings) : '';
-    const cacheKey = `indicator:${lineStartAbs}:${sequence.length}:${this.getAnnotationHash(annotations)}:${settingsHash}`;
+    const cacheKey = [
+      'indicator',
+      lineStartAbs,
+      sequence.length,
+      chromosome || '',
+      this.isCircularModeEnabled() ? 'circular' : 'linear',
+      this.getSequenceLength(chromosome),
+      this.getAnnotationHash(annotations),
+      settingsHash,
+    ].join(':');
 
     if (this.svgCache.has(cacheKey)) {
       this.performanceStats.cacheHits++;
@@ -1533,8 +1738,12 @@ class SequenceUtils {
     const lineWidth = sequence.length * charWidth * widthCorrection;
     const lineEndAbs = lineStartAbs + sequence.length;
 
+    const displayGenes = annotations.flatMap(gene =>
+      this.getAnnotationDisplaySegments(gene, lineStartAbs, lineEndAbs, chromosome)
+    );
+
     // Pre-filter overlapping genes
-    const overlappingGenes = annotations.filter(gene => {
+    const overlappingGenes = displayGenes.filter(gene => {
       if (gene.start > lineEndAbs || gene.end < lineStartAbs + 1) return false;
       if (!this.genomeBrowser.shouldShowGeneType(gene.type)) return false;
 
@@ -1550,7 +1759,9 @@ class SequenceUtils {
     });
 
     if (overlappingGenes.length === 0) {
-      const result = `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${barHeight}px; margin-left: 0;"></svg>`;
+      const result =
+        `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; ` +
+        `height: ${barHeight}px; margin-left: 0;"></svg>`;
       this.svgCache.set(cacheKey, result);
       return result;
     }
@@ -2496,7 +2707,16 @@ class SequenceUtils {
   /**
    * Create gene indicator bar below sequence line - simple narrow shapes with track-consistent colors
    */
-  createGeneIndicatorBar(sequence, lineStartAbs, annotations, operons, charWidth, simplified = false, settings = {}) {
+  createGeneIndicatorBar(
+    sequence,
+    lineStartAbs,
+    annotations,
+    operons,
+    charWidth,
+    simplified = false,
+    settings = {},
+    chromosome = null
+  ) {
     // Check if indicators should be shown
     if (settings.showIndicators === false) {
       return '<div style="height: 0px;"></div>';
@@ -2510,7 +2730,10 @@ class SequenceUtils {
 
     // Process genes that overlap with this sequence line
     const lineEndAbs = lineStartAbs + sequence.length;
-    const overlappingGenes = annotations.filter(gene => {
+    const displayGenes = annotations.flatMap(gene =>
+      this.getAnnotationDisplaySegments(gene, lineStartAbs, lineEndAbs, chromosome)
+    );
+    const overlappingGenes = displayGenes.filter(gene => {
       if (gene.start > lineEndAbs || gene.end < lineStartAbs + 1) return false;
       if (!this.genomeBrowser.shouldShowGeneType(gene.type)) return false;
 
@@ -2573,6 +2796,8 @@ class SequenceUtils {
 
     const isForward = gene.strand !== -1;
     const geneType = gene.type.toLowerCase();
+    const tooltipStart = gene._sourceStart || gene.start;
+    const tooltipEnd = gene._sourceEnd || gene.end;
 
     // Apply height correction to barHeight
     const heightCorrection = (settings.heightCorrection || 100) / 100;
@@ -2581,7 +2806,15 @@ class SequenceUtils {
     let indicator = '';
 
     // Gene body shape with corrected height
-    indicator += this.createGeneBodyShape(gene, startX, width, correctedBarHeight, geneColor, geneType, settings);
+    indicator += this.createGeneBodyShape(
+      { ...gene, start: tooltipStart, end: tooltipEnd },
+      startX,
+      width,
+      correctedBarHeight,
+      geneColor,
+      geneType,
+      settings
+    );
 
     // For forward genes: start marker at left, end arrow at right
     // For reverse genes: start marker at right, end arrow at left
@@ -2806,7 +3039,14 @@ class SequenceUtils {
    * Get cache key for sequence line
    */
   getSequenceLineCacheKey(lineSubsequence, lineStartPos, chromosome) {
-    return `${chromosome}:${lineStartPos}:${lineSubsequence.length}:${lineSubsequence.substring(0, 10)}`;
+    return [
+      chromosome,
+      lineStartPos,
+      lineSubsequence.length,
+      this.isCircularModeEnabled() ? 'circular' : 'linear',
+      this.getSequenceLength(chromosome),
+      lineSubsequence.substring(0, 10),
+    ].join(':');
   }
 
   /**
@@ -2831,6 +3071,8 @@ class SequenceUtils {
       params.chromosome !== chromosome ||
       params.viewStart !== viewStart ||
       params.viewEnd !== viewEnd ||
+      params.circularMode !== this.isCircularModeEnabled() ||
+      params.sequenceLength !== this.getSequenceLength(chromosome) ||
       params.annotationCount !== annotations.length ||
       params.annotationHash !== this.getAnnotationHash(annotations) ||
       settingsChanged
@@ -2896,6 +3138,8 @@ class SequenceUtils {
       annotationCount: annotations.length,
       annotationHash: this.getAnnotationHash(annotations),
       settingsHash: settings ? this.getSettingsHash(settings) : '',
+      circularMode: this.isCircularModeEnabled(),
+      sequenceLength: this.getSequenceLength(chromosome),
       timestamp: Date.now(),
     };
   }
@@ -3156,7 +3400,14 @@ class SequenceUtils {
    */
   extractGenomicPositionFromNode(node, offset) {
     if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
-      const span = node.parentElement.closest('.sequence-bases span');
+      const span =
+        node.parentElement.closest('.sequence-bases span[data-position]') ||
+        node.parentElement.closest('.sequence-bases span');
+      if (span?.dataset?.position !== undefined) {
+        const position = parseInt(span.dataset.position, 10);
+        return Number.isNaN(position) ? null : position + offset;
+      }
+
       if (span && span.onclick) {
         const match = span.onclick.toString().match(/handleSequenceClick\(event,\s*(\d+)\)/);
         if (match) {
@@ -3175,12 +3426,20 @@ class SequenceUtils {
     const positionSpan = lineElement.querySelector('.sequence-position');
     if (!positionSpan) return null;
 
-    // Extract the line start position from the position span
-    const positionText = positionSpan.textContent;
-    const lineStartMatch = positionText.match(/^(\d+)/);
-    if (!lineStartMatch) return null;
+    let lineStartPos;
+    const lineStartDataset = positionSpan.dataset?.displayStart;
+    if (lineStartDataset !== undefined) {
+      lineStartPos = parseInt(lineStartDataset, 10);
+    } else {
+      // Extract the line start position from the position span
+      const positionText = positionSpan.textContent;
+      const lineStartMatch = positionText.match(/^(\d+)/);
+      if (!lineStartMatch) return null;
 
-    const lineStartPos = parseInt(lineStartMatch[1]) - 1; // Convert to 0-based
+      lineStartPos = parseInt(lineStartMatch[1], 10) - 1; // Convert to 0-based
+    }
+
+    if (Number.isNaN(lineStartPos)) return null;
 
     // Calculate character offset within the line
     const sequenceBases = lineElement.querySelector('.sequence-bases');
@@ -3193,12 +3452,15 @@ class SequenceUtils {
     let currentNode;
     while ((currentNode = walker.nextNode())) {
       if (currentNode === node) {
-        return lineStartPos + charOffset + offset;
+        return this.displayToSourcePosition(
+          lineStartPos + charOffset + offset,
+          this.genomeBrowser.currentChromosome
+        );
       }
       charOffset += currentNode.textContent.length;
     }
 
-    return lineStartPos + charOffset;
+    return this.displayToSourcePosition(lineStartPos + charOffset, this.genomeBrowser.currentChromosome);
   }
 
   /**
@@ -3206,6 +3468,17 @@ class SequenceUtils {
    */
   findNodeAtGenomicPosition(genomicPosition, sequenceContainer) {
     if (!sequenceContainer) return null;
+
+    const directSpan = sequenceContainer.querySelector(`.sequence-bases span[data-position="${genomicPosition}"]`);
+    const directTextNode = directSpan
+      ? document.createTreeWalker(directSpan, NodeFilter.SHOW_TEXT, null, false).nextNode()
+      : null;
+    if (directTextNode) {
+      return {
+        node: directTextNode,
+        offset: 0,
+      };
+    }
 
     // Find all sequence lines
     const sequenceLines = sequenceContainer.querySelectorAll('.sequence-line-group');
@@ -3215,12 +3488,20 @@ class SequenceUtils {
       const positionSpan = lineElement.querySelector('.sequence-position');
       if (!positionSpan) continue;
 
-      // Extract the line start position
-      const positionText = positionSpan.textContent;
-      const lineStartMatch = positionText.match(/^(\d+)/);
-      if (!lineStartMatch) continue;
+      let lineStartPos;
+      const lineStartDataset = positionSpan.dataset?.displayStart;
+      if (lineStartDataset !== undefined) {
+        lineStartPos = parseInt(lineStartDataset, 10);
+      } else {
+        // Extract the line start position
+        const positionText = positionSpan.textContent;
+        const lineStartMatch = positionText.match(/^(\d+)/);
+        if (!lineStartMatch) continue;
 
-      const lineStartPos = parseInt(lineStartMatch[1]) - 1; // Convert to 0-based
+        lineStartPos = parseInt(lineStartMatch[1], 10) - 1; // Convert to 0-based
+      }
+
+      if (Number.isNaN(lineStartPos)) continue;
 
       // Get the sequence bases container
       const sequenceBases = lineElement.querySelector('.sequence-bases');
@@ -3420,33 +3701,43 @@ class SequenceUtils {
   applySearchHighlightToLine(basesDiv, lineStartPos, lineLength) {
     if (this.searchHighlights.length === 0) return;
 
-    const lineEndPos = lineStartPos + lineLength - 1;
+    const overlappingHighlights = [];
+    let activeRange = null;
 
-    // Find highlights that overlap with this line
-    const overlappingHighlights = this.searchHighlights.filter(highlight => {
-      return highlight.start <= lineEndPos && highlight.end >= lineStartPos;
-    });
+    for (let offset = 0; offset < lineLength; offset++) {
+      const sourcePosition = this.displayToSourcePosition(lineStartPos + offset, this.genomeBrowser.currentChromosome);
+      const isHighlighted = this.searchHighlights.some(highlight => {
+        if (highlight.start <= highlight.end) {
+          return sourcePosition >= highlight.start && sourcePosition <= highlight.end;
+        }
+        return sourcePosition >= highlight.start || sourcePosition <= highlight.end;
+      });
+
+      if (isHighlighted && !activeRange) {
+        activeRange = { relativeStart: offset, relativeEnd: offset };
+      } else if (isHighlighted) {
+        activeRange.relativeEnd = offset;
+      } else if (activeRange) {
+        overlappingHighlights.push(activeRange);
+        activeRange = null;
+      }
+    }
+
+    if (activeRange) {
+      overlappingHighlights.push(activeRange);
+    }
 
     if (overlappingHighlights.length === 0) return;
 
     // Apply highlighting by wrapping the highlighted text in spans
     let innerHTML = basesDiv.innerHTML;
 
-    // Sort highlights by start position to avoid conflicts
-    overlappingHighlights.sort((a, b) => a.start - b.start);
-
     // Apply highlights in reverse order to maintain character positions
     for (let i = overlappingHighlights.length - 1; i >= 0; i--) {
       const highlight = overlappingHighlights[i];
-      const highlightStart = Math.max(highlight.start, lineStartPos);
-      const highlightEnd = Math.min(highlight.end, lineEndPos);
-
-      // Calculate positions relative to the line
-      const relativeStart = highlightStart - lineStartPos;
-      const relativeEnd = highlightEnd - lineStartPos;
 
       // Apply highlighting by adding background style to existing spans
-      innerHTML = this.addHighlightToHTML(innerHTML, relativeStart, relativeEnd);
+      innerHTML = this.addHighlightToHTML(innerHTML, highlight.relativeStart, highlight.relativeEnd);
     }
 
     basesDiv.innerHTML = innerHTML;
