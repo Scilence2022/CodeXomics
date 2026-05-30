@@ -16,9 +16,6 @@ class SequenceUtils {
 
     // Only using view mode - edit mode functionality removed
 
-    // Sequence content display mode for View Mode
-    this.sequenceContentMode = 'dna-only'; // 'auto', 'dna-only', 'protein-only', 'both'
-
     // Sequence line height configuration (in pixels)
     this.lineHeight = 28; // Default increased from 24px to 28px for better readability
 
@@ -544,8 +541,8 @@ class SequenceUtils {
 
     // Only using view mode - no edit mode functionality
 
-    // Add sequence content mode selector for view mode
-    this.addSequenceContentModeSelector();
+    this.addSequenceDisplayControls();
+    this.syncSequenceHeaderToggleButtons(this.getSequenceTrackSettings());
 
     // Update CSS variables for line height
     this.updateSequenceLineHeightCSS();
@@ -724,80 +721,46 @@ class SequenceUtils {
   }
 
   /**
-   * Add sequence content mode selector for View Mode
+   * Add sequence display controls for View Mode
    */
-  addSequenceContentModeSelector() {
+  addSequenceDisplayControls() {
     const sequenceControls = document.querySelector('.sequence-controls') || this.createSequenceControlsContainer();
-
-    // Check if selector already exists
-    if (document.getElementById('sequenceContentModeSelector')) {
-      return;
-    }
-
-    const selectorContainer = document.createElement('div');
-    selectorContainer.className = 'sequence-content-mode-container';
-    selectorContainer.style.cssText = `
-            display: inline-flex;
-            align-items: center;
-            margin-left: 10px;
-            gap: 8px;
-        `;
-
-    const label = document.createElement('label');
-    label.textContent = 'Display:';
-    label.style.cssText = `
-            font-size: 12px;
-            color: #6c757d;
-            font-weight: 500;
-        `;
-
-    const selector = document.createElement('select');
-    selector.id = 'sequenceContentModeSelector';
-    selector.className = 'sequence-content-mode-select';
-    selector.style.cssText = `
-            padding: 4px 8px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 12px;
-            background-color: white;
-            color: #495057;
-            cursor: pointer;
-            min-width: 120px;
-        `;
-
-    const options = [
-      { value: 'auto', text: 'Auto (Smart)' },
-      { value: 'dna-only', text: 'DNA Only' },
-      { value: 'protein-only', text: 'Protein Only' },
-      { value: 'both', text: 'DNA + Protein' },
-    ];
-
-    options.forEach(option => {
-      const optionElement = document.createElement('option');
-      optionElement.value = option.value;
-      optionElement.textContent = option.text;
-      optionElement.selected = option.value === this.sequenceContentMode;
-      selector.appendChild(optionElement);
-    });
-
-    selector.addEventListener('change', e => {
-      this.sequenceContentMode = e.target.value;
-
-      // Re-render the sequence with new mode
-      const chromosome = this.genomeBrowser.currentChromosome;
-      const sequenceData = this.genomeBrowser.currentSequence;
-      if (chromosome && sequenceData && sequenceData[chromosome]) {
-        const sequence = sequenceData[chromosome];
-        this.displayEnhancedSequence(chromosome, sequence);
-      }
-    });
-
-    selectorContainer.appendChild(label);
-    selectorContainer.appendChild(selector);
-    sequenceControls.appendChild(selectorContainer);
-
-    // Add line height selector
     this.addLineHeightSelector(sequenceControls);
+  }
+
+  toggleSequenceTrackSetting(settingKey) {
+    const trackRenderer = this.genomeBrowser.trackRenderer;
+    if (!trackRenderer?.getTrackSettings || !trackRenderer?.saveTrackSettings) return;
+
+    const settings = { ...trackRenderer.getTrackSettings('sequence') };
+    settings[settingKey] = !settings[settingKey];
+    trackRenderer.saveTrackSettings('sequence', settings);
+    this.clearRenderCache();
+    this.syncSequenceHeaderToggleButtons(settings);
+
+    const chromosome = this.genomeBrowser.currentChromosome;
+    const sequenceData = this.genomeBrowser.currentSequence;
+    if (chromosome && sequenceData && sequenceData[chromosome]) {
+      this.displayEnhancedSequence(chromosome, sequenceData[chromosome]);
+    }
+  }
+
+  syncSequenceHeaderToggleButtons(settings = this.getSequenceTrackSettings()) {
+    const toggleButton = (id, isActive, onTitle, offTitle) => {
+      const button = document.getElementById(id);
+      if (!button) return;
+      button.classList.toggle('active', Boolean(isActive));
+      button.setAttribute('aria-pressed', Boolean(isActive).toString());
+      button.title = isActive ? onTitle : offTitle;
+    };
+
+    toggleButton(
+      'toggleProteinSequenceBtn',
+      settings.showProteinSequence,
+      'Hide Protein Sequence',
+      'Show Protein Sequence'
+    );
+    toggleButton('togglePrimerSequenceBtn', settings.showPrimers, 'Hide Primers', 'Show Primers');
   }
 
   /**
@@ -1013,30 +976,6 @@ class SequenceUtils {
       }
     }
     return sequenceControls;
-  }
-
-  // Mode toggle button method removed - only using view mode
-
-  // Toggle display mode method removed - only using view mode
-
-  // Enable editing mode method removed - only using view mode
-
-  // Remove editing button method removed - only using view mode
-
-  /**
-   * Remove sequence content mode selector when in Edit Mode
-   */
-  removeSequenceContentModeSelector() {
-    const selectorContainer = document.querySelector('.sequence-content-mode-container');
-    if (selectorContainer) {
-      selectorContainer.remove();
-    }
-
-    // Also remove line height and spacing selectors
-    const lineHeightContainer = document.querySelector('.sequence-line-height-container');
-    if (lineHeightContainer) {
-      lineHeightContainer.remove();
-    }
   }
 
   /**
@@ -1281,7 +1220,7 @@ class SequenceUtils {
     // Enable virtual scrolling for sequences that actually need it
     const totalLines = Math.ceil(subsequence.length / optimalLineLength);
     // Estimate if the content will overflow the container
-    const estimatedContentHeight = totalLines * (this.lineHeight + this.lineSpacing);
+    const estimatedContentHeight = totalLines * this.getSequenceLineBlockHeight(sequenceSettings);
     const estimatedContainerHeight = container.getBoundingClientRect().height || 400;
     const enableVirtualScrolling = totalLines > 50 && estimatedContentHeight > estimatedContainerHeight * 1.5;
 
@@ -1395,9 +1334,6 @@ class SequenceUtils {
     const tempDiv = document.createElement('div');
     tempDiv.className = 'detailed-sequence-view';
 
-    // Calculate viewEnd based on subsequence length
-    const viewEnd = viewStart + subsequence.length - 1;
-
     // Batch DOM operations
     const linesToRender = [];
     for (let i = 0; i < subsequence.length; i += optimalLineLength) {
@@ -1406,24 +1342,17 @@ class SequenceUtils {
       linesToRender.push({ lineSubsequence, lineStartPos, index: i });
     }
 
-    // Render lines in batches to avoid blocking the UI (only if DNA should be shown)
-    const shouldShowDNA = this.shouldShowDNASequence(subsequence.length);
-    if (shouldShowDNA) {
-      this.renderSequenceLinesBatch(
-        tempDiv,
-        linesToRender,
-        chromosome,
-        annotations,
-        operons,
-        charWidth,
-        sequenceSettings,
-        featureLookup,
-        0
-      );
-    }
-
-    // Add protein translations based on content mode
-    this.addProteinTranslationsConditional(tempDiv, chromosome, subsequence, viewStart, viewEnd, annotations);
+    this.renderSequenceLinesBatch(
+      tempDiv,
+      linesToRender,
+      chromosome,
+      annotations,
+      operons,
+      charWidth,
+      sequenceSettings,
+      featureLookup,
+      0
+    );
 
     container.appendChild(tempDiv);
 
@@ -1618,12 +1547,227 @@ class SequenceUtils {
     );
 
     lineGroup.appendChild(sequenceLine);
+
+    if (sequenceSettings.showProteinSequence) {
+      this.createAlignedProteinRows(
+        lineSubsequence.length,
+        lineStartPos,
+        chromosome,
+        annotations,
+        charWidth
+      ).forEach(row => lineGroup.appendChild(row));
+    }
+
+    if (sequenceSettings.showPrimers) {
+      this.createAlignedPrimerRows(
+        lineSubsequence.length,
+        lineStartPos,
+        chromosome,
+        annotations,
+        charWidth
+      ).forEach(row => lineGroup.appendChild(row));
+    }
+
     lineGroup.appendChild(indicatorLine);
 
     // Cache the rendered line
     this.renderCache.set(cacheKey, lineGroup.cloneNode(true));
 
     return lineGroup;
+  }
+
+  getSequenceLineBlockHeight(settings = {}) {
+    const indicatorHeight = settings.showIndicators === false ? 0 : (settings.indicatorHeight || 8) + 8;
+    const proteinHeight = settings.showProteinSequence ? 22 : 0;
+    const primerHeight = settings.showPrimers ? 20 : 0;
+    return this.lineHeight + this.lineSpacing + indicatorHeight + proteinHeight + primerHeight;
+  }
+
+  createAlignedProteinRows(lineLength, lineStartAbs, chromosome, annotations, charWidth) {
+    const fullSequence = this.genomeBrowser.currentSequence?.[chromosome];
+    if (!fullSequence) return [];
+
+    const lineEndAbs = lineStartAbs + lineLength;
+    const cdsFeatures = annotations.filter(feature => {
+      if (feature.type !== 'CDS') return false;
+      if (!this.genomeBrowser.shouldShowGeneType('CDS')) return false;
+      return this.featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome);
+    });
+
+    return cdsFeatures
+      .map(cds => {
+        const proteinSequence = this.translateDNA(fullSequence.substring(cds.start - 1, cds.end), cds.strand);
+        const marks = [];
+
+        for (let i = 0; i < lineLength; i++) {
+          const sourcePos1Based = this.displayToSourcePosition(lineStartAbs + i, chromosome) + 1;
+          if (!this.positionWithinFeature(sourcePos1Based, cds)) continue;
+
+          const aaIndex =
+            cds.strand === -1 || cds.strand === '-'
+              ? ((cds.end - 1) - sourcePos1Based) / 3
+              : (sourcePos1Based - (cds.start + 1)) / 3;
+
+          if (!Number.isInteger(aaIndex) || aaIndex < 0 || aaIndex >= proteinSequence.length) continue;
+          marks.push({ index: i, text: proteinSequence[aaIndex], title: this.getFeatureDisplayName(cds) });
+        }
+
+        if (marks.length === 0) return null;
+        return this.createAlignedSequenceRow({
+          className: 'sequence-protein-row',
+          label: this.truncateLabel(this.getFeatureDisplayName(cds), 12),
+          marks,
+          charWidth,
+          lineLength,
+          color: '#065f46',
+          background: aa => this.getAminoAcidBackground(aa),
+          borderColor: '#86efac',
+        });
+      })
+      .filter(Boolean);
+  }
+
+  createAlignedPrimerRows(lineLength, lineStartAbs, chromosome, annotations, charWidth) {
+    const lineEndAbs = lineStartAbs + lineLength;
+    const primers = annotations.filter(feature => {
+      const type = (feature.type || '').toLowerCase();
+      if (type !== 'primer' && type !== 'primer_bind') return false;
+      return this.featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome);
+    });
+
+    return primers
+      .map(primer => {
+        const primerSequence = this.getPrimerSequence(primer);
+        const isReverse = primer.strand === -1 || primer.strand === '-';
+        const marks = [];
+        const start = Math.min(primer.start, primer.end);
+        const end = Math.max(primer.start, primer.end);
+
+        for (let i = 0; i < lineLength; i++) {
+          const sourcePos1Based = this.displayToSourcePosition(lineStartAbs + i, chromosome) + 1;
+          if (sourcePos1Based < start || sourcePos1Based > end) continue;
+
+          const sequenceIndex = isReverse ? end - sourcePos1Based : sourcePos1Based - start;
+          const primerBase = primerSequence ? primerSequence[sequenceIndex] || '' : '';
+          marks.push({
+            index: i,
+            text: primerBase || (isReverse ? '<' : '>'),
+            title: `${this.getFeatureDisplayName(primer)} primer`,
+          });
+        }
+
+        if (marks.length === 0) return null;
+        return this.createAlignedSequenceRow({
+          className: `sequence-primer-row ${isReverse ? 'reverse' : 'forward'}`,
+          label: this.truncateLabel(this.getFeatureDisplayName(primer), 12),
+          marks,
+          charWidth,
+          lineLength,
+          color: isReverse ? '#7c2d12' : '#1e3a8a',
+          background: () => (isReverse ? 'rgba(251, 146, 60, 0.2)' : 'rgba(96, 165, 250, 0.2)'),
+          borderColor: isReverse ? '#fdba74' : '#93c5fd',
+        });
+      })
+      .filter(Boolean);
+  }
+
+  createAlignedSequenceRow({ className, label, marks, charWidth, lineLength, color, background, borderColor }) {
+    const row = document.createElement('div');
+    row.className = `sequence-aligned-row ${className}`;
+
+    const labelElement = document.createElement('span');
+    labelElement.className = 'sequence-position sequence-aligned-label';
+    labelElement.textContent = label;
+
+    const basesElement = document.createElement('div');
+    basesElement.className = 'sequence-aligned-bases';
+    basesElement.style.width = `${Math.max(1, lineLength * charWidth)}px`;
+
+    marks.forEach(mark => {
+      const marker = document.createElement('span');
+      marker.className = 'sequence-aligned-marker';
+      marker.textContent = mark.text;
+      marker.title = mark.title;
+      marker.style.left = `${mark.index * charWidth}px`;
+      marker.style.width = `${Math.max(1, charWidth)}px`;
+      marker.style.color = color;
+      marker.style.background = typeof background === 'function' ? background(mark.text) : background;
+      marker.style.borderColor = borderColor;
+      basesElement.appendChild(marker);
+    });
+
+    row.appendChild(labelElement);
+    row.appendChild(basesElement);
+    return row;
+  }
+
+  featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome) {
+    for (let displayPos = lineStartAbs; displayPos < lineEndAbs; displayPos++) {
+      const sourcePos1Based = this.displayToSourcePosition(displayPos, chromosome) + 1;
+      if (this.positionWithinFeature(sourcePos1Based, feature)) return true;
+    }
+    return false;
+  }
+
+  positionWithinFeature(sourcePos1Based, feature) {
+    if (!feature) return false;
+    if (feature.start <= feature.end) {
+      return sourcePos1Based >= feature.start && sourcePos1Based <= feature.end;
+    }
+    return sourcePos1Based >= feature.start || sourcePos1Based <= feature.end;
+  }
+
+  getFeatureDisplayName(feature) {
+    return (
+      this.genomeBrowser.getQualifierValue?.(feature.qualifiers, 'gene') ||
+      this.genomeBrowser.getQualifierValue?.(feature.qualifiers, 'locus_tag') ||
+      this.genomeBrowser.getQualifierValue?.(feature.qualifiers, 'label') ||
+      feature.name ||
+      feature.type ||
+      'feature'
+    );
+  }
+
+  getPrimerSequence(primer) {
+    return (
+      primer.sequence ||
+      this.genomeBrowser.getQualifierValue?.(primer.qualifiers, 'sequence') ||
+      this.genomeBrowser.getQualifierValue?.(primer.qualifiers, 'primer_sequence') ||
+      this.genomeBrowser.getQualifierValue?.(primer.qualifiers, 'oligo_sequence') ||
+      ''
+    ).toUpperCase();
+  }
+
+  truncateLabel(label, maxLength) {
+    const text = String(label || '');
+    return text.length > maxLength ? `${text.substring(0, maxLength - 1)}.` : text;
+  }
+
+  getAminoAcidBackground(aminoAcid) {
+    const colors = {
+      A: '#fef3c7',
+      V: '#fef3c7',
+      L: '#fef3c7',
+      I: '#fef3c7',
+      M: '#fef3c7',
+      F: '#fef3c7',
+      W: '#fef3c7',
+      P: '#fef3c7',
+      S: '#dbeafe',
+      T: '#dbeafe',
+      Y: '#dbeafe',
+      N: '#dbeafe',
+      Q: '#dbeafe',
+      C: '#dbeafe',
+      K: '#fee2e2',
+      R: '#fee2e2',
+      H: '#fee2e2',
+      D: '#dcfce7',
+      E: '#dcfce7',
+      G: '#f3f4f6',
+      '*': '#fecaca',
+    };
+    return colors[aminoAcid] || '#f3f4f6';
   }
 
   /**
@@ -1810,8 +1954,7 @@ class SequenceUtils {
 
     const totalLines = Math.ceil(subsequence.length / optimalLineLength);
 
-    // FIXED: Use actual line height + spacing for virtual scrolling
-    const actualLineHeight = this.lineHeight + this.lineSpacing;
+    const actualLineHeight = this.getSequenceLineBlockHeight(sequenceSettings);
 
     // Calculate actual available height from the parent container
     const parentContainer = document.getElementById('sequenceContent');
@@ -1901,25 +2044,21 @@ class SequenceUtils {
       needsScrolling: needsScrolling,
     };
 
-    // Initial render (only if DNA should be shown)
-    const shouldShowDNA = this.shouldShowDNASequence(subsequence.length);
-    if (shouldShowDNA) {
-      this.updateVirtualizedContent(
-        visibleContent,
-        0,
-        chromosome,
-        subsequence,
-        viewStart,
-        annotations,
-        operons,
-        charWidth,
-        optimalLineLength,
-        sequenceSettings,
-        featureLookup,
-        totalLines,
-        virtualScrollingParams
-      );
-    }
+    this.updateVirtualizedContent(
+      visibleContent,
+      0,
+      chromosome,
+      subsequence,
+      viewStart,
+      annotations,
+      operons,
+      charWidth,
+      optimalLineLength,
+      sequenceSettings,
+      featureLookup,
+      totalLines,
+      virtualScrollingParams
+    );
 
     // Scroll handler for virtual scrolling (only if scrolling is needed)
     if (needsScrolling) {
@@ -1948,16 +2087,6 @@ class SequenceUtils {
     }
 
     container.appendChild(virtualContainer);
-
-    // Add protein translations below based on content mode
-    this.addProteinTranslationsConditional(
-      container,
-      chromosome,
-      subsequence,
-      viewStart,
-      viewStart + subsequence.length,
-      annotations
-    );
 
     // Add click event listener for cursor positioning
     this.attachSequenceClickHandlers(container);
@@ -2044,211 +2173,6 @@ class SequenceUtils {
     console.log(
       `🔧 [SequenceUtils] Virtual scroll update: lines ${startLine}-${endLine} of ${totalLines}, scrollTop=${scrollTop}px, lineHeight=${lineHeight}px`
     );
-  }
-
-  /**
-   * Add protein translations section conditionally based on content mode
-   */
-  addProteinTranslationsConditional(container, chromosome, subsequence, viewStart, viewEnd, annotations) {
-    const shouldShowProtein = this.shouldShowProteinSequence(subsequence.length);
-    const shouldShowDNA = this.shouldShowDNASequence(subsequence.length);
-
-    if (this.sequenceContentMode === 'protein-only' && !shouldShowDNA) {
-      // For protein-only mode when DNA is not shown, clear DNA content and show only proteins
-      this.renderProteinOnlyMode(container, chromosome, subsequence, viewStart, viewEnd, annotations);
-    } else if (shouldShowProtein) {
-      // Add protein translations in addition to DNA
-      this.addProteinTranslations(container, chromosome, subsequence, viewStart, viewEnd, annotations);
-    }
-  }
-
-  /**
-   * Determine if DNA sequence should be shown based on content mode and zoom level
-   */
-  shouldShowDNASequence(sequenceLength) {
-    switch (this.sequenceContentMode) {
-      case 'dna-only':
-        return true;
-      case 'protein-only':
-        return false;
-      case 'both':
-        return true;
-      case 'auto':
-      default:
-        // Auto mode: show DNA when zoomed in enough (less than 5000 bp)
-        return sequenceLength <= 5000;
-    }
-  }
-
-  /**
-   * Determine if protein sequence should be shown based on content mode and zoom level
-   */
-  shouldShowProteinSequence(sequenceLength) {
-    switch (this.sequenceContentMode) {
-      case 'dna-only':
-        return false;
-      case 'protein-only':
-        return true;
-      case 'both':
-        return true;
-      case 'auto':
-      default:
-        // Auto mode: show protein when very zoomed in (less than 2000 bp) or when DNA is not shown
-        return sequenceLength <= 2000 || sequenceLength > 5000;
-    }
-  }
-
-  /**
-   * Render protein-only mode with consistent DNA-style formatting
-   */
-  renderProteinOnlyMode(container, chromosome, subsequence, viewStart, viewEnd, annotations) {
-    const cdsFeatures = annotations.filter(
-      feature =>
-        feature.type === 'CDS' &&
-        feature.start <= viewEnd &&
-        feature.end >= viewStart &&
-        this.genomeBrowser.shouldShowGeneType('CDS')
-    );
-
-    if (cdsFeatures.length === 0) {
-      const noProteinMsg = document.createElement('div');
-      noProteinMsg.className = 'no-proteins-message';
-      noProteinMsg.textContent = 'No protein-coding sequences in this region';
-      container.appendChild(noProteinMsg);
-      return;
-    }
-
-    // Clear existing DNA content
-    container.innerHTML = '';
-
-    const proteinContainer = document.createElement('div');
-    proteinContainer.className = 'detailed-sequence-view protein-only-mode';
-
-    cdsFeatures.forEach(cds => {
-      const fullSequence = this.genomeBrowser.currentSequence[chromosome];
-      const dnaForTranslation = fullSequence.substring(cds.start - 1, cds.end);
-      const proteinSequence = this.translateDNA(dnaForTranslation, cds.strand);
-      const geneName =
-        this.genomeBrowser.getQualifierValue(cds.qualifiers, 'gene') ||
-        this.genomeBrowser.getQualifierValue(cds.qualifiers, 'locus_tag') ||
-        'Unknown';
-
-      // Create protein section with DNA-style formatting
-      const proteinSection = document.createElement('div');
-      proteinSection.className = 'protein-sequence-section';
-      proteinSection.style.marginBottom = '20px';
-
-      // Header
-      const headerDiv = document.createElement('div');
-      headerDiv.className = 'sequence-info';
-      headerDiv.innerHTML = `<strong>${geneName} (${cds.start}-${cds.end}, ${cds.strand === -1 ? '-' : '+'} strand) - Protein Sequence:</strong>`;
-      proteinSection.appendChild(headerDiv);
-
-      // Render protein sequence with DNA-style line formatting
-      const optimalLineLength = 60; // Same as DNA display
-      for (let i = 0; i < proteinSequence.length; i += optimalLineLength) {
-        const lineSubsequence = proteinSequence.substring(i, i + optimalLineLength);
-        const lineStartPos = i; // Protein position
-
-        const lineGroup = document.createElement('div');
-        lineGroup.className = 'sequence-line-group';
-        lineGroup.style.marginBottom = `${this.lineSpacing}px`;
-
-        // Create sequence line with same styling as DNA and configurable height
-        const sequenceLine = document.createElement('div');
-        sequenceLine.className = 'sequence-line';
-        // Use configurable line height with appropriate line-height ratio (same as DNA)
-        const lineHeightRatio = Math.max(1.2, this.lineHeight / 16); // Ensure minimum ratio of 1.2
-        sequenceLine.style.cssText = `display: flex; margin-bottom: 8px; font-family: "Courier New", monospace; font-size: 14px; line-height: ${lineHeightRatio}; min-height: ${this.lineHeight}px; padding: 4px 0;`;
-
-        // Position label (amino acid position)
-        const positionSpan = document.createElement('span');
-        positionSpan.className = 'sequence-position';
-        positionSpan.style.cssText =
-          'width: 100px; color: #6c757d; font-weight: 600; margin-right: 15px; text-align: right; flex-shrink: 0;';
-        positionSpan.textContent = `aa${lineStartPos + 1}`;
-
-        // Sequence bases (amino acids)
-        const basesDiv = document.createElement('div');
-        basesDiv.className = 'sequence-bases';
-        basesDiv.style.cssText =
-          'flex: 1; word-break: break-all; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6;';
-        basesDiv.innerHTML = this.colorizeProteinSequence(lineSubsequence);
-
-        sequenceLine.appendChild(positionSpan);
-        sequenceLine.appendChild(basesDiv);
-        lineGroup.appendChild(sequenceLine);
-        proteinSection.appendChild(lineGroup);
-      }
-
-      proteinContainer.appendChild(proteinSection);
-    });
-
-    container.appendChild(proteinContainer);
-
-    // Add click event listener for cursor positioning
-    this.attachSequenceClickHandlers(container);
-
-    // Restore cursor if it was visible before render
-    if (this.cursor.visible && this.cursor.position >= 0) {
-      console.log('🔄 [SequenceUtils] Re-rendering cursor after protein-only render');
-      this.renderCursor();
-    }
-  }
-
-  /**
-   * Add protein translations section
-   */
-  addProteinTranslations(container, chromosome, subsequence, viewStart, viewEnd, annotations) {
-    const cdsFeatures = annotations.filter(
-      feature =>
-        feature.type === 'CDS' &&
-        feature.start <= viewEnd &&
-        feature.end >= viewStart &&
-        this.genomeBrowser.shouldShowGeneType('CDS')
-    );
-
-    if (cdsFeatures.length === 0) return;
-
-    const translationsDiv = document.createElement('div');
-    translationsDiv.className = 'protein-translations';
-    translationsDiv.style.cssText = 'margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6;';
-
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'sequence-info';
-    headerDiv.innerHTML = '<strong>Protein Translations:</strong>';
-    translationsDiv.appendChild(headerDiv);
-
-    cdsFeatures.forEach(cds => {
-      const fullSequence = this.genomeBrowser.currentSequence[chromosome];
-      const dnaForTranslation = fullSequence.substring(cds.start - 1, cds.end);
-      const proteinSequence = this.translateDNA(dnaForTranslation, cds.strand);
-      const geneName =
-        this.genomeBrowser.getQualifierValue(cds.qualifiers, 'gene') ||
-        this.genomeBrowser.getQualifierValue(cds.qualifiers, 'locus_tag') ||
-        'Unknown';
-
-      const proteinDiv = document.createElement('div');
-      proteinDiv.className = 'protein-sequence';
-      proteinDiv.style.marginBottom = '15px';
-
-      const headerDiv = document.createElement('div');
-      headerDiv.className = 'protein-header';
-      headerDiv.style.cssText = 'font-weight: bold; color: #495057; margin-bottom: 5px;';
-      headerDiv.textContent = `${geneName} (${cds.start}-${cds.end}, ${cds.strand === -1 ? '-' : '+'} strand):`;
-
-      const seqDiv = document.createElement('div');
-      seqDiv.className = 'protein-seq';
-      seqDiv.style.cssText =
-        'font-family: "Courier New", monospace; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px; word-break: break-all; line-height: 1.4;';
-      seqDiv.innerHTML = this.colorizeProteinSequence(proteinSequence);
-
-      proteinDiv.appendChild(headerDiv);
-      proteinDiv.appendChild(seqDiv);
-      translationsDiv.appendChild(proteinDiv);
-    });
-
-    container.appendChild(translationsDiv);
   }
 
   // Biological utilities
@@ -2998,6 +2922,8 @@ class SequenceUtils {
     // Return default settings if trackRenderer not available
     return {
       showIndicators: true,
+      showProteinSequence: false,
+      showPrimers: false,
       indicatorHeight: 8,
       indicatorOpacity: 0.7,
       showStartMarkers: true,
@@ -3087,6 +3013,8 @@ class SequenceUtils {
     // Create a simple hash of key settings that affect rendering
     const keySettings = [
       settings.showIndicators,
+      settings.showProteinSequence,
+      settings.showPrimers,
       settings.indicatorHeight,
       settings.indicatorOpacity,
       settings.showStartMarkers,
@@ -3218,48 +3146,6 @@ class SequenceUtils {
     };
 
     return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
-  }
-
-  /**
-   * Colorize protein sequence
-   */
-  colorizeProteinSequence(proteinSequence) {
-    const aminoAcidColors = {
-      // Hydrophobic
-      A: '#FFE4B5',
-      V: '#FFE4B5',
-      L: '#FFE4B5',
-      I: '#FFE4B5',
-      M: '#FFE4B5',
-      F: '#FFE4B5',
-      W: '#FFE4B5',
-      P: '#FFE4B5',
-      // Polar
-      S: '#E6F3FF',
-      T: '#E6F3FF',
-      Y: '#E6F3FF',
-      N: '#E6F3FF',
-      Q: '#E6F3FF',
-      C: '#E6F3FF',
-      // Positively charged
-      K: '#FFE6E6',
-      R: '#FFE6E6',
-      H: '#FFE6E6',
-      // Negatively charged
-      D: '#E6FFE6',
-      E: '#E6FFE6',
-      // Special
-      G: '#F0F0F0', // Glycine - flexible
-      '*': '#FF6B6B', // Stop codon - red
-    };
-
-    return proteinSequence
-      .split('')
-      .map(aa => {
-        const color = aminoAcidColors[aa] || '#F0F0F0';
-        return `<span style="background-color: ${color}; padding: 1px 2px; margin: 0 1px; border-radius: 2px;">${aa}</span>`;
-      })
-      .join('');
   }
 
   /**

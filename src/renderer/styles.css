@@ -11657,7 +11657,6 @@ input:checked + .slider:before {
 }
 
 .detailed-sequence-view .sequence-line,
-.protein-only-mode .sequence-line,
 .sequence-line-group .sequence-line {
   display: flex !important;
   margin-bottom: 8px !important;

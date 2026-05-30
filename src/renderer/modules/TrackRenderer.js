@@ -12009,6 +12009,8 @@ This action cannot be undone.`;
         showCoordinates: true,
         fontSize: 12,
         renderingMode: 'canvas', // Default rendering mode for sequence track
+        showProteinSequence: false,
+        showPrimers: false,
       },
       sequenceLine: {
         fontSize: 14,
@@ -12834,6 +12836,12 @@ This action cannot be undone.`;
         // View Mode settings (traditional sequence view)
         const showIndicatorsEl = modal.querySelector('#sequenceShowIndicators');
         if (showIndicatorsEl) settings.showIndicators = showIndicatorsEl.checked;
+
+        var showProteinSequenceEl = modal.querySelector('#sequenceShowProteinSequence');
+        if (showProteinSequenceEl) settings.showProteinSequence = showProteinSequenceEl.checked;
+
+        var showPrimersEl = modal.querySelector('#sequenceShowPrimers');
+        if (showPrimersEl) settings.showPrimers = showPrimersEl.checked;
 
         const indicatorHeightEl = modal.querySelector('#sequenceIndicatorHeight');
         if (indicatorHeightEl) settings.indicatorHeight = parseInt(indicatorHeightEl.value) || 8;
@@ -13762,6 +13770,20 @@ This action cannot be undone.`;
                     <div class="tab-content active" id="sequence-indicators-tab">
                         <div class="settings-section">
                             <h4>Gene Indicator Bar Settings</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowProteinSequence" ${settings.showProteinSequence ? 'checked' : ''}>
+                                    Show protein sequence below CDS bases
+                                </label>
+                                <div class="help-text">Display translated amino acids aligned under the DNA codons for each visible CDS.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="sequenceShowPrimers" ${settings.showPrimers ? 'checked' : ''}>
+                                    Show primers below sequence lines
+                                </label>
+                                <div class="help-text">Display primer binding footprints aligned with the DNA sequence.</div>
+                            </div>
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="sequenceShowIndicators" ${settings.showIndicators !== false ? 'checked' : ''}>

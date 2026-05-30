@@ -565,20 +565,6 @@
   overflow: visible;
 }
 
-.sequence-settings-tabs .mode-indicator {
-  background: #e3f2fd;
-  border: 1px solid #bbdefb;
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 20px;
-  font-size: 13px;
-  color: #1565c0;
-}
-
-.sequence-settings-tabs .mode-indicator i {
-  margin-right: 8px;
-}
-
 .sequence-settings-tabs .settings-section {
   margin-bottom: 25px;
   padding: 15px;
@@ -700,16 +686,6 @@
   ) !important; /* 最小间隙12px */
 }
 
-.protein-only-mode .sequence-line {
-  min-height: var(--sequence-line-height, 28px) !important;
-  line-height: var(--sequence-line-ratio, 1.8) !important;
-  flex-shrink: 0 !important;
-  margin-bottom: max(
-    var(--sequence-line-spacing, 8px),
-    var(--min-sequence-line-spacing, 12px)
-  ) !important; /* 最小间隙12px */
-}
-
 .sequence-line-group {
   flex-shrink: 0 !important;
   margin-bottom: max(
@@ -726,6 +702,60 @@
     var(--sequence-line-spacing, 8px),
     var(--min-sequence-line-spacing, 12px)
   ) !important; /* 最小间隙12px */
+}
+
+.sequence-toggle-btn.active {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+  color: #075985;
+}
+
+.sequence-aligned-row {
+  display: flex;
+  align-items: center;
+  min-height: 18px;
+  margin-top: 1px;
+  margin-bottom: 2px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sequence-aligned-label {
+  font-size: 10px !important;
+  color: #64748b !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sequence-aligned-bases {
+  position: relative;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.sequence-aligned-marker {
+  position: absolute;
+  top: 1px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid;
+  border-radius: 2px;
+  box-sizing: border-box;
+  font-weight: 700;
+  pointer-events: auto;
+}
+
+.sequence-protein-row .sequence-aligned-marker {
+  font-size: 10px;
+}
+
+.sequence-primer-row .sequence-aligned-marker {
+  font-size: 9px;
 }
 
 /* Ensure position labels maintain consistent width */
@@ -772,7 +802,6 @@
 
 /* Prevent flexbox compression at all levels */
 .detailed-sequence-view,
-.protein-only-mode,
 .sequence-line-group,
 .sequence-line {
   flex-shrink: 0 !important;
@@ -845,12 +874,6 @@
   --sequence-line-height: initial;
   --sequence-line-ratio: initial;
   --sequence-line-spacing: initial;
-}
-
-/* Transition management during mode switches */
-.sequence-content.mode-switching {
-  opacity: 0.8;
-  pointer-events: none;
 }
 
 /* Cursor status styles */

@@ -1055,6 +1055,12 @@ class GenomeBrowser {
         this.trackRenderer.openTrackSettings('sequence');
       }
     });
+    document.getElementById('toggleProteinSequenceBtn')?.addEventListener('click', () => {
+      this.sequenceUtils.toggleSequenceTrackSetting('showProteinSequence');
+    });
+    document.getElementById('togglePrimerSequenceBtn')?.addEventListener('click', () => {
+      this.sequenceUtils.toggleSequenceTrackSetting('showPrimers');
+    });
 
     // Add click event for selected sequences (both gene and manual)
     document.addEventListener('click', e => {
