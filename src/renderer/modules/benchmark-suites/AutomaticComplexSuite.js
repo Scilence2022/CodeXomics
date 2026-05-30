@@ -365,6 +365,68 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       },
 
       {
+        id: 'analysis_auto_complex_03',
+        name: 'Coding Sequence Translation Workflow',
+        type: 'workflow',
+        category: 'sequence_analysis',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction:
+          'Retrieve the coding sequence for the lacZ gene, translate that coding sequence in reading frame 1, and calculate the molecular weight of the translated protein sequence.',
+        expectedResult: {
+          tool_sequence: ['get_coding_sequence', 'translate_dna', 'calculate_molecular_weight'],
+          parameters: [
+            {
+              geneName: 'lacZ',
+            },
+            {
+              dna: '<coding_sequence>',
+              readingFrame: 1,
+            },
+            {
+              sequence: '<protein_sequence>',
+              type: 'protein',
+            },
+          ],
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
+        id: 'analysis_auto_complex_05',
+        name: 'Sequence Composition and Strand Workflow',
+        type: 'workflow',
+        category: 'sequence_analysis',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction:
+          'Get the current visible DNA sequence, calculate its entropy, compute its reverse complement, and translate the same DNA sequence in reading frame 1.',
+        expectedResult: {
+          tool_sequence: ['get_sequence', 'calculate_entropy', 'reverse_complement', 'translate_dna'],
+          parameters: [
+            {},
+            {
+              sequence: '<visible_sequence>',
+            },
+            {
+              sequence: '<visible_sequence>',
+            },
+            {
+              dna: '<visible_sequence>',
+              readingFrame: 1,
+            },
+          ],
+        },
+        maxScore: 20,
+        bonusScore: 4,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
         id: 'primer_auto_01',
         name: 'Design Primers',
         type: 'function_call',
