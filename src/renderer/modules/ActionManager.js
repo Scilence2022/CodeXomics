@@ -48,6 +48,7 @@ class ActionManager {
     this.nextActionId = 1;
     this.isExecuting = false;
     this.clipboard = null; // Stores copied/cut sequence data
+    this.executionClipboard = null; // Clipboard snapshot used only while execute_actions is running
 
     // DEPRECATED: Will be removed in v3.0 - use automatic cursor detection instead
     this.cursorPosition = 0;
@@ -110,7 +111,210 @@ class ActionManager {
       return genomeData.getSequence(chr);
     }
     // Direct access
-    return genomeData?.sequence?.[chr] || '';
+    return genomeData?.sequence?.[chr] || genomeData?.sequences?.[chr] || '';
+  }
+
+  /**
+   * Read a 1-based inclusive sequence region from a genome data source.
+   */
+  getSequenceForRegionFromGenomeData(genomeData, chromosome, start, end, strand = '+') {
+    const sequence = genomeData ?
+      this.getSequenceFromGenomeData(genomeData, chromosome) :
+      this.genomeBrowser?.currentSequence?.[chromosome];
+
+    if (!sequence) {
+      return null;
+    }
+
+    let regionSequence = sequence.substring(start - 1, end);
+    if (strand === '-') {
+      regionSequence = this.reverseComplement(regionSequence);
+    }
+
+    return regionSequence;
+  }
+
+  /**
+   * Extract normalized coordinates from action metadata, falling back to the target string.
+   */
+  getActionCoordinates(action) {
+    const metadata = action?.metadata || {};
+    const chromosome = metadata.chromosome;
+    const startValue = metadata.start !== undefined ? metadata.start : metadata.position;
+    const endValue = metadata.end !== undefined ? metadata.end : startValue;
+
+    if (chromosome && startValue !== undefined && endValue !== undefined) {
+      const start = Number(startValue);
+      const end = Number(endValue);
+      if (Number.isInteger(start) && Number.isInteger(end)) {
+        return {
+          chromosome,
+          start,
+          end,
+          strand: metadata.strand || '+',
+        };
+      }
+    }
+
+    if (!action?.target) {
+      return null;
+    }
+
+    const rangeMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\(([+-])\))?/);
+    if (rangeMatch) {
+      return {
+        chromosome: rangeMatch[1],
+        start: parseInt(rangeMatch[2], 10),
+        end: parseInt(rangeMatch[3], 10),
+        strand: rangeMatch[4] || '+',
+      };
+    }
+
+    const pointMatch = action.target.match(/([^:]+):(\d+)(?:\(([+-])\))?/);
+    if (pointMatch) {
+      const position = parseInt(pointMatch[2], 10);
+      return {
+        chromosome: pointMatch[1],
+        start: position,
+        end: position,
+        strand: pointMatch[3] || '+',
+      };
+    }
+
+    return null;
+  }
+
+  getActionInsertSequence(action) {
+    return action?.metadata?.insertSequence || action?.metadata?.sequence || action?.metadata?.newSequence || '';
+  }
+
+  getActionReplacementSequence(action) {
+    return action?.metadata?.newSequence || action?.metadata?.sequence || '';
+  }
+
+  getClipboardForAction(action) {
+    if (this.executionClipboard?.sourceInfo?.source === 'execute_actions') {
+      return this.executionClipboard;
+    }
+
+    return action?.metadata?.clipboardData || this.executionClipboard || this.clipboard;
+  }
+
+  getActionLengthDelta(action) {
+    const coords = this.getActionCoordinates(action);
+    if (!coords) {
+      return 0;
+    }
+
+    const originalLength = coords.end - coords.start + 1;
+    switch (action.type) {
+      case this.ACTION_TYPES.DELETE_SEQUENCE:
+      case this.ACTION_TYPES.CUT_SEQUENCE:
+        return -originalLength;
+      case this.ACTION_TYPES.INSERT_SEQUENCE:
+        return this.getActionInsertSequence(action).length;
+      case this.ACTION_TYPES.REPLACE_SEQUENCE:
+        return this.getActionReplacementSequence(action).length - originalLength;
+      case this.ACTION_TYPES.PASTE_SEQUENCE: {
+        const clipboardData = this.getClipboardForAction(action);
+        const clipboardLength = clipboardData?.sequence?.length || 0;
+        return this.isPasteInsertAction(action) ? clipboardLength : clipboardLength - originalLength;
+      }
+      default:
+        return 0;
+    }
+  }
+
+  isPasteInsertAction(action) {
+    const metadata = action?.metadata || {};
+    if (metadata.pasteMode === 'insert') return true;
+    if (metadata.pasteMode === 'replace') return false;
+    return metadata.position !== undefined;
+  }
+
+  isInsertionPointAction(action) {
+    return (
+      action?.type === this.ACTION_TYPES.INSERT_SEQUENCE ||
+      (action?.type === this.ACTION_TYPES.PASTE_SEQUENCE && this.isPasteInsertAction(action))
+    );
+  }
+
+  getMaxCoordinateForAction(action, chromosomeLength) {
+    return this.isInsertionPointAction(action) ? chromosomeLength + 1 : chromosomeLength;
+  }
+
+  setExecutionClipboard(type, sequence, target, chromosome, start, end, strand, comprehensiveData) {
+    this.executionClipboard = {
+      type,
+      sequence,
+      source: target,
+      timestamp: new Date(),
+      chromosome,
+      start,
+      end,
+      strand,
+      sourceInfo: { chromosome, start, end, strand, hasSelection: true, source: 'execute_actions' },
+      comprehensiveData,
+    };
+
+    return this.executionClipboard;
+  }
+
+  applySequenceModificationToGenomeData(genomeData, chromosome, modification) {
+    const currentSequence = this.getSequenceFromGenomeData(genomeData, chromosome);
+    if (currentSequence === null || currentSequence === undefined) {
+      throw new Error(`No sequence available for chromosome '${chromosome}'`);
+    }
+
+    let modifiedSequence;
+    if (modification.type === 'delete') {
+      modifiedSequence = this.applyDeleteModification(currentSequence, modification);
+    } else if (modification.type === 'insert') {
+      modifiedSequence = this.applyInsertModification(currentSequence, modification);
+    } else if (modification.type === 'replace') {
+      modifiedSequence = this.applyReplaceModification(currentSequence, modification);
+    } else {
+      throw new Error(`Unsupported sequence modification type: ${modification.type}`);
+    }
+
+    this.setSequenceInGenomeData(genomeData, chromosome, modifiedSequence);
+    return {
+      beforeLength: currentSequence.length,
+      afterLength: modifiedSequence.length,
+    };
+  }
+
+  applyFeatureModificationToGenomeData(genomeData, chromosome, modification) {
+    const currentFeatures = this.getFeaturesFromGenomeData(genomeData, chromosome);
+    if (!currentFeatures || currentFeatures.length === 0) {
+      this.setFeaturesInGenomeData(genomeData, chromosome, []);
+      return { beforeCount: 0, afterCount: 0, removedCount: 0 };
+    }
+
+    const adjustedFeatures = [];
+    const removeContainedForReplace = modification.type === 'replace';
+    for (const feature of currentFeatures) {
+      if (
+        removeContainedForReplace &&
+        feature.start >= modification.start &&
+        feature.end <= modification.end
+      ) {
+        continue;
+      }
+
+      const adjustedFeature = this.adjustSingleFeature(feature, [modification]);
+      if (adjustedFeature) {
+        adjustedFeatures.push(adjustedFeature);
+      }
+    }
+
+    adjustedFeatures.sort((a, b) => a.start - b.start);
+    this.setFeaturesInGenomeData(genomeData, chromosome, adjustedFeatures);
+    return {
+      beforeCount: currentFeatures.length,
+      afterCount: adjustedFeatures.length,
+      removedCount: currentFeatures.length - adjustedFeatures.length,
+    };
   }
 
   /**
@@ -1909,6 +2113,14 @@ class ActionManager {
     };
 
     try {
+      comprehensiveData.sequence = this.getSequenceForRegionFromGenomeData(
+        executionGenomeData,
+        chromosome,
+        start,
+        end,
+        strand
+      );
+
       // 🔧 Use helper methods to support both proxy and direct access
       const features = executionGenomeData
         ? this.getFeaturesFromGenomeData(executionGenomeData, chromosome)
@@ -2053,15 +2265,29 @@ class ActionManager {
 
     this.isExecuting = true;
     this.showExecutionProgress(0, pendingActionsCopy.length);
+    this.executionClipboard = this.clipboard ? JSON.parse(JSON.stringify(this.clipboard)) : null;
 
     // Track execution start time
     const executionStartTime = performance.now();
     this.stats.totalExecutions++;
+    let executedCount = 0;
+    let failedCount = 0;
+    let gbkResult = null;
 
     try {
       // Step 4: Execute actions with comprehensive feature updates
       for (let i = 0; i < pendingActionsCopy.length; i++) {
         const action = pendingActionsCopy[i];
+
+        if (action.status === this.STATUS.FAILED) {
+          failedCount++;
+          throw new Error(`Action ${action.id} (${action.type}) cannot execute: ${action.error || action.failureReason}`);
+        }
+
+        if (action.status !== this.STATUS.PENDING) {
+          this.showExecutionProgress(i + 1, pendingActionsCopy.length);
+          continue;
+        }
 
         console.log(
           `🔄 [ActionManager] Executing action ${i + 1}/${pendingActionsCopy.length}: ${action.type} at ${action.target}`
@@ -2070,16 +2296,14 @@ class ActionManager {
         // Execute the action using proxy
         await this.executeActionOnCopy(action, executionActionsCopy, executionGenomeDataProxy);
         if (action.status === this.STATUS.FAILED) {
+          failedCount++;
           throw new Error(`Action ${action.id} (${action.type}) failed: ${action.error || 'Unknown error'}`);
         }
+        executedCount++;
 
-        // 🔒 CRITICAL FIX: Do NOT adjust features after each action!
-        // Features will be adjusted ONCE at the end based on ALL modifications
-        // Adjusting after each action causes cumulative double/triple adjustments
-        // await this.updateAllFeaturesAfterAction(action, executionGenomeDataProxy); // REMOVED
-
-        // Adjust positions of remaining pending actions using enhanced logic
-        this.adjustPendingActionPositionsEnhanced(action, i + 1, executionActionsCopy);
+        // Sequence and feature state has already been updated on the working proxy.
+        // Keep later queued action coordinates aligned with that working copy.
+        this.adjustPendingActionPositionsEnhanced(action, i + 1, executionActionsCopy, executionGenomeDataProxy);
 
         this.showExecutionProgress(i + 1, pendingActionsCopy.length);
 
@@ -2183,14 +2407,17 @@ class ActionManager {
 
       // Step 6: Generate comprehensive GBK file with full history
       console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 调用generateComprehensiveGBK | resolvedSaveFile=${resolvedSaveFile}`);
-      const gbkResult = await this.generateComprehensiveGBK(
+      gbkResult = await this.generateComprehensiveGBK(
         executionActionsCopy,
         executionGenomeDataProxy,
         executionId,
         resolvedSaveFile
       );
+      if (!gbkResult || gbkResult.success !== true) {
+        throw new Error(gbkResult?.error || 'Failed to generate modified GenBank file');
+      }
 
-      this.genomeBrowser.showNotification(`All ${pendingActionsCopy.length} actions executed successfully`, 'success');
+      this.genomeBrowser.showNotification(`All ${executedCount} actions executed successfully`, 'success');
 
       // 📦 CRITICAL FIX: Archive completed actions to history (don't modify original queue)
       const completedActions = executionActionsCopy.filter(
@@ -2213,24 +2440,24 @@ class ActionManager {
       // Update performance statistics
       const executionTime = performance.now() - executionStartTime;
       this.stats.lastExecutionTime = executionTime;
-      this.stats.totalActions += pendingActionsCopy.length;
+      this.stats.totalActions += executedCount;
       this.stats.avgExecutionTime =
         this.stats.avgExecutionTime === 0 ? executionTime : (this.stats.avgExecutionTime + executionTime) / 2;
 
       console.log(`✅ [ActionManager] Execution completed successfully`);
       console.log(`📊 [ActionManager] Performance:`, {
         executionTime: executionTime.toFixed(2) + 'ms',
-        actionsExecuted: pendingActionsCopy.length,
-        avgTimePerAction: (executionTime / pendingActionsCopy.length).toFixed(2) + 'ms',
+        actionsExecuted: executedCount,
+        avgTimePerAction: executedCount > 0 ? (executionTime / executedCount).toFixed(2) + 'ms' : '0ms',
         totalExecutions: this.stats.totalExecutions,
         avgExecutionTime: this.stats.avgExecutionTime.toFixed(2) + 'ms',
       });
 
       return {
         success: true,
-        message: `Executed ${pendingActionsCopy.length} actions successfully`,
-        executedActions: pendingActionsCopy.length,
-        failedActions: 0,
+        message: `Executed ${executedCount} actions successfully`,
+        executedActions: executedCount,
+        failedActions: failedCount,
         totalActions: this.actions.length,
         executionId,
         filename: gbkResult?.filename,
@@ -2244,8 +2471,8 @@ class ActionManager {
       return {
         success: false,
         message: `Execution failed: ${error.message}`,
-        executedActions: 0,
-        failedActions: pendingActionsCopy.length,
+        executedActions: executedCount,
+        failedActions: failedCount || pendingActionsCopy.length - executedCount,
         totalActions: this.actions.length,
         error: error.message,
         executionId,
@@ -2260,6 +2487,7 @@ class ActionManager {
         `🧹 [ActionManager] Clearing ${this.sequenceModifications.size} chromosome modifications from memory`
       );
       this.sequenceModifications.clear();
+      this.executionClipboard = null;
 
       this.restoreGenomeDataFromBackup(originalGenomeData);
       this.isExecuting = false;
@@ -2274,7 +2502,7 @@ class ActionManager {
 
       // 🔒 CRITICAL FIX: Auto-open GBK file AFTER cleanup completes
       // This ensures original data is verified and restored before loading modified data
-      if (typeof gbkResult !== 'undefined' && gbkResult && gbkResult.success) {
+      if (gbkResult && gbkResult.success) {
         console.log(`📂 [ActionManager] Auto-opening generated GBK file after cleanup...`);
         try {
           await this.autoOpenGeneratedGBK(gbkResult.genbankContent, gbkResult.filename);
@@ -2358,25 +2586,15 @@ class ActionManager {
    * Parse action position from target string
    */
   parseActionPosition(action) {
-    if (!action.target) return null;
-
-    const match = action.target.match(/([^:]+):(\d+)-(\d+)(?:\(([+-])\))?/);
-    if (!match) return null;
-
-    return {
-      chromosome: match[1],
-      start: parseInt(match[2]),
-      end: parseInt(match[3]),
-      strand: match[4] || '+',
-    };
+    return this.getActionCoordinates(action);
   }
 
   /**
    * Check if two actions overlap in position
    */
   actionsOverlap(action1, action2) {
-    // Actions overlap if one starts before the other ends
-    return action1.start < action2.end && action2.start < action1.end;
+    // Genomic coordinates are 1-based and inclusive.
+    return action1.start <= action2.end && action2.start <= action1.end;
   }
 
   /**
@@ -2412,7 +2630,7 @@ class ActionManager {
   generateConflictDescription(action1, action2) {
     const type1 = action1.type.replace('_', ' ').toLowerCase();
     const type2 = action2.type.replace('_', ' ').toLowerCase();
-    const overlap = action1.end - action2.start + 1;
+    const overlap = Math.min(action1.end, action2.end) - Math.max(action1.start, action2.start) + 1;
 
     return `${type1} action overlaps with ${type2} action by ${overlap} base pairs`;
   }
@@ -2497,10 +2715,10 @@ class ActionManager {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="this.closest('.modal').remove(); resolve(false);">
+                            <button type="button" class="btn btn-secondary action-conflict-cancel" data-bs-dismiss="modal">
                                 <i class="fas fa-times"></i> Cancel Execution
                             </button>
-                            <button type="button" class="btn btn-warning" data-bs-dismiss="modal" onclick="this.closest('.modal').remove(); resolve(true);">
+                            <button type="button" class="btn btn-warning action-conflict-proceed" data-bs-dismiss="modal">
                                 <i class="fas fa-play"></i> Proceed Anyway
                             </button>
                         </div>
@@ -2510,12 +2728,22 @@ class ActionManager {
 
       document.body.appendChild(dialog);
 
+      let resolved = false;
+      const finish = shouldProceed => {
+        if (resolved) {
+          return;
+        }
+        resolved = true;
+        dialog.remove();
+        resolve(shouldProceed);
+      };
+
+      dialog.querySelector('.action-conflict-cancel')?.addEventListener('click', () => finish(false));
+      dialog.querySelector('.action-conflict-proceed')?.addEventListener('click', () => finish(true));
+
       // Auto-remove after 30 seconds if no response
       setTimeout(() => {
-        if (dialog.parentNode) {
-          dialog.remove();
-          resolve(false);
-        }
+        finish(false);
       }, 30000);
     });
   }
@@ -2592,8 +2820,8 @@ class ActionManager {
       const genbankContent = this.genbankExporter.exportGenBank({
         chromosomes,
         getSequence: chr => {
-          const originalSeq = this.genomeBrowser.currentSequence[chr];
-          return this.applySequenceModifications(chr, originalSeq);
+          const sequence = this.getSequenceFromGenomeData(executionGenomeData, chr);
+          return sequence === null || sequence === undefined ? this.genomeBrowser.currentSequence[chr] : sequence;
         },
         getFeatures: chr => {
           // 🔒 CRITICAL: Get features from execution copy - these are ALREADY modified
@@ -2684,10 +2912,7 @@ class ActionManager {
         }
 
         if (!writeSuccess) {
-          // Final fallback: browser download (cannot write to specific path)
-          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 所有写入方法不可用，fallback downloadTextFile | baseFilename=${baseFilename}`);
-          this.downloadTextFile(genbankContent, baseFilename);
-          finalFilePath = baseFilename;
+          throw new Error(`Unable to write modified GenBank file to ${saveFile}`);
         }
       } else {
         // No saveFile provided — use browser download as fallback
@@ -2708,7 +2933,10 @@ class ActionManager {
     } catch (error) {
       console.error('❌ [ActionManager] Error generating comprehensive GBK:', error);
       this.genomeBrowser.showNotification('Error generating GBK file', 'error');
-      return null;
+      return {
+        success: false,
+        error: error.message,
+      };
     }
   }
 
@@ -3355,7 +3583,7 @@ class ActionManager {
   /**
    * Enhanced position adjustment with comprehensive validation
    */
-  adjustPendingActionPositionsEnhanced(executedAction, startIndex, executionActionsCopy) {
+  adjustPendingActionPositionsEnhanced(executedAction, startIndex, executionActionsCopy, executionGenomeData = null) {
     console.log(`🔧 [ActionManager] Enhanced position adjustment for action: ${executedAction.type}`);
 
     // Only adjust if the executed action affects sequence positions
@@ -3364,56 +3592,19 @@ class ActionManager {
       return;
     }
 
-    const { chromosome, start, end } = executedAction.metadata;
-    const chromosomeLength = this.genomeBrowser.currentSequence?.[chromosome]?.length || 0;
-
-    if (!chromosomeLength) {
-      console.warn(
-        `⚠️ [ActionManager] No chromosome length available for ${chromosome}, skipping position adjustments`
-      );
+    const executedPosition = this.getActionCoordinates(executedAction);
+    if (!executedPosition) {
+      console.warn(`⚠️ [ActionManager] Could not parse executed action position for ${executedAction.id}`);
       return;
     }
 
-    let positionShift = 0;
+    const { chromosome, start } = executedPosition;
+    const chromosomeLength =
+      this.getSequenceFromGenomeData(executionGenomeData, chromosome)?.length ||
+      this.genomeBrowser.currentSequence?.[chromosome]?.length ||
+      0;
 
-    // Calculate position shift based on action type
-    switch (executedAction.type) {
-      case this.ACTION_TYPES.DELETE_SEQUENCE:
-      case this.ACTION_TYPES.CUT_SEQUENCE:
-        positionShift = -(end - start + 1); // Negative shift for deletions
-        break;
-
-      case this.ACTION_TYPES.INSERT_SEQUENCE:
-        const insertLength = executedAction.metadata.insertSequence
-          ? executedAction.metadata.insertSequence.length
-          : executedAction.metadata.length || 0;
-        positionShift = insertLength; // Positive shift for insertions
-        break;
-
-      case this.ACTION_TYPES.REPLACE_SEQUENCE:
-        const originalLength = end - start + 1;
-        const newLength = executedAction.metadata.newSequence
-          ? executedAction.metadata.newSequence.length
-          : executedAction.metadata.newLength || originalLength;
-        positionShift = newLength - originalLength; // Net change
-        break;
-
-      case this.ACTION_TYPES.PASTE_SEQUENCE:
-        // Handle paste-insert vs paste-replace
-        if (executedAction.result && executedAction.result.operation === 'paste-insert') {
-          const pasteLength = executedAction.metadata.clipboardData
-            ? executedAction.metadata.clipboardData.sequence.length
-            : 0;
-          positionShift = pasteLength;
-        } else if (executedAction.result && executedAction.result.operation === 'paste-replace') {
-          const originalLength = end - start + 1;
-          const newLength = executedAction.metadata.clipboardData
-            ? executedAction.metadata.clipboardData.sequence.length
-            : 0;
-          positionShift = newLength - originalLength;
-        }
-        break;
-    }
+    const positionShift = this.getActionLengthDelta(executedAction);
 
     if (positionShift === 0) {
       console.log(`🔧 [ActionManager] No position shift needed for action ${executedAction.type}`);
@@ -3492,10 +3683,16 @@ class ActionManager {
    * Calculate how a pending action should be adjusted based on an executed action
    */
   calculateActionAdjustment(executedAction, pendingAction, pendingStart, pendingEnd, positionShift, chromosomeLength) {
-    const { start: execStart, end: execEnd } = executedAction.metadata;
+    const executedPosition = this.getActionCoordinates(executedAction);
+    if (!executedPosition) {
+      return { action: 'skip' };
+    }
+
+    const { start: execStart, end: execEnd } = executedPosition;
+    const maxCoordinate = this.getMaxCoordinateForAction(pendingAction, chromosomeLength);
 
     // Check for overlaps and conflicts
-    const hasOverlap = pendingStart < execEnd && pendingEnd > execStart;
+    const hasOverlap = pendingStart <= execEnd && pendingEnd >= execStart;
 
     if (
       executedAction.type === this.ACTION_TYPES.DELETE_SEQUENCE ||
@@ -3503,6 +3700,21 @@ class ActionManager {
     ) {
       // For deletions, check if pending action is affected
       if (hasOverlap) {
+        if (this.isInsertionPointAction(pendingAction)) {
+          if (execStart < 1 || execStart > maxCoordinate) {
+            return {
+              action: 'fail',
+              reason: `Adjusted insert position ${execStart} would exceed chromosome boundaries (1-${maxCoordinate})`,
+            };
+          }
+
+          return {
+            action: 'adjust',
+            newStart: execStart,
+            newEnd: execStart,
+          };
+        }
+
         // Check if pending action is completely within deleted region
         if (pendingStart >= execStart && pendingEnd <= execEnd) {
           return {
@@ -3511,13 +3723,10 @@ class ActionManager {
           };
         }
 
-        // Check if pending action partially overlaps with deleted region
-        if (pendingStart < execEnd && pendingEnd > execStart) {
-          return {
-            action: 'fail',
-            reason: `Target region ${pendingStart}-${pendingEnd} partially overlaps with deleted region ${execStart}-${execEnd}`,
-          };
-        }
+        return {
+          action: 'fail',
+          reason: `Target region ${pendingStart}-${pendingEnd} partially overlaps with deleted region ${execStart}-${execEnd}`,
+        };
       }
 
       // If pending action starts after the deleted region, shift it
@@ -3526,10 +3735,10 @@ class ActionManager {
         const newEnd = pendingEnd + positionShift;
 
         // Validate new positions
-        if (newStart < 1 || newEnd > chromosomeLength) {
+        if (newStart < 1 || newEnd > maxCoordinate) {
           return {
             action: 'fail',
-            reason: `Adjusted position ${newStart}-${newEnd} would exceed chromosome boundaries (1-${chromosomeLength})`,
+            reason: `Adjusted position ${newStart}-${newEnd} would exceed chromosome boundaries (1-${maxCoordinate})`,
           };
         }
 
@@ -3542,17 +3751,21 @@ class ActionManager {
 
       // If pending action is before the deleted region, no adjustment needed
       return { action: 'skip' };
-    } else {
-      // For insertions and replacements, adjust positions after the change
-      if (pendingStart > execEnd) {
+    }
+
+    if (
+      executedAction.type === this.ACTION_TYPES.INSERT_SEQUENCE ||
+      (executedAction.type === this.ACTION_TYPES.PASTE_SEQUENCE && this.isPasteInsertAction(executedAction))
+    ) {
+      // Insertions happen before the base at execStart, so actions at that point move after the inserted bases.
+      if (pendingStart >= execStart) {
         const newStart = pendingStart + positionShift;
         const newEnd = pendingEnd + positionShift;
 
-        // Validate new positions
-        if (newStart < 1 || newEnd > chromosomeLength) {
+        if (newStart < 1 || newEnd > maxCoordinate) {
           return {
             action: 'fail',
-            reason: `Adjusted position ${newStart}-${newEnd} would exceed chromosome boundaries (1-${chromosomeLength})`,
+            reason: `Adjusted position ${newStart}-${newEnd} would exceed chromosome boundaries (1-${maxCoordinate})`,
           };
         }
 
@@ -3563,9 +3776,42 @@ class ActionManager {
         };
       }
 
-      // If pending action is before or at the change point, no adjustment needed
       return { action: 'skip' };
     }
+
+    if (
+      executedAction.type === this.ACTION_TYPES.REPLACE_SEQUENCE ||
+      executedAction.type === this.ACTION_TYPES.PASTE_SEQUENCE
+    ) {
+      if (hasOverlap) {
+        return {
+          action: 'fail',
+          reason: `Target region ${pendingStart}-${pendingEnd} overlaps replaced region ${execStart}-${execEnd}`,
+        };
+      }
+
+      if (pendingStart > execEnd) {
+        const newStart = pendingStart + positionShift;
+        const newEnd = pendingEnd + positionShift;
+
+        if (newStart < 1 || newEnd > maxCoordinate) {
+          return {
+            action: 'fail',
+            reason: `Adjusted position ${newStart}-${newEnd} would exceed chromosome boundaries (1-${maxCoordinate})`,
+          };
+        }
+
+        return {
+          action: 'adjust',
+          newStart,
+          newEnd,
+        };
+      }
+
+      return { action: 'skip' };
+    }
+
+    return { action: 'skip' };
   }
 
   /**
@@ -3573,6 +3819,9 @@ class ActionManager {
    */
   applyActionPositionAdjustment(pendingAction, newStart, newEnd, positionShift) {
     // Update metadata
+    if (pendingAction.metadata.position !== undefined) {
+      pendingAction.metadata.position = newStart;
+    }
     pendingAction.metadata.start = newStart;
     pendingAction.metadata.end = newEnd;
 
@@ -3603,7 +3852,11 @@ class ActionManager {
     const strandSuffix = strand ? `(${strand})` : '';
 
     // Update target with new positions
-    pendingAction.target = `${chromosome}:${newStart}-${newEnd}${strandSuffix}`;
+    if (pendingAction.metadata.position !== undefined && newStart === newEnd) {
+      pendingAction.target = `${chromosome}:${newStart}${strandSuffix}`;
+    } else {
+      pendingAction.target = `${chromosome}:${newStart}-${newEnd}${strandSuffix}`;
+    }
   }
 
   /**
@@ -3629,8 +3882,8 @@ class ActionManager {
    * Execute copy sequence action with comprehensive data
    */
   async executeCopySequence(action, executionGenomeData = null) {
-    const { chromosome, start, end, strand } = action.metadata;
-    const sequence = await this.getSequenceForRegion(chromosome, start, end, strand);
+    const { chromosome, start, end, strand } = this.getActionCoordinates(action);
+    const sequence = this.getSequenceForRegionFromGenomeData(executionGenomeData, chromosome, start, end, strand);
 
     if (!sequence) {
       throw new Error('Unable to retrieve sequence for copying');
@@ -3646,11 +3899,16 @@ class ActionManager {
       featureNames: comprehensiveData.features?.map(f => f.name || f.type).join(', ') || 'none',
     });
 
-    // Clipboard should already be set when the action was created
-    // Update it with comprehensive data if needed
-    if (this.clipboard && this.clipboard.sequence === sequence) {
-      this.clipboard.comprehensiveData = comprehensiveData;
-    }
+    action.metadata.clipboardData = this.setExecutionClipboard(
+      'copy',
+      sequence,
+      action.target,
+      chromosome,
+      start,
+      end,
+      strand,
+      comprehensiveData
+    );
 
     return {
       operation: 'copy',
@@ -3668,9 +3926,9 @@ class ActionManager {
    * @param {Object} executionGenomeData - Genome data copy or proxy (NEVER modify original!)
    */
   async executeCutSequence(action, executionGenomeData = null) {
-    const { chromosome, start, end, strand } = action.metadata;
+    const { chromosome, start, end, strand } = this.getActionCoordinates(action);
 
-    const sequence = await this.getSequenceForRegion(chromosome, start, end, strand);
+    const sequence = this.getSequenceForRegionFromGenomeData(executionGenomeData, chromosome, start, end, strand);
 
     if (!sequence) {
       const availableChromosomes = this.genomeBrowser.currentSequence
@@ -3683,19 +3941,20 @@ class ActionManager {
       );
     }
 
-    // Clipboard should already be set when the action was created
-    // Just verify it exists
-    if (!this.clipboard || this.clipboard.sequence !== sequence) {
-      this.clipboard = {
-        type: 'cut',
-        sequence: sequence,
-        source: action.target,
-        timestamp: new Date(),
-      };
-    }
+    const comprehensiveData = await this.collectComprehensiveData(chromosome, start, end, strand, executionGenomeData);
+    action.metadata.clipboardData = this.setExecutionClipboard(
+      'cut',
+      sequence,
+      action.target,
+      chromosome,
+      start,
+      end,
+      strand,
+      comprehensiveData
+    );
 
     // Record the sequence modification (cut is essentially a delete)
-    this.recordSequenceModification(chromosome, {
+    const modification = {
       type: 'delete',
       position: start,
       start: start,
@@ -3703,33 +3962,12 @@ class ActionManager {
       length: end - start + 1,
       actionId: action.id,
       operation: 'cut', // Mark this as part of cut operation
-    });
+    };
+    this.recordSequenceModification(chromosome, modification);
+    this.applySequenceModificationToGenomeData(executionGenomeData, chromosome, modification);
 
     // 🔒 CRITICAL: Remove features from cut region (only in execution copy)
-    let removedFeaturesCount = 0;
-
-    // Get features from execution copy (proxy or direct)
-    const currentFeatures = this.getFeaturesFromGenomeData(executionGenomeData, chromosome);
-
-    if (currentFeatures && currentFeatures.length > 0) {
-      const initialCount = currentFeatures.length;
-
-      // Filter out features in cut region (only in execution copy)
-      const remainingFeatures = currentFeatures.filter(feature => !(feature.start >= start && feature.end <= end));
-
-      // Set filtered features back to execution copy
-      this.setFeaturesInGenomeData(executionGenomeData, chromosome, remainingFeatures);
-
-      removedFeaturesCount = initialCount - remainingFeatures.length;
-
-      console.log('✂️ [ActionManager] Removed features from cut region (in execution copy):', {
-        chromosome: chromosome,
-        region: `${start}-${end}`,
-        removedFeatures: removedFeaturesCount,
-        remainingFeatures: remainingFeatures.length,
-        originalDataUntouched: true,
-      });
-    }
+    const featureStats = this.applyFeatureModificationToGenomeData(executionGenomeData, chromosome, modification);
 
     return {
       operation: 'cut',
@@ -3737,7 +3975,7 @@ class ActionManager {
       source: action.target,
       chromosome: chromosome,
       cutRegion: { start, end },
-      removedFeaturesCount: removedFeaturesCount,
+      removedFeaturesCount: featureStats.removedCount,
     };
   }
 
@@ -3745,9 +3983,9 @@ class ActionManager {
    * Execute paste sequence action with comprehensive features handling
    */
   async executePasteSequence(action, executionGenomeData = null) {
-    const { chromosome, start, end } = action.metadata;
-    const clipboardData = action.metadata.clipboardData;
-    const isInsert = start === end;
+    const { chromosome, start, end } = this.getActionCoordinates(action);
+    const clipboardData = this.getClipboardForAction(action);
+    const isInsert = this.isPasteInsertAction(action);
     const operation = isInsert ? 'paste-insert' : 'paste-replace';
 
     // 🔒 CRITICAL: All modifications happen on executionGenomeData (proxy/copy)
@@ -3756,6 +3994,7 @@ class ActionManager {
     if (!clipboardData) {
       throw new Error('No clipboard data available for pasting');
     }
+    action.metadata.clipboardData = clipboardData;
 
     console.log('🔄 [ActionManager] Executing paste with comprehensive data:', {
       actionId: action.id,
@@ -3766,18 +4005,19 @@ class ActionManager {
       targetRegion: `${chromosome}:${start}-${end}`,
     });
 
-    // Record sequence modification
+    // Record and apply sequence modification in queue order.
+    let modification;
     if (isInsert) {
-      this.recordSequenceModification(chromosome, {
+      modification = {
         type: 'insert',
         position: start,
         sequence: clipboardData.sequence,
         length: clipboardData.sequence.length,
         actionId: action.id,
         operation: operation,
-      });
+      };
     } else {
-      this.recordSequenceModification(chromosome, {
+      modification = {
         type: 'replace',
         start: start,
         end: end,
@@ -3786,36 +4026,13 @@ class ActionManager {
         newLength: clipboardData.sequence.length,
         actionId: action.id,
         operation: operation,
-      });
+      };
     }
+    this.recordSequenceModification(chromosome, modification);
+    this.applySequenceModificationToGenomeData(executionGenomeData, chromosome, modification);
 
-    // 🔧 CRITICAL FIX: For paste-replace, remove features in target region BEFORE adding new features
-    let removedFeaturesCount = 0;
-    if (!isInsert) {
-      // This is a paste-replace operation - remove features in target region first
-      const currentFeatures = this.getFeaturesFromGenomeData(executionGenomeData, chromosome);
-
-      if (currentFeatures && currentFeatures.length > 0) {
-        const initialCount = currentFeatures.length;
-
-        // Filter out features that are completely within the replaced region
-        const remainingFeatures = currentFeatures.filter(feature => !(feature.start >= start && feature.end <= end));
-
-        // Set filtered features back to execution copy
-        this.setFeaturesInGenomeData(executionGenomeData, chromosome, remainingFeatures);
-
-        removedFeaturesCount = initialCount - remainingFeatures.length;
-
-        console.log('🗑️ [ActionManager] Removed features from paste-replace target region:', {
-          chromosome: chromosome,
-          targetRegion: `${start}-${end}`,
-          removedFeatures: removedFeaturesCount,
-          removedFeatureNames: currentFeatures.filter(f => f.start >= start && f.end <= end).map(f => f.name || f.type),
-          remainingFeatures: remainingFeatures.length,
-          note: 'Features in target region removed before pasting new features',
-        });
-      }
-    }
+    const featureStats = this.applyFeatureModificationToGenomeData(executionGenomeData, chromosome, modification);
+    const removedFeaturesCount = featureStats.removedCount;
 
     // Handle features copying and position adjustment
     let copiedFeaturesCount = 0;
@@ -3963,7 +4180,7 @@ class ActionManager {
    * @param {Object} executionGenomeData - Genome data copy or proxy (NEVER modify original!)
    */
   async executeDeleteSequence(action, executionGenomeData = null) {
-    const { chromosome, start, end } = action.metadata;
+    const { chromosome, start, end } = this.getActionCoordinates(action);
 
     console.log('🗑️ [ActionManager] Executing delete sequence action:', {
       actionId: action.id,
@@ -3974,38 +4191,17 @@ class ActionManager {
     });
 
     // Record the sequence modification
-    this.recordSequenceModification(chromosome, {
+    const modification = {
       type: 'delete',
       position: start,
       start: start,
       end: end,
       length: end - start + 1,
       actionId: action.id,
-    });
-
-    // 🔒 CRITICAL FIX: Do NOT delete features here!
-    // Features will be filtered/adjusted ONCE at the end in generateComprehensiveGBK()
-    // based on ALL accumulated modifications in sequenceModifications Map
-    // Deleting features here causes double deletion when adjustFeaturePositions() is called
-
-    // Count features that will be affected (for reporting only)
-    let deletedFeaturesCount = 0;
-    const currentFeatures = this.getFeaturesFromGenomeData(executionGenomeData, chromosome);
-
-    if (currentFeatures && currentFeatures.length > 0) {
-      const featuresToDelete = currentFeatures.filter(feature => feature.start >= start && feature.end <= end);
-      deletedFeaturesCount = featuresToDelete.length;
-
-      // Store deleted features info in action metadata (for reporting only)
-      action.metadata.deletedFeatures = featuresToDelete;
-
-      console.log('🗑️ [ActionManager] Features in deleted region (will be removed in final export):', {
-        chromosome: chromosome,
-        region: `${start}-${end}`,
-        featuresToDelete: deletedFeaturesCount,
-        note: 'Features NOT deleted yet - will be filtered in final GBK generation',
-      });
-    }
+    };
+    this.recordSequenceModification(chromosome, modification);
+    this.applySequenceModificationToGenomeData(executionGenomeData, chromosome, modification);
+    const featureStats = this.applyFeatureModificationToGenomeData(executionGenomeData, chromosome, modification);
 
     return {
       operation: 'delete',
@@ -4013,7 +4209,7 @@ class ActionManager {
       target: action.target,
       chromosome: chromosome,
       deletedRegion: { start, end },
-      deletedFeaturesCount: deletedFeaturesCount,
+      deletedFeaturesCount: featureStats.removedCount,
     };
   }
 
@@ -4023,9 +4219,9 @@ class ActionManager {
   async executeInsertSequence(action, executionGenomeData = null) {
     // Support both 'position' and 'start' fields for compatibility
     // Support both 'sequence' and 'insertSequence' field names (functionInsertSequence stores 'sequence')
-    const { chromosome, position, start } = action.metadata;
+    const { chromosome, start } = this.getActionCoordinates(action);
     const insertSequence = action.metadata.insertSequence || action.metadata.sequence;
-    const insertPosition = position !== undefined ? position : start;
+    const insertPosition = Number(action.metadata.position !== undefined ? action.metadata.position : start);
 
     if (!insertSequence) {
       throw new Error(`Insert sequence action missing sequence data in metadata. Available keys: ${Object.keys(action.metadata).join(', ')}`);
@@ -4040,13 +4236,16 @@ class ActionManager {
     });
 
     // Record the sequence modification
-    this.recordSequenceModification(chromosome, {
+    const modification = {
       type: 'insert',
       position: insertPosition,
       sequence: insertSequence,
       length: insertSequence.length,
       actionId: action.id,
-    });
+    };
+    this.recordSequenceModification(chromosome, modification);
+    this.applySequenceModificationToGenomeData(executionGenomeData, chromosome, modification);
+    this.applyFeatureModificationToGenomeData(executionGenomeData, chromosome, modification);
 
     return {
       operation: 'insert',
@@ -4062,7 +4261,7 @@ class ActionManager {
    * Execute replace sequence action
    */
   async executeReplaceSequence(action, executionGenomeData = null) {
-    const { chromosome, start, end } = action.metadata;
+    const { chromosome, start, end } = this.getActionCoordinates(action);
     // Support both 'newSequence' and 'sequence' field names (functionReplaceSequence stores 'sequence')
     const newSequence = action.metadata.newSequence || action.metadata.sequence;
     const originalLength = end - start + 1;
@@ -4080,7 +4279,7 @@ class ActionManager {
     });
 
     // Record the sequence modification
-    this.recordSequenceModification(chromosome, {
+    const modification = {
       type: 'replace',
       start: start,
       end: end,
@@ -4088,7 +4287,10 @@ class ActionManager {
       newSequence: newSequence,
       newLength: newSequence.length,
       actionId: action.id,
-    });
+    };
+    this.recordSequenceModification(chromosome, modification);
+    this.applySequenceModificationToGenomeData(executionGenomeData, chromosome, modification);
+    const featureStats = this.applyFeatureModificationToGenomeData(executionGenomeData, chromosome, modification);
 
     return {
       operation: 'replace',
@@ -4098,6 +4300,7 @@ class ActionManager {
       chromosome: chromosome,
       replacedRegion: { start, end },
       newSequence: newSequence,
+      removedFeaturesCount: featureStats.removedCount,
     };
   }
 
@@ -5667,6 +5870,7 @@ class ActionManager {
       annotations: null,
       variants: null,
       reads: null,
+      sequence: null,
       sequences: null,
       metadata: {},
     };
@@ -5694,6 +5898,7 @@ class ActionManager {
 
       // 🔒 CRITICAL: Backup sequence lengths (note: singular currentSequence, not currentSequences)
       if (this.genomeBrowser.currentSequence) {
+        backup.sequence = { ...this.genomeBrowser.currentSequence };
         // Store sequence LENGTHS only for verification (not full sequences - too large)
         backup.sequences = {};
         for (const [chr, seq] of Object.entries(this.genomeBrowser.currentSequence)) {
@@ -5805,10 +6010,10 @@ class ActionManager {
           this.genomeBrowser.currentAnnotations = JSON.parse(JSON.stringify(backupData.annotations));
         }
 
-        // 🔒 NOTE: Do NOT restore sequences!
-        // backupData.sequences only contains LENGTHS (numbers) for verification,
-        // not actual sequence strings. Sequences should NEVER be modified during execution.
-        // If sequences were corrupted, this is a separate critical bug that needs investigation.
+        if (backupData.sequence) {
+          console.log('🔄 Restoring sequences...');
+          this.genomeBrowser.currentSequence = { ...backupData.sequence };
+        }
 
         if (backupData.variants) {
           console.log('🔄 Restoring variants...');
@@ -5819,8 +6024,7 @@ class ActionManager {
           this.genomeBrowser.currentReads = JSON.parse(JSON.stringify(backupData.reads));
         }
 
-        console.log('✅ [ActionManager] Emergency restoration completed (annotations, variants, reads)');
-        console.log('⚠️ [ActionManager] Sequences NOT restored - they are stored as lengths only in backup');
+        console.log('✅ [ActionManager] Emergency restoration completed (sequences, annotations, variants, reads)');
 
         // Show error to user
         this.genomeBrowser.showNotification(
@@ -6313,7 +6517,10 @@ class ActionManager {
     action.metadata = {
       chromosome: insertTarget.chromosome,
       position: insertTarget.position,
+      start: insertTarget.position,
+      end: insertTarget.position,
       sequence: actualSequence,
+      length: actualSequence.length,
       source: 'function_call',
     };
 
@@ -6357,6 +6564,8 @@ class ActionManager {
       end: region.end,
       strand: region.strand,
       sequence: actualSequence,
+      newSequence: actualSequence,
+      newLength: actualSequence.length,
       source: 'function_call',
     };
 
