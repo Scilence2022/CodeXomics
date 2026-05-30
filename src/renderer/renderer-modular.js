@@ -5668,8 +5668,9 @@ class GenomeBrowser {
 
   /**
    * Populate the dedicated Primer Details sidebar panel.
-   * Extracts the primer sequence from the loaded genome and runs
-   * PrimerDesigner.calculateProperties to compute Tm, GC%, and hairpin risk.
+   * Uses the stored primer oligo sequence when present. The genomic binding
+   * window is shown separately because primers can intentionally differ from
+   * the reference sequence they bind.
    */
   populatePrimerDetails(primer) {
     const content = document.getElementById('primerDetailsContent');
@@ -5681,25 +5682,10 @@ class GenomeBrowser {
     const strandIcon = primer.strand === -1 ? 'fa-long-arrow-alt-left' : 'fa-long-arrow-alt-right';
     const desc = primer.description || primer.qualifiers?.note || '';
     const product = primer.qualifiers?.product || '';
-
-    // Extract primer sequence from loaded genome
-    const currentChr = document.getElementById('chromosomeSelect')?.value;
-    const fullSequence = this.currentSequence ? this.currentSequence[currentChr] : null;
-    let primerSequence = '';
-    if (fullSequence && primer.start != null && primer.end != null) {
-      const seqStart = Math.max(0, primer.start - 1); // 1-based → 0-based
-      const seqEnd = Math.min(fullSequence.length, primer.end);
-      primerSequence = fullSequence.substring(seqStart, seqEnd).toUpperCase();
-      if (primer.strand === -1) {
-        // Reverse complement
-        const complement = { A: 'T', T: 'A', G: 'C', C: 'G', N: 'N' };
-        primerSequence = primerSequence
-          .split('')
-          .reverse()
-          .map(b => complement[b] || b)
-          .join('');
-      }
-    }
+    const currentChr = primer.chromosome || document.getElementById('chromosomeSelect')?.value;
+    const genomeBindingSequence = this.getPrimerGenomeBindingSequence(primer, currentChr);
+    const primerSequence = this.getPrimerOligoSequence(primer) || genomeBindingSequence;
+    const mismatchSummary = this.getPrimerGenomeMismatchSummary(primerSequence, genomeBindingSequence);
 
     // Calculate properties via PrimerDesigner if available
     let props = null;
@@ -5729,12 +5715,14 @@ class GenomeBrowser {
     const lengthQuality = this._assessLengthQuality(props.length || length);
 
     // Build HTML
-    const safeName = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const safeName = this.escapeHtml(name);
+    const safeNameForPrompt = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const safeSequenceJs = JSON.stringify(primerSequence || '');
 
     // Primer identity card
     let html = `
       <div class="primer-identity-card">
-        <div class="primer-name">${name}</div>
+        <div class="primer-name">${safeName}</div>
         <div class="primer-badges">
           <span class="primer-type-badge"><i class="fas fa-vial"></i> primer</span>
           <span class="primer-strand-badge ${primer.strand === -1 ? 'reverse' : 'forward'}">
@@ -5743,7 +5731,7 @@ class GenomeBrowser {
         </div>
         <div class="primer-position">
           <i class="fas fa-map-marker-alt"></i>
-          ${currentChr || 'chr'}:${primer.start.toLocaleString()}-${primer.end.toLocaleString()}
+          ${this.escapeHtml(currentChr || 'chr')}:${primer.start.toLocaleString()}-${primer.end.toLocaleString()}
           <span class="primer-length-badge">${length} bp</span>
         </div>
       </div>
@@ -5769,7 +5757,7 @@ class GenomeBrowser {
           <i class="fas fa-search-plus"></i> Zoom to
         </button>
         <button class="primer-action-btn primer-copy-btn" onclick="
-          const seq = '${primerSequence}';
+          const seq = ${safeSequenceJs};
           if (seq) { navigator.clipboard.writeText(seq).then(() => { if (window.genomeBrowser) window.genomeBrowser.showNotification('Primer sequence copied', 'success'); }); }
         " title="Copy sequence to clipboard" ${!primerSequence ? 'disabled' : ''}>
           <i class="fas fa-copy"></i> Copy Seq
@@ -5822,19 +5810,28 @@ class GenomeBrowser {
 
     // Sequence display
     if (primerSequence) {
-      // Color-code the nucleotides
-      const coloredSeq = primerSequence
-        .split('')
-        .map(b => {
-          const colors = { A: '#22c55e', T: '#ef4444', G: '#f59e0b', C: '#3b82f6' };
-          return `<span style="color: ${colors[b] || '#888'}">${b}</span>`;
-        })
-        .join('');
+      const coloredSeq = this.renderPrimerSequenceHtml(primerSequence, mismatchSummary.positions);
+      const coloredGenomeSeq = genomeBindingSequence
+        ? this.renderPrimerSequenceHtml(genomeBindingSequence, mismatchSummary.positions)
+        : '';
 
       html += `
       <div class="primer-sequence-section">
-        <div class="primer-section-title"><i class="fas fa-dna"></i> Sequence (5'→3')</div>
+        <div class="primer-section-title"><i class="fas fa-dna"></i> Primer Oligo Sequence (5' to 3')</div>
         <div class="primer-sequence-display">${coloredSeq}</div>
+        ${
+          genomeBindingSequence
+            ? `<div class="primer-section-title primer-genome-binding-title"><i class="fas fa-map-pin"></i> Genomic Binding Window (${primer.strand === -1 ? 'reverse-complemented' : 'forward'})</div>
+        <div class="primer-sequence-display primer-genome-sequence">${coloredGenomeSeq}</div>
+        <div class="primer-mismatch-summary">${
+          mismatchSummary.comparable
+            ? mismatchSummary.count === 0
+              ? 'Primer sequence matches the loaded genome at this binding window.'
+              : `${mismatchSummary.count} base difference${mismatchSummary.count === 1 ? '' : 's'} versus the loaded genome at positions ${mismatchSummary.positions.map(pos => pos + 1).join(', ')}.`
+            : 'Primer and genome window lengths differ, so base-by-base comparison was skipped.'
+        }</div>`
+            : ''
+        }
       </div>`;
     }
 
@@ -5861,8 +5858,8 @@ class GenomeBrowser {
       infoItems.forEach(item => {
         html += `
           <div class="primer-info-row">
-            <span class="primer-info-label">${item.label}</span>
-            <span class="primer-info-value">${item.value}</span>
+            <span class="primer-info-label">${this.escapeHtml(item.label)}</span>
+            <span class="primer-info-value">${this.escapeHtml(item.value)}</span>
           </div>`;
       });
       html += `</div>`;
@@ -5871,16 +5868,77 @@ class GenomeBrowser {
     // AI action
     html += `
       <div class="primer-ai-section">
-        <button class="primer-ai-btn" onclick="if(window.chatBox) { window.chatBox.setInputText('Please calculate the properties of this primer sequence: ${primerSequence || safeName}'); window.chatBox.focusInput(); }">
+        <button class="primer-ai-btn" onclick="if(window.chatBox) { window.chatBox.setInputText('Please calculate the properties of this primer sequence: ${primerSequence || safeNameForPrompt}'); window.chatBox.focusInput(); }">
           <i class="fas fa-robot"></i> Analyze with AI
         </button>
-        <button class="primer-ai-btn primer-binding-btn" onclick="if(window.chatBox) { window.chatBox.setInputText('Find binding sites for primer ${safeName} in the current genome'); window.chatBox.focusInput(); }">
+        <button class="primer-ai-btn primer-binding-btn" onclick="if(window.chatBox) { window.chatBox.setInputText('Find binding sites for primer ${safeNameForPrompt} in the current genome'); window.chatBox.focusInput(); }">
           <i class="fas fa-crosshairs"></i> Find Binding Sites
         </button>
       </div>
     `;
 
     content.innerHTML = html;
+  }
+
+  getPrimerOligoSequence(primer) {
+    const sequence =
+      primer.sequence ||
+      primer.qualifiers?.sequence ||
+      primer.qualifiers?.primer_sequence ||
+      primer.qualifiers?.oligo_sequence;
+
+    if (!sequence) return '';
+    return String(sequence)
+      .toUpperCase()
+      .replace(/[^ATCGN]/g, '');
+  }
+
+  getPrimerGenomeBindingSequence(primer, chromosome = null) {
+    const chr = chromosome || primer.chromosome || document.getElementById('chromosomeSelect')?.value;
+    const fullSequence = this.currentSequence ? this.currentSequence[chr] : null;
+    if (!fullSequence || primer.start == null || primer.end == null) return '';
+
+    const seqStart = Math.max(0, Math.min(primer.start, primer.end) - 1);
+    const seqEnd = Math.min(fullSequence.length, Math.max(primer.start, primer.end));
+    let sequence = fullSequence.substring(seqStart, seqEnd).toUpperCase();
+    if (primer.strand === -1) {
+      sequence = this.reverseComplementDNA(sequence);
+    }
+    return sequence.replace(/[^ATCGN]/g, '');
+  }
+
+  getPrimerGenomeMismatchSummary(primerSequence, genomeBindingSequence) {
+    if (!primerSequence || !genomeBindingSequence || primerSequence.length !== genomeBindingSequence.length) {
+      return { comparable: false, count: 0, positions: [] };
+    }
+
+    const positions = [];
+    for (let i = 0; i < primerSequence.length; i++) {
+      if (primerSequence[i] !== genomeBindingSequence[i]) positions.push(i);
+    }
+
+    return { comparable: true, count: positions.length, positions };
+  }
+
+  renderPrimerSequenceHtml(sequence, mismatchPositions = []) {
+    const mismatchSet = new Set(mismatchPositions);
+    return String(sequence)
+      .split('')
+      .map((base, index) => {
+        const colors = { A: '#22c55e', T: '#ef4444', G: '#f59e0b', C: '#3b82f6', N: '#64748b' };
+        const className = mismatchSet.has(index) ? ' primer-base-mismatch' : '';
+        return `<span class="primer-base${className}" style="color: ${colors[base] || '#888'}">${this.escapeHtml(base)}</span>`;
+      })
+      .join('');
+  }
+
+  reverseComplementDNA(sequence) {
+    const complement = { A: 'T', T: 'A', G: 'C', C: 'G', N: 'N' };
+    return String(sequence)
+      .split('')
+      .reverse()
+      .map(base => complement[base] || base)
+      .join('');
   }
 
   /** @private Assess melting temperature quality */
@@ -9209,6 +9267,16 @@ class GenomeBrowser {
       }
     });
 
+    document.getElementById('manualAddPrimerBtn')?.addEventListener('click', () => {
+      this.hidePrimersDropdown();
+      this.showAddFeatureModal('primer');
+    });
+
+    document.getElementById('manualDeletePrimerBtn')?.addEventListener('click', () => {
+      this.hidePrimersDropdown();
+      this.promptDeletePrimers();
+    });
+
     document.getElementById('togglePrimerTrackMenuBtn')?.addEventListener('click', e => {
       e.stopPropagation();
       this.togglePrimerTrack();
@@ -9232,6 +9300,9 @@ class GenomeBrowser {
 
     // Add feature modal
     document.getElementById('addFeatureBtn')?.addEventListener('click', () => this.addUserFeature());
+    document.getElementById('featureType')?.addEventListener('change', e => {
+      this.updatePrimerSequenceFieldVisibility(e.target.value);
+    });
 
     // Close dropdown when clicking outside
     document.addEventListener('click', () => {
@@ -9356,6 +9427,7 @@ class GenomeBrowser {
     const displayFeatureType = featureType || 'gene';
     titleElement.textContent = `Add ${displayFeatureType.charAt(0).toUpperCase() + displayFeatureType.slice(1)}`;
     typeSelect.value = displayFeatureType;
+    this.updatePrimerSequenceFieldVisibility(displayFeatureType);
 
     // Populate chromosome dropdown
     this.populateChromosomeSelectForFeature(chromosomeSelect);
@@ -9383,9 +9455,19 @@ class GenomeBrowser {
     // Clear previous values
     document.getElementById('featureName').value = '';
     document.getElementById('featureDescription').value = '';
+    const primerSequenceInput = document.getElementById('primerOligoSequence');
+    if (primerSequenceInput) {
+      primerSequenceInput.value = '';
+    }
 
     // Show modal
     modal.classList.add('show');
+  }
+
+  updatePrimerSequenceFieldVisibility(featureType) {
+    const primerSequenceGroup = document.getElementById('primerSequenceGroup');
+    if (!primerSequenceGroup) return;
+    primerSequenceGroup.style.display = String(featureType || '').toLowerCase() === 'primer' ? 'block' : 'none';
   }
 
   populateChromosomeSelectForFeature(selectElement) {
@@ -9412,6 +9494,7 @@ class GenomeBrowser {
     const end = parseInt(document.getElementById('featureEnd').value);
     const strand = parseInt(document.getElementById('featureStrand').value);
     const description = document.getElementById('featureDescription').value.trim();
+    const primerOligoSequence = document.getElementById('primerOligoSequence')?.value.trim();
 
     // Validation
     if (!featureName) {
@@ -9443,18 +9526,38 @@ class GenomeBrowser {
       }
     }
 
+    const qualifiers = {
+      gene: featureName,
+      product: description || featureName,
+      note: description,
+      user_defined: true,
+    };
+
+    if (featureType.toLowerCase() === 'primer') {
+      const normalizedPrimerSequence = primerOligoSequence ? primerOligoSequence.toUpperCase().replace(/[^ATCGN]/g, '') : '';
+      if (primerOligoSequence && !normalizedPrimerSequence) {
+        notify('Please enter a valid primer sequence using A, T, C, G, or N');
+        return;
+      }
+      if (normalizedPrimerSequence && normalizedPrimerSequence.length !== end - start + 1) {
+        const proceed = confirm(
+          `The primer sequence is ${normalizedPrimerSequence.length} bp, but the binding interval is ${end - start + 1} bp. Add it anyway?`
+        );
+        if (!proceed) return;
+      }
+      if (normalizedPrimerSequence) {
+        qualifiers.sequence = normalizedPrimerSequence;
+      }
+      qualifiers.direction = strand === -1 ? 'reverse' : 'forward';
+    }
+
     // Create the feature object
     const feature = {
       type: featureType,
       start: start,
       end: end,
       strand: strand,
-      qualifiers: {
-        gene: featureName,
-        product: description || featureName,
-        note: description,
-        user_defined: true,
-      },
+      qualifiers,
       userDefined: true,
       id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     };
@@ -9471,6 +9574,13 @@ class GenomeBrowser {
     }
     this.currentAnnotations[chromosome].push(feature);
 
+    if (featureType.toLowerCase() === 'primer') {
+      this.visibleTracks.add('primers');
+      const checkbox = document.getElementById('trackPrimers');
+      if (checkbox) checkbox.checked = true;
+      this.updatePrimerTrackButtonState(true);
+    }
+
     // Close modal
     document.getElementById('addFeatureModal').classList.remove('show');
 
@@ -9484,6 +9594,102 @@ class GenomeBrowser {
     }
 
     notify(`Added ${featureType} "${featureName}" to ${chromosome}:${start}-${end}`);
+  }
+
+  promptDeletePrimers() {
+    const currentChr = document.getElementById('chromosomeSelect')?.value || this.currentChromosome;
+    const primers = this.getPrimerAnnotations(currentChr);
+
+    if (primers.length === 0) {
+      notify('No primers found on the current chromosome');
+      return;
+    }
+
+    const primerList = primers
+      .map((primer, index) => {
+        const name = primer.name || primer.qualifiers?.label || primer.qualifiers?.gene || primer.id || 'Unnamed Primer';
+        return `${index + 1}. ${name} (${primer.start}-${primer.end})`;
+      })
+      .join('\n');
+
+    const answer = prompt(
+      `Delete primer by number, name, or id. Type ALL to delete all primers on ${currentChr}.\n\n${primerList}`
+    );
+    if (!answer) return;
+
+    const trimmed = answer.trim();
+    let removed = 0;
+
+    if (trimmed.toUpperCase() === 'ALL') {
+      const confirmed = confirm(`Delete all ${primers.length} primer annotations on ${currentChr}?`);
+      if (!confirmed) return;
+      removed = this.deletePrimerAnnotations(currentChr, () => true);
+    } else {
+      const numericIndex = Number(trimmed);
+      const target =
+        Number.isInteger(numericIndex) && numericIndex >= 1 && numericIndex <= primers.length
+          ? primers[numericIndex - 1]
+          : primers.find(primer => {
+              const names = [
+                primer.id,
+                primer.name,
+                primer.qualifiers?.label,
+                primer.qualifiers?.gene,
+                primer.qualifiers?.locus_tag,
+              ]
+                .filter(Boolean)
+                .map(value => String(value).toLowerCase());
+              return names.includes(trimmed.toLowerCase());
+            });
+
+      if (!target) {
+        notify(`Primer "${trimmed}" was not found`);
+        return;
+      }
+
+      const targetName = target.name || target.qualifiers?.label || target.qualifiers?.gene || target.id;
+      const confirmed = confirm(`Delete primer "${targetName}"?`);
+      if (!confirmed) return;
+      removed = this.deletePrimerAnnotations(currentChr, primer => primer === target || primer.id === target.id);
+    }
+
+    if (removed > 0) {
+      this.visibleTracks.add('primers');
+      const checkbox = document.getElementById('trackPrimers');
+      if (checkbox) checkbox.checked = true;
+      this.updatePrimerTrackButtonState(true);
+      if (currentChr && this.currentSequence?.[currentChr]) {
+        this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+      }
+      notify(`Deleted ${removed} primer${removed === 1 ? '' : 's'}`);
+    }
+  }
+
+  getPrimerAnnotations(chromosome) {
+    const annotations = this.currentAnnotations?.[chromosome] || [];
+    return annotations.filter(feature => {
+      const featureType = String(feature?.type || '').toLowerCase();
+      return featureType === 'primer' || featureType === 'primer_bind';
+    });
+  }
+
+  deletePrimerAnnotations(chromosome, predicate) {
+    let removed = 0;
+    const removeFromCollection = collection => {
+      if (!collection?.[chromosome]) return;
+      const before = collection[chromosome].length;
+      collection[chromosome] = collection[chromosome].filter(feature => {
+        const featureType = String(feature?.type || '').toLowerCase();
+        const isPrimer = featureType === 'primer' || featureType === 'primer_bind';
+        return !isPrimer || !predicate(feature);
+      });
+      removed = Math.max(removed, before - collection[chromosome].length);
+    };
+
+    removeFromCollection(this.currentAnnotations);
+    removeFromCollection(this.userDefinedFeatures);
+
+    return removed;
   }
 
   initializeSequenceSelection() {

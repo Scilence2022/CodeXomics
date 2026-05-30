@@ -127,6 +127,44 @@ describe('BLAST Tool Registry Consistency', () => {
       expect(content).toContain('blastManager');
       expect(content).toContain('executeMCPBlastTool');
     });
+
+    it('should handle blast_sequence_from_region without recursive ChatManager delegation', () => {
+      expect(content).toContain('_blastSequenceFromRegionDirect');
+      expect(content).toContain("methodName === 'blastSequenceFromRegion'");
+    });
+  });
+
+  describe('BlastFunctionTools behavior coverage', () => {
+    const content = readFile('src/renderer/modules/BlastFunctionTools.js');
+
+    it('should register generic and region BLAST tools', () => {
+      expect(content).toContain('blast_search: this.executeBlastSearch.bind(this)');
+      expect(content).toContain('blast_sequence_from_region: this.blastSequenceFromRegion.bind(this)');
+    });
+
+    it('should map BLAST programs to the correct database molecule type', () => {
+      expect(content).toContain('getDatabaseTypeForBlastType(blastType)');
+      expect(content).toContain("normalized === 'blastp' || normalized === 'blastx'");
+      expect(content).toContain("return 'nucleotide'");
+    });
+  });
+
+  describe('BlastManager semantic fixes', () => {
+    const content = readFile('src/renderer/modules/BlastManager.js');
+
+    it('should support tblastx executable lookup', () => {
+      expect(content).toContain("tblastx: 'tblastx'");
+    });
+
+    it('should validate tblastn as protein-query BLAST', () => {
+      expect(content).toContain("params.blastType === 'tblastn' && sequenceType !== 'Protein'");
+    });
+
+    it('should resolve quick/custom database IDs through registered database metadata', () => {
+      expect(content).toContain('const directCustomDb = this.customDatabases.get(databaseValue)');
+      expect(content).toContain('const localDb = this.config.localDatabases.get(databaseValue)');
+      expect(content).toContain('path.join(localDb.path, localDb.name || databaseValue)');
+    });
   });
 
   describe('FunctionCallsOrganizer BLAST entries', () => {

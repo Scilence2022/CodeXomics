@@ -1087,10 +1087,263 @@ class TrackRenderer {
       return track;
     }
 
-    this.renderGeneElements(trackContent, visiblePrimers, viewport, [], settings);
+    this.renderPrimerElements(trackContent, visiblePrimers, viewport, settings);
     this.restoreHeaderState(track, 'primers');
 
     return track;
+  }
+
+  /**
+   * Render primers as binding footprints, not as gene-like features.
+   * A primer has its own oligo sequence and can bind imperfectly to the genome.
+   */
+  renderPrimerElements(trackContent, visiblePrimers, viewport, settings = {}) {
+    const primerRows = this.arrangeGenesInRows(visiblePrimers, viewport.start, viewport.end, [], {
+      ...settings,
+      layoutMode: settings.layoutMode || 'expanded',
+    });
+    const layout = this.calculatePrimerTrackLayout(primerRows, settings);
+
+    trackContent.style.height = `${Math.max(layout.totalHeight, 90)}px`;
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'primer-binding-svg');
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', String(layout.totalHeight));
+    svg.setAttribute('viewBox', `0 0 1000 ${layout.totalHeight}`);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.position = 'absolute';
+    svg.style.left = '0';
+    svg.style.top = '0';
+
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const arrowMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+    arrowMarker.setAttribute('id', 'primerArrowHead');
+    arrowMarker.setAttribute('markerWidth', '8');
+    arrowMarker.setAttribute('markerHeight', '8');
+    arrowMarker.setAttribute('refX', '7');
+    arrowMarker.setAttribute('refY', '4');
+    arrowMarker.setAttribute('orient', 'auto');
+
+    const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    arrowPath.setAttribute('d', 'M 0 0 L 8 4 L 0 8 z');
+    arrowPath.setAttribute('fill', '#7c3aed');
+    arrowMarker.appendChild(arrowPath);
+    defs.appendChild(arrowMarker);
+    svg.appendChild(defs);
+
+    primerRows.forEach((row, rowIndex) => {
+      if (rowIndex >= layout.maxRows) return;
+      row.forEach(primer => {
+        const element = this.createSVGPrimerElement(primer, viewport, rowIndex, layout);
+        if (element) svg.appendChild(element);
+      });
+    });
+
+    trackContent.appendChild(svg);
+    this.addPrimerTrackLegend(trackContent, visiblePrimers, layout);
+  }
+
+  calculatePrimerTrackLayout(primerRows, settings = {}) {
+    const primerHeight = settings.primerHeight || 12;
+    const rowSpacing = 10;
+    const rulerHeight = 35;
+    const topPadding = 12;
+    const bottomPadding = 18;
+    const maxRows = settings.maxRows || 6;
+    const effectiveRows = Math.min(primerRows.length, maxRows);
+
+    return {
+      primerHeight,
+      rowSpacing,
+      rulerHeight,
+      topPadding,
+      bottomPadding,
+      maxRows,
+      effectiveRows,
+      totalHeight:
+        rulerHeight +
+        topPadding +
+        Math.max(1, effectiveRows) * (primerHeight + rowSpacing) -
+        rowSpacing +
+        bottomPadding,
+    };
+  }
+
+  createSVGPrimerElement(primer, viewport, rowIndex, layout) {
+    const range = viewport.end - viewport.start;
+    if (range <= 0) return null;
+
+    const visibleStart = Math.max(primer.start, viewport.start);
+    const visibleEnd = Math.min(primer.end, viewport.end);
+    if (visibleEnd < visibleStart) return null;
+
+    const x = ((visibleStart - viewport.start) / range) * 1000;
+    const width = Math.max(((visibleEnd - visibleStart) / range) * 1000, 5);
+    const y = layout.rulerHeight + layout.topPadding + rowIndex * (layout.primerHeight + layout.rowSpacing);
+    const centerY = y + layout.primerHeight / 2;
+    const isReverse = primer.strand === -1 || primer.strand === '-';
+    const oligoSequence = this.getPrimerOligoSequence(primer);
+    const genomeSequence = this.getPrimerGenomeBindingSequence(primer);
+    const mismatchSummary = this.getPrimerMismatchSummary(oligoSequence, genomeSequence);
+    const primerName =
+      primer.name ||
+      this.getPrimerQualifier(primer, 'label') ||
+      this.getPrimerQualifier(primer, 'gene') ||
+      'Primer';
+
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('class', `primer-binding-element${isReverse ? ' reverse' : ' forward'}`);
+    group.style.cursor = 'pointer';
+
+    const stem = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    stem.setAttribute('x1', String(isReverse ? x + width : x));
+    stem.setAttribute('x2', String(isReverse ? x : x + width));
+    stem.setAttribute('y1', String(centerY));
+    stem.setAttribute('y2', String(centerY));
+    stem.setAttribute('stroke', mismatchSummary.count > 0 ? '#c026d3' : '#7c3aed');
+    stem.setAttribute('stroke-width', String(layout.primerHeight));
+    stem.setAttribute('stroke-linecap', 'round');
+    stem.setAttribute('marker-end', 'url(#primerArrowHead)');
+    group.appendChild(stem);
+
+    const bindingLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    bindingLine.setAttribute('x1', String(x));
+    bindingLine.setAttribute('x2', String(x + width));
+    bindingLine.setAttribute('y1', String(y + layout.primerHeight + 5));
+    bindingLine.setAttribute('y2', String(y + layout.primerHeight + 5));
+    bindingLine.setAttribute('stroke', '#64748b');
+    bindingLine.setAttribute('stroke-width', '1.5');
+    bindingLine.setAttribute('stroke-dasharray', mismatchSummary.count > 0 ? '3 3' : 'none');
+    group.appendChild(bindingLine);
+
+    if (mismatchSummary.positions.length > 0 && oligoSequence.length > 0) {
+      mismatchSummary.positions.slice(0, 30).forEach(pos => {
+        const relative = oligoSequence.length <= 1 ? 0.5 : pos / (oligoSequence.length - 1);
+        const markerX = isReverse ? x + width - relative * width : x + relative * width;
+        const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        tick.setAttribute('x1', String(markerX));
+        tick.setAttribute('x2', String(markerX));
+        tick.setAttribute('y1', String(y - 3));
+        tick.setAttribute('y2', String(y + layout.primerHeight + 8));
+        tick.setAttribute('stroke', '#ef4444');
+        tick.setAttribute('stroke-width', '2');
+        tick.setAttribute('vector-effect', 'non-scaling-stroke');
+        group.appendChild(tick);
+      });
+    }
+
+    if (width > 28) {
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', String(x + width / 2));
+      label.setAttribute('y', String(y - 5));
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('font-size', '11');
+      label.setAttribute('font-weight', '600');
+      label.setAttribute('fill', '#334155');
+      label.setAttribute('vector-effect', 'non-scaling-stroke');
+      label.textContent = primerName.length > 18 ? `${primerName.substring(0, 17)}...` : primerName;
+      group.appendChild(label);
+    }
+
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    const sequenceLine = oligoSequence ? `Primer sequence: ${oligoSequence}` : 'Primer sequence: not stored';
+    const genomeLine = genomeSequence ? `Genome binding window: ${genomeSequence}` : 'Genome binding window: unavailable';
+    const mismatchLine =
+      mismatchSummary.count > 0
+        ? `Mismatches vs genome: ${mismatchSummary.count} at ${mismatchSummary.positions.map(pos => pos + 1).join(', ')}`
+        : 'Mismatches vs genome: none detected';
+    title.textContent = `${primerName}\nPosition: ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})\n${sequenceLine}\n${genomeLine}\n${mismatchLine}`;
+    group.appendChild(title);
+
+    group.addEventListener('click', () => {
+      this.showGeneDetails(primer, null);
+    });
+
+    return group;
+  }
+
+  addPrimerTrackLegend(trackContent, visiblePrimers, layout) {
+    const mismatchCount = visiblePrimers.reduce((count, primer) => {
+      const oligoSequence = this.getPrimerOligoSequence(primer);
+      const genomeSequence = this.getPrimerGenomeBindingSequence(primer);
+      return count + (this.getPrimerMismatchSummary(oligoSequence, genomeSequence).count > 0 ? 1 : 0);
+    }, 0);
+
+    const legend = document.createElement('div');
+    legend.className = 'primer-track-legend';
+    legend.style.top = `${layout.totalHeight - 18}px`;
+    legend.textContent = `${visiblePrimers.length} primer${visiblePrimers.length === 1 ? '' : 's'} in view`;
+    if (mismatchCount > 0) {
+      legend.textContent += `, ${mismatchCount} with genome differences`;
+    }
+    trackContent.appendChild(legend);
+  }
+
+  getPrimerQualifier(primer, key) {
+    if (!primer?.qualifiers) return undefined;
+    if (this.genomeBrowser?.getQualifierValue) {
+      return this.genomeBrowser.getQualifierValue(primer.qualifiers, key);
+    }
+    return primer.qualifiers[key];
+  }
+
+  getPrimerOligoSequence(primer) {
+    const storedSequence =
+      primer.sequence ||
+      this.getPrimerQualifier(primer, 'sequence') ||
+      this.getPrimerQualifier(primer, 'primer_sequence') ||
+      this.getPrimerQualifier(primer, 'oligo_sequence');
+
+    if (storedSequence) {
+      return String(storedSequence)
+        .toUpperCase()
+        .replace(/[^ATCGN]/g, '');
+    }
+
+    return this.getPrimerGenomeBindingSequence(primer);
+  }
+
+  getPrimerGenomeBindingSequence(primer) {
+    const chromosome = primer.chromosome || this.genomeBrowser.currentChromosome || document.getElementById('chromosomeSelect')?.value;
+    const sequence = this.genomeBrowser.currentSequence?.[chromosome];
+    if (!sequence || primer.start == null || primer.end == null) return '';
+
+    const start = Math.max(0, Math.min(primer.start, primer.end) - 1);
+    const end = Math.min(sequence.length, Math.max(primer.start, primer.end));
+    let genomeSequence = sequence.substring(start, end).toUpperCase();
+    if (primer.strand === -1 || primer.strand === '-') {
+      genomeSequence = this.reverseComplementSequence(genomeSequence);
+    }
+    return genomeSequence.replace(/[^ATCGN]/g, '');
+  }
+
+  getPrimerMismatchSummary(oligoSequence, genomeSequence) {
+    if (!oligoSequence || !genomeSequence || oligoSequence.length !== genomeSequence.length) {
+      return { count: 0, positions: [], comparable: false };
+    }
+
+    const positions = [];
+    for (let i = 0; i < oligoSequence.length; i++) {
+      if (oligoSequence[i] !== genomeSequence[i]) {
+        positions.push(i);
+      }
+    }
+
+    return {
+      count: positions.length,
+      positions,
+      comparable: true,
+    };
+  }
+
+  reverseComplementSequence(sequence) {
+    const complement = { A: 'T', T: 'A', G: 'C', C: 'G', N: 'N' };
+    return String(sequence)
+      .split('')
+      .reverse()
+      .map(base => complement[base] || base)
+      .join('');
   }
 
   /**

@@ -39,6 +39,12 @@ parameters:
     description:
       type: string
       description: 'Optional description or properties'
+    sequence:
+      type: string
+      description: 'Optional primer oligo sequence. Use this when the primer intentionally differs from the genomic binding window.'
+    primerSequence:
+      type: string
+      description: 'Alias for sequence.'
   required:
     - name
     - chromosome

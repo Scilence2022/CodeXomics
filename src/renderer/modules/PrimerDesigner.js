@@ -584,6 +584,9 @@ class PrimerDesigner {
           strand: label,
           mismatches: mismatches,
           sequence: templateWindow,
+          primerSequence: pSeq,
+          primerAlignedSequence: query,
+          genomicSequence: templateWindow,
           // Enriched fields
           threePrimeMismatches: quality.threePrimeMismatches,
           terminalMismatch: quality.terminalMismatch,

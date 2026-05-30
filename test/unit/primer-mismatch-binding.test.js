@@ -54,6 +54,9 @@ describe('Primer Designer Mismatch Binding Tests', () => {
       expect(atStart.threePrimeMismatches).toBe(0);
       expect(atStart.terminalMismatch).toBe(false);
       expect(atStart.bindingScore).toBeLessThan(100.0);
+      expect(atStart.primerSequence).toBe(fivePrimeMismatchPrimer);
+      expect(atStart.primerAlignedSequence).toBe(fivePrimeMismatchPrimer);
+      expect(atStart.genomicSequence).toBe(template.substring(0, fivePrimeMismatchPrimer.length));
     });
 
     it('should respect maxMismatches and filter out sites with too many mismatches', () => {
@@ -222,6 +225,9 @@ describe('Primer Designer Mismatch Binding Tests', () => {
       expect(revSite).toBeDefined();
       expect(revSite.start).toBe(10);
       expect(revSite.sequence).toBe('GATAGCGCAT');
+      expect(revSite.primerSequence).toBe(perfectPrimer);
+      expect(revSite.primerAlignedSequence).toBe('GATAGCGCAT');
+      expect(revSite.genomicSequence).toBe('GATAGCGCAT');
     });
   });
 });

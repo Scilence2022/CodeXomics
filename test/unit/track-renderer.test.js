@@ -142,6 +142,7 @@ describe('Circular Viewport Handling', () => {
 describe('Track Creation Methods', () => {
   const trackMethods = [
     'createGeneTrack',
+    'createPrimerTrack',
     'createAnnotationTrack',
     'createBlastTrack',
     'createTrackBase',
@@ -154,6 +155,30 @@ describe('Track Creation Methods', () => {
     for (const method of trackMethods) {
       expect(content.includes(method)).toBe(true);
     }
+  });
+});
+
+describe('Primer Track Rendering', () => {
+  let content;
+
+  beforeAll(() => {
+    content = fs.readFileSync(TR_PATH, 'utf-8');
+  });
+
+  it('should use a dedicated primer binding renderer instead of generic gene rendering', () => {
+    const primerTrackStart = content.indexOf('createPrimerTrack(chromosome)');
+    const primerTrackEnd = content.indexOf('createBlastTrack(chromosome)');
+    const primerTrackSection = content.substring(primerTrackStart, primerTrackEnd);
+
+    expect(primerTrackSection).toContain('renderPrimerElements');
+    expect(primerTrackSection).not.toContain('renderGeneElements(trackContent, visiblePrimers');
+  });
+
+  it('should expose sequence comparison helpers for oligo-vs-genome differences', () => {
+    expect(content).toContain('getPrimerOligoSequence(primer)');
+    expect(content).toContain('getPrimerGenomeBindingSequence(primer)');
+    expect(content).toContain('getPrimerMismatchSummary(oligoSequence, genomeSequence)');
+    expect(content).toContain('primer-binding-svg');
   });
 });
 
@@ -200,7 +225,7 @@ describe('Post-Extraction Consistency', () => {
   it('should be smaller after GeneShapeCreators extraction', () => {
     const content = fs.readFileSync(TR_PATH, 'utf-8');
     const lines = content.split('\n').length;
-    expect(lines).toBeLessThan(15600); // adjusted since we added code for genes, reads, variants, and other settings tabs
+    expect(lines).toBeLessThan(16050); // includes dedicated primer binding renderer and existing track subsystems
   });
 
   it('should still reference GeneShapeCreators module', () => {

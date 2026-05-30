@@ -3886,10 +3886,13 @@ class BlastManager {
       throw new Error('BLASTP requires a protein sequence');
     }
     if (
-      (params.blastType === 'blastn' || params.blastType === 'blastx' || params.blastType === 'tblastn') &&
+      (params.blastType === 'blastn' || params.blastType === 'blastx' || params.blastType === 'tblastx') &&
       sequenceType === 'Protein'
     ) {
       throw new Error(`${params.blastType.toUpperCase()} cannot be used with protein sequences`);
+    }
+    if (params.blastType === 'tblastn' && sequenceType !== 'Protein') {
+      throw new Error('TBLASTN requires a protein query sequence');
     }
   }
 
@@ -3924,10 +3927,7 @@ class BlastManager {
       // Store results for track rendering
       this.searchResults = results;
 
-      // Refresh Blast track to show new results
-      if (this.app && this.app.genomeBrowser && this.app.genomeBrowser.trackRenderer) {
-        this.app.genomeBrowser.trackRenderer.refreshTrack('blast');
-      }
+      this.refreshBlastTrack();
 
       return results;
     } catch (error) {
@@ -4562,10 +4562,7 @@ class BlastManager {
       // Store results for track rendering
       this.searchResults = results;
 
-      // Refresh Blast track to show new results
-      if (this.app && this.app.genomeBrowser && this.app.genomeBrowser.trackRenderer) {
-        this.app.genomeBrowser.trackRenderer.refreshTrack('blast');
-      }
+      this.refreshBlastTrack();
 
       // Clean up temporary file
       await this.cleanupTempFile(queryFile);
@@ -4642,6 +4639,13 @@ class BlastManager {
     }
   }
 
+  refreshBlastTrack() {
+    const genomeBrowser = this.app?.genomeBrowser || this.app;
+    if (genomeBrowser?.trackRenderer?.refreshTrack) {
+      genomeBrowser.trackRenderer.refreshTrack('blast');
+    }
+  }
+
   async createTempFastaFile(sequence) {
     const tempDir = require('os').tmpdir();
     const tempFile = require('path').join(tempDir, `blast_query_${Date.now()}.fa`);
@@ -4662,8 +4666,8 @@ class BlastManager {
     let command = `${blastExecutable} -query "${queryFile}" -db "${databasePath}"`;
 
     // Add common parameters
-    command += ` -evalue ${params.evalue}`;
-    command += ` -max_target_seqs ${params.maxTargets}`;
+    command += ` -evalue ${params.evalue || '0.01'}`;
+    command += ` -max_target_seqs ${params.maxTargets || 50}`;
 
     // Use detailed output format that includes sequence alignment information
     // Format 6 with additional sequence fields: qseq (query sequence) and sseq (subject sequence)
@@ -4687,6 +4691,24 @@ class BlastManager {
   }
 
   resolveDatabasePath(databaseValue) {
+    const path = require('path');
+    if (!databaseValue) {
+      throw new Error('Database value is required');
+    }
+
+    const directCustomDb = this.customDatabases.get(databaseValue);
+    if (directCustomDb) {
+      if (directCustomDb.dbPath) return directCustomDb.dbPath;
+      if (directCustomDb.outputDir) return path.join(directCustomDb.outputDir, databaseValue);
+      if (directCustomDb.path) return directCustomDb.path;
+    }
+
+    const localDb = this.config.localDatabases.get(databaseValue);
+    if (localDb) {
+      if (localDb.dbPath) return localDb.dbPath;
+      if (localDb.path) return path.join(localDb.path, localDb.name || databaseValue);
+    }
+
     // Check if this is a custom database
     if (databaseValue.startsWith('custom_')) {
       const dbId = databaseValue.replace('custom_', '');
@@ -4699,7 +4721,6 @@ class BlastManager {
         }
 
         // Fallback to default path construction - use static directory name
-        const path = require('path');
         const os = require('os');
         const documentsPath = os.homedir() + '/Documents';
         const blastDbPath = path.join(documentsPath, 'CodeXomics Projects', 'blast_databases', dbId);
@@ -4719,6 +4740,7 @@ class BlastManager {
       blastp: 'blastp',
       blastx: 'blastx',
       tblastn: 'tblastn',
+      tblastx: 'tblastx',
     };
 
     const executable = executables[blastType];

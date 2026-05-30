@@ -29,9 +29,11 @@ class BlastFunctionTools {
     // Register built-in tool mappings
     this.toolMappings = {
       // Search tools
+      blast_search: this.executeBlastSearch.bind(this),
       blast_search_online: this.executeOnlineBlastSearch.bind(this),
       blast_search_local: this.executeLocalBlastSearch.bind(this),
       blast_search_batch: this.executeBatchBlastSearch.bind(this),
+      blast_sequence_from_region: this.blastSequenceFromRegion.bind(this),
 
       // Database management
       blast_create_database: this.createBlastDatabase.bind(this),
@@ -58,6 +60,20 @@ class BlastFunctionTools {
 
     this.initialized = true;
     console.log(`✅ [BlastFunctionTools] Initialized ${Object.keys(this.toolMappings).length} BLAST tools`);
+  }
+
+  /**
+   * Execute generic BLAST search by routing to the requested service.
+   */
+  async executeBlastSearch(params) {
+    const service = String(params.service || params.searchType || params.search_type || 'online').toLowerCase();
+    if (service === 'local' || service === 'blast+') {
+      return this.executeLocalBlastSearch(params);
+    }
+    if (service === 'ncbi' || service === 'online' || service === 'remote') {
+      return this.executeOnlineBlastSearch(params);
+    }
+    throw new Error('service/searchType must be one of: online, ncbi, remote, local, blast+');
   }
 
   /**
@@ -155,19 +171,8 @@ class BlastFunctionTools {
     if (!database) {
       const genomeId = this.getCurrentGenomeId();
       if (genomeId) {
-        // Detect sequence type
-        const sequenceType = this.detectSequenceType({ sequence });
-        const seqType = sequenceType.sequenceType;
-
         // Get associated database based on BLAST type
-        let dbType = 'nucleotide';
-        if (blastType === 'blastp' || blastType === 'tblastn') {
-          dbType = 'protein';
-        } else if (blastType === 'blastx') {
-          dbType = 'protein'; // Query is nucleotide but database is protein
-        } else if (blastType === 'tblastx') {
-          dbType = 'nucleotide'; // Both query and database are nucleotide (translated)
-        }
+        const dbType = this.getDatabaseTypeForBlastType(blastType);
 
         const associatedDb = this.getAssociatedDatabase(genomeId, dbType);
         if (associatedDb) {
@@ -270,6 +275,38 @@ class BlastFunctionTools {
       searchType: searchType,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  /**
+   * BLAST a region from the loaded genome.
+   */
+  async blastSequenceFromRegion(params) {
+    const { chromosome, start, end } = params;
+    if (!chromosome || start === undefined || end === undefined) {
+      throw new Error('chromosome, start, and end are required');
+    }
+
+    const genomeBrowser = this.getGenomeBrowser();
+    if (!genomeBrowser) {
+      throw new Error('Genome browser not available');
+    }
+
+    let sequence = '';
+    if (typeof genomeBrowser.getSequenceForRegion === 'function') {
+      sequence = await genomeBrowser.getSequenceForRegion(chromosome, Number(start), Number(end));
+    } else {
+      const chromosomeSequence = genomeBrowser.currentSequence?.[chromosome];
+      if (!chromosomeSequence) {
+        throw new Error(`No sequence data found for chromosome: ${chromosome}`);
+      }
+      sequence = chromosomeSequence.substring(Number(start) - 1, Number(end));
+    }
+
+    return this.executeBlastSearch({
+      ...params,
+      sequence,
+      blastType: params.blastType || 'blastn',
+    });
   }
 
   /**
@@ -454,12 +491,12 @@ class BlastFunctionTools {
 
     try {
       // Get genome data
-      const genomeBrowser = this.blastManager.app?.genomeBrowser;
+      const genomeBrowser = this.getGenomeBrowser();
       if (!genomeBrowser) {
         throw new Error('Genome browser not available');
       }
 
-      const genomeData = genomeBrowser.getChromosomeData(chromosome);
+      const genomeData = this.getChromosomeData(genomeBrowser, chromosome);
       if (!genomeData || !genomeData.sequence) {
         throw new Error(`No sequence data found for chromosome: ${chromosome}`);
       }
@@ -508,12 +545,12 @@ class BlastFunctionTools {
 
     try {
       // Get genome data
-      const genomeBrowser = this.blastManager.app?.genomeBrowser;
+      const genomeBrowser = this.getGenomeBrowser();
       if (!genomeBrowser) {
         throw new Error('Genome browser not available');
       }
 
-      const genomeData = genomeBrowser.getChromosomeData(chromosome);
+      const genomeData = this.getChromosomeData(genomeBrowser, chromosome);
       if (!genomeData || !genomeData.sequence) {
         throw new Error(`No sequence data found for chromosome: ${chromosome}`);
       }
@@ -698,13 +735,15 @@ class BlastFunctionTools {
     }
 
     const type = this.blastManager.detectSequenceType(sequence);
+    const normalizedType = String(type).toLowerCase();
 
     return {
       success: true,
       sequence: sequence.substring(0, 100) + (sequence.length > 100 ? '...' : ''),
       sequenceLength: sequence.length,
       detectedType: type,
-      recommendedBlastType: type === 'protein' ? 'blastp' : 'blastn',
+      sequenceType: type,
+      recommendedBlastType: normalizedType === 'protein' ? 'blastp' : 'blastn',
       timestamp: new Date().toISOString(),
     };
   }
@@ -899,6 +938,32 @@ class BlastFunctionTools {
     }
 
     return null;
+  }
+
+  getDatabaseTypeForBlastType(blastType) {
+    const normalized = String(blastType || '').toLowerCase();
+    if (normalized === 'blastp' || normalized === 'blastx') {
+      return 'protein';
+    }
+    return 'nucleotide';
+  }
+
+  getGenomeBrowser() {
+    return this.blastManager.app?.genomeBrowser || this.blastManager.app || null;
+  }
+
+  getChromosomeData(genomeBrowser, chromosome) {
+    if (typeof genomeBrowser.getChromosomeData === 'function') {
+      return genomeBrowser.getChromosomeData(chromosome);
+    }
+
+    const sequence = genomeBrowser.currentSequence?.[chromosome];
+    if (!sequence) return null;
+    return {
+      chromosome,
+      sequence,
+      annotations: genomeBrowser.currentAnnotations?.[chromosome] || [],
+    };
   }
 
   /**

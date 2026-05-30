@@ -194,12 +194,12 @@ const PRIMER_TOOL_SCHEMAS = {
         },
         maxMismatches: {
           type: 'number',
-          description: 'Maximum number of mismatched bases allowed (default: 0)',
+          description: 'Maximum number of mismatched bases allowed (default: 3)',
         },
         max3PrimeMismatches: {
           type: 'number',
           description:
-            'Maximum mismatches allowed in the last 5 bases at the 3-prime end of the primer (default: no limit).',
+            'Maximum mismatches allowed in the last 5 bases at the 3-prime end of the primer (default: 1).',
           minimum: 0,
         },
         minBindingTm: {
@@ -257,6 +257,15 @@ const PRIMER_TOOL_SCHEMAS = {
         description: {
           type: 'string',
           description: 'Optional description or properties (e.g. "Tm: 60C, GC: 50%")',
+        },
+        sequence: {
+          type: 'string',
+          description:
+            'Optional primer oligo sequence. Store this when the primer sequence intentionally differs from the genomic binding window.',
+        },
+        primerSequence: {
+          type: 'string',
+          description: 'Alias for sequence.',
         },
       },
       required: ['name', 'chromosome', 'start', 'end'],

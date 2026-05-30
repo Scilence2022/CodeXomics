@@ -115,7 +115,16 @@ class BlastService {
       }
     }
 
-    // Priority 2: Direct ChatManager prototype method (from BlastChatManagerIntegration)
+    // Priority 2: Direct BlastManager methods for ChatManager proxy wrappers
+    if (methodName === 'blastSearch' && this.app.blastManager?.executeBlastSearch) {
+      return await this.app.blastManager.executeBlastSearch(params);
+    }
+
+    if (methodName === 'blastSequenceFromRegion') {
+      return await this._blastSequenceFromRegionDirect(params);
+    }
+
+    // Priority 3: Direct ChatManager prototype method (from BlastChatManagerIntegration)
     if (typeof this.chatManager[methodName] === 'function') {
       try {
         return await this.chatManager[methodName](params);
@@ -124,12 +133,12 @@ class BlastService {
       }
     }
 
-    // Priority 3: BlastManager direct
+    // Priority 4: BlastManager direct
     if (this.app.blastManager && typeof this.app.blastManager[methodName] === 'function') {
       return await this.app.blastManager[methodName](params);
     }
 
-    // Priority 4: MCP blast tool fallback for search operations
+    // Priority 5: MCP blast tool fallback for search operations
     const searchMethods = [
       'blastSearch',
       'blastSearchOnline',
@@ -146,6 +155,30 @@ class BlastService {
     }
 
     throw new Error(`BLAST function '${methodName}' not found or BLAST system not initialized`);
+  }
+
+  async _blastSequenceFromRegionDirect(params) {
+    const { chromosome, start, end } = params;
+    if (!chromosome || start === undefined || end === undefined) {
+      throw new Error('chromosome, start, and end are required');
+    }
+
+    let sequence = '';
+    if (typeof this.app.getSequenceForRegion === 'function') {
+      sequence = await this.app.getSequenceForRegion(chromosome, Number(start), Number(end));
+    } else {
+      const chromosomeSequence = this.app.currentSequence?.[chromosome];
+      if (!chromosomeSequence) {
+        throw new Error(`No sequence data found for chromosome: ${chromosome}`);
+      }
+      sequence = chromosomeSequence.substring(Number(start) - 1, Number(end));
+    }
+
+    return this._executeBlastRequest('blastSearch', {
+      ...params,
+      sequence,
+      blastType: params.blastType || 'blastn',
+    });
   }
 
   async executeMCPBlastTool(toolName, params) {

@@ -79,6 +79,14 @@ class PrimerService {
       throw new Error('Missing required fields for annotation: chromosome, start, end, name');
     }
     const strand = params.strand === '-' || params.strand === -1 ? -1 : 1;
+    const qualifiers = {};
+    const primerSequence = params.sequence || params.primerSequence || params.oligoSequence;
+    if (primerSequence) {
+      qualifiers.sequence = String(primerSequence)
+        .toUpperCase()
+        .replace(/[^ATCGN]/g, '');
+    }
+
     const result = await this.chatManager.createAnnotation({
       type: 'primer',
       name: params.name,
@@ -87,6 +95,8 @@ class PrimerService {
       end: parseInt(params.end),
       strand,
       description: params.description || `Tm: ${params.tm || '?'}, GC: ${params.gcContent || '?'}%`,
+      sequence: qualifiers.sequence,
+      qualifiers,
     });
 
     this._showPrimerTrack(params.chromosome);
@@ -113,6 +123,7 @@ class PrimerService {
         start: primer.start,
         end: primer.end,
         strand: primer.strand === -1 ? '-' : '+',
+        sequence: primer.sequence || primer.qualifiers?.sequence || primer.qualifiers?.primer_sequence || '',
         description: primer.description || primer.qualifiers?.note || '',
       }));
 
