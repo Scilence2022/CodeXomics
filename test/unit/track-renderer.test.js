@@ -7,8 +7,11 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 
 const TR_PATH = path.join(process.cwd(), 'src/renderer/modules/TrackRenderer.js');
+const require = createRequire(import.meta.url);
+const TrackRenderer = require(TR_PATH);
 
 describe('TrackRenderer Structure', () => {
   let content;
@@ -67,6 +70,69 @@ describe('Viewport Filtering', () => {
     // Both should exist; order doesn't matter since they're in different sections
     expect(geneShapeIdx).toBeGreaterThan(0);
     expect(filterIdx).toBeGreaterThan(0);
+  });
+});
+
+describe('Circular Viewport Handling', () => {
+  function createRenderer() {
+    global.document = {
+      getElementById: () => ({ value: 'chr1' }),
+    };
+
+    return new TrackRenderer({
+      currentChromosome: 'chr1',
+      currentSequence: {
+        chr1: 'A'.repeat(90) + 'CGCGT' + 'TTTTT',
+      },
+      currentPosition: { start: 90, end: 110 },
+      navigationManager: { circularMode: false },
+      readsManager: {
+        async getReadsForRegion(chromosome, start, end) {
+          if (start === 90 && end === 100) {
+            return [{ id: 'tail', start: 96, end: 100, sequence: 'AAAA', mutations: [] }];
+          }
+          if (start === 0 && end === 10) {
+            return [{ id: 'head', start: 6, end: 9, sequence: 'TTT', mutations: [] }];
+          }
+          return [];
+        },
+      },
+    });
+  }
+
+  it('wraps reference sequence across the origin when genes circular mode is enabled', () => {
+    const renderer = createRenderer();
+    renderer.trackSettings.genes = { circularMode: true };
+
+    expect(renderer.getReferenceSequence(95, 105, 'chr1')).toBe('TTTTTAAAAA');
+  });
+
+  it('maps source features after the origin into display coordinates', () => {
+    const renderer = createRenderer();
+    renderer.trackSettings.genes = { circularMode: true };
+
+    const visible = renderer.filterFeaturesByViewport([
+      { id: 'tail', start: 94, end: 98 },
+      { id: 'head', start: 4, end: 8 },
+      { id: 'outside', start: 40, end: 50 },
+    ], { start: 90, end: 110 });
+
+    expect(visible.map((feature) => feature.id)).toEqual(['tail', 'head']);
+    expect(visible[1].start).toBe(104);
+    expect(visible[1].end).toBe(108);
+    expect(visible[1]._sourceStart).toBe(4);
+  });
+
+  it('splits read queries at the junction and shifts post-origin reads', async () => {
+    const renderer = createRenderer();
+    renderer.trackSettings.genes = { circularMode: true };
+
+    const reads = await renderer.getReadsForViewport('chr1', { start: 90, end: 110 }, {});
+
+    expect(reads.map((read) => read.id)).toEqual(['tail', 'head']);
+    expect(reads[1].start).toBe(106);
+    expect(reads[1].end).toBe(109);
+    expect(reads[1]._sourceStart).toBe(6);
   });
 });
 
@@ -258,4 +324,3 @@ describe('Other Track Settings Style Consistency & Tab Refactoring', () => {
     expect(content).toContain('setupDefaultSettingsEventListeners(bodyElement)');
   });
 });
-

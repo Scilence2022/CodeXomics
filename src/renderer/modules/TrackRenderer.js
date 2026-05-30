@@ -554,6 +554,233 @@ class TrackRenderer {
   }
 
   /**
+   * Circular browsing is configured from the Genes & Features track, but the
+   * viewport is shared by every track. Treat it as a global coordinate mode.
+   */
+  isCircularModeEnabled(settings = null) {
+    const genesSettings = this.getTrackSettings('genes');
+
+    return Boolean(
+        settings?.circularMode ||
+        genesSettings?.circularMode ||
+        this.genomeBrowser?.navigationManager?.circularMode,
+    );
+  }
+
+  getSequenceLength(chromosome = null) {
+    const currentChr =
+      chromosome || document.getElementById('chromosomeSelect')?.value || this.genomeBrowser?.currentChromosome;
+    const sequence = this.genomeBrowser?.currentSequence;
+    const chromosomeSequence = typeof sequence === 'object' && currentChr ? sequence[currentChr] : sequence;
+    return typeof chromosomeSequence === 'string' ? chromosomeSequence.length : 0;
+  }
+
+  normalizeCircularPosition(position, sequenceLength) {
+    if (!sequenceLength || sequenceLength <= 0) return position;
+    return ((position % sequenceLength) + sequenceLength) % sequenceLength;
+  }
+
+  /**
+   * Split a display viewport into source-coordinate intervals. For a circular
+   * viewport such as 950-1050 on a 1000 bp sequence, this returns
+   * 950-1000 and 0-50 while preserving their display-space offsets.
+   */
+  getViewportSegments(viewport, chromosome = null) {
+    const sequenceLength = this.getSequenceLength(chromosome);
+    const range = viewport.end - viewport.start;
+
+    if (!this.isCircularModeEnabled() || sequenceLength <= 0 || range <= 0) {
+      return [{
+        sourceStart: viewport.start,
+        sourceEnd: viewport.end,
+        displayStart: viewport.start,
+        displayEnd: viewport.end,
+      }];
+    }
+
+    const segments = [];
+    let cursor = viewport.start;
+    const maxSegments = Math.min(Math.ceil(range / sequenceLength) + 2, 20);
+
+    while (cursor < viewport.end && segments.length < maxSegments) {
+      const sourceStart = this.normalizeCircularPosition(cursor, sequenceLength);
+      const basesToBoundary = sourceStart === 0 ? sequenceLength : sequenceLength - sourceStart;
+      const displayEnd = Math.min(viewport.end, cursor + basesToBoundary);
+      const sourceEnd = sourceStart + (displayEnd - cursor);
+
+      segments.push({
+        sourceStart,
+        sourceEnd,
+        displayStart: cursor,
+        displayEnd,
+      });
+
+      cursor = displayEnd;
+    }
+
+    return segments;
+  }
+
+  getWrappedSequence(sequence, start, end, chromosome = null) {
+    if (typeof sequence !== 'string' || sequence.length === 0 || end <= start) return '';
+
+    if (!this.isCircularModeEnabled() || sequence.length === 0) {
+      const startIndex = Math.max(0, start);
+      const endIndex = Math.min(sequence.length, end);
+      return sequence.substring(startIndex, endIndex);
+    }
+
+    const segments = this.getViewportSegments({start, end}, chromosome);
+    return segments
+        .map((segment) => sequence.substring(segment.sourceStart, Math.min(segment.sourceEnd, sequence.length)))
+        .join('');
+  }
+
+  getFeatureDisplaySegments(feature, viewport, options = {}) {
+    const startKey = options.startKey || 'start';
+    const endKey = options.endKey || 'end';
+    const chromosome = options.chromosome || null;
+    const includeZeroLength = options.includeZeroLength !== false;
+
+    const rawStart = Number(feature?.[startKey]);
+    const rawEnd = Number(feature?.[endKey]);
+    if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd)) return [];
+
+    const overlapsLinear = includeZeroLength ?
+      rawStart <= viewport.end && rawEnd >= viewport.start :
+      rawStart < viewport.end && rawEnd > viewport.start;
+
+    if (!this.isCircularModeEnabled()) {
+      return overlapsLinear ? [feature] : [];
+    }
+
+    const sequenceLength = this.getSequenceLength(chromosome);
+    if (sequenceLength <= 0) {
+      return overlapsLinear ? [feature] : [];
+    }
+
+    const sourceIntervals = rawStart <= rawEnd ?
+      [{start: rawStart, end: rawEnd}] :
+      [
+        {start: rawStart, end: sequenceLength},
+        {start: 0, end: rawEnd},
+      ];
+
+    const displaySegments = [];
+    const viewportSegments = this.getViewportSegments(viewport, chromosome);
+
+    viewportSegments.forEach((viewportSegment) => {
+      sourceIntervals.forEach((sourceInterval) => {
+        const overlapStart = Math.max(sourceInterval.start, viewportSegment.sourceStart);
+        const overlapEnd = Math.min(sourceInterval.end, viewportSegment.sourceEnd);
+        const overlaps = includeZeroLength ? overlapStart <= overlapEnd : overlapStart < overlapEnd;
+
+        if (!overlaps) return;
+
+        const displayStart = viewportSegment.displayStart + (overlapStart - viewportSegment.sourceStart);
+        let displayEnd = viewportSegment.displayStart + (overlapEnd - viewportSegment.sourceStart);
+
+        if (includeZeroLength && displayEnd === displayStart) {
+          displayEnd = displayStart + 1;
+        }
+
+        displaySegments.push({
+          ...feature,
+          [startKey]: displayStart,
+          [endKey]: displayEnd,
+          _sourceStart: rawStart,
+          _sourceEnd: rawEnd,
+          _circularDisplaySegment: true,
+        });
+      });
+    });
+
+    return displaySegments;
+  }
+
+  getFeatureRangeDisplaySegments(start, end, viewport, options = {}) {
+    return this.getFeatureDisplaySegments({start, end}, viewport, options);
+  }
+
+  adjustReadForViewportSegment(read, viewportSegment) {
+    if (!read) return null;
+
+    const readStart0Based = Number(read.start) - 1;
+    const readEnd0Based = Number(read.end);
+    if (!Number.isFinite(readStart0Based) || !Number.isFinite(readEnd0Based)) return null;
+
+    const overlapStart = Math.max(readStart0Based, viewportSegment.sourceStart);
+    const overlapEnd = Math.min(readEnd0Based, viewportSegment.sourceEnd);
+    if (overlapEnd <= overlapStart) return null;
+
+    const displayOffset = viewportSegment.displayStart - viewportSegment.sourceStart;
+    const adjustedRead = {
+      ...read,
+      start: read.start + displayOffset,
+      end: read.end + displayOffset,
+      _sourceStart: read.start,
+      _sourceEnd: read.end,
+      _circularDisplaySegment: displayOffset !== 0,
+    };
+
+    if (Array.isArray(read.mutations)) {
+      adjustedRead.mutations = read.mutations.map((mutation) => ({
+        ...mutation,
+        position: typeof mutation.position === 'number' ? mutation.position + displayOffset : mutation.position,
+      }));
+    }
+
+    return adjustedRead;
+  }
+
+  async getReadsForViewport(chromosome, viewport, settings = {}, bamFile = null) {
+    const sequenceLength = this.getSequenceLength(chromosome);
+
+    if (!this.isCircularModeEnabled() || sequenceLength <= 0) {
+      if (bamFile?.reader) {
+        const bamStart = Math.max(0, viewport.start);
+        const bamEnd = Math.max(bamStart + 1, viewport.end);
+        return await bamFile.reader.getRecordsForRange(chromosome, bamStart, bamEnd, settings);
+      }
+
+      return await this.genomeBrowser.readsManager.getReadsForRegion(
+          chromosome,
+          viewport.start,
+          viewport.end,
+          settings,
+      );
+    }
+
+    const reads = [];
+    const segments = this.getViewportSegments(viewport, chromosome);
+
+    for (const segment of segments) {
+      const sourceStart = Math.max(0, Math.floor(segment.sourceStart));
+      const sourceEnd = Math.min(sequenceLength, Math.ceil(segment.sourceEnd));
+      if (sourceEnd <= sourceStart) continue;
+
+      let segmentReads;
+      if (bamFile?.reader) {
+        segmentReads = await bamFile.reader.getRecordsForRange(chromosome, sourceStart, sourceEnd, settings);
+      } else {
+        segmentReads = await this.genomeBrowser.readsManager.getReadsForRegion(
+            chromosome,
+            sourceStart,
+            sourceEnd,
+            settings,
+        );
+      }
+
+      segmentReads.forEach((read) => {
+        const adjustedRead = this.adjustReadForViewportSegment(read, segment);
+        if (adjustedRead) reads.push(adjustedRead);
+      });
+    }
+
+    return reads;
+  }
+
+  /**
    * Save header visibility state before track recreation
    */
   saveHeaderStates() {
@@ -708,10 +935,10 @@ class TrackRenderer {
   filterFeaturesByViewport(features, viewport) {
     if (!Array.isArray(features)) return [];
 
-    return features.filter(
-        (feature) =>
-          feature && feature.start && feature.end && feature.start <= viewport.end && feature.end >= viewport.start,
-    );
+    return features.flatMap((feature) => {
+      if (!feature) return [];
+      return this.getFeatureDisplaySegments(feature, viewport);
+    });
   }
 
   // ============================================================================
@@ -893,11 +1120,9 @@ class TrackRenderer {
 
     // Filter results by viewport
     const visibleResults = this.filterBlastResultsByViewport(allBlastResults, viewport);
-    const outOfViewResults = allBlastResults.filter((result) => {
-      const resultStart = result.hitRange.from;
-      const resultEnd = result.hitRange.to;
-      return !(resultStart <= viewport.end && resultEnd >= viewport.start);
-    });
+    const outOfViewResults = allBlastResults.filter(
+        (result) => this.filterBlastResultsByViewport([result], viewport).length === 0,
+    );
 
     console.log(
         `Displaying ${visibleResults.length} BLAST results in region ${viewport.start}-${viewport.end}, ${outOfViewResults.length} results outside view`,
@@ -1121,10 +1346,18 @@ class TrackRenderer {
    * Filter BLAST results by viewport
    */
   filterBlastResultsByViewport(results, viewport) {
-    return results.filter((result) => {
+    return results.flatMap((result) => {
       const resultStart = result.hitRange.from;
       const resultEnd = result.hitRange.to;
-      return resultStart <= viewport.end && resultEnd >= viewport.start;
+      const actualStart = Math.min(resultStart, resultEnd);
+      const actualEnd = Math.max(resultStart, resultEnd);
+
+      return this.getFeatureRangeDisplaySegments(actualStart, actualEnd, viewport).map((segment) => ({
+        ...result,
+        _displayStart: segment.start,
+        _displayEnd: segment.end,
+        _sourceHitRange: {...result.hitRange},
+      }));
     });
   }
 
@@ -1206,8 +1439,9 @@ class TrackRenderer {
     // Render each blast result
     visibleResults.forEach((result, index) => {
       // Get raw start and end positions
-      const resultStart = result.hitRange.from;
-      const resultEnd = result.hitRange.to;
+      const sourceHitRange = result._sourceHitRange || result.hitRange;
+      const resultStart = sourceHitRange.from;
+      const resultEnd = sourceHitRange.to;
 
       // Determine hit direction for BLAST results
       // For reverse alignments (start > end), arrow should point left
@@ -1216,12 +1450,12 @@ class TrackRenderer {
 
       // For reverse alignments, we need to swap start and end for proper width calculation
       // while maintaining the direction indicator
-      let actualStart = resultStart;
-      let actualEnd = resultEnd;
+      let actualStart = result._displayStart ?? resultStart;
+      let actualEnd = result._displayEnd ?? resultEnd;
       if (resultStart > resultEnd) {
         // Reverse alignment - swap start and end for position calculation
-        actualStart = resultEnd;
-        actualEnd = resultStart;
+        actualStart = result._displayStart ?? resultEnd;
+        actualEnd = result._displayEnd ?? resultStart;
       }
 
       const resultWidth = actualEnd - actualStart;
@@ -1382,7 +1616,7 @@ class TrackRenderer {
     ];
 
     const settings = this.getTrackSettings('genes');
-    const isCircular = settings.circularMode || false;
+    const isCircular = this.isCircularModeEnabled(settings);
 
     return annotations
         .filter((feature) => {
@@ -1408,7 +1642,7 @@ class TrackRenderer {
       return featureType === 'primer' || featureType === 'primer_bind';
     });
 
-    const isCircular = settings.circularMode || false;
+    const isCircular = this.isCircularModeEnabled(settings);
     return primerAnnotations.filter((primer) => {
       if (isCircular) {
         return this.isFeatureVisibleCircular(primer, viewport);
@@ -1504,9 +1738,15 @@ class TrackRenderer {
 
     // We can instantiate the CanvasGenesRenderer directly
     // It handles its own canvas creation and lifecycle
+    const rendererGeneRows = this.isCircularModeEnabled(settings) ?
+      geneRows.map((rowGenes) =>
+        rowGenes.flatMap((gene) => this.getFeatureDisplaySegments(gene, viewport, {includeZeroLength: false})),
+      ) :
+      geneRows;
+
     const renderer = new CanvasGenesRenderer(
         container,
-        geneRows,
+        rendererGeneRows,
         viewport,
         layout,
         operons,
@@ -1595,7 +1835,7 @@ class TrackRenderer {
    */
   createSVGGeneElement(gene, viewport, operons, rowIndex, layout, settings, defs, containerWidth) {
     // Handle circular mode positioning
-    const isCircular = settings.circularMode || false;
+    const isCircular = this.isCircularModeEnabled(settings);
     const chromosome = this.genomeBrowser.currentChromosome;
     const sequence = this.genomeBrowser.currentSequence[chromosome];
     const seqLen = sequence ? sequence.length : 0;
@@ -2143,7 +2383,7 @@ class TrackRenderer {
     const viewport = this.getCurrentViewport();
 
     // Get subsequence for current viewport
-    const subsequence = sequence.substring(viewport.start, viewport.end);
+    const subsequence = this.getWrappedSequence(sequence, viewport.start, viewport.end, chromosome);
 
     // Get track settings for sequence line track
     const settings = this.getTrackSettings('sequenceLine');
@@ -2404,7 +2644,10 @@ class TrackRenderer {
 
     // Add tooltip with position info
     // FIX: Remove +1 offset - index is already 0-based within the subsequence
-    const position = viewport.start + index;
+    const circularSequenceLength = this.getSequenceLength();
+    const position = this.isCircularModeEnabled() && circularSequenceLength > 0 ?
+      this.normalizeCircularPosition(viewport.start + index, circularSequenceLength) :
+      viewport.start + index;
     baseElement.title = `Position: ${position}, Base: ${base}`;
 
     return baseElement;
@@ -2415,7 +2658,7 @@ class TrackRenderer {
     const viewport = this.getCurrentViewport();
 
     // Get subsequence for current viewport
-    const subsequence = sequence.substring(viewport.start, viewport.end);
+    const subsequence = this.getWrappedSequence(sequence, viewport.start, viewport.end, chromosome);
 
     // Create enhanced GC content and skew visualization
     const gcDisplay = this.createEnhancedGCVisualization(subsequence, viewport.start, viewport.end);
@@ -2720,7 +2963,7 @@ class TrackRenderer {
     // Basic tooltip for quick info
     const variantInfo =
       `Variant: ${variant.id || 'Unknown'}\n` +
-      `Position: ${variant.start + 1}\n` + // Convert to 1-based
+      `Position: ${(variant._sourceStart ?? variant.start) + 1}\n` + // Convert to 1-based
       `Ref: ${variant.ref || 'N/A'}\n` +
       `Alt: ${variant.alt || 'N/A'}\n` +
       `Quality: ${variant.quality || 'N/A'}`;
@@ -3128,12 +3371,7 @@ class TrackRenderer {
       trackContent.style.height = '100px'; // Default height for empty track
     } else {
       // Get reads for current region using ReadsManager with settings
-      const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(
-          chromosome,
-          viewport.start,
-          viewport.end,
-          settings,
-      );
+      const visibleReads = await this.getReadsForViewport(chromosome, viewport, settings);
 
       // Update sampling display based on whether sampling was applied
       const isSampled = visibleReads._samplingInfo !== undefined;
@@ -3234,12 +3472,7 @@ class TrackRenderer {
       console.log(`🔍 [DEBUG] showReference setting: ${settings.showReference}`);
 
       // Get reads for current region using ReadsManager with settings
-      const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(
-          chromosome,
-          viewport.start,
-          viewport.end,
-          settings,
-      );
+      const visibleReads = await this.getReadsForViewport(chromosome, viewport, settings);
 
       console.log(`🎯 [TrackRenderer] Retrieved reads for sequence display check:`, {
         readsCount: visibleReads.length,
@@ -3373,6 +3606,7 @@ class TrackRenderer {
           // Use traditional limited rows approach
           const maxRows = settings.maxRows || 20;
           const limitedReadRows = readRows.slice(0, maxRows);
+          const renderingMode = settings.renderingMode || 'canvas';
 
           // Calculate adaptive track height including reference sequence
           let trackHeight;
@@ -3397,7 +3631,6 @@ class TrackRenderer {
           trackContent.style.height = `${trackHeight}px`;
 
           // Render reads using Canvas or SVG based on settings
-          const renderingMode = settings.renderingMode || 'canvas';
           console.log(
               `🔧 [DEBUG] [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`,
           );
@@ -3594,30 +3827,19 @@ class TrackRenderer {
     );
 
     try {
-      // Load reads using the specific BAM reader
-      // Both viewport and BAM coordinates are 0-based - no conversion needed
-      const bamStart = Math.max(0, viewport.start);
-      const bamEnd = Math.max(bamStart + 1, viewport.end);
-
       console.log(`🔍 [TrackRenderer] Querying BAM for reads (content only):`, {
         chromosome,
-        bamStart,
-        bamEnd,
+        viewport,
         fileName: bamFile.metadata.name,
         hasReferences: bamFile.reader.references?.length || 0,
         availableReferences: bamFile.reader.references?.slice(0, 5).map((ref) => ref.name) || [],
       });
 
-      const reads = await bamFile.reader.getRecordsForRange(
-          chromosome,
-          bamStart,
-          bamEnd,
-          settings, // CRITICAL FIX: Pass settings to BAM reader
-      );
+      const reads = await this.getReadsForViewport(chromosome, viewport, settings, bamFile);
 
       console.log(`📊 [TrackRenderer] BAM query result (content only):`, {
         readsFound: reads.length,
-        region: `${chromosome}:${bamStart}-${bamEnd}`,
+        region: `${chromosome}:${viewport.start}-${viewport.end}`,
         fileName: bamFile.metadata.name,
       });
 
@@ -3856,15 +4078,9 @@ class TrackRenderer {
     track.appendChild(trackContent);
 
     try {
-      // Load reads using the specific BAM reader
-      // Both viewport and BAM coordinates are 0-based - no conversion needed
-      const bamStart = Math.max(0, viewport.start);
-      const bamEnd = Math.max(bamStart + 1, viewport.end);
-
       console.log(`🔍 [TrackRenderer] Querying BAM for reads:`, {
         chromosome,
-        bamStart,
-        bamEnd,
+        viewport,
         fileName: bamFile.metadata.name,
         hasReferences: bamFile.reader.references?.length || 0,
         availableReferences: bamFile.reader.references?.slice(0, 5).map((ref) => ref.name) || [],
@@ -3884,12 +4100,7 @@ class TrackRenderer {
       }
 
       console.log('🔧 [DEBUG] [createSingleReadsTrack] About to call BAM getRecordsForRange...');
-      const reads = await bamFile.reader.getRecordsForRange(
-          chromosome,
-          bamStart,
-          bamEnd,
-          settings, // CRITICAL FIX: Pass settings to BAM reader
-      );
+      const reads = await this.getReadsForViewport(chromosome, viewport, settings, bamFile);
       console.log('🔧 [DEBUG] [createSingleReadsTrack] BAM getRecordsForRange completed, reads count:', reads.length);
 
       // Check the path we'll take based on reads count
@@ -3901,7 +4112,7 @@ class TrackRenderer {
 
       console.log(`📊 [TrackRenderer] BAM query result:`, {
         readsFound: reads.length,
-        region: `${chromosome}:${bamStart}-${bamEnd}`,
+        region: `${chromosome}:${viewport.start}-${viewport.end}`,
         fileName: bamFile.metadata.name,
       });
 
@@ -5490,7 +5701,7 @@ class TrackRenderer {
         // No coordinate conversion needed - they can be used directly with substring()
         const startIndex = Math.max(0, start);
         const endIndex = Math.min(sequence.length, end);
-        const result = sequence.substring(startIndex, endIndex);
+        const result = this.getWrappedSequence(sequence, start, end, currentChr);
 
         console.log(`🔍 [getReferenceSequence] Fixed coordinate mapping:`, {
           inputStart: start,
@@ -6005,7 +6216,7 @@ class TrackRenderer {
   filterProteinAnnotations(annotations, viewport) {
     return annotations
         .filter((feature) => feature.type === 'CDS' && this.genomeBrowser.shouldShowGeneType('CDS'))
-        .filter((protein) => this.filterFeaturesByViewport([protein], viewport).length > 0);
+        .flatMap((protein) => this.filterFeaturesByViewport([protein], viewport));
   }
 
   /**
@@ -6703,9 +6914,14 @@ class TrackRenderer {
 
       if (closestIndex < data.detailedData.length) {
         const detail = data.detailedData[closestIndex];
-        const absolutePos = viewStart + detail.position;
-        const windowStart = viewStart + detail.windowStart;
-        const windowEnd = viewStart + detail.windowEnd;
+        const sequenceLength = this.getSequenceLength();
+        const normalizePosition = (position) =>
+          this.isCircularModeEnabled() && sequenceLength > 0 ?
+            this.normalizeCircularPosition(position, sequenceLength) :
+            position;
+        const absolutePos = normalizePosition(viewStart + detail.position);
+        const windowStart = normalizePosition(viewStart + detail.windowStart);
+        const windowEnd = normalizePosition(viewStart + detail.windowEnd);
 
         tooltip.innerHTML = `
                     <div style="font-weight: 600; margin-bottom: 4px; color: #ffc107;">Position: ${Math.round(absolutePos).toLocaleString()}</div>
@@ -7418,7 +7634,7 @@ class TrackRenderer {
 
     // Get circular mode state
     const settings = this.getTrackSettings('genes');
-    const isCircular = settings.circularMode || false;
+    const isCircular = this.isCircularModeEnabled(settings);
     const sequence = this.genomeBrowser.currentSequence[chromosome];
     const seqLen = sequence ? sequence.length : 0;
 
@@ -7737,7 +7953,7 @@ class TrackRenderer {
       } else {
         // Regular WIG track - use pre-loaded data
         // Filter data points in current viewport
-        visibleData = trackData.filter((point) => point.start <= viewport.end && point.end >= viewport.start);
+        visibleData = this.filterFeaturesByViewport(trackData, viewport);
       }
 
       if (visibleData.length === 0) {
@@ -7921,20 +8137,24 @@ class TrackRenderer {
     });
 
     // Separate actions into in-view and out-of-view
-    const visibleActions = chromosomeActions.filter((action) => {
+    const visibleActions = chromosomeActions.flatMap((action) => {
       const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
       const actionStart = parseInt(positionMatch[2]);
       const actionEnd = parseInt(positionMatch[3]);
 
-      return actionEnd >= viewport.start && actionStart <= viewport.end;
+      return this.getFeatureRangeDisplaySegments(actionStart, actionEnd, viewport).map((segment) => ({
+        ...action,
+        _displayStart: segment.start,
+        _displayEnd: segment.end,
+        _sourceStart: actionStart,
+        _sourceEnd: actionEnd,
+      }));
     });
 
-    const outOfViewActions = chromosomeActions.filter((action) => {
-      const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-      const actionStart = parseInt(positionMatch[2]);
-      const actionEnd = parseInt(positionMatch[3]);
+    const visibleActionIds = new Set(visibleActions.map((action) => action.id || action.target));
 
-      return !(actionEnd >= viewport.start && actionStart <= viewport.end);
+    const outOfViewActions = chromosomeActions.filter((action) => {
+      return !visibleActionIds.has(action.id || action.target);
     });
 
     if (chromosomeActions.length === 0) {
@@ -8061,8 +8281,8 @@ class TrackRenderer {
    */
   createOutOfViewActionItem(action, viewport, chromosome) {
     const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-    const actionStart = parseInt(positionMatch[2]);
-    const actionEnd = parseInt(positionMatch[3]);
+    const actionStart = action._displayStart ?? parseInt(positionMatch[2]);
+    const actionEnd = action._displayEnd ?? parseInt(positionMatch[3]);
     const actionLength = actionEnd - actionStart + 1;
 
     const item = document.createElement('div');
@@ -8865,7 +9085,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       const aMatch = a.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
       const bMatch = b.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
       if (!aMatch || !bMatch) return 0;
-      return parseInt(aMatch[2]) - parseInt(bMatch[2]);
+      return (a._displayStart ?? parseInt(aMatch[2])) - (b._displayStart ?? parseInt(bMatch[2]));
     });
 
     // Place actions in rows
@@ -8873,8 +9093,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
       if (!positionMatch) return;
 
-      const actionStart = parseInt(positionMatch[2]);
-      const actionEnd = parseInt(positionMatch[3]);
+      const actionStart = action._displayStart ?? parseInt(positionMatch[2]);
+      const actionEnd = action._displayEnd ?? parseInt(positionMatch[3]);
 
       // Find first row where action fits
       let placed = false;
@@ -8884,8 +9104,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
           const existingMatch = existingAction.target.match(/(\w+):(\d+)-(\d+)/);
           if (!existingMatch) return true;
 
-          const existingStart = parseInt(existingMatch[2]);
-          const existingEnd = parseInt(existingMatch[3]);
+          const existingStart = existingAction._displayStart ?? parseInt(existingMatch[2]);
+          const existingEnd = existingAction._displayEnd ?? parseInt(existingMatch[3]);
 
           // Check if they don't overlap
           return actionEnd < existingStart || actionStart > existingEnd;
@@ -11718,6 +11938,10 @@ This action cannot be undone.`;
     console.log('🔧 [DEBUG] Collected settings:', settings);
     console.log('🔧 [DEBUG] renderingMode in settings:', settings.renderingMode);
 
+    if (trackType === 'genes' && this.genomeBrowser.navigationManager) {
+      this.genomeBrowser.navigationManager.setCircularMode(Boolean(settings.circularMode));
+    }
+
     this.saveTrackSettings(trackType, settings, fileId);
 
     // Apply settings immediately
@@ -13189,7 +13413,7 @@ This action cannot be undone.`;
 
     // Regenerate GC visualization with current viewport and sequence
     const viewport = this.getCurrentViewport();
-    const subsequence = sequence.substring(viewport.start, viewport.end);
+    const subsequence = this.getWrappedSequence(sequence, viewport.start, viewport.end, chromosome);
 
     // Create new enhanced GC content and skew visualization
     const gcDisplay = this.createEnhancedGCVisualization(subsequence, viewport.start, viewport.end);
@@ -13738,7 +13962,10 @@ This action cannot be undone.`;
 
     // Add tooltip with position info
     // FIX: Remove +1 offset - index is already 0-based within the subsequence
-    const position = viewport.start + index;
+    const circularSequenceLength = this.getSequenceLength();
+    const position = this.isCircularModeEnabled() && circularSequenceLength > 0 ?
+      this.normalizeCircularPosition(viewport.start + index, circularSequenceLength) :
+      viewport.start + index;
     baseElement.title = `Position: ${position}, Base: ${base}`;
 
     return baseElement;
