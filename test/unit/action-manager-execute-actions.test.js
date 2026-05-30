@@ -322,6 +322,39 @@ describe('ActionManager execute_actions sequencing', () => {
     );
   });
 
+  it('reverse-complements IUPAC ambiguity bases for reverse-strand sequence_edit actions', async () => {
+    const { manager } = createManager('AACCGG');
+    const sequenceEdit = manager.createAction(
+      manager.ACTION_TYPES.SEQUENCE_EDIT,
+      'chr1:2-5(-)',
+      'Edit chr1:2-5 on reverse strand with ambiguity bases',
+      {
+        chromosome: 'chr1',
+        start: 2,
+        end: 5,
+        strand: '-',
+        originalSequence: 'CGGT',
+        changeSummary: {
+          totalChanges: 4,
+          substitutions: 4,
+          insertions: 0,
+          deletions: 0,
+          originalLength: 4,
+          newLength: 4,
+          modifiedSequence: 'RYKM',
+        },
+      }
+    );
+    manager.addAction(sequenceEdit);
+
+    const result = await manager.executeAllActionsInternal({
+      saveFile: '/tmp/reverse-sequence-edit-iupac-actions.gbk',
+    });
+
+    expect(result.success).toBe(true);
+    expect(lastExport.chr1.sequence).toBe('AKMRYG');
+  });
+
   it('keeps insertions at a deleted locus executable while invalidating deleted range reads', async () => {
     const { manager } = createManager('ACGTACGT');
 

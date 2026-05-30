@@ -2047,8 +2047,24 @@ class ActionManager {
       return result;
     }
 
-    // Fallback to original implementation if unified module not available
-    const complementMap = { A: 'T', T: 'A', G: 'C', C: 'G', N: 'N' };
+    // Fallback to original implementation if unified module is not available.
+    const complementMap = {
+      A: 'T',
+      T: 'A',
+      G: 'C',
+      C: 'G',
+      R: 'Y',
+      Y: 'R',
+      S: 'S',
+      W: 'W',
+      K: 'M',
+      M: 'K',
+      B: 'V',
+      V: 'B',
+      D: 'H',
+      H: 'D',
+      N: 'N',
+    };
     return sequence
       .toUpperCase()
       .split('')
