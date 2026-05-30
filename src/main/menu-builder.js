@@ -42,49 +42,49 @@ function createCircosPlotterMenu(circosWindow) {
     // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
     ...(process.platform === 'darwin'
       ? [
-        {
-          label: 'CodeXomics',
-          submenu: [
-            {
-              label: 'About Circos Genome Plotter',
-              click: () => {
-                circosWindow.webContents.send('circos-menu-action', 'about');
+          {
+            label: 'CodeXomics',
+            submenu: [
+              {
+                label: 'About Circos Genome Plotter',
+                click: () => {
+                  circosWindow.webContents.send('circos-menu-action', 'about');
+                },
               },
-            },
-            { type: 'separator' },
-            {
-              label: 'Preferences',
-              accelerator: 'Cmd+,',
-              click: () => {
-                circosWindow.webContents.send('circos-menu-action', 'preferences');
+              { type: 'separator' },
+              {
+                label: 'Preferences',
+                accelerator: 'Cmd+,',
+                click: () => {
+                  circosWindow.webContents.send('circos-menu-action', 'preferences');
+                },
               },
-            },
-            { type: 'separator' },
-            {
-              label: `Hide ${APP_NAME}`,
-              accelerator: 'Cmd+H',
-              role: 'hide',
-            },
-            {
-              label: 'Hide Others',
-              accelerator: 'Cmd+Shift+H',
-              role: 'hideothers',
-            },
-            {
-              label: 'Show All',
-              role: 'unhide',
-            },
-            { type: 'separator' },
-            {
-              label: `Quit ${APP_NAME}`,
-              accelerator: 'Cmd+Q',
-              click: () => {
-                app.quit();
+              { type: 'separator' },
+              {
+                label: `Hide ${APP_NAME}`,
+                accelerator: 'Cmd+H',
+                role: 'hide',
               },
-            },
-          ],
-        },
-      ]
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: `Quit ${APP_NAME}`,
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
       : []),
     {
       label: 'File',
@@ -212,15 +212,15 @@ function createCircosPlotterMenu(circosWindow) {
         },
         ...(process.platform !== 'darwin'
           ? [
-            { type: 'separator' },
-            {
-              label: 'Exit',
-              accelerator: 'Ctrl+Q',
-              click: () => {
-                app.quit();
+              { type: 'separator' },
+              {
+                label: 'Exit',
+                accelerator: 'Ctrl+Q',
+                click: () => {
+                  app.quit();
+                },
               },
-            },
-          ]
+            ]
           : []),
       ],
     },
@@ -594,49 +594,49 @@ function createToolWindowMenu(toolWindow, toolName) {
     // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
     ...(process.platform === 'darwin'
       ? [
-        {
-          label: 'CodeXomics',
-          submenu: [
-            {
-              label: `About ${toolName}`,
-              click: () => {
-                toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+          {
+            label: 'CodeXomics',
+            submenu: [
+              {
+                label: `About ${toolName}`,
+                click: () => {
+                  toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+                },
               },
-            },
-            { type: 'separator' },
-            {
-              label: 'Preferences',
-              accelerator: 'Cmd+,',
-              click: () => {
-                toolWindow.webContents.send('tool-menu-action', 'preferences');
+              { type: 'separator' },
+              {
+                label: 'Preferences',
+                accelerator: 'Cmd+,',
+                click: () => {
+                  toolWindow.webContents.send('tool-menu-action', 'preferences');
+                },
               },
-            },
-            { type: 'separator' },
-            {
-              label: `Hide ${APP_NAME}`,
-              accelerator: 'Cmd+H',
-              role: 'hide',
-            },
-            {
-              label: 'Hide Others',
-              accelerator: 'Cmd+Shift+H',
-              role: 'hideothers',
-            },
-            {
-              label: 'Show All',
-              role: 'unhide',
-            },
-            { type: 'separator' },
-            {
-              label: `Quit ${APP_NAME}`,
-              accelerator: 'Cmd+Q',
-              click: () => {
-                app.quit();
+              { type: 'separator' },
+              {
+                label: `Hide ${APP_NAME}`,
+                accelerator: 'Cmd+H',
+                role: 'hide',
               },
-            },
-          ],
-        },
-      ]
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: `Quit ${APP_NAME}`,
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
       : []),
     {
       label: 'File',
@@ -686,23 +686,23 @@ function createToolWindowMenu(toolWindow, toolName) {
         { type: 'separator' },
         ...(process.platform !== 'darwin'
           ? [
-            {
-              label: 'Exit',
-              accelerator: 'Ctrl+Q',
-              click: () => {
-                app.quit();
+              {
+                label: 'Exit',
+                accelerator: 'Ctrl+Q',
+                click: () => {
+                  app.quit();
+                },
               },
-            },
-          ]
+            ]
           : [
-            {
-              label: 'Close Window',
-              accelerator: 'Cmd+W',
-              click: () => {
-                toolWindow.close();
+              {
+                label: 'Close Window',
+                accelerator: 'Cmd+W',
+                click: () => {
+                  toolWindow.close();
+                },
               },
-            },
-          ]),
+            ]),
       ],
     },
     {
@@ -822,15 +822,15 @@ function createToolWindowMenu(toolWindow, toolName) {
       submenu: [
         ...(process.platform !== 'darwin'
           ? [
-            {
-              label: 'Preferences',
-              accelerator: 'Ctrl+,',
-              click: () => {
-                toolWindow.webContents.send('tool-menu-action', 'preferences');
+              {
+                label: 'Preferences',
+                accelerator: 'Ctrl+,',
+                click: () => {
+                  toolWindow.webContents.send('tool-menu-action', 'preferences');
+                },
               },
-            },
-            { type: 'separator' },
-          ]
+              { type: 'separator' },
+            ]
           : []),
         {
           label: 'Analysis Settings',
@@ -885,14 +885,14 @@ function createToolWindowMenu(toolWindow, toolName) {
       submenu: [
         ...(process.platform !== 'darwin'
           ? [
-            {
-              label: `About ${toolName}`,
-              click: () => {
-                toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+              {
+                label: `About ${toolName}`,
+                click: () => {
+                  toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+                },
               },
-            },
-            { type: 'separator' },
-          ]
+              { type: 'separator' },
+            ]
           : []),
         {
           label: 'User Guide',
@@ -979,52 +979,52 @@ function createMenu() {
     // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
     ...(process.platform === 'darwin'
       ? [
-        {
-          label: 'CodeXomics',
-          submenu: [
-            {
-              label: 'About CodeXomics',
-              click: () => {
-                sendToCurrentMainWindow('show-about');
+          {
+            label: 'CodeXomics',
+            submenu: [
+              {
+                label: 'About CodeXomics',
+                click: () => {
+                  sendToCurrentMainWindow('show-about');
+                },
               },
-            },
-            { type: 'separator' },
-            {
-              label: 'Preferences',
-              accelerator: 'Cmd+,',
-              click: () => {
-                sendToCurrentMainWindow('general-settings');
+              { type: 'separator' },
+              {
+                label: 'Preferences',
+                accelerator: 'Cmd+,',
+                click: () => {
+                  sendToCurrentMainWindow('general-settings');
+                },
               },
-            },
-            { type: 'separator' },
-            {
-              label: 'Hide CodeXomics',
-              accelerator: 'Cmd+H',
-              role: 'hide',
-            },
-            {
-              label: 'Hide Others',
-              accelerator: 'Cmd+Shift+H',
-              role: 'hideothers',
-            },
-            {
-              label: 'Show All',
-              role: 'unhide',
-            },
-            { type: 'separator' },
-            {
-              label: 'Quit CodeXomics',
-              accelerator: 'Cmd+Q',
-              click: () => {
-                app.quit();
+              { type: 'separator' },
+              {
+                label: 'Hide CodeXomics',
+                accelerator: 'Cmd+H',
+                role: 'hide',
               },
-            },
-          ],
-        },
-      ]
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: 'Quit CodeXomics',
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
       : []),
     {
-      label: 'File',
+      label: 'Project',
       submenu: [
         {
           label: 'New Project',
@@ -1136,15 +1136,15 @@ function createMenu() {
         },
         ...(process.platform !== 'darwin'
           ? [
-            { type: 'separator' },
-            {
-              label: 'Exit',
-              accelerator: 'Ctrl+Q',
-              click: () => {
-                app.quit();
+              { type: 'separator' },
+              {
+                label: 'Exit',
+                accelerator: 'Ctrl+Q',
+                click: () => {
+                  app.quit();
+                },
               },
-            },
-          ]
+            ]
           : []),
       ],
     },
@@ -1585,12 +1585,12 @@ function createMenu() {
         },
         ...(process.platform === 'darwin'
           ? [
-            { type: 'separator' },
-            {
-              label: 'Bring All to Front',
-              role: 'front',
-            },
-          ]
+              { type: 'separator' },
+              {
+                label: 'Bring All to Front',
+                role: 'front',
+              },
+            ]
           : []),
       ],
     },
@@ -1599,20 +1599,20 @@ function createMenu() {
       submenu: [
         ...(process.platform !== 'darwin'
           ? [
-            {
-              label: `About ${APP_NAME}`,
-              click: () => {
-                const currentWindow = getCurrentMainWindow();
-                dialog.showMessageBox(currentWindow || null, {
-                  type: 'info',
-                  title: `About ${APP_NAME}`,
-                  message: VERSION_INFO.appTitle,
-                  detail: 'A modern AI-powered genome analysis studio built with Electron',
-                });
+              {
+                label: `About ${APP_NAME}`,
+                click: () => {
+                  const currentWindow = getCurrentMainWindow();
+                  dialog.showMessageBox(currentWindow || null, {
+                    type: 'info',
+                    title: `About ${APP_NAME}`,
+                    message: VERSION_INFO.appTitle,
+                    detail: 'A modern AI-powered genome analysis studio built with Electron',
+                  });
+                },
               },
-            },
-            { type: 'separator' },
-          ]
+              { type: 'separator' },
+            ]
           : []),
         {
           label: 'User Guide',
@@ -1693,49 +1693,49 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
     // macOS app menu
     ...(process.platform === 'darwin'
       ? [
-        {
-          label: 'CodeXomics',
-          submenu: [
-            {
-              label: 'About Deep Gene Research',
-              click: () => {
-                deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
+          {
+            label: 'CodeXomics',
+            submenu: [
+              {
+                label: 'About Deep Gene Research',
+                click: () => {
+                  deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
+                },
               },
-            },
-            { type: 'separator' },
-            {
-              label: 'Preferences',
-              accelerator: 'Cmd+,',
-              click: () => {
-                deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'preferences');
+              { type: 'separator' },
+              {
+                label: 'Preferences',
+                accelerator: 'Cmd+,',
+                click: () => {
+                  deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'preferences');
+                },
               },
-            },
-            { type: 'separator' },
-            {
-              label: `Hide ${APP_NAME}`,
-              accelerator: 'Cmd+H',
-              role: 'hide',
-            },
-            {
-              label: 'Hide Others',
-              accelerator: 'Cmd+Shift+H',
-              role: 'hideothers',
-            },
-            {
-              label: 'Show All',
-              role: 'unhide',
-            },
-            { type: 'separator' },
-            {
-              label: `Quit ${APP_NAME}`,
-              accelerator: 'Cmd+Q',
-              click: () => {
-                app.quit();
+              { type: 'separator' },
+              {
+                label: `Hide ${APP_NAME}`,
+                accelerator: 'Cmd+H',
+                role: 'hide',
               },
-            },
-          ],
-        },
-      ]
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: `Quit ${APP_NAME}`,
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
       : []),
     {
       label: 'File',
@@ -1772,23 +1772,23 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
         { type: 'separator' },
         ...(process.platform !== 'darwin'
           ? [
-            {
-              label: 'Exit',
-              accelerator: 'Ctrl+Q',
-              click: () => {
-                app.quit();
+              {
+                label: 'Exit',
+                accelerator: 'Ctrl+Q',
+                click: () => {
+                  app.quit();
+                },
               },
-            },
-          ]
+            ]
           : [
-            {
-              label: 'Close Window',
-              accelerator: 'Cmd+W',
-              click: () => {
-                deepGeneResearchWindow.close();
+              {
+                label: 'Close Window',
+                accelerator: 'Cmd+W',
+                click: () => {
+                  deepGeneResearchWindow.close();
+                },
               },
-            },
-          ]),
+            ]),
       ],
     },
     {
@@ -1924,14 +1924,14 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
       submenu: [
         ...(process.platform !== 'darwin'
           ? [
-            {
-              label: 'About Deep Gene Research',
-              click: () => {
-                deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
+              {
+                label: 'About Deep Gene Research',
+                click: () => {
+                  deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
+                },
               },
-            },
-            { type: 'separator' },
-          ]
+              { type: 'separator' },
+            ]
           : []),
         {
           label: 'User Guide',
@@ -2673,12 +2673,12 @@ function createProjectManagerMenu(projectManagerWindow) {
         },
         ...(process.platform === 'darwin'
           ? [
-            { type: 'separator' },
-            {
-              label: 'Bring All to Front',
-              role: 'front',
-            },
-          ]
+              { type: 'separator' },
+              {
+                label: 'Bring All to Front',
+                role: 'front',
+              },
+            ]
           : []),
       ],
     },
@@ -2799,41 +2799,41 @@ function createMCPServerManagerMenu(mcpWindow) {
   const template = [
     ...(process.platform === 'darwin'
       ? [
-        {
-          label: 'CodeXomics',
-          submenu: [
-            {
-              label: 'About MCP Server Manager',
-              click: () => {
-                mcpWindow.webContents.send('mcp-server-manager-menu-action', 'about');
+          {
+            label: 'CodeXomics',
+            submenu: [
+              {
+                label: 'About MCP Server Manager',
+                click: () => {
+                  mcpWindow.webContents.send('mcp-server-manager-menu-action', 'about');
+                },
               },
-            },
-            { type: 'separator' },
-            {
-              label: `Hide ${APP_NAME}`,
-              accelerator: 'Cmd+H',
-              role: 'hide',
-            },
-            {
-              label: 'Hide Others',
-              accelerator: 'Cmd+Shift+H',
-              role: 'hideothers',
-            },
-            {
-              label: 'Show All',
-              role: 'unhide',
-            },
-            { type: 'separator' },
-            {
-              label: `Quit ${APP_NAME}`,
-              accelerator: 'Cmd+Q',
-              click: () => {
-                app.quit();
+              { type: 'separator' },
+              {
+                label: `Hide ${APP_NAME}`,
+                accelerator: 'Cmd+H',
+                role: 'hide',
               },
-            },
-          ],
-        },
-      ]
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: `Quit ${APP_NAME}`,
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
       : []),
     {
       label: 'File',
@@ -2933,9 +2933,11 @@ function setMenuDependencies(deps) {
   if (deps.createBlastDownloaderWindow !== undefined) createBlastDownloaderWindow = deps.createBlastDownloaderWindow;
   if (deps.createBlastConfigWindow !== undefined) createBlastConfigWindow = deps.createBlastConfigWindow;
   if (deps.createMCPServerManagerWindow !== undefined) createMCPServerManagerWindow = deps.createMCPServerManagerWindow;
-  if (deps.createCustomExternalToolWindow !== undefined) createCustomExternalToolWindow = deps.createCustomExternalToolWindow;
+  if (deps.createCustomExternalToolWindow !== undefined)
+    createCustomExternalToolWindow = deps.createCustomExternalToolWindow;
   if (deps.createGenomicDownloadWindow !== undefined) createGenomicDownloadWindow = deps.createGenomicDownloadWindow;
-  if (deps.getCustomExternalToolsMenuItems !== undefined) getCustomExternalToolsMenuItems = deps.getCustomExternalToolsMenuItems;
+  if (deps.getCustomExternalToolsMenuItems !== undefined)
+    getCustomExternalToolsMenuItems = deps.getCustomExternalToolsMenuItems;
   if (deps.arrangeWindowsOptimal !== undefined) arrangeWindowsOptimal = deps.arrangeWindowsOptimal;
   if (deps.arrangeWindowsSideBySide !== undefined) arrangeWindowsSideBySide = deps.arrangeWindowsSideBySide;
   if (deps.arrangeMainWindowFocus !== undefined) arrangeMainWindowFocus = deps.arrangeMainWindowFocus;
