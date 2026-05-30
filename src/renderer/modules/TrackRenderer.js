@@ -11949,30 +11949,52 @@ This action cannot be undone.`;
 
   getTrackSettings(trackType, fileId = null) {
     const instanceKey = this._instanceSettingsKey(trackType, fileId);
-    console.log(`🔍 [getTrackSettings] Getting settings for ${instanceKey}`);
+
+    if (!this.trackSettings) {
+      this.trackSettings = {};
+    }
 
     // First check if we have instance-level saved settings
-    if (fileId && this.trackSettings && this.trackSettings[instanceKey]) {
-      console.log(`🔍 [getTrackSettings] Using instance-level settings for ${instanceKey}`);
+    if (fileId && this.trackSettings[instanceKey]) {
       // Merge type-level defaults with instance overrides
-      const typeDefaults = this.trackSettings[trackType] || this._getDefaultTrackSettings(trackType);
+      const typeDefaults =
+        this.trackSettings[trackType] || this._getCachedDefaultTrackSettingsWithFallback(trackType);
       return { ...typeDefaults, ...this.trackSettings[instanceKey] };
     }
 
     // Then check if we have type-level saved settings from applySettingsToTrack
-    if (this.trackSettings && this.trackSettings[trackType]) {
-      console.log(`🔍 [getTrackSettings] Using saved ${trackType} track settings:`, this.trackSettings[trackType]);
-      console.log(`🔍 [getTrackSettings] Saved renderingMode: ${this.trackSettings[trackType].renderingMode}`);
-      console.log(
-        `🔍 [getTrackSettings] showReference from saved settings: ${this.trackSettings[trackType].showReference}`
-      );
+    if (this.trackSettings[trackType]) {
       return this.trackSettings[trackType];
-    } else {
-      console.log(`🔍 [getTrackSettings] No saved settings found for ${trackType}, using defaults`);
     }
 
     // Get settings from ConfigManager or default values
-    return this._getDefaultTrackSettingsWithFallback(trackType);
+    return this._getCachedDefaultTrackSettingsWithFallback(trackType);
+  }
+
+  _getCachedDefaultTrackSettingsWithFallback(trackType) {
+    const settings = this._getDefaultTrackSettingsWithFallback(trackType);
+    this.trackSettings[trackType] = settings;
+    return settings;
+  }
+
+  clearTrackSettingsCache(trackType = null, fileId = null) {
+    if (!this.trackSettings) {
+      return;
+    }
+
+    if (!trackType) {
+      this.trackSettings = {};
+      return;
+    }
+
+    const instanceKey = this._instanceSettingsKey(trackType, fileId);
+    delete this.trackSettings[instanceKey];
+
+    if (!fileId) {
+      Object.keys(this.trackSettings)
+        .filter(key => key.startsWith(`${trackType}::`))
+        .forEach(key => delete this.trackSettings[key]);
+    }
   }
 
   /**

@@ -4,7 +4,7 @@
  * Validates key TrackRenderer patterns for gene, annotation,
  * and blast track creation, viewport filtering, and layout management.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
@@ -136,6 +136,45 @@ describe('Circular Viewport Handling', () => {
     expect(reads[1].start).toBe(106);
     expect(reads[1].end).toBe(109);
     expect(reads[1]._sourceStart).toBe(6);
+  });
+});
+
+describe('Track Settings Resolution', () => {
+  it('caches default settings without logging on each lookup', () => {
+    const configManager = {
+      get: vi.fn(() => ({})),
+    };
+    const renderer = new TrackRenderer({
+      configManager,
+      generalSettingsManager: {
+        getSettings: () => ({ enableGlobalDragging: true }),
+      },
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    try {
+      const firstSettings = renderer.getTrackSettings('genes');
+      const secondSettings = renderer.getTrackSettings('genes');
+
+      expect(secondSettings).toBe(firstSettings);
+      expect(configManager.get).toHaveBeenCalledTimes(1);
+      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('[getTrackSettings]'));
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('can clear cached defaults before resolving fresh settings', () => {
+    const configManager = {
+      get: vi.fn(() => ({})),
+    };
+    const renderer = new TrackRenderer({ configManager });
+
+    renderer.getTrackSettings('genes');
+    renderer.clearTrackSettingsCache('genes');
+    renderer.getTrackSettings('genes');
+
+    expect(configManager.get).toHaveBeenCalledTimes(2);
   });
 });
 

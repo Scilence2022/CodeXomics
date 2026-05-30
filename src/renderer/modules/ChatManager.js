@@ -15255,9 +15255,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         try {
           // Clear saved settings from storage
           if (this.genomeBrowser.configManager) {
-            this.genomeBrowser.configManager.set(`tracks.${type}.settings`, {});
+            await this.genomeBrowser.configManager.set(`tracks.${type}.settings`, {});
           }
           localStorage.removeItem(`trackSettings_${type}`);
+          this.genomeBrowser.trackRenderer.clearTrackSettingsCache?.(type);
 
           // Get fresh default settings
           const defaultSettings = this.genomeBrowser.trackRenderer.getTrackSettings(type);
@@ -15300,9 +15301,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // Clear saved settings from storage
       if (this.genomeBrowser.configManager) {
-        this.genomeBrowser.configManager.set(`tracks.${track_type}.settings`, {});
+        await this.genomeBrowser.configManager.set(`tracks.${track_type}.settings`, {});
       }
       localStorage.removeItem(`trackSettings_${track_type}`);
+      this.genomeBrowser.trackRenderer.clearTrackSettingsCache?.(track_type);
 
       // Get fresh default settings
       const defaultSettings = this.genomeBrowser.trackRenderer.getTrackSettings(track_type);
