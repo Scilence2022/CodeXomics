@@ -9525,10 +9525,19 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     if (isNewModal) {
       modal = this.createTrackSettingsModal();
       document.body.appendChild(modal);
+
+      if (window.modalDragManager) {
+        window.modalDragManager.makeDraggable('#trackSettingsModal');
+      }
     }
 
     // Load track-specific settings
     this.loadTrackSpecificSettings(trackType, modal, fileId);
+
+    // Reset drag position so modal re-centers on open, matching other settings modals
+    if (window.modalDragManager) {
+      window.modalDragManager.resetPosition('#trackSettingsModal');
+    }
 
     // Show modal
     modal.classList.add('show');
@@ -14904,56 +14913,6 @@ This action cannot be undone.`;
     if (rect.bottom > window.innerHeight) {
       menu.style.top = event.clientY - rect.height + 'px';
     }
-  }
-
-  /**
-   * Make modal draggable
-   */
-  makeModalDraggable(modal) {
-    const header = modal.querySelector('.draggable-header');
-    if (!header) return;
-
-    let isDragging = false;
-    let startX; let startY; let startLeft; let startTop;
-
-    header.addEventListener('mousedown', (e) => {
-      if (e.target.classList.contains('modal-close')) return;
-
-      isDragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-
-      const rect = modal.getBoundingClientRect();
-      startLeft = rect.left;
-      startTop = rect.top;
-
-      modal.classList.add('dragging');
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
-
-      const newLeft = startLeft + deltaX;
-      const newTop = startTop + deltaY;
-
-      // Keep modal within viewport bounds
-      const maxLeft = window.innerWidth - modal.offsetWidth;
-      const maxTop = window.innerHeight - modal.offsetHeight;
-
-      modal.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
-      modal.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        modal.classList.remove('dragging');
-      }
-    });
   }
 
   /**
