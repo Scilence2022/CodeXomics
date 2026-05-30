@@ -2,8 +2,8 @@
   "timestamp": "2026-05-20T01:06:51.570Z",
   "version": "1.0.0",
   "stats": {
-    "totalTools": 158,
-    "validTools": 158,
+    "totalTools": 157,
+    "validTools": 157,
     "invalidTools": 17,
     "categories": 17,
     "totalSize": 455164
@@ -619,11 +619,6 @@
       "name": "show_action_list",
       "category": "sequence_editing",
       "file": "show_action_list.yaml"
-    },
-    {
-      "name": "undo_last_action",
-      "category": "sequence_editing",
-      "file": "undo_last_action.yaml"
     },
     {
       "name": "add_primer_annotation",

@@ -1,7 +1,7 @@
 # copy_sequence.yaml
 name: 'copy_sequence'
 version: '1.1.0'
-description: 'Copy a sequence region to clipboard for later use in sequence editing operations. Part of the sequence editing action queue system.'
+description: 'Copy a sequence region into the sequence-editing clipboard and queue a copy Action. This is not a checklist Task. Use paste_sequence after this to queue a paste, and execute_actions(auto_save=true) to apply queued sequence-editing Actions.'
 category: 'sequence_editing'
 keywords: ['copy', 'sequence', 'clipboard', 'edit', 'manipulation', 'action', 'queue']
 priority: 1

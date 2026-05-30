@@ -1,6 +1,6 @@
 name: paste_sequence
 version: 1.0.0
-description: Paste sequence from clipboard at specified position
+description: Paste the current sequence clipboard at a specified genomic insertion position. Requires a previous copy_sequence or cut_sequence call. This creates a queued sequence-editing Action; execute_actions applies the queue.
 category: sequence_editing
 keywords:
   - paste
@@ -26,30 +26,29 @@ parameters:
     chromosome:
       type: string
       description: Chromosome identifier
+    position:
+      type: number
+      description: Insert position (1-based genomic coordinate)
+      minimum: 1
     start:
       type: number
-      description: Start position (1-based coordinate)
-      minimum: 1
-    end:
-      type: number
-      description: End position (1-based coordinate)
+      description: Alias for position. Use position instead.
       minimum: 1
   required:
     - chromosome
-    - start
-    - end
+    - position
 sample_usages:
-  - user_query: Use paste_sequence to analyze genomic data
-    tool_call: paste_sequence(parameter1='value1', parameter2='value2')
-    thought: User wants to use paste_sequence for paste sequence from clipboard at specified position
-    expected_result: Result from paste_sequence analysis
+  - user_query: Paste the copied sequence at position 5000
+    tool_call: paste_sequence(chromosome='NC_000913.3', position=5000)
+    thought: User wants to queue a paste Action using the current sequence clipboard.
+    expected_result: Paste Action created and queued for execution.
 relationships:
-  depends_on: []
+  depends_on: [copy_sequence]
   conflicts_with: []
   enhances: []
   alternatives: []
   prerequisites: []
-  follow_up: []
+  follow_up: [execute_actions]
 metadata:
   usage_count: 0
   success_rate: 0
@@ -67,4 +66,5 @@ error_handling:
 returns:
   success: boolean - Whether operation was successful
   action_id: string - Unique identifier for this action
-  sequence_length: number - Length of processed sequence
+  message: string - Human-readable result description
+  details: object - Contains chromosome, position, and clipboardLength information

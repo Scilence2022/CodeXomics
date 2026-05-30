@@ -1,6 +1,6 @@
 name: insert_sequence
 version: 1.1.0
-description: Insert a DNA sequence at specified position
+description: Queue insertion of a DNA sequence at a specified position as a sequence-editing Action. This is not a checklist Task. Call execute_actions(auto_save=true) to apply queued sequence-editing Actions.
 category: sequence_editing
 keywords:
   - insert
@@ -60,6 +60,7 @@ relationships:
   prerequisites: []
   follow_up:
     - execute_actions
+    - get_action_list
 metadata:
   usage_count: 0
   success_rate: 0

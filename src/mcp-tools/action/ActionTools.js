@@ -83,6 +83,10 @@ class ActionTools {
               type: 'number',
               description: 'Insert position (1-based genomic coordinate)',
             },
+            start: {
+              type: 'number',
+              description: 'Alias for position. Use position instead.',
+            },
           },
           required: ['chromosome', 'position'],
         },
@@ -168,11 +172,11 @@ class ActionTools {
             },
             sequence: {
               type: 'string',
-              description: 'Replacement DNA sequence (A, T, C, G, N allowed). Alias for newSequence.',
+              description: 'Replacement DNA sequence (A, T, C, G, N allowed). Preferred parameter name.',
             },
             newSequence: {
               type: 'string',
-              description: 'New DNA sequence to replace the existing region (A, T, C, G, N allowed). Preferred parameter name.',
+              description: 'Alias for sequence.',
             },
             strand: {
               type: 'string',
@@ -181,13 +185,13 @@ class ActionTools {
               default: '+',
             },
           },
-          required: ['chromosome', 'start', 'end'],
+          required: ['chromosome', 'start', 'end', 'sequence'],
         },
       },
 
       get_action_list: {
         name: 'get_action_list',
-        description: 'Get current list of pending and completed sequence actions',
+        description: 'Get the current sequence-editing Action queue. Actions are queued genome edit operations, not checklist Tasks.',
         parameters: {
           type: 'object',
           properties: {
@@ -196,22 +200,30 @@ class ActionTools {
               description: 'Browser client ID for multi-window support',
               default: 'default',
             },
-            chromosome: {
+            status: {
               type: 'string',
-              description: 'Chromosome identifier',
-            },
-            start: {
-              type: 'number',
-              description: 'Start position (1-based coordinate)',
-              minimum: 1,
-            },
-            end: {
-              type: 'number',
-              description: 'End position (1-based coordinate)',
-              minimum: 1,
+              enum: ['all', 'pending', 'executing', 'completed', 'failed'],
+              description: 'Filter actions by status',
+              default: 'all',
             },
           },
-          required: ['chromosome', 'start', 'end'],
+          required: [],
+        },
+      },
+
+      show_action_list: {
+        name: 'show_action_list',
+        description: 'Open the Action List Manager interface for queued sequence-editing Actions.',
+        parameters: {
+          type: 'object',
+          properties: {
+            clientId: {
+              type: 'string',
+              description: 'Browser client ID for multi-window support',
+              default: 'default',
+            },
+          },
+          required: [],
         },
       },
 
@@ -241,15 +253,20 @@ class ActionTools {
 
       clear_actions: {
         name: 'clear_actions',
-        description: 'Clear actions from the queue',
+        description: 'Clear sequence-editing Actions from the queue. Actions are queued genome edit operations, not checklist Tasks.',
         parameters: {
           type: 'object',
           properties: {
             status: {
               type: 'string',
-              enum: ['pending', 'completed', 'failed', 'all'],
+              enum: ['pending', 'executing', 'completed', 'failed', 'all'],
               description: 'Clear actions by status',
               default: 'all',
+            },
+            forced: {
+              type: 'boolean',
+              description: 'Whether to force clear, skip confirmation prompt',
+              default: false,
             },
           },
         },
@@ -312,6 +329,10 @@ class ActionTools {
 
   async get_action_list(params, clientId) {
     return await this.executeClientTool('get_action_list', params, clientId);
+  }
+
+  async show_action_list(params, clientId) {
+    return await this.executeClientTool('show_action_list', params, clientId);
   }
 
   async execute_actions(params, clientId) {

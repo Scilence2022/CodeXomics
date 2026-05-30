@@ -971,6 +971,25 @@ class LLMContextService {
         condition: () => true,
       },
 
+      // Sequence-editing Actions - queue operations, inspection, and execution are intentionally repeatable.
+      sequence_editing_actions: {
+        tools: [
+          'copy_sequence',
+          'cut_sequence',
+          'paste_sequence',
+          'delete_sequence',
+          'insert_sequence',
+          'replace_sequence',
+          'execute_actions',
+          'get_action_list',
+          'show_action_list',
+          'clear_actions',
+          'get_clipboard_content',
+        ],
+        policy: 'always_allowed',
+        condition: () => true,
+      },
+
       // Zoom operations - prevent rapid repetition
       zoom_operations: {
         tools: ['zoom_in', 'zoom_out'],
@@ -1133,7 +1152,14 @@ class LLMContextService {
             }
           }
 
-
+          const checkboxId = currentTrack ? (trackMapping[currentTrack.toLowerCase()] || trackMapping[currentTrack]) : null;
+          const trackCheckbox = checkboxId ? document.getElementById(checkboxId) : null;
+          if (trackCheckbox && currentVisibleState !== undefined && trackCheckbox.checked === currentVisibleState) {
+            console.log(
+                `🚫 [Policy] Track already in requested state: ${currentTrack} (${currentAction || currentVisible})`,
+            );
+            return false;
+          }
 
           // Check for recent execution of same track toggle with more precise parameter matching
           const now = Date.now();
@@ -2191,21 +2217,16 @@ CRITICAL: Choose the correct protein structure function based on user intent:
 
 SEQUENCE EDITING WORKFLOW:
 1. Find gene location: find_gene_by_name
-2. Use appropriate editing function (deleteSequence, insertSequence, etc.)
+2. Use appropriate editing function (delete_sequence, insert_sequence, etc.)
 3. Execute all pending actions: execute_actions （ALWAYS auto_save=true）
 4. IMPORTANT: Actions are queued until execute_actions is called
+5. IMPORTANT: Actions are queued genome sequence edits. Tasks are checklist/progress items. Never use execute_actions for checklist Tasks, and never use task tools to edit sequence.
 
 EDITING FUNCTIONS WITH PARAMETERS:
 
 • delete_sequence - Delete a DNA sequence region
   Parameters: chromosome (string), start (number), end (number), strand (optional: "+" or "-")
   Example: {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
-
-• delete_gene - Delete a gene by name or locus tag (automatically finds gene coordinates)
-  Parameters: geneName (string - gene name or locus tag), chromosome (optional string - will auto-detect if not provided)
-  Example: {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}
-  Example: {"tool_name": "delete_gene", "parameters": {"geneName": "b0005"}}
-  Example: {"tool_name": "delete_gene", "parameters": {"geneName": "lacZ", "chromosome": "COLI-K12"}}
 
 • insert_sequence - Insert DNA sequence at a specific position
   Parameters: chromosome (string), position (number), sequence (string - DNA only: A,T,C,G,N)
@@ -2237,12 +2258,6 @@ EDITING FUNCTIONS WITH PARAMETERS:
   Example: {"tool_name": "get_action_list", "parameters": {"status": "pending"}}
 
 CRITICAL GENE DELETION WORKFLOW:
-Method 1 - Simple gene deletion by name or locus tag:
-1. {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}  (by gene name)
-1. {"tool_name": "delete_gene", "parameters": {"geneName": "b0005"}}  (by locus tag)
-2. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
-
-Method 2 - Manual deletion with coordinates:
 1. {"tool_name": "find_gene_by_name", "parameters": {"name": "yaaJ"}}
 2. Use gene coordinates from result in delete_sequence
 3. {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": [gene_start], "end": [gene_end]}}
@@ -2325,12 +2340,6 @@ Before using get_coding_sequence or other gene-specific functions:
 
 WORKFLOW EXAMPLES:
 • Gene Deletion Workflow:
-  Method 1 (Recommended): 
-  1. {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}  (by gene name)
-  1. {"tool_name": "delete_gene", "parameters": {"geneName": "b0005"}}  (by locus tag)
-  2. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
-  
-  Method 2 (Manual): 
   1. {"tool_name": "find_gene_by_name", "parameters": {"name": "yaaJ"}}
   2. {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 8238, "end": 9191}}
   3. {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
@@ -2481,8 +2490,8 @@ Sequence Editing Examples:
 - Copy sequence: {"tool_name": "copy_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Cut sequence: {"tool_name": "cut_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Paste sequence: {"tool_name": "paste_sequence", "parameters": {"chromosome": "chr1", "position": 2000}}
-- Delete sequence: {"tool_name": "deleteSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
-- Insert sequence: {"tool_name": "insertSequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
+- Delete sequence: {"tool_name": "delete_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Insert sequence: {"tool_name": "insert_sequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
 - Replace sequence: {"tool_name": "replace_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
 - Execute actions: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 - Get action list: {"tool_name": "get_action_list", "parameters": {}}
@@ -2708,8 +2717,8 @@ Sequence Editing Examples:
 - Copy sequence: {"tool_name": "copy_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Cut sequence: {"tool_name": "cut_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Paste sequence: {"tool_name": "paste_sequence", "parameters": {"chromosome": "chr1", "position": 2000}}
-- Delete sequence: {"tool_name": "deleteSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
-- Insert sequence: {"tool_name": "insertSequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
+- Delete sequence: {"tool_name": "delete_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Insert sequence: {"tool_name": "insert_sequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
 - Replace sequence: {"tool_name": "replace_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
 - Execute actions: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 - Get action list: {"tool_name": "get_action_list", "parameters": {}}

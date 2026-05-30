@@ -615,6 +615,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('show_action_list', {
+      method: 'executeActionTool_show_action_list',
+      category: 'sequence_editing',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('clear_actions', {
       method: 'executeActionTool_clear_actions',
       category: 'sequence_editing',
@@ -1750,6 +1757,21 @@ class BuiltInToolsIntegration {
         name: 'insert_sequence',
         confidence: 0.9,
         reason: 'Sequence insertion keywords detected',
+      });
+    }
+
+    if (
+      /\b(show|display|open|view|inspect|get|list)\s+.*?\b(action\s+list|actions?\s+queue|sequence\s+editing\s+queue)\b/i.test(query) ||
+      /\b(action\s+list|actions?\s+queue|sequence\s+editing\s+queue)\s+.*?\b(show|display|open|view|inspect|get|list)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'show_action_list',
+        confidence: 0.95,
+        reason: 'Action list interface keywords detected',
+      }, {
+        name: 'get_action_list',
+        confidence: 0.9,
+        reason: 'Action queue inspection keywords detected',
       });
     }
 

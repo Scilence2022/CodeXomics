@@ -190,6 +190,7 @@ class FunctionCallsOrganizer {
           'cut_sequence',
           'paste_sequence',
           'get_action_list',
+          'show_action_list',
           'execute_actions',
           'clear_actions',
           'get_clipboard_content',

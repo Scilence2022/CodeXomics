@@ -1,6 +1,6 @@
 name: get_action_list
 version: 1.0.0
-description: Get current list of pending and completed sequence actions
+description: Get the current sequence-editing Action queue. Actions are queued genome edit operations, not checklist Tasks.
 category: sequence_editing
 keywords:
   - get
@@ -24,26 +24,17 @@ parameters:
       type: string
       description: Browser client ID for multi-window support
       default: default
-    chromosome:
+    status:
       type: string
-      description: Chromosome identifier
-    start:
-      type: number
-      description: Start position (1-based coordinate)
-      minimum: 1
-    end:
-      type: number
-      description: End position (1-based coordinate)
-      minimum: 1
-  required:
-    - chromosome
-    - start
-    - end
+      description: Filter actions by status. Defaults to all.
+      enum: [all, pending, executing, completed, failed]
+      default: all
+  required: []
 sample_usages:
-  - user_query: Use get_action_list to analyze genomic data
-    tool_call: get_action_list(parameter1='value1', parameter2='value2')
-    thought: User wants to use get_action_list for get current list of pending and completed sequence actions
-    expected_result: Result from get_action_list analysis
+  - user_query: Show the pending sequence editing actions
+    tool_call: get_action_list(status='pending')
+    thought: User wants to inspect queued genome-editing Actions without opening the UI.
+    expected_result: Returns pending sequence-editing Actions.
 relationships:
   depends_on: []
   conflicts_with: []
@@ -66,5 +57,6 @@ error_handling:
   clipboard_error: Returns error if clipboard operation fails
 returns:
   success: boolean - Whether operation was successful
-  action_id: string - Unique identifier for this action
-  sequence_length: number - Length of processed sequence
+  totalActions: number - Total number of actions in the queue
+  filteredActions: number - Number of actions returned after filtering
+  actions: array - Matching sequence-editing Actions

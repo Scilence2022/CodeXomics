@@ -1,6 +1,6 @@
 name: execute_actions
 version: 1.1.0
-description: Execute all pending sequence actions and generate a modified GenBank file
+description: Execute all pending sequence-editing Actions and generate a modified GenBank file. This executes queued genome edits only; it does not run checklist Tasks.
 category: sequence_editing
 keywords:
   - execute

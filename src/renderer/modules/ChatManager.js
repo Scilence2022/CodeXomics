@@ -7364,11 +7364,11 @@ TOOL AVAILABILITY:
         'cut_sequence',
         'paste_sequence',
         'delete_sequence',
-        'delete_gene',
         'insert_sequence',
         'replace_sequence',
         'execute_actions',
         'get_action_list',
+        'show_action_list',
       ],
       'TRACK SETTINGS': [
         'get_track_settings',
@@ -7619,9 +7619,9 @@ ${coreTools}
       execute_actions: () => this.executeActionTool('execute_actions', parameters),
       action_execute_actions: () => this.executeActionTool('execute_actions', parameters),
       get_action_list: () => this.executeActionTool('get_action_list', parameters),
-      show_action_list: () => this.executeActionTool('get_action_list', parameters),
+      show_action_list: () => this.executeActionTool('show_action_list', parameters),
       action_get_action_list: () => this.executeActionTool('get_action_list', parameters),
-      action_show_action_list: () => this.executeActionTool('get_action_list', parameters),
+      action_show_action_list: () => this.executeActionTool('show_action_list', parameters),
       clear_actions: () => this.executeActionTool('clear_actions', parameters),
       action_clear_actions: () => this.executeActionTool('clear_actions', parameters),
       get_clipboard_content: () => this.executeActionTool('get_clipboard_content', parameters),
@@ -8231,12 +8231,10 @@ ${coreTools}
           return await window.actionManager.executeAllActions(parameters);
         case 'get_action_list':
           return await window.actionManager.getActionList(parameters);
+        case 'show_action_list':
+          return await window.actionManager.showActionListUI(parameters);
         case 'clear_actions':
-          const clearOptions = {};
-          if (parameters && parameters.forced !== undefined) {
-            clearOptions.forced = parameters.forced;
-          }
-          return await window.actionManager.clearAllActions(clearOptions);
+          return await window.actionManager.clearAllActions(parameters || {});
         case 'get_clipboard_content':
           return await window.actionManager.getClipboardContent(parameters);
         default:
@@ -8781,10 +8779,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'cut_sequence',
       'paste_sequence',
       'delete_sequence',
-      'delete_gene',
       'insert_sequence',
       'replace_sequence',
       'get_action_list',
+      'show_action_list',
       'execute_actions',
       'clear_actions',
       'get_clipboard_content',

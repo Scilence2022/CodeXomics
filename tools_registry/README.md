@@ -73,8 +73,8 @@ tools_registry/
 │   ├── replace_sequence.yaml
 │   ├── get_action_list.yaml
 │   ├── execute_actions.yaml
-│   ├── clear_actions.yaml
-│   └── undo_last_action.yaml
+│   ├── show_action_list.yaml
+│   └── clear_actions.yaml
 ├── plugin_management/                  # Plugin Management Tools
 │   ├── list_plugins.yaml
 │   ├── get_plugin_info.yaml

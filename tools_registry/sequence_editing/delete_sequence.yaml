@@ -1,6 +1,6 @@
 name: delete_sequence
 version: 1.0.0
-description: Delete a sequence region
+description: Queue deletion of a sequence region as a sequence-editing Action. This is not a checklist Task. Call execute_actions(auto_save=true) to apply queued sequence-editing Actions.
 category: sequence_editing
 keywords:
   - delete
@@ -37,17 +37,19 @@ parameters:
     - start
     - end
 sample_usages:
-  - user_query: Use delete_sequence to analyze genomic data
-    tool_call: delete_sequence(parameter1='value1', parameter2='value2')
-    thought: User wants to use delete_sequence for delete a sequence region
-    expected_result: Result from delete_sequence analysis
+  - user_query: Delete bases 1000 to 2000 on NC_000913.3
+    tool_call: delete_sequence(chromosome='NC_000913.3', start=1000, end=2000)
+    thought: User wants to queue a DNA sequence deletion Action.
+    expected_result: Delete Action is queued and ready for execute_actions.
 relationships:
   depends_on: []
   conflicts_with: []
   enhances: []
   alternatives: []
   prerequisites: []
-  follow_up: []
+  follow_up:
+    - execute_actions
+    - get_action_list
 metadata:
   usage_count: 0
   success_rate: 0
@@ -64,5 +66,5 @@ error_handling:
   clipboard_error: Returns error if clipboard operation fails
 returns:
   success: boolean - Whether operation was successful
-  action_id: string - Unique identifier for this action
-  sequence_length: number - Length of processed sequence
+  actionId: string - Unique identifier for this Action
+  details: object - Contains chromosome, start, end, strand, and length

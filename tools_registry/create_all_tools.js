@@ -241,12 +241,6 @@ class ToolDefinitionCreator {
         keywords: ['clear', 'actions', 'queue'],
         priority: 2,
       },
-      undo_last_action: {
-        category: 'sequence_editing',
-        description: 'Attempt to undo the last completed action',
-        keywords: ['undo', 'last', 'action', 'completed'],
-        priority: 2,
-      },
 
       // Plugin Management Tools
       get_plugin_info: {

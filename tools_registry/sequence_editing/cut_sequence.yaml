@@ -1,6 +1,6 @@
 name: cut_sequence
 version: 1.0.0
-description: Cut a sequence region (copy to clipboard and mark for deletion)
+description: Cut a sequence region into the sequence-editing clipboard and queue a cut Action. This is not a checklist Task. Use paste_sequence after this to queue a move, and execute_actions(auto_save=true) to apply queued sequence-editing Actions.
 category: sequence_editing
 keywords:
   - cut
@@ -38,17 +38,21 @@ parameters:
     - start
     - end
 sample_usages:
-  - user_query: Use cut_sequence to analyze genomic data
-    tool_call: cut_sequence(parameter1='value1', parameter2='value2')
-    thought: User wants to use cut_sequence for cut a sequence region (copy to clipboard and mark for deletion)
-    expected_result: Result from cut_sequence analysis
+  - user_query: Cut bases 1000 to 1500 from NC_000913.3 so I can move them elsewhere
+    tool_call: cut_sequence(chromosome='NC_000913.3', start=1000, end=1500)
+    thought: User wants to copy a sequence region to the Actions clipboard and queue its deletion.
+    expected_result: Cut Action is queued and clipboard contains the selected sequence.
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: []
+  enhances:
+    - paste_sequence
   alternatives: []
   prerequisites: []
-  follow_up: []
+  follow_up:
+    - paste_sequence
+    - get_action_list
+    - execute_actions
 metadata:
   usage_count: 0
   success_rate: 0
@@ -65,5 +69,5 @@ error_handling:
   clipboard_error: Returns error if clipboard operation fails
 returns:
   success: boolean - Whether operation was successful
-  action_id: string - Unique identifier for this action
-  sequence_length: number - Length of processed sequence
+  actionId: string - Unique identifier for this Action
+  details: object - Contains chromosome, start, end, strand, and length

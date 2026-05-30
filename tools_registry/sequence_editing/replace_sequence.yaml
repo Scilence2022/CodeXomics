@@ -1,6 +1,6 @@
 name: replace_sequence
 version: 1.1.0
-description: Replace sequence in specified region with new sequence
+description: Queue replacement of a sequence region with a new DNA sequence as a sequence-editing Action. This is not a checklist Task. Call execute_actions(auto_save=true) to apply queued sequence-editing Actions.
 category: sequence_editing
 keywords:
   - replace
@@ -35,18 +35,18 @@ parameters:
       minimum: 1
     newSequence:
       type: string
-      description: New DNA sequence to replace the existing region (only A, T, C, G, N allowed)
+      description: Alias for sequence. Use 'sequence' instead.
     sequence:
       type: string
-      description: Alias for newSequence. Use 'newSequence' instead.
+      description: New DNA sequence to replace the existing region (only A, T, C, G, N allowed)
   required:
     - chromosome
     - start
     - end
-    - newSequence
+    - sequence
 sample_usages:
   - user_query: Replace the sequence in region 400000 to 400200 with GCTAGCTAGCTAGCTA
-    tool_call: replace_sequence(chromosome='NC_000913.3', start=400000, end=400200, newSequence='GCTAGCTAGCTAGCTA')
+    tool_call: replace_sequence(chromosome='NC_000913.3', start=400000, end=400200, sequence='GCTAGCTAGCTAGCTA')
     thought: User wants to replace a genomic region with a new sequence
     expected_result: Replace action created and queued for execution
 relationships:
@@ -57,6 +57,7 @@ relationships:
   prerequisites: []
   follow_up:
     - execute_actions
+    - get_action_list
 metadata:
   usage_count: 0
   success_rate: 0
@@ -70,10 +71,10 @@ metadata:
   usage_pattern: frequent
 error_handling:
   invalid_region: Returns error if region is invalid
-  invalid_sequence: Returns error if newSequence contains non-DNA characters
+  invalid_sequence: Returns error if sequence contains non-DNA characters
   clipboard_error: Returns error if clipboard operation fails
 returns:
   success: boolean - Whether operation was successful
   action_id: string - Unique identifier for this action
   message: string - Human-readable result description
-  details: object - Contains chromosome, start, end, newSequenceLength information
+  details: object - Contains chromosome, start, end, originalLength, and newLength information

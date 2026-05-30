@@ -349,6 +349,7 @@ class ActionManager {
    * Create action object (without adding to queue)
    */
   createAction(type, target, details, metadata = {}) {
+    const timestamp = new Date();
     const action = {
       id: this.nextActionId++,
       type: type,
@@ -356,7 +357,8 @@ class ActionManager {
       details: details,
       metadata: metadata,
       status: this.STATUS.PENDING,
-      timestamp: new Date(),
+      timestamp,
+      created: timestamp,
       estimatedTime: this.estimateActionTime(type),
       result: null,
       error: null,
@@ -1754,6 +1756,112 @@ class ActionManager {
     }
   }
 
+  parsePositiveCoordinate(value, name) {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error(`${name} must be a positive integer genomic coordinate`);
+    }
+    return parsed;
+  }
+
+  normalizeStrand(strand = '+') {
+    if (strand !== '+' && strand !== '-') {
+      throw new Error('strand must be "+" or "-"');
+    }
+    return strand;
+  }
+
+  validateRegionParameters(chromosome, start, end, strand = '+') {
+    if (!chromosome) {
+      throw new Error('Missing required parameter: chromosome');
+    }
+
+    const startCoord = this.parsePositiveCoordinate(start, 'start');
+    const endCoord = this.parsePositiveCoordinate(end, 'end');
+    const normalizedStrand = this.normalizeStrand(strand);
+
+    if (startCoord > endCoord) {
+      throw new Error('Start position must be less than or equal to end position');
+    }
+
+    const sequenceMap = this.genomeBrowser?.currentSequence;
+    if (!sequenceMap || Object.keys(sequenceMap).length === 0) {
+      throw new Error('No genome sequence is loaded. Load a genome sequence before queueing sequence-editing Actions.');
+    }
+
+    const sequence = sequenceMap[chromosome];
+    if (!sequence) {
+      const available = Object.keys(sequenceMap);
+      throw new Error(`Chromosome '${chromosome}' was not found in the loaded genome sequence. Available: ${available.join(', ')}`);
+    }
+
+    if (endCoord > sequence.length) {
+      throw new Error(`End position (${endCoord}) exceeds chromosome length (${sequence.length})`);
+    }
+
+    return { chromosome, start: startCoord, end: endCoord, strand: normalizedStrand };
+  }
+
+  validateInsertParameters(chromosome, position) {
+    if (!chromosome) {
+      throw new Error('Missing required parameter: chromosome');
+    }
+
+    const insertPosition = this.parsePositiveCoordinate(position, 'position');
+    const sequenceMap = this.genomeBrowser?.currentSequence;
+    if (!sequenceMap || Object.keys(sequenceMap).length === 0) {
+      throw new Error('No genome sequence is loaded. Load a genome sequence before queueing sequence-editing Actions.');
+    }
+
+    const sequence = sequenceMap[chromosome];
+    if (!sequence) {
+      const available = Object.keys(sequenceMap);
+      throw new Error(`Chromosome '${chromosome}' was not found in the loaded genome sequence. Available: ${available.join(', ')}`);
+    }
+
+    if (insertPosition > sequence.length + 1) {
+      throw new Error(`Insert position (${insertPosition}) exceeds chromosome length + 1 (${sequence.length + 1})`);
+    }
+
+    return { chromosome, position: insertPosition };
+  }
+
+  normalizeDnaSequence(sequence, name = 'sequence') {
+    if (!sequence || typeof sequence !== 'string') {
+      throw new Error(`Missing required parameter: ${name}`);
+    }
+
+    const normalized = sequence.toUpperCase().replace(/\s/g, '');
+    if (!/^[ATCGN]+$/.test(normalized)) {
+      throw new Error(`${name} contains invalid characters. Only A, T, C, G, N are allowed.`);
+    }
+
+    return normalized;
+  }
+
+  async setClipboardFromRegion(type, chromosome, start, end, strand, target) {
+    const sequence = await this.getSequenceForRegion(chromosome, start, end, strand);
+    if (!sequence) {
+      throw new Error(`Unable to retrieve sequence for ${type} at ${chromosome}:${start}-${end}`);
+    }
+
+    const comprehensiveData = await this.collectComprehensiveData(chromosome, start, end, strand);
+    this.clipboard = {
+      type,
+      sequence,
+      source: target,
+      timestamp: new Date(),
+      chromosome,
+      start,
+      end,
+      strand,
+      sourceInfo: { chromosome, start, end, strand, hasSelection: true, source: 'function_call' },
+      comprehensiveData,
+    };
+
+    return sequence;
+  }
+
   /**
    * Reverse complement DNA sequence
    */
@@ -1961,6 +2069,9 @@ class ActionManager {
 
         // Execute the action using proxy
         await this.executeActionOnCopy(action, executionActionsCopy, executionGenomeDataProxy);
+        if (action.status === this.STATUS.FAILED) {
+          throw new Error(`Action ${action.id} (${action.type}) failed: ${action.error || 'Unknown error'}`);
+        }
 
         // 🔒 CRITICAL FIX: Do NOT adjust features after each action!
         // Features will be adjusted ONCE at the end based on ALL modifications
@@ -3636,6 +3747,8 @@ class ActionManager {
   async executePasteSequence(action, executionGenomeData = null) {
     const { chromosome, start, end } = action.metadata;
     const clipboardData = action.metadata.clipboardData;
+    const isInsert = start === end;
+    const operation = isInsert ? 'paste-insert' : 'paste-replace';
 
     // 🔒 CRITICAL: All modifications happen on executionGenomeData (proxy/copy)
     // Original data is never modified (Copy-on-Write architecture)
@@ -3649,13 +3762,9 @@ class ActionManager {
       target: action.target,
       clipboardFeatures: clipboardData.comprehensiveData?.features?.length || 0,
       hasComprehensiveData: !!clipboardData.comprehensiveData,
-      operation: isInsert ? 'paste-insert' : 'paste-replace',
+      operation,
       targetRegion: `${chromosome}:${start}-${end}`,
     });
-
-    // Determine if this is an insert or replace based on start/end
-    const isInsert = start === end;
-    const operation = isInsert ? 'paste-insert' : 'paste-replace';
 
     // Record sequence modification
     if (isInsert) {
@@ -6004,27 +6113,29 @@ class ActionManager {
   async functionCopySequence(params) {
     const { chromosome, start, end, strand = '+' } = params;
 
-    // Validate parameters
-    if (!chromosome || !start || !end) {
-      throw new Error('Missing required parameters: chromosome, start, end');
-    }
-
-    if (start > end) {
-      throw new Error('Start position must be less than or equal to end position');
-    }
+    const region = this.validateRegionParameters(chromosome, start, end, strand);
+    const target = `${region.chromosome}:${region.start}-${region.end}(${region.strand})`;
+    const sequence = await this.setClipboardFromRegion(
+      'copy',
+      region.chromosome,
+      region.start,
+      region.end,
+      region.strand,
+      target
+    );
 
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.COPY_SEQUENCE,
-      `${chromosome}:${start}-${end}(${strand})`,
-      `Copy sequence from ${chromosome}:${start}-${end} (${strand})`
+      target,
+      `Copy sequence from ${region.chromosome}:${region.start}-${region.end} (${region.strand})`
     );
 
     action.metadata = {
-      chromosome,
-      start: parseInt(start),
-      end: parseInt(end),
-      strand,
+      chromosome: region.chromosome,
+      start: region.start,
+      end: region.end,
+      strand: region.strand,
       source: 'function_call',
     };
 
@@ -6033,13 +6144,13 @@ class ActionManager {
     return {
       success: true,
       actionId: action.id,
-      message: `Sequence copy action created for ${chromosome}:${start}-${end} (${strand})`,
+      message: `Sequence copy action created for ${region.chromosome}:${region.start}-${region.end} (${region.strand})`,
       details: {
-        chromosome,
-        start,
-        end,
-        strand,
-        length: end - start + 1,
+        chromosome: region.chromosome,
+        start: region.start,
+        end: region.end,
+        strand: region.strand,
+        length: sequence.length,
       },
     };
   }
@@ -6047,27 +6158,29 @@ class ActionManager {
   async functionCutSequence(params) {
     const { chromosome, start, end, strand = '+' } = params;
 
-    // Validate parameters
-    if (!chromosome || !start || !end) {
-      throw new Error('Missing required parameters: chromosome, start, end');
-    }
-
-    if (start > end) {
-      throw new Error('Start position must be less than or equal to end position');
-    }
+    const region = this.validateRegionParameters(chromosome, start, end, strand);
+    const target = `${region.chromosome}:${region.start}-${region.end}(${region.strand})`;
+    const sequence = await this.setClipboardFromRegion(
+      'cut',
+      region.chromosome,
+      region.start,
+      region.end,
+      region.strand,
+      target
+    );
 
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.CUT_SEQUENCE,
-      `${chromosome}:${start}-${end}(${strand})`,
-      `Cut sequence from ${chromosome}:${start}-${end} (${strand})`
+      target,
+      `Cut sequence from ${region.chromosome}:${region.start}-${region.end} (${region.strand})`
     );
 
     action.metadata = {
-      chromosome,
-      start: parseInt(start),
-      end: parseInt(end),
-      strand,
+      chromosome: region.chromosome,
+      start: region.start,
+      end: region.end,
+      strand: region.strand,
       source: 'function_call',
     };
 
@@ -6076,13 +6189,13 @@ class ActionManager {
     return {
       success: true,
       actionId: action.id,
-      message: `Sequence cut action created for ${chromosome}:${start}-${end} (${strand})`,
+      message: `Sequence cut action created for ${region.chromosome}:${region.start}-${region.end} (${region.strand})`,
       details: {
-        chromosome,
-        start,
-        end,
-        strand,
-        length: end - start + 1,
+        chromosome: region.chromosome,
+        start: region.start,
+        end: region.end,
+        strand: region.strand,
+        length: sequence.length,
       },
     };
   }
@@ -6090,12 +6203,14 @@ class ActionManager {
   async functionPasteSequence(params) {
     const { chromosome, position, start, end } = params;
 
-    // AI agents might provide start/end instead of position
+    // AI agents might provide start instead of position
     const actualPosition = position || start;
 
-    // Validate parameters
-    if (!chromosome || !actualPosition) {
-      return { success: false, error: 'Missing required parameters: chromosome, position (or start)' };
+    let insertTarget;
+    try {
+      insertTarget = this.validateInsertParameters(chromosome, actualPosition);
+    } catch (error) {
+      return { success: false, error: error.message };
     }
 
     // Check if clipboard has content
@@ -6106,13 +6221,17 @@ class ActionManager {
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.PASTE_SEQUENCE,
-      `${chromosome}:${actualPosition}`,
-      `Paste sequence at ${chromosome}:${actualPosition}`
+      `${insertTarget.chromosome}:${insertTarget.position}`,
+      `Paste sequence at ${insertTarget.chromosome}:${insertTarget.position}`
     );
 
     action.metadata = {
-      chromosome,
-      position: parseInt(actualPosition),
+      chromosome: insertTarget.chromosome,
+      position: insertTarget.position,
+      start: insertTarget.position,
+      end: insertTarget.position,
+      clipboardData: this.clipboard,
+      pasteMode: 'insert',
       source: 'function_call',
     };
 
@@ -6121,10 +6240,10 @@ class ActionManager {
     return {
       success: true,
       actionId: action.id,
-      message: `Sequence paste action created for ${chromosome}:${actualPosition}`,
+      message: `Sequence paste action created for ${insertTarget.chromosome}:${insertTarget.position}`,
       details: {
-        chromosome,
-        position: actualPosition,
+        chromosome: insertTarget.chromosome,
+        position: insertTarget.position,
         clipboardLength: this.clipboard ? this.clipboard.sequence.length : 0,
       },
     };
@@ -6133,27 +6252,25 @@ class ActionManager {
   async functionDeleteSequence(params) {
     const { chromosome, start, end, strand = '+' } = params;
 
-    // Validate parameters
-    if (!chromosome || !start || !end) {
-      return { success: false, error: 'Missing required parameters: chromosome, start, end' };
-    }
-
-    if (start > end) {
-      return { success: false, error: 'Start position must be less than or equal to end position' };
+    let region;
+    try {
+      region = this.validateRegionParameters(chromosome, start, end, strand);
+    } catch (error) {
+      return { success: false, error: error.message };
     }
 
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.DELETE_SEQUENCE,
-      `${chromosome}:${start}-${end}(${strand})`,
-      `Delete sequence from ${chromosome}:${start}-${end} (${strand})`
+      `${region.chromosome}:${region.start}-${region.end}(${region.strand})`,
+      `Delete sequence from ${region.chromosome}:${region.start}-${region.end} (${region.strand})`
     );
 
     action.metadata = {
-      chromosome,
-      start: parseInt(start),
-      end: parseInt(end),
-      strand,
+      chromosome: region.chromosome,
+      start: region.start,
+      end: region.end,
+      strand: region.strand,
       source: 'function_call',
     };
 
@@ -6162,13 +6279,13 @@ class ActionManager {
     return {
       success: true,
       actionId: action.id,
-      message: `Sequence delete action created for ${chromosome}:${start}-${end} (${strand})`,
+      message: `Sequence delete action created for ${region.chromosome}:${region.start}-${region.end} (${region.strand})`,
       details: {
-        chromosome,
-        start,
-        end,
-        strand,
-        length: end - start + 1,
+        chromosome: region.chromosome,
+        start: region.start,
+        end: region.end,
+        strand: region.strand,
+        length: region.end - region.start + 1,
       },
     };
   }
@@ -6176,31 +6293,27 @@ class ActionManager {
   async functionInsertSequence(params) {
     const { chromosome, position, sequence, start } = params;
 
-    // AI agents might provide start instead of position
     const actualPosition = position || start;
-    const actualSequence = sequence || params.newSequence;
-
-    // Validate parameters
-    if (!chromosome || !actualPosition || !actualSequence) {
-      return { success: false, error: 'Missing required parameters: chromosome, position (or start), sequence' };
-    }
-
-    // Validate sequence
-    if (!/^[ATCGN]+$/i.test(actualSequence)) {
-      return { success: false, error: 'Sequence contains invalid characters. Only A, T, C, G, N are allowed.' };
+    let insertTarget;
+    let actualSequence;
+    try {
+      insertTarget = this.validateInsertParameters(chromosome, actualPosition);
+      actualSequence = this.normalizeDnaSequence(sequence || params.newSequence);
+    } catch (error) {
+      return { success: false, error: error.message };
     }
 
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.INSERT_SEQUENCE,
-      `${chromosome}:${actualPosition}`,
-      `Insert ${actualSequence.length}bp sequence at ${chromosome}:${actualPosition}`
+      `${insertTarget.chromosome}:${insertTarget.position}`,
+      `Insert ${actualSequence.length}bp sequence at ${insertTarget.chromosome}:${insertTarget.position}`
     );
 
     action.metadata = {
-      chromosome,
-      position: parseInt(actualPosition),
-      sequence: actualSequence.toUpperCase(),
+      chromosome: insertTarget.chromosome,
+      position: insertTarget.position,
+      sequence: actualSequence,
       source: 'function_call',
     };
 
@@ -6209,10 +6322,10 @@ class ActionManager {
     return {
       success: true,
       actionId: action.id,
-      message: `Sequence insert action created for ${chromosome}:${position}`,
+      message: `Sequence insert action created for ${insertTarget.chromosome}:${insertTarget.position}`,
       details: {
-        chromosome,
-        position,
+        chromosome: insertTarget.chromosome,
+        position: insertTarget.position,
         sequenceLength: actualSequence.length,
         sequence: actualSequence.substring(0, 50) + (actualSequence.length > 50 ? '...' : ''),
       },
@@ -6222,35 +6335,28 @@ class ActionManager {
   async functionReplaceSequence(params) {
     const { chromosome, start, end, sequence, strand = '+' } = params;
 
-    const actualSequence = sequence || params.newSequence;
-
-    // Validate parameters
-    if (!chromosome || !start || !end || !actualSequence) {
-      return { success: false, error: 'Missing required parameters: chromosome, start, end, sequence' };
-    }
-
-    if (start > end) {
-      return { success: false, error: 'Start position must be less than or equal to end position' };
-    }
-
-    // Validate sequence
-    if (!/^[ATCGN]+$/i.test(actualSequence)) {
-      return { success: false, error: 'Sequence contains invalid characters. Only A, T, C, G, N are allowed.' };
+    let region;
+    let actualSequence;
+    try {
+      region = this.validateRegionParameters(chromosome, start, end, strand);
+      actualSequence = this.normalizeDnaSequence(sequence || params.newSequence);
+    } catch (error) {
+      return { success: false, error: error.message };
     }
 
     // Create action
     const action = this.createAction(
       this.ACTION_TYPES.REPLACE_SEQUENCE,
-      `${chromosome}:${start}-${end}(${strand})`,
-      `Replace sequence in ${chromosome}:${start}-${end} (${strand}) with ${actualSequence.length}bp`
+      `${region.chromosome}:${region.start}-${region.end}(${region.strand})`,
+      `Replace sequence in ${region.chromosome}:${region.start}-${region.end} (${region.strand}) with ${actualSequence.length}bp`
     );
 
     action.metadata = {
-      chromosome,
-      start: parseInt(start),
-      end: parseInt(end),
-      strand,
-      sequence: actualSequence.toUpperCase(),
+      chromosome: region.chromosome,
+      start: region.start,
+      end: region.end,
+      strand: region.strand,
+      sequence: actualSequence,
       source: 'function_call',
     };
 
@@ -6259,13 +6365,13 @@ class ActionManager {
     return {
       success: true,
       actionId: action.id,
-      message: `Sequence replace action created for ${chromosome}:${start}-${end} (${strand})`,
+      message: `Sequence replace action created for ${region.chromosome}:${region.start}-${region.end} (${region.strand})`,
       details: {
-        chromosome,
-        start,
-        end,
-        strand,
-        originalLength: end - start + 1,
+        chromosome: region.chromosome,
+        start: region.start,
+        end: region.end,
+        strand: region.strand,
+        originalLength: region.end - region.start + 1,
         newLength: actualSequence.length,
         sequence: actualSequence.substring(0, 50) + (actualSequence.length > 50 ? '...' : ''),
       },

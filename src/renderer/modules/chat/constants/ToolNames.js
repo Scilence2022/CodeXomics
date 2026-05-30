@@ -188,7 +188,6 @@ const TOOL_NAMES = {
     CUT_SEQUENCE: 'cut_sequence',
     PASTE_SEQUENCE: 'paste_sequence',
     DELETE_SEQUENCE: 'delete_sequence',
-    DELETE_GENE: 'delete_gene',
     INSERT_SEQUENCE: 'insert_sequence',
     REPLACE_SEQUENCE: 'replace_sequence',
     GET_ACTION_LIST: 'get_action_list',

@@ -1,7 +1,7 @@
 # show_action_list.yaml
 name: 'show_action_list'
 version: '1.0.0'
-description: 'Display the action list interface showing all pending, completed, and failed sequence editing actions with visual management controls'
+description: 'Display the Action List Manager interface for queued sequence-editing Actions. Actions are genome edit operations, not checklist Tasks.'
 category: 'sequence_editing'
 keywords: ['show', 'display', 'action', 'list', 'interface', 'ui', 'modal', 'view', 'manage']
 priority: 1

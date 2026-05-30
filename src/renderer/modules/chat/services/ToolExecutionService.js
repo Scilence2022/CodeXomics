@@ -393,7 +393,6 @@ class ToolExecutionService {
       predict_terminator: ['seq', 'sequence'],
       get_coding_sequence: ['identifier', 'gene_name', 'geneName'],
       jump_to_gene: ['geneName', 'identifier', 'name'],
-      delete_gene: ['geneName', 'identifier'],
       get_upstream_region: ['geneObj', 'length'],
       get_downstream_region: ['geneObj', 'length'],
       zoom_in: ['factor'],
