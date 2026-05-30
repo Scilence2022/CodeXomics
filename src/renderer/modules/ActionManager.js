@@ -2170,6 +2170,8 @@ class ActionManager {
     }
 
     console.log(`🔄 [ActionManager] Starting execution of ${pendingActions.length} pending actions`);
+    const initialTotalActions = this.actions.length;
+    const initialPendingActions = pendingActions.length;
 
     // Step 1: Check for action conflicts before execution
     const conflictAnalysis = this.checkActionConflicts(pendingActions);
@@ -2188,7 +2190,8 @@ class ActionManager {
             success: false,
             message: 'Execution cancelled due to action conflicts',
             executedActions: 0,
-            totalActions: this.actions.length,
+            totalActions: initialTotalActions,
+            pendingActions: initialPendingActions,
             conflicts: conflictAnalysis.conflicts,
           };
         }
@@ -2329,7 +2332,8 @@ class ActionManager {
                 success: false,
                 message: 'Save dialog cancelled by user',
                 executedActions: 0,
-                totalActions: this.actions.length,
+                totalActions: initialTotalActions,
+                pendingActions: initialPendingActions,
               };
             }
           } catch (error) {
@@ -2362,7 +2366,8 @@ class ActionManager {
                   success: false,
                   message: 'Save dialog cancelled by user',
                   executedActions: 0,
-                  totalActions: this.actions.length,
+                  totalActions: initialTotalActions,
+                  pendingActions: initialPendingActions,
                 };
               }
             }
@@ -2427,7 +2432,9 @@ class ActionManager {
         message: `Executed ${executedCount} actions successfully`,
         executedActions: executedCount,
         failedActions: failedCount,
-        totalActions: this.actions.length,
+        totalActions: initialTotalActions,
+        pendingActions: initialPendingActions,
+        remainingActions: this.actions.length,
         executionId,
         filename: gbkResult?.filename,
         file_path: gbkResult?.filename,
@@ -2442,7 +2449,9 @@ class ActionManager {
         message: `Execution failed: ${error.message}`,
         executedActions: executedCount,
         failedActions: failedCount || pendingActionsCopy.length - executedCount,
-        totalActions: this.actions.length,
+        totalActions: initialTotalActions,
+        pendingActions: initialPendingActions,
+        remainingActions: this.actions.length,
         error: error.message,
         executionId,
       };

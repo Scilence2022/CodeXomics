@@ -12,7 +12,7 @@ priority: 1
 resident: true
 execution:
   type: client
-  timeout: 15000
+  timeout: 60000
   retries: 2
   requires_auth: false
   requires_data: true
@@ -74,6 +74,9 @@ returns:
   message: string - Result description
   executedActions: number - Number of actions executed
   failedActions: number - Number of failed actions
+  totalActions: number - Number of actions that were in the queue before execution
+  pendingActions: number - Number of pending actions considered for this execution
+  remainingActions: number - Number of actions left in the active queue after execution
   filename: string - Output filename
   file_path: string - Full path to the generated GenBank file
   executionId: string - Unique execution identifier

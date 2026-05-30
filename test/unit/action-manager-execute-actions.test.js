@@ -112,6 +112,9 @@ describe('ActionManager execute_actions sequencing', () => {
 
     expect(result.success).toBe(true);
     expect(result.executedActions).toBe(2);
+    expect(result.totalActions).toBe(2);
+    expect(result.pendingActions).toBe(2);
+    expect(result.remainingActions).toBe(0);
     expect(lastExport.chr1.sequence).toBe('ACTTGTAGT');
     expect(genomeBrowser.currentSequence.chr1).toBe('ACGTACGT');
     expect(manager.actions).toHaveLength(0);
