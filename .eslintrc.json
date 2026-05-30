@@ -1,8 +1,5 @@
 {
-  "extends": [
-    "eslint:recommended",
-    "google"
-  ],
+  "extends": ["eslint:recommended", "google"],
   "env": {
     "browser": true,
     "node": true,
@@ -38,7 +35,12 @@
     "eqeqeq": ["warn", "smart"],
     "curly": ["warn", "multi-line"],
     "no-var": "warn",
-    "no-throw-literal": "error"
+    "no-throw-literal": "error",
+    "indent": "off",
+    "object-curly-spacing": "off",
+    "operator-linebreak": "off",
+    "arrow-parens": "off",
+    "comma-dangle": "off"
   },
   "overrides": [
     {
@@ -57,13 +59,5 @@
       }
     }
   ],
-  "ignorePatterns": [
-    "node_modules/",
-    "dist/",
-    "build/",
-    "docs/",
-    "site/",
-    "scripts/marketplace-data/",
-    "packages/"
-  ]
+  "ignorePatterns": ["node_modules/", "dist/", "build/", "docs/", "site/", "scripts/marketplace-data/", "packages/"]
 }
