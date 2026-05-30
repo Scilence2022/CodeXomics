@@ -264,6 +264,16 @@ class ActionManager {
         });
       }
 
+      // Add reset position button handler
+      const resetPositionBtn = actionListModal.querySelector('.reset-position-btn');
+      if (resetPositionBtn) {
+        resetPositionBtn.addEventListener('click', () => {
+          if (window.modalDragManager) {
+            window.modalDragManager.resetPosition('#actionListModal');
+          }
+        });
+      }
+
       actionListModal.querySelectorAll('.modal-close').forEach(btn => {
         btn.addEventListener('click', () => this.closeActionList());
       });

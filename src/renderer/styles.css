@@ -14732,6 +14732,8 @@ input:checked+.slider:before {
   /* Action List modal specific sizing */
   #actionListModal .modal-content {
     width: 1000px;
+    min-width: 800px;
+    max-width: 1400px !important;
     min-height: 600px;
   }
 

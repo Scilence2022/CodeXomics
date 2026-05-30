@@ -53,6 +53,24 @@ class ResizableModalManager {
       const baseWidth = currentWidth > 100 ? currentWidth : 500;
       modalContent.style.width = `${Math.round(baseWidth)}px`;
     }
+
+    // Save the original CSS constraints before overriding them
+    const currentStyle = window.getComputedStyle(modalContent);
+    const originalMaxWidth = currentStyle.maxWidth;
+    if (originalMaxWidth && originalMaxWidth !== 'none' && !modalContent.hasAttribute('data-max-width')) {
+      const parsedMax = parseInt(originalMaxWidth, 10);
+      if (!isNaN(parsedMax) && parsedMax > 0) {
+        modalContent.setAttribute('data-max-width', parsedMax.toString());
+      }
+    }
+    const originalMinWidth = currentStyle.minWidth;
+    if (originalMinWidth && originalMinWidth !== '0px' && !modalContent.hasAttribute('data-min-width')) {
+      const parsedMin = parseInt(originalMinWidth, 10);
+      if (!isNaN(parsedMin) && parsedMin > 0) {
+        modalContent.setAttribute('data-min-width', parsedMin.toString());
+      }
+    }
+
     // Allow free resizing beyond max-width constraints
     modalContent.style.maxWidth = 'none';
 
@@ -121,6 +139,28 @@ class ResizableModalManager {
     let newLeft = this.startLeft;
     let newTop = this.startTop;
 
+    // Apply constraints dynamically
+    const dataMinWidth = modalContent.getAttribute('data-min-width');
+    const dataMaxWidth = modalContent.getAttribute('data-max-width');
+    const dataMinHeight = modalContent.getAttribute('data-min-height');
+    const dataMaxHeight = modalContent.getAttribute('data-max-height');
+
+    const style = window.getComputedStyle(modalContent);
+
+    const minWidth = dataMinWidth ? parseInt(dataMinWidth, 10) : (parseInt(style.minWidth, 10) || 400);
+    const minHeight = dataMinHeight ? parseInt(dataMinHeight, 10) : (parseInt(style.minHeight, 10) || 300);
+
+    const defaultMaxWidth = Math.max(window.innerWidth * 3, 2000);
+    const defaultMaxHeight = Math.max(window.innerHeight * 2, 1200);
+
+    const cssMaxWidth = style.maxWidth && style.maxWidth !== 'none' ?
+      parseInt(style.maxWidth, 10) : defaultMaxWidth;
+    const cssMaxHeight = style.maxHeight && style.maxHeight !== 'none' ?
+      parseInt(style.maxHeight, 10) : defaultMaxHeight;
+
+    const maxWidth = dataMaxWidth ? parseInt(dataMaxWidth, 10) : cssMaxWidth;
+    const maxHeight = dataMaxHeight ? parseInt(dataMaxHeight, 10) : cssMaxHeight;
+
     // Calculate new dimensions based on handle type
     if (
       handleClass.includes('resize-handle-e') ||
@@ -128,6 +168,7 @@ class ResizableModalManager {
       handleClass.includes('resize-handle-se')
     ) {
       newWidth = this.startWidth + deltaX;
+      newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
     }
     if (
       handleClass.includes('resize-handle-w') ||
@@ -135,7 +176,10 @@ class ResizableModalManager {
       handleClass.includes('resize-handle-sw')
     ) {
       newWidth = this.startWidth - deltaX;
-      newLeft = this.startLeft + deltaX;
+      newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+
+      const actualDeltaX = this.startWidth - newWidth;
+      newLeft = this.startLeft + actualDeltaX;
     }
     if (
       handleClass.includes('resize-handle-s') ||
@@ -143,6 +187,7 @@ class ResizableModalManager {
       handleClass.includes('resize-handle-sw')
     ) {
       newHeight = this.startHeight + deltaY;
+      newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
     }
     if (
       handleClass.includes('resize-handle-n') ||
@@ -150,17 +195,11 @@ class ResizableModalManager {
       handleClass.includes('resize-handle-nw')
     ) {
       newHeight = this.startHeight - deltaY;
-      newTop = this.startTop + deltaY;
+      newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+
+      const actualDeltaY = this.startHeight - newHeight;
+      newTop = this.startTop + actualDeltaY;
     }
-
-    // Apply constraints
-    const minWidth = 400;
-    const minHeight = 300;
-    const maxWidth = Math.max(window.innerWidth * 3, 2000); // Allow much wider than screen for multi-monitor setups
-    const maxHeight = Math.max(window.innerHeight * 2, 1200); // Allow much taller for better usability
-
-    newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
-    newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
 
     // Apply new dimensions
     modalContent.style.width = `${newWidth}px`;

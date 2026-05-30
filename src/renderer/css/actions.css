@@ -5,7 +5,8 @@
 /* Action List Modal */
 .action-list-modal {
   width: 90vw;
-  max-width: 1200px;
+  min-width: 800px;
+  max-width: 1400px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
@@ -477,6 +478,7 @@
 @media (max-width: 768px) {
   .action-list-modal {
     width: 95vw;
+    min-width: auto;
     margin: 20px auto;
   }
 
