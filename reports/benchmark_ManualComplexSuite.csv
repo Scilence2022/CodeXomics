@@ -1,0 +1,16 @@
+Category,Test ID,Test Name,Instruction
+analysis,anal_manual_02,araA Comprehensive Codon Analysis,Perform comprehensive codon usage analysis for araA gene.
+analysis,anal_manual_03,thrC Upstream Sequence Analysis,Analyze the sequence composition in the 500bp region upstream of the thrC gene.
+annotation,annot_manual_01,Create and Search Annotation Workflow,"Create a gene annotation named ""test_workflow_gene"" at position 700000 to 703000, then search for all annotations of type ""gene"" to verify it was created."
+blast,blast_manual_01,BLAST Create DB and Search,"Create a BLAST database from the current genome, then perform a local BLAST search with sequence ATGAAAGCGCTGAAAGCGCTG against it."
+data_loading,load_manual_05,Complete Genomic Environment Setup,"Set up a complete genomic analysis environment by loading genome file, gene annotations, variant data (VCF), and expression tracks (WIG) in the optimal order for integrated analysis."
+data_loading,load_manual_06,Multi-track Comparative Setup,"Create a multi-track comparative analysis setup by loading reference genome, sample reads, and variant calls, then configure tracks for mutation impact visualization."
+external_database,ext_manual_01,Comprehensive Protein Analysis for araA,"Perform comprehensive protein analysis for araA gene: retrieve UniProt annotation and AlphaFold structure prediction, then integrate results for functional characterization."
+primer_design,primer_manual_01,Design and Annotate Primers,"Design PCR primers for the lacZ gene, calculate the properties of the forward primer, then add the primer as an annotation on the genome."
+protein_structure,protein_manual_01,Comprehensive Protein Analysis,"Search UniProt for lacZ protein from E. coli, fetch its AlphaFold structure, then analyze its InterPro domains."
+restriction,restrict_manual_01,Find Sites and Virtual Digest,"Find restriction enzyme sites in the current region, then perform a virtual digest with EcoRI and BamHI enzymes."
+search,search_manual_02,Amino Acid Biosynthesis Distribution,
+search,search_manual_03,ara Genes Clustering Analysis,
+track_settings,track_manual_01,Configure and Reset Track Settings,"Get current track settings, set the annotation track height to 80 pixels, then reset all track settings to defaults."
+workflow,workflow_manual_01,Comparative Genomics Analysis,"Perform complete comparative genomics analysis: load two bacterial genomes, identify orthologs of lacZ gene, compare their codon usage patterns and assess evolutionary conservation."
+workflow,workflow_manual_02,Genome Analysis Workflow,"Design and validate genome analysis workflow: load genome and annotation files, analyze sequence composition, and generate comprehensive reports."

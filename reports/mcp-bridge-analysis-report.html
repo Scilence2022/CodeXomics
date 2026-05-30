@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeXomics MCP Bridge 深度分析报告</title>
+    <style>
+      :root {
+        --bg: #0f1117;
+        --surface: #161822;
+        --surface2: #1e2030;
+        --border: #2a2d3e;
+        --text: #e4e6f0;
+        --text2: #9ca0b0;
+        --accent: #6c8cff;
+        --accent2: #4fd1c5;
+        --accent3: #f0a55a;
+        --accent4: #e06c75;
+        --accent5: #c678dd;
+        --gradient1: linear-gradient(135deg, #6c8cff 0%, #4fd1c5 100%);
+        --gradient2: linear-gradient(135deg, #f0a55a 0%, #e06c75 100%);
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+        padding: 0;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+
+      /* Hero Section */
+      .hero {
+        text-align: center;
+        padding: 60px 20px 40px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 48px;
+      }
+      .hero h1 {
+        font-size: 2.6em;
+        font-weight: 700;
+        background: var(--gradient1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 12px;
+      }
+      .hero .subtitle {
+        font-size: 1.15em;
+        color: var(--text2);
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      .hero .meta {
+        margin-top: 20px;
+        display: flex;
+        gap: 24px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .hero .meta span {
+        font-size: 0.85em;
+        color: var(--text2);
+        background: var(--surface);
+        padding: 4px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+      }
+
+      /* Section Styles */
+      .section {
+        margin-bottom: 56px;
+      }
+      .section h2 {
+        font-size: 1.6em;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section h2 .icon {
+        font-size: 1.1em;
+      }
+      .section h3 {
+        font-size: 1.2em;
+        font-weight: 600;
+        color: var(--accent2);
+        margin: 28px 0 12px;
+      }
+      .section p,
+      .section li {
+        color: var(--text);
+        font-size: 0.95em;
+        margin-bottom: 8px;
+      }
+      .section ul,
+      .section ol {
+        padding-left: 22px;
+        margin-bottom: 16px;
+      }
+
+      /* Code Block */
+      .code-block {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px 22px;
+        font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace;
+        font-size: 0.85em;
+        line-height: 1.65;
+        overflow-x: auto;
+        margin: 16px 0;
+      }
+      .code-block .comment {
+        color: #5c6370;
+        font-style: italic;
+      }
+      .code-block .keyword {
+        color: #c678dd;
+      }
+      .code-block .string {
+        color: #98c379;
+      }
+      .code-block .type {
+        color: #e5c07b;
+      }
+      .code-block .fn {
+        color: #61afef;
+      }
+      .code-block .number {
+        color: #d19a66;
+      }
+
+      /* Architecture Diagram */
+      .arch-diagram {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 32px;
+        margin: 24px 0;
+        overflow-x: auto;
+      }
+      .arch-diagram svg {
+        width: 100%;
+        max-width: 1000px;
+        margin: 0 auto;
+        display: block;
+      }
+
+      /* Card Grid */
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 22px;
+        transition: border-color 0.2s;
+      }
+      .card:hover {
+        border-color: var(--accent);
+      }
+      .card .card-title {
+        font-weight: 600;
+        font-size: 1.05em;
+        color: var(--accent);
+        margin-bottom: 10px;
+      }
+      .card p,
+      .card li {
+        font-size: 0.9em;
+        color: var(--text2);
+      }
+      .card ul {
+        padding-left: 16px;
+      }
+
+      /* Flow Steps */
+      .flow-steps {
+        position: relative;
+        margin: 24px 0;
+        padding-left: 36px;
+      }
+      .flow-steps::before {
+        content: '';
+        position: absolute;
+        left: 14px;
+        top: 6px;
+        bottom: 6px;
+        width: 2px;
+        background: linear-gradient(180deg, var(--accent), var(--accent2));
+        border-radius: 2px;
+      }
+      .flow-step {
+        position: relative;
+        margin-bottom: 22px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 20px;
+      }
+      .flow-step::before {
+        content: '';
+        position: absolute;
+        left: -30px;
+        top: 18px;
+        width: 12px;
+        height: 12px;
+        background: var(--accent);
+        border-radius: 50%;
+        border: 2px solid var(--bg);
+      }
+      .flow-step .step-num {
+        font-size: 0.75em;
+        color: var(--accent);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+      }
+      .flow-step .step-title {
+        font-weight: 600;
+        font-size: 1em;
+        margin-bottom: 6px;
+      }
+      .flow-step .step-desc {
+        font-size: 0.88em;
+        color: var(--text2);
+      }
+      .flow-step .step-code {
+        font-family: monospace;
+        font-size: 0.82em;
+        color: var(--accent2);
+        background: var(--surface2);
+        padding: 2px 8px;
+        border-radius: 4px;
+        margin-top: 6px;
+        display: inline-block;
+      }
+
+      /* Comparison Table */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 0.9em;
+      }
+      table th {
+        background: var(--surface2);
+        color: var(--accent);
+        font-weight: 600;
+        text-align: left;
+        padding: 12px 16px;
+        border-bottom: 2px solid var(--border);
+      }
+      table td {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        color: var(--text2);
+      }
+      table tr:hover td {
+        background: var(--surface);
+      }
+
+      /* Tag / Badge */
+      .tag {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 0.78em;
+        font-weight: 600;
+        margin: 2px;
+      }
+      .tag-server {
+        background: rgba(108, 140, 255, 0.15);
+        color: var(--accent);
+      }
+      .tag-client {
+        background: rgba(79, 209, 197, 0.15);
+        color: var(--accent2);
+      }
+      .tag-hybrid {
+        background: rgba(240, 165, 90, 0.15);
+        color: var(--accent3);
+      }
+      .tag-security {
+        background: rgba(224, 108, 117, 0.15);
+        color: var(--accent4);
+      }
+      .tag-agent {
+        background: rgba(198, 120, 221, 0.15);
+        color: var(--accent5);
+      }
+
+      /* Callout */
+      .callout {
+        border-left: 4px solid var(--accent3);
+        background: rgba(240, 165, 90, 0.06);
+        border-radius: 0 10px 10px 0;
+        padding: 16px 20px;
+        margin: 20px 0;
+      }
+      .callout.info {
+        border-left-color: var(--accent);
+        background: rgba(108, 140, 255, 0.06);
+      }
+      .callout.danger {
+        border-left-color: var(--accent4);
+        background: rgba(224, 108, 117, 0.06);
+      }
+      .callout .callout-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+        font-size: 0.95em;
+      }
+      .callout p {
+        font-size: 0.9em;
+        color: var(--text2);
+      }
+
+      /* TOC */
+      .toc {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px 28px;
+        margin-bottom: 40px;
+      }
+      .toc .toc-title {
+        font-weight: 700;
+        font-size: 1.1em;
+        margin-bottom: 14px;
+        color: var(--accent);
+      }
+      .toc ol {
+        padding-left: 20px;
+        column-count: 2;
+        column-gap: 32px;
+      }
+      .toc li {
+        margin-bottom: 6px;
+        font-size: 0.9em;
+      }
+      .toc a {
+        color: var(--text2);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      .toc a:hover {
+        color: var(--accent);
+      }
+
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 1.8em;
+        }
+        .toc ol {
+          column-count: 1;
+        }
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Hero -->
+      <div class="hero">
+        <h1>CodeXomics MCP Bridge</h1>
+        <p class="subtitle">深度架构分析：外部 AI 代理如何通过 Model Context Protocol 连接并驱动基因组分析平台</p>
+        <div class="meta">
+          <span>v1.0.0</span>
+          <span>MCP Protocol 2024-11-05</span>
+          <span>13 Tool Modules · 80+ Tools</span>
+          <span>Analysis Date: 2026-04-30</span>
+        </div>
+      </div>
+
+      <!-- TOC -->
+      <div class="toc">
+        <div class="toc-title">目录</div>
+        <ol>
+          <li><a href="#overview">系统概述与设计哲学</a></li>
+          <li><a href="#architecture">核心架构全景</a></li>
+          <li><a href="#components">五大核心组件深度解析</a></li>
+          <li><a href="#dataflow">数据流全链路追踪</a></li>
+          <li><a href="#dual-mode">双模式运行机制</a></li>
+          <li><a href="#multi-window">多窗口支持</a></li>
+          <li><a href="#security">安全与认证体系</a></li>
+          <li><a href="#health">连接健康监控</a></li>
+          <li><a href="#tool-category">工具分类与执行路由</a></li>
+          <li><a href="#external-mcp">外部 MCP 服务器管理</a></li>
+          <li><a href="#strengths">架构优势与潜在改进</a></li>
+        </ol>
+      </div>
+
+      <!-- 1. System Overview -->
+      <div class="section" id="overview">
+        <h2><span class="icon">01</span> 系统概述与设计哲学</h2>
+        <p>
+          CodeXomics MCP Bridge 是一个精心设计的「双向桥接」系统，解决了桌面基因组分析应用与外部 AI
+          代理之间的互操作性难题。其核心挑战在于：
+        </p>
+        <ul>
+          <li>
+            <strong>渲染进程依赖</strong>：大部分基因组操作（导航、序列提取、轨道渲染等）必须运行在 Electron
+            渲染进程内，因为它们直接操作 DOM 和 Canvas
+          </li>
+          <li>
+            <strong>外部协议标准</strong>：MCP 客户端（如 Claude Desktop、Cursor）遵循标准 MCP 协议，需要通过
+            SSE/WebSocket 等标准传输层通信
+          </li>
+          <li>
+            <strong>多客户端并发</strong>：需要同时支持内部聊天 AI、外部 MCP 客户端、以及远程桥接客户端的并发工具调用
+          </li>
+        </ul>
+        <p>
+          Bridge 的设计哲学是：<strong>将 MCP 协议适配层与业务逻辑完全分离</strong
+          >，通过「请求-响应」的异步管道桥接两个进程世界。
+        </p>
+      </div>
+
+      <!-- 2. Architecture -->
+      <div class="section" id="architecture">
+        <h2><span class="icon">02</span> 核心架构全景</h2>
+        <div class="arch-diagram">
+          <svg viewBox="0 0 960 520" xmlns="http://www.w3.org/2000/svg">
+            <!-- External Clients -->
+            <rect x="10" y="30" width="160" height="80" rx="10" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5" />
+            <text x="90" y="58" text-anchor="middle" fill="#6c8cff" font-size="13" font-weight="600">MCP Client</text>
+            <text x="90" y="78" text-anchor="middle" fill="#9ca0b0" font-size="11">(Claude / Cursor / etc.)</text>
+            <text x="90" y="96" text-anchor="middle" fill="#9ca0b0" font-size="10">SSE / stdio</text>
+
+            <!-- Deep Gene Research -->
+            <rect x="10" y="140" width="160" height="70" rx="10" fill="#1e2030" stroke="#f0a55a" stroke-width="1.5" />
+            <text x="90" y="168" text-anchor="middle" fill="#f0a55a" font-size="13" font-weight="600">
+              Deep Gene Research
+            </text>
+            <text x="90" y="188" text-anchor="middle" fill="#9ca0b0" font-size="10">Streamable HTTP :3000</text>
+
+            <!-- Main Process Box -->
+            <rect
+              x="260"
+              y="10"
+              width="300"
+              height="200"
+              rx="14"
+              fill="none"
+              stroke="#4fd1c5"
+              stroke-width="2"
+              stroke-dasharray="6 3"
+            />
+            <text x="410" y="32" text-anchor="middle" fill="#4fd1c5" font-size="13" font-weight="700">
+              Electron Main Process
+            </text>
+
+            <!-- StandardClaudeMCPServer -->
+            <rect x="280" y="46" width="260" height="150" rx="10" fill="#1e2030" stroke="#4fd1c5" stroke-width="1.5" />
+            <text x="410" y="70" text-anchor="middle" fill="#4fd1c5" font-size="12" font-weight="600">
+              StandardClaudeMCPServer
+            </text>
+            <text x="410" y="88" text-anchor="middle" fill="#9ca0b0" font-size="10">HTTP :3002 / WS :3003</text>
+            <!-- Sub-modules -->
+            <rect x="295" y="98" width="70" height="28" rx="6" fill="#161822" stroke="#6c8cff" stroke-width="1" />
+            <text x="330" y="116" text-anchor="middle" fill="#6c8cff" font-size="9">MCP SDK</text>
+            <rect x="375" y="98" width="70" height="28" rx="6" fill="#161822" stroke="#f0a55a" stroke-width="1" />
+            <text x="410" y="116" text-anchor="middle" fill="#f0a55a" font-size="9">AuthManager</text>
+            <rect x="455" y="98" width="70" height="28" rx="6" fill="#161822" stroke="#e06c75" stroke-width="1" />
+            <text x="490" y="116" text-anchor="middle" fill="#e06c75" font-size="9">HealthMon</text>
+            <rect x="295" y="136" width="100" height="28" rx="6" fill="#161822" stroke="#c678dd" stroke-width="1" />
+            <text x="345" y="154" text-anchor="middle" fill="#c678dd" font-size="9">ToolsIntegrator</text>
+            <rect x="405" y="136" width="120" height="28" rx="6" fill="#161822" stroke="#4fd1c5" stroke-width="1" />
+            <text x="465" y="154" text-anchor="middle" fill="#4fd1c5" font-size="9">ToolCategoryManager</text>
+            <rect x="295" y="172" width="230" height="18" rx="4" fill="#161822" stroke="#2a2d3e" stroke-width="1" />
+            <text x="410" y="184" text-anchor="middle" fill="#9ca0b0" font-size="8">13 Tool Modules · 80+ Tools</text>
+
+            <!-- IPC Arrow -->
+            <line x1="410" y1="210" x2="410" y2="270" stroke="#e06c75" stroke-width="2" marker-end="url(#arrowRed)" />
+            <text x="435" y="245" fill="#e06c75" font-size="10" font-weight="600">Electron IPC</text>
+
+            <!-- WS Arrow from MCPBridge -->
+            <line
+              x1="640"
+              y1="370"
+              x2="540"
+              y2="190"
+              stroke="#6c8cff"
+              stroke-width="1.5"
+              stroke-dasharray="4 2"
+              marker-end="url(#arrowBlue)"
+            />
+            <text x="575" y="280" fill="#6c8cff" font-size="10" font-weight="500" transform="rotate(-40 575 280)">
+              WebSocket
+            </text>
+
+            <!-- SSE Arrow -->
+            <line x1="170" y1="70" x2="278" y2="70" stroke="#6c8cff" stroke-width="2" marker-end="url(#arrowBlue)" />
+            <text x="224" y="62" text-anchor="middle" fill="#6c8cff" font-size="9">SSE</text>
+
+            <!-- HTTP Arrow -->
+            <line
+              x1="170"
+              y1="175"
+              x2="278"
+              y2="175"
+              stroke="#f0a55a"
+              stroke-width="1.5"
+              stroke-dasharray="4 2"
+              marker-end="url(#arrowOrange)"
+            />
+
+            <!-- Renderer Process Box -->
+            <rect
+              x="260"
+              y="270"
+              width="680"
+              height="230"
+              rx="14"
+              fill="none"
+              stroke="#c678dd"
+              stroke-width="2"
+              stroke-dasharray="6 3"
+            />
+            <text x="600" y="292" text-anchor="middle" fill="#c678dd" font-size="13" font-weight="700">
+              Electron Renderer Process (Browser)
+            </text>
+
+            <!-- InternalMCPServer -->
+            <rect x="280" y="310" width="220" height="170" rx="10" fill="#1e2030" stroke="#c678dd" stroke-width="1.5" />
+            <text x="390" y="334" text-anchor="middle" fill="#c678dd" font-size="12" font-weight="600">
+              InternalMCPServer
+            </text>
+            <text x="390" y="352" text-anchor="middle" fill="#9ca0b0" font-size="10">IPC Handler</text>
+            <rect x="295" y="362" width="90" height="24" rx="5" fill="#161822" stroke="#6c8cff" stroke-width="1" />
+            <text x="340" y="378" text-anchor="middle" fill="#6c8cff" font-size="9">ChatManager</text>
+            <rect x="395" y="362" width="90" height="24" rx="5" fill="#161822" stroke="#4fd1c5" stroke-width="1" />
+            <text x="440" y="378" text-anchor="middle" fill="#4fd1c5" font-size="9">executeMethod</text>
+            <rect x="295" y="396" width="190" height="24" rx="5" fill="#161822" stroke="#f0a55a" stroke-width="1" />
+            <text x="390" y="412" text-anchor="middle" fill="#f0a55a" font-size="9">Fallback Handlers (20+)</text>
+            <rect x="295" y="428" width="190" height="24" rx="5" fill="#161822" stroke="#e06c75" stroke-width="1" />
+            <text x="390" y="444" text-anchor="middle" fill="#e06c75" font-size="9">Direct DOM / Genome Access</text>
+            <rect x="295" y="458" width="190" height="16" rx="4" fill="#161822" stroke="#2a2d3e" stroke-width="1" />
+            <text x="390" y="470" text-anchor="middle" fill="#9ca0b0" font-size="8">
+              snake_case → camelCase → Method
+            </text>
+
+            <!-- MCPBridge -->
+            <rect x="530" y="310" width="200" height="170" rx="10" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5" />
+            <text x="630" y="334" text-anchor="middle" fill="#6c8cff" font-size="12" font-weight="600">MCPBridge</text>
+            <text x="630" y="352" text-anchor="middle" fill="#9ca0b0" font-size="10">WebSocket Client</text>
+            <rect x="545" y="362" width="170" height="24" rx="5" fill="#161822" stroke="#4fd1c5" stroke-width="1" />
+            <text x="630" y="378" text-anchor="middle" fill="#4fd1c5" font-size="9">Exponential Backoff</text>
+            <rect x="545" y="396" width="170" height="24" rx="5" fill="#161822" stroke="#f0a55a" stroke-width="1" />
+            <text x="630" y="412" text-anchor="middle" fill="#f0a55a" font-size="9">Ping Keep-Alive (15s)</text>
+            <rect x="545" y="428" width="170" height="24" rx="5" fill="#161822" stroke="#c678dd" stroke-width="1" />
+            <text x="630" y="444" text-anchor="middle" fill="#c678dd" font-size="9">windowId Identification</text>
+            <rect x="545" y="458" width="170" height="16" rx="4" fill="#161822" stroke="#2a2d3e" stroke-width="1" />
+            <text x="630" y="470" text-anchor="middle" fill="#9ca0b0" font-size="8">genome-loaded Reporting</text>
+
+            <!-- MCPServerManager -->
+            <rect x="760" y="310" width="160" height="170" rx="10" fill="#1e2030" stroke="#f0a55a" stroke-width="1.5" />
+            <text x="840" y="334" text-anchor="middle" fill="#f0a55a" font-size="11" font-weight="600">
+              MCPServerManager
+            </text>
+            <text x="840" y="352" text-anchor="middle" fill="#9ca0b0" font-size="10">Multi-Server</text>
+            <rect x="775" y="362" width="130" height="22" rx="5" fill="#161822" stroke="#6c8cff" stroke-width="1" />
+            <text x="840" y="377" text-anchor="middle" fill="#6c8cff" font-size="9">WebSocket</text>
+            <rect x="775" y="392" width="130" height="22" rx="5" fill="#161822" stroke="#f0a55a" stroke-width="1" />
+            <text x="840" y="407" text-anchor="middle" fill="#f0a55a" font-size="9">Streamable HTTP</text>
+            <rect x="775" y="422" width="130" height="22" rx="5" fill="#161822" stroke="#4fd1c5" stroke-width="1" />
+            <text x="840" y="437" text-anchor="middle" fill="#4fd1c5" font-size="9">SSE</text>
+            <rect x="775" y="452" width="130" height="22" rx="5" fill="#161822" stroke="#c678dd" stroke-width="1" />
+            <text x="840" y="467" text-anchor="middle" fill="#c678dd" font-size="9">Claude MCP</text>
+
+            <!-- Internal delegation arrow -->
+            <line
+              x1="530"
+              y1="400"
+              x2="500"
+              y2="400"
+              stroke="#9ca0b0"
+              stroke-width="1.5"
+              marker-end="url(#arrowGray)"
+            />
+            <text x="515" y="395" fill="#9ca0b0" font-size="8">delegates</text>
+
+            <!-- Arrow markers -->
+            <defs>
+              <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8" fill="#6c8cff" />
+              </marker>
+              <marker id="arrowRed" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8" fill="#e06c75" />
+              </marker>
+              <marker id="arrowOrange" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8" fill="#f0a55a" />
+              </marker>
+              <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8" fill="#9ca0b0" />
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 3. Components -->
+      <div class="section" id="components">
+        <h2><span class="icon">03</span> 五大核心组件深度解析</h2>
+
+        <h3>3.1 StandardClaudeMCPServer（主进程 MCP 服务器）</h3>
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">职责定位</div>
+            <ul>
+              <li>实现 MCP 协议规范的「服务端」</li>
+              <li>管理 HTTP/SSE/WS 三种传输层</li>
+              <li>路由工具调用到正确的执行层</li>
+              <li>管理多窗口客户端注册与路由</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">技术实现</div>
+            <ul>
+              <li>基于 <code>@modelcontextprotocol/sdk</code> 构建</li>
+              <li>Express 处理 HTTP/SSE 端点</li>
+              <li>ws 库处理 WebSocket 连接</li>
+              <li>支持 <code>tools</code> / <code>agent</code> 双模式</li>
+              <li>端口：HTTP :3002 / WS :3003</li>
+            </ul>
+          </div>
+        </div>
+        <div class="code-block">
+          <span class="comment">// 服务器初始化关键代码</span>
+          <span class="keyword">this</span>.mcpServer = <span class="keyword">new</span>
+          <span class="type">Server</span>( { name: <span class="string">'codexomics'</span>, version:
+          <span class="string">'1.0.0'</span> }, { capabilities: { tools: { listChanged:
+          <span class="keyword">true</span> }, logging: {} } } );
+          <span class="comment">// 注册 MCP 协议处理器</span>
+          <span class="keyword">this</span>.mcpServer.setRequestHandler(<span class="type">CallToolRequestSchema</span>,
+          <span class="keyword">async</span> req => { ... });
+          <span class="keyword">this</span>.mcpServer.setRequestHandler(<span class="type">ListToolsRequestSchema</span
+          >, <span class="keyword">async</span> req => { ... });
+        </div>
+
+        <h3>3.2 MCPBridge（渲染进程 WebSocket 客户端）</h3>
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">职责定位</div>
+            <ul>
+              <li>渲染进程→主进程 MCP 服务器的通信桥梁</li>
+              <li>自动连接 + 指数退避重连</li>
+              <li>接收工具执行请求并委派给 InternalMCPServer</li>
+              <li>上报窗口 ID 和基因组加载状态</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">连接策略</div>
+            <ul>
+              <li>基础间隔 5s，指数退避至最大 60s</li>
+              <li>15s 心跳 ping 防止健康监控标记为 stale</li>
+              <li>连接成功后发送 <code>internal-client</code> 身份标识</li>
+              <li>支持 <code>genome-loaded</code> 事件上报</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout info">
+          <div class="callout-title">关键设计：为什么用 WebSocket 而不是 IPC？</div>
+          <p>
+            MCPBridge 使用 WebSocket 而非 Electron IPC 连接主进程 MCP 服务器，原因是服务器可以作为独立进程运行（<code
+              >npm run codexomics-mcp-server</code
+            >），此时不存在 IPC 通道。WebSocket 方案在嵌入模式和独立模式下均能工作。
+          </p>
+        </div>
+
+        <h3>3.3 InternalMCPServer（渲染进程工具执行器）</h3>
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">双重入口架构</div>
+            <ul>
+              <li><strong>IPC 入口</strong>：监听 <code>mcp-tool-call</code>，处理来自 Electron IPC 的请求</li>
+              <li><strong>WebSocket 入口</strong>：被 MCPBridge 委派，处理来自 WS 通道的请求</li>
+              <li>两条路径最终都调用 <code>executeMethod()</code></li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">执行路由策略</div>
+            <ul>
+              <li><strong>优先路径</strong>：委派给 ChatManager.executeToolWithPriority()（70+ 工具）</li>
+              <li><strong>降级路径</strong>：switch/case 回退处理器（20+ 方法）</li>
+              <li>自动将 <code>snake_case</code> 工具名转换为 <code>camelCase</code> 方法名</li>
+            </ul>
+          </div>
+        </div>
+        <div class="code-block">
+          <span class="comment">// 方法名转换：snake_case → camelCase</span>
+          <span class="keyword">const</span> toolName = method.replace(<span class="string">/([A-Z])/g</span>,
+          <span class="string">'_$1'</span>).toLowerCase();
+          <span class="comment">// 优先委派给 ChatManager</span>
+          <span class="keyword">if</span> (<span class="keyword">this</span>.genomeStudio.chatManager) {
+          <span class="keyword">const</span> result = <span class="keyword">await</span>
+          <span class="keyword">this</span>.genomeStudio.chatManager.<span class="fn">executeToolWithPriority</span
+          >(toolName, parameters); }
+          <span class="comment">// 降级到直接处理器</span>
+          <span class="keyword">switch</span> (method) { <span class="keyword">case</span>
+          <span class="string">'navigateToPosition'</span>: <span class="keyword">return</span>
+          <span class="keyword">await</span> <span class="keyword">this</span>.<span class="fn">navigateToPosition</span
+          >(parameters); <span class="keyword">case</span> <span class="string">'codexomicsChat'</span>:
+          <span class="keyword">return</span> <span class="keyword">await</span> <span class="keyword">this</span>.<span
+            class="fn"
+            >handleCodexomicsChat</span
+          >(parameters); ... }
+        </div>
+
+        <h3>3.4 MCPServerManager（渲染进程多服务器管理器）</h3>
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">核心功能</div>
+            <ul>
+              <li>管理多个外部 MCP 服务器连接</li>
+              <li>支持 4 种传输协议</li>
+              <li>工具发现与注册</li>
+              <li>Prompt 发现与获取</li>
+              <li>任务状态检查与结果下载</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">支持的协议</div>
+            <ul>
+              <li><span class="tag tag-server">WebSocket</span> 传统长连接</li>
+              <li><span class="tag tag-hybrid">Streamable HTTP</span> JSON-RPC over HTTP</li>
+              <li><span class="tag tag-client">SSE</span> Server-Sent Events</li>
+              <li><span class="tag tag-agent">Claude MCP</span> 兼容协议</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>3.5 ToolsIntegrator（工具集成引擎）</h3>
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">13 个工具模块</div>
+            <ul>
+              <li>NavigationTools · SequenceTools</li>
+              <li>ProteinTools · DatabaseTools</li>
+              <li>DataTools · PathwayTools</li>
+              <li>ActionTools · UtilityTools</li>
+              <li>FileTools · TrackSettingsTools</li>
+              <li>PrimerTools · AnnotationTools</li>
+              <li>AgentChatTools</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">智能路由逻辑</div>
+            <ul>
+              <li>服务端可执行工具：就地计算（GC、翻译、BLAST 等）</li>
+              <li>客户端依赖工具：委派到渲染进程</li>
+              <li>Agent 模式：所有工具调用通过 <code>codexomics_chat</code> 路由至 AI 代理</li>
+              <li>参数验证：JSON Schema 必填检查 + 类型检查</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Data Flow -->
+      <div class="section" id="dataflow">
+        <h2><span class="icon">04</span> 数据流全链路追踪</h2>
+
+        <h3>路径 A：MCP Client → SSE → Main Process → WS → Renderer（主路径）</h3>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="step-num">Step 1</div>
+            <div class="step-title">MCP Client 发起请求</div>
+            <div class="step-desc">客户端通过 SSE 传输层发送 <code>tools/call</code> JSON-RPC 请求</div>
+            <div class="step-code">
+              POST /sse { "method": "tools/call", "params": { "name": "navigate_to_position", "arguments": {...} } }
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 2</div>
+            <div class="step-title">MCP Server 接收并解析</div>
+            <div class="step-desc">CallToolRequestSchema handler 被触发，ToolsIntegrator.executeTool() 执行</div>
+            <div class="step-code">this.toolsIntegrator.executeTool("navigate_to_position", args, clientId)</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 3</div>
+            <div class="step-title">ToolCategoryManager 分类验证</div>
+            <div class="step-desc">验证工具执行模式（server/client/hybrid），检查客户端连接可用性</div>
+            <div class="step-code">this.toolCategoryManager.validateExecution(toolName, hasClient)</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 4</div>
+            <div class="step-title">委派到客户端执行</div>
+            <div class="step-desc">客户端依赖工具通过 WebSocket 或 IPC 发送到渲染进程</div>
+            <div class="step-code">this.server.executeToolOnClient(toolName, parameters, clientId)</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 5</div>
+            <div class="step-title">MCPBridge 接收并委派</div>
+            <div class="step-desc">WebSocket 消息到达 MCPBridge，委派给 InternalMCPServer.executeMethod()</div>
+            <div class="step-code">this.internalMCPServer.executeMethod(method, parameters)</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 6</div>
+            <div class="step-title">ChatManager 执行工具</div>
+            <div class="step-desc">优先通过 ChatManager.executeToolWithPriority() 执行，直接操作 DOM 和基因组数据</div>
+            <div class="step-code">this.genomeStudio.chatManager.executeToolWithPriority(toolName, params)</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 7</div>
+            <div class="step-title">结果原路返回</div>
+            <div class="step-desc">结果通过 WS → MCP Server → SSE 返回 MCP Client，总延迟约 50-200ms</div>
+            <div class="step-code">MCPBridge.sendResult() → MCP Server → SSE response</div>
+          </div>
+        </div>
+
+        <h3>路径 B：MCP Client → SSE → Main Process → 就地执行（服务端工具）</h3>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="step-num">Step 1-2</div>
+            <div class="step-title">同上，请求到达 ToolsIntegrator</div>
+            <div class="step-desc">工具名为服务端工具（如 compute_gc、search_uniprot_database）</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 3</div>
+            <div class="step-title">服务端就地执行</div>
+            <div class="step-desc">直接在主进程 Node.js 环境中执行计算，无需客户端交互</div>
+            <div class="step-code">return { gcContent: this.sequenceTools.calculateGCContent(sequence) }</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 4</div>
+            <div class="step-title">直接返回结果</div>
+            <div class="step-desc">跳过渲染进程往返，延迟极低（&lt;10ms）</div>
+          </div>
+        </div>
+
+        <h3>路径 C：Internal Chat → ChatManager（内部路径）</h3>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="step-num">Internal</div>
+            <div class="step-title">用户在 CodeXomics 内部聊天</div>
+            <div class="step-desc">内部 AI 通过 ChatManager.executeToolWithPriority() 直接执行工具，无需 MCP 桥接</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Dual Mode -->
+      <div class="section" id="dual-mode">
+        <h2><span class="icon">05</span> 双模式运行机制</h2>
+        <div class="callout info">
+          <div class="callout-title">MCP Server 运行模式</div>
+          <p>通过环境变量 <code>CODEXOMICS_MCP_MODE</code> 或启动参数 <code>--mode=</code> 切换</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th>Tools 模式（默认）</th>
+              <th>Agent 模式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>暴露工具数量</td>
+              <td>80+ 全部工具</td>
+              <td>2 个（codexomics_chat + 窗口管理）</td>
+            </tr>
+            <tr>
+              <td>工具调用方式</td>
+              <td>MCP Client 直接选择并调用</td>
+              <td>MCP Client 发送自然语言，AI 自主决策</td>
+            </tr>
+            <tr>
+              <td>执行路径</td>
+              <td>MCP Server → ToolsIntegrator → Client</td>
+              <td>MCP Server → codexomics_chat → ChatManager.processAgentPrompt()</td>
+            </tr>
+            <tr>
+              <td>超时时间</td>
+              <td>30 秒</td>
+              <td>120 秒（允许多轮推理）</td>
+            </tr>
+            <tr>
+              <td>进度通知</td>
+              <td>无</td>
+              <td>通过 <code>sendLoggingMessage</code> 推送</td>
+            </tr>
+            <tr>
+              <td>适用场景</td>
+              <td>确定性工具调用、自动化脚本</td>
+              <td>开放式探索、复杂多步骤分析</td>
+            </tr>
+            <tr>
+              <td>Agent 模式路由</td>
+              <td>不适用</td>
+              <td>非 chat/窗口工具自动转为自然语言 prompt</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="code-block">
+          <span class="comment">// Agent 模式核心路由逻辑</span>
+          <span class="keyword">if</span> (isAgentMode && !isAgentTool && !isWindowTool) {
+          <span class="comment">// 将结构化工具调用转为自然语言，交给 AI 代理</span>
+          <span class="keyword">const</span> prompt = <span class="keyword">this</span>.<span class="fn"
+            >_buildAgentPromptFromToolCall</span
+          >(toolName, parameters); <span class="keyword">return</span> <span class="keyword">await</span>
+          <span class="keyword">this</span>.<span class="fn">_executeViaAgent</span>(toolName, parameters, clientId); }
+        </div>
+      </div>
+
+      <!-- 6. Multi-Window -->
+      <div class="section" id="multi-window">
+        <h2><span class="icon">06</span> 多窗口支持</h2>
+        <p>CodeXomics 支持同时打开多个基因组浏览器窗口，MCP Bridge 完整实现了多窗口路由机制：</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">窗口注册流程</div>
+            <ul>
+              <li>main.js 创建 BrowserWindow 时分配 windowId</li>
+              <li>通过 IPC 发送 windowId 到渲染进程</li>
+              <li>MCPBridge 收到后立即通过 WebSocket 上报</li>
+              <li>主进程 MCP Server 维护 <code>internalClients Map&lt;windowId, ws&gt;</code></li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">工具路由策略</div>
+            <ul>
+              <li><strong>指定窗口</strong>：工具参数包含 <code>windowId</code>，直接路由到对应 WS 客户端</li>
+              <li><strong>默认聚焦窗口</strong>：无 windowId 时，自动选择当前 focused 窗口</li>
+              <li><strong>窗口降级</strong>：聚焦窗口不可用时，回退到第一个可用窗口</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="code-block">
+          <span class="comment">// 多窗口路由核心逻辑</span>
+          <span class="keyword">async</span> <span class="fn">executeViaInternalClient</span>(toolName, parameters,
+          clientId, targetWindowId) { <span class="keyword">let</span> targetClient;
+          <span class="keyword">if</span> (targetWindowId &&
+          <span class="keyword">this</span>.internalClients.has(targetWindowId)) { targetClient =
+          <span class="keyword">this</span>.internalClients.get(targetWindowId);
+          <span class="comment">// 精确路由</span> } <span class="keyword">else</span> { targetClient =
+          <span class="keyword">this</span>.<span class="fn">getFocusedWindowClient</span>() ||
+          <span class="keyword">this</span>.internalClient; <span class="comment">// 默认聚焦</span> }
+          targetClient.send(JSON.stringify({ type: <span class="string">'tool-execution'</span>, ... })); }
+        </div>
+
+        <h3>多窗口数据结构</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>数据结构</th>
+              <th>位置</th>
+              <th>用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>windowRegistry</code></td>
+              <td>main.js (权威)</td>
+              <td>BrowserWindow 引用 + 基因组名</td>
+            </tr>
+            <tr>
+              <td><code>internalClients</code></td>
+              <td>MCP Server</td>
+              <td>windowId → WebSocket 映射</td>
+            </tr>
+            <tr>
+              <td><code>pendingRequests</code></td>
+              <td>MCP Server</td>
+              <td>requestId → Promise 映射</td>
+            </tr>
+            <tr>
+              <td><code>windowId</code></td>
+              <td>MCPBridge</td>
+              <td>当前窗口标识</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 7. Security -->
+      <div class="section" id="security">
+        <h2><span class="icon">07</span> 安全与认证体系</h2>
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title"><span class="tag tag-security">AuthenticationManager</span></div>
+            <ul>
+              <li>API Key 认证：SHA-256 哈希存储</li>
+              <li>Session 管理：1 小时超时，可配置</li>
+              <li>Localhost 绕过：本地连接免认证（可配置关闭）</li>
+              <li>Master Key：管理级全权限密钥</li>
+              <li>Development Key：开发模式自动生成</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="tag tag-security">传输层安全</span></div>
+            <ul>
+              <li><strong>SSE 端点</strong>：Bearer Token 认证中间件</li>
+              <li><strong>WebSocket</strong>：首消息认证，10 秒超时</li>
+              <li><strong>内部客户端</strong>：仅允许 localhost 连接</li>
+              <li><strong>Client Bridge</strong>：注册制 + Session 绑定</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout danger">
+          <div class="callout-title">安全注意事项</div>
+          <p>
+            当前 localhost 绕过默认开启（<code>enableLocalBypass: true</code>），且 WebSocket 内部客户端仅通过 IP 验证
+            localhost。在生产环境中，建议关闭 localhost 绕过并增加额外安全层。
+          </p>
+        </div>
+      </div>
+
+      <!-- 8. Health Monitor -->
+      <div class="section" id="health">
+        <h2><span class="icon">08</span> 连接健康监控</h2>
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">ConnectionHealthMonitor</div>
+            <ul>
+              <li>Ping 间隔：30 秒</li>
+              <li>超时阈值：60 秒无活动标记为 stale</li>
+              <li>最大未响应 ping：3 次</li>
+              <li>健康检查间隔：10 秒</li>
+              <li>自动清理：2 倍超时阈值后强制移除</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">系统指标</div>
+            <ul>
+              <li>总连接数 / 断开数</li>
+              <li>工具执行次数 / 错误率</li>
+              <li>平均响应时间</li>
+              <li>连接类型分布（SSE/WS/HTTP）</li>
+              <li>系统状态：healthy / degraded / unhealthy</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Tool Category -->
+      <div class="section" id="tool-category">
+        <h2><span class="icon">09</span> 工具分类与执行路由</h2>
+        <p>ToolCategoryManager 将 80+ 工具分为三类执行模式：</p>
+        <table>
+          <thead>
+            <tr>
+              <th>执行模式</th>
+              <th>说明</th>
+              <th>示例工具</th>
+              <th>数量</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tag tag-server">SERVER_ONLY</span></td>
+              <td>无需浏览器上下文，可在主进程直接执行</td>
+              <td>compute_gc, search_uniprot_database, translate_dna</td>
+              <td>~15</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-client">CLIENT_ONLY</span></td>
+              <td>必须运行在渲染进程，依赖 DOM/基因组数据</td>
+              <td>navigate_to_position, get_sequence, toggle_track</td>
+              <td>~30</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-hybrid">HYBRID</span></td>
+              <td>两端均可执行，优先客户端（更精确）</td>
+              <td>search_alphafold_structures, codon_usage_analysis</td>
+              <td>~5</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>执行路由决策树</h3>
+        <div class="code-block">
+          <span class="fn">executeTool</span>(toolName, parameters, clientId) ├─
+          <span class="comment">// Agent 模式？</span> ├─ YES → <span class="fn">_executeViaAgent</span>() →
+          codexomics_chat → ChatManager └─ NO ↓ ├─ <span class="comment">// 服务端可执行？</span> ├─ compute_gc →
+          <span class="fn">calculateGCContent</span>() → 直接返回 ├─ search_uniprot_database →
+          <span class="fn">searchUniProtDatabase</span>() → 直接返回 ├─ translate_dna →
+          <span class="fn">translateDNA</span>() → 直接返回 └─ <span class="comment">// 客户端依赖工具</span> └─
+          executeClientTool() → server.executeToolOnClient() ├─ internalClients 有连接？ →
+          <span class="fn">executeViaInternalClient</span>() ├─ windowRegistry 有窗口？ →
+          <span class="fn">executeViaElectronIPC</span>() ├─ mainWindow 可用？ → 降级 IPC └─ clientBridge 有注册？ →
+          <span class="fn">executeViaClientBridge</span>()
+        </div>
+      </div>
+
+      <!-- 10. External MCP -->
+      <div class="section" id="external-mcp">
+        <h2><span class="icon">10</span> 外部 MCP 服务器管理</h2>
+        <p>MCPServerManager 不仅让 CodeXomics 暴露工具给外部 AI，还反向连接其他 MCP 服务器获取扩展工具：</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">Deep Gene Research</div>
+            <ul>
+              <li>协议：Streamable HTTP</li>
+              <li>端点：<code>http://localhost:3000/api/mcp</code></li>
+              <li>功能：基因深度研究与分析</li>
+              <li>超时：600 秒（长任务）</li>
+              <li>支持任务状态追踪、结果下载</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">工具发现机制</div>
+            <ul>
+              <li>JSON-RPC <code>tools/list</code> 请求</li>
+              <li>SSE 格式解析</li>
+              <li>多端点探测（/tools, /api/tools 等）</li>
+              <li>Prompt 发现：<code>prompts/list</code> + <code>prompts/get</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>外部工具执行流程</h3>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="step-num">Step 1</div>
+            <div class="step-title">ChatManager 查找工具</div>
+            <div class="step-desc">内部工具未命中时，检查 MCPServerManager 的外部工具</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 2</div>
+            <div class="step-title">协议匹配路由</div>
+            <div class="step-desc">根据服务器配置的 transportType 选择执行方法</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">Step 3</div>
+            <div class="step-title">执行并返回</div>
+            <div class="step-desc">通过 HTTP/WebSocket/SSE 发送工具调用，处理响应格式</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11. Strengths & Improvements -->
+      <div class="section" id="strengths">
+        <h2><span class="icon">11</span> 架构优势与潜在改进</h2>
+
+        <h3>架构优势</h3>
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">灵活性</div>
+            <ul>
+              <li>三种通信路径（WS/IPC/Bridge）确保在不同部署模式下均可工作</li>
+              <li>双模式（tools/agent）适应不同使用场景</li>
+              <li>多协议外部服务器支持</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">健壮性</div>
+            <ul>
+              <li>指数退避重连机制</li>
+              <li>心跳保活 + 健康监控</li>
+              <li>超时保护（工具执行 30s/120s）</li>
+              <li>多窗口断线后自动晋升</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">可扩展性</div>
+            <ul>
+              <li>13 个模块化工具集，独立可扩展</li>
+              <li>动态工具注册（YAML + builtInToolsMap）</li>
+              <li>Client Bridge 机制支持远程扩展</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>潜在改进方向</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>领域</th>
+              <th>现状</th>
+              <th>改进建议</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>请求-响应关联</td>
+              <td>MCPServerManager 的 ClaudeMCP 模式缺乏可靠的 request-response 映射</td>
+              <td>引入 <code>pendingRequests Map</code> 模式（类似主进程已有实现）</td>
+            </tr>
+            <tr>
+              <td>工具定义统一</td>
+              <td>parameters / inputSchema 命名不一致，需要运行时转换</td>
+              <td>全量迁移到 MCP 标准的 <code>inputSchema</code> 字段</td>
+            </tr>
+            <tr>
+              <td>错误传播</td>
+              <td>ChatManager 委派失败后 rethrow 而非 fallback</td>
+              <td>对特定错误类型（如"工具未注册"）尝试 fallback handler</td>
+            </tr>
+            <tr>
+              <td>WebSocket 消息协议</td>
+              <td>内部 WS 消息格式与 MCP JSON-RPC 不完全对齐</td>
+              <td>统一内部通信也使用 JSON-RPC 2.0 格式</td>
+            </tr>
+            <tr>
+              <td>Client Bridge</td>
+              <td>轮询式（bridge 客户端需主动 poll），且桥接选择策略为 TODO</td>
+              <td>实现 WebSocket 推送式 bridge + 多 bridge 负载均衡</td>
+            </tr>
+            <tr>
+              <td>类型安全</td>
+              <td>纯 JavaScript，无编译时类型检查</td>
+              <td>考虑 TypeScript 化关键路径（ToolsIntegrator、IPC 消息类型）</td>
+            </tr>
+            <tr>
+              <td>性能可观测性</td>
+              <td>console.log 为主，缺少结构化日志和指标</td>
+              <td>集成 OpenTelemetry 或结构化日志框架</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align: center; padding: 40px 0; border-top: 1px solid var(--border); margin-top: 40px">
+        <p style="color: var(--text2); font-size: 0.85em">
+          CodeXomics MCP Bridge 深度分析报告 · Generated 2026-04-30<br />
+          Based on source code analysis of 7 core modules and 17+ source files
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
