@@ -1110,6 +1110,13 @@ class TabManager {
    * Handle initial genome loading (updates all existing tabs with genome data)
    */
   onGenomeLoaded(genomeData, filename) {
+    if (filename) {
+      this.genomeBrowser.loadedGenomePath = filename;
+      if (typeof this.genomeBrowser.updateAppTitle === 'function') {
+        this.genomeBrowser.updateAppTitle();
+      }
+    }
+
     // Update all existing tabs with the new genome data
     this.tabStates.forEach((tabState, tabId) => {
       // Update genome data in all tabs

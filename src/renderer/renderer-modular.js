@@ -291,6 +291,7 @@ class GenomeBrowser {
     };
 
     this.currentFile = null;
+    this.loadedGenomePath = null;
     this.searchResults = [];
     this.currentSearchIndex = 0;
 
@@ -610,9 +611,7 @@ class GenomeBrowser {
       }
 
       // Update document title
-      if (typeof VERSION_INFO !== 'undefined') {
-        document.title = VERSION_INFO.appTitle;
-      }
+      this.updateAppTitle();
 
       // Make version info globally available
       if (typeof VERSION_INFO !== 'undefined') {
@@ -624,6 +623,28 @@ class GenomeBrowser {
     } catch (error) {
       console.error('❌ Error initializing version information:', error);
     }
+  }
+
+  /**
+   * Update app title bar with the loaded genome file path
+   */
+  updateAppTitle() {
+    if (typeof VERSION_INFO === 'undefined') return;
+
+    let title = VERSION_INFO.appTitle;
+
+    // Add windowId if available
+    if (this.windowId) {
+      title += ` [${this.windowId}]`;
+    }
+
+    // Add loaded genome path if available
+    if (this.loadedGenomePath) {
+      title += ` - ${this.loadedGenomePath}`;
+    }
+
+    document.title = title;
+    console.log(`📋 Updated document title to: ${title}`);
   }
 
   /**
@@ -2951,10 +2972,8 @@ class GenomeBrowser {
       if (this.mcpBridge) {
         this.mcpBridge.setWindowId(windowId);
       }
-      // Update document title to show windowId for debugging
-      if (typeof VERSION_INFO !== 'undefined') {
-        document.title = `${VERSION_INFO.appTitle} [${windowId}]`;
-      }
+      // Update document title to show windowId and loaded genome path
+      this.updateAppTitle();
     });
 
     // Listen for MCP Server status updates
