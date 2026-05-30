@@ -4379,7 +4379,6 @@ class ActionManager {
     const { chromosome, start, end, strand } = this.getActionCoordinates(action);
     // Support both 'newSequence' and 'sequence' field names (functionReplaceSequence stores 'sequence')
     const newSequence = action.metadata.newSequence || action.metadata.sequence;
-    const replacementSequence = strand === '-' ? this.reverseComplement(newSequence) : newSequence;
     const originalLength = end - start + 1;
 
     if (!newSequence) {
@@ -4387,6 +4386,7 @@ class ActionManager {
         `Replace sequence action missing sequence data in metadata. Available keys: ${Object.keys(action.metadata).join(', ')}`
       );
     }
+    const replacementSequence = strand === '-' ? this.reverseComplement(newSequence) : newSequence;
 
     console.log('🔄 [ActionManager] Executing replace sequence action:', {
       actionId: action.id,

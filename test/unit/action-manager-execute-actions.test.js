@@ -206,6 +206,29 @@ describe('ActionManager execute_actions sequencing', () => {
     );
   });
 
+  it('reports a clear error for reverse-strand replace_sequence actions missing replacement bases', async () => {
+    const { manager } = createManager('AACCGG');
+    const replaceAction = manager.createAction(
+      manager.ACTION_TYPES.REPLACE_SEQUENCE,
+      'chr1:2-5(-)',
+      'Malformed reverse-strand replace',
+      {
+        chromosome: 'chr1',
+        start: 2,
+        end: 5,
+        strand: '-',
+      }
+    );
+    manager.addAction(replaceAction);
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/missing-replace-actions.gbk' });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Replace sequence action missing sequence data');
+    expect(window.electronAPI.writeFile).not.toHaveBeenCalled();
+    expect(lastExport).toBeNull();
+  });
+
   it('preserves the clipboard snapshot stored on queued paste actions', async () => {
     const { manager } = createManager('ACGTACGT');
     manager.clipboard = {
