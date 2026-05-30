@@ -143,11 +143,38 @@ class ActionManager {
     const chromosome = metadata.chromosome;
     const startValue = metadata.start !== undefined ? metadata.start : metadata.position;
     const endValue = metadata.end !== undefined ? metadata.end : startValue;
+    const targetCoordinates = this.parseTargetCoordinates(action?.target);
 
     if (chromosome && startValue !== undefined && endValue !== undefined) {
       const start = Number(startValue);
       const end = Number(endValue);
-      if (Number.isInteger(start) && Number.isInteger(end)) {
+      if (Number.isInteger(start) && Number.isInteger(end) && start >= 1 && end >= 1 && start <= end) {
+        const metadataCoordinates = {
+          chromosome,
+          start,
+          end,
+          strand: metadata.strand || '+',
+        };
+
+        // Older UI insert actions stored metadata.position as 0-based while target was already 1-based.
+        // Prefer the display target when it is exactly one base ahead for insertion-point actions.
+        if (
+          this.isInsertionPointAction(action) &&
+          targetCoordinates &&
+          metadata.position !== undefined &&
+          metadataCoordinates.start + 1 === targetCoordinates.start
+        ) {
+          return targetCoordinates;
+        }
+
+        return metadataCoordinates;
+      }
+    }
+
+    if (chromosome && metadata.viewStart !== undefined && metadata.viewEnd !== undefined) {
+      const start = Number(metadata.viewStart) + 1;
+      const end = Number(metadata.viewEnd);
+      if (Number.isInteger(start) && Number.isInteger(end) && start >= 1 && end >= 1 && start <= end) {
         return {
           chromosome,
           start,
@@ -157,11 +184,15 @@ class ActionManager {
       }
     }
 
-    if (!action?.target) {
+    return targetCoordinates;
+  }
+
+  parseTargetCoordinates(target) {
+    if (!target) {
       return null;
     }
 
-    const rangeMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\(([+-])\))?/);
+    const rangeMatch = target.match(/([^:]+):(\d+)-(\d+)(?:\(([+-])\))?/);
     if (rangeMatch) {
       return {
         chromosome: rangeMatch[1],
@@ -171,7 +202,7 @@ class ActionManager {
       };
     }
 
-    const pointMatch = action.target.match(/([^:]+):(\d+)(?:\(([+-])\))?/);
+    const pointMatch = target.match(/([^:]+):(\d+)(?:\(([+-])\))?/);
     if (pointMatch) {
       const position = parseInt(pointMatch[2], 10);
       return {
@@ -191,6 +222,17 @@ class ActionManager {
 
   getActionReplacementSequence(action) {
     return action?.metadata?.newSequence || action?.metadata?.sequence || '';
+  }
+
+  getSequenceEditReplacementSequence(action) {
+    const changeSummary = action?.metadata?.changeSummary || {};
+    if (typeof changeSummary.modifiedSequence === 'string') {
+      return changeSummary.modifiedSequence.toUpperCase();
+    }
+    if (typeof action?.metadata?.modifiedSequence === 'string') {
+      return action.metadata.modifiedSequence.toUpperCase();
+    }
+    return '';
   }
 
   getClipboardForAction(action) {
@@ -216,6 +258,8 @@ class ActionManager {
         return this.getActionInsertSequence(action).length;
       case this.ACTION_TYPES.REPLACE_SEQUENCE:
         return this.getActionReplacementSequence(action).length - originalLength;
+      case this.ACTION_TYPES.SEQUENCE_EDIT:
+        return this.getSequenceEditReplacementSequence(action).length - originalLength;
       case this.ACTION_TYPES.PASTE_SEQUENCE: {
         const clipboardData = this.getClipboardForAction(action);
         const clipboardLength = clipboardData?.sequence?.length || 0;
@@ -1800,33 +1844,38 @@ class ActionManager {
   /**
    * Create insert action with sequence and position
    * @param {string} chromosome - Target chromosome
-   * @param {number} position - Insert position (0-based)
+   * @param {number} position - Insert position from UI/cursor APIs (0-based)
    * @param {string} sequence - Sequence to insert
    */
   createInsertAction(chromosome, position, sequence) {
-    const target = `${chromosome}:${position + 1}`;
+    const insertPosition = position + 1;
+    const target = `${chromosome}:${insertPosition}`;
     const metadata = {
       chromosome,
-      position,
+      position: insertPosition,
+      start: insertPosition,
+      end: insertPosition,
       insertSequence: sequence,
       insertLength: sequence.length,
+      coordinateSystem: '1-based',
+      originalUiPosition: position,
     };
 
-    const description = `Insert ${sequence.length} bp at ${chromosome}:${position + 1}`;
+    const description = `Insert ${sequence.length} bp at ${chromosome}:${insertPosition}`;
 
     // Add the action
     const actionId = this.addAction(this.ACTION_TYPES.INSERT_SEQUENCE, target, description, metadata);
 
     // Show confirmation
     this.genomeBrowser.showNotification(
-      `Insert action created: ${sequence.length} bp at position ${position + 1}`,
+      `Insert action created: ${sequence.length} bp at position ${insertPosition}`,
       'success'
     );
 
     console.log('✅ [ActionManager] Insert action created:', {
       actionId,
       chromosome,
-      position: position + 1,
+      position: insertPosition,
       sequenceLength: sequence.length,
       sequence: sequence.substring(0, 20) + (sequence.length > 20 ? '...' : ''),
     });
@@ -3737,6 +3786,7 @@ class ActionManager {
 
     if (
       executedAction.type === this.ACTION_TYPES.REPLACE_SEQUENCE ||
+      executedAction.type === this.ACTION_TYPES.SEQUENCE_EDIT ||
       executedAction.type === this.ACTION_TYPES.PASTE_SEQUENCE
     ) {
       if (hasOverlap) {
@@ -3780,6 +3830,12 @@ class ActionManager {
     }
     pendingAction.metadata.start = newStart;
     pendingAction.metadata.end = newEnd;
+    if (pendingAction.metadata.viewStart !== undefined) {
+      pendingAction.metadata.viewStart = newStart - 1;
+    }
+    if (pendingAction.metadata.viewEnd !== undefined) {
+      pendingAction.metadata.viewEnd = newEnd;
+    }
 
     // Update target string
     this.updateActionTargetString(pendingAction, newStart, newEnd);
@@ -4064,45 +4120,43 @@ class ActionManager {
         usingExecutionCopy: !!executionGenomeData,
       });
 
-      // Calculate position offset for features
-      const sourceStart = sourceRegion.start;
-      const positionOffset = targetStart - sourceStart;
+      const copySuffix = Date.now();
+      const copyTimestamp = new Date().toISOString();
 
       // Create new features with adjusted positions
-      const newFeatures = sourceFeatures.map(feature => {
-        const newFeature = JSON.parse(JSON.stringify(feature)); // Deep copy
+      const newFeatures = sourceFeatures
+        .map(feature => this.transformClipboardFeatureForPaste(feature, sourceRegion, targetChromosome, targetStart))
+        .filter(Boolean)
+        .map(newFeature => {
+          const originalName = newFeature.name;
 
-        // Adjust positions
-        newFeature.start = feature.start + positionOffset;
-        newFeature.end = feature.end + positionOffset;
-        newFeature.chromosome = targetChromosome;
+          // Add metadata about the copy operation
+          newFeature.copied = {
+            from: `${sourceRegion.chromosome}:${newFeature.copiedFrom.start}-${newFeature.copiedFrom.end}`,
+            to: `${targetChromosome}:${newFeature.start}-${newFeature.end}`,
+            actionId: `paste-${copySuffix}`,
+            timestamp: copyTimestamp,
+          };
 
-        // Add metadata about the copy operation
-        newFeature.copied = {
-          from: `${sourceRegion.chromosome}:${feature.start}-${feature.end}`,
-          to: `${targetChromosome}:${newFeature.start}-${newFeature.end}`,
-          actionId: `paste-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-        };
+          // Update any name/ID to avoid conflicts
+          if (newFeature.name) {
+            newFeature.name = `${newFeature.name}_copy_${copySuffix}`;
+          }
+          if (newFeature.locus_tag) {
+            newFeature.locus_tag = `${newFeature.locus_tag}_copy_${copySuffix}`;
+          }
 
-        // Update any name/ID to avoid conflicts
-        if (newFeature.name) {
-          newFeature.name = `${newFeature.name}_copy_${Date.now()}`;
-        }
-        if (newFeature.locus_tag) {
-          newFeature.locus_tag = `${newFeature.locus_tag}_copy_${Date.now()}`;
-        }
+          console.log('🎯 [ActionManager] Adjusted feature position:', {
+            originalName,
+            newName: newFeature.name,
+            originalPos: `${newFeature.copiedFrom.start}-${newFeature.copiedFrom.end}`,
+            newPos: `${newFeature.start}-${newFeature.end}`,
+            sourceStrand: sourceRegion.strand || '+',
+          });
 
-        console.log('🎯 [ActionManager] Adjusted feature position:', {
-          originalName: feature.name,
-          newName: newFeature.name,
-          originalPos: `${feature.start}-${feature.end}`,
-          newPos: `${newFeature.start}-${newFeature.end}`,
-          offset: positionOffset,
+          delete newFeature.copiedFrom;
+          return newFeature;
         });
-
-        return newFeature;
-      });
 
       // 🔒 CRITICAL: Add features to execution copy ONLY, never to original data
       const currentFeatures = this.getFeaturesFromGenomeData(executionGenomeData, targetChromosome);
@@ -4127,6 +4181,70 @@ class ActionManager {
       console.error('❌ [ActionManager] Error copying features from clipboard:', error);
       return 0;
     }
+  }
+
+  transformClipboardFeatureForPaste(feature, sourceRegion, targetChromosome, targetStart) {
+    const sourceStart = Number(sourceRegion.start);
+    const sourceEnd = Number(sourceRegion.end);
+    const featureStart = Number(feature.start);
+    const featureEnd = Number(feature.end);
+
+    if (
+      !Number.isInteger(sourceStart) ||
+      !Number.isInteger(sourceEnd) ||
+      !Number.isInteger(featureStart) ||
+      !Number.isInteger(featureEnd)
+    ) {
+      return null;
+    }
+
+    const clippedStart = Math.max(featureStart, sourceStart);
+    const clippedEnd = Math.min(featureEnd, sourceEnd);
+    if (clippedStart > clippedEnd) {
+      return null;
+    }
+
+    const newFeature = JSON.parse(JSON.stringify(feature));
+    const sourceStrand = sourceRegion.strand || '+';
+    let relativeStart;
+    let relativeEnd;
+
+    if (sourceStrand === '-') {
+      relativeStart = sourceEnd - clippedEnd;
+      relativeEnd = sourceEnd - clippedStart;
+      if (newFeature.strand === '+') {
+        newFeature.strand = '-';
+      } else if (newFeature.strand === '-') {
+        newFeature.strand = '+';
+      }
+    } else {
+      relativeStart = clippedStart - sourceStart;
+      relativeEnd = clippedEnd - sourceStart;
+    }
+
+    newFeature.start = targetStart + relativeStart;
+    newFeature.end = targetStart + relativeEnd;
+    newFeature.chromosome = targetChromosome;
+    newFeature.copiedFrom = {
+      chromosome: sourceRegion.chromosome,
+      start: clippedStart,
+      end: clippedEnd,
+      strand: sourceStrand,
+    };
+
+    if (clippedStart !== featureStart || clippedEnd !== featureEnd) {
+      this.appendFeatureNote(
+        newFeature,
+        `Feature clipped from ${featureStart}-${featureEnd} to copied region ${clippedStart}-${clippedEnd}.`
+      );
+    }
+
+    return newFeature;
+  }
+
+  appendFeatureNote(feature, note) {
+    const existingNote = feature.note || '';
+    feature.note = existingNote ? `${existingNote} ${note}` : note;
   }
 
   /**
@@ -4461,6 +4579,7 @@ class ActionManager {
       this.ACTION_TYPES.INSERT_SEQUENCE,
       this.ACTION_TYPES.REPLACE_SEQUENCE,
       this.ACTION_TYPES.PASTE_SEQUENCE,
+      this.ACTION_TYPES.SEQUENCE_EDIT,
     ];
 
     return positionAffectingTypes.includes(action.type);
@@ -4781,7 +4900,17 @@ class ActionManager {
    * Execute sequence edit action
    */
   async executeSequenceEdit(action, executionGenomeData = null) {
-    const { changeSummary } = action.metadata;
+    const metadata = action.metadata || {};
+    const changeSummary = metadata.changeSummary || {};
+    const coordinates = this.getActionCoordinates(action);
+
+    if (!coordinates) {
+      throw new Error(`Sequence edit action ${action.id} is missing genomic coordinates`);
+    }
+
+    if (typeof changeSummary.modifiedSequence !== 'string' && typeof metadata.modifiedSequence === 'string') {
+      changeSummary.modifiedSequence = metadata.modifiedSequence;
+    }
 
     console.log('🔧 [ActionManager] Executing sequence edit action:', {
       actionId: action.id,
@@ -4797,15 +4926,54 @@ class ActionManager {
       throw new Error('Sequence edit validation failed');
     }
 
-    // Apply changes (simulation)
-    await this.applySequenceChanges(action.metadata);
+    const { chromosome, start, end } = coordinates;
+    const modifiedSequence = this.getSequenceEditReplacementSequence(action);
+    const currentRegionSequence = this.getSequenceForRegionFromGenomeData(
+      executionGenomeData,
+      chromosome,
+      start,
+      end,
+      coordinates.strand
+    );
+    const expectedOriginalSequence =
+      typeof metadata.originalSequence === 'string'
+        ? metadata.originalSequence
+        : typeof changeSummary.originalSequence === 'string'
+          ? changeSummary.originalSequence
+          : null;
+
+    if (expectedOriginalSequence && currentRegionSequence) {
+      const normalizedExpected = expectedOriginalSequence.toUpperCase().replace(/\s/g, '');
+      if (currentRegionSequence.toUpperCase() !== normalizedExpected) {
+        throw new Error(
+          `Sequence edit original sequence does not match current execution region ${chromosome}:${start}-${end}`
+        );
+      }
+    }
+
+    const modification = {
+      type: 'replace',
+      start,
+      end,
+      originalLength: end - start + 1,
+      newSequence: modifiedSequence,
+      newLength: modifiedSequence.length,
+      actionId: action.id,
+      operation: 'sequence_edit',
+    };
+    this.recordSequenceModification(chromosome, modification);
+    this.applySequenceModificationToGenomeData(executionGenomeData, chromosome, modification);
+    const featureStats = this.applyFeatureModificationToGenomeData(executionGenomeData, chromosome, modification);
 
     return {
       operation: 'sequence_edit',
       target: action.target,
+      chromosome,
       changesApplied: changeSummary.totalChanges,
-      originalLength: changeSummary.originalLength,
-      newLength: changeSummary.newLength,
+      originalLength: end - start + 1,
+      newLength: modifiedSequence.length,
+      replacedRegion: { start, end },
+      removedFeaturesCount: featureStats.removedCount,
       summary: {
         substitutions: changeSummary.substitutions,
         insertions: changeSummary.insertions,
