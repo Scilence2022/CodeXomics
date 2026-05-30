@@ -274,6 +274,11 @@ Important files:
 
 Do not treat `site/` as source.
 
+Deployment Note:
+
+- While a `Deploy Documentation` GitHub Actions workflow exists for push events to `main`, repository environment protection rules for the `github-pages` environment prevent deployments from the `main` branch directly.
+- The authoritative deployment mechanism is running `mkdocs gh-deploy` locally. This compiles the docs to the `site/` directory, commits it to the `gh-pages` branch, and pushes it to `origin/gh-pages`, updating the live site.
+
 ## 13. Historical Decisions
 
 - Main process extraction reduced `src/main.js` into focused modules under `src/main/`.
@@ -286,6 +291,7 @@ Do not treat `site/` as source.
 - Tool execution was extracted from `ChatManager` into focused services.
 - Tool execution policies remain hardcoded for auditability.
 - Delegated tool routing was unified on `executeToolByName()` and `ToolExecutionService.execute()`.
+- Formatting updates across the codebase led to unit test failures in string-match assertions in `blast-tools-consistency.test.js`. The test was refactored to use robust regular expressions (`new RegExp(...)`) instead of rigid string containment checks (`toContain`), making tests resilient to line wrapping.
 
 ## 14. Common Commands
 
