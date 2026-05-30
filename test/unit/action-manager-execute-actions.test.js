@@ -181,6 +181,31 @@ describe('ActionManager execute_actions sequencing', () => {
     expect(genomeBrowser.currentSequence.chr1).toBe('ACGTACGT');
   });
 
+  it('converts reverse-strand replace_sequence replacements back to genomic orientation', async () => {
+    const { manager } = createManager('AACCGG');
+
+    await manager.functionReplaceSequence({
+      chromosome: 'chr1',
+      start: 2,
+      end: 5,
+      strand: '-',
+      sequence: 'ATGC',
+    });
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/reverse-replace-actions.gbk' });
+
+    expect(result.success).toBe(true);
+    expect(lastExport.chr1.sequence).toBe('AGCATG');
+    expect(manager.actionHistory[0].actions[0].result).toEqual(
+      expect.objectContaining({
+        operation: 'replace',
+        strand: '-',
+        inputSequence: 'ATGC',
+        newSequence: 'GCAT',
+      })
+    );
+  });
+
   it('preserves the clipboard snapshot stored on queued paste actions', async () => {
     const { manager } = createManager('ACGTACGT');
     manager.clipboard = {
@@ -386,5 +411,31 @@ describe('ActionManager execute_actions sequencing', () => {
     expect(result.message).toContain('cannot execute');
     expect(window.electronAPI.writeFile).not.toHaveBeenCalled();
     expect(lastExport).toBeNull();
+  });
+
+  it('opens the replacement modal with the selected strand when replace uses manual region selection', async () => {
+    const { manager } = createManager('AACCGG');
+    document.body.innerHTML = `
+      <select id="chromosomeSelectSeq"><option value="chr1" selected>chr1</option></select>
+      <input id="startPositionSeq" value="2" />
+      <input id="endPositionSeq" value="5" />
+      <select id="strandSelectSeq"><option value="-">-</option></select>
+    `;
+    manager.currentOperation = 'replace';
+    manager.closeSequenceSelectionModal = vi.fn();
+    manager.showSequenceReplaceModal = vi.fn();
+
+    await manager.confirmSequenceSelection();
+
+    expect(manager.actions).toHaveLength(0);
+    expect(manager.closeSequenceSelectionModal).toHaveBeenCalled();
+    expect(manager.showSequenceReplaceModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chromosome: 'chr1',
+        start: 2,
+        end: 5,
+        strand: '-',
+      })
+    );
   });
 });

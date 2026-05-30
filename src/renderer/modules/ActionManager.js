@@ -1310,8 +1310,9 @@ class ActionManager {
 
     // Set target region info
     const targetInfo = document.getElementById('replaceTargetInfo');
+    const selectionStrand = selectionInfo.strand || '+';
     targetInfo.innerHTML = `
-            <strong>${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}</strong><br>
+            <strong>${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}(${selectionStrand})</strong><br>
             <small>Length: ${selectionInfo.end - selectionInfo.start + 1} bp</small>
         `;
 
@@ -1345,7 +1346,7 @@ class ActionManager {
     if (!seqTextarea) return;
 
     const sequence = seqTextarea.value.toUpperCase().replace(/\s/g, '');
-    const validNucleotides = /^[ATGC]*$/;
+    const validNucleotides = /^[ATGCN]*$/;
 
     if (sequence === '') {
       if (validationMsg) {
@@ -1363,7 +1364,7 @@ class ActionManager {
       return true;
     } else {
       if (validationMsg) {
-        validationMsg.textContent = '✗ Invalid sequence - only A, T, G, C allowed';
+        validationMsg.textContent = '✗ Invalid sequence - only A, T, G, C, N allowed';
         validationMsg.className = 'validation-message invalid';
       }
       return false;
@@ -1391,15 +1392,15 @@ class ActionManager {
       return;
     }
 
-    const { chromosome, start, end } = this.currentReplaceSelection;
+    const { chromosome, start, end, strand = '+' } = this.currentReplaceSelection;
 
     // Create replace action
-    const target = `${chromosome}:${start}-${end}`;
+    const target = `${chromosome}:${start}-${end}(${strand})`;
     const metadata = {
       chromosome,
       start,
       end,
-      strand: '+',
+      strand,
       newSequence: sequence,
       selectionSource: 'manual_input',
     };
@@ -1636,6 +1637,19 @@ class ActionManager {
             metadata
           );
           break;
+
+        case 'replace':
+          this.closeSequenceSelectionModal();
+          this.showSequenceReplaceModal({
+            hasSelection: true,
+            chromosome,
+            start,
+            end,
+            strand,
+            source: 'manual',
+            name: `Manual Selection (${target})`,
+          });
+          return;
       }
 
       // Close modal
@@ -4346,9 +4360,10 @@ class ActionManager {
    * Execute replace sequence action
    */
   async executeReplaceSequence(action, executionGenomeData = null) {
-    const { chromosome, start, end } = this.getActionCoordinates(action);
+    const { chromosome, start, end, strand } = this.getActionCoordinates(action);
     // Support both 'newSequence' and 'sequence' field names (functionReplaceSequence stores 'sequence')
     const newSequence = action.metadata.newSequence || action.metadata.sequence;
+    const replacementSequence = strand === '-' ? this.reverseComplement(newSequence) : newSequence;
     const originalLength = end - start + 1;
 
     if (!newSequence) {
@@ -4361,6 +4376,7 @@ class ActionManager {
       actionId: action.id,
       target: action.target,
       region: `${chromosome}:${start}-${end}`,
+      strand,
       originalLength: originalLength,
       newLength: newSequence.length,
     });
@@ -4371,8 +4387,8 @@ class ActionManager {
       start: start,
       end: end,
       originalLength: originalLength,
-      newSequence: newSequence,
-      newLength: newSequence.length,
+      newSequence: replacementSequence,
+      newLength: replacementSequence.length,
       actionId: action.id,
     };
     this.recordSequenceModification(chromosome, modification);
@@ -4386,7 +4402,9 @@ class ActionManager {
       target: action.target,
       chromosome: chromosome,
       replacedRegion: { start, end },
-      newSequence: newSequence,
+      strand,
+      newSequence: replacementSequence,
+      inputSequence: newSequence,
       removedFeaturesCount: featureStats.removedCount,
     };
   }

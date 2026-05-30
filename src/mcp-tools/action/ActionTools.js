@@ -181,7 +181,8 @@ class ActionTools {
             strand: {
               type: 'string',
               enum: ['+', '-'],
-              description: 'Strand direction (+ for forward, - for reverse)',
+              description:
+                'Target strand. If "-", provide the replacement sequence in reverse-strand/read orientation; execute_actions writes its reverse complement to the genomic forward sequence.',
               default: '+',
             },
           },
@@ -191,7 +192,8 @@ class ActionTools {
 
       get_action_list: {
         name: 'get_action_list',
-        description: 'Get the current sequence-editing Action queue. Actions are queued genome edit operations, not checklist Tasks.',
+        description:
+          'Get the current sequence-editing Action queue. Actions are queued genome edit operations, not checklist Tasks.',
         parameters: {
           type: 'object',
           properties: {
@@ -229,22 +231,26 @@ class ActionTools {
 
       execute_actions: {
         name: 'execute_actions',
-        description: 'Execute all pending sequence actions and generate a modified GenBank file. When auto_save is true, saves the file directly without showing a save dialog (essential for LLM/automated workflows).',
+        description:
+          'Execute all pending sequence actions and generate a modified GenBank file. When auto_save is true, saves the file directly without showing a save dialog (essential for LLM/automated workflows).',
         parameters: {
           type: 'object',
           properties: {
             auto_save: {
               type: 'boolean',
-              description: 'When true, automatically save the generated GenBank file without showing a save dialog prompt. Essential for LLM/automated workflows where interactive dialogs would block execution. Default is false, but LLMs should always set this to true.',
+              description:
+                'When true, automatically save the generated GenBank file without showing a save dialog prompt. Essential for LLM/automated workflows where interactive dialogs would block execution. Default is false, but LLMs should always set this to true.',
               default: false,
             },
             filename: {
               type: 'string',
-              description: 'Output file path for the generated GenBank file. Supports absolute paths (e.g., "/Users/user/output/modified_genome.gbk") or relative paths (resolved against CWD). Only effective when auto_save is true.',
+              description:
+                'Output file path for the generated GenBank file. Supports absolute paths (e.g., "/Users/user/output/modified_genome.gbk") or relative paths (resolved against CWD). Only effective when auto_save is true.',
             },
             confirm: {
               type: 'boolean',
-              description: 'Confirm execution without additional user prompt (auto-resolves conflicts). Implied when auto_save is true.',
+              description:
+                'Confirm execution without additional user prompt (auto-resolves conflicts). Implied when auto_save is true.',
               default: false,
             },
           },
@@ -253,7 +259,8 @@ class ActionTools {
 
       clear_actions: {
         name: 'clear_actions',
-        description: 'Clear sequence-editing Actions from the queue. Actions are queued genome edit operations, not checklist Tasks.',
+        description:
+          'Clear sequence-editing Actions from the queue. Actions are queued genome edit operations, not checklist Tasks.',
         parameters: {
           type: 'object',
           properties: {

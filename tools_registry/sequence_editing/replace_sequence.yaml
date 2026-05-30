@@ -38,7 +38,14 @@ parameters:
       description: Alias for sequence. Use 'sequence' instead.
     sequence:
       type: string
-      description: New DNA sequence to replace the existing region (only A, T, C, G, N allowed)
+      description: New DNA sequence to replace the existing region (only A, T, C, G, N allowed). If strand is "-", provide the sequence in reverse-strand/read orientation; execute_actions writes its reverse complement to the genomic forward sequence.
+    strand:
+      type: string
+      enum:
+        - '+'
+        - '-'
+      description: Target strand. Use "+" for forward genomic orientation or "-" when the replacement sequence is written in reverse-strand/read orientation.
+      default: '+'
   required:
     - chromosome
     - start
