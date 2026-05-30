@@ -1149,6 +1149,128 @@ function createMenu() {
       ],
     },
     {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Load File',
+          submenu: [
+            {
+              label: 'Genome File...',
+              click: () => {
+                sendToCurrentMainWindow('menu-load-genome');
+              },
+            },
+            {
+              label: 'Annotation (Merge)...',
+              click: () => {
+                sendToCurrentMainWindow('menu-load-annotation-merge');
+              },
+            },
+            {
+              label: 'Annotation (New Track)...',
+              click: () => {
+                sendToCurrentMainWindow('menu-load-annotation-new');
+              },
+            },
+            {
+              label: 'Variant File...',
+              click: () => {
+                sendToCurrentMainWindow('menu-load-variant');
+              },
+            },
+            {
+              label: 'Reads File...',
+              click: () => {
+                sendToCurrentMainWindow('menu-load-reads');
+              },
+            },
+            {
+              label: 'WIG/BigWig Tracks...',
+              click: () => {
+                sendToCurrentMainWindow('menu-load-wig');
+              },
+            },
+            {
+              label: 'Operon File...',
+              click: () => {
+                sendToCurrentMainWindow('menu-load-operon');
+              },
+            },
+            {
+              label: 'Blast Results...',
+              click: () => {
+                sendToCurrentMainWindow('menu-load-blast');
+              },
+            },
+            { type: 'separator' },
+            {
+              label: 'Any Supported File...',
+              click: () => {
+                sendToCurrentMainWindow('menu-load-any');
+              },
+            },
+          ],
+        },
+        {
+          label: 'Export As',
+          submenu: [
+            {
+              label: 'FASTA Sequence...',
+              click: () => {
+                sendToCurrentMainWindow('menu-export-fasta');
+              },
+            },
+            {
+              label: 'GenBank Format...',
+              click: () => {
+                sendToCurrentMainWindow('menu-export-genbank');
+              },
+            },
+            { type: 'separator' },
+            {
+              label: 'CDS FASTA...',
+              click: () => {
+                sendToCurrentMainWindow('menu-export-cds');
+              },
+            },
+            {
+              label: 'Protein FASTA...',
+              click: () => {
+                sendToCurrentMainWindow('menu-export-protein');
+              },
+            },
+            { type: 'separator' },
+            {
+              label: 'GFF Annotations...',
+              click: () => {
+                sendToCurrentMainWindow('menu-export-gff');
+              },
+            },
+            {
+              label: 'BED Format...',
+              click: () => {
+                sendToCurrentMainWindow('menu-export-bed');
+              },
+            },
+            { type: 'separator' },
+            {
+              label: 'Current View (FASTA)...',
+              click: () => {
+                sendToCurrentMainWindow('menu-export-current-view');
+              },
+            },
+            { type: 'separator' },
+            {
+              label: 'Configure Export...',
+              click: () => {
+                sendToCurrentMainWindow('menu-export-configure');
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       label: 'Search && Edit',
       submenu: [
         {

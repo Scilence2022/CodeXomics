@@ -3380,6 +3380,61 @@ class GenomeBrowser {
       }
     });
 
+    // Handle main menu Load File actions
+    ipcRenderer.on('menu-load-genome', () => {
+      this.fileManager.openSpecificFileType('genome');
+    });
+    ipcRenderer.on('menu-load-annotation-merge', () => {
+      this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: true });
+    });
+    ipcRenderer.on('menu-load-annotation-new', () => {
+      this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: false });
+    });
+    ipcRenderer.on('menu-load-variant', () => {
+      this.fileManager.openSpecificFileType('variant');
+    });
+    ipcRenderer.on('menu-load-reads', () => {
+      this.fileManager.openSpecificFileType('reads');
+    });
+    ipcRenderer.on('menu-load-wig', () => {
+      this.fileManager.openSpecificFileType('tracks');
+    });
+    ipcRenderer.on('menu-load-operon', () => {
+      this.fileManager.openSpecificFileType('operon');
+    });
+    ipcRenderer.on('menu-load-blast', () => {
+      this.fileManager.openSpecificFileType('blast');
+    });
+    ipcRenderer.on('menu-load-any', () => {
+      this.fileManager.openSpecificFileType('any');
+    });
+
+    // Handle main menu Export As actions
+    ipcRenderer.on('menu-export-fasta', () => {
+      this.exportManager.exportAsFasta();
+    });
+    ipcRenderer.on('menu-export-genbank', () => {
+      this.exportManager.exportAsGenBank();
+    });
+    ipcRenderer.on('menu-export-cds', () => {
+      this.exportManager.exportCDSAsFasta();
+    });
+    ipcRenderer.on('menu-export-protein', () => {
+      this.exportManager.exportProteinAsFasta();
+    });
+    ipcRenderer.on('menu-export-gff', () => {
+      this.exportManager.exportAsGFF();
+    });
+    ipcRenderer.on('menu-export-bed', () => {
+      this.exportManager.exportAsBED();
+    });
+    ipcRenderer.on('menu-export-current-view', () => {
+      this.exportManager.exportCurrentViewAsFasta();
+    });
+    ipcRenderer.on('menu-export-configure', () => {
+      this.exportManager.showExportConfigDialog();
+    });
+
     // Handle MCP tool calls for action functions and utility functions
     ipcRenderer.on('mcp-tool-call', async (event, data) => {
       console.log('🔧 MCP tool call received:', data);
