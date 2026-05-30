@@ -1,16 +1,12 @@
-# 🧬 CodeXomics
+# CodeXomics
 
-**AI-Powered Bioinformatics Analysis Platform**
+**AI-powered bioinformatics analysis platform**
 
-[![Version](https://img.shields.io/badge/version-0.532.0--beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![Version](https://img.shields.io/badge/version-0.7.0--beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Scilence2022/CodeXomics/blob/main/LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 
----
-
-## What is CodeXomics?
-
-CodeXomics is a modern, cross-platform bioinformatics analysis platform featuring **multi-agent AI collaboration**, an advanced plugin system, MCP integration, and comprehensive biological data analysis tools.
+CodeXomics is a cross-platform Electron workspace for genome visualization, AI-assisted biological analysis, plugin development, benchmark testing, and Model Context Protocol (MCP) integration.
 
 <div class="grid cards" markdown>
 
@@ -18,7 +14,7 @@ CodeXomics is a modern, cross-platform bioinformatics analysis platform featurin
 
   ***
 
-  Install and configure CodeXomics in minutes
+  Install CodeXomics, configure an AI provider, and load your first genome.
 
   [:octicons-arrow-right-24: Getting Started](user-guides/GETTING_STARTED.md)
 
@@ -26,76 +22,83 @@ CodeXomics is a modern, cross-platform bioinformatics analysis platform featurin
 
   ***
 
-  Comprehensive guide to all features
+  Learn the genome browser, ChatBox, plugins, BLAST, and benchmark workflows.
 
   [:octicons-arrow-right-24: User Guide](user-guides/USER_GUIDE.md)
+
+- :material-lan-connect:{ .lg .middle } **MCP Server**
+
+  ***
+
+  Connect CodeXomics tools to MCP-compatible clients in tools or agent mode.
+
+  [:octicons-arrow-right-24: MCP Server](user-guides/MCP_SERVER_GUIDE.md)
 
 - :material-code-tags:{ .lg .middle } **Developer Guide**
 
   ***
 
-  Build plugins and contribute to CodeXomics
+  Understand the source tree, tool registry, agents, plugins, and tests.
 
   [:octicons-arrow-right-24: Developer Guide](developer-guides/DEVELOPER_GUIDE.md)
 
-- :material-cog:{ .lg .middle } **Architecture**
-
-  ***
-
-  Technical deep-dives into system design
-
-  [:octicons-arrow-right-24: Architecture](architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md)
-
 </div>
 
----
+## Current System Snapshot
 
-## Key Features
+| Area                   | Current state                                                                          |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| Application version    | `0.7.0-beta` (`v0.7beta` display)                                                      |
+| Tool registry          | 180 YAML schemas across 18 active categories                                           |
+| Built-in ChatBox tools | 143 mapped local tools                                                                 |
+| MCP tools mode         | 95 tools exposed                                                                       |
+| MCP agent mode         | `codexomics_chat`, `list_genome_windows`, `switch_active_window`                       |
+| Runtime agents         | Coordinator, Analysis, Data, Navigation, External, Plugin, DeepResearch                |
+| UI styling             | Vanilla CSS with default, professional, minimal, pastel, elegant, and midnight presets |
 
-### 🤖 Multi-Agent AI System
+## Core Capabilities
 
-- Collaborative intelligence with multiple AI agents
-- MCP integration for seamless tool integration
-- Support for OpenAI, Anthropic, Google Gemini, and local LLMs
+### Genome Visualization
 
-### 🧬 Advanced Genome Visualization
+- Load FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML, and `.prj.GAI` projects.
+- Explore genes, sequence, GC content/skew, variants, reads, protein data, pathway views, and custom annotation tracks.
+- Use SVG and Canvas renderers for responsive browsing across dense genomic datasets.
 
-- Tabbed Gene Details sidebar with 6 specialized functional domains
-- Dynamic SVG-based GC content/skew visualization
-- Interactive tracks for genes, sequences, variants, and reads
-- Multi-format support (FASTA, GenBank, GFF, VCF, BAM)
+### AI-Assisted Analysis
 
-### 🔌 Plugin System
+- Configure OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, or local LLM-compatible endpoints.
+- Ask the ChatBox to navigate, search, analyze sequence content, design primers, run BLAST workflows, retrieve protein structures, and manage tasks.
+- Use multi-agent routing for complex workflows that need decomposition and tool coordination.
 
-- Modular architecture with plugin marketplace
-- AI-callable plugins via JSON function calling
-- Security sandbox with parameter validation
+### Extensibility
 
-### 🔧 External Tools Integration
+- Build plugins with the VS Code-inspired extension host and Plugin API `2.0.0`.
+- Expose plugin functions to AI tool calling.
+- Serve and test marketplace plugins through `packages/marketplace-server/`.
 
-- ProGenFixer, Deep Gene Research, CHOPCHOP
-- Customizable external bioinformatics tools
-- Session management and keyboard shortcuts
+### MCP Integration
 
----
+- Run CodeXomics as a standalone MCP server.
+- Use tools mode for direct tool calls.
+- Use agent mode when an external client should delegate natural-language prompts to the in-app AI pipeline.
 
-## Quick Links
+## Documentation Map
 
-| Resource                                                           | Description             |
-| ------------------------------------------------------------------ | ----------------------- |
-| [Installation](user-guides/GETTING_STARTED.md#installation)        | Download and install    |
-| [Configuration](user-guides/USER_GUIDE.md#ai-assistant)            | Set up AI providers     |
-| [Plugin Development](developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md) | Build custom plugins    |
-| [API Reference](architecture/PLUGIN_SYSTEM_DEEP_ANALYSIS.md)       | Technical documentation |
+| Section              | Start here                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| New users            | [Getting Started](user-guides/GETTING_STARTED.md)                                           |
+| Daily usage          | [User Guide](user-guides/USER_GUIDE.md)                                                     |
+| MCP clients          | [MCP Server Guide](user-guides/MCP_SERVER_GUIDE.md)                                         |
+| Plugin users         | [Plugin Marketplace Guide](user-guides/PLUGIN_MARKETPLACE_GUIDE.md)                         |
+| Developers           | [Developer Guide](developer-guides/DEVELOPER_GUIDE.md)                                      |
+| AI coding assistants | [AI Assistant Guidelines](developer-guides/AI_ASSISTANT_GUIDELINES.md)                      |
+| Architecture         | [Multi-Agent System](architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md) |
+| BLAST                | [BLAST Guide](reference/BLAST_GUIDE.md)                                                     |
+| Benchmarks           | [Benchmark Methods](reference/BENCHMARK_METHODS.md)                                         |
 
----
+## Repository Links
 
-## Community
-
-- **Issues**: [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Scilence2022/CodeXomics/discussions)
-- **Email**: songlf@tib.cas.cn
-
----
-
-_Developed by the CodeXomics Team_
+- [GitHub Repository](https://github.com/Scilence2022/CodeXomics)
+- [Issues](https://github.com/Scilence2022/CodeXomics/issues)
+- [Discussions](https://github.com/Scilence2022/CodeXomics/discussions)
+- [Releases](https://github.com/Scilence2022/CodeXomics/releases)

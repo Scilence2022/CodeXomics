@@ -1,295 +1,156 @@
-# Getting Started with CodeXomics
+# Getting Started With CodeXomics
 
-Welcome to **CodeXomics v0.532beta**! This guide will help you get up and running with the platform quickly and efficiently.
+This guide gets CodeXomics `0.7.0-beta` running, connected to an AI provider, and ready to inspect genomic data.
 
-## 📋 Prerequisites
+## Requirements
 
-### System Requirements
+| Resource | Minimum                               | Recommended                                                  |
+| -------- | ------------------------------------- | ------------------------------------------------------------ |
+| OS       | macOS 10.15, Windows 10, Ubuntu 20.04 | Current stable release                                       |
+| Memory   | 6 GB RAM                              | 12 GB RAM or more                                            |
+| Storage  | 1 GB for the app                      | Extra space for genomes, reads, BLAST databases, and plugins |
+| Network  | Optional for local workflows          | Required for cloud LLMs and biological databases             |
 
-- **Operating System**: macOS 10.14+, Windows 10+, or Linux (Ubuntu 18.04+)
-- **Memory**: 6GB RAM minimum, 12GB recommended
-- **Storage**: 1GB for application, additional space for data and plugins
-- **Network**: Internet connection for AI services and database access
+Optional tools:
 
-### Optional Requirements
+- An API key for OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, or another OpenAI-compatible endpoint.
+- A local LLM server such as Ollama for offline or local model workflows.
+- BLAST+ for local sequence alignment. CodeXomics includes BLAST setup and management workflows.
 
-- **AI Services**: API keys for OpenAI, Anthropic, or Google Gemini (for AI chat features)
-- **BLAST+**: For sequence alignment tools (can be installed through the app)
+## Install
 
-## 🚀 Installation
+### Download A Release
 
-### Option 1: Download Pre-built Release (Recommended)
+Use the [GitHub Releases page](https://github.com/Scilence2022/CodeXomics/releases) and choose the build for your operating system.
 
-1. **Download the latest release**:
-   - Visit the [GitHub Releases page](https://github.com/Scilence2022/CodeXomics/releases)
-   - Download the appropriate version for your platform:
-     - **macOS Intel**: `CodeXomics-0.527.0-beta-x64.dmg`
-     - **macOS Apple Silicon**: `CodeXomics-0.527.0-beta-arm64.dmg`
-     - **Windows**: `CodeXomics Setup 0.527.0-beta.exe`
-     - **Linux**: `CodeXomics-0.527.0-beta.AppImage`
-
-2. **Install the application**:
-   - **macOS**: Open the DMG file and drag the app to Applications
-   - **Windows**: Run the installer and follow the setup wizard
-   - **Linux**: Make the AppImage executable and run it
-
-### Option 2: Build from Source
-
-1. **Clone the repository**:
+### Build From Source
 
 ```bash
 git clone https://github.com/Scilence2022/CodeXomics.git
 cd CodeXomics
-```
-
-2. **Install dependencies**:
-
-```bash
 npm install
-```
-
-3. **Run the application**:
-
-```bash
 npm start
 ```
 
-## 🎯 First Launch
+Development mode:
 
-### 1. Initial Setup
+```bash
+npm run dev
+```
 
-When you first launch CodeXomics, you'll see the welcome screen with options to:
+## First Launch
 
-- Load a genome file
-- Open annotation files
-- Import variant data
-- Open sequencing reads
+On launch, CodeXomics opens the main genome workspace. The primary areas are:
 
-### 2. Loading Your First Genome
+- Header/menu controls for files, tools, settings, and windows.
+- Central genome browser with genomic tracks.
+- Side panels for gene details, ChatBox, file/project state, and settings.
+- Optional standalone tool windows for pathway, protein, BLAST, downloader, and marketplace workflows.
 
-1. Click **"Load File"** in the toolbar or use the welcome screen
-2. Select your genome file (FASTA, GenBank, etc.)
-3. The application will process and display your genomic data
-4. Use the navigation controls to explore your genome
+## Configure AI
 
-### 3. Basic Navigation
+AI features are optional, but they enable natural-language analysis and multi-agent tool execution.
 
-- **Zoom**: Use the zoom controls or mouse wheel
-- **Pan**: Drag the visualization to move around
-- **Search**: Use the search bar to find specific genes or regions
-- **Jump to**: Click segments or use the **"Zoom to"** button on selected genes
-- **Tracks**: Toggle different data tracks on and off
-- **Gene Details**: Deep-dive into results using the tabbed (General, GO, Pathways, Sequence, etc.) sidebar
+1. Open `Options -> Configure LLMs`.
+2. Select a provider tab.
+3. Enter an API key or local endpoint.
+4. Pick a model, or choose "Other (specify below)" for a custom model name.
+5. Test the connection.
+6. Save the configuration.
 
-## 🤖 Setting Up AI Chat (Optional)
+Supported provider families include OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, and local OpenAI-compatible endpoints.
 
-The AI assistant provides natural language interaction with your genomic data.
+## Load Data
 
-### 1. Configure AI Provider
+Use `File -> Load File` to load a genome or supporting dataset.
 
-1. Go to **Options → Configure LLMs**
-2. Choose your preferred AI provider:
-   - **OpenAI** (GPT-4, GPT-3.5)
-   - **Anthropic** (Claude)
-   - **Google** (Gemini)
-   - **Local LLM** (Ollama, etc.)
+| Data type           | Formats                        |
+| ------------------- | ------------------------------ |
+| Genome sequence     | FASTA, GenBank (`.gb`, `.gbk`) |
+| Annotations         | GFF, GFF3, GTF, BED            |
+| Variants            | VCF                            |
+| Reads               | SAM, BAM                       |
+| Quantitative tracks | WIG, BigWig, BedGraph          |
+| Pathways            | KGML                           |
+| Projects            | `.prj.GAI`                     |
 
-### 2. Add API Credentials
+After loading data, use the browser controls to zoom, pan, search features, select genes, and toggle tracks.
 
-1. Enter your API key for your chosen provider
-2. Test the connection
-3. Save the configuration
+## Ask The ChatBox
 
-### 3. Start Chatting
+Open the ChatBox and ask direct analysis questions:
 
-- Use the chat panel to ask questions about your data
-- Example queries:
-  - "Show me all ribosomal genes"
-  - "What genes are in this region?"
-  - "Find genes involved in DNA repair"
+```text
+Find all ribosomal genes.
+Zoom to dnaA.
+Calculate GC content in the visible region.
+Translate the selected CDS.
+Design primers for lacZ.
+Search UniProt for the selected gene.
+Create a quick BLAST database from the current genome.
+List the currently loaded files.
+```
 
-## 📁 Working with Projects
+The assistant selects relevant tools dynamically from the registry. Complex requests can be routed through the multi-agent system when enabled.
 
-### Creating a New Project
+## Use MCP Clients
 
-1. Go to **File → New Project**
-2. Choose a project template or start blank
-3. Set up your project directory structure
-4. Add your genomic data files
+Start the standalone MCP server:
 
-### Opening Existing Projects
+```bash
+npm run mcp-server
+```
 
-1. Use **File → Open Project** (Ctrl+Shift+O)
-2. Select a `.prj.GAI` project file
-3. The project will load with all associated data
+Or run agent mode:
 
-### Project View Modes
+```bash
+npm run mcp-server -- --mode=agent
+```
 
-Switch between different project views:
+Default endpoints:
 
-- **Grid View**: Visual grid of files and folders
-- **List View**: Detailed list with metadata
-- **Details View**: Comprehensive information table
+- HTTP/SSE: `http://localhost:3002`
+- WebSocket: `ws://localhost:3003`
 
-## 🔬 Core Features Overview
+See the [MCP Server Guide](MCP_SERVER_GUIDE.md) for client configuration.
 
-### 1. Genome Visualization
+## Work With Projects
 
-- **Interactive tracks** for genes, variants, reads, and more
-- **Real-time navigation** with smooth zooming and panning
-- **Customizable track heights** and ordering
-- **Multi-format support** for various data types
+Projects store workspace state and associated files in `.prj.GAI` format.
 
-### 2. Analysis Tools
+Common project actions:
 
-- **BLAST searches** with integrated database management
-- **Sequence analysis** tools for GC content, translation, etc.
-- **Protein structure visualization** with AlphaFold integration
-- **Pathway analysis** with KGML viewer
+- Create a new project from the File menu.
+- Open an existing project with `File -> Open Project`.
+- Save project state after loading genomes, annotations, reads, and analysis outputs.
 
-### 3. Data Export
+## Explore Built-In Tools
 
-- Export sequences in multiple formats (FASTA, GenBank, etc.)
-- Export visualizations as images
-- Export analysis results as tables
+Common workflows:
 
-### 4. Plugin System
-
-- Browse and install plugins from the marketplace
-- Extend functionality with community-developed tools
-- Create custom plugins for specialized analyses
-
-## 📖 Example Workflow
-
-### Analyzing a Bacterial Genome
-
-1. **Load Data**:
-   - Load your bacterial genome (FASTA or GenBank)
-   - Add annotation files (GFF/GTF) if available
-
-2. **Explore the Genome**:
-   - Navigate to different regions using the search bar
-   - Examine tabbed gene annotations (GO, Pathways, Sequence) in the sidebar
-   - Look at GC content and skew patterns
-
-3. **Perform Analysis**:
-   - Use BLAST to search for specific sequences
-   - Analyze protein sequences with structure tools
-   - Examine metabolic pathways with pathway viewer
-
-4. **AI-Assisted Analysis**:
-   - Ask the AI assistant about specific genes
-   - Get explanations of gene functions
-   - Find related genes or pathways
-
-5. **Export Results**:
-   - Export interesting sequences for further analysis
-   - Save visualizations as images
-   - Export annotations as GFF files
-
-## 🎛️ Interface Overview
-
-### Main Window Components
-
-- **Header Toolbar**: File operations, zoom controls, search
-- **Track Panel**: Genomic data visualization tracks
-- **Side Panel**: Tabbed gene details, AI chat interface, file browser
-- **Status Bar**: Current position, statistics, system status
-
-### Keyboard Shortcuts
-
-- **Ctrl+O**: Open file
-- **Ctrl+S**: Save project
-- **Ctrl+F**: Search
-- **Ctrl+Plus/Minus**: Zoom in/out
-- **Ctrl+Shift+O**: Open project
-- **Ctrl+Shift+K**: Open KGML viewer
-
-## 🔧 Customization
-
-### Track Settings
-
-- Adjust track heights by dragging resize handles
-- Reorder tracks by dragging them up and down
-- Toggle track visibility using the sidebar controls
-- Customize colors and display options
-
-### UI Preferences
-
-- Adjust zoom sensitivity
-- Configure search behavior
-- Set default file locations
-- Customize keyboard shortcuts
-
-## 📚 Learning Resources
-
-### Tutorials
-
-- **[User Guide](USER_GUIDE.md)** - Comprehensive user guide
-- **[BLAST Guide](../reference/BLAST_GUIDE.md)** - Sequence alignment tools
-- **[Plugin Development](../developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md)** - Working with plugins
-
-### Example Data
-
-The application includes sample data for testing:
-
-- E. coli genome with annotations
-- Example VCF files with variants
-- Sample KGML pathway files
-- Protein structure examples
-
-### Video Tutorials
-
-- Basic navigation and visualization
-- Setting up AI chat integration
-- Working with plugins
-- Advanced analysis workflows
-
-## 🆘 Getting Help
-
-### Troubleshooting
-
-- Check the **[Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)** for common issues
-- Verify system requirements and dependencies
-- Check the error console in developer tools
-
-### Support Channels
-
-- **GitHub Issues**: Report bugs or request features
-- **Documentation**: Comprehensive guides and API docs
-- **Community**: Join discussions and share experiences
-
-### FAQ
-
-- **Q**: Can I use CodeXomics without an internet connection?
-  **A**: Yes, core features work offline. AI chat and some database features require internet.
-
-- **Q**: What file formats are supported?
-  **A**: FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML, and project files (.prj.GAI).
-
-- **Q**: How do I install additional tools like BLAST?
-  **A**: Use the built-in BLAST installer under Tools menu.
-
-## 🎯 Next Steps
-
-Now that you're set up, explore these advanced features:
-
-1. **[Install plugins](../developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md)** from the marketplace
-2. **[Set up BLAST tools](../reference/BLAST_GUIDE.md)** for sequence analysis
-3. **[Configure advanced visualization](USER_GUIDE.md#core-features)** options
-4. **[Learn about development](../developer-guides/DEVELOPER_GUIDE.md)** for custom development
-
-## 📝 Feedback
-
-We'd love to hear about your experience! Please:
-
-- Report any issues you encounter
-- Suggest new features or improvements
-- Share your analysis workflows
-- Contribute to the documentation
-
----
-
-**Happy analyzing!** 🧬
-
-_This guide covers CodeXomics v0.532beta. For the latest updates, check the [project repository](https://github.com/Scilence2022/CodeXomics)._
+- Genome navigation and search.
+- Sequence analysis, GC content, translation, restriction digest, and gel simulation.
+- Primer design and binding-site annotation.
+- BLAST database creation and sequence search.
+- UniProt, InterPro, AlphaFold, PDB, KEGG, GO, DAVID, STRING, Reactome, and NCBI helper windows.
+- Benchmark execution and result export.
+- Plugin marketplace install, enable, disable, and function execution.
+
+## Next Steps
+
+| Goal                          | Guide                                                     |
+| ----------------------------- | --------------------------------------------------------- |
+| Learn the main interface      | [User Guide](USER_GUIDE.md)                               |
+| Configure external clients    | [MCP Server Guide](MCP_SERVER_GUIDE.md)                   |
+| Run local alignment workflows | [BLAST Guide](../reference/BLAST_GUIDE.md)                |
+| Install or develop plugins    | [Plugin Marketplace Guide](PLUGIN_MARKETPLACE_GUIDE.md)   |
+| Contribute to the codebase    | [Developer Guide](../developer-guides/DEVELOPER_GUIDE.md) |
+
+## Troubleshooting
+
+- If AI calls fail, re-open `Options -> Configure LLMs`, test the provider, and verify the base URL.
+- If file loading fails, confirm the file format and path are accessible to the Electron app.
+- If MCP clients cannot connect, confirm the server is running and no other process is using ports `3002` or `3003`.
+- If local BLAST is unavailable, use the built-in BLAST status/setup workflows.
+
+For more detail, see the [Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md).

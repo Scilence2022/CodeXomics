@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you resolve common issues encountered while using **CodeXomics v0.532beta**.
+This guide helps you resolve common issues encountered while using **CodeXomics v0.7beta**.
 
 ## 🚨 Common Installation Issues
 
@@ -396,8 +396,8 @@ wmic OS get TotalVisibleMemorySize,FreePhysicalMemory /format:list
 ### Plugin System Check
 
 ```bash
-# Validate plugin system
-npm run test:plugins
+# Run the Vitest suite
+npm test
 
 # Check plugin marketplace connectivity
 curl -I https://codexomics-marketplace.com/api/health
@@ -424,4 +424,4 @@ curl -I https://codexomics-marketplace.com/api/health
 
 **Still having issues?** Contact our support team with detailed information about your problem, including system specifications and error messages.
 
-_This guide covers CodeXomics v0.532.0-beta. Check for updates to both the application and this documentation._
+_This guide covers CodeXomics v0.7beta. Check for updates to both the application and this documentation._

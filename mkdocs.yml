@@ -80,14 +80,14 @@ markdown_extensions:
 extra:
   version:
     method: mike
-    name: v0.533.0-beta
-    default: v0.533.0-beta
+    name: v0.7.0-beta
+    default: v0.7.0-beta
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/Scilence2022/CodeXomics
   generator: false
 
-copyright: Copyright &copy; 2024-2025 CodeXomics Team
+copyright: Copyright &copy; 2024-2026 CodeXomics Team
 
 nav:
   - Home: index.md
@@ -100,8 +100,8 @@ nav:
       - FAQ: user-guides/FAQ.md
       - Troubleshooting: user-guides/TROUBLESHOOTING_GUIDE.md
   - Developer Guide:
-      - AI Assistant Guidelines: Agents.md
       - Overview: developer-guides/DEVELOPER_GUIDE.md
+      - AI Assistant Guidelines: developer-guides/AI_ASSISTANT_GUIDELINES.md
       - Plugin Development: developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md
       - Build Instructions: developer-guides/build-instructions.md
       - Actions System:

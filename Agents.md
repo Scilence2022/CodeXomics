@@ -1,123 +1,127 @@
-# CodeXomics AI Agent Behavior Rules (`Agents.md`) - v0.7beta
+# CodeXomics AI Agent Rules - v0.7beta
 
-This document contains **behavioral rules and constraints** for AI coding assistants operating within the CodeXomics repository. For architectural context and project background, see `Memory.md`.
+This file is the operational contract for AI coding assistants working in the CodeXomics repository. For architectural background and project memory, read `Memory.md`.
 
-## 1. Adding a New Tool — Complete Checklist
+## 1. Documentation And GitHub Pages
 
-1. **Create the YAML schema** in `tools_registry/<category>/<tool_name>.yaml` – Define name, description, parameters (JSON Schema format), keywords, sample_usages, and relationships.
-2. **Add to `builtInToolsMap`** in `tools_registry/builtin_tools_integration.js` – Map the tool name to its ChatManager method name and category. Without this entry, the tool will be incorrectly classified as "Extended/External".
-3. **Add keyword matching rules** in `analyzeBuiltInToolRelevance()` (same file) – Add regex patterns so the tool is detected when users mention relevant keywords. Without this, the tool won't be included in dynamic (per-query) prompts.
-4. **Wire the execution** in `ChatManager.executeLocalTool()` or the appropriate service class (`src/renderer/modules/chat/services/`).
-5. **Add to `ToolNames.js`** (`src/renderer/modules/chat/constants/ToolNames.js`) – Add the tool name constant under the appropriate category.
-6. **Add to `FunctionCallsOrganizer`** (`src/renderer/modules/FunctionCallsOrganizer.js`) – Add the tool to its category mapping.
-7. **Add intent keywords** in `tools_registry/registry_manager.js` – Add the tool category to `analyzeUserIntent()` and `getIntentKeywords()`.
-8. **Add category to `tool_categories.yaml`** (`tools_registry/tool_categories.yaml`).
-9. **MCP Server parity** – If the tool should be available to external MCP clients, add the corresponding tool definition in `src/mcp-tools/` and register in `src/mcp-server.js`.
-10. **Add to tool execution policy** – Add the tool to the appropriate policy category in `LLMContextService.shouldAllowToolExecution()` (`LLMContextService.js:767-1087`). If no explicit policy is added, the default "allow once per same parameters" policy applies, which may cause unexpected `Policy blocked` errors for tools that should be re-executable.
+- The public documentation source is `docs/`; the site is configured by `mkdocs.yml`.
+- Do not edit generated `site/` output directly. Change Markdown under `docs/` and rebuild from source.
+- Root-level `README.md`, `Agents.md`, and `Memory.md` are canonical repository documents. If public Pages content repeats their guidance, keep the public page shorter and link back to the canonical root file.
+- Keep MkDocs navigation paths relative to `docs/`. Root files such as `Agents.md` and `Memory.md` are not valid nav targets unless mirrored under `docs/`.
+- Preserve YAML indentation in `mkdocs.yml`.
+- Markdown artifacts should use standard GitHub Flavored Markdown unless a MkDocs Material extension is intentionally used.
 
-## 2. Keyword Regex Rules
+## 2. Adding Or Changing Tools
 
-- Use `.*?` (lazy) between verb and noun to support intermediate words: `\b(open|create)\s+.*?\b(tabs?)\b` matches "open three new tabs"
-- Support plural forms: `(tabs?|windows?)` not just `(tab|window)`
-- Support prepositions: `\b(switch|go\s+to)\s+.*?\b(tabs?)\b` matches "switch to the analysis tab"
-- **Anti-pattern**: Never use `\b(verb)\s+(noun)\b` (strict adjacency) — it fails on natural language like "search for gene", "replace the sequence", "scroll to the left"
+When adding a new AI-callable tool, update every relevant registry. Missing one of these is the most common cause of invisible tools, incorrect "External" classification, or `Policy blocked` behavior.
 
-## 3. Dynamic Tool Registry Rules
+1. Create the YAML schema in `tools_registry/<category>/<tool_name>.yaml`.
+2. Add the tool to `builtInToolsMap` in `tools_registry/builtin_tools_integration.js` when it is a local built-in ChatBox tool.
+3. Add keyword matching in `analyzeBuiltInToolRelevance()` in `tools_registry/builtin_tools_integration.js`.
+4. Wire execution through `ChatManager.executeLocalTool()` or the appropriate service under `src/renderer/modules/chat/services/`.
+5. Add the name constant to `src/renderer/modules/chat/constants/ToolNames.js`.
+6. Add the tool to `src/renderer/modules/FunctionCallsOrganizer.js`.
+7. Add intent keywords in `tools_registry/registry_manager.js`.
+8. Add or update the category in `tools_registry/tool_categories.yaml`.
+9. If external MCP clients should see it, add the MCP definition under `src/mcp-tools/` and make sure `ToolsIntegrator` exposes/routes it.
+10. Add an explicit policy in `LLMContextService.shouldAllowToolExecution()` so repeated legitimate calls are not blocked by the default "allow once per same parameters" rule.
 
-- **Rule**: Keep the built-in ChatBox tool capabilities (via `tools_registry/` descriptors) and the MCP Server schemas (via `src/mcp-tools/`) updated synchronously to ensure functional parity.
-- **Rule**: Never mark a tool as `is_external: true` in `analyzeBuiltInToolRelevance()` if the tool is actually a local built-in tool.
-- **Rule**: When a tool exists in both `builtInToolsMap` and the MCP server, it will be classified as Built-in with `alsoAvailableViaMCP: true`.
-- **Rule**: Built-in tool parameter descriptions are enriched from the YAML registry definitions.
-- **Rule**: Every tool registered in `builtInToolsMap` that should appear in dynamic prompts MUST have a corresponding keyword detection rule in `analyzeBuiltInToolRelevance()`.
+Current local facts to keep in mind:
 
-## 4. LLM Configuration Rules
+- `tools_registry/` currently contains 180 YAML tools across 18 active categories.
+- `builtInToolsMap` currently maps 143 built-in tools.
+- MCP tools mode currently exposes 95 tools.
+- MCP agent mode exposes only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.
 
-- **Rule**: When adding a new provider tab, include the "Other (specify below)" option and `ModelOtherGroup`/`ModelOther` input, following the exact same pattern as existing providers.
-- **Rule**: The Local LLM tab uses `id="localEndpoint"` for base URL, while cloud providers use `id="{provider}BaseUrl"`. Code that reads base URL must handle this difference.
-- **Rule**: `testConnection()` does NOT work on the "Model Selection" tab (`activeTab === 'models'`). Guard against this case.
-- **Rule**: Each `test*()` method must include `baseUrl` fallback defaults (e.g., `'https://api.openai.com/v1'` for OpenAI) to prevent `undefined` URL concatenation.
-- **Rule**: The Anthropic `testAnthropic()` method requires the `anthropic-dangerous-direct-browser-access: 'true'` header for browser-based API calls.
-- **Rule**: The Google test method uses the `v1beta` API path (matching `sendGoogleMessage`), not `v1`.
-- **Rule**: `testLocal()` validates that the configured model exists on the local server by parsing the `/models` response.
+## 3. Keyword Regex Rules
 
-## 5. Multi-Agent Routing Rules
+- Use lazy gaps between verbs and nouns, for example `\b(open|create)\s+.*?\b(tabs?)\b`.
+- Support plural forms, for example `(tabs?|windows?)`.
+- Support common prepositions and natural phrasing, for example `\b(switch|go\s+to)\s+.*?\b(tabs?)\b`.
+- Avoid strict adjacency patterns such as `\b(search)\s+(gene)\b`; they fail on natural phrasing like "search for the gene".
 
-- **Rule**: When adding functionality that requires AI to sequentially execute logic (like navigating AND analyzing), integrate it as a capability into the relevant Agent class rather than building brittle one-off callbacks in the UI layer.
-- **Rule**: When adding a tool that should be routed through a specific agent, add it to BOTH the agent's `toolMapping` (in `registerToolMapping()`) AND the `isSpecializedAgent` map in `MultiAgentSystem`. If the tool should get the +100 specialization bonus, it MUST be in `isSpecializedAgent`.
-- **Rule**: System/utility tools (category `'system'` in `builtInToolsMap`) should NOT be added to any agent's `toolMapping`. They are handled by `ToolExecutionService` PRIORITY 7 fallback.
-- **Rule**: Never make `CoordinatorAgent.canExecute()` accept all tools unconditionally — this causes infinite recursion with `ToolExecutionService` PRIORITY 3.
-- **Rule**: `ChatManager.builtInTools` may be `undefined` at runtime. Never assume `this.chatManager.builtInTools.builtInToolsMap` exists. The `builtInToolsMap` lives on the `BuiltInToolsIntegration` class instance in `tools_registry/builtin_tools_integration.js`, not on `ChatManager`.
-- **Rule**: When adding a new tool name, also add it to `ToolNames.js` under the appropriate category constant.
+## 4. Dynamic Tool Registry Rules
 
-## 6. Tool Execution Policy Rules
+- Keep ChatBox built-in descriptors in `tools_registry/` and MCP schemas in `src/mcp-tools/` synchronized when a capability is shared.
+- Never mark a local built-in tool as `is_external: true`.
+- A tool present in both `builtInToolsMap` and the MCP server should be classified as built-in with MCP availability metadata.
+- Built-in parameter descriptions should come from YAML registry definitions where available.
+- Every built-in tool that should appear in dynamic prompts needs a keyword detection rule.
 
-- **Rule**: When adding a new tool, explicitly add it to the `toolPolicies` object in `LLMContextService.shouldAllowToolExecution()` (`LLMContextService.js:767-1087`). Without an explicit policy, the tool falls through to the default "allow once per same parameters" policy, which blocks re-execution with the same parameters — this causes `🚫 Policy blocked: <tool_name>` messages.
-- **Rule**: Primer design tools (`design_primers`, `calculate_primer_properties`, `find_primer_binding_sites`, `add_primer_annotation`) should be added to a `primer_design` policy category with `parameter_based` policy, since users frequently re-run primer design with different parameters.
-- **Rule**: The policy system is hardcoded inline. Do NOT introduce YAML/JSON config or UI toggles for policies without explicit approval — the current design keeps policies immutable and auditable.
-- **Rule**: When debugging a `Policy blocked` message, check: (1) is the tool in an explicit policy category? (2) was it already executed with the same parameters? (3) is the `wasToolExecutedSuccessfully()` check finding a stale system message in conversation history?
+## 5. Tool Execution Policy Rules
 
-## 7. Benchmark Rules
+- Policies are hardcoded inside `LLMContextService.shouldAllowToolExecution()`. Do not introduce YAML/JSON policy config or UI toggles unless explicitly requested.
+- Add new tools to an explicit policy category. Unknown tools fall through to the default same-parameters block.
+- Primer tools (`design_primers`, `calculate_primer_properties`, `find_primer_binding_sites`, `add_primer_annotation`, `list_primer_annotations`, `clear_primer_annotations`) belong in a `primer_design` policy category with parameter-sensitive behavior.
+- Benchmark tools belong in a system/utility policy path and should not be routed through agents.
+- When debugging `Policy blocked: <tool_name>`, check whether the tool has an explicit policy, whether identical parameters already succeeded, and whether stale system messages are being matched by `wasToolExecutedSuccessfully()`.
 
-- **Rule**: Benchmark tools must NOT be added to any agent's `toolMapping`. They are system/utility tools handled by `ToolExecutionService` PRIORITY 7.
-- **Rule**: Never use `typeof openBenchmarkInterface === 'function'` as a fallback. Always use `this.app.initializeBenchmarkSystemOnDemand()`.
-- **Rule**: When calling `_getBenchmarkManager()`, use `let` (not `const`) so the variable can be reassigned after on-demand initialization.
-- **Rule**: The benchmark YAML schemas are in `tools_registry/benchmark/` (8 files). The category must be declared in `tools_registry/tool_categories.yaml`.
-- **Rule**: Parameter names in ChatManager methods must be consistent — use `params` or `parameters` for both the function argument and body references, never mix them.
+## 6. Multi-Agent Routing Rules
 
-## 8. MCP Server Rules
+- Sequential AI behavior belongs in an agent capability, not brittle UI callbacks.
+- When a tool should route to a specialized agent, update both that agent's `toolMapping` or capabilities and `MultiAgentSystem.isSpecializedAgent()`.
+- System, utility, and benchmark tools should not be added to agent `toolMapping`; they are handled by `ToolExecutionService` fallback paths.
+- Never make `CoordinatorAgent.canExecute()` accept all tools unconditionally; that can recurse through `ToolExecutionService`.
+- `ChatManager.builtInTools` may be undefined at runtime. The authoritative map lives on `BuiltInToolsIntegration`, not on `ChatManager`.
 
-- **Rule**: In agent mode, `ToolsIntegrator.getAvailableTools()` returns only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.
-- **Rule**: `_executeViaAgent()` translates structured tool calls into natural language prompts via `_buildAgentPromptFromToolCall()`. Unknown tools get a generic fallback prompt.
-- **Rule**: `processAgentPrompt` must always go through `sendToLLM()` (the same pipeline as ChatBox user input). Never create a separate LLM call loop.
-- **Rule**: `processAgentPrompt` must check `this.llmConfigManager.isConfigured()` before execution. Use `llmConfigManager` (not legacy `this.llmConfig` or `this.getCurrentModelConfig()`).
-- **Rule**: The `onProgress` callback must never throw — wrap it in try/catch in `InternalMCPServer.handleCodexomicsChat()`.
-- **Rule**: Agent mode timeout is 120s (vs 30s in tools mode).
-- **Rule**: `setMode()` triggers `sendToolListChanged()` so MCP clients re-fetch the tool list.
-- **Rule**: When the ChatBox is busy (`conversationState.isProcessing`), `processAgentPrompt` returns `{ success: false, error: 'ChatBox is busy...' }`.
-- **Rule**: Client-delegated tool calls from MCP clients must use `chatManager.executeToolByName()` rather than legacy routing methods. `executeToolWithPriority()` and its category-specific switch functions are obsolete and removed.
+## 7. MCP Server Rules
 
-## 9. Styling Rules
+- Agent mode tool lists must remain limited to `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.
+- `_executeViaAgent()` should translate structured calls into natural-language prompts via `_buildAgentPromptFromToolCall()`.
+- `processAgentPrompt` must use `sendToLLM()` and the same ChatBox pipeline as normal user input.
+- `processAgentPrompt` must check `llmConfigManager.isConfigured()`.
+- `onProgress` callbacks must never throw; wrap callback delivery in `try/catch`.
+- Agent mode timeout is 120 seconds; tools mode timeout is 30 seconds.
+- `setMode()` must call `sendToolListChanged()` so clients refresh the exposed tool list.
+- When `conversationState.isProcessing` is true, agent prompt execution should return a busy error rather than starting a second ChatBox run.
+- Client-delegated MCP calls should use `chatManager.executeToolByName()`. Legacy category switch routing is obsolete.
 
-- **Rule**: Use Vanilla CSS. Do **not** use TailwindCSS, Bootstrap, or any atomic CSS frameworks unless explicitly asked. The project uses standard `.css` files in `src/renderer/css/`. Respect existing color variables and DOM structures.
+## 8. LLM Configuration Rules
 
-## 10. UI Style Preset Rules
+- New provider tabs must include the "Other (specify below)" option and matching `ModelOtherGroup` / `ModelOther` fields.
+- The Local LLM tab uses `id="localEndpoint"` for base URL; cloud providers use `id="{provider}BaseUrl"`.
+- `testConnection()` must guard against the Model Selection tab (`activeTab === 'models'`).
+- Each provider-specific test method needs a base URL fallback.
+- Anthropic browser requests require the `anthropic-dangerous-direct-browser-access: 'true'` header.
+- Google tests use the `v1beta` API path to match `sendGoogleMessage`.
+- `testLocal()` validates the configured model against the local `/models` response.
 
-When adding a new UI Style preset:
+## 9. UI, Styling, And Theme Rules
 
-1. Define preset variables in `ThemeManager.js` (name, description, icon, variables, darkVariables).
-2. Create `src/renderer/css/themes/<preset>.css` with `[data-ui-style="<preset>"]` selectors overriding all hardcoded colors (header, buttons, chatbox, toolbar, toggles, checkboxes, modals, markdown, benchmark UI).
-3. Add preset card in `src/renderer/index.html` inside `#stylePresetCards`.
-4. Add CSS `<link>` in `src/renderer/index.html`.
-5. Update `ThemeManager.applyStyle()` — add new style name to `classList.remove()` call.
+- Use vanilla CSS in `src/renderer/css/`. Do not add TailwindCSS, Bootstrap, or atomic CSS frameworks unless explicitly requested.
+- Respect existing CSS variables, DOM structures, and theme files.
+- UI style presets are managed by `ThemeManager.js`, `src/renderer/index.html`, and `src/renderer/css/themes/<preset>.css`.
+- Current preset CSS files include `professional.css`, `minimal.css`, `pastel.css`, `elegant.css`, and `midnight.css`.
+- When adding a preset, define variables in `ThemeManager.js`, create the theme CSS, add the preset card and stylesheet link in `index.html`, and update `ThemeManager.applyStyle()`.
+- Keep `GeneralSettingsManager.applySettings()` ordering and accent-color safeguards intact so non-default presets win over accent color overrides.
 
-- **Rule**: When `GeneralSettingsManager.saveAllSettings()` calls `applySettings()`, `applyAccentColor()` may override the preset's `--primary-color`. The guard skips override when UI Style is not `'default'`. `applySettings()` ensures `applyUIStyle()` runs after `applyAccentColor()` so preset variables always win. Do not remove these safeguards.
+## 10. Navigation And Tab Rules
 
-## 11. Tab Manager Rules
+- Any navigation, zoom, or drag code that updates tab titles must call `updateCurrentTabPosition()` with an options object.
+- Never call `updateCurrentTabPosition()` without `{ source: '...' }`.
+- Only `GenomeNavigationBar.js` ruler interactions should use `{ source: 'ruler' }`.
+- Position-focused navigation can use `'ruler'`; exploration-focused zoom, drag, and navigation should preserve the current mode.
 
-- **Rule**: When modifying any navigation, zoom, or drag functionality, pass the appropriate `source` parameter to `updateCurrentTabPosition()`.
-- **Rule**: Never call `updateCurrentTabPosition()` without the options object — always include `{ source: '...' }`.
-- **Rule**: The navigation ruler (`GenomeNavigationBar.js`) is the ONLY interaction that should use `{ source: 'ruler' }`.
-- **Rule**: When adding new navigation methods, determine the appropriate source: position-focused → `'ruler'`, exploration-focused → preserve current mode.
+## 11. Sequence Editing Vs. Task Checklist Rules
+
+- Sequence editing actions are genome mutation operations managed by `ActionManager` and executed through `execute_actions`.
+- Task checklist items are AI progress-tracking items managed by `TaskService`.
+- Do not call `execute_actions` to run checklist items.
+- Do not call task-management tools to mutate sequence data.
 
 ## 12. Coding Conventions
 
-1. **Vanilla JavaScript**: ES6+ only. No TypeScript or React. Use standard ES6 classes and modular imports. Native DOM manipulation or D3.js for visual updates.
-2. **Robust IPC and Error Handling**: Wrap IPC calls and network requests in `try/catch`. Bubble errors up sequentially. Do not let promises fail silently.
-3. **No Code Placeholders**: Provide fully working, drop-in replacement code. No `// TODO: implement logic here`.
-4. **File Operations**: Always use `fs.promises` internally. Handle cross-platform paths using Node's `path` module.
-5. **camelCase naming**: Use camelCase for variables and functions.
+- Use vanilla JavaScript ES6+ classes/modules. The app is not TypeScript or React.
+- Use robust `try/catch` around IPC, file operations, and network requests. Bubble errors sequentially.
+- Do not leave placeholder logic or TODO stubs in delivered code.
+- Internal file operations should use `fs.promises` and Node's `path` module for cross-platform paths.
+- Use camelCase for variables and functions.
+- Keep changes scoped; do not refactor unrelated systems during a targeted fix.
+- Do not revert unrelated user changes in the working tree.
 
-## 13. Sequence Editing Actions vs. Task Checklist Rules
+## 13. Editing And Release Reminders
 
-- **Rule**: Never confuse "sequence editing actions" with "task checklist management".
-  - When the user asks to "run tasks", "execute actions", or "run queue" referring to sequence modifications (e.g., copy, paste, delete sequence), use the `execute_actions` tool.
-  - When organizing or updating the agent's progress checklist, use task management tools (`add_task`, `update_task`, `list_tasks`, `clear_tasks`, `delete_task`).
-  - Never call `execute_actions` to execute checklist items, and never call task management tools to perform sequence editing.
-
-## 14. Editing Reminders
-
-- Commit all changes in a concise conventional commit style (e.g., `feat(primer): add advanced parameters for biological directions`).
-- Maintain strict adherence to semantic versioning in `package.json` and `CHANGELOG.md`.
-- Do not modify `package-lock.json` manually; run `npm install` if a dependency is added.
-- When generating markdown artifacts or tables, maintain standard GitHub Flavored Markdown (GFM).
-- If editing `mkdocs.yml`, ensure proper YAML indentation spaces are preserved.
+- Commit completed changes with a concise conventional commit message.
+- Maintain semantic version consistency in `package.json`, `src/version.js`, `CHANGELOG.md`, and release notes when doing release/version work.
+- Do not manually edit `package-lock.json`; run `npm install` if dependencies change.
+- If editing build or Pages config, validate with the relevant command before committing when tooling is available.

@@ -1,6 +1,6 @@
 # Plugin Development Guide
 
-Welcome to the **CodeXomics Plugin Development Guide**! This comprehensive guide will help you create powerful plugins for the CodeXomics v0.532beta platform.
+Welcome to the **CodeXomics Plugin Development Guide**! This guide helps you create plugins for the CodeXomics v0.7beta platform and Plugin API 2.0.0.
 
 ## 📋 Table of Contents
 
@@ -104,7 +104,7 @@ The `manifest.json` file defines your plugin:
   "homepage": "https://github.com/yourname/my-awesome-plugin",
   "keywords": ["genomics", "analysis", "visualization"],
   "engines": {
-    "codexomics": ">=0.532.0"
+    "codexomics": ">=0.7.0"
   },
   "main": "plugin.js",
   "category": "analysis",
@@ -352,7 +352,7 @@ module.exports = {
     libraryTarget: 'umd',
   },
   externals: {
-    'codexomics': 'CodeXomics',
+    codexomics: 'CodeXomics',
   },
   module: {
     rules: [
@@ -915,4 +915,4 @@ class GenomeCircosPlugin {
 
 **Happy plugin development!** 🚀
 
-_This guide covers CodeXomics v0.532.0-beta plugin development. For the latest updates and API changes, check the project repository._
+_This guide covers CodeXomics v0.7beta plugin development. For the latest updates and API changes, check the project repository._

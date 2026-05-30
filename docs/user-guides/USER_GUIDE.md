@@ -34,26 +34,26 @@ CodeXomics is an AI-powered bioinformatics analysis platform that combines tradi
 
 ### Pre-built Binaries
 
-Download the latest version (v0.532beta) from the [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.532beta) page.
+Download the latest available build from the [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases) page.
 
 #### macOS
 
-1. Download `CodeXomics-0.527.0-beta-x64.dmg` (Intel) or `CodeXomics-0.527.0-beta-arm64.dmg` (Apple Silicon)
+1. Download the Intel or Apple Silicon DMG for the latest release
 2. Open the DMG file
 3. Drag CodeXomics to your Applications folder
 4. Right-click and select "Open" the first time (macOS security)
 
 #### Windows
 
-1. Download `CodeXomics Setup 0.527.0-beta.exe` (installer) or portable version
+1. Download the Windows installer or portable executable
 2. Run the installer and follow the prompts
 3. Launch from Start Menu or Desktop shortcut
 
 #### Linux
 
-1. Download `CodeXomics-0.527.0-beta.AppImage` or `.deb` package
-2. For AppImage: `chmod +x CodeXomics-0.527.0-beta.AppImage && ./CodeXomics-0.527.0-beta.AppImage`
-3. For Debian: `sudo dpkg -i codexomics_0.527.0-beta_amd64.deb`
+1. Download the AppImage, Debian package, or Snap package
+2. For AppImage: `chmod +x CodeXomics-*.AppImage && ./CodeXomics-*.AppImage`
+3. For Debian: `sudo dpkg -i codexomics_*_amd64.deb`
 
 ### Building from Source
 
@@ -219,22 +219,27 @@ CodeXomics includes E. coli genome and pathway data for testing.
 
 ### Gene Details Sidebar
 
-The Gene Details sidebar provides a comprehensive, tabbed intelligence panel for exploring annotated genomic features. 
+The Gene Details sidebar provides a comprehensive, tabbed intelligence panel for exploring annotated genomic features.
 
 #### Pinned Header
+
 The header remains static, providing immediate access to core identifiers:
+
 - **Gene Identifiers:** Displays the gene name, locus tag, and feature type (e.g., CDS, mRNA).
 - **Location Data:** Shows exact genomic coordinates, strand orientation, and sequence length.
 - **Operon Integration:** Displays a color-coded operon badge for genes that are part of a coordinated transcriptional unit.
 
 #### Global Actions
+
 These buttons are always accessible above the tabs:
+
 - **Edit Annotation:** Modify gene metadata or structure.
 - **Zoom to:** Center the genome viewer on the selected feature.
 - **Deep Research:** Launch advanced AI analysis for functional discovery.
 - **Search PDB / AlphaFold:** Search for 3D protein structures (experimental or AI-predicted).
 
 #### Tabbed Information Architecture
+
 - **General Tab:** Essential attributes, product descriptions, and unified literature citations.
 - **GO Tab:** Dedicated Gene Ontology terms for functional classification.
 - **Pathways Tab:** Metabolic context, including EC numbers, KEGG orthology (KO), and pathway maps.
@@ -821,7 +826,7 @@ A: AI provides helpful insights but should be validated. Use benchmark tests to 
 **Explore More:**
 
 - [Developer Guide](../developer-guides/DEVELOPER_GUIDE.md) - Create plugins and contribute
-- [API Reference](../api-docs/) - Technical documentation
+- [Developer Guide](../developer-guides/DEVELOPER_GUIDE.md) - Technical documentation
 - [Release Notes](../release-notes/) - What's new in each version
 
 **Join the Community:**
@@ -839,6 +844,6 @@ A: AI provides helpful insights but should be validated. Use benchmark tests to 
 
 ---
 
-**CodeXomics v0.532beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
+**CodeXomics v0.7beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
 
 Made with ❤️ by the CodeXomics Team

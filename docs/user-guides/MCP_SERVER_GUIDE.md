@@ -1,37 +1,61 @@
 # CodeXomics MCP Server Guide
 
-Welcome to the CodeXomics Model Context Protocol (MCP) Server integration guide! The CodeXomics MCP Server is a powerful bridge that gives external AI tools (like Claude Desktop, Cherry Studio, or Cursor) direct programmatic access to the bioinformatic tools, visualizations, and datasets inside your CodeXomics workspace.
+The CodeXomics Model Context Protocol (MCP) server lets external AI clients inspect and operate on CodeXomics genomes, tools, windows, and analysis workflows.
 
-## 🌟 What is the MCP Server?
+## Modes
 
-Traditional AI assistants are trapped in a chat box and can't interact with your files. The **CodeXomics MCP Server** exposes the robust capabilities of the CodeXomics application over a standardized protocol. 
+| Mode       | How it behaves                                                                     | Exposed tools                                                    |
+| ---------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Tools mode | External clients call specific CodeXomics tools directly.                          | 95 tools                                                         |
+| Agent mode | External clients send natural-language prompts to the in-app ChatBox LLM pipeline. | `codexomics_chat`, `list_genome_windows`, `switch_active_window` |
 
-When you connect an MCP-compatible AI to this server, the AI gains the ability to:
-- Retrieve nucleotide and protein sequences seamlessly.
-- Automatically run analysis tools (e.g. sequence motifs, primers calculation, GC content).
-- Search biological databases explicitly within your local bioinformatics contexts.
+Tools mode is the default. Agent mode is useful when you want CodeXomics to choose and sequence tools internally.
 
-## 🚀 How to Start the MCP Server
+## Start The Server
 
-You have two primary ways to run the MCP Server:
+From the repository root:
 
-### Option A: Standalone Mode
-If you only need the server running (without launching the full Electron App UI), run this from the project root:
 ```bash
 npm run mcp-server
 ```
 
-### Option B: Concurrent Mode (Recommended)
-If you want to use the full CodeXomics interface alongside an external AI tool connected to the server, use:
+Start agent mode:
+
+```bash
+npm run mcp-server -- --mode=agent
+```
+
+Start the Electron app and MCP server together:
+
 ```bash
 npm run start-with-mcp
 ```
-*This command starts both the MCP Server (usually on port `3002` or `3000`) and the Electron application simultaneously.*
 
-## 🔌 Connecting to AI Clients
+Default transports:
 
-### 1. Claude Desktop
-To add CodeXomics to your Claude Desktop capabilities, modify your Claude MCP settings file (`claude_desktop_config.json`). Add the following entry:
+- HTTP/SSE: `http://localhost:3002`
+- WebSocket: `ws://localhost:3003`
+
+## Configure A Client
+
+### HTTP/SSE Configuration
+
+Use this configuration for clients that support remote HTTP/SSE MCP servers:
+
+```json
+{
+  "mcpServers": {
+    "CodeXomics": {
+      "url": "http://localhost:3002",
+      "transportType": "streamable-http"
+    }
+  }
+}
+```
+
+### Command Configuration
+
+Use this configuration for clients that spawn a local process:
 
 ```json
 {
@@ -43,23 +67,61 @@ To add CodeXomics to your Claude Desktop capabilities, modify your Claude MCP se
   }
 }
 ```
-*(Make sure to replace `/ABSOLUTE/PATH/TO/` with the actual path to your repository).*
 
-### 2. Cherry Studio
-To use CodeXomics with Cherry Studio:
-1. Open Cherry Studio Settings → **MCP Servers**.
-2. Add a new server configuration.
-3. Choose **Command** type.
-4. Set Command: `node`
-5. Set Arguments: `/ABSOLUTE/PATH/TO/CodeXomics/scripts/start-mcp-server.js`
-6. Click Save and Ensure the status shows "Connected".
+Replace `/ABSOLUTE/PATH/TO/CodeXomics` with your local repository path.
 
-## 🛠️ Frequently Available Tools
+## Agent Mode Configuration
 
-Once connected, your AI assistant will inherently understand the `tools_registry` structure of CodeXomics and can call tools such as:
-- **`get_sequence`**: Fetch specific sequences directly from active genome tracks.
-- **`analyze_gc`**: Assess GC content/skew across nucleotide boundaries.
-- **`search_sequence_motif`**: Find biological regex patterns natively.
+For process-spawn clients, pass `--mode=agent`:
 
-> [!TIP]
-> Tell your AI assistant: *"Analyze the sequence from chromosome 1 using your available CodeXomics tools"* and watch it autonomously invoke the MCP tools to return answers without copy-pasting sequences manually!
+```json
+{
+  "mcpServers": {
+    "codexomics-agent": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/CodeXomics/scripts/start-mcp-server.js", "--mode=agent"]
+    }
+  }
+}
+```
+
+Agent mode requires a configured LLM provider in CodeXomics. If the ChatBox is already processing a request, agent mode returns a busy response instead of starting a second run.
+
+## Common Tool Families
+
+In tools mode, clients can access tool families for:
+
+- Genome navigation and state inspection.
+- Sequence retrieval, GC content, translation, reverse complement, molecular weight, motif search, restriction digest, and gel simulation.
+- Primer design and primer annotation.
+- Annotation CRUD and search.
+- File loading/export and loaded-file inspection.
+- BLAST, UniProt, InterPro, AlphaFold, PDB, and pathway workflows.
+- Track settings.
+- Sequence editing action queues.
+- Benchmark control and result export.
+- Multi-window discovery and focus.
+
+## Example Prompts
+
+Tools mode:
+
+```text
+Use get_sequence for the selected gene, then translate it.
+Find restriction sites in the visible region.
+Create a quick BLAST database for the current genome.
+```
+
+Agent mode:
+
+```text
+Analyze the operon around lacZ, collect supporting database evidence, and summarize the result.
+```
+
+## Troubleshooting
+
+- Confirm the server process is running.
+- Confirm ports `3002` and `3003` are available.
+- For agent mode, confirm CodeXomics has a saved and working LLM configuration.
+- If a tool needs genome state, keep the Electron app open and connected.
+- If tool lists look stale after changing modes, restart the client or ask it to refresh MCP tools.
