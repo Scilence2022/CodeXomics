@@ -18,12 +18,12 @@ class ModalDragManager {
   }
 
   initializeEventListeners() {
-    document.addEventListener('mousedown', e => this.handleMouseDown(e));
-    document.addEventListener('mousemove', e => this.handleMouseMove(e));
-    document.addEventListener('mouseup', e => this.handleMouseUp(e));
+    document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+    document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+    document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
 
     // Prevent text selection during drag
-    document.addEventListener('selectstart', e => {
+    document.addEventListener('selectstart', (e) => {
       if (this.isDragging) {
         e.preventDefault();
       }
@@ -165,6 +165,8 @@ class ModalDragManager {
 
   /**
    * Reset modal position to center
+   * Keeps the current resized dimensions intact; size resets are handled by
+   * ResizableModalManager.resetSize().
    */
   resetPosition(modalSelector) {
     const modal = document.querySelector(modalSelector);
@@ -178,9 +180,6 @@ class ModalDragManager {
     modalContent.style.top = '';
     modalContent.style.margin = '';
     modalContent.style.transform = '';
-    modalContent.style.width = '';
-    modalContent.style.height = '';
-    modalContent.style.maxWidth = '';
   }
 
   /**
@@ -209,7 +208,7 @@ class ModalDragManager {
       '#dnaMarkerBrowserModal',
     ];
 
-    managementModals.forEach(selector => {
+    managementModals.forEach((selector) => {
       setTimeout(() => {
         this.makeDraggable(selector);
       }, 100);
@@ -229,7 +228,7 @@ class ModalDragManager {
     resetBtn.className = 'reset-position-btn';
     resetBtn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i>';
     resetBtn.title = 'Reset Position';
-    resetBtn.addEventListener('click', e => {
+    resetBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetPosition(modalSelector);
     });

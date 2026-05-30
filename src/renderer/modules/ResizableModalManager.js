@@ -11,6 +11,7 @@ class ResizableModalManager {
     this.startHeight = 0;
     this.startLeft = 0;
     this.startTop = 0;
+    this.viewportPadding = 16;
 
     this.initializeEventListeners();
     console.log('ResizableModalManager initialized');
@@ -18,12 +19,12 @@ class ResizableModalManager {
 
   initializeEventListeners() {
     // Handle mouse events for resizing
-    document.addEventListener('mousedown', e => this.handleMouseDown(e));
-    document.addEventListener('mousemove', e => this.handleMouseMove(e));
-    document.addEventListener('mouseup', e => this.handleMouseUp(e));
+    document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+    document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+    document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
 
     // Prevent text selection during resize
-    document.addEventListener('selectstart', e => {
+    document.addEventListener('selectstart', (e) => {
       if (this.resizing) {
         e.preventDefault();
       }
@@ -71,8 +72,8 @@ class ResizableModalManager {
       }
     }
 
-    // Allow free resizing beyond max-width constraints
-    modalContent.style.maxWidth = 'none';
+    // Allow the JS constraint logic to be the single source of truth.
+    modalContent.style.setProperty('max-width', 'none', 'important');
 
     console.log(`Made modal resizable: ${modalSelector}`);
   }
@@ -102,7 +103,7 @@ class ResizableModalManager {
     this.startTop = rect.top;
 
     // Pin the element to its current visual position using fixed positioning.
-    // This takes it out of any flex-centered flow (e.g. parent has display: flex; align-items: center; justify-content: center;)
+    // This takes it out of flex-centered flow so one side can resize independently.
     // so resizing one side does not cause the other side to expand/shrink simultaneously.
     const currentPosition = window.getComputedStyle(modalContent).position;
     if (currentPosition !== 'fixed' && currentPosition !== 'absolute') {
@@ -139,27 +140,16 @@ class ResizableModalManager {
     let newLeft = this.startLeft;
     let newTop = this.startTop;
 
-    // Apply constraints dynamically
-    const dataMinWidth = modalContent.getAttribute('data-min-width');
-    const dataMaxWidth = modalContent.getAttribute('data-max-width');
-    const dataMinHeight = modalContent.getAttribute('data-min-height');
-    const dataMaxHeight = modalContent.getAttribute('data-max-height');
+    const constraints = this.getResizeConstraints(modalContent);
+    const minWidth = constraints.minWidth;
+    const minHeight = constraints.minHeight;
+    const maxWidth = constraints.maxWidth;
+    const maxHeight = constraints.maxHeight;
 
-    const style = window.getComputedStyle(modalContent);
-
-    const minWidth = dataMinWidth ? parseInt(dataMinWidth, 10) : (parseInt(style.minWidth, 10) || 400);
-    const minHeight = dataMinHeight ? parseInt(dataMinHeight, 10) : (parseInt(style.minHeight, 10) || 300);
-
-    const defaultMaxWidth = Math.max(window.innerWidth * 3, 2000);
-    const defaultMaxHeight = Math.max(window.innerHeight * 2, 1200);
-
-    const cssMaxWidth = style.maxWidth && style.maxWidth !== 'none' ?
-      parseInt(style.maxWidth, 10) : defaultMaxWidth;
-    const cssMaxHeight = style.maxHeight && style.maxHeight !== 'none' ?
-      parseInt(style.maxHeight, 10) : defaultMaxHeight;
-
-    const maxWidth = dataMaxWidth ? parseInt(dataMaxWidth, 10) : cssMaxWidth;
-    const maxHeight = dataMaxHeight ? parseInt(dataMaxHeight, 10) : cssMaxHeight;
+    const leftBoundary = this.viewportPadding;
+    const topBoundary = this.viewportPadding;
+    const rightBoundary = Math.max(leftBoundary, window.innerWidth - this.viewportPadding);
+    const bottomBoundary = Math.max(topBoundary, window.innerHeight - this.viewportPadding);
 
     // Calculate new dimensions based on handle type
     if (
@@ -168,7 +158,8 @@ class ResizableModalManager {
       handleClass.includes('resize-handle-se')
     ) {
       newWidth = this.startWidth + deltaX;
-      newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+      const maxWidthForEast = Math.max(minWidth, Math.min(maxWidth, rightBoundary - this.startLeft));
+      newWidth = this.clamp(newWidth, minWidth, maxWidthForEast);
     }
     if (
       handleClass.includes('resize-handle-w') ||
@@ -176,10 +167,11 @@ class ResizableModalManager {
       handleClass.includes('resize-handle-sw')
     ) {
       newWidth = this.startWidth - deltaX;
-      newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+      const fixedRight = this.startLeft + this.startWidth;
+      const maxWidthForWest = Math.max(minWidth, Math.min(maxWidth, fixedRight - leftBoundary));
+      newWidth = this.clamp(newWidth, minWidth, maxWidthForWest);
 
-      const actualDeltaX = this.startWidth - newWidth;
-      newLeft = this.startLeft + actualDeltaX;
+      newLeft = fixedRight - newWidth;
     }
     if (
       handleClass.includes('resize-handle-s') ||
@@ -187,7 +179,8 @@ class ResizableModalManager {
       handleClass.includes('resize-handle-sw')
     ) {
       newHeight = this.startHeight + deltaY;
-      newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+      const maxHeightForSouth = Math.max(minHeight, Math.min(maxHeight, bottomBoundary - this.startTop));
+      newHeight = this.clamp(newHeight, minHeight, maxHeightForSouth);
     }
     if (
       handleClass.includes('resize-handle-n') ||
@@ -195,10 +188,11 @@ class ResizableModalManager {
       handleClass.includes('resize-handle-nw')
     ) {
       newHeight = this.startHeight - deltaY;
-      newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+      const fixedBottom = this.startTop + this.startHeight;
+      const maxHeightForNorth = Math.max(minHeight, Math.min(maxHeight, fixedBottom - topBoundary));
+      newHeight = this.clamp(newHeight, minHeight, maxHeightForNorth);
 
-      const actualDeltaY = this.startHeight - newHeight;
-      newTop = this.startTop + actualDeltaY;
+      newTop = fixedBottom - newHeight;
     }
 
     // Apply new dimensions
@@ -220,6 +214,51 @@ class ResizableModalManager {
     ) {
       modalContent.style.top = `${newTop}px`;
     }
+  }
+
+  parsePositiveInteger(value, fallback) {
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  }
+
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(value, max));
+  }
+
+  getResizeConstraints(modalContent) {
+    const style = window.getComputedStyle(modalContent);
+
+    const defaultMaxWidth = Math.max(window.innerWidth * 3, 2000);
+    const defaultMaxHeight = Math.max(window.innerHeight * 2, 1200);
+    const cssMaxWidth = style.maxWidth && style.maxWidth !== 'none' ?
+      this.parsePositiveInteger(style.maxWidth, defaultMaxWidth) :
+      defaultMaxWidth;
+    const cssMaxHeight = style.maxHeight && style.maxHeight !== 'none' ?
+      this.parsePositiveInteger(style.maxHeight, defaultMaxHeight) :
+      defaultMaxHeight;
+
+    const configuredMinWidth = this.parsePositiveInteger(
+        modalContent.getAttribute('data-min-width'),
+        this.parsePositiveInteger(style.minWidth, 400),
+    );
+    const configuredMinHeight = this.parsePositiveInteger(
+        modalContent.getAttribute('data-min-height'),
+        this.parsePositiveInteger(style.minHeight, 300),
+    );
+    const configuredMaxWidth = this.parsePositiveInteger(modalContent.getAttribute('data-max-width'), cssMaxWidth);
+    const configuredMaxHeight = this.parsePositiveInteger(modalContent.getAttribute('data-max-height'), cssMaxHeight);
+
+    const viewportMaxWidth = Math.max(1, window.innerWidth - this.viewportPadding * 2);
+    const viewportMaxHeight = Math.max(1, window.innerHeight - this.viewportPadding * 2);
+    const maxWidth = Math.min(configuredMaxWidth, viewportMaxWidth);
+    const maxHeight = Math.min(configuredMaxHeight, viewportMaxHeight);
+
+    return {
+      minWidth: Math.min(configuredMinWidth, maxWidth),
+      minHeight: Math.min(configuredMinHeight, maxHeight),
+      maxWidth,
+      maxHeight,
+    };
   }
 
   handleMouseUp(e) {
@@ -258,4 +297,9 @@ class ResizableModalManager {
     modalContent.style.position = '';
     modalContent.style.margin = '';
   }
+}
+
+// Export for use in other modules
+if (typeof window !== 'undefined') {
+  window.ResizableModalManager = ResizableModalManager;
 }
