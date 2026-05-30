@@ -4937,6 +4937,8 @@ class ActionManager {
 
     const { chromosome, start, end } = coordinates;
     const modifiedSequence = this.getSequenceEditReplacementSequence(action);
+    const replacementSequence =
+      coordinates.strand === '-' ? this.reverseComplement(modifiedSequence) : modifiedSequence;
     const currentRegionSequence = this.getSequenceForRegionFromGenomeData(
       executionGenomeData,
       chromosome,
@@ -4965,8 +4967,8 @@ class ActionManager {
       start,
       end,
       originalLength: end - start + 1,
-      newSequence: modifiedSequence,
-      newLength: modifiedSequence.length,
+      newSequence: replacementSequence,
+      newLength: replacementSequence.length,
       actionId: action.id,
       operation: 'sequence_edit',
     };
@@ -4982,6 +4984,7 @@ class ActionManager {
       originalLength: end - start + 1,
       newLength: modifiedSequence.length,
       replacedRegion: { start, end },
+      strand: coordinates.strand,
       removedFeaturesCount: featureStats.removedCount,
       summary: {
         substitutions: changeSummary.substitutions,
