@@ -1,3 +1,4 @@
+/* global ipcRenderer */
 /**
  * TabManager - Chrome-style tab management for multi-genome analysis
  * Provides tab creation, switching, closing, and state isolation
@@ -28,7 +29,9 @@ class TabManager {
       console.error('TabManager: Required DOM element "tabSettingsButton" not found');
     }
     if (!this.toggleBannerButton) {
-      console.warn('TabManager: Optional DOM element "toggleBannerButton" not found. Banner toggle functionality disabled.');
+      console.warn(
+        'TabManager: Optional DOM element "toggleBannerButton" not found. Banner toggle functionality disabled.'
+      );
     }
     if (!this.headerElement) {
       console.warn('TabManager: Optional DOM element "header.header" not found. Banner toggle functionality disabled.');
@@ -414,8 +417,8 @@ class TabManager {
     const currentTrackTypes = new Set(
       this.genomeBrowser.trackVisibility
         ? Object.entries(this.genomeBrowser.trackVisibility)
-          .filter(([_, visible]) => visible)
-          .map(([type, _]) => type)
+            .filter(([_, visible]) => visible)
+            .map(([type, _]) => type)
         : ['genes', 'sequence']
     );
 
@@ -428,16 +431,16 @@ class TabManager {
       : this.genomeBrowser.featureVisibility
         ? { ...this.genomeBrowser.featureVisibility }
         : {
-          genes: false,
-          CDS: true,
-          mRNA: true,
-          tRNA: true,
-          rRNA: true,
-          promoter: true,
-          terminator: true,
-          regulatory: true,
-          other: true,
-        };
+            genes: false,
+            CDS: true,
+            mRNA: true,
+            tRNA: true,
+            rRNA: true,
+            promoter: true,
+            terminator: true,
+            regulatory: true,
+            other: true,
+          };
 
     return {
       id: tabId,
@@ -730,7 +733,7 @@ class TabManager {
       if (tabState.trackVisibility) {
         this.genomeBrowser.trackVisibility = { ...tabState.trackVisibility };
       }
-      
+
       if (tabState.visibleTracks) {
         // Restore the entire Set (includes instances like annotation_track_1)
         this.genomeBrowser.visibleTracks = new Set(tabState.visibleTracks);
@@ -790,7 +793,7 @@ class TabManager {
       // Update track visibility controls in UI
       this.updateTrackVisibilityControls();
 
-      // Note: Track order is now handled directly by displayGenomeView 
+      // Note: Track order is now handled directly by displayGenomeView
       // which uses the tabState.trackOrder as its primary source of truth.
 
       // Refresh the display if there's genome data
@@ -845,10 +848,10 @@ class TabManager {
 
     const { source = 'unknown' } = options;
     const tabState = this.tabStates.get(this.activeTabId);
-    
+
     // Check if current title is in gene name mode (mode 2)
     const isGeneNameMode = tabState && tabState.title && tabState.title.startsWith('Gene: ');
-    
+
     // Only override gene name titles when navigation comes from the ruler
     // For zoom, drag, and other navigation methods, preserve the gene name
     if (isGeneNameMode && source !== 'ruler') {
@@ -858,14 +861,14 @@ class TabManager {
         tabState.currentPosition = { start, end };
         tabState.lastAccessedAt = new Date();
       }
-      
+
       // Still update position visualization and cache
       this.updateTabPositionVisualization(this.activeTabId, chromosome, start, end);
       if (this.cacheSettings.enabled) {
         this.clearTabCache(this.activeTabId);
       }
       this.updateCurrentTabTrackState();
-      
+
       console.log(`Preserved gene name title for tab ${this.activeTabId} during ${source} navigation`);
       return;
     }
@@ -911,7 +914,7 @@ class TabManager {
       if (this.genomeBrowser.trackVisibility) {
         tabState.trackVisibility = { ...this.genomeBrowser.trackVisibility };
       }
-      
+
       if (this.genomeBrowser.visibleTracks) {
         tabState.visibleTracks = new Set(this.genomeBrowser.visibleTracks);
       }
@@ -2993,7 +2996,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 // Global debugging function for position indicators
-window.debugPositionIndicators = function () {
+window.debugPositionIndicators = function() {
   console.log('=== Position Indicators Debug ===');
 
   const tabs = document.querySelectorAll('.genome-tab');
@@ -3056,7 +3059,7 @@ window.debugPositionIndicators = function () {
 };
 
 // Add to global scope for easy access
-window.forcePositionIndicatorVisibility = function () {
+window.forcePositionIndicatorVisibility = function() {
   if (window.genomeBrowser && window.genomeBrowser.tabManager) {
     window.genomeBrowser.tabManager.forcePositionIndicatorVisibility();
   } else {
