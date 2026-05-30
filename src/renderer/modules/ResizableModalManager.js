@@ -47,14 +47,6 @@ class ResizableModalManager {
       return;
     }
 
-    // Only set initial dimensions on first initialization (no inline width set yet)
-    if (!modalContent.style.width) {
-      // Use the modal's current CSS-determined width as the base
-      const currentWidth = modalContent.getBoundingClientRect().width;
-      const baseWidth = currentWidth > 100 ? currentWidth : 500;
-      modalContent.style.width = `${Math.round(baseWidth)}px`;
-    }
-
     // Save the original CSS constraints before overriding them
     const currentStyle = window.getComputedStyle(modalContent);
     const originalMaxWidth = currentStyle.maxWidth;
@@ -74,6 +66,7 @@ class ResizableModalManager {
 
     // Allow the JS constraint logic to be the single source of truth.
     modalContent.style.setProperty('max-width', 'none', 'important');
+    this.syncInitialWidth(modalContent);
 
     console.log(`Made modal resizable: ${modalSelector}`);
   }
@@ -223,6 +216,19 @@ class ResizableModalManager {
 
   clamp(value, min, max) {
     return Math.max(min, Math.min(value, max));
+  }
+
+  syncInitialWidth(modalContent) {
+    const constraints = this.getResizeConstraints(modalContent);
+    const rectWidth = modalContent.getBoundingClientRect().width;
+    const inlineWidth = this.parsePositiveInteger(modalContent.style.width, rectWidth);
+    const currentWidth = inlineWidth > 100 ? inlineWidth : rectWidth;
+    const baseWidth = currentWidth > 100 ? currentWidth : constraints.minWidth;
+    const nextWidth = this.clamp(baseWidth, constraints.minWidth, constraints.maxWidth);
+
+    if (!modalContent.style.width || Math.round(currentWidth) !== Math.round(nextWidth)) {
+      modalContent.style.width = `${Math.round(nextWidth)}px`;
+    }
   }
 
   getResizeConstraints(modalContent) {
