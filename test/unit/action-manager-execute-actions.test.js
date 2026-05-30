@@ -144,6 +144,43 @@ describe('ActionManager execute_actions sequencing', () => {
     expect(genomeBrowser.currentAnnotations.chr1).toEqual(originalFeatures);
   });
 
+  it('executes cut and later paste as an ordered move on the working sequence', async () => {
+    const { genomeBrowser, manager } = createManager('AAAACCCC');
+
+    await manager.functionCutSequence({ chromosome: 'chr1', start: 2, end: 4 });
+    await manager.functionPasteSequence({ chromosome: 'chr1', position: 9 });
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/cut-paste-actions.gbk' });
+
+    expect(result.success).toBe(true);
+    expect(result.executedActions).toBe(2);
+    expect(lastExport.chr1.sequence).toBe('ACCCCAAA');
+    expect(genomeBrowser.currentSequence.chr1).toBe('AAAACCCC');
+    expect(manager.actionHistory[0].actions[1].target).toBe('chr1:6');
+  });
+
+  it('executes replace_sequence actions against the working sequence and removes replaced features', async () => {
+    const { genomeBrowser, manager } = createManager('ACGTACGT', [
+      { type: 'gene', name: 'replaced_gene', start: 3, end: 4, strand: '+' },
+      { type: 'gene', name: 'shifted_gene', start: 7, end: 8, strand: '+' },
+    ]);
+
+    await manager.functionReplaceSequence({ chromosome: 'chr1', start: 3, end: 4, sequence: 'TTAA' });
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/replace-actions.gbk' });
+
+    expect(result.success).toBe(true);
+    expect(lastExport.chr1.sequence).toBe('ACTTAAACGT');
+    expect(lastExport.chr1.features).toEqual([
+      expect.objectContaining({
+        name: 'shifted_gene',
+        start: 9,
+        end: 10,
+      }),
+    ]);
+    expect(genomeBrowser.currentSequence.chr1).toBe('ACGTACGT');
+  });
+
   it('preserves the clipboard snapshot stored on queued paste actions', async () => {
     const { manager } = createManager('ACGTACGT');
     manager.clipboard = {
