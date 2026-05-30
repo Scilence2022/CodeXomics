@@ -1,4 +1,5 @@
 // @ts-check
+/* global GenomeDataProxy, GenBankExporter */
 /**
  * ActionManager - Unified sequence operations management system
  *
@@ -118,9 +119,9 @@ class ActionManager {
    * Read a 1-based inclusive sequence region from a genome data source.
    */
   getSequenceForRegionFromGenomeData(genomeData, chromosome, start, end, strand = '+') {
-    const sequence = genomeData ?
-      this.getSequenceFromGenomeData(genomeData, chromosome) :
-      this.genomeBrowser?.currentSequence?.[chromosome];
+    const sequence = genomeData
+      ? this.getSequenceFromGenomeData(genomeData, chromosome)
+      : this.genomeBrowser?.currentSequence?.[chromosome];
 
     if (!sequence) {
       return null;
@@ -294,11 +295,7 @@ class ActionManager {
     const adjustedFeatures = [];
     const removeContainedForReplace = modification.type === 'replace';
     for (const feature of currentFeatures) {
-      if (
-        removeContainedForReplace &&
-        feature.start >= modification.start &&
-        feature.end <= modification.end
-      ) {
+      if (removeContainedForReplace && feature.start >= modification.start && feature.end <= modification.end) {
         continue;
       }
 
@@ -445,7 +442,7 @@ class ActionManager {
     document.getElementById('executeAllActionsBtn')?.addEventListener('click', () => this.executeAllActions());
     document
       .getElementById('clearAllActionsBtn')
-      ?.addEventListener('click', () => this.clearAllActions({ forced: false }));
+      ?.addEventListener('click', () => this.clearAllActionsUI({ forced: false }));
     document.getElementById('exportActionsBtn')?.addEventListener('click', () => this.exportActions());
     document.getElementById('importActionsBtn')?.addEventListener('click', () => this.importActions());
 
@@ -847,14 +844,6 @@ class ActionManager {
   }
 
   /**
-   * Handle insert sequence action
-   */
-  handleInsertSequence() {
-    // Show modal to input sequence to insert
-    this.showSequenceInsertModal();
-  }
-
-  /**
    * Handle replace sequence action
    */
   handleReplaceSequence() {
@@ -980,7 +969,8 @@ class ActionManager {
     const length = end - start + 1;
     const metadata = { chromosome, start, end, strand, selectionSource: source };
 
-    let actionType, description;
+    let actionType;
+    let description;
 
     switch (operation) {
       case 'copy':
@@ -1049,9 +1039,8 @@ class ActionManager {
         length: defaultEnd - defaultStart + 1,
         source: 'manual track selection',
       });
-    }
-    // Priority 2: Check if there's an active gene selection (from sequenceSelection)
-    else if (
+    } else if (
+      // Priority 2: Check if there's an active gene selection (from sequenceSelection)
       this.genomeBrowser.sequenceSelection &&
       this.genomeBrowser.sequenceSelection.active &&
       this.genomeBrowser.sequenceSelection.source === 'gene'
@@ -1069,9 +1058,8 @@ class ActionManager {
         gene: selection.geneName,
         source: 'gene selection',
       });
-    }
-    // Priority 3: Check if there's a selected gene (from selectedGene)
-    else if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
+    } else if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
+      // Priority 3: Check if there's a selected gene (from selectedGene)
       const gene = this.genomeBrowser.selectedGene.gene;
       defaultChromosome = gene.chromosome || this.genomeBrowser.currentChromosome;
       defaultStart = parseInt(gene.start) || 1;
@@ -1085,9 +1073,8 @@ class ActionManager {
         gene: gene.name || gene.locus_tag,
         source: 'selected gene',
       });
-    }
-    // Priority 4: Fall back to current genome view
-    else if (this.genomeBrowser.currentChromosome) {
+    } else if (this.genomeBrowser.currentChromosome) {
+      // Priority 4: Fall back to current genome view
       defaultChromosome = this.genomeBrowser.currentChromosome;
       defaultStart = this.genomeBrowser.currentPosition?.start || 1;
       defaultEnd = this.genomeBrowser.currentPosition?.end || defaultStart + 1000;
@@ -1117,7 +1104,7 @@ class ActionManager {
       delete: 'Delete Sequence',
     };
 
-    let baseTitle = titleMap[operation] || 'Select Sequence';
+    const baseTitle = titleMap[operation] || 'Select Sequence';
     let sourceIndicator = '';
 
     // Add indicator based on selection source
@@ -1178,8 +1165,8 @@ class ActionManager {
     this.populateChromosomeSelectInsert();
 
     // Set default values
-    let defaultChromosome = this.genomeBrowser.currentChromosome || '';
-    let defaultPosition = this.cursorPosition || 1;
+    const defaultChromosome = this.genomeBrowser.currentChromosome || '';
+    const defaultPosition = this.cursorPosition || 1;
 
     // Set default values
     const chrSelect = document.getElementById('chromosomeSelectInsert');
@@ -1405,91 +1392,6 @@ class ActionManager {
   }
 
   /**
-   * Validate insert sequence
-   */
-  validateInsertSequence() {
-    const seqTextarea = document.getElementById('insertSequenceText');
-    const validationMsg = document.getElementById('sequenceValidation');
-
-    if (!seqTextarea || !validationMsg) return;
-
-    const sequence = seqTextarea.value.toUpperCase().replace(/\s/g, '');
-    const validNucleotides = /^[ATGC]*$/;
-
-    if (sequence === '') {
-      validationMsg.textContent = '';
-      validationMsg.className = 'validation-message';
-      return true;
-    }
-
-    if (validNucleotides.test(sequence)) {
-      validationMsg.textContent = `✓ Valid sequence (${sequence.length} nucleotides)`;
-      validationMsg.className = 'validation-message valid';
-      return true;
-    } else {
-      validationMsg.textContent = '✗ Invalid sequence - only A, T, G, C allowed';
-      validationMsg.className = 'validation-message invalid';
-      return false;
-    }
-  }
-
-  /**
-   * Confirm sequence insert
-   */
-  confirmSequenceInsert() {
-    const chromosome = document.getElementById('chromosomeSelectInsert').value;
-    const position = parseInt(document.getElementById('insertPositionSeq').value);
-    const sequence = document.getElementById('insertSequenceText').value.toUpperCase().replace(/\s/g, '');
-
-    if (!chromosome) {
-      this.genomeBrowser.showNotification('Please select a chromosome', 'warning');
-      return;
-    }
-
-    if (!position || position < 1) {
-      this.genomeBrowser.showNotification('Please enter a valid position', 'warning');
-      return;
-    }
-
-    if (!sequence) {
-      this.genomeBrowser.showNotification('Please enter a sequence to insert', 'warning');
-      return;
-    }
-
-    if (!this.validateInsertSequence()) {
-      this.genomeBrowser.showNotification('Please enter a valid DNA sequence', 'warning');
-      return;
-    }
-
-    // Create insert action
-    const target = `${chromosome}:${position}`;
-    const metadata = {
-      chromosome,
-      start: position,
-      end: position,
-      strand: '+',
-      insertSequence: sequence,
-      selectionSource: 'manual_input',
-    };
-
-    this.addAction(
-      this.ACTION_TYPES.INSERT_SEQUENCE,
-      target,
-      `Insert ${sequence.length} bp at ${chromosome}:${position}`,
-      metadata
-    );
-
-    this.genomeBrowser.showNotification(
-      `Insert action queued: ${sequence.length} bp at ${chromosome}:${position}`,
-      'success'
-    );
-
-    // Close modal
-    const modal = document.getElementById('sequenceInsertModal');
-    if (modal) modal.style.display = 'none';
-  }
-
-  /**
    * Update sequence preview
    */
   async updateSequencePreview() {
@@ -1620,7 +1522,7 @@ class ActionManager {
 
     try {
       switch (this.currentOperation) {
-        case 'copy':
+        case 'copy': {
           // Get sequence and set clipboard immediately for copy
           const copySequence = await this.getSequenceForRegion(chromosome, start, end, strand);
           if (copySequence) {
@@ -1647,8 +1549,9 @@ class ActionManager {
             metadata
           );
           break;
+        }
 
-        case 'cut':
+        case 'cut': {
           // Get sequence and set clipboard immediately for cut
           const cutSequence = await this.getSequenceForRegion(chromosome, start, end, strand);
           if (cutSequence) {
@@ -1670,6 +1573,7 @@ class ActionManager {
 
           this.addAction(this.ACTION_TYPES.CUT_SEQUENCE, target, `Cut ${end - start + 1} bp from ${target}`, metadata);
           break;
+        }
 
         case 'paste':
           this.addAction(
@@ -1996,7 +1900,9 @@ class ActionManager {
     const sequence = sequenceMap[chromosome];
     if (!sequence) {
       const available = Object.keys(sequenceMap);
-      throw new Error(`Chromosome '${chromosome}' was not found in the loaded genome sequence. Available: ${available.join(', ')}`);
+      throw new Error(
+        `Chromosome '${chromosome}' was not found in the loaded genome sequence. Available: ${available.join(', ')}`
+      );
     }
 
     if (endCoord > sequence.length) {
@@ -2020,7 +1926,9 @@ class ActionManager {
     const sequence = sequenceMap[chromosome];
     if (!sequence) {
       const available = Object.keys(sequenceMap);
-      throw new Error(`Chromosome '${chromosome}' was not found in the loaded genome sequence. Available: ${available.join(', ')}`);
+      throw new Error(
+        `Chromosome '${chromosome}' was not found in the loaded genome sequence. Available: ${available.join(', ')}`
+      );
     }
 
     if (insertPosition > sequence.length + 1) {
@@ -2281,7 +2189,9 @@ class ActionManager {
 
         if (action.status === this.STATUS.FAILED) {
           failedCount++;
-          throw new Error(`Action ${action.id} (${action.type}) cannot execute: ${action.error || action.failureReason}`);
+          throw new Error(
+            `Action ${action.id} (${action.type}) cannot execute: ${action.error || action.failureReason}`
+          );
         }
 
         if (action.status !== this.STATUS.PENDING) {
@@ -2324,14 +2234,18 @@ class ActionManager {
       });
 
       // Step 5: Resolve save file path and show dialog if needed (before generating GBK)
-      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 调用resolveSaveFilePath前 | saveFile=${options.saveFile} | filename=${options.filename} | auto_save=${options.auto_save} | executionId=${executionId}`);
+      console.log(
+        `🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 调用resolveSaveFilePath前 | saveFile=${options.saveFile} | filename=${options.filename} | auto_save=${options.auto_save} | executionId=${executionId}`
+      );
       let resolvedSaveFile = this.resolveSaveFilePath({
         saveFile: options.saveFile,
         filename: options.filename,
         auto_save: options.auto_save,
         executionId,
       });
-      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal resolveSaveFilePath返回 | resolvedSaveFile=${resolvedSaveFile}`);
+      console.log(
+        `🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal resolveSaveFilePath返回 | resolvedSaveFile=${resolvedSaveFile}`
+      );
 
       // If no path resolved (no auto_save, no saveFile), show interactive dialog
       if (!resolvedSaveFile) {
@@ -2343,9 +2257,7 @@ class ActionManager {
           const path = require('path');
           defaultDirectory = path.dirname(currentFile.path);
         }
-        const defaultPath = defaultDirectory
-          ? require('path').join(defaultDirectory, baseFilename)
-          : baseFilename;
+        const defaultPath = defaultDirectory ? require('path').join(defaultDirectory, baseFilename) : baseFilename;
 
         if (window.electronAPI && window.electronAPI.showSaveDialog) {
           try {
@@ -2359,7 +2271,9 @@ class ActionManager {
             });
             if (!dialogResult.canceled && dialogResult.filePath) {
               resolvedSaveFile = dialogResult.filePath;
-              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 弹窗选择路径(electronAPI) | resolvedSaveFile=${resolvedSaveFile}`);
+              console.log(
+                `🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 弹窗选择路径(electronAPI) | resolvedSaveFile=${resolvedSaveFile}`
+              );
             } else {
               console.log(`⚠️ [ActionManager] Save dialog cancelled`);
               return {
@@ -2377,7 +2291,9 @@ class ActionManager {
           try {
             const { ipcRenderer } = require('electron');
             if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
-              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 使用ipcRenderer.invoke('show-save-dialog')`);
+              console.log(
+                `🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 使用ipcRenderer.invoke('show-save-dialog')`
+              );
               const dialogResult = await ipcRenderer.invoke('show-save-dialog', {
                 title: 'Save Modified Genome as GenBank File',
                 defaultPath,
@@ -2388,7 +2304,9 @@ class ActionManager {
               });
               if (!dialogResult.canceled && dialogResult.filePath) {
                 resolvedSaveFile = dialogResult.filePath;
-                console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 弹窗选择路径(ipcRenderer) | resolvedSaveFile=${resolvedSaveFile}`);
+                console.log(
+                  `🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 弹窗选择路径(ipcRenderer) | resolvedSaveFile=${resolvedSaveFile}`
+                );
               } else {
                 console.log(`⚠️ [ActionManager] Save dialog cancelled`);
                 return {
@@ -2406,7 +2324,9 @@ class ActionManager {
       }
 
       // Step 6: Generate comprehensive GBK file with full history
-      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 调用generateComprehensiveGBK | resolvedSaveFile=${resolvedSaveFile}`);
+      console.log(
+        `🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 调用generateComprehensiveGBK | resolvedSaveFile=${resolvedSaveFile}`
+      );
       gbkResult = await this.generateComprehensiveGBK(
         executionActionsCopy,
         executionGenomeDataProxy,
@@ -2801,7 +2721,9 @@ class ActionManager {
    */
   async generateComprehensiveGBK(executionActionsCopy, executionGenomeData, executionId, saveFile) {
     try {
-      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 入口 | saveFile=${saveFile} | executionId=${executionId}`);
+      console.log(
+        `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 入口 | saveFile=${saveFile} | executionId=${executionId}`
+      );
       console.log(`📄 [ActionManager] Generating comprehensive GBK file with action history`);
 
       if (!this.genomeBrowser.exportManager) {
@@ -2851,7 +2773,9 @@ class ActionManager {
 
       const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
       let finalFilePath = saveFile || baseFilename;
-      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 保存逻辑 | saveFile=${saveFile} | baseFilename=${baseFilename} | finalFilePath=${finalFilePath}`);
+      console.log(
+        `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 保存逻辑 | saveFile=${saveFile} | baseFilename=${baseFilename} | finalFilePath=${finalFilePath}`
+      );
 
       if (saveFile) {
         // Direct write via writeFile IPC — no dialog, no prompt
@@ -2860,17 +2784,25 @@ class ActionManager {
 
         // Method 1: window.electronAPI.writeFile (preload contextBridge)
         if (!writeSuccess && window.electronAPI && window.electronAPI.writeFile) {
-          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用electronAPI.writeFile | saveFile=${saveFile}`);
+          console.log(
+            `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用electronAPI.writeFile | saveFile=${saveFile}`
+          );
           try {
             const result = await window.electronAPI.writeFile(saveFile, genbankContent);
             if (result && result.success) {
-              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile成功 | saveFile=${saveFile}`);
+              console.log(
+                `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile成功 | saveFile=${saveFile}`
+              );
               writeSuccess = true;
             } else {
-              console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile失败 | saveFile=${saveFile} | error=${result?.error}`);
+              console.error(
+                `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile失败 | saveFile=${saveFile} | error=${result?.error}`
+              );
             }
           } catch (err) {
-            console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile异常 | error=${err.message}`);
+            console.error(
+              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile异常 | error=${err.message}`
+            );
           }
         }
 
@@ -2879,17 +2811,25 @@ class ActionManager {
           try {
             const { ipcRenderer } = require('electron');
             if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
-              console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用ipcRenderer.invoke('write-file') | saveFile=${saveFile}`);
+              console.log(
+                `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用ipcRenderer.invoke('write-file') | saveFile=${saveFile}`
+              );
               const result = await ipcRenderer.invoke('write-file', saveFile, genbankContent);
               if (result && result.success) {
-                console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入成功 | saveFile=${saveFile}`);
+                console.log(
+                  `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入成功 | saveFile=${saveFile}`
+                );
                 writeSuccess = true;
               } else {
-                console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入失败 | saveFile=${saveFile} | error=${result?.error}`);
+                console.error(
+                  `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入失败 | saveFile=${saveFile} | error=${result?.error}`
+                );
               }
             }
           } catch (err) {
-            console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入异常 | error=${err.message}`);
+            console.error(
+              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入异常 | error=${err.message}`
+            );
           }
         }
 
@@ -2902,12 +2842,18 @@ class ActionManager {
             if (!fs.existsSync(dir)) {
               fs.mkdirSync(dir, { recursive: true });
             }
-            console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用Node.js fs.writeFileSync | saveFile=${saveFile}`);
+            console.log(
+              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用Node.js fs.writeFileSync | saveFile=${saveFile}`
+            );
             fs.writeFileSync(saveFile, genbankContent, 'utf8');
-            console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK fs.writeFileSync成功 | saveFile=${saveFile}`);
+            console.log(
+              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK fs.writeFileSync成功 | saveFile=${saveFile}`
+            );
             writeSuccess = true;
           } catch (err) {
-            console.error(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK fs.writeFileSync异常 | error=${err.message}`);
+            console.error(
+              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK fs.writeFileSync异常 | error=${err.message}`
+            );
           }
         }
 
@@ -2917,7 +2863,9 @@ class ActionManager {
       } else {
         // No saveFile provided — use browser download as fallback
         // (Dialog interaction should be handled by the caller before reaching here)
-        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 无saveFile，fallback downloadTextFile | baseFilename=${baseFilename}`);
+        console.log(
+          `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 无saveFile，fallback downloadTextFile | baseFilename=${baseFilename}`
+        );
         this.downloadTextFile(genbankContent, baseFilename);
         finalFilePath = baseFilename;
       }
@@ -3102,8 +3050,10 @@ class ActionManager {
    * @param {string} options.executionId - Execution ID for generating default filename
    * @returns {string|null} Resolved absolute file path, or null if user interaction (dialog) is needed
    */
-  resolveSaveFilePath({ saveFile = null, filename = null, auto_save = false, executionId = null } = {}) {
-    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath 入口 | saveFile=${saveFile} | filename=${filename} | auto_save=${auto_save} | executionId=${executionId}`);
+  resolveSaveFilePath({ saveFile = null, filename = null, auto_save: autoSave = false, executionId = null } = {}) {
+    console.log(
+      `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath 入口 | saveFile=${saveFile} | filename=${filename} | auto_save=${autoSave} | executionId=${executionId}`
+    );
     // Priority 1: saveFile already provided — resolve relative to absolute if needed
     if (saveFile) {
       if (typeof require !== 'undefined') {
@@ -3111,7 +3061,9 @@ class ActionManager {
         if (!path.isAbsolute(saveFile)) {
           const cwd = this._getCWD();
           const resolved = path.resolve(cwd, saveFile);
-          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority1 相对路径→绝对路径 | saveFile=${saveFile} | cwd=${cwd} | resolved=${resolved}`);
+          console.log(
+            `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority1 相对路径→绝对路径 | saveFile=${saveFile} | cwd=${cwd} | resolved=${resolved}`
+          );
           return resolved;
         }
       }
@@ -3120,13 +3072,15 @@ class ActionManager {
     }
 
     // Priority 2: auto_save with filename — resolve to absolute path
-    if (auto_save && filename) {
+    if (autoSave && filename) {
       if (typeof require !== 'undefined') {
         const path = require('path');
         if (!path.isAbsolute(filename)) {
           const cwd = this._getCWD();
           const resolved = path.resolve(cwd, filename);
-          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority2 相对路径→绝对路径 | filename=${filename} | cwd=${cwd} | resolved=${resolved}`);
+          console.log(
+            `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority2 相对路径→绝对路径 | filename=${filename} | cwd=${cwd} | resolved=${resolved}`
+          );
           return resolved;
         }
       }
@@ -3135,13 +3089,15 @@ class ActionManager {
     }
 
     // Priority 3: auto_save without filename — auto-generate default path in CWD
-    if (auto_save) {
+    if (autoSave) {
       const id = executionId || `execution_${Date.now()}`;
       const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${id}.gbk`;
       if (typeof require !== 'undefined') {
         const path = require('path');
         const resolved = path.resolve(this._getCWD(), baseFilename);
-        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority3 自动生成路径 | baseFilename=${baseFilename} | cwd=${this._getCWD()} | resolved=${resolved}`);
+        console.log(
+          `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority3 自动生成路径 | baseFilename=${baseFilename} | cwd=${this._getCWD()} | resolved=${resolved}`
+        );
         return resolved;
       }
       console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority3 无require | baseFilename=${baseFilename}`);
@@ -3196,7 +3152,9 @@ class ActionManager {
         try {
           const { ipcRenderer } = require('electron');
           if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
-            console.log(`🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用ipcRenderer.invoke('write-file') | filePath=${filePath}`);
+            console.log(
+              `🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用ipcRenderer.invoke('write-file') | filePath=${filePath}`
+            );
             const result = await ipcRenderer.invoke('write-file', filePath, content);
             if (result && result.success) {
               console.log(`📁 [ActionManager] File saved successfully via ipcRenderer to: ${filePath}`);
@@ -3219,7 +3177,9 @@ class ActionManager {
           if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
           }
-          console.log(`🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用Node.js fs.writeFileSync | filePath=${filePath}`);
+          console.log(
+            `🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用Node.js fs.writeFileSync | filePath=${filePath}`
+          );
           fs.writeFileSync(filePath, content, 'utf8');
           console.log(`📁 [ActionManager] File saved successfully via fs to: ${filePath}`);
           return true;
@@ -3230,7 +3190,9 @@ class ActionManager {
 
       // Method 4: try saveFile API (shows dialog - not ideal for auto_save)
       if (window.electronAPI && window.electronAPI.saveFile) {
-        console.warn(`⚠️ [ActionManager] All direct write methods unavailable, falling back to saveFile (may show dialog)`);
+        console.warn(
+          `⚠️ [ActionManager] All direct write methods unavailable, falling back to saveFile (may show dialog)`
+        );
         const success = await window.electronAPI.saveFile(filePath, content);
         if (success) {
           console.log(`📁 [ActionManager] File saved successfully to: ${filePath}`);
@@ -3261,15 +3223,6 @@ class ActionManager {
   async autoOpenGeneratedGBK(genbankContent, filename) {
     try {
       console.log(`🔄 [ActionManager] Auto-opening generated GBK file: ${filename}`);
-
-      // Create a temporary file object for the generated GBK content
-      const tempFile = {
-        name: filename,
-        data: genbankContent,
-        type: 'text/plain',
-        size: genbankContent.length,
-        lastModified: new Date(),
-      };
 
       // Check if FileManager is available
       if (!this.genomeBrowser.fileManager) {
@@ -3334,7 +3287,7 @@ class ActionManager {
    * @deprecated Use executeAllActions() which properly uses execution copy
    * @private
    */
-  async executeAction(action) {
+  async executeActionDeprecated(action) {
     console.error('❌❌❌ [ActionManager] CRITICAL: executeAction() called directly!');
     console.error('This method modifies original data and should NOT be used!');
     console.error('Use executeAllActions() or executeActionOnCopy() instead.');
@@ -3426,22 +3379,24 @@ class ActionManager {
         positionShift = -(end - start + 1); // Negative shift for deletions
         break;
 
-      case this.ACTION_TYPES.INSERT_SEQUENCE:
+      case this.ACTION_TYPES.INSERT_SEQUENCE: {
         const insertLength = executedAction.metadata.insertSequence
           ? executedAction.metadata.insertSequence.length
           : executedAction.metadata.length || 0;
         positionShift = insertLength; // Positive shift for insertions
         break;
+      }
 
-      case this.ACTION_TYPES.REPLACE_SEQUENCE:
+      case this.ACTION_TYPES.REPLACE_SEQUENCE: {
         const originalLength = end - start + 1;
         const newLength = executedAction.metadata.newSequence
           ? executedAction.metadata.newSequence.length
           : executedAction.metadata.newLength || originalLength;
         positionShift = newLength - originalLength; // Net change
         break;
+      }
 
-      case this.ACTION_TYPES.PASTE_SEQUENCE:
+      case this.ACTION_TYPES.PASTE_SEQUENCE: {
         // Handle paste-insert vs paste-replace
         if (executedAction.result && executedAction.result.operation === 'paste-insert') {
           const pasteLength = executedAction.metadata.clipboardData
@@ -3456,6 +3411,7 @@ class ActionManager {
           positionShift = newLength - originalLength;
         }
         break;
+      }
     }
 
     if (positionShift === 0) {
@@ -3936,8 +3892,8 @@ class ActionManager {
         : [];
       throw new Error(
         `Unable to retrieve sequence for cutting at ${chromosome}:${start}-${end}. ` +
-        `Chromosome '${chromosome}' not found in loaded genome data. ` +
-        `Available chromosomes: ${availableChromosomes.join(', ')}`
+          `Chromosome '${chromosome}' not found in loaded genome data. ` +
+          `Available chromosomes: ${availableChromosomes.join(', ')}`
       );
     }
 
@@ -4224,7 +4180,9 @@ class ActionManager {
     const insertPosition = Number(action.metadata.position !== undefined ? action.metadata.position : start);
 
     if (!insertSequence) {
-      throw new Error(`Insert sequence action missing sequence data in metadata. Available keys: ${Object.keys(action.metadata).join(', ')}`);
+      throw new Error(
+        `Insert sequence action missing sequence data in metadata. Available keys: ${Object.keys(action.metadata).join(', ')}`
+      );
     }
 
     console.log('➕ [ActionManager] Executing insert sequence action:', {
@@ -4267,7 +4225,9 @@ class ActionManager {
     const originalLength = end - start + 1;
 
     if (!newSequence) {
-      throw new Error(`Replace sequence action missing sequence data in metadata. Available keys: ${Object.keys(action.metadata).join(', ')}`);
+      throw new Error(
+        `Replace sequence action missing sequence data in metadata. Available keys: ${Object.keys(action.metadata).join(', ')}`
+      );
     }
 
     console.log('🔄 [ActionManager] Executing replace sequence action:', {
@@ -4344,22 +4304,24 @@ class ActionManager {
         positionShift = -(end - start + 1); // Negative shift for deletions
         break;
 
-      case this.ACTION_TYPES.INSERT_SEQUENCE:
+      case this.ACTION_TYPES.INSERT_SEQUENCE: {
         const insertLength = executedAction.metadata.insertSequence
           ? executedAction.metadata.insertSequence.length
           : executedAction.metadata.length || 0;
         positionShift = insertLength; // Positive shift for insertions
         break;
+      }
 
-      case this.ACTION_TYPES.REPLACE_SEQUENCE:
+      case this.ACTION_TYPES.REPLACE_SEQUENCE: {
         const originalLength = end - start + 1;
         const newLength = executedAction.metadata.newSequence
           ? executedAction.metadata.newSequence.length
           : executedAction.metadata.newLength || originalLength;
         positionShift = newLength - originalLength; // Net change
         break;
+      }
 
-      case this.ACTION_TYPES.PASTE_SEQUENCE:
+      case this.ACTION_TYPES.PASTE_SEQUENCE: {
         // Handle paste-insert vs paste-replace
         if (executedAction.result && executedAction.result.operation === 'paste-insert') {
           const pasteLength = executedAction.metadata.clipboardData
@@ -4374,6 +4336,7 @@ class ActionManager {
           positionShift = newLength - originalLength;
         }
         break;
+      }
     }
 
     if (positionShift === 0) {
@@ -4690,7 +4653,7 @@ class ActionManager {
       const modEnd = mod.end || modPosition;
 
       switch (mod.type) {
-        case 'delete':
+        case 'delete': {
           const deleteLength = mod.length || modEnd - modPosition + 1;
 
           // Check if feature is completely within deleted region
@@ -4733,8 +4696,9 @@ class ActionManager {
             adjustedEnd -= deleteLength;
           }
           break;
+        }
 
-        case 'insert':
+        case 'insert': {
           const insertLength = mod.length || (mod.sequence ? mod.sequence.length : 0);
 
           // Shift features that come after the insertion
@@ -4746,8 +4710,9 @@ class ActionManager {
             adjustedEnd += insertLength;
           }
           break;
+        }
 
-        case 'replace':
+        case 'replace': {
           const originalLength = mod.originalLength || modEnd - modPosition + 1;
           const newLength = mod.newLength || (mod.newSequence ? mod.newSequence.length : originalLength);
           const lengthDiff = newLength - originalLength;
@@ -4781,6 +4746,7 @@ class ActionManager {
             adjustedEnd += lengthDiff;
           }
           break;
+        }
       }
 
       if (!isValid) break;
@@ -4815,7 +4781,7 @@ class ActionManager {
    * Execute sequence edit action
    */
   async executeSequenceEdit(action, executionGenomeData = null) {
-    const { changeSummary, originalSequence, modifiedSequence } = action.metadata;
+    const { changeSummary } = action.metadata;
 
     console.log('🔧 [ActionManager] Executing sequence edit action:', {
       actionId: action.id,
@@ -5181,7 +5147,7 @@ class ActionManager {
    * @param {boolean} options.forced - Whether to force clear without confirmation
    * @returns {Object} - Result of the operation
    */
-  clearAllActions(options = {}) {
+  clearAllActionsUI(options = {}) {
     const { forced = false } = options;
 
     if (this.actions.length === 0) {
@@ -6162,13 +6128,28 @@ class ActionManager {
       // Execute actions function
       executeActions: {
         name: 'executeActions',
-        description: 'Execute all pending actions and generate a modified GenBank file. Use auto_save=true for LLM/automated workflows to bypass save dialog.',
+        description:
+          'Execute all pending actions and generate a modified GenBank file. Use auto_save=true for LLM/automated workflows to bypass save dialog.',
         parameters: {
           type: 'object',
           properties: {
-            auto_save: { type: 'boolean', description: 'When true, automatically save the GenBank file without showing a save dialog. Essential for LLM/automated workflows. Default is false, but LLMs should always set this to true.', default: false },
-            filename: { type: 'string', description: 'Output file path for the generated GenBank file. Supports absolute paths (e.g., "/Users/user/output/modified_genome.gbk") or relative paths (resolved against CWD). Only effective when auto_save is true.' },
-            confirm: { type: 'boolean', description: 'Confirm execution without user prompt (auto-resolves conflicts). Implied when auto_save is true.', default: false },
+            auto_save: {
+              type: 'boolean',
+              description:
+                'When true, automatically save the GenBank file without showing a save dialog. Essential for LLM/automated workflows. Default is false, but LLMs should always set this to true.',
+              default: false,
+            },
+            filename: {
+              type: 'string',
+              description:
+                'Output file path for the generated GenBank file. Supports absolute paths (e.g., "/Users/user/output/modified_genome.gbk") or relative paths (resolved against CWD). Only effective when auto_save is true.',
+            },
+            confirm: {
+              type: 'boolean',
+              description:
+                'Confirm execution without user prompt (auto-resolves conflicts). Implied when auto_save is true.',
+              default: false,
+            },
           },
         },
       },
@@ -6405,7 +6386,7 @@ class ActionManager {
   }
 
   async functionPasteSequence(params) {
-    const { chromosome, position, start, end } = params;
+    const { chromosome, position, start } = params;
 
     // AI agents might provide start instead of position
     const actualPosition = position || start;
@@ -6671,15 +6652,17 @@ class ActionManager {
   async functionExecuteActions(params) {
     // Delegate to executeAllActionsInternal with raw params.
     // Path resolution is handled by resolveSaveFilePath() inside executeAllActionsInternal.
-    const { auto_save = false, filename, saveFile, confirm } = params || {};
+    const { auto_save: autoSave = false, filename, saveFile, confirm } = params || {};
 
-    console.log(`🔍 [TRACE-EXECUTE_ACTIONS] functionExecuteActions 入口 | auto_save=${auto_save} | filename=${filename} | saveFile=${saveFile} | confirm=${confirm}`);
+    console.log(
+      `🔍 [TRACE-EXECUTE_ACTIONS] functionExecuteActions 入口 | auto_save=${autoSave} | filename=${filename} | saveFile=${saveFile} | confirm=${confirm}`
+    );
 
     const options = {};
     if (saveFile) options.saveFile = saveFile;
     if (filename) options.filename = filename;
-    if (auto_save) {
-      options.auto_save = true;
+    if (autoSave) {
+      options['auto_save'] = true;
       options.confirm = true; // auto_save implies auto-resolve conflicts
     }
     if (confirm) options.confirm = true;
@@ -6800,7 +6783,7 @@ class ActionManager {
     // Path resolution is handled by resolveSaveFilePath() inside executeAllActionsInternal.
     console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActions 入口 | params=${JSON.stringify(params)}`);
     const options = { ...(params || {}) };
-    if (params && params.auto_save) {
+    if (params && params['auto_save']) {
       options.confirm = true; // auto_save implies auto-resolve conflicts
     }
     console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActions 构建options | options=${JSON.stringify(options)}`);
@@ -6963,138 +6946,6 @@ class ActionManager {
   }
 
   /**
-   * Switch to a specific tab by ID, name, or index
-   * @param {Object} params - Switch parameters
-   * @param {string} params.tab_id - Specific tab ID to switch to
-   * @param {string} params.tab_name - Tab name/title to search for (partial matching)
-   * @param {number} params.tab_index - Zero-based index of tab to switch to
-   * @param {string} params.clientId - Optional client identifier
-   * @returns {Object} Switch result
-   */
-  async functionSwitchToTab(params) {
-    console.log('🔧 [ActionManager] ===== FUNCTION SWITCH TO TAB START =====');
-    console.log('🔧 [ActionManager] Received params:', params);
-    console.log('🔧 [ActionManager] Params type:', typeof params);
-    console.log('🔧 [ActionManager] Params keys:', Object.keys(params || {}));
-
-    const { tab_id, tab_name, tab_index, clientId } = params || {};
-
-    console.log('🔧 [ActionManager] Destructured params:');
-    console.log('  - tab_id:', tab_id);
-    console.log('  - tab_name:', tab_name);
-    console.log('  - tab_index:', tab_index);
-    console.log('  - clientId:', clientId);
-
-    try {
-      // Check if genome browser and tab manager are available
-      console.log('🔧 [ActionManager] Checking genome browser availability...');
-      console.log('🔧 [ActionManager] this.genomeBrowser available:', !!this.genomeBrowser);
-
-      if (!this.genomeBrowser) {
-        throw new Error('Genome browser not available');
-      }
-
-      console.log('🔧 [ActionManager] Checking tab manager availability...');
-      console.log('🔧 [ActionManager] this.genomeBrowser.tabManager available:', !!this.genomeBrowser.tabManager);
-
-      if (!this.genomeBrowser.tabManager) {
-        throw new Error('Tab manager not available');
-      }
-
-      let targetTabId = null;
-      let targetTabTitle = null;
-      const tabEntries = Array.from(this.genomeBrowser.tabManager.tabs.entries());
-
-      console.log('🔧 [ActionManager] Current tabs count:', tabEntries.length);
-      console.log(
-        '🔧 [ActionManager] Available tab IDs:',
-        tabEntries.map(([id]) => id)
-      );
-
-      // Strategy 1: Switch by specific tab ID
-      if (tab_id) {
-        console.log(`🔧 [ActionManager] Strategy 1: Searching for tab by ID: ${tab_id}`);
-        if (this.genomeBrowser.tabManager.tabs.has(tab_id)) {
-          targetTabId = tab_id;
-          const tabState = this.genomeBrowser.tabManager.tabs.get(tab_id);
-          targetTabTitle = tabState.title || `Tab ${tab_id}`;
-          console.log(`🎯 [ActionManager] Found tab by ID: ${tab_id} - ${targetTabTitle}`);
-        } else {
-          throw new Error(`Tab with ID '${tab_id}' not found`);
-        }
-      }
-      // Strategy 2: Switch by tab name/title (case-insensitive partial matching)
-      else if (tab_name) {
-        console.log(`🔧 [ActionManager] Strategy 2: Searching for tab by name: ${tab_name}`);
-        const foundTab = tabEntries.find(([tabId, tabState]) => {
-          if (tabState.title) {
-            const matches = tabState.title.toLowerCase().includes(tab_name.toLowerCase());
-            console.log(`🔍 [ActionManager] Checking tab "${tabState.title}" against "${tab_name}": ${matches}`);
-            return matches;
-          }
-          return false;
-        });
-
-        if (foundTab) {
-          targetTabId = foundTab[0];
-          targetTabTitle = foundTab[1].title;
-          console.log(`🎯 [ActionManager] Found tab by name '${tab_name}': ${targetTabId} - ${targetTabTitle}`);
-        } else {
-          throw new Error(`No tab found matching name '${tab_name}'`);
-        }
-      }
-      // Strategy 3: Switch by tab index (zero-based)
-      else if (tab_index !== undefined) {
-        console.log(`🔧 [ActionManager] Strategy 3: Searching for tab by index: ${tab_index}`);
-        const tabIds = Array.from(this.genomeBrowser.tabManager.tabs.keys());
-        console.log(`🔧 [ActionManager] Available tab indices: 0-${tabIds.length - 1}`);
-
-        if (tab_index >= 0 && tab_index < tabIds.length) {
-          targetTabId = tabIds[tab_index];
-          const tabState = this.genomeBrowser.tabManager.tabs.get(targetTabId);
-          targetTabTitle = tabState.title || `Tab ${targetTabId}`;
-          console.log(`🎯 [ActionManager] Found tab by index ${tab_index}: ${targetTabId} - ${targetTabTitle}`);
-        } else {
-          throw new Error(`Tab index ${tab_index} is out of range (0-${tabIds.length - 1})`);
-        }
-      } else {
-        throw new Error('At least one parameter (tab_id, tab_name, or tab_index) must be provided');
-      }
-
-      // Perform the tab switch
-      if (targetTabId) {
-        console.log(`🔧 [ActionManager] Attempting to switch to tab: ${targetTabId}`);
-
-        // Use the TabManager's switchTab method
-        this.genomeBrowser.tabManager.switchTab(targetTabId);
-
-        console.log(`✅ [ActionManager] Successfully switched to tab: ${targetTabId} - ${targetTabTitle}`);
-        console.log('🔧 [ActionManager] ===== FUNCTION SWITCH TO TAB END =====');
-
-        return {
-          success: true,
-          tab_id: targetTabId,
-          tab_title: targetTabTitle,
-          message: `Successfully switched to tab: ${targetTabTitle}`,
-          clientId: clientId,
-        };
-      } else {
-        throw new Error('Failed to identify target tab');
-      }
-    } catch (error) {
-      console.error('❌ [ActionManager] Error switching tab:', error);
-      console.error('❌ [ActionManager] Error stack:', error.stack);
-      console.log('🔧 [ActionManager] ===== FUNCTION SWITCH TO TAB ERROR =====');
-
-      return {
-        success: false,
-        error: error.message,
-        clientId: clientId,
-      };
-    }
-  }
-
-  /**
    * Switch to tab function for AI integration
    */
   async functionSwitchToTab(params) {
@@ -7103,12 +6954,12 @@ class ActionManager {
     console.log('🔧 [ActionManager] Params type:', typeof params);
     console.log('🔧 [ActionManager] Params keys:', Object.keys(params || {}));
 
-    const { tab_id, tab_name, tab_index } = params || {};
+    const { tab_id: tabId, tab_name: tabName, tab_index: tabIndex, clientId } = params || {};
 
     console.log('🔧 [ActionManager] Destructured params:');
-    console.log('  - tab_id:', tab_id);
-    console.log('  - tab_name:', tab_name);
-    console.log('  - tab_index:', tab_index);
+    console.log('  - tab_id:', tabId);
+    console.log('  - tab_name:', tabName);
+    console.log('  - tab_index:', tabIndex);
 
     try {
       // Check if genome browser and tab manager are available
@@ -7135,20 +6986,19 @@ class ActionManager {
       console.log('🔧 [ActionManager] Available tabs:', Array.from(this.genomeBrowser.tabManager.tabs.keys()));
 
       // Strategy 1: Switch by specific tab ID
-      if (tab_id) {
-        console.log('🔧 [ActionManager] Switching by tab ID:', tab_id);
-        if (this.genomeBrowser.tabManager.tabs.has(tab_id)) {
-          targetTabId = tab_id;
-          const tabState = this.genomeBrowser.tabManager.tabStates.get(tab_id);
+      if (tabId) {
+        console.log('🔧 [ActionManager] Switching by tab ID:', tabId);
+        if (this.genomeBrowser.tabManager.tabs.has(tabId)) {
+          targetTabId = tabId;
+          const tabState = this.genomeBrowser.tabManager.tabStates.get(tabId);
           targetTabTitle = tabState?.title || 'Unknown';
           console.log('🔧 [ActionManager] Found tab by ID:', targetTabId, 'with title:', targetTabTitle);
         } else {
-          throw new Error(`Tab with ID '${tab_id}' not found`);
+          throw new Error(`Tab with ID '${tabId}' not found`);
         }
-      }
-      // Strategy 2: Switch by tab name/title
-      else if (tab_name) {
-        console.log('🔧 [ActionManager] Switching by tab name:', tab_name);
+      } else if (tabName) {
+        // Strategy 2: Switch by tab name/title
+        console.log('🔧 [ActionManager] Switching by tab name:', tabName);
         const tabEntries = Array.from(this.genomeBrowser.tabManager.tabStates.entries());
         console.log(
           '🔧 [ActionManager] Available tab states:',
@@ -7156,7 +7006,7 @@ class ActionManager {
         );
 
         const foundTab = tabEntries.find(
-          ([tabId, tabState]) => tabState.title && tabState.title.toLowerCase().includes(tab_name.toLowerCase())
+          ([, tabState]) => tabState.title && tabState.title.toLowerCase().includes(tabName.toLowerCase())
         );
 
         if (foundTab) {
@@ -7164,22 +7014,21 @@ class ActionManager {
           targetTabTitle = foundTab[1].title;
           console.log('🔧 [ActionManager] Found tab by name:', targetTabId, 'with title:', targetTabTitle);
         } else {
-          throw new Error(`Tab with name containing '${tab_name}' not found`);
+          throw new Error(`Tab with name containing '${tabName}' not found`);
         }
-      }
-      // Strategy 3: Switch by tab index
-      else if (tab_index !== undefined) {
-        console.log('🔧 [ActionManager] Switching by tab index:', tab_index);
+      } else if (tabIndex !== undefined) {
+        // Strategy 3: Switch by tab index
+        console.log('🔧 [ActionManager] Switching by tab index:', tabIndex);
         const tabIds = Array.from(this.genomeBrowser.tabManager.tabs.keys());
         console.log('🔧 [ActionManager] Available tab IDs:', tabIds);
 
-        if (tab_index >= 0 && tab_index < tabIds.length) {
-          targetTabId = tabIds[tab_index];
+        if (tabIndex >= 0 && tabIndex < tabIds.length) {
+          targetTabId = tabIds[tabIndex];
           const tabState = this.genomeBrowser.tabManager.tabStates.get(targetTabId);
           targetTabTitle = tabState?.title || 'Unknown';
           console.log('🔧 [ActionManager] Found tab by index:', targetTabId, 'with title:', targetTabTitle);
         } else {
-          throw new Error(`Tab index ${tab_index} is out of range (0-${tabIds.length - 1})`);
+          throw new Error(`Tab index ${tabIndex} is out of range (0-${tabIds.length - 1})`);
         }
       } else {
         throw new Error('Must provide either tab_id, tab_name, or tab_index');
@@ -7194,10 +7043,14 @@ class ActionManager {
 
       return {
         success: true,
+        tabId: targetTabId,
+        tabTitle: targetTabTitle,
+        previousTabId,
         tab_id: targetTabId,
         tab_title: targetTabTitle,
         previous_tab_id: previousTabId,
         message: `Switched to tab: ${targetTabTitle}`,
+        clientId,
       };
     } catch (error) {
       console.error('❌ [ActionManager] Error switching tab:', error);
@@ -7221,7 +7074,7 @@ class ActionManager {
       // Fallback: search in current annotations
       if (this.genomeBrowser.currentAnnotations) {
         const results = [];
-        for (const [chromosome, features] of Object.entries(this.genomeBrowser.currentAnnotations)) {
+        for (const [, features] of Object.entries(this.genomeBrowser.currentAnnotations)) {
           const matchingFeatures = features.filter(
             feature =>
               (feature.name && feature.name.toLowerCase().includes(geneName.toLowerCase())) ||
@@ -7247,7 +7100,7 @@ class ActionManager {
   /**
    * Get clipboard content (UI response function)
    */
-  getClipboardContent() {
+  getClipboardContentForUI() {
     if (!this.clipboard) {
       this.genomeBrowser.showNotification('Clipboard is empty', 'warning');
       return null;
