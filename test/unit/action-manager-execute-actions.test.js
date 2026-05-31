@@ -144,6 +144,19 @@ describe('ActionManager execute_actions sequencing', () => {
     expect(genomeBrowser.currentAnnotations.chr1).toEqual(originalFeatures);
   });
 
+  it('opens generated GBK files in a new genome window when window creation is available', async () => {
+    const { genomeBrowser, manager } = createManager('ACGT');
+    manager.autoOpenGeneratedGBK = ActionManager.prototype.autoOpenGeneratedGBK.bind(manager);
+    genomeBrowser.fileManager.parseGenBank = vi.fn(async () => {});
+    window.electronAPI.createNewMainWindow = vi.fn(async () => ({ success: true, windowId: 'window-test' }));
+
+    await manager.autoOpenGeneratedGBK('LOCUS test\n//\n', '/tmp/generated-actions.gbk');
+
+    expect(window.electronAPI.createNewMainWindow).toHaveBeenCalledWith('/tmp/generated-actions.gbk');
+    expect(genomeBrowser.fileManager.parseGenBank).not.toHaveBeenCalled();
+    expect(genomeBrowser.fileManager.currentFile.path).toBe('/tmp/source.gbk');
+  });
+
   it('executes cut and later paste as an ordered move on the working sequence', async () => {
     const { genomeBrowser, manager } = createManager('AAAACCCC');
 

@@ -3312,6 +3312,19 @@ class ActionManager {
     try {
       console.log(`🔄 [ActionManager] Auto-opening generated GBK file: ${filename}`);
 
+      if (window.electronAPI && typeof window.electronAPI.createNewMainWindow === 'function') {
+        try {
+          const result = await window.electronAPI.createNewMainWindow(filename);
+          if (result && result.success) {
+            console.log(`✅ [ActionManager] Successfully opened generated GBK file in new window: ${filename}`);
+            return;
+          }
+          console.warn('⚠️ [ActionManager] New-window GBK open failed, falling back to current window:', result?.error);
+        } catch (error) {
+          console.warn('⚠️ [ActionManager] New-window GBK open threw, falling back to current window:', error);
+        }
+      }
+
       // Check if FileManager is available
       if (!this.genomeBrowser.fileManager) {
         console.warn('⚠️ [ActionManager] FileManager not available, cannot auto-open GBK file');
