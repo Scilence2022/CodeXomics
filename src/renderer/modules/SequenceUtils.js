@@ -763,6 +763,12 @@ class SequenceUtils {
       'Show Protein Sequence'
     );
     toggleButton('togglePrimerSequenceBtn', settings.showPrimers, 'Hide Primers', 'Show Primers');
+    toggleButton(
+      'toggleComplementaryStrandBtn',
+      settings.showComplementary,
+      'Hide Complementary Strand',
+      'Show Complementary Strand'
+    );
   }
 
   /**
@@ -1163,7 +1169,8 @@ class SequenceUtils {
     const positionWidth = 100;
     const marginRight = 15; // Position span margin-right
     const padding = 30; // Container padding
-    const availableWidth = containerWidth - positionWidth - marginRight - padding;
+    const strandLabelWidth = 20; // 5'/3' label width
+    const availableWidth = containerWidth - positionWidth - marginRight - padding - strandLabelWidth;
 
     // Calculate optimal line length with better precision
     // FIX: Letter-spacing is already included in character width measurement
@@ -1642,7 +1649,7 @@ class SequenceUtils {
     const positionSpan = document.createElement('span');
     positionSpan.className = 'sequence-position';
     positionSpan.style.cssText =
-      'width: 100px; color: #6c757d; font-weight: 600; margin-right: 15px; text-align: right; flex-shrink: 0;';
+      'width: 100px; color: #6c757d; font-weight: 600; margin-right: 15px; text-align: right; flex-shrink: 0; align-self: flex-start; margin-top: 4px;';
     positionSpan.dataset.displayStart = String(lineStartPos);
     positionSpan.dataset.sourceStart = String(this.displayToSourcePositionFast(lineStartPos, context));
     positionSpan.textContent = this.getLineDisplayLabel(lineStartPos, chromosome);
@@ -1663,8 +1670,52 @@ class SequenceUtils {
     // Apply search highlighting if any highlights overlap with this line
     this.applySearchHighlightToLine(basesDiv, lineStartPos, lineSubsequence.length);
 
+    // Create a container for both strands so they stack vertically
+    const strandContainer = document.createElement('div');
+    strandContainer.className = 'strand-container';
+    strandContainer.style.cssText = 'flex: 1; display: flex; flex-direction: column; overflow: hidden;';
+
+    // Main Row
+    const mainRow = document.createElement('div');
+    mainRow.className = 'strand-row main-strand-row';
+    mainRow.style.cssText = 'display: flex; align-items: center; width: 100%;';
+    const mainLabel = document.createElement('span');
+    mainLabel.textContent = "5'";
+    mainLabel.style.cssText = 'width: 20px; color: #888; font-size: 10px; font-weight: 600; flex-shrink: 0; user-select: none; font-family: sans-serif;';
+    mainRow.appendChild(mainLabel);
+    mainRow.appendChild(basesDiv);
+    strandContainer.appendChild(mainRow);
+
+    if (sequenceSettings.showComplementary) {
+      const compSequence = this.getComplement(lineSubsequence);
+      const compBasesDiv = document.createElement('div');
+      compBasesDiv.className = 'sequence-bases complement-bases';
+      compBasesDiv.style.cssText =
+        'flex: 1; white-space: nowrap; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6; letter-spacing: 1px; overflow: hidden; opacity: 0.75;';
+      compBasesDiv.innerHTML = this.colorizeSequenceWithFeaturesOptimized(
+        compSequence,
+        lineStartPos,
+        featureLookup,
+        operons,
+        chromosome
+      );
+
+      // Apply search highlighting if any highlights overlap with this line
+      this.applySearchHighlightToLine(compBasesDiv, lineStartPos, compSequence.length);
+
+      const compRow = document.createElement('div');
+      compRow.className = 'strand-row complement-strand-row';
+      compRow.style.cssText = 'display: flex; align-items: center; width: 100%; margin-top: 2px;';
+      const compLabel = document.createElement('span');
+      compLabel.textContent = "3'";
+      compLabel.style.cssText = 'width: 20px; color: #888; font-size: 10px; font-weight: 600; flex-shrink: 0; user-select: none; font-family: sans-serif;';
+      compRow.appendChild(compLabel);
+      compRow.appendChild(compBasesDiv);
+      strandContainer.appendChild(compRow);
+    }
+
     sequenceLine.appendChild(positionSpan);
-    sequenceLine.appendChild(basesDiv);
+    sequenceLine.appendChild(strandContainer);
 
     // Gene indicator line - use pre-calculated values
     const indicatorLine = document.createElement('div');
@@ -1726,7 +1777,8 @@ class SequenceUtils {
     const indicatorHeight = settings.showIndicators === false ? 0 : (settings.indicatorHeight || 8) + 8;
     const proteinHeight = settings.showProteinSequence ? 22 : 0;
     const primerHeight = settings.showPrimers ? 20 : 0;
-    return this.lineHeight + this.lineSpacing + indicatorHeight + proteinHeight + primerHeight;
+    const complementaryHeight = settings.showComplementary ? 22 : 0;
+    return this.lineHeight + this.lineSpacing + indicatorHeight + proteinHeight + primerHeight + complementaryHeight;
   }
 
   createAlignedProteinRows(
@@ -2504,6 +2556,19 @@ class SequenceUtils {
       .join('');
   }
 
+  getComplement(sequence) {
+    const complement = {
+      'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G',
+      'a': 't', 't': 'a', 'g': 'c', 'c': 'g',
+      'N': 'N', 'n': 'n',
+      'R': 'Y', 'Y': 'R', 'S': 'S', 'W': 'W', 'K': 'M', 'M': 'K',
+      'B': 'V', 'D': 'H', 'H': 'D', 'V': 'B',
+      'r': 'y', 'y': 'r', 's': 's', 'w': 'w', 'k': 'm', 'm': 'k',
+      'b': 'v', 'd': 'h', 'h': 'd', 'v': 'b'
+    };
+    return sequence.split('').map(base => complement[base] || base).join('');
+  }
+
   // Sequence operations
   /**
    * Copy sequence to system clipboard with proper error handling and FASTA formatting
@@ -3104,6 +3169,7 @@ class SequenceUtils {
       showIndicators: true,
       showProteinSequence: false,
       showPrimers: false,
+      showComplementary: false,
       indicatorHeight: 8,
       indicatorOpacity: 0.7,
       showStartMarkers: true,

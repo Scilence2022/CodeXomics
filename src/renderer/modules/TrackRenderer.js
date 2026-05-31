@@ -12045,6 +12045,7 @@ This action cannot be undone.`;
         renderingMode: 'canvas', // Default rendering mode for sequence track
         showProteinSequence: false,
         showPrimers: false,
+        showComplementary: false,
       },
       sequenceLine: {
         fontSize: 14,

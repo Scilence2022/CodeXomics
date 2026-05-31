@@ -1060,6 +1060,9 @@ class GenomeBrowser {
     document.getElementById('togglePrimerSequenceBtn')?.addEventListener('click', () => {
       this.sequenceUtils.toggleSequenceTrackSetting('showPrimers');
     });
+    document.getElementById('toggleComplementaryStrandBtn')?.addEventListener('click', () => {
+      this.sequenceUtils.toggleSequenceTrackSetting('showComplementary');
+    });
 
     // Add click event for selected sequences (both gene and manual)
     document.addEventListener('click', e => {
@@ -9815,7 +9818,9 @@ class GenomeBrowser {
     if (!positionElement) return null;
 
     const lineStartPos = parseInt(positionElement.textContent.replace(/,/g, ''));
-    const baseIndex = Array.from(parentLine.querySelectorAll('.sequence-bases span')).indexOf(baseElement);
+    const basesDiv = baseElement.closest('.sequence-bases');
+    if (!basesDiv) return null;
+    const baseIndex = Array.from(basesDiv.querySelectorAll('span')).indexOf(baseElement);
 
     return {
       chromosome: document.getElementById('chromosomeSelect')?.value,
