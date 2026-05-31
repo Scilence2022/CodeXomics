@@ -1462,6 +1462,12 @@ function createMenu() {
           },
         },
         {
+          label: 'Paste (Reverse)',
+          click: () => {
+            sendToCurrentMainWindow('action-paste-sequence-reverse');
+          },
+        },
+        {
           label: 'Del Sequence',
           accelerator: 'CmdOrCtrl+Shift+D',
           click: () => {
@@ -1473,6 +1479,12 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+I',
           click: () => {
             sendToCurrentMainWindow('action-insert-sequence');
+          },
+        },
+        {
+          label: 'Insert (Reverse)',
+          click: () => {
+            sendToCurrentMainWindow('action-insert-sequence-reverse');
           },
         },
         { type: 'separator' },

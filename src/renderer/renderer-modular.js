@@ -3222,6 +3222,14 @@ class GenomeBrowser {
       }
     });
 
+    ipcRenderer.on('action-paste-sequence-reverse', () => {
+      if (window.actionManager) {
+        window.actionManager.handlePasteSequence(true);
+      } else {
+        this.showNotification('Action system not initialized', 'error');
+      }
+    });
+
     ipcRenderer.on('action-delete-sequence', () => {
       if (window.actionManager) {
         window.actionManager.handleDeleteSequence();
@@ -3233,6 +3241,14 @@ class GenomeBrowser {
     ipcRenderer.on('action-insert-sequence', () => {
       if (window.actionManager) {
         window.actionManager.handleInsertSequence();
+      } else {
+        this.showNotification('Action system not initialized', 'error');
+      }
+    });
+
+    ipcRenderer.on('action-insert-sequence-reverse', () => {
+      if (window.actionManager) {
+        window.actionManager.handleInsertSequence(true);
       } else {
         this.showNotification('Action system not initialized', 'error');
       }

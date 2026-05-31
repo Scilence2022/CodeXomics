@@ -380,6 +380,41 @@ describe('ActionManager execute_actions sequencing', () => {
     expect(manager.actionHistory[0].actions[0].metadata.position).toBe(9);
   });
 
+  it('executes UI-created reverse-complement insert actions', async () => {
+    const { manager } = createManager('AACCGG');
+
+    manager.createInsertAction('chr1', 2, 'ATGC', { reverseComplement: true });
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/ui-reverse-insert-actions.gbk' });
+
+    expect(result.success).toBe(true);
+    expect(lastExport.chr1.sequence).toBe('AAGCATCCGG');
+    expect(manager.actionHistory[0].actions[0].metadata.reverseComplement).toBe(true);
+  });
+
+  it('queues reverse-complement paste actions from the UI handler', () => {
+    const { manager } = createManager('AACCGG');
+    manager.cursorPosition = 3;
+    manager.clipboard = {
+      type: 'copy',
+      sequence: 'ATGC',
+      source: 'manual',
+      sourceInfo: null,
+      comprehensiveData: { features: [], region: { chromosome: 'chr1', start: 1, end: 4, strand: '+' } },
+    };
+
+    manager.handlePasteSequence(true);
+
+    expect(manager.actions).toHaveLength(1);
+    expect(manager.actions[0].metadata).toEqual(
+      expect.objectContaining({
+        pasteMode: 'insert',
+        reverseComplement: true,
+        reverse_complement: true,
+      })
+    );
+  });
+
   it('applies sequence_edit actions to the exported working copy and shifts later coordinates', async () => {
     const { manager } = createManager('ACGTACGT');
     const sequenceEdit = manager.createAction(manager.ACTION_TYPES.SEQUENCE_EDIT, 'chr1:3-5(+)', 'Edit chr1:3-5', {

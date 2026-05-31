@@ -538,8 +538,10 @@ class ActionManager {
       const copyHeaderBtn = document.getElementById('copySequenceHeaderBtn'); // Copy button in sequence track header
       const cutBtn = document.getElementById('cutSequenceBtn');
       const pasteBtn = document.getElementById('pasteSequenceBtn');
+      const pasteReverseBtn = document.getElementById('pasteSequenceReverseBtn');
       const deleteBtn = document.getElementById('deleteSequenceBtn');
       const insertBtn = document.getElementById('insertSequenceBtn');
+      const insertReverseBtn = document.getElementById('insertSequenceReverseBtn');
       const showListBtn = document.getElementById('showActionListBtn');
       const executeBtn = document.getElementById('executeActionsBtn');
       if (copyBtn) {
@@ -558,6 +560,10 @@ class ActionManager {
         pasteBtn.addEventListener('click', () => this.handlePasteSequence());
         console.log('✅ Paste sequence listener added');
       }
+      if (pasteReverseBtn) {
+        pasteReverseBtn.addEventListener('click', () => this.handlePasteSequence(true));
+        console.log('✅ Reverse-complement paste sequence listener added');
+      }
       if (deleteBtn) {
         deleteBtn.addEventListener('click', () => this.handleDeleteSequence());
         console.log('✅ Delete sequence listener added');
@@ -565,6 +571,10 @@ class ActionManager {
       if (insertBtn) {
         insertBtn.addEventListener('click', () => this.handleInsertSequence());
         console.log('✅ Insert sequence listener added');
+      }
+      if (insertReverseBtn) {
+        insertReverseBtn.addEventListener('click', () => this.handleInsertSequence(true));
+        console.log('✅ Reverse-complement insert sequence listener added');
       }
       if (showListBtn) {
         showListBtn.addEventListener('click', () => this.showActionList());
@@ -883,7 +893,7 @@ class ActionManager {
   /**
    * Handle paste sequence action
    */
-  handlePasteSequence() {
+  handlePasteSequence(reverseComplement = false) {
     if (!this.clipboard || !this.clipboard.sequence) {
       this.genomeBrowser.showNotification('No sequence in clipboard', 'warning');
       return;
@@ -911,17 +921,23 @@ class ActionManager {
         strand: selectionInfo.strand || '+',
         clipboardData: this.clipboard,
         selectionSource: selectionInfo.source,
+        reverse_complement: reverseComplement,
+        reverseComplement,
       };
 
       this.addAction(
         this.ACTION_TYPES.PASTE_SEQUENCE,
         target,
-        `Paste ${this.clipboard.sequence.length} bp to replace ${selectionInfo.end - selectionInfo.start + 1} bp in ${selectionInfo.name}`,
+        `${reverseComplement ? 'Paste reverse-complement' : 'Paste'} ${this.clipboard.sequence.length} bp to replace ${
+          selectionInfo.end - selectionInfo.start + 1
+        } bp in ${selectionInfo.name}`,
         metadata
       );
 
       this.genomeBrowser.showNotification(
-        `Paste-replace action queued: ${selectionInfo.name} with ${this.clipboard.sequence.length} bp`,
+        `${reverseComplement ? 'Reverse-complement paste' : 'Paste-replace'} action queued: ${
+          selectionInfo.name
+        } with ${this.clipboard.sequence.length} bp`,
         'success'
       );
       return;
@@ -940,17 +956,23 @@ class ActionManager {
         clipboardData: this.clipboard,
         selectionSource: 'clipboard_source',
         pasteMode: 'replace', // Paste replaces the source location
+        reverse_complement: reverseComplement,
+        reverseComplement,
       };
 
       this.addAction(
         this.ACTION_TYPES.PASTE_SEQUENCE,
         target,
-        `Paste ${this.clipboard.sequence.length} bp to replace ${sourceInfo.end - sourceInfo.start + 1} bp at ${sourceInfo.name || target}`,
+        `${reverseComplement ? 'Paste reverse-complement' : 'Paste'} ${
+          this.clipboard.sequence.length
+        } bp to replace ${sourceInfo.end - sourceInfo.start + 1} bp at ${sourceInfo.name || target}`,
         metadata
       );
 
       this.genomeBrowser.showNotification(
-        `Paste-replace action queued at clipboard source location (${this.clipboard.sequence.length} bp)`,
+        `${reverseComplement ? 'Reverse-complement paste' : 'Paste-replace'} action queued at clipboard source location (${
+          this.clipboard.sequence.length
+        } bp)`,
         'success'
       );
       return;
@@ -975,17 +997,23 @@ class ActionManager {
           strand: '+',
           clipboardData: this.clipboard,
           pasteMode: 'insert', // Paste inserts at cursor
+          reverse_complement: reverseComplement,
+          reverseComplement,
         };
 
         this.addAction(
           this.ACTION_TYPES.PASTE_SEQUENCE,
           target,
-          `Paste ${this.clipboard.sequence.length} bp at cursor position ${this.cursorPosition}`,
+          `${reverseComplement ? 'Paste reverse-complement' : 'Paste'} ${
+            this.clipboard.sequence.length
+          } bp at cursor position ${this.cursorPosition}`,
           metadata
         );
 
         this.genomeBrowser.showNotification(
-          `Paste-insert action queued at cursor position ${this.cursorPosition}`,
+          `${reverseComplement ? 'Reverse-complement paste' : 'Paste-insert'} action queued at cursor position ${
+            this.cursorPosition
+          }`,
           'success'
         );
         return;
@@ -993,6 +1021,7 @@ class ActionManager {
     }
 
     // Fallback to modal selection if no cursor position or selection
+    this.currentPasteReverseComplement = reverseComplement;
     this.showSequenceSelectionModal('paste');
   }
 
@@ -1027,18 +1056,19 @@ class ActionManager {
    * Handle insert sequence action
    * Inserts sequence at cursor position or prompts user for sequence and position
    */
-  handleInsertSequence() {
+  handleInsertSequence(reverseComplement = false) {
     console.log('📋 [ActionManager] Insert sequence action initiated');
+    this.pendingInsertReverseComplement = reverseComplement;
 
     // Check if cursor is positioned
     const cursorPosition = this.genomeBrowser.sequenceUtils?.getCursorPosition();
 
     if (cursorPosition !== null && cursorPosition >= 0) {
       // Cursor is positioned - prompt for sequence to insert
-      this.promptInsertSequence(cursorPosition);
+      this.promptInsertSequence(cursorPosition, reverseComplement);
     } else {
       // No cursor - show modal to select position and enter sequence
-      this.showInsertSequenceModal();
+      this.showInsertSequenceModal(null, null, { reverseComplement });
     }
   }
 
@@ -1733,8 +1763,15 @@ class ActionManager {
           this.addAction(
             this.ACTION_TYPES.PASTE_SEQUENCE,
             target,
-            `Paste ${this.clipboard.sequence?.length || 0} bp to ${target}`,
-            { ...metadata, clipboardData: this.clipboard }
+            `${this.currentPasteReverseComplement ? 'Paste reverse-complement' : 'Paste'} ${
+              this.clipboard.sequence?.length || 0
+            } bp to ${target}`,
+            {
+              ...metadata,
+              clipboardData: this.clipboard,
+              reverse_complement: !!this.currentPasteReverseComplement,
+              reverseComplement: !!this.currentPasteReverseComplement,
+            }
           );
           break;
 
@@ -1779,6 +1816,7 @@ class ActionManager {
       modal.classList.remove('show');
     }
     this.currentOperation = null;
+    this.currentPasteReverseComplement = false;
   }
 
   /**
@@ -1789,6 +1827,7 @@ class ActionManager {
     if (modal) {
       modal.classList.remove('show');
     }
+    this.pendingInsertReverseComplement = false;
   }
 
   /**
@@ -1884,7 +1923,9 @@ class ActionManager {
     }
 
     // Create insert action
-    this.createInsertAction(chromosome, position, cleanSequence);
+    this.createInsertAction(chromosome, position, cleanSequence, {
+      reverseComplement: !!this.pendingInsertReverseComplement,
+    });
 
     // Close modal
     this.closeInsertSequenceModal();
@@ -1894,7 +1935,7 @@ class ActionManager {
    * Prompt user to enter sequence for insertion at cursor position
    * @param {number} position - The cursor position where sequence will be inserted
    */
-  promptInsertSequence(position) {
+  promptInsertSequence(position, reverseComplement = false) {
     const chromosome = this.genomeBrowser.currentChromosome;
     if (!chromosome) {
       this.genomeBrowser.showNotification('No chromosome selected', 'error');
@@ -1902,7 +1943,7 @@ class ActionManager {
     }
 
     // Show insert modal with position pre-filled
-    this.showInsertSequenceModal(chromosome, position);
+    this.showInsertSequenceModal(chromosome, position, { reverseComplement });
   }
 
   /**
@@ -1910,11 +1951,24 @@ class ActionManager {
    * @param {string} chromosome - Target chromosome (optional)
    * @param {number} position - Insert position (optional, 0-based)
    */
-  showInsertSequenceModal(chromosome = null, position = null) {
+  showInsertSequenceModal(chromosome = null, position = null, options = {}) {
     const modal = document.getElementById('sequenceInsertModal');
     if (!modal) {
       this.genomeBrowser.showNotification('Insert modal not found', 'error');
       return;
+    }
+
+    const reverseComplement = !!options.reverseComplement;
+    this.pendingInsertReverseComplement = reverseComplement;
+
+    const title = modal.querySelector('.modal-header h3');
+    if (title) {
+      title.textContent = reverseComplement ? 'Insert Sequence (Reverse Complement)' : 'Insert Sequence';
+    }
+
+    const confirmBtn = document.getElementById('confirmSequenceInsert');
+    if (confirmBtn) {
+      confirmBtn.textContent = reverseComplement ? 'Insert Sequence (Reverse)' : 'Insert Sequence';
     }
 
     // Populate chromosome dropdown
@@ -1970,8 +2024,9 @@ class ActionManager {
    * @param {number} position - Insert position from UI/cursor APIs (0-based)
    * @param {string} sequence - Sequence to insert
    */
-  createInsertAction(chromosome, position, sequence) {
+  createInsertAction(chromosome, position, sequence, options = {}) {
     const insertPosition = position + 1;
+    const reverseComplement = !!options.reverseComplement;
     const target = `${chromosome}:${insertPosition}`;
     const metadata = {
       chromosome,
@@ -1982,16 +2037,23 @@ class ActionManager {
       insertLength: sequence.length,
       coordinateSystem: '1-based',
       originalUiPosition: position,
+      inputSequence: reverseComplement ? sequence : undefined,
+      reverse_complement: reverseComplement,
+      reverseComplement,
     };
 
-    const description = `Insert ${sequence.length} bp at ${chromosome}:${insertPosition}`;
+    const description = `Insert${reverseComplement ? ' reverse-complement' : ''} ${
+      sequence.length
+    } bp at ${chromosome}:${insertPosition}`;
 
     // Add the action
     const actionId = this.addAction(this.ACTION_TYPES.INSERT_SEQUENCE, target, description, metadata);
 
     // Show confirmation
     this.genomeBrowser.showNotification(
-      `Insert action created: ${sequence.length} bp at position ${insertPosition}`,
+      `${reverseComplement ? 'Reverse-complement insert' : 'Insert'} action created: ${
+        sequence.length
+      } bp at position ${insertPosition}`,
       'success'
     );
 
@@ -2000,6 +2062,7 @@ class ActionManager {
       chromosome,
       position: insertPosition,
       sequenceLength: sequence.length,
+      reverseComplement,
       sequence: sequence.substring(0, 20) + (sequence.length > 20 ? '...' : ''),
     });
 
