@@ -53,6 +53,18 @@ describe('Menu Builder Module', () => {
     expect(content).toContain("'View'");
   });
 
+  it('File menu should start with new-window actions', () => {
+    const fileMenuIndex = content.indexOf("label: 'File'");
+    const newWindowIndex = content.indexOf("label: 'New Window'", fileMenuIndex);
+    const openNewWindowIndex = content.indexOf("label: 'Open (New Window)'", fileMenuIndex);
+    const loadFileIndex = content.indexOf("label: 'Load File'", fileMenuIndex);
+
+    expect(fileMenuIndex).toBeGreaterThan(-1);
+    expect(newWindowIndex).toBeGreaterThan(fileMenuIndex);
+    expect(openNewWindowIndex).toBeGreaterThan(newWindowIndex);
+    expect(loadFileIndex).toBeGreaterThan(openNewWindowIndex);
+  });
+
   it('createCircosPlotterMenu should accept circosWindow param', () => {
     const match = content.match(/function createCircosPlotterMenu\(\s*circosWindow/);
     expect(match).not.toBeNull();

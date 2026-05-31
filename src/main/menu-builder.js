@@ -2,7 +2,6 @@
 // @ts-check
 
 const { Menu, dialog, app, BrowserWindow } = require('electron');
-const i18n = require('../i18n/i18n-main');
 
 // External references (set by main module via setMenuDependencies)
 let APP_NAME;
@@ -13,6 +12,7 @@ let currentActiveWindow;
 
 // External function references (set by main module via setMenuDependencies)
 let createProjectManagerWindow;
+let createWindow;
 let createCircosWindow;
 let createKEGGWindow;
 let createGOWindow;
@@ -23,7 +23,6 @@ let createProGenFixerWindow;
 let createBlastDownloaderWindow;
 let createBlastConfigWindow;
 let createMCPServerManagerWindow;
-let createCustomExternalToolWindow;
 let createGenomicDownloadWindow;
 let sendToCurrentMainWindow;
 let getCurrentMainWindow;
@@ -35,6 +34,38 @@ let arrangeProjectManagerFocus;
 let arrangeWindowsVertical;
 let arrangeWindowsCascade;
 let resetWindowPositions;
+
+const genomeFileDialogFilters = [
+  {
+    name: 'All Genome Files',
+    extensions: ['fasta', 'fa', 'gb', 'gbk', 'genbank', 'gff', 'gtf', 'bed', 'vcf', 'bam', 'sam'],
+  },
+  { name: 'FASTA Files', extensions: ['fasta', 'fa'] },
+  { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
+  { name: 'Annotation Files', extensions: ['gff', 'gtf', 'bed'] },
+  { name: 'Variant Files', extensions: ['vcf'] },
+  { name: 'Alignment Files', extensions: ['bam', 'sam'] },
+  { name: 'All Files', extensions: ['*'] },
+];
+
+function openFileInNewMainWindow(filePath) {
+  const newWindow = createWindow();
+
+  const sendFileToNewWindow = () => {
+    setTimeout(() => {
+      if (newWindow && !newWindow.isDestroyed()) {
+        newWindow.webContents.send('file-opened', filePath);
+        newWindow.focus();
+      }
+    }, 500);
+  };
+
+  if (newWindow.webContents.isLoading()) {
+    newWindow.webContents.once('did-finish-load', sendFileToNewWindow);
+  } else {
+    sendFileToNewWindow();
+  }
+}
 
 // 为 Circos Genome Plotter 创建专门的菜单系统
 function createCircosPlotterMenu(circosWindow) {
@@ -1151,6 +1182,27 @@ function createMenu() {
     {
       label: 'File',
       submenu: [
+        {
+          label: 'New Window',
+          click: () => {
+            createWindow();
+          },
+        },
+        {
+          label: 'Open (New Window)',
+          click: async () => {
+            const parentWindow = getCurrentMainWindow() || mainWindow;
+            const result = await dialog.showOpenDialog(parentWindow, {
+              properties: ['openFile'],
+              filters: genomeFileDialogFilters,
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+              openFileInNewMainWindow(result.filePaths[0]);
+            }
+          },
+        },
+        { type: 'separator' },
         {
           label: 'Load File',
           submenu: [
@@ -3044,6 +3096,7 @@ function setMenuDependencies(deps) {
   if (deps.currentActiveWindow !== undefined) currentActiveWindow = deps.currentActiveWindow;
   if (deps.sendToCurrentMainWindow !== undefined) sendToCurrentMainWindow = deps.sendToCurrentMainWindow;
   if (deps.getCurrentMainWindow !== undefined) getCurrentMainWindow = deps.getCurrentMainWindow;
+  if (deps.createWindow !== undefined) createWindow = deps.createWindow;
   if (deps.createProjectManagerWindow !== undefined) createProjectManagerWindow = deps.createProjectManagerWindow;
   if (deps.createCircosWindow !== undefined) createCircosWindow = deps.createCircosWindow;
   if (deps.createKEGGWindow !== undefined) createKEGGWindow = deps.createKEGGWindow;
@@ -3055,11 +3108,10 @@ function setMenuDependencies(deps) {
   if (deps.createBlastDownloaderWindow !== undefined) createBlastDownloaderWindow = deps.createBlastDownloaderWindow;
   if (deps.createBlastConfigWindow !== undefined) createBlastConfigWindow = deps.createBlastConfigWindow;
   if (deps.createMCPServerManagerWindow !== undefined) createMCPServerManagerWindow = deps.createMCPServerManagerWindow;
-  if (deps.createCustomExternalToolWindow !== undefined)
-    createCustomExternalToolWindow = deps.createCustomExternalToolWindow;
   if (deps.createGenomicDownloadWindow !== undefined) createGenomicDownloadWindow = deps.createGenomicDownloadWindow;
-  if (deps.getCustomExternalToolsMenuItems !== undefined)
+  if (deps.getCustomExternalToolsMenuItems !== undefined) {
     getCustomExternalToolsMenuItems = deps.getCustomExternalToolsMenuItems;
+  }
   if (deps.arrangeWindowsOptimal !== undefined) arrangeWindowsOptimal = deps.arrangeWindowsOptimal;
   if (deps.arrangeWindowsSideBySide !== undefined) arrangeWindowsSideBySide = deps.arrangeWindowsSideBySide;
   if (deps.arrangeMainWindowFocus !== undefined) arrangeMainWindowFocus = deps.arrangeMainWindowFocus;
