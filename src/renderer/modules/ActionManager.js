@@ -2513,8 +2513,11 @@ class ActionManager {
       if (gbkResult && gbkResult.success) {
         console.log(`📂 [ActionManager] Auto-opening generated GBK file after cleanup...`);
         try {
-          await this.autoOpenGeneratedGBK(gbkResult.genbankContent, gbkResult.filename);
-          this.genomeBrowser.showNotification(`GBK file generated and opened: ${gbkResult.filename}`, 'success');
+          const opened = await this.autoOpenGeneratedGBK(gbkResult.genbankContent, gbkResult.filename);
+          const message = opened
+            ? `GBK file generated and opened: ${gbkResult.filename}`
+            : `GBK file generated: ${gbkResult.filename}`;
+          this.genomeBrowser.showNotification(message, opened ? 'success' : 'warning');
         } catch (error) {
           console.error('❌ [ActionManager] Error auto-opening GBK file:', error);
           this.genomeBrowser.showNotification('GBK file generated but could not be opened automatically', 'warning');
@@ -3311,71 +3314,45 @@ class ActionManager {
   async autoOpenGeneratedGBK(genbankContent, filename) {
     try {
       console.log(`🔄 [ActionManager] Auto-opening generated GBK file: ${filename}`);
+      const contentSize = typeof genbankContent === 'string' ? genbankContent.length : 0;
 
       if (window.electronAPI && typeof window.electronAPI.createNewMainWindow === 'function') {
         try {
           const result = await window.electronAPI.createNewMainWindow(filename);
           if (result && result.success) {
             console.log(`✅ [ActionManager] Successfully opened generated GBK file in new window: ${filename}`);
-            return;
+            return true;
           }
-          console.warn('⚠️ [ActionManager] New-window GBK open failed, falling back to current window:', result?.error);
+          console.warn('⚠️ [ActionManager] electronAPI new-window GBK open failed:', result?.error);
         } catch (error) {
-          console.warn('⚠️ [ActionManager] New-window GBK open threw, falling back to current window:', error);
+          console.warn('⚠️ [ActionManager] electronAPI new-window GBK open threw:', error);
         }
       }
 
-      // Check if FileManager is available
-      if (!this.genomeBrowser.fileManager) {
-        console.warn('⚠️ [ActionManager] FileManager not available, cannot auto-open GBK file');
-        return;
+      if (typeof require !== 'undefined') {
+        try {
+          const { ipcRenderer } = require('electron');
+          if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
+            const result = await ipcRenderer.invoke('createNewMainWindow', filename);
+            if (result && result.success) {
+              console.log(`✅ [ActionManager] Successfully opened generated GBK file via IPC: ${filename}`);
+              return true;
+            }
+            console.warn('⚠️ [ActionManager] IPC new-window GBK open failed:', result?.error);
+          }
+        } catch (error) {
+          console.warn('⚠️ [ActionManager] IPC new-window GBK open threw:', error);
+        }
       }
 
-      // Set the current file in FileManager
-      this.genomeBrowser.fileManager.currentFile = {
-        info: {
-          name: filename,
-          extension: '.gbk',
-          size: genbankContent.length,
-          type: 'text/plain',
-        },
-        data: genbankContent,
-        path: filename,
-      };
-
-      // Parse the GenBank content
-      await this.genomeBrowser.fileManager.parseGenBank();
-
-      // Update UI to show the new genome data
-      if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.onGenomeLoaded(this.genomeBrowser.currentSequence, filename);
-      }
-
-      // Update chromosome selector
-      if (this.genomeBrowser.populateChromosomeSelect) {
-        this.genomeBrowser.populateChromosomeSelect();
-      }
-
-      // Select first chromosome by default
-      const firstChr = Object.keys(this.genomeBrowser.currentSequence || {})[0];
-      if (firstChr) {
-        this.genomeBrowser.selectChromosome(firstChr);
-      }
-
-      // Update export menu state
-      if (this.genomeBrowser.exportManager) {
-        this.genomeBrowser.exportManager.updateExportMenuState();
-      }
-
-      // Refresh the genome view
-      if (this.genomeBrowser.displayGenomeView) {
-        this.genomeBrowser.displayGenomeView();
-      }
-
-      console.log(`✅ [ActionManager] Successfully opened generated GBK file: ${filename}`);
+      console.warn(
+        `⚠️ [ActionManager] Generated GBK file saved (${contentSize} bytes) but no new-window opener was available`
+      );
+      return false;
     } catch (error) {
       console.error('❌ [ActionManager] Error auto-opening generated GBK file:', error);
       this.genomeBrowser.showNotification('Generated GBK file saved but could not be opened automatically', 'warning');
+      return false;
     }
   }
 

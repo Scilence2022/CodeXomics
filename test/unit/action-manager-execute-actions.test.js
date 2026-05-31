@@ -96,6 +96,7 @@ beforeAll(() => {
 beforeEach(() => {
   document.body.innerHTML = '';
   installFakeGenBankExporter();
+  vmContext.require = undefined;
   window.electronAPI = {
     writeFile: vi.fn(async () => ({ success: true })),
   };
@@ -153,6 +154,41 @@ describe('ActionManager execute_actions sequencing', () => {
     await manager.autoOpenGeneratedGBK('LOCUS test\n//\n', '/tmp/generated-actions.gbk');
 
     expect(window.electronAPI.createNewMainWindow).toHaveBeenCalledWith('/tmp/generated-actions.gbk');
+    expect(genomeBrowser.fileManager.parseGenBank).not.toHaveBeenCalled();
+    expect(genomeBrowser.fileManager.currentFile.path).toBe('/tmp/source.gbk');
+  });
+
+  it('uses direct IPC to open generated GBK files when preload APIs are unavailable', async () => {
+    const { genomeBrowser, manager } = createManager('ACGT');
+    const ipcRenderer = {
+      invoke: vi.fn(async () => ({ success: true, windowId: 'window-ipc' })),
+    };
+    manager.autoOpenGeneratedGBK = ActionManager.prototype.autoOpenGeneratedGBK.bind(manager);
+    genomeBrowser.fileManager.parseGenBank = vi.fn(async () => {});
+    vmContext.require = vi.fn(moduleName => {
+      if (moduleName === 'electron') {
+        return { ipcRenderer };
+      }
+      throw new Error(`Unexpected module: ${moduleName}`);
+    });
+
+    const opened = await manager.autoOpenGeneratedGBK('LOCUS test\n//\n', '/tmp/generated-actions.gbk');
+
+    expect(opened).toBe(true);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith('createNewMainWindow', '/tmp/generated-actions.gbk');
+    expect(genomeBrowser.fileManager.parseGenBank).not.toHaveBeenCalled();
+    expect(genomeBrowser.fileManager.currentFile.path).toBe('/tmp/source.gbk');
+  });
+
+  it('does not load generated GBK files into the current window when new-window opening fails', async () => {
+    const { genomeBrowser, manager } = createManager('ACGT');
+    manager.autoOpenGeneratedGBK = ActionManager.prototype.autoOpenGeneratedGBK.bind(manager);
+    genomeBrowser.fileManager.parseGenBank = vi.fn(async () => {});
+    window.electronAPI.createNewMainWindow = vi.fn(async () => ({ success: false, error: 'Window failed' }));
+
+    const opened = await manager.autoOpenGeneratedGBK('LOCUS test\n//\n', '/tmp/generated-actions.gbk');
+
+    expect(opened).toBe(false);
     expect(genomeBrowser.fileManager.parseGenBank).not.toHaveBeenCalled();
     expect(genomeBrowser.fileManager.currentFile.path).toBe('/tmp/source.gbk');
   });
