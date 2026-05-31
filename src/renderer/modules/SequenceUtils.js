@@ -2747,30 +2747,6 @@ class SequenceUtils {
     this.copyToSystemClipboard(textToCopy, selectionInfo, copyMessage);
   }
 
-  exportSequence() {
-    const currentChr = document.getElementById('chromosomeSelect').value;
-    if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) {
-      alert('No sequence to export');
-      return;
-    }
-
-    const sequence = this.genomeBrowser.currentSequence[currentChr];
-    const subsequence = sequence.substring(
-      this.genomeBrowser.currentPosition.start,
-      this.genomeBrowser.currentPosition.end
-    );
-
-    const fastaContent = `>${currentChr}:${this.genomeBrowser.currentPosition.start + 1}-${this.genomeBrowser.currentPosition.end}\n${subsequence}`;
-
-    const blob = new Blob([fastaContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentChr}_${this.genomeBrowser.currentPosition.start + 1}-${this.genomeBrowser.currentPosition.end}.fasta`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   // Statistics and analysis
   updateStatistics(chromosome, sequence) {
     const length = sequence.length;

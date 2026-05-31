@@ -5,9 +5,9 @@ const path = require('path');
 
 // Toast notification helper — replaces alert() with non-blocking notifications
 // Uses NotificationService if available, falls back to alert
-const notify = (function() {
+const notify = (function () {
   let _ns = null;
-  return function(message, type = 'warn') {
+  return function (message, type = 'warn') {
     if (!_ns && typeof NotificationService !== 'undefined') {
       _ns = new NotificationService();
       window._notificationService = _ns;
@@ -1044,7 +1044,6 @@ class GenomeBrowser {
     // Sequence controls
     // ✅ Copy button is now fully handled by ActionManager (see ActionManager.js line 188-191)
     // No duplicate listener needed here to avoid event conflicts
-    document.getElementById('exportBtn').addEventListener('click', () => this.sequenceUtils.exportSequence());
     // ❌ REMOVED: Copy is now handled by ActionManager
     // document.getElementById('copySequenceHeaderBtn').addEventListener('click', (e) => {
     //     e.stopImmediatePropagation();
@@ -9540,7 +9539,9 @@ class GenomeBrowser {
     };
 
     if (featureType.toLowerCase() === 'primer') {
-      const normalizedPrimerSequence = primerOligoSequence ? primerOligoSequence.toUpperCase().replace(/[^ATCGN]/g, '') : '';
+      const normalizedPrimerSequence = primerOligoSequence
+        ? primerOligoSequence.toUpperCase().replace(/[^ATCGN]/g, '')
+        : '';
       if (primerOligoSequence && !normalizedPrimerSequence) {
         notify('Please enter a valid primer sequence using A, T, C, G, or N');
         return;
@@ -9613,7 +9614,8 @@ class GenomeBrowser {
 
     const primerList = primers
       .map((primer, index) => {
-        const name = primer.name || primer.qualifiers?.label || primer.qualifiers?.gene || primer.id || 'Unnamed Primer';
+        const name =
+          primer.name || primer.qualifiers?.label || primer.qualifiers?.gene || primer.id || 'Unnamed Primer';
         return `${index + 1}. ${name} (${primer.start}-${primer.end})`;
       })
       .join('\n');
@@ -11033,19 +11035,19 @@ class TrackStateManager {
 }
 
 // Load MicrobeGenomicsFunctions for chat integration
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // Dynamically load MicrobeGenomicsFunctions if not already loaded
   if (!window.MicrobeFns) {
     const script = document.createElement('script');
     script.src = './modules/MicrobeGenomicsFunctions.js';
-    script.onload = function() {
+    script.onload = function () {
       console.log('MicrobeGenomicsFunctions loaded successfully');
       // Trigger re-initialization of ChatManager if it exists
       if (window.chatManager && window.chatManager.initializeMicrobeGenomicsFunctions) {
         window.chatManager.initializeMicrobeGenomicsFunctions();
       }
     };
-    script.onerror = function() {
+    script.onerror = function () {
       console.error('Failed to load MicrobeGenomicsFunctions');
     };
     document.head.appendChild(script);

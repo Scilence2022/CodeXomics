@@ -159,7 +159,7 @@ class ExportManager {
           if (value === true) {
             qualifierContent += `                     /${key}\n`;
           } else if (value && value !== '' && value !== 'Unknown') {
-            let cleanValue = String(value);
+            const cleanValue = String(value);
 
             // Format multi-line qualifiers properly
             if (cleanValue.length > 60) {
@@ -198,14 +198,12 @@ class ExportManager {
   // Get correct protein sequence using the same algorithm as Protein FASTA export
   getCorrectProteinSequence(feature) {
     try {
-      // Find the chromosome this feature belongs to
-      let chromosome = null;
+      // Find the chromosome sequence this feature belongs to.
       let sequence = null;
 
       for (const [chr, chrSequence] of Object.entries(this.genomeBrowser.currentSequence)) {
         const features = this.genomeBrowser.currentAnnotations[chr] || [];
         if (features.includes(feature)) {
-          chromosome = chr;
           sequence = chrSequence;
           break;
         }
@@ -681,7 +679,6 @@ class ExportManager {
 
       features.forEach((feature, index) => {
         const id = feature.id || feature.name || `feature_${index + 1}`;
-        const name = feature.name || id;
         const type = feature.type || 'misc_feature';
         const strand = feature.strand || '+';
         const score = feature.score || '.';
@@ -733,17 +730,22 @@ class ExportManager {
 
   // Export current view as FASTA
   exportCurrentViewAsFasta() {
-    const currentChr = document.getElementById('chromosomeSelect').value;
+    const currentChr = this.genomeBrowser.currentChromosome || document.getElementById('chromosomeSelect')?.value;
     if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) {
       alert('No chromosome selected or sequence loaded.');
       return;
     }
 
     const sequence = this.genomeBrowser.currentSequence[currentChr];
-    const start = this.genomeBrowser.currentStart || 1;
-    const end = this.genomeBrowser.currentEnd || sequence.length;
+    const currentPosition = this.genomeBrowser.currentPosition || {};
+    const startIndex = Number.isFinite(currentPosition.start) ? currentPosition.start : 0;
+    const endIndex = Number.isFinite(currentPosition.end) ? currentPosition.end : sequence.length;
+    const clampedStartIndex = Math.max(0, Math.min(startIndex, sequence.length));
+    const clampedEndIndex = Math.max(clampedStartIndex, Math.min(endIndex, sequence.length));
+    const start = clampedStartIndex + 1;
+    const end = clampedEndIndex;
 
-    const viewSequence = sequence.substring(start - 1, end);
+    const viewSequence = sequence.substring(clampedStartIndex, clampedEndIndex);
     const header = `${currentChr}:${start}-${end}`;
 
     let fastaContent = `>${header}\n`;
@@ -874,7 +876,7 @@ class ExportManager {
       GGG: 'G',
     };
 
-    let sequence = dnaSequence.toUpperCase();
+    const sequence = dnaSequence.toUpperCase();
 
     let protein = '';
     for (let i = 0; i < sequence.length - 2; i += 3) {

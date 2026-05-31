@@ -128,7 +128,7 @@ Handles sequence processing, display, and biological utilities.
 - `displayEnhancedSequence()` - Smart sequence display with optimization
 - `translateDNA()` - Genetic code translation with error handling
 - `colorizeSequence()` - Base pair coloring with accessibility
-- `copySequence()`, `exportSequence()` - Enhanced sequence operations
+- `copySequence()` - Enhanced sequence copy operations
 - `updateStatistics()` - Real-time sequence analysis
 
 ### AI Integration Modules
