@@ -504,6 +504,16 @@
    SEQUENCE TRACK SETTINGS STYLES
    ===================================================== */
 
+#trackSettingsModal .llm-provider-config > .tab-content {
+  display: none !important;
+  min-height: 300px;
+  overflow: visible;
+}
+
+#trackSettingsModal .llm-provider-config > .tab-content.active {
+  display: block !important;
+}
+
 .sequence-settings-tabs {
   margin-top: 10px;
 }
@@ -560,7 +570,6 @@
 
 /* Ensure tab content container is properly sized */
 .sequence-settings-tabs .tab-content {
-  display: block !important;
   min-height: 300px;
   overflow: visible;
 }
@@ -945,7 +954,6 @@
 
 /* Ensure tab content container is properly sized */
 .reads-settings-tabs .tab-content {
-  display: block !important;
   min-height: 300px;
   overflow: visible;
 }

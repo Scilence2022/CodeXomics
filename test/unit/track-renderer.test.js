@@ -179,6 +179,132 @@ describe('Track Settings Resolution', () => {
   });
 });
 
+describe('Track Settings Tabs', () => {
+  const CSS_PATH = path.join(process.cwd(), 'src/renderer/css/sequence-tracks.css');
+
+  function createRenderer() {
+    return new TrackRenderer({
+      configManager: {
+        get: vi.fn(() => ({})),
+      },
+      generalSettingsManager: {
+        getSettings: () => ({ enableGlobalDragging: true }),
+      },
+    });
+  }
+
+  function getTabFixtures(renderer) {
+    return [
+      {
+        trackType: 'genes',
+        html: renderer.createGenesSettingsContent(renderer.getTrackSettings('genes')),
+        setup: bodyElement => renderer.setupGenesSettingsEventListeners(bodyElement),
+      },
+      {
+        trackType: 'gc',
+        html: renderer.createGCSettingsContent(renderer.getTrackSettings('gc')),
+        setup: bodyElement => renderer.setupGCSettingsEventListeners(bodyElement),
+      },
+      {
+        trackType: 'reads',
+        html: renderer.createReadsSettingsContent(renderer.getTrackSettings('reads')),
+        setup: bodyElement => renderer.setupReadsSettingsEventListeners(bodyElement),
+      },
+      {
+        trackType: 'sequence',
+        html: renderer.createSequenceSettingsContent(renderer.getTrackSettings('sequence')),
+        setup: bodyElement => renderer.setupSequenceSettingsEventListeners(bodyElement),
+      },
+      {
+        trackType: 'sequenceLine',
+        html: renderer.createSequenceLineSettingsContent(renderer.getTrackSettings('sequenceLine')),
+        setup: bodyElement => renderer.setupSequenceLineSettingsEventListeners(bodyElement),
+      },
+      {
+        trackType: 'wigTracks',
+        html: renderer.createWIGTracksSettingsContent(renderer.getTrackSettings('wigTracks')),
+        setup: bodyElement => renderer.setupWIGTracksSettingsEventListeners(bodyElement),
+      },
+      {
+        trackType: 'variants',
+        html: renderer.createVariantsSettingsContent(renderer.getTrackSettings('variants')),
+        setup: bodyElement => renderer.setupVariantsSettingsEventListeners(bodyElement),
+      },
+      {
+        trackType: 'actions',
+        html: renderer.createActionsSettingsContent(renderer.getTrackSettings('actions')),
+        setup: bodyElement => renderer.setupActionsSettingsEventListeners(bodyElement),
+      },
+      {
+        trackType: 'blast',
+        html: renderer.createDefaultSettingsContent('blast', renderer.getTrackSettings('blast')),
+        setup: bodyElement => renderer.setupDefaultSettingsEventListeners(bodyElement),
+      },
+    ];
+  }
+
+  beforeEach(() => {
+    global.document = jsdomDocument;
+    document.body.innerHTML = '';
+  });
+
+  it('scopes track settings CSS so inactive tab content is hidden', () => {
+    const css = fs.readFileSync(CSS_PATH, 'utf-8');
+
+    expect(css).toContain('#trackSettingsModal .llm-provider-config > .tab-content');
+    expect(css).toContain('display: none !important;');
+    expect(css).toContain('#trackSettingsModal .llm-provider-config > .tab-content.active');
+    expect(css).toContain('display: block !important;');
+
+    const style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+    document.body.innerHTML = `
+      <div id="trackSettingsModal">
+        <div class="llm-provider-config">
+          <div id="inactive-tab" class="tab-content"></div>
+          <div id="active-tab" class="tab-content active"></div>
+        </div>
+      </div>
+    `;
+
+    expect(getComputedStyle(document.getElementById('inactive-tab')).display).toBe('none');
+    expect(getComputedStyle(document.getElementById('active-tab')).display).toBe('block');
+  });
+
+  it('switches each track settings interface to one active tab panel', () => {
+    const renderer = createRenderer();
+
+    for (const fixture of getTabFixtures(renderer)) {
+      const bodyElement = document.createElement('div');
+      bodyElement.innerHTML = fixture.html;
+      document.body.appendChild(bodyElement);
+
+      fixture.setup(bodyElement);
+
+      const tabButtons = bodyElement.querySelectorAll('.tab-button');
+      const tabPanels = bodyElement.querySelectorAll('.llm-provider-config > .tab-content');
+
+      expect(tabButtons.length, `${fixture.trackType} should have multiple tab buttons`).toBeGreaterThan(1);
+      expect(tabPanels.length, `${fixture.trackType} should have multiple tab panels`).toBeGreaterThan(1);
+      expect(
+        bodyElement.querySelectorAll('.llm-provider-config > .tab-content.active').length,
+        `${fixture.trackType} should start with one active panel`
+      ).toBe(1);
+
+      const targetButton = tabButtons[1];
+      const targetPanelId = `${targetButton.getAttribute('data-tab')}-tab`;
+      targetButton.click();
+
+      const activePanels = bodyElement.querySelectorAll('.llm-provider-config > .tab-content.active');
+      expect(activePanels.length, `${fixture.trackType} should keep exactly one active panel`).toBe(1);
+      expect(activePanels[0].id, `${fixture.trackType} should activate the clicked tab panel`).toBe(targetPanelId);
+
+      bodyElement.remove();
+    }
+  });
+});
+
 describe('Track Creation Methods', () => {
   const trackMethods = [
     'createGeneTrack',
@@ -363,7 +489,7 @@ describe('Genes Track Settings Tabs & Style Consistency', () => {
     expect(content).toContain('.llm-provider-config .tab-content');
   });
 
-  it('loadTrackSpecificSettings should add llm-config-modal class on the modal content wrapper for all track types', () => {
+  it('loadTrackSpecificSettings should add llm-config-modal class on the modal content wrapper', () => {
     expect(content).toContain('llm-config-modal');
     expect(content).toContain("modal.querySelector('.modal-content')");
     expect(content).toContain("modalContent.classList.add('llm-config-modal')");
@@ -383,7 +509,7 @@ describe('Other Track Settings Style Consistency & Tab Refactoring', () => {
     content = fs.readFileSync(TR_PATH, 'utf-8');
   });
 
-  it('createReadsSettingsContent should return tabbed layout with llm-provider-tabs and llm-provider-config and form classes', () => {
+  it('createReadsSettingsContent should return a tabbed layout with shared form classes', () => {
     expect(content).toContain('createReadsSettingsContent(settings)');
     expect(content).toContain('reads-settings-tabs');
     expect(content).toContain('llm-provider-tabs');
@@ -392,7 +518,7 @@ describe('Other Track Settings Style Consistency & Tab Refactoring', () => {
     expect(content).toContain('class="form-input"');
   });
 
-  it('createVariantsSettingsContent should return tabbed layout with variants-settings-tabs, llm-provider-tabs and form classes', () => {
+  it('createVariantsSettingsContent should return a tabbed layout with form classes', () => {
     expect(content).toContain('createVariantsSettingsContent(settings)');
     expect(content).toContain('variants-settings-tabs');
     expect(content).toContain('variants-display');
