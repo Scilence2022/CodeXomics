@@ -12,6 +12,7 @@ import { createRequire } from 'module';
 const TR_PATH = path.join(process.cwd(), 'src/renderer/modules/TrackRenderer.js');
 const require = createRequire(import.meta.url);
 const TrackRenderer = require(TR_PATH);
+const jsdomDocument = globalThis.document;
 
 describe('TrackRenderer Structure', () => {
   let content;
@@ -218,6 +219,64 @@ describe('Primer Track Rendering', () => {
     expect(content).toContain('getPrimerGenomeBindingSequence(primer)');
     expect(content).toContain('getPrimerMismatchSummary(oligoSequence, genomeSequence)');
     expect(content).toContain('primer-binding-svg');
+  });
+
+  function createPrimerRenderer() {
+    if (!globalThis.document?.createElement && jsdomDocument?.createElement) {
+      globalThis.document = jsdomDocument;
+    }
+
+    return new TrackRenderer({
+      currentChromosome: 'chr1',
+      currentSequence: {
+        chr1: 'A'.repeat(1000),
+      },
+      getQualifierValue: (qualifiers, key) => qualifiers?.[key],
+    });
+  }
+
+  it('uses the measured track width for primer geometry to avoid stretched labels', () => {
+    const renderer = createPrimerRenderer();
+    const trackContent = document.createElement('div');
+    trackContent.getBoundingClientRect = () => ({ width: 640 });
+
+    renderer.renderPrimerElements(
+      trackContent,
+      [{ type: 'primer', start: 110, end: 210, name: 'Primer A', strand: 1 }],
+      { start: 100, end: 300 },
+      {}
+    );
+
+    const svg = trackContent.querySelector('.primer-binding-svg');
+    const stem = trackContent.querySelector('.primer-binding-element line');
+
+    expect(svg.getAttribute('viewBox')).toMatch(/^0 0 640 /);
+    expect(stem.getAttribute('x1')).toBe('32');
+    expect(stem.getAttribute('x2')).toBe('352');
+  });
+
+  it('honors primer track size and label settings', () => {
+    const renderer = createPrimerRenderer();
+    const layout = renderer.calculatePrimerTrackLayout([[{ type: 'primer', start: 1, end: 20 }]], {
+      geneHeight: 18,
+    });
+
+    const group = renderer.createSVGPrimerElement(
+      { type: 'primer', start: 10, end: 50, name: 'Custom Primer', strand: 1 },
+      { start: 0, end: 100 },
+      0,
+      layout,
+      { fontSize: 13, geneNameColor: '#123456', fontFamily: 'Verdana, sans-serif' },
+      500
+    );
+    const stem = group.querySelector('line');
+    const label = group.querySelector('text');
+
+    expect(layout.primerHeight).toBe(18);
+    expect(stem.getAttribute('stroke-width')).toBe('18');
+    expect(label.getAttribute('font-size')).toBe('13');
+    expect(label.getAttribute('fill')).toBe('#123456');
+    expect(label.getAttribute('font-family')).toBe('Verdana, sans-serif');
   });
 });
 

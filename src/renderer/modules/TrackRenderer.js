@@ -1103,6 +1103,7 @@ class TrackRenderer {
       layoutMode: settings.layoutMode || 'expanded',
     });
     const layout = this.calculatePrimerTrackLayout(primerRows, settings);
+    const containerWidth = this.getPrimerTrackRenderableWidth(trackContent);
 
     trackContent.style.height = `${Math.max(layout.totalHeight, 90)}px`;
 
@@ -1110,7 +1111,7 @@ class TrackRenderer {
     svg.setAttribute('class', 'primer-binding-svg');
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', String(layout.totalHeight));
-    svg.setAttribute('viewBox', `0 0 1000 ${layout.totalHeight}`);
+    svg.setAttribute('viewBox', `0 0 ${containerWidth} ${layout.totalHeight}`);
     svg.setAttribute('preserveAspectRatio', 'none');
     svg.style.position = 'absolute';
     svg.style.left = '0';
@@ -1135,7 +1136,7 @@ class TrackRenderer {
     primerRows.forEach((row, rowIndex) => {
       if (rowIndex >= layout.maxRows) return;
       row.forEach(primer => {
-        const element = this.createSVGPrimerElement(primer, viewport, rowIndex, layout);
+        const element = this.createSVGPrimerElement(primer, viewport, rowIndex, layout, settings, containerWidth);
         if (element) svg.appendChild(element);
       });
     });
@@ -1144,8 +1145,18 @@ class TrackRenderer {
     this.addPrimerTrackLegend(trackContent, visiblePrimers, layout);
   }
 
+  getPrimerTrackRenderableWidth(trackContent) {
+    const widthCandidates = [
+      trackContent?.getBoundingClientRect?.().width,
+      trackContent?.offsetWidth,
+      trackContent?.parentElement?.getBoundingClientRect?.().width,
+      typeof window !== 'undefined' ? window.innerWidth - 300 : 0,
+    ];
+    return widthCandidates.find(width => Number.isFinite(width) && width > 100) || 800;
+  }
+
   calculatePrimerTrackLayout(primerRows, settings = {}) {
-    const primerHeight = settings.primerHeight || 12;
+    const primerHeight = settings.primerHeight || settings.geneHeight || 12;
     const rowSpacing = 10;
     const rulerHeight = 35;
     const topPadding = 12;
@@ -1170,7 +1181,7 @@ class TrackRenderer {
     };
   }
 
-  createSVGPrimerElement(primer, viewport, rowIndex, layout) {
+  createSVGPrimerElement(primer, viewport, rowIndex, layout, settings = {}, containerWidth = 1000) {
     const range = viewport.end - viewport.start;
     if (range <= 0) return null;
 
@@ -1178,8 +1189,8 @@ class TrackRenderer {
     const visibleEnd = Math.min(primer.end, viewport.end);
     if (visibleEnd < visibleStart) return null;
 
-    const x = ((visibleStart - viewport.start) / range) * 1000;
-    const width = Math.max(((visibleEnd - visibleStart) / range) * 1000, 5);
+    const x = ((visibleStart - viewport.start) / range) * containerWidth;
+    const width = Math.max(((visibleEnd - visibleStart) / range) * containerWidth, 5);
     const y = layout.rulerHeight + layout.topPadding + rowIndex * (layout.primerHeight + layout.rowSpacing);
     const centerY = y + layout.primerHeight / 2;
     const isReverse = primer.strand === -1 || primer.strand === '-';
@@ -1187,10 +1198,7 @@ class TrackRenderer {
     const genomeSequence = this.getPrimerGenomeBindingSequence(primer);
     const mismatchSummary = this.getPrimerMismatchSummary(oligoSequence, genomeSequence);
     const primerName =
-      primer.name ||
-      this.getPrimerQualifier(primer, 'label') ||
-      this.getPrimerQualifier(primer, 'gene') ||
-      'Primer';
+      primer.name || this.getPrimerQualifier(primer, 'label') || this.getPrimerQualifier(primer, 'gene') || 'Primer';
 
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     group.setAttribute('class', `primer-binding-element${isReverse ? ' reverse' : ' forward'}`);
@@ -1238,9 +1246,10 @@ class TrackRenderer {
       label.setAttribute('x', String(x + width / 2));
       label.setAttribute('y', String(y - 5));
       label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('font-size', '11');
+      label.setAttribute('font-size', String(settings.fontSize || 11));
       label.setAttribute('font-weight', '600');
-      label.setAttribute('fill', '#334155');
+      label.setAttribute('fill', settings.geneNameColor || '#334155');
+      label.setAttribute('font-family', settings.fontFamily || 'Arial, sans-serif');
       label.setAttribute('vector-effect', 'non-scaling-stroke');
       label.textContent = primerName.length > 18 ? `${primerName.substring(0, 17)}...` : primerName;
       group.appendChild(label);
@@ -1248,7 +1257,9 @@ class TrackRenderer {
 
     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
     const sequenceLine = oligoSequence ? `Primer sequence: ${oligoSequence}` : 'Primer sequence: not stored';
-    const genomeLine = genomeSequence ? `Genome binding window: ${genomeSequence}` : 'Genome binding window: unavailable';
+    const genomeLine = genomeSequence
+      ? `Genome binding window: ${genomeSequence}`
+      : 'Genome binding window: unavailable';
     const mismatchLine =
       mismatchSummary.count > 0
         ? `Mismatches vs genome: ${mismatchSummary.count} at ${mismatchSummary.positions.map(pos => pos + 1).join(', ')}`
@@ -1305,7 +1316,8 @@ class TrackRenderer {
   }
 
   getPrimerGenomeBindingSequence(primer) {
-    const chromosome = primer.chromosome || this.genomeBrowser.currentChromosome || document.getElementById('chromosomeSelect')?.value;
+    const chromosome =
+      primer.chromosome || this.genomeBrowser.currentChromosome || document.getElementById('chromosomeSelect')?.value;
     const sequence = this.genomeBrowser.currentSequence?.[chromosome];
     if (!sequence || primer.start == null || primer.end == null) return '';
 
