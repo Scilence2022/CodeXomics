@@ -90,4 +90,22 @@ describe('SequenceUtils circular bottom sequence track', () => {
     const highlightedText = highlightedBases[1].querySelector('span').firstChild;
     expect(utils.extractGenomicPositionFromNode(highlightedText, 0)).toBe(2);
   });
+
+  it('indexes CDS rows and reuses protein translations across rendered lines', () => {
+    const cds = { type: 'CDS', start: 1, end: 9, strand: 1, qualifiers: { gene: 'cached' } };
+    utils.genomeBrowser.currentSequence.chr1 = 'ATGAAATGG';
+    utils.genomeBrowser.navigationManager.circularMode = false;
+    utils.genomeBrowser.trackRenderer.getTrackSettings = name => (name === 'genes' ? { circularMode: false } : {});
+    utils.translateDNA = vi.fn(() => 'MKW');
+
+    const index = utils.buildLineFeatureIndex([cds], 0, 9, 3, 'chr1', { showProteinSequence: true });
+
+    expect(index).toHaveLength(3);
+    expect(index.every(line => line.cds[0] === cds)).toBe(true);
+
+    utils.createAlignedProteinRows(3, 0, 'chr1', [cds], 10, index[0].cds, utils.createRenderContext('chr1'));
+    utils.createAlignedProteinRows(3, 3, 'chr1', [cds], 10, index[1].cds, utils.createRenderContext('chr1'));
+
+    expect(utils.translateDNA).toHaveBeenCalledTimes(1);
+  });
 });

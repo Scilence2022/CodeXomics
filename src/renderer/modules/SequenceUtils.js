@@ -26,6 +26,8 @@ class SequenceUtils {
     // Performance optimization caches
     this.renderCache = new Map(); // Cache for rendered sequence lines
     this.featureCache = new Map(); // Cache for feature lookups
+    this.lineFeatureCache = new Map(); // Cache for per-line feature indexes
+    this.proteinTranslationCache = new Map(); // Cache for CDS translations used by aligned protein rows
     this.colorCache = new Map(); // Cache for color calculations
     this.svgCache = new Map(); // Cache for SVG indicators
     this.lastRenderParams = null; // Track last render parameters
@@ -987,13 +989,6 @@ class SequenceUtils {
 
     console.log('🔧 [SequenceUtils] Cleaning up container for view mode');
 
-    // Store current CSS variables before cleanup to preserve View Mode settings
-    const preservedVars = {
-      lineHeight: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-height'),
-      lineRatio: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-ratio'),
-      lineSpacing: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-spacing'),
-    };
-
     // VSCode editor and SequenceEditor removed - only using view mode
 
     // Clear container content
@@ -1135,6 +1130,8 @@ class SequenceUtils {
   performDetailedSequenceRender(chromosome, fullSequence, viewStart, viewEnd) {
     // Start performance monitoring
     this.performanceStats.lastRenderStart = performance.now();
+    this.performanceStats.cacheHits = 0;
+    this.performanceStats.cacheMisses = 0;
 
     const container = document.getElementById('sequenceContent');
 
@@ -1171,7 +1168,7 @@ class SequenceUtils {
     // Calculate optimal line length with better precision
     // FIX: Letter-spacing is already included in character width measurement
     const effectiveCharWidth = charWidth; // Remove +1 extra spacing
-    const optimalLineLength = Math.max(10, Math.floor(availableWidth / effectiveCharWidth));
+    let optimalLineLength = Math.max(10, Math.floor(availableWidth / effectiveCharWidth));
 
     // Calculate actual width that will be used
     const actualUsedWidth = optimalLineLength * effectiveCharWidth;
@@ -1219,6 +1216,16 @@ class SequenceUtils {
 
     // Enable virtual scrolling for sequences that actually need it
     const totalLines = Math.ceil(subsequence.length / optimalLineLength);
+    const lineFeatureIndex = this.buildLineFeatureIndex(
+      annotations,
+      viewStart,
+      viewEnd,
+      optimalLineLength,
+      chromosome,
+      sequenceSettings
+    );
+    const renderContext = this.createRenderContext(chromosome);
+    this.applySequenceSpacingVariables(sequenceSettings);
     // Estimate if the content will overflow the container
     const estimatedContentHeight = totalLines * this.getSequenceLineBlockHeight(sequenceSettings);
     const estimatedContainerHeight = container.getBoundingClientRect().height || 400;
@@ -1235,7 +1242,9 @@ class SequenceUtils {
         charWidth,
         optimalLineLength,
         sequenceSettings,
-        featureLookup
+        featureLookup,
+        lineFeatureIndex,
+        renderContext
       );
     } else {
       this.renderFullSequence(
@@ -1248,7 +1257,9 @@ class SequenceUtils {
         charWidth,
         optimalLineLength,
         sequenceSettings,
-        featureLookup
+        featureLookup,
+        lineFeatureIndex,
+        renderContext
       );
     }
 
@@ -1289,25 +1300,138 @@ class SequenceUtils {
     this.performanceStats.cacheMisses++;
 
     const lookup = new Map();
-
+    const lookupPriorities = new Map();
+    const typeOrder = { CDS: 1, mRNA: 2, tRNA: 2, rRNA: 2, promoter: 3, terminator: 3, regulatory: 3, gene: 4 };
     const relevantAnnotations = annotations.filter(f => this.genomeBrowser.shouldShowGeneType(f.type));
 
-    // Build position-based lookup
-    for (let displayPos = viewStart; displayPos < viewEnd; displayPos++) {
-      const sourcePos1Based = this.displayToSourcePosition(displayPos, chromosome) + 1;
-      const overlapping = relevantAnnotations.filter(f => this.annotationOverlapsSourcePosition(f, sourcePos1Based));
-      if (overlapping.length > 0) {
-        // Sort by priority
-        const sorted = overlapping.sort((a, b) => {
-          const typeOrder = { CDS: 1, mRNA: 2, tRNA: 2, rRNA: 2, promoter: 3, terminator: 3, regulatory: 3, gene: 4 };
-          return (typeOrder[a.type] || 5) - (typeOrder[b.type] || 5);
-        });
-        lookup.set(displayPos + 1, sorted[0]);
-      }
-    }
+    relevantAnnotations.forEach(annotation => {
+      const priority = typeOrder[annotation.type] || 5;
+      const segments = this.getAnnotationDisplaySegments(annotation, viewStart, viewEnd, chromosome);
+
+      segments.forEach(segment => {
+        const segmentStart = Math.max(viewStart, segment.start - 1);
+        const segmentEnd = Math.min(viewEnd, segment.end);
+        if (segmentEnd <= segmentStart) return;
+
+        for (let displayPos = segmentStart; displayPos < segmentEnd; displayPos++) {
+          const lookupKeyForPos = displayPos + 1;
+          const existingPriority = lookupPriorities.get(lookupKeyForPos);
+          if (existingPriority == null || priority < existingPriority) {
+            lookup.set(lookupKeyForPos, segment);
+            lookupPriorities.set(lookupKeyForPos, priority);
+          }
+        }
+      });
+    });
 
     this.featureCache.set(lookupKey, lookup);
     return lookup;
+  }
+
+  createRenderContext(chromosome = null) {
+    const sequenceLength = this.getSequenceLength(chromosome);
+    return {
+      chromosome,
+      sequenceLength,
+      circularMode: this.isCircularModeEnabled() && sequenceLength > 0,
+    };
+  }
+
+  displayToSourcePositionFast(displayPosition, context) {
+    if (!context?.circularMode) return displayPosition;
+    return ((displayPosition % context.sequenceLength) + context.sequenceLength) % context.sequenceLength;
+  }
+
+  buildLineFeatureIndex(annotations, viewStart, viewEnd, optimalLineLength, chromosome = null, settings = {}) {
+    const cacheKey = [
+      'line-index',
+      viewStart,
+      viewEnd,
+      optimalLineLength,
+      chromosome || '',
+      this.isCircularModeEnabled() ? 'circular' : 'linear',
+      this.getSequenceLength(chromosome),
+      this.getAnnotationHash(annotations),
+      this.getSettingsHash(settings),
+    ].join(':');
+
+    if (this.lineFeatureCache.has(cacheKey)) {
+      this.performanceStats.cacheHits++;
+      return this.lineFeatureCache.get(cacheKey);
+    }
+
+    this.performanceStats.cacheMisses++;
+
+    const totalLines = Math.ceil((viewEnd - viewStart) / optimalLineLength);
+    const index = Array.from({ length: totalLines }, () => ({
+      indicators: [],
+      cds: [],
+      primers: [],
+    }));
+
+    annotations.forEach(annotation => {
+      if (!this.shouldRenderAnnotationInSequence(annotation, settings)) return;
+
+      const segments = this.getAnnotationDisplaySegments(annotation, viewStart, viewEnd, chromosome);
+      segments.forEach(segment => {
+        const segmentStart = Math.max(viewStart, segment.start - 1);
+        const segmentEnd = Math.min(viewEnd, segment.end);
+        if (segmentEnd <= segmentStart) return;
+
+        const firstLine = Math.max(0, Math.floor((segmentStart - viewStart) / optimalLineLength));
+        const lastLine = Math.min(
+          totalLines - 1,
+          Math.floor((Math.max(segmentStart, segmentEnd - 1) - viewStart) / optimalLineLength)
+        );
+
+        for (let lineIndex = firstLine; lineIndex <= lastLine; lineIndex++) {
+          const lineFeatures = index[lineIndex];
+          lineFeatures.indicators.push(segment);
+
+          if (annotation.type === 'CDS' && settings.showProteinSequence) {
+            if (!lineFeatures.cds.includes(annotation)) {
+              lineFeatures.cds.push(annotation);
+            }
+          }
+
+          const type = (annotation.type || '').toLowerCase();
+          if (settings.showPrimers && (type === 'primer' || type === 'primer_bind')) {
+            if (!lineFeatures.primers.includes(annotation)) {
+              lineFeatures.primers.push(annotation);
+            }
+          }
+        }
+      });
+    });
+
+    this.lineFeatureCache.set(cacheKey, index);
+    return index;
+  }
+
+  shouldRenderAnnotationInSequence(annotation, settings = {}) {
+    if (!annotation || !this.genomeBrowser.shouldShowGeneType(annotation.type)) return false;
+
+    const geneType = (annotation.type || '').toLowerCase();
+    if (geneType === 'cds' && settings.showCDS === false) return false;
+    if (['trna', 'rrna', 'mrna'].includes(geneType) && settings.showRNA === false) return false;
+    if (geneType === 'promoter' && settings.showPromoter === false) return false;
+    if (geneType === 'terminator' && settings.showTerminator === false) return false;
+    if (geneType === 'regulatory' && settings.showRegulatory === false) return false;
+    if (geneType === 'source' && settings.showSource === false) return false;
+
+    return true;
+  }
+
+  applySequenceSpacingVariables(sequenceSettings = {}) {
+    const verticalOffset = sequenceSettings.verticalOffset || 0;
+    const indicatorMarginBottom = 4;
+    const correctedMarginBottom = indicatorMarginBottom - verticalOffset;
+
+    document.documentElement.style.setProperty('--sequence-line-spacing', `${Math.max(4, correctedMarginBottom)}px`);
+    document.documentElement.style.setProperty(
+      '--min-sequence-line-spacing',
+      `${Math.max(4, correctedMarginBottom)}px`
+    );
   }
 
   /**
@@ -1323,14 +1447,14 @@ class SequenceUtils {
     charWidth,
     optimalLineLength,
     sequenceSettings,
-    featureLookup
+    featureLookup,
+    lineFeatureIndex,
+    renderContext
   ) {
     // Ensure parent container has proper scrolling enabled
     container.style.overflow = 'auto';
     container.style.height = '100%';
 
-    // Use document fragment for better performance
-    const fragment = document.createDocumentFragment();
     const tempDiv = document.createElement('div');
     tempDiv.className = 'detailed-sequence-view';
 
@@ -1351,7 +1475,11 @@ class SequenceUtils {
       charWidth,
       sequenceSettings,
       featureLookup,
-      0
+      0,
+      lineFeatureIndex,
+      viewStart,
+      optimalLineLength,
+      renderContext
     );
 
     container.appendChild(tempDiv);
@@ -1387,7 +1515,11 @@ class SequenceUtils {
     charWidth,
     sequenceSettings,
     featureLookup,
-    batchStart
+    batchStart,
+    lineFeatureIndex = null,
+    viewStart = 0,
+    optimalLineLength = 1,
+    renderContext = null
   ) {
     // Skip rendering if we're dragging (optimization)
     if (this.dragOptimization.isDragging) {
@@ -1408,7 +1540,9 @@ class SequenceUtils {
         operons,
         charWidth,
         sequenceSettings,
-        featureLookup
+        featureLookup,
+        this.getLineFeatureSet(lineFeatureIndex, lineStartPos, viewStart, optimalLineLength),
+        renderContext
       );
       container.appendChild(lineElement);
     }
@@ -1428,13 +1562,23 @@ class SequenceUtils {
             charWidth,
             sequenceSettings,
             featureLookup,
-            batchEnd
+            batchEnd,
+            lineFeatureIndex,
+            viewStart,
+            optimalLineLength,
+            renderContext
           );
         } else {
           console.log('🔧 [SequenceUtils] Stopping batch render due to drag start');
         }
       });
     }
+  }
+
+  getLineFeatureSet(lineFeatureIndex, lineStartPos, viewStart, optimalLineLength) {
+    if (!lineFeatureIndex) return null;
+    const lineIndex = Math.floor((lineStartPos - viewStart) / optimalLineLength);
+    return lineFeatureIndex[lineIndex] || null;
   }
 
   /**
@@ -1448,7 +1592,9 @@ class SequenceUtils {
     operons,
     charWidth,
     sequenceSettings,
-    featureLookup
+    featureLookup,
+    lineFeatureSet = null,
+    renderContext = null
   ) {
     const cacheKey = this.getSequenceLineCacheKey(lineSubsequence, lineStartPos, chromosome);
 
@@ -1479,7 +1625,8 @@ class SequenceUtils {
     const lineGroup = document.createElement('div');
     lineGroup.className = 'sequence-line-group';
     lineGroup.dataset.displayStart = String(lineStartPos);
-    lineGroup.dataset.sourceStart = String(this.displayToSourcePosition(lineStartPos, chromosome));
+    const context = renderContext || this.createRenderContext(chromosome);
+    lineGroup.dataset.sourceStart = String(this.displayToSourcePositionFast(lineStartPos, context));
     lineGroup.style.marginBottom = `${this.lineSpacing}px`;
 
     // Create sequence line with configurable height to prevent compression
@@ -1497,7 +1644,7 @@ class SequenceUtils {
     positionSpan.style.cssText =
       'width: 100px; color: #6c757d; font-weight: 600; margin-right: 15px; text-align: right; flex-shrink: 0;';
     positionSpan.dataset.displayStart = String(lineStartPos);
-    positionSpan.dataset.sourceStart = String(this.displayToSourcePosition(lineStartPos, chromosome));
+    positionSpan.dataset.sourceStart = String(this.displayToSourcePositionFast(lineStartPos, context));
     positionSpan.textContent = this.getLineDisplayLabel(lineStartPos, chromosome);
 
     // Sequence bases
@@ -1529,21 +1676,16 @@ class SequenceUtils {
     // Use both inline styles and CSS variables to ensure our spacing takes effect
     indicatorLine.style.cssText = `height: ${correctedHeight}px; margin-left: ${finalLeftMargin}px; margin-bottom: ${correctedMarginBottom}px; margin-top: ${correctedMarginTop}px;`;
 
-    // Also set CSS variables to override the !important styles in sequence-tracks.css
-    document.documentElement.style.setProperty('--sequence-line-spacing', `${Math.max(4, correctedMarginBottom)}px`);
-    document.documentElement.style.setProperty(
-      '--min-sequence-line-spacing',
-      `${Math.max(4, correctedMarginBottom)}px`
-    );
     indicatorLine.innerHTML = this.createGeneIndicatorBarOptimized(
       lineSubsequence,
       lineStartPos,
-      annotations,
+      lineFeatureSet?.indicators || annotations,
       operons,
       charWidth,
       false,
       sequenceSettings,
-      chromosome
+      chromosome,
+      Boolean(lineFeatureSet)
     );
 
     lineGroup.appendChild(sequenceLine);
@@ -1554,7 +1696,9 @@ class SequenceUtils {
         lineStartPos,
         chromosome,
         annotations,
-        charWidth
+        charWidth,
+        lineFeatureSet?.cds || null,
+        context
       ).forEach(row => lineGroup.appendChild(row));
     }
 
@@ -1564,7 +1708,9 @@ class SequenceUtils {
         lineStartPos,
         chromosome,
         annotations,
-        charWidth
+        charWidth,
+        lineFeatureSet?.primers || null,
+        context
       ).forEach(row => lineGroup.appendChild(row));
     }
 
@@ -1583,29 +1729,40 @@ class SequenceUtils {
     return this.lineHeight + this.lineSpacing + indicatorHeight + proteinHeight + primerHeight;
   }
 
-  createAlignedProteinRows(lineLength, lineStartAbs, chromosome, annotations, charWidth) {
+  createAlignedProteinRows(
+    lineLength,
+    lineStartAbs,
+    chromosome,
+    annotations,
+    charWidth,
+    indexedCdsFeatures = null,
+    renderContext = null
+  ) {
     const fullSequence = this.genomeBrowser.currentSequence?.[chromosome];
     if (!fullSequence) return [];
 
     const lineEndAbs = lineStartAbs + lineLength;
-    const cdsFeatures = annotations.filter(feature => {
-      if (feature.type !== 'CDS') return false;
-      if (!this.genomeBrowser.shouldShowGeneType('CDS')) return false;
-      return this.featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome);
-    });
+    const cdsFeatures =
+      indexedCdsFeatures ||
+      annotations.filter(feature => {
+        if (feature.type !== 'CDS') return false;
+        if (!this.genomeBrowser.shouldShowGeneType('CDS')) return false;
+        return this.featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome);
+      });
+    const context = renderContext || this.createRenderContext(chromosome);
 
     return cdsFeatures
       .map(cds => {
-        const proteinSequence = this.translateDNA(fullSequence.substring(cds.start - 1, cds.end), cds.strand);
+        const proteinSequence = this.getCachedProteinTranslation(cds, fullSequence, chromosome);
         const marks = [];
 
         for (let i = 0; i < lineLength; i++) {
-          const sourcePos1Based = this.displayToSourcePosition(lineStartAbs + i, chromosome) + 1;
+          const sourcePos1Based = this.displayToSourcePositionFast(lineStartAbs + i, context) + 1;
           if (!this.positionWithinFeature(sourcePos1Based, cds)) continue;
 
           const aaIndex =
             cds.strand === -1 || cds.strand === '-'
-              ? ((cds.end - 1) - sourcePos1Based) / 3
+              ? (cds.end - 1 - sourcePos1Based) / 3
               : (sourcePos1Based - (cds.start + 1)) / 3;
 
           if (!Number.isInteger(aaIndex) || aaIndex < 0 || aaIndex >= proteinSequence.length) continue;
@@ -1627,13 +1784,49 @@ class SequenceUtils {
       .filter(Boolean);
   }
 
-  createAlignedPrimerRows(lineLength, lineStartAbs, chromosome, annotations, charWidth) {
+  getCachedProteinTranslation(cds, fullSequence, chromosome) {
+    const startIndex = Math.max(0, cds.start - 1);
+    const endIndex = Math.min(fullSequence.length, cds.end);
+    const dnaSequence = fullSequence.substring(startIndex, endIndex);
+    const cacheKey = [
+      chromosome || '',
+      cds.start,
+      cds.end,
+      cds.strand || 1,
+      dnaSequence.length,
+      dnaSequence.substring(0, 12),
+      dnaSequence.substring(Math.max(0, dnaSequence.length - 12)),
+    ].join(':');
+
+    if (this.proteinTranslationCache.has(cacheKey)) {
+      this.performanceStats.cacheHits++;
+      return this.proteinTranslationCache.get(cacheKey);
+    }
+
+    this.performanceStats.cacheMisses++;
+    const proteinSequence = this.translateDNA(dnaSequence, cds.strand);
+    this.proteinTranslationCache.set(cacheKey, proteinSequence);
+    return proteinSequence;
+  }
+
+  createAlignedPrimerRows(
+    lineLength,
+    lineStartAbs,
+    chromosome,
+    annotations,
+    charWidth,
+    indexedPrimers = null,
+    renderContext = null
+  ) {
     const lineEndAbs = lineStartAbs + lineLength;
-    const primers = annotations.filter(feature => {
-      const type = (feature.type || '').toLowerCase();
-      if (type !== 'primer' && type !== 'primer_bind') return false;
-      return this.featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome);
-    });
+    const primers =
+      indexedPrimers ||
+      annotations.filter(feature => {
+        const type = (feature.type || '').toLowerCase();
+        if (type !== 'primer' && type !== 'primer_bind') return false;
+        return this.featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome);
+      });
+    const context = renderContext || this.createRenderContext(chromosome);
 
     return primers
       .map(primer => {
@@ -1644,7 +1837,7 @@ class SequenceUtils {
         const end = Math.max(primer.start, primer.end);
 
         for (let i = 0; i < lineLength; i++) {
-          const sourcePos1Based = this.displayToSourcePosition(lineStartAbs + i, chromosome) + 1;
+          const sourcePos1Based = this.displayToSourcePositionFast(lineStartAbs + i, context) + 1;
           if (sourcePos1Based < start || sourcePos1Based > end) continue;
 
           const sequenceIndex = isReverse ? end - sourcePos1Based : sourcePos1Based - start;
@@ -1850,7 +2043,8 @@ class SequenceUtils {
     charWidth,
     simplified = false,
     settings = {},
-    chromosome = null
+    chromosome = null,
+    annotationsAreDisplaySegments = false
   ) {
     // Check if indicators should be shown
     if (settings.showIndicators === false) {
@@ -1882,9 +2076,9 @@ class SequenceUtils {
     const lineWidth = sequence.length * charWidth * widthCorrection;
     const lineEndAbs = lineStartAbs + sequence.length;
 
-    const displayGenes = annotations.flatMap(gene =>
-      this.getAnnotationDisplaySegments(gene, lineStartAbs, lineEndAbs, chromosome)
-    );
+    const displayGenes = annotationsAreDisplaySegments
+      ? annotations
+      : annotations.flatMap(gene => this.getAnnotationDisplaySegments(gene, lineStartAbs, lineEndAbs, chromosome));
 
     // Pre-filter overlapping genes
     const overlappingGenes = displayGenes.filter(gene => {
@@ -1948,7 +2142,9 @@ class SequenceUtils {
     charWidth,
     optimalLineLength,
     sequenceSettings,
-    featureLookup
+    featureLookup,
+    lineFeatureIndex,
+    renderContext
   ) {
     console.log('🔧 [SequenceUtils] Using virtualized rendering for large sequence');
 
@@ -2057,7 +2253,9 @@ class SequenceUtils {
       sequenceSettings,
       featureLookup,
       totalLines,
-      virtualScrollingParams
+      virtualScrollingParams,
+      lineFeatureIndex,
+      renderContext
     );
 
     // Scroll handler for virtual scrolling (only if scrolling is needed)
@@ -2080,7 +2278,9 @@ class SequenceUtils {
             sequenceSettings,
             featureLookup,
             totalLines,
-            virtualScrollingParams
+            virtualScrollingParams,
+            lineFeatureIndex,
+            renderContext
           );
         }, 16); // ~60fps
       });
@@ -2114,7 +2314,9 @@ class SequenceUtils {
     sequenceSettings,
     featureLookup,
     totalLines,
-    virtualScrollingParams = null
+    virtualScrollingParams = null,
+    lineFeatureIndex = null,
+    renderContext = null
   ) {
     // Use dynamic parameters if provided, otherwise fall back to instance parameters
     const params = virtualScrollingParams || this.virtualScrolling;
@@ -2147,7 +2349,9 @@ class SequenceUtils {
         operons,
         charWidth,
         sequenceSettings,
-        featureLookup
+        featureLookup,
+        this.getLineFeatureSet(lineFeatureIndex, lineStartPos, viewStart, optimalLineLength),
+        renderContext
       );
       lineElement.style.position = 'absolute';
       lineElement.style.top = `${lineIndex * lineHeight}px`; // FIXED: Use correct line height
@@ -2401,7 +2605,9 @@ class SequenceUtils {
     }
 
     const sequence = this.genomeBrowser.currentSequence[currentChr];
-    let textToCopy, copyMessage, copySource;
+    let textToCopy;
+    let copyMessage;
+    let copySource;
 
     // Priority 1: Check if there's a selected gene sequence
     if (
@@ -2413,9 +2619,8 @@ class SequenceUtils {
       textToCopy = sequence.substring(geneSeq.start - 1, geneSeq.end); // Convert to 0-based indexing
       copyMessage = `Copied ${geneSeq.geneName} sequence (${textToCopy.length} bp) to clipboard`;
       copySource = 'gene';
-    }
-    // Priority 2: Check if there's a manual sequence selection (drag selection)
-    else if (this.genomeBrowser.currentSequenceSelection) {
+    } else if (this.genomeBrowser.currentSequenceSelection) {
+      // Priority 2: Check if there's a manual sequence selection (drag selection)
       const manualSelection = this.genomeBrowser.currentSequenceSelection;
       console.log('Manual selection:', manualSelection);
       // Convert to 0-based indexing for substring
@@ -2425,9 +2630,8 @@ class SequenceUtils {
       console.log('Extracted sequence:', textToCopy);
       copyMessage = `Copied selected sequence (${textToCopy.length} bp) to clipboard`;
       copySource = 'manual';
-    }
-    // Priority 3: Check if there's a text selection
-    else {
+    } else {
+      // Priority 3: Check if there's a text selection
       const selection = window.getSelection();
       if (selection.toString().length > 0) {
         // Use selected text
@@ -2875,7 +3079,7 @@ class SequenceUtils {
     const isForward = feature.strand !== -1;
 
     // Use the same colors as Genes & Features track
-    let fillColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(feature.type);
+    const fillColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(feature.type);
 
     let shape = '';
 
@@ -2956,6 +3160,8 @@ class SequenceUtils {
   clearRenderCache() {
     this.renderCache.clear();
     this.featureCache.clear();
+    this.lineFeatureCache.clear();
+    this.proteinTranslationCache.clear();
     this.colorCache.clear();
     this.svgCache.clear();
     console.log('🔧 [SequenceUtils] Performance caches cleared');
@@ -3237,8 +3443,6 @@ class SequenceUtils {
       return null;
     }
 
-    // Calculate relative positions within the sequence
-    const containerRect = sequenceContainer.getBoundingClientRect();
     const startNode = range.startContainer;
     const endNode = range.endContainer;
 
@@ -3338,10 +3542,7 @@ class SequenceUtils {
     let currentNode;
     while ((currentNode = walker.nextNode())) {
       if (currentNode === node) {
-        return this.displayToSourcePosition(
-          lineStartPos + charOffset + offset,
-          this.genomeBrowser.currentChromosome
-        );
+        return this.displayToSourcePosition(lineStartPos + charOffset + offset, this.genomeBrowser.currentChromosome);
       }
       charOffset += currentNode.textContent.length;
     }
