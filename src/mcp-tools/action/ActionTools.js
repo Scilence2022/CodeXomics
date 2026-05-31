@@ -71,7 +71,9 @@ class ActionTools {
 
       paste_sequence: {
         name: 'paste_sequence',
-        description: 'Paste sequence from clipboard at specified position',
+        description:
+          'Paste sequence from clipboard at specified position. ' +
+          'Set reverse_complement=true to reverse-complement the clipboard sequence before pasting.',
         parameters: {
           type: 'object',
           properties: {
@@ -86,6 +88,16 @@ class ActionTools {
             start: {
               type: 'number',
               description: 'Alias for position. Use position instead.',
+            },
+            reverse_complement: {
+              type: 'boolean',
+              description: 'When true, reverse-complement the clipboard sequence before pasting.',
+              default: false,
+            },
+            reverseComplement: {
+              type: 'boolean',
+              description: 'Alias for reverse_complement.',
+              default: false,
             },
           },
           required: ['chromosome', 'position'],
@@ -123,7 +135,9 @@ class ActionTools {
 
       insert_sequence: {
         name: 'insert_sequence',
-        description: 'Insert a DNA sequence at specified position without user confirmation',
+        description:
+          'Insert a DNA sequence at specified position without user confirmation. ' +
+          'Set reverse_complement=true to reverse-complement the provided sequence before inserting.',
         parameters: {
           type: 'object',
           properties: {
@@ -146,6 +160,16 @@ class ActionTools {
             newSequence: {
               type: 'string',
               description: 'Alias for sequence parameter. Use sequence instead.',
+            },
+            reverse_complement: {
+              type: 'boolean',
+              description: 'When true, reverse-complement the provided sequence before inserting.',
+              default: false,
+            },
+            reverseComplement: {
+              type: 'boolean',
+              description: 'Alias for reverse_complement.',
+              default: false,
             },
           },
           required: ['chromosome', 'position', 'sequence'],

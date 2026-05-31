@@ -2277,8 +2277,9 @@ EDITING FUNCTIONS WITH PARAMETERS:
   Example: {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
 
 • insert_sequence - Insert DNA sequence at a specific position
-  Parameters: chromosome (string), position (number), sequence (string - DNA only: A,T,C,G,N)
+  Parameters: chromosome (string), position (number), sequence (string - DNA only: A,T,C,G,N), reverse_complement (optional boolean: reverse-complement before inserting)
   Example: {"tool_name": "insert_sequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGCTAT"}}
+  Reverse-complement example: {"tool_name": "insert_sequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGC", "reverse_complement": true}}
 
 • replace_sequence - Replace sequence in a region with new sequence
   Parameters: chromosome (string), start (number), end (number), sequence (string), strand (optional)
@@ -2293,11 +2294,13 @@ EDITING FUNCTIONS WITH PARAMETERS:
   Example: {"tool_name": "cut_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
 
 • paste_sequence - Paste sequence from clipboard
-  Parameters: chromosome (string), position (number)
+  Parameters: chromosome (string), position (number), reverse_complement (optional boolean: reverse-complement clipboard sequence before pasting)
   Example: {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
+  Reverse-complement example: {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000, "reverse_complement": true}}
 
 • execute_actions - Execute all queued sequence editing actions
   Parameters: auto_save (boolean, default: false - MUST be true to avoid blocking dialog), filename (optional: output path)
+  Applies queued paste_sequence/insert_sequence reverse_complement mode before modifying the genome.
   Example: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
   Example: {"tool_name": "execute_actions", "parameters": {"auto_save": true, "filename": "/tmp/output.gbk"}}
 
@@ -2410,10 +2413,12 @@ EXAMPLES:
 • Find gene: {"tool_name": "find_gene_by_name", "parameters": {"name": "thrC"}}
 • Delete gene: {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
 • Insert DNA: {"tool_name": "insert_sequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGC"}}
+• Insert reverse complement: {"tool_name": "insert_sequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGC", "reverse_complement": true}}
 • Execute actions: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 • Get action list: {"tool_name": "get_action_list", "parameters": {}}
 • Copy sequence: {"tool_name": "copy_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
-• Paste sequence: {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}`;
+• Paste sequence: {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
+• Paste reverse complement: {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000, "reverse_complement": true}}`;
   }
 
   getCompleteToolContext() {
@@ -2538,8 +2543,10 @@ Sequence Editing Examples:
 - Copy sequence: {"tool_name": "copy_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Cut sequence: {"tool_name": "cut_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Paste sequence: {"tool_name": "paste_sequence", "parameters": {"chromosome": "chr1", "position": 2000}}
+- Paste reverse complement: {"tool_name": "paste_sequence", "parameters": {"chromosome": "chr1", "position": 2000, "reverse_complement": true}}
 - Delete sequence: {"tool_name": "delete_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Insert sequence: {"tool_name": "insert_sequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
+- Insert reverse complement: {"tool_name": "insert_sequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGC", "reverse_complement": true}}
 - Replace sequence: {"tool_name": "replace_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
 - Execute actions: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 - Get action list: {"tool_name": "get_action_list", "parameters": {}}
@@ -2765,8 +2772,10 @@ Sequence Editing Examples:
 - Copy sequence: {"tool_name": "copy_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Cut sequence: {"tool_name": "cut_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Paste sequence: {"tool_name": "paste_sequence", "parameters": {"chromosome": "chr1", "position": 2000}}
+- Paste reverse complement: {"tool_name": "paste_sequence", "parameters": {"chromosome": "chr1", "position": 2000, "reverse_complement": true}}
 - Delete sequence: {"tool_name": "delete_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Insert sequence: {"tool_name": "insert_sequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
+- Insert reverse complement: {"tool_name": "insert_sequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGC", "reverse_complement": true}}
 - Replace sequence: {"tool_name": "replace_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
 - Execute actions: {"tool_name": "execute_actions", "parameters": {"auto_save": true}}
 - Get action list: {"tool_name": "get_action_list", "parameters": {}}

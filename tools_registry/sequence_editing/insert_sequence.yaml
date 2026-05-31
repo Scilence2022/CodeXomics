@@ -1,6 +1,6 @@
 name: insert_sequence
 version: 1.1.0
-description: Queue insertion of a DNA sequence at a specified position as a sequence-editing Action. This is not a checklist Task. Call execute_actions(auto_save=true) to apply queued sequence-editing Actions.
+description: Queue insertion of a DNA sequence at a specified position as a sequence-editing Action. Set reverse_complement=true to reverse-complement the provided sequence before it is inserted. This is not a checklist Task. Call execute_actions(auto_save=true) to apply queued sequence-editing Actions.
 category: sequence_editing
 keywords:
   - insert
@@ -39,6 +39,14 @@ parameters:
     newSequence:
       type: string
       description: Alias for sequence parameter. Use 'sequence' instead.
+    reverse_complement:
+      type: boolean
+      description: When true, reverse-complement the provided sequence before inserting it.
+      default: false
+    reverseComplement:
+      type: boolean
+      description: Alias for reverse_complement.
+      default: false
   required:
     - chromosome
     - position
@@ -52,6 +60,10 @@ sample_usages:
     tool_call: insert_sequence(chromosome='NC_000913.3', position=300000, sequence='ATGCGATCGATCGATCG')
     thought: User wants to insert a sequence at a specific genomic position
     expected_result: Insert action created successfully
+  - user_query: Insert ATGC at position 300000 in reverse-complement mode
+    tool_call: insert_sequence(chromosome='NC_000913.3', position=300000, sequence='ATGC', reverse_complement=true)
+    thought: User wants the provided sequence converted to GCAT before insertion.
+    expected_result: Reverse-complement insert Action created and queued for execution
 relationships:
   depends_on: []
   conflicts_with: []
@@ -80,4 +92,4 @@ returns:
   success: boolean - Whether operation was successful
   action_id: string - Unique identifier for this action
   message: string - Human-readable result description
-  details: object - Contains chromosome, position, sequenceLength information
+  details: object - Contains chromosome, position, sequenceLength, and reverseComplement information

@@ -1,6 +1,6 @@
 name: paste_sequence
 version: 1.0.0
-description: Paste the current sequence clipboard at a specified genomic insertion position. Requires a previous copy_sequence or cut_sequence call. This creates a queued sequence-editing Action; execute_actions applies the queue.
+description: Paste the current sequence clipboard at a specified genomic insertion position. Set reverse_complement=true to reverse-complement the clipboard sequence before it is pasted. Requires a previous copy_sequence or cut_sequence call. This creates a queued sequence-editing Action; execute_actions applies the queue.
 category: sequence_editing
 keywords:
   - paste
@@ -34,6 +34,14 @@ parameters:
       type: number
       description: Alias for position. Use position instead.
       minimum: 1
+    reverse_complement:
+      type: boolean
+      description: When true, reverse-complement the clipboard sequence before pasting it.
+      default: false
+    reverseComplement:
+      type: boolean
+      description: Alias for reverse_complement.
+      default: false
   required:
     - chromosome
     - position
@@ -42,6 +50,10 @@ sample_usages:
     tool_call: paste_sequence(chromosome='NC_000913.3', position=5000)
     thought: User wants to queue a paste Action using the current sequence clipboard.
     expected_result: Paste Action created and queued for execution.
+  - user_query: Paste the copied sequence at position 5000 in reverse-complement mode
+    tool_call: paste_sequence(chromosome='NC_000913.3', position=5000, reverse_complement=true)
+    thought: User wants to reverse-complement the clipboard sequence before queueing the paste Action.
+    expected_result: Reverse-complement paste Action created and queued for execution.
 relationships:
   depends_on: [copy_sequence]
   conflicts_with: []
@@ -67,4 +79,4 @@ returns:
   success: boolean - Whether operation was successful
   action_id: string - Unique identifier for this action
   message: string - Human-readable result description
-  details: object - Contains chromosome, position, and clipboardLength information
+  details: object - Contains chromosome, position, clipboardLength, and reverseComplement information

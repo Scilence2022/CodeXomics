@@ -220,6 +220,115 @@ class ActionManager {
     return action?.metadata?.insertSequence || action?.metadata?.sequence || action?.metadata?.newSequence || '';
   }
 
+  isTruthyFlag(value) {
+    return value === true || value === 'true' || value === '1' || value === 1 || value === 'yes';
+  }
+
+  isReverseComplementRequested(source = {}) {
+    return (
+      this.isTruthyFlag(source.reverse_complement) ||
+      this.isTruthyFlag(source.reverseComplement) ||
+      this.isTruthyFlag(source.reverse_complement_mode) ||
+      this.isTruthyFlag(source.reverseComplementMode)
+    );
+  }
+
+  toggleStrand(strand = '+') {
+    if (strand === '+') return '-';
+    if (strand === '-') return '+';
+    return strand;
+  }
+
+  cloneClipboardData(clipboardData) {
+    if (!clipboardData) {
+      return clipboardData;
+    }
+
+    const cloned = { ...clipboardData };
+    if (clipboardData.sourceInfo) {
+      cloned.sourceInfo = { ...clipboardData.sourceInfo };
+    }
+    if (clipboardData.comprehensiveData) {
+      cloned.comprehensiveData = {
+        ...clipboardData.comprehensiveData,
+        region: clipboardData.comprehensiveData.region ? { ...clipboardData.comprehensiveData.region } : undefined,
+        features: Array.isArray(clipboardData.comprehensiveData.features)
+          ? clipboardData.comprehensiveData.features.map(feature => ({ ...feature }))
+          : clipboardData.comprehensiveData.features,
+        annotations: Array.isArray(clipboardData.comprehensiveData.annotations)
+          ? clipboardData.comprehensiveData.annotations.map(annotation => ({ ...annotation }))
+          : clipboardData.comprehensiveData.annotations,
+      };
+    }
+    return cloned;
+  }
+
+  prepareClipboardDataForPasteAction(action, clipboardData) {
+    if (!clipboardData) {
+      return clipboardData;
+    }
+
+    const metadata = action?.metadata || {};
+    const reverseComplement = this.isReverseComplementRequested(metadata);
+    if (!reverseComplement && !clipboardData.reverseComplementApplied) {
+      return clipboardData;
+    }
+
+    const resolvedClipboard = this.cloneClipboardData(clipboardData);
+    const originalSequence = resolvedClipboard.originalSequence || resolvedClipboard.sequence || '';
+
+    if (reverseComplement && !resolvedClipboard.reverseComplementApplied) {
+      resolvedClipboard.sequence = this.reverseComplement(resolvedClipboard.sequence || '');
+      resolvedClipboard.originalSequence = originalSequence;
+      resolvedClipboard.reverseComplementApplied = true;
+    }
+
+    if (reverseComplement && !resolvedClipboard.reverseComplementFeaturesApplied) {
+      if (resolvedClipboard.sourceInfo) {
+        resolvedClipboard.sourceInfo.strand = this.toggleStrand(resolvedClipboard.sourceInfo.strand || '+');
+      }
+      if (resolvedClipboard.comprehensiveData?.region) {
+        resolvedClipboard.comprehensiveData.region.strand = this.toggleStrand(
+          resolvedClipboard.comprehensiveData.region.strand || '+'
+        );
+      }
+      resolvedClipboard.reverseComplementFeaturesApplied = true;
+    }
+
+    resolvedClipboard.reverseComplement = reverseComplement || resolvedClipboard.reverseComplementApplied;
+    metadata.reverseComplement = resolvedClipboard.reverseComplement;
+    metadata.reverse_complement = resolvedClipboard.reverseComplement;
+    metadata.reverseComplementApplied = resolvedClipboard.reverseComplementApplied;
+    metadata.clipboardData = resolvedClipboard;
+
+    return resolvedClipboard;
+  }
+
+  prepareInsertSequenceForAction(action) {
+    const metadata = action?.metadata || {};
+    const insertSequence = this.getActionInsertSequence(action);
+
+    if (!insertSequence) {
+      return insertSequence;
+    }
+
+    if (!this.isReverseComplementRequested(metadata) || metadata.reverseComplementApplied) {
+      return insertSequence;
+    }
+
+    const originalSequence = metadata.inputSequence || insertSequence;
+    const resolvedSequence = this.reverseComplement(insertSequence);
+    metadata.inputSequence = originalSequence;
+    metadata.sequence = resolvedSequence;
+    metadata.insertSequence = resolvedSequence;
+    metadata.length = resolvedSequence.length;
+    metadata.insertLength = resolvedSequence.length;
+    metadata.reverseComplement = true;
+    metadata.reverse_complement = true;
+    metadata.reverseComplementApplied = true;
+    return resolvedSequence;
+  }
+
   getActionReplacementSequence(action) {
     return action?.metadata?.newSequence || action?.metadata?.sequence || '';
   }
@@ -4025,7 +4134,7 @@ class ActionManager {
    */
   async executePasteSequence(action, executionGenomeData = null) {
     const { chromosome, start, end } = this.getActionCoordinates(action);
-    const clipboardData = this.getClipboardForAction(action);
+    const clipboardData = this.prepareClipboardDataForPasteAction(action, this.getClipboardForAction(action));
     const isInsert = this.isPasteInsertAction(action);
     const operation = isInsert ? 'paste-insert' : 'paste-replace';
 
@@ -4044,6 +4153,7 @@ class ActionManager {
       hasComprehensiveData: !!clipboardData.comprehensiveData,
       operation,
       targetRegion: `${chromosome}:${start}-${end}`,
+      reverseComplement: !!clipboardData.reverseComplement,
     });
 
     // Record and apply sequence modification in queue order.
@@ -4101,7 +4211,13 @@ class ActionManager {
       chromosome: chromosome,
       copiedFeaturesCount: copiedFeaturesCount,
       removedFeaturesCount: removedFeaturesCount, // Track removed features in target region
+      reverseComplement: !!clipboardData.reverseComplement,
     };
+
+    if (clipboardData.reverseComplement) {
+      result.inputSequence = clipboardData.originalSequence || '';
+      result.pastedSequence = clipboardData.sequence;
+    }
 
     if (isInsert) {
       result.position = start;
@@ -4323,7 +4439,7 @@ class ActionManager {
     // Support both 'position' and 'start' fields for compatibility
     // Support both 'sequence' and 'insertSequence' field names (functionInsertSequence stores 'sequence')
     const { chromosome, start } = this.getActionCoordinates(action);
-    const insertSequence = action.metadata.insertSequence || action.metadata.sequence;
+    const insertSequence = this.prepareInsertSequenceForAction(action);
     const insertPosition = Number(action.metadata.position !== undefined ? action.metadata.position : start);
 
     if (!insertSequence) {
@@ -4337,6 +4453,7 @@ class ActionManager {
       target: action.target,
       region: `${chromosome}:${insertPosition + 1}`,
       insertLength: insertSequence.length,
+      reverseComplement: !!action.metadata.reverseComplement,
       usingExecutionCopy: !!executionGenomeData,
     });
 
@@ -4352,14 +4469,21 @@ class ActionManager {
     this.applySequenceModificationToGenomeData(executionGenomeData, chromosome, modification);
     this.applyFeatureModificationToGenomeData(executionGenomeData, chromosome, modification);
 
-    return {
+    const result = {
       operation: 'insert',
       sequenceLength: insertSequence.length,
       target: action.target,
       chromosome: chromosome,
       insertedSequence: insertSequence,
       position: insertPosition,
+      reverseComplement: !!action.metadata.reverseComplement,
     };
+
+    if (action.metadata.reverseComplement) {
+      result.inputSequence = action.metadata.inputSequence || '';
+    }
+
+    return result;
   }
 
   /**
@@ -6253,12 +6377,23 @@ class ActionManager {
       // Paste sequence function
       pasteSequence: {
         name: 'pasteSequence',
-        description: 'Paste sequence from clipboard at specified position',
+        description:
+          'Paste sequence from clipboard at specified position, optionally reverse-complementing the pasted sequence first',
         parameters: {
           type: 'object',
           properties: {
             chromosome: { type: 'string', description: 'Chromosome identifier' },
             position: { type: 'number', description: 'Insert position (1-based)' },
+            reverse_complement: {
+              type: 'boolean',
+              description: 'When true, reverse-complement the clipboard sequence before pasting',
+              default: false,
+            },
+            reverseComplement: {
+              type: 'boolean',
+              description: 'Alias for reverse_complement',
+              default: false,
+            },
           },
           required: ['chromosome', 'position'],
         },
@@ -6283,13 +6418,24 @@ class ActionManager {
       // Insert sequence function
       insertSequence: {
         name: 'insertSequence',
-        description: 'Insert sequence at specified position',
+        description:
+          'Insert sequence at specified position, optionally reverse-complementing the provided sequence first',
         parameters: {
           type: 'object',
           properties: {
             chromosome: { type: 'string', description: 'Chromosome identifier' },
             position: { type: 'number', description: 'Insert position (1-based)' },
             sequence: { type: 'string', description: 'Sequence to insert' },
+            reverse_complement: {
+              type: 'boolean',
+              description: 'When true, reverse-complement the provided sequence before inserting',
+              default: false,
+            },
+            reverseComplement: {
+              type: 'boolean',
+              description: 'Alias for reverse_complement',
+              default: false,
+            },
           },
           required: ['chromosome', 'position', 'sequence'],
         },
@@ -6594,6 +6740,7 @@ class ActionManager {
 
     // AI agents might provide start instead of position
     const actualPosition = position || start;
+    const reverseComplement = this.isReverseComplementRequested(params);
 
     let insertTarget;
     try {
@@ -6621,6 +6768,8 @@ class ActionManager {
       end: insertTarget.position,
       clipboardData: this.clipboard,
       pasteMode: 'insert',
+      reverse_complement: reverseComplement,
+      reverseComplement: reverseComplement,
       source: 'function_call',
     };
 
@@ -6634,6 +6783,7 @@ class ActionManager {
         chromosome: insertTarget.chromosome,
         position: insertTarget.position,
         clipboardLength: this.clipboard ? this.clipboard.sequence.length : 0,
+        reverseComplement,
       },
     };
   }
@@ -6683,6 +6833,7 @@ class ActionManager {
     const { chromosome, position, sequence, start } = params;
 
     const actualPosition = position || start;
+    const reverseComplement = this.isReverseComplementRequested(params);
     let insertTarget;
     let actualSequence;
     try {
@@ -6706,6 +6857,9 @@ class ActionManager {
       end: insertTarget.position,
       sequence: actualSequence,
       length: actualSequence.length,
+      inputSequence: reverseComplement ? actualSequence : undefined,
+      reverse_complement: reverseComplement,
+      reverseComplement: reverseComplement,
       source: 'function_call',
     };
 
@@ -6720,6 +6874,7 @@ class ActionManager {
         position: insertTarget.position,
         sequenceLength: actualSequence.length,
         sequence: actualSequence.substring(0, 50) + (actualSequence.length > 50 ? '...' : ''),
+        reverseComplement,
       },
     };
   }

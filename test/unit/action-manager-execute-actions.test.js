@@ -255,6 +255,57 @@ describe('ActionManager execute_actions sequencing', () => {
     );
   });
 
+  it('reverse-complements insert_sequence input before execute_actions applies it', async () => {
+    const { manager } = createManager('AACCGG');
+
+    await manager.functionInsertSequence({
+      chromosome: 'chr1',
+      position: 3,
+      sequence: 'ATGC',
+      reverse_complement: true,
+    });
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/reverse-insert-actions.gbk' });
+
+    expect(result.success).toBe(true);
+    expect(lastExport.chr1.sequence).toBe('AAGCATCCGG');
+    expect(manager.actionHistory[0].actions[0].result).toEqual(
+      expect.objectContaining({
+        operation: 'insert',
+        reverseComplement: true,
+        inputSequence: 'ATGC',
+        insertedSequence: 'GCAT',
+      })
+    );
+  });
+
+  it('reverse-complements paste_sequence clipboard snapshots before execute_actions applies them', async () => {
+    const { manager } = createManager('AACCGG');
+    manager.clipboard = {
+      type: 'copy',
+      sequence: 'ATGC',
+      source: 'manual',
+      sourceInfo: { source: 'function_call' },
+      comprehensiveData: { features: [], region: { chromosome: 'chr1', start: 1, end: 4, strand: '+' } },
+    };
+
+    await manager.functionPasteSequence({ chromosome: 'chr1', position: 3, reverse_complement: true });
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/reverse-paste-actions.gbk' });
+
+    expect(result.success).toBe(true);
+    expect(lastExport.chr1.sequence).toBe('AAGCATCCGG');
+    expect(manager.clipboard.sequence).toBe('ATGC');
+    expect(manager.actionHistory[0].actions[0].result).toEqual(
+      expect.objectContaining({
+        operation: 'paste-insert',
+        reverseComplement: true,
+        inputSequence: 'ATGC',
+        pastedSequence: 'GCAT',
+      })
+    );
+  });
+
   it('reports a clear error for reverse-strand replace_sequence actions missing replacement bases', async () => {
     const { manager } = createManager('AACCGG');
     const replaceAction = manager.createAction(
@@ -499,6 +550,23 @@ describe('ActionManager execute_actions sequencing', () => {
     expect(lastExport.chr1.sequence).toBe('AAACCGTTCGGT');
 
     const copiedFeature = lastExport.chr1.features.find(feature => feature.name?.startsWith('rev_feature_copy_'));
+    expect(copiedFeature).toEqual(expect.objectContaining({ start: 11, end: 12, strand: '-' }));
+  });
+
+  it('reorients copied features when pasting in reverse-complement mode', async () => {
+    const { manager } = createManager('AAACCGTT', [
+      { type: 'gene', name: 'rc_paste_feature', start: 3, end: 4, strand: '+' },
+    ]);
+
+    await manager.functionCopySequence({ chromosome: 'chr1', start: 3, end: 6, strand: '+' });
+    await manager.functionPasteSequence({ chromosome: 'chr1', position: 9, reverse_complement: true });
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/reverse-paste-feature-actions.gbk' });
+
+    expect(result.success).toBe(true);
+    expect(lastExport.chr1.sequence).toBe('AAACCGTTCGGT');
+
+    const copiedFeature = lastExport.chr1.features.find(feature => feature.name?.startsWith('rc_paste_feature_copy_'));
     expect(copiedFeature).toEqual(expect.objectContaining({ start: 11, end: 12, strand: '-' }));
   });
 

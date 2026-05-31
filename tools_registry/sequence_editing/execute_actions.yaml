@@ -1,6 +1,6 @@
 name: execute_actions
 version: 1.1.0
-description: Execute all pending sequence-editing Actions and generate a modified GenBank file. This executes queued genome edits only; it does not run checklist Tasks.
+description: Execute all pending sequence-editing Actions and generate a modified GenBank file. This executes queued genome edits only; it does not run checklist Tasks. Reverse-complement paste_sequence and insert_sequence Actions are converted before they are applied.
 category: sequence_editing
 keywords:
   - execute
@@ -47,6 +47,10 @@ sample_usages:
     tool_call: execute_actions(auto_save=true)
     thought: Execute actions with auto-save to avoid dialog prompt
     expected_result: Actions executed and file saved with default name
+  - user_query: Execute the queued reverse-complement paste or insert edits
+    tool_call: execute_actions(auto_save=true)
+    thought: execute_actions applies queued paste_sequence/insert_sequence Actions, including reverse-complement mode.
+    expected_result: Actions executed after converting reverse-complement paste/insert sequences as requested
 relationships:
   depends_on: []
   conflicts_with: []
