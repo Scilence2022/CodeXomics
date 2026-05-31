@@ -10843,8 +10843,10 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     .catch(error => {
       console.error('❌ Failed to wait for scripts to load:', error);
-      // Fallback: initialize anyway
-      window.genomeBrowser = new GenomeBrowser();
+      if (!window.genomeBrowser) {
+        // Fallback: initialize anyway if construction never reached the global assignment.
+        window.genomeBrowser = new GenomeBrowser();
+      }
     });
 });
 

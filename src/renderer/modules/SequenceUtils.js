@@ -3360,8 +3360,8 @@ class SequenceUtils {
    */
   loadMinLineSpacingFromSettings() {
     // Try to get settings from GeneralSettingsManager
-    if (window.genomeBrowser && window.genomeBrowser.generalSettingsManager) {
-      const settingsManager = window.genomeBrowser.generalSettingsManager;
+    if (this.genomeBrowser && this.genomeBrowser.generalSettingsManager) {
+      const settingsManager = this.genomeBrowser.generalSettingsManager;
       if (settingsManager.getSetting) {
         const minSpacing = settingsManager.getSetting('minLineSpacing', 12);
         if (minSpacing !== this.minLineSpacing) {

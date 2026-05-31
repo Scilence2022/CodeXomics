@@ -706,6 +706,10 @@ class UIManager {
     });
   }
 
+  initializeHorizontalSplitter() {
+    console.log('ℹ️ [UIManager] initializeHorizontalSplitter is handled by initializeSplitter');
+  }
+
   /**
    * Initialize vertical drag functionality for genome navigation buttons
    * Allows users to reposition the left/right pan buttons to avoid track obstruction

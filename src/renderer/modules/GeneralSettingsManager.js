@@ -61,6 +61,7 @@ class GeneralSettingsManager {
       chopchopUrl: 'https://chopchop.cbu.uib.no/',
       progenFixerUrl: 'https://progenfixer.biodesign.ac.cn',
     };
+    this.settings = { ...this.defaultSettings };
   }
 
   /**
@@ -837,7 +838,9 @@ class GeneralSettingsManager {
     // Persist theme mode hint for the inline early-style script in index.html
     try {
       localStorage.setItem('_themeHint', theme || 'auto');
-    } catch (_) {}
+    } catch (_) {
+      // Ignore unavailable localStorage in restricted renderer contexts.
+    }
 
     // Also notify ThemeManager about dark mode change
     if (window.themeManager) {
@@ -1213,7 +1216,6 @@ class GeneralSettingsManager {
    * Update system information display
    */
   updateSystemInfo() {
-    const userAgent = navigator.userAgent;
     const platform = navigator.platform;
     const memory = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Unknown';
     const cores = navigator.hardwareConcurrency || 'Unknown';
@@ -1327,14 +1329,15 @@ class GeneralSettingsManager {
    * Get current settings
    */
   getSettings() {
-    return { ...this.settings };
+    return { ...(this.settings || this.defaultSettings) };
   }
 
   /**
    * Get a specific setting
    */
   getSetting(key, defaultValue = null) {
-    return this.settings[key] !== undefined ? this.settings[key] : defaultValue;
+    const settings = this.settings || this.defaultSettings || {};
+    return settings[key] !== undefined ? settings[key] : defaultValue;
   }
 
   /**
