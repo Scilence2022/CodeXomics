@@ -59,7 +59,7 @@ function createWindow() {
   const windowId = generateWindowId();
 
   // Create the browser window
-  mainWindow = new BrowserWindow({
+  const newWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 800,
@@ -75,25 +75,28 @@ function createWindow() {
     show: false,
   });
 
+  // Update the module-level mainWindow to point to the newest window
+  mainWindow = newWindow;
+
   // Store windowId on the BrowserWindow object for easy lookup
-  mainWindow.windowId = windowId;
+  newWindow.windowId = windowId;
 
   // Register in window registry with enhanced error handling
-  registerGenomeWindow(windowId, mainWindow, { skipResolve: true });
+  registerGenomeWindow(windowId, newWindow, { skipResolve: true });
   console.log(`📋 [createMainWindow] Window ${windowId} registered in registry`);
 
   // Load the app
-  mainWindow.loadFile(path.join(__dirname, '..', 'renderer/index.html'));
+  newWindow.loadFile(path.join(__dirname, '..', 'renderer/index.html'));
 
   // Show window when ready to prevent visual flash
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+  newWindow.once('ready-to-show', () => {
+    newWindow.show();
 
     // Send windowId to renderer process for MCPBridge identification
-    mainWindow.webContents.send('set-window-id', windowId);
+    newWindow.webContents.send('set-window-id', windowId);
 
     // Initialize RPC interface after window is ready
-    codeXomicsRPC.setMainWindow(mainWindow);
+    codeXomicsRPC.setMainWindow(newWindow);
     codeXomicsRPC.initialize();
 
     // Process any files that were queued before window was ready
@@ -104,47 +107,57 @@ function createWindow() {
 
   // Open DevTools for debugging (can be disabled in production)
   if (process.argv.includes('--dev')) {
-    mainWindow.webContents.openDevTools();
+    newWindow.webContents.openDevTools();
   }
 
-  // 主窗口获得焦点时切换回主菜单
-  mainWindow.on('focus', () => {
-    if (currentActiveWindow !== mainWindow) {
-      currentActiveWindow = mainWindow;
-      createMenu(); // 重新创建并设置主窗口菜单
-      console.log('Switched to main window menu');
+  // When this specific window gains focus, make it the active main window and
+  // rebuild the menu so that menu actions target this window.  We close over
+  // `newWindow` (not the mutable `mainWindow`) so the handler always refers to
+  // the correct instance even after additional windows are created.
+  newWindow.on('focus', () => {
+    if (currentActiveWindow !== newWindow) {
+      currentActiveWindow = newWindow;
+      createMenu(); // Rebuild menu so sendToCurrentMainWindow routes to this window
+      console.log(`Switched to main window menu (windowId: ${windowId})`);
     }
   });
 
-  // 主窗口 webContents 获得焦点时也恢复主菜单（处理点击主窗口区域的情况）
-  mainWindow.webContents.on('focus', () => {
-    if (currentActiveWindow !== mainWindow) {
-      currentActiveWindow = mainWindow;
+  // webContents focus also covers clicking inside the window's content area
+  newWindow.webContents.on('focus', () => {
+    if (currentActiveWindow !== newWindow) {
+      currentActiveWindow = newWindow;
       createMenu();
-      console.log('Switched to main window menu (via webContents focus)');
+      console.log(`Switched to main window menu via webContents focus (windowId: ${windowId})`);
     }
   });
 
-  // Handle window closed - cleanup is handled automatically via the 'closed' event listener in registerGenomeWindow
-  mainWindow.on('closed', () => {
+  // Handle window closed
+  newWindow.on('closed', () => {
     console.log(`📋 [createMainWindow] Window ${windowId} closed`);
     unregisterGenomeWindow(windowId);
-    mainWindow = null;
-    currentActiveWindow = null;
+    // Only clear the module-level mainWindow pointer if it still refers to this
+    // closing window.  When multiple windows are open, mainWindow may already
+    // point to a different (surviving) window.
+    if (mainWindow === newWindow) {
+      mainWindow = null;
+    }
+    if (currentActiveWindow === newWindow) {
+      currentActiveWindow = null;
+    }
   });
 
   // Handle errors
-  mainWindow.webContents.on('crashed', (event, killed) => {
+  newWindow.webContents.on('crashed', (event, killed) => {
     console.error(`📋 [createMainWindow] Window ${windowId} crashed (killed: ${killed})`);
     cleanupWindowRegistration(windowId);
   });
 
-  mainWindow.webContents.on('render-process-gone', (event, details) => {
+  newWindow.webContents.on('render-process-gone', (event, details) => {
     console.error(`📋 [createMainWindow] Window ${windowId} render process gone: ${details.reason}`);
     cleanupWindowRegistration(windowId);
   });
 
-  return mainWindow;
+  return newWindow;
 }
 
 // Helper function to get the current active main window
