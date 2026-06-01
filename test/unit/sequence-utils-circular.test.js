@@ -138,4 +138,23 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(firstMarker.textContent).toBe('M');
     expect(firstMarker.style.left).toBe('10px');
   });
+
+  it('aligns gene indicator start and end to base edges', () => {
+    const gene = { type: 'CDS', start: 2, end: 4, strand: 1, qualifiers: { gene: 'edge' } };
+    utils.genomeBrowser.currentSequence.chr1 = 'AAAAAA';
+    utils.genomeBrowser.currentAnnotations.chr1 = [gene];
+    utils.genomeBrowser.navigationManager.circularMode = false;
+    utils.genomeBrowser.trackRenderer.getTrackSettings = name => (name === 'genes' ? { circularMode: false } : {});
+
+    const lineElement = utils.renderSequenceLine('AAAAAA', 0, 'chr1', [gene], [], 10, {}, new Map());
+
+    const indicatorLine = lineElement.querySelector('.gene-indicator-line');
+    const indicatorSvg = indicatorLine.querySelector('.gene-indicator-svg');
+
+    expect(indicatorLine.style.marginLeft).toBe('135px');
+    expect(indicatorSvg.innerHTML).toContain('x="10"');
+    expect(indicatorSvg.innerHTML).toContain('width="30"');
+    expect(indicatorSvg.innerHTML).toContain('x1="10"');
+    expect(indicatorSvg.innerHTML).toContain('M 28 ');
+  });
 });

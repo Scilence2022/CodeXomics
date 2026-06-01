@@ -1617,7 +1617,6 @@ class SequenceUtils {
     const positionWidth = 100; // position span width
     const marginRight = 15; // margin-right of position span
     const alignmentOffset = positionWidth + marginRight;
-    const horizontalAdjustment = charWidth * 0.8; // Add horizontal offset to compensate for character centering
 
     // Apply position and size corrections from settings
     const horizontalOffset = sequenceSettings.horizontalOffset || 0;
@@ -1724,7 +1723,7 @@ class SequenceUtils {
     const indicatorLine = document.createElement('div');
     indicatorLine.className = 'gene-indicator-line';
 
-    const finalLeftMargin = alignmentOffset - horizontalAdjustment + horizontalOffset;
+    const finalLeftMargin = alignmentOffset + this.strandLabelWidth + horizontalOffset;
     const correctedHeight = 12 * heightCorrection;
 
     // Use both inline styles and CSS variables to ensure our spacing takes effect
@@ -3000,12 +2999,11 @@ class SequenceUtils {
     const geneStartInLine = visibleStart1Based - lineStart1Based;
     const geneEndInLine = visibleEnd1Based - lineStart1Based;
 
-    // Convert to pixel positions with character centering and apply width correction
-    // Add 0.5 * charWidth to center the indicator on the character
+    // Convert to edge-based pixel positions so indicators share the same origin as base spans.
     const widthCorrection = (settings.widthCorrection || 100) / 100;
     const correctedCharWidth = charWidth * widthCorrection;
-    const startX = geneStartInLine * correctedCharWidth + correctedCharWidth * 0.5;
-    const endX = (geneEndInLine + 1) * correctedCharWidth + correctedCharWidth * 0.5;
+    const startX = geneStartInLine * correctedCharWidth;
+    const endX = (geneEndInLine + 1) * correctedCharWidth;
     const width = endX - startX;
 
     if (width <= 0) return '';
