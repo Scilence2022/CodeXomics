@@ -4129,6 +4129,7 @@ class ChatManager {
 
       // Save visibility state
       this.configManager.set('chat.visible', !isVisible);
+      this.notifyDockLayoutChanged('visibility');
       console.log('ChatBox visibility toggled:', isVisible ? 'hidden' : 'visible');
     }
   }
@@ -4204,6 +4205,7 @@ class ChatManager {
     // Setup dock splitter dragging
     this.setupDockSplitterDragging();
 
+    this.notifyDockLayoutChanged('dock');
     console.log('ChatBox docked to right panel');
   }
 
@@ -4258,7 +4260,17 @@ class ChatManager {
     // Hide any undock indicator
     this.hideUndockIndicator();
 
+    this.notifyDockLayoutChanged('undock');
     console.log('ChatBox undocked to floating mode');
+  }
+
+  notifyDockLayoutChanged(reason = 'dock-layout') {
+    if (typeof window === 'undefined') return;
+
+    window.setTimeout(() => {
+      console.log(`🔄 ChatBox ${reason} changed viewport width; triggering adaptive track resize`);
+      window.dispatchEvent(new Event('resize'));
+    }, 50);
   }
 
   /**
@@ -4316,6 +4328,7 @@ class ChatManager {
       // Save the new width
       const finalWidth = parseInt(dockContainer.style.width) || 400;
       this.configManager.set('chat.dockWidth', finalWidth);
+      this.notifyDockLayoutChanged('dock splitter');
     };
 
     newSplitter.addEventListener('mousedown', onMouseDown);

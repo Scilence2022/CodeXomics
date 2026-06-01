@@ -19,3 +19,13 @@ describe('ChatManager - Track Settings Routing', () => {
     expect(content).toContain('this.genomeBrowser.trackRenderer.getTrackSettings(track_type)');
   });
 });
+
+describe('ChatManager - Chat Dock Resize Notifications', () => {
+  it('dispatches resize after ChatBox dock layout changes', () => {
+    const content = fs.readFileSync(CM_PATH, 'utf-8');
+
+    expect(content).toContain("notifyDockLayoutChanged(reason = 'dock-layout')");
+    expect(content).toContain("this.notifyDockLayoutChanged('dock splitter');");
+    expect(content).toContain("window.dispatchEvent(new Event('resize'));");
+  });
+});
