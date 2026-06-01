@@ -22,6 +22,7 @@ class SequenceUtils {
     // Sequence line spacing configuration (margin between lines in pixels)
     this.lineSpacing = 8; // Default spacing between sequence lines
     this.minLineSpacing = 12; // Minimum line spacing to maintain readability (configurable in settings)
+    this.strandLabelWidth = 20; // Width of the 5'/3' label before sequence bases
 
     // Performance optimization caches
     this.renderCache = new Map(); // Cache for rendered sequence lines
@@ -1681,7 +1682,8 @@ class SequenceUtils {
     mainRow.style.cssText = 'display: flex; align-items: center; width: 100%;';
     const mainLabel = document.createElement('span');
     mainLabel.textContent = "5'";
-    mainLabel.style.cssText = 'width: 20px; color: #888; font-size: 10px; font-weight: 600; flex-shrink: 0; user-select: none; font-family: sans-serif;';
+    mainLabel.style.cssText =
+      'width: 20px; color: #888; font-size: 10px; font-weight: 600; flex-shrink: 0; user-select: none; font-family: sans-serif;';
     mainRow.appendChild(mainLabel);
     mainRow.appendChild(basesDiv);
     strandContainer.appendChild(mainRow);
@@ -1708,7 +1710,8 @@ class SequenceUtils {
       compRow.style.cssText = 'display: flex; align-items: center; width: 100%; margin-top: 2px;';
       const compLabel = document.createElement('span');
       compLabel.textContent = "3'";
-      compLabel.style.cssText = 'width: 20px; color: #888; font-size: 10px; font-weight: 600; flex-shrink: 0; user-select: none; font-family: sans-serif;';
+      compLabel.style.cssText =
+        'width: 20px; color: #888; font-size: 10px; font-weight: 600; flex-shrink: 0; user-select: none; font-family: sans-serif;';
       compRow.appendChild(compLabel);
       compRow.appendChild(compBasesDiv);
       strandContainer.appendChild(compRow);
@@ -1828,6 +1831,7 @@ class SequenceUtils {
           marks,
           charWidth,
           lineLength,
+          strandLabelWidth: this.strandLabelWidth,
           color: '#065f46',
           background: aa => this.getAminoAcidBackground(aa),
           borderColor: '#86efac',
@@ -1908,6 +1912,7 @@ class SequenceUtils {
           marks,
           charWidth,
           lineLength,
+          strandLabelWidth: this.strandLabelWidth,
           color: isReverse ? '#7c2d12' : '#1e3a8a',
           background: () => (isReverse ? 'rgba(251, 146, 60, 0.2)' : 'rgba(96, 165, 250, 0.2)'),
           borderColor: isReverse ? '#fdba74' : '#93c5fd',
@@ -1916,13 +1921,28 @@ class SequenceUtils {
       .filter(Boolean);
   }
 
-  createAlignedSequenceRow({ className, label, marks, charWidth, lineLength, color, background, borderColor }) {
+  createAlignedSequenceRow({
+    className,
+    label,
+    marks,
+    charWidth,
+    lineLength,
+    strandLabelWidth = 20,
+    color,
+    background,
+    borderColor,
+  }) {
     const row = document.createElement('div');
     row.className = `sequence-aligned-row ${className}`;
 
     const labelElement = document.createElement('span');
     labelElement.className = 'sequence-position sequence-aligned-label';
     labelElement.textContent = label;
+
+    const strandSpacer = document.createElement('span');
+    strandSpacer.className = 'sequence-aligned-strand-spacer';
+    strandSpacer.style.width = `${strandLabelWidth}px`;
+    strandSpacer.style.flex = `0 0 ${strandLabelWidth}px`;
 
     const basesElement = document.createElement('div');
     basesElement.className = 'sequence-aligned-bases';
@@ -1942,6 +1962,7 @@ class SequenceUtils {
     });
 
     row.appendChild(labelElement);
+    row.appendChild(strandSpacer);
     row.appendChild(basesElement);
     return row;
   }
@@ -2558,15 +2579,41 @@ class SequenceUtils {
 
   getComplement(sequence) {
     const complement = {
-      'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G',
-      'a': 't', 't': 'a', 'g': 'c', 'c': 'g',
-      'N': 'N', 'n': 'n',
-      'R': 'Y', 'Y': 'R', 'S': 'S', 'W': 'W', 'K': 'M', 'M': 'K',
-      'B': 'V', 'D': 'H', 'H': 'D', 'V': 'B',
-      'r': 'y', 'y': 'r', 's': 's', 'w': 'w', 'k': 'm', 'm': 'k',
-      'b': 'v', 'd': 'h', 'h': 'd', 'v': 'b'
+      A: 'T',
+      T: 'A',
+      G: 'C',
+      C: 'G',
+      a: 't',
+      t: 'a',
+      g: 'c',
+      c: 'g',
+      N: 'N',
+      n: 'n',
+      R: 'Y',
+      Y: 'R',
+      S: 'S',
+      W: 'W',
+      K: 'M',
+      M: 'K',
+      B: 'V',
+      D: 'H',
+      H: 'D',
+      V: 'B',
+      r: 'y',
+      y: 'r',
+      s: 's',
+      w: 'w',
+      k: 'm',
+      m: 'k',
+      b: 'v',
+      d: 'h',
+      h: 'd',
+      v: 'b',
     };
-    return sequence.split('').map(base => complement[base] || base).join('');
+    return sequence
+      .split('')
+      .map(base => complement[base] || base)
+      .join('');
   }
 
   // Sequence operations

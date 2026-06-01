@@ -108,4 +108,34 @@ describe('SequenceUtils circular bottom sequence track', () => {
 
     expect(utils.translateDNA).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps aligned protein rows in the same base column as the DNA strand', () => {
+    const cds = { type: 'CDS', start: 1, end: 9, strand: 1, qualifiers: { gene: 'aligned' } };
+    utils.genomeBrowser.currentSequence.chr1 = 'ATGAAATGG';
+    utils.genomeBrowser.currentAnnotations.chr1 = [cds];
+    utils.genomeBrowser.navigationManager.circularMode = false;
+    utils.genomeBrowser.trackRenderer.getTrackSettings = name => (name === 'genes' ? { circularMode: false } : {});
+
+    const lineElement = utils.renderSequenceLine(
+      'ATGAAATGG',
+      0,
+      'chr1',
+      [cds],
+      [],
+      10,
+      { showProteinSequence: true },
+      new Map()
+    );
+
+    const strandLabel = lineElement.querySelector('.main-strand-row > span');
+    const spacer = lineElement.querySelector('.sequence-protein-row .sequence-aligned-strand-spacer');
+    const proteinBases = lineElement.querySelector('.sequence-protein-row .sequence-aligned-bases');
+    const firstMarker = proteinBases.querySelector('.sequence-aligned-marker');
+
+    expect(strandLabel.style.width).toBe('20px');
+    expect(spacer.style.width).toBe('20px');
+    expect(proteinBases.style.width).toBe('90px');
+    expect(firstMarker.textContent).toBe('M');
+    expect(firstMarker.style.left).toBe('10px');
+  });
 });
