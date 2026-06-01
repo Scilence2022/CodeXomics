@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self' data: blob: file:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://d3js.org https://cdn.jsdelivr.net data: blob:; style-src 'self' 'unsafe-inline' https: http: data:; img-src 'self' data: blob: https: http: file:; font-src 'self' https: http: data:; connect-src 'self' https: http: ws: wss: data: blob:;">
     <title>CodeXomics</title>
@@ -51,7 +52,7 @@
     (function() {
       try {
         var hint = localStorage.getItem('_uiStyleHint');
-        var themeHint = localStorage.getItem('_themeHint');
+        localStorage.setItem('_themeHint', 'light');
         if (!hint || hint === 'default') return;
 
         // Condensed preset variables (must stay in sync with ThemeManager.stylePresets)
@@ -143,7 +144,8 @@
           }
         };
 
-        // Dark-mode overrides for each preset (background/text/border/accent)
+        // Legacy dark-mode overrides are kept inert for compatibility with old
+        // saved data; CodeXomics now always renders the UI style system in light mode.
         var darkOverrides = {
           professional: {
             '--bg-primary':'#141d2b','--bg-secondary':'#0f1722','--bg-tertiary':'#1e2a3a',
@@ -220,11 +222,7 @@
         var vars = presets[hint];
         if (!vars) return;
 
-        // Determine dark mode
         var isDark = false;
-        if (themeHint === 'dark') isDark = true;
-        else if (themeHint === 'light') isDark = false;
-        else isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
         // Apply light-mode variables
         var root = document.documentElement;
@@ -3249,16 +3247,7 @@ Supported formats:
                         </div>
 
                         <div class="settings-section">
-                            <h4><i class="fas fa-moon"></i> Theme Settings</h4>
-                            <div class="form-group">
-                                <label for="themeMode">Color Scheme:</label>
-                                <select id="themeMode" class="input-full">
-                                    <option value="auto">Auto (System)</option>
-                                    <option value="light">Light</option>
-                                    <option value="dark">Dark</option>
-                                </select>
-                                <small class="help-text">Choose your preferred color scheme</small>
-                            </div>
+                            <h4><i class="fas fa-palette"></i> Theme Settings</h4>
                             <div class="form-group">
                                 <label>UI Style:</label>
                                 <div class="style-preset-cards" id="stylePresetCards">

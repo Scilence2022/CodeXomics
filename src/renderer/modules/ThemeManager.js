@@ -1,6 +1,6 @@
 /**
  * ThemeManager - Multi-style theme management for CodeXomics
- * Supports switching between different UI style presets (not just light/dark).
+ * Supports switching between different light-mode UI style presets.
  * Each style preset defines a complete color palette via CSS custom properties.
  */
 class ThemeManager {
@@ -661,21 +661,11 @@ class ThemeManager {
       root.style.setProperty(key, value);
     });
 
-    // If dark mode is active, also apply dark overrides
-    if (this.isDarkMode()) {
-      Object.entries(preset.darkVariables).forEach(([key, value]) => {
-        root.style.setProperty(key, value);
-      });
-    }
-
     // Persist style hint to localStorage so the inline script in index.html can
     // apply it synchronously on the next launch, eliminating the flash of default style.
     try {
       localStorage.setItem('_uiStyleHint', styleName);
-      // Also persist the current theme mode so the inline script can determine
-      // dark/light mode without waiting for ConfigManager
-      const themeMode = this.configManager?.get('generalSettings.themeMode', 'auto');
-      localStorage.setItem('_themeHint', themeMode || 'auto');
+      localStorage.setItem('_themeHint', 'light');
     } catch (_) {
       // Ignore if localStorage is unavailable
     }
@@ -699,43 +689,31 @@ class ThemeManager {
    * Check if dark mode is currently active
    */
   isDarkMode() {
-    const themeMode = this.configManager?.get('generalSettings.themeMode', 'auto');
-    if (themeMode === 'dark') return true;
-    if (themeMode === 'light') return false;
-    // auto - check system preference
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false;
   }
 
   /**
-   * Apply dark mode overrides for the current style
+   * Keep the current style in light mode.
    */
-  applyDarkModeOverrides(isDark) {
+  applyDarkModeOverrides() {
     const preset = this.stylePresets[this.currentStyle];
     if (!preset) return;
 
     const root = document.documentElement;
 
-    if (isDark) {
-      Object.entries(preset.darkVariables).forEach(([key, value]) => {
-        root.style.setProperty(key, value);
-      });
-    } else {
-      // Restore light-mode values
-      Object.entries(preset.variables).forEach(([key, value]) => {
-        root.style.setProperty(key, value);
-      });
-    }
+    Object.entries(preset.variables).forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
 
     // Persist theme mode hint for the inline early-style script
     try {
-      const themeMode = this.configManager?.get('generalSettings.themeMode', 'auto');
-      localStorage.setItem('_themeHint', themeMode || 'auto');
+      localStorage.setItem('_themeHint', 'light');
     } catch (_) {}
 
     // Dispatch event so other windows (e.g., Project Manager) can sync
     window.dispatchEvent(
       new CustomEvent('uiStyleChanged', {
-        detail: { style: this.currentStyle, preset: preset, isDark: isDark },
+        detail: { style: this.currentStyle, preset: preset, isDark: false },
       })
     );
   }
@@ -790,7 +768,7 @@ class ThemeManager {
     // Emit event for other components to react
     window.dispatchEvent(
       new CustomEvent('uiStyleChanged', {
-        detail: { style: styleName, preset: this.stylePresets[styleName] },
+        detail: { style: styleName, preset: this.stylePresets[styleName], isDark: false },
       })
     );
 
@@ -803,10 +781,6 @@ class ThemeManager {
   getVariable(name) {
     const preset = this.stylePresets[this.currentStyle];
     if (preset) {
-      const isDark = this.isDarkMode();
-      if (isDark && preset.darkVariables[name]) {
-        return preset.darkVariables[name];
-      }
       return preset.variables[name];
     }
     return null;

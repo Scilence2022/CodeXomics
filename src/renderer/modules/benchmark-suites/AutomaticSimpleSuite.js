@@ -1919,17 +1919,16 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
       {
         id: 'settings_auto_06',
-        name: 'Switch to Midnight Dark Mode',
+        name: 'Switch to Midnight Mode',
         type: 'function_call',
         category: 'system',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Change the application appearance to the midnight style and enable dark mode.',
+        instruction: 'Change the application appearance to the midnight style.',
         expectedResult: {
           tool_name: 'switch_ui_style',
           parameters: {
             style_name: 'midnight',
-            dark_mode: 'dark',
           },
         },
         maxScore: 5,

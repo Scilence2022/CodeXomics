@@ -8227,7 +8227,7 @@ ${coreTools}
 
   /**
    * Switch UI style / theme
-   * Changes the application's visual style preset and/or dark/light mode
+   * Changes the application's visual style preset. Color scheme is always light.
    */
   async switchUiStyle(parameters = {}) {
     const { style_name: styleName, dark_mode: darkMode } = parameters;
@@ -8268,38 +8268,25 @@ ${coreTools}
         }
       }
 
-      // Apply dark/light mode if specified
+      // Dark mode has been removed from the UI style system; keep light mode.
       if (darkMode) {
-        let targetIsDark;
-        if (darkMode === 'dark') {
-          targetIsDark = true;
-        } else if (darkMode === 'light') {
-          targetIsDark = false;
-        } else if (darkMode === 'toggle') {
-          targetIsDark = !themeManager.isDarkMode();
+        if (generalSettingsManager) {
+          generalSettingsManager.settings.themeMode = 'light';
+          generalSettingsManager.applyTheme('light');
+        } else {
+          themeManager.applyDarkModeOverrides(false);
         }
-
-        if (targetIsDark !== undefined) {
-          const themeMode = targetIsDark ? 'dark' : 'light';
-          if (generalSettingsManager) {
-            generalSettingsManager.settings.themeMode = themeMode;
-            generalSettingsManager.applyTheme(themeMode);
-          } else {
-            themeManager.applyDarkModeOverrides(targetIsDark);
-          }
-          results.push(`Dark mode ${targetIsDark ? 'enabled' : 'disabled'}`);
-        }
+        results.push('Color scheme kept in light mode');
       }
 
       // If neither specified, just return current state
       if (!styleName && !darkMode) {
         const currentStyle = themeManager.getCurrentStyle();
-        const isDark = themeManager.isDarkMode();
         return {
           success: true,
-          message: `Current UI style: '${currentStyle}' (${isDark ? 'dark' : 'light'} mode)`,
+          message: `Current UI style: '${currentStyle}' (light mode)`,
           style_name: currentStyle,
-          dark_mode: isDark,
+          dark_mode: false,
           available_styles: availableStyles,
         };
       }
@@ -8308,7 +8295,7 @@ ${coreTools}
         success: true,
         message: results.join('. ') || 'UI style updated',
         style_name: themeManager.getCurrentStyle(),
-        dark_mode: themeManager.isDarkMode(),
+        dark_mode: false,
       };
     } catch (error) {
       console.error(`[ChatManager] switchUiStyle error:`, error);

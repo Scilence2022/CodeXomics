@@ -3638,12 +3638,11 @@ class GenomeBrowser {
       if (themeManager) {
         const style = themeManager.getCurrentStyle();
         const preset = themeManager.stylePresets[style];
-        const isDark = themeManager.isDarkMode();
         const themeData = {
           style: style,
           variables: preset.variables,
-          darkVariables: preset.darkVariables || {},
-          isDark: isDark,
+          darkVariables: {},
+          isDark: false,
         };
         try {
           localStorage.setItem('_globalThemeData', JSON.stringify(themeData));
@@ -3660,15 +3659,11 @@ class GenomeBrowser {
     // Listen for style changes and broadcast to PM window
     window.addEventListener('uiStyleChanged', event => {
       const { style, preset } = event.detail;
-      const themeManager = window.themeManager;
-      // Prefer isDark from event detail (set by applyDarkModeOverrides), fallback to ThemeManager
-      const isDark =
-        event.detail.isDark !== undefined ? event.detail.isDark : themeManager ? themeManager.isDarkMode() : false;
       const themeData = {
         style: style,
         variables: preset.variables,
-        darkVariables: preset.darkVariables || {},
-        isDark: isDark,
+        darkVariables: {},
+        isDark: false,
       };
       try {
         localStorage.setItem('_globalThemeData', JSON.stringify(themeData));

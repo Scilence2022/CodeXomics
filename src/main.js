@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme } = require('electron');
 
 // =============================================================================
 // GPU and WebGL fixes - matching working version configuration
@@ -308,6 +308,8 @@ function buildModuleDeps() {
 // =============================================================================
 
 app.whenReady().then(async () => {
+  nativeTheme.themeSource = 'light';
+
   // Set up environment variables for system command execution
   setupEnvironmentVariables();
 

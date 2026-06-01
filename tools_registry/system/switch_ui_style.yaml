@@ -1,7 +1,7 @@
 # switch_ui_style.yaml
 name: 'switch_ui_style'
 version: '1.0.0'
-description: "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 6 preset styles and dark/light mode toggle."
+description: "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 6 light-mode preset styles."
 category: 'system'
 keywords:
   [
@@ -9,7 +9,6 @@ keywords:
     'theme',
     'style',
     'appearance',
-    'dark mode',
     'light mode',
     'color scheme',
     'visual style',
@@ -17,8 +16,6 @@ keywords:
     'change theme',
     'change appearance',
     'switch theme',
-    'toggle dark',
-    'toggle light',
     'ui style',
     'look and feel',
   ]
@@ -39,7 +36,7 @@ parameters:
   properties:
     style_name:
       type: 'string'
-      description: "The UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (dark navy with cyan-blue), 'pastel' (soft pastel colors). If not provided, only toggles dark mode."
+      description: "The light-mode UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (navy/cyan accents), 'pastel' (soft pastel colors)."
       enum:
         - 'default'
         - 'professional'
@@ -48,14 +45,6 @@ parameters:
         - 'midnight'
         - 'pastel'
       examples: ['default', 'professional', 'midnight']
-    dark_mode:
-      type: 'string'
-      description: "Set dark/light mode. 'dark' enables dark mode, 'light' enables light mode, 'toggle' switches between them. If not provided, the current mode is preserved when changing style."
-      enum:
-        - 'dark'
-        - 'light'
-        - 'toggle'
-      examples: ['dark', 'light', 'toggle']
   required: []
 
 # High-quality examples for few-shot learning
@@ -69,26 +58,6 @@ sample_usages:
     tool_call: "switch_ui_style(style_name='professional')"
     thought: 'User wants the Professional style with deep teal colors'
     expected_result: 'UI switches to Professional style with clean, muted scientific tones'
-
-  - user_query: 'Enable dark mode'
-    tool_call: "switch_ui_style(dark_mode='dark')"
-    thought: 'User wants to enable dark mode without changing the current style'
-    expected_result: 'Dark mode is enabled, background colors become dark while preserving the current style'
-
-  - user_query: 'Turn on light mode'
-    tool_call: "switch_ui_style(dark_mode='light')"
-    thought: 'User wants to switch to light mode'
-    expected_result: 'Light mode is enabled with the current style preset'
-
-  - user_query: 'Use Midnight style in dark mode'
-    tool_call: "switch_ui_style(style_name='midnight', dark_mode='dark')"
-    thought: 'User wants both the Midnight style and dark mode'
-    expected_result: 'UI switches to Midnight style with dark navy background and icy cyan-blue accents in dark mode'
-
-  - user_query: 'Toggle dark mode'
-    tool_call: "switch_ui_style(dark_mode='toggle')"
-    thought: 'User wants to toggle between dark and light mode'
-    expected_result: 'Dark mode is toggled - if currently light, switches to dark, and vice versa'
 
   - user_query: 'Change the appearance to Pastel'
     tool_call: "switch_ui_style(style_name='pastel')"
@@ -110,7 +79,7 @@ metadata:
   success_rate: 0.0
   avg_execution_time: 0
   last_used: null
-  tags: ['system', 'ui', 'style', 'theme', 'appearance', 'dark mode']
+  tags: ['system', 'ui', 'style', 'theme', 'appearance', 'light mode']
   complexity: 'simple'
   usage_pattern: 'moderate'
 
@@ -125,5 +94,5 @@ returns:
   success: 'boolean - Whether the style switch was performed successfully'
   message: 'string - Status message describing what happened'
   style_name: 'string - The style preset that was applied'
-  dark_mode: 'boolean - Whether dark mode is now active'
+  dark_mode: 'boolean - Always false; the UI style system is light-only'
   available_styles: 'array - List of available style preset names (returned when style_name is invalid)'

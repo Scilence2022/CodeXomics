@@ -11,7 +11,7 @@ class GeneralSettingsManager {
     // Default settings
     this.defaultSettings = {
       // Appearance
-      themeMode: 'auto',
+      themeMode: 'light',
       uiStyle: 'default',
       accentColor: '#667eea',
       fontSize: 'medium',
@@ -194,8 +194,8 @@ class GeneralSettingsManager {
     const themeSelect = document.getElementById('themeMode');
     if (themeSelect) {
       themeSelect.addEventListener('change', e => {
-        this.updateSetting('themeMode', e.target.value);
-        this.applyTheme(e.target.value);
+        this.updateSetting('themeMode', 'light');
+        this.applyTheme('light');
       });
     }
 
@@ -615,6 +615,11 @@ class GeneralSettingsManager {
 
       // Merge with defaults
       this.settings = { ...this.defaultSettings, ...settings };
+      if (this.settings.themeMode !== 'light') {
+        this.settings.themeMode = 'light';
+        await this.configManager.set('generalSettings.themeMode', 'light');
+        await this.configManager.saveConfig();
+      }
 
       // Update UI elements
       this.updateUIFromSettings();
@@ -742,6 +747,9 @@ class GeneralSettingsManager {
    * Update a specific setting
    */
   async updateSetting(key, value) {
+    if (key === 'themeMode') {
+      value = 'light';
+    }
     this.settings[key] = value;
 
     if (this.configManager) {
@@ -806,7 +814,7 @@ class GeneralSettingsManager {
    * Apply all settings to the application
    */
   applySettings() {
-    this.applyTheme(this.settings.themeMode);
+    this.applyTheme('light');
     this.applyAccentColor(this.settings.accentColor);
     this.applyUIStyle(this.settings.uiStyle || 'default');
     this.applyFontSize(this.settings.fontSize);
@@ -827,26 +835,19 @@ class GeneralSettingsManager {
   applyTheme(theme) {
     const body = document.body;
     body.classList.remove('theme-light', 'theme-dark');
-
-    if (theme === 'light') {
-      body.classList.add('theme-light');
-    } else if (theme === 'dark') {
-      body.classList.add('theme-dark');
-    }
-    // 'auto' uses system preference via CSS media queries
+    body.classList.add('theme-light');
+    this.settings.themeMode = 'light';
 
     // Persist theme mode hint for the inline early-style script in index.html
     try {
-      localStorage.setItem('_themeHint', theme || 'auto');
+      localStorage.setItem('_themeHint', 'light');
     } catch (_) {
       // Ignore unavailable localStorage in restricted renderer contexts.
     }
 
-    // Also notify ThemeManager about dark mode change
+    // Also notify ThemeManager about color scheme changes
     if (window.themeManager) {
-      const isDark =
-        theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      window.themeManager.applyDarkModeOverrides(isDark);
+      window.themeManager.applyDarkModeOverrides(false);
     }
   }
 

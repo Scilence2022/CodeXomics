@@ -1867,7 +1867,7 @@ class BuiltInToolsIntegration {
       ) ||
       /\b(ui\s*style|theme|appearance)\s+.*?\b(switch|change|set|apply|activate|toggle)\b/i.test(query) ||
       /\b(switch\s+style|change\s+style|switch\s+theme|change\s+theme|switch\s+ui|change\s+ui)\b/i.test(query) ||
-      /\b(dark\s*mode|light\s*mode|toggle\s*dark|toggle\s*light|enable\s*dark|enable\s*light|turn\s+on\s+dark|turn\s+off\s+dark)\b/i.test(
+      /\b(light\s*mode|enable\s*light|turn\s+on\s+light)\b/i.test(
         query
       ) ||
       /\b(ai\s*dynamic|professional\s*style|minimal\s*style|elegant\s*style|midnight\s*style|pastel\s*style)\b/i.test(

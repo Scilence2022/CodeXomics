@@ -407,7 +407,7 @@ class ConfigManager {
         },
       },
       generalSettings: {
-        themeMode: 'auto',
+        themeMode: 'light',
         uiStyle: 'default',
         accentColor: '#667eea',
         fontSize: 'medium',

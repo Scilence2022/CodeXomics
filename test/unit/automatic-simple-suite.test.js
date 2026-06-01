@@ -68,7 +68,7 @@ describe('AutomaticSimpleSuite', () => {
       expect(test05.expectedResult.tool_name).toBe('switch_ui_style');
       expect(test05.expectedResult.parameters.style_name).toBe('professional');
 
-      // Verify details of settings_auto_06 (Switch to Midnight Dark Mode)
+      // Verify details of settings_auto_06 (Switch to Midnight Mode)
       const test06 = tests.find(t => t.id === 'settings_auto_06');
       expect(test06.type).toBe('function_call');
       expect(test06.category).toBe('system');
@@ -76,7 +76,7 @@ describe('AutomaticSimpleSuite', () => {
       expect(test06.evaluation).toBe('automatic');
       expect(test06.expectedResult.tool_name).toBe('switch_ui_style');
       expect(test06.expectedResult.parameters.style_name).toBe('midnight');
-      expect(test06.expectedResult.parameters.dark_mode).toBe('dark');
+      expect(test06.expectedResult.parameters).not.toHaveProperty('dark_mode');
     });
 
     it('should resolve default directory fallback and build paths correctly', () => {
