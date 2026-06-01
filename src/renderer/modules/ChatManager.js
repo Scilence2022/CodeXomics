@@ -3300,6 +3300,33 @@ class ChatManager {
     const parsedStart = Math.min(parseInt(start), parseInt(end));
     const parsedEnd = Math.max(parseInt(start), parseInt(end));
     const parsedStrand = strand === -1 || strand === '-1' ? -1 : 1;
+    const requestedType = type ? type.trim().toLowerCase() : 'gene';
+
+    if (requestedType === 'primer' && this.app?.primerManager) {
+      const primer = await this.app.primerManager.addPrimer({
+        name,
+        sequence,
+        description,
+        source: 'create_annotation',
+        bindingSites: [
+          {
+            chromosome,
+            start: parsedStart,
+            end: parsedEnd,
+            strand: parsedStrand,
+            source: 'create_annotation',
+          },
+        ],
+      });
+
+      return {
+        success: true,
+        primerId: primer.id,
+        primer,
+        track: 'primers',
+        message: `Created primer: ${name} (${parsedStart}-${parsedEnd})`,
+      };
+    }
 
     if (this.app && this.app.addUserDefinedFeature) {
       const finalQualifiers = {
