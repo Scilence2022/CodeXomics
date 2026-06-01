@@ -1898,6 +1898,45 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
+      {
+        id: 'settings_auto_05',
+        name: 'Switch UI Style Theme',
+        type: 'function_call',
+        category: 'system',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Switch the application UI visual style to the Professional theme.',
+        expectedResult: {
+          tool_name: 'switch_ui_style',
+          parameters: {
+            style_name: 'professional',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'settings_auto_06',
+        name: 'Switch to Midnight Dark Mode',
+        type: 'function_call',
+        category: 'system',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Change the application appearance to the midnight style and enable dark mode.',
+        expectedResult: {
+          tool_name: 'switch_ui_style',
+          parameters: {
+            style_name: 'midnight',
+            dark_mode: 'dark',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
 
       // UTILITY TASKS - Automatic + Simple
       {
