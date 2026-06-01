@@ -590,6 +590,10 @@ class FileManager {
         await this.genomeBrowser.geneAttachmentsManager.reloadForFile();
         console.log('📎 Gene attachments reloaded for new file');
       }
+      if (this.genomeBrowser.primerManager && typeof this.genomeBrowser.primerManager.reloadForFile === 'function') {
+        await this.genomeBrowser.primerManager.reloadForFile();
+        console.log('🧬 Primers reloaded for new file');
+      }
     } catch (error) {
       console.error('Error loading file:', error);
 

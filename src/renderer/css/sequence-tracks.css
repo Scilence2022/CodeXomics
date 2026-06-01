@@ -767,6 +767,71 @@
   font-size: 9px;
 }
 
+.sequence-primer-binding-row {
+  min-height: 22px;
+}
+
+.sequence-primer-binding-bases {
+  height: 22px;
+}
+
+.sequence-primer-binding-segment {
+  position: absolute;
+  top: 1px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border: 2px solid #a21caf;
+  background: rgba(250, 245, 255, 0.92);
+  box-sizing: border-box;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  overflow: visible;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.sequence-primer-binding-segment.forward {
+  border-radius: 3px 8px 3px 3px;
+}
+
+.sequence-primer-binding-segment.reverse {
+  border-radius: 3px 3px 3px 8px;
+}
+
+.sequence-primer-binding-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1ch;
+}
+
+.sequence-primer-binding-base.mismatch {
+  color: #dc2626;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+.sequence-primer-direction {
+  position: absolute;
+  top: -7px;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.sequence-primer-binding-segment.forward .sequence-primer-direction {
+  right: -9px;
+}
+
+.sequence-primer-binding-segment.reverse .sequence-primer-direction {
+  left: -9px;
+}
+
 /* Ensure position labels maintain consistent width */
 .sequence-position {
   width: 100px !important;

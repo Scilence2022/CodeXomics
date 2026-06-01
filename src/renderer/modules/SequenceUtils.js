@@ -1158,6 +1158,9 @@ class SequenceUtils {
 
     // Get sequence track settings
     const sequenceSettings = this.getSequenceTrackSettings();
+    const primerBindings = sequenceSettings.showPrimers
+      ? this.getPrimerBindingFeatures(chromosome, viewStart, viewEnd)
+      : [];
 
     // Check if we should invalidate cache
     if (this.shouldInvalidateCache(chromosome, viewStart, viewEnd, annotations, sequenceSettings)) {
@@ -1230,7 +1233,8 @@ class SequenceUtils {
       viewEnd,
       optimalLineLength,
       chromosome,
-      sequenceSettings
+      sequenceSettings,
+      primerBindings
     );
     const renderContext = this.createRenderContext(chromosome);
     this.applySequenceSpacingVariables(sequenceSettings);
@@ -1350,7 +1354,15 @@ class SequenceUtils {
     return ((displayPosition % context.sequenceLength) + context.sequenceLength) % context.sequenceLength;
   }
 
-  buildLineFeatureIndex(annotations, viewStart, viewEnd, optimalLineLength, chromosome = null, settings = {}) {
+  buildLineFeatureIndex(
+    annotations,
+    viewStart,
+    viewEnd,
+    optimalLineLength,
+    chromosome = null,
+    settings = {},
+    primerBindings = []
+  ) {
     const cacheKey = [
       'line-index',
       viewStart,
@@ -1360,6 +1372,7 @@ class SequenceUtils {
       this.isCircularModeEnabled() ? 'circular' : 'linear',
       this.getSequenceLength(chromosome),
       this.getAnnotationHash(annotations),
+      this.getAnnotationHash(primerBindings),
       this.getSettingsHash(settings),
     ].join(':');
 
@@ -1401,16 +1414,30 @@ class SequenceUtils {
               lineFeatures.cds.push(annotation);
             }
           }
-
-          const type = (annotation.type || '').toLowerCase();
-          if (settings.showPrimers && (type === 'primer' || type === 'primer_bind')) {
-            if (!lineFeatures.primers.includes(annotation)) {
-              lineFeatures.primers.push(annotation);
-            }
-          }
         }
       });
     });
+
+    if (settings.showPrimers) {
+      primerBindings.forEach(primer => {
+        const segmentStart = Math.max(viewStart, primer.start - 1);
+        const segmentEnd = Math.min(viewEnd, primer.end);
+        if (segmentEnd <= segmentStart) return;
+
+        const firstLine = Math.max(0, Math.floor((segmentStart - viewStart) / optimalLineLength));
+        const lastLine = Math.min(
+          totalLines - 1,
+          Math.floor((Math.max(segmentStart, segmentEnd - 1) - viewStart) / optimalLineLength)
+        );
+
+        for (let lineIndex = firstLine; lineIndex <= lastLine; lineIndex++) {
+          const lineFeatures = index[lineIndex];
+          if (!lineFeatures.primers.includes(primer)) {
+            lineFeatures.primers.push(primer);
+          }
+        }
+      });
+    }
 
     this.lineFeatureCache.set(cacheKey, index);
     return index;
@@ -1420,6 +1447,7 @@ class SequenceUtils {
     if (!annotation || !this.genomeBrowser.shouldShowGeneType(annotation.type)) return false;
 
     const geneType = (annotation.type || '').toLowerCase();
+    if (geneType === 'primer' || geneType === 'primer_bind' || geneType === 'primer_binding') return false;
     if (geneType === 'cds' && settings.showCDS === false) return false;
     if (['trna', 'rrna', 'mrna'].includes(geneType) && settings.showRNA === false) return false;
     if (geneType === 'promoter' && settings.showPromoter === false) return false;
@@ -1604,7 +1632,13 @@ class SequenceUtils {
     lineFeatureSet = null,
     renderContext = null
   ) {
-    const cacheKey = this.getSequenceLineCacheKey(lineSubsequence, lineStartPos, chromosome);
+    const cacheKey = [
+      this.getSequenceLineCacheKey(lineSubsequence, lineStartPos, chromosome),
+      this.getAnnotationHash(lineFeatureSet?.indicators || []),
+      this.getAnnotationHash(lineFeatureSet?.cds || []),
+      this.getAnnotationHash(lineFeatureSet?.primers || []),
+      this.getSettingsHash(sequenceSettings),
+    ].join(':');
 
     if (this.renderCache.has(cacheKey)) {
       this.performanceStats.cacheHits++;
@@ -1741,19 +1775,20 @@ class SequenceUtils {
       Boolean(lineFeatureSet)
     );
 
-    lineGroup.appendChild(sequenceLine);
-
-    if (sequenceSettings.showProteinSequence) {
-      this.createAlignedProteinRows(
+    if (sequenceSettings.showPrimers) {
+      this.createAlignedPrimerRows(
         lineSubsequence.length,
         lineStartPos,
         chromosome,
         annotations,
         charWidth,
-        lineFeatureSet?.cds || null,
-        context
+        lineFeatureSet?.primers || null,
+        context,
+        '+'
       ).forEach(row => lineGroup.appendChild(row));
     }
+
+    lineGroup.appendChild(sequenceLine);
 
     if (sequenceSettings.showPrimers) {
       this.createAlignedPrimerRows(
@@ -1763,6 +1798,19 @@ class SequenceUtils {
         annotations,
         charWidth,
         lineFeatureSet?.primers || null,
+        context,
+        '-'
+      ).forEach(row => lineGroup.appendChild(row));
+    }
+
+    if (sequenceSettings.showProteinSequence) {
+      this.createAlignedProteinRows(
+        lineSubsequence.length,
+        lineStartPos,
+        chromosome,
+        annotations,
+        charWidth,
+        lineFeatureSet?.cds || null,
         context
       ).forEach(row => lineGroup.appendChild(row));
     }
@@ -1778,7 +1826,7 @@ class SequenceUtils {
   getSequenceLineBlockHeight(settings = {}) {
     const indicatorHeight = settings.showIndicators === false ? 0 : (settings.indicatorHeight || 8) + 8;
     const proteinHeight = settings.showProteinSequence ? 22 : 0;
-    const primerHeight = settings.showPrimers ? 20 : 0;
+    const primerHeight = settings.showPrimers ? 44 : 0;
     const complementaryHeight = settings.showComplementary ? 22 : 0;
     return this.lineHeight + this.lineSpacing + indicatorHeight + proteinHeight + primerHeight + complementaryHeight;
   }
@@ -1864,6 +1912,32 @@ class SequenceUtils {
     return proteinSequence;
   }
 
+  getPrimerBindingFeatures(chromosome, viewStart = null, viewEnd = null) {
+    const viewport =
+      Number.isFinite(viewStart) && Number.isFinite(viewEnd)
+        ? { start: viewStart, end: viewEnd }
+        : null;
+
+    if (this.genomeBrowser.primerManager) {
+      return this.genomeBrowser.primerManager.getRenderableBindingSites(chromosome, viewport);
+    }
+
+    const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+    return annotations
+      .filter(feature => {
+        const type = (feature.type || '').toLowerCase();
+        if (type !== 'primer' && type !== 'primer_bind') return false;
+        if (!viewport) return true;
+        return this.featureOverlapsDisplayRange(feature, viewport.start, viewport.end, chromosome);
+      })
+      .map(feature => ({
+        ...feature,
+        chromosome: feature.chromosome || chromosome,
+        primerSequence: this.getPrimerSequence(feature),
+        bindingSequence: this.getPrimerSequence(feature),
+      }));
+  }
+
   createAlignedPrimerRows(
     lineLength,
     lineStartAbs,
@@ -1871,8 +1945,10 @@ class SequenceUtils {
     annotations,
     charWidth,
     indexedPrimers = null,
-    renderContext = null
+    renderContext = null,
+    strandFilter = null
   ) {
+    void renderContext;
     const lineEndAbs = lineStartAbs + lineLength;
     const primers =
       indexedPrimers ||
@@ -1881,43 +1957,106 @@ class SequenceUtils {
         if (type !== 'primer' && type !== 'primer_bind') return false;
         return this.featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome);
       });
-    const context = renderContext || this.createRenderContext(chromosome);
-
     return primers
-      .map(primer => {
-        const primerSequence = this.getPrimerSequence(primer);
+      .filter(primer => {
         const isReverse = primer.strand === -1 || primer.strand === '-';
-        const marks = [];
+        if (strandFilter === '+') return !isReverse;
+        if (strandFilter === '-') return isReverse;
+        return true;
+      })
+      .map(primer => {
+        const primerSequence = primer.primerSequence || this.getPrimerSequence(primer);
+        const isReverse = primer.strand === -1 || primer.strand === '-';
         const start = Math.min(primer.start, primer.end);
         const end = Math.max(primer.start, primer.end);
+        const visibleStart = Math.max(start, lineStartAbs + 1);
+        const visibleEnd = Math.min(end, lineStartAbs + lineLength);
+        if (visibleEnd < visibleStart) return null;
 
-        for (let i = 0; i < lineLength; i++) {
-          const sourcePos1Based = this.displayToSourcePositionFast(lineStartAbs + i, context) + 1;
-          if (sourcePos1Based < start || sourcePos1Based > end) continue;
-
+        const visibleBases = [];
+        const mismatchIndexes = new Set((primer.mismatches || []).map(mismatch => mismatch.primerIndex));
+        for (let sourcePos1Based = visibleStart; sourcePos1Based <= visibleEnd; sourcePos1Based++) {
           const sequenceIndex = isReverse ? end - sourcePos1Based : sourcePos1Based - start;
           const primerBase = primerSequence ? primerSequence[sequenceIndex] || '' : '';
-          marks.push({
-            index: i,
+          visibleBases.push({
             text: primerBase || (isReverse ? '<' : '>'),
-            title: `${this.getFeatureDisplayName(primer)} primer`,
+            mismatch: mismatchIndexes.has(sequenceIndex),
           });
         }
 
-        if (marks.length === 0) return null;
-        return this.createAlignedSequenceRow({
+        return this.createPrimerBindingRow({
           className: `sequence-primer-row ${isReverse ? 'reverse' : 'forward'}`,
           label: this.truncateLabel(this.getFeatureDisplayName(primer), 12),
-          marks,
           charWidth,
           lineLength,
+          startIndex: visibleStart - (lineStartAbs + 1),
+          visibleLength: visibleEnd - visibleStart + 1,
+          bases: visibleBases,
+          isReverse,
           strandLabelWidth: this.strandLabelWidth,
           color: isReverse ? '#7c2d12' : '#1e3a8a',
-          background: () => (isReverse ? 'rgba(251, 146, 60, 0.2)' : 'rgba(96, 165, 250, 0.2)'),
-          borderColor: isReverse ? '#fdba74' : '#93c5fd',
+          borderColor: primer.color || (isReverse ? '#a21caf' : '#9333ea'),
+          title: `${this.getFeatureDisplayName(primer)} primer ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})`,
         });
       })
       .filter(Boolean);
+  }
+
+  createPrimerBindingRow({
+    className,
+    label,
+    charWidth,
+    lineLength,
+    startIndex,
+    visibleLength,
+    bases,
+    isReverse,
+    strandLabelWidth = 20,
+    color,
+    borderColor,
+    title,
+  }) {
+    const row = document.createElement('div');
+    row.className = `sequence-aligned-row sequence-primer-binding-row ${className}`;
+
+    const labelElement = document.createElement('span');
+    labelElement.className = 'sequence-position sequence-aligned-label';
+    labelElement.textContent = label;
+
+    const strandSpacer = document.createElement('span');
+    strandSpacer.className = 'sequence-aligned-strand-spacer';
+    strandSpacer.style.width = `${strandLabelWidth}px`;
+    strandSpacer.style.flex = `0 0 ${strandLabelWidth}px`;
+
+    const basesElement = document.createElement('div');
+    basesElement.className = 'sequence-aligned-bases sequence-primer-binding-bases';
+    basesElement.style.width = `${Math.max(1, lineLength * charWidth)}px`;
+
+    const segment = document.createElement('span');
+    segment.className = `sequence-primer-binding-segment ${isReverse ? 'reverse' : 'forward'}`;
+    segment.title = title;
+    segment.style.left = `${startIndex * charWidth}px`;
+    segment.style.width = `${Math.max(1, visibleLength * charWidth)}px`;
+    segment.style.color = color;
+    segment.style.borderColor = borderColor;
+
+    bases.forEach(base => {
+      const baseElement = document.createElement('span');
+      baseElement.className = `sequence-primer-binding-base${base.mismatch ? ' mismatch' : ''}`;
+      baseElement.textContent = base.text;
+      segment.appendChild(baseElement);
+    });
+
+    const direction = document.createElement('span');
+    direction.className = 'sequence-primer-direction';
+    direction.textContent = isReverse ? '<' : '>';
+    segment.appendChild(direction);
+
+    basesElement.appendChild(segment);
+    row.appendChild(labelElement);
+    row.appendChild(strandSpacer);
+    row.appendChild(basesElement);
+    return row;
   }
 
   createAlignedSequenceRow({
@@ -1995,6 +2134,7 @@ class SequenceUtils {
 
   getPrimerSequence(primer) {
     return (
+      primer.primerSequence ||
       primer.sequence ||
       this.genomeBrowser.getQualifierValue?.(primer.qualifiers, 'sequence') ||
       this.genomeBrowser.getQualifierValue?.(primer.qualifiers, 'primer_sequence') ||

@@ -157,4 +157,61 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(indicatorSvg.innerHTML).toContain('x1="10"');
     expect(indicatorSvg.innerHTML).toContain('M 28 ');
   });
+
+  it('renders primer manager bindings above and below the DNA rows by strand', () => {
+    utils.genomeBrowser.currentSequence.chr1 = 'ATGAAATGGCCCAAA';
+    utils.genomeBrowser.currentAnnotations.chr1 = [];
+    utils.genomeBrowser.primerManager = {
+      getRenderableBindingSites: () => [
+        {
+          type: 'primer_binding',
+          name: 'F-primer',
+          sequence: 'ATGAAA',
+          primerSequence: 'ATGAAA',
+          chromosome: 'chr1',
+          start: 1,
+          end: 6,
+          strand: '+',
+          mismatches: [],
+        },
+        {
+          type: 'primer_binding',
+          name: 'R-primer',
+          sequence: 'TTTGGG',
+          primerSequence: 'TTTGGG',
+          chromosome: 'chr1',
+          start: 10,
+          end: 15,
+          strand: '-',
+          mismatches: [{ primerIndex: 2 }],
+        },
+      ],
+    };
+
+    const lineElement = utils.renderSequenceLine(
+      'ATGAAATGGCCCAAA',
+      0,
+      'chr1',
+      [],
+      [],
+      10,
+      { showPrimers: true },
+      new Map(),
+      {
+        indicators: [],
+        cds: [],
+        primers: utils.genomeBrowser.primerManager.getRenderableBindingSites(),
+      }
+    );
+
+    const rows = Array.from(lineElement.children);
+    const forwardRow = lineElement.querySelector('.sequence-primer-row.forward');
+    const reverseRow = lineElement.querySelector('.sequence-primer-row.reverse');
+
+    expect(rows.indexOf(forwardRow)).toBeLessThan(rows.indexOf(lineElement.querySelector('.sequence-line')));
+    expect(rows.indexOf(reverseRow)).toBeGreaterThan(rows.indexOf(lineElement.querySelector('.sequence-line')));
+    expect(forwardRow.querySelector('.sequence-primer-binding-segment').textContent).toContain('ATGAAA>');
+    expect(reverseRow.querySelector('.sequence-primer-binding-segment').textContent).toContain('GGGTTT<');
+    expect(reverseRow.querySelectorAll('.sequence-primer-binding-base.mismatch')).toHaveLength(1);
+  });
 });

@@ -199,6 +199,7 @@ class SidecarManager {
       lastModified: new Date().toISOString(),
       geneNotes: {},
       geneAttachments: {},
+      primers: [],
     };
   }
 

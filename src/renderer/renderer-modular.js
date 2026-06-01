@@ -1,4 +1,4 @@
-/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, ipcRenderer */
+/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 const path = require('path');
@@ -513,6 +513,22 @@ class GenomeBrowser {
     } catch (error) {
       console.error('❌ Error initializing GeneNotesManager:', error);
       this.geneNotesManager = null;
+    }
+
+    // Step 5.6.4: Initialize Primer Manager
+    console.log('🧬 About to initialize PrimerManager...');
+    try {
+      if (typeof PrimerManager !== 'undefined') {
+        this.primerManager = new PrimerManager(this, this.configManager, this.sidecarManager);
+        window.primerManager = this.primerManager;
+        console.log('✅ PrimerManager initialized successfully');
+      } else {
+        console.warn('⚠️ PrimerManager class not found');
+        this.primerManager = null;
+      }
+    } catch (error) {
+      console.error('❌ Error initializing PrimerManager:', error);
+      this.primerManager = null;
     }
 
     // Step 5.7: Initialize External Tools Manager
@@ -5697,8 +5713,9 @@ class GenomeBrowser {
 
     const name = primer.name || primer.qualifiers?.label || primer.qualifiers?.gene || 'Unnamed Primer';
     const length = Math.abs(primer.end - primer.start) + 1;
-    const strand = primer.strand === -1 ? 'Reverse (-)' : 'Forward (+)';
-    const strandIcon = primer.strand === -1 ? 'fa-long-arrow-alt-left' : 'fa-long-arrow-alt-right';
+    const isReversePrimer = primer.strand === -1 || primer.strand === '-';
+    const strand = isReversePrimer ? 'Reverse (-)' : 'Forward (+)';
+    const strandIcon = isReversePrimer ? 'fa-long-arrow-alt-left' : 'fa-long-arrow-alt-right';
     const desc = primer.description || primer.qualifiers?.note || '';
     const product = primer.qualifiers?.product || '';
     const currentChr = primer.chromosome || document.getElementById('chromosomeSelect')?.value;
@@ -5744,7 +5761,7 @@ class GenomeBrowser {
         <div class="primer-name">${safeName}</div>
         <div class="primer-badges">
           <span class="primer-type-badge"><i class="fas fa-vial"></i> primer</span>
-          <span class="primer-strand-badge ${primer.strand === -1 ? 'reverse' : 'forward'}">
+          <span class="primer-strand-badge ${isReversePrimer ? 'reverse' : 'forward'}">
             <i class="fas ${strandIcon}"></i> ${strand}
           </span>
         </div>
@@ -5840,7 +5857,7 @@ class GenomeBrowser {
         <div class="primer-sequence-display">${coloredSeq}</div>
         ${
           genomeBindingSequence
-            ? `<div class="primer-section-title primer-genome-binding-title"><i class="fas fa-map-pin"></i> Genomic Binding Window (${primer.strand === -1 ? 'reverse-complemented' : 'forward'})</div>
+            ? `<div class="primer-section-title primer-genome-binding-title"><i class="fas fa-map-pin"></i> Genomic Binding Window (${isReversePrimer ? 'reverse-complemented' : 'forward'})</div>
         <div class="primer-sequence-display primer-genome-sequence">${coloredGenomeSeq}</div>
         <div class="primer-mismatch-summary">${
           mismatchSummary.comparable
@@ -5901,6 +5918,7 @@ class GenomeBrowser {
 
   getPrimerOligoSequence(primer) {
     const sequence =
+      primer.primerSequence ||
       primer.sequence ||
       primer.qualifiers?.sequence ||
       primer.qualifiers?.primer_sequence ||
@@ -5913,6 +5931,12 @@ class GenomeBrowser {
   }
 
   getPrimerGenomeBindingSequence(primer, chromosome = null) {
+    if (primer.bindingSequence) {
+      return String(primer.bindingSequence)
+        .toUpperCase()
+        .replace(/[^ATCGN]/g, '');
+    }
+
     const chr = chromosome || primer.chromosome || document.getElementById('chromosomeSelect')?.value;
     const fullSequence = this.currentSequence ? this.currentSequence[chr] : null;
     if (!fullSequence || primer.start == null || primer.end == null) return '';
@@ -5920,7 +5944,7 @@ class GenomeBrowser {
     const seqStart = Math.max(0, Math.min(primer.start, primer.end) - 1);
     const seqEnd = Math.min(fullSequence.length, Math.max(primer.start, primer.end));
     let sequence = fullSequence.substring(seqStart, seqEnd).toUpperCase();
-    if (primer.strand === -1) {
+    if (primer.strand === -1 || primer.strand === '-') {
       sequence = this.reverseComplementDNA(sequence);
     }
     return sequence.replace(/[^ATCGN]/g, '');
@@ -9505,7 +9529,7 @@ class GenomeBrowser {
     }
   }
 
-  addUserFeature() {
+  async addUserFeature() {
     const featureType = document.getElementById('featureType').value;
     const featureName = document.getElementById('featureName').value.trim();
     const chromosome = document.getElementById('featureChromosome').value;
@@ -9551,11 +9575,10 @@ class GenomeBrowser {
       note: description,
       user_defined: true,
     };
+    let normalizedPrimerSequence = '';
 
     if (featureType.toLowerCase() === 'primer') {
-      const normalizedPrimerSequence = primerOligoSequence
-        ? primerOligoSequence.toUpperCase().replace(/[^ATCGN]/g, '')
-        : '';
+      normalizedPrimerSequence = primerOligoSequence ? primerOligoSequence.toUpperCase().replace(/[^ATCGN]/g, '') : '';
       if (primerOligoSequence && !normalizedPrimerSequence) {
         notify('Please enter a valid primer sequence using A, T, C, G, or N');
         return;
@@ -9570,6 +9593,45 @@ class GenomeBrowser {
         qualifiers.sequence = normalizedPrimerSequence;
       }
       qualifiers.direction = strand === -1 ? 'reverse' : 'forward';
+    }
+
+    if (featureType.toLowerCase() === 'primer') {
+      if (!this.primerManager) {
+        notify('Primer manager is not available');
+        return;
+      }
+
+      await this.primerManager.addPrimer({
+        name: featureName,
+        sequence: normalizedPrimerSequence,
+        description,
+        source: 'manual',
+        bindingSites: [
+          {
+            chromosome,
+            start,
+            end,
+            strand,
+            source: 'manual',
+          },
+        ],
+      });
+
+      this.visibleTracks.add('primers');
+      const checkbox = document.getElementById('trackPrimers');
+      if (checkbox) checkbox.checked = true;
+      this.updatePrimerTrackButtonState(true);
+
+      document.getElementById('addFeatureModal').classList.remove('show');
+      this.clearSequenceSelection();
+
+      if (chromosome === document.getElementById('chromosomeSelect')?.value) {
+        this.displayGenomeView(chromosome, this.currentSequence[chromosome]);
+        this.sequenceUtils.displayEnhancedSequence(chromosome, this.currentSequence[chromosome]);
+      }
+
+      notify(`Added primer "${featureName}" to ${chromosome}:${start}-${end}`);
+      return;
     }
 
     // Create the feature object
@@ -9595,13 +9657,6 @@ class GenomeBrowser {
     }
     this.currentAnnotations[chromosome].push(feature);
 
-    if (featureType.toLowerCase() === 'primer') {
-      this.visibleTracks.add('primers');
-      const checkbox = document.getElementById('trackPrimers');
-      if (checkbox) checkbox.checked = true;
-      this.updatePrimerTrackButtonState(true);
-    }
-
     // Close modal
     document.getElementById('addFeatureModal').classList.remove('show');
 
@@ -9617,7 +9672,7 @@ class GenomeBrowser {
     notify(`Added ${featureType} "${featureName}" to ${chromosome}:${start}-${end}`);
   }
 
-  promptDeletePrimers() {
+  async promptDeletePrimers() {
     const currentChr = document.getElementById('chromosomeSelect')?.value || this.currentChromosome;
     const primers = this.getPrimerAnnotations(currentChr);
 
@@ -9645,7 +9700,7 @@ class GenomeBrowser {
     if (trimmed.toUpperCase() === 'ALL') {
       const confirmed = confirm(`Delete all ${primers.length} primer annotations on ${currentChr}?`);
       if (!confirmed) return;
-      removed = this.deletePrimerAnnotations(currentChr, () => true);
+      removed = await this.deletePrimerAnnotations(currentChr, () => true);
     } else {
       const numericIndex = Number(trimmed);
       const target =
@@ -9672,7 +9727,7 @@ class GenomeBrowser {
       const targetName = target.name || target.qualifiers?.label || target.qualifiers?.gene || target.id;
       const confirmed = confirm(`Delete primer "${targetName}"?`);
       if (!confirmed) return;
-      removed = this.deletePrimerAnnotations(currentChr, primer => primer === target || primer.id === target.id);
+      removed = await this.deletePrimerAnnotations(currentChr, primer => primer === target || primer.id === target.id);
     }
 
     if (removed > 0) {
@@ -9688,6 +9743,10 @@ class GenomeBrowser {
   }
 
   getPrimerAnnotations(chromosome) {
+    if (this.primerManager) {
+      return this.primerManager.getRenderableBindingSites(chromosome || null);
+    }
+
     const annotations = this.currentAnnotations?.[chromosome] || [];
     return annotations.filter(feature => {
       const featureType = String(feature?.type || '').toLowerCase();
@@ -9695,7 +9754,19 @@ class GenomeBrowser {
     });
   }
 
-  deletePrimerAnnotations(chromosome, predicate) {
+  async deletePrimerAnnotations(chromosome, predicate) {
+    if (this.primerManager) {
+      const primers = this.primerManager.getRenderableBindingSites(chromosome || null);
+      const primerIds = new Set(primers.filter(predicate).map(primer => primer.primerId || primer.id));
+      let removed = 0;
+      for (const primerId of primerIds) {
+        if (await this.primerManager.removePrimer(primerId)) {
+          removed++;
+        }
+      }
+      return removed;
+    }
+
     let removed = 0;
     const removeFromCollection = collection => {
       if (!collection?.[chromosome]) return;

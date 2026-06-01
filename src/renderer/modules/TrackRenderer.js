@@ -1077,8 +1077,7 @@ class TrackRenderer {
     const detailedRuler = this.createDetailedRuler(chromosome);
     trackContent.appendChild(detailedRuler);
 
-    const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
-    const visiblePrimers = this.filterPrimerAnnotations(annotations, viewport, settings);
+    const visiblePrimers = this.getVisiblePrimerBindings(chromosome, viewport, settings);
 
     if (visiblePrimers.length === 0) {
       const noPrimersMsg = this.createNoDataMessage('No primers in this region', 'no-primers-message');
@@ -1091,6 +1090,15 @@ class TrackRenderer {
     this.restoreHeaderState(track, 'primers');
 
     return track;
+  }
+
+  getVisiblePrimerBindings(chromosome, viewport, settings = {}) {
+    if (this.genomeBrowser.primerManager) {
+      return this.genomeBrowser.primerManager.getRenderableBindingSites(chromosome, viewport);
+    }
+
+    const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+    return this.filterPrimerAnnotations(annotations, viewport, settings);
   }
 
   /**
@@ -1268,7 +1276,7 @@ class TrackRenderer {
     group.appendChild(title);
 
     group.addEventListener('click', () => {
-      this.showGeneDetails(primer, null);
+      this.genomeBrowser.selectPrimer(primer);
     });
 
     return group;
@@ -1316,6 +1324,12 @@ class TrackRenderer {
   }
 
   getPrimerGenomeBindingSequence(primer) {
+    if (primer.bindingSequence) {
+      return String(primer.bindingSequence)
+        .toUpperCase()
+        .replace(/[^ATCGN]/g, '');
+    }
+
     const chromosome =
       primer.chromosome || this.genomeBrowser.currentChromosome || document.getElementById('chromosomeSelect')?.value;
     const sequence = this.genomeBrowser.currentSequence?.[chromosome];

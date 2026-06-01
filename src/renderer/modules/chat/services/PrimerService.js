@@ -62,11 +62,27 @@ class PrimerService {
         }
       ),
     };
-    if (result.sites.length > 0 && params.sequenceOffset) {
-      const offset = params.sequenceOffset - 1;
-      result.sites.forEach(s => {
-        s.start += offset;
-        s.end += offset;
+    const hasGenomicContext = Boolean(params.chromosome || params.sequenceOffset);
+    if (result.sites.length > 0) {
+      const sequenceOffset = params.sequenceOffset || 1;
+      result.sites = result.sites.map(site => {
+        const bindingSequence =
+          site.strand === '-' ? Designer.reverseComplement(site.genomicSequence || site.sequence) : site.genomicSequence || site.sequence;
+        const mismatches = (site.mismatchDetails || []).map(mismatch => ({
+          primerIndex: mismatch.position,
+          primerBase: mismatch.primer,
+          genomeBase: bindingSequence[mismatch.position],
+          posFrom3Prime: mismatch.posFrom3Prime,
+          type: mismatch.type,
+        }));
+        return {
+          ...site,
+          chromosome: params.chromosome,
+          start: hasGenomicContext ? sequenceOffset + site.start : site.start,
+          end: hasGenomicContext ? sequenceOffset + site.end - 1 : site.end,
+          bindingSequence,
+          mismatches,
+        };
       });
     }
     return result;
@@ -79,36 +95,39 @@ class PrimerService {
       throw new Error('Missing required fields for annotation: chromosome, start, end, name');
     }
     const strand = params.strand === '-' || params.strand === -1 ? -1 : 1;
-    const qualifiers = {};
     const primerSequence = params.sequence || params.primerSequence || params.oligoSequence;
-    if (primerSequence) {
-      qualifiers.sequence = String(primerSequence)
-        .toUpperCase()
-        .replace(/[^ATCGN]/g, '');
-    }
-
-    const result = await this.chatManager.createAnnotation({
-      type: 'primer',
+    const manager = this._getPrimerManager();
+    const primer = await manager.addPrimer({
       name: params.name,
-      chromosome: params.chromosome,
-      start: parseInt(params.start),
-      end: parseInt(params.end),
-      strand,
+      sequence: primerSequence,
       description: params.description || `Tm: ${params.tm || '?'}, GC: ${params.gcContent || '?'}%`,
-      sequence: qualifiers.sequence,
-      qualifiers,
+      source: 'chatbox',
+      bindingSites: [
+        {
+          chromosome: params.chromosome,
+          start: parseInt(params.start),
+          end: parseInt(params.end),
+          strand,
+          tm: params.tm,
+          gcContent: params.gcContent,
+          source: 'chatbox',
+        },
+      ],
     });
 
     this._showPrimerTrack(params.chromosome);
     return {
-      ...result,
+      success: true,
+      primer,
       track: 'primers',
       message: `Added primer "${params.name}" to the Primers track`,
     };
   }
 
   async listPrimerAnnotations(params = {}) {
-    const primers = this._getPrimerAnnotations(params.chromosome)
+    const manager = this._getPrimerManager();
+    const primers = manager
+      .getRenderableBindingSites(params.chromosome || null)
       .filter(primer => {
         const start = this._getNumber(params.start);
         const end = this._getNumber(params.end);
@@ -122,9 +141,11 @@ class PrimerService {
         chromosome: primer.chromosome,
         start: primer.start,
         end: primer.end,
-        strand: primer.strand === -1 ? '-' : '+',
-        sequence: primer.sequence || primer.qualifiers?.sequence || primer.qualifiers?.primer_sequence || '',
-        description: primer.description || primer.qualifiers?.note || '',
+        strand: primer.strand,
+        sequence: primer.sequence || '',
+        bindingSequence: primer.bindingSequence || '',
+        mismatches: primer.mismatches || [],
+        description: primer.description || '',
       }));
 
     return {
@@ -141,7 +162,8 @@ class PrimerService {
       throw new Error('Set confirm=true to clear primer annotations');
     }
 
-    const removed = this._removePrimerAnnotations(chromosome);
+    const manager = this._getPrimerManager();
+    const removed = await manager.clearPrimers(chromosome);
     this._showPrimerTrack(chromosome);
 
     return {
@@ -159,6 +181,15 @@ class PrimerService {
       return window.PrimerDesigner;
     }
     throw new Error('PrimerDesigner is not loaded. Primer tools are unavailable.');
+  }
+
+  _getPrimerManager() {
+    const manager =
+      this.app?.primerManager || this.chatManager?.app?.primerManager || (typeof window !== 'undefined' && window.primerManager);
+    if (!manager) {
+      throw new Error('PrimerManager is not loaded. Primer persistence is unavailable.');
+    }
+    return manager;
   }
 
   _getPrimerAnnotations(chromosome = null) {
