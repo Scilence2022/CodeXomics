@@ -12054,6 +12054,7 @@ This action cannot be undone.`;
       sequence: {
         visible: true,
         height: 60,
+        panelHeight: 250,
         displayMode: 'letters',
         showCoordinates: true,
         fontSize: 12,
@@ -12887,6 +12888,13 @@ This action cannot be undone.`;
 
       case 'sequence':
         // View Mode settings (traditional sequence view)
+        {
+          const currentSequenceSettings = this.getTrackSettings('sequence') || {};
+          if (Number.isFinite(Number(currentSequenceSettings.panelHeight))) {
+            settings.panelHeight = Number(currentSequenceSettings.panelHeight);
+          }
+        }
+
         const showIndicatorsEl = modal.querySelector('#sequenceShowIndicators');
         if (showIndicatorsEl) settings.showIndicators = showIndicatorsEl.checked;
 

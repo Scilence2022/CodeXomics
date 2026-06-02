@@ -10067,8 +10067,10 @@ class GenomeBrowser {
       if (sequenceDisplaySection) {
         sequenceDisplaySection.style.display = 'flex';
 
+        const panelHeight = this.getBottomSequencePanelHeight();
+
         // Set proper layout properties to ensure it reaches the bottom
-        sequenceDisplaySection.style.height = '250px'; // Default height
+        sequenceDisplaySection.style.height = `${panelHeight}px`;
         sequenceDisplaySection.style.minHeight = '50px';
         sequenceDisplaySection.style.maxHeight = '60vh';
         sequenceDisplaySection.style.flex = '0 0 auto'; // Don't grow automatically
@@ -10117,6 +10119,37 @@ class GenomeBrowser {
     }
   }
 
+  getBottomSequencePanelHeight() {
+    const defaultHeight = 250;
+    const minHeight = 50;
+    const maxHeight = Math.max(minHeight, Math.floor(window.innerHeight * 0.6));
+    const settings = this.trackRenderer?.getTrackSettings?.('sequence') || {};
+    const savedHeight = Number(settings.panelHeight);
+
+    if (Number.isFinite(savedHeight) && savedHeight > 0) {
+      return Math.min(maxHeight, Math.max(minHeight, savedHeight));
+    }
+
+    return Math.min(defaultHeight, maxHeight);
+  }
+
+  saveBottomSequencePanelHeight(height) {
+    const numericHeight = Number(height);
+    if (!Number.isFinite(numericHeight) || numericHeight <= 0 || !this.trackRenderer?.saveTrackSettings) {
+      return;
+    }
+
+    const minHeight = 50;
+    const maxHeight = Math.max(minHeight, Math.floor(window.innerHeight * 0.6));
+    const panelHeight = Math.round(Math.min(maxHeight, Math.max(minHeight, numericHeight)));
+    const currentSettings = this.trackRenderer.getTrackSettings('sequence') || {};
+
+    this.trackRenderer.saveTrackSettings('sequence', {
+      ...currentSettings,
+      panelHeight,
+    });
+  }
+
   // Set up collapse/expand functionality for sequence header
   setupSequenceHeaderToggle() {
     const sequenceHeader = document.querySelector('.sequence-header');
@@ -10160,7 +10193,7 @@ class GenomeBrowser {
         // Restore proper height and flex properties
         sequenceDisplaySection.style.minHeight = '50px';
         sequenceDisplaySection.style.maxHeight = '60vh';
-        sequenceDisplaySection.style.height = '250px'; // Default height
+        sequenceDisplaySection.style.height = `${this.getBottomSequencePanelHeight()}px`;
         sequenceDisplaySection.style.flex = '0 0 auto';
         sequenceDisplaySection.style.position = 'relative';
         sequenceDisplaySection.style.bottom = '0';

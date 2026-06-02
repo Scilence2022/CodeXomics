@@ -532,6 +532,12 @@ class UIManager {
     let startGenomeHeight = 0;
     let startSequenceHeight = 0;
 
+    const saveSequencePanelHeight = height => {
+      if (typeof this.genomeBrowser.saveBottomSequencePanelHeight === 'function') {
+        this.genomeBrowser.saveBottomSequencePanelHeight(height);
+      }
+    };
+
     // Mouse events for dragging
     splitter.addEventListener('mousedown', e => {
       isResizing = true;
@@ -591,6 +597,8 @@ class UIManager {
         // Trigger sequence track window re-render if it was affected
         const sequenceSection = document.getElementById('sequenceDisplaySection');
         if (sequenceSection && sequenceSection.style.display !== 'none') {
+          saveSequencePanelHeight(sequenceSection.offsetHeight);
+
           const currentChr = document.getElementById('chromosomeSelect')?.value;
           if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             console.log('🔄 Triggering sequence track window re-render after main splitter adjustment');
@@ -627,6 +635,7 @@ class UIManager {
           genomeSection.style.height = 'auto';
           sequenceSection.style.flex = 'none';
           sequenceSection.style.height = `${defaultSequenceHeight}px`;
+          saveSequencePanelHeight(defaultSequenceHeight);
 
           // Trigger sequence track window re-render after Home key reset
           const currentChr = document.getElementById('chromosomeSelect')?.value;
@@ -674,6 +683,7 @@ class UIManager {
 
         sequenceSection.style.flex = 'none';
         sequenceSection.style.height = `${newSequenceHeight}px`;
+        saveSequencePanelHeight(newSequenceHeight);
 
         // Trigger sequence track window re-render after keyboard adjustment
         const currentChr = document.getElementById('chromosomeSelect')?.value;
@@ -694,6 +704,7 @@ class UIManager {
       genomeSection.style.height = 'auto';
       sequenceSection.style.flex = 'none';
       sequenceSection.style.height = `${defaultSequenceHeight}px`;
+      saveSequencePanelHeight(defaultSequenceHeight);
 
       // Trigger sequence track window re-render after double-click reset
       const currentChr = document.getElementById('chromosomeSelect')?.value;
