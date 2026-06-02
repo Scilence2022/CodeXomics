@@ -512,7 +512,128 @@ class SequenceUtils {
     // Store reference for cleanup
     container._cursorLeaveHandler = leaveHandler;
 
+    const existingIndicatorClickHandler = container._geneIndicatorClickHandler;
+    if (existingIndicatorClickHandler) {
+      container.removeEventListener('click', existingIndicatorClickHandler);
+    }
+
+    const indicatorClickHandler = event => {
+      const target = event.target.closest?.('.gene-indicator-click-target');
+      if (!target || !container.contains(target)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      this.handleGeneIndicatorClick(target);
+    };
+    container.addEventListener('click', indicatorClickHandler);
+    container._geneIndicatorClickHandler = indicatorClickHandler;
+
     console.log('✅ [SequenceUtils] Cursor mouseleave handler attached (persistence mode)');
+  }
+
+  handleGeneIndicatorClick(target) {
+    const gene = this.findGeneFromIndicatorTarget(target);
+    if (!gene) {
+      console.warn('⚠️ [SequenceUtils] Could not resolve clicked gene indicator:', target?.dataset || {});
+      return;
+    }
+
+    const chromosome = target.dataset.chromosome || this.genomeBrowser.currentChromosome;
+    const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+    const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations, chromosome) : [];
+    const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+
+    if (this.genomeBrowser.trackRenderer?.showGeneDetails) {
+      this.genomeBrowser.trackRenderer.showGeneDetails(gene, operonInfo);
+      return;
+    }
+
+    this.genomeBrowser.selectGene?.(gene, operonInfo);
+    this.genomeBrowser.showGeneDetailsPanel?.();
+    this.genomeBrowser.populateGeneDetails?.(gene, operonInfo);
+    this.genomeBrowser.highlightGeneSequence?.(gene);
+  }
+
+  findGeneFromIndicatorTarget(target) {
+    const chromosome = target.dataset.chromosome || this.genomeBrowser.currentChromosome;
+    const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+    const sourceStart = parseInt(target.dataset.geneStart, 10);
+    const sourceEnd = parseInt(target.dataset.geneEnd, 10);
+    const type = (target.dataset.geneType || '').toLowerCase();
+    const geneName = target.dataset.geneName || '';
+    const locusTag = target.dataset.locusTag || '';
+
+    return annotations.find(annotation => {
+      if (!annotation) return false;
+      const annotationType = (annotation.type || '').toLowerCase();
+      if (type && annotationType !== type) return false;
+      if (annotation.start !== sourceStart || annotation.end !== sourceEnd) return false;
+
+      if (!geneName && !locusTag) return true;
+
+      const annotationGeneName = this.genomeBrowser.getQualifierValue?.(annotation.qualifiers, 'gene') || '';
+      const annotationLocusTag = this.genomeBrowser.getQualifierValue?.(annotation.qualifiers, 'locus_tag') || '';
+      return (!geneName || annotationGeneName === geneName) && (!locusTag || annotationLocusTag === locusTag);
+    });
+  }
+
+  getGeneIndicatorGeometry(barHeight, settings = {}) {
+    const heightCorrection = (settings.heightCorrection || 100) / 100;
+    const correctedBarHeight = barHeight * heightCorrection;
+    const startMarkerHeightPercent = settings.startMarkerHeight || 200;
+    const arrowHeightPercent = settings.arrowHeight || 200;
+    const markerHeight =
+      settings.showStartMarkers !== false ? (correctedBarHeight * startMarkerHeightPercent) / 100 : 0;
+    const arrowHeight = settings.showEndArrows !== false ? (correctedBarHeight * arrowHeightPercent) / 100 : 0;
+    const hitHeight = Math.max(correctedBarHeight, markerHeight, arrowHeight);
+
+    return {
+      correctedBarHeight,
+      hitHeight,
+      yOffset: (hitHeight - correctedBarHeight) / 2,
+    };
+  }
+
+  getGeneIndicatorHitHeight(barHeight, settings = {}) {
+    return this.getGeneIndicatorGeometry(barHeight, settings).hitHeight;
+  }
+
+  escapeHtmlAttribute(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  createGeneIndicatorDataAttributes(gene, extraClass = '') {
+    const sourceStart = gene._sourceStart || gene.start;
+    const sourceEnd = gene._sourceEnd || gene.end;
+    const geneName = this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'gene') || '';
+    const locusTag = this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'locus_tag') || '';
+    const chromosome = this.genomeBrowser.currentChromosome || '';
+    const classes = ['gene-indicator-click-target', extraClass].filter(Boolean).join(' ');
+
+    return [
+      `class="${this.escapeHtmlAttribute(classes)}"`,
+      `data-gene-start="${this.escapeHtmlAttribute(sourceStart)}"`,
+      `data-gene-end="${this.escapeHtmlAttribute(sourceEnd)}"`,
+      `data-gene-type="${this.escapeHtmlAttribute(gene.type || '')}"`,
+      `data-gene-name="${this.escapeHtmlAttribute(geneName)}"`,
+      `data-locus-tag="${this.escapeHtmlAttribute(locusTag)}"`,
+      `data-chromosome="${this.escapeHtmlAttribute(chromosome)}"`,
+      'style="cursor: pointer;"',
+    ].join(' ');
+  }
+
+  createGeneIndicatorHitTarget(gene, x, width, hitHeight, settings = {}) {
+    const tooltip =
+      this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'gene') ||
+      this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'locus_tag') ||
+      gene.type;
+    const tooltipAttr = settings.showTooltips !== false ? `title="${this.escapeHtmlAttribute(tooltip)}"` : '';
+    const targetAttrs = this.createGeneIndicatorDataAttributes(gene, 'gene-indicator-hit-area');
+    return `<rect x="${x}" y="0" width="${width}" height="${hitHeight}" fill="transparent" pointer-events="all" ${tooltipAttr} ${targetAttrs}/>`;
   }
 
   // Sequence display methods
@@ -1683,8 +1804,6 @@ class SequenceUtils {
     // Apply position and size corrections from settings
     const horizontalOffset = sequenceSettings.horizontalOffset || 0;
     const verticalOffset = sequenceSettings.verticalOffset || 0;
-    const heightCorrection = (sequenceSettings.heightCorrection || 100) / 100;
-
     // Position indicator directly below the sequence text with minimal gap
     const indicatorMarginTop = -6; // Negative to move up closer to sequence text
     const indicatorMarginBottom = 4; // Small gap before next sequence line
@@ -1786,7 +1905,7 @@ class SequenceUtils {
     indicatorLine.className = 'gene-indicator-line';
 
     const finalLeftMargin = alignmentOffset + this.strandLabelWidth + horizontalOffset;
-    const correctedHeight = 12 * heightCorrection;
+    const correctedHeight = this.getGeneIndicatorHitHeight(sequenceSettings.indicatorHeight || 8, sequenceSettings);
 
     // Use both inline styles and CSS variables to ensure our spacing takes effect
     indicatorLine.style.cssText = `height: ${correctedHeight}px; margin-left: ${finalLeftMargin}px; margin-bottom: ${correctedMarginBottom}px; margin-top: ${correctedMarginTop}px;`;
@@ -1941,10 +2060,7 @@ class SequenceUtils {
   }
 
   getPrimerBindingFeatures(chromosome, viewStart = null, viewEnd = null) {
-    const viewport =
-      Number.isFinite(viewStart) && Number.isFinite(viewEnd)
-        ? { start: viewStart, end: viewEnd }
-        : null;
+    const viewport = Number.isFinite(viewStart) && Number.isFinite(viewEnd) ? { start: viewStart, end: viewEnd } : null;
 
     if (this.genomeBrowser.primerManager) {
       return this.genomeBrowser.primerManager.getRenderableBindingSites(chromosome, viewport);
@@ -2312,6 +2428,7 @@ class SequenceUtils {
     this.performanceStats.cacheMisses++;
 
     const barHeight = settings.indicatorHeight || 8;
+    const svgHeight = this.getGeneIndicatorHitHeight(barHeight, settings);
     const widthCorrection = (settings.widthCorrection || 100) / 100;
     const lineWidth = sequence.length * charWidth * widthCorrection;
     const lineEndAbs = lineStartAbs + sequence.length;
@@ -2339,14 +2456,14 @@ class SequenceUtils {
     if (overlappingGenes.length === 0) {
       const result =
         `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; ` +
-        `height: ${barHeight}px; margin-left: 0;"></svg>`;
+        `height: ${svgHeight}px; margin-left: 0;" viewBox="0 0 ${lineWidth} ${svgHeight}"></svg>`;
       this.svgCache.set(cacheKey, result);
       return result;
     }
 
     // Build SVG content
     const svgParts = [
-      `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${barHeight}px; margin-left: 0;">`,
+      `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${svgHeight}px; margin-left: 0;" viewBox="0 0 ${lineWidth} ${svgHeight}">`,
     ];
 
     overlappingGenes.forEach(gene => {
@@ -2808,9 +2925,7 @@ class SequenceUtils {
       const settings = this.getSequenceTrackSettings();
       const copyFormat = settings.copyFormat || 'clean';
       const clipboardContent =
-        copyFormat === 'fasta' && selectionInfo
-          ? `${this.createFastaHeader(selectionInfo)}\n${sequence}`
-          : sequence;
+        copyFormat === 'fasta' && selectionInfo ? `${this.createFastaHeader(selectionInfo)}\n${sequence}` : sequence;
 
       // Try using navigator.clipboard API
       if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
@@ -3155,10 +3270,11 @@ class SequenceUtils {
     }
 
     const barHeight = settings.indicatorHeight || 8; // Use settings or default
+    const svgHeight = this.getGeneIndicatorHitHeight(barHeight, settings);
     const lineWidth = sequence.length * charWidth;
 
     // Create SVG for the indicator bar
-    let svg = `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${barHeight}px; margin-left: 0;">`;
+    let svg = `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${svgHeight}px; margin-left: 0;" viewBox="0 0 ${lineWidth} ${svgHeight}">`;
 
     // Process genes that overlap with this sequence line
     const lineEndAbs = lineStartAbs + sequence.length;
@@ -3230,14 +3346,13 @@ class SequenceUtils {
     const tooltipStart = gene._sourceStart || gene.start;
     const tooltipEnd = gene._sourceEnd || gene.end;
 
-    // Apply height correction to barHeight
-    const heightCorrection = (settings.heightCorrection || 100) / 100;
-    const correctedBarHeight = barHeight * heightCorrection;
+    const indicatorGeometry = this.getGeneIndicatorGeometry(barHeight, settings);
+    const correctedBarHeight = indicatorGeometry.correctedBarHeight;
 
-    let indicator = '';
+    let indicatorContent = '';
 
     // Gene body shape with corrected height
-    indicator += this.createGeneBodyShape(
+    indicatorContent += this.createGeneBodyShape(
       { ...gene, start: tooltipStart, end: tooltipEnd },
       startX,
       width,
@@ -3260,14 +3375,19 @@ class SequenceUtils {
         const markerHeightPercent = settings.startMarkerHeight || 200;
         const markerHeight = (correctedBarHeight * markerHeightPercent) / 100;
         const markerOffset = (correctedBarHeight - markerHeight) / 2;
-        indicator += `<line x1="${startX}" y1="${markerOffset}" x2="${startX}" y2="${markerOffset + markerHeight}" 
+        const markerAttrs = this.createGeneIndicatorDataAttributes(gene);
+        const markerLabel =
+          this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'gene') ||
+          this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'locus_tag') ||
+          gene.type;
+        indicatorContent += `<line x1="${startX}" y1="${markerOffset}" x2="${startX}" y2="${markerOffset + markerHeight}" 
                                    stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
-                                   ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
+                                   ${settings.showTooltips !== false ? `title="Gene start: ${this.escapeHtmlAttribute(markerLabel)}"` : ''} ${markerAttrs}/>`;
       }
 
       // End marker (arrow) - only if gene actually ends in this line and enabled
       if (settings.showEndArrows !== false && geneEnd1Based >= lineStart1Based && geneEnd1Based <= lineEnd1Based) {
-        indicator += this.createGeneEndArrow(endX, correctedBarHeight, geneColor, isForward, gene, settings);
+        indicatorContent += this.createGeneEndArrow(endX, correctedBarHeight, geneColor, isForward, gene, settings);
       }
     } else {
       // For reverse genes: start marker at right (gene's actual start), end arrow at left (transcription direction)
@@ -3282,19 +3402,27 @@ class SequenceUtils {
         const markerHeight = (correctedBarHeight * markerHeightPercent) / 100;
         const markerOffset = (correctedBarHeight - markerHeight) / 2;
         // For reverse genes, the start marker should be at the RIGHT end (where gene actually starts)
-        indicator += `<line x1="${endX}" y1="${markerOffset}" x2="${endX}" y2="${markerOffset + markerHeight}" 
+        const markerAttrs = this.createGeneIndicatorDataAttributes(gene);
+        const markerLabel =
+          this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'gene') ||
+          this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'locus_tag') ||
+          gene.type;
+        indicatorContent += `<line x1="${endX}" y1="${markerOffset}" x2="${endX}" y2="${markerOffset + markerHeight}" 
                                    stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
-                                   ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
+                                   ${settings.showTooltips !== false ? `title="Gene start: ${this.escapeHtmlAttribute(markerLabel)}"` : ''} ${markerAttrs}/>`;
       }
 
       // End marker (arrow) - for reverse genes, show arrow at the FIRST line where gene appears (gene start position)
       if (settings.showEndArrows !== false && geneStart1Based >= lineStart1Based && geneStart1Based <= lineEnd1Based) {
         // For reverse genes, the transcription arrow should be at the LEFT end (first appearance in sequence display)
-        indicator += this.createGeneEndArrow(startX, correctedBarHeight, geneColor, isForward, gene, settings);
+        indicatorContent += this.createGeneEndArrow(startX, correctedBarHeight, geneColor, isForward, gene, settings);
       }
     }
 
-    return indicator;
+    return [
+      this.createGeneIndicatorHitTarget(gene, startX, width, indicatorGeometry.hitHeight, settings),
+      `<g transform="translate(0 ${indicatorGeometry.yOffset})">${indicatorContent}</g>`,
+    ].join('');
   }
 
   /**
@@ -3303,8 +3431,13 @@ class SequenceUtils {
   createGeneBodyShape(gene, x, width, height, color, geneType, settings = {}) {
     const isForward = gene.strand !== -1;
     const opacity = settings.indicatorOpacity || 0.7;
-    const tooltipAttr = settings.showTooltips !== false ? `title="${gene.qualifiers?.gene || gene.type}"` : '';
+    const geneLabel =
+      this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'gene') ||
+      this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'locus_tag') ||
+      gene.type;
+    const tooltipAttr = settings.showTooltips !== false ? `title="${this.escapeHtmlAttribute(geneLabel)}"` : '';
     const hoverClass = settings.showHoverEffects !== false ? 'gene-indicator-hover' : '';
+    const targetAttrs = this.createGeneIndicatorDataAttributes(gene, hoverClass);
 
     let shape = '';
 
@@ -3312,15 +3445,15 @@ class SequenceUtils {
       // Simple arrow for promoter
       if (isForward) {
         shape = `<path d="M ${x} 3 L ${x + width - 6} 3 L ${x + width} ${height / 2} L ${x + width - 6} ${height - 3} L ${x} ${height - 3} Z" 
-                               fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
+                               fill="${color}" opacity="${opacity}" ${tooltipAttr} ${targetAttrs}/>`;
       } else {
         shape = `<path d="M ${x + 6} 3 L ${x + width} 3 L ${x + width} ${height - 3} L ${x + 6} ${height - 3} L ${x} ${height / 2} Z" 
-                               fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
+                               fill="${color}" opacity="${opacity}" ${tooltipAttr} ${targetAttrs}/>`;
       }
     } else if (geneType === 'terminator') {
       // Rectangle with rounded ends for terminator
       shape = `<rect x="${x}" y="3" width="${width}" height="${height - 6}" rx="3" ry="3" 
-                           fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
+                           fill="${color}" opacity="${opacity}" ${tooltipAttr} ${targetAttrs}/>`;
     } else if (['trna', 'rrna', 'mrna'].includes(geneType)) {
       // Wavy shape for RNA
       const waveHeight = 2;
@@ -3329,11 +3462,11 @@ class SequenceUtils {
                             Q ${x + (3 * width) / 4} 3 ${x + width} ${3 + waveHeight}
                             L ${x + width} ${height - 3}
                             L ${x} ${height - 3} Z" 
-                            fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
+                            fill="${color}" opacity="${opacity}" ${tooltipAttr} ${targetAttrs}/>`;
     } else {
       // Default rectangle for CDS and others
       shape = `<rect x="${x}" y="3" width="${width}" height="${height - 6}" 
-                           fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
+                           fill="${color}" opacity="${opacity}" ${tooltipAttr} ${targetAttrs}/>`;
     }
 
     return shape;
@@ -3348,11 +3481,16 @@ class SequenceUtils {
     const arrowHeight = (height * arrowHeightPercent) / 100;
     const arrowOffset = (height - arrowHeight) / 2;
     const darkColor = this.darkenHexColor(color, 40);
+    const geneLabel =
+      this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'gene') ||
+      this.genomeBrowser.getQualifierValue?.(gene.qualifiers, 'locus_tag') ||
+      gene.type;
     const tooltipAttr =
       settings.showTooltips !== false
-        ? `title="Gene end (${gene.qualifiers?.gene || gene.type}) ${isForward ? '→' : '←'}"`
+        ? `title="Gene end (${this.escapeHtmlAttribute(geneLabel)}) ${isForward ? '→' : '←'}"`
         : '';
     const hoverClass = settings.showHoverEffects !== false ? 'gene-indicator-hover' : '';
+    const targetAttrs = this.createGeneIndicatorDataAttributes(gene, hoverClass);
 
     let arrow = '';
 
@@ -3363,11 +3501,11 @@ class SequenceUtils {
     if (isForward) {
       // Right-pointing arrow
       arrow = `<path d="M ${x - arrowSize} ${arrowTop} L ${x} ${arrowMiddle} L ${x - arrowSize} ${arrowBottom} Z" 
-                           fill="${darkColor}" opacity="1" ${tooltipAttr} class="${hoverClass}"/>`;
+                           fill="${darkColor}" opacity="1" ${tooltipAttr} ${targetAttrs}/>`;
     } else {
       // Left-pointing arrow
       arrow = `<path d="M ${x + arrowSize} ${arrowTop} L ${x} ${arrowMiddle} L ${x + arrowSize} ${arrowBottom} Z" 
-                           fill="${darkColor}" opacity="1" ${tooltipAttr} class="${hoverClass}"/>`;
+                           fill="${darkColor}" opacity="1" ${tooltipAttr} ${targetAttrs}/>`;
     }
 
     return arrow;

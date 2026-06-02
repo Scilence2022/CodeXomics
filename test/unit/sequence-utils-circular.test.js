@@ -152,10 +152,34 @@ describe('SequenceUtils circular bottom sequence track', () => {
     const indicatorSvg = indicatorLine.querySelector('.gene-indicator-svg');
 
     expect(indicatorLine.style.marginLeft).toBe('135px');
+    expect(indicatorLine.style.height).toBe('16px');
+    expect(indicatorSvg.getAttribute('style')).toContain('height: 16px');
     expect(indicatorSvg.innerHTML).toContain('x="10"');
     expect(indicatorSvg.innerHTML).toContain('width="30"');
     expect(indicatorSvg.innerHTML).toContain('x1="10"');
     expect(indicatorSvg.innerHTML).toContain('M 28 ');
+  });
+
+  it('opens gene details when a bottom sequence indicator is clicked', () => {
+    const gene = { type: 'CDS', start: 2, end: 4, strand: 1, qualifiers: { gene: 'clickable' } };
+    const showGeneDetails = vi.fn();
+    utils.genomeBrowser.currentSequence.chr1 = 'AAAAAA';
+    utils.genomeBrowser.currentAnnotations.chr1 = [gene];
+    utils.genomeBrowser.navigationManager.circularMode = false;
+    utils.genomeBrowser.trackRenderer = {
+      getTrackSettings: name => (name === 'genes' ? { circularMode: false } : {}),
+      showGeneDetails,
+    };
+
+    const container = document.getElementById('sequenceContent');
+    const lineElement = utils.renderSequenceLine('AAAAAA', 0, 'chr1', [gene], [], 10, {}, new Map());
+    container.appendChild(lineElement);
+    utils.attachSequenceClickHandlers(container);
+
+    lineElement.querySelector('.gene-indicator-click-target').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(showGeneDetails).toHaveBeenCalledTimes(1);
+    expect(showGeneDetails).toHaveBeenCalledWith(gene, null);
   });
 
   it('renders primer manager bindings above and below the DNA rows by strand', () => {
