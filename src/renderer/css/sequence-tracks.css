@@ -97,7 +97,7 @@
 /* Enhanced Sequence Display */
 .sequence-content {
   flex: 1; /* Fill all available vertical space */
-  height: 100%; /* Ensure it takes full height of parent */
+  min-height: 0; /* Allow flex sizing to follow the panel height */
   overflow-y: auto;
   background: rgba(255, 255, 255, 0.9); /* More opaque for better readability */
   backdrop-filter: blur(5px);

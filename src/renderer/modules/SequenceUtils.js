@@ -2425,8 +2425,13 @@ class SequenceUtils {
     const needsScrolling = maxPossibleHeight > availableHeight;
     const containerHeight = needsScrolling ? availableHeight : maxPossibleHeight;
 
-    // Calculate how many lines can fit in the available height
-    const dynamicVisibleLines = Math.floor(availableHeight / actualLineHeight);
+    // Optional rows such as primers and protein translations are line-specific, so
+    // the fixed virtual row height is intentionally conservative. Render from a
+    // smaller base estimate to avoid an under-filled viewport when most visible
+    // lines do not contain those optional rows.
+    const minimumLineHeight = Math.max(1, this.lineHeight + this.lineSpacing);
+    const visibleLineHeightEstimate = Math.max(minimumLineHeight, Math.ceil(actualLineHeight * 0.6));
+    const dynamicVisibleLines = Math.max(1, Math.ceil(availableHeight / visibleLineHeightEstimate));
 
     console.log(
       `🔧 [SequenceUtils] Container sizing: available=${availableHeight}px, calculated=${containerHeight}px, lines=${totalLines}, visible=${dynamicVisibleLines}, needsScrolling=${needsScrolling}, actualLineHeight=${actualLineHeight}px`
@@ -2561,8 +2566,8 @@ class SequenceUtils {
     // Use dynamic parameters if provided, otherwise fall back to instance parameters
     const params = virtualScrollingParams || this.virtualScrolling;
     const lineHeight = params.lineHeight || this.lineHeight + this.lineSpacing; // FIXED: Use actual line height
-    const visibleLines = params.visibleLines;
-    const bufferLines = params.bufferLines;
+    const visibleLines = params.visibleLines || this.virtualScrolling.visibleLines || 20;
+    const bufferLines = params.bufferLines || this.virtualScrolling.bufferLines || 5;
 
     const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - bufferLines);
     const endLine = Math.min(totalLines, startLine + visibleLines + bufferLines * 2);
