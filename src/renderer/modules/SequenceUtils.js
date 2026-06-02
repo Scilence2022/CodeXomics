@@ -3423,7 +3423,7 @@ class SequenceUtils {
       copyFormat: 'clean',
       indicatorHeight: 8,
       indicatorOpacity: 0.7,
-      showStartMarkers: true,
+      showStartMarkers: false,
       showEndArrows: true,
       startMarkerWidth: 6,
       startMarkerHeight: 200,

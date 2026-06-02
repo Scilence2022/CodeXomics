@@ -12062,6 +12062,8 @@ This action cannot be undone.`;
         showPrimers: false,
         showComplementary: false,
         copyFormat: 'clean',
+        showStartMarkers: false,
+        arrowSize: 12,
       },
       sequenceLine: {
         fontSize: 14,
@@ -12916,7 +12918,7 @@ This action cannot be undone.`;
         if (startMarkerHeightEl) settings.startMarkerHeight = parseInt(startMarkerHeightEl.value) || 85;
 
         const arrowSizeEl = modal.querySelector('#sequenceArrowSize');
-        if (arrowSizeEl) settings.arrowSize = parseInt(arrowSizeEl.value) || 6;
+        if (arrowSizeEl) settings.arrowSize = parseInt(arrowSizeEl.value) || 12;
 
         const arrowHeightEl = modal.querySelector('#sequenceArrowHeight');
         if (arrowHeightEl) settings.arrowHeight = parseInt(arrowHeightEl.value) || 85;
@@ -12945,31 +12947,6 @@ This action cannot be undone.`;
         // Cursor Settings
         const cursorColorEl = modal.querySelector('#sequenceCursorColor');
         if (cursorColorEl) settings.cursorColor = cursorColorEl.value;
-        break;
-
-      case 'wigTracks':
-        // Collect track spacing
-        const trackSpacingEl = modal.querySelector('#wigTrackSpacing');
-        if (trackSpacingEl) {
-          settings.trackSpacing = parseInt(trackSpacingEl.value) || 5;
-        }
-
-        // Collect individual track heights
-        const heightInputs = modal.querySelectorAll('.wig-track-height-input');
-        if (heightInputs.length > 0) {
-          settings.trackHeights = {};
-          heightInputs.forEach(input => {
-            const trackName = input.dataset.trackName;
-            const height = parseInt(input.value) || 30;
-            settings.trackHeights[trackName] = height;
-          });
-        }
-
-        // Collect default track height if no tracks are present
-        const defaultHeightEl = modal.querySelector('#wigDefaultTrackHeight');
-        if (defaultHeightEl) {
-          settings.defaultTrackHeight = parseInt(defaultHeightEl.value) || 30;
-        }
 
         // Position & Size Corrections
         const horizontalOffsetEl = modal.querySelector('#sequenceHorizontalOffset');
@@ -13013,7 +12990,31 @@ This action cannot be undone.`;
         if (colorNEl) settings.colorN = colorNEl.value;
 
         // Edit Mode settings removed - only using view mode
+        break;
 
+      case 'wigTracks':
+        // Collect track spacing
+        const trackSpacingEl = modal.querySelector('#wigTrackSpacing');
+        if (trackSpacingEl) {
+          settings.trackSpacing = parseInt(trackSpacingEl.value) || 5;
+        }
+
+        // Collect individual track heights
+        const heightInputs = modal.querySelectorAll('.wig-track-height-input');
+        if (heightInputs.length > 0) {
+          settings.trackHeights = {};
+          heightInputs.forEach(input => {
+            const trackName = input.dataset.trackName;
+            const height = parseInt(input.value) || 30;
+            settings.trackHeights[trackName] = height;
+          });
+        }
+
+        // Collect default track height if no tracks are present
+        const defaultHeightEl = modal.querySelector('#wigDefaultTrackHeight');
+        if (defaultHeightEl) {
+          settings.defaultTrackHeight = parseInt(defaultHeightEl.value) || 30;
+        }
         break;
 
       case 'sequenceLine':
@@ -13893,7 +13894,7 @@ This action cannot be undone.`;
                             <h4>Gene Markers</h4>
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="sequenceShowStartMarkers" ${settings.showStartMarkers !== false ? 'checked' : ''}>
+                                    <input type="checkbox" id="sequenceShowStartMarkers" ${settings.showStartMarkers ? 'checked' : ''}>
                                     Show gene start markers (vertical lines)
                                 </label>
                                 <div class="help-text">Display vertical lines at gene start positions.</div>
@@ -13917,7 +13918,7 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group">
                                 <label for="sequenceArrowSize">End arrow size (px):</label>
-                                <input type="number" id="sequenceArrowSize" class="form-input" min="3" max="12" value="${settings.arrowSize || 6}">
+                                <input type="number" id="sequenceArrowSize" class="form-input" min="3" max="12" value="${settings.arrowSize || 12}">
                                 <div class="help-text">Size of the directional arrows at gene ends.</div>
                             </div>
                             <div class="form-group">

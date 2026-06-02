@@ -15570,7 +15570,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             description: 'Indicator bar height in pixels',
           },
           indicatorOpacity: { type: 'number', min: 0.3, max: 1, default: 0.7, description: 'Indicator opacity (0-1)' },
-          showStartMarkers: { type: 'boolean', default: true, description: 'Show gene start markers' },
+          showStartMarkers: { type: 'boolean', default: false, description: 'Show gene start markers' },
           showEndArrows: { type: 'boolean', default: true, description: 'Show gene end arrows' },
           startMarkerWidth: { type: 'number', min: 1, max: 6, default: 3, description: 'Start marker width in pixels' },
           startMarkerHeight: {
@@ -15580,7 +15580,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             default: 85,
             description: 'Start marker height (% of bar)',
           },
-          arrowSize: { type: 'number', min: 3, max: 12, default: 6, description: 'End arrow size in pixels' },
+          arrowSize: { type: 'number', min: 3, max: 12, default: 12, description: 'End arrow size in pixels' },
           arrowHeight: { type: 'number', min: 50, max: 100, default: 85, description: 'End arrow height (% of bar)' },
           showCDS: { type: 'boolean', default: true, description: 'Show CDS genes' },
           showRNA: { type: 'boolean', default: true, description: 'Show RNA genes' },

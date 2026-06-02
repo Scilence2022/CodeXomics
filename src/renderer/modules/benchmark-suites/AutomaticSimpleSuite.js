@@ -1936,6 +1936,29 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
+      {
+        id: 'settings_auto_07',
+        name: 'Set Sequence Track Settings',
+        type: 'function_call',
+        category: 'track_settings',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Configure the sequence track to hide gene start markers and set end arrow size to 12.',
+        expectedResult: {
+          tool_name: 'set_track_settings',
+          parameters: {
+            track_type: 'sequence',
+            settings: {
+              showStartMarkers: false,
+              arrowSize: 12,
+            },
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 30000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
 
       // UTILITY TASKS - Automatic + Simple
       {
