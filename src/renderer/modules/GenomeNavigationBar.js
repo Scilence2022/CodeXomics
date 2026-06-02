@@ -1011,6 +1011,7 @@ class GenomeNavigationBar {
       chromosome: this.currentChromosome,
       start: startPos,
       end: endPos,
+      coordinateSystem: 'zero-based-inclusive',
     };
 
     // Update sequence selection state

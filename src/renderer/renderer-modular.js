@@ -1079,6 +1079,9 @@ class GenomeBrowser {
     document.getElementById('toggleComplementaryStrandBtn')?.addEventListener('click', () => {
       this.sequenceUtils.toggleSequenceTrackSetting('showComplementary');
     });
+    document.getElementById('toggleSequenceCopyFormatBtn')?.addEventListener('click', () => {
+      this.sequenceUtils.toggleSequenceCopyFormat();
+    });
 
     // Add click event for selected sequences (both gene and manual)
     document.addEventListener('click', e => {
@@ -9877,6 +9880,18 @@ class GenomeBrowser {
   }
 
   getSequencePosition(baseElement) {
+    const datasetPosition = baseElement?.dataset?.position;
+    if (datasetPosition !== undefined) {
+      const sourcePosition = parseInt(datasetPosition, 10);
+      if (!Number.isNaN(sourcePosition)) {
+        return {
+          chromosome: document.getElementById('chromosomeSelect')?.value,
+          position: sourcePosition + 1,
+          element: baseElement,
+        };
+      }
+    }
+
     const parentLine = baseElement.closest('.sequence-line');
     if (!parentLine) return null;
 
@@ -9927,6 +9942,7 @@ class GenomeBrowser {
       chromosome: start.chromosome,
       start: startPos,
       end: endPos,
+      coordinateSystem: 'one-based-inclusive',
     };
 
     // Update copy button state when manual selection is made

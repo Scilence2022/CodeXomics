@@ -748,6 +748,22 @@ class SequenceUtils {
     }
   }
 
+  setSequenceTrackSetting(settingKey, settingValue) {
+    const trackRenderer = this.genomeBrowser.trackRenderer;
+    if (!trackRenderer?.getTrackSettings || !trackRenderer?.saveTrackSettings) return;
+
+    const settings = { ...trackRenderer.getTrackSettings('sequence') };
+    settings[settingKey] = settingValue;
+    trackRenderer.saveTrackSettings('sequence', settings);
+    this.syncSequenceHeaderToggleButtons(settings);
+  }
+
+  toggleSequenceCopyFormat() {
+    const settings = this.getSequenceTrackSettings();
+    const nextFormat = settings.copyFormat === 'fasta' ? 'clean' : 'fasta';
+    this.setSequenceTrackSetting('copyFormat', nextFormat);
+  }
+
   syncSequenceHeaderToggleButtons(settings = this.getSequenceTrackSettings()) {
     const toggleButton = (id, isActive, onTitle, offTitle) => {
       const button = document.getElementById(id);
@@ -770,6 +786,18 @@ class SequenceUtils {
       'Hide Complementary Strand',
       'Show Complementary Strand'
     );
+
+    const copyFormatButton = document.getElementById('toggleSequenceCopyFormatBtn');
+    if (copyFormatButton) {
+      const copyAsFasta = settings.copyFormat === 'fasta';
+      copyFormatButton.classList.toggle('active', copyAsFasta);
+      copyFormatButton.setAttribute('aria-pressed', copyAsFasta.toString());
+      copyFormatButton.title = copyAsFasta ? 'Copy FASTA Format' : 'Copy Clean Sequence';
+      const label = copyFormatButton.querySelector('i')?.nextSibling;
+      if (label) {
+        label.textContent = copyAsFasta ? ' FASTA' : ' Clean';
+      }
+    }
   }
 
   /**
@@ -2757,7 +2785,7 @@ class SequenceUtils {
 
   // Sequence operations
   /**
-   * Copy sequence to system clipboard with proper error handling and FASTA formatting
+   * Copy sequence to system clipboard with proper error handling and optional FASTA formatting
    * @param {string} sequence - The DNA sequence to copy
    * @param {object} selectionInfo - Information about the selection (chromosome, start, end, name)
    * @param {string} copyMessage - Custom message to display (optional)
@@ -2765,18 +2793,21 @@ class SequenceUtils {
    */
   async copyToSystemClipboard(sequence, selectionInfo, copyMessage = null) {
     try {
-      // Format as FASTA
-      const fastaHeader = `>${selectionInfo.name || selectionInfo.chromosome}:${selectionInfo.start + 1}-${selectionInfo.end + 1}`;
-      const fastaContent = `${fastaHeader}\n${sequence}`;
+      const settings = this.getSequenceTrackSettings();
+      const copyFormat = settings.copyFormat || 'clean';
+      const clipboardContent =
+        copyFormat === 'fasta' && selectionInfo
+          ? `${this.createFastaHeader(selectionInfo)}\n${sequence}`
+          : sequence;
 
       // Try using navigator.clipboard API
       if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-        await navigator.clipboard.writeText(fastaContent);
+        await navigator.clipboard.writeText(clipboardContent);
         console.log('✅ [SequenceUtils] Sequence copied to system clipboard (API)');
       } else {
         // Fallback: Use textarea to copy
         const textArea = document.createElement('textarea');
-        textArea.value = fastaContent;
+        textArea.value = clipboardContent;
         textArea.style.position = 'fixed';
         textArea.style.left = '-999999px';
         document.body.appendChild(textArea);
@@ -2838,6 +2869,36 @@ class SequenceUtils {
     }
   }
 
+  createFastaHeader(selectionInfo) {
+    const chromosome = selectionInfo.chromosome || this.genomeBrowser.currentChromosome || 'sequence';
+    const startValue = parseInt(selectionInfo.start, 10);
+    const endValue = parseInt(selectionInfo.end, 10);
+    const isZeroBased = selectionInfo.coordinateSystem === 'zero-based-inclusive';
+    const start = Number.isNaN(startValue) ? 1 : startValue + (isZeroBased ? 1 : 0);
+    const end = Number.isNaN(endValue) ? start : endValue + (isZeroBased ? 1 : 0);
+    const label = selectionInfo.name || `${chromosome}:${start}-${end}`;
+    return `>${label}`;
+  }
+
+  getManualSelectionSourceRange(selection) {
+    if (!selection) return null;
+
+    const rawStart = parseInt(selection.start, 10);
+    const rawEnd = parseInt(selection.end, 10);
+    if (Number.isNaN(rawStart) || Number.isNaN(rawEnd)) return null;
+
+    const start = Math.min(rawStart, rawEnd);
+    const end = Math.max(rawStart, rawEnd);
+    if (selection.coordinateSystem === 'zero-based-inclusive') {
+      return { start, end };
+    }
+
+    return {
+      start: Math.max(0, start - 1),
+      end: Math.max(0, end - 1),
+    };
+  }
+
   copySequence() {
     console.log('🔖 [SequenceUtils] copySequence() called!');
 
@@ -2874,9 +2935,10 @@ class SequenceUtils {
       // Priority 2: Check if there's a manual sequence selection (drag selection)
       const manualSelection = this.genomeBrowser.currentSequenceSelection;
       console.log('Manual selection:', manualSelection);
-      // Convert to 0-based indexing for substring
-      const startIdx = manualSelection.start;
-      const endIdx = manualSelection.end + 1; // Include end position
+      const manualRange = this.getManualSelectionSourceRange(manualSelection);
+      if (!manualRange) return;
+      const startIdx = manualRange.start;
+      const endIdx = manualRange.end + 1; // Include end position
       textToCopy = sequence.substring(startIdx, endIdx);
       console.log('Extracted sequence:', textToCopy);
       copyMessage = `Copied selected sequence (${textToCopy.length} bp) to clipboard`;
@@ -2923,15 +2985,18 @@ class SequenceUtils {
       selectionInfo = {
         chromosome: currentChr,
         start: geneSeq.start - 1,
-        end: geneSeq.end,
+        end: geneSeq.end - 1,
+        coordinateSystem: 'zero-based-inclusive',
         name: geneSeq.geneName,
       };
     } else if (copySource === 'manual') {
       const manualSelection = this.genomeBrowser.currentSequenceSelection;
+      const manualRange = this.getManualSelectionSourceRange(manualSelection);
       selectionInfo = {
         chromosome: currentChr,
-        start: manualSelection.start,
-        end: manualSelection.end + 1,
+        start: manualRange.start,
+        end: manualRange.end,
+        coordinateSystem: 'zero-based-inclusive',
         name: null,
       };
     } else {
@@ -3355,6 +3420,7 @@ class SequenceUtils {
       showProteinSequence: false,
       showPrimers: false,
       showComplementary: false,
+      copyFormat: 'clean',
       indicatorHeight: 8,
       indicatorOpacity: 0.7,
       showStartMarkers: true,
@@ -3880,13 +3946,16 @@ class SequenceUtils {
     }
 
     // Find the DOM nodes for the selection range
-    const startResult = this.findNodeAtGenomicPosition(selectionInfo.start, sequenceContainer);
-    const endResult = this.findNodeAtGenomicPosition(selectionInfo.end, sequenceContainer);
+    const sourceRange = this.getManualSelectionSourceRange(selectionInfo);
+    if (!sourceRange) return;
+
+    const startResult = this.findNodeAtGenomicPosition(sourceRange.start, sequenceContainer);
+    const endResult = this.findNodeAtGenomicPosition(sourceRange.end, sequenceContainer);
 
     if (!startResult || !endResult) {
       console.warn('🔧 [SequenceUtils] Could not find DOM nodes for manual selection restore:', {
-        startPos: selectionInfo.start,
-        endPos: selectionInfo.end,
+        startPos: sourceRange.start,
+        endPos: sourceRange.end,
         startResult: !!startResult,
         endResult: !!endResult,
       });
@@ -3900,7 +3969,7 @@ class SequenceUtils {
     try {
       // Set range with calculated positions
       range.setStart(startResult.node, startResult.offset);
-      range.setEnd(endResult.node, endResult.offset);
+      range.setEnd(endResult.node, Math.min(endResult.node.textContent.length, endResult.offset + 1));
 
       // Apply selection
       selection.removeAllRanges();
@@ -3957,11 +4026,14 @@ class SequenceUtils {
 
       // Update genome browser selection state if it exists
       if (window.genomeBrowser && window.genomeBrowser.currentSequenceSelection) {
+        const inclusiveEndPos = Math.max(savedSelection.startPos, savedSelection.endPos - 1);
         window.genomeBrowser.currentSequenceSelection = {
-          start: savedSelection.startPos,
-          end: savedSelection.endPos,
+          chromosome: window.genomeBrowser.currentChromosome,
+          start: savedSelection.startPos + 1,
+          end: inclusiveEndPos + 1,
           active: true,
-          length: savedSelection.endPos - savedSelection.startPos + 1,
+          length: inclusiveEndPos - savedSelection.startPos + 1,
+          coordinateSystem: 'one-based-inclusive',
         };
       }
 

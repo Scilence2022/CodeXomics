@@ -1093,14 +1093,18 @@ class ActionManager {
     // Priority 1: Manual sequence selection
     if (this.genomeBrowser.currentSequenceSelection) {
       const selection = this.genomeBrowser.currentSequenceSelection;
+      const rawStart = parseInt(selection.start);
+      const rawEnd = parseInt(selection.end);
+      const start = selection.coordinateSystem === 'zero-based-inclusive' ? rawStart + 1 : rawStart;
+      const end = selection.coordinateSystem === 'zero-based-inclusive' ? rawEnd + 1 : rawEnd;
       return {
         hasSelection: true,
         chromosome: selection.chromosome,
-        start: parseInt(selection.start),
-        end: parseInt(selection.end),
+        start,
+        end,
         strand: '+', // Default for manual selections
         source: 'manual',
-        name: `Manual Selection (${selection.chromosome}:${selection.start}-${selection.end})`,
+        name: `Manual Selection (${selection.chromosome}:${start}-${end})`,
       };
     }
 

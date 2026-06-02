@@ -10484,6 +10484,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       chromosome: this.genomeBrowser.currentChromosome,
       start: start,
       end: end,
+      coordinateSystem: 'zero-based-inclusive',
     };
 
     // Update sequence selection state
@@ -12060,6 +12061,7 @@ This action cannot be undone.`;
         showProteinSequence: false,
         showPrimers: false,
         showComplementary: false,
+        copyFormat: 'clean',
       },
       sequenceLine: {
         fontSize: 14,
@@ -12892,6 +12894,9 @@ This action cannot be undone.`;
         var showPrimersEl = modal.querySelector('#sequenceShowPrimers');
         if (showPrimersEl) settings.showPrimers = showPrimersEl.checked;
 
+        var copyFormatEl = modal.querySelector('#sequenceCopyFormat');
+        if (copyFormatEl) settings.copyFormat = copyFormatEl.value === 'fasta' ? 'fasta' : 'clean';
+
         const indicatorHeightEl = modal.querySelector('#sequenceIndicatorHeight');
         if (indicatorHeightEl) settings.indicatorHeight = parseInt(indicatorHeightEl.value) || 8;
 
@@ -13346,6 +13351,8 @@ This action cannot be undone.`;
       if (settings.cursorColor) {
         this.genomeBrowser.sequenceUtils.setCursorColor(settings.cursorColor);
       }
+
+      this.genomeBrowser.sequenceUtils.syncSequenceHeaderToggleButtons(settings);
 
       // VSCodeSequenceEditor settings removed - only using view mode
     }
@@ -13832,6 +13839,14 @@ This action cannot be undone.`;
                                     Show primers below sequence lines
                                 </label>
                                 <div class="help-text">Display primer binding footprints aligned with the DNA sequence.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceCopyFormat">Copy format:</label>
+                                <select id="sequenceCopyFormat" class="form-select">
+                                    <option value="clean" ${(settings.copyFormat || 'clean') !== 'fasta' ? 'selected' : ''}>Clean sequence</option>
+                                    <option value="fasta" ${settings.copyFormat === 'fasta' ? 'selected' : ''}>FASTA</option>
+                                </select>
+                                <div class="help-text">Choose whether the Bottom Sequence Track copy button copies only bases or includes a FASTA header.</div>
                             </div>
                             <div class="form-group">
                                 <label>
