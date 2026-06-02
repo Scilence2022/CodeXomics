@@ -2480,6 +2480,7 @@ class SequenceUtils {
       ...this.virtualScrolling,
       lineHeight: actualLineHeight, // FIXED: Use actual line height
       visibleLines: dynamicVisibleLines,
+      bufferLines: Math.max(this.virtualScrolling.bufferLines || 5, Math.ceil(dynamicVisibleLines * 0.75)),
       containerHeight: containerHeight,
       totalLines: totalLines,
       needsScrolling: needsScrolling,
@@ -2505,14 +2506,20 @@ class SequenceUtils {
 
     // Scroll handler for virtual scrolling (only if scrolling is needed)
     if (needsScrolling) {
-      let scrollTimeout;
+      let scrollFrame = null;
+      let pendingScrollTop = 0;
       virtualContainer.addEventListener('scroll', () => {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-          const scrollTop = virtualContainer.scrollTop;
+        pendingScrollTop = virtualContainer.scrollTop;
+
+        if (scrollFrame !== null) {
+          return;
+        }
+
+        scrollFrame = requestAnimationFrame(() => {
+          scrollFrame = null;
           this.updateVirtualizedContent(
             visibleContent,
-            scrollTop,
+            pendingScrollTop,
             chromosome,
             subsequence,
             viewStart,
@@ -2527,7 +2534,7 @@ class SequenceUtils {
             lineFeatureIndex,
             renderContext
           );
-        }, 16); // ~60fps
+        });
       });
     }
 
