@@ -545,11 +545,11 @@ class ActionManager {
       const showListBtn = document.getElementById('showActionListBtn');
       const executeBtn = document.getElementById('executeActionsBtn');
       if (copyBtn) {
-        copyBtn.addEventListener('click', () => this.handleCopySequence());
+        copyBtn.addEventListener('click', event => this.handleCopySequence(event));
         console.log('✅ Copy sequence action listener added (Actions dropdown)');
       }
       if (copyHeaderBtn) {
-        copyHeaderBtn.addEventListener('click', () => this.handleSimpleSequenceCopy());
+        copyHeaderBtn.addEventListener('click', event => this.handleSimpleSequenceCopy(event));
         console.log('✅ Copy sequence header button listener added (Sequence track)');
       }
       if (cutBtn) {
@@ -835,12 +835,12 @@ class ActionManager {
    * Handle simple sequence copy (for sequence track copy button)
    * This is a simple read-only copy operation like CMD+C
    */
-  handleSimpleSequenceCopy() {
+  handleSimpleSequenceCopy(event = null) {
     console.log('🔖 [ActionManager] Simple sequence copy - delegating to SequenceUtils');
 
     // Delegate to SequenceUtils for simple clipboard copy
     if (this.genomeBrowser && this.genomeBrowser.sequenceUtils) {
-      this.genomeBrowser.sequenceUtils.copySequence();
+      this.genomeBrowser.sequenceUtils.copySequence(event);
     } else {
       console.warn('⚠️ [ActionManager] SequenceUtils not available');
     }

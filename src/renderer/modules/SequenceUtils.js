@@ -3026,7 +3026,28 @@ class SequenceUtils {
     };
   }
 
-  copySequence() {
+  getCopySequenceOptions(eventOrOptions = {}) {
+    const shiftKey = Boolean(eventOrOptions?.shiftKey);
+    const reverseComplement = Boolean(eventOrOptions?.reverseComplement || shiftKey);
+    const copyMode = reverseComplement ? 'reverse-complement' : 'forward';
+
+    return {
+      reverseComplement,
+      copyMode,
+      copyModeLabel: reverseComplement ? 'reverse-complement' : 'forward',
+    };
+  }
+
+  formatSequenceCopyMessage(sourceLabel, length, unit, copyOptions) {
+    return `Copied ${copyOptions.copyModeLabel} ${sourceLabel} (${length} ${unit}) to clipboard`;
+  }
+
+  applySequenceCopyMode(sequence, copyOptions) {
+    if (!copyOptions.reverseComplement) return sequence;
+    return this.getReverseComplement(sequence);
+  }
+
+  copySequence(eventOrOptions = {}) {
     console.log('🔖 [SequenceUtils] copySequence() called!');
 
     const currentChr = document.getElementById('chromosomeSelect').value;
@@ -3044,6 +3065,7 @@ class SequenceUtils {
     }
 
     const sequence = this.genomeBrowser.currentSequence[currentChr];
+    const copyOptions = this.getCopySequenceOptions(eventOrOptions);
     let textToCopy;
     let copyMessage;
     let copySource;
@@ -3056,7 +3078,13 @@ class SequenceUtils {
     ) {
       const geneSeq = this.genomeBrowser.sequenceSelection;
       textToCopy = sequence.substring(geneSeq.start - 1, geneSeq.end); // Convert to 0-based indexing
-      copyMessage = `Copied ${geneSeq.geneName} sequence (${textToCopy.length} bp) to clipboard`;
+      textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
+      copyMessage = this.formatSequenceCopyMessage(
+        `${geneSeq.geneName} sequence`,
+        textToCopy.length,
+        'bp',
+        copyOptions
+      );
       copySource = 'gene';
     } else if (this.genomeBrowser.currentSequenceSelection) {
       // Priority 2: Check if there's a manual sequence selection (drag selection)
@@ -3067,8 +3095,9 @@ class SequenceUtils {
       const startIdx = manualRange.start;
       const endIdx = manualRange.end + 1; // Include end position
       textToCopy = sequence.substring(startIdx, endIdx);
+      textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
       console.log('Extracted sequence:', textToCopy);
-      copyMessage = `Copied selected sequence (${textToCopy.length} bp) to clipboard`;
+      copyMessage = this.formatSequenceCopyMessage('selected sequence', textToCopy.length, 'bp', copyOptions);
       copySource = 'manual';
     } else {
       // Priority 3: Check if there's a text selection
@@ -3076,12 +3105,17 @@ class SequenceUtils {
       if (selection.toString().length > 0) {
         // Use selected text
         textToCopy = selection.toString().replace(/\s+/g, '').replace(/\d+/g, '');
-        copyMessage = `Copied text selection (${textToCopy.length} bases) to clipboard`;
+        textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
+        copyMessage = this.formatSequenceCopyMessage('text selection', textToCopy.length, 'bases', copyOptions);
         copySource = 'text';
       } else {
         // Priority 4: Use entire visible sequence
+        const copyModePrompt =
+          copyOptions.copyMode === 'reverse-complement'
+            ? 'Reverse-complement copy mode is active because Shift is pressed.'
+            : 'Forward copy mode is active.';
         const userChoice = confirm(
-          'No sequence selected. Click OK to copy the entire visible sequence, or Cancel to select a specific region first.'
+          `No sequence selected. ${copyModePrompt} Click OK to copy the entire visible sequence, or Cancel to select a specific region first.`
         );
         if (!userChoice) {
           const errorMessage =
@@ -3100,7 +3134,8 @@ class SequenceUtils {
           this.genomeBrowser.currentPosition.start,
           this.genomeBrowser.currentPosition.end
         );
-        copyMessage = `Copied visible sequence (${textToCopy.length} bases) to clipboard`;
+        textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
+        copyMessage = this.formatSequenceCopyMessage('visible sequence', textToCopy.length, 'bases', copyOptions);
         copySource = 'visible';
       }
     }
@@ -3128,7 +3163,7 @@ class SequenceUtils {
       };
     } else {
       // For text and visible selections, just use navigator.clipboard directly
-      navigator.clipboard
+      return navigator.clipboard
         .writeText(textToCopy)
         .then(() => {
           // ... existing code ...
@@ -3183,11 +3218,10 @@ class SequenceUtils {
             }
           }
         });
-      return;
     }
 
     // Use copyToSystemClipboard for gene and manual selections
-    this.copyToSystemClipboard(textToCopy, selectionInfo, copyMessage);
+    return this.copyToSystemClipboard(textToCopy, selectionInfo, copyMessage);
   }
 
   // Statistics and analysis

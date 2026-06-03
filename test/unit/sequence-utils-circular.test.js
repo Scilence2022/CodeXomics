@@ -8,6 +8,7 @@ const SequenceUtils = require(path.join(process.cwd(), 'src/renderer/modules/Seq
 describe('SequenceUtils circular bottom sequence track', () => {
   let utils;
   let logSpy;
+  let clipboardWriteTextSpy;
 
   function createGenomeBrowser() {
     return {
@@ -22,10 +23,13 @@ describe('SequenceUtils circular bottom sequence track', () => {
           { type: 'CDS', start: 3, end: 5, strand: 1, qualifiers: { gene: 'head' } },
         ],
       },
+      sequenceSelection: null,
+      currentSequenceSelection: null,
       navigationManager: { circularMode: false },
       trackRenderer: {
         getTrackSettings: name => (name === 'genes' ? { circularMode: true } : {}),
       },
+      uiManager: { updateStatus: vi.fn() },
       shouldShowGeneType: () => true,
       getGeneOperonInfo: () => null,
       getQualifierValue: (qualifiers, key) => qualifiers?.[key] || '',
@@ -33,8 +37,17 @@ describe('SequenceUtils circular bottom sequence track', () => {
   }
 
   beforeEach(() => {
-    document.body.innerHTML = '<div id="sequenceContent"></div>';
+    document.body.innerHTML = `
+      <select id="chromosomeSelect"><option value="chr1" selected>chr1</option></select>
+      <div id="sequenceContent"></div>
+    `;
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    clipboardWriteTextSpy = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: clipboardWriteTextSpy },
+    });
+    window.getSelection = vi.fn(() => ({ toString: () => '' }));
     utils = new SequenceUtils(createGenomeBrowser());
   });
 
@@ -180,6 +193,43 @@ describe('SequenceUtils circular bottom sequence track', () => {
 
     expect(showGeneDetails).toHaveBeenCalledTimes(1);
     expect(showGeneDetails).toHaveBeenCalledWith(gene, null);
+  });
+
+  it('copies the reverse-complement gene sequence when Shift is pressed', async () => {
+    utils.genomeBrowser.currentSequence.chr1 = 'AACCGGTT';
+    utils.genomeBrowser.sequenceSelection = {
+      active: true,
+      source: 'gene',
+      start: 2,
+      end: 5,
+      chromosome: 'chr1',
+      geneName: 'shiftGene',
+    };
+
+    await utils.copySequence({ shiftKey: true });
+
+    expect(clipboardWriteTextSpy).toHaveBeenCalledWith('CGGT');
+    expect(utils.genomeBrowser.uiManager.updateStatus).toHaveBeenCalledWith(
+      'Copied reverse-complement shiftGene sequence (4 bp) to clipboard',
+      expect.objectContaining({ color: '#10b981' })
+    );
+  });
+
+  it('includes copy mode in the visible-sequence prompt and copies forward sequence by default', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    utils.genomeBrowser.currentSequence.chr1 = 'AACCGGTT';
+    utils.genomeBrowser.currentPosition = { start: 1, end: 5 };
+
+    await utils.copySequence();
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Forward copy mode is active.'));
+    expect(clipboardWriteTextSpy).toHaveBeenCalledWith('ACCG');
+    expect(utils.genomeBrowser.uiManager.updateStatus).toHaveBeenCalledWith(
+      'Copied forward visible sequence (4 bases) to clipboard',
+      expect.objectContaining({ color: '#10b981' })
+    );
+
+    confirmSpy.mockRestore();
   });
 
   it('renders primer manager bindings above and below the DNA rows by strand', () => {
