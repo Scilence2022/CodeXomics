@@ -12,6 +12,16 @@
 const { ipcMain, app, dialog, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const {
+  createSecureWebPreferences,
+  rememberApprovedDialogPaths,
+  getDefaultWritableRoots,
+  assertAllowedFileAccess,
+  assertPluginPath,
+  safePluginJoin,
+  safeExtractAdmZip,
+  sanitizePluginId,
+} = require('./security-utils');
 
 /**
  * Register all non-Project-Manager IPC handlers.
@@ -190,11 +200,12 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('ensure-directory', async (event, dirPath) => {
     try {
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-        console.log('Created directory:', dirPath);
+      const safeDirPath = assertAllowedFileAccess(app, dirPath, { operation: 'create directory' });
+      if (!fs.existsSync(safeDirPath)) {
+        fs.mkdirSync(safeDirPath, { recursive: true });
+        console.log('Created directory:', safeDirPath);
       }
-      return { success: true, path: dirPath };
+      return { success: true, path: safeDirPath };
     } catch (error) {
       console.error('Failed to create directory:', error);
       return { success: false, error: error.message };
@@ -206,17 +217,18 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('list-plugins', async (event, pluginPath) => {
     try {
-      if (!fs.existsSync(pluginPath)) {
+      const safePluginPath = assertPluginPath(app, pluginPath);
+      if (!fs.existsSync(safePluginPath)) {
         return { success: true, plugins: [] };
       }
 
-      const items = fs.readdirSync(pluginPath, { withFileTypes: true });
+      const items = fs.readdirSync(safePluginPath, { withFileTypes: true });
       const plugins = items
         .filter(item => item.isDirectory())
         .map(item => ({
           id: item.name,
-          path: path.join(pluginPath, item.name),
-          hasManifest: fs.existsSync(path.join(pluginPath, item.name, 'plugin.json')),
+          path: path.join(safePluginPath, item.name),
+          hasManifest: fs.existsSync(path.join(safePluginPath, item.name, 'plugin.json')),
         }));
 
       return { success: true, plugins };
@@ -238,7 +250,7 @@ function registerIpcHandlers(deps) {
         { name: 'All Files', extensions: ['*'] },
       ],
     });
-    return result;
+    return rememberApprovedDialogPaths(result);
   });
 
   /**
@@ -246,7 +258,8 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('get-plugin-file-info', async (event, filePath) => {
     try {
-      const stats = fs.statSync(filePath);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'inspect plugin file', mustExist: true });
+      const stats = fs.statSync(safeFilePath);
       return {
         exists: true,
         isDirectory: stats.isDirectory(),
@@ -267,7 +280,8 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('read-plugin-file', async (event, filePath) => {
     try {
-      return fs.readFileSync(filePath, 'utf8');
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'read plugin file', mustExist: true });
+      return fs.readFileSync(safeFilePath, 'utf8');
     } catch (error) {
       throw new Error(`Failed to read plugin file: ${error.message}`);
     }
@@ -277,7 +291,12 @@ function registerIpcHandlers(deps) {
    * Check if file exists
    */
   ipcMain.handle('check-file-exists', async (event, filePath) => {
-    return fs.existsSync(filePath);
+    try {
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'check file' });
+      return fs.existsSync(safeFilePath);
+    } catch (error) {
+      return false;
+    }
   });
 
   /**
@@ -415,18 +434,27 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
     try {
-      const stats = fs.statSync(pluginPath);
+      let safePluginPath;
+      try {
+        safePluginPath = assertPluginPath(app, pluginPath, 'plugin metadata path');
+      } catch (pluginPathError) {
+        safePluginPath = assertAllowedFileAccess(app, pluginPath, {
+          operation: 'load plugin metadata',
+          mustExist: true,
+        });
+      }
+      const stats = fs.statSync(safePluginPath);
 
       if (stats.isDirectory()) {
         // Try to load plugin.json
-        const manifestPath = path.join(pluginPath, 'plugin.json');
+        const manifestPath = path.join(safePluginPath, 'plugin.json');
         if (fs.existsSync(manifestPath)) {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
           return { success: true, metadata: manifest };
         }
 
         // Try to load from package.json
-        const packagePath = path.join(pluginPath, 'package.json');
+        const packagePath = path.join(safePluginPath, 'package.json');
         if (fs.existsSync(packagePath)) {
           const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
           return {
@@ -441,14 +469,14 @@ function registerIpcHandlers(deps) {
             },
           };
         }
-      } else if (stats.isFile() && pluginPath.endsWith('.js')) {
+      } else if (stats.isFile() && safePluginPath.endsWith('.js')) {
         // Parse JavaScript file for metadata
-        const content = fs.readFileSync(pluginPath, 'utf8');
+        const content = fs.readFileSync(safePluginPath, 'utf8');
         const lines = content.split('\n');
 
         const metadata = {
-          id: path.basename(pluginPath, '.js'),
-          name: path.basename(pluginPath, '.js'),
+          id: path.basename(safePluginPath, '.js'),
+          name: path.basename(safePluginPath, '.js'),
           description: 'No description',
           version: '1.0.0',
           author: 'Unknown',
@@ -496,8 +524,14 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('extract-plugin-zip', async (event, zipPath) => {
     try {
+      assertAllowedFileAccess(app, zipPath, {
+        operation: 'extract plugin zip',
+        mustExist: true,
+      });
       // Create temp directory for extraction
-      const tempDir = path.join(app.getPath('temp'), `plugin-${Date.now()}`);
+      const tempDir = assertAllowedFileAccess(app, path.join(app.getPath('temp'), `plugin-${Date.now()}`), {
+        operation: 'create plugin extraction directory',
+      });
       fs.mkdirSync(tempDir, { recursive: true });
 
       // Note: This is a placeholder - you'll need to add a zip extraction library
@@ -519,6 +553,11 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('copy-plugin-directory', async (event, sourcePath, destPath) => {
     try {
+      const safeSourcePath = assertAllowedFileAccess(app, sourcePath, {
+        operation: 'copy plugin source',
+        mustExist: true,
+      });
+      const safeDestPath = assertPluginPath(app, destPath, 'plugin destination');
       // Recursive directory copy
       const copyRecursive = (src, dest) => {
         if (!fs.existsSync(dest)) {
@@ -539,7 +578,7 @@ function registerIpcHandlers(deps) {
         }
       };
 
-      copyRecursive(sourcePath, destPath);
+      copyRecursive(safeSourcePath, safeDestPath);
       return { success: true };
     } catch (error) {
       console.error('Failed to copy plugin directory:', error);
@@ -552,11 +591,16 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('copy-plugin-file', async (event, sourcePath, destPath) => {
     try {
-      const destDir = path.dirname(destPath);
+      const safeSourcePath = assertAllowedFileAccess(app, sourcePath, {
+        operation: 'copy plugin file source',
+        mustExist: true,
+      });
+      const safeDestPath = assertPluginPath(app, destPath, 'plugin destination file');
+      const destDir = path.dirname(safeDestPath);
       if (!fs.existsSync(destDir)) {
         fs.mkdirSync(destDir, { recursive: true });
       }
-      fs.copyFileSync(sourcePath, destPath);
+      fs.copyFileSync(safeSourcePath, safeDestPath);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -568,11 +612,12 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('write-plugin-file', async (event, filePath, content) => {
     try {
-      const dir = path.dirname(filePath);
+      const safeFilePath = assertPluginPath(app, filePath, 'plugin file');
+      const dir = path.dirname(safeFilePath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(filePath, content, 'utf8');
+      fs.writeFileSync(safeFilePath, content, 'utf8');
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -585,18 +630,20 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('write-plugin-files', async (event, options) => {
     const { pluginId, installPath, data, manifest } = options;
+    const safePluginId = sanitizePluginId(pluginId);
+    const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
 
-    console.log(`[Main] Writing plugin files for ${pluginId} to ${installPath}`);
+    console.log(`[Main] Writing plugin files for ${safePluginId} to ${safeInstallPath}`);
 
     try {
       // Create plugin directory if it doesn't exist
-      if (!fs.existsSync(installPath)) {
-        fs.mkdirSync(installPath, { recursive: true });
-        console.log(`[Main] Created plugin directory: ${installPath}`);
+      if (!fs.existsSync(safeInstallPath)) {
+        fs.mkdirSync(safeInstallPath, { recursive: true });
+        console.log(`[Main] Created plugin directory: ${safeInstallPath}`);
       }
 
       // Write manifest file (plugin.json)
-      const manifestPath = path.join(installPath, 'plugin.json');
+      const manifestPath = safePluginJoin(app, safeInstallPath, 'plugin.json', 'plugin manifest');
       fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
       console.log(`[Main] Wrote manifest to: ${manifestPath}`);
 
@@ -604,7 +651,7 @@ function registerIpcHandlers(deps) {
       if (data) {
         if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'number') {
           // Binary data sent as byte array - could be a ZIP file
-          const zipPath = path.join(installPath, `${pluginId}.zip`);
+          const zipPath = safePluginJoin(app, safeInstallPath, `${safePluginId}.zip`, 'plugin zip');
           const buffer = Buffer.from(data);
           fs.writeFileSync(zipPath, buffer);
           console.log(`[Main] Wrote ZIP file (${buffer.length} bytes): ${zipPath}`);
@@ -613,24 +660,24 @@ function registerIpcHandlers(deps) {
           try {
             const AdmZip = require('adm-zip');
             const zip = new AdmZip(buffer);
-            zip.extractAllTo(installPath, true);
+            safeExtractAdmZip(app, zip, safeInstallPath);
             // Remove the zip file after extraction
             fs.unlinkSync(zipPath);
-            console.log(`[Main] Extracted ZIP file to ${installPath}`);
+            console.log(`[Main] Extracted ZIP file to ${safeInstallPath}`);
           } catch (extractError) {
             // If adm-zip is not available or extraction fails, keep the ZIP for manual extraction
             console.log(`[Main] ZIP extraction not available, keeping ZIP file: ${extractError.message}`);
           }
         } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
           // Binary data (ArrayBuffer/TypedArray) - should not normally reach here after IPC
-          const zipPath = path.join(installPath, `${pluginId}.zip`);
+          const zipPath = safePluginJoin(app, safeInstallPath, `${safePluginId}.zip`, 'plugin zip');
           const buffer = Buffer.from(data);
           fs.writeFileSync(zipPath, buffer);
           console.log(`[Main] Wrote binary data (${buffer.length} bytes): ${zipPath}`);
         } else if (typeof data === 'object' && !Array.isArray(data)) {
           // JSON package (mock package with files object)
           for (const [filename, content] of Object.entries(data)) {
-            const filePath = path.join(installPath, filename);
+            const filePath = safePluginJoin(app, safeInstallPath, filename, 'plugin package file');
             const fileDir = path.dirname(filePath);
 
             if (!fs.existsSync(fileDir)) {
@@ -650,22 +697,22 @@ function registerIpcHandlers(deps) {
       }
 
       // Create an index.js entry point if not provided
-      const indexPath = path.join(installPath, 'index.js');
+      const indexPath = safePluginJoin(app, safeInstallPath, 'index.js', 'plugin index');
       if (!fs.existsSync(indexPath)) {
-        const defaultIndex = `// Plugin: ${pluginId}\n// Auto-generated entry point\nmodule.exports = ${JSON.stringify(manifest, null, 2)};\n`;
+        const defaultIndex = `// Plugin: ${safePluginId}\n// Auto-generated entry point\nmodule.exports = ${JSON.stringify(manifest, null, 2)};\n`;
         fs.writeFileSync(indexPath, defaultIndex, 'utf8');
         console.log(`[Main] Created default index.js`);
       }
 
-      console.log(`[Main] Plugin ${pluginId} installed successfully to ${installPath}`);
+      console.log(`[Main] Plugin ${safePluginId} installed successfully to ${safeInstallPath}`);
 
       return {
         success: true,
-        installPath,
-        files: fs.readdirSync(installPath),
+        installPath: safeInstallPath,
+        files: fs.readdirSync(safeInstallPath),
       };
     } catch (error) {
-      console.error(`[Main] Failed to write plugin files for ${pluginId}:`, error);
+      console.error(`[Main] Failed to write plugin files for ${safePluginId}:`, error);
       return {
         success: false,
         error: error.message,
@@ -678,20 +725,22 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('load-plugin-from-disk', async (event, options) => {
     const { pluginId, installPath } = options;
+    const safePluginId = sanitizePluginId(pluginId);
+    const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
 
-    console.log(`[Main] Loading plugin ${pluginId} from ${installPath}`);
+    console.log(`[Main] Loading plugin ${safePluginId} from ${safeInstallPath}`);
 
     try {
       // Check if plugin directory exists
-      if (!fs.existsSync(installPath)) {
+      if (!fs.existsSync(safeInstallPath)) {
         return {
           success: false,
-          error: `Plugin directory not found: ${installPath}`,
+          error: `Plugin directory not found: ${safeInstallPath}`,
         };
       }
 
       // Read manifest
-      const manifestPath = path.join(installPath, 'plugin.json');
+      const manifestPath = safePluginJoin(app, safeInstallPath, 'plugin.json', 'plugin manifest');
       if (!fs.existsSync(manifestPath)) {
         return {
           success: false,
@@ -702,27 +751,27 @@ function registerIpcHandlers(deps) {
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
       // List all files in plugin directory
-      const files = fs.readdirSync(installPath);
+      const files = fs.readdirSync(safeInstallPath);
 
       // Read index.js if exists
       let indexContent = null;
-      const indexPath = path.join(installPath, 'index.js');
+      const indexPath = safePluginJoin(app, safeInstallPath, 'index.js', 'plugin index');
       if (fs.existsSync(indexPath)) {
         indexContent = fs.readFileSync(indexPath, 'utf8');
       }
 
-      console.log(`[Main] Loaded plugin ${pluginId} with ${files.length} files`);
+      console.log(`[Main] Loaded plugin ${safePluginId} with ${files.length} files`);
 
       return {
         success: true,
-        pluginId,
+        pluginId: safePluginId,
         manifest,
         files,
         indexContent,
-        installPath,
+        installPath: safeInstallPath,
       };
     } catch (error) {
-      console.error(`[Main] Failed to load plugin ${pluginId}:`, error);
+      console.error(`[Main] Failed to load plugin ${safePluginId}:`, error);
       return {
         success: false,
         error: error.message,
@@ -735,13 +784,15 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('delete-plugin-files', async (event, options) => {
     const { pluginId, installPath } = options;
+    const safePluginId = sanitizePluginId(pluginId);
+    const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
 
-    console.log(`[Main] Deleting plugin ${pluginId} from ${installPath}`);
+    console.log(`[Main] Deleting plugin ${safePluginId} from ${safeInstallPath}`);
 
     try {
       // Check if plugin directory exists
-      if (!fs.existsSync(installPath)) {
-        console.log(`[Main] Plugin directory doesn't exist, nothing to delete: ${installPath}`);
+      if (!fs.existsSync(safeInstallPath)) {
+        console.log(`[Main] Plugin directory doesn't exist, nothing to delete: ${safeInstallPath}`);
         return {
           success: true,
           message: 'Plugin directory already deleted',
@@ -763,17 +814,17 @@ function registerIpcHandlers(deps) {
         }
       };
 
-      deleteRecursive(installPath);
+      deleteRecursive(safeInstallPath);
 
-      console.log(`[Main] Deleted plugin directory: ${installPath}`);
+      console.log(`[Main] Deleted plugin directory: ${safeInstallPath}`);
 
       return {
         success: true,
-        pluginId,
-        deletedPath: installPath,
+        pluginId: safePluginId,
+        deletedPath: safeInstallPath,
       };
     } catch (error) {
-      console.error(`[Main] Failed to delete plugin ${pluginId}:`, error);
+      console.error(`[Main] Failed to delete plugin ${safePluginId}:`, error);
       return {
         success: false,
         error: error.message,
@@ -788,10 +839,14 @@ function registerIpcHandlers(deps) {
   // IPC handlers
   ipcMain.handle('read-file', async (event, filePath) => {
     try {
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'read file',
+        mustExist: true,
+      });
       // Check file size first
-      const stats = fs.statSync(filePath);
+      const stats = fs.statSync(safeFilePath);
       const fileSizeMB = stats.size / (1024 * 1024);
-      const extension = path.extname(filePath).toLowerCase();
+      const extension = path.extname(safeFilePath).toLowerCase();
 
       // For BAM files, don't try to read as text
       if (extension === '.bam') {
@@ -829,12 +884,12 @@ function registerIpcHandlers(deps) {
         const { promisify } = require('util');
         const gunzip = promisify(zlib.gunzip);
 
-        const compressedData = fs.readFileSync(filePath);
+        const compressedData = fs.readFileSync(safeFilePath);
         const decompressedData = await gunzip(compressedData);
         const data = decompressedData.toString('utf8');
         return { success: true, data, isGzipped: true };
       } else {
-        const data = fs.readFileSync(filePath, 'utf8');
+        const data = fs.readFileSync(safeFilePath, 'utf8');
         return { success: true, data };
       }
     } catch (error) {
@@ -846,7 +901,7 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('show-save-dialog', async (event, options) => {
     try {
       const result = await dialog.showSaveDialog(mainWindow, options);
-      return result;
+      return rememberApprovedDialogPaths(result);
     } catch (error) {
       console.error('Error showing save dialog:', error);
       return { canceled: true, error: error.message };
@@ -857,24 +912,25 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('write-file', async (event, filePath, content) => {
     try {
       const path = require('path');
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'write file' });
 
       // Ensure directory exists
-      const directory = path.dirname(filePath);
+      const directory = path.dirname(safeFilePath);
       if (!fs.existsSync(directory)) {
         fs.mkdirSync(directory, { recursive: true });
       }
 
       // Write the file
-      fs.writeFileSync(filePath, content, 'utf8');
+      fs.writeFileSync(safeFilePath, content, 'utf8');
 
       // Verify file was written
-      if (fs.existsSync(filePath)) {
-        const stats = fs.statSync(filePath);
-        console.log(`File written successfully: ${filePath} (${stats.size} bytes)`);
+      if (fs.existsSync(safeFilePath)) {
+        const stats = fs.statSync(safeFilePath);
+        console.log(`File written successfully: ${safeFilePath} (${stats.size} bytes)`);
         return {
           success: true,
-          filePath: filePath,
-          fileName: path.basename(filePath),
+          filePath: safeFilePath,
+          fileName: path.basename(safeFilePath),
           fileSize: stats.size,
         };
       } else {
@@ -892,18 +948,22 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 1024) => {
     try {
-      const stats = fs.statSync(filePath);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'stream file',
+        mustExist: true,
+      });
+      const stats = fs.statSync(safeFilePath);
       const fileSize = stats.size;
       let totalRead = 0;
       let buffer = '';
       let lineCount = 0;
 
       console.log(
-        `Starting stream read of ${(fileSize / (1024 * 1024)).toFixed(1)} MB file: ${path.basename(filePath)}`
+        `Starting stream read of ${(fileSize / (1024 * 1024)).toFixed(1)} MB file: ${path.basename(safeFilePath)}`
       );
 
       return new Promise((resolve, reject) => {
-        const stream = fs.createReadStream(filePath, {
+        const stream = fs.createReadStream(safeFilePath, {
           encoding: 'utf8',
           highWaterMark: chunkSize,
         });
@@ -973,14 +1033,18 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('get-file-info', async (event, filePath) => {
     try {
-      const stats = fs.statSync(filePath);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'inspect file',
+        mustExist: true,
+      });
+      const stats = fs.statSync(safeFilePath);
       return {
         success: true,
         info: {
           size: stats.size,
           modified: stats.mtime,
-          name: path.basename(filePath),
-          extension: path.extname(filePath),
+          name: path.basename(safeFilePath),
+          extension: path.extname(safeFilePath),
         },
       };
     } catch (error) {
@@ -1033,6 +1097,7 @@ function registerIpcHandlers(deps) {
       if (result.canceled) {
         return { success: false, canceled: true };
       }
+      rememberApprovedDialogPaths(result);
 
       return {
         success: true,
@@ -1050,27 +1115,34 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('copy-attachment-file', async (event, sourcePath, targetDir, filename) => {
     try {
+      const safeSourcePath = assertAllowedFileAccess(app, sourcePath, {
+        operation: 'copy attachment source',
+        mustExist: true,
+      });
+      const safeTargetDir = assertAllowedFileAccess(app, targetDir, { operation: 'copy attachment target' });
       // Validate source file exists
-      if (!fs.existsSync(sourcePath)) {
+      if (!fs.existsSync(safeSourcePath)) {
         return { success: false, error: 'Source file does not exist' };
       }
 
       // Ensure target directory exists
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
+      if (!fs.existsSync(safeTargetDir)) {
+        fs.mkdirSync(safeTargetDir, { recursive: true });
       }
 
       // Determine target path
-      const targetFilename = filename || path.basename(sourcePath);
-      const targetPath = path.join(targetDir, targetFilename);
+      const targetFilename = path.basename(filename || path.basename(safeSourcePath));
+      const targetPath = assertAllowedFileAccess(app, path.join(safeTargetDir, targetFilename), {
+        operation: 'copy attachment target file',
+      });
 
       // Copy file
-      fs.copyFileSync(sourcePath, targetPath);
+      fs.copyFileSync(safeSourcePath, targetPath);
 
       // Get file info
       const stats = fs.statSync(targetPath);
 
-      console.log(`Attachment copied: ${sourcePath} -> ${targetPath}`);
+      console.log(`Attachment copied: ${safeSourcePath} -> ${targetPath}`);
 
       return {
         success: true,
@@ -1092,14 +1164,15 @@ function registerIpcHandlers(deps) {
       if (!filePath) {
         return { success: false, error: 'File path is required' };
       }
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'delete attachment' });
 
-      if (!fs.existsSync(filePath)) {
-        console.log(`Attachment file does not exist, skipping deletion: ${filePath}`);
+      if (!fs.existsSync(safeFilePath)) {
+        console.log(`Attachment file does not exist, skipping deletion: ${safeFilePath}`);
         return { success: true, message: 'File does not exist' };
       }
 
-      fs.unlinkSync(filePath);
-      console.log(`Attachment deleted: ${filePath}`);
+      fs.unlinkSync(safeFilePath);
+      console.log(`Attachment deleted: ${safeFilePath}`);
 
       return { success: true, message: 'Attachment deleted successfully' };
     } catch (error) {
@@ -1116,15 +1189,19 @@ function registerIpcHandlers(deps) {
       if (!filePath) {
         return { success: false, error: 'File path is required' };
       }
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open attachment',
+        mustExist: true,
+      });
 
-      if (!fs.existsSync(filePath)) {
+      if (!fs.existsSync(safeFilePath)) {
         return { success: false, error: 'File does not exist' };
       }
 
       const { shell } = require('electron');
-      await shell.openPath(filePath);
+      await shell.openPath(safeFilePath);
 
-      console.log(`Opened attachment: ${filePath}`);
+      console.log(`Opened attachment: ${safeFilePath}`);
       return { success: true };
     } catch (error) {
       console.error('Error opening attachment file:', error);
@@ -1176,10 +1253,13 @@ function registerIpcHandlers(deps) {
 
       // Parse URL to get protocol and filename
       const urlObj = new URL(url);
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        return { success: false, error: 'Only HTTP and HTTPS downloads are allowed' };
+      }
       const protocol = urlObj.protocol === 'https:' ? require('https') : require('http');
 
       // Determine filename from URL if not provided
-      const extractedFilename = filename || path.basename(urlObj.pathname) || 'downloaded_file';
+      const extractedFilename = path.basename(filename || path.basename(urlObj.pathname) || 'downloaded_file');
 
       // Determine destination directory
       let destDir = destinationPath;
@@ -1188,12 +1268,15 @@ function registerIpcHandlers(deps) {
         destDir = path.join(app.getPath('downloads'));
       }
 
-      // Ensure destination directory exists
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
-      }
+      const safeDestDir = assertAllowedFileAccess(app, destDir, { operation: 'download destination' });
+      const fullPath = assertAllowedFileAccess(app, path.join(safeDestDir, extractedFilename), {
+        operation: 'download target',
+      });
 
-      const fullPath = path.join(destDir, extractedFilename);
+      // Ensure destination directory exists after validation
+      if (!fs.existsSync(safeDestDir)) {
+        fs.mkdirSync(safeDestDir, { recursive: true });
+      }
 
       return new Promise(resolve => {
         const file = fs.createWriteStream(fullPath);
@@ -1204,12 +1287,10 @@ function registerIpcHandlers(deps) {
             console.log(`[Download] Following redirect to: ${response.headers.location}`);
             file.close();
             fs.unlinkSync(fullPath);
-
-            // Recursively follow redirect
-            ipcMain.emit('download-internet-file', event, {
-              url: response.headers.location,
-              destinationPath,
-              filename,
+            resolve({
+              success: false,
+              error: 'Redirected downloads must be retried with the final HTTPS URL',
+              redirectUrl: response.headers.location,
             });
             return;
           }
@@ -1288,39 +1369,39 @@ function registerIpcHandlers(deps) {
     const { filePath, title } = options;
 
     try {
-      console.log(`[Markdown Viewer] Opening: ${filePath}`);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open markdown viewer',
+        mustExist: true,
+        allowedRoots: [app.getAppPath(), ...getDefaultWritableRoots(app)],
+      });
+      console.log(`[Markdown Viewer] Opening: ${safeFilePath}`);
 
       // Validate file path
-      if (!filePath || typeof filePath !== 'string') {
+      if (!safeFilePath || typeof safeFilePath !== 'string') {
         return { success: false, error: 'Invalid file path provided' };
       }
 
       // Check if file exists
-      if (!fs.existsSync(filePath)) {
-        return { success: false, error: `File not found: ${filePath}` };
+      if (!fs.existsSync(safeFilePath)) {
+        return { success: false, error: `File not found: ${safeFilePath}` };
       }
 
       // Check file extension
-      const ext = path.extname(filePath).toLowerCase();
+      const ext = path.extname(safeFilePath).toLowerCase();
       if (ext !== '.md' && ext !== '.markdown') {
         console.warn(`[Markdown Viewer] File is not a markdown file: ${ext}`);
       }
 
       // Read the file content
-      const content = fs.readFileSync(filePath, 'utf8');
-      const fileName = path.basename(filePath);
+      const content = fs.readFileSync(safeFilePath, 'utf8');
+      const fileName = path.basename(safeFilePath);
       const windowTitle = title || `${fileName} - Markdown Viewer`;
 
       // Create viewer window
       const viewerWindow = new BrowserWindow({
         width: 900,
         height: 700,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          enableRemoteModule: false,
-          preload: path.join(__dirname, '..', 'preload.js'),
-        },
+        webPreferences: createSecureWebPreferences(),
         title: windowTitle,
         icon: path.join(__dirname, '..', 'assets', 'icon.png'),
         resizable: true,
@@ -1344,7 +1425,7 @@ function registerIpcHandlers(deps) {
       viewerWindow.webContents.on('did-finish-load', () => {
         viewerWindow.webContents.send('load-markdown', {
           content: content,
-          filePath: filePath,
+          filePath: safeFilePath,
           fileName: fileName,
           title: windowTitle,
         });
@@ -1490,6 +1571,7 @@ function registerIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result);
         return {
           success: true,
           canceled: false,
@@ -1871,12 +1953,7 @@ function registerIpcHandlers(deps) {
       const resourceManagerWindow = new BrowserWindow({
         width: 1000,
         height: 700,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          enableRemoteModule: false,
-          preload: path.join(__dirname, '..', 'preload.js'),
-        },
+        webPreferences: createSecureWebPreferences(),
         title: 'Resource Manager - CodeXomics',
         icon: path.join(__dirname, '..', 'assets', 'icon.png'),
         resizable: true,
@@ -2015,6 +2092,7 @@ function registerIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result);
         const filePath = result.filePaths[0];
         // Send to main window for loading
         mainWindow.webContents.send('load-file', filePath);
@@ -2136,16 +2214,7 @@ function registerIpcHandlers(deps) {
         height: 800,
         minWidth: 800,
         minHeight: 600,
-        webPreferences: {
-          nodeIntegration: true,
-          contextIsolation: false,
-          enableRemoteModule: true,
-          webSecurity: false,
-
-          allowRunningInsecureContent: true,
-          // Explicitly disable sandbox to prevent /tmp access issues on Linux
-          sandbox: false,
-        },
+        webPreferences: createSecureWebPreferences(),
         title: `Debug Tool - ${fileName}`,
         icon: path.join(__dirname, '..', 'assets', 'icon.png'),
         show: false,

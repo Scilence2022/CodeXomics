@@ -72,9 +72,12 @@ describe('Window Management Module', () => {
     expect(content).toContain('module.exports');
   });
 
-  it('should have enableRemoteModule:false for all windows', () => {
-    const count = (content.match(/enableRemoteModule:\s*false/g) || []).length;
-    expect(count).toBeGreaterThanOrEqual(18);
+  it('should centralize secure web preferences for BrowserWindow creation', () => {
+    expect(content).toContain('createSecureWebPreferences');
+    expect(content).not.toMatch(/nodeIntegration:\s*true/);
+    expect(content).not.toMatch(/contextIsolation:\s*false/);
+    expect(content).not.toMatch(/webSecurity:\s*false/);
+    expect(content).not.toMatch(/allowRunningInsecureContent:\s*true/);
   });
 
   it('should import ipcMain after fix', () => {

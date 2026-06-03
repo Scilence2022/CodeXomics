@@ -52,7 +52,7 @@ describe('Preload API Structure', () => {
 
   describe('IPC channel validation', () => {
     it('should validate invoke channels', () => {
-      expect(preloadContent).toContain('validChannels');
+      expect(preloadContent).toContain('allowedInvokeChannels');
       expect(preloadContent).toContain('mcp-server-start');
       expect(preloadContent).toContain('mcp-server-stop');
     });
@@ -73,6 +73,7 @@ describe('Preload API Structure', () => {
       // The preload should only expose specific, validated methods
       // This check ensures we don't have `exposeInMainWorld('ipcRenderer', ipcRenderer)`
       expect(preloadContent).toContain("exposeInMainWorld('electronAPI'");
+      expect(preloadContent).not.toContain("exposeInMainWorld('ipcRenderer', ipcRenderer)");
     });
 
     it('removeAllListeners should have channel whitelist', () => {
