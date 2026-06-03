@@ -45,6 +45,29 @@ describe('Genes track sequence selection settings', () => {
     expect(genomeBrowser.scrollBottomSequenceToGene).not.toHaveBeenCalled();
   });
 
+  it('keeps Genes & Features track clicks scrolling unless the caller opts out', () => {
+    const genomeBrowser = {
+      selectGene: vi.fn(),
+      showGeneDetailsPanel: vi.fn(),
+      populateGeneDetails: vi.fn(),
+      scrollBottomSequenceToGene: vi.fn(),
+    };
+    const trackRenderer = new TrackRenderer(genomeBrowser);
+    const gene = { type: 'CDS', start: 2, end: 4, strand: 1, qualifiers: { gene: 'lacZ' } };
+
+    trackRenderer.showGeneDetails(gene, null);
+
+    expect(genomeBrowser.selectGene).toHaveBeenCalledWith(gene, null);
+    expect(genomeBrowser.showGeneDetailsPanel).toHaveBeenCalledTimes(1);
+    expect(genomeBrowser.populateGeneDetails).toHaveBeenCalledWith(gene, null);
+    expect(genomeBrowser.scrollBottomSequenceToGene).toHaveBeenCalledWith(gene);
+
+    genomeBrowser.scrollBottomSequenceToGene.mockClear();
+    trackRenderer.showGeneDetails(gene, null, { scrollBottomSequence: false });
+
+    expect(genomeBrowser.scrollBottomSequenceToGene).not.toHaveBeenCalled();
+  });
+
   it('keeps AI-facing track settings schemas in sync', () => {
     const chatManagerContent = fs.readFileSync(CM_PATH, 'utf-8');
     const mcpTrackSettingsContent = fs.readFileSync(MCP_TRACK_SETTINGS_PATH, 'utf-8');

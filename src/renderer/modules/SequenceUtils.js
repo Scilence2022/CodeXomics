@@ -544,7 +544,9 @@ class SequenceUtils {
     const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
 
     if (this.genomeBrowser.trackRenderer?.showGeneDetails) {
-      this.genomeBrowser.trackRenderer.showGeneDetails(gene, operonInfo);
+      this.genomeBrowser.trackRenderer.showGeneDetails(gene, operonInfo, {
+        scrollBottomSequence: false,
+      });
       return;
     }
 

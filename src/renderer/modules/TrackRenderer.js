@@ -7240,7 +7240,7 @@ class TrackRenderer {
     });
   }
 
-  showGeneDetails(gene, operonInfo) {
+  showGeneDetails(gene, operonInfo, options = {}) {
     const featureType = (gene.type || '').toLowerCase();
     if (featureType === 'primer' || featureType === 'primer_bind') {
       // Route primers to dedicated Primer Details sidebar
@@ -7254,7 +7254,7 @@ class TrackRenderer {
     this.genomeBrowser.populateGeneDetails(gene, operonInfo);
 
     const genesSettings = this.getTrackSettings('genes');
-    if (genesSettings.autoScrollBottomSequenceOnGeneSelect !== false) {
+    if (options.scrollBottomSequence !== false && genesSettings.autoScrollBottomSequenceOnGeneSelect !== false) {
       this.genomeBrowser.scrollBottomSequenceToGene?.(gene);
     }
   }

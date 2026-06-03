@@ -193,7 +193,7 @@ describe('SequenceUtils circular bottom sequence track', () => {
     lineElement.querySelector('.gene-indicator-click-target').dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(showGeneDetails).toHaveBeenCalledTimes(1);
-    expect(showGeneDetails).toHaveBeenCalledWith(gene, null);
+    expect(showGeneDetails).toHaveBeenCalledWith(gene, null, { scrollBottomSequence: false });
   });
 
   it('scrolls the virtualized bottom sequence view when auto-scrolling to a selected gene', () => {
