@@ -474,7 +474,7 @@ Keyboard: Cmd/Ctrl+Shift+D
 
 ```
 Tools → External Tools → CHOPCHOP
-Keyboard: Cmd/Ctrl+Shift+C
+Keyboard: Cmd/Ctrl+Alt+H
 ```
 
 **Capabilities:**

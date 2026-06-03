@@ -19,7 +19,7 @@ class ExternalToolsManager {
         name: 'CHOPCHOP CRISPR Toolbox',
         url: 'https://chopchop.cbu.uib.no/',
         icon: 'fas fa-cut',
-        accelerator: 'CmdOrCtrl+Shift+C',
+        accelerator: 'CmdOrCtrl+Alt+H',
       },
       progenfixer: {
         name: 'ProGenFixer',
@@ -405,7 +405,7 @@ class ExternalToolsManager {
         name: 'CHOPCHOP CRISPR Toolbox',
         url: 'https://chopchop.cbu.uib.no/',
         icon: 'fas fa-cut',
-        accelerator: 'CmdOrCtrl+Shift+C',
+        accelerator: 'CmdOrCtrl+Alt+H',
       },
       progenfixer: {
         name: 'ProGenFixer',

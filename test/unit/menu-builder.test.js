@@ -78,6 +78,22 @@ describe('Menu Builder Module', () => {
     expect(content).toContain("'action-insert-sequence-reverse'");
   });
 
+  it('should reserve Cmd/Ctrl+Shift+C for reverse-complement sequence copy', () => {
+    expect(content).toContain("label: 'Copy Reverse-Complement Sequence'");
+    expect(content).toContain("accelerator: 'CmdOrCtrl+Shift+C'");
+    expect(content).toContain("'action-copy-reverse-complement-sequence'");
+    expect(rendererContent).toContain("ipcRenderer.on('action-copy-reverse-complement-sequence'");
+    expect(rendererContent).toContain('this.sequenceUtils.copySequence({ reverseComplement: true })');
+  });
+
+  it('should move Circos and CHOPCHOP away from Cmd/Ctrl+Shift+C', () => {
+    const circosIndex = content.indexOf("label: 'Circos Genome Plotter'");
+    const chopchopIndex = content.indexOf("label: 'CHOPCHOP CRISPR Toolbox'");
+
+    expect(content.slice(circosIndex, circosIndex + 120)).toContain("accelerator: 'CmdOrCtrl+Alt+C'");
+    expect(content.slice(chopchopIndex, chopchopIndex + 140)).toContain("accelerator: 'CmdOrCtrl+Alt+H'");
+  });
+
   it('top Actions dropdown should include reverse-complement paste and insert buttons', () => {
     expect(indexHtml).toContain('id="pasteSequenceReverseBtn"');
     expect(indexHtml).toContain('Paste (Reverse)');

@@ -1442,9 +1442,15 @@ function createMenu() {
       submenu: [
         {
           label: 'Copy Sequence',
-          accelerator: 'CmdOrCtrl+Shift+C',
           click: () => {
             sendToCurrentMainWindow('action-copy-sequence');
+          },
+        },
+        {
+          label: 'Copy Reverse-Complement Sequence',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            sendToCurrentMainWindow('action-copy-reverse-complement-sequence');
           },
         },
         {
@@ -1524,7 +1530,7 @@ function createMenu() {
       submenu: [
         {
           label: 'Circos Genome Plotter',
-          accelerator: 'CmdOrCtrl+Shift+C',
+          accelerator: 'CmdOrCtrl+Alt+C',
           click: () => {
             createCircosWindow();
           },
@@ -1589,7 +1595,7 @@ function createMenu() {
         },
         {
           label: 'CHOPCHOP CRISPR Toolbox',
-          accelerator: 'CmdOrCtrl+Shift+C',
+          accelerator: 'CmdOrCtrl+Alt+H',
           click: async () => {
             await createChopchopWindow();
           },

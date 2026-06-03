@@ -3228,6 +3228,14 @@ class GenomeBrowser {
       }
     });
 
+    ipcRenderer.on('action-copy-reverse-complement-sequence', () => {
+      if (this.sequenceUtils && this.currentSequence && Object.keys(this.currentSequence).length > 0) {
+        this.sequenceUtils.copySequence({ reverseComplement: true });
+      } else {
+        this.showNotification('No sequence to copy', 'error');
+      }
+    });
+
     ipcRenderer.on('action-cut-sequence', () => {
       if (window.actionManager) {
         window.actionManager.handleCutSequence();
