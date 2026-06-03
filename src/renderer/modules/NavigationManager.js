@@ -1179,12 +1179,15 @@ class NavigationManager {
     // Scroll bottom sequence panel to show the match
     const sequenceContent = document.getElementById('sequenceContent');
     if (sequenceContent) {
+      const sequenceView = sequenceContent.querySelector('.detailed-sequence-view');
+      const scrollContainer =
+        sequenceContent.querySelector('.detailed-sequence-view.virtualized') || sequenceContent;
       // Calculate the line number where the match is located
       const currentPos = this.genomeBrowser.currentPosition;
 
       // Get actual bases per line from the first sequence line
-      const firstSequenceLine = sequenceContent.querySelector('.sequence-line .sequence-bases');
-      let basesPerLine = 100; // Default fallback
+      const firstSequenceLine = sequenceView?.querySelector('.sequence-line .sequence-bases');
+      let basesPerLine = parseInt(sequenceView?.dataset?.basesPerLine, 10) || 100; // Default fallback
 
       if (firstSequenceLine) {
         // Count actual characters in the first line
@@ -1197,8 +1200,8 @@ class NavigationManager {
       }
 
       // Get actual line height from rendered elements
-      const firstLineGroup = sequenceContent.querySelector('.sequence-line-group');
-      let lineHeight = 40; // Default fallback
+      const firstLineGroup = sequenceView?.querySelector('.sequence-line-group');
+      let lineHeight = parseFloat(sequenceView?.dataset?.lineHeight) || 40; // Default fallback
 
       if (firstLineGroup) {
         const rect = firstLineGroup.getBoundingClientRect();
@@ -1219,10 +1222,11 @@ class NavigationManager {
         lineNumber,
         lineHeight,
         scrollPosition,
+        scrollTarget: scrollContainer === sequenceContent ? 'sequenceContent' : 'virtualizedSequenceView',
       });
 
       // Scroll to the line containing the match
-      sequenceContent.scrollTo({
+      scrollContainer.scrollTo({
         top: scrollPosition,
         behavior: 'smooth',
       });

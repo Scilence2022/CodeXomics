@@ -4,6 +4,7 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const SequenceUtils = require(path.join(process.cwd(), 'src/renderer/modules/SequenceUtils.js'));
+const NavigationManager = require(path.join(process.cwd(), 'src/renderer/modules/NavigationManager.js'));
 
 describe('SequenceUtils circular bottom sequence track', () => {
   let utils;
@@ -193,6 +194,36 @@ describe('SequenceUtils circular bottom sequence track', () => {
 
     expect(showGeneDetails).toHaveBeenCalledTimes(1);
     expect(showGeneDetails).toHaveBeenCalledWith(gene, null);
+  });
+
+  it('scrolls the virtualized bottom sequence view when auto-scrolling to a selected gene', () => {
+    document.body.innerHTML = `
+      <div id="sequenceContent">
+        <div class="detailed-sequence-view virtualized" data-bases-per-line="50" data-line-height="32"></div>
+      </div>
+    `;
+
+    const virtualSequenceView = document.querySelector('.detailed-sequence-view.virtualized');
+    const outerSequenceContent = document.getElementById('sequenceContent');
+    virtualSequenceView.scrollTo = vi.fn();
+    outerSequenceContent.scrollTo = vi.fn();
+
+    const navigationManager = Object.create(NavigationManager.prototype);
+    navigationManager.genomeBrowser = {
+      currentPosition: { start: 1000, end: 6000 },
+    };
+
+    navigationManager.scrollToMatchPosition({
+      position: 3500,
+      end: 3600,
+      type: 'gene',
+    });
+
+    expect(virtualSequenceView.scrollTo).toHaveBeenCalledWith({
+      top: 1600,
+      behavior: 'smooth',
+    });
+    expect(outerSequenceContent.scrollTo).not.toHaveBeenCalled();
   });
 
   it('copies the reverse-complement gene sequence when Shift is pressed', async () => {

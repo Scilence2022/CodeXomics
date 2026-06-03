@@ -1642,6 +1642,8 @@ class SequenceUtils {
 
     const tempDiv = document.createElement('div');
     tempDiv.className = 'detailed-sequence-view';
+    tempDiv.dataset.basesPerLine = String(optimalLineLength);
+    tempDiv.dataset.lineHeight = String(this.getSequenceLineBlockHeight(sequenceSettings));
 
     // Batch DOM operations
     const linesToRender = [];
@@ -2561,6 +2563,8 @@ class SequenceUtils {
     // Create virtualized container that takes full parent space
     const virtualContainer = document.createElement('div');
     virtualContainer.className = 'detailed-sequence-view virtualized';
+    virtualContainer.dataset.basesPerLine = String(optimalLineLength);
+    virtualContainer.dataset.lineHeight = String(actualLineHeight);
     virtualContainer.style.cssText = `
             height: 100%;
             width: 100%;
