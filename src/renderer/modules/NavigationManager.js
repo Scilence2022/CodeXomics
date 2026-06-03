@@ -1182,6 +1182,7 @@ class NavigationManager {
       const sequenceView = sequenceContent.querySelector('.detailed-sequence-view');
       const scrollContainer =
         sequenceContent.querySelector('.detailed-sequence-view.virtualized') || sequenceContent;
+      const isVirtualized = scrollContainer.classList?.contains('virtualized');
       // Calculate the line number where the match is located
       const currentPos = this.genomeBrowser.currentPosition;
 
@@ -1203,7 +1204,7 @@ class NavigationManager {
       const firstLineGroup = sequenceView?.querySelector('.sequence-line-group');
       let lineHeight = parseFloat(sequenceView?.dataset?.lineHeight) || 40; // Default fallback
 
-      if (firstLineGroup) {
+      if (firstLineGroup && !isVirtualized) {
         const rect = firstLineGroup.getBoundingClientRect();
         const style = window.getComputedStyle(firstLineGroup);
         const marginBottom = parseInt(style.marginBottom) || 0;

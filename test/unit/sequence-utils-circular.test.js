@@ -199,12 +199,16 @@ describe('SequenceUtils circular bottom sequence track', () => {
   it('scrolls the virtualized bottom sequence view when auto-scrolling to a selected gene', () => {
     document.body.innerHTML = `
       <div id="sequenceContent">
-        <div class="detailed-sequence-view virtualized" data-bases-per-line="50" data-line-height="32"></div>
+        <div class="detailed-sequence-view virtualized" data-bases-per-line="50" data-line-height="32">
+          <div class="sequence-line-group"></div>
+        </div>
       </div>
     `;
 
     const virtualSequenceView = document.querySelector('.detailed-sequence-view.virtualized');
+    const renderedBufferLine = document.querySelector('.sequence-line-group');
     const outerSequenceContent = document.getElementById('sequenceContent');
+    renderedBufferLine.getBoundingClientRect = vi.fn(() => ({ height: 96 }));
     virtualSequenceView.scrollTo = vi.fn();
     outerSequenceContent.scrollTo = vi.fn();
 
