@@ -88,6 +88,27 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(restored.offset).toBe(0);
   });
 
+  it('restores active gene sequence highlighting on newly rendered virtualized rows', () => {
+    const lineElement = utils.renderSequenceLine('ACGTACGTAC', 20, 'chr1', [], [], 10, {}, new Map());
+    document.getElementById('sequenceContent').appendChild(lineElement);
+
+    utils.genomeBrowser.sequenceSelection = {
+      start: 22,
+      end: 24,
+      active: true,
+      chromosome: 'chr1',
+      source: 'gene',
+      geneName: 'virtualGene',
+    };
+
+    expect(utils.restoreActiveGeneSequenceHighlight()).toBe(3);
+
+    const highlightedPositions = Array.from(document.querySelectorAll('.gene-sequence-selected')).map(
+      base => Number(base.dataset.position) + 1
+    );
+    expect(highlightedPositions).toEqual([22, 23, 24]);
+  });
+
   it('highlights source-coordinate search matches after the origin', () => {
     const featureLookup = new Map();
     const lineElement = utils.renderSequenceLine('TTTTTAAAAA', 95, 'chr1', [], [], 10, {}, featureLookup);

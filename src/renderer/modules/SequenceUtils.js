@@ -2742,6 +2742,8 @@ class SequenceUtils {
       visibleContent.appendChild(lineElement);
     }
 
+    this.restoreActiveGeneSequenceHighlight();
+
     // FIXED: Restore selection state after content update - use setTimeout to ensure DOM is ready
     if (savedSelection) {
       setTimeout(() => {
@@ -2752,6 +2754,69 @@ class SequenceUtils {
     console.log(
       `🔧 [SequenceUtils] Virtual scroll update: lines ${startLine}-${endLine} of ${totalLines}, scrollTop=${scrollTop}px, lineHeight=${lineHeight}px`
     );
+  }
+
+  getBaseElementSourcePosition(baseElement) {
+    const sourceDataset = baseElement?.dataset?.position;
+    if (sourceDataset !== undefined) {
+      const sourcePosition = parseInt(sourceDataset, 10);
+      return Number.isNaN(sourcePosition) ? null : sourcePosition + 1;
+    }
+
+    const parentLine = baseElement?.closest?.('.sequence-line');
+    if (!parentLine) return null;
+
+    const positionElement = parentLine.querySelector('.sequence-position');
+    if (!positionElement) return null;
+
+    let lineStartPos;
+    const displayStartDataset = positionElement.dataset?.displayStart;
+    if (displayStartDataset !== undefined) {
+      lineStartPos = parseInt(displayStartDataset, 10) + 1;
+    } else {
+      lineStartPos = parseInt(positionElement.textContent.replace(/,/g, ''), 10);
+    }
+
+    if (Number.isNaN(lineStartPos)) return null;
+
+    const basesDiv = baseElement.closest('.sequence-bases');
+    if (!basesDiv) return null;
+
+    const baseIndex = Array.from(basesDiv.querySelectorAll('span')).indexOf(baseElement);
+    return baseIndex < 0 ? null : lineStartPos + baseIndex;
+  }
+
+  restoreActiveGeneSequenceHighlight() {
+    const geneSelection = this.genomeBrowser?.sequenceSelection;
+    if (!geneSelection?.active || geneSelection.source !== 'gene') {
+      return 0;
+    }
+
+    const selectionStart = parseInt(geneSelection.start, 10);
+    const selectionEnd = parseInt(geneSelection.end, 10);
+    if (Number.isNaN(selectionStart) || Number.isNaN(selectionEnd)) {
+      return 0;
+    }
+
+    const start = Math.min(selectionStart, selectionEnd);
+    const end = Math.max(selectionStart, selectionEnd);
+    let highlightedCount = 0;
+
+    document.querySelectorAll('.sequence-bases span.gene-sequence-selected').forEach(baseElement => {
+      baseElement.classList.remove('sequence-selected');
+      baseElement.classList.remove('gene-sequence-selected');
+    });
+
+    document.querySelectorAll('.sequence-bases span').forEach(baseElement => {
+      const sourcePosition = this.getBaseElementSourcePosition(baseElement);
+      if (sourcePosition !== null && sourcePosition >= start && sourcePosition <= end) {
+        baseElement.classList.add('sequence-selected');
+        baseElement.classList.add('gene-sequence-selected');
+        highlightedCount++;
+      }
+    });
+
+    return highlightedCount;
   }
 
   // Biological utilities

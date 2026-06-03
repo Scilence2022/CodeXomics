@@ -7722,24 +7722,39 @@ class GenomeBrowser {
     };
 
     // Find sequence bases within the gene range and mark them as selected
-    const sequenceBases = document.querySelectorAll('.sequence-bases span');
-    sequenceBases.forEach(baseElement => {
-      const parentLine = baseElement.closest('.sequence-line');
-      if (!parentLine) return;
+    if (this.sequenceUtils && typeof this.sequenceUtils.restoreActiveGeneSequenceHighlight === 'function') {
+      this.sequenceUtils.restoreActiveGeneSequenceHighlight();
+    } else {
+      const sequenceBases = document.querySelectorAll('.sequence-bases span');
+      sequenceBases.forEach(baseElement => {
+        const datasetPosition = baseElement.dataset?.position;
+        let absolutePos = null;
 
-      const positionElement = parentLine.querySelector('.sequence-position');
-      if (!positionElement) return;
+        if (datasetPosition !== undefined) {
+          const sourcePosition = parseInt(datasetPosition, 10);
+          absolutePos = Number.isNaN(sourcePosition) ? null : sourcePosition + 1;
+        } else {
+          const parentLine = baseElement.closest('.sequence-line');
+          if (!parentLine) return;
 
-      const lineStartPos = parseInt(positionElement.textContent.replace(/,/g, '')) - 1; // Convert to 0-based
-      const baseIndex = Array.from(parentLine.querySelectorAll('.sequence-bases span')).indexOf(baseElement);
-      const absolutePos = lineStartPos + baseIndex + 1; // Convert back to 1-based for comparison
+          const positionElement = parentLine.querySelector('.sequence-position');
+          if (!positionElement) return;
 
-      // Check if this base is within the gene range
-      if (absolutePos >= gene.start && absolutePos <= gene.end) {
-        baseElement.classList.add('sequence-selected');
-        baseElement.classList.add('gene-sequence-selected');
-      }
-    });
+          const lineStartPos = parseInt(positionElement.textContent.replace(/,/g, ''), 10) - 1;
+          const basesDiv = baseElement.closest('.sequence-bases');
+          if (!basesDiv) return;
+
+          const baseIndex = Array.from(basesDiv.querySelectorAll('span')).indexOf(baseElement);
+          absolutePos = lineStartPos + baseIndex + 1;
+        }
+
+        // Check if this base is within the gene range
+        if (absolutePos !== null && absolutePos >= gene.start && absolutePos <= gene.end) {
+          baseElement.classList.add('sequence-selected');
+          baseElement.classList.add('gene-sequence-selected');
+        }
+      });
+    }
 
     // Update copy button text to indicate gene sequence is selected
     this.updateCopyButtonState();
