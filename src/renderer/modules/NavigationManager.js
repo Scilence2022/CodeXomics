@@ -1190,7 +1190,7 @@ class NavigationManager {
       const firstSequenceLine = sequenceView?.querySelector('.sequence-line .sequence-bases');
       let basesPerLine = parseInt(sequenceView?.dataset?.basesPerLine, 10) || 100; // Default fallback
 
-      if (firstSequenceLine) {
+      if (firstSequenceLine && !isVirtualized) {
         // Count actual characters in the first line
         const textContent = firstSequenceLine.textContent || '';
         // Remove any whitespace and count actual bases

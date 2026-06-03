@@ -200,7 +200,11 @@ describe('SequenceUtils circular bottom sequence track', () => {
     document.body.innerHTML = `
       <div id="sequenceContent">
         <div class="detailed-sequence-view virtualized" data-bases-per-line="50" data-line-height="32">
-          <div class="sequence-line-group"></div>
+          <div class="sequence-line-group">
+            <div class="sequence-line">
+              <div class="sequence-bases">ACG</div>
+            </div>
+          </div>
         </div>
       </div>
     `;
