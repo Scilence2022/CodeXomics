@@ -5312,7 +5312,7 @@ class GenomeBrowser {
         );
 
         // Auto-highlight sequence region if enabled
-        if (genesSettings.autoHighlightSequence) {
+        if (genesSettings.autoHighlightSequence !== false) {
           this.highlightGeneSequence(gene);
         }
         return; // Canvas mode handled — skip SVG/DOM logic below
@@ -5387,9 +5387,28 @@ class GenomeBrowser {
     }
 
     // Auto-highlight sequence region if enabled
-    if (genesSettings.autoHighlightSequence) {
+    if (genesSettings.autoHighlightSequence !== false) {
       this.highlightGeneSequence(gene);
     }
+  }
+
+  scrollBottomSequenceToGene(gene) {
+    if (!gene || !this.navigationManager?.scrollToMatchPosition) return;
+
+    const currentStart = this.currentPosition?.start ?? 0;
+    const currentEnd = this.currentPosition?.end ?? 0;
+    const geneStartZeroBased = Math.max(0, (parseInt(gene.start, 10) || 1) - 1);
+
+    if (geneStartZeroBased < currentStart || geneStartZeroBased >= currentEnd) {
+      console.log('Gene is outside current view, skipping bottom sequence scroll');
+      return;
+    }
+
+    this.navigationManager.scrollToMatchPosition({
+      position: geneStartZeroBased,
+      end: Math.max(geneStartZeroBased, (parseInt(gene.end, 10) || gene.start) - 1),
+      type: 'gene',
+    });
   }
 
   /**

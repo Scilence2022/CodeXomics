@@ -7252,7 +7252,11 @@ class TrackRenderer {
     this.genomeBrowser.selectGene(gene, operonInfo);
     this.genomeBrowser.showGeneDetailsPanel();
     this.genomeBrowser.populateGeneDetails(gene, operonInfo);
-    this.genomeBrowser.highlightGeneSequence(gene);
+
+    const genesSettings = this.getTrackSettings('genes');
+    if (genesSettings.autoScrollBottomSequenceOnGeneSelect !== false) {
+      this.genomeBrowser.scrollBottomSequenceToGene?.(gene);
+    }
   }
 
   showProteinDetails(protein, chromosome) {
@@ -11088,10 +11092,17 @@ This action cannot be undone.`;
                             </div>
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="genesAutoHighlightSequence" ${settings.autoHighlightSequence ? 'checked' : ''}>
+                                    <input type="checkbox" id="genesAutoHighlightSequence" ${settings.autoHighlightSequence !== false ? 'checked' : ''}>
                                     Auto-highlight sequence region when gene is selected
                                 </label>
                                 <div class="help-text">When enabled, automatically highlights the corresponding sequence region in the reference sequence when a gene is selected.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="genesAutoScrollBottomSequence" ${settings.autoScrollBottomSequenceOnGeneSelect !== false ? 'checked' : ''}>
+                                    Auto-scroll Bottom Sequence Track to selected gene
+                                </label>
+                                <div class="help-text">When enabled, clicking a gene in this track scrolls the Bottom Sequence Track to the selected gene position.</div>
                             </div>
                         </div>
                     </div>
@@ -12041,7 +12052,8 @@ This action cannot be undone.`;
         layoutMode: 'compact', // 'compact' or 'groupByType'
         enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false, // Inherit from global setting, default to true
         highlightEffect: 'pulse', // 'pulse', 'border', 'both'
-        autoHighlightSequence: false, // Auto-highlight sequence region when gene is selected
+        autoHighlightSequence: true, // Auto-highlight sequence region when gene is selected
+        autoScrollBottomSequenceOnGeneSelect: true, // Scroll Bottom Sequence Track to selected gene
         showSequence: false, // Show reference sequence
         sequenceHeight: 25, // Height of reference sequence display
         renderingMode: 'svg', // 'svg' or 'canvas'
@@ -12761,6 +12773,7 @@ This action cannot be undone.`;
         const sequenceHeightElement = modal.querySelector('#genesSequenceHeight');
         const highlightEffectElement = modal.querySelector('#genesHighlightEffect');
         const autoHighlightSequenceElement = modal.querySelector('#genesAutoHighlightSequence');
+        const autoScrollBottomSequenceElement = modal.querySelector('#genesAutoScrollBottomSequence');
 
         console.log('Form elements found:', {
           renderingModeElement: !!renderingModeElement,
@@ -12792,7 +12805,8 @@ This action cannot be undone.`;
         settings.showSequence = showSequenceElement?.checked || false; // Default to false (hidden)
         settings.sequenceHeight = parseInt(sequenceHeightElement?.value) || 25;
         settings.highlightEffect = highlightEffectElement?.value || 'pulse';
-        settings.autoHighlightSequence = autoHighlightSequenceElement?.checked || false;
+        settings.autoHighlightSequence = autoHighlightSequenceElement?.checked !== false;
+        settings.autoScrollBottomSequenceOnGeneSelect = autoScrollBottomSequenceElement?.checked !== false;
 
         const maxBorderWidthElement = modal.querySelector('#genesMaxBorderWidth');
         settings.maxBorderWidth = parseFloat(maxBorderWidthElement?.value) || 1;
@@ -14997,6 +15011,15 @@ This action cannot be undone.`;
       autoHighlightSequenceCheckbox.addEventListener('change', e => {
         console.log(
           `🔧 [setupGenesSettingsEventListeners] Auto-highlight sequence changed to: ${e.target.checked} (will apply on Apply button)`
+        );
+      });
+    }
+
+    const autoScrollBottomSequenceCheckbox = bodyElement.querySelector('#genesAutoScrollBottomSequence');
+    if (autoScrollBottomSequenceCheckbox) {
+      autoScrollBottomSequenceCheckbox.addEventListener('change', e => {
+        console.log(
+          `🔧 [setupGenesSettingsEventListeners] Auto-scroll Bottom Sequence Track changed to: ${e.target.checked} (will apply on Apply button)`
         );
       });
     }

@@ -15383,8 +15383,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           },
           autoHighlightSequence: {
             type: 'boolean',
-            default: false,
+            default: true,
             description: 'Auto-highlight sequence region when gene is selected',
+          },
+          autoScrollBottomSequenceOnGeneSelect: {
+            type: 'boolean',
+            default: true,
+            description: 'Auto-scroll Bottom Sequence Track to the selected gene when a gene is clicked',
           },
           showSequence: { type: 'boolean', default: false, description: 'Show reference sequence' },
           sequenceHeight: {
