@@ -1182,6 +1182,9 @@ function registerIpcHandlers(deps) {
           modified: stats.mtime,
           name: path.basename(safeFilePath),
           extension: path.extname(safeFilePath),
+          isDirectory: stats.isDirectory(),
+          isFile: stats.isFile(),
+          path: safeFilePath,
         },
       };
     } catch (error) {

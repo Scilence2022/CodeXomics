@@ -135,7 +135,7 @@ class ToolExecutionTracker {
   getSessionExecutions(sessionId = null) {
     const targetSessionId = sessionId || this.currentSessionId;
     if (!targetSessionId) {
-      console.warn('⚠️ [ToolExecutionTracker] No session ID provided and no current session');
+      console.debug('ℹ️ [ToolExecutionTracker] No session ID provided and no current session');
       return [];
     }
 

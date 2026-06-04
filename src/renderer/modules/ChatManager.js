@@ -1231,62 +1231,98 @@ class ChatManager {
     try {
       let targetPath;
       const previousDirectory = this.getCurrentWorkingDirectory();
+      const pathModule =
+        (typeof window !== 'undefined' && window.path) ||
+        (typeof require !== 'undefined' ? require('path') : null);
+      const isAbsolutePath = candidatePath => {
+        if (pathModule && typeof pathModule.isAbsolute === 'function') {
+          return pathModule.isAbsolute(candidatePath);
+        }
+        return /^(?:\/|[A-Za-z]:[\\/])/.test(String(candidatePath || ''));
+      };
 
       // Determine target directory
       if (use_home_directory) {
-        const os = require('os');
-        targetPath = os.homedir() || this.getCurrentWorkingDirectory();
+        const osModule =
+          (typeof window !== 'undefined' && window.os) || (typeof require !== 'undefined' ? require('os') : null);
+        targetPath =
+          osModule && typeof osModule.homedir === 'function' && osModule.homedir()
+            ? osModule.homedir()
+            : this.getCurrentWorkingDirectory();
         // [ChatManager] Using home directory
       } else if (directory_path) {
-        const path = require('path');
         // Handle both absolute and relative paths
-        targetPath = path.isAbsolute(directory_path)
+        targetPath = isAbsolutePath(directory_path)
           ? directory_path
-          : path.resolve(this.getCurrentWorkingDirectory(), directory_path);
+          : pathModule && typeof pathModule.resolve === 'function'
+            ? pathModule.resolve(this.getCurrentWorkingDirectory(), directory_path)
+            : `${this.getCurrentWorkingDirectory().replace(/\/+$/g, '')}/${directory_path}`;
         // [ChatManager] Target directory
       } else {
         throw new Error('Either directory_path or use_home_directory must be provided');
       }
 
       // Validate and setup directory
-      const fs = require('fs');
-      const path = require('path');
-
-      // Check if directory exists
-      if (!fs.existsSync(targetPath)) {
-        if (create_if_missing) {
-          // [ChatManager] Creating directory
-          fs.mkdirSync(targetPath, { recursive: true });
-        } else {
-          throw new Error(`Directory '${targetPath}' does not exist`);
-        }
-      }
-
-      // Validate it's actually a directory
-      const stats = fs.statSync(targetPath);
-      if (!stats.isDirectory()) {
-        throw new Error(`Path '${targetPath}' is not a directory`);
-      }
-
-      // Check permissions if requested
+      let createdDirectory = false;
       const permissions = { readable: false, writable: false };
-      if (validate_permissions) {
-        try {
-          fs.accessSync(targetPath, fs.constants.R_OK);
-          permissions.readable = true;
-        } catch (e) {
-          // [ChatManager] Directory not readable
+
+      if (typeof window !== 'undefined' && window.electronAPI?.getSelectedFileInfo) {
+        let infoResult = await window.electronAPI.getSelectedFileInfo(targetPath);
+        if ((!infoResult || !infoResult.success) && create_if_missing && window.electronAPI.ensureDirectory) {
+          const createResult = await window.electronAPI.ensureDirectory(targetPath);
+          if (!createResult?.success) {
+            throw new Error(createResult?.error || `Failed to create directory '${targetPath}'`);
+          }
+          createdDirectory = true;
+          infoResult = await window.electronAPI.getSelectedFileInfo(targetPath);
         }
 
-        try {
-          fs.accessSync(targetPath, fs.constants.W_OK);
-          permissions.writable = true;
-        } catch (e) {
-          // [ChatManager] Directory not writable
+        if (!infoResult || !infoResult.success) {
+          throw new Error(infoResult?.error || `Directory '${targetPath}' does not exist`);
         }
 
-        if (!permissions.readable) {
-          throw new Error(`Permission denied: Cannot read directory '${targetPath}'`);
+        if (!infoResult.info?.isDirectory) {
+          throw new Error(`Path '${targetPath}' is not a directory`);
+        }
+
+        permissions.readable = true;
+        permissions.writable = validate_permissions ? true : false;
+        targetPath = infoResult.info.path || targetPath;
+      } else {
+        const fs = require('fs');
+
+        if (!fs.existsSync(targetPath)) {
+          if (create_if_missing) {
+            fs.mkdirSync(targetPath, { recursive: true });
+            createdDirectory = true;
+          } else {
+            throw new Error(`Directory '${targetPath}' does not exist`);
+          }
+        }
+
+        const stats = fs.statSync(targetPath);
+        if (!stats.isDirectory()) {
+          throw new Error(`Path '${targetPath}' is not a directory`);
+        }
+
+        if (validate_permissions) {
+          try {
+            fs.accessSync(targetPath, fs.constants.R_OK);
+            permissions.readable = true;
+          } catch (e) {
+            // [ChatManager] Directory not readable
+          }
+
+          try {
+            fs.accessSync(targetPath, fs.constants.W_OK);
+            permissions.writable = true;
+          } catch (e) {
+            // [ChatManager] Directory not writable
+          }
+
+          if (!permissions.readable) {
+            throw new Error(`Permission denied: Cannot read directory '${targetPath}'`);
+          }
         }
       }
 
@@ -1305,10 +1341,9 @@ class ChatManager {
 
       const result = {
         success: true,
-        message:
-          create_if_missing && !fs.existsSync(targetPath)
-            ? `Working directory set to ${targetPath} (created)`
-            : `Working directory set to ${targetPath}`,
+        message: createdDirectory
+          ? `Working directory set to ${targetPath} (created)`
+          : `Working directory set to ${targetPath}`,
         current_directory: targetPath,
         previous_directory: previousDirectory,
         permissions: permissions,

@@ -176,6 +176,8 @@ class LLMBenchmarkFramework {
 
     this.isRunning = true;
     const startTime = Date.now();
+    let benchmarkRunSessionId = null;
+    const previousBenchmarkAutomationActive = this.chatManager?.benchmarkAutomationActive === true;
 
     // Set timeout from options if provided
     // If timeout is null, it means use individual test timeouts
@@ -205,6 +207,19 @@ class LLMBenchmarkFramework {
     this.totalDelayTime = 0;
 
     try {
+      if (this.chatManager) {
+        this.chatManager.benchmarkAutomationActive = true;
+        if (this.chatManager.toolExecutionTracker) {
+          benchmarkRunSessionId = `benchmark_run_${startTime}`;
+          this.chatManager.toolExecutionTracker.startSession(benchmarkRunSessionId, {
+            benchmark: true,
+            scope: 'run',
+            startTime,
+          });
+          console.log(`🔬 [Benchmark] Started run-level tracker session: ${benchmarkRunSessionId}`);
+        }
+      }
+
       const results = {
         startTime: startTime,
         endTime: null,
@@ -353,6 +368,13 @@ class LLMBenchmarkFramework {
 
       return results;
     } finally {
+      if (benchmarkRunSessionId && this.chatManager?.toolExecutionTracker) {
+        this.chatManager.toolExecutionTracker.endSession(benchmarkRunSessionId);
+        console.log(`🔬 [Benchmark] Ended run-level tracker session: ${benchmarkRunSessionId}`);
+      }
+      if (this.chatManager) {
+        this.chatManager.benchmarkAutomationActive = previousBenchmarkAutomationActive;
+      }
       this.isRunning = false;
     }
   }
@@ -397,7 +419,7 @@ class LLMBenchmarkFramework {
           this.chatManager.addThinkingMessage(
             `⚠️ **Working Directory Warning**</br>` +
               `• Attempted Directory: \`${normalizedPath}\`</br>` +
-              `• Result: ${result?.message || 'Unknown error'}</br>` +
+              `• Result: ${result?.message || result?.error || 'Unknown error'}</br>` +
               `• Continuing with current working directory</br></br>`
           );
         }
@@ -930,18 +952,25 @@ class LLMBenchmarkFramework {
   async executeTest(test) {
     const startTime = Date.now();
 
-    // CRITICAL FIX: Initialize Tool Execution Tracker session for benchmark test
     let benchmarkSessionId = null;
+    let createdTrackerSessionForTest = false;
     if (this.chatManager && this.chatManager.toolExecutionTracker) {
-      benchmarkSessionId = `benchmark_${test.id}_${Date.now()}`;
-      this.chatManager.toolExecutionTracker.startSession(benchmarkSessionId, {
-        testId: test.id,
-        testName: test.name,
-        testType: test.type,
-        benchmark: true,
-        startTime: startTime,
-      });
-      console.log(`🔬 [Benchmark] Started tracker session: ${benchmarkSessionId}`);
+      if (this.chatManager.toolExecutionTracker.currentSessionId) {
+        benchmarkSessionId = this.chatManager.toolExecutionTracker.currentSessionId;
+        this.chatManager.toolExecutionTracker.setCurrentTestId(test.id);
+        console.log(`🔬 [Benchmark] Using tracker session ${benchmarkSessionId} for test ${test.id}`);
+      } else {
+        benchmarkSessionId = `benchmark_${test.id}_${Date.now()}`;
+        createdTrackerSessionForTest = true;
+        this.chatManager.toolExecutionTracker.startSession(benchmarkSessionId, {
+          testId: test.id,
+          testName: test.name,
+          testType: test.type,
+          benchmark: true,
+          startTime: startTime,
+        });
+        console.log(`🔬 [Benchmark] Started tracker session: ${benchmarkSessionId}`);
+      }
     }
 
     // Check if this is a manual evaluation test
@@ -951,7 +980,7 @@ class LLMBenchmarkFramework {
         return await this.executeManualTest(test);
       } finally {
         // End tracker session for manual tests
-        if (benchmarkSessionId && this.chatManager.toolExecutionTracker) {
+        if (benchmarkSessionId && createdTrackerSessionForTest && this.chatManager.toolExecutionTracker) {
           this.chatManager.toolExecutionTracker.endSession(benchmarkSessionId);
           console.log(`🔬 [Benchmark] Ended tracker session for manual test: ${benchmarkSessionId}`);
         }
@@ -1064,7 +1093,7 @@ class LLMBenchmarkFramework {
       }
 
       // CRITICAL FIX: End Tool Execution Tracker session for benchmark test
-      if (benchmarkSessionId && this.chatManager && this.chatManager.toolExecutionTracker) {
+      if (benchmarkSessionId && createdTrackerSessionForTest && this.chatManager && this.chatManager.toolExecutionTracker) {
         this.chatManager.toolExecutionTracker.endSession(benchmarkSessionId);
         console.log(`🔬 [Benchmark] Ended tracker session: ${benchmarkSessionId}`);
       }

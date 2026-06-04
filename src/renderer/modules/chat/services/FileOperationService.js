@@ -8,22 +8,55 @@ class FileOperationService {
     this.chatManager = chatManager;
   }
 
+  isBenchmarkAutomationMode() {
+    const sessionId = this.chatManager?.toolExecutionTracker?.currentSessionId || '';
+    return this.chatManager?.benchmarkAutomationActive === true || sessionId.startsWith('benchmark');
+  }
+
+  requireExplicitFilePathForBenchmark(toolName) {
+    if (this.isBenchmarkAutomationMode()) {
+      throw new Error(`${toolName} requires an explicit filePath during benchmark automation; file dialogs require user activation.`);
+    }
+  }
+
+  async validateFilePath(filePath, label = 'File') {
+    if (!filePath) {
+      throw new Error(`${label} path is required`);
+    }
+
+    if (typeof window !== 'undefined' && window.electronAPI?.getSelectedFileInfo) {
+      const infoResult = await window.electronAPI.getSelectedFileInfo(filePath);
+      if (!infoResult?.success) {
+        throw new Error(infoResult?.error || `${label} not found: ${filePath}`);
+      }
+      if (infoResult.info?.isDirectory) {
+        throw new Error(`${label} path is a directory, expected a file: ${filePath}`);
+      }
+      return infoResult;
+    }
+
+    if (typeof require !== 'undefined') {
+      const fs = require('fs');
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`${label} not found: ${filePath}`);
+      }
+    }
+
+    return { success: true };
+  }
+
   // 1. FILE LOADING OPERATIONS
   async loadGenomeFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
+      const { showFileDialog = false, fileType = 'auto' } = parameters;
 
-      if (filePath && !showFileDialog) {
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) {
           throw new Error('FileManager not available');
         }
 
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) {
-            throw new Error(`File not found: ${filePath}`);
-          }
-        }
+        await this.validateFilePath(filePath, 'Genome file');
 
         await this.app.fileManager.loadFile(filePath);
 
@@ -36,6 +69,7 @@ class FileOperationService {
           timestamp: new Date().toISOString(),
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_genome_file');
         if (!this.app?.fileManager) {
           throw new Error('FileManager not available');
         }
@@ -65,8 +99,8 @@ class FileOperationService {
   async loadAnnotationFile(parameters = {}) {
     try {
       // Support both loadMode and mergeWithExisting for compatibility
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
       const {
-        filePath,
         showFileDialog = false,
         fileType = 'auto',
         loadMode,
@@ -86,17 +120,12 @@ class FileOperationService {
 
       const options = mergeWithExisting !== undefined ? { mergeWithExisting } : {};
 
-      if (filePath && !showFileDialog) {
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) {
           throw new Error('FileManager not available');
         }
 
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) {
-            throw new Error(`File not found: ${filePath}`);
-          }
-        }
+        await this.validateFilePath(filePath, 'Annotation file');
 
         // Load annotation file passing merge options
         await this.app.fileManager.loadFile(filePath, options);
@@ -110,6 +139,7 @@ class FileOperationService {
           timestamp: new Date().toISOString(),
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_annotation_file');
         if (!this.app?.fileManager) {
           throw new Error('FileManager not available');
         }
@@ -506,13 +536,11 @@ class FileOperationService {
 
   async loadVariantFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false } = parameters;
-      if (filePath && !showFileDialog) {
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
+      const { showFileDialog = false } = parameters;
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
-        }
+        await this.validateFilePath(filePath, 'Variant file');
         await this.app.fileManager.loadFile(filePath);
         return {
           success: true,
@@ -521,6 +549,7 @@ class FileOperationService {
           fileType: 'variant',
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_variant_file');
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('variant');
         return {
@@ -538,16 +567,15 @@ class FileOperationService {
 
   async loadReadsFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false } = parameters;
-      if (filePath && !showFileDialog) {
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
+      const { showFileDialog = false } = parameters;
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
-        }
+        await this.validateFilePath(filePath, 'Reads file');
         await this.app.fileManager.loadFile(filePath);
         return { success: true, message: `Successfully loaded reads file: ${filePath}`, filePath, fileType: 'reads' };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_reads_file');
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('reads');
         return {
@@ -565,15 +593,13 @@ class FileOperationService {
 
   async loadWigTracks(parameters = {}) {
     try {
-      const { filePaths, showFileDialog = false, multiple = true } = parameters;
-      if (filePaths && !showFileDialog) {
+      const filePaths = parameters.filePaths || parameters.file_paths || parameters.filePath || parameters.file_path;
+      const { showFileDialog = false, multiple = true } = parameters;
+      if (filePaths && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         const pathsArray = Array.isArray(filePaths) ? filePaths : [filePaths];
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          for (const path of pathsArray) {
-            if (!fs.existsSync(path)) throw new Error(`File not found: ${path}`);
-          }
+        for (const wigPath of pathsArray) {
+          await this.validateFilePath(wigPath, 'WIG track file');
         }
         if (pathsArray.length > 1) await this.app.fileManager.loadMultipleWIGFiles(pathsArray);
         else await this.app.fileManager.loadFile(pathsArray[0]);
@@ -585,6 +611,7 @@ class FileOperationService {
           count: pathsArray.length,
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_wig_tracks');
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('tracks');
         return {
@@ -603,13 +630,11 @@ class FileOperationService {
 
   async loadOperonFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false, format = 'auto' } = parameters;
-      if (filePath && !showFileDialog) {
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
+      const { showFileDialog = false, format = 'auto' } = parameters;
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
-        }
+        await this.validateFilePath(filePath, 'Operon file');
         await this.app.fileManager.loadOperonFile(filePath);
         return {
           success: true,
@@ -619,6 +644,7 @@ class FileOperationService {
           format,
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_operon_file');
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('operon');
         return {
@@ -796,7 +822,13 @@ class FileOperationService {
   }
 
   getCurrentWorkingDirectory() {
-    return this.chatManager.currentWorkingDirectory || process.cwd();
+    if (this.chatManager?.currentWorkingDirectory) {
+      return this.chatManager.currentWorkingDirectory;
+    }
+    if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
+      return process.cwd();
+    }
+    return '/';
   }
 
   // Aliases for ToolExecutionService

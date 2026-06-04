@@ -259,6 +259,7 @@ const safePath = {
     const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
     return joined.replace(/\/+/g, '/').replace(/([^:])\/+$/g, '$1');
   },
+  isAbsolute: filePath => /^(?:\/|[A-Za-z]:[\\/])/.test(String(filePath || '')),
   resolve: (...parts) => {
     const joined = safePath.join(...parts);
     if (!joined) return '.';
