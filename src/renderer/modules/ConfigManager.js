@@ -587,7 +587,12 @@ class ConfigManager {
         console.log(`  ${key}: ${path}`);
       });
       // File-based config for Electron
-      await this.loadFromFiles();
+      try {
+        await this.loadFromFiles();
+      } catch (error) {
+        console.warn('File-based configuration unavailable, falling back to localStorage:', error.message);
+        this.loadFromLocalStorage();
+      }
     } else {
       console.log('Loading configuration from LOCALSTORAGE (fallback)');
       // localStorage fallback
@@ -818,8 +823,14 @@ class ConfigManager {
         Object.entries(this.configPath).forEach(([key, path]) => {
           console.log(`  ${key}: ${path}`);
         });
-        await this.saveToFiles();
-        console.log('Configuration saved to files');
+        const savedToFiles = await this.saveToFiles();
+        if (savedToFiles === false) {
+          console.warn('File-based configuration save unavailable, falling back to localStorage');
+          this.saveToLocalStorage();
+          console.log('Configuration saved to localStorage fallback');
+        } else {
+          console.log('Configuration saved to files');
+        }
       } else {
         console.log('Saving configuration to LOCALSTORAGE (fallback)');
         this.saveToLocalStorage();
@@ -1049,12 +1060,13 @@ class ConfigManager {
 
       console.log('All configuration files saved successfully');
       console.log('=== saveToFiles Debug End ===');
+      return true;
     } catch (error) {
       console.error('Error saving configuration to files:', error);
       console.error('=== saveToFiles Debug End (ERROR) ===');
 
-      // Don't throw the error, just log it to prevent app crashes
-      console.warn('Configuration save failed, but continuing execution to prevent app crash');
+      // Return false so saveConfig can persist to localStorage fallback.
+      return false;
     }
   }
 

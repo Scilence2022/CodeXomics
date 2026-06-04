@@ -3798,6 +3798,7 @@ class ChatManager {
     const existingChatPanel = document.getElementById('llmChatPanel');
     if (existingChatPanel) {
       existingChatPanel.style.display = 'flex';
+      this.ensureChatPanelInViewport(existingChatPanel);
       this.configManager.set('chat.visible', true);
       return;
     }
@@ -3807,8 +3808,12 @@ class ChatManager {
     const defaultPosition = this.getDefaultChatPosition();
 
     // Load saved position and size
-    const savedPosition = this.configManager.get('chat.position', defaultPosition);
-    const savedSize = this.configManager.get('chat.size', defaultSize);
+    const savedSize = this.normalizeChatSize(this.configManager.get('chat.size', defaultSize), defaultSize);
+    const savedPosition = this.normalizeChatPosition(
+      this.configManager.get('chat.position', defaultPosition),
+      savedSize,
+      defaultPosition
+    );
 
     // Create chat panel HTML
     const chatHTML = `
@@ -3939,6 +3944,7 @@ class ChatManager {
     const chatPanel = document.getElementById('llmChatPanel');
     if (chatPanel) {
       chatPanel.style.display = 'flex';
+      this.ensureChatPanelInViewport(chatPanel);
       this.configManager.set('chat.visible', true);
       console.log('ChatBox created with visibility: visible');
     }
@@ -3967,6 +3973,8 @@ class ChatManager {
           chatPanel.style.left = freshDefaultPos.x + 'px';
           chatPanel.style.top = freshDefaultPos.y + 'px';
         }
+
+        this.ensureChatPanelInViewport(chatPanel);
       }
 
       // Restore dock state from config
@@ -3994,6 +4002,63 @@ class ChatManager {
     console.log('Chat position calculation:', { viewportWidth, viewportHeight, x, y, defaultSize });
 
     return { x, y };
+  }
+
+  getChatViewport() {
+    return {
+      width: Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0),
+      height: Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0),
+    };
+  }
+
+  normalizeChatSize(size, fallback = { width: 400, height: 600 }) {
+    const viewport = this.getChatViewport();
+    const width = Number(size?.width);
+    const height = Number(size?.height);
+    const maxWidth = Math.max(320, viewport.width - 20);
+    const maxHeight = Math.max(420, viewport.height - 20);
+
+    return {
+      width: Math.max(300, Math.min(Number.isFinite(width) ? width : fallback.width, maxWidth)),
+      height: Math.max(400, Math.min(Number.isFinite(height) ? height : fallback.height, maxHeight)),
+    };
+  }
+
+  normalizeChatPosition(position, size, fallback = this.getDefaultChatPosition()) {
+    const viewport = this.getChatViewport();
+    const rawX = Number(position?.x);
+    const rawY = Number(position?.y);
+    const x = Number.isFinite(rawX) ? rawX : fallback.x;
+    const y = Number.isFinite(rawY) ? rawY : fallback.y;
+    const maxLeft = Math.max(10, viewport.width - size.width - 10);
+    const maxTop = Math.max(10, viewport.height - size.height - 10);
+
+    return {
+      x: Math.max(10, Math.min(x, maxLeft)),
+      y: Math.max(10, Math.min(y, maxTop)),
+    };
+  }
+
+  ensureChatPanelInViewport(chatPanel) {
+    if (!chatPanel || chatPanel.classList.contains('docked')) return;
+
+    const currentSize = {
+      width: parseInt(chatPanel.style.width, 10),
+      height: parseInt(chatPanel.style.height, 10),
+    };
+    const size = this.normalizeChatSize(currentSize);
+    const position = this.normalizeChatPosition(
+      {
+        x: parseInt(chatPanel.style.left, 10),
+        y: parseInt(chatPanel.style.top, 10),
+      },
+      size
+    );
+
+    chatPanel.style.left = position.x + 'px';
+    chatPanel.style.top = position.y + 'px';
+    chatPanel.style.width = size.width + 'px';
+    chatPanel.style.height = size.height + 'px';
   }
 
   /**
@@ -4033,6 +4098,7 @@ class ChatManager {
         if (needsUpdate) {
           chatPanel.style.left = newLeft + 'px';
           chatPanel.style.top = newTop + 'px';
+          this.ensureChatPanelInViewport(chatPanel);
           console.log('Chat position adjusted on resize:', { newLeft, newTop });
         }
       }
@@ -4428,6 +4494,7 @@ class ChatManager {
     const chatPanel = document.getElementById('llmChatPanel');
     if (chatPanel) {
       chatPanel.style.display = 'flex';
+      this.ensureChatPanelInViewport(chatPanel);
       this.configManager.set('chat.visible', true);
       console.log('ChatBox forced to visible');
     }

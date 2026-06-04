@@ -4,6 +4,7 @@ import path from 'path';
 
 const CHAT_MANAGER_PATH = path.join(process.cwd(), 'src/renderer/modules/ChatManager.js');
 const RENDERER_PATH = path.join(process.cwd(), 'src/renderer/renderer-modular.js');
+const CONFIG_MANAGER_PATH = path.join(process.cwd(), 'src/renderer/modules/ConfigManager.js');
 
 describe('ChatBox visibility startup behavior', () => {
   it('creates the ChatBox in a visible state on startup', () => {
@@ -32,11 +33,28 @@ describe('ChatBox visibility startup behavior', () => {
     expect(content).toContain("const appDiv = document.getElementById('app') || document.body;");
   });
 
+  it('clamps ChatBox geometry into the viewport on startup and forced show', () => {
+    const content = fs.readFileSync(CHAT_MANAGER_PATH, 'utf-8');
+
+    expect(content).toContain('normalizeChatSize(');
+    expect(content).toContain('normalizeChatPosition(');
+    expect(content).toContain('ensureChatPanelInViewport(chatPanel);');
+    expect(content).toContain('ensureChatPanelInViewport(existingChatPanel);');
+  });
+
   it('uses the real ChatBox panel selector when revealing chat from renderer flows', () => {
     const content = fs.readFileSync(RENDERER_PATH, 'utf-8');
 
     expect(content).toContain('this.chatManager.showChatBox();');
     expect(content).toContain("document.getElementById('llmChatPanel')");
     expect(content).not.toContain("document.querySelector('.chat-container')");
+  });
+
+  it('falls back to localStorage when hardened renderer blocks file config APIs', () => {
+    const content = fs.readFileSync(CONFIG_MANAGER_PATH, 'utf-8');
+
+    expect(content).toContain('File-based configuration unavailable, falling back to localStorage');
+    expect(content).toContain('File-based configuration save unavailable, falling back to localStorage');
+    expect(content).toContain('return false;');
   });
 });
