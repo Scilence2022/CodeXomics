@@ -34,6 +34,33 @@ class LLMBenchmarkFramework {
     this.setupEventHandlers();
   }
 
+  normalizeDirectoryPath(directoryPath) {
+    const rawPath = String(directoryPath || '').trim();
+    if (!rawPath) return rawPath;
+
+    try {
+      const pathModule = (typeof window !== 'undefined' && window.path) || (typeof require !== 'undefined' && require('path'));
+      if (pathModule && typeof pathModule.resolve === 'function') {
+        return pathModule.resolve(rawPath);
+      }
+    } catch (error) {
+      console.warn(`⚠️ [LLMBenchmarkFramework] Path normalization fallback used: ${error.message}`);
+    }
+
+    return rawPath.replace(/\\/g, '/').replace(/\/+/g, '/');
+  }
+
+  collectGarbageIfAvailable(reason) {
+    const runtimeGlobal =
+      typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : null;
+    if (runtimeGlobal && typeof runtimeGlobal.gc === 'function') {
+      runtimeGlobal.gc();
+      console.log(`🧹 ${reason}`);
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Initialize all test suites
    */
@@ -289,10 +316,9 @@ class LLMBenchmarkFramework {
           );
 
           // Force garbage collection if memory usage is high
-          if (memoryDelta > 100 * 1024 * 1024 && global.gc) {
+          if (memoryDelta > 100 * 1024 * 1024) {
             // 100MB threshold
-            global.gc();
-            console.log('🧹 Forced garbage collection due to high memory usage');
+            this.collectGarbageIfAvailable('Forced garbage collection due to high memory usage');
           }
         } catch (suiteError) {
           console.error(`❌ Error in test suite ${suiteId}:`, suiteError);
@@ -340,9 +366,8 @@ class LLMBenchmarkFramework {
     console.log('📁 [LLMBenchmarkFramework] Setting up benchmark working directory:', directoryPath);
 
     try {
-      // Ensure directory path is absolute and normalized
-      const path = require('path');
-      const normalizedPath = path.resolve(directoryPath);
+      // Ensure directory path is normalized without depending on unrestricted Node APIs in the renderer.
+      const normalizedPath = this.normalizeDirectoryPath(directoryPath);
 
       // Call ChatManager's setWorkingDirectory method directly
       if (this.chatManager && typeof this.chatManager.setWorkingDirectory === 'function') {
@@ -558,10 +583,7 @@ class LLMBenchmarkFramework {
       // MEMORY OPTIMIZATION: Force garbage collection every 5 tests AND check memory
       if (i % 5 === 0) {
         this.checkMemoryUsage();
-        if (global.gc) {
-          global.gc();
-          console.log(`🧹 Memory cleanup performed after test ${i + 1}`);
-        }
+        this.collectGarbageIfAvailable(`Memory cleanup performed after test ${i + 1}`);
       }
 
       // Add configurable delay every 10 tests to prevent rate limiting
@@ -5696,13 +5718,19 @@ class LLMBenchmarkFramework {
    */
   persistInteractionDataToDisk(testId, suiteId, interactionData) {
     try {
-      const path = require('path');
-      const os = require('os');
+      const pathModule = (typeof window !== 'undefined' && window.path) || (typeof require !== 'undefined' && require('path'));
+      const tmpDir =
+        (typeof window !== 'undefined' && window.os && typeof window.os.tmpdir === 'function' && window.os.tmpdir()) ||
+        '';
+
+      if (!pathModule || typeof pathModule.join !== 'function' || !tmpDir) {
+        return null;
+      }
 
       // Use a dedicated benchmark-data directory in the system temp folder
-      const benchmarkDir = path.join(os.tmpdir(), 'codexomics-benchmark-data');
+      const benchmarkDir = pathModule.join(tmpDir, 'codexomics-benchmark-data');
       const filename = `interaction_${suiteId}_${testId}_${Date.now()}.json`;
-      const filePath = path.join(benchmarkDir, filename);
+      const filePath = pathModule.join(benchmarkDir, filename);
 
       const jsonContent = JSON.stringify(interactionData);
 

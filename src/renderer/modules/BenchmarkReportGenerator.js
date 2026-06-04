@@ -11,6 +11,65 @@ class BenchmarkReportGenerator {
     };
   }
 
+  getDefaultSuiteStats() {
+    return {
+      totalTests: 0,
+      passedTests: 0,
+      failedTests: 0,
+      successRate: 0,
+      scoreStats: {
+        percentage: {
+          mean: 0,
+          standardDeviation: 0,
+        },
+      },
+      performanceStats: {
+        duration: {
+          mean: 0,
+          standardDeviation: 0,
+        },
+      },
+      errorAnalysis: {
+        errorRate: 0,
+      },
+    };
+  }
+
+  getSuiteStats(suiteResult) {
+    const defaults = this.getDefaultSuiteStats();
+    const stats = suiteResult?.stats || {};
+    const mergedStats = {
+      ...defaults,
+      ...stats,
+      scoreStats: {
+        ...defaults.scoreStats,
+        ...(stats.scoreStats || {}),
+        percentage: {
+          ...defaults.scoreStats.percentage,
+          ...(stats.scoreStats?.percentage || {}),
+        },
+      },
+      performanceStats: {
+        ...defaults.performanceStats,
+        ...(stats.performanceStats || {}),
+        duration: {
+          ...defaults.performanceStats.duration,
+          ...(stats.performanceStats?.duration || {}),
+        },
+      },
+      errorAnalysis: {
+        ...defaults.errorAnalysis,
+        ...(stats.errorAnalysis || {}),
+      },
+    };
+
+    if (suiteResult?.error && mergedStats.totalTests === 0) {
+      mergedStats.errorAnalysis.errorRate = 100;
+    }
+
+    return mergedStats;
+  }
+
   /**
    * Generate comprehensive report
    */
@@ -101,14 +160,15 @@ class BenchmarkReportGenerator {
 
     // Analyze each test suite
     for (const suiteResult of benchmarkResults.testSuiteResults) {
+      const suiteStats = this.getSuiteStats(suiteResult);
       analysis.testSuiteBreakdown.push({
         suiteName: suiteResult.suiteName,
         suiteId: suiteResult.suiteId,
         summary: {
-          totalTests: suiteResult.stats.totalTests,
-          successRate: suiteResult.stats.successRate,
-          averageScore: suiteResult.stats.scoreStats.percentage.mean,
-          averageDuration: suiteResult.stats.performanceStats.duration.mean,
+          totalTests: suiteStats.totalTests,
+          successRate: suiteStats.successRate,
+          averageScore: suiteStats.scoreStats.percentage.mean,
+          averageDuration: suiteStats.performanceStats.duration.mean,
         },
         strengths: this.identifyStrengths(suiteResult),
         weaknesses: this.identifyWeaknesses(suiteResult),
@@ -527,16 +587,17 @@ class BenchmarkReportGenerator {
 
   identifyStrengths(suiteResult) {
     const strengths = [];
+    const stats = this.getSuiteStats(suiteResult);
 
-    if (suiteResult.stats.successRate > 85) {
+    if (stats.successRate > 85) {
       strengths.push('High success rate');
     }
 
-    if (suiteResult.stats.scoreStats.percentage.mean > 80) {
+    if (stats.scoreStats.percentage.mean > 80) {
       strengths.push('Strong average performance');
     }
 
-    if (suiteResult.stats.errorAnalysis.errorRate < 5) {
+    if (stats.errorAnalysis.errorRate < 5) {
       strengths.push('Low error rate');
     }
 
@@ -545,16 +606,17 @@ class BenchmarkReportGenerator {
 
   identifyWeaknesses(suiteResult) {
     const weaknesses = [];
+    const stats = this.getSuiteStats(suiteResult);
 
-    if (suiteResult.stats.successRate < 70) {
+    if (stats.successRate < 70) {
       weaknesses.push('Below-target success rate');
     }
 
-    if (suiteResult.stats.errorAnalysis.errorRate > 10) {
+    if (stats.errorAnalysis.errorRate > 10) {
       weaknesses.push('High error rate');
     }
 
-    if (suiteResult.stats.performanceStats.duration.mean > 15000) {
+    if (stats.performanceStats.duration.mean > 15000) {
       weaknesses.push('Slow response times');
     }
 
@@ -563,13 +625,14 @@ class BenchmarkReportGenerator {
 
   generateSuiteInsights(suiteResult) {
     const insights = [];
+    const stats = this.getSuiteStats(suiteResult);
 
     // Add suite-specific insights based on performance patterns
-    if (suiteResult.stats.scoreStats.percentage.standardDeviation > 25) {
+    if (stats.scoreStats.percentage.standardDeviation > 25) {
       insights.push('High variability in test scores suggests inconsistent performance');
     }
 
-    if (suiteResult.stats.performanceStats.duration.standardDeviation > 5000) {
+    if (stats.performanceStats.duration.standardDeviation > 5000) {
       insights.push('Response times vary significantly across tests');
     }
 
@@ -581,6 +644,7 @@ class BenchmarkReportGenerator {
     const categories = {};
 
     for (const suiteResult of benchmarkResults.testSuiteResults) {
+      const stats = this.getSuiteStats(suiteResult);
       const category = this.categorizeTestSuite(suiteResult.suiteId);
       if (!categories[category]) {
         categories[category] = {
@@ -591,18 +655,17 @@ class BenchmarkReportGenerator {
         };
       }
 
-      categories[category].testCount += suiteResult.stats.totalTests;
-      categories[category].successCount += suiteResult.stats.passedTests;
-      categories[category].totalScore += suiteResult.stats.scoreStats.percentage.mean * suiteResult.stats.totalTests;
-      categories[category].totalDuration +=
-        suiteResult.stats.performanceStats.duration.mean * suiteResult.stats.totalTests;
+      categories[category].testCount += stats.totalTests;
+      categories[category].successCount += stats.passedTests;
+      categories[category].totalScore += stats.scoreStats.percentage.mean * stats.totalTests;
+      categories[category].totalDuration += stats.performanceStats.duration.mean * stats.totalTests;
     }
 
     // Calculate averages
     for (const category of Object.values(categories)) {
-      category.successRate = (category.successCount / category.testCount) * 100;
-      category.averageScore = category.totalScore / category.testCount;
-      category.averageDuration = category.totalDuration / category.testCount;
+      category.successRate = category.testCount > 0 ? (category.successCount / category.testCount) * 100 : 0;
+      category.averageScore = category.testCount > 0 ? category.totalScore / category.testCount : 0;
+      category.averageDuration = category.testCount > 0 ? category.totalDuration / category.testCount : 0;
     }
 
     return categories;

@@ -78,8 +78,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
 
     if (typeof require === 'undefined') return;
 
-    const fs = require('fs');
     try {
+      const fs = require('fs');
       if (!fs.existsSync(exportedFilesDir)) return;
 
       const files = fs.readdirSync(exportedFilesDir);
@@ -91,6 +91,10 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       }
       console.log(`🧹 Cleaned up ${files.length} export files`);
     } catch (error) {
+      if (/Blocked renderer require\('fs'\)/.test(error.message)) {
+        console.info('ℹ️ Export cleanup skipped in hardened renderer; filesystem access is main-process only.');
+        return;
+      }
       console.warn(`⚠️ Export cleanup error: ${error.message}`);
     }
   }

@@ -167,6 +167,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           }
         }
       } catch (error) {
+        if (/Blocked renderer require\('fs'\)/.test(error.message)) {
+          console.info(
+            'ℹ️ [AutomaticComplexSuite] Export cleanup skipped in hardened renderer; filesystem access is main-process only.'
+          );
+          return;
+        }
         console.warn(`⚠️  [AutomaticComplexSuite] Error during directory cleanup: ${error.message}`);
       }
     }

@@ -259,6 +259,13 @@ const safePath = {
     const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
     return joined.replace(/\/+/g, '/').replace(/([^:])\/+$/g, '$1');
   },
+  resolve: (...parts) => {
+    const joined = safePath.join(...parts);
+    if (!joined) return '.';
+    const normalized = String(joined).replace(/\\/g, '/');
+    if (/^(?:\/|[A-Za-z]:\/)/.test(normalized)) return normalized;
+    return `/${normalized}`.replace(/\/+/g, '/');
+  },
 };
 
 const safeOs = {
