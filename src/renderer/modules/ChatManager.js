@@ -940,6 +940,173 @@ class ChatManager {
   }
 
   /**
+   * Initialize Tool Execution Tracker
+   */
+  async initializeToolExecutionTracker() {
+    try {
+      if (typeof ToolExecutionTracker !== 'undefined') {
+        this.toolExecutionTracker = new ToolExecutionTracker();
+      } else {
+        await this.loadScript('modules/ToolExecutionTracker.js');
+
+        if (typeof ToolExecutionTracker !== 'undefined') {
+          this.toolExecutionTracker = new ToolExecutionTracker();
+        }
+      }
+    } catch (error) {
+      console.warn('[ChatManager] Failed to initialize Tool Execution Tracker:', error.message);
+    }
+  }
+
+  /**
+   * Get the last user query for Dynamic Tools Registry intent analysis
+   */
+  getLastUserQuery() {
+    if (this.currentMessage) {
+      return this.currentMessage;
+    }
+
+    if (this.chatHistory.length === 0) return '';
+    const lastMessage = this.chatHistory[this.chatHistory.length - 1];
+    return lastMessage.role === 'user' ? lastMessage.content : '';
+  }
+
+  /**
+   * Check if we're currently in benchmark mode
+   * @returns {boolean} True if in benchmark mode
+   */
+  isBenchmarkMode() {
+    const benchmarkInterface = document.getElementById('benchmarkInterface');
+    if (benchmarkInterface && benchmarkInterface.style.display !== 'none') {
+      return true;
+    }
+
+    if (window.benchmarkUI && window.benchmarkUI.isRunning) {
+      return true;
+    }
+
+    if (this.app?.benchmarkManager?.isRunning) {
+      return true;
+    }
+
+    return false;
+  }
+
+  async loadGenomeFile(parameters = {}) {
+    return this.services.file.loadGenomeFile(parameters);
+  }
+
+  async loadAnnotationFile(parameters = {}) {
+    return this.services.file.loadAnnotationFile(parameters);
+  }
+
+  async loadVariantFile(parameters = {}) {
+    return this.services.file.loadVariantFile(parameters);
+  }
+
+  async loadReadsFile(parameters = {}) {
+    return this.services.file.loadReadsFile(parameters);
+  }
+
+  async loadWigTracks(parameters = {}) {
+    return this.services.file.loadWigTracks(parameters);
+  }
+
+  async loadOperonFile(parameters = {}) {
+    return this.services.file.loadOperonFile(parameters);
+  }
+
+  async downloadInternetFile(parameters = {}) {
+    if (!this.services || !this.services.file) {
+      console.error('[ChatManager] file not initialized');
+      return;
+    }
+    return this.services.file.downloadInternetFile(parameters);
+  }
+
+  async viewMarkdownFile(parameters = {}) {
+    try {
+      const { filePath, title } = parameters;
+
+      if (!filePath) {
+        throw new Error('File path is required');
+      }
+
+      const result = window.electronAPI?.openMarkdownViewer
+        ? await window.electronAPI.openMarkdownViewer({ filePath, title })
+        : await require('electron').ipcRenderer.invoke('open-markdown-viewer', { filePath, title });
+
+      if (result.success) {
+        return {
+          success: true,
+          message: `Opened markdown viewer for: ${result.fileName}`,
+          filePath: result.filePath,
+          fileName: result.fileName,
+          windowTitle: result.windowTitle,
+          tool: 'view_markdown_file',
+        };
+      }
+
+      throw new Error(result.error || 'Failed to open markdown viewer');
+    } catch (error) {
+      console.error('❌ [ChatManager] Error opening markdown viewer:', error);
+      return {
+        success: false,
+        error: error.message,
+        tool: 'view_markdown_file',
+      };
+    }
+  }
+
+  async getLoadedFilesList(parameters = {}) {
+    try {
+      const { includeMetadata = true } = parameters;
+
+      if (!this.app) {
+        throw new Error('Application not available');
+      }
+
+      const loadedFiles = this.app.loadedFiles || [];
+      const filesList = loadedFiles.map(file => {
+        const baseInfo = {
+          name: file.name,
+          path: file.path,
+          type: file.type,
+        };
+
+        if (includeMetadata) {
+          return {
+            ...baseInfo,
+            size: file.size,
+            sizeFormatted: file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
+            loadedAt: file.loadedAt,
+          };
+        }
+
+        return baseInfo;
+      });
+
+      return {
+        success: true,
+        message: `Found ${filesList.length} loaded file(s)`,
+        filesCount: filesList.length,
+        files: filesList,
+        tool: 'get_loaded_files_list',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        filesCount: 0,
+        files: [],
+        tool: 'get_loaded_files_list',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
    * Set working directory - Built-in function tool
    * @param {Object} parameters - Tool parameters
    * @param {string} parameters.directory_path - Absolute or relative path to set as working directory

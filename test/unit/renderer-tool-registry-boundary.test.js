@@ -23,4 +23,15 @@ describe('Renderer Tool Registry Boundary', () => {
     expect(adapterContent).not.toContain("require('fs')");
     expect(adapterContent).not.toContain('require("fs")');
   });
+
+  it('keeps ChatManager startup methods required by the constructor', () => {
+    const content = fs.readFileSync(CHAT_MANAGER_PATH, 'utf-8');
+
+    expect(content).toContain('this.initializeToolExecutionTracker()');
+    expect(content).toContain('async initializeToolExecutionTracker()');
+    expect(content).toContain('getLastUserQuery()');
+    expect(content).toContain('async loadGenomeFile(parameters = {})');
+    expect(content).toContain('async downloadInternetFile(parameters = {})');
+    expect(content).toContain('async getLoadedFilesList(parameters = {})');
+  });
 });
