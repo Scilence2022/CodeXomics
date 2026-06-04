@@ -578,7 +578,7 @@ class LLMBenchmarkFramework {
       // MEMORY OPTIMIZATION: Slim down the test result before storing it in the array.
       // The full llmInteractionData can be 5-15MB per test (logs, prompts, execution data).
       // After evaluation, we only need the scoring-relevant fields in the stored result.
-      const slimResult = this.slimDownTestResult(testResult);
+      const slimResult = await this.slimDownTestResult(testResult);
       results.testResults.push(slimResult);
 
       // MEMORY OPTIMIZATION: Clear the full result reference immediately
@@ -5658,7 +5658,7 @@ class LLMBenchmarkFramework {
    * and only a lightweight summary + disk reference is kept in memory.
    * The UI can load detailed data on demand from disk when the user expands a test.
    */
-  slimDownTestResult(result) {
+  async slimDownTestResult(result) {
     if (!result) return result;
 
     // Build a slim copy with fields needed for reporting/scoring AND UI fallback reconstruction
@@ -5731,7 +5731,7 @@ class LLMBenchmarkFramework {
       };
 
       // Persist full interaction data to disk for on-demand retrieval
-      const diskPath = this.persistInteractionDataToDisk(result.testId, result.suiteId, data);
+      const diskPath = await this.persistInteractionDataToDisk(result.testId, result.suiteId, data);
       if (diskPath) {
         slim.llmInteractionDataSummary.diskPath = diskPath;
       }
@@ -5745,40 +5745,85 @@ class LLMBenchmarkFramework {
    * This allows the UI to load detailed data on demand instead of keeping
    * 5-15MB per test in memory. Data is stored in the app's temp directory.
    */
-  persistInteractionDataToDisk(testId, suiteId, interactionData) {
-    try {
-      const pathModule = (typeof window !== 'undefined' && window.path) || (typeof require !== 'undefined' && require('path'));
-      const tmpDir =
-        (typeof window !== 'undefined' && window.os && typeof window.os.tmpdir === 'function' && window.os.tmpdir()) ||
-        '';
+  sanitizeBenchmarkFileSegment(value) {
+    return String(value || 'unknown')
+      .replace(/[^A-Za-z0-9._-]/g, '_')
+      .replace(/_+/g, '_')
+      .slice(0, 120);
+  }
 
-      if (!pathModule || typeof pathModule.join !== 'function' || !tmpDir) {
+  async getBenchmarkDataDirectory(pathModule) {
+    const appPathsResult =
+      typeof window !== 'undefined' && window.electronAPI?.getAppPaths
+        ? await window.electronAPI.getAppPaths()
+        : null;
+    const appPaths = appPathsResult?.success ? appPathsResult.paths || {} : {};
+    const baseDir = appPaths.temp || appPaths.userData;
+
+    if (baseDir) {
+      return pathModule.join(baseDir, 'codexomics-benchmark-data');
+    }
+
+    const osTmpDir =
+      typeof window !== 'undefined' && window.os && typeof window.os.tmpdir === 'function'
+        ? window.os.tmpdir()
+        : '';
+
+    return osTmpDir ? pathModule.join(osTmpDir, 'codexomics-benchmark-data') : null;
+  }
+
+  getInteractionDataReplacer() {
+    const circularReplacer = this.getCircularReplacer();
+    return (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return circularReplacer(key, value);
+    };
+  }
+
+  async persistInteractionDataToDisk(testId, suiteId, interactionData) {
+    try {
+      const pathModule =
+        (typeof window !== 'undefined' && window.path) ||
+        (typeof require !== 'undefined' && require('path'));
+      const electronAPI = typeof window !== 'undefined' ? window.electronAPI : null;
+
+      if (!pathModule || typeof pathModule.join !== 'function') {
+        console.warn('[Benchmark] Cannot persist interaction data: path utilities are unavailable');
         return null;
       }
 
-      // Use a dedicated benchmark-data directory in the system temp folder
-      const benchmarkDir = pathModule.join(tmpDir, 'codexomics-benchmark-data');
-      const filename = `interaction_${suiteId}_${testId}_${Date.now()}.json`;
+      const benchmarkDir = await this.getBenchmarkDataDirectory(pathModule);
+      if (!benchmarkDir) {
+        console.warn('[Benchmark] Cannot persist interaction data: no temp or userData directory is available');
+        return null;
+      }
+
+      const safeSuiteId = this.sanitizeBenchmarkFileSegment(suiteId);
+      const safeTestId = this.sanitizeBenchmarkFileSegment(testId);
+      const filename = `interaction_${safeSuiteId}_${safeTestId}_${Date.now()}.json`;
       const filePath = pathModule.join(benchmarkDir, filename);
 
-      const jsonContent = JSON.stringify(interactionData);
+      const jsonContent = JSON.stringify(interactionData, this.getInteractionDataReplacer());
 
       // Try Electron IPC first (renderer process), then fs directly
-      if (window.electronAPI?.writeFile) {
-        // Ensure directory exists before writing
-        const ensureDir = window.electronAPI.ensureDirectory;
-        const writeOp = ensureDir
-          ? ensureDir(benchmarkDir).then(() => window.electronAPI.writeFile(filePath, jsonContent))
-          : window.electronAPI.writeFile(filePath, jsonContent);
-        writeOp
-          .then(() => {
-            console.log(
-              `💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`
-            );
-          })
-          .catch(err => {
-            console.warn(`[Benchmark] Failed to persist interaction data via IPC: ${err.message}`);
-          });
+      if (electronAPI?.writeFile) {
+        if (electronAPI.ensureDirectory) {
+          const ensureResult = await electronAPI.ensureDirectory(benchmarkDir);
+          if (ensureResult?.success === false) {
+            throw new Error(ensureResult.error || `Failed to create benchmark data directory: ${benchmarkDir}`);
+          }
+        }
+
+        const writeResult = await electronAPI.writeFile(filePath, jsonContent);
+        if (writeResult?.success === false) {
+          throw new Error(writeResult.error || `Failed to write benchmark interaction data: ${filePath}`);
+        }
+
+        console.log(
+          `💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`
+        );
         return filePath;
       } else {
         // Fallback: use fs directly (works in main process or Node.js context)
@@ -5812,7 +5857,14 @@ class LLMBenchmarkFramework {
 
     try {
       if (window.electronAPI?.readFile) {
-        const content = await window.electronAPI.readFile(diskPath);
+        const result = await window.electronAPI.readFile(diskPath);
+        if (result?.success === false) {
+          throw new Error(result.error || `Failed to read interaction data: ${diskPath}`);
+        }
+        const content = typeof result === 'string' ? result : result?.data;
+        if (typeof content !== 'string') {
+          throw new Error('Interaction data read returned no text content');
+        }
         return JSON.parse(content);
       } else {
         const fs = require('fs').promises;
