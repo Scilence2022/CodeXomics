@@ -22,6 +22,7 @@
     "version-sync": "node scripts/update-version.js",
     "version-validate": "node scripts/validate-versions.js",
     "tool-registry:generate": "node scripts/generate-tool-registry-manifest.js",
+    "tool-registry:validate": "node scripts/validate-tool-registry-consistency.js",
     "generate-dmg-bg": "node scripts/generate-dmg-svg.js && node scripts/convert-svg-to-png.js",
     "prebuild": "npm run version-sync && npm run tool-registry:generate && npm run generate-dmg-bg",
     "build": "electron-builder",

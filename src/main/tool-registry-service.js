@@ -45,6 +45,20 @@ function normalizeCategoryFromPath(registryRoot, filePath) {
   return parts.length > 1 ? parts[0] : null;
 }
 
+function hasJavaScriptImplementation(tool) {
+  const implementation = tool.implementation || {};
+  const execution = tool.execution || {};
+  const implementationType = String(implementation.type || execution.type || tool.execution_type || '').toLowerCase();
+  const blockedTypes = new Set(['built-in', 'builtin', 'javascript', 'js', 'node', 'module', 'script', 'local']);
+  const blockedFields = ['code', 'script', 'module', 'path', 'file', 'handler', 'method', 'entrypoint'];
+
+  if (blockedTypes.has(implementationType)) {
+    return true;
+  }
+
+  return blockedFields.some(field => Object.prototype.hasOwnProperty.call(implementation, field));
+}
+
 class ToolRegistryService {
   constructor(options = {}) {
     this.app = options.app || null;
@@ -71,7 +85,17 @@ class ToolRegistryService {
       return cloneSerializable(this.cachedSnapshot);
     }
 
-    const snapshot = await this.loadSnapshot();
+    let snapshot;
+    try {
+      snapshot = await this.loadSnapshot();
+    } catch (error) {
+      snapshot = this.createEmptySnapshot([
+        createDiagnostic('error', 'Tool registry snapshot generation failed', {
+          source: 'tool_registry_service',
+          error: error.message,
+        }),
+      ]);
+    }
     this.cachedSnapshot = snapshot;
     this.cachedAt = Date.now();
     return cloneSerializable(snapshot);
@@ -187,6 +211,35 @@ class ToolRegistryService {
       builtInTools,
       builtInToolsByName: Object.fromEntries(builtInTools.map(tool => [tool.name, tool])),
       aliases: this.buildAliases(tools),
+      diagnostics,
+    };
+  }
+
+  createEmptySnapshot(diagnostics = []) {
+    return {
+      success: false,
+      schemaVersion: SNAPSHOT_SCHEMA_VERSION,
+      generatedAt: new Date().toISOString(),
+      registryHash: crypto.createHash('sha256').update(JSON.stringify(diagnostics)).digest('hex'),
+      roots: {
+        appRegistry: 'app://tools_registry',
+        userRegistry: this.userRegistryRoot ? 'userData://tool-registry' : null,
+      },
+      counts: {
+        tools: 0,
+        appTools: 0,
+        userTools: 0,
+        uniqueTools: 0,
+        categories: 0,
+        builtInTools: 0,
+        diagnostics: diagnostics.length,
+      },
+      categories: { categories: {} },
+      tools: [],
+      toolsByName: {},
+      builtInTools: [],
+      builtInToolsByName: {},
+      aliases: {},
       diagnostics,
     };
   }
@@ -350,7 +403,7 @@ class ToolRegistryService {
 
     let yamlFiles = [];
     try {
-      yamlFiles = await this.findYamlFiles(resolvedRoot);
+      yamlFiles = await this.findYamlFiles(resolvedRoot, diagnostics, source);
     } catch (error) {
       if (source === 'app_registry') {
         diagnostics.push(
@@ -440,7 +493,7 @@ class ToolRegistryService {
     return tools;
   }
 
-  async findYamlFiles(root) {
+  async findYamlFiles(root, diagnostics = null, source = null) {
     const results = [];
     let entries = [];
     try {
@@ -453,9 +506,17 @@ class ToolRegistryService {
     for (const entry of entries) {
       const fullPath = path.join(root, entry.name);
       if (entry.isDirectory()) {
-        results.push(...(await this.findYamlFiles(fullPath)));
+        results.push(...(await this.findYamlFiles(fullPath, diagnostics, source)));
       } else if (entry.isFile() && /\.(ya?ml)$/i.test(entry.name)) {
         results.push(fullPath);
+      } else if (entry.isFile() && source === 'user_registry' && diagnostics) {
+        diagnostics.push(
+          createDiagnostic('warning', 'Skipped non-YAML user registry file', {
+            source,
+            file: path.relative(root, fullPath),
+            reason: 'User-defined tools must be YAML descriptors; JavaScript or other executable files are not loaded.',
+          })
+        );
       }
     }
 
@@ -544,6 +605,17 @@ class ToolRegistryService {
       return { valid: false, diagnostics };
     }
 
+    if (options.source === 'user_registry' && hasJavaScriptImplementation(tool)) {
+      diagnostics.push(
+        createDiagnostic('error', 'User tool cannot define local JavaScript or built-in implementation', {
+          source: options.source,
+          file: options.relativeFile,
+          tool: tool.name,
+        })
+      );
+      return { valid: false, diagnostics };
+    }
+
     if (!tool.parameters || typeof tool.parameters !== 'object') {
       diagnostics.push(
         createDiagnostic('warning', 'Tool definition has no parameter schema', {
@@ -586,4 +658,5 @@ module.exports = {
   ToolRegistryService,
   SNAPSHOT_SCHEMA_VERSION,
   USER_TOOL_MAX_BYTES,
+  hasJavaScriptImplementation,
 };

@@ -97,4 +97,59 @@ describe('ToolRegistryService', () => {
     expect(snapshot.toolsByName.load_genome_file.source).toBe('app_registry');
     expect(snapshot.diagnostics.some(diagnostic => diagnostic.message.includes('cannot override'))).toBe(true);
   });
+
+  it('keeps user tools descriptor-only by rejecting local JavaScript implementations', async () => {
+    const userRegistryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'codexomics-tool-registry-'));
+    tempDirs.push(userRegistryRoot);
+
+    fs.writeFileSync(
+      path.join(userRegistryRoot, 'unsafe_user_tool.yaml'),
+      [
+        "name: 'unsafe_user_tool'",
+        "description: 'Attempts to execute local JavaScript'",
+        "category: 'utility'",
+        'implementation:',
+        "  type: 'javascript'",
+        "  path: './unsafe.js'",
+        'parameters:',
+        "  type: 'object'",
+        '  properties: {}',
+      ].join('\n')
+    );
+    fs.writeFileSync(path.join(userRegistryRoot, 'unsafe.js'), 'module.exports = () => true;');
+
+    const service = new ToolRegistryService({
+      registryRoot: REGISTRY_ROOT,
+      userRegistryRoot,
+      cacheTtlMs: 1,
+    });
+
+    const snapshot = await service.getSnapshot();
+
+    expect(snapshot.toolsByName.unsafe_user_tool).toBeUndefined();
+    expect(
+      snapshot.diagnostics.some(diagnostic =>
+        diagnostic.message.includes('User tool cannot define local JavaScript')
+      )
+    ).toBe(true);
+    expect(snapshot.diagnostics.some(diagnostic => diagnostic.message.includes('Skipped non-YAML'))).toBe(true);
+  });
+
+  it('returns diagnostics instead of throwing when snapshot generation fails', async () => {
+    const service = new ToolRegistryService({
+      registryRoot: REGISTRY_ROOT,
+      userRegistryRoot: null,
+      cacheTtlMs: 1,
+    });
+    service.loadSnapshot = async () => {
+      throw new Error('synthetic registry failure');
+    };
+
+    const snapshot = await service.getSnapshot({ force: true });
+
+    expect(snapshot.success).toBe(false);
+    expect(snapshot.tools).toEqual([]);
+    expect(snapshot.diagnostics[0].message).toBe('Tool registry snapshot generation failed');
+    expect(snapshot.diagnostics[0].error).toBe('synthetic registry failure');
+  });
 });

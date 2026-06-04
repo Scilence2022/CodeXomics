@@ -100,6 +100,7 @@ class ChatManager {
     this.builtInToolsMap = new Map();
     this._toolRegistryUpdateListenerRegistered = false;
     this._pendingToolRegistrySnapshot = null;
+    this.toolRegistryDiagnostics = [];
     this._dynamicToolsReady = false;
     this.initializeDynamicTools()
       .then(() => {
@@ -862,16 +863,41 @@ class ChatManager {
       }
 
       if (!window.electronAPI || typeof window.electronAPI.getToolRegistrySnapshot !== 'function') {
-        throw new Error('Tool registry IPC API is not available');
+        this.toolRegistryDiagnostics = [
+          {
+            severity: 'warning',
+            message: 'Tool registry IPC API is not available',
+            source: 'renderer',
+          },
+        ];
+        this.dynamicToolsEnabled = false;
+        console.warn('[ChatManager] Dynamic Tools Registry disabled: IPC API is not available');
+        return;
       }
 
       const snapshot = await window.electronAPI.getToolRegistrySnapshot();
       if (!snapshot || (!Array.isArray(snapshot.tools) && !snapshot.toolsByName)) {
-        throw new Error('Tool registry snapshot is invalid');
+        this.toolRegistryDiagnostics = [
+          {
+            severity: 'error',
+            message: 'Tool registry snapshot is invalid',
+            source: 'renderer',
+          },
+        ];
+        this.dynamicToolsEnabled = false;
+        console.warn('[ChatManager] Dynamic Tools Registry disabled: invalid snapshot');
+        return;
+      }
+
+      this.toolRegistryDiagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
+      if (snapshot.success === false && this.toolRegistryDiagnostics.length > 0) {
+        console.warn('[ChatManager] Tool registry snapshot reported diagnostics:', this.toolRegistryDiagnostics);
       }
 
       if (snapshot.success === false && (!snapshot.tools || snapshot.tools.length === 0)) {
-        throw new Error('Tool registry snapshot contains no usable tools');
+        this.dynamicToolsEnabled = false;
+        console.warn('[ChatManager] Dynamic Tools Registry disabled: snapshot contains no usable tools');
+        return;
       }
 
       this.dynamicTools = this.createDynamicToolsSnapshotAdapter(snapshot);
