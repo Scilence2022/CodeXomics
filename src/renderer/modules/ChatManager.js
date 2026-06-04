@@ -126,25 +126,12 @@ class ChatManager {
     // Initialize working directory
     this.initializeWorkingDirectory();
 
-    // Initialize modularized services first - UI initialization depends on them
-    this.services = {
-      execution: new window.ToolExecutionService(this.app, this),
-      file: new window.FileOperationService(this.app, this),
-      analysis: new window.GenomeAnalysisService(this.app, this),
-      protein: new window.ProteinService(this.app, this),
-      blast: new window.BlastService(this.app, this),
-      annotation: new window.AnnotationService(this.app, this),
-      intent: new window.IntentParserService(this.app, this),
-      context: new window.LLMContextService(this.app, this),
-      ui: new window.UIService(this.app, this),
-      restriction: new window.RestrictionDigestService(this.app, this),
-      gel: new window.GelElectrophoresisService(this.app, this),
-      task: new window.TaskService(this.app, this),
-    };
+    this.services = {};
 
     // Legacy MCP connection check (kept for backward compatibility)
     this.checkAndSetupMCPConnection();
     this.initializeUI();
+    this.initializeServices();
 
     // Load chat history AFTER UI is initialized
     setTimeout(() => {
@@ -153,6 +140,37 @@ class ChatManager {
       // Update agent system button state after UI is ready
       this.updateMultiAgentToggleButton();
     }, 100);
+  }
+
+  initializeServices() {
+    const serviceDefinitions = [
+      ['execution', 'ToolExecutionService'],
+      ['file', 'FileOperationService'],
+      ['analysis', 'GenomeAnalysisService'],
+      ['protein', 'ProteinService'],
+      ['blast', 'BlastService'],
+      ['annotation', 'AnnotationService'],
+      ['intent', 'IntentParserService'],
+      ['context', 'LLMContextService'],
+      ['ui', 'UIService'],
+      ['restriction', 'RestrictionDigestService'],
+      ['gel', 'GelElectrophoresisService'],
+      ['task', 'TaskService'],
+    ];
+
+    for (const [key, className] of serviceDefinitions) {
+      const ServiceClass = window[className];
+      if (typeof ServiceClass !== 'function') {
+        console.warn(`[ChatManager] ${className} not available; ${key} service disabled`);
+        continue;
+      }
+
+      try {
+        this.services[key] = new ServiceClass(this.app, this);
+      } catch (error) {
+        console.warn(`[ChatManager] Failed to initialize ${className}:`, error);
+      }
+    }
   }
 
   /**
@@ -3747,6 +3765,13 @@ class ChatManager {
   }
 
   createChatInterface() {
+    const existingChatPanel = document.getElementById('llmChatPanel');
+    if (existingChatPanel) {
+      existingChatPanel.style.display = 'flex';
+      this.configManager.set('chat.visible', true);
+      return;
+    }
+
     // Calculate right-bottom position
     const defaultSize = { width: 400, height: 600 };
     const defaultPosition = this.getDefaultChatPosition();
@@ -3870,7 +3895,11 @@ class ChatManager {
         `;
 
     // Insert chat panel into the page
-    const appDiv = document.getElementById('app');
+    const appDiv = document.getElementById('app') || document.body;
+    if (!appDiv) {
+      console.error('ChatBox could not be created because no document container is available');
+      return;
+    }
     appDiv.insertAdjacentHTML('beforeend', chatHTML);
 
     // Initial render of welcome cards will be handled in initializeChatBoxSettings()
@@ -3879,10 +3908,9 @@ class ChatManager {
     // Ensure ChatBox is visible by default
     const chatPanel = document.getElementById('llmChatPanel');
     if (chatPanel) {
-      // Check if there's a saved visibility state
-      const savedVisibility = this.configManager.get('chat.visible', true);
-      chatPanel.style.display = savedVisibility ? 'flex' : 'none';
-      console.log('ChatBox created with visibility:', savedVisibility ? 'visible' : 'hidden');
+      chatPanel.style.display = 'flex';
+      this.configManager.set('chat.visible', true);
+      console.log('ChatBox created with visibility: visible');
     }
 
     // Setup dragging and resizing

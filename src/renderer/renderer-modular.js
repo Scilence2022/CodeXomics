@@ -8432,12 +8432,20 @@ class GenomeBrowser {
 
   // Helper method to show chat if hidden
   showChatIfHidden() {
-    const chatBox = document.querySelector('.chat-container');
-    if (chatBox && !chatBox.classList.contains('visible')) {
-      const toggleChatBtn = document.getElementById('toggleChatBtn');
-      if (toggleChatBtn) {
-        toggleChatBtn.click();
-      }
+    if (this.chatManager && typeof this.chatManager.showChatBox === 'function') {
+      this.chatManager.showChatBox();
+      return;
+    }
+
+    const chatPanel = document.getElementById('llmChatPanel');
+    if (chatPanel) {
+      chatPanel.style.display = 'flex';
+      return;
+    }
+
+    const toggleChatBtn = document.getElementById('toggleChatBtn');
+    if (toggleChatBtn) {
+      toggleChatBtn.click();
     }
   }
 
