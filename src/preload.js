@@ -50,6 +50,10 @@ const allowedInvokeChannels = [
   'bam-reader:initialize',
   'bam-reader:get-records-for-range',
   'bam-reader:destroy',
+  'blast:detect-installation',
+  'blast:run-command',
+  'blast:select-executable',
+  'blast:verify-executable',
 ];
 
 const allowedListenChannels = [
@@ -474,6 +478,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getRecordsForRange: (readerId, chromosome, start, end, settings) =>
       ipcRenderer.invoke('bam-reader:get-records-for-range', readerId, chromosome, start, end, settings),
     destroy: readerId => ipcRenderer.invoke('bam-reader:destroy', readerId),
+  },
+
+  // BLAST local runtime APIs
+  blast: {
+    detectInstallation: () => ipcRenderer.invoke('blast:detect-installation'),
+    runCommand: options => ipcRenderer.invoke('blast:run-command', options),
+    selectExecutable: () => ipcRenderer.invoke('blast:select-executable'),
+    verifyExecutable: executablePath => ipcRenderer.invoke('blast:verify-executable', executablePath),
   },
 
   // Plugin path resolution APIs

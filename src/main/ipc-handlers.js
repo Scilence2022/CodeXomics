@@ -27,12 +27,170 @@ const {
 const { ToolRegistryService } = require('./tool-registry-service');
 
 let BamReaderClass = null;
+const BLAST_EXECUTABLES = new Set(['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx']);
 
 function getBamReaderClass() {
   if (!BamReaderClass) {
     BamReaderClass = require('../renderer/modules/BamReader');
   }
   return BamReaderClass;
+}
+
+function parseCommandLine(command) {
+  const args = [];
+  let current = '';
+  let quote = null;
+  let escaped = false;
+
+  for (const char of String(command || '')) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current) {
+        args.push(current);
+        current = '';
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (escaped) current += '\\';
+  if (current) args.push(current);
+  return args;
+}
+
+function getBlastExecutableName(executablePath) {
+  return path.basename(String(executablePath || ''), path.extname(String(executablePath || ''))).toLowerCase();
+}
+
+function isTrustedBlastExecutablePath(executablePath) {
+  if (!executablePath || typeof executablePath !== 'string') return false;
+  const resolvedPath = path.resolve(executablePath);
+  const trustedDirs = [
+    '/usr/bin',
+    '/usr/local/bin',
+    '/opt/homebrew/bin',
+    '/usr/local/blast+/bin',
+    '/opt/blast+/bin',
+  ];
+  return trustedDirs.some(dirPath => isSubPathSafe(dirPath, resolvedPath));
+}
+
+function isSubPathSafe(parentPath, targetPath) {
+  const relative = path.relative(path.resolve(parentPath), path.resolve(targetPath));
+  return relative === '' || (!!relative && !relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function resolveBlastExecutable(appInstance, commandToken, configuredBlastPath) {
+  const commandName = getBlastExecutableName(commandToken);
+  if (!BLAST_EXECUTABLES.has(commandName)) {
+    throw new Error(`Blocked non-BLAST command: ${commandName}`);
+  }
+
+  if (configuredBlastPath && typeof configuredBlastPath === 'string') {
+    let safeConfiguredPath = null;
+    try {
+      safeConfiguredPath = assertAllowedFileAccess(appInstance, configuredBlastPath, {
+        operation: 'execute configured BLAST binary',
+        mustExist: true,
+      });
+    } catch (error) {
+      if (isTrustedBlastExecutablePath(configuredBlastPath) && fs.existsSync(configuredBlastPath)) {
+        safeConfiguredPath = path.resolve(configuredBlastPath);
+      } else {
+        throw error;
+      }
+    }
+
+    const configuredName = getBlastExecutableName(configuredBlastPath);
+    if (configuredName === 'blastn') {
+      const executable = path.join(
+        path.dirname(safeConfiguredPath),
+        `${commandName}${process.platform === 'win32' ? '.exe' : ''}`
+      );
+      return executable;
+    }
+  }
+
+  return commandName;
+}
+
+function runBlastVersionCheck(executablePath) {
+  const { execFile } = require('child_process');
+  return new Promise(resolve => {
+    const commandName = getBlastExecutableName(executablePath);
+    if (!BLAST_EXECUTABLES.has(commandName)) {
+      resolve({ found: false, error: `Not a supported BLAST executable: ${executablePath}` });
+      return;
+    }
+
+    execFile(executablePath, ['-version'], { timeout: 15000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) {
+        resolve({ found: false, error: error.message, stderr });
+        return;
+      }
+
+      const output = stdout || stderr || '';
+      const versionMatch = output.match(/(?:blastn|blastp|blastx|tblastn|tblastx|makeblastdb|blastdbcmd):\s*([\d.]+)/i);
+      resolve({
+        found: true,
+        version: versionMatch ? versionMatch[1] : 'Unknown',
+        path: executablePath,
+        output,
+      });
+    });
+  });
+}
+
+async function findBlastExecutable() {
+  const os = require('os');
+  const homeDir = os.homedir();
+  const commonPaths = [
+    '/usr/local/bin/blastn',
+    '/usr/bin/blastn',
+    '/opt/homebrew/bin/blastn',
+    '/usr/local/blast+/bin/blastn',
+    path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'),
+    path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'),
+    path.join(homeDir, '.local', 'bin', 'blastn'),
+    '/opt/blast+/bin/blastn',
+  ];
+
+  const pathResult = await runBlastVersionCheck('blastn');
+  if (pathResult.found) return { ...pathResult, method: 'PATH' };
+
+  for (const blastPath of commonPaths) {
+    if (!fs.existsSync(blastPath)) continue;
+    const result = await runBlastVersionCheck(blastPath);
+    if (result.found) return { ...result, method: 'Common Path' };
+  }
+
+  return { found: false, error: 'BLAST+ not found in PATH or common installation locations' };
 }
 
 function toIpcSafeValue(value, seen = new WeakSet(), depth = 0) {
@@ -3495,77 +3653,122 @@ function registerIpcHandlers(deps) {
   // 15. System Checks IPC Handlers
   // =====================================================================
 
+  ipcMain.handle('blast:detect-installation', async () => {
+    try {
+      const result = await findBlastExecutable();
+      return {
+        success: true,
+        installed: result.found,
+        found: result.found,
+        message: result.found
+          ? `BLAST+ installed successfully (version ${result.version})`
+          : 'BLAST+ not found or not installed',
+        version: result.version || null,
+        path: result.path || null,
+        method: result.method || null,
+        output: result.output || null,
+        error: result.error || null,
+      };
+    } catch (error) {
+      return { success: false, installed: false, found: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('blast:select-executable', async () => {
+    try {
+      const result = await dialog.showOpenDialog(null, {
+        title: 'Select BLAST+ Executable',
+        properties: ['openFile'],
+        filters: process.platform === 'win32' ? [{ name: 'Executable', extensions: ['exe'] }] : undefined,
+      });
+      rememberApprovedDialogPaths(result);
+      return result;
+    } catch (error) {
+      return { canceled: true, error: error.message };
+    }
+  });
+
+  ipcMain.handle('blast:verify-executable', async (event, executablePath) => {
+    try {
+      const safeExecutablePath = assertAllowedFileAccess(app, executablePath, {
+        operation: 'verify BLAST executable',
+        mustExist: true,
+      });
+      const result = await runBlastVersionCheck(safeExecutablePath);
+      return {
+        success: result.found,
+        found: result.found,
+        version: result.version || null,
+        path: safeExecutablePath,
+        output: result.output || null,
+        error: result.error || null,
+      };
+    } catch (error) {
+      return { success: false, found: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('blast:run-command', async (event, options = {}) => {
+    try {
+      const { execFile } = require('child_process');
+      const tokens = parseCommandLine(options.command || '');
+      if (tokens.length === 0) {
+        throw new Error('BLAST command is required');
+      }
+
+      const executable = resolveBlastExecutable(app, tokens[0], options.blastExecutablePath);
+      const args = tokens.slice(1);
+      const execOptions = { maxBuffer: 10 * 1024 * 1024 };
+
+      if (options.workingDirectory) {
+        execOptions.cwd = assertAllowedFileAccess(app, options.workingDirectory, {
+          operation: 'use BLAST working directory',
+          mustExist: true,
+        });
+      }
+
+      const isVersionCommand = args.includes('-version') || args.includes('--version');
+      if (options.localDbPath && !isVersionCommand) {
+        const localDbPath = assertAllowedFileAccess(app, options.localDbPath, {
+          operation: 'use BLAST database directory',
+        });
+        if (!fs.existsSync(localDbPath)) {
+          fs.mkdirSync(localDbPath, { recursive: true });
+        }
+        execOptions.env = { ...process.env, BLASTDB: localDbPath };
+      }
+
+      return await new Promise(resolve => {
+        execFile(executable, args, execOptions, (error, stdout, stderr) => {
+          if (error) {
+            resolve({
+              success: false,
+              error: error.message,
+              stdout,
+              stderr,
+              executable,
+              args,
+            });
+            return;
+          }
+
+          resolve({
+            success: true,
+            stdout,
+            stderr,
+            executable,
+            args,
+          });
+        });
+      });
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // IPC handler for BLAST installation check
   ipcMain.on('check-blast-installation', event => {
     console.log('IPC: Checking BLAST installation...');
-    const { exec } = require('child_process');
-    const path = require('path');
-    const fs = require('fs');
-    const os = require('os');
-
-    // Function to check BLAST+ at specific path
-    function checkBlastAtPath(blastPath) {
-      return new Promise(resolve => {
-        const command = `"${blastPath}" -version`;
-        console.log('Checking BLAST at:', command);
-
-        exec(command, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ found: false, error: error.message });
-          } else {
-            const versionMatch = stdout.match(/blastn: ([\d.]+)/);
-            const version = versionMatch ? versionMatch[1] : 'Unknown version';
-            resolve({
-              found: true,
-              version: version,
-              path: blastPath,
-              output: stdout,
-            });
-          }
-        });
-      });
-    }
-
-    // Function to find BLAST+ executable
-    async function findBlastExecutable() {
-      const homeDir = os.homedir();
-      const commonPaths = [
-        '/usr/local/bin/blastn',
-        '/usr/bin/blastn',
-        '/opt/homebrew/bin/blastn',
-        '/usr/local/blast+/bin/blastn',
-        path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'),
-        path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'),
-        path.join(homeDir, '.local', 'bin', 'blastn'),
-        '/opt/blast+/bin/blastn',
-      ];
-
-      // First try direct command execution (for PATH-based installations)
-      try {
-        const result = await checkBlastAtPath('blastn');
-        if (result.found) {
-          return result;
-        }
-      } catch (error) {
-        console.log('Direct blastn command failed, trying specific paths...');
-      }
-
-      // Try specific paths
-      for (const blastPath of commonPaths) {
-        try {
-          if (fs.existsSync(blastPath)) {
-            const result = await checkBlastAtPath(blastPath);
-            if (result.found) {
-              return result;
-            }
-          }
-        } catch (error) {
-          continue;
-        }
-      }
-
-      return { found: false, error: 'BLAST+ not found in any common locations' };
-    }
 
     // Execute the search
     findBlastExecutable()

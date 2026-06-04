@@ -5,13 +5,12 @@
  */
 class BlastConfigManager {
   constructor() {
-    this.fs = require('fs');
-    this.path = require('path');
-    this.os = require('os');
-    const { exec } = require('child_process');
-    const { promisify } = require('util');
-    this.exec = exec;
-    this.execAsync = promisify(exec);
+    this.path = (typeof window !== 'undefined' && window.require ? window.require('path') : null) || {
+      join: (...parts) => parts.filter(Boolean).join('/').replace(/\/+/g, '/'),
+    };
+    this.os = (typeof window !== 'undefined' && window.require ? window.require('os') : null) || {
+      platform: () => 'unknown',
+    };
 
     // Configuration storage
     this.configPath = this.getConfigPath();
@@ -25,25 +24,7 @@ class BlastConfigManager {
    * Get configuration file path
    */
   getConfigPath() {
-    const homeDir = this.os.homedir();
-    const platform = this.os.platform();
-
-    let configDir;
-    if (platform === 'win32') {
-      const appData = process.env.LOCALAPPDATA || this.path.join(homeDir, 'AppData', 'Local');
-      configDir = this.path.join(appData, 'GenomeAIStudio');
-    } else if (platform === 'darwin') {
-      configDir = this.path.join(homeDir, 'Library', 'Application Support', 'GenomeAIStudio');
-    } else {
-      configDir = this.path.join(homeDir, '.config', 'GenomeAIStudio');
-    }
-
-    // Create directory if it doesn't exist
-    if (!this.fs.existsSync(configDir)) {
-      this.fs.mkdirSync(configDir, { recursive: true });
-    }
-
-    return this.path.join(configDir, 'blast-config.json');
+    return 'blast-config';
   }
 
   /**
@@ -51,8 +32,8 @@ class BlastConfigManager {
    */
   loadConfig() {
     try {
-      if (this.fs.existsSync(this.configPath)) {
-        const data = this.fs.readFileSync(this.configPath, 'utf8');
+      const data = localStorage.getItem(this.configPath);
+      if (data) {
         return JSON.parse(data);
       }
     } catch (error) {
@@ -73,7 +54,7 @@ class BlastConfigManager {
    */
   saveConfig() {
     try {
-      this.fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2), 'utf8');
+      localStorage.setItem(this.configPath, JSON.stringify(this.config));
       return true;
     } catch (error) {
       console.error('Failed to save BLAST config:', error);
@@ -164,28 +145,17 @@ class BlastConfigManager {
    * Detect BLAST in system PATH
    */
   async detectInPath() {
-    try {
-      const command = this.os.platform() === 'win32' ? 'blastn.exe -version' : 'blastn -version';
-      const { stdout } = await this.execAsync(command);
-
-      const versionMatch = stdout.match(/blastn: ([\d.]+)/);
-      if (versionMatch) {
-        const version = versionMatch[1];
-
-        // Try to get the full path
-        const whichCommand = this.os.platform() === 'win32' ? 'where blastn.exe' : 'which blastn';
-        const { stdout: pathOutput } = await this.execAsync(whichCommand);
-        const executablePath = pathOutput.trim().split('\n')[0]; // Get first path if multiple
-
+    if (window.electronAPI?.blast?.detectInstallation) {
+      const result = await window.electronAPI.blast.detectInstallation();
+      if (result?.found || result?.installed) {
         return {
           found: true,
-          path: executablePath,
-          version: version,
-          method: 'PATH',
+          path: result.path,
+          version: result.version,
+          method: result.method || 'PATH',
         };
       }
-    } catch (error) {
-      console.log('Not found in PATH:', error.message);
+      console.log('Not found in PATH:', result?.error || result?.message);
     }
 
     return { found: false };
@@ -195,47 +165,6 @@ class BlastConfigManager {
    * Detect BLAST in common installation paths
    */
   async detectInCommonPaths() {
-    const homeDir = this.os.homedir();
-    const platform = this.os.platform();
-
-    const commonPaths = [
-      '/usr/local/bin/blastn',
-      '/usr/bin/blastn',
-      '/opt/homebrew/bin/blastn',
-      '/usr/local/blast+/bin/blastn',
-      '/opt/blast+/bin/blastn',
-      this.path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'),
-      this.path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'),
-      this.path.join(homeDir, '.local', 'bin', 'blastn'),
-      'C:\\Program Files\\NCBI\\blast+\\bin\\blastn.exe',
-      'C:\\blast+\\bin\\blastn.exe',
-      'C:\\ncbi-blast\\bin\\blastn.exe',
-    ];
-
-    for (const blastPath of commonPaths) {
-      try {
-        // Check if file exists
-        if (!this.fs.existsSync(blastPath)) {
-          continue;
-        }
-
-        // Try to execute version command
-        const { stdout } = await this.execAsync(`"${blastPath}" -version`);
-        const versionMatch = stdout.match(/blastn: ([\d.]+)/);
-
-        if (versionMatch) {
-          return {
-            found: true,
-            path: blastPath,
-            version: versionMatch[1],
-            method: 'Common Path',
-          };
-        }
-      } catch (error) {
-        continue;
-      }
-    }
-
     return { found: false };
   }
 
@@ -319,15 +248,9 @@ class BlastConfigManager {
    * Browse for BLAST executable
    */
   async browseForBlast() {
-    const { dialog } = require('@electron/remote');
+    const result = await window.electronAPI?.blast?.selectExecutable?.();
 
-    const result = await dialog.showOpenDialog({
-      title: 'Select BLAST+ Executable',
-      properties: ['openFile'],
-      filters: [{ name: 'Executable', extensions: this.os.platform() === 'win32' ? ['exe'] : ['*'] }],
-    });
-
-    if (!result.canceled && result.filePaths.length > 0) {
+    if (result && !result.canceled && result.filePaths.length > 0) {
       const selectedPath = result.filePaths[0];
       document.getElementById('blastPathInput').value = selectedPath;
     }
@@ -350,18 +273,9 @@ class BlastConfigManager {
     verifyBtn.innerHTML = '<span class="spinner"></span><span>Verifying...</span>';
 
     try {
-      // Check if file exists
-      if (!this.fs.existsSync(path)) {
-        this.showStatus('error', 'File does not exist at the specified path.', 'verifyStatus');
-        return;
-      }
-
-      // Try to execute version command
-      const { stdout } = await this.execAsync(`"${path}" -version`);
-      const versionMatch = stdout.match(/blastn: ([\d.]+)/);
-
-      if (versionMatch) {
-        const version = versionMatch[1];
+      const result = await window.electronAPI?.blast?.verifyExecutable?.(path);
+      if (result?.success || result?.found) {
+        const version = result.version || 'Unknown';
         this.showStatus('success', `Valid BLAST+ executable found! Version: ${version}`, 'verifyStatus');
 
         // Update config
@@ -369,7 +283,7 @@ class BlastConfigManager {
         this.config.blastVersion = version;
         this.config.lastDetection = new Date().toISOString();
       } else {
-        this.showStatus('error', 'File exists but does not appear to be a valid BLAST+ executable.', 'verifyStatus');
+        this.showStatus('error', result?.error || 'File does not appear to be a valid BLAST+ executable.', 'verifyStatus');
       }
     } catch (error) {
       this.showStatus('error', `Verification failed: ${error.message}`, 'verifyStatus');

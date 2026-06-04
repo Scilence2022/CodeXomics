@@ -60,19 +60,35 @@ class BlastManager {
   }
 
   canUseLocalBlastRuntime() {
-    try {
-      require('fs');
-      require('child_process');
-      return true;
-    } catch (error) {
-      return false;
-    }
+    return !!(
+      (typeof window !== 'undefined' && window.electronAPI?.blast?.runCommand) ||
+      (() => {
+        try {
+          require('fs');
+          require('child_process');
+          return true;
+        } catch (error) {
+          return false;
+        }
+      })()
+    );
   }
 
   /**
    * Load saved BLAST configuration from file
    */
   loadSavedBlastConfig() {
+    try {
+      const storedConfig = localStorage.getItem('blast-config');
+      if (storedConfig) {
+        const config = JSON.parse(storedConfig);
+        console.log('BlastManager: Loaded BLAST configuration from localStorage:', config);
+        return config;
+      }
+    } catch (error) {
+      console.warn('BlastManager: Failed to load localStorage BLAST configuration:', error.message);
+    }
+
     if (!this.canUseRendererFileSystem()) {
       console.debug('BlastManager: File-backed BLAST config unavailable in hardened renderer');
       return null;
@@ -120,7 +136,7 @@ class BlastManager {
     const os = require('os');
     const path = require('path');
     const platform = os.platform();
-    const homeDir = os.homedir();
+    const homeDir = os.homedir() || '/tmp';
 
     switch (platform) {
       case 'win32':
@@ -254,6 +270,18 @@ class BlastManager {
 
   async checkBlastInstallation() {
     console.log('BlastManager: Checking BLAST+ installation...');
+    if (typeof window !== 'undefined' && window.electronAPI?.blast?.detectInstallation) {
+      const detection = await window.electronAPI.blast.detectInstallation();
+      if (detection?.installed || detection?.found) {
+        this.config.blastExecutablePath = detection.path;
+        this.config.installedBlastVersion = detection.version;
+        console.log(`BlastManager: Found BLAST+ via main process at ${detection.path}: v${detection.version}`);
+        return true;
+      }
+      console.warn('BlastManager: BLAST+ not detected by main process:', detection?.error || detection?.message);
+      return false;
+    }
+
     try {
       // First try direct command execution
       const command = 'blastn -version';
@@ -388,6 +416,41 @@ class BlastManager {
   }
 
   async runCommand(command, workingDirectory = null) {
+    if (typeof window !== 'undefined' && window.electronAPI?.blast?.runCommand) {
+      const result = await window.electronAPI.blast.runCommand({
+        command,
+        workingDirectory,
+        localDbPath: this.getCurrentDatabasePath(),
+        blastExecutablePath: this.config.blastExecutablePath,
+      });
+
+      if (result?.success) {
+        return result.stdout || '';
+      }
+
+      const stderr = result?.stderr || '';
+      if (stderr.includes('Database memory map file error')) {
+        throw new Error(
+          `BLAST database error: The database directory may be corrupted or inaccessible. Please check permissions for: ${this.config.localDbPath}`
+        );
+      }
+      if (stderr.includes('BLAST Database error')) {
+        throw new Error(`BLAST database error: ${stderr.trim()}`);
+      }
+      if (stderr.includes('is empty')) {
+        throw new Error(
+          `makeblastdb failed: File appears empty or unreadable. Check file format and permissions. Error: ${stderr.trim()}`
+        );
+      }
+      if (stderr.includes('No such file or directory')) {
+        throw new Error(`makeblastdb failed: File not found in working directory. Error: ${stderr.trim()}`);
+      }
+      if (command.includes('makeblastdb')) {
+        throw new Error(`makeblastdb failed: ${result?.error || 'Command failed'}${stderr ? ' STDERR: ' + stderr.trim() : ''}`);
+      }
+      throw new Error(result?.error || 'BLAST command failed');
+    }
+
     if (!this.canUseLocalBlastRuntime()) {
       throw new Error('Local BLAST command execution is unavailable in the hardened renderer');
     }
@@ -4641,9 +4704,6 @@ class BlastManager {
 
   async validateDatabase(databasePath, blastType) {
     try {
-      const fs = require('fs').promises;
-      const path = require('path');
-
       // Check if database files exist
       const expectedExtensions = ['.nhr', '.nin', '.nsq']; // For nucleotide databases
       if (blastType === 'blastp' || blastType === 'blastx') {
@@ -4654,8 +4714,14 @@ class BlastManager {
       for (const ext of expectedExtensions) {
         try {
           const filePath = databasePath + ext;
-          await fs.access(filePath);
-          foundFiles++;
+          if (typeof window !== 'undefined' && window.electronAPI?.checkFileExists) {
+            const result = await window.electronAPI.checkFileExists(filePath);
+            if (result?.exists) foundFiles++;
+          } else {
+            const fs = require('fs').promises;
+            await fs.access(filePath);
+            foundFiles++;
+          }
         } catch (error) {
           // File doesn't exist
         }
@@ -5073,7 +5139,11 @@ class BlastManager {
 
   async cleanupTempFile(file) {
     try {
-      await require('fs').promises.unlink(file);
+      if (typeof window !== 'undefined' && window.electronAPI?.deletePhysicalFile) {
+        await window.electronAPI.deletePhysicalFile(file);
+      } else {
+        await require('fs').promises.unlink(file);
+      }
     } catch (error) {
       console.warn('Failed to clean up temporary file:', error);
     }
