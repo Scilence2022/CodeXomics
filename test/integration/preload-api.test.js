@@ -38,6 +38,8 @@ describe('Preload API Structure', () => {
       'getLocaleLanguages',
       'getAppPaths',
       'getSanitizerConfig',
+      'checkGeneResearchReport',
+      'openGeneResearchReport',
       'invoke',
       'onMenuAction',
       'ipcRenderer',

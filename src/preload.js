@@ -17,6 +17,8 @@ const allowedInvokeChannels = [
   'getFileInfo',
   'checkFileExists',
   'check-file-exists',
+  'check-gene-research-report',
+  'open-gene-research-report',
   'copy-plugin-directory',
   'copy-plugin-file',
   'createNewMainWindow',
@@ -341,6 +343,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createTempFile: (fileName, content) => ipcRenderer.invoke('createTempFile', fileName, content),
   getFileInfo: filePath => ipcRenderer.invoke('getFileInfo', filePath),
   checkFileExists: filePath => ipcRenderer.invoke('checkFileExists', filePath),
+  checkGeneResearchReport: geneSymbol => ipcRenderer.invoke('check-gene-research-report', geneSymbol),
+  openGeneResearchReport: geneSymbol => ipcRenderer.invoke('open-gene-research-report', geneSymbol),
   deletePhysicalFile: filePath => ipcRenderer.invoke('deletePhysicalFile', filePath),
   updateRecentProjects: recentProjects => ipcRenderer.invoke('updateRecentProjects', recentProjects),
 

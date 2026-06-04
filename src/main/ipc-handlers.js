@@ -120,6 +120,19 @@ function registerIpcHandlers(deps) {
     checkPortAvailable,
   } = deps;
 
+  const resolveGeneResearchReportPath = geneSymbol => {
+    const safeSymbol = String(geneSymbol || 'Unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `Gene_${safeSymbol}_Research_Report.md`;
+    const reportsDir = path.resolve(process.cwd(), 'reports');
+    const reportPath = path.resolve(reportsDir, fileName);
+
+    if (path.dirname(reportPath) !== reportsDir) {
+      throw new Error('Invalid gene research report path');
+    }
+
+    return { reportPath, fileName };
+  };
+
   // =====================================================================
   // 1. Tool Execution IPC
   // =====================================================================
@@ -296,6 +309,39 @@ function registerIpcHandlers(deps) {
       return fs.existsSync(safeFilePath);
     } catch (error) {
       return false;
+    }
+  });
+
+  ipcMain.handle('check-gene-research-report', async (event, geneSymbol) => {
+    try {
+      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol);
+      return {
+        success: true,
+        exists: fs.existsSync(reportPath),
+        fileName,
+      };
+    } catch (error) {
+      return { success: false, exists: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('open-gene-research-report', async (event, geneSymbol) => {
+    try {
+      const { reportPath } = resolveGeneResearchReportPath(geneSymbol);
+
+      if (!fs.existsSync(reportPath)) {
+        return { success: false, error: 'Gene research report does not exist' };
+      }
+
+      const { shell } = require('electron');
+      const openError = await shell.openPath(reportPath);
+      if (openError) {
+        return { success: false, error: openError };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   });
 

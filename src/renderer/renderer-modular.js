@@ -6308,46 +6308,8 @@ class GenomeBrowser {
 
     geneDetailsContent.innerHTML = html;
 
-    // Check for Deep Research Report presence and add button if exists
-    try {
-      const fs = require('fs');
-      // path is already declared at top of file
-      // Use gene name or locus tag as symbol, sanitize to match ChatManager logic
-      const safeSymbol = (geneName || 'Unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const reportBaseDir =
-        typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '/';
-      const reportPath = rendererPath.join(reportBaseDir, 'reports', `Gene_${safeSymbol}_Research_Report.md`);
-
-      if (fs.existsSync(reportPath)) {
-        const container = document.getElementById('deep-research-report-container');
-        if (container) {
-          const btn = document.createElement('button');
-          btn.className = 'btn gene-action-btn';
-          btn.style.backgroundColor = '#e3f2fd'; // Light blue background
-          btn.style.color = '#1565C0'; // Darker blue text
-          btn.style.borderColor = '#90CAF9';
-          btn.style.marginBottom = '8px';
-          btn.style.width = '100%';
-          btn.style.fontWeight = '600';
-          btn.innerHTML = '<i class="fas fa-file-alt"></i> View Research Report';
-          btn.title = `Open report: ${rendererPath.basename(reportPath)}`;
-
-          btn.onclick = () => {
-            try {
-              const { shell } = require('electron');
-              shell.openPath(reportPath);
-            } catch (e) {
-              console.error('Failed to open report:', e);
-              notify('Failed to open report file.');
-            }
-          };
-
-          container.appendChild(btn);
-        }
-      }
-    } catch (err) {
-      console.error('Error checking for gene research report:', err);
-    }
+    // Check for Deep Research Report presence and add button if exists.
+    this.addGeneResearchReportButton(geneName);
 
     // Add event listeners for expandable sections
     this.setupExpandableSequences();
@@ -6369,6 +6331,52 @@ class GenomeBrowser {
       if (geneDetailsSection && geneDetailsSection.style.display !== 'none') {
         this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
       }
+    }
+  }
+
+  async addGeneResearchReportButton(geneName) {
+    try {
+      const api = window.electronAPI;
+      if (!api || typeof api.checkGeneResearchReport !== 'function' || typeof api.openGeneResearchReport !== 'function') {
+        return;
+      }
+
+      const report = await api.checkGeneResearchReport(geneName || 'Unknown');
+      if (!report || !report.success || !report.exists) {
+        return;
+      }
+
+      const container = document.getElementById('deep-research-report-container');
+      if (!container || container.querySelector('.gene-research-report-btn')) {
+        return;
+      }
+
+      const btn = document.createElement('button');
+      btn.className = 'btn gene-action-btn gene-research-report-btn';
+      btn.style.backgroundColor = '#e3f2fd'; // Light blue background
+      btn.style.color = '#1565C0'; // Darker blue text
+      btn.style.borderColor = '#90CAF9';
+      btn.style.marginBottom = '8px';
+      btn.style.width = '100%';
+      btn.style.fontWeight = '600';
+      btn.innerHTML = '<i class="fas fa-file-alt"></i> View Research Report';
+      btn.title = `Open report: ${report.fileName || 'Gene research report'}`;
+
+      btn.onclick = async () => {
+        try {
+          const result = await api.openGeneResearchReport(geneName || 'Unknown');
+          if (!result || !result.success) {
+            notify(result?.error || 'Failed to open report file.', 'error');
+          }
+        } catch (error) {
+          console.error('Failed to open report:', error);
+          notify('Failed to open report file.', 'error');
+        }
+      };
+
+      container.appendChild(btn);
+    } catch (error) {
+      console.warn('Unable to check gene research report:', error.message || error);
     }
   }
 

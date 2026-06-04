@@ -43,6 +43,12 @@ describe('IPC Handlers Module', () => {
     expect(content).toContain('write-file');
   });
 
+  it('should expose scoped gene research report IPC', () => {
+    expect(content).toContain('check-gene-research-report');
+    expect(content).toContain('open-gene-research-report');
+    expect(content).toContain('resolveGeneResearchReportPath');
+  });
+
   it('should handle MCP server IPC', () => {
     expect(content).toContain('mcp-server');
   });
