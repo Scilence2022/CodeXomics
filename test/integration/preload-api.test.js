@@ -39,6 +39,7 @@ describe('Preload API Structure', () => {
       'getAppPaths',
       'getSanitizerConfig',
       'invoke',
+      'onMenuAction',
       'ipcRenderer',
       'removeAllListeners',
     ];

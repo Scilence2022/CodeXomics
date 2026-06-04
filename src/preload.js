@@ -383,6 +383,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('resource-added', callback);
   },
 
+  onMenuAction: callback => {
+    if (typeof callback !== 'function') {
+      return;
+    }
+    safeIpcRenderer.on('tool-menu-action', (event, action, data) => {
+      callback(action, data);
+    });
+  },
+
   // Project Manager specific event listeners
   onCreateNewProject: callback => {
     ipcRenderer.on('create-new-project', callback);

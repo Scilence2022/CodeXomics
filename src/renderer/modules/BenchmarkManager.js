@@ -126,8 +126,16 @@ class BenchmarkManager {
    */
   setupEventHandlers() {
     // Listen for menu actions from main process
-    if (window.electronAPI) {
+    if (window.electronAPI && typeof window.electronAPI.onMenuAction === 'function') {
       window.electronAPI.onMenuAction((action, data) => {
+        this.handleMenuAction(action, data);
+      });
+    } else if (
+      window.electronAPI &&
+      window.electronAPI.ipcRenderer &&
+      typeof window.electronAPI.ipcRenderer.on === 'function'
+    ) {
+      window.electronAPI.ipcRenderer.on('tool-menu-action', (event, action, data) => {
         this.handleMenuAction(action, data);
       });
     }
