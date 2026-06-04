@@ -33,14 +33,13 @@ class UIManager {
       const fileButton = document.getElementById('openFileBtn');
       const annotationMenuButton = document.getElementById('openAnnotationMenuBtn');
       const exportButton = document.getElementById('exportFileBtn');
+      const clickedDropdownItem = e.target && e.target.classList && e.target.classList.contains('dropdown-item');
 
       // Close file dropdown if click is outside
       if (fileDropdown && fileDropdown.classList.contains('show')) {
-        if (
-          !fileButton.contains(e.target) &&
-          !fileDropdown.contains(e.target) &&
-          !annotationSubmenu.contains(e.target)
-        ) {
+        const clickedFileButton = fileButton && fileButton.contains(e.target);
+        const clickedAnnotationSubmenu = annotationSubmenu && annotationSubmenu.contains(e.target);
+        if (!clickedFileButton && !fileDropdown.contains(e.target) && !clickedAnnotationSubmenu) {
           this.closeFileDropdown();
           if (annotationSubmenu && annotationSubmenu.classList.contains('show')) {
             annotationSubmenu.classList.remove('show');
@@ -50,16 +49,18 @@ class UIManager {
 
       // Close annotation submenu if click is outside
       if (annotationSubmenu && annotationSubmenu.classList.contains('show')) {
-        if (!annotationMenuButton.contains(e.target) && !annotationSubmenu.contains(e.target)) {
+        const clickedAnnotationButton = annotationMenuButton && annotationMenuButton.contains(e.target);
+        if (!clickedAnnotationButton && !annotationSubmenu.contains(e.target)) {
           annotationSubmenu.classList.remove('show');
         }
       }
 
       // Close export dropdown if click is outside
       if (exportDropdown && exportDropdown.classList.contains('show')) {
-        if (!exportButton.contains(e.target) && !exportDropdown.contains(e.target)) {
+        const clickedExportButton = exportButton && exportButton.contains(e.target);
+        if (!clickedExportButton && !exportDropdown.contains(e.target)) {
           // Don't close if clicking on a dropdown item - let the item handle it
-          if (!e.target.classList.contains('dropdown-item')) {
+          if (!clickedDropdownItem) {
             this.closeExportDropdown();
           }
         }
@@ -69,8 +70,9 @@ class UIManager {
       const optionsDropdown = document.getElementById('optionsDropdownMenu');
       const optionsButton = document.getElementById('optionsBtn');
       if (optionsDropdown && optionsDropdown.classList.contains('show')) {
-        if (!optionsButton.contains(e.target) && !optionsDropdown.contains(e.target)) {
-          if (!e.target.classList.contains('dropdown-item')) {
+        const clickedOptionsButton = optionsButton && optionsButton.contains(e.target);
+        if (!clickedOptionsButton && !optionsDropdown.contains(e.target)) {
+          if (!clickedDropdownItem) {
             this.closeOptionsDropdown();
           }
         }
