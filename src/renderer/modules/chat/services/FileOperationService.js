@@ -662,7 +662,18 @@ class FileOperationService {
 
   async downloadInternetFile(parameters = {}) {
     try {
-      let { url, destinationPath, filename } = parameters;
+      let {
+        url,
+        destinationPath,
+        destination_path,
+        savePath,
+        save_path,
+        filename,
+        fileName,
+        file_name,
+      } = parameters;
+      destinationPath = destinationPath || destination_path || savePath || save_path;
+      filename = filename || fileName || file_name;
       if (url) url = url.replace(/[`\s]/g, '');
       console.log(`📥 [FileOperationService] Downloading file from: ${url}`);
       if (!url) throw new Error('URL is required for download');
@@ -676,10 +687,11 @@ class FileOperationService {
         console.log(`📥 [FileOperationService] No destinationPath given; using working directory: ${destinationPath}`);
       }
 
-      if (usingWorkingDirectoryDestination && window.electronAPI?.approveWorkingDirectory) {
+      if (destinationPath && window.electronAPI?.approveWorkingDirectory) {
         const approvalResult = await window.electronAPI.approveWorkingDirectory(destinationPath);
         if (!approvalResult?.success) {
-          throw new Error(approvalResult?.error || `Working directory is not approved: ${destinationPath}`);
+          const directoryLabel = usingWorkingDirectoryDestination ? 'Working directory' : 'Download destination';
+          throw new Error(approvalResult?.error || `${directoryLabel} is not approved: ${destinationPath}`);
         }
         destinationPath = approvalResult.path || destinationPath;
       }

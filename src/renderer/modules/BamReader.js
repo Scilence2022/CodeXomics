@@ -1228,6 +1228,47 @@ class BamReader {
    * @param {Object} settings - Conversion settings
    * @param {number} offset - Offset for record numbering (for chunked processing)
    */
+  sanitizeRecordTags(tags) {
+    const sanitizedTags = {};
+
+    if (!tags || typeof tags !== 'object') {
+      return sanitizedTags;
+    }
+
+    Object.entries(tags).forEach(([key, value]) => {
+      const sanitizedValue = this.sanitizeTagValue(value);
+      if (sanitizedValue !== undefined) {
+        sanitizedTags[key] = sanitizedValue;
+      }
+    });
+
+    return sanitizedTags;
+  }
+
+  sanitizeTagValue(value, depth = 0) {
+    if (value === null) return null;
+
+    const valueType = typeof value;
+    if (valueType === 'string' || valueType === 'boolean') return value;
+    if (valueType === 'number') return Number.isFinite(value) ? value : null;
+    if (valueType === 'bigint') return value.toString();
+    if (valueType === 'undefined' || valueType === 'function' || valueType === 'symbol') return undefined;
+
+    if (depth > 1) {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(item => this.sanitizeTagValue(item, depth + 1)).filter(item => item !== undefined);
+    }
+
+    if (ArrayBuffer.isView(value)) {
+      return Array.from(value).slice(0, 1024);
+    }
+
+    return undefined;
+  }
+
   convertRecordsToReads(records, chromosome, settings = {}, offset = 0) {
     const reads = [];
     let filteredCount = 0;
@@ -1315,6 +1356,7 @@ class BamReader {
           lowQualityCount++;
         }
 
+        const tags = this.sanitizeRecordTags(record.tags);
         const read = {
           id: record.name || record.qname || `read_${offset + i}`,
           chromosome: record.refName || chromosome,
@@ -1327,8 +1369,8 @@ class BamReader {
           quality: record.qual || '',
           flags: record.flags || 0,
           templateLength: record.template_length || record.tlen || 0,
-          tags: record.tags || {},
-          isMultiMapping: mappingQuality === 0 || (record.tags && record.tags.NH > 1),
+          tags,
+          isMultiMapping: mappingQuality === 0 || tags.NH > 1,
           // Parse mutations from CIGAR and sequence
           mutations: this.parseMutations(record),
         };

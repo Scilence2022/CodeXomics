@@ -35,8 +35,60 @@ function getBamReaderClass() {
   return BamReaderClass;
 }
 
+function toIpcSafeValue(value, seen = new WeakSet(), depth = 0) {
+  if (value === null) return null;
+
+  const valueType = typeof value;
+  if (valueType === 'string' || valueType === 'boolean') return value;
+  if (valueType === 'number') return Number.isFinite(value) ? value : null;
+  if (valueType === 'bigint') return value.toString();
+  if (valueType === 'undefined' || valueType === 'function' || valueType === 'symbol') return undefined;
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (Buffer.isBuffer(value)) {
+    return value.toString('base64');
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return Array.from(value);
+  }
+
+  if (value instanceof ArrayBuffer) {
+    return Array.from(new Uint8Array(value));
+  }
+
+  if (depth > 8 || typeof value !== 'object') {
+    return undefined;
+  }
+
+  if (seen.has(value)) {
+    return undefined;
+  }
+
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    const safeArray = value.map(item => toIpcSafeValue(item, seen, depth + 1)).filter(item => item !== undefined);
+    seen.delete(value);
+    return safeArray;
+  }
+
+  const safeObject = {};
+  Object.entries(value).forEach(([key, item]) => {
+    const safeItem = toIpcSafeValue(item, seen, depth + 1);
+    if (safeItem !== undefined) {
+      safeObject[key] = safeItem;
+    }
+  });
+  seen.delete(value);
+  return safeObject;
+}
+
 function getBamReaderState(reader) {
-  return {
+  return toIpcSafeValue({
     filePath: reader.filePath,
     indexPath: reader.indexPath,
     isInitialized: reader.isInitialized,
@@ -48,7 +100,7 @@ function getBamReaderState(reader) {
     fileSize: reader.fileSize,
     indexSize: reader.indexSize,
     performanceStats: { ...reader.performanceStats },
-  };
+  });
 }
 
 /**
@@ -1253,7 +1305,7 @@ function registerIpcHandlers(deps) {
       const reader = getOwnedBamReader(event, readerId);
       const reads = await reader.getRecordsForRange(chromosome, start, end, settings);
       return {
-        reads,
+        reads: toIpcSafeValue(reads),
         state: getBamReaderState(reader),
       };
     } catch (error) {
