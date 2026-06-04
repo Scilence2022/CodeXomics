@@ -233,8 +233,11 @@ class FileOperationService {
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
         filePath: writeResult?.filePath || outputFilename,
+        total_chromosomes: chromosomes.length,
         chromosomes: chromosomes,
         total_length: chromosomes.reduce((sum, chr) => sum + this.app.currentSequence[chr].length, 0),
+        message: `Successfully exported ${chromosomes.length} chromosome(s) as FASTA`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`FASTA export failed: ${error.message}`);
@@ -298,6 +301,7 @@ class FileOperationService {
         total_protein_sequences: proteinCount,
         translation_table: translationTable,
         message: `Successfully exported ${proteinCount} protein sequences`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`Protein FASTA export failed: ${error.message}`);
@@ -346,6 +350,7 @@ class FileOperationService {
         region_length: viewEnd - viewStart + 1,
         coordinates: `${currentChr}:${viewStart}-${viewEnd}`,
         message: `Successfully exported current view as FASTA format`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`Current view FASTA export failed: ${error.message}`);
@@ -360,10 +365,14 @@ class FileOperationService {
 
     try {
       const chromosomes = Object.keys(this.app.currentSequence);
+      const includeFeatures = parameters.include_features !== false && parameters.includeFeatures !== false;
+      const includeSequence = parameters.include_sequence !== false && parameters.includeSequence !== false;
+      let totalFeatures = 0;
       let genbankContent = '';
       chromosomes.forEach(chr => {
         const sequence = this.app.currentSequence[chr];
-        const features = this.app.currentAnnotations?.[chr] || [];
+        const features = includeFeatures ? this.app.currentAnnotations?.[chr] || [] : [];
+        totalFeatures += features.length;
         genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10)}\n`;
         genbankContent += `FEATURES             Location/Qualifiers\n`;
         genbankContent += `     source          1..${sequence.length}\n`;
@@ -374,12 +383,14 @@ class FileOperationService {
               : `${feature.start}..${feature.end}`;
           genbankContent += `     ${feature.type.padEnd(15)} ${loc}\n`;
         });
-        genbankContent += `ORIGIN\n`;
-        for (let i = 0; i < sequence.length; i += 60) {
-          const lineNum = (i + 1).toString().padStart(9);
-          const seqLine = sequence.substring(i, i + 60).toLowerCase();
-          const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
-          genbankContent += `${lineNum} ${formattedSeq}\n`;
+        if (includeSequence) {
+          genbankContent += `ORIGIN\n`;
+          for (let i = 0; i < sequence.length; i += 60) {
+            const lineNum = (i + 1).toString().padStart(9);
+            const seqLine = sequence.substring(i, i + 60).toLowerCase();
+            const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
+            genbankContent += `${lineNum} ${formattedSeq}\n`;
+          }
         }
         genbankContent += `//\n\n`;
       });
@@ -399,6 +410,13 @@ class FileOperationService {
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
         filePath: writeResult?.filePath || outputFilename,
+        total_chromosomes: chromosomes.length,
+        total_features: totalFeatures,
+        include_features: includeFeatures,
+        include_sequence: includeSequence,
+        include_protein_sequences: false,
+        message: `Successfully exported ${chromosomes.length} chromosome(s) in GenBank format`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`GenBank export failed: ${error.message}`);
@@ -407,6 +425,7 @@ class FileOperationService {
 
   async exportCdsFasta(parameters = {}) {
     try {
+      const includeGeneNames = parameters.includeGeneNames !== false && parameters.include_gene_names !== false;
       const chromosomes = Object.keys(this.app.currentSequence || {});
       let cdsContent = '';
       let totalCDS = 0;
@@ -444,9 +463,13 @@ class FileOperationService {
         tool: 'export_cds_fasta',
         exported_format: 'CDS FASTA',
         count: totalCDS,
+        total_cds_sequences: totalCDS,
+        include_gene_names: includeGeneNames,
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
         filePath: writeResult?.filePath || outputFilename,
+        message: `Successfully exported ${totalCDS} CDS sequence(s)`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`CDS export failed: ${error.message}`);
@@ -456,10 +479,14 @@ class FileOperationService {
   async exportGffAnnotations(parameters = {}) {
     try {
       const chromosomes = Object.keys(this.app.currentAnnotations || {});
+      const featureTypes = new Set();
+      let totalFeatures = 0;
       let gffContent = '##gff-version 3\n';
       chromosomes.forEach(chr => {
         const features = this.app.currentAnnotations[chr];
         features.forEach(f => {
+          totalFeatures++;
+          if (f.type) featureTypes.add(f.type);
           const attrs = Object.entries(f.attributes || {})
             .map(([k, v]) => `${k}=${v}`)
             .join(';');
@@ -482,6 +509,10 @@ class FileOperationService {
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
         filePath: writeResult?.filePath || outputFilename,
+        total_features: totalFeatures,
+        feature_types: Array.from(featureTypes),
+        message: `Successfully exported ${totalFeatures} annotation feature(s) in GFF format`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`GFF export failed: ${error.message}`);
@@ -556,7 +587,12 @@ class FileOperationService {
         file_path: writeResult?.filePath || outputFilename,
         filePath: writeResult?.filePath || outputFilename,
         exported_count: exportedCount,
+        total_features: exportedCount,
         bed_format,
+        include_score: bed_format !== 'bed3',
+        include_strand: bed_format !== 'bed3',
+        message: `Successfully exported ${exportedCount} feature(s) in BED format`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
       if (hasRangeFilter) {
         result.range = { start: rangeStart, end: rangeEnd, include_partial_overlap };

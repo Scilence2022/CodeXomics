@@ -1625,113 +1625,113 @@ InterPro domain analysis has been completed successfully.`;
 
       case 'export_fasta_sequence':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `🧬 **FASTA Sequence Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Chromosomes:** ${result.result.total_chromosomes}
-- **Total Length:** ${result.result.total_length?.toLocaleString()} bp
+- **Format:** ${result.result.exported_format || 'FASTA'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Chromosomes:** ${result.result.total_chromosomes ?? result.result.chromosomes?.length ?? 'Unknown'}
+- **Total Length:** ${result.result.total_length?.toLocaleString() || 'Unknown'} bp
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_genbank_format':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `📄 **GenBank Format Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Chromosomes:** ${result.result.total_chromosomes}
-- **Features:** ${result.result.total_features}
+- **Format:** ${result.result.exported_format || 'GenBank'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Chromosomes:** ${result.result.total_chromosomes ?? result.result.chromosomes?.length ?? 'Unknown'}
+- **Features:** ${result.result.total_features ?? 'Unknown'}
 - **Protein Sequences:** ${result.result.include_protein_sequences ? 'Included' : 'Not included'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `GenBank export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_cds_fasta':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `🧬 **CDS FASTA Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **CDS Sequences:** ${result.result.total_cds_sequences}
+- **Format:** ${result.result.exported_format || 'CDS FASTA'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **CDS Sequences:** ${result.result.total_cds_sequences ?? result.result.count ?? 'Unknown'}
 - **Gene Names:** ${result.result.include_gene_names ? 'Included' : 'Not included'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `CDS FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_protein_fasta':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `🧬 **Protein FASTA Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Protein Sequences:** ${result.result.total_protein_sequences}
-- **Translation Table:** ${result.result.translation_table}
+- **Format:** ${result.result.exported_format || 'Protein FASTA'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Protein Sequences:** ${result.result.total_protein_sequences ?? 'Unknown'}
+- **Translation Table:** ${result.result.translation_table ?? 'Standard'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `Protein FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_gff_annotations':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `📋 **GFF Annotations Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Features:** ${result.result.total_features}
+- **Format:** ${result.result.exported_format || 'GFF'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Features:** ${result.result.total_features ?? 'Unknown'}
 - **Feature Types:** ${result.result.feature_types?.join(', ') || 'Various'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `GFF export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_bed_format':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `📊 **BED Format Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Features:** ${result.result.total_features}
+- **Format:** ${result.result.exported_format || 'BED'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Features:** ${result.result.total_features ?? result.result.exported_count ?? 'Unknown'}
 - **Score/Strand:** ${result.result.include_score && result.result.include_strand ? 'Included' : 'Basic format'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `BED export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_current_view_fasta':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `👁️ **Current View FASTA Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Region:** ${result.result.coordinates}
-- **Length:** ${result.result.region_length?.toLocaleString()} bp
+- **Format:** ${result.result.exported_format || 'FASTA (Current View)'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Region:** ${result.result.coordinates || 'Current view'}
+- **Length:** ${result.result.region_length?.toLocaleString() || 'Unknown'} bp
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `Current view export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
