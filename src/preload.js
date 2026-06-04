@@ -15,6 +15,7 @@ const allowedInvokeChannels = [
   'read-file-stream',
   'get-file-info',
   'getFileInfo',
+  'get-app-paths',
   'checkFileExists',
   'check-file-exists',
   'check-gene-research-report',
@@ -26,6 +27,7 @@ const allowedInvokeChannels = [
   'copy-plugin-file',
   'createNewMainWindow',
   'ensure-directory',
+  'approve-working-directory',
   'extract-plugin-zip',
   'get-plugin-file-info',
   'open-markdown-viewer',
@@ -39,6 +41,10 @@ const allowedInvokeChannels = [
   'selectMultipleFiles',
   'show-directory-dialog',
   'write-plugin-file',
+  'tool-registry:get-snapshot',
+  'tool-registry:get-metadata',
+  'tool-registry:get-tool',
+  'tool-registry:reload',
   'i18n:getCurrentLanguage',
   'i18n:changeLanguage',
 ];
@@ -182,6 +188,7 @@ const allowedListenChannels = [
   'file-lines-chunk',
   'file-stream-complete',
   'file-read-progress',
+  'tool-registry-updated',
 ];
 
 const allowedSendChannels = [
@@ -354,6 +361,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createTempFile: (fileName, content) => ipcRenderer.invoke('createTempFile', fileName, content),
   getFileInfo: filePath => ipcRenderer.invoke('getFileInfo', filePath),
   checkFileExists: filePath => ipcRenderer.invoke('checkFileExists', filePath),
+  getAppPaths: () => ipcRenderer.invoke('get-app-paths'),
   checkGeneResearchReport: geneSymbol => ipcRenderer.invoke('check-gene-research-report', geneSymbol),
   openGeneResearchReport: geneSymbol => ipcRenderer.invoke('open-gene-research-report', geneSymbol),
   loadSidecarFile: genomePath => ipcRenderer.invoke('load-sidecar-file', genomePath),
@@ -387,6 +395,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Plugin management APIs
   scanPluginDirectory: () => ipcRenderer.invoke('scan-plugin-directory'),
   loadPluginMetadata: pluginPath => ipcRenderer.invoke('load-plugin-metadata', pluginPath),
+  approveWorkingDirectory: (directoryPath, options) =>
+    ipcRenderer.invoke('approve-working-directory', directoryPath, options),
 
   // Event listeners
   onResourceUpdate: callback => {
@@ -478,6 +488,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Utility Tools APIs
   downloadInternetFile: options => ipcRenderer.invoke('download-internet-file', options),
   openMarkdownViewer: options => ipcRenderer.invoke('open-markdown-viewer', options),
+
+  // Dynamic tool registry APIs
+  getToolRegistrySnapshot: () => ipcRenderer.invoke('tool-registry:get-snapshot'),
+  getToolRegistryMetadata: () => ipcRenderer.invoke('tool-registry:get-metadata'),
+  getToolDefinition: toolName => ipcRenderer.invoke('tool-registry:get-tool', toolName),
+  reloadToolRegistry: () => ipcRenderer.invoke('tool-registry:reload'),
+  onToolRegistryUpdated: callback => {
+    if (typeof callback !== 'function') {
+      return;
+    }
+    safeIpcRenderer.on('tool-registry-updated', (event, snapshot) => {
+      callback(snapshot);
+    });
+  },
 
   // Gene Attachments APIs
   selectAttachmentFiles: options => ipcRenderer.invoke('select-attachment-files', options),

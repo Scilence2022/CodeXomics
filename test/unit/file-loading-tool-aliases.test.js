@@ -64,6 +64,46 @@ describe('file loading tool aliases', () => {
     expect(organizer.getFunctionCategory('load_bed_file').name).toBe('dataRetrieval');
   });
 
+  it('registers canonical registry snapshot tools in FunctionCallsOrganizer', () => {
+    const FunctionCallsOrganizer = loadBrowserClass(
+      'src/renderer/modules/FunctionCallsOrganizer.js',
+      'FunctionCallsOrganizer',
+      { module: { exports: {} } }
+    );
+
+    const organizer = new FunctionCallsOrganizer({ app: {} });
+    organizer.registerToolRegistrySnapshot({
+      tools: [
+        { name: 'custom_registry_tool', category: 'custom_category', source: 'user_registry' },
+        { name: 'remote_blast_lookup', category: 'external_apis', source: 'app_registry' },
+      ],
+      builtInTools: [{ name: 'load_extra_track', category: 'file_loading', source: 'builtin_tools_map' }],
+    });
+
+    expect(organizer.getFunctionCategory('custom_registry_tool').name).toBe('registryDynamic');
+    expect(organizer.getFunctionCategory('remote_blast_lookup').name).toBe('blastSearch');
+    expect(organizer.getFunctionCategory('load_extra_track').name).toBe('dataRetrieval');
+  });
+
+  it('replaces stale registry tools when FunctionCallsOrganizer receives a new snapshot', () => {
+    const FunctionCallsOrganizer = loadBrowserClass(
+      'src/renderer/modules/FunctionCallsOrganizer.js',
+      'FunctionCallsOrganizer',
+      { module: { exports: {} } }
+    );
+
+    const organizer = new FunctionCallsOrganizer({ app: {} });
+    organizer.registerToolRegistrySnapshot({
+      tools: [{ name: 'temporary_registry_tool', category: 'custom_category', source: 'user_registry' }],
+    });
+    organizer.registerToolRegistrySnapshot({
+      tools: [{ name: 'replacement_registry_tool', category: 'custom_category', source: 'user_registry' }],
+    });
+
+    expect(organizer.getFunctionCategory('temporary_registry_tool')).toBeNull();
+    expect(organizer.getFunctionCategory('replacement_registry_tool').name).toBe('registryDynamic');
+  });
+
   it('matches benchmark expected canonical tools with alias names', () => {
     const BenchmarkEvaluatorBase = loadBrowserClass(
       'src/renderer/modules/benchmark-suites/BenchmarkEvaluatorBase.js',

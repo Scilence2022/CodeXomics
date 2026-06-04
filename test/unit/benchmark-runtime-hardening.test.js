@@ -12,8 +12,33 @@ describe('benchmark runtime hardening', () => {
   it('sets ChatBox working directory through path-info IPC in hardened renderer', () => {
     const source = readSource('src/renderer/modules/ChatManager.js');
 
+    expect(source).toContain('approveWorkingDirectory');
     expect(source).toContain('window.electronAPI?.getSelectedFileInfo');
     expect(source).toContain('infoResult.info?.isDirectory');
+  });
+
+  it('downloads to the working directory only after approving it through main IPC', () => {
+    const source = readSource('src/renderer/modules/chat/services/FileOperationService.js');
+
+    expect(source).toContain('usingWorkingDirectoryDestination');
+    expect(source).toContain('window.electronAPI?.approveWorkingDirectory');
+    expect(source).toContain('window.electronAPI.downloadInternetFile');
+  });
+
+  it('writes BLAST temporary FASTA files through main-process file IPC', () => {
+    const source = readSource('src/renderer/modules/BlastManager.js');
+    const writeSequenceStart = source.indexOf('async writeSequenceToFile');
+    const writeSequenceEnd = source.indexOf('generateEnhancedMockResults', writeSequenceStart);
+    const writeSequenceSource = source.slice(writeSequenceStart, writeSequenceEnd);
+    const tempFastaStart = source.indexOf('async createTempFastaFile');
+    const tempFastaEnd = source.indexOf('buildBlastCommand', tempFastaStart);
+    const tempFastaSource = source.slice(tempFastaStart, tempFastaEnd);
+
+    expect(source).toContain('writeTextFileViaMain');
+    expect(writeSequenceSource).not.toContain("require('fs')");
+    expect(writeSequenceSource).not.toContain('require("fs")');
+    expect(tempFastaSource).not.toContain("require('fs')");
+    expect(tempFastaSource).not.toContain('require("fs")');
   });
 
   it('prevents benchmark automation from opening file chooser dialogs', () => {

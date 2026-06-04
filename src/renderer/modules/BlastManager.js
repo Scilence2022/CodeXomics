@@ -4688,14 +4688,53 @@ class BlastManager {
     }
   }
 
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    if (typeof require !== 'undefined') {
+      return require('path');
+    }
+    return {
+      join: (...parts) => parts.filter(Boolean).join('/').replace(/\/+/g, '/'),
+      dirname: filePath => String(filePath || '').replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '/',
+    };
+  }
+
+  sanitizeFileNamePart(value, fallback = 'blast') {
+    const safeValue = String(value || fallback)
+      .replace(/[^A-Za-z0-9._-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    return safeValue || fallback;
+  }
+
+  async getAppTempDirectory() {
+    if (typeof window !== 'undefined' && window.electronAPI?.getAppPaths) {
+      const result = await window.electronAPI.getAppPaths();
+      if (result?.success && result.paths) {
+        return result.paths.temp || result.paths.userData;
+      }
+    }
+    return '/tmp';
+  }
+
+  async writeTextFileViaMain(filePath, content) {
+    if (!window.electronAPI?.writeFile) {
+      throw new Error('Main-process file write API is unavailable');
+    }
+    const result = await window.electronAPI.writeFile(filePath, content);
+    if (!result?.success) {
+      throw new Error(result?.error || `Failed to write file: ${filePath}`);
+    }
+    return result.filePath || filePath;
+  }
+
   async createTempFastaFile(sequence) {
-    const tempDir = require('os').tmpdir();
-    const tempFile = require('path').join(tempDir, `blast_query_${Date.now()}.fa`);
-
+    const path = this.getPathModule();
+    const tempDir = await this.getAppTempDirectory();
+    const tempFile = path.join(tempDir, `blast_query_${Date.now()}.fa`);
     const fastaContent = `>Query_sequence\n${sequence}`;
-    await require('fs').promises.writeFile(tempFile, fastaContent);
-
-    return tempFile;
+    return await this.writeTextFileViaMain(tempFile, fastaContent);
   }
 
   buildBlastCommand(params, queryFile) {
@@ -6441,12 +6480,10 @@ class BlastManager {
   }
 
   async writeSequenceToFile(fastaContent, dbName, dbType) {
-    const fs = require('fs').promises;
-    const path = require('path');
-    const os = require('os');
+    const path = this.getPathModule();
 
-    // Try to get current file directory first, fallback to temp directory
-    let targetDir = os.tmpdir(); // Default fallback
+    // Try to get current file directory first, fallback to the main-process temp directory.
+    let targetDir = await this.getAppTempDirectory();
     let currentFilePath = null;
 
     // Try multiple approaches to get the current file path
@@ -6474,10 +6511,24 @@ class BlastManager {
       console.log('BlastManager: Current file path not available, using temp directory');
     }
 
-    const fileName = `${dbName}_${dbType}_${Date.now()}.fasta`;
-    const filePath = path.join(targetDir, fileName);
+    const fileName = `${this.sanitizeFileNamePart(dbName)}_${this.sanitizeFileNamePart(dbType)}_${Date.now()}.fasta`;
+    let filePath = path.join(targetDir, fileName);
 
-    await fs.writeFile(filePath, fastaContent);
+    try {
+      filePath = await this.writeTextFileViaMain(filePath, fastaContent);
+    } catch (error) {
+      if (!currentFilePath) {
+        throw error;
+      }
+
+      const fallbackDir = await this.getAppTempDirectory();
+      const fallbackPath = path.join(fallbackDir, fileName);
+      console.warn(
+        `BlastManager: Genome directory write failed (${error.message}); retrying in temp directory: ${fallbackDir}`
+      );
+      filePath = await this.writeTextFileViaMain(fallbackPath, fastaContent);
+    }
+
     console.log(`BlastManager: Wrote sequence to ${filePath}`);
 
     return filePath;

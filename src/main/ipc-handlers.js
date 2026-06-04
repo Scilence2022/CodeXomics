@@ -14,6 +14,7 @@ const path = require('path');
 const fs = require('fs');
 const {
   createSecureWebPreferences,
+  rememberApprovedPath,
   rememberApprovedDialogPaths,
   getDefaultWritableRoots,
   assertAllowedFileAccess,
@@ -22,6 +23,7 @@ const {
   safeExtractAdmZip,
   sanitizePluginId,
 } = require('./security-utils');
+const { ToolRegistryService } = require('./tool-registry-service');
 
 /**
  * Register all non-Project-Manager IPC handlers.
@@ -160,6 +162,15 @@ function registerIpcHandlers(deps) {
     return { safeGenomePath, sidecarPath, fallbackDir, fallbackPath };
   };
 
+  const toolRegistryService = deps.toolRegistryService || new ToolRegistryService({ app });
+  const broadcastToolRegistryUpdated = snapshot => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('tool-registry-updated', snapshot);
+      }
+    }
+  };
+
   // =====================================================================
   // 1. Tool Execution IPC
   // =====================================================================
@@ -202,6 +213,28 @@ function registerIpcHandlers(deps) {
     if (_mcpServer && _mcpServer.handleToolResponse) {
       _mcpServer.handleToolResponse(response);
     }
+  });
+
+  // =====================================================================
+  // 1a. Dynamic Tool Registry IPC
+  // =====================================================================
+
+  ipcMain.handle('tool-registry:get-snapshot', async () => {
+    return await toolRegistryService.getSnapshot();
+  });
+
+  ipcMain.handle('tool-registry:get-metadata', async () => {
+    return await toolRegistryService.getMetadata();
+  });
+
+  ipcMain.handle('tool-registry:get-tool', async (event, toolName) => {
+    return await toolRegistryService.getTool(toolName);
+  });
+
+  ipcMain.handle('tool-registry:reload', async () => {
+    const snapshot = await toolRegistryService.reload();
+    broadcastToolRegistryUpdated(snapshot);
+    return snapshot;
   });
 
   // =====================================================================
@@ -1079,6 +1112,61 @@ function registerIpcHandlers(deps) {
     }
   });
 
+  ipcMain.handle('approve-working-directory', async (event, directoryPath, options = {}) => {
+    try {
+      if (!directoryPath || typeof directoryPath !== 'string') {
+        throw new Error('Working directory approval requires a valid directory path');
+      }
+
+      const resolvedPath = path.resolve(directoryPath);
+      const rootPath = path.parse(resolvedPath).root;
+      if (resolvedPath === rootPath) {
+        throw new Error('Refusing to approve filesystem root as a working directory');
+      }
+
+      let created = false;
+      if (!fs.existsSync(resolvedPath)) {
+        if (!options.createIfMissing) {
+          throw new Error(`Directory does not exist: ${resolvedPath}`);
+        }
+
+        const allowedCreatePath = assertAllowedFileAccess(app, resolvedPath, {
+          operation: 'create working directory',
+          allowApproved: true,
+        });
+        fs.mkdirSync(allowedCreatePath, { recursive: true });
+        created = true;
+      }
+
+      const stats = fs.statSync(resolvedPath);
+      if (!stats.isDirectory()) {
+        throw new Error(`Path is not a directory: ${resolvedPath}`);
+      }
+
+      try {
+        fs.accessSync(resolvedPath, fs.constants.R_OK | fs.constants.W_OK);
+      } catch (error) {
+        throw new Error(`Working directory is not readable and writable: ${resolvedPath}`);
+      }
+
+      rememberApprovedPath(resolvedPath);
+      return {
+        success: true,
+        path: resolvedPath,
+        created,
+        permissions: {
+          readable: true,
+          writable: true,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  });
+
   // BAM file handling has been moved to renderer process using direct @gmod/bam API
   // This eliminates IPC overhead and provides better performance
   // The BamReader class in renderer/modules/BamReader.js now handles all BAM operations directly
@@ -1190,6 +1278,26 @@ function registerIpcHandlers(deps) {
     } catch (error) {
       return { success: false, error: error.message };
     }
+  });
+
+  ipcMain.handle('get-app-paths', async () => {
+    const safeGetPath = name => {
+      try {
+        return app.getPath(name);
+      } catch (error) {
+        return '';
+      }
+    };
+
+    return {
+      success: true,
+      paths: {
+        userData: safeGetPath('userData'),
+        temp: safeGetPath('temp'),
+        downloads: safeGetPath('downloads'),
+        documents: safeGetPath('documents'),
+      },
+    };
   });
 
   // =====================================================================

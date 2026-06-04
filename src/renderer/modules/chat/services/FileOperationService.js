@@ -669,9 +669,19 @@ class FileOperationService {
 
       // If no explicit destination was given, use the user-configured working directory
       // so the file lands where set_working_directory points, not the system Downloads folder.
+      let usingWorkingDirectoryDestination = false;
       if (!destinationPath) {
         destinationPath = this.getCurrentWorkingDirectory();
+        usingWorkingDirectoryDestination = true;
         console.log(`📥 [FileOperationService] No destinationPath given; using working directory: ${destinationPath}`);
+      }
+
+      if (usingWorkingDirectoryDestination && window.electronAPI?.approveWorkingDirectory) {
+        const approvalResult = await window.electronAPI.approveWorkingDirectory(destinationPath);
+        if (!approvalResult?.success) {
+          throw new Error(approvalResult?.error || `Working directory is not approved: ${destinationPath}`);
+        }
+        destinationPath = approvalResult.path || destinationPath;
       }
 
       if (window.electronAPI?.downloadInternetFile) {

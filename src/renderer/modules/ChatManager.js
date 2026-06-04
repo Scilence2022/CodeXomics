@@ -96,6 +96,10 @@ class ChatManager {
     // Initialize Dynamic Tools Registry System
     this.dynamicTools = null;
     this.dynamicToolsEnabled = true;
+    this.builtInTools = null;
+    this.builtInToolsMap = new Map();
+    this._toolRegistryUpdateListenerRegistered = false;
+    this._pendingToolRegistrySnapshot = null;
     this._dynamicToolsReady = false;
     this.initializeDynamicTools()
       .then(() => {
@@ -703,6 +707,9 @@ class ChatManager {
       // Initialize the smart executor
       if (typeof SmartExecutor !== 'undefined') {
         this.smartExecutor = new SmartExecutor(this);
+        if (this._pendingToolRegistrySnapshot) {
+          this.registerToolRegistrySnapshotWithOrganizer(this._pendingToolRegistrySnapshot);
+        }
         // SmartExecutor initialized successfully
       } else {
         // SmartExecutor not available, falling back to standard execution
@@ -854,362 +861,82 @@ class ChatManager {
         await this.initializePrimerFunctionTools();
       }
 
-      // Check if we can access file system to verify tools_registry directory
-      if (window.require) {
-        try {
-          const fs = window.require('fs');
-          const path = window.require('path');
-          const rendererDirname = typeof __dirname !== 'undefined' ? __dirname : null;
-          const rendererCwd = this.getCurrentWorkingDirectory();
-          const resourcesPath =
-            typeof process !== 'undefined' && process.resourcesPath ? process.resourcesPath : null;
+      if (!window.electronAPI || typeof window.electronAPI.getToolRegistrySnapshot !== 'function') {
+        throw new Error('Tool registry IPC API is not available');
+      }
 
-          // Check different possible locations
-          const possibleDirs = [
-            rendererDirname ? path.join(rendererDirname, '../../tools_registry') : null,
-            rendererDirname ? path.join(rendererDirname, '../../../tools_registry') : null,
-            rendererCwd ? path.join(rendererCwd, 'tools_registry') : null,
-            resourcesPath ? path.join(resourcesPath, 'tools_registry') : null,
-          ].filter(Boolean);
+      const snapshot = await window.electronAPI.getToolRegistrySnapshot();
+      if (!snapshot || (!Array.isArray(snapshot.tools) && !snapshot.toolsByName)) {
+        throw new Error('Tool registry snapshot is invalid');
+      }
 
-          // Checking tools_registry directory locations:
-          for (const dir of possibleDirs) {
-            try {
-              const exists = fs.existsSync(dir);
-              // Directory check result
-              if (exists) {
-                const files = fs.readdirSync(dir);
-                // Files found
-              }
-            } catch (e) {
-              // Directory check error
-            }
+      if (snapshot.success === false && (!snapshot.tools || snapshot.tools.length === 0)) {
+        throw new Error('Tool registry snapshot contains no usable tools');
+      }
+
+      this.dynamicTools = this.createDynamicToolsSnapshotAdapter(snapshot);
+      this.builtInTools = this.dynamicTools.builtInTools;
+      this.builtInToolsMap = this.dynamicTools.builtInTools.builtInToolsMap;
+      this.registerToolRegistrySnapshotWithOrganizer(snapshot);
+      this.dynamicToolsEnabled = true;
+
+      if (
+        !this._toolRegistryUpdateListenerRegistered &&
+        typeof window.electronAPI.onToolRegistryUpdated === 'function'
+      ) {
+        window.electronAPI.onToolRegistryUpdated(updatedSnapshot => {
+          try {
+            this.dynamicTools = this.createDynamicToolsSnapshotAdapter(updatedSnapshot);
+            this.builtInTools = this.dynamicTools.builtInTools;
+            this.builtInToolsMap = this.dynamicTools.builtInTools.builtInToolsMap;
+            this.registerToolRegistrySnapshotWithOrganizer(updatedSnapshot);
+            this.dynamicToolsEnabled = true;
+            this.connectPluginManagerToDynamicTools();
+            console.log('[ChatManager] Tool registry snapshot updated', this.dynamicTools.integrationStatus);
+          } catch (updateError) {
+            console.warn('[ChatManager] Failed to apply updated tool registry snapshot:', updateError.message);
           }
-        } catch (e) {
-          // Could not access filesystem for directory check
-        }
+        });
+        this._toolRegistryUpdateListenerRegistered = true;
       }
 
-      // Try different path resolution strategies for packaged vs development
-      let SystemIntegration;
-      const possiblePaths = [
-        '../../tools_registry/system_integration', // Development path
-        '../../../tools_registry/system_integration', // Alternative dev path
-        './tools_registry/system_integration', // Packaged relative path
-        'tools_registry/system_integration', // Direct path
-      ];
+      console.log('[ChatManager] Dynamic Tools Registry initialized from main-process snapshot', {
+        tools: snapshot.counts?.tools || 0,
+        builtInTools: snapshot.counts?.builtInTools || 0,
+        registryHash: snapshot.registryHash,
+      });
 
-      let loadedPath = null;
-      for (const tryPath of possiblePaths) {
-        try {
-          // Trying to load SystemIntegration from path
-          SystemIntegration = require(tryPath);
-          loadedPath = tryPath;
-          // Successfully loaded SystemIntegration from path
-          break;
-        } catch (pathError) {
-          // Failed to load from path
-        }
-      }
-
-      if (!SystemIntegration) {
-        throw new Error('Could not load SystemIntegration from any path');
-      }
-
-      // SystemIntegration loaded
-
-      if (SystemIntegration) {
-        // Creating SystemIntegration instance...
-        this.dynamicTools = new SystemIntegration();
-        // Calling initialize()...
-        const initialized = await this.dynamicTools.initialize();
-        // Initialize result
-
-        if (initialized) {
-          // Dynamic Tools Registry System initialized
-          // Loaded from path
-
-          // Connect PluginManager to Dynamic Tools Bridge
-          this.connectPluginManagerToDynamicTools();
-        } else {
-          // Dynamic Tools Registry System failed to initialize, using fallback
-          this.dynamicToolsEnabled = false;
-        }
-      } else {
-        // SystemIntegration not available
-        this.dynamicToolsEnabled = false;
-      }
+      // Connect PluginManager to Dynamic Tools Bridge
+      this.connectPluginManagerToDynamicTools();
     } catch (error) {
       // Failed to initialize Dynamic Tools Registry System
       // Error details
+      console.warn('[ChatManager] Failed to initialize Dynamic Tools Registry from snapshot:', error.message);
       this.dynamicToolsEnabled = false;
     }
   }
 
-  /**
-   * Initialize Tool Execution Tracker
-   */
-  async initializeToolExecutionTracker() {
-    try {
-      // Initializing Tool Execution Tracker...
-
-      // Check if ToolExecutionTracker is available globally
-      if (typeof ToolExecutionTracker !== 'undefined') {
-        this.toolExecutionTracker = new ToolExecutionTracker();
-        // Tool Execution Tracker initialized successfully
-      } else {
-        // Try to load the module
-        await this.loadScript('modules/ToolExecutionTracker.js');
-
-        if (typeof ToolExecutionTracker !== 'undefined') {
-          this.toolExecutionTracker = new ToolExecutionTracker();
-          // Tool Execution Tracker loaded and initialized successfully
-        } else {
-          // ToolExecutionTracker not available
-        }
-      }
-    } catch (error) {
-      // Failed to initialize Tool Execution Tracker
-    }
-  }
-
-  /**
-   * Get the last user query for Dynamic Tools Registry intent analysis
-   */
-  getLastUserQuery() {
-    // Try to get the current message being processed
-    if (this.currentMessage) {
-      return this.currentMessage;
-    }
-
-    // Fallback to chat history
-    if (this.chatHistory.length === 0) return '';
-    const lastMessage = this.chatHistory[this.chatHistory.length - 1];
-    return lastMessage.role === 'user' ? lastMessage.content : '';
-  }
-
-  /**
-   * Check if we're currently in benchmark mode
-   * @returns {boolean} True if in benchmark mode
-   */
-  isBenchmarkMode() {
-    // Check if benchmark interface is open
-    const benchmarkInterface = document.getElementById('benchmarkInterface');
-    if (benchmarkInterface && benchmarkInterface.style.display !== 'none') {
-      return true;
-    }
-
-    // Check if any benchmark is currently running
-    if (window.benchmarkUI && window.benchmarkUI.isRunning) {
-      return true;
-    }
-
-    // Check if we have an active benchmark manager
-    if (this.app?.benchmarkManager?.isRunning) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
-   * Load genome file (FASTA/GenBank) - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @param {string} parameters.fileType - File type hint ('fasta', 'genbank', 'auto')
-   * @returns {Object} Load result
-   */
-  async loadGenomeFile(parameters = {}) {
-    return this.services.file.loadGenomeFile(parameters);
-  }
-
-  /**
-   * Load annotation file (GFF/BED) - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @param {string} parameters.fileType - File type hint ('gff', 'bed', 'auto')
-   * @param {boolean} parameters.mergeWithExisting - Whether to merge with existing annotations (default: false)
-   * @returns {Object} Load result
-   */
-  async loadAnnotationFile(parameters = {}) {
-    return this.services.file.loadAnnotationFile(parameters);
-  }
-
-  /**
-   * Load variant file (VCF) - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @returns {Object} Load result
-   */
-  async loadVariantFile(parameters = {}) {
-    return this.services.file.loadVariantFile(parameters);
-  }
-
-  /**
-   * Load reads file (SAM/BAM) - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @returns {Object} Load result
-   */
-  async loadReadsFile(parameters = {}) {
-    return this.services.file.loadReadsFile(parameters);
-  }
-
-  /**
-   * Load WIG tracks - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string|string[]} parameters.filePaths - Direct file path(s) (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @param {boolean} parameters.multiple - Allow multiple file selection (default: true)
-   * @returns {Object} Load result
-   */
-  async loadWigTracks(parameters = {}) {
-    return this.services.file.loadWigTracks(parameters);
-  }
-
-  /**
-   * Load operon file - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @param {string} parameters.format - File format hint ('json', 'csv', 'txt', 'auto')
-   * @returns {Object} Load result
-   */
-  async loadOperonFile(parameters = {}) {
-    return this.services.file.loadOperonFile(parameters);
-  }
-
-  /**
-   * Download a file from the internet - Built-in utility function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.url - The URL to download from
-   * @param {string} parameters.destinationPath - The local directory to save to (optional)
-   * @param {string} parameters.filename - Custom filename (optional)
-   * @returns {Object} Download result
-   */
-  async downloadInternetFile(parameters = {}) {
-    if (!this.services || !this.services.file) {
-      console.error('[ChatManager] file not initialized');
+  registerToolRegistrySnapshotWithOrganizer(snapshot) {
+    this._pendingToolRegistrySnapshot = snapshot;
+    const organizer = this.smartExecutor?.organizer;
+    if (!organizer || typeof organizer.registerToolRegistrySnapshot !== 'function') {
       return;
     }
-    return this.services.file.downloadInternetFile(parameters);
+
+    organizer.registerToolRegistrySnapshot(snapshot);
   }
 
   /**
-   * Open and view a markdown file - Built-in utility function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - The path to the markdown file
-   * @param {string} parameters.title - Custom window title (optional)
-   * @returns {Object} Viewer result
+   * Create a renderer-side adapter for the main-process tool registry snapshot.
+   * The adapter preserves the old SystemIntegration method shape without giving
+   * the renderer direct filesystem access to tools_registry/.
    */
-  async viewMarkdownFile(parameters = {}) {
-    try {
-      const { filePath, title } = parameters;
-
-      console.log(`📄 [ChatManager] Opening markdown file: ${filePath}`);
-
-      if (!filePath) {
-        throw new Error('File path is required');
-      }
-
-      // Main renderer window uses nodeIntegration:true / contextIsolation:false (no preload),
-      // so window.electronAPI is undefined here. Use require('electron').ipcRenderer directly.
-      const { ipcRenderer } = require('electron');
-      const result = await ipcRenderer.invoke('open-markdown-viewer', { filePath, title });
-
-      if (result.success) {
-        return {
-          success: true,
-          message: `Opened markdown viewer for: ${result.fileName}`,
-          filePath: result.filePath,
-          fileName: result.fileName,
-          windowTitle: result.windowTitle,
-          tool: 'view_markdown_file',
-        };
-      } else {
-        throw new Error(result.error || 'Failed to open markdown viewer');
-      }
-    } catch (error) {
-      console.error('❌ [ChatManager] Error opening markdown viewer:', error);
-      return {
-        success: false,
-        error: error.message,
-        tool: 'view_markdown_file',
-      };
+  createDynamicToolsSnapshotAdapter(snapshot) {
+    if (typeof DynamicToolsSnapshotAdapter === 'undefined') {
+      throw new Error('DynamicToolsSnapshotAdapter script is not available');
     }
-  }
 
-  /**
-   * Get list of loaded files - Built-in function tool
-   * Returns information about all currently loaded files in the genome browser
-   * @param {Object} parameters - Tool parameters (optional)
-   * @param {boolean} parameters.includeMetadata - Include detailed file metadata (default: true)
-   * @returns {Object} Loaded files list result
-   */
-
-  async getLoadedFilesList(parameters = {}) {
-    try {
-      const { includeMetadata = true } = parameters;
-
-      // [ChatManager] Getting loaded files list
-
-      if (!this.app) {
-        throw new Error('Application not available');
-      }
-
-      // Get loaded files from genome browser
-      const loadedFiles = this.app.loadedFiles || [];
-
-      // Format the file list
-      const filesList = loadedFiles.map(file => {
-        const baseInfo = {
-          name: file.name,
-          path: file.path,
-          type: file.type,
-        };
-
-        if (includeMetadata) {
-          return {
-            ...baseInfo,
-            size: file.size,
-            sizeFormatted: file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
-            loadedAt: file.loadedAt,
-          };
-        }
-
-        return baseInfo;
-      });
-
-      const result = {
-        success: true,
-        message: `Found ${filesList.length} loaded file(s)`,
-        filesCount: filesList.length,
-        files: filesList,
-        tool: 'get_loaded_files_list',
-        timestamp: new Date().toISOString(),
-      };
-
-      // [ChatManager] TOOL EXECUTED: get_loaded_files_list - Retrieved file list
-
-      return result;
-    } catch (error) {
-      // [ChatManager] Error getting loaded files list
-
-      const errorResult = {
-        success: false,
-        error: error.message,
-        filesCount: 0,
-        files: [],
-        tool: 'get_loaded_files_list',
-        timestamp: new Date().toISOString(),
-      };
-
-      return errorResult;
-    }
+    return new DynamicToolsSnapshotAdapter(snapshot, this);
   }
 
   /**
@@ -1266,7 +993,19 @@ class ChatManager {
       let createdDirectory = false;
       const permissions = { readable: false, writable: false };
 
-      if (typeof window !== 'undefined' && window.electronAPI?.getSelectedFileInfo) {
+      if (typeof window !== 'undefined' && window.electronAPI?.approveWorkingDirectory) {
+        const approvalResult = await window.electronAPI.approveWorkingDirectory(targetPath, {
+          createIfMissing: create_if_missing,
+        });
+        if (!approvalResult?.success) {
+          throw new Error(approvalResult?.error || `Directory '${targetPath}' is not available`);
+        }
+
+        targetPath = approvalResult.path || targetPath;
+        createdDirectory = !!approvalResult.created;
+        permissions.readable = !!approvalResult.permissions?.readable;
+        permissions.writable = validate_permissions ? !!approvalResult.permissions?.writable : false;
+      } else if (typeof window !== 'undefined' && window.electronAPI?.getSelectedFileInfo) {
         let infoResult = await window.electronAPI.getSelectedFileInfo(targetPath);
         if ((!infoResult || !infoResult.success) && create_if_missing && window.electronAPI.ensureDirectory) {
           const createResult = await window.electronAPI.ensureDirectory(targetPath);

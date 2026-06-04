@@ -37,12 +37,18 @@ describe('Preload API Structure', () => {
       'getLocaleData',
       'getLocaleLanguages',
       'getAppPaths',
+      'approveWorkingDirectory',
       'getSanitizerConfig',
       'checkGeneResearchReport',
       'openGeneResearchReport',
       'loadSidecarFile',
       'saveSidecarFile',
       'checkSidecarFile',
+      'getToolRegistrySnapshot',
+      'getToolRegistryMetadata',
+      'getToolDefinition',
+      'reloadToolRegistry',
+      'onToolRegistryUpdated',
       'invoke',
       'onMenuAction',
       'ipcRenderer',
@@ -61,6 +67,10 @@ describe('Preload API Structure', () => {
       expect(preloadContent).toContain('allowedInvokeChannels');
       expect(preloadContent).toContain('mcp-server-start');
       expect(preloadContent).toContain('mcp-server-stop');
+      expect(preloadContent).toContain('tool-registry:get-snapshot');
+      expect(preloadContent).toContain('tool-registry:reload');
+      expect(preloadContent).toContain('approve-working-directory');
+      expect(preloadContent).toContain('get-app-paths');
     });
 
     it('should validate on() listener channels', () => {
