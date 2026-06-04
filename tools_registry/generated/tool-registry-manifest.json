@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-04T14:49:27.782Z",
-  "registryHash": "725db848ac038d97fe1ef149d5de9a595f8b958dae0dce7530c438457043273d",
+  "generatedAt": "2026-06-04T16:24:35.827Z",
+  "registryHash": "6fa5483dd786827f977c596d5352fc209f299f0559b9897fff2c7ab47220e17a",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -10038,6 +10038,10 @@
               "/tmp/chromosome_1.bed"
             ]
           },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
+          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.",
@@ -10315,6 +10319,10 @@
               "/tmp/chromosome_cds.fasta"
             ]
           },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
+          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.",
@@ -10524,6 +10532,10 @@
               "current_chromosome.fasta",
               "/tmp/view_sequences.fasta"
             ]
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -10744,6 +10756,10 @@
               "/tmp/chromosome_1.fasta"
             ]
           },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
+          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution. The file will be written to the current working directory or the path specified in filename.",
@@ -10918,6 +10934,10 @@
               "chromosome_1.gbk",
               "/tmp/selected_region.gbk"
             ]
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -11104,6 +11124,10 @@
               "selected_features.gff3",
               "/tmp/chromosome_1.gff3"
             ]
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -11340,6 +11364,10 @@
               "selected_proteins.fasta",
               "/tmp/chromosome_proteins.fasta"
             ]
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -33153,6 +33181,10 @@
               "/tmp/chromosome_1.bed"
             ]
           },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
+          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.",
@@ -33430,6 +33462,10 @@
               "/tmp/chromosome_cds.fasta"
             ]
           },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
+          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.",
@@ -33639,6 +33675,10 @@
               "current_chromosome.fasta",
               "/tmp/view_sequences.fasta"
             ]
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -33859,6 +33899,10 @@
               "/tmp/chromosome_1.fasta"
             ]
           },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
+          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution. The file will be written to the current working directory or the path specified in filename.",
@@ -34033,6 +34077,10 @@
               "chromosome_1.gbk",
               "/tmp/selected_region.gbk"
             ]
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -34219,6 +34267,10 @@
               "selected_features.gff3",
               "/tmp/chromosome_1.gff3"
             ]
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -34455,6 +34507,10 @@
               "selected_proteins.fasta",
               "/tmp/chromosome_proteins.fasta"
             ]
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",

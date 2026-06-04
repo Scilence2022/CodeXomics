@@ -32,6 +32,9 @@ parameters:
         - '/Users/user/output/all_cds.fasta'
         - 'selected_cds.fasta'
         - '/tmp/chromosome_cds.fasta'
+    filePath:
+      type: string
+      description: Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath.
     auto_save:
       type: boolean
       description: >-

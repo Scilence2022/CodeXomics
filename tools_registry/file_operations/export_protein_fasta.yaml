@@ -33,6 +33,9 @@ parameters:
         - '/Users/user/output/all_proteins.fasta'
         - 'selected_proteins.fasta'
         - '/tmp/chromosome_proteins.fasta'
+    filePath:
+      type: string
+      description: Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath.
     auto_save:
       type: boolean
       description: >-
