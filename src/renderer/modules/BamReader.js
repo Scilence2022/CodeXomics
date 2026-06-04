@@ -4,24 +4,37 @@
  * Directly uses @gmod/bam API for optimal performance and compatibility
  */
 
-// In Electron renderer process, we can use require() for Node.js modules
-let BamFile, LocalFile;
+let BamFile;
+let useIpcBamBackend = false;
+
+function hasIpcBamBackend() {
+  return (
+    typeof window !== 'undefined' &&
+    window.electronAPI &&
+    window.electronAPI.bamReader &&
+    typeof window.electronAPI.bamReader.initialize === 'function'
+  );
+}
 
 try {
-  // Import @gmod/bam in Electron renderer process
+  // Import @gmod/bam when running in a Node-capable process.
   const bamModule = require('@gmod/bam');
   BamFile = bamModule.BamFile;
 
   // Import generic-filehandle2 if needed
   try {
-    const fileHandleModule = require('generic-filehandle2');
-    LocalFile = fileHandleModule.LocalFile;
+    require('generic-filehandle2');
   } catch (fileHandleError) {
     console.warn('generic-filehandle2 not available, using built-in file handling');
   }
 } catch (error) {
-  console.error('Failed to import @gmod/bam:', error);
-  throw new Error('@gmod/bam library is required but not available. Please ensure it is installed.');
+  if (hasIpcBamBackend()) {
+    useIpcBamBackend = true;
+    console.info('Using secure IPC-backed BAM reader because direct @gmod/bam access is unavailable:', error.message);
+  } else {
+    console.error('Failed to import @gmod/bam:', error);
+    throw new Error('@gmod/bam library is required but not available. Please ensure it is installed.');
+  }
 }
 
 class BamReader {
@@ -44,6 +57,52 @@ class BamReader {
       totalQueryTime: 0,
       queryCount: 0,
     };
+    this.backendId = null;
+    this.usesIpcBackend = useIpcBamBackend;
+  }
+
+  applyBackendState(state = {}) {
+    this.filePath = state.filePath || null;
+    this.indexPath = state.indexPath || null;
+    this.isInitialized = !!state.isInitialized;
+    this.hasIndex = !!state.hasIndex;
+    this.indexType = state.indexType || null;
+    this.header = state.header || null;
+    this.references = Array.isArray(state.references) ? state.references : [];
+    this.totalReads = state.totalReads || 0;
+    this.fileSize = state.fileSize || 0;
+    this.indexSize = state.indexSize || 0;
+    this.performanceStats = {
+      queriesWithIndex: 0,
+      queriesWithoutIndex: 0,
+      averageQueryTime: 0,
+      totalQueryTime: 0,
+      queryCount: 0,
+      ...(state.performanceStats || {}),
+    };
+  }
+
+  async initializeViaIpc(filePath, options = {}) {
+    if (!hasIpcBamBackend()) {
+      throw new Error('Secure BAM reader bridge is not available.');
+    }
+
+    this.reset();
+    const result = await window.electronAPI.bamReader.initialize(filePath, options);
+    this.backendId = result.readerId;
+    this.applyBackendState(result.state);
+
+    return {
+      success: true,
+      header: this.header,
+      references: this.references,
+      totalReads: this.totalReads,
+      fileSize: this.fileSize,
+      hasIndex: this.hasIndex,
+      indexType: this.indexType,
+      indexPath: this.indexPath,
+      indexSize: this.indexSize,
+    };
   }
 
   /**
@@ -55,6 +114,10 @@ class BamReader {
    * @returns {Promise<Object>} Initialization result
    */
   async initialize(filePath, options = {}) {
+    if (this.usesIpcBackend) {
+      return this.initializeViaIpc(filePath, options);
+    }
+
     try {
       console.log('🧬 BamReader: Initializing with file:', filePath);
 
@@ -793,6 +856,22 @@ class BamReader {
    * @returns {Promise<Array>} Array of BAM records
    */
   async getRecordsForRange(chromosome, start, end, settings = {}) {
+    if (this.usesIpcBackend) {
+      if (!this.backendId) {
+        throw new Error('BAM reader not initialized. Call initialize() first.');
+      }
+
+      const result = await window.electronAPI.bamReader.getRecordsForRange(
+        this.backendId,
+        chromosome,
+        start,
+        end,
+        settings
+      );
+      this.applyBackendState(result.state);
+      return result.reads || [];
+    }
+
     const startTime = performance.now();
 
     try {
@@ -1593,6 +1672,14 @@ class BamReader {
    * Reset BAM reader state
    */
   reset() {
+    const backendId = this.backendId;
+    if (this.usesIpcBackend && backendId && hasIpcBamBackend()) {
+      window.electronAPI.bamReader.destroy(backendId).catch(error => {
+        console.warn('⚠️ [BamReader] Failed to destroy remote BAM reader:', error.message);
+      });
+    }
+
+    this.backendId = null;
     this.filePath = null;
     this.indexPath = null;
     this.bamFile = null;

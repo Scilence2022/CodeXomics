@@ -47,6 +47,9 @@ const allowedInvokeChannels = [
   'tool-registry:reload',
   'i18n:getCurrentLanguage',
   'i18n:changeLanguage',
+  'bam-reader:initialize',
+  'bam-reader:get-records-for-range',
+  'bam-reader:destroy',
 ];
 
 const allowedListenChannels = [
@@ -464,6 +467,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // File reading API for project manager
   readFile: filePath => ipcRenderer.invoke('read-file', filePath),
+
+  // BAM reader APIs
+  bamReader: {
+    initialize: (filePath, options) => ipcRenderer.invoke('bam-reader:initialize', filePath, options),
+    getRecordsForRange: (readerId, chromosome, start, end, settings) =>
+      ipcRenderer.invoke('bam-reader:get-records-for-range', readerId, chromosome, start, end, settings),
+    destroy: readerId => ipcRenderer.invoke('bam-reader:destroy', readerId),
+  },
 
   // Plugin path resolution APIs
   getPluginPaths: () => ipcRenderer.invoke('get-plugin-paths'),

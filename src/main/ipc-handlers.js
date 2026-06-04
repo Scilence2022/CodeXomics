@@ -12,6 +12,7 @@
 const { ipcMain, app, dialog, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const {
   createSecureWebPreferences,
   rememberApprovedPath,
@@ -24,6 +25,31 @@ const {
   sanitizePluginId,
 } = require('./security-utils');
 const { ToolRegistryService } = require('./tool-registry-service');
+
+let BamReaderClass = null;
+
+function getBamReaderClass() {
+  if (!BamReaderClass) {
+    BamReaderClass = require('../renderer/modules/BamReader');
+  }
+  return BamReaderClass;
+}
+
+function getBamReaderState(reader) {
+  return {
+    filePath: reader.filePath,
+    indexPath: reader.indexPath,
+    isInitialized: reader.isInitialized,
+    hasIndex: reader.hasIndex,
+    indexType: reader.indexType,
+    header: reader.header,
+    references: reader.references,
+    totalReads: reader.totalReads,
+    fileSize: reader.fileSize,
+    indexSize: reader.indexSize,
+    performanceStats: { ...reader.performanceStats },
+  };
+}
 
 /**
  * Register all non-Project-Manager IPC handlers.
@@ -121,6 +147,15 @@ function registerIpcHandlers(deps) {
     saveMCPServerSettings,
     checkPortAvailable,
   } = deps;
+  const bamReaders = new Map();
+
+  const getOwnedBamReader = (event, readerId) => {
+    const entry = bamReaders.get(readerId);
+    if (!entry || entry.ownerWebContentsId !== event.sender.id) {
+      throw new Error('BAM reader is not available for this window');
+    }
+    return entry.reader;
+  };
 
   const resolveGeneResearchReportPath = geneSymbol => {
     const safeSymbol = String(geneSymbol || 'Unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -1167,9 +1202,76 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  // BAM file handling has been moved to renderer process using direct @gmod/bam API
-  // This eliminates IPC overhead and provides better performance
-  // The BamReader class in renderer/modules/BamReader.js now handles all BAM operations directly
+  ipcMain.handle('bam-reader:initialize', async (event, filePath, options = {}) => {
+    try {
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open BAM file',
+        mustExist: true,
+      });
+      const safeOptions = { ...(options || {}) };
+
+      if (safeOptions.indexPath) {
+        safeOptions.indexPath = assertAllowedFileAccess(app, safeOptions.indexPath, {
+          operation: 'open BAM index file',
+          mustExist: true,
+        });
+      }
+
+      const BamReader = getBamReaderClass();
+      const reader = new BamReader();
+      const result = await reader.initialize(safeFilePath, safeOptions);
+      const readerId = crypto.randomUUID();
+      const ownerWebContentsId = event.sender.id;
+
+      bamReaders.set(readerId, {
+        reader,
+        ownerWebContentsId,
+      });
+
+      event.sender.once('destroyed', () => {
+        for (const [storedReaderId, entry] of bamReaders.entries()) {
+          if (entry.ownerWebContentsId === ownerWebContentsId) {
+            entry.reader.reset();
+            bamReaders.delete(storedReaderId);
+          }
+        }
+      });
+
+      return {
+        ...result,
+        readerId,
+        state: getBamReaderState(reader),
+      };
+    } catch (error) {
+      console.error('Failed to initialize BAM reader:', error);
+      throw new Error(`Failed to initialize BAM reader: ${error.message}`);
+    }
+  });
+
+  ipcMain.handle('bam-reader:get-records-for-range', async (event, readerId, chromosome, start, end, settings = {}) => {
+    try {
+      const reader = getOwnedBamReader(event, readerId);
+      const reads = await reader.getRecordsForRange(chromosome, start, end, settings);
+      return {
+        reads,
+        state: getBamReaderState(reader),
+      };
+    } catch (error) {
+      console.error('Failed to query BAM reader:', error);
+      throw new Error(`Failed to query BAM reader: ${error.message}`);
+    }
+  });
+
+  ipcMain.handle('bam-reader:destroy', async (event, readerId) => {
+    try {
+      const reader = getOwnedBamReader(event, readerId);
+      reader.reset();
+      bamReaders.delete(readerId);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
 
   ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 1024) => {
     try {
