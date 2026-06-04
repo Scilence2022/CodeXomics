@@ -704,6 +704,10 @@ class BenchmarkUI {
                                         <span>🤖 Include LLM Interaction Details</span>
                                     </label>
                                     <label class="form-item">
+                                        <input type="checkbox" id="llmInteractionsFailedOnly">
+                                        <span>❌ Only Failed LLM Interactions</span>
+                                    </label>
+                                    <label class="form-item">
                                         <input type="checkbox" id="stopOnError">
                                         <span>🛑 Stop on Error</span>
                                     </label>
@@ -2536,7 +2540,8 @@ class BenchmarkUI {
 
     try {
       // Extract all LLM interaction data
-      const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults);
+      const failedOnly = document.getElementById('llmInteractionsFailedOnly')?.checked === true;
+      const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults, { failedOnly });
 
       // Create comprehensive export data
       const exportData = {
@@ -2546,6 +2551,7 @@ class BenchmarkUI {
           totalTests: this.currentResults.overallStats?.totalTests || 0,
           totalInteractions: detailedInteractions.length,
           exportType: 'detailed_llm_interactions',
+          failedOnly: failedOnly,
           version: '1.0.0',
         },
 
@@ -2572,7 +2578,8 @@ class BenchmarkUI {
 
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'llm-interactions-detailed-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+      const filePrefix = failedOnly ? 'llm-interactions-failed-' : 'llm-interactions-detailed-';
+      a.download = filePrefix + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
       a.click();
       URL.revokeObjectURL(url);
 
@@ -2590,16 +2597,18 @@ class BenchmarkUI {
    * Extract all LLM interaction data from benchmark results
    * Enhanced to extract data from multiple sources including incomplete/timeout scenarios
    */
-  extractAllLLMInteractionData(results) {
+  extractAllLLMInteractionData(results, options = {}) {
     const interactions = [];
 
     if (results.testSuiteResults) {
       results.testSuiteResults.forEach(suite => {
         if (suite.testResults) {
           suite.testResults.forEach(test => {
+            let interaction = null;
+
             // Primary source: dedicated llmInteractionData field
             if (test.llmInteractionData) {
-              interactions.push({
+              interaction = {
                 ...test.llmInteractionData,
                 testInfo: {
                   testId: test.testId,
@@ -2610,10 +2619,10 @@ class BenchmarkUI {
                   duration: test.duration,
                   status: test.status,
                 },
-              });
+              };
             } else if (test.llmInteractionDataSummary) {
               // Secondary source: summary from slim results (full data persisted to disk)
-              interactions.push({
+              interaction = {
                 testId: test.llmInteractionDataSummary.testId,
                 testName: test.llmInteractionDataSummary.testName,
                 request: {
@@ -2643,13 +2652,14 @@ class BenchmarkUI {
                   duration: test.duration,
                   status: test.status,
                 },
-              });
+              };
             } else {
               // Fallback: construct interaction data from available test fields
-              const reconstructedInteraction = this.reconstructLLMInteractionFromTest(test);
-              if (reconstructedInteraction) {
-                interactions.push(reconstructedInteraction);
-              }
+              interaction = this.reconstructLLMInteractionFromTest(test);
+            }
+
+            if (interaction && (!options.failedOnly || this.isFailedLLMInteraction(interaction))) {
+              interactions.push(interaction);
             }
           });
         }
@@ -2657,6 +2667,14 @@ class BenchmarkUI {
     }
 
     return interactions;
+  }
+
+  isFailedLLMInteraction(interaction) {
+    return (
+      interaction.analysis?.isError === true ||
+      interaction.testInfo?.success === false ||
+      interaction.testInfo?.status === 'failed'
+    );
   }
 
   /**
@@ -3611,6 +3629,7 @@ class BenchmarkUI {
       includeCharts: document.getElementById('includeCharts').checked,
       includeRawData: document.getElementById('includeRawData')?.checked || false,
       includeLLMInteractions: document.getElementById('includeLLMInteractions')?.checked !== false, // Default to true
+      llmInteractionsFailedOnly: document.getElementById('llmInteractionsFailedOnly')?.checked === true,
       stopOnError: document.getElementById('stopOnError').checked,
       verboseLogging: document.getElementById('verboseLogging')?.checked || false,
       timeout: timeoutValue === -1 ? null : timeoutValue, // null means use individual test timeouts
@@ -4224,6 +4243,9 @@ class BenchmarkUI {
                                 <input type="checkbox" id="includeLLMInteractions" checked> Include LLM Interactions
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                                <input type="checkbox" id="llmInteractionsFailedOnly"> Only Failed LLM Interactions
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
                                 <input type="checkbox" id="stopOnError"> Stop on Error
                             </label>
                         </div>
@@ -4455,7 +4477,8 @@ class BenchmarkUI {
                 
                 try {
                     // Export detailed LLM interaction data
-                    const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults);
+                    const failedOnly = document.getElementById('llmInteractionsFailedOnly')?.checked === true;
+                    const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults, { failedOnly });
                     
                     // Clean the benchmark results to avoid circular references
                     const cleanBenchmarkResults = this.cleanDataForExport(this.currentResults);
@@ -4468,6 +4491,7 @@ class BenchmarkUI {
                             totalTests: this.currentResults.overallStats?.totalTests || 0,
                             totalInteractions: detailedInteractions.length,
                             exportType: 'detailed_benchmark_results_with_llm_interactions',
+                            failedOnly: failedOnly,
                             version: '1.0.0'
                         },
                         
@@ -4516,16 +4540,18 @@ class BenchmarkUI {
              * Extract all LLM interaction data from benchmark results
              * Enhanced to extract data from multiple sources including incomplete/timeout scenarios
              */
-            extractAllLLMInteractionData(results) {
+            extractAllLLMInteractionData(results, options = {}) {
                 const interactions = [];
                 
                 if (results.testSuiteResults) {
                     results.testSuiteResults.forEach(suite => {
                         if (suite.testResults) {
                             suite.testResults.forEach(test => {
+                                let interaction = null;
+
                                 // Primary source: dedicated llmInteractionData field
                                 if (test.llmInteractionData) {
-                                    interactions.push({
+                                    interaction = {
                                         ...test.llmInteractionData,
                                         testInfo: {
                                             testId: test.testId,
@@ -4536,10 +4562,10 @@ class BenchmarkUI {
                                             duration: test.duration,
                                             status: test.status
                                         }
-                                    });
+                                    };
                                 } else if (test.llmInteractionDataSummary) {
                                     // Secondary source: summary from slim results
-                                    interactions.push({
+                                    interaction = {
                                         testId: test.llmInteractionDataSummary.testId,
                                         testName: test.llmInteractionDataSummary.testName,
                                         request: {
@@ -4569,13 +4595,14 @@ class BenchmarkUI {
                                             duration: test.duration,
                                             status: test.status
                                         }
-                                    });
+                                    };
                                 } else {
                                     // Fallback: construct interaction data from available test fields
-                                    const reconstructedInteraction = this.reconstructLLMInteractionFromTest(test);
-                                    if (reconstructedInteraction) {
-                                        interactions.push(reconstructedInteraction);
-                                    }
+                                    interaction = this.reconstructLLMInteractionFromTest(test);
+                                }
+
+                                if (interaction && (!options.failedOnly || this.isFailedLLMInteraction(interaction))) {
+                                    interactions.push(interaction);
                                 }
                             });
                         }
@@ -4583,6 +4610,14 @@ class BenchmarkUI {
                 }
                 
                 return interactions;
+            }
+
+            isFailedLLMInteraction(interaction) {
+                return (
+                    interaction.analysis?.isError === true ||
+                    interaction.testInfo?.success === false ||
+                    interaction.testInfo?.status === 'failed'
+                );
             }
 
             /**
@@ -4824,7 +4859,8 @@ class BenchmarkUI {
 
                 try {
                     // Extract all LLM interaction data
-                    const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults);
+                    const failedOnly = document.getElementById('llmInteractionsFailedOnly')?.checked === true;
+                    const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults, { failedOnly });
                     
                     if (detailedInteractions.length === 0) {
                         alert('No LLM interaction data found in results');
@@ -4842,6 +4878,7 @@ class BenchmarkUI {
                             totalTests: this.currentResults.overallStats?.totalTests || 0,
                             totalInteractions: detailedInteractions.length,
                             exportType: 'llm_interactions_only',
+                            failedOnly: failedOnly,
                             version: '1.0.0'
                         },
                         
@@ -4858,7 +4895,7 @@ class BenchmarkUI {
                         interactions: cleanInteractions
                     };
 
-                    this.downloadJSONSafe(exportData, 'llm-interactions-detailed');
+                    this.downloadJSONSafe(exportData, failedOnly ? 'llm-interactions-failed' : 'llm-interactions-detailed');
                     
                     console.log('🤖 Detailed LLM interactions exported');
                     this.updateStatus('ready', 'LLM interactions exported');
@@ -4940,6 +4977,8 @@ class BenchmarkUI {
                         suites: selectedSuites,
                         generateReport: document.getElementById('generateReport').checked,
                         includeCharts: document.getElementById('includeCharts').checked,
+                        includeLLMInteractions: document.getElementById('includeLLMInteractions')?.checked !== false,
+                        llmInteractionsFailedOnly: document.getElementById('llmInteractionsFailedOnly')?.checked === true,
                         stopOnError: document.getElementById('stopOnError').checked,
                         timeout: parseInt(document.getElementById('testTimeout').value),
                         onProgress: (progress, suiteId, suiteResult) => this.updateMainWindowProgress(progress, suiteId, suiteResult),

@@ -15975,6 +15975,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const generateReport = parameters.generate_report !== undefined ? parameters.generate_report : true;
     const includeCharts = parameters.include_charts !== undefined ? parameters.include_charts : true;
     const includeRawData = parameters.include_raw_data !== undefined ? parameters.include_raw_data : false;
+    const includeLLMInteractions =
+      parameters.include_llm_interactions !== undefined ? parameters.include_llm_interactions : true;
+    const llmInteractionsFailedOnly =
+      parameters.llm_interactions_failed_only !== undefined ? parameters.llm_interactions_failed_only : false;
     const stopOnError = parameters.stop_on_error !== undefined ? parameters.stop_on_error : false;
 
     // Open the interface first so the user can see progress
@@ -16008,6 +16012,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         if (chartsEl) chartsEl.checked = includeCharts;
         const rawDataEl = document.getElementById('includeRawData');
         if (rawDataEl) rawDataEl.checked = includeRawData;
+        const includeLLMEl = document.getElementById('includeLLMInteractions');
+        if (includeLLMEl) includeLLMEl.checked = includeLLMInteractions;
+        const failedOnlyEl = document.getElementById('llmInteractionsFailedOnly');
+        if (failedOnlyEl) failedOnlyEl.checked = llmInteractionsFailedOnly;
         const stopOnErrorEl = document.getElementById('stopOnError');
         if (stopOnErrorEl) stopOnErrorEl.checked = stopOnError;
 
@@ -16026,6 +16034,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
               generateReport,
               includeCharts,
               includeRawData,
+              includeLLMInteractions,
+              llmInteractionsFailedOnly,
               stopOnError,
             })
             .catch(err => console.error('[startBenchmark] Fallback run error:', err));
@@ -16192,13 +16202,15 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     const format = (parameters.format || 'json').toLowerCase();
+    const llmInteractionsFailedOnly =
+      parameters.llm_interactions_failed_only !== undefined ? parameters.llm_interactions_failed_only : false;
     const validFormats = ['json', 'csv', 'html'];
     if (!validFormats.includes(format)) {
       return { success: false, error: `Invalid format '${format}'. Supported formats: json, csv, html` };
     }
 
     try {
-      await bm.framework.exportResults(format);
+      await bm.framework.exportResults(format, { llmInteractionsFailedOnly });
       return { success: true, message: `Benchmark results exported as ${format}` };
     } catch (err) {
       return { success: false, error: `Export failed: ${err.message}` };

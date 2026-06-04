@@ -17,6 +17,11 @@ parameters:
       description: 'Export format. Options: json (structured data), csv (spreadsheet), html (human-readable report). Default is json.'
       default: 'json'
       example: 'json'
+    llm_interactions_failed_only:
+      type: 'boolean'
+      description: 'For HTML report exports, include only failed LLM interactions in LLM interaction report sections. Default false.'
+      default: false
+      example: true
 
 responses:
   success:

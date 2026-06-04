@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-04T08:56:22.759Z",
-  "registryHash": "db4f04e43b1f94498cb3c924bea5b42ca5d06d7ced915becf00ec94330e5db75",
+  "generatedAt": "2026-06-04T14:49:27.782Z",
+  "registryHash": "725db848ac038d97fe1ef149d5de9a595f8b958dae0dce7530c438457043273d",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -1548,6 +1548,12 @@
             "description": "Export format. Options: json (structured data), csv (spreadsheet), html (human-readable report). Default is json.",
             "default": "json",
             "example": "json"
+          },
+          "llm_interactions_failed_only": {
+            "type": "boolean",
+            "description": "For HTML report exports, include only failed LLM interactions in LLM interaction report sections. Default false.",
+            "default": false,
+            "example": true
           }
         }
       },
@@ -2230,6 +2236,18 @@
             "description": "Whether to include raw test response data in the report. Increases report size. Default false.",
             "default": false,
             "example": false
+          },
+          "include_llm_interactions": {
+            "type": "boolean",
+            "description": "Whether to include LLM interaction analysis in the generated report. Default true.",
+            "default": true,
+            "example": true
+          },
+          "llm_interactions_failed_only": {
+            "type": "boolean",
+            "description": "Whether generated report LLM interaction sections should include only failed interactions. Default false.",
+            "default": false,
+            "example": true
           },
           "stop_on_error": {
             "type": "boolean",
@@ -24645,6 +24663,12 @@
             "description": "Export format. Options: json (structured data), csv (spreadsheet), html (human-readable report). Default is json.",
             "default": "json",
             "example": "json"
+          },
+          "llm_interactions_failed_only": {
+            "type": "boolean",
+            "description": "For HTML report exports, include only failed LLM interactions in LLM interaction report sections. Default false.",
+            "default": false,
+            "example": true
           }
         }
       },
@@ -25327,6 +25351,18 @@
             "description": "Whether to include raw test response data in the report. Increases report size. Default false.",
             "default": false,
             "example": false
+          },
+          "include_llm_interactions": {
+            "type": "boolean",
+            "description": "Whether to include LLM interaction analysis in the generated report. Default true.",
+            "default": true,
+            "example": true
+          },
+          "llm_interactions_failed_only": {
+            "type": "boolean",
+            "description": "Whether generated report LLM interaction sections should include only failed interactions. Default false.",
+            "default": false,
+            "example": true
           },
           "stop_on_error": {
             "type": "boolean",

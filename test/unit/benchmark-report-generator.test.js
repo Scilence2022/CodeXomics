@@ -41,4 +41,64 @@ describe('BenchmarkReportGenerator', () => {
     expect(analysis.categoryAnalysis.Other.testCount).toBe(0);
     expect(analysis.categoryAnalysis.Other.averageDuration).toBe(0);
   });
+
+  it('filters LLM interaction analysis to failed interactions when requested', () => {
+    const BenchmarkReportGenerator = loadBenchmarkReportGenerator();
+    const generator = new BenchmarkReportGenerator();
+
+    const benchmarkResults = {
+      testSuiteResults: [
+        {
+          suiteId: 'automatic_simple',
+          suiteName: 'Automatic Simple',
+          testResults: [
+            {
+              testId: 'pass_01',
+              testName: 'Passing test',
+              success: true,
+              status: 'passed',
+              llmInteractionData: {
+                testId: 'pass_01',
+                request: { provider: 'openai', model: 'gpt-test' },
+                response: { responseTime: 100, tokenUsage: { totalTokens: 10 } },
+                analysis: { isError: false, confidence: 90 },
+              },
+            },
+            {
+              testId: 'error_01',
+              testName: 'Errored interaction',
+              success: false,
+              status: 'failed',
+              llmInteractionData: {
+                testId: 'error_01',
+                request: { provider: 'openai', model: 'gpt-test' },
+                response: { responseTime: 200, tokenUsage: { totalTokens: 20 } },
+                analysis: { isError: true, confidence: 0 },
+              },
+            },
+            {
+              testId: 'score_fail_01',
+              testName: 'Failed evaluation',
+              success: false,
+              status: 'failed',
+              llmInteractionData: {
+                testId: 'score_fail_01',
+                request: { provider: 'anthropic', model: 'claude-test' },
+                response: { responseTime: 300, tokenUsage: { totalTokens: 30 } },
+                analysis: { isError: false, confidence: 55 },
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const analysis = generator.generateLLMInteractionAnalysis(benchmarkResults, { failedOnly: true });
+
+    expect(analysis.summary.totalInteractions).toBe(2);
+    expect(analysis.summary.successfulInteractions).toBe(1);
+    expect(analysis.summary.failedInteractions).toBe(1);
+    expect(analysis.providerAnalysis.openai.interactions).toBe(1);
+    expect(analysis.providerAnalysis.anthropic.interactions).toBe(1);
+  });
 });

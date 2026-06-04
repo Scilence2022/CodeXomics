@@ -362,7 +362,7 @@ class LLMBenchmarkFramework {
 
       // Generate report if requested
       if (options.generateReport !== false) {
-        const report = this.reportGenerator.generateReport(results);
+        const report = this.reportGenerator.generateReport(results, options);
         results.report = report;
       }
 
@@ -5508,14 +5508,14 @@ class LLMBenchmarkFramework {
   /**
    * Export benchmark results
    */
-  exportResults(format = 'json') {
+  exportResults(format = 'json', options = {}) {
     switch (format) {
       case 'json':
         return JSON.stringify(this.benchmarkResults, null, 2);
       case 'csv':
         return this.reportGenerator.generateCSVReport(this.benchmarkResults);
       case 'html':
-        return this.reportGenerator.generateHTMLReport(this.benchmarkResults);
+        return this.reportGenerator.generateHTMLReport(this.benchmarkResults, options);
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }
