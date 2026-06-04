@@ -1592,7 +1592,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         );
       }
 
-      this.applyFileVerificationPenalty(evaluation, expectedResult, trackerMatchedExportTools.length);
+      await this.applyFileVerificationPenalty(evaluation, expectedResult, trackerMatchedExportTools.length);
 
       evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
       return evaluation;
@@ -1605,7 +1605,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     for (const fileName of expectedFiles) {
       const filePath = this.buildFilePath(fileName);
-      const fileExists = this.checkTargetFileExists(filePath);
+      const fileExists = await this.checkTargetFileExists(filePath);
 
       if (fileExists) {
         evaluation.details.filesExported.push(fileName);
@@ -1686,7 +1686,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         );
 
         // Apply Song's file verification penalty system
-        this.applyFileVerificationPenalty(evaluation, expectedResult, matchingTools.length);
+        await this.applyFileVerificationPenalty(evaluation, expectedResult, matchingTools.length);
 
         return evaluation;
       }
@@ -1766,7 +1766,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
    * Apply Song's file verification penalty system
    * If detected files < detected tools, deduct 1 point per missing file
    */
-  applyFileVerificationPenalty(evaluation, expectedResult, detectedToolsCount) {
+  async applyFileVerificationPenalty(evaluation, expectedResult, detectedToolsCount) {
     const expectedFiles = expectedResult.expectedFiles || [];
     let actualFilesFound = 0;
     const foundFiles = [];
@@ -1778,11 +1778,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     console.log(`🔍 [FileVerification] Expected files:`, expectedFiles);
 
     // Check each expected file existence
-    expectedFiles.forEach(fileName => {
+    for (const fileName of expectedFiles) {
       const filePath = this.buildFilePath(fileName);
       console.log(`🔍 [FileVerification] Checking file: ${fileName} at path: ${filePath}`);
 
-      const fileExists = this.checkTargetFileExists(filePath);
+      const fileExists = await this.checkTargetFileExists(filePath);
 
       if (fileExists) {
         evaluation.details.filesExported.push(fileName);
@@ -1794,7 +1794,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         missingFiles.push(fileName);
         console.log(`❌ [FileVerification] File missing: ${fileName}`);
       }
-    });
+    }
 
     console.log(`📉 [FileVerification] Files found: ${actualFilesFound}/${expectedFiles.length}`);
     console.log(`📉 [FileVerification] Found files:`, foundFiles);
@@ -1971,51 +1971,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   /**
    * Check if target export file exists (Song's file-priority system)
    */
-  checkTargetFileExists(filePath) {
+  async checkTargetFileExists(filePath) {
     console.log(`🔍 [checkTargetFileExists] Checking file existence: ${filePath}`);
 
-    try {
-      // Method 1: Try Node.js fs module if available (Electron environment)
-      if (typeof require !== 'undefined') {
-        const fs = require('fs');
-        const exists = fs.existsSync(filePath);
-        console.log(`✅ [checkTargetFileExists] fs.existsSync(${filePath}): ${exists}`);
-        return exists;
-      }
-    } catch (error) {
-      console.log(`⚠️ [checkTargetFileExists] fs check failed:`, error.message);
-    }
-
-    // Method 2: Try via ChatManager file operations if available
-    try {
-      if (window.chatManager && window.chatManager.checkFileExists) {
-        const exists = window.chatManager.checkFileExists(filePath);
-        console.log(`✅ [checkTargetFileExists] chatManager.checkFileExists(${filePath}): ${exists}`);
-        return exists;
-      }
-    } catch (error) {
-      console.log(`⚠️ [checkTargetFileExists] chatManager check failed:`, error.message);
-    }
-
-    // Method 3: Try via fetch API for file existence (last resort)
-    try {
-      // This is a synchronous fallback - not ideal but necessary for the penalty system
-      // In a real scenario, this should be async, but the penalty system expects sync results
-      console.log(`📋 [checkTargetFileExists] Using fetch API fallback for: ${filePath}`);
-
-      // For now, return true as fallback if files are confirmed to exist
-      // TODO: Implement proper async file checking or adjust penalty system
-      console.log(
-        `[checkTargetFileExists] Cannot verify file existence reliably - conservatively assuming file does not exist`
-      );
-      return false;
-    } catch (error) {
-      console.log(`⚠️ [checkTargetFileExists] All file check methods failed:`, error.message);
-    }
-
-    // Final fallback: assume file doesn't exist
-    console.log(`❌ [checkTargetFileExists] Cannot verify file existence for: ${filePath}`);
-    return false;
+    return this.checkFileExists(filePath);
   }
 
   /**

@@ -438,6 +438,48 @@ class BenchmarkEvaluatorBase {
     return { matched, unmatched, matchDetails };
   }
 
+  async checkFileExists(filePath) {
+    if (!filePath || typeof filePath !== 'string') {
+      return false;
+    }
+
+    try {
+      if (window.electronAPI?.checkFileExists) {
+        const result = await window.electronAPI.checkFileExists(filePath);
+        const exists = result === true || result?.exists === true;
+        console.log(`✅ [BenchmarkEvaluatorBase] electronAPI.checkFileExists(${filePath}): ${exists}`);
+        return exists;
+      }
+    } catch (error) {
+      console.log(`⚠️ [BenchmarkEvaluatorBase] electronAPI file check failed:`, error.message);
+    }
+
+    try {
+      if (window.chatManager?.checkFileExists) {
+        const result = await window.chatManager.checkFileExists(filePath);
+        const exists = result === true || result?.exists === true;
+        console.log(`✅ [BenchmarkEvaluatorBase] chatManager.checkFileExists(${filePath}): ${exists}`);
+        return exists;
+      }
+    } catch (error) {
+      console.log(`⚠️ [BenchmarkEvaluatorBase] chatManager file check failed:`, error.message);
+    }
+
+    try {
+      if (typeof require !== 'undefined') {
+        const fs = require('fs');
+        const exists = fs.existsSync(filePath);
+        console.log(`✅ [BenchmarkEvaluatorBase] fs.existsSync(${filePath}): ${exists}`);
+        return exists;
+      }
+    } catch (error) {
+      console.log(`⚠️ [BenchmarkEvaluatorBase] fs file check failed:`, error.message);
+    }
+
+    console.log(`❌ [BenchmarkEvaluatorBase] Cannot verify file existence for: ${filePath}`);
+    return false;
+  }
+
   /**
    * Unified basic function call evaluation.
    *
