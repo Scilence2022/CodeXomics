@@ -279,7 +279,53 @@ Deployment Note:
 - While a `Deploy Documentation` GitHub Actions workflow exists for push events to `main`, repository environment protection rules for the `github-pages` environment prevent deployments from the `main` branch directly.
 - The authoritative deployment mechanism is running `mkdocs gh-deploy` locally. This compiles the docs to the `site/` directory, commits it to the `gh-pages` branch, and pushes it to `origin/gh-pages`, updating the live site.
 
-## 13. Historical Decisions
+## 13. Recent Engineering Memory
+
+Recent changes on the `codex/fix-p0-security-boundaries` branch focused on restoring ChatBox startup behavior and making benchmark workflows compatible with a hardened Electron renderer.
+
+Security hardening and renderer boundary:
+
+- Renderer `require()` is intentionally restricted in `src/preload.js`. The renderer may use safe compatibility shims for limited `path` and `os` helpers, but direct `fs` and `child_process` access must remain blocked.
+- File and directory checks that need filesystem access should go through main-process IPC, especially `get-file-info`, `read-file`, `write-file`, and `ensure-directory`.
+- `src/main/security-utils.js` now centralizes secure web preferences and renderer CSP injection. Do not reintroduce `unsafe-eval` or direct renderer Node access to make a feature work.
+- `src/preload.js` maintains explicit allowlists for invoke/listen/send IPC channels. If a legitimate renderer channel is blocked, add it to the appropriate allowlist rather than exposing raw `ipcRenderer`.
+
+ChatBox startup and visibility:
+
+- ChatBox visibility issues were caused by startup ordering and hardened-renderer side effects, not by a missing static DOM definition alone.
+- `ChatManager` initializes services before UI-dependent dragging/setup code so `UIService` exists when ChatBox UI initialization runs.
+- `renderer-modular.js` includes fallback ChatManager initialization and MCPBridge startup guards. MCPBridge should check whether the MCP WebSocket server is actually listening before opening a browser WebSocket, avoiding startup `ERR_CONNECTION_REFUSED` noise.
+- Startup-only warnings from missing optional modals, unavailable sequence data, and delayed primer/chat integration were quieted where they were normal during first render.
+
+Configuration and BLAST under hardened renderer:
+
+- `ConfigManager` should not attempt file-based load/save in the renderer when filesystem access is unavailable. It should use localStorage fallback without first logging blocked `fs` errors.
+- `BlastManager` must not run BLAST+ detection, `child_process`, or direct filesystem validation from the hardened renderer. Local BLAST command execution should eventually move through main-process IPC if full local BLAST support is needed.
+
+Benchmark runtime:
+
+- `LLMBenchmarkFramework` no longer depends on Node globals such as `global.gc`, direct `path.resolve`, or direct `fs`/`os` in the renderer.
+- Benchmark working-directory setup uses `ChatManager.setWorkingDirectory()`, which validates directories through main-process path-info IPC.
+- Benchmark automation sets `chatManager.benchmarkAutomationActive` and starts a run-level `ToolExecutionTracker` session. Individual tests set the current test id instead of ending the tracker session before evaluation.
+- `FileOperationService` must not open file chooser dialogs during benchmark automation. Benchmark file-loading tests must provide explicit `filePath`/`filePaths`; otherwise the service returns a clear error instead of calling DOM file input or Electron dialogs without user activation.
+- `BenchmarkReportGenerator` is defensive against failed suites with partial/minimal `stats`; setup failures should produce reportable error entries, not crash report generation.
+- `ToolExecutionTracker.getSessionExecutions()` logs missing current sessions at debug level because empty-session queries can be valid during UI/reporting flows.
+
+Benchmark and file-loading tool aliases:
+
+- LLMs may emit common file-loading aliases such as `load_genome`, `load_bed_file`, `load_gff_file`, `load_vcf_file`, `load_bam_file`, or `load_wig_file`.
+- `ToolExecutionService` canonicalizes these aliases to the built-in file-loading tools, for example `load_genome -> load_genome_file` and `load_bed_file -> load_annotation_file`.
+- `FunctionCallsOrganizer`, `LLMContextService.shouldAllowToolExecution()`, and `BenchmarkEvaluatorBase.matchToolName()` must stay aligned with those aliases so planning, policy, execution, and benchmark scoring all agree.
+- When adding new aliases, update execution routing, organizer category mapping, policy lists, benchmark matching, and tests together.
+
+Recent regression tests added:
+
+- `test/unit/chatbox-visibility.test.js` covers ChatBox startup/visibility assumptions.
+- `test/unit/benchmark-report-generator.test.js` covers benchmark report generation from failed/minimal suite results.
+- `test/unit/benchmark-runtime-hardening.test.js` covers hardened benchmark runtime behavior and path-info IPC expectations.
+- `test/unit/file-loading-tool-aliases.test.js` covers file-loading alias routing, organizer classification, and benchmark alias matching.
+
+## 14. Historical Decisions
 
 - Main process extraction reduced `src/main.js` into focused modules under `src/main/`.
 - `ServiceContainer.js` introduced lazy singleton caching and cycle detection.
@@ -293,7 +339,7 @@ Deployment Note:
 - Delegated tool routing was unified on `executeToolByName()` and `ToolExecutionService.execute()`.
 - Formatting updates across the codebase led to unit test failures in string-match assertions in `blast-tools-consistency.test.js`. The test was refactored to use robust regular expressions (`new RegExp(...)`) instead of rigid string containment checks (`toContain`), making tests resilient to line wrapping.
 
-## 14. Common Commands
+## 15. Common Commands
 
 ```bash
 npm start
