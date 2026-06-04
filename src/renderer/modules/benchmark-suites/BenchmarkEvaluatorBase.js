@@ -45,6 +45,48 @@ class BenchmarkEvaluatorBase {
     return normalized.toLowerCase();
   }
 
+  canonicalizeToolName(name) {
+    const normalized = this.normalizeToolName(name);
+    const aliases = {
+      load_genome: 'load_genome_file',
+      load_fasta: 'load_genome_file',
+      load_fasta_file: 'load_genome_file',
+      load_genbank: 'load_genome_file',
+      load_genbank_file: 'load_genome_file',
+      load_gbk: 'load_genome_file',
+      load_gbk_file: 'load_genome_file',
+      load_annotation: 'load_annotation_file',
+      load_bed: 'load_annotation_file',
+      load_bed_file: 'load_annotation_file',
+      load_gff: 'load_annotation_file',
+      load_gff_file: 'load_annotation_file',
+      load_gff3: 'load_annotation_file',
+      load_gff3_file: 'load_annotation_file',
+      load_gtf: 'load_annotation_file',
+      load_gtf_file: 'load_annotation_file',
+      load_variant: 'load_variant_file',
+      load_vcf: 'load_variant_file',
+      load_vcf_file: 'load_variant_file',
+      load_reads: 'load_reads_file',
+      load_bam: 'load_reads_file',
+      load_bam_file: 'load_reads_file',
+      load_sam: 'load_reads_file',
+      load_sam_file: 'load_reads_file',
+      load_wig: 'load_wig_tracks',
+      load_wig_file: 'load_wig_tracks',
+      load_bigwig: 'load_wig_tracks',
+      load_bigwig_file: 'load_wig_tracks',
+      load_bedgraph: 'load_wig_tracks',
+      load_bedgraph_file: 'load_wig_tracks',
+      load_track: 'load_wig_tracks',
+      load_track_file: 'load_wig_tracks',
+      load_tracks: 'load_wig_tracks',
+      load_operon: 'load_operon_file',
+      load_operons: 'load_operon_file',
+    };
+    return aliases[normalized] || normalized;
+  }
+
   /**
    * Check whether two tool names match, with normalization support.
    * Returns 'exact' for identical strings, 'normalized' for snake_case equivalence, or false.
@@ -52,6 +94,7 @@ class BenchmarkEvaluatorBase {
   matchToolName(actual, expected) {
     if (actual === expected) return 'exact';
     if (this.normalizeToolName(actual) === this.normalizeToolName(expected)) return 'normalized';
+    if (this.canonicalizeToolName(actual) === this.canonicalizeToolName(expected)) return 'alias';
     return false;
   }
 
