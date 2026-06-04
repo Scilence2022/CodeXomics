@@ -5,6 +5,37 @@ const fs = require('fs');
 
 const approvedFilePaths = new Set();
 
+const RENDERER_CONTENT_SECURITY_POLICY = [
+  "default-src 'self' data: blob: file:",
+  "script-src 'self' 'unsafe-inline' https://d3js.org https://cdn.jsdelivr.net data: blob:",
+  "style-src 'self' 'unsafe-inline' https: http: data:",
+  "img-src 'self' data: blob: https: http: file:",
+  "font-src 'self' https: http: data:",
+  "connect-src 'self' https: http: ws: wss: data: blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+].join('; ');
+
+function registerRendererContentSecurityPolicy(electronSession) {
+  const targetSession = electronSession?.defaultSession || electronSession;
+  if (!targetSession?.webRequest) {
+    return;
+  }
+
+  targetSession.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = { ...(details.responseHeaders || {}) };
+
+    for (const headerName of Object.keys(responseHeaders)) {
+      if (headerName.toLowerCase() === 'content-security-policy') {
+        delete responseHeaders[headerName];
+      }
+    }
+
+    responseHeaders['Content-Security-Policy'] = [RENDERER_CONTENT_SECURITY_POLICY];
+    callback({ responseHeaders });
+  });
+}
+
 function createSecureWebPreferences(overrides = {}) {
   const preferences = {
     nodeIntegration: false,
@@ -179,6 +210,8 @@ function safeExtractAdmZip(app, zip, installPath) {
 
 module.exports = {
   approvedFilePaths,
+  RENDERER_CONTENT_SECURITY_POLICY,
+  registerRendererContentSecurityPolicy,
   createSecureWebPreferences,
   rememberApprovedPath,
   rememberApprovedDialogPaths,

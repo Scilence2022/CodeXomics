@@ -16,15 +16,17 @@ describe('ChatBox visibility startup behavior', () => {
     expect(content).toContain("this.configManager.set('chat.visible', true);");
   });
 
-  it('renders ChatBox before optional service initialization can fail', () => {
+  it('initializes optional services defensively before ChatBox interaction setup', () => {
     const content = fs.readFileSync(CHAT_MANAGER_PATH, 'utf-8');
     const uiIndex = content.indexOf('this.initializeUI();');
     const servicesIndex = content.indexOf('this.initializeServices();');
 
     expect(content).toContain('initializeServices()');
+    expect(content).toContain("console.warn(`[ChatManager] ${className} not available; ${key} service disabled`);");
+    expect(content).toContain("console.warn(`[ChatManager] Failed to initialize ${className}:`, error);");
     expect(uiIndex).toBeGreaterThan(-1);
     expect(servicesIndex).toBeGreaterThan(-1);
-    expect(uiIndex).toBeLessThan(servicesIndex);
+    expect(servicesIndex).toBeLessThan(uiIndex);
   });
 
   it('falls back to document.body if the app container is unavailable', () => {

@@ -127,11 +127,11 @@ class ChatManager {
     this.initializeWorkingDirectory();
 
     this.services = {};
+    this.initializeServices();
 
     // Legacy MCP connection check (kept for backward compatibility)
     this.checkAndSetupMCPConnection();
     this.initializeUI();
-    this.initializeServices();
 
     // Load chat history AFTER UI is initialized
     setTimeout(() => {

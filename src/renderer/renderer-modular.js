@@ -714,9 +714,8 @@ class GenomeBrowser {
 
         // Only start the bridge if it was previously enabled
         if (mcpBridgeEnabled) {
-          this.mcpBridge.start();
           window.mcpBridge = this.mcpBridge;
-          console.log('✅ MCPBridge initialized and started (restored from persisted state)');
+          this.startMCPBridgeIfServerAvailable('initialized');
         } else {
           window.mcpBridge = this.mcpBridge;
           console.log('✅ MCPBridge initialized but not started (was disabled last session)');
@@ -740,8 +739,7 @@ class GenomeBrowser {
             }
 
             if (mcpBridgeEnabled) {
-              this.mcpBridge.start();
-              console.log('✅ MCPBridge loaded and started (restored from persisted state)');
+              this.startMCPBridgeIfServerAvailable('loaded');
             } else {
               console.log('✅ MCPBridge loaded but not started (was disabled last session)');
             }
@@ -756,6 +754,33 @@ class GenomeBrowser {
       }
     } catch (error) {
       console.error('❌ Failed to initialize MCPBridge:', error);
+    }
+  }
+
+  async startMCPBridgeIfServerAvailable(loadState = 'initialized') {
+    if (!this.mcpBridge) return;
+
+    try {
+      const settings =
+        typeof ipcRenderer !== 'undefined' ? await ipcRenderer.invoke('mcp-server-get-settings') : { wsPort: 3003 };
+      const wsPort = settings?.wsPort || 3003;
+      const portStatus =
+        typeof ipcRenderer !== 'undefined'
+          ? await ipcRenderer.invoke('mcp-server-check-port', wsPort)
+          : { available: true };
+
+      if (portStatus.available) {
+        console.log(`✅ MCPBridge ${loadState} but not started (MCP WebSocket port ${wsPort} is not listening)`);
+        this.updateMCPBridgeUI(false);
+        return;
+      }
+
+      this.mcpBridge.start();
+      console.log(`✅ MCPBridge ${loadState} and started (MCP WebSocket port ${wsPort} is listening)`);
+      this.updateMCPBridgeUI(this.mcpBridge.isConnected());
+    } catch (error) {
+      console.warn('⚠️ MCPBridge availability check failed; bridge not started:', error.message);
+      this.updateMCPBridgeUI(false);
     }
   }
 

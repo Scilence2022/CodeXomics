@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain, nativeTheme } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme, session } = require('electron');
 
 // =============================================================================
 // GPU and WebGL fixes - matching working version configuration
@@ -26,6 +26,7 @@ const wm = require('./main/window-management');
 const mcp = require('./main/mcp-lifecycle');
 const { registerIpcHandlers } = require('./main/ipc-handlers');
 const { registerProjectIpcHandlers } = require('./main/project-ipc');
+const { registerRendererContentSecurityPolicy } = require('./main/security-utils');
 
 // =============================================================================
 // Application constants
@@ -309,6 +310,7 @@ function buildModuleDeps() {
 
 app.whenReady().then(async () => {
   nativeTheme.themeSource = 'light';
+  registerRendererContentSecurityPolicy(session);
 
   // Set up environment variables for system command execution
   setupEnvironmentVariables();

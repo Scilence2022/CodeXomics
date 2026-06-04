@@ -50,10 +50,34 @@ class BlastManager {
     });
   }
 
+  canUseRendererFileSystem() {
+    try {
+      const fsModule = require('fs');
+      return !!(fsModule && (fsModule.promises || typeof fsModule.existsSync === 'function'));
+    } catch (error) {
+      return false;
+    }
+  }
+
+  canUseLocalBlastRuntime() {
+    try {
+      require('fs');
+      require('child_process');
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   /**
    * Load saved BLAST configuration from file
    */
   loadSavedBlastConfig() {
+    if (!this.canUseRendererFileSystem()) {
+      console.debug('BlastManager: File-backed BLAST config unavailable in hardened renderer');
+      return null;
+    }
+
     try {
       const fs = require('fs');
       const path = require('path');
@@ -83,7 +107,7 @@ class BlastManager {
         console.log('BlastManager: No saved BLAST configuration found');
       }
     } catch (error) {
-      console.error('BlastManager: Failed to load saved BLAST configuration:', error);
+      console.warn('BlastManager: Failed to load saved BLAST configuration:', error.message);
     }
 
     return null;
@@ -199,6 +223,12 @@ class BlastManager {
   async initializeLocalBlast() {
     console.log('BlastManager: Initializing local BLAST...');
     try {
+      if (!this.canUseLocalBlastRuntime()) {
+        console.info('BlastManager: Local BLAST command execution is unavailable in the hardened renderer');
+        this.enableLocalBlast();
+        return;
+      }
+
       // Check if BLAST+ is installed
       const isInstalled = await this.checkBlastInstallation();
       console.log('BlastManager: BLAST+ installed status:', isInstalled);
@@ -216,7 +246,7 @@ class BlastManager {
         );
       }
     } catch (error) {
-      console.error('Error initializing local BLAST:', error);
+      console.warn('Error initializing local BLAST:', error.message);
       // Still enable the UI for database creation
       this.enableLocalBlast();
     }
@@ -253,6 +283,11 @@ class BlastManager {
   }
 
   async tryFallbackBlastDetection() {
+    if (!this.canUseLocalBlastRuntime()) {
+      console.debug('BlastManager: Skipping fallback BLAST+ detection without renderer fs/child_process access');
+      return false;
+    }
+
     console.log('BlastManager: Trying fallback BLAST+ detection methods...');
 
     // Try common installation paths
@@ -353,6 +388,10 @@ class BlastManager {
   }
 
   async runCommand(command, workingDirectory = null) {
+    if (!this.canUseLocalBlastRuntime()) {
+      throw new Error('Local BLAST command execution is unavailable in the hardened renderer');
+    }
+
     return new Promise((resolve, reject) => {
       const { exec, execFile } = require('child_process');
       const path = require('path');
@@ -1161,6 +1200,11 @@ class BlastManager {
   }
 
   async validateStoredDatabases() {
+    if (!this.canUseRendererFileSystem()) {
+      console.debug('BlastManager: Skipping local database file validation without renderer fs access');
+      return;
+    }
+
     const fs = require('fs').promises;
     let removedCount = 0;
 
@@ -2764,8 +2808,6 @@ class BlastManager {
         this.createDatabaseFromLoadedGenome();
       });
       console.log('✓ Create local database button listener added');
-    } else {
-      console.warn('✗ Create local database button not found');
     }
 
     console.log('BlastManager: All event listeners setup completed');

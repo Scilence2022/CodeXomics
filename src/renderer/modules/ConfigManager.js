@@ -579,7 +579,7 @@ class ConfigManager {
     console.log('=== loadConfig Debug Start ===');
     console.log('this.configPath:', this.configPath);
 
-    if (this.configPath) {
+    if (this.configPath && this.canUseRendererFileSystem()) {
       console.log('Loading configuration from FILES');
       console.log('Config directory:', this.configPath.dir);
       console.log('Config files:');
@@ -816,7 +816,7 @@ class ConfigManager {
     try {
       await this.waitForInitialization();
 
-      if (this.configPath) {
+      if (this.configPath && this.canUseRendererFileSystem()) {
         console.log('Saving configuration to FILES');
         console.log('Target directory:', this.configPath.dir);
         console.log('Target files:');
@@ -852,6 +852,26 @@ class ConfigManager {
         // Don't throw error to prevent app crashes
         console.warn('Configuration save failed completely, but continuing execution');
       }
+    }
+  }
+
+  /**
+   * Whether the hardened renderer has direct filesystem access.
+   *
+   * In the context-isolated app this is intentionally false, and configuration
+   * should use localStorage or IPC-backed APIs instead of logging blocked
+   * require('fs') attempts on every startup.
+   */
+  canUseRendererFileSystem() {
+    try {
+      if (typeof window === 'undefined' || typeof window.require !== 'function') {
+        return false;
+      }
+
+      const fsModule = window.require('fs');
+      return !!(fsModule && (fsModule.promises || typeof fsModule.existsSync === 'function'));
+    } catch (error) {
+      return false;
     }
   }
 

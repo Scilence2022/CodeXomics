@@ -13619,8 +13619,6 @@ This action cannot be undone.`;
 
         console.log('✅ Optimized view refresh completed');
       }
-    } else {
-      console.warn('Cannot refresh view - missing chromosome or sequence data');
     }
   }
 
