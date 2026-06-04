@@ -1837,4 +1837,10 @@ class GeneShapeCreators {
   }
 }
 
-module.exports = GeneShapeCreators;
+if (typeof window !== 'undefined') {
+  window.GeneShapeCreators = GeneShapeCreators;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = GeneShapeCreators;
+}

@@ -6,8 +6,8 @@
  * All innerHTML assignments should go through this service to prevent XSS attacks.
  *
  * Security Context:
- * - CodeXomics currently runs with nodeIntegration:true + contextIsolation:false
- * - Any XSS directly equals full system compromise
+ * - CodeXomics renderer runs with nodeIntegration disabled and contextIsolation enabled
+ * - Sanitization still protects persisted/project content, chat messages, and plugin-provided HTML
  * - 422+ innerHTML assignments exist without sanitization
  *
  * Usage:
@@ -21,7 +21,89 @@
  * @module SanitizeService
  */
 
-const DOMPurify = require('dompurify');
+function createFallbackSanitizer() {
+  const escapeHtml = value =>
+    String(value).replace(/[&<>"']/g, char => {
+      const entities = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      };
+      return entities[char];
+    });
+
+  return {
+    sanitize(value, config = {}) {
+      if (typeof value !== 'string') return '';
+
+      if (config.ALLOWED_TAGS && config.ALLOWED_TAGS.length === 0) {
+        return escapeHtml(value.replace(/<[^>]*>/g, ''));
+      }
+
+      if (typeof document === 'undefined') {
+        return escapeHtml(value);
+      }
+
+      const allowedTags = new Set((config.ALLOWED_TAGS || []).map(tag => tag.toLowerCase()));
+      const allowedAttrs = new Set((config.ALLOWED_ATTR || config.ADD_ATTR || []).map(attr => attr.toLowerCase()));
+      const allowDataAttrs = config.ALLOW_DATA_ATTR === true;
+      const template = document.createElement('template');
+      template.innerHTML = value;
+
+      template.content.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach(node => {
+        node.remove();
+      });
+
+      template.content.querySelectorAll('*').forEach(node => {
+        const tagName = node.tagName.toLowerCase();
+        if (allowedTags.size > 0 && !allowedTags.has(tagName)) {
+          node.replaceWith(...Array.from(node.childNodes));
+          return;
+        }
+
+        Array.from(node.attributes).forEach(attr => {
+          const attrName = attr.name.toLowerCase();
+          const attrValue = attr.value || '';
+          const isAllowedDataAttr = allowDataAttrs && attrName.startsWith('data-');
+          const isAllowedAttr = allowedAttrs.size === 0 || allowedAttrs.has(attrName) || isAllowedDataAttr;
+
+          if (
+            !isAllowedAttr ||
+            attrName.startsWith('on') ||
+            /javascript\s*:/i.test(attrValue) ||
+            /data\s*:/i.test(attrValue)
+          ) {
+            node.removeAttribute(attr.name);
+          }
+        });
+      });
+
+      return template.innerHTML;
+    },
+  };
+}
+
+function resolveDOMPurify() {
+  if (typeof window !== 'undefined' && window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+    return window.DOMPurify;
+  }
+
+  if (typeof module !== 'undefined' && module.exports && typeof require === 'function') {
+    try {
+      const requiredDOMPurify = require('dompurify');
+      if (requiredDOMPurify && typeof requiredDOMPurify.sanitize === 'function') {
+        return requiredDOMPurify;
+      }
+    } catch (error) {
+      console.warn('[Security] DOMPurify CommonJS load failed, using fallback sanitizer:', error.message);
+    }
+  }
+
+  console.error('[Security] DOMPurify browser bundle was not available; using limited fallback sanitizer');
+  return createFallbackSanitizer();
+}
 
 class SanitizeService {
   constructor() {
@@ -195,7 +277,7 @@ class SanitizeService {
     };
 
     // Cache DOMPurify instance
-    this._purify = DOMPurify;
+    this._purify = resolveDOMPurify();
   }
 
   /**
@@ -286,5 +368,7 @@ if (typeof window !== 'undefined') {
   window.SanitizeService = sanitizeService;
 }
 
-module.exports = sanitizeService;
-module.exports.SanitizeService = SanitizeService;
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = sanitizeService;
+  module.exports.SanitizeService = SanitizeService;
+}

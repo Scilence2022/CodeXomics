@@ -777,4 +777,10 @@ class InternalMCPServer {
   }
 }
 
-module.exports = InternalMCPServer;
+if (typeof window !== 'undefined') {
+  window.InternalMCPServer = InternalMCPServer;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = InternalMCPServer;
+}

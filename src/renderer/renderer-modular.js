@@ -1,7 +1,7 @@
 /* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
-const path = require('path');
+const rendererPath = (typeof window !== 'undefined' && window.path) || require('path');
 
 // Toast notification helper — replaces alert() with non-blocking notifications
 // Uses NotificationService if available, falls back to alert
@@ -6289,7 +6289,9 @@ class GenomeBrowser {
       // path is already declared at top of file
       // Use gene name or locus tag as symbol, sanitize to match ChatManager logic
       const safeSymbol = (geneName || 'Unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const reportPath = path.join(process.cwd(), 'reports', `Gene_${safeSymbol}_Research_Report.md`);
+      const reportBaseDir =
+        typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '/';
+      const reportPath = rendererPath.join(reportBaseDir, 'reports', `Gene_${safeSymbol}_Research_Report.md`);
 
       if (fs.existsSync(reportPath)) {
         const container = document.getElementById('deep-research-report-container');
@@ -6303,7 +6305,7 @@ class GenomeBrowser {
           btn.style.width = '100%';
           btn.style.fontWeight = '600';
           btn.innerHTML = '<i class="fas fa-file-alt"></i> View Research Report';
-          btn.title = `Open report: ${path.basename(reportPath)}`;
+          btn.title = `Open report: ${rendererPath.basename(reportPath)}`;
 
           btn.onclick = () => {
             try {

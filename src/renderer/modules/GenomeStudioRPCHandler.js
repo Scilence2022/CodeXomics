@@ -349,4 +349,10 @@ class GenomeStudioRPCHandler {
   }
 }
 
-module.exports = GenomeStudioRPCHandler;
+if (typeof window !== 'undefined') {
+  window.GenomeStudioRPCHandler = GenomeStudioRPCHandler;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = GenomeStudioRPCHandler;
+}

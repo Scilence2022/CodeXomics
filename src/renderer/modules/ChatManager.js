@@ -859,14 +859,18 @@ class ChatManager {
         try {
           const fs = window.require('fs');
           const path = window.require('path');
+          const rendererDirname = typeof __dirname !== 'undefined' ? __dirname : null;
+          const rendererCwd = this.getCurrentWorkingDirectory();
+          const resourcesPath =
+            typeof process !== 'undefined' && process.resourcesPath ? process.resourcesPath : null;
 
           // Check different possible locations
           const possibleDirs = [
-            path.join(__dirname, '../../tools_registry'),
-            path.join(__dirname, '../../../tools_registry'),
-            path.join(process.cwd(), 'tools_registry'),
-            path.join(process.resourcesPath, 'tools_registry'),
-          ];
+            rendererDirname ? path.join(rendererDirname, '../../tools_registry') : null,
+            rendererDirname ? path.join(rendererDirname, '../../../tools_registry') : null,
+            rendererCwd ? path.join(rendererCwd, 'tools_registry') : null,
+            resourcesPath ? path.join(resourcesPath, 'tools_registry') : null,
+          ].filter(Boolean);
 
           // Checking tools_registry directory locations:
           for (const dir of possibleDirs) {
@@ -1231,12 +1235,14 @@ class ChatManager {
       // Determine target directory
       if (use_home_directory) {
         const os = require('os');
-        targetPath = os.homedir();
+        targetPath = os.homedir() || this.getCurrentWorkingDirectory();
         // [ChatManager] Using home directory
       } else if (directory_path) {
         const path = require('path');
         // Handle both absolute and relative paths
-        targetPath = path.isAbsolute(directory_path) ? directory_path : path.resolve(process.cwd(), directory_path);
+        targetPath = path.isAbsolute(directory_path)
+          ? directory_path
+          : path.resolve(this.getCurrentWorkingDirectory(), directory_path);
         // [ChatManager] Target directory
       } else {
         throw new Error('Either directory_path or use_home_directory must be provided');
@@ -1285,7 +1291,9 @@ class ChatManager {
       }
 
       // Set the working directory
-      process.chdir(targetPath);
+      if (typeof process !== 'undefined' && typeof process.chdir === 'function') {
+        process.chdir(targetPath);
+      }
 
       // Store in ChatManager state for persistence
       this.currentWorkingDirectory = targetPath;
@@ -1335,7 +1343,25 @@ class ChatManager {
    * @returns {string} Current working directory path
    */
   getCurrentWorkingDirectory() {
-    return this.currentWorkingDirectory || process.cwd();
+    if (this.currentWorkingDirectory) {
+      return this.currentWorkingDirectory;
+    }
+
+    if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
+      return process.cwd();
+    }
+
+    try {
+      const os = typeof window !== 'undefined' && window.require ? window.require('os') : null;
+      const homeDir = os && typeof os.homedir === 'function' ? os.homedir() : '';
+      if (homeDir) {
+        return homeDir;
+      }
+    } catch (error) {
+      // Ignore unavailable Node compatibility APIs in the hardened renderer.
+    }
+
+    return '/';
   }
 
   /**
@@ -1351,20 +1377,24 @@ class ChatManager {
 
       if (savedDirectory && require('fs').existsSync(savedDirectory)) {
         this.currentWorkingDirectory = savedDirectory;
-        process.chdir(savedDirectory);
+        if (typeof process !== 'undefined' && typeof process.chdir === 'function') {
+          process.chdir(savedDirectory);
+        }
         // [ChatManager] Restored working directory
       } else {
         // Default to user home directory
         const os = require('os');
-        const homeDir = os.homedir();
+        const homeDir = os.homedir() || this.getCurrentWorkingDirectory();
         this.currentWorkingDirectory = homeDir;
-        process.chdir(homeDir);
+        if (typeof process !== 'undefined' && typeof process.chdir === 'function') {
+          process.chdir(homeDir);
+        }
         // [ChatManager] Initialized working directory to home
       }
     } catch (error) {
       // [ChatManager] Error initializing working directory
-      // Fallback to current process directory
-      this.currentWorkingDirectory = process.cwd();
+      // Fallback to a stable renderer-safe directory placeholder.
+      this.currentWorkingDirectory = this.getCurrentWorkingDirectory();
     }
   }
 
