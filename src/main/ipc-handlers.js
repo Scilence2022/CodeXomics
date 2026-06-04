@@ -133,6 +133,33 @@ function registerIpcHandlers(deps) {
     return { reportPath, fileName };
   };
 
+  const hashString = value => {
+    let hash = 0;
+    const input = String(value || '');
+    for (let i = 0; i < input.length; i += 1) {
+      hash = (hash << 5) - hash + input.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(16);
+  };
+
+  const resolveSidecarPaths = genomePath => {
+    const safeGenomePath = assertAllowedFileAccess(app, genomePath, {
+      operation: 'sidecar access',
+      mustExist: true,
+    });
+    const parsed = path.parse(safeGenomePath);
+    const sidecarPath = path.resolve(parsed.dir, `${parsed.name}.CodeXomics`);
+    const fallbackDir = path.resolve(app.getPath('userData'), 'sidecar');
+    const fallbackPath = path.resolve(fallbackDir, `${hashString(safeGenomePath)}.CodeXomics`);
+
+    if (path.dirname(sidecarPath) !== parsed.dir || path.dirname(fallbackPath) !== fallbackDir) {
+      throw new Error('Invalid sidecar path');
+    }
+
+    return { safeGenomePath, sidecarPath, fallbackDir, fallbackPath };
+  };
+
   // =====================================================================
   // 1. Tool Execution IPC
   // =====================================================================
@@ -342,6 +369,70 @@ function registerIpcHandlers(deps) {
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('load-sidecar-file', async (event, genomePath) => {
+    try {
+      const { safeGenomePath, sidecarPath, fallbackPath } = resolveSidecarPaths(genomePath);
+      const readPath = fs.existsSync(sidecarPath) ? sidecarPath : fallbackPath;
+
+      if (!fs.existsSync(readPath)) {
+        return { success: true, exists: false, data: null };
+      }
+
+      const content = await fs.promises.readFile(readPath, 'utf8');
+      return {
+        success: true,
+        exists: true,
+        path: readPath,
+        data: JSON.parse(content),
+        sourceFile: path.basename(safeGenomePath),
+      };
+    } catch (error) {
+      return { success: false, exists: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('save-sidecar-file', async (event, genomePath, data) => {
+    try {
+      const { safeGenomePath, sidecarPath, fallbackDir, fallbackPath } = resolveSidecarPaths(genomePath);
+      const content = JSON.stringify(
+        {
+          ...(data || {}),
+          sourceFile: data?.sourceFile || path.basename(safeGenomePath),
+          lastModified: data?.lastModified || new Date().toISOString(),
+        },
+        null,
+        2
+      );
+
+      try {
+        await fs.promises.writeFile(sidecarPath, content, 'utf8');
+        return { success: true, path: sidecarPath, fallback: false };
+      } catch (writeError) {
+        if (!['EACCES', 'EROFS', 'EPERM', 'ENOENT'].includes(writeError.code)) {
+          throw writeError;
+        }
+
+        await fs.promises.mkdir(fallbackDir, { recursive: true });
+        await fs.promises.writeFile(fallbackPath, content, 'utf8');
+        return { success: true, path: fallbackPath, fallback: true };
+      }
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('check-sidecar-file', async (event, genomePath) => {
+    try {
+      const { sidecarPath, fallbackPath } = resolveSidecarPaths(genomePath);
+      return {
+        success: true,
+        exists: fs.existsSync(sidecarPath) || fs.existsSync(fallbackPath),
+      };
+    } catch (error) {
+      return { success: false, exists: false, error: error.message };
     }
   });
 

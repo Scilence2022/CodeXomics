@@ -49,6 +49,13 @@ describe('IPC Handlers Module', () => {
     expect(content).toContain('resolveGeneResearchReportPath');
   });
 
+  it('should expose scoped sidecar file IPC', () => {
+    expect(content).toContain('load-sidecar-file');
+    expect(content).toContain('save-sidecar-file');
+    expect(content).toContain('check-sidecar-file');
+    expect(content).toContain('resolveSidecarPaths');
+  });
+
   it('should handle MCP server IPC', () => {
     expect(content).toContain('mcp-server');
   });
