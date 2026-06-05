@@ -60,6 +60,15 @@ class GeneralSettingsManager {
       deepGeneResearchUrl: 'http://43.196.74.134:3000/',
       chopchopUrl: 'https://chopchop.cbu.uib.no/',
       progenFixerUrl: 'https://progenfixer.biodesign.ac.cn',
+
+      // Security
+      securityProfile: 'balanced',
+      warnBeforeAiFileWrites: true,
+      warnBeforeInternetDownloads: true,
+      showSecurityNotifications: true,
+      enablePluginSecurityValidation: false,
+      enablePluginSandboxMode: true,
+      blockUntrustedPluginSources: true,
     };
     this.settings = { ...this.defaultSettings };
   }
@@ -396,6 +405,34 @@ class GeneralSettingsManager {
         this.updateSetting('progenFixerUrl', e.target.value);
       });
     }
+
+    // Security settings
+    const securityProfileSelect = document.getElementById('securityProfile');
+    if (securityProfileSelect) {
+      securityProfileSelect.addEventListener('change', e => {
+        this.updateSetting('securityProfile', e.target.value);
+        this.applySecuritySettings();
+      });
+    }
+
+    const securityCheckboxes = [
+      'warnBeforeAiFileWrites',
+      'warnBeforeInternetDownloads',
+      'showSecurityNotifications',
+      'enablePluginSecurityValidation',
+      'enablePluginSandboxMode',
+      'blockUntrustedPluginSources',
+    ];
+
+    securityCheckboxes.forEach(id => {
+      const checkbox = document.getElementById(id);
+      if (checkbox) {
+        checkbox.addEventListener('change', e => {
+          this.updateSetting(id, e.target.checked);
+          this.applySecuritySettings();
+        });
+      }
+    });
 
     // Feature toggles
     const featureCheckboxes = [
@@ -739,6 +776,24 @@ class GeneralSettingsManager {
     const progenFixerUrlInput = document.getElementById('progenFixerUrl');
     if (progenFixerUrlInput) progenFixerUrlInput.value = this.settings.progenFixerUrl;
 
+    // Security settings
+    const securityProfileSelect = document.getElementById('securityProfile');
+    if (securityProfileSelect) securityProfileSelect.value = this.settings.securityProfile || 'balanced';
+
+    const securityCheckboxes = [
+      'warnBeforeAiFileWrites',
+      'warnBeforeInternetDownloads',
+      'showSecurityNotifications',
+      'enablePluginSecurityValidation',
+      'enablePluginSandboxMode',
+      'blockUntrustedPluginSources',
+    ];
+
+    securityCheckboxes.forEach(id => {
+      const checkbox = document.getElementById(id);
+      if (checkbox) checkbox.checked = !!this.settings[id];
+    });
+
     // Update system info
     this.updateSystemInfo();
   }
@@ -824,6 +879,7 @@ class GeneralSettingsManager {
     this.applyTrackHeight(this.settings.trackHeight);
     this.applyAnimations(this.settings.enableAnimations);
     this.applyMinLineSpacing(this.settings.minLineSpacing);
+    this.applySecuritySettings();
 
     // Apply feature settings
     this.applyFeatureSetting('enableGlobalDragging', this.settings.enableGlobalDragging);
@@ -1059,6 +1115,77 @@ class GeneralSettingsManager {
         detail: { feature, enabled },
       })
     );
+  }
+
+  /**
+   * Apply security settings to runtime services that support live updates.
+   */
+  applySecuritySettings() {
+    const securitySettings = {
+      securityProfile: this.settings.securityProfile || 'balanced',
+      warnBeforeAiFileWrites: !!this.settings.warnBeforeAiFileWrites,
+      warnBeforeInternetDownloads: !!this.settings.warnBeforeInternetDownloads,
+      showSecurityNotifications: !!this.settings.showSecurityNotifications,
+      enablePluginSecurityValidation: !!this.settings.enablePluginSecurityValidation,
+      enablePluginSandboxMode: !!this.settings.enablePluginSandboxMode,
+      blockUntrustedPluginSources: !!this.settings.blockUntrustedPluginSources,
+    };
+
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.dataset.securityProfile = securitySettings.securityProfile;
+    }
+
+    if (typeof window !== 'undefined') {
+      if (window.pluginManagerV2?.options) {
+        window.pluginManagerV2.options.enableSecurityValidation = securitySettings.enablePluginSecurityValidation;
+      }
+
+      if (window.pluginManagerV2?.marketplace?.options) {
+        window.pluginManagerV2.marketplace.options.enableSecurityValidation =
+          securitySettings.enablePluginSecurityValidation;
+      }
+
+      if (window.pluginMarketplace?.options) {
+        window.pluginMarketplace.options.enableSecurityValidation = securitySettings.enablePluginSecurityValidation;
+      }
+
+      if (window.pluginManagementUI?.settings) {
+        window.pluginManagementUI.settings.enablePluginSandbox = securitySettings.enablePluginSandboxMode;
+        if (window.pluginManagementUI.settings.securitySettings) {
+          window.pluginManagementUI.settings.securitySettings.enableSandboxMode =
+            securitySettings.enablePluginSandboxMode;
+          window.pluginManagementUI.settings.securitySettings.requireSecureContext =
+            securitySettings.blockUntrustedPluginSources;
+        }
+        if (typeof window.pluginManagementUI.saveSettings === 'function') {
+          window.pluginManagementUI.saveSettings();
+        }
+      }
+    }
+
+    if (this.configManager) {
+      Promise.resolve(this.configManager.set('enablePluginSandbox', securitySettings.enablePluginSandboxMode)).catch(
+        error => {
+          console.warn('[GeneralSettings] Failed to persist plugin sandbox setting:', error);
+        }
+      );
+      Promise.resolve(
+        this.configManager.set(
+          'marketplace.settings.enableSecurityValidation',
+          securitySettings.enablePluginSecurityValidation
+        )
+      ).catch(error => {
+        console.warn('[GeneralSettings] Failed to persist plugin security validation setting:', error);
+      });
+    }
+
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(
+        new CustomEvent('securitySettingsChanged', {
+          detail: securitySettings,
+        })
+      );
+    }
   }
 
   /**

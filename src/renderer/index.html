@@ -3226,6 +3226,9 @@ Supported formats:
                     <button class="tab-button" data-tab="features">
                         <i class="fas fa-toggle-on"></i> Features
                     </button>
+                    <button class="tab-button" data-tab="security">
+                        <i class="fas fa-shield-alt"></i> Security
+                    </button>
                     <button class="tab-button" data-tab="export">
                         <i class="fas fa-file-export"></i> Export/Import
                     </button>
@@ -3588,6 +3591,86 @@ Supported formats:
                                 <input type="url" id="progenFixerUrl" value="https://progenfixer.biodesign.ac.cn"
                                     class="input-full">
                                 <small class="help-text">URL for the ProGenFixer web interface</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Tab -->
+                    <div id="security-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h4><i class="fas fa-lock"></i> Runtime Protection</h4>
+                            <div class="system-info">
+                                <div class="info-row">
+                                    <span class="info-label">Renderer Node.js Guard:</span>
+                                    <span class="info-value">Enabled</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">File Permission Broker:</span>
+                                    <span class="info-value">Enabled</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">HTML Sanitization:</span>
+                                    <span class="info-value">Enabled</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4><i class="fas fa-folder-shield"></i> File & AI Safety</h4>
+                            <div class="form-group">
+                                <label for="securityProfile">Security Profile:</label>
+                                <select id="securityProfile" class="input-full">
+                                    <option value="balanced" selected>Balanced</option>
+                                    <option value="strict">Strict</option>
+                                    <option value="research">Research Workflow</option>
+                                </select>
+                                <small class="help-text">Sets the default posture for AI-assisted file and network actions</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="warnBeforeAiFileWrites" checked>
+                                    Warn before AI-initiated file writes
+                                </label>
+                                <small class="help-text">Show an explicit warning before AI tools create or overwrite files</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="warnBeforeInternetDownloads" checked>
+                                    Warn before internet downloads
+                                </label>
+                                <small class="help-text">Require extra visibility before tools download files from URLs</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="showSecurityNotifications" checked>
+                                    Show security notifications
+                                </label>
+                                <small class="help-text">Display notifications when CodeXomics blocks or reroutes unsafe access</small>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4><i class="fas fa-puzzle-piece"></i> Plugin Safety</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enablePluginSecurityValidation">
+                                    Enable plugin security validation
+                                </label>
+                                <small class="help-text">Analyze plugin install plans before marketplace installation</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enablePluginSandboxMode" checked>
+                                    Enable plugin sandbox mode
+                                </label>
+                                <small class="help-text">Run plugins with restricted capabilities where supported</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="blockUntrustedPluginSources" checked>
+                                    Block untrusted plugin sources
+                                </label>
+                                <small class="help-text">Keep marketplace installs limited to configured trusted sources</small>
                             </div>
                         </div>
                     </div>

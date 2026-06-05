@@ -349,6 +349,13 @@ class ConfigManager {
         deepGeneResearchUrl: 'http://43.196.74.134:3000/',
         chopchopUrl: 'https://chopchop.cbu.uib.no/',
         progenFixerUrl: 'https://progenfixer.biodesign.ac.cn',
+        securityProfile: 'balanced',
+        warnBeforeAiFileWrites: true,
+        warnBeforeInternetDownloads: true,
+        showSecurityNotifications: true,
+        enablePluginSecurityValidation: false,
+        enablePluginSandboxMode: true,
+        blockUntrustedPluginSources: true,
       },
       chatboxSettings: {},
     };
