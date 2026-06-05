@@ -487,7 +487,7 @@ class ConfigManager {
       try {
         await this.loadFromMainConfig();
       } catch (error) {
-        console.warn('Main-process configuration unavailable, falling back to localStorage:', error.message);
+        console.warn('File-based configuration unavailable, falling back to localStorage:', error.message);
         this.loadFromLocalStorage();
       }
     } else {
@@ -711,7 +711,7 @@ class ConfigManager {
         console.log('Saving configuration through main-process config IPC');
         const savedToMain = await this.saveToMainConfig();
         if (savedToMain === false) {
-          console.warn('Main-process configuration save unavailable, falling back to localStorage');
+          console.warn('File-based configuration save unavailable, falling back to localStorage');
           this.saveToLocalStorage();
           console.log('Configuration saved to localStorage fallback');
         } else {
