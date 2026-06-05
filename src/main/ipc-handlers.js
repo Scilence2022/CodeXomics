@@ -31,6 +31,8 @@ const { ToolRegistryService } = require('./tool-registry-service');
 
 let BamReaderClass = null;
 const BLAST_EXECUTABLES = new Set(['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx']);
+const LOCALE_NAMESPACES = new Set(['common', 'menu', 'dialogs', 'notifications', 'tracks']);
+const LOCALE_CODE_PATTERN = /^[A-Za-z]{2}(?:-[A-Za-z0-9]+)?$/;
 
 function getBamReaderClass() {
   if (!BamReaderClass) {
@@ -144,6 +146,42 @@ function sanitizeOpenFileDialogOptions(options = {}) {
     title: typeof options.title === 'string' && options.title.trim() ? options.title.trim().slice(0, 120) : 'Open File',
     properties,
     filters: filters.length > 0 ? filters : [{ name: 'All Files', extensions: ['*'] }],
+  };
+}
+
+function getLocalesRoot() {
+  return path.join(__dirname, '..', 'locales');
+}
+
+function sanitizeLocaleCode(language) {
+  const locale = String(language || '').trim();
+  return LOCALE_CODE_PATTERN.test(locale) ? locale : 'en';
+}
+
+function sanitizeLocaleNamespace(namespace) {
+  const safeNamespace = String(namespace || '').trim();
+  if (!LOCALE_NAMESPACES.has(safeNamespace)) {
+    throw new Error(`Unsupported locale namespace: ${safeNamespace}`);
+  }
+  return safeNamespace;
+}
+
+function readLocaleNamespace(language, namespace) {
+  const localeRoot = getLocalesRoot();
+  const safeLanguage = sanitizeLocaleCode(language);
+  const safeNamespace = sanitizeLocaleNamespace(namespace);
+  const candidatePath = path.join(localeRoot, safeLanguage, `${safeNamespace}.json`);
+  const fallbackPath = path.join(localeRoot, 'en', `${safeNamespace}.json`);
+  const selectedPath = fs.existsSync(candidatePath) ? candidatePath : fallbackPath;
+
+  if (!fs.existsSync(selectedPath)) {
+    return { language: safeLanguage, namespace: safeNamespace, data: {} };
+  }
+
+  return {
+    language: path.basename(path.dirname(selectedPath)),
+    namespace: safeNamespace,
+    data: JSON.parse(fs.readFileSync(selectedPath, 'utf8')),
   };
 }
 
@@ -1710,6 +1748,43 @@ function registerIpcHandlers(deps) {
       },
     };
   });
+
+  ipcMain.handle('get-locale-data', async (event, language, namespace) => {
+    try {
+      return {
+        success: true,
+        ...readLocaleNamespace(language, namespace),
+      };
+    } catch (error) {
+      return { success: false, error: error.message, language: sanitizeLocaleCode(language), namespace, data: {} };
+    }
+  });
+
+  ipcMain.handle('get-locale-languages', async () => {
+    try {
+      const localeRoot = getLocalesRoot();
+      const languages = fs
+        .readdirSync(localeRoot, { withFileTypes: true })
+        .filter(entry => entry.isDirectory() && LOCALE_CODE_PATTERN.test(entry.name))
+        .map(entry => entry.name);
+      return { success: true, languages };
+    } catch (error) {
+      return { success: false, error: error.message, languages: ['en'] };
+    }
+  });
+
+  ipcMain.handle('i18n:getCurrentLanguage', async () => app.getLocale());
+
+  ipcMain.handle('i18n:changeLanguage', async (event, language) => {
+    const safeLanguage = sanitizeLocaleCode(language);
+    return { success: true, language: safeLanguage };
+  });
+
+  ipcMain.handle('get-sanitizer-config', async () => ({
+    success: true,
+    allowDataAttributes: true,
+    allowAriaAttributes: true,
+  }));
 
   // =====================================================================
   // 4. Gene Attachments IPC Handlers

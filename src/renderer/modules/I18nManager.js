@@ -23,17 +23,6 @@ class I18nManager {
   static DEFAULT_LANGUAGE = 'en';
 
   /**
-   * Resolve the shared locales directory path.
-   * Uses Node.js __dirname (available due to nodeIntegration:true).
-   * From src/renderer/modules/ → ../../locales → src/locales/
-   */
-  static getLocalesPath() {
-    // Compute from __dirname: this file → modules/ → renderer/ → src/ → locales/
-    const path = require('path');
-    return path.join(__dirname, '..', '..', 'locales');
-  }
-
-  /**
    * Create an I18nManager instance
    * @param {ConfigManager} configManager - The config manager for persistence
    */
@@ -70,9 +59,9 @@ class I18nManager {
       this.currentLanguage = savedLanguage || I18nManager.DEFAULT_LANGUAGE;
 
       // Try to get language from main process (system language detection)
-      if (!savedLanguage && window.ipcRenderer) {
+      if (!savedLanguage && typeof window !== 'undefined' && window.electronAPI?.getCurrentLanguage) {
         try {
-          const systemLang = await window.ipcRenderer.invoke('i18n:getCurrentLanguage');
+          const systemLang = await window.electronAPI.getCurrentLanguage();
           if (systemLang && this.isLanguageSupported(systemLang)) {
             this.currentLanguage = systemLang;
           }
@@ -129,26 +118,18 @@ class I18nManager {
    */
   async loadTranslations(language) {
     const translationsData = {};
-    const fs = require('fs');
-    const path = require('path');
-    const localesPath = I18nManager.getLocalesPath();
 
     for (const ns of this.namespaces) {
       try {
-        // Single source of truth: src/locales/ (shared between main & renderer)
-        const filePath = path.join(localesPath, language, `${ns}.json`);
-        if (fs.existsSync(filePath)) {
-          const content = fs.readFileSync(filePath, 'utf-8');
-          translationsData[ns] = JSON.parse(content);
+        if (typeof window === 'undefined' || !window.electronAPI?.getLocaleData) {
+          throw new Error('Locale IPC API is unavailable');
+        }
+
+        const result = await window.electronAPI.getLocaleData(language, ns);
+        if (result?.success) {
+          translationsData[ns] = result.data || {};
         } else {
-          // Try fallback to English
-          if (language !== 'en') {
-            const fallbackPath = path.join(localesPath, 'en', `${ns}.json`);
-            if (fs.existsSync(fallbackPath)) {
-              const fallbackContent = fs.readFileSync(fallbackPath, 'utf-8');
-              translationsData[ns] = JSON.parse(fallbackContent);
-            }
-          }
+          throw new Error(result?.error || `Failed to load locale namespace ${ns}`);
         }
       } catch (error) {
         console.warn(`[I18nManager] Failed to load ${ns} translations for ${language}:`, error);
@@ -250,9 +231,9 @@ class I18nManager {
     await this.saveLanguagePreference(lang);
 
     // Notify main process
-    if (window.ipcRenderer) {
+    if (typeof window !== 'undefined' && window.electronAPI?.changeLanguage) {
       try {
-        await window.ipcRenderer.invoke('i18n:changeLanguage', lang);
+        await window.electronAPI.changeLanguage(lang);
       } catch (e) {
         console.warn('[I18nManager] Could not notify main process of language change:', e);
       }
