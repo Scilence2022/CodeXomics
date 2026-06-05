@@ -1,8 +1,6 @@
 /**
  * ChatManager - Handles LLM chat interface and MCP communication
  */
-// Note: fs and path are required locally inside addToolResultMessage to avoid global scope conflicts
-
 class ChatManager {
   constructor(app, configManager = null) {
     this.app = app;
@@ -1146,14 +1144,10 @@ class ChatManager {
     const directory_path = parameters.directory_path || parameters.working_directory;
     const { use_home_directory = false, create_if_missing = false, validate_permissions = true } = parameters;
 
-    // [ChatManager] Setting working directory
-
     try {
       let targetPath;
       const previousDirectory = this.getCurrentWorkingDirectory();
-      const pathModule =
-        (typeof window !== 'undefined' && window.path) ||
-        (typeof require !== 'undefined' ? require('path') : null);
+      const pathModule = this.getPathModule();
       const isAbsolutePath = candidatePath => {
         if (pathModule && typeof pathModule.isAbsolute === 'function') {
           return pathModule.isAbsolute(candidatePath);
@@ -1161,28 +1155,22 @@ class ChatManager {
         return /^(?:\/|[A-Za-z]:[\\/])/.test(String(candidatePath || ''));
       };
 
-      // Determine target directory
       if (use_home_directory) {
-        const osModule =
-          (typeof window !== 'undefined' && window.os) || (typeof require !== 'undefined' ? require('os') : null);
+        const osModule = typeof window !== 'undefined' ? window.os : null;
         targetPath =
           osModule && typeof osModule.homedir === 'function' && osModule.homedir()
             ? osModule.homedir()
             : this.getCurrentWorkingDirectory();
-        // [ChatManager] Using home directory
       } else if (directory_path) {
-        // Handle both absolute and relative paths
         targetPath = isAbsolutePath(directory_path)
           ? directory_path
           : pathModule && typeof pathModule.resolve === 'function'
             ? pathModule.resolve(this.getCurrentWorkingDirectory(), directory_path)
             : `${this.getCurrentWorkingDirectory().replace(/\/+$/g, '')}/${directory_path}`;
-        // [ChatManager] Target directory
       } else {
         throw new Error('Either directory_path or use_home_directory must be provided');
       }
 
-      // Validate and setup directory
       let createdDirectory = false;
       const permissions = { readable: false, writable: false };
 
@@ -1221,57 +1209,20 @@ class ChatManager {
         permissions.writable = validate_permissions ? true : false;
         targetPath = infoResult.info.path || targetPath;
       } else {
-        const fs = require('fs');
-
-        if (!fs.existsSync(targetPath)) {
-          if (create_if_missing) {
-            fs.mkdirSync(targetPath, { recursive: true });
-            createdDirectory = true;
-          } else {
-            throw new Error(`Directory '${targetPath}' does not exist`);
-          }
-        }
-
-        const stats = fs.statSync(targetPath);
-        if (!stats.isDirectory()) {
-          throw new Error(`Path '${targetPath}' is not a directory`);
-        }
-
-        if (validate_permissions) {
-          try {
-            fs.accessSync(targetPath, fs.constants.R_OK);
-            permissions.readable = true;
-          } catch (e) {
-            // [ChatManager] Directory not readable
-          }
-
-          try {
-            fs.accessSync(targetPath, fs.constants.W_OK);
-            permissions.writable = true;
-          } catch (e) {
-            // [ChatManager] Directory not writable
-          }
-
-          if (!permissions.readable) {
-            throw new Error(`Permission denied: Cannot read directory '${targetPath}'`);
-          }
-        }
+        throw new Error('Working directory validation requires electronAPI.approveWorkingDirectory');
       }
 
-      // Set the working directory
       if (typeof process !== 'undefined' && typeof process.chdir === 'function') {
         process.chdir(targetPath);
       }
 
-      // Store in ChatManager state for persistence
       this.currentWorkingDirectory = targetPath;
 
-      // Save to config for persistence across sessions
       if (this.configManager) {
         this.configManager.set('workingDirectory', targetPath);
       }
 
-      const result = {
+      return {
         success: true,
         message: createdDirectory
           ? `Working directory set to ${targetPath} (created)`
@@ -1282,26 +1233,14 @@ class ChatManager {
         tool: 'set_working_directory',
         timestamp: new Date().toISOString(),
       };
-
-      // Enhanced logging for benchmark tool detection recording
-      // [ChatManager] TOOL EXECUTED: set_working_directory - Directory changed
-
-      return result;
     } catch (error) {
-      // [ChatManager] Error setting working directory
-
-      const errorResult = {
+      return {
         success: false,
         error: error.message,
         attempted_path: directory_path || (use_home_directory ? 'user home directory' : 'undefined'),
         tool: 'set_working_directory',
         timestamp: new Date().toISOString(),
       };
-
-      // Log error for benchmark tool detection recording
-      // [ChatManager] TOOL ERROR: set_working_directory - Failed
-
-      return errorResult;
     }
   }
 
@@ -1318,17 +1257,27 @@ class ChatManager {
       return process.cwd();
     }
 
-    try {
-      const os = typeof window !== 'undefined' && window.require ? window.require('os') : null;
-      const homeDir = os && typeof os.homedir === 'function' ? os.homedir() : '';
-      if (homeDir) {
-        return homeDir;
-      }
-    } catch (error) {
-      // Ignore unavailable Node compatibility APIs in the hardened renderer.
+    const os = typeof window !== 'undefined' ? window.os : null;
+    const homeDir = os && typeof os.homedir === 'function' ? os.homedir() : '';
+    if (homeDir) {
+      return homeDir;
     }
 
     return '/';
+  }
+
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      isAbsolute: filePath => /^(?:\/|[A-Za-z]:[\\/])/.test(String(filePath || '')),
+      resolve: (...parts) => {
+        const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
+        const normalized = joined.replace(/\\/g, '/').replace(/\/+/g, '/');
+        return /^(?:\/|[A-Za-z]:[\\/])/.test(normalized) ? normalized : `/${normalized}`;
+      },
+    };
   }
 
   /**
@@ -1342,7 +1291,7 @@ class ChatManager {
         savedDirectory = this.configManager.get('workingDirectory', null);
       }
 
-      if (savedDirectory && require('fs').existsSync(savedDirectory)) {
+      if (savedDirectory) {
         this.currentWorkingDirectory = savedDirectory;
         if (typeof process !== 'undefined' && typeof process.chdir === 'function') {
           process.chdir(savedDirectory);
@@ -1350,8 +1299,8 @@ class ChatManager {
         // [ChatManager] Restored working directory
       } else {
         // Default to user home directory
-        const os = require('os');
-        const homeDir = os.homedir() || this.getCurrentWorkingDirectory();
+        const os = typeof window !== 'undefined' ? window.os : null;
+        const homeDir = os && typeof os.homedir === 'function' ? os.homedir() : this.getCurrentWorkingDirectory();
         this.currentWorkingDirectory = homeDir;
         if (typeof process !== 'undefined' && typeof process.chdir === 'function') {
           process.chdir(homeDir);

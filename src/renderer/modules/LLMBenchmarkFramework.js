@@ -34,12 +34,26 @@ class LLMBenchmarkFramework {
     this.setupEventHandlers();
   }
 
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      join: (...parts) => parts.filter(part => part !== undefined && part !== null && part !== '').join('/').replace(/\/+/g, '/'),
+      resolve: (...parts) => {
+        const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
+        const normalized = joined.replace(/\\/g, '/').replace(/\/+/g, '/');
+        return /^([A-Za-z]:[\\/]|\/)/.test(normalized) ? normalized : `/${normalized}`;
+      },
+    };
+  }
+
   normalizeDirectoryPath(directoryPath) {
     const rawPath = String(directoryPath || '').trim();
     if (!rawPath) return rawPath;
 
     try {
-      const pathModule = (typeof window !== 'undefined' && window.path) || (typeof require !== 'undefined' && require('path'));
+      const pathModule = this.getPathModule();
       if (pathModule && typeof pathModule.resolve === 'function') {
         return pathModule.resolve(rawPath);
       }
@@ -5784,9 +5798,7 @@ class LLMBenchmarkFramework {
 
   async persistInteractionDataToDisk(testId, suiteId, interactionData) {
     try {
-      const pathModule =
-        (typeof window !== 'undefined' && window.path) ||
-        (typeof require !== 'undefined' && require('path'));
+      const pathModule = this.getPathModule();
       const electronAPI = typeof window !== 'undefined' ? window.electronAPI : null;
 
       if (!pathModule || typeof pathModule.join !== 'function') {
@@ -5807,7 +5819,6 @@ class LLMBenchmarkFramework {
 
       const jsonContent = JSON.stringify(interactionData, this.getInteractionDataReplacer());
 
-      // Try Electron IPC first (renderer process), then fs directly
       if (electronAPI?.writeFile) {
         if (electronAPI.ensureDirectory) {
           const ensureResult = await electronAPI.ensureDirectory(benchmarkDir);
@@ -5826,21 +5837,8 @@ class LLMBenchmarkFramework {
         );
         return filePath;
       } else {
-        // Fallback: use fs directly (works in main process or Node.js context)
-        try {
-          const fs = require('fs');
-          if (!fs.existsSync(benchmarkDir)) {
-            fs.mkdirSync(benchmarkDir, { recursive: true });
-          }
-          fs.writeFileSync(filePath, jsonContent, 'utf8');
-          console.log(
-            `💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`
-          );
-          return filePath;
-        } catch (fsError) {
-          console.warn(`[Benchmark] Failed to persist interaction data via fs: ${fsError.message}`);
-          return null;
-        }
+        console.warn('[Benchmark] Cannot persist interaction data: electronAPI.writeFile is unavailable');
+        return null;
       }
     } catch (error) {
       console.warn(`[Benchmark] Failed to persist interaction data for ${testId}: ${error.message}`);
@@ -5867,9 +5865,7 @@ class LLMBenchmarkFramework {
         }
         return JSON.parse(content);
       } else {
-        const fs = require('fs').promises;
-        const content = await fs.readFile(diskPath, 'utf8');
-        return JSON.parse(content);
+        throw new Error('electronAPI.readFile is unavailable in the hardened renderer');
       }
     } catch (error) {
       console.warn(`[Benchmark] Failed to load interaction data from ${diskPath}: ${error.message}`);

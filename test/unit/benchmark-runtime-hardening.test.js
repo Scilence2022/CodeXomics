@@ -11,10 +11,16 @@ function readSource(relativePath) {
 describe('benchmark runtime hardening', () => {
   it('sets ChatBox working directory through path-info IPC in hardened renderer', () => {
     const source = readSource('src/renderer/modules/ChatManager.js');
+    const methodStart = source.indexOf('async setWorkingDirectory');
+    const methodEnd = source.indexOf('/**\n   * Get current working directory', methodStart);
+    const methodSource = source.slice(methodStart, methodEnd);
 
     expect(source).toContain('approveWorkingDirectory');
     expect(source).toContain('window.electronAPI?.getSelectedFileInfo');
     expect(source).toContain('infoResult.info?.isDirectory');
+    expect(methodSource).not.toMatch(/\brequire\(['"]fs['"]\)/);
+    expect(methodSource).not.toMatch(/\brequire\(['"]path['"]\)/);
+    expect(methodSource).not.toMatch(/\brequire\(['"]os['"]\)/);
   });
 
   it('downloads to the working directory only after approving it through main IPC', () => {
@@ -55,6 +61,24 @@ describe('benchmark runtime hardening', () => {
     expect(source).toContain('benchmark_run_');
     expect(source).toContain('Started run-level tracker session');
     expect(source).toContain('createdTrackerSessionForTest');
+  });
+
+  it('persists benchmark interaction data only through preload file IPC', () => {
+    const source = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+    const persistStart = source.indexOf('async persistInteractionDataToDisk');
+    const loadStart = source.indexOf('async loadInteractionDataFromDisk');
+    const persistSource = source.slice(persistStart, loadStart);
+    const loadEnd = source.indexOf('/**\n   * MEMORY SAFETY', loadStart);
+    const loadSource = source.slice(loadStart, loadEnd);
+
+    expect(source).toContain('getPathModule()');
+    expect(persistSource).toContain('electronAPI.writeFile');
+    expect(persistSource).toContain('electronAPI.ensureDirectory');
+    expect(persistSource).toContain('electronAPI.writeFile is unavailable');
+    expect(loadSource).toContain('window.electronAPI?.readFile');
+    expect(persistSource).not.toMatch(/\brequire\(['"]fs['"]\)/);
+    expect(persistSource).not.toMatch(/\brequire\(['"]path['"]\)/);
+    expect(loadSource).not.toMatch(/\brequire\(['"]fs['"]\)/);
   });
 
   it('path info IPC returns file and directory type metadata', () => {
