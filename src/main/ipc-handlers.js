@@ -1842,12 +1842,7 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('i18n:getCurrentLanguage', async () => app.getLocale());
-
-  ipcMain.handle('i18n:changeLanguage', async (event, language) => {
-    const safeLanguage = sanitizeLocaleCode(language);
-    return { success: true, language: safeLanguage };
-  });
+  // i18n handlers are registered by i18n-main.js setupIPC() — do not duplicate here
 
   ipcMain.handle('get-sanitizer-config', async () => ({
     success: true,
