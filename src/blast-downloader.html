@@ -475,9 +475,28 @@
     </div>
 
     <script>
-      const { ipcRenderer } = require('electron');
-      const os = require('os');
-      const path = require('path');
+      const electronBridge = window.require ? window.require('electron') : null;
+      const ipcRenderer = window.ipcRenderer || electronBridge?.ipcRenderer || null;
+      const os =
+        window.os || {
+          platform: () => navigator.platform || 'unknown',
+          arch: () => (navigator.userAgentData?.architecture === 'arm' ? 'arm64' : 'x64'),
+          release: () => '',
+        };
+      const path =
+        window.path || {
+          basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '',
+          dirname: filePath => {
+            const normalized = String(filePath || '').replace(/\\/g, '/');
+            const index = normalized.lastIndexOf('/');
+            return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
+          },
+          join: (...parts) =>
+            parts
+              .filter(part => part !== undefined && part !== null && part !== '')
+              .join('/')
+              .replace(/\/+/g, '/'),
+        };
 
       // Global variables
       let downloadInProgress = false;
