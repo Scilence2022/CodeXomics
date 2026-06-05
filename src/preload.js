@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer, shell } = require('electron');
+const nodeOs = require('os');
 
 const allowedInvokeChannels = [
   'mcp-server-start',
@@ -285,8 +286,10 @@ const safePath = {
 };
 
 const safeOs = {
+  arch: () => process.arch,
   homedir: () => '',
   platform: () => process.platform,
+  release: () => nodeOs.release(),
   tmpdir: () => '',
 };
 

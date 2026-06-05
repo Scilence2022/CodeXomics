@@ -96,7 +96,7 @@ class BlastManager {
 
     try {
       const fs = require('fs');
-      const path = require('path');
+      const path = this.getPathModule();
       const os = require('os');
 
       const homeDir = os.homedir();
@@ -215,10 +215,21 @@ class BlastManager {
    * Create directory using cross-platform method
    */
   async createDirectoryAsync(dirPath) {
-    const fs = require('fs');
-    const path = require('path');
+    if (typeof window !== 'undefined' && window.electronAPI?.ensureDirectory) {
+      const result = await window.electronAPI.ensureDirectory(dirPath);
+      if (!result?.success) {
+        throw new Error(result?.error || `Failed to create directory ${dirPath}`);
+      }
+      console.log(`BlastManager: Created directory via main process: ${result.path || dirPath}`);
+      return true;
+    }
+
+    if (!this.canUseRendererFileSystem()) {
+      throw new Error('Main-process directory API is unavailable');
+    }
 
     try {
+      const fs = require('fs');
       // Use Node.js built-in recursive directory creation
       await fs.promises.mkdir(dirPath, { recursive: true });
       console.log(`BlastManager: Created directory: ${dirPath}`);
@@ -374,29 +385,13 @@ class BlastManager {
   }
 
   async checkAndFixBlastDatabaseDirectory() {
-    const fs = require('fs');
-    const path = require('path');
-
     try {
       // Get current database path (may change based on current file location)
       const localDbPath = this.getCurrentDatabasePath();
       this.config.localDbPath = localDbPath; // Update config with current path
 
-      // Check if directory exists
-      if (!fs.existsSync(localDbPath)) {
-        console.log('BlastManager: Creating BLAST database directory:', localDbPath);
-        await this.createDirectoryAsync(localDbPath);
-        return true;
-      }
-
-      // Check if directory is writable
-      try {
-        await fs.promises.access(localDbPath, fs.constants.W_OK);
-        return true;
-      } catch (error) {
-        console.error('BlastManager: BLAST database directory not writable:', localDbPath);
-        throw new Error(`BLAST database directory not writable: ${localDbPath}`);
-      }
+      await this.createDirectoryAsync(localDbPath);
+      return true;
     } catch (error) {
       console.error('BlastManager: Error checking BLAST database directory:', error);
       throw error;
@@ -415,12 +410,13 @@ class BlastManager {
     return this.config.localDbPath; // Fallback to configured path
   }
 
-  async runCommand(command, workingDirectory = null) {
+  async runCommand(command, workingDirectory = null, options = {}) {
     if (typeof window !== 'undefined' && window.electronAPI?.blast?.runCommand) {
+      const localDbPath = options.localDbPath || workingDirectory || this.getCurrentDatabasePath();
       const result = await window.electronAPI.blast.runCommand({
         command,
         workingDirectory,
-        localDbPath: this.getCurrentDatabasePath(),
+        localDbPath,
         blastExecutablePath: this.config.blastExecutablePath,
       });
 
@@ -773,7 +769,7 @@ class BlastManager {
       const command = this.buildMakeBlastDbCommand(params);
 
       // Execute makeblastdb
-      await this.runCommand(command);
+      await this.runCommand(command, null, { localDbPath: targetDir });
 
       // Reload databases
       await this.loadLocalDatabases();
@@ -1663,29 +1659,26 @@ class BlastManager {
         this.appendLog(`Running: makeblastdb -in "${filePath}" -dbtype ${dbType} -out "${outputPath}"`);
 
         try {
-          // Create the actual BLAST database
-          // Use relative paths to avoid issues with spaces in absolute paths
-          const path = require('path');
-          const fileName = path.basename(filePath);
+          // Create the actual BLAST database through main-process IPC.
+          const path = this.getPathModule();
           const sourceDirectory = path.dirname(filePath);
-          const outputName = path.basename(outputPath);
-
-          // Check if source file exists and is readable
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) {
-            throw new Error(`Source file not found: ${filePath}`);
-          }
+          let databaseDirectory = sourceDirectory;
+          let databaseOutputPath = outputPath;
 
           // Validate file content
           try {
-            const stats = await fs.promises.stat(filePath);
-            if (stats.size === 0) {
+            const fileInfo = await window.electronAPI?.getSelectedFileInfo?.(filePath);
+            if (!fileInfo?.success) {
+              throw new Error(fileInfo?.error || `Source file not found: ${filePath}`);
+            }
+            if (fileInfo.info?.size === 0) {
               throw new Error(`Source file is empty: ${filePath}`);
             }
 
             // Check if file has FASTA content
-            const fileContent = await fs.promises.readFile(filePath, 'utf8');
-            if (!fileContent.trim()) {
+            const fileContentResult = await window.electronAPI?.readFile?.(filePath);
+            const fileContent = fileContentResult?.data || '';
+            if (!fileContentResult?.success || !fileContent.trim()) {
               throw new Error(`Source file contains no content: ${filePath}`);
             }
 
@@ -1731,80 +1724,47 @@ class BlastManager {
             const sequences = fileContent.split('>').filter(seq => seq.trim()).length;
 
             this.appendLog(
-              `✓ File validation passed: ${(stats.size / 1024).toFixed(2)} KB, ${sequences} sequences, first header: ${firstLine.substring(0, 50)}${firstLine.length > 50 ? '...' : ''}`
+              `✓ File validation passed: ${((fileInfo.info?.size || 0) / 1024).toFixed(2)} KB, ${sequences} sequences, first header: ${firstLine.substring(0, 50)}${firstLine.length > 50 ? '...' : ''}`
             );
           } catch (error) {
-            if (error.code === 'EACCES') {
-              throw new Error(`Cannot read source file (permission denied): ${filePath}`);
-            } else if (error.code === 'ENOENT') {
-              throw new Error(`Source file not found: ${filePath}`);
-            } else {
-              throw error;
-            }
+            throw error;
           }
 
-          // Check if source directory is writable
           try {
-            await fs.promises.access(sourceDirectory, fs.constants.W_OK);
+            await this.createDirectoryAsync(sourceDirectory);
           } catch (error) {
-            throw new Error(`Cannot write to source directory: ${sourceDirectory}. Please check permissions.`);
-          }
-
-          // Build command with properly escaped paths
-          const escapedFileName = fileName.replace(/"/g, '\\"');
-          const escapedOutputName = outputName.replace(/"/g, '\\"');
-          const escapedDbName = dbName.replace(/"/g, '\\"');
-          const makeblastdbCmd = `makeblastdb -in "${escapedFileName}" -dbtype ${dbType} -out "${escapedOutputName}" -title "${escapedDbName}"`;
-
-          this.appendLog(`Executing: ${makeblastdbCmd} in directory: ${sourceDirectory}`);
-
-          // Additional debugging - verify file is still accessible from working directory
-          const fileInWorkingDir = path.join(sourceDirectory, fileName);
-          if (!fs.existsSync(fileInWorkingDir)) {
-            throw new Error(`File not accessible from working directory: ${fileInWorkingDir}`);
-          }
-
-          // Additional debugging - list files in working directory
-          try {
-            const filesInDir = await fs.promises.readdir(sourceDirectory);
+            databaseDirectory = await this.getAppTempDirectory();
+            databaseOutputPath = path.join(databaseDirectory, dbFileName);
             this.appendLog(
-              `Files in working directory: ${filesInDir.filter(f => f.includes('.fasta') || f.includes('.fa')).join(', ')}`
+              `⚠ Source directory is not writable through CodeXomics security policy; using temp directory: ${databaseDirectory}`,
+              'warning'
             );
-          } catch (error) {
-            this.appendLog(`⚠ Could not list directory contents: ${error.message}`, 'warning');
           }
+
+          // Build command with absolute paths so it can run from the main process without renderer fs access.
+          const escapedFilePath = filePath.replace(/"/g, '\\"');
+          const escapedOutputPath = databaseOutputPath.replace(/"/g, '\\"');
+          const escapedDbName = dbName.replace(/"/g, '\\"');
+          const makeblastdbCmd = `makeblastdb -in "${escapedFilePath}" -dbtype ${dbType} -out "${escapedOutputPath}" -title "${escapedDbName}"`;
+
+          this.appendLog(`Executing: ${makeblastdbCmd}`);
 
           // Execute command in the source directory
-          try {
-            await this.runCommand(makeblastdbCmd, sourceDirectory);
-          } catch (error) {
-            // If relative path fails, try absolute path as fallback
-            if (error.message.includes('is empty') || error.message.includes('No such file')) {
-              this.appendLog(`⚠ Relative path failed, trying absolute path...`, 'warning');
-              const escapedFilePath = filePath.replace(/"/g, '\\"');
-              const escapedOutputPath = outputPath.replace(/"/g, '\\"');
-              const escapedDbNameFallback = dbName.replace(/"/g, '\\"');
-              const absoluteCmd = `makeblastdb -in "${escapedFilePath}" -dbtype ${dbType} -out "${escapedOutputPath}" -title "${escapedDbNameFallback}"`;
-              this.appendLog(`Retrying with absolute paths: ${absoluteCmd}`);
-              await this.runCommand(absoluteCmd);
-            } else {
-              throw error;
-            }
-          }
+          await this.runCommand(makeblastdbCmd, null, { localDbPath: databaseDirectory });
 
           // Mark as ready and store additional metadata
           const dbEntry = this.customDatabases.get(dbId);
           dbEntry.status = 'ready';
-          dbEntry.dbPath = outputPath;
-          dbEntry.sourceDirectory = sourceDirectory;
-          dbEntry.location = 'source_directory';
+          dbEntry.dbPath = databaseOutputPath;
+          dbEntry.sourceDirectory = databaseDirectory;
+          dbEntry.location = databaseDirectory === sourceDirectory ? 'source_directory' : 'temp_directory';
           dbEntry.lastUsed = new Date().toISOString();
 
           // Also add to config.localDatabases so it appears in BLAST search dropdown
           this.config.localDatabases.set(dbId, {
             name: dbId,
             type: dbType === 'nucl' ? 'blastn' : 'blastp', // Convert to BLAST type format
-            path: sourceDirectory,
+            path: databaseDirectory,
             description: `Custom ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database: ${dbName}`,
             sequences: 'Unknown', // Will be updated if stats are available
             letters: 'Unknown',
@@ -1818,8 +1778,9 @@ class BlastManager {
           const createdFiles = [];
           for (const ext of extensions) {
             try {
-              await require('fs').promises.access(outputPath + ext);
-              createdFiles.push(dbId + ext);
+              if (await this.fileExistsViaMain(databaseOutputPath + ext)) {
+                createdFiles.push(dbId + ext);
+              }
             } catch (error) {
               // File doesn't exist
             }
@@ -2006,23 +1967,9 @@ class BlastManager {
       } else {
         // Create the actual BLAST database
         try {
-          // Get target directory for database files (same as genome file directory)
-          const currentFile = this.app?.fileManager?.currentFile;
-          let outputDir = null;
-
-          // Try to get the directory from the current file path
-          if (currentFile && currentFile.path) {
-            outputDir = require('path').dirname(currentFile.path);
-            console.log(`BlastManager: Creating database in genome directory: ${outputDir}`);
-          } else if (currentFile && currentFile.info?.path) {
-            // Fallback: try info.path
-            outputDir = require('path').dirname(currentFile.info.path);
-            console.log(`BlastManager: Creating database in genome directory (from info.path): ${outputDir}`);
-          } else {
-            // Last resort: use the directory of the temp file
-            outputDir = require('path').dirname(tempFile);
-            console.log(`BlastManager: Using temp file directory for database: ${outputDir}`);
-          }
+          const path = this.getPathModule();
+          const outputDir = path.dirname(tempFile);
+          console.log(`BlastManager: Creating database in sequence file directory: ${outputDir}`);
 
           await this.createLocalDatabase({
             inputFile: tempFile,
@@ -2034,7 +1981,7 @@ class BlastManager {
 
           // Update database info with success status
           this.customDatabases.get(dbId).status = 'ready';
-          this.customDatabases.get(dbId).dbPath = require('path').join(outputDir, dbId); // Store actual database path
+          this.customDatabases.get(dbId).dbPath = path.join(outputDir, dbId); // Store actual database path
           this.customDatabases.get(dbId).outputDir = outputDir; // Store output directory for reference
 
           // Also add to config.localDatabases so it appears in BLAST search dropdown
@@ -2474,12 +2421,15 @@ class BlastManager {
       // Delete database files if they exist
       if (database.dbPath) {
         try {
-          const fs = require('fs').promises;
           const extensions = database.type === 'nucl' ? ['.nhr', '.nin', '.nsq'] : ['.phr', '.pin', '.psq'];
 
           for (const ext of extensions) {
             try {
-              await fs.unlink(database.dbPath + ext);
+              if (typeof window !== 'undefined' && window.electronAPI?.deletePhysicalFile) {
+                await window.electronAPI.deletePhysicalFile(database.dbPath + ext);
+              } else if (this.canUseRendererFileSystem()) {
+                await require('fs').promises.unlink(database.dbPath + ext);
+              }
               console.log(`Deleted database file: ${database.dbPath + ext}`);
             } catch (error) {
               console.warn(`Could not delete file ${database.dbPath + ext}:`, error.message);
@@ -2549,27 +2499,34 @@ class BlastManager {
         return;
       }
 
-      // Create FASTA file in the same directory as the GBK file
-      const path = require('path');
-      const fs = require('fs');
-
+      const path = this.getPathModule();
       const gbkDir = path.dirname(currentPath);
       const gbkBasename = path.basename(currentPath, path.extname(currentPath));
       const fastaPath = path.join(gbkDir, `${gbkBasename}.fasta`);
 
       // Check if FASTA file already exists
-      if (fs.existsSync(fastaPath)) {
+      if (await this.fileExistsViaMain(fastaPath)) {
         console.log(`FASTA file already exists: ${fastaPath}`);
         this.appendLog(`✓ FASTA file already exists: ${path.basename(fastaPath)}`, 'info');
         return fastaPath;
       }
 
-      // Write FASTA file
-      fs.writeFileSync(fastaPath, fastaContent);
-      console.log(`Created FASTA file: ${fastaPath}`);
-      this.appendLog(`✓ Created FASTA file: ${path.basename(fastaPath)}`, 'success');
+      let writtenPath = fastaPath;
+      try {
+        writtenPath = await this.writeTextFileViaMain(fastaPath, fastaContent);
+      } catch (writeError) {
+        const tempDir = await this.getAppTempDirectory();
+        const fallbackPath = path.join(tempDir, `${gbkBasename}_${Date.now()}.fasta`);
+        console.warn(
+          `BlastManager: Could not write FASTA next to GBK (${writeError.message}); retrying in temp directory`
+        );
+        writtenPath = await this.writeTextFileViaMain(fallbackPath, fastaContent);
+      }
 
-      return fastaPath;
+      console.log(`Created FASTA file: ${writtenPath}`);
+      this.appendLog(`✓ Created FASTA file: ${path.basename(writtenPath)}`, 'success');
+
+      return writtenPath;
     } catch (error) {
       console.error('Error creating FASTA file:', error);
       this.appendLog(`⚠ Could not create FASTA file: ${error.message}`, 'warning');
@@ -4784,6 +4741,20 @@ class BlastManager {
     return '/tmp';
   }
 
+  async fileExistsViaMain(filePath) {
+    if (typeof window !== 'undefined' && window.electronAPI?.checkFileExists) {
+      const result = await window.electronAPI.checkFileExists(filePath);
+      return !!result?.exists;
+    }
+
+    if (!this.canUseRendererFileSystem()) {
+      return false;
+    }
+
+    const fs = require('fs');
+    return fs.existsSync(filePath);
+  }
+
   async writeTextFileViaMain(filePath, content) {
     if (!window.electronAPI?.writeFile) {
       throw new Error('Main-process file write API is unavailable');
@@ -6335,34 +6306,10 @@ class BlastManager {
       // Write to temporary file
       const tempFile = await this.writeSequenceToFile(fastaContent, dbName, dbType);
 
-      // Create database using makeblastdb
-      // Get target directory for database files (same as genome file directory)
-      // Try multiple approaches to get the current file path
-      let outputDir = this.config.localDbPath; // Default fallback
-      let currentFilePath = null;
-
-      // Approach 1: From FileManager.currentFile.path (primary structure)
-      const currentFile = this.app?.fileManager?.currentFile;
-      if (currentFile && currentFile.path) {
-        currentFilePath = currentFile.path;
-      }
-
-      // Approach 2: From FileManager.currentFile.info.path (alternative structure)
-      if (!currentFilePath && currentFile && currentFile.info?.path) {
-        currentFilePath = currentFile.info.path;
-      }
-
-      // Approach 3: Check if there's a global file path stored
-      if (!currentFilePath && this.app?.currentFilePath) {
-        currentFilePath = this.app.currentFilePath;
-      }
-
-      if (currentFilePath) {
-        outputDir = require('path').dirname(currentFilePath);
-        console.log(`BlastManager: Creating database in genome directory: ${outputDir}`);
-      } else {
-        console.log('BlastManager: Current file path not available, using default directory');
-      }
+      // Create database using makeblastdb in the same directory where the generated FASTA was actually written.
+      const path = this.getPathModule();
+      const outputDir = path.dirname(tempFile);
+      console.log(`BlastManager: Creating database in sequence file directory: ${outputDir}`);
 
       await this.createLocalDatabase({
         inputFile: tempFile,

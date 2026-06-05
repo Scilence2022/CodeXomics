@@ -3756,10 +3756,19 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('blast:verify-executable', async (event, executablePath) => {
     try {
-      const safeExecutablePath = assertAllowedFileAccess(app, executablePath, {
-        operation: 'verify BLAST executable',
-        mustExist: true,
-      });
+      let safeExecutablePath = null;
+      try {
+        safeExecutablePath = assertAllowedFileAccess(app, executablePath, {
+          operation: 'verify BLAST executable',
+          mustExist: true,
+        });
+      } catch (error) {
+        if (isTrustedBlastExecutablePath(executablePath) && fs.existsSync(executablePath)) {
+          safeExecutablePath = path.resolve(executablePath);
+        } else {
+          throw error;
+        }
+      }
       const result = await runBlastVersionCheck(safeExecutablePath);
       return {
         success: result.found,

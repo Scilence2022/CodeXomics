@@ -219,6 +219,7 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result);
         return { success: true, filePaths: result.filePaths };
       }
 
@@ -243,6 +244,7 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result);
         return { success: true, filePath: result.filePaths[0] };
       }
 

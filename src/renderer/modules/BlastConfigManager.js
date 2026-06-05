@@ -223,16 +223,46 @@ class BlastConfigManager {
   async detectOtherTools(directory) {
     const tools = ['blastp', 'blastx', 'tblastn', 'tblastx', 'makeblastdb', 'blastdbcmd'];
     const found = [];
+    const blastnPath = document.getElementById('blastPathInput')?.value.trim() || this.config.blastExecutablePath;
 
     for (const tool of tools) {
-      const toolPath = this.path.join(directory, tool + (this.os.platform() === 'win32' ? '.exe' : ''));
-
-      if (this.fs.existsSync(toolPath)) {
-        found.push(tool);
+      try {
+        const result = await window.electronAPI?.blast?.runCommand?.({
+          command: `${tool} -version`,
+          blastExecutablePath: blastnPath || this.path.join(directory, 'blastn'),
+        });
+        if (result?.success || result?.stdout || result?.stderr) {
+          found.push(tool);
+        }
+      } catch (error) {
+        // Missing companion tools are non-fatal for configuration display.
       }
     }
 
-    return found;
+    if (found.length === 0 && directory) {
+      for (const tool of tools) {
+        const toolPath = this.path.join(directory, tool + (this.os.platform() === 'win32' ? '.exe' : ''));
+        try {
+          const result = await window.electronAPI?.blast?.verifyExecutable?.(toolPath);
+          if (result?.success || result?.found) {
+            found.push(tool);
+          }
+        } catch (error) {
+          // Ignore tools that cannot be verified from this directory.
+        }
+      }
+    }
+
+    return found.length > 0 ? found : ['Not checked'];
+  }
+
+  async verifyExecutablePath(path) {
+    const result = await window.electronAPI?.blast?.verifyExecutable?.(path);
+    if (result?.success || result?.found) {
+      return result;
+    }
+
+    throw new Error(result?.error || 'File does not appear to be a valid BLAST+ executable.');
   }
 
   /**
@@ -296,7 +326,7 @@ class BlastConfigManager {
   /**
    * Save configuration
    */
-  saveConfiguration() {
+  async saveConfiguration() {
     const path = document.getElementById('blastPathInput').value.trim();
 
     if (!path) {
@@ -304,21 +334,22 @@ class BlastConfigManager {
       return;
     }
 
-    if (!this.fs.existsSync(path)) {
-      this.showStatus('error', 'The specified path does not exist. Please verify it first.', 'verifyStatus');
-      return;
-    }
+    try {
+      const result = await this.verifyExecutablePath(path);
+      this.config.blastExecutablePath = result.path || path;
+      this.config.blastVersion = result.version || this.config.blastVersion;
 
-    this.config.blastExecutablePath = path;
+      if (this.saveConfig()) {
+        this.showStatus('success', 'Configuration saved successfully!', 'verifyStatus');
+        this.loadCurrentConfig();
 
-    if (this.saveConfig()) {
-      this.showStatus('success', 'Configuration saved successfully!', 'verifyStatus');
-      this.loadCurrentConfig();
-
-      // Notify main window to reload BLAST configuration
-      setTimeout(() => {
-        this.showStatus('info', 'Please restart the application for changes to take effect.', 'verifyStatus');
-      }, 1500);
+        // Notify main window to reload BLAST configuration
+        setTimeout(() => {
+          this.showStatus('info', 'Please restart the application for changes to take effect.', 'verifyStatus');
+        }, 1500);
+      }
+    } catch (error) {
+      this.showStatus('error', `The specified path could not be verified: ${error.message}`, 'verifyStatus');
     }
   }
 
