@@ -33,6 +33,18 @@ let BamReaderClass = null;
 const BLAST_EXECUTABLES = new Set(['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx']);
 const LOCALE_NAMESPACES = new Set(['common', 'menu', 'dialogs', 'notifications', 'tracks']);
 const LOCALE_CODE_PATTERN = /^[A-Za-z]{2}(?:-[A-Za-z0-9]+)?$/;
+const CONFIG_FILES = Object.freeze({
+  main: 'config.json',
+  llm: 'llm-config.json',
+  ui: 'ui-preferences.json',
+  chat: 'chat-history.json',
+  app: 'app-settings.json',
+  generalSettings: 'general-settings.json',
+  chatboxSettings: 'chatbox-settings.json',
+  evolution: 'conversation-evolution-data.json',
+  blast: 'blast-databases.json',
+  marketplace: 'marketplace-settings.json',
+});
 
 function getBamReaderClass() {
   if (!BamReaderClass) {
@@ -183,6 +195,31 @@ function readLocaleNamespace(language, namespace) {
     namespace: safeNamespace,
     data: JSON.parse(fs.readFileSync(selectedPath, 'utf8')),
   };
+}
+
+function getConfigStorageDir() {
+  return path.join(app.getPath('userData'), 'config');
+}
+
+function getConfigStoragePaths() {
+  const dir = getConfigStorageDir();
+  return Object.fromEntries(Object.entries(CONFIG_FILES).map(([section, filename]) => [section, path.join(dir, filename)]));
+}
+
+function readConfigFileIfPresent(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function writeJsonFile(filePath, data) {
+  const payload = JSON.stringify(data || {}, null, 2);
+  const byteLength = Buffer.byteLength(payload, 'utf8');
+  if (byteLength > 100 * 1024 * 1024) {
+    throw new Error(`Configuration section is too large to persist safely: ${(byteLength / 1024 / 1024).toFixed(1)} MB`);
+  }
+  fs.writeFileSync(filePath, payload, 'utf8');
 }
 
 function resolveBlastExecutable(appInstance, commandToken, configuredBlastPath) {
@@ -1785,6 +1822,61 @@ function registerIpcHandlers(deps) {
     allowDataAttributes: true,
     allowAriaAttributes: true,
   }));
+
+  ipcMain.handle('config:load', async () => {
+    try {
+      const dir = getConfigStorageDir();
+      const paths = getConfigStoragePaths();
+      const config = {};
+      for (const [section, filePath] of Object.entries(paths)) {
+        const data = readConfigFileIfPresent(filePath);
+        if (data !== null) {
+          config[section] = data;
+        }
+      }
+
+      return {
+        success: true,
+        config,
+        configPath: {
+          dir,
+          ...paths,
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error.message, config: {} };
+    }
+  });
+
+  ipcMain.handle('config:save', async (event, config = {}) => {
+    try {
+      const dir = getConfigStorageDir();
+      const paths = getConfigStoragePaths();
+      fs.mkdirSync(dir, { recursive: true });
+
+      writeJsonFile(paths.main, {
+        version: config.version || '0.7.0-beta',
+        lastModified: new Date().toISOString(),
+      });
+
+      for (const [section, filePath] of Object.entries(paths)) {
+        if (section === 'main') continue;
+        if (config[section] !== undefined) {
+          writeJsonFile(filePath, config[section]);
+        }
+      }
+
+      return {
+        success: true,
+        configPath: {
+          dir,
+          ...paths,
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
 
   // =====================================================================
   // 4. Gene Attachments IPC Handlers

@@ -78,107 +78,10 @@ class ConfigManager {
   }
 
   /**
-   * Get the appropriate config directory path based on platform
+   * Config storage is owned by the main process in hardened Electron builds.
+   * Concrete file paths are returned by config:load/config:save after IPC setup.
    */
   getConfigPath() {
-    console.log('=== getConfigPath Debug Start ===');
-    console.log('this.isElectron:', this.isElectron);
-
-    if (this.isElectron) {
-      try {
-        console.log('Attempting to get config paths in Electron environment...');
-
-        // Try modern Electron API first
-        console.log('Checking window.electronAPI...');
-        const electronAPI_path = window.electronAPI?.path;
-        const electronAPI_os = window.electronAPI?.os;
-        console.log('electronAPI path:', typeof electronAPI_path, electronAPI_path);
-        console.log('electronAPI os:', typeof electronAPI_os, electronAPI_os);
-
-        if (electronAPI_path && electronAPI_os) {
-          console.log('Using electronAPI for paths');
-          const configDir = electronAPI_path.join(electronAPI_os.homedir(), '.genome-browser');
-          const paths = {
-            dir: configDir,
-            main: electronAPI_path.join(configDir, 'config.json'),
-            llm: electronAPI_path.join(configDir, 'llm-config.json'),
-            ui: electronAPI_path.join(configDir, 'ui-preferences.json'),
-            chat: electronAPI_path.join(configDir, 'chat-history.json'),
-            app: electronAPI_path.join(configDir, 'app-settings.json'),
-            generalSettings: electronAPI_path.join(configDir, 'general-settings.json'),
-            chatboxSettings: electronAPI_path.join(configDir, 'chatbox-settings.json'),
-            evolution: electronAPI_path.join(configDir, 'conversation-evolution-data.json'),
-            blast: electronAPI_path.join(configDir, 'blast-databases.json'),
-            marketplace: electronAPI_path.join(configDir, 'marketplace-settings.json'),
-          };
-          console.log('electronAPI config paths:', paths);
-          console.log('=== getConfigPath Debug End (electronAPI success) ===');
-          return paths;
-        }
-
-        // Fallback to Node.js require if available
-        console.log('electronAPI not available, trying window.require...');
-        console.log('window.require type:', typeof window.require);
-
-        if (typeof window !== 'undefined' && typeof window.require === 'function') {
-          console.log('window.require is available, attempting to load path and os modules...');
-
-          try {
-            const path = window.require('path');
-            const os = window.require('os');
-            console.log('path module loaded:', typeof path, !!path);
-            console.log('os module loaded:', typeof os, !!os);
-
-            if (path && os) {
-              console.log('Both modules loaded successfully');
-              const homeDir = os.homedir();
-              console.log('Home directory:', homeDir);
-
-              const configDir = path.join(homeDir, '.genome-browser');
-              console.log('Config directory:', configDir);
-
-              const paths = {
-                dir: configDir,
-                main: path.join(configDir, 'config.json'),
-                llm: path.join(configDir, 'llm-config.json'),
-                ui: path.join(configDir, 'ui-preferences.json'),
-                chat: path.join(configDir, 'chat-history.json'),
-                app: path.join(configDir, 'app-settings.json'),
-                generalSettings: path.join(configDir, 'general-settings.json'),
-                chatboxSettings: path.join(configDir, 'chatbox-settings.json'),
-                evolution: path.join(configDir, 'conversation-evolution-data.json'),
-                blast: path.join(configDir, 'blast-databases.json'),
-                marketplace: path.join(configDir, 'marketplace-settings.json'),
-              };
-
-              console.log('Final config paths using require:');
-              Object.entries(paths).forEach(([key, value]) => {
-                console.log(`  ${key}: ${value}`);
-              });
-
-              console.log('=== getConfigPath Debug End (require success) ===');
-              return paths;
-            } else {
-              console.log('Failed to load path or os modules');
-            }
-          } catch (requireError) {
-            console.error('Error requiring modules:', requireError);
-          }
-        } else {
-          console.log('window.require not available');
-        }
-
-        console.log('Electron detected but no file system APIs available');
-      } catch (error) {
-        console.error('Failed to access Electron APIs:', error);
-      }
-    } else {
-      console.log('Not in Electron environment');
-    }
-
-    // Fallback to localStorage for non-Electron environments or API failure
-    console.log('Using localStorage fallback for configuration storage');
-    console.log('=== getConfigPath Debug End (localStorage fallback) ===');
     return null;
   }
 
@@ -579,18 +482,12 @@ class ConfigManager {
     console.log('=== loadConfig Debug Start ===');
     console.log('this.configPath:', this.configPath);
 
-    if (this.configPath && this.canUseRendererFileSystem()) {
-      console.log('Loading configuration from FILES');
-      console.log('Config directory:', this.configPath.dir);
-      console.log('Config files:');
-      Object.entries(this.configPath).forEach(([key, path]) => {
-        console.log(`  ${key}: ${path}`);
-      });
-      // File-based config for Electron
+    if (typeof window !== 'undefined' && window.electronAPI?.loadConfigData) {
+      console.log('Loading configuration from main-process config IPC');
       try {
-        await this.loadFromFiles();
+        await this.loadFromMainConfig();
       } catch (error) {
-        console.warn('File-based configuration unavailable, falling back to localStorage:', error.message);
+        console.warn('Main-process configuration unavailable, falling back to localStorage:', error.message);
         this.loadFromLocalStorage();
       }
     } else {
@@ -602,97 +499,46 @@ class ConfigManager {
   }
 
   /**
-   * Load configuration from files (Electron)
+   * Load configuration from main process (Electron)
    */
-  async loadFromFiles() {
-    console.log('=== loadFromFiles Debug Start ===');
-    let fs;
-    let path;
-
-    try {
-      // Try to get file system APIs
-      if (typeof window !== 'undefined' && typeof window.require === 'function') {
-        console.log('Getting fs and path modules via window.require...');
-        fs = window.require('fs').promises;
-        path = window.require('path');
-        console.log('fs module:', typeof fs);
-        console.log('path module:', typeof path);
-      } else {
-        // This shouldn't happen if we're here, but just in case
-        throw new Error('No file system APIs available');
-      }
-
-      // Ensure config directory exists
-      console.log('Creating config directory:', this.configPath.dir);
-      await fs.mkdir(this.configPath.dir, { recursive: true });
-      console.log('Config directory created/verified');
-
-      // Load main config
-      console.log('Checking main config file:', this.configPath.main);
-      if (await this.fileExists(this.configPath.main)) {
-        console.log('Loading main config from:', this.configPath.main);
-        const mainConfig = JSON.parse(await fs.readFile(this.configPath.main, 'utf8'));
-        console.log('Main config loaded:', mainConfig);
-        this.config = this.mergeConfig(this.config, mainConfig);
-      } else {
-        console.log('Main config file does not exist');
-      }
-
-      // Load specific config files
-      const configFiles = {
-        llm: this.configPath.llm,
-        ui: this.configPath.ui,
-        chat: this.configPath.chat,
-        app: this.configPath.app,
-        generalSettings: this.configPath.generalSettings,
-        chatboxSettings: this.configPath.chatboxSettings,
-        evolution: this.configPath.evolution,
-        blast: this.configPath.blast,
-        marketplace: this.configPath.marketplace,
-      };
-
-      for (const [section, filePath] of Object.entries(configFiles)) {
-        console.log(`Checking ${section} config file:`, filePath);
-        if (await this.fileExists(filePath)) {
-          console.log(`Loading ${section} config from:`, filePath);
-          const sectionConfig = JSON.parse(await fs.readFile(filePath, 'utf8'));
-          console.log(`${section} config loaded:`, Object.keys(sectionConfig));
-          this.config[section] = this.mergeConfig(this.config[section], sectionConfig);
-        } else {
-          console.log(`${section} config file does not exist`);
-
-          // Special handling for marketplace: migrate from localStorage if file doesn't exist
-          if (section === 'marketplace') {
-            console.log('🔄 Attempting to migrate marketplace settings from localStorage...');
-            try {
-              const marketplaceSettings = localStorage.getItem('marketplaceSettings');
-              if (marketplaceSettings) {
-                const parsed = JSON.parse(marketplaceSettings);
-                this.config.marketplace = { ...this.config.marketplace, ...parsed };
-                console.log('✅ Marketplace settings migrated from localStorage:', {
-                  installed: Object.keys(this.config.marketplace.installed || {}).length,
-                  sources: this.config.marketplace.sources?.length,
-                });
-                // Save to file for future loads
-                await fs.writeFile(filePath, JSON.stringify(this.config.marketplace, null, 2));
-                console.log('💾 Marketplace settings saved to file:', filePath);
-              } else {
-                console.log('No marketplace settings found in localStorage to migrate');
-              }
-            } catch (migrationError) {
-              console.error('Failed to migrate marketplace settings from localStorage:', migrationError);
-            }
-          }
-        }
-      }
-
-      console.log('Configuration loaded from files successfully');
-      console.log('=== loadFromFiles Debug End ===');
-    } catch (error) {
-      console.error('Error loading configuration from files:', error);
-      console.error('=== loadFromFiles Debug End (ERROR) ===');
-      throw error;
+  async loadFromMainConfig() {
+    const result = await window.electronAPI.loadConfigData();
+    if (!result?.success) {
+      throw new Error(result?.error || 'Failed to load configuration from main process');
     }
+
+    if (result.configPath) {
+      this.configPath = result.configPath;
+    }
+
+    const loadedConfig = result.config || {};
+    if (loadedConfig.main) {
+      this.config = this.mergeConfig(this.config, loadedConfig.main);
+    }
+
+    for (const section of [
+      'llm',
+      'ui',
+      'chat',
+      'app',
+      'generalSettings',
+      'chatboxSettings',
+      'evolution',
+      'blast',
+      'marketplace',
+    ]) {
+      if (loadedConfig[section]) {
+        this.config[section] = this.mergeConfig(this.config[section], loadedConfig[section]);
+      }
+    }
+
+    this.migrateMarketplaceSettingsFromLocalStorage();
+    this.migrateBlastDatabasesFromLocalStorage();
+    console.log('Configuration loaded from main-process config IPC');
+  }
+
+  async loadFromFiles() {
+    return this.loadFromMainConfig();
   }
 
   /**
@@ -806,6 +652,51 @@ class ConfigManager {
     }
   }
 
+  migrateMarketplaceSettingsFromLocalStorage() {
+    try {
+      const marketplaceSettings = localStorage.getItem('marketplaceSettings');
+      if (!marketplaceSettings) return;
+
+      const parsed = JSON.parse(marketplaceSettings);
+      this.config.marketplace = { ...this.config.marketplace, ...parsed };
+      console.log('Marketplace settings migrated from localStorage:', {
+        installed: Object.keys(this.config.marketplace.installed || {}).length,
+        sources: this.config.marketplace.sources?.length,
+      });
+    } catch (error) {
+      console.error('Error migrating marketplace settings from localStorage:', error);
+    }
+  }
+
+  migrateBlastDatabasesFromLocalStorage() {
+    try {
+      const blastDatabases = localStorage.getItem('blast_custom_databases');
+      if (!blastDatabases) return;
+
+      const savedData = JSON.parse(blastDatabases);
+      let databases;
+      if (Array.isArray(savedData)) {
+        databases = savedData;
+      } else if (savedData.databases) {
+        databases = savedData.databases;
+      }
+
+      if (!databases) return;
+
+      const databasesObject = {};
+      databases.forEach(([id, data]) => {
+        databasesObject[id] = data;
+      });
+
+      this.config.blast.customDatabases = databasesObject;
+      this.config.blast.metadata.lastUpdated = new Date().toISOString();
+      this.config.blast.metadata.totalDatabases = databases.length;
+      console.log(`Migrated ${databases.length} BLAST databases from localStorage`);
+    } catch (error) {
+      console.error('Error migrating BLAST databases from localStorage:', error);
+    }
+  }
+
   /**
    * Save configuration
    */
@@ -816,20 +707,15 @@ class ConfigManager {
     try {
       await this.waitForInitialization();
 
-      if (this.configPath && this.canUseRendererFileSystem()) {
-        console.log('Saving configuration to FILES');
-        console.log('Target directory:', this.configPath.dir);
-        console.log('Target files:');
-        Object.entries(this.configPath).forEach(([key, path]) => {
-          console.log(`  ${key}: ${path}`);
-        });
-        const savedToFiles = await this.saveToFiles();
-        if (savedToFiles === false) {
-          console.warn('File-based configuration save unavailable, falling back to localStorage');
+      if (typeof window !== 'undefined' && window.electronAPI?.saveConfigData) {
+        console.log('Saving configuration through main-process config IPC');
+        const savedToMain = await this.saveToMainConfig();
+        if (savedToMain === false) {
+          console.warn('Main-process configuration save unavailable, falling back to localStorage');
           this.saveToLocalStorage();
           console.log('Configuration saved to localStorage fallback');
         } else {
-          console.log('Configuration saved to files');
+          console.log('Configuration saved through main process');
         }
       } else {
         console.log('Saving configuration to LOCALSTORAGE (fallback)');
@@ -859,20 +745,11 @@ class ConfigManager {
    * Whether the hardened renderer has direct filesystem access.
    *
    * In the context-isolated app this is intentionally false, and configuration
-   * should use localStorage or IPC-backed APIs instead of logging blocked
-   * require('fs') attempts on every startup.
+   * should use localStorage or IPC-backed APIs instead of probing renderer
+   * filesystem modules on every startup.
    */
   canUseRendererFileSystem() {
-    try {
-      if (typeof window === 'undefined' || typeof window.require !== 'function') {
-        return false;
-      }
-
-      const fsModule = window.require('fs');
-      return !!(fsModule && (fsModule.promises || typeof fsModule.existsSync === 'function'));
-    } catch (error) {
-      return false;
-    }
+    return false;
   }
 
   /**
@@ -1001,93 +878,35 @@ class ConfigManager {
   }
 
   /**
-   * Save configuration to files (Electron)
+   * Save configuration through main process (Electron)
    */
-  async saveToFiles() {
-    console.log('=== saveToFiles Debug Start ===');
-    let fs;
-
+  async saveToMainConfig() {
     try {
-      // Try to get file system APIs
-      if (typeof window !== 'undefined' && typeof window.require === 'function') {
-        console.log('Getting fs module via window.require...');
-        fs = window.require('fs').promises;
-        console.log('fs module:', typeof fs);
-      } else {
-        throw new Error('No file system APIs available');
+      if (typeof window === 'undefined' || !window.electronAPI?.saveConfigData) {
+        throw new Error('Main-process config save API is unavailable');
       }
 
-      // Ensure config directory exists
-      console.log('Creating config directory:', this.configPath.dir);
-      await fs.mkdir(this.configPath.dir, { recursive: true });
-      console.log('Config directory created/verified');
-
-      // Save main config
-      const mainConfigData = {
-        version: this.config.version,
-        lastModified: new Date().toISOString(),
+      const cleanConfig = {
+        ...this.config,
+        chat: this.validateAndCleanData(this.config.chat),
+        evolution: this.validateAndCleanData(this.config.evolution || this.getDefaultEvolutionConfig()),
       };
-      console.log('Saving main config to:', this.configPath.main);
-      console.log('Main config data:', mainConfigData);
-      await fs.writeFile(this.configPath.main, this.safeStringify(mainConfigData));
-      console.log('Main config saved successfully');
-
-      // Save specific config files with validation
-      const configFiles = {
-        [this.configPath.llm]: this.config.llm,
-        [this.configPath.ui]: this.config.ui,
-        [this.configPath.chat]: this.config.chat,
-        [this.configPath.app]: this.config.app,
-        [this.configPath.generalSettings]: this.config.generalSettings,
-        [this.configPath.chatboxSettings]: this.config.chatboxSettings,
-        [this.configPath.evolution]: this.config.evolution || this.getDefaultEvolutionConfig(),
-        [this.configPath.blast]: this.config.blast,
-        [this.configPath.marketplace]: this.config.marketplace,
-      };
-
-      for (const [filePath, data] of Object.entries(configFiles)) {
-        try {
-          console.log('Saving config to:', filePath);
-          console.log('Data keys:', Object.keys(data));
-
-          // Validate and clean data before saving
-          const cleanData = this.validateAndCleanData(data);
-          const jsonString = this.safeStringify(cleanData);
-
-          await fs.writeFile(filePath, jsonString);
-          console.log('Config file saved successfully:', filePath);
-        } catch (fileError) {
-          console.error(`Error saving individual config file ${filePath}:`, fileError);
-
-          // Try to save a minimal version for critical files
-          if (filePath.includes('evolution')) {
-            console.warn('Saving minimal evolution config due to error');
-            const minimalEvolution = this.getDefaultEvolutionConfig();
-            await fs.writeFile(filePath, this.safeStringify(minimalEvolution));
-          } else if (filePath.includes('chat')) {
-            console.warn('Saving minimal chat config due to error');
-            const minimalChat = {
-              ...data,
-              history: [], // Clear history if it's causing issues
-            };
-            await fs.writeFile(filePath, this.safeStringify(minimalChat));
-          } else {
-            // For other files, re-throw the error
-            throw fileError;
-          }
-        }
+      const result = await window.electronAPI.saveConfigData(cleanConfig);
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to save configuration through main process');
       }
-
-      console.log('All configuration files saved successfully');
-      console.log('=== saveToFiles Debug End ===');
+      if (result.configPath) {
+        this.configPath = result.configPath;
+      }
       return true;
     } catch (error) {
-      console.error('Error saving configuration to files:', error);
-      console.error('=== saveToFiles Debug End (ERROR) ===');
-
-      // Return false so saveConfig can persist to localStorage fallback.
+      console.error('Error saving configuration through main process:', error);
       return false;
     }
+  }
+
+  async saveToFiles() {
+    return this.saveToMainConfig();
   }
 
   /**
@@ -1403,9 +1222,13 @@ class ConfigManager {
       };
 
       if (filePath) {
-        if (this.isElectron) {
-          const fs = require('fs').promises;
-          await fs.writeFile(filePath, JSON.stringify(exportData, null, 2));
+        if (typeof window !== 'undefined' && window.electronAPI?.writeFile) {
+          const result = await window.electronAPI.writeFile(filePath, JSON.stringify(exportData, null, 2));
+          if (!result?.success) {
+            throw new Error(result?.error || `Failed to write configuration export: ${filePath}`);
+          }
+        } else {
+          throw new Error('File export requires main-process file write API');
         }
       } else {
         // Download as file in browser
@@ -1495,18 +1318,11 @@ class ConfigManager {
    * Utility functions
    */
   async fileExists(path) {
-    try {
-      let fs;
-      if (typeof window !== 'undefined' && typeof window.require === 'function') {
-        fs = window.require('fs').promises;
-      } else {
-        return false;
-      }
-      await fs.access(path);
-      return true;
-    } catch {
-      return false;
+    if (typeof window !== 'undefined' && window.electronAPI?.checkFileExists) {
+      const result = await window.electronAPI.checkFileExists(path);
+      return !!result?.exists;
     }
+    return false;
   }
 
   mergeConfig(target, source) {
