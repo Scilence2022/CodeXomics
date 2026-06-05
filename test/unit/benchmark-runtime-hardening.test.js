@@ -55,6 +55,17 @@ describe('benchmark runtime hardening', () => {
     expect(source).toContain('parameters.file_path');
   });
 
+  it('does not use renderer fs fallback in benchmark cleanup or file verification', () => {
+    const simpleSuite = readSource('src/renderer/modules/benchmark-suites/AutomaticSimpleSuite.js');
+    const complexSuite = readSource('src/renderer/modules/benchmark-suites/AutomaticComplexSuite.js');
+    const evaluator = readSource('src/renderer/modules/benchmark-suites/BenchmarkEvaluatorBase.js');
+    const combinedSource = [simpleSuite, complexSuite, evaluator].join('\n');
+
+    expect(combinedSource).not.toMatch(/\brequire\(['"]fs['"]\)/);
+    expect(combinedSource).toContain('filesystem access is main-process only');
+    expect(evaluator).toContain('window.electronAPI.checkFileExists');
+  });
+
   it('keeps a run-level ToolExecutionTracker session during benchmark execution', () => {
     const source = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
 

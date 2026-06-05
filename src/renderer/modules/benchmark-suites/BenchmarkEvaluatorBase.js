@@ -465,17 +465,6 @@ class BenchmarkEvaluatorBase {
       console.log(`⚠️ [BenchmarkEvaluatorBase] chatManager file check failed:`, error.message);
     }
 
-    try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs');
-        const exists = fs.existsSync(filePath);
-        console.log(`✅ [BenchmarkEvaluatorBase] fs.existsSync(${filePath}): ${exists}`);
-        return exists;
-      }
-    } catch (error) {
-      console.log(`⚠️ [BenchmarkEvaluatorBase] fs file check failed:`, error.message);
-    }
-
     console.log(`❌ [BenchmarkEvaluatorBase] Cannot verify file existence for: ${filePath}`);
     return false;
   }

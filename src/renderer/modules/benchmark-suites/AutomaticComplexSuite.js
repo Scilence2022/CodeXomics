@@ -145,39 +145,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     console.log(' [AutomaticComplexSuite] Starting export file cleanup...');
     console.log(` [AutomaticComplexSuite] Checking directory: ${exportedFilesDir}`);
 
-    if (typeof require !== 'undefined') {
-      try {
-        const fs = require('fs').promises;
-        try {
-          const files = await fs.readdir(exportedFilesDir);
-          for (const file of files) {
-            const filePath = `${exportedFilesDir}/${file}`;
-            const stat = await fs.stat(filePath);
-            if (stat.isFile()) {
-              await fs.unlink(filePath);
-              console.log(` [AutomaticComplexSuite] Deleted file: ${filePath}`);
-            }
-          }
-          console.log(`✅ [AutomaticComplexSuite] Cleaned up ${files.length} files in ${exportedFilesDir}`);
-        } catch (dirError) {
-          if (dirError.code === 'ENOENT') {
-            console.log(`ℹ️  [AutomaticComplexSuite] Directory does not exist: ${exportedFilesDir}`);
-          } else {
-            throw dirError;
-          }
-        }
-      } catch (error) {
-        if (/Blocked renderer require\('fs'\)/.test(error.message)) {
-          console.info(
-            'ℹ️ [AutomaticComplexSuite] Export cleanup skipped in hardened renderer; filesystem access is main-process only.'
-          );
-          return;
-        }
-        console.warn(`⚠️  [AutomaticComplexSuite] Error during directory cleanup: ${error.message}`);
-      }
-    }
-
-    console.log('✅ [AutomaticComplexSuite] Export file cleanup completed');
+    console.info('ℹ️ [AutomaticComplexSuite] Export cleanup skipped in hardened renderer; filesystem access is main-process only.');
   }
 
   /**

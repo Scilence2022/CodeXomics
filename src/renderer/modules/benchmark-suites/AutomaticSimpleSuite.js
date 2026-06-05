@@ -76,27 +76,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
   async cleanupExportFiles() {
     const exportedFilesDir = this.buildFilePath('exported_files');
 
-    if (typeof require === 'undefined') return;
-
-    try {
-      const fs = require('fs');
-      if (!fs.existsSync(exportedFilesDir)) return;
-
-      const files = fs.readdirSync(exportedFilesDir);
-      for (const file of files) {
-        const filePath = `${exportedFilesDir}/${file}`;
-        if (fs.statSync(filePath).isFile()) {
-          fs.unlinkSync(filePath);
-        }
-      }
-      console.log(`🧹 Cleaned up ${files.length} export files`);
-    } catch (error) {
-      if (/Blocked renderer require\('fs'\)/.test(error.message)) {
-        console.info('ℹ️ Export cleanup skipped in hardened renderer; filesystem access is main-process only.');
-        return;
-      }
-      console.warn(`⚠️ Export cleanup error: ${error.message}`);
-    }
+    console.info(`ℹ️ Export cleanup skipped in hardened renderer for ${exportedFilesDir}; filesystem access is main-process only.`);
   }
 
   /**

@@ -1146,7 +1146,13 @@ class TabManager {
     console.log(`Updated all tabs with new genome data from: ${filename}`);
 
     // Multi-window support: Report the loaded genome name to main process for WindowRegistry
-    const genomeName = filename ? require('path').basename(filename) : Object.keys(genomeData)[0] || 'Unknown';
+    const genomeName = filename
+      ? String(filename)
+          .replace(/\\/g, '/')
+          .split('/')
+          .filter(Boolean)
+          .pop()
+      : Object.keys(genomeData)[0] || 'Unknown';
     if (this.genomeBrowser.windowId && typeof ipcRenderer !== 'undefined') {
       ipcRenderer.send('update-window-genome-name', {
         windowId: this.genomeBrowser.windowId,

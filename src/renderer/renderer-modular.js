@@ -3,7 +3,7 @@ console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 const rendererPath =
   (typeof window !== 'undefined' && window.path) ||
-  (typeof require !== 'undefined' ? require('path') : { basename: filePath => String(filePath || '') });
+  { basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '' };
 
 // Toast notification helper — replaces alert() with non-blocking notifications
 // Uses NotificationService if available, falls back to alert
