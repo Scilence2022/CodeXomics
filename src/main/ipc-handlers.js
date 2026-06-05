@@ -749,6 +749,28 @@ function registerIpcHandlers(deps) {
     }
   });
 
+  ipcMain.handle('save-gene-research-report', async (event, geneSymbol, report) => {
+    try {
+      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol);
+      const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
+
+      if (!reportStr.trim()) {
+        return { success: false, error: 'Report content is empty' };
+      }
+
+      fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+      fs.writeFileSync(reportPath, reportStr, 'utf8');
+
+      return {
+        success: true,
+        fileName,
+        reportPath,
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('open-gene-research-report', async (event, geneSymbol) => {
     try {
       const { reportPath } = resolveGeneResearchReportPath(geneSymbol);
@@ -1787,6 +1809,7 @@ function registerIpcHandlers(deps) {
     return {
       success: true,
       paths: {
+        appPath: app.getAppPath(),
         userData: safeGetPath('userData'),
         temp: safeGetPath('temp'),
         downloads: safeGetPath('downloads'),

@@ -1329,53 +1329,6 @@ class BenchmarkUI {
         }
       }
 
-      // Try legacy Electron remote API (if available)
-      if (window.require) {
-        try {
-          console.log('🔌 Attempting legacy Electron remote API...');
-
-          let dialog;
-          try {
-            // Try electron.remote first
-            dialog = window.require('electron').remote?.dialog;
-          } catch (e) {
-            // If that fails, try @electron/remote
-            try {
-              dialog = window.require('@electron/remote').dialog;
-            } catch (e2) {
-              console.warn('⚠️ Remote modules not available:', e2.message);
-              throw new Error('Remote API not available');
-            }
-          }
-
-          if (dialog) {
-            const result = await dialog.showOpenDialog({
-              title: 'Select Default File Directory',
-              properties: ['openDirectory'],
-              defaultPath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/',
-            });
-
-            if (!result.canceled && result.filePaths.length > 0) {
-              const selectedPath = result.filePaths[0];
-              const directoryInput = document.getElementById('defaultFileDirectory');
-              if (directoryInput) {
-                // Ensure path ends with /
-                const normalizedPath = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
-                directoryInput.value = normalizedPath;
-
-                // Save to configuration
-                this.saveDefaultDirectory(normalizedPath);
-
-                console.log('✅ Default directory updated via remote:', normalizedPath);
-                return;
-              }
-            }
-          }
-        } catch (remoteError) {
-          console.warn('⚠️ Legacy remote API failed:', remoteError.message);
-        }
-      }
-
       // Fallback: Show custom input dialog using DOM
       this.showCustomDirectoryDialog();
     } catch (error) {

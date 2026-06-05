@@ -1056,9 +1056,11 @@ class ChatManager {
         throw new Error('File path is required');
       }
 
-      const result = window.electronAPI?.openMarkdownViewer
-        ? await window.electronAPI.openMarkdownViewer({ filePath, title })
-        : await require('electron').ipcRenderer.invoke('open-markdown-viewer', { filePath, title });
+      if (!window.electronAPI?.openMarkdownViewer) {
+        throw new Error('Markdown viewer IPC bridge is unavailable');
+      }
+
+      const result = await window.electronAPI.openMarkdownViewer({ filePath, title });
 
       if (result.success) {
         return {
@@ -7942,12 +7944,11 @@ ${coreTools}
     console.log(`[ChatManager] listGenomeWindows called`);
     console.log(`[ChatManager] this.app.windowId: ${this.app.windowId}`);
     try {
-      // Use Electron IPC to query the main process window registry
-      let ipc;
-      try {
-        ipc = typeof ipcRenderer !== 'undefined' ? ipcRenderer : require('electron').ipcRenderer;
-      } catch (e) {
-        ipc = require('electron').ipcRenderer;
+      const ipc =
+        (typeof window !== 'undefined' && window.ipcRenderer) ||
+        (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
+      if (!ipc?.invoke) {
+        throw new Error('IPC bridge unavailable');
       }
 
       console.log(`[ChatManager] Calling ipc.invoke('list-genome-windows')`);
@@ -7982,11 +7983,11 @@ ${coreTools}
     }
 
     try {
-      let ipc;
-      try {
-        ipc = typeof ipcRenderer !== 'undefined' ? ipcRenderer : require('electron').ipcRenderer;
-      } catch (e) {
-        ipc = require('electron').ipcRenderer;
+      const ipc =
+        (typeof window !== 'undefined' && window.ipcRenderer) ||
+        (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
+      if (!ipc?.invoke) {
+        throw new Error('IPC bridge unavailable');
       }
 
       const result = await ipc.invoke('focus-genome-window', windowId);

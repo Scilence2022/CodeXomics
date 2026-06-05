@@ -2942,27 +2942,39 @@ ${this.chatManager.getPluginSystemInfo()}`;
         // Custom handling for Deep Gene Research tool
         if (result.tool === 'deep-gene-research') {
           try {
-            const fs = require('fs');
-            const path = require('path');
             const extracted = this.chatManager.extractDeepGeneResearchReport(resultData);
             const { report, geneSymbol, stepsCount, statistics } = extracted;
             let reportSaved = false;
-            let reportPath = '';
+            let reportFileName = '';
 
             const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
             if (reportStr && reportStr.trim().length > 0) {
-              const reportsDir = path.join(process.cwd(), 'reports');
-              if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
-              const safeSymbol = geneSymbol.replace(/[^a-zA-Z0-9_-]/g, '_');
-              reportPath = path.join(reportsDir, `Gene_${safeSymbol}_Research_Report.md`);
-              fs.writeFileSync(reportPath, reportStr);
-              reportSaved = true;
+              const saveReport = window.electronAPI?.saveGeneResearchReport;
+              if (saveReport) {
+                saveReport(geneSymbol, reportStr)
+                  .then(saveResult => {
+                    if (saveResult?.success) {
+                      this.chatManager.updateThinkingMessage(
+                        `<div style="color: #00695c; margin: 8px 0;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${this.chatManager.escapeHtml(saveResult.fileName || '')}</code></div>`
+                      );
+                    } else {
+                      console.warn('Deep Gene Research report save failed:', saveResult?.error || 'Unknown error');
+                    }
+                  })
+                  .catch(saveError => {
+                    console.warn('Deep Gene Research report save failed:', saveError);
+                  });
+                reportSaved = true;
+                reportFileName = 'pending save';
+              } else {
+                console.warn('Deep Gene Research report save skipped: IPC bridge unavailable');
+              }
             }
 
             resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">`;
             resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Complete: ${geneSymbol}</h3>`;
             if (reportSaved) {
-              resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${path.basename(reportPath)}</code></div>`;
+              resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report save requested <code>${this.chatManager.escapeHtml(reportFileName)}</code></div>`;
             }
             resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
             if (stepsCount > 0) resultDisplay += `Completed ${stepsCount} steps of analysis.<br>`;

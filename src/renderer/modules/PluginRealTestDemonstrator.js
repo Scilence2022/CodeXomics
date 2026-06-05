@@ -20,6 +20,58 @@ class PluginRealTestDemonstrator {
     // Note: pluginBasePath removed - now using dynamic path resolution per plugin
   }
 
+  getPathApi() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+
+    return {
+      join: (...parts) => parts.filter(Boolean).join('/').replace(/\/+/g, '/'),
+      dirname: filePath => {
+        const normalized = String(filePath || '').replace(/\\/g, '/');
+        const index = normalized.lastIndexOf('/');
+        return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
+      },
+    };
+  }
+
+  async checkFileExists(filePath) {
+    const api = typeof window !== 'undefined' ? window.electronAPI : null;
+    if (api?.checkPluginFileExists) {
+      return Boolean(await api.checkPluginFileExists(filePath));
+    }
+    if (api?.checkFileExists) {
+      return Boolean(await api.checkFileExists(filePath));
+    }
+    return false;
+  }
+
+  async looksLikeProjectRoot(dir) {
+    const path = this.getPathApi();
+    return (
+      (await this.checkFileExists(path.join(dir, 'package.json'))) &&
+      (await this.checkFileExists(path.join(dir, 'src', 'renderer', 'modules')))
+    );
+  }
+
+  async getProjectBasePath() {
+    const path = this.getPathApi();
+    const api = typeof window !== 'undefined' ? window.electronAPI : null;
+    const appPathsResult = api?.getAppPaths ? await api.getAppPaths() : null;
+    const candidatePaths = [
+      appPathsResult?.paths?.appPath,
+      path.dirname(path.dirname(path.dirname(appPathsResult?.paths?.userData || ''))),
+    ].filter(Boolean);
+
+    for (const candidatePath of candidatePaths) {
+      if (await this.looksLikeProjectRoot(candidatePath)) {
+        return candidatePath;
+      }
+    }
+
+    throw new Error('Unable to resolve application project root for plugin demo loading');
+  }
+
   /**
    * Resolve demo.js path for a plugin
    * Searches multiple locations: installed plugins, marketplace source, built-in plugins
@@ -28,90 +80,13 @@ class PluginRealTestDemonstrator {
    * @returns {string} Absolute path to demo.js
    * @throws {Error} If demo.js cannot be found in any location
    */
-  resolvePluginDemoPath(pluginId, version) {
-    const path = require('path');
-    const fs = require('fs');
-
-    // Get project root path using multiple strategies
-    let basePath = null;
-
-    // Helper: check if a directory looks like the project root
-    const isProjectRoot = dir => {
-      try {
-        return (
-          fs.existsSync(path.join(dir, 'package.json')) && fs.existsSync(path.join(dir, 'src', 'renderer', 'modules'))
-        );
-      } catch (e) {
-        return false;
-      }
-    };
-
-    // Strategy 1: Walk upward from __dirname until we find the project root
-    // This works for both source (src/renderer/modules/..2x..) and dist builds
-    if (typeof __dirname !== 'undefined' && __dirname) {
-      let searchPath = __dirname;
-      for (let i = 0; i < 15; i++) {
-        if (isProjectRoot(searchPath)) {
-          basePath = searchPath;
-          break;
-        }
-        const parentPath = path.dirname(searchPath);
-        if (parentPath === searchPath) break; // Reached filesystem root
-        searchPath = parentPath;
-      }
-    }
-
-    // Strategy 2: Use Electron's app path if available
-    if (!basePath && typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getAppPath) {
-      try {
-        const appPath = window.electronAPI.getAppPath();
-        if (appPath && isProjectRoot(appPath)) {
-          basePath = appPath;
-        }
-      } catch (e) {
-        // Ignore error, try next strategy
-      }
-    }
-
-    // Strategy 3: Use process.cwd() and search upward
-    if (!basePath) {
-      let searchPath = process.cwd();
-      for (let i = 0; i < 10; i++) {
-        if (isProjectRoot(searchPath)) {
-          basePath = searchPath;
-          break;
-        }
-        const parentPath = path.dirname(searchPath);
-        if (parentPath === searchPath) break;
-        searchPath = parentPath;
-      }
-    }
-
-    // Strategy 4: Fallback - look for the path relative to common locations
-    if (!basePath) {
-      const homeDir = process.env.HOME || '';
-      const fallbackPaths = [
-        path.join(homeDir, 'Github-Repos', 'CodeXomics'),
-        path.join(homeDir, 'Github-Repos', 'GenomeAIStudio_1'),
-        path.join(homeDir, 'GenomeAIStudio_1'),
-        process.cwd(),
-      ];
-      for (const fallbackPath of fallbackPaths) {
-        if (isProjectRoot(fallbackPath)) {
-          basePath = fallbackPath;
-          break;
-        }
-      }
-    }
-
-    // If still no basePath, use process.cwd() as last resort
-    if (!basePath) {
-      basePath = process.cwd();
-    }
+  async resolvePluginDemoPath(pluginId, version) {
+    const path = this.getPathApi();
+    const basePath = await this.getProjectBasePath();
 
     console.log(`🔍 Resolving demo path for ${pluginId}@${version}`);
     console.log(`  Base path: ${basePath}`);
-    console.log(`  Has package.json: ${fs.existsSync(path.join(basePath, 'package.json'))}`);
+    console.log(`  Has package.json: ${await this.checkFileExists(path.join(basePath, 'package.json'))}`);
 
     // Define search locations in priority order
     const searchLocations = [
@@ -132,7 +107,7 @@ class PluginRealTestDemonstrator {
     for (const demoPath of searchLocations) {
       console.log(`  Checking: ${demoPath}`);
       try {
-        if (fs.existsSync(demoPath)) {
+        if (await this.checkFileExists(demoPath)) {
           console.log(`✅ Found demo.js at: ${demoPath}`);
           return demoPath;
         }
@@ -156,7 +131,7 @@ class PluginRealTestDemonstrator {
         if (!searchLocations.includes(demoPath)) {
           console.log(`  Checking (resolver): ${demoPath}`);
           try {
-            if (fs.existsSync(demoPath)) {
+            if (await this.checkFileExists(demoPath)) {
               console.log(`✅ Found demo.js at: ${demoPath}`);
               return demoPath;
             }
@@ -203,7 +178,7 @@ class PluginRealTestDemonstrator {
 
       // Resolve path to plugin demo script - will throw if PathResolver not ready
       const version = plugin.version || '1.0.0';
-      const demoPath = this.resolvePluginDemoPath(pluginId, version);
+      const demoPath = await this.resolvePluginDemoPath(pluginId, version);
 
       console.log(`🔍 Attempting to load demo module: ${demoPath}`);
 

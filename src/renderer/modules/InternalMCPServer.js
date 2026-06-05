@@ -7,15 +7,9 @@
 
 // Access ipcRenderer without redeclaring
 let mcpServerIpc;
-try {
-  if (typeof ipcRenderer !== 'undefined') {
-    mcpServerIpc = ipcRenderer;
-  } else {
-    mcpServerIpc = require('electron').ipcRenderer;
-  }
-} catch (e) {
-  mcpServerIpc = require('electron').ipcRenderer;
-}
+mcpServerIpc =
+  (typeof window !== 'undefined' && window.ipcRenderer) ||
+  (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
 
 class InternalMCPServer {
   constructor() {

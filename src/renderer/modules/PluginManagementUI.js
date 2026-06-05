@@ -7,7 +7,7 @@
 // Import electron ipcRenderer for IPC communication without redeclaring the preload global.
 const pluginManagementIpcRenderer =
   (typeof window !== 'undefined' && window.ipcRenderer) ||
-  (typeof require === 'function' ? require('electron').ipcRenderer : null);
+  (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
 
 // Expose ipcRenderer globally for use in other modules
 // This is needed for renderer-modular.js and other modules that need IPC communication
