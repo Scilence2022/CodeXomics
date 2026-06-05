@@ -204,11 +204,59 @@ class BlastManager {
     }
 
     if (currentFilePath) {
-      const path = require('path');
+      const path = this.getPathModule();
       return path.dirname(currentFilePath);
     }
 
     return null;
+  }
+
+  parseBlastCommand(command) {
+    const args = [];
+    let current = '';
+    let quote = null;
+    let escaped = false;
+
+    for (const char of String(command || '')) {
+      if (escaped) {
+        current += char;
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (quote) {
+        if (char === quote) {
+          quote = null;
+        } else {
+          current += char;
+        }
+        continue;
+      }
+
+      if (char === '"' || char === "'") {
+        quote = char;
+        continue;
+      }
+
+      if (/\s/.test(char)) {
+        if (current) {
+          args.push(current);
+          current = '';
+        }
+        continue;
+      }
+
+      current += char;
+    }
+
+    if (escaped) current += '\\';
+    if (current) args.push(current);
+    return args;
   }
 
   /**
@@ -404,7 +452,7 @@ class BlastManager {
   getCurrentDatabasePath() {
     const currentFileDir = this.getCurrentFileDirectory();
     if (currentFileDir) {
-      const path = require('path');
+      const path = this.getPathModule();
       return path.join(currentFileDir, 'blast_db');
     }
     return this.config.localDbPath; // Fallback to configured path
@@ -412,9 +460,17 @@ class BlastManager {
 
   async runCommand(command, workingDirectory = null, options = {}) {
     if (typeof window !== 'undefined' && window.electronAPI?.blast?.runCommand) {
+      const tokens = this.parseBlastCommand(command);
+      const executable = tokens[0];
+      const args = tokens.slice(1);
+      if (!executable) {
+        throw new Error('BLAST command is required');
+      }
+
       const localDbPath = options.localDbPath || workingDirectory || this.getCurrentDatabasePath();
       const result = await window.electronAPI.blast.runCommand({
-        command,
+        executable,
+        args,
         workingDirectory,
         localDbPath,
         blastExecutablePath: this.config.blastExecutablePath,
@@ -785,7 +841,7 @@ class BlastManager {
 
     // Use custom output directory if provided, otherwise use current database path
     const targetDir = outputDir || this.getCurrentDatabasePath();
-    const path = require('path');
+    const path = this.getPathModule();
     const outputPath = path.join(targetDir, dbName);
 
     // Build command - will be parsed into arguments for execFile

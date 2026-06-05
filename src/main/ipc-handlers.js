@@ -3999,13 +3999,20 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('blast:run-command', async (event, options = {}) => {
     try {
       const { execFile } = require('child_process');
-      const tokens = parseCommandLine(options.command || '');
-      if (tokens.length === 0) {
+
+      let executableToken = options.executable;
+      let args = Array.isArray(options.args) ? options.args.map(arg => String(arg)) : null;
+      if (!executableToken || !args) {
+        const tokens = parseCommandLine(options.command || '');
+        executableToken = tokens[0];
+        args = tokens.slice(1);
+      }
+
+      if (!executableToken) {
         throw new Error('BLAST command is required');
       }
 
-      const executable = resolveBlastExecutable(app, tokens[0], options.blastExecutablePath);
-      const args = tokens.slice(1);
+      const executable = resolveBlastExecutable(app, executableToken, options.blastExecutablePath);
       const execOptions = { maxBuffer: 10 * 1024 * 1024 };
 
       if (options.workingDirectory) {

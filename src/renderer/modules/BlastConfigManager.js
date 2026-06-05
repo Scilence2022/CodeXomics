@@ -228,7 +228,8 @@ class BlastConfigManager {
     for (const tool of tools) {
       try {
         const result = await window.electronAPI?.blast?.runCommand?.({
-          command: `${tool} -version`,
+          executable: tool,
+          args: ['-version'],
           blastExecutablePath: blastnPath || this.path.join(directory, 'blastn'),
         });
         if (result?.success || result?.stdout || result?.stderr) {
