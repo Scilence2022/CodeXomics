@@ -1621,11 +1621,20 @@ function registerIpcHandlers(deps) {
         }
       });
 
-      return {
-        ...result,
+      const state = getBamReaderState(reader);
+      return toIpcSafeValue({
+        success: !!result?.success,
         readerId,
-        state: getBamReaderState(reader),
-      };
+        state,
+        header: state.header,
+        references: state.references,
+        totalReads: state.totalReads,
+        fileSize: state.fileSize,
+        hasIndex: state.hasIndex,
+        indexType: state.indexType,
+        indexPath: state.indexPath,
+        indexSize: state.indexSize,
+      });
     } catch (error) {
       console.error('Failed to initialize BAM reader:', error);
       throw new Error(`Failed to initialize BAM reader: ${error.message}`);
@@ -1636,10 +1645,10 @@ function registerIpcHandlers(deps) {
     try {
       const reader = getOwnedBamReader(event, readerId);
       const reads = await reader.getRecordsForRange(chromosome, start, end, settings);
-      return {
+      return toIpcSafeValue({
         reads: toIpcSafeValue(reads),
         state: getBamReaderState(reader),
-      };
+      });
     } catch (error) {
       console.error('Failed to query BAM reader:', error);
       throw new Error(`Failed to query BAM reader: ${error.message}`);

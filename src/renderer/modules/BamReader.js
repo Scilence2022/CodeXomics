@@ -32,8 +32,7 @@ try {
     useIpcBamBackend = true;
     console.info('Using secure IPC-backed BAM reader because direct @gmod/bam access is unavailable:', error.message);
   } else {
-    console.error('Failed to import @gmod/bam:', error);
-    throw new Error('@gmod/bam library is required but not available. Please ensure it is installed.');
+    console.warn('Direct @gmod/bam access is unavailable and no IPC backend is currently exposed:', error.message);
   }
 }
 
@@ -58,7 +57,7 @@ class BamReader {
       queryCount: 0,
     };
     this.backendId = null;
-    this.usesIpcBackend = useIpcBamBackend;
+    this.usesIpcBackend = useIpcBamBackend || (!BamFile && hasIpcBamBackend());
   }
 
   applyBackendState(state = {}) {
@@ -114,6 +113,10 @@ class BamReader {
    * @returns {Promise<Object>} Initialization result
    */
   async initialize(filePath, options = {}) {
+    if (!this.usesIpcBackend && !BamFile && hasIpcBamBackend()) {
+      this.usesIpcBackend = true;
+    }
+
     if (this.usesIpcBackend) {
       return this.initializeViaIpc(filePath, options);
     }
