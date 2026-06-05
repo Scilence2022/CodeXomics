@@ -98,6 +98,26 @@ class ActionManager {
     console.log('✅ ActionManager v2.0 initialized with Copy-on-Write optimization');
   }
 
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      isAbsolute: filePath => /^(?:\/|[A-Za-z]:[\\/])/.test(String(filePath || '')),
+      dirname: filePath => {
+        const normalized = String(filePath || '').replace(/\\/g, '/');
+        const index = normalized.lastIndexOf('/');
+        return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
+      },
+      join: (...parts) => parts.filter(part => part !== undefined && part !== null && part !== '').join('/').replace(/\/+/g, '/'),
+      resolve: (...parts) => {
+        const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
+        const normalized = joined.replace(/\\/g, '/').replace(/\/+/g, '/');
+        return /^(?:\/|[A-Za-z]:[\\/])/.test(normalized) ? normalized : `/${normalized}`;
+      },
+    };
+  }
+
   /**
    * Get sequence from genome data (supports both proxy and direct access)
    *
@@ -2510,12 +2530,12 @@ class ActionManager {
         console.log(`🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal resolvedSaveFile为null → 准备弹窗`);
         const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
         let defaultDirectory = null;
+        const path = this.getPathModule();
         const currentFile = this.genomeBrowser.fileManager?.currentFile;
-        if (currentFile && currentFile.path && typeof require !== 'undefined') {
-          const path = require('path');
+        if (currentFile && currentFile.path) {
           defaultDirectory = path.dirname(currentFile.path);
         }
-        const defaultPath = defaultDirectory ? require('path').join(defaultDirectory, baseFilename) : baseFilename;
+        const defaultPath = defaultDirectory ? path.join(defaultDirectory, baseFilename) : baseFilename;
 
         if (window.electronAPI && window.electronAPI.showSaveDialog) {
           try {
@@ -2545,41 +2565,8 @@ class ActionManager {
           } catch (error) {
             console.warn('⚠️ [ActionManager] Save dialog failed:', error);
           }
-        } else if (typeof require !== 'undefined') {
-          // Fallback: use ipcRenderer directly (main window with nodeIntegration:true)
-          try {
-            const { ipcRenderer } = require('electron');
-            if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
-              console.log(
-                `🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 使用ipcRenderer.invoke('show-save-dialog')`
-              );
-              const dialogResult = await ipcRenderer.invoke('show-save-dialog', {
-                title: 'Save Modified Genome as GenBank File',
-                defaultPath,
-                filters: [
-                  { name: 'GenBank Files', extensions: ['gbk', 'gb', 'genbank'] },
-                  { name: 'All Files', extensions: ['*'] },
-                ],
-              });
-              if (!dialogResult.canceled && dialogResult.filePath) {
-                resolvedSaveFile = dialogResult.filePath;
-                console.log(
-                  `🔍 [TRACE-EXECUTE_ACTIONS] executeAllActionsInternal 弹窗选择路径(ipcRenderer) | resolvedSaveFile=${resolvedSaveFile}`
-                );
-              } else {
-                console.log(`⚠️ [ActionManager] Save dialog cancelled`);
-                return {
-                  success: false,
-                  message: 'Save dialog cancelled by user',
-                  executedActions: 0,
-                  totalActions: initialTotalActions,
-                  pendingActions: initialPendingActions,
-                };
-              }
-            }
-          } catch (error) {
-            console.warn('⚠️ [ActionManager] ipcRenderer show-save-dialog failed:', error);
-          }
+        } else {
+          console.warn('⚠️ [ActionManager] Save dialog API unavailable in hardened renderer');
         }
       }
 
@@ -3045,88 +3032,16 @@ class ActionManager {
       );
 
       if (saveFile) {
-        // Direct write via writeFile IPC — no dialog, no prompt
-        // Try multiple methods: window.electronAPI.writeFile → ipcRenderer directly → Node.js fs
-        let writeSuccess = false;
-
-        // Method 1: window.electronAPI.writeFile (preload contextBridge)
-        if (!writeSuccess && window.electronAPI && window.electronAPI.writeFile) {
-          console.log(
-            `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用electronAPI.writeFile | saveFile=${saveFile}`
-          );
-          try {
-            const result = await window.electronAPI.writeFile(saveFile, genbankContent);
-            if (result && result.success) {
-              console.log(
-                `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile成功 | saveFile=${saveFile}`
-              );
-              writeSuccess = true;
-            } else {
-              console.error(
-                `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile失败 | saveFile=${saveFile} | error=${result?.error}`
-              );
-            }
-          } catch (err) {
-            console.error(
-              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile异常 | error=${err.message}`
-            );
-          }
+        if (!window.electronAPI?.writeFile) {
+          throw new Error('Main-process file write API is unavailable');
         }
 
-        // Method 2: ipcRenderer.invoke('write-file') directly (main window with nodeIntegration:true)
-        if (!writeSuccess && typeof require !== 'undefined') {
-          try {
-            const { ipcRenderer } = require('electron');
-            if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
-              console.log(
-                `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用ipcRenderer.invoke('write-file') | saveFile=${saveFile}`
-              );
-              const result = await ipcRenderer.invoke('write-file', saveFile, genbankContent);
-              if (result && result.success) {
-                console.log(
-                  `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入成功 | saveFile=${saveFile}`
-                );
-                writeSuccess = true;
-              } else {
-                console.error(
-                  `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入失败 | saveFile=${saveFile} | error=${result?.error}`
-                );
-              }
-            }
-          } catch (err) {
-            console.error(
-              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK ipcRenderer写入异常 | error=${err.message}`
-            );
-          }
+        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用electronAPI.writeFile | saveFile=${saveFile}`);
+        const result = await window.electronAPI.writeFile(saveFile, genbankContent);
+        if (!result?.success) {
+          throw new Error(result?.error || `Unable to write modified GenBank file to ${saveFile}`);
         }
-
-        // Method 3: Node.js fs.writeFileSync directly (main window with nodeIntegration:true)
-        if (!writeSuccess && typeof require !== 'undefined') {
-          try {
-            const fs = require('fs');
-            const nodePath = require('path');
-            const dir = nodePath.dirname(saveFile);
-            if (!fs.existsSync(dir)) {
-              fs.mkdirSync(dir, { recursive: true });
-            }
-            console.log(
-              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用Node.js fs.writeFileSync | saveFile=${saveFile}`
-            );
-            fs.writeFileSync(saveFile, genbankContent, 'utf8');
-            console.log(
-              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK fs.writeFileSync成功 | saveFile=${saveFile}`
-            );
-            writeSuccess = true;
-          } catch (err) {
-            console.error(
-              `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK fs.writeFileSync异常 | error=${err.message}`
-            );
-          }
-        }
-
-        if (!writeSuccess) {
-          throw new Error(`Unable to write modified GenBank file to ${saveFile}`);
-        }
+        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile成功 | saveFile=${saveFile}`);
       } else {
         // No saveFile provided — use browser download as fallback
         // (Dialog interaction should be handled by the caller before reaching here)
@@ -3323,16 +3238,14 @@ class ActionManager {
     );
     // Priority 1: saveFile already provided — resolve relative to absolute if needed
     if (saveFile) {
-      if (typeof require !== 'undefined') {
-        const path = require('path');
-        if (!path.isAbsolute(saveFile)) {
-          const cwd = this._getCWD();
-          const resolved = path.resolve(cwd, saveFile);
-          console.log(
-            `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority1 相对路径→绝对路径 | saveFile=${saveFile} | cwd=${cwd} | resolved=${resolved}`
-          );
-          return resolved;
-        }
+      const path = this.getPathModule();
+      if (!path.isAbsolute(saveFile)) {
+        const cwd = this._getCWD();
+        const resolved = path.resolve(cwd, saveFile);
+        console.log(
+          `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority1 相对路径→绝对路径 | saveFile=${saveFile} | cwd=${cwd} | resolved=${resolved}`
+        );
+        return resolved;
       }
       console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority1 绝对路径 | saveFile=${saveFile}`);
       return saveFile;
@@ -3340,16 +3253,14 @@ class ActionManager {
 
     // Priority 2: auto_save with filename — resolve to absolute path
     if (autoSave && filename) {
-      if (typeof require !== 'undefined') {
-        const path = require('path');
-        if (!path.isAbsolute(filename)) {
-          const cwd = this._getCWD();
-          const resolved = path.resolve(cwd, filename);
-          console.log(
-            `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority2 相对路径→绝对路径 | filename=${filename} | cwd=${cwd} | resolved=${resolved}`
-          );
-          return resolved;
-        }
+      const path = this.getPathModule();
+      if (!path.isAbsolute(filename)) {
+        const cwd = this._getCWD();
+        const resolved = path.resolve(cwd, filename);
+        console.log(
+          `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority2 相对路径→绝对路径 | filename=${filename} | cwd=${cwd} | resolved=${resolved}`
+        );
+        return resolved;
       }
       console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority2 绝对路径 | filename=${filename}`);
       return filename;
@@ -3359,16 +3270,12 @@ class ActionManager {
     if (autoSave) {
       const id = executionId || `execution_${Date.now()}`;
       const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${id}.gbk`;
-      if (typeof require !== 'undefined') {
-        const path = require('path');
-        const resolved = path.resolve(this._getCWD(), baseFilename);
-        console.log(
-          `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority3 自动生成路径 | baseFilename=${baseFilename} | cwd=${this._getCWD()} | resolved=${resolved}`
-        );
-        return resolved;
-      }
-      console.log(`🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority3 无require | baseFilename=${baseFilename}`);
-      return baseFilename;
+      const path = this.getPathModule();
+      const resolved = path.resolve(this._getCWD(), baseFilename);
+      console.log(
+        `🔍 [TRACE-EXECUTE_ACTIONS] resolveSaveFilePath Priority3 自动生成路径 | baseFilename=${baseFilename} | cwd=${this._getCWD()} | resolved=${resolved}`
+      );
+      return resolved;
     }
 
     // No auto_save, no saveFile, no filename → return null (caller should show dialog)
@@ -3414,48 +3321,7 @@ class ActionManager {
         }
       }
 
-      // Method 2: ipcRenderer.invoke('write-file') directly (main window with nodeIntegration:true)
-      if (typeof require !== 'undefined') {
-        try {
-          const { ipcRenderer } = require('electron');
-          if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
-            console.log(
-              `🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用ipcRenderer.invoke('write-file') | filePath=${filePath}`
-            );
-            const result = await ipcRenderer.invoke('write-file', filePath, content);
-            if (result && result.success) {
-              console.log(`📁 [ActionManager] File saved successfully via ipcRenderer to: ${filePath}`);
-              return true;
-            } else {
-              console.error(`❌ [ActionManager] ipcRenderer write-file failed for: ${filePath}`, result?.error);
-            }
-          }
-        } catch (err) {
-          console.error(`❌ [ActionManager] ipcRenderer write-file error for: ${filePath}`, err);
-        }
-      }
-
-      // Method 3: Node.js fs.writeFileSync directly (main window with nodeIntegration:true)
-      if (typeof require !== 'undefined') {
-        try {
-          const fs = require('fs');
-          const nodePath = require('path');
-          const dir = nodePath.dirname(filePath);
-          if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
-          }
-          console.log(
-            `🔍 [TRACE-EXECUTE_ACTIONS] saveTextFileToFile 使用Node.js fs.writeFileSync | filePath=${filePath}`
-          );
-          fs.writeFileSync(filePath, content, 'utf8');
-          console.log(`📁 [ActionManager] File saved successfully via fs to: ${filePath}`);
-          return true;
-        } catch (err) {
-          console.error(`❌ [ActionManager] fs.writeFileSync error for: ${filePath}`, err);
-        }
-      }
-
-      // Method 4: try saveFile API (shows dialog - not ideal for auto_save)
+      // Method 2: try saveFile API (shows dialog - not ideal for auto_save)
       if (window.electronAPI && window.electronAPI.saveFile) {
         console.warn(
           `⚠️ [ActionManager] All direct write methods unavailable, falling back to saveFile (may show dialog)`
@@ -3505,19 +3371,17 @@ class ActionManager {
         }
       }
 
-      if (typeof require !== 'undefined') {
+      const rendererIpc = (typeof window !== 'undefined' && window.ipcRenderer) || globalThis.ipcRenderer;
+      if (rendererIpc && typeof rendererIpc.invoke === 'function') {
         try {
-          const { ipcRenderer } = require('electron');
-          if (ipcRenderer && typeof ipcRenderer.invoke === 'function') {
-            const result = await ipcRenderer.invoke('createNewMainWindow', filename);
-            if (result && result.success) {
-              console.log(`✅ [ActionManager] Successfully opened generated GBK file via IPC: ${filename}`);
-              return true;
-            }
-            console.warn('⚠️ [ActionManager] IPC new-window GBK open failed:', result?.error);
+          const result = await rendererIpc.invoke('createNewMainWindow', filename);
+          if (result && result.success) {
+            console.log(`✅ [ActionManager] Successfully opened generated GBK file via safe IPC: ${filename}`);
+            return true;
           }
+          console.warn('⚠️ [ActionManager] safe IPC new-window GBK open failed:', result?.error);
         } catch (error) {
-          console.warn('⚠️ [ActionManager] IPC new-window GBK open threw:', error);
+          console.warn('⚠️ [ActionManager] safe IPC new-window GBK open threw:', error);
         }
       }
 
@@ -6163,10 +6027,11 @@ class ActionManager {
    */
   async promptSaveGBK(content) {
     try {
-      // Use Electron dialog to prompt for save location
-      const { ipcRenderer } = require('electron');
+      if (!window.electronAPI?.showSaveDialog) {
+        throw new Error('Main-process save dialog API is unavailable');
+      }
 
-      const result = await ipcRenderer.invoke('show-save-dialog', {
+      const result = await window.electronAPI.showSaveDialog({
         title: 'Save modified genome as GenBank file',
         defaultPath: 'modified_genome.gbk',
         filters: [
@@ -6176,9 +6041,13 @@ class ActionManager {
       });
 
       if (!result.canceled && result.filePath) {
-        // Write file using Node.js fs
-        const fs = require('fs');
-        await fs.promises.writeFile(result.filePath, content, 'utf8');
+        if (!window.electronAPI?.writeFile) {
+          throw new Error('Main-process file write API is unavailable');
+        }
+        const writeResult = await window.electronAPI.writeFile(result.filePath, content);
+        if (!writeResult?.success) {
+          throw new Error(writeResult?.error || `Failed to write file: ${result.filePath}`);
+        }
 
         this.genomeBrowser.showNotification(`GBK file saved to: ${result.filePath}`, 'success');
       }

@@ -97,12 +97,24 @@ beforeEach(() => {
   document.body.innerHTML = '';
   installFakeGenBankExporter();
   vmContext.require = undefined;
+  window.ipcRenderer = undefined;
   window.electronAPI = {
     writeFile: vi.fn(async () => ({ success: true })),
   };
 });
 
 describe('ActionManager execute_actions sequencing', () => {
+  it('routes file writes and dialogs through preload IPC in the hardened renderer', () => {
+    const source = fs.readFileSync(path.join(repoRoot, 'src/renderer/modules/ActionManager.js'), 'utf8');
+
+    expect(source).toContain('getPathModule()');
+    expect(source).toContain('window.electronAPI.writeFile');
+    expect(source).toContain('window.electronAPI.showSaveDialog');
+    expect(source).not.toMatch(/\brequire\(['"]fs['"]\)/);
+    expect(source).not.toMatch(/\brequire\(['"]path['"]\)/);
+    expect(source).not.toMatch(/\brequire\(['"]electron['"]\)/);
+  });
+
   it('executes queued sequence edits against the working sequence and adjusts later coordinates', async () => {
     const { genomeBrowser, manager } = createManager('ACGTACGT');
 
@@ -158,19 +170,14 @@ describe('ActionManager execute_actions sequencing', () => {
     expect(genomeBrowser.fileManager.currentFile.path).toBe('/tmp/source.gbk');
   });
 
-  it('uses direct IPC to open generated GBK files when preload APIs are unavailable', async () => {
+  it('uses safe IPC to open generated GBK files when preload APIs are unavailable', async () => {
     const { genomeBrowser, manager } = createManager('ACGT');
     const ipcRenderer = {
       invoke: vi.fn(async () => ({ success: true, windowId: 'window-ipc' })),
     };
     manager.autoOpenGeneratedGBK = ActionManager.prototype.autoOpenGeneratedGBK.bind(manager);
     genomeBrowser.fileManager.parseGenBank = vi.fn(async () => {});
-    vmContext.require = vi.fn(moduleName => {
-      if (moduleName === 'electron') {
-        return { ipcRenderer };
-      }
-      throw new Error(`Unexpected module: ${moduleName}`);
-    });
+    window.ipcRenderer = ipcRenderer;
 
     const opened = await manager.autoOpenGeneratedGBK('LOCUS test\n//\n', '/tmp/generated-actions.gbk');
 
