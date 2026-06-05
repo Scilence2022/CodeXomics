@@ -8,6 +8,21 @@ class FileManager {
     this.currentFile = null;
   }
 
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      dirname: filePath => String(filePath || '').replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '/',
+      basename: filePath =>
+        String(filePath || '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .filter(Boolean)
+          .pop() || '',
+    };
+  }
+
   async openFile() {
     await this.openSpecificFileType('any');
   }
@@ -867,7 +882,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
   async parseFasta() {
     // Auto-set working directory to the FASTA file's directory
     if (this.currentFile?.path) {
-      const path = require('path');
+      const path = this.getPathModule();
       const fileDir = path.dirname(this.currentFile.path);
       console.log(`📁 Auto-setting working directory to: ${fileDir}`);
 
@@ -922,7 +937,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
     // Show notification about working directory
     if (this.currentFile?.path) {
-      const path = require('path');
+      const path = this.getPathModule();
       const fileDir = path.dirname(this.currentFile.path);
       this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
     }
@@ -946,7 +961,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
     // Auto-set working directory to the GBK file's directory
     if (this.currentFile?.path) {
-      const path = require('path');
+      const path = this.getPathModule();
       const fileDir = path.dirname(this.currentFile.path);
       console.log(`📁 Auto-setting working directory to: ${fileDir}`);
 
@@ -1222,7 +1237,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
     // Show notification about working directory
     if (this.currentFile?.path) {
-      const path = require('path');
+      const path = this.getPathModule();
       const fileDir = path.dirname(this.currentFile.path);
       this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
     }

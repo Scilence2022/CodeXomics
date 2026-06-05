@@ -8,6 +8,20 @@ class FileOperationService {
     this.chatManager = chatManager;
   }
 
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      isAbsolute: filePath => /^([A-Za-z]:[\\/]|\/)/.test(String(filePath || '')),
+      resolve: (...parts) => {
+        const joined = parts.filter(Boolean).join('/');
+        const normalized = joined.replace(/\\/g, '/').replace(/\/+/g, '/');
+        return /^([A-Za-z]:[\\/]|\/)/.test(normalized) ? normalized : `/${normalized}`;
+      },
+    };
+  }
+
   isBenchmarkAutomationMode() {
     const sessionId = this.chatManager?.toolExecutionTracker?.currentSessionId || '';
     return this.chatManager?.benchmarkAutomationActive === true || sessionId.startsWith('benchmark');
@@ -35,11 +49,8 @@ class FileOperationService {
       return infoResult;
     }
 
-    if (typeof require !== 'undefined') {
-      const fs = require('fs');
-      if (!fs.existsSync(filePath)) {
-        throw new Error(`${label} not found: ${filePath}`);
-      }
+    if (typeof window !== 'undefined') {
+      throw new Error('electronAPI.getSelectedFileInfo is unavailable in the hardened renderer');
     }
 
     return { success: true };
@@ -884,9 +895,7 @@ class FileOperationService {
     try {
       // Resolve relative paths against current working directory
       let resolvedPath = filename;
-      const pathModule =
-        (typeof window !== 'undefined' && window.path) ||
-        (typeof require !== 'undefined' ? require('path') : null);
+      const pathModule = this.getPathModule();
       if (pathModule && typeof pathModule.isAbsolute === 'function') {
         if (!pathModule.isAbsolute(filename)) {
           const cwd = this.getCurrentWorkingDirectory();
@@ -904,11 +913,7 @@ class FileOperationService {
           this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
         return { success: true, filePath: result.filePath || resolvedPath };
       } else {
-        const fs = require('fs').promises;
-        await fs.writeFile(resolvedPath, content, 'utf8');
-        if (this.chatManager.showNotification)
-          this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
-        return { success: true, filePath: resolvedPath };
+        throw new Error('electronAPI.writeFile is unavailable in the hardened renderer');
       }
     } catch (error) {
       if (this.chatManager.showNotification)
