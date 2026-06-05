@@ -5,10 +5,10 @@
  */
 class BlastConfigManager {
   constructor() {
-    this.path = (typeof window !== 'undefined' && window.require ? window.require('path') : null) || {
+    this.path = (typeof window !== 'undefined' && window.path) || {
       join: (...parts) => parts.filter(Boolean).join('/').replace(/\/+/g, '/'),
     };
-    this.os = (typeof window !== 'undefined' && window.require ? window.require('os') : null) || {
+    this.os = (typeof window !== 'undefined' && window.os) || {
       platform: () => 'unknown',
     };
 

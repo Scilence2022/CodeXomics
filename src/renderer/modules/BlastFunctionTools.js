@@ -984,8 +984,11 @@ class BlastFunctionTools {
         return currentFile.name.replace(/\.[^/.]+$/, ''); // Remove extension
       }
       if (currentFile.path) {
-        const path = require('path');
-        const fileName = path.basename(currentFile.path);
+        const fileName = String(currentFile.path || '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .filter(Boolean)
+          .pop();
         return fileName.replace(/\.[^/.]+$/, '');
       }
     }

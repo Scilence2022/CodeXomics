@@ -5,6 +5,7 @@ import path from 'path';
 const IPC_HANDLERS = path.join(process.cwd(), 'src/main/ipc-handlers.js');
 const BLAST_MANAGER = path.join(process.cwd(), 'src/renderer/modules/BlastManager.js');
 const BLAST_CONFIG_MANAGER = path.join(process.cwd(), 'src/renderer/modules/BlastConfigManager.js');
+const BLAST_FUNCTION_TOOLS = path.join(process.cwd(), 'src/renderer/modules/BlastFunctionTools.js');
 
 function readFile(relPath) {
   return fs.readFileSync(relPath, 'utf8');
@@ -39,5 +40,18 @@ describe('BLAST structured IPC hardening', () => {
     expect(source).toContain('executable: tool');
     expect(source).toContain("args: ['-version']");
     expect(source).not.toContain('command: `${tool} -version`');
+  });
+
+  it('does not use renderer Node filesystem or process modules in BLAST renderer code', () => {
+    const blastManager = readFile(BLAST_MANAGER);
+    const blastConfigManager = readFile(BLAST_CONFIG_MANAGER);
+    const blastFunctionTools = readFile(BLAST_FUNCTION_TOOLS);
+    const combinedSource = [blastManager, blastConfigManager, blastFunctionTools].join('\n');
+
+    expect(combinedSource).not.toMatch(/\brequire\(['"]fs['"]\)/);
+    expect(combinedSource).not.toMatch(/\brequire\(['"]path['"]\)/);
+    expect(combinedSource).not.toMatch(/\brequire\(['"]os['"]\)/);
+    expect(combinedSource).not.toMatch(/\brequire\(['"]child_process['"]\)/);
+    expect(combinedSource).not.toMatch(/window\.require\(['"](fs|path|os|child_process)['"]\)/);
   });
 });
