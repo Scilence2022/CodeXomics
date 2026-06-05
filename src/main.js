@@ -26,7 +26,7 @@ const wm = require('./main/window-management');
 const mcp = require('./main/mcp-lifecycle');
 const { registerIpcHandlers } = require('./main/ipc-handlers');
 const { registerProjectIpcHandlers } = require('./main/project-ipc');
-const { registerRendererContentSecurityPolicy } = require('./main/security-utils');
+const { registerRendererContentSecurityPolicy, rememberApprovedPath } = require('./main/security-utils');
 
 // =============================================================================
 // Application constants
@@ -142,6 +142,7 @@ function openGenBankFile(filePath) {
     dialog.showErrorBox('File Not Found', `The file "${filePath}" could not be found.`);
     return;
   }
+  rememberApprovedPath(filePath);
 
   // If main window exists and is ready, send file directly
   if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
@@ -340,6 +341,7 @@ app.whenReady().then(async () => {
 
   if (openProjectIndex !== -1 && args[openProjectIndex + 1]) {
     projectToOpen = args[openProjectIndex + 1];
+    rememberApprovedPath(projectToOpen);
     console.log('[Main] App launched with project file:', projectToOpen);
   }
 
@@ -412,6 +414,7 @@ const commandLineFiles = process.argv.slice(1).filter(arg => {
 if (commandLineFiles.length > 0) {
   console.log('[Main] Command-line GenBank files:', commandLineFiles);
   commandLineFiles.forEach(filePath => {
+    rememberApprovedPath(filePath);
     fileOpenQueue.push(filePath);
   });
 }

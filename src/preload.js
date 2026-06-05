@@ -10,6 +10,7 @@ const allowedInvokeChannels = [
   'broadcast-theme-to-pm',
   'request-current-theme',
   'show-save-dialog',
+  'show-open-file-dialog',
   'write-file',
   'read-file',
   'read-file-stream',
@@ -319,6 +320,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // File operations
   selectAndLoadFile: () => ipcRenderer.invoke('select-and-load-file'),
+  showOpenFileDialog: options => ipcRenderer.invoke('show-open-file-dialog', options),
   getSelectedFileInfo: filePath => ipcRenderer.invoke('get-file-info', filePath),
 
   // Directory selection for benchmark

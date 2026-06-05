@@ -106,6 +106,44 @@ function isSubPathSafe(parentPath, targetPath) {
   return relative === '' || (!!relative && !relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
+function sanitizeOpenFileDialogOptions(options = {}) {
+  const allowedProperties = new Set(['openFile', 'multiSelections', 'showHiddenFiles']);
+  const properties = Array.isArray(options.properties)
+    ? options.properties.filter(property => allowedProperties.has(property))
+    : ['openFile'];
+
+  if (!properties.includes('openFile')) {
+    properties.unshift('openFile');
+  }
+
+  const filters = Array.isArray(options.filters)
+    ? options.filters
+        .map(filter => {
+          const name =
+            typeof filter.name === 'string' && filter.name.trim() ? filter.name.trim().slice(0, 80) : 'Files';
+          const extensions = Array.isArray(filter.extensions)
+            ? filter.extensions
+                .map(extension =>
+                  String(extension || '')
+                    .trim()
+                    .replace(/^\./, '')
+                )
+                .filter(extension => extension === '*' || /^[A-Za-z0-9]+$/.test(extension))
+                .slice(0, 50)
+            : [];
+          return extensions.length > 0 ? { name, extensions } : null;
+        })
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
+
+  return {
+    title: typeof options.title === 'string' && options.title.trim() ? options.title.trim().slice(0, 120) : 'Open File',
+    properties,
+    filters: filters.length > 0 ? filters : [{ name: 'All Files', extensions: ['*'] }],
+  };
+}
+
 function resolveBlastExecutable(appInstance, commandToken, configuredBlastPath) {
   const commandName = getBlastExecutableName(commandToken);
   if (!BLAST_EXECUTABLES.has(commandName)) {
@@ -1320,6 +1358,27 @@ function registerIpcHandlers(deps) {
     } catch (error) {
       console.error('Error showing save dialog:', error);
       return { canceled: true, error: error.message };
+    }
+  });
+
+  ipcMain.handle('show-open-file-dialog', async (event, options = {}) => {
+    try {
+      const ownerWindow = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+      const result = await dialog.showOpenDialog(ownerWindow, sanitizeOpenFileDialogOptions(options));
+
+      if (result.canceled) {
+        return { success: false, canceled: true, filePaths: [] };
+      }
+
+      rememberApprovedDialogPaths(result);
+      return {
+        success: true,
+        canceled: false,
+        filePaths: result.filePaths,
+      };
+    } catch (error) {
+      console.error('Error showing open file dialog:', error);
+      return { success: false, canceled: false, filePaths: [], error: error.message };
     }
   });
 
@@ -2634,9 +2693,16 @@ function registerIpcHandlers(deps) {
             extensions: [
               'fasta',
               'fa',
+              'fas',
+              'fna',
+              'gb',
+              'gbk',
+              'gbff',
+              'genbank',
               'gff',
               'gff3',
               'gtf',
+              'bed',
               'vcf',
               'bam',
               'sam',
