@@ -1155,11 +1155,6 @@ class PluginMarketplace {
             ...(plugin.type === 'visualization'
               ? {
                   supportedDataTypes: plugin.supportedDataTypes || ['generic'],
-                  executor:
-                    plugin.executor ||
-                    function (data) {
-                      return data;
-                    },
                 }
               : {}),
             // Add required fields for function plugins
@@ -1287,6 +1282,7 @@ class PluginMarketplace {
     // Get complete manifest from plugin manager if available
     const installedPlugin = this.pluginManager.getPlugin(plugin.id);
     const manifest = installedPlugin || plugin;
+    const persistentManifest = this.createPersistentManifest(manifest);
 
     this.installedPlugins.set(plugin.id, {
       id: plugin.id,
@@ -1296,40 +1292,78 @@ class PluginMarketplace {
       dependencies: plugin.dependencies || [],
       autoUpdate: true,
       // Store complete manifest data for restoration
-      manifest: {
-        id: manifest.id,
-        name: manifest.name,
-        description: manifest.description,
-        version: manifest.version,
-        author: manifest.author,
-        category: manifest.category,
-        type: manifest.type,
-        dependencies: manifest.dependencies || [],
-        tags: manifest.tags || [],
-        homepage: manifest.homepage,
-        repository: manifest.repository,
-        license: manifest.license,
-        // Include contributes for commands, visualizations, etc.
-        ...(manifest.contributes ? { contributes: manifest.contributes } : {}),
-        // Type-specific fields
-        ...(manifest.type === 'visualization'
-          ? {
-              supportedDataTypes: manifest.supportedDataTypes || ['generic'],
-              executor: manifest.executor,
-            }
-          : {}),
-        ...(manifest.type === 'function'
-          ? {
-              functions: manifest.functions || {},
-            }
-          : {}),
-      },
+      manifest: persistentManifest,
     });
 
     // Save to config immediately (await to ensure persistence)
     await this.saveInstalledPluginsRegistry();
 
     console.log(`💾 Saved ${plugin.id} to installed plugins registry`);
+  }
+
+  /**
+   * Build a JSON-cloneable manifest for persistence.
+   * Runtime visualization functions are reconstructed by preparePluginDefinitionForRegistration().
+   * @param {Object} manifest
+   * @returns {Object}
+   */
+  createPersistentManifest(manifest = {}) {
+    const persistentManifest = {
+      id: manifest.id,
+      name: manifest.name,
+      description: manifest.description,
+      version: manifest.version,
+      author: manifest.author,
+      category: manifest.category,
+      type: manifest.type,
+      dependencies: manifest.dependencies || [],
+      tags: manifest.tags || [],
+      homepage: manifest.homepage,
+      repository: manifest.repository,
+      license: manifest.license,
+    };
+
+    if (manifest.main) {
+      persistentManifest.main = manifest.main;
+    }
+    if (manifest.keywords) {
+      persistentManifest.keywords = manifest.keywords;
+    }
+    if (manifest.compatibility) {
+      persistentManifest.compatibility = manifest.compatibility;
+    }
+    if (manifest.contributes) {
+      persistentManifest.contributes = manifest.contributes;
+    }
+    if (manifest.codeExecutionBlocked) {
+      persistentManifest.codeExecutionBlocked = true;
+    }
+
+    if (manifest.type === 'visualization') {
+      persistentManifest.supportedDataTypes = manifest.supportedDataTypes || ['generic'];
+    }
+
+    if (manifest.type === 'function') {
+      persistentManifest.functions = manifest.functions || {};
+    }
+
+    return this.toJsonCloneable(persistentManifest);
+  }
+
+  /**
+   * Remove non-persistable values before data is sent through IPC or localStorage.
+   * @param {Object} data
+   * @returns {Object}
+   */
+  toJsonCloneable(data) {
+    return JSON.parse(
+      JSON.stringify(data, (key, value) => {
+        if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'undefined') {
+          return undefined;
+        }
+        return value;
+      })
+    );
   }
 
   /**

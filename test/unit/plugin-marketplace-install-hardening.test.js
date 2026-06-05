@@ -78,6 +78,61 @@ describe('plugin marketplace install hardening', () => {
     expect(typeof definition.executor).toBe('function');
   });
 
+  it('persists installed visualization plugin manifests without runtime renderer functions', async () => {
+    const savedValues = [];
+    const marketplace = Object.create(PluginMarketplace.prototype);
+    marketplace.installedPlugins = new Map();
+    marketplace.pluginManager = {
+      getPlugin: vi.fn(() => ({
+        id: 'protein-interaction-network',
+        name: 'Protein Interaction Network Visualizer',
+        description: 'Interactive protein-protein interaction network analysis and visualization',
+        version: '1.8.3',
+        author: 'CodeXomics Team',
+        category: 'network-analysis',
+        type: 'visualization',
+        supportedDataTypes: ['protein-interaction', 'ppi-network'],
+        contributes: {
+          visualizations: {
+            'protein-network': {
+              supportedDataTypes: ['protein-interaction'],
+            },
+          },
+        },
+        executor: () => document.createElement('div'),
+        renderNetwork: () => document.createElement('div'),
+        visualize: () => document.createElement('div'),
+      })),
+    };
+    marketplace.configManager = {
+      setAndSaveImmediate: vi.fn(async (configPath, value) => {
+        savedValues.push({ configPath, value });
+        return true;
+      }),
+    };
+
+    await marketplace.registerInstalledPlugin(
+      {
+        id: 'protein-interaction-network',
+        version: '1.8.3',
+        source: { id: 'official' },
+        dependencies: [],
+      },
+      {
+        installedAt: new Date('2026-06-05T00:00:00.000Z'),
+      }
+    );
+
+    expect(savedValues).toHaveLength(1);
+    expect(savedValues[0].configPath).toBe('marketplace.installed');
+    const persistedPlugin = savedValues[0].value['protein-interaction-network'];
+    expect(persistedPlugin.manifest.supportedDataTypes).toEqual(['protein-interaction', 'ppi-network']);
+    expect(persistedPlugin.manifest).not.toHaveProperty('executor');
+    expect(persistedPlugin.manifest).not.toHaveProperty('renderNetwork');
+    expect(persistedPlugin.manifest).not.toHaveProperty('visualize');
+    expect(JSON.stringify(savedValues[0].value)).toContain('protein-interaction-network');
+  });
+
   it('validates visualization plugins against callable visualization methods', () => {
     const validDefinition = {
       name: 'Network Renderer',

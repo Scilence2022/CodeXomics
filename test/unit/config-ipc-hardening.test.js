@@ -31,4 +31,12 @@ describe('ConfigManager IPC hardening', () => {
     expect(ipcHandlers).toContain("ipcMain.handle('config:load'");
     expect(ipcHandlers).toContain("ipcMain.handle('config:save'");
   });
+
+  it('cleans the complete config object before main-process IPC save', () => {
+    const source = fs.readFileSync(CONFIG_MANAGER, 'utf8');
+
+    expect(source).toContain('const configForPersistence = {');
+    expect(source).toContain('const cleanConfig = this.validateAndCleanData(configForPersistence)');
+    expect(source).toContain('window.electronAPI.saveConfigData(cleanConfig)');
+  });
 });

@@ -893,11 +893,12 @@ class ConfigManager {
         throw new Error('Main-process config save API is unavailable');
       }
 
-      const cleanConfig = {
+      const configForPersistence = {
         ...this.config,
         chat: this.validateAndCleanData(this.config.chat),
         evolution: this.validateAndCleanData(this.config.evolution || this.getDefaultEvolutionConfig()),
       };
+      const cleanConfig = this.validateAndCleanData(configForPersistence);
       const result = await window.electronAPI.saveConfigData(cleanConfig);
       if (!result?.success) {
         throw new Error(result?.error || 'Failed to save configuration through main process');
