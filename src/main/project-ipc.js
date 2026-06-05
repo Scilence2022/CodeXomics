@@ -149,7 +149,10 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
-        rememberApprovedDialogPaths(result);
+        rememberApprovedDialogPaths(result, {
+          source: 'user-project-directory-dialog',
+          operation: 'selectProjectDirectory',
+        });
         return { success: true, filePath: result.filePaths[0] };
       }
 
@@ -175,7 +178,10 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
-        rememberApprovedDialogPaths(result);
+        rememberApprovedDialogPaths(result, {
+          source: 'user-project-file-dialog',
+          operation: 'selectProjectFile',
+        });
         return { success: true, filePath: result.filePaths[0] };
       }
 
@@ -219,7 +225,10 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
-        rememberApprovedDialogPaths(result);
+        rememberApprovedDialogPaths(result, {
+          source: 'user-project-files-dialog',
+          operation: 'selectMultipleFiles',
+        });
         return { success: true, filePaths: result.filePaths };
       }
 
@@ -244,7 +253,10 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
-        rememberApprovedDialogPaths(result);
+        rememberApprovedDialogPaths(result, {
+          source: 'user-blast-fasta-dialog',
+          operation: 'selectFastaFile',
+        });
         return { success: true, filePath: result.filePaths[0] };
       }
 
@@ -2047,7 +2059,10 @@ function registerProjectIpcHandlers(deps) {
         properties: ['openDirectory'],
         title: 'Select Output Directory',
       });
-      rememberApprovedDialogPaths(result);
+      rememberApprovedDialogPaths(result, {
+        source: 'user-directory-dialog',
+        operation: 'selectDirectory',
+      });
 
       return {
         success: true,

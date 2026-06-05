@@ -74,12 +74,104 @@ describe('security-utils', () => {
   it('treats dialog-approved directories as scoped roots', () => {
     const approvedDir = path.join(rootDir, 'approved-project');
     const approvedChild = path.join(approvedDir, 'genomes', 'sample.fasta');
+    fs.mkdirSync(path.dirname(approvedChild), { recursive: true });
+    fs.writeFileSync(approvedChild, '>sample\nATGC\n');
     securityUtils.rememberApprovedDialogPaths({
       canceled: false,
       filePaths: [approvedDir],
     });
 
     expect(securityUtils.assertAllowedFileAccess(app, approvedChild)).toBe(path.resolve(approvedChild));
+  });
+
+  it('treats dialog-approved files as exact file grants, not parent directory grants', () => {
+    const selectedFile = path.join(rootDir, 'outside', 'selected.gbk');
+    const siblingFile = path.join(rootDir, 'outside', 'sibling.gbk');
+    fs.mkdirSync(path.dirname(selectedFile), { recursive: true });
+    fs.writeFileSync(selectedFile, 'LOCUS       demo\n');
+    fs.writeFileSync(siblingFile, 'LOCUS       sibling\n');
+
+    securityUtils.rememberApprovedDialogPaths({
+      canceled: false,
+      filePaths: [selectedFile],
+    });
+
+    expect(
+      securityUtils.assertAllowedFileAccess(app, selectedFile, {
+        operation: 'read file',
+        mustExist: true,
+      })
+    ).toBe(path.resolve(selectedFile));
+    expect(
+      securityUtils.assertAllowedFileAccess(app, selectedFile, {
+        operation: 'write file',
+      })
+    ).toBe(path.resolve(selectedFile));
+    expect(() =>
+      securityUtils.assertAllowedFileAccess(app, siblingFile, {
+        operation: 'read file',
+        mustExist: true,
+      })
+    ).toThrow(/Blocked read file/);
+  });
+
+  it('grants write access to exact save-dialog paths outside default roots', () => {
+    const savePath = path.join(rootDir, 'desktop-like', 'exported.gbk');
+    const siblingPath = path.join(rootDir, 'desktop-like', 'other.gbk');
+
+    securityUtils.rememberApprovedDialogPaths({
+      canceled: false,
+      filePath: savePath,
+    });
+
+    expect(
+      securityUtils.assertAllowedFileAccess(app, savePath, {
+        operation: 'write file',
+      })
+    ).toBe(path.resolve(savePath));
+    expect(() =>
+      securityUtils.assertAllowedFileAccess(app, siblingPath, {
+        operation: 'write file',
+      })
+    ).toThrow(/Blocked write file/);
+  });
+
+  it('enforces granted capabilities when checking approved paths', () => {
+    const executablePath = path.join(rootDir, 'tools', 'blastn');
+    fs.mkdirSync(path.dirname(executablePath), { recursive: true });
+    fs.writeFileSync(executablePath, '#!/bin/sh\n');
+
+    securityUtils.permissionBroker.grantPath(executablePath, {
+      source: 'test',
+      capabilities: [securityUtils.FILE_CAPABILITIES.READ],
+      recursive: false,
+    });
+
+    expect(
+      securityUtils.assertAllowedFileAccess(app, executablePath, {
+        operation: 'read file',
+      })
+    ).toBe(path.resolve(executablePath));
+    expect(() =>
+      securityUtils.assertAllowedFileAccess(app, executablePath, {
+        operation: 'execute configured BLAST binary',
+      })
+    ).toThrow(/Blocked execute configured BLAST binary/);
+  });
+
+  it('clears PermissionBroker grants when the legacy approved path set is cleared', () => {
+    const approvedDir = path.join(rootDir, 'approved-to-clear');
+    const child = path.join(approvedDir, 'child.txt');
+    fs.mkdirSync(approvedDir, { recursive: true });
+    fs.writeFileSync(child, 'demo');
+
+    securityUtils.rememberApprovedPath(approvedDir);
+    expect(securityUtils.assertAllowedFileAccess(app, child, { operation: 'read file' })).toBe(path.resolve(child));
+
+    securityUtils.approvedFilePaths.clear();
+    expect(() => securityUtils.assertAllowedFileAccess(app, child, { operation: 'read file' })).toThrow(
+      /Blocked read file/
+    );
   });
 
   it('rejects unsafe plugin ids and plugin paths outside user plugin roots', () => {

@@ -15,6 +15,9 @@ const fs = require('fs');
 const crypto = require('crypto');
 const {
   createSecureWebPreferences,
+  permissionBroker,
+  ALL_FILE_CAPABILITIES,
+  FILE_CAPABILITIES,
   rememberApprovedPath,
   rememberApprovedDialogPaths,
   getDefaultWritableRoots,
@@ -606,7 +609,10 @@ function registerIpcHandlers(deps) {
         { name: 'All Files', extensions: ['*'] },
       ],
     });
-    return rememberApprovedDialogPaths(result);
+    return rememberApprovedDialogPaths(result, {
+      source: 'user-plugin-file-dialog',
+      operation: 'select-plugin-file',
+    });
   });
 
   /**
@@ -1354,7 +1360,11 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('show-save-dialog', async (event, options) => {
     try {
       const result = await dialog.showSaveDialog(mainWindow, options);
-      return rememberApprovedDialogPaths(result);
+      return rememberApprovedDialogPaths(result, {
+        source: 'user-save-dialog',
+        capabilities: [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE],
+        operation: 'show-save-dialog',
+      });
     } catch (error) {
       console.error('Error showing save dialog:', error);
       return { canceled: true, error: error.message };
@@ -1370,7 +1380,11 @@ function registerIpcHandlers(deps) {
         return { success: false, canceled: true, filePaths: [] };
       }
 
-      rememberApprovedDialogPaths(result);
+      rememberApprovedDialogPaths(result, {
+        source: 'user-open-dialog',
+        capabilities: [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE],
+        operation: 'show-open-file-dialog',
+      });
       return {
         success: true,
         canceled: false,
@@ -1429,6 +1443,26 @@ function registerIpcHandlers(deps) {
       }
 
       let created = false;
+      const existingGrant =
+        permissionBroker.findGrant(resolvedPath, { capability: FILE_CAPABILITIES.WRITE }) ||
+        permissionBroker.findGrant(resolvedPath, { capability: FILE_CAPABILITIES.READ });
+      let insideDefaultRoot = false;
+      try {
+        assertAllowedFileAccess(app, resolvedPath, {
+          operation: 'approve working directory',
+          allowApproved: false,
+        });
+        insideDefaultRoot = true;
+      } catch (error) {
+        insideDefaultRoot = false;
+      }
+
+      if (!insideDefaultRoot && !existingGrant) {
+        throw new Error(
+          `Working directory outside approved application directories requires prior user selection: ${resolvedPath}`
+        );
+      }
+
       if (!fs.existsSync(resolvedPath)) {
         if (!options.createIfMissing) {
           throw new Error(`Directory does not exist: ${resolvedPath}`);
@@ -1453,7 +1487,13 @@ function registerIpcHandlers(deps) {
         throw new Error(`Working directory is not readable and writable: ${resolvedPath}`);
       }
 
-      rememberApprovedPath(resolvedPath);
+      permissionBroker.grantPath(resolvedPath, {
+        source: existingGrant?.source || (insideDefaultRoot ? 'app-default-root' : 'prior-user-approval'),
+        reason: 'Working directory approved after path validation',
+        capabilities: ALL_FILE_CAPABILITIES,
+        recursive: true,
+        operation: 'approve-working-directory',
+      });
       return {
         success: true,
         path: resolvedPath,
@@ -1716,7 +1756,10 @@ function registerIpcHandlers(deps) {
       if (result.canceled) {
         return { success: false, canceled: true };
       }
-      rememberApprovedDialogPaths(result);
+      rememberApprovedDialogPaths(result, {
+        source: 'user-attachment-dialog',
+        operation: 'select-attachment-files',
+      });
 
       return {
         success: true,
@@ -2190,7 +2233,10 @@ function registerIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
-        rememberApprovedDialogPaths(result);
+        rememberApprovedDialogPaths(result, {
+          source: 'user-load-file-dialog',
+          operation: 'select-and-load-file',
+        });
         return {
           success: true,
           canceled: false,

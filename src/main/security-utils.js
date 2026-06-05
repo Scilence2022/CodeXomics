@@ -3,7 +3,31 @@
 const path = require('path');
 const fs = require('fs');
 
-const approvedFilePaths = new Set();
+class ApprovedPathSet extends Set {
+  constructor() {
+    super();
+    this.onClear = null;
+  }
+
+  clear() {
+    super.clear();
+    if (typeof this.onClear === 'function') {
+      this.onClear();
+    }
+  }
+}
+
+const approvedFilePaths = new ApprovedPathSet();
+
+const FILE_CAPABILITIES = Object.freeze({
+  READ: 'read',
+  WRITE: 'write',
+  LIST: 'list',
+  DELETE: 'delete',
+  EXECUTE: 'execute',
+});
+
+const ALL_FILE_CAPABILITIES = Object.freeze(Object.values(FILE_CAPABILITIES));
 
 const RENDERER_CONTENT_SECURITY_POLICY = [
   "default-src 'self' data: blob: file:",
@@ -59,19 +83,178 @@ function createSecureWebPreferences(overrides = {}) {
 }
 
 function rememberApprovedPath(filePath) {
-  if (typeof filePath === 'string' && filePath.trim()) {
-    approvedFilePaths.add(path.resolve(filePath));
+  return permissionBroker.grantPath(filePath, {
+    source: 'legacy',
+    reason: 'Legacy approved path',
+    capabilities: ALL_FILE_CAPABILITIES,
+  });
+}
+
+function rememberApprovedDialogPaths(result, options = {}) {
+  if (!result || result.canceled) return result;
+  permissionBroker.grantDialogPaths(result, options);
+  return result;
+}
+
+function normalizeCapabilities(capabilities, fallback = [FILE_CAPABILITIES.READ]) {
+  const rawCapabilities = Array.isArray(capabilities) ? capabilities : [capabilities];
+  const normalized = rawCapabilities
+    .filter(Boolean)
+    .map(capability => String(capability).trim().toLowerCase())
+    .filter(capability => capability === '*' || ALL_FILE_CAPABILITIES.includes(capability));
+
+  return normalized.length > 0 ? [...new Set(normalized)] : [...fallback];
+}
+
+function inferCapabilityFromOperation(operation = 'access') {
+  const lower = String(operation || '').toLowerCase();
+  if (/\b(delete|remove|unlink|trash)\b/.test(lower)) return FILE_CAPABILITIES.DELETE;
+  if (/\b(execute|run|command|binary)\b/.test(lower)) return FILE_CAPABILITIES.EXECUTE;
+  if (/\b(write|save|export|download|create|copy|move|install|extract)\b/.test(lower)) {
+    return FILE_CAPABILITIES.WRITE;
+  }
+  if (/\b(list|scan|directory)\b/.test(lower)) return FILE_CAPABILITIES.LIST;
+  return FILE_CAPABILITIES.READ;
+}
+
+class PermissionBroker {
+  constructor() {
+    this.grants = new Map();
+    this.nextGrantId = 1;
+  }
+
+  clear(options = {}) {
+    this.grants.clear();
+    this.nextGrantId = 1;
+    if (!options.skipLegacySet) {
+      approvedFilePaths.clear();
+    }
+  }
+
+  grantPath(targetPath, options = {}) {
+    if (typeof targetPath !== 'string' || !targetPath.trim()) {
+      return null;
+    }
+
+    const resolvedPath = path.resolve(targetPath);
+    const stats = this.getStatsIfAvailable(resolvedPath);
+    const isDirectory = !!stats?.isDirectory?.();
+    const recursive = options.recursive !== undefined ? !!options.recursive : isDirectory;
+    const defaultCapabilities = isDirectory
+      ? ALL_FILE_CAPABILITIES
+      : [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE];
+
+    const grant = {
+      id: `grant-${Date.now()}-${this.nextGrantId++}`,
+      path: resolvedPath,
+      source: options.source || 'unknown',
+      reason: options.reason || '',
+      capabilities: normalizeCapabilities(options.capabilities, defaultCapabilities),
+      recursive,
+      createdAt: Date.now(),
+      expiresAt: Number.isFinite(options.expiresAt) ? Number(options.expiresAt) : null,
+      windowId: options.windowId || null,
+      operation: options.operation || null,
+    };
+
+    this.grants.set(grant.id, grant);
+    approvedFilePaths.add(resolvedPath);
+    return grant;
+  }
+
+  grantDialogPaths(result, options = {}) {
+    if (!result || result.canceled) {
+      return [];
+    }
+
+    const grants = [];
+
+    if (result.filePath) {
+      grants.push(
+        this.grantPath(result.filePath, {
+          source: options.source || 'user-save-dialog',
+          reason: options.reason || 'User selected save path',
+          capabilities: options.capabilities || [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE],
+          recursive: options.recursive === true,
+          windowId: options.windowId,
+          operation: options.operation || 'save dialog',
+        })
+      );
+    }
+
+    if (Array.isArray(result.filePaths)) {
+      for (const selectedPath of result.filePaths) {
+        const stats = this.getStatsIfAvailable(selectedPath);
+        const isDirectory = !!stats?.isDirectory?.();
+        grants.push(
+          this.grantPath(selectedPath, {
+            source: options.source || 'user-open-dialog',
+            reason: options.reason || 'User selected open path',
+            capabilities:
+              options.capabilities ||
+              (isDirectory ? ALL_FILE_CAPABILITIES : [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE]),
+            recursive: options.recursive !== undefined ? options.recursive : isDirectory,
+            windowId: options.windowId,
+            operation: options.operation || 'open dialog',
+          })
+        );
+      }
+    }
+
+    return grants.filter(Boolean);
+  }
+
+  findGrant(targetPath, options = {}) {
+    if (typeof targetPath !== 'string' || !targetPath.trim()) {
+      return null;
+    }
+
+    const resolvedPath = path.resolve(targetPath);
+    const capability = options.capability || FILE_CAPABILITIES.READ;
+    const now = Date.now();
+
+    for (const [grantId, grant] of this.grants.entries()) {
+      if (grant.expiresAt && grant.expiresAt <= now) {
+        this.grants.delete(grantId);
+        continue;
+      }
+
+      const hasCapability = grant.capabilities.includes('*') || grant.capabilities.includes(capability);
+      if (!hasCapability) {
+        continue;
+      }
+
+      const pathMatches = grant.recursive ? isSubPath(grant.path, resolvedPath) : path.resolve(grant.path) === resolvedPath;
+      if (pathMatches) {
+        return grant;
+      }
+    }
+
+    return null;
+  }
+
+  hasGrant(targetPath, options = {}) {
+    return !!this.findGrant(targetPath, options);
+  }
+
+  listGrants() {
+    return [...this.grants.values()].map(grant => ({ ...grant, capabilities: [...grant.capabilities] }));
+  }
+
+  getStatsIfAvailable(targetPath) {
+    try {
+      if (targetPath && fs.existsSync(targetPath)) {
+        return fs.statSync(targetPath);
+      }
+    } catch (error) {
+      // Ignore paths that cannot be inspected; the later access check will handle them.
+    }
+    return null;
   }
 }
 
-function rememberApprovedDialogPaths(result) {
-  if (!result || result.canceled) return result;
-  rememberApprovedPath(result.filePath);
-  if (Array.isArray(result.filePaths)) {
-    result.filePaths.forEach(rememberApprovedPath);
-  }
-  return result;
-}
+const permissionBroker = new PermissionBroker();
+approvedFilePaths.onClear = () => permissionBroker.clear({ skipLegacySet: true });
 
 function isSubPath(parentPath, targetPath) {
   const parent = path.resolve(parentPath);
@@ -114,6 +297,7 @@ function assertAllowedFileAccess(app, targetPath, options = {}) {
     allowedRoots = getDefaultWritableRoots(app),
     allowApproved = true,
     mustExist = false,
+    capability = inferCapabilityFromOperation(operation),
   } = options;
 
   if (!targetPath || typeof targetPath !== 'string') {
@@ -127,10 +311,11 @@ function assertAllowedFileAccess(app, targetPath, options = {}) {
   }
 
   if (allowApproved) {
-    const approved = [...approvedFilePaths].some(approvedPath => isSubPath(approvedPath, resolvedPath));
-    if (approved) {
+    const grant = permissionBroker.findGrant(resolvedPath, { capability });
+    if (grant) {
       return resolvedPath;
     }
+
   }
 
   const allowed = allowedRoots.some(root => isSubPath(root, resolvedPath));
@@ -210,11 +395,15 @@ function safeExtractAdmZip(app, zip, installPath) {
 
 module.exports = {
   approvedFilePaths,
+  permissionBroker,
+  FILE_CAPABILITIES,
+  ALL_FILE_CAPABILITIES,
   RENDERER_CONTENT_SECURITY_POLICY,
   registerRendererContentSecurityPolicy,
   createSecureWebPreferences,
   rememberApprovedPath,
   rememberApprovedDialogPaths,
+  inferCapabilityFromOperation,
   isSubPath,
   assertInsideRoot,
   getDefaultWritableRoots,
