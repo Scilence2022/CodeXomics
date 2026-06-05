@@ -272,18 +272,7 @@ class PluginMarketplace {
           };
         }
 
-        // For visualization plugins, ensure they have a working render method
-        if (manifest.type === 'visualization' || pluginInfo.type === 'visualization') {
-          manifest.type = 'visualization';
-          manifest.supportedDataTypes = manifest.supportedDataTypes || pluginInfo.supportedDataTypes || ['generic'];
-
-          // Create a working renderer function since functions can't be serialized to JSON
-          manifest.executor = this.createDefaultVisualizationRenderer(pluginId, manifest.name || pluginId);
-          manifest.renderNetwork = manifest.executor;
-          manifest.visualize = manifest.executor;
-
-          console.log(`🎨 Added visualization renderer for plugin: ${pluginId}`);
-        }
+        manifest = this.preparePluginDefinitionForRegistration(pluginId, manifest, pluginInfo);
 
         console.log(`📦 Restoring plugin manifest:`, {
           id: manifest.id,
@@ -521,6 +510,80 @@ class PluginMarketplace {
 
       return container;
     };
+  }
+
+  /**
+   * Normalize marketplace plugin manifests before registering with PluginManagerV2.
+   * Visualization plugin code is not executed in the renderer after security hardening,
+   * so manifests need a trusted fallback renderer function for metadata-only installs.
+   * @param {string} pluginId
+   * @param {Object} manifest
+   * @param {Object} pluginInfo
+   * @returns {Object}
+   */
+  preparePluginDefinitionForRegistration(pluginId, manifest = {}, pluginInfo = {}) {
+    const definition = {
+      ...manifest,
+    };
+
+    if (definition.type !== 'visualization' && pluginInfo.type !== 'visualization') {
+      return definition;
+    }
+
+    definition.type = 'visualization';
+    definition.supportedDataTypes = this.resolveVisualizationDataTypes(definition, pluginInfo);
+
+    let renderer =
+      typeof definition.executor === 'function'
+        ? definition.executor
+        : typeof definition.renderNetwork === 'function'
+          ? definition.renderNetwork
+          : typeof definition.visualize === 'function'
+            ? definition.visualize
+            : null;
+
+    if (!renderer) {
+      renderer = this.createDefaultVisualizationRenderer(pluginId, definition.name || pluginInfo.name || pluginId);
+      console.log(`🎨 Added trusted fallback visualization renderer for plugin: ${pluginId}`);
+    }
+
+    if (typeof definition.executor !== 'function') {
+      definition.executor = renderer;
+    }
+    if (typeof definition.renderNetwork !== 'function') {
+      definition.renderNetwork = renderer;
+    }
+    if (typeof definition.visualize !== 'function') {
+      definition.visualize = renderer;
+    }
+
+    return definition;
+  }
+
+  /**
+   * Resolve supported data types from top-level metadata or contribution metadata.
+   * @param {Object} manifest
+   * @param {Object} pluginInfo
+   * @returns {string[]}
+   */
+  resolveVisualizationDataTypes(manifest = {}, pluginInfo = {}) {
+    if (Array.isArray(manifest.supportedDataTypes) && manifest.supportedDataTypes.length > 0) {
+      return manifest.supportedDataTypes;
+    }
+
+    if (Array.isArray(pluginInfo.supportedDataTypes) && pluginInfo.supportedDataTypes.length > 0) {
+      return pluginInfo.supportedDataTypes;
+    }
+
+    const contributionTypes = [];
+    const visualizations = manifest.contributes?.visualizations || pluginInfo.contributes?.visualizations || {};
+    for (const visualization of Object.values(visualizations)) {
+      if (Array.isArray(visualization.supportedDataTypes)) {
+        contributionTypes.push(...visualization.supportedDataTypes);
+      }
+    }
+
+    return contributionTypes.length > 0 ? [...new Set(contributionTypes)] : ['generic'];
   }
 
   /**
@@ -1155,12 +1218,15 @@ class PluginMarketplace {
               console.log(`📦 Using JSON package data`);
             }
 
-            await window.electronAPI.writePluginFiles({
+            const writeResult = await window.electronAPI.writePluginFiles({
               pluginId: downloadResult.pluginId,
               installPath: installPath,
               data: serializableData,
               manifest: downloadResult.manifest,
             });
+            if (!writeResult?.success) {
+              throw new Error(writeResult?.error || 'Plugin file write failed');
+            }
             console.log(`✅ Plugin files written to disk at ${installPath}`);
           } else {
             console.warn('⚠️  electronAPI.writePluginFiles not available, plugin files not written to disk');
@@ -1179,13 +1245,19 @@ class PluginMarketplace {
         console.warn(
           `⚠️ Plugin code execution is disabled for ${downloadResult.pluginId}; registering manifest metadata only`
         );
-        pluginDefinition = {
-          ...downloadResult.manifest,
+        pluginDefinition = this.preparePluginDefinitionForRegistration(downloadResult.pluginId, downloadResult.manifest, {
           codeExecutionBlocked: true,
-        };
+          ...(downloadResult.plugin || {}),
+          ...(downloadResult.manifest || {}),
+        });
+        pluginDefinition.codeExecutionBlocked = true;
       } else {
         // No code available, use manifest only
-        pluginDefinition = downloadResult.manifest;
+        pluginDefinition = this.preparePluginDefinitionForRegistration(
+          downloadResult.pluginId,
+          downloadResult.manifest,
+          downloadResult.plugin || {}
+        );
       }
 
       // 4. Register plugin with plugin manager (in-memory registration)

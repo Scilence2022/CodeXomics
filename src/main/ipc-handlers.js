@@ -123,6 +123,25 @@ function isSubPathSafe(parentPath, targetPath) {
   return relative === '' || (!!relative && !relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
+function resolvePluginPaths() {
+  const isDevelopment = !app.isPackaged;
+
+  if (isDevelopment) {
+    const builtinPluginsPath = path.join(__dirname, '..', 'renderer', 'modules', 'Plugins');
+    return {
+      isDevelopment,
+      builtinPluginsPath,
+      userPluginsPath: path.join(builtinPluginsPath, 'UserInstalled'),
+    };
+  }
+
+  return {
+    isDevelopment,
+    builtinPluginsPath: path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins'),
+    userPluginsPath: path.join(app.getPath('userData'), 'plugins'),
+  };
+}
+
 function sanitizeOpenFileDialogOptions(options = {}) {
   const allowedProperties = new Set(['openFile', 'multiSelections', 'showHiddenFiles']);
   const properties = Array.isArray(options.properties)
@@ -607,26 +626,7 @@ function registerIpcHandlers(deps) {
    * Returns different paths based on whether app is packaged
    */
   ipcMain.handle('get-plugin-paths', async () => {
-    const isDevelopment = !app.isPackaged;
-
-    let builtinPluginsPath;
-    let userPluginsPath;
-
-    if (isDevelopment) {
-      // Development: use source directory
-      builtinPluginsPath = path.join(__dirname, 'renderer', 'modules', 'Plugins');
-      userPluginsPath = path.join(__dirname, 'renderer', 'modules', 'Plugins', 'UserInstalled');
-    } else {
-      // Production: builtin plugins are in ASAR, user plugins in userData
-      builtinPluginsPath = path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins');
-      userPluginsPath = path.join(app.getPath('userData'), 'plugins');
-    }
-
-    return {
-      isDevelopment,
-      builtinPluginsPath,
-      userPluginsPath,
-    };
+    return resolvePluginPaths();
   });
 
   /**
@@ -861,22 +861,7 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('scan-plugin-directory', async () => {
     try {
-      const paths = await (async () => {
-        const isDevelopment = !app.isPackaged;
-        if (isDevelopment) {
-          return {
-            isDevelopment,
-            builtinPluginsPath: path.join(__dirname, 'renderer', 'modules', 'Plugins'),
-            userPluginsPath: path.join(__dirname, 'renderer', 'modules', 'Plugins', 'UserInstalled'),
-          };
-        } else {
-          return {
-            isDevelopment,
-            builtinPluginsPath: path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins'),
-            userPluginsPath: path.join(app.getPath('userData'), 'plugins'),
-          };
-        }
-      })();
+      const paths = resolvePluginPaths();
 
       const plugins = [];
 
@@ -1185,13 +1170,13 @@ function registerIpcHandlers(deps) {
    * Handles both JSON (mock packages) and ZIP (real packages) data
    */
   ipcMain.handle('write-plugin-files', async (event, options) => {
-    const { pluginId, installPath, data, manifest } = options;
-    const safePluginId = sanitizePluginId(pluginId);
-    const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
-
-    console.log(`[Main] Writing plugin files for ${safePluginId} to ${safeInstallPath}`);
-
     try {
+      const { pluginId, installPath, data, manifest } = options || {};
+      const safePluginId = sanitizePluginId(pluginId);
+      const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
+
+      console.log(`[Main] Writing plugin files for ${safePluginId} to ${safeInstallPath}`);
+
       // Create plugin directory if it doesn't exist
       if (!fs.existsSync(safeInstallPath)) {
         fs.mkdirSync(safeInstallPath, { recursive: true });
@@ -1268,7 +1253,7 @@ function registerIpcHandlers(deps) {
         files: fs.readdirSync(safeInstallPath),
       };
     } catch (error) {
-      console.error(`[Main] Failed to write plugin files for ${safePluginId}:`, error);
+      console.error('[Main] Failed to write plugin files:', error);
       return {
         success: false,
         error: error.message,

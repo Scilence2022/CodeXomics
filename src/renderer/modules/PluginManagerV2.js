@@ -554,8 +554,15 @@ class PluginManagerV2 {
     }
 
     if (definition.type === 'visualization') {
-      if (!definition.supportedDataTypes || !definition.executor) {
-        throw new Error('Visualization plugins must define supportedDataTypes and executor');
+      const hasSupportedDataTypes =
+        Array.isArray(definition.supportedDataTypes) && definition.supportedDataTypes.length > 0;
+      const hasVisualizationMethod =
+        typeof definition.executor === 'function' ||
+        typeof definition.renderNetwork === 'function' ||
+        typeof definition.visualize === 'function';
+
+      if (!hasSupportedDataTypes || !hasVisualizationMethod) {
+        throw new Error('Visualization plugins must define supportedDataTypes and a callable visualization method');
       }
     }
   }
