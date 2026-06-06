@@ -175,8 +175,21 @@ class BlastConfigManager {
     const resultsDiv = document.getElementById('detectionResults');
 
     // Get directory and other tools
-    const directory = this.path.dirname(detection.path);
-    const otherTools = await this.detectOtherTools(directory);
+    const blastExecutablePath = detection.path;
+    const directory = this.path.dirname(blastExecutablePath);
+
+    // Store the detected blastn path before probing companion tools so runCommand
+    // can resolve makeblastdb/blastdbcmd from the same installation directory.
+    this.config.blastExecutablePath = blastExecutablePath;
+    this.config.blastVersion = detection.version;
+    this.config.detectedPaths = {
+      directory: directory,
+      otherTools: [],
+    };
+    this.config.lastDetection = new Date().toISOString();
+    document.getElementById('blastPathInput').value = blastExecutablePath;
+
+    const otherTools = await this.detectOtherTools(directory, blastExecutablePath);
 
     // Update UI
     resultsDiv.innerHTML = `
@@ -190,7 +203,7 @@ class BlastConfigManager {
             </div>
             <div class="detection-item">
                 <span class="detection-label">Executable Path:</span>
-                <span class="detection-value">${detection.path}</span>
+                <span class="detection-value">${blastExecutablePath}</span>
             </div>
             <div class="detection-item">
                 <span class="detection-label">Directory:</span>
@@ -204,33 +217,28 @@ class BlastConfigManager {
 
     resultsDiv.style.display = 'block';
 
-    // Update manual input field
-    document.getElementById('blastPathInput').value = detection.path;
-
     // Save detection results
-    this.config.blastExecutablePath = detection.path;
-    this.config.blastVersion = detection.version;
     this.config.detectedPaths = {
       directory: directory,
       otherTools: otherTools,
     };
-    this.config.lastDetection = new Date().toISOString();
   }
 
   /**
    * Detect other BLAST tools in the same directory
    */
-  async detectOtherTools(directory) {
+  async detectOtherTools(directory, blastExecutablePath = null) {
     const tools = ['blastp', 'blastx', 'tblastn', 'tblastx', 'makeblastdb', 'blastdbcmd'];
     const found = [];
-    const blastnPath = document.getElementById('blastPathInput')?.value.trim() || this.config.blastExecutablePath;
+    const blastnPath =
+      blastExecutablePath || document.getElementById('blastPathInput')?.value.trim() || this.config.blastExecutablePath;
 
     for (const tool of tools) {
       try {
         const result = await window.electronAPI?.blast?.runCommand?.({
           executable: tool,
           args: ['-version'],
-          blastExecutablePath: blastnPath || this.path.join(directory, 'blastn'),
+          blastExecutablePath: blastnPath,
         });
         if (result?.success || result?.stdout || result?.stderr) {
           found.push(tool);
@@ -376,7 +384,7 @@ class BlastConfigManager {
       }
     } else {
       configDiv.innerHTML =
-        '<div style="color: #666;">No BLAST+ configuration found. Please detect or configure manually.</div>';
+        '<div class="no-config">No BLAST+ configuration found. Please detect or configure manually.</div>';
       // Clear the input field if no config
       if (pathInput) {
         pathInput.value = '';

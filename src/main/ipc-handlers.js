@@ -105,6 +105,37 @@ function getBlastExecutableName(executablePath) {
   return path.basename(String(executablePath || ''), path.extname(String(executablePath || ''))).toLowerCase();
 }
 
+function findExecutableOnPath(executableName) {
+  if (!executableName || /[\\/]/.test(executableName)) return null;
+
+  const searchPaths = String(process.env.PATH || '')
+    .split(path.delimiter)
+    .filter(Boolean);
+  const extensions =
+    process.platform === 'win32'
+      ? String(process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM')
+          .split(';')
+          .filter(Boolean)
+      : [''];
+
+  for (const searchPath of searchPaths) {
+    for (const extension of extensions) {
+      const candidateName = executableName.endsWith(extension.toLowerCase())
+        ? executableName
+        : executableName + extension;
+      const candidate = path.join(searchPath, candidateName);
+      try {
+        fs.accessSync(candidate, fs.constants.X_OK);
+        return path.resolve(candidate);
+      } catch (_) {
+        // Keep searching PATH entries.
+      }
+    }
+  }
+
+  return null;
+}
+
 function isTrustedBlastExecutablePath(executablePath) {
   if (!executablePath || typeof executablePath !== 'string') return false;
   const resolvedPath = path.resolve(executablePath);
@@ -248,27 +279,35 @@ function resolveBlastExecutable(appInstance, commandToken, configuredBlastPath) 
   }
 
   if (configuredBlastPath && typeof configuredBlastPath === 'string') {
+    const trimmedConfiguredPath = configuredBlastPath.trim();
+    if (!trimmedConfiguredPath || !/[\\/]/.test(trimmedConfiguredPath)) {
+      return commandName;
+    }
+
     let safeConfiguredPath = null;
     try {
-      safeConfiguredPath = assertAllowedFileAccess(appInstance, configuredBlastPath, {
+      safeConfiguredPath = assertAllowedFileAccess(appInstance, trimmedConfiguredPath, {
         operation: 'execute configured BLAST binary',
         mustExist: true,
       });
     } catch (error) {
-      if (isTrustedBlastExecutablePath(configuredBlastPath) && fs.existsSync(configuredBlastPath)) {
-        safeConfiguredPath = path.resolve(configuredBlastPath);
+      if (isTrustedBlastExecutablePath(trimmedConfiguredPath) && fs.existsSync(trimmedConfiguredPath)) {
+        safeConfiguredPath = path.resolve(trimmedConfiguredPath);
       } else {
-        throw error;
+        return commandName;
       }
     }
 
-    const configuredName = getBlastExecutableName(configuredBlastPath);
+    const configuredName = getBlastExecutableName(trimmedConfiguredPath);
     if (configuredName === 'blastn') {
       const executable = path.join(
         path.dirname(safeConfiguredPath),
         `${commandName}${process.platform === 'win32' ? '.exe' : ''}`
       );
-      return executable;
+      if (fs.existsSync(executable)) {
+        return executable;
+      }
+      return commandName;
     }
   }
 
@@ -315,6 +354,12 @@ async function findBlastExecutable() {
     path.join(homeDir, '.local', 'bin', 'blastn'),
     '/opt/blast+/bin/blastn',
   ];
+
+  const pathBlastn = findExecutableOnPath('blastn');
+  if (pathBlastn) {
+    const result = await runBlastVersionCheck(pathBlastn);
+    if (result.found) return { ...result, method: 'PATH' };
+  }
 
   const pathResult = await runBlastVersionCheck('blastn');
   if (pathResult.found) return { ...pathResult, method: 'PATH' };
