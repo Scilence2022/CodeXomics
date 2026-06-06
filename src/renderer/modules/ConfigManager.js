@@ -885,6 +885,45 @@ class ConfigManager {
   }
 
   /**
+   * Build the renderer payload for the main-process config store.
+   *
+   * Keep this intentionally aligned with CONFIG_FILES in src/main/ipc-handlers.js.
+   * Runtime-only state such as tabs, genome sequences, annotations, and transient
+   * manager caches must not be spread into this object.
+   */
+  buildPersistableConfig() {
+    const persistableConfig = {
+      version: this.config.version,
+    };
+
+    const sections = [
+      'llm',
+      'ui',
+      'chat',
+      'app',
+      'generalSettings',
+      'chatboxSettings',
+      'evolution',
+      'blast',
+      'marketplace',
+    ];
+
+    sections.forEach(section => {
+      if (section === 'evolution') {
+        persistableConfig.evolution = this.validateAndCleanData(
+          this.config.evolution || this.getDefaultEvolutionConfig()
+        );
+      } else if (section === 'chat') {
+        persistableConfig.chat = this.validateAndCleanData(this.config.chat);
+      } else if (this.config[section] !== undefined) {
+        persistableConfig[section] = this.validateAndCleanData(this.config[section]);
+      }
+    });
+
+    return persistableConfig;
+  }
+
+  /**
    * Save configuration through main process (Electron)
    */
   async saveToMainConfig() {
@@ -893,11 +932,7 @@ class ConfigManager {
         throw new Error('Main-process config save API is unavailable');
       }
 
-      const configForPersistence = {
-        ...this.config,
-        chat: this.validateAndCleanData(this.config.chat),
-        evolution: this.validateAndCleanData(this.config.evolution || this.getDefaultEvolutionConfig()),
-      };
+      const configForPersistence = this.buildPersistableConfig();
       const cleanConfig = this.validateAndCleanData(configForPersistence);
       const result = await window.electronAPI.saveConfigData(cleanConfig);
       if (!result?.success) {
