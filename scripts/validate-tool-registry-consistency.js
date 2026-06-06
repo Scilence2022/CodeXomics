@@ -87,7 +87,6 @@ const KNOWN_EXCEPTIONS = {
     'calculate_melting_temp',
     'compare_regions',
     'edit_annotation',
-    'evo2_design',
     'export_region_features',
     'find_intergenic_regions',
     'find_similar_sequences',

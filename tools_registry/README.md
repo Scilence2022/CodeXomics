@@ -49,12 +49,6 @@ tools_registry/
 │   ├── analyze_interpro_domains.yaml
 │   ├── search_interpro_entry.yaml
 │   └── get_interpro_entry_details.yaml
-├── ai_analysis/                        # AI-Powered Analysis (EVO2)
-│   ├── evo2_generate_sequence.yaml
-│   ├── evo2_predict_function.yaml
-│   ├── evo2_design_crispr.yaml
-│   ├── evo2_optimize_sequence.yaml
-│   └── evo2_analyze_essentiality.yaml
 ├── data_management/                    # Data Management Tools
 │   ├── create_annotation.yaml
 │   ├── analyze_region.yaml
@@ -113,8 +107,6 @@ tools_registry/
     ├── uniprot_get_annotation.yaml
     ├── alphafold_search.yaml
     ├── alphafold_get_structure.yaml
-    ├── evo2_design.yaml
-    ├── evo2_optimize.yaml
     ├── interpro_search.yaml
     └── kegg_search.yaml
 ```

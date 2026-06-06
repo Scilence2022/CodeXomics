@@ -230,7 +230,7 @@ class AgentBase {
     };
 
     // Adjust based on function type
-    if (functionName.includes('blast') || functionName.includes('evo2')) {
+    if (functionName.includes('blast')) {
       requirements.network = 30;
       requirements.cpu = 20;
     }
@@ -443,7 +443,7 @@ class AgentBase {
     };
 
     // Adjust based on function type
-    if (functionName.includes('blast') || functionName.includes('evo2')) {
+    if (functionName.includes('blast')) {
       release.network = 30;
       release.cpu = 20;
     }

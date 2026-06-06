@@ -304,13 +304,12 @@ try {
 
 ## Server-Side vs Client-Side Tools
 
-### Server-Side Tools (16 tools)
+### Server-Side Tools
 
 Execute directly on the server with API calls:
 
 - All protein structure tools
 - All database integration tools
-- All EVO2 AI tools
 - Some sequence analysis tools
 
 ### Client-Side Tools (24 tools)

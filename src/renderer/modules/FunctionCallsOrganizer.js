@@ -376,7 +376,7 @@ class FunctionCallsOrganizer {
       externalApis: {
         priority: 5,
         description: 'External API calls and third-party integrations',
-        functions: ['blast_sequence', 'uniprot_search', 'alphafold_search', 'alphafold_get_structure', 'evo2_design'],
+        functions: ['blast_sequence', 'uniprot_search', 'alphafold_search', 'alphafold_get_structure'],
       },
 
       // 类别17: 基准测试管理类 - 中等优先级，UI管理型

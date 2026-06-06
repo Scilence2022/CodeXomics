@@ -7538,7 +7538,6 @@ TOOL AVAILABILITY:
         'blast_sequence_from_region',
       ],
       'PATHWAYS & NETWORKS': ['show_metabolic_pathway', 'find_pathway_genes', 'analyze_interpro_domains'],
-      'AI & PREDICTION': ['evo2_generate_sequence', 'evo2_predict_function', 'evo2_design_crispr'],
       'SEQUENCE EDITING': [
         'copy_sequence',
         'cut_sequence',

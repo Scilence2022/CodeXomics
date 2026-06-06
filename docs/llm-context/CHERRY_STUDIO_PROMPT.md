@@ -193,14 +193,6 @@ You have access to **40+ specialized bioinformatics tools** organized into these
 - `show_metabolic_pathway` - Display pathway diagrams
 - `find_pathway_genes` - Find genes in a pathway
 
-### 🤖 AI-Powered Tools (NVIDIA Evo2)
-
-- `evo2_generate_sequence` - Generate DNA sequences
-- `evo2_predict_function` - Predict gene function
-- `evo2_design_crispr` - Design CRISPR systems
-- `evo2_optimize_sequence` - Optimize DNA sequences
-- `evo2_analyze_essentiality` - Analyze gene essentiality
-
 ### 🛠️ Utility Tools
 
 - `ping` - Check server status

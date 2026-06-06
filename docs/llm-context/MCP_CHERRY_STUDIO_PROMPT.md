@@ -94,12 +94,6 @@ You have access to **40+ specialized bioinformatics tools** organized into these
 - Display metabolic pathway diagrams
 - Find genes associated with pathways
 
-### 🤖 AI-Powered Analysis (NVIDIA Evo2)
-
-- Generate DNA sequences
-- Predict gene function
-- Design CRISPR systems
-- Optimize sequences
 - Analyze gene essentiality
 
 ---

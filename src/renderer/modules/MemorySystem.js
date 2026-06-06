@@ -1960,7 +1960,6 @@ class MemorySystem {
       'blast_search',
       'uniprot_search',
       'alphafold_search',
-      'evo2_generate_sequence',
       'interpro_search',
     ];
     return externalFunctions.includes(functionName);

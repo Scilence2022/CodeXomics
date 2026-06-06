@@ -526,18 +526,6 @@ class ToolDefinitionCreator {
         keywords: ['alphafold', 'get', 'structure', 'protein'],
         priority: 1,
       },
-      evo2_design: {
-        category: 'external_apis',
-        description: 'Design sequences using Evo2 AI model',
-        keywords: ['evo2', 'design', 'sequences', 'ai'],
-        priority: 1,
-      },
-      evo2_optimize: {
-        category: 'external_apis',
-        description: 'Optimize sequences using Evo2 AI model',
-        keywords: ['evo2', 'optimize', 'sequences', 'ai'],
-        priority: 2,
-      },
       interpro_search: {
         category: 'external_apis',
         description: 'Search InterPro database for protein domains',

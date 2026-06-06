@@ -357,7 +357,6 @@ class MultiAgentSystem {
       'blast_search_batch',
       'batch_blast_search',
       'advanced_blast_search',
-      'evo2_generate_sequence',
       'build_phylogenetic_tree',
     ];
 
@@ -388,7 +387,7 @@ class MultiAgentSystem {
     }
 
     // Check for external service dependencies
-    if (functionName.includes('blast') || functionName.includes('evo2')) {
+    if (functionName.includes('blast')) {
       dependencies.push({
         type: 'external_service',
         service: functionName.split('_')[0],
@@ -937,8 +936,6 @@ class MultiAgentSystem {
         'get_interpro_entry_details',
         'kegg_search',
         'kegg_get_pathway',
-        'evo2_design',
-        'evo2_optimize',
       ],
       PluginAgent: [
         // From registerToolMapping() — no legacy aliases

@@ -536,8 +536,6 @@ class ToolsIntegrator {
         description: 'Tools for accessing biological databases',
         tools: Object.keys(this.databaseTools.getTools()),
       },
-      // Note: Evo2Tools category removed - NVIDIA EVO2 integration not yet implemented
-      // To add back, import Evo2Tools module and initialize in constructor
       data: {
         name: 'Data Management',
         description: 'Tools for data annotation, export, and analysis',
@@ -591,11 +589,6 @@ class ToolsIntegrator {
         'analyze_interpro_domains',
         'search_interpro_entry',
         'get_interpro_entry_details',
-        'evo2_generate_sequence',
-        'evo2_predict_function',
-        'evo2_design_crispr',
-        'evo2_optimize_sequence',
-        'evo2_analyze_essentiality',
       ].length,
       clientSideTools:
         totalTools -
@@ -610,11 +603,6 @@ class ToolsIntegrator {
           'analyze_interpro_domains',
           'search_interpro_entry',
           'get_interpro_entry_details',
-          'evo2_generate_sequence',
-          'evo2_predict_function',
-          'evo2_design_crispr',
-          'evo2_optimize_sequence',
-          'evo2_analyze_essentiality',
         ].length,
     };
   }
@@ -717,14 +705,6 @@ class ToolsIntegrator {
           query: 'insulin',
           searchType: 'protein_name',
           limit: 10,
-        },
-      },
-      evo2_generate_sequence: {
-        description: 'Generate DNA sequence using EVO2 AI',
-        example: {
-          prompt: 'ATCG',
-          maxTokens: 100,
-          temperature: 1.0,
         },
       },
       zoom_in: {

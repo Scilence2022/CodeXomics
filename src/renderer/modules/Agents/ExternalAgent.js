@@ -9,7 +9,6 @@ class ExternalAgent extends AgentBase {
       'blast_search',
       'uniprot_search',
       'alphafold_search',
-      'evo2_design',
     ]);
 
     this.app = multiAgentSystem.app;
@@ -138,10 +137,6 @@ class ExternalAgent extends AgentBase {
     // KEGG搜索工具
     this.toolMapping.set('kegg_search', this.keggSearch.bind(this));
     this.toolMapping.set('kegg_get_pathway', this.keggGetPathway.bind(this));
-
-    // Evo2设计工具
-    this.toolMapping.set('evo2_design', this.evo2Design.bind(this));
-    this.toolMapping.set('evo2_optimize', this.evo2Optimize.bind(this));
 
     console.log(`🌐 ExternalAgent: Registered ${this.toolMapping.size} external API tools`);
   }
@@ -438,76 +433,6 @@ class ExternalAgent extends AgentBase {
       return { success: true, structure };
     } catch (error) {
       return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Evo2设计
-   */
-  async evo2Design(parameters, strategy) {
-    try {
-      const { sequence, target, constraints = {} } = parameters;
-
-      if (!sequence || !target) {
-        throw new Error('Sequence and target are required');
-      }
-
-      if (!this.apiManager) {
-        throw new Error('APIManager not available');
-      }
-
-      const designResult = await this.apiManager.evo2Design(sequence, target, constraints);
-
-      return {
-        success: true,
-        design: {
-          originalSequence: designResult.originalSequence,
-          designedSequence: designResult.designedSequence,
-          mutations: designResult.mutations,
-          score: designResult.score,
-          confidence: designResult.confidence,
-        },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Evo2优化
-   */
-  async evo2Optimize(parameters, strategy) {
-    try {
-      const { sequence, objective, constraints = {} } = parameters;
-
-      if (!sequence || !objective) {
-        throw new Error('Sequence and objective are required');
-      }
-
-      if (!this.apiManager) {
-        throw new Error('APIManager not available');
-      }
-
-      const optimizationResult = await this.apiManager.evo2Optimize(sequence, objective, constraints);
-
-      return {
-        success: true,
-        optimization: {
-          originalSequence: optimizationResult.originalSequence,
-          optimizedSequence: optimizationResult.optimizedSequence,
-          mutations: optimizationResult.mutations,
-          objectiveValue: optimizationResult.objectiveValue,
-          iterations: optimizationResult.iterations,
-        },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
     }
   }
 

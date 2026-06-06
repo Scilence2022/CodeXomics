@@ -2,8 +2,8 @@
   "timestamp": "2026-05-20T01:06:51.570Z",
   "version": "1.0.0",
   "stats": {
-    "totalTools": 157,
-    "validTools": 157,
+    "totalTools": 156,
+    "validTools": 156,
     "invalidTools": 17,
     "categories": 17,
     "totalSize": 455164
@@ -889,11 +889,6 @@
       "name": "blast_sequence",
       "category": "external_apis",
       "file": "blast_sequence.yaml"
-    },
-    {
-      "name": "evo2_optimize",
-      "category": "external_apis",
-      "file": "evo2_optimize.yaml"
     },
     {
       "name": "interpro_search",

@@ -1,17 +1,17 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-04T16:24:35.827Z",
-  "registryHash": "6fa5483dd786827f977c596d5352fc209f299f0559b9897fff2c7ab47220e17a",
+  "generatedAt": "2026-06-06T03:38:58.519Z",
+  "registryHash": "8b97a64fd6a969aa9127110c6e92e2933ea4c18a257140bab4e262b7f85fc80e",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 180,
-    "appTools": 180,
+    "tools": 179,
+    "appTools": 179,
     "userTools": 0,
-    "uniqueTools": 174,
+    "uniqueTools": 173,
     "categories": 18,
     "builtInTools": 143,
     "diagnostics": 12
@@ -232,10 +232,9 @@
         "subcategories": [
           "blast_apis",
           "uniprot_apis",
-          "alphafold_apis",
-          "evo2_apis"
+          "alphafold_apis"
         ],
-        "tools_count": 12
+        "tools_count": 11
       },
       "utility": {
         "name": "Utility Tools",
@@ -8094,106 +8093,6 @@
       },
       "source": "app_registry",
       "sourceFile": "external_apis/blast_sequence.yaml",
-      "isBuiltIn": false,
-      "isExternal": false,
-      "execution_type": "server",
-      "implementation": {},
-      "builtin": null
-    },
-    {
-      "name": "evo2_optimize",
-      "version": "1.0.0",
-      "description": "Optimize sequences using Evo2 AI model",
-      "category": "external_apis",
-      "keywords": [
-        "evo2",
-        "optimize",
-        "sequences",
-        "ai"
-      ],
-      "priority": 2,
-      "execution": {
-        "type": "server",
-        "timeout": 120000,
-        "retries": 2,
-        "requires_auth": true,
-        "requires_data": false,
-        "requires_network": true
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "clientId": {
-            "type": "string",
-            "description": "Browser client ID for multi-window support",
-            "default": "default"
-          },
-          "sequence": {
-            "type": "string",
-            "description": "Query sequence"
-          },
-          "blastType": {
-            "type": "string",
-            "description": "Type of BLAST search",
-            "enum": [
-              "blastn",
-              "blastp",
-              "blastx",
-              "tblastn",
-              "tblastx"
-            ]
-          },
-          "database": {
-            "type": "string",
-            "description": "Target database",
-            "default": "nr"
-          }
-        },
-        "required": [
-          "sequence",
-          "blastType",
-          "database"
-        ]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Use evo2_optimize to analyze genomic data",
-          "tool_call": "evo2_optimize(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use evo2_optimize for optimize sequences using evo2 ai model",
-          "expected_result": "Result from evo2_optimize analysis"
-        }
-      ],
-      "relationships": {
-        "depends_on": [],
-        "conflicts_with": [],
-        "enhances": [],
-        "alternatives": [],
-        "prerequisites": [],
-        "follow_up": []
-      },
-      "metadata": {
-        "usage_count": 0,
-        "success_rate": 0,
-        "avg_execution_time": 0,
-        "last_used": null,
-        "tags": [
-          "external_apis",
-          "important"
-        ],
-        "complexity": "moderate",
-        "usage_pattern": "common"
-      },
-      "error_handling": {
-        "api_error": "Returns error if external API is unavailable",
-        "network_timeout": "Returns error if request times out"
-      },
-      "returns": {
-        "success": "boolean - Whether API call was successful",
-        "results": "array - List of API results",
-        "execution_time": "number - API call execution time"
-      },
-      "source": "app_registry",
-      "sourceFile": "external_apis/evo2_optimize.yaml",
       "isBuiltIn": false,
       "isExternal": false,
       "execution_type": "server",
@@ -31237,106 +31136,6 @@
       },
       "source": "app_registry",
       "sourceFile": "external_apis/blast_sequence.yaml",
-      "isBuiltIn": false,
-      "isExternal": false,
-      "execution_type": "server",
-      "implementation": {},
-      "builtin": null
-    },
-    "evo2_optimize": {
-      "name": "evo2_optimize",
-      "version": "1.0.0",
-      "description": "Optimize sequences using Evo2 AI model",
-      "category": "external_apis",
-      "keywords": [
-        "evo2",
-        "optimize",
-        "sequences",
-        "ai"
-      ],
-      "priority": 2,
-      "execution": {
-        "type": "server",
-        "timeout": 120000,
-        "retries": 2,
-        "requires_auth": true,
-        "requires_data": false,
-        "requires_network": true
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "clientId": {
-            "type": "string",
-            "description": "Browser client ID for multi-window support",
-            "default": "default"
-          },
-          "sequence": {
-            "type": "string",
-            "description": "Query sequence"
-          },
-          "blastType": {
-            "type": "string",
-            "description": "Type of BLAST search",
-            "enum": [
-              "blastn",
-              "blastp",
-              "blastx",
-              "tblastn",
-              "tblastx"
-            ]
-          },
-          "database": {
-            "type": "string",
-            "description": "Target database",
-            "default": "nr"
-          }
-        },
-        "required": [
-          "sequence",
-          "blastType",
-          "database"
-        ]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Use evo2_optimize to analyze genomic data",
-          "tool_call": "evo2_optimize(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use evo2_optimize for optimize sequences using evo2 ai model",
-          "expected_result": "Result from evo2_optimize analysis"
-        }
-      ],
-      "relationships": {
-        "depends_on": [],
-        "conflicts_with": [],
-        "enhances": [],
-        "alternatives": [],
-        "prerequisites": [],
-        "follow_up": []
-      },
-      "metadata": {
-        "usage_count": 0,
-        "success_rate": 0,
-        "avg_execution_time": 0,
-        "last_used": null,
-        "tags": [
-          "external_apis",
-          "important"
-        ],
-        "complexity": "moderate",
-        "usage_pattern": "common"
-      },
-      "error_handling": {
-        "api_error": "Returns error if external API is unavailable",
-        "network_timeout": "Returns error if request times out"
-      },
-      "returns": {
-        "success": "boolean - Whether API call was successful",
-        "results": "array - List of API results",
-        "execution_time": "number - API call execution time"
-      },
-      "source": "app_registry",
-      "sourceFile": "external_apis/evo2_optimize.yaml",
       "isBuiltIn": false,
       "isExternal": false,
       "execution_type": "server",
