@@ -11,51 +11,77 @@
         box-sizing: border-box;
       }
 
+      :root {
+        --primary-color: #3b82f6;
+        --primary-hover: #2563eb;
+        --primary-rgb: 59, 130, 246;
+        --secondary-color: #6b7280;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --error-color: #ef4444;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8fafc;
+        --bg-tertiary: #f1f5f9;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --text-muted: #9ca3af;
+        --border-color: #e5e7eb;
+        --border-hover: #d1d5db;
+        --header-gradient: linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #667eea 80%);
+        --btn-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        --btn-gradient-hover: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        --focus-ring: rgba(59, 130, 246, 0.3);
+      }
+
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #333;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
         overflow-x: hidden;
       }
 
       .container {
-        max-width: 900px;
+        max-width: 1120px;
         margin: 0 auto;
-        padding: 20px;
+        padding: 20px 24px 24px;
         min-height: 100vh;
       }
 
       .header {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        padding: 30px;
-        margin-bottom: 30px;
-        text-align: center;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 18px 20px;
+        margin-bottom: 16px;
+        box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
       }
 
       .header h1 {
-        color: #2c3e50;
-        font-size: 2.5rem;
-        margin-bottom: 10px;
-        font-weight: 700;
+        color: var(--text-primary);
+        font-size: 22px;
+        font-weight: 650;
+        line-height: 1.2;
+        margin-bottom: 4px;
       }
 
       .header .subtitle {
-        color: #7f8c8d;
-        font-size: 1.1rem;
-        margin-bottom: 20px;
+        color: var(--text-secondary);
+        font-size: 13px;
       }
 
       .status-indicator {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 8px 16px;
-        border-radius: 20px;
+        padding: 7px 12px;
+        border-radius: 999px;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 12px;
+        white-space: nowrap;
       }
 
       .status-ready {
@@ -79,129 +105,149 @@
       }
 
       .card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        padding: 30px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
-        transition:
-          transform 0.3s ease,
-          box-shadow 0.3s ease;
-      }
-
-      .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 18px;
+        box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+        margin-bottom: 16px;
       }
 
       .card h2 {
-        color: #2c3e50;
-        font-size: 1.5rem;
-        margin-bottom: 20px;
+        color: var(--text-primary);
+        font-size: 15px;
+        font-weight: 650;
+        margin-bottom: 14px;
         display: flex;
         align-items: center;
         gap: 10px;
       }
 
+      .card h2 i {
+        color: var(--primary-color);
+      }
+
       .system-info {
-        margin: 15px 0;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
       }
 
       .info-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 15px;
-        margin: 8px 0;
-        background: #f8f9fa;
-        border-radius: 10px;
-        border-left: 4px solid #007bff;
+        padding: 11px 12px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
       }
 
       .info-label {
         font-weight: 600;
-        color: #495057;
+        color: var(--text-secondary);
+        display: block;
+        font-size: 12px;
+        margin-bottom: 5px;
       }
 
       .info-value {
-        color: #6c757d;
-        font-family: 'Monaco', 'Menlo', monospace;
+        color: var(--text-primary);
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+        font-size: 12px;
+        overflow-wrap: anywhere;
       }
 
       .version-info {
-        background: #e3f2fd;
-        border-radius: 10px;
-        padding: 15px;
-        margin: 15px 0;
-        border-left: 4px solid #2196f3;
+        background: var(--bg-secondary);
+        border-radius: 6px;
+        padding: 12px;
+        margin: 12px 0;
+        border: 1px solid var(--border-color);
       }
 
       .download-info {
-        background: #f3e5f5;
-        border-radius: 10px;
-        padding: 15px;
-        margin: 15px 0;
-        border-left: 4px solid #9c27b0;
+        background: var(--bg-secondary);
+        border-radius: 6px;
+        padding: 12px;
+        margin: 12px 0;
+        border: 1px solid var(--border-color);
+      }
+
+      .version-info h4,
+      .download-info h4 {
+        color: var(--text-primary);
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      .version-info p,
+      .download-info p {
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
       }
 
       .btn {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
-        padding: 12px 24px;
-        border: none;
-        border-radius: 12px;
+        min-height: 38px;
+        padding: 9px 14px;
+        border: 1px solid transparent;
+        border-radius: 6px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition:
+          background 0.18s ease,
+          border-color 0.18s ease,
+          box-shadow 0.18s ease,
+          transform 0.18s ease;
         text-decoration: none;
-        font-size: 1rem;
-        margin: 5px;
+        font-size: 13px;
+        margin: 4px;
+        white-space: nowrap;
       }
 
       .btn-primary {
-        background: linear-gradient(135deg, #007bff, #0056b3);
+        background: var(--btn-gradient);
         color: white;
       }
 
       .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+        box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
       }
 
       .btn-success {
-        background: linear-gradient(135deg, #28a745, #1e7e34);
+        background: var(--success-color);
         color: white;
       }
 
       .btn-success:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
       }
 
       .btn-secondary {
-        background: linear-gradient(135deg, #6c757d, #5a6268);
-        color: white;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        border-color: var(--border-color);
       }
 
       .btn-warning {
-        background: linear-gradient(135deg, #ffc107, #ff9800);
+        background: var(--warning-color);
         color: white;
       }
 
       .btn-warning:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+        box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
       }
 
       .btn-danger {
-        background: linear-gradient(135deg, #dc3545, #c82333);
+        background: var(--error-color);
         color: white;
       }
 
       .btn-danger:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+        box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
       }
 
       .btn:disabled {
@@ -212,17 +258,17 @@
 
       .progress-bar {
         width: 100%;
-        height: 25px;
-        background: #e9ecef;
-        border-radius: 12px;
+        height: 22px;
+        background: var(--bg-tertiary);
+        border-radius: 999px;
         overflow: hidden;
         margin: 15px 0;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
       }
 
       .progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, #007bff, #0056b3);
+        background: var(--btn-gradient);
         width: 0%;
         transition: width 0.3s ease;
         display: flex;
@@ -234,16 +280,16 @@
       }
 
       .log-container {
-        background: #1e1e1e;
-        color: #e0e0e0;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 20px 0;
-        font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-        font-size: 0.9rem;
+        background: #111827;
+        color: #e5e7eb;
+        border-radius: 6px;
+        padding: 14px;
+        margin: 14px 0;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+        font-size: 12px;
         max-height: 300px;
         overflow-y: auto;
-        border: 1px solid #444;
+        border: 1px solid var(--border-color);
       }
 
       .log-entry {
@@ -278,8 +324,8 @@
       }
 
       .alert {
-        padding: 15px 20px;
-        border-radius: 12px;
+        padding: 14px;
+        border-radius: 6px;
         margin: 15px 0;
         border-left: 4px solid;
       }
@@ -322,23 +368,44 @@
       }
 
       .download-location {
-        background: rgba(255, 255, 255, 0.8);
+        background: var(--bg-secondary);
         padding: 10px 15px;
-        border-radius: 8px;
+        border-radius: 6px;
         margin: 15px 0;
         font-family: monospace;
-        font-size: 13px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        font-size: 12px;
+        border: 1px solid var(--border-color);
         word-break: break-all;
       }
 
+      .control-actions,
+      .log-actions {
+        margin: 16px 0 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      #currentStep {
+        color: var(--primary-color);
+      }
+
       @media (max-width: 768px) {
+        .header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
         .header h1 {
-          font-size: 2rem;
+          font-size: 20px;
         }
 
         .card {
-          padding: 20px;
+          padding: 16px;
+        }
+
+        .system-info {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -347,8 +414,10 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1><i class="fas fa-download"></i> BLAST+ Tools Downloader</h1>
-        <p class="subtitle">Download NCBI BLAST+ tools for your system</p>
+        <div>
+          <h1><i class="fas fa-download"></i> BLAST+ Tools Downloader</h1>
+          <p class="subtitle">Download NCBI BLAST+ tools for your system</p>
+        </div>
         <div id="statusIndicator" class="status-indicator status-ready">
           <i class="fas fa-circle"></i>
           Ready to Download
@@ -391,7 +460,7 @@
           <p><strong>Save Location:</strong> <span id="savePath">Will be determined...</span></p>
         </div>
 
-        <div style="margin: 20px 0; text-align: center">
+        <div class="control-actions">
           <button id="downloadBtn" class="btn btn-success" onclick="startDownload()">
             <i class="fas fa-download"></i>
             Start Download
@@ -420,15 +489,13 @@
 
         <!-- Progress Container -->
         <div id="progressContainer" style="display: none">
-          <h4 style="margin-bottom: 10px"><i class="fas fa-tasks"></i> Download Progress</h4>
+          <h4><i class="fas fa-tasks"></i> Download Progress</h4>
 
           <div class="progress-bar">
             <div class="progress-fill" id="progressBar">0%</div>
           </div>
 
-          <div id="currentStep" style="text-align: center; margin: 10px 0; font-weight: 600; color: #007bff">
-            Preparing download...
-          </div>
+          <div id="currentStep">Preparing download...</div>
         </div>
 
         <!-- Downloaded File Info -->
@@ -437,7 +504,7 @@
             <h4><i class="fas fa-check-circle"></i> Download Complete!</h4>
             <p><strong>Downloaded file:</strong> <span id="downloadedFileName"></span></p>
             <div class="download-location"><strong>Location:</strong> <span id="downloadedFilePath"></span></div>
-            <div style="margin-top: 15px">
+            <div class="control-actions">
               <button class="btn btn-primary" onclick="openDownloadedFile()">
                 <i class="fas fa-external-link-alt"></i> Open Downloaded File
               </button>
@@ -460,7 +527,7 @@
           </div>
         </div>
 
-        <div style="margin-top: 15px">
+        <div class="log-actions">
           <button class="btn btn-secondary" onclick="clearLog()">
             <i class="fas fa-trash"></i>
             Clear Log
@@ -475,28 +542,30 @@
     </div>
 
     <script>
-      const electronBridge = window.require ? window.require('electron') : null;
-      const ipcRenderer = window.ipcRenderer || electronBridge?.ipcRenderer || null;
-      const os =
-        window.os || {
-          platform: () => navigator.platform || 'unknown',
-          arch: () => (navigator.userAgentData?.architecture === 'arm' ? 'arm64' : 'x64'),
-          release: () => '',
-        };
-      const path =
-        window.path || {
-          basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '',
-          dirname: filePath => {
-            const normalized = String(filePath || '').replace(/\\/g, '/');
-            const index = normalized.lastIndexOf('/');
-            return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
-          },
-          join: (...parts) =>
-            parts
-              .filter(part => part !== undefined && part !== null && part !== '')
-              .join('/')
-              .replace(/\/+/g, '/'),
-        };
+      (() => {
+        const electronBridge = window.require ? window.require('electron') : null;
+        window.blastDownloaderIpc = window.ipcRenderer || electronBridge?.ipcRenderer || null;
+        window.blastDownloaderOs =
+          window.os || {
+            platform: () => navigator.platform || 'unknown',
+            arch: () => (navigator.userAgentData?.architecture === 'arm' ? 'arm64' : 'x64'),
+            release: () => '',
+          };
+        window.blastDownloaderPath =
+          window.path || {
+            basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '',
+            dirname: filePath => {
+              const normalized = String(filePath || '').replace(/\\/g, '/');
+              const index = normalized.lastIndexOf('/');
+              return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
+            },
+            join: (...parts) =>
+              parts
+                .filter(part => part !== undefined && part !== null && part !== '')
+                .join('/')
+                .replace(/\/+/g, '/'),
+          };
+      })();
 
       // Global variables
       let downloadInProgress = false;
@@ -537,9 +606,9 @@
       function detectSystemInfo() {
         logMessage('Detecting system information...', 'info');
 
-        const platform = os.platform();
-        const arch = os.arch();
-        const release = os.release();
+        const platform = window.blastDownloaderOs.platform();
+        const arch = window.blastDownloaderOs.arch();
+        const release = window.blastDownloaderOs.release();
 
         let platformDisplay = platform;
         let archDisplay = arch;
@@ -565,7 +634,7 @@
 
         document.getElementById('osInfo').textContent = `${platformDisplay} ${release}`;
         document.getElementById('archInfo').textContent = archDisplay;
-        document.getElementById('platformInfo').textContent = process.platform;
+        document.getElementById('platformInfo').textContent = platform;
 
         logMessage(`System detected: ${platformDisplay} ${archDisplay}`, 'success');
       }
@@ -607,8 +676,8 @@
         }
 
         const version = (await response.text()).trim();
-        const platform = os.platform();
-        const arch = os.arch();
+        const platform = window.blastDownloaderOs.platform();
+        const arch = window.blastDownloaderOs.arch();
 
         let estimatedSize = '285 MB';
         if (platform === 'win32') {
@@ -625,8 +694,8 @@
       }
 
       function determineDownloadUrl() {
-        const platform = os.platform();
-        const arch = os.arch();
+        const platform = window.blastDownloaderOs.platform();
+        const arch = window.blastDownloaderOs.arch();
 
         const baseUrl = 'https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/';
 
@@ -695,7 +764,7 @@
 
           if (!downloadPaused) {
             downloadedFilePath = filePath;
-            const fileName = path.basename(filePath);
+            const fileName = window.blastDownloaderPath.basename(filePath);
 
             document.getElementById('downloadedFileName').textContent = fileName;
             document.getElementById('downloadedFilePath').textContent = filePath;
@@ -751,11 +820,11 @@
           throw new Error('Main-process download API is unavailable');
         }
 
-        const filename = path.basename(downloadUrl);
+        const filename = window.blastDownloaderPath.basename(downloadUrl);
         let activeUrl = downloadUrl;
 
         for (let attempt = 0; attempt < 5; attempt++) {
-          logMessage(`Saving to: ${path.join(savePath, filename)}`, 'info');
+          logMessage(`Saving to: ${window.blastDownloaderPath.join(savePath, filename)}`, 'info');
           const result = await window.electronAPI.downloadInternetFile({
             url: activeUrl,
             destinationPath: savePath,
@@ -783,14 +852,14 @@
 
       async function openDownloadedFile() {
         if (downloadedFilePath) {
-          await window.electronAPI?.openFolderInExplorer?.(path.dirname(downloadedFilePath));
+          await window.electronAPI?.openFolderInExplorer?.(window.blastDownloaderPath.dirname(downloadedFilePath));
           logMessage('Opened downloaded file location', 'info');
         }
       }
 
       async function openDownloadFolder() {
         if (downloadedFilePath) {
-          await window.electronAPI?.openFolderInExplorer?.(path.dirname(downloadedFilePath));
+          await window.electronAPI?.openFolderInExplorer?.(window.blastDownloaderPath.dirname(downloadedFilePath));
           logMessage('Opened download location', 'info');
         } else {
           await window.electronAPI?.openFolderInExplorer?.(savePath);
@@ -851,151 +920,136 @@
       }
 
       // ===== Menu Action Handler =====
-      ipcRenderer.on('tool-menu-action', (event, action) => {
-        switch (action) {
-          case 'copy': {
-            const activeEl = document.activeElement;
-            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-              const start = activeEl.selectionStart;
-              const end = activeEl.selectionEnd;
-              if (start !== end) {
-                navigator.clipboard.writeText(activeEl.value.substring(start, end)).catch(() => {});
+      if (window.blastDownloaderIpc) {
+        window.blastDownloaderIpc.on('tool-menu-action', (event, action) => {
+          switch (action) {
+            case 'copy': {
+              const activeEl = document.activeElement;
+              if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                const start = activeEl.selectionStart;
+                const end = activeEl.selectionEnd;
+                if (start !== end) {
+                  navigator.clipboard.writeText(activeEl.value.substring(start, end)).catch(() => {});
+                }
+              } else {
+                const selection = window.getSelection();
+                if (selection && selection.toString()) {
+                  navigator.clipboard.writeText(selection.toString()).catch(() => {});
+                }
               }
-            } else {
-              const selection = window.getSelection();
-              if (selection && selection.toString()) {
-                navigator.clipboard.writeText(selection.toString()).catch(() => {});
-              }
+              break;
             }
-            break;
+            case 'paste':
+              if (
+                document.activeElement &&
+                (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')
+              ) {
+                navigator.clipboard
+                  .readText()
+                  .then(text => {
+                    const el = document.activeElement;
+                    const start = el.selectionStart;
+                    const end = el.selectionEnd;
+                    el.value = el.value.substring(0, start) + text + el.value.substring(end);
+                    el.selectionStart = el.selectionEnd = start + text.length;
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                  })
+                  .catch(() => {});
+              }
+              break;
+            case 'cut': {
+              const activeElCut = document.activeElement;
+              if (activeElCut && (activeElCut.tagName === 'INPUT' || activeElCut.tagName === 'TEXTAREA')) {
+                const startC = activeElCut.selectionStart;
+                const endC = activeElCut.selectionEnd;
+                if (startC !== endC) {
+                  navigator.clipboard.writeText(activeElCut.value.substring(startC, endC)).catch(() => {});
+                  activeElCut.value = activeElCut.value.substring(0, startC) + activeElCut.value.substring(endC);
+                  activeElCut.selectionStart = activeElCut.selectionEnd = startC;
+                  activeElCut.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+              }
+              break;
+            }
+            case 'select-all':
+              if (
+                document.activeElement &&
+                (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')
+              ) {
+                document.activeElement.select();
+              } else {
+                window.getSelection().selectAllChildren(document.body);
+              }
+              break;
+            case 'find':
+            case 'find-next':
+              break;
+            case 'new-analysis':
+              location.reload();
+              break;
+            case 'save-results':
+            case 'export-data':
+              exportLog();
+              break;
+            case 'refresh-data':
+              location.reload();
+              break;
+            case 'clear-results':
+              clearLog();
+              break;
           }
-          case 'paste':
-            if (
-              document.activeElement &&
-              (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')
-            ) {
-              navigator.clipboard
-                .readText()
-                .then(text => {
-                  const el = document.activeElement;
-                  const start = el.selectionStart;
-                  const end = el.selectionEnd;
-                  el.value = el.value.substring(0, start) + text + el.value.substring(end);
-                  el.selectionStart = el.selectionEnd = start + text.length;
-                  el.dispatchEvent(new Event('input', { bubbles: true }));
-                })
-                .catch(() => {});
-            }
-            break;
-          case 'cut': {
-            const activeElCut = document.activeElement;
-            if (activeElCut && (activeElCut.tagName === 'INPUT' || activeElCut.tagName === 'TEXTAREA')) {
-              const startC = activeElCut.selectionStart;
-              const endC = activeElCut.selectionEnd;
-              if (startC !== endC) {
-                navigator.clipboard.writeText(activeElCut.value.substring(startC, endC)).catch(() => {});
-                activeElCut.value = activeElCut.value.substring(0, startC) + activeElCut.value.substring(endC);
-                activeElCut.selectionStart = activeElCut.selectionEnd = startC;
-                activeElCut.dispatchEvent(new Event('input', { bubbles: true }));
-              }
-            }
-            break;
-          }
-          case 'select-all':
-            if (
-              document.activeElement &&
-              (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')
-            ) {
-              document.activeElement.select();
-            } else {
-              window.getSelection().selectAllChildren(document.body);
-            }
-            break;
-          case 'find':
-          case 'find-next':
-            break;
-          case 'new-analysis':
-            location.reload();
-            break;
-          case 'save-results':
-          case 'export-data':
-            exportLog();
-            break;
-          case 'refresh-data':
-            location.reload();
-            break;
-          case 'clear-results':
-            clearLog();
-            break;
-        }
-      });
+        });
+      }
 
       // ===== Theme Integration =====
       function applyBlastDownloaderTheme(themeData) {
+        if (!themeData || !themeData.variables) return;
+
         const root = document.documentElement;
         const vars =
           themeData.isDark && themeData.darkVariables
             ? { ...themeData.variables, ...themeData.darkVariables }
             : themeData.variables;
 
-        if (vars['--header-gradient']) {
-          document.body.style.background = vars['--header-gradient'];
-        }
+        [
+          '--primary-color',
+          '--primary-hover',
+          '--primary-rgb',
+          '--secondary-color',
+          '--success-color',
+          '--warning-color',
+          '--error-color',
+          '--bg-primary',
+          '--bg-secondary',
+          '--bg-tertiary',
+          '--text-primary',
+          '--text-secondary',
+          '--text-muted',
+          '--border-color',
+          '--border-hover',
+          '--header-gradient',
+          '--btn-gradient',
+          '--btn-gradient-hover',
+          '--focus-ring',
+        ].forEach(varName => {
+          if (vars[varName]) {
+            root.style.setProperty(varName, vars[varName]);
+          }
+        });
 
-        if (vars['--primary-color']) {
-          root.style.setProperty('--blast-accent', vars['--primary-color']);
-          document.querySelectorAll('.info-item').forEach(el => {
-            el.style.borderLeftColor = vars['--primary-color'];
-          });
-          document.querySelectorAll('.version-info').forEach(el => {
-            el.style.borderLeftColor = vars['--primary-color'];
-          });
-          document.querySelectorAll('.btn-primary').forEach(el => {
-            if (vars['--btn-gradient']) {
-              el.style.background = vars['--btn-gradient'];
-            }
-          });
-          document.querySelectorAll('#currentStep').forEach(el => {
-            el.style.color = vars['--primary-color'];
-          });
-          document.querySelectorAll('.progress-fill').forEach(el => {
-            if (vars['--btn-gradient']) {
-              el.style.background = vars['--btn-gradient'];
-            }
-          });
-        }
-
-        if (themeData.isDark) {
-          document.body.style.color = vars['--text-primary'] || '#e0e0e0';
-          document.querySelectorAll('.header, .card').forEach(el => {
-            el.style.background = vars['--bg-secondary'] || '#1e1e2e';
-            el.style.color = vars['--text-primary'] || '#e0e0e0';
-          });
-          document.querySelectorAll('.header h1, .card h2').forEach(el => {
-            el.style.color = vars['--text-primary'] || '#e0e0e0';
-          });
-          document.querySelectorAll('.info-label').forEach(el => {
-            el.style.color = vars['--text-secondary'] || '#ccc';
-          });
-          document.querySelectorAll('.info-value').forEach(el => {
-            el.style.color = vars['--text-muted'] || '#999';
-          });
-          document.querySelectorAll('.subtitle').forEach(el => {
-            el.style.color = vars['--text-muted'] || '#999';
-          });
-        }
+        root.dataset.uiStyle = themeData.style || '';
       }
 
-      if (typeof ipcRenderer !== 'undefined') {
-        ipcRenderer.on('sync-theme', (event, themeData) => {
+      if (window.blastDownloaderIpc) {
+        window.blastDownloaderIpc.on('sync-theme', (event, themeData) => {
           console.log('Theme sync received in BLAST Downloader:', themeData);
           applyBlastDownloaderTheme(themeData);
         });
       }
 
       document.addEventListener('DOMContentLoaded', () => {
-        if (typeof ipcRenderer !== 'undefined' && ipcRenderer.invoke) {
-          ipcRenderer.invoke('request-current-theme').catch(err => {
+        if (window.blastDownloaderIpc?.invoke) {
+          window.blastDownloaderIpc.invoke('request-current-theme').catch(err => {
             console.warn('Failed to request initial theme:', err.message);
           });
         }
