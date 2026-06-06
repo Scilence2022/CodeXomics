@@ -6,6 +6,7 @@ class LLMContextService {
   constructor(app, chatManager) {
     this.app = app;
     this.chatManager = chatManager;
+    this.toolExecutionPolicy = null;
   }
 
   formatToolResult(toolName, parameters, result) {
@@ -852,603 +853,37 @@ class LLMContextService {
     return normalized;
   }
 
+  getToolExecutionPolicy() {
+    if (!this.toolExecutionPolicy) {
+      const PolicyClass =
+        (typeof window !== 'undefined' && window.ToolExecutionPolicy) ||
+        (typeof globalThis !== 'undefined' && globalThis.ToolExecutionPolicy);
+
+      if (!PolicyClass) {
+        throw new Error('ToolExecutionPolicy is required before LLMContextService');
+      }
+
+      this.toolExecutionPolicy = new PolicyClass({
+        chatManager: this.chatManager,
+        normalizeToolParams: (toolName, parameters) => this.normalizeToolParams(toolName, parameters),
+        getDocument: () => (typeof document !== 'undefined' ? document : null),
+      });
+    }
+
+    return this.toolExecutionPolicy;
+  }
+
   hasViewStateChangedSinceLastExecution(toolName, conversationHistory) {
-    if (!conversationHistory || !Array.isArray(conversationHistory)) {
-      return false;
-    }
-
-    // 1. Find the index of the last successful execution of this tool
-    let lastExecIdx = -1;
-    for (let i = conversationHistory.length - 1; i >= 0; i--) {
-      const msg = conversationHistory[i];
-      if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
-        lastExecIdx = i;
-        break;
-      }
-    }
-
-    if (lastExecIdx === -1) {
-      return false; // No prior execution
-    }
-
-    // 2. Look for any view-changing tools executed successfully after that index
-    const viewChangingTools = [
-      'navigate_to_position',
-      'jump_to_gene',
-      'jump_to_feature',
-      'focus_on_gene',
-      'scroll_left',
-      'scroll_right',
-      'pan_left',
-      'pan_right',
-      'zoom_in',
-      'zoom_out',
-      'switch_to_tab',
-      'open_new_tab',
-      'load_genome_file',
-      'load_annotation_file',
-    ];
-
-    for (let i = lastExecIdx + 1; i < conversationHistory.length; i++) {
-      const msg = conversationHistory[i];
-      if (msg.role === 'system' && msg.content) {
-        for (const viewTool of viewChangingTools) {
-          if (msg.content.includes(`${viewTool} executed successfully`)) {
-            console.log(
-              `🔄 [Policy] View state changed since last execution of ${toolName} due to subsequent successful ${viewTool}`
-            );
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
+    return this.getToolExecutionPolicy().hasViewStateChangedSinceLastExecution(toolName, conversationHistory);
   }
 
   shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults = []) {
-    const toolKey =
-      this.chatManager && typeof this.chatManager.getToolExecutionKey === 'function'
-        ? this.chatManager.getToolExecutionKey(tool.tool_name, tool.parameters)
-        : `${tool.tool_name}:${JSON.stringify(this.normalizeToolParams(tool.tool_name, tool.parameters))}`;
-    const toolName = tool.tool_name;
-
-    // Define tool execution policies
-    const toolPolicies = {
-      // File operations - only re-execute with different parameters or after failure
-      file_operations: {
-        tools: [
-          'load_genome_file',
-          'load_annotation_file',
-          'load_variant_file',
-          'load_reads_file',
-          'load_wig_tracks',
-          'load_operon_file',
-        ],
-        policy: 'conditional_re_execution',
-        condition: (tool, history, results) => {
-          const wasSuccessful = this.chatManager.wasToolExecutedSuccessfully(toolKey, history);
-          if (wasSuccessful) {
-            console.log(`🚫 [Policy] File operation already succeeded with same parameters: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // UI operations - allow once per round, prevent rapid repetition
-      ui_operations: {
-        tools: [
-          'open_new_tab',
-          'close_tab',
-          'switch_tab',
-          'create_annotation',
-          'update_annotation',
-          'delete_annotation',
-          'bulk_update_annotations',
-          'get_annotation_history',
-          'delete_feature',
-          'export_data',
-        ],
-        policy: 'once_per_round',
-        condition: (tool, history, results, round) => {
-          const executedInCurrentRound = results.some(r => r.tool === toolName);
-          if (executedInCurrentRound) {
-            console.log(`🚫 [Policy] UI operation already executed in current round: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // Navigation operations - prevent re-navigation to same position
-      position_navigation: {
-        tools: ['navigate_to_position'],
-        policy: 'parameter_based',
-        condition: (tool, history, results) => {
-          const existingExecution = this.chatManager.findExistingExecution(toolKey, history);
-          if (existingExecution && existingExecution.success) {
-            console.log(`🚫 [Policy] Navigation already executed with same parameters: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // Scroll operations - can be repeated (different from precise navigation)
-      scroll_operations: {
-        tools: ['scroll_left', 'scroll_right', 'pan_left', 'pan_right'],
-        policy: 'always_allowed',
-        condition: () => true,
-      },
-
-      // Task management operations - always allowed to run sequentially
-      task_management: {
-        tools: ['add_task', 'update_task', 'list_tasks', 'clear_tasks', 'delete_task'],
-        policy: 'always_allowed',
-        condition: () => true,
-      },
-
-      // Sequence-editing Actions - queue operations, inspection, and execution are intentionally repeatable.
-      sequence_editing_actions: {
-        tools: [
-          'copy_sequence',
-          'cut_sequence',
-          'paste_sequence',
-          'delete_sequence',
-          'insert_sequence',
-          'replace_sequence',
-          'execute_actions',
-          'get_action_list',
-          'show_action_list',
-          'clear_actions',
-          'get_clipboard_content',
-        ],
-        policy: 'always_allowed',
-        condition: () => true,
-      },
-
-      // Zoom operations - prevent rapid repetition
-      zoom_operations: {
-        tools: ['zoom_in', 'zoom_out'],
-        policy: 'rate_limited',
-        condition: (tool, history, results) => {
-          const recentExecution = this.chatManager.findRecentExecution(toolName, history, 5000); // 5 seconds
-          if (recentExecution) {
-            console.log(`🚫 [Policy] Zoom operation rate limited: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // Gene/feature navigation - single execution per gene/feature
-      feature_navigation: {
-        tools: ['jump_to_gene', 'jump_to_feature', 'focus_on_gene', 'select_gene', 'select_sequence_region'],
-        policy: 'parameter_based',
-        condition: (tool, history, results) => {
-          const existingExecution = this.chatManager.findExistingExecution(toolKey, history);
-          if (existingExecution && existingExecution.success) {
-            console.log(`🚫 [Policy] Feature navigation already executed with same parameters: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // Search operations - allow with different parameters or after reasonable delay
-      search: {
-        tools: ['find_gene_by_name', 'search_features', 'search_sequence_motif'],
-        policy: 'parameter_based',
-        condition: (tool, history, results) => {
-          // Allow if parameters are different
-          const existingExecution = this.chatManager.findExistingExecution(toolKey, history);
-          if (existingExecution && existingExecution.success) {
-            console.log(`🚫 [Policy] Search already executed with same parameters: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // Analysis operations - single execution per analysis request
-      analysis: {
-        tools: [
-          'codon_usage_analysis',
-          'compute_gc',
-          'analyze_region',
-          'translate_dna',
-          'reverse_complement',
-          'get_coding_sequence',
-          'analyze_interpro_domains',
-          'calculate_molecular_weight',
-          'calculate_entropy',
-          'find_restriction_sites',
-          'virtual_digest',
-          'list_restriction_enzymes',
-          'simulate_gel_electrophoresis',
-        ],
-        policy: 'parameter_based',
-        condition: (tool, history, results) => {
-          const existingExecution = this.chatManager.findExistingExecution(toolKey, history);
-          if (existingExecution && existingExecution.success) {
-            console.log(`🚫 [Policy] Analysis already executed with same parameters: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // Primer design operations - allow re-runs when design parameters change
-      primer_design: {
-        tools: [
-          'design_primers',
-          'calculate_primer_properties',
-          'find_primer_binding_sites',
-          'add_primer_annotation',
-          'list_primer_annotations',
-          'clear_primer_annotations',
-        ],
-        policy: 'parameter_based',
-        condition: (tool, history, results) => {
-          const existingExecution = this.chatManager.findExistingExecution(toolKey, history);
-          if (existingExecution && existingExecution.success) {
-            console.log(`🚫 [Policy] Primer tool already executed with same parameters: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // Display/UI state operations - once per round
-      display_operations: {
-        tools: ['show_hide_features', 'set_view_mode', 'refresh_view'],
-        policy: 'once_per_round',
-        condition: (tool, history, results, round) => {
-          const executedInCurrentRound = results.some(r => r.tool === toolName);
-          if (executedInCurrentRound) {
-            console.log(`🚫 [Policy] Display operation already executed in current round: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // Track toggle operations - prevent unnecessary repetition of track toggle
-      track_operations: {
-        tools: ['toggle_track', 'toggle_annotation_track'],
-        policy: 'parameter_based_rate_limited',
-        condition: (tool, history, results) => {
-          // Get current track name from either trackName or track_name parameter
-          const currentTrack = tool.parameters?.trackName || tool.parameters?.track_name;
-          const currentAction = tool.parameters?.action;
-          const currentVisible = tool.parameters?.visible;
-
-          // Normalize track names for comparison (treat "action" and "actions" as the same)
-          const normalizeTrackName = trackName => {
-            if (!trackName) return '';
-            const lower = trackName.toLowerCase();
-            if (lower === 'action') return 'actions';
-            if (lower === 'primer') return 'primers';
-            return lower;
-          };
-
-          const normalizedCurrentTrack = normalizeTrackName(currentTrack);
-
-          // Check if the track is already in the desired state
-          const trackMapping = {
-            genes: 'trackGenes',
-            gc: 'trackGC',
-            gc_content: 'trackGC',
-            variants: 'trackVariants',
-            reads: 'trackReads',
-            proteins: 'trackProteins',
-            primers: 'trackPrimers',
-            primer: 'trackPrimers',
-            wigtracks: 'trackWIG',
-            wigTracks: 'trackWIG',
-            sequence: 'trackSequence',
-            actions: 'trackActions',
-            action: 'trackActions',
-            blast: 'trackBlast',
-            blast_results: 'trackBlast',
-          };
-
-          // Convert action to visible state for comparison
-          let currentVisibleState = currentVisible;
-          if (currentVisibleState === undefined && currentAction) {
-            if (currentAction === 'show') {
-              currentVisibleState = true;
-            } else if (currentAction === 'hide') {
-              currentVisibleState = false;
-            } else if (currentAction === 'toggle') {
-              const checkboxId = currentTrack
-                ? trackMapping[currentTrack.toLowerCase()] || trackMapping[currentTrack]
-                : null;
-              const trackCheckbox = checkboxId ? document.getElementById(checkboxId) : null;
-              if (trackCheckbox) {
-                currentVisibleState = !trackCheckbox.checked;
-              }
-            }
-          }
-
-          const checkboxId = currentTrack
-            ? trackMapping[currentTrack.toLowerCase()] || trackMapping[currentTrack]
-            : null;
-          const trackCheckbox = checkboxId ? document.getElementById(checkboxId) : null;
-          if (trackCheckbox && currentVisibleState !== undefined && trackCheckbox.checked === currentVisibleState) {
-            console.log(
-              `🚫 [Policy] Track already in requested state: ${currentTrack} (${currentAction || currentVisible})`
-            );
-            return false;
-          }
-
-          // Check for recent execution of same track toggle with more precise parameter matching
-          const now = Date.now();
-          const timeWindowMs = 3000; // 3 seconds
-
-          // Look through conversation history for recent executions
-          for (let i = conversationHistory.length - 1; i >= 0; i--) {
-            const msg = conversationHistory[i];
-
-            // Check assistant messages for tool calls
-            if (msg.role === 'assistant' && msg.content) {
-              try {
-                // Try to parse as single tool call
-                const parsed = JSON.parse(msg.content);
-                if (
-                  (parsed.tool_name === 'toggle_track' || parsed.tool_name === 'toggle_annotation_track') &&
-                  parsed.parameters
-                ) {
-                  const estimatedTimestamp = now - (conversationHistory.length - 1 - i) * 1000;
-
-                  if (now - estimatedTimestamp < timeWindowMs) {
-                    // Get recent track name from either trackName or track_name parameter
-                    const recentTrack = parsed.parameters?.trackName || parsed.parameters?.track_name;
-                    const recentAction = parsed.parameters?.action;
-                    const recentVisible = parsed.parameters?.visible;
-
-                    // Convert recent action to visible state for comparison
-                    let recentVisibleState = recentVisible;
-                    if (recentVisibleState === undefined && recentAction) {
-                      if (recentAction === 'show') {
-                        recentVisibleState = true;
-                      } else if (recentAction === 'hide') {
-                        recentVisibleState = false;
-                      } else if (recentAction === 'toggle') {
-                        let foundState = null;
-                        if (i + 1 < conversationHistory.length && conversationHistory[i + 1].role === 'tool') {
-                          try {
-                            const toolResult = JSON.parse(conversationHistory[i + 1].content);
-                            if (toolResult && toolResult.visible !== undefined) {
-                              foundState = toolResult.visible;
-                            }
-                          } catch (e) {}
-                        }
-                        const checkboxIdRecent = recentTrack
-                          ? trackMapping[recentTrack.toLowerCase()] || trackMapping[recentTrack]
-                          : null;
-                        const trackCheckboxRecent = checkboxIdRecent ? document.getElementById(checkboxIdRecent) : null;
-                        recentVisibleState =
-                          foundState !== null
-                            ? foundState
-                            : trackCheckboxRecent
-                              ? !trackCheckboxRecent.checked
-                              : undefined;
-                      }
-                    }
-
-                    // If same track and same action, block it
-                    const normalizedRecentTrack = normalizeTrackName(recentTrack);
-                    if (
-                      normalizedCurrentTrack === normalizedRecentTrack &&
-                      currentVisibleState === recentVisibleState &&
-                      currentVisibleState !== undefined
-                    ) {
-                      console.log(
-                        `🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`
-                      );
-                      return false;
-                    }
-                  }
-                }
-              } catch (e) {
-                // Try to parse as multiple tool calls
-                try {
-                  const multipleToolCalls = this.chatManager.parseMultipleToolCalls(msg.content);
-                  const matchingTool = multipleToolCalls.find(
-                    t => t.tool_name === 'toggle_track' || t.tool_name === 'toggle_annotation_track'
-                  );
-
-                  if (matchingTool && matchingTool.parameters) {
-                    const estimatedTimestamp = now - (conversationHistory.length - 1 - i) * 1000;
-
-                    if (now - estimatedTimestamp < timeWindowMs) {
-                      // Get recent track name from either trackName or track_name parameter
-                      const recentTrack = matchingTool.parameters?.trackName || matchingTool.parameters?.track_name;
-                      const recentAction = matchingTool.parameters?.action;
-                      const recentVisible = matchingTool.parameters?.visible;
-
-                      // Convert recent action to visible state for comparison
-                      let recentVisibleState = recentVisible;
-                      if (recentVisibleState === undefined && recentAction) {
-                        if (recentAction === 'show') {
-                          recentVisibleState = true;
-                        } else if (recentAction === 'hide') {
-                          recentVisibleState = false;
-                        } else if (recentAction === 'toggle') {
-                          let foundState = null;
-                          if (i + 1 < conversationHistory.length && conversationHistory[i + 1].role === 'tool') {
-                            try {
-                              const toolResult = JSON.parse(conversationHistory[i + 1].content);
-                              if (toolResult && toolResult.visible !== undefined) {
-                                foundState = toolResult.visible;
-                              }
-                            } catch (e) {}
-                          }
-                          const checkboxIdRecent = recentTrack
-                            ? trackMapping[recentTrack.toLowerCase()] || trackMapping[recentTrack]
-                            : null;
-                          const trackCheckboxRecent = checkboxIdRecent
-                            ? document.getElementById(checkboxIdRecent)
-                            : null;
-                          recentVisibleState =
-                            foundState !== null
-                              ? foundState
-                              : trackCheckboxRecent
-                                ? !trackCheckboxRecent.checked
-                                : undefined;
-                        }
-                      }
-
-                      // If same track and same action, block it
-                      const normalizedRecentTrack = normalizeTrackName(recentTrack);
-                      if (
-                        normalizedCurrentTrack === normalizedRecentTrack &&
-                        currentVisibleState === recentVisibleState &&
-                        currentVisibleState !== undefined
-                      ) {
-                        console.log(
-                          `🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`
-                        );
-                        return false;
-                      }
-                    }
-                  }
-                } catch (e2) {
-                  // Not a tool call, continue
-                }
-              }
-            }
-          }
-
-          return true;
-        },
-      },
-
-      // State operations - parameter-based to prevent repetition
-      state: {
-        tools: [
-          'get_current_state',
-          'get_genome_info',
-          'get_file_info',
-          'get_sequence',
-          'get_current_region',
-          'get_visible_tracks',
-          'get_annotation',
-          'list_annotations',
-          'search_annotations',
-          'get_operons',
-        ],
-        policy: 'parameter_based',
-        condition: (tool, history, results) => {
-          const existingExecution = this.chatManager.findExistingExecution(toolKey, history);
-          if (existingExecution && existingExecution.success) {
-            console.log(`🚫 [Policy] State operation already executed with same parameters: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-
-      // External API operations - prevent rapid re-execution
-      external_api: {
-        tools: [
-          'blast_search',
-          'fetch_protein_structure',
-          'get_uniprot_entry',
-          'search_uniprot_database',
-          'advanced_uniprot_search',
-          'search_interpro_entry',
-          'get_interpro_entry_details',
-          'fetch_alphafold_structure',
-        ],
-        policy: 'rate_limited',
-        condition: (tool, history, results) => {
-          const recentExecution = this.chatManager.findRecentExecution(toolName, history, 30000); // 30 seconds
-          if (recentExecution) {
-            console.log(`🚫 [Policy] External API operation rate limited: ${toolName}`);
-            return false;
-          }
-          return true;
-        },
-      },
-    };
-
-    // Find applicable policy
-    let applicablePolicy = null;
-    let applicablePolicyName = null;
-    for (const [policyName, policy] of Object.entries(toolPolicies)) {
-      if (policy.tools.includes(toolName)) {
-        applicablePolicy = policy;
-        applicablePolicyName = policyName;
-        console.log(`🎯 [Policy] Applied ${policyName} policy to ${toolName}`);
-        break;
-      }
-    }
-
-    // Apply global execution limits unless exempted
-    // Scroll and zoom operations are exempted as they are meant to be repeated for exploration
-    const exemptedPolicies = ['scroll_operations', 'zoom_operations'];
-    if (!exemptedPolicies.includes(applicablePolicyName)) {
-      const chatboxSettings = this.chatManager.configManager.get('chatboxSettings') || {};
-      const maxSameToolIdenticalParams =
-        chatboxSettings.maxSameToolIdenticalParams ||
-        this.chatManager.configManager.get('llm.maxSameToolIdenticalParams', 2);
-
-      // Check identical parameters limit
-      const identicalExecutionCount = this.chatManager.getToolExecutionCount(toolKey, conversationHistory);
-      if (identicalExecutionCount >= maxSameToolIdenticalParams) {
-        // If view state changed since the last execution, bypass identical params block
-        if (this.hasViewStateChangedSinceLastExecution(toolName, conversationHistory)) {
-          console.log(
-            `🔄 [Policy] View state has changed since last successful run. Bypassing identical execution limit for ${toolName}`
-          );
-        } else {
-          console.log(
-            `🚫 [Policy] Maximum identical tool execution limit reached (${maxSameToolIdenticalParams}): ${toolName}`
-          );
-          return false;
-        }
-      }
-
-      // Check different parameters limit, unless policy is exempted from total limit
-      const exemptedFromTotalLimit = [
-        'scroll_operations',
-        'zoom_operations',
-        'search',
-        'analysis',
-        'state',
-        'external_api',
-        'primer_design',
-        'feature_navigation',
-        'position_navigation',
-        'track_operations',
-      ];
-
-      if (!exemptedFromTotalLimit.includes(applicablePolicyName)) {
-        const maxSameToolDifferentParams =
-          chatboxSettings.maxSameToolDifferentParams ||
-          this.chatManager.configManager.get('llm.maxSameToolDifferentParams', 3);
-        const totalExecutionCount = this.chatManager.getToolExecutionCountByName(toolName, conversationHistory);
-        if (totalExecutionCount >= maxSameToolDifferentParams) {
-          console.log(
-            `🚫 [Policy] Maximum total tool execution limit reached (${maxSameToolDifferentParams}): ${toolName}`
-          );
-          return false;
-        }
-      }
-    }
-
-    // Default policy for unknown tools - allow once (if not already blocked by global limits)
-    if (!applicablePolicy) {
-      console.log(`⚠️ [Policy] Unknown tool, applying default once-per-round policy: ${toolName}`);
-      const alreadyExecuted = this.chatManager.wasToolExecutedSuccessfully(toolKey, conversationHistory);
-      return !alreadyExecuted;
-    }
-
-    // Apply the policy condition
-    return applicablePolicy.condition(tool, conversationHistory, toolResults, currentRound);
+    return this.getToolExecutionPolicy().shouldAllowToolExecution(
+      tool,
+      conversationHistory,
+      currentRound,
+      toolResults
+    );
   }
 
   generateSingleToolResponse(tool, result) {
@@ -1590,113 +1025,113 @@ InterPro domain analysis has been completed successfully.`;
 
       case 'export_fasta_sequence':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `🧬 **FASTA Sequence Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Chromosomes:** ${result.result.total_chromosomes}
-- **Total Length:** ${result.result.total_length?.toLocaleString()} bp
+- **Format:** ${result.result.exported_format || 'FASTA'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Chromosomes:** ${result.result.total_chromosomes ?? result.result.chromosomes?.length ?? 'Unknown'}
+- **Total Length:** ${result.result.total_length?.toLocaleString() || 'Unknown'} bp
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_genbank_format':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `📄 **GenBank Format Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Chromosomes:** ${result.result.total_chromosomes}
-- **Features:** ${result.result.total_features}
+- **Format:** ${result.result.exported_format || 'GenBank'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Chromosomes:** ${result.result.total_chromosomes ?? result.result.chromosomes?.length ?? 'Unknown'}
+- **Features:** ${result.result.total_features ?? 'Unknown'}
 - **Protein Sequences:** ${result.result.include_protein_sequences ? 'Included' : 'Not included'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `GenBank export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_cds_fasta':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `🧬 **CDS FASTA Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **CDS Sequences:** ${result.result.total_cds_sequences}
+- **Format:** ${result.result.exported_format || 'CDS FASTA'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **CDS Sequences:** ${result.result.total_cds_sequences ?? result.result.count ?? 'Unknown'}
 - **Gene Names:** ${result.result.include_gene_names ? 'Included' : 'Not included'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `CDS FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_protein_fasta':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `🧬 **Protein FASTA Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Protein Sequences:** ${result.result.total_protein_sequences}
-- **Translation Table:** ${result.result.translation_table}
+- **Format:** ${result.result.exported_format || 'Protein FASTA'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Protein Sequences:** ${result.result.total_protein_sequences ?? 'Unknown'}
+- **Translation Table:** ${result.result.translation_table ?? 'Standard'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `Protein FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_gff_annotations':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `📋 **GFF Annotations Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Features:** ${result.result.total_features}
+- **Format:** ${result.result.exported_format || 'GFF'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Features:** ${result.result.total_features ?? 'Unknown'}
 - **Feature Types:** ${result.result.feature_types?.join(', ') || 'Various'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `GFF export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_bed_format':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `📊 **BED Format Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Features:** ${result.result.total_features}
+- **Format:** ${result.result.exported_format || 'BED'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Features:** ${result.result.total_features ?? result.result.exported_count ?? 'Unknown'}
 - **Score/Strand:** ${result.result.include_score && result.result.include_strand ? 'Included' : 'Basic format'}
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `BED export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
 
       case 'export_current_view_fasta':
         if (result.result && result.result.success) {
+          const details = result.result.details ? `\n${result.result.details}` : '';
           return `👁️ **Current View FASTA Export Completed!**
 
 **Export Details:**
-- **Format:** ${result.result.exported_format}
-- **File:** ${result.result.filename}
-- **Region:** ${result.result.coordinates}
-- **Length:** ${result.result.region_length?.toLocaleString()} bp
+- **Format:** ${result.result.exported_format || 'FASTA (Current View)'}
+- **File:** ${result.result.filePath || result.result.file_path || result.result.filename}
+- **Region:** ${result.result.coordinates || 'Current view'}
+- **Length:** ${result.result.region_length?.toLocaleString() || 'Unknown'} bp
 
-✅ ${result.result.message}
-${result.result.details}`;
+✅ ${result.result.message || 'Export completed successfully.'}${details}`;
         } else {
           return `Current view export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
         }
@@ -2907,27 +2342,39 @@ ${this.chatManager.getPluginSystemInfo()}`;
         // Custom handling for Deep Gene Research tool
         if (result.tool === 'deep-gene-research') {
           try {
-            const fs = require('fs');
-            const path = require('path');
             const extracted = this.chatManager.extractDeepGeneResearchReport(resultData);
             const { report, geneSymbol, stepsCount, statistics } = extracted;
             let reportSaved = false;
-            let reportPath = '';
+            let reportFileName = '';
 
             const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
             if (reportStr && reportStr.trim().length > 0) {
-              const reportsDir = path.join(process.cwd(), 'reports');
-              if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
-              const safeSymbol = geneSymbol.replace(/[^a-zA-Z0-9_-]/g, '_');
-              reportPath = path.join(reportsDir, `Gene_${safeSymbol}_Research_Report.md`);
-              fs.writeFileSync(reportPath, reportStr);
-              reportSaved = true;
+              const saveReport = window.electronAPI?.saveGeneResearchReport;
+              if (saveReport) {
+                saveReport(geneSymbol, reportStr)
+                  .then(saveResult => {
+                    if (saveResult?.success) {
+                      this.chatManager.updateThinkingMessage(
+                        `<div style="color: #00695c; margin: 8px 0;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${this.chatManager.escapeHtml(saveResult.fileName || '')}</code></div>`
+                      );
+                    } else {
+                      console.warn('Deep Gene Research report save failed:', saveResult?.error || 'Unknown error');
+                    }
+                  })
+                  .catch(saveError => {
+                    console.warn('Deep Gene Research report save failed:', saveError);
+                  });
+                reportSaved = true;
+                reportFileName = 'pending save';
+              } else {
+                console.warn('Deep Gene Research report save skipped: IPC bridge unavailable');
+              }
             }
 
             resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">`;
             resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Complete: ${geneSymbol}</h3>`;
             if (reportSaved) {
-              resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${path.basename(reportPath)}</code></div>`;
+              resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report save requested <code>${this.chatManager.escapeHtml(reportFileName)}</code></div>`;
             }
             resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
             if (stepsCount > 0) resultDisplay += `Completed ${stepsCount} steps of analysis.<br>`;

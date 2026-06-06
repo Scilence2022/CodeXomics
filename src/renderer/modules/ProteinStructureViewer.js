@@ -102,6 +102,12 @@ class ProteinStructureViewer {
 
     // Listen for protein structure-related messages from MCP server
     this.setupMCPListeners();
+
+    // Listen for theme style changes and propagate to open windows
+    window.addEventListener('uiStyleChanged', event => {
+      const { style, preset } = event.detail;
+      this.applyThemeToAllWindows(style, preset);
+    });
   }
 
   /**
@@ -397,6 +403,15 @@ class ProteinStructureViewer {
     // Set up the viewer window content
     viewerWindow.document.write(this.getViewerHTML(proteinName, pdbId));
     viewerWindow.document.close();
+
+    // Apply current theme style immediately
+    if (window.themeManager) {
+      const currentStyle = window.themeManager.getCurrentStyle();
+      const preset = window.themeManager.stylePresets[currentStyle];
+      if (preset) {
+        this.applyThemeToWindow(viewerWindow, currentStyle, preset);
+      }
+    }
 
     // Wait for window to load, then wait for NGL to load, then initialize
     viewerWindow.onload = () => {
@@ -790,22 +805,30 @@ class ProteinStructureViewer {
                     body {
                         margin: 0;
                         padding: 0;
-                        font-family: Arial, sans-serif;
-                        background: #f0f0f0;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                        background: var(--bg-primary, #ffffff);
+                        color: var(--text-primary, #1f2937);
+                        transition: background-color 0.3s ease, color 0.3s ease;
                     }
                     .header {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        background: var(--modal-header-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
                         color: white;
                         padding: 15px;
                         text-align: center;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        transition: background 0.3s ease;
                     }
                     .header h1 {
                         margin: 0;
                         font-size: 1.5em;
+                        font-weight: 600;
+                        letter-spacing: -0.5px;
                     }
                     .header .pdb-id {
                         font-size: 0.9em;
-                        opacity: 0.8;
+                        opacity: 0.85;
+                        margin-top: 4px;
+                        font-weight: 500;
                     }
                     .viewer-container {
                         height: calc(100vh - 80px);
@@ -813,24 +836,35 @@ class ProteinStructureViewer {
                     }
                     .controls {
                         position: absolute;
-                        top: 10px;
-                        left: 10px;
-                        background: rgba(255,255,255,0.9);
+                        top: 15px;
+                        left: 15px;
+                        background: var(--bg-primary, #ffffff);
+                        border: 1px solid var(--border-color, #e5e7eb);
                         padding: 10px;
-                        border-radius: 5px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
                         z-index: 1000;
+                        display: flex;
+                        gap: 6px;
+                        transition: background-color 0.3s ease, border-color 0.3s ease;
                     }
                     .controls button {
-                        margin: 2px;
-                        padding: 5px 10px;
-                        border: 1px solid #ddd;
-                        background: white;
-                        border-radius: 3px;
+                        padding: 6px 12px;
+                        border: 1px solid var(--border-color, #e5e7eb);
+                        background: var(--bg-primary, #ffffff);
+                        color: var(--text-primary, #1f2937);
+                        border-radius: 6px;
                         cursor: pointer;
+                        font-weight: 500;
+                        font-size: 0.85em;
+                        transition: all 0.2s ease;
                     }
                     .controls button:hover {
-                        background: #f0f0f0;
+                        background: var(--bg-tertiary, #f1f5f9);
+                        border-color: var(--border-hover, #d1d5db);
+                    }
+                    .controls button:active {
+                        transform: scale(0.97);
                     }
                     #viewport {
                         width: 100%;
@@ -842,8 +876,9 @@ class ProteinStructureViewer {
                         left: 50%;
                         transform: translate(-50%, -50%);
                         text-align: center;
-                        font-size: 1.2em;
-                        color: #666;
+                        font-size: 1.1em;
+                        color: var(--text-secondary, #6b7280);
+                        font-weight: 500;
                     }
                 </style>
             </head>
@@ -865,6 +900,54 @@ class ProteinStructureViewer {
             </body>
             </html>
         `;
+  }
+
+  /**
+   * Apply theme style to all open protein structure viewer windows
+   */
+  applyThemeToAllWindows(styleName, preset) {
+    console.log(`Applying theme ${styleName} to all structure windows`);
+    for (const [windowId, viewerWindow] of this.structureWindows.entries()) {
+      if (viewerWindow && !viewerWindow.closed) {
+        this.applyThemeToWindow(viewerWindow, styleName, preset);
+      } else {
+        this.structureWindows.delete(windowId);
+      }
+    }
+  }
+
+  /**
+   * Apply theme style to a single protein structure viewer window
+   */
+  applyThemeToWindow(viewerWindow, styleName, preset) {
+    try {
+      const doc = viewerWindow.document;
+      if (!doc) return;
+
+      // Remove any previous style class from body
+      doc.body.classList.remove(
+        'style-default',
+        'style-professional',
+        'style-minimal',
+        'style-pastel',
+        'style-elegant',
+        'style-midnight'
+      );
+      doc.body.classList.add(`style-${styleName}`);
+
+      // Set data attribute for CSS selectors
+      doc.documentElement.setAttribute('data-ui-style', styleName);
+
+      // Apply style variables
+      const root = doc.documentElement;
+      Object.entries(preset.variables).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+
+      console.log(`Successfully applied style '${styleName}' to viewer window`);
+    } catch (error) {
+      console.error('Error applying theme style to viewer window:', error);
+    }
   }
 
   /**
@@ -1539,7 +1622,7 @@ class ProteinStructureViewer {
     if (!header) return;
 
     let isDragging = false;
-    let dragOffset = { x: 0, y: 0 };
+    const dragOffset = { x: 0, y: 0 };
 
     const startDrag = e => {
       // Only start drag if clicked on header (not on close button)

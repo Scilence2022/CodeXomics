@@ -11,6 +11,65 @@ class BenchmarkReportGenerator {
     };
   }
 
+  getDefaultSuiteStats() {
+    return {
+      totalTests: 0,
+      passedTests: 0,
+      failedTests: 0,
+      successRate: 0,
+      scoreStats: {
+        percentage: {
+          mean: 0,
+          standardDeviation: 0,
+        },
+      },
+      performanceStats: {
+        duration: {
+          mean: 0,
+          standardDeviation: 0,
+        },
+      },
+      errorAnalysis: {
+        errorRate: 0,
+      },
+    };
+  }
+
+  getSuiteStats(suiteResult) {
+    const defaults = this.getDefaultSuiteStats();
+    const stats = suiteResult?.stats || {};
+    const mergedStats = {
+      ...defaults,
+      ...stats,
+      scoreStats: {
+        ...defaults.scoreStats,
+        ...(stats.scoreStats || {}),
+        percentage: {
+          ...defaults.scoreStats.percentage,
+          ...(stats.scoreStats?.percentage || {}),
+        },
+      },
+      performanceStats: {
+        ...defaults.performanceStats,
+        ...(stats.performanceStats || {}),
+        duration: {
+          ...defaults.performanceStats.duration,
+          ...(stats.performanceStats?.duration || {}),
+        },
+      },
+      errorAnalysis: {
+        ...defaults.errorAnalysis,
+        ...(stats.errorAnalysis || {}),
+      },
+    };
+
+    if (suiteResult?.error && mergedStats.totalTests === 0) {
+      mergedStats.errorAnalysis.errorRate = 100;
+    }
+
+    return mergedStats;
+  }
+
   /**
    * Generate comprehensive report
    */
@@ -19,6 +78,7 @@ class BenchmarkReportGenerator {
     const includeCharts = options.includeCharts !== false;
     const includeRawData = options.includeRawData === true;
     const includeLLMInteractions = options.includeLLMInteractions !== false; // Default to true
+    const llmInteractionsFailedOnly = options.llmInteractionsFailedOnly === true;
 
     const report = {
       metadata: this.generateMetadata(benchmarkResults, options),
@@ -33,10 +93,11 @@ class BenchmarkReportGenerator {
 
     // CRITICAL ENHANCEMENT: Add comprehensive LLM interaction analysis
     if (includeLLMInteractions) {
-      report.llmInteractionAnalysis = this.generateLLMInteractionAnalysis(benchmarkResults);
-      report.conversationFlows = this.generateConversationFlows(benchmarkResults);
-      report.promptAnalysis = this.generatePromptAnalysis(benchmarkResults);
-      report.responsePatterns = this.generateResponsePatterns(benchmarkResults);
+      const llmInteractionOptions = { failedOnly: llmInteractionsFailedOnly };
+      report.llmInteractionAnalysis = this.generateLLMInteractionAnalysis(benchmarkResults, llmInteractionOptions);
+      report.conversationFlows = this.generateConversationFlows(benchmarkResults, llmInteractionOptions);
+      report.promptAnalysis = this.generatePromptAnalysis(benchmarkResults, llmInteractionOptions);
+      report.responsePatterns = this.generateResponsePatterns(benchmarkResults, llmInteractionOptions);
     }
 
     if (includeCharts) {
@@ -101,14 +162,15 @@ class BenchmarkReportGenerator {
 
     // Analyze each test suite
     for (const suiteResult of benchmarkResults.testSuiteResults) {
+      const suiteStats = this.getSuiteStats(suiteResult);
       analysis.testSuiteBreakdown.push({
         suiteName: suiteResult.suiteName,
         suiteId: suiteResult.suiteId,
         summary: {
-          totalTests: suiteResult.stats.totalTests,
-          successRate: suiteResult.stats.successRate,
-          averageScore: suiteResult.stats.scoreStats.percentage.mean,
-          averageDuration: suiteResult.stats.performanceStats.duration.mean,
+          totalTests: suiteStats.totalTests,
+          successRate: suiteStats.successRate,
+          averageScore: suiteStats.scoreStats.percentage.mean,
+          averageDuration: suiteStats.performanceStats.duration.mean,
         },
         strengths: this.identifyStrengths(suiteResult),
         weaknesses: this.identifyWeaknesses(suiteResult),
@@ -358,8 +420,8 @@ class BenchmarkReportGenerator {
   /**
    * Generate HTML report
    */
-  generateHTMLReport(benchmarkResults) {
-    const report = this.generateReport(benchmarkResults, { includeCharts: true });
+  generateHTMLReport(benchmarkResults, options = {}) {
+    const report = this.generateReport(benchmarkResults, { ...options, includeCharts: true });
 
     return `
 <!DOCTYPE html>
@@ -527,16 +589,17 @@ class BenchmarkReportGenerator {
 
   identifyStrengths(suiteResult) {
     const strengths = [];
+    const stats = this.getSuiteStats(suiteResult);
 
-    if (suiteResult.stats.successRate > 85) {
+    if (stats.successRate > 85) {
       strengths.push('High success rate');
     }
 
-    if (suiteResult.stats.scoreStats.percentage.mean > 80) {
+    if (stats.scoreStats.percentage.mean > 80) {
       strengths.push('Strong average performance');
     }
 
-    if (suiteResult.stats.errorAnalysis.errorRate < 5) {
+    if (stats.errorAnalysis.errorRate < 5) {
       strengths.push('Low error rate');
     }
 
@@ -545,16 +608,17 @@ class BenchmarkReportGenerator {
 
   identifyWeaknesses(suiteResult) {
     const weaknesses = [];
+    const stats = this.getSuiteStats(suiteResult);
 
-    if (suiteResult.stats.successRate < 70) {
+    if (stats.successRate < 70) {
       weaknesses.push('Below-target success rate');
     }
 
-    if (suiteResult.stats.errorAnalysis.errorRate > 10) {
+    if (stats.errorAnalysis.errorRate > 10) {
       weaknesses.push('High error rate');
     }
 
-    if (suiteResult.stats.performanceStats.duration.mean > 15000) {
+    if (stats.performanceStats.duration.mean > 15000) {
       weaknesses.push('Slow response times');
     }
 
@@ -563,13 +627,14 @@ class BenchmarkReportGenerator {
 
   generateSuiteInsights(suiteResult) {
     const insights = [];
+    const stats = this.getSuiteStats(suiteResult);
 
     // Add suite-specific insights based on performance patterns
-    if (suiteResult.stats.scoreStats.percentage.standardDeviation > 25) {
+    if (stats.scoreStats.percentage.standardDeviation > 25) {
       insights.push('High variability in test scores suggests inconsistent performance');
     }
 
-    if (suiteResult.stats.performanceStats.duration.standardDeviation > 5000) {
+    if (stats.performanceStats.duration.standardDeviation > 5000) {
       insights.push('Response times vary significantly across tests');
     }
 
@@ -581,6 +646,7 @@ class BenchmarkReportGenerator {
     const categories = {};
 
     for (const suiteResult of benchmarkResults.testSuiteResults) {
+      const stats = this.getSuiteStats(suiteResult);
       const category = this.categorizeTestSuite(suiteResult.suiteId);
       if (!categories[category]) {
         categories[category] = {
@@ -591,18 +657,17 @@ class BenchmarkReportGenerator {
         };
       }
 
-      categories[category].testCount += suiteResult.stats.totalTests;
-      categories[category].successCount += suiteResult.stats.passedTests;
-      categories[category].totalScore += suiteResult.stats.scoreStats.percentage.mean * suiteResult.stats.totalTests;
-      categories[category].totalDuration +=
-        suiteResult.stats.performanceStats.duration.mean * suiteResult.stats.totalTests;
+      categories[category].testCount += stats.totalTests;
+      categories[category].successCount += stats.passedTests;
+      categories[category].totalScore += stats.scoreStats.percentage.mean * stats.totalTests;
+      categories[category].totalDuration += stats.performanceStats.duration.mean * stats.totalTests;
     }
 
     // Calculate averages
     for (const category of Object.values(categories)) {
-      category.successRate = (category.successCount / category.testCount) * 100;
-      category.averageScore = category.totalScore / category.testCount;
-      category.averageDuration = category.totalDuration / category.testCount;
+      category.successRate = category.testCount > 0 ? (category.successCount / category.testCount) * 100 : 0;
+      category.averageScore = category.testCount > 0 ? category.totalScore / category.testCount : 0;
+      category.averageDuration = category.testCount > 0 ? category.totalDuration / category.testCount : 0;
     }
 
     return categories;
@@ -875,7 +940,7 @@ class BenchmarkReportGenerator {
   /**
    * CRITICAL ENHANCEMENT: Generate comprehensive LLM interaction analysis
    */
-  generateLLMInteractionAnalysis(benchmarkResults) {
+  generateLLMInteractionAnalysis(benchmarkResults, options = {}) {
     const analysis = {
       summary: {
         totalInteractions: 0,
@@ -892,7 +957,7 @@ class BenchmarkReportGenerator {
       responseQualityDistribution: {},
     };
 
-    const allInteractions = this.extractAllLLMInteractions(benchmarkResults);
+    const allInteractions = this.extractAllLLMInteractions(benchmarkResults, options);
     analysis.summary.totalInteractions = allInteractions.length;
 
     if (allInteractions.length === 0) {
@@ -973,7 +1038,7 @@ class BenchmarkReportGenerator {
   /**
    * Extract all LLM interactions from benchmark results
    */
-  extractAllLLMInteractions(benchmarkResults) {
+  extractAllLLMInteractions(benchmarkResults, options = {}) {
     const interactions = [];
 
     if (benchmarkResults.testSuiteResults) {
@@ -981,7 +1046,40 @@ class BenchmarkReportGenerator {
         if (suiteResult.testResults) {
           suiteResult.testResults.forEach(testResult => {
             if (testResult.llmInteractionData) {
-              interactions.push(testResult.llmInteractionData);
+              const interaction = {
+                ...testResult.llmInteractionData,
+                testInfo: this.buildLLMInteractionTestInfo(suiteResult, testResult),
+              };
+              if (!options.failedOnly || this.isFailedLLMInteraction(interaction)) {
+                interactions.push(interaction);
+              }
+            } else if (testResult.llmInteractionDataSummary) {
+              const interaction = {
+                testId: testResult.llmInteractionDataSummary.testId,
+                testName: testResult.llmInteractionDataSummary.testName,
+                request: {
+                  provider: testResult.llmInteractionDataSummary.requestProvider,
+                  model: testResult.llmInteractionDataSummary.requestModel,
+                  systemPromptLength: testResult.llmInteractionDataSummary.requestSystemPromptLength,
+                  contextLength: testResult.llmInteractionDataSummary.requestContextLength,
+                },
+                response: {
+                  responseTime: testResult.llmInteractionDataSummary.responseTime,
+                  executionRounds: testResult.llmInteractionDataSummary.executionRounds,
+                  tokenUsage: testResult.llmInteractionDataSummary.tokenUsage,
+                  _summaryOnly: true,
+                  _diskPath: testResult.llmInteractionDataSummary.diskPath,
+                },
+                analysis: {
+                  isError: testResult.llmInteractionDataSummary.analysisIsError,
+                  errorType: testResult.llmInteractionDataSummary.analysisErrorType,
+                  confidence: testResult.llmInteractionDataSummary.analysisConfidence,
+                },
+                testInfo: this.buildLLMInteractionTestInfo(suiteResult, testResult),
+              };
+              if (!options.failedOnly || this.isFailedLLMInteraction(interaction)) {
+                interactions.push(interaction);
+              }
             }
           });
         }
@@ -991,10 +1089,31 @@ class BenchmarkReportGenerator {
     return interactions;
   }
 
+  buildLLMInteractionTestInfo(suiteResult, testResult) {
+    return {
+      testId: testResult.testId,
+      testName: testResult.testName,
+      suiteId: testResult.suiteId || suiteResult.suiteId,
+      suiteName: suiteResult.suiteName,
+      score: testResult.score,
+      success: testResult.success,
+      duration: testResult.duration,
+      status: testResult.status,
+    };
+  }
+
+  isFailedLLMInteraction(interaction) {
+    return (
+      interaction.analysis?.isError === true ||
+      interaction.testInfo?.success === false ||
+      interaction.testInfo?.status === 'failed'
+    );
+  }
+
   /**
    * Generate conversation flows analysis
    */
-  generateConversationFlows(benchmarkResults) {
+  generateConversationFlows(benchmarkResults, options = {}) {
     const flows = {
       totalConversations: 0,
       averageLength: 0,
@@ -1004,7 +1123,7 @@ class BenchmarkReportGenerator {
       commonFailurePoints: [],
     };
 
-    const allInteractions = this.extractAllLLMInteractions(benchmarkResults);
+    const allInteractions = this.extractAllLLMInteractions(benchmarkResults, options);
 
     // Group interactions by test to analyze conversation flows
     const conversationsByTest = {};
@@ -1034,7 +1153,7 @@ class BenchmarkReportGenerator {
   /**
    * Generate prompt analysis
    */
-  generatePromptAnalysis(benchmarkResults) {
+  generatePromptAnalysis(benchmarkResults, options = {}) {
     const analysis = {
       promptStats: {
         averageLength: 0,
@@ -1055,7 +1174,7 @@ class BenchmarkReportGenerator {
       },
     };
 
-    const allInteractions = this.extractAllLLMInteractions(benchmarkResults);
+    const allInteractions = this.extractAllLLMInteractions(benchmarkResults, options);
 
     if (allInteractions.length === 0) {
       return analysis;
@@ -1099,7 +1218,7 @@ class BenchmarkReportGenerator {
   /**
    * Generate response patterns analysis
    */
-  generateResponsePatterns(benchmarkResults) {
+  generateResponsePatterns(benchmarkResults, options = {}) {
     const patterns = {
       responseTypes: {
         functionCalls: 0,
@@ -1117,7 +1236,7 @@ class BenchmarkReportGenerator {
       },
     };
 
-    const allInteractions = this.extractAllLLMInteractions(benchmarkResults);
+    const allInteractions = this.extractAllLLMInteractions(benchmarkResults, options);
 
     allInteractions.forEach(interaction => {
       const response = interaction.response?.rawResponse || '';

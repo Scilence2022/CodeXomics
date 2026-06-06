@@ -8,22 +8,66 @@ class FileOperationService {
     this.chatManager = chatManager;
   }
 
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      isAbsolute: filePath => /^([A-Za-z]:[\\/]|\/)/.test(String(filePath || '')),
+      resolve: (...parts) => {
+        const joined = parts.filter(Boolean).join('/');
+        const normalized = joined.replace(/\\/g, '/').replace(/\/+/g, '/');
+        return /^([A-Za-z]:[\\/]|\/)/.test(normalized) ? normalized : `/${normalized}`;
+      },
+    };
+  }
+
+  isBenchmarkAutomationMode() {
+    const sessionId = this.chatManager?.toolExecutionTracker?.currentSessionId || '';
+    return this.chatManager?.benchmarkAutomationActive === true || sessionId.startsWith('benchmark');
+  }
+
+  requireExplicitFilePathForBenchmark(toolName) {
+    if (this.isBenchmarkAutomationMode()) {
+      throw new Error(`${toolName} requires an explicit filePath during benchmark automation; file dialogs require user activation.`);
+    }
+  }
+
+  async validateFilePath(filePath, label = 'File') {
+    if (!filePath) {
+      throw new Error(`${label} path is required`);
+    }
+
+    if (typeof window !== 'undefined' && window.electronAPI?.getSelectedFileInfo) {
+      const infoResult = await window.electronAPI.getSelectedFileInfo(filePath);
+      if (!infoResult?.success) {
+        throw new Error(infoResult?.error || `${label} not found: ${filePath}`);
+      }
+      if (infoResult.info?.isDirectory) {
+        throw new Error(`${label} path is a directory, expected a file: ${filePath}`);
+      }
+      return infoResult;
+    }
+
+    if (typeof window !== 'undefined') {
+      throw new Error('electronAPI.getSelectedFileInfo is unavailable in the hardened renderer');
+    }
+
+    return { success: true };
+  }
+
   // 1. FILE LOADING OPERATIONS
   async loadGenomeFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
+      const { showFileDialog = false, fileType = 'auto' } = parameters;
 
-      if (filePath && !showFileDialog) {
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) {
           throw new Error('FileManager not available');
         }
 
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) {
-            throw new Error(`File not found: ${filePath}`);
-          }
-        }
+        await this.validateFilePath(filePath, 'Genome file');
 
         await this.app.fileManager.loadFile(filePath);
 
@@ -36,6 +80,7 @@ class FileOperationService {
           timestamp: new Date().toISOString(),
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_genome_file');
         if (!this.app?.fileManager) {
           throw new Error('FileManager not available');
         }
@@ -65,8 +110,8 @@ class FileOperationService {
   async loadAnnotationFile(parameters = {}) {
     try {
       // Support both loadMode and mergeWithExisting for compatibility
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
       const {
-        filePath,
         showFileDialog = false,
         fileType = 'auto',
         loadMode,
@@ -86,17 +131,12 @@ class FileOperationService {
 
       const options = mergeWithExisting !== undefined ? { mergeWithExisting } : {};
 
-      if (filePath && !showFileDialog) {
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) {
           throw new Error('FileManager not available');
         }
 
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) {
-            throw new Error(`File not found: ${filePath}`);
-          }
-        }
+        await this.validateFilePath(filePath, 'Annotation file');
 
         // Load annotation file passing merge options
         await this.app.fileManager.loadFile(filePath, options);
@@ -110,6 +150,7 @@ class FileOperationService {
           timestamp: new Date().toISOString(),
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_annotation_file');
         if (!this.app?.fileManager) {
           throw new Error('FileManager not available');
         }
@@ -138,8 +179,40 @@ class FileOperationService {
   }
 
   // 2. DATA EXPORT OPERATIONS
+  getExportFilename(parameters = {}, defaultFilename) {
+    return (
+      parameters.filename ||
+      parameters.fileName ||
+      parameters.file_name ||
+      parameters.filePath ||
+      parameters.file_path ||
+      parameters.path ||
+      parameters.outputPath ||
+      parameters.output_path ||
+      parameters.savePath ||
+      parameters.save_path ||
+      defaultFilename
+    );
+  }
+
+  shouldAutoSaveExport(parameters = {}) {
+    return Boolean(
+      parameters.auto_save ||
+        parameters.autoSave ||
+        parameters.filename ||
+        parameters.fileName ||
+        parameters.file_name ||
+        parameters.filePath ||
+        parameters.file_path ||
+        parameters.path ||
+        parameters.outputPath ||
+        parameters.output_path ||
+        parameters.savePath ||
+        parameters.save_path
+    );
+  }
+
   async exportFastaSequence(parameters = {}) {
-    const { filename, auto_save = false } = parameters;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
       throw new Error('No genome data loaded to export');
@@ -156,9 +229,9 @@ class FileOperationService {
         }
       });
 
-      const outputFilename = filename || 'genome.fasta';
+      const outputFilename = this.getExportFilename(parameters, 'genome.fasta');
       let writeResult;
-      if (auto_save || (filename && filename.trim())) {
+      if (this.shouldAutoSaveExport(parameters)) {
         writeResult = await this.writeFileDirectly(fastaContent, outputFilename, 'FASTA sequence');
       } else {
         writeResult = await this.showExportSaveDialog(fastaContent, outputFilename, 'FASTA sequence', 'text/plain');
@@ -170,8 +243,12 @@ class FileOperationService {
         exported_format: 'FASTA',
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
+        filePath: writeResult?.filePath || outputFilename,
+        total_chromosomes: chromosomes.length,
         chromosomes: chromosomes,
         total_length: chromosomes.reduce((sum, chr) => sum + this.app.currentSequence[chr].length, 0),
+        message: `Successfully exported ${chromosomes.length} chromosome(s) as FASTA`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`FASTA export failed: ${error.message}`);
@@ -179,7 +256,7 @@ class FileOperationService {
   }
 
   async exportProteinFasta(parameters = {}) {
-    const { filename, includeGeneNames = true, translationTable = 1, auto_save = false } = parameters;
+    const { translationTable = 1 } = parameters;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
       throw new Error('No annotation data loaded to export protein sequences');
@@ -213,9 +290,9 @@ class FileOperationService {
 
       if (!proteinContent) throw new Error('No protein-coding features found to export');
 
-      const outputFilename = filename || 'protein_sequences.fasta';
+      const outputFilename = this.getExportFilename(parameters, 'protein_sequences.fasta');
       let writeResult;
-      if (auto_save || (filename && filename.trim())) {
+      if (this.shouldAutoSaveExport(parameters)) {
         writeResult = await this.writeFileDirectly(proteinContent, outputFilename, 'Protein FASTA');
       } else {
         writeResult = await this.showExportSaveDialog(proteinContent, outputFilename, 'Protein FASTA', 'text/plain');
@@ -231,9 +308,11 @@ class FileOperationService {
         exported_format: 'Protein FASTA',
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
+        filePath: writeResult?.filePath || outputFilename,
         total_protein_sequences: proteinCount,
         translation_table: translationTable,
         message: `Successfully exported ${proteinCount} protein sequences`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`Protein FASTA export failed: ${error.message}`);
@@ -241,7 +320,6 @@ class FileOperationService {
   }
 
   async exportCurrentViewFasta(parameters = {}) {
-    const { filename, includeCoordinates = true, auto_save = false } = parameters;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
       throw new Error('No genome data loaded to export current view');
@@ -262,9 +340,9 @@ class FileOperationService {
       for (let i = 0; i < viewSequence.length; i += 80) fastaContent += viewSequence.substring(i, i + 80) + '\n';
 
       const defaultFilename = `${currentChr}_${viewStart}-${viewEnd}.fasta`;
-      const outputFilename = filename || defaultFilename;
+      const outputFilename = this.getExportFilename(parameters, defaultFilename);
       let writeResult;
-      if (auto_save || (filename && filename.trim())) {
+      if (this.shouldAutoSaveExport(parameters)) {
         writeResult = await this.writeFileDirectly(fastaContent, outputFilename, 'Current view FASTA');
       } else {
         writeResult = await this.showExportSaveDialog(fastaContent, outputFilename, 'Current view FASTA', 'text/plain');
@@ -276,12 +354,14 @@ class FileOperationService {
         exported_format: 'FASTA (Current View)',
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
+        filePath: writeResult?.filePath || outputFilename,
         chromosome: currentChr,
         region_start: viewStart,
         region_end: viewEnd,
         region_length: viewEnd - viewStart + 1,
         coordinates: `${currentChr}:${viewStart}-${viewEnd}`,
         message: `Successfully exported current view as FASTA format`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`Current view FASTA export failed: ${error.message}`);
@@ -289,7 +369,6 @@ class FileOperationService {
   }
 
   async exportGenBankFormat(parameters = {}) {
-    const { filename, auto_save = false } = parameters;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
       throw new Error('No genome data loaded to export');
@@ -297,10 +376,14 @@ class FileOperationService {
 
     try {
       const chromosomes = Object.keys(this.app.currentSequence);
+      const includeFeatures = parameters.include_features !== false && parameters.includeFeatures !== false;
+      const includeSequence = parameters.include_sequence !== false && parameters.includeSequence !== false;
+      let totalFeatures = 0;
       let genbankContent = '';
       chromosomes.forEach(chr => {
         const sequence = this.app.currentSequence[chr];
-        const features = this.app.currentAnnotations?.[chr] || [];
+        const features = includeFeatures ? this.app.currentAnnotations?.[chr] || [] : [];
+        totalFeatures += features.length;
         genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10)}\n`;
         genbankContent += `FEATURES             Location/Qualifiers\n`;
         genbankContent += `     source          1..${sequence.length}\n`;
@@ -311,19 +394,21 @@ class FileOperationService {
               : `${feature.start}..${feature.end}`;
           genbankContent += `     ${feature.type.padEnd(15)} ${loc}\n`;
         });
-        genbankContent += `ORIGIN\n`;
-        for (let i = 0; i < sequence.length; i += 60) {
-          const lineNum = (i + 1).toString().padStart(9);
-          const seqLine = sequence.substring(i, i + 60).toLowerCase();
-          const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
-          genbankContent += `${lineNum} ${formattedSeq}\n`;
+        if (includeSequence) {
+          genbankContent += `ORIGIN\n`;
+          for (let i = 0; i < sequence.length; i += 60) {
+            const lineNum = (i + 1).toString().padStart(9);
+            const seqLine = sequence.substring(i, i + 60).toLowerCase();
+            const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
+            genbankContent += `${lineNum} ${formattedSeq}\n`;
+          }
         }
         genbankContent += `//\n\n`;
       });
 
-      const outputFilename = filename || 'genome.gbk';
+      const outputFilename = this.getExportFilename(parameters, 'genome.gbk');
       let writeResult;
-      if (auto_save || (filename && filename.trim())) {
+      if (this.shouldAutoSaveExport(parameters)) {
         writeResult = await this.writeFileDirectly(genbankContent, outputFilename, 'GenBank format');
       } else {
         writeResult = await this.showExportSaveDialog(genbankContent, outputFilename, 'GenBank format', 'text/plain');
@@ -335,6 +420,14 @@ class FileOperationService {
         exported_format: 'GenBank',
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
+        filePath: writeResult?.filePath || outputFilename,
+        total_chromosomes: chromosomes.length,
+        total_features: totalFeatures,
+        include_features: includeFeatures,
+        include_sequence: includeSequence,
+        include_protein_sequences: false,
+        message: `Successfully exported ${chromosomes.length} chromosome(s) in GenBank format`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`GenBank export failed: ${error.message}`);
@@ -342,8 +435,8 @@ class FileOperationService {
   }
 
   async exportCdsFasta(parameters = {}) {
-    const { filename, auto_save = false } = parameters;
     try {
+      const includeGeneNames = parameters.includeGeneNames !== false && parameters.include_gene_names !== false;
       const chromosomes = Object.keys(this.app.currentSequence || {});
       let cdsContent = '';
       let totalCDS = 0;
@@ -368,9 +461,9 @@ class FileOperationService {
 
       if (cdsContent === '') throw new Error('No CDS features found to export');
 
-      const outputFilename = filename || 'cds_sequences.fasta';
+      const outputFilename = this.getExportFilename(parameters, 'cds_sequences.fasta');
       let writeResult;
-      if (auto_save || (filename && filename.trim())) {
+      if (this.shouldAutoSaveExport(parameters)) {
         writeResult = await this.writeFileDirectly(cdsContent, outputFilename, 'CDS FASTA');
       } else {
         writeResult = await this.showExportSaveDialog(cdsContent, outputFilename, 'CDS FASTA', 'text/plain');
@@ -381,8 +474,13 @@ class FileOperationService {
         tool: 'export_cds_fasta',
         exported_format: 'CDS FASTA',
         count: totalCDS,
+        total_cds_sequences: totalCDS,
+        include_gene_names: includeGeneNames,
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
+        filePath: writeResult?.filePath || outputFilename,
+        message: `Successfully exported ${totalCDS} CDS sequence(s)`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`CDS export failed: ${error.message}`);
@@ -390,13 +488,16 @@ class FileOperationService {
   }
 
   async exportGffAnnotations(parameters = {}) {
-    const { filename, auto_save = false } = parameters;
     try {
       const chromosomes = Object.keys(this.app.currentAnnotations || {});
+      const featureTypes = new Set();
+      let totalFeatures = 0;
       let gffContent = '##gff-version 3\n';
       chromosomes.forEach(chr => {
         const features = this.app.currentAnnotations[chr];
         features.forEach(f => {
+          totalFeatures++;
+          if (f.type) featureTypes.add(f.type);
           const attrs = Object.entries(f.attributes || {})
             .map(([k, v]) => `${k}=${v}`)
             .join(';');
@@ -404,9 +505,9 @@ class FileOperationService {
         });
       });
 
-      const outputFilename = filename || 'features.gff3';
+      const outputFilename = this.getExportFilename(parameters, 'features.gff3');
       let writeResult;
-      if (auto_save || (filename && filename.trim())) {
+      if (this.shouldAutoSaveExport(parameters)) {
         writeResult = await this.writeFileDirectly(gffContent, outputFilename, 'GFF annotations');
       } else {
         writeResult = await this.showExportSaveDialog(gffContent, outputFilename, 'GFF annotations', 'text/plain');
@@ -418,6 +519,11 @@ class FileOperationService {
         exported_format: 'GFF',
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
+        filePath: writeResult?.filePath || outputFilename,
+        total_features: totalFeatures,
+        feature_types: Array.from(featureTypes),
+        message: `Successfully exported ${totalFeatures} annotation feature(s) in GFF format`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
     } catch (error) {
       throw new Error(`GFF export failed: ${error.message}`);
@@ -426,8 +532,6 @@ class FileOperationService {
 
   async exportBedFormat(parameters = {}) {
     const {
-      filename,
-      auto_save = false,
       export_range = 'all',
       chromosome: filterChromosome,
       start_position,
@@ -478,9 +582,9 @@ class FileOperationService {
         return { success: false, tool: 'export_bed_format', error: `No features found${rangeInfo}`, exported_count: 0 };
       }
 
-      const outputFilename = filename || 'features.bed';
+      const outputFilename = this.getExportFilename(parameters, 'features.bed');
       let writeResult;
-      if (auto_save || (filename && filename.trim())) {
+      if (this.shouldAutoSaveExport(parameters)) {
         writeResult = await this.writeFileDirectly(bedContent, outputFilename, 'BED format');
       } else {
         writeResult = await this.showExportSaveDialog(bedContent, outputFilename, 'BED format', 'text/plain');
@@ -492,8 +596,14 @@ class FileOperationService {
         exported_format: 'BED',
         filename: outputFilename,
         file_path: writeResult?.filePath || outputFilename,
+        filePath: writeResult?.filePath || outputFilename,
         exported_count: exportedCount,
+        total_features: exportedCount,
         bed_format,
+        include_score: bed_format !== 'bed3',
+        include_strand: bed_format !== 'bed3',
+        message: `Successfully exported ${exportedCount} feature(s) in BED format`,
+        details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
       if (hasRangeFilter) {
         result.range = { start: rangeStart, end: rangeEnd, include_partial_overlap };
@@ -506,13 +616,11 @@ class FileOperationService {
 
   async loadVariantFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false } = parameters;
-      if (filePath && !showFileDialog) {
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
+      const { showFileDialog = false } = parameters;
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
-        }
+        await this.validateFilePath(filePath, 'Variant file');
         await this.app.fileManager.loadFile(filePath);
         return {
           success: true,
@@ -521,6 +629,7 @@ class FileOperationService {
           fileType: 'variant',
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_variant_file');
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('variant');
         return {
@@ -538,16 +647,15 @@ class FileOperationService {
 
   async loadReadsFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false } = parameters;
-      if (filePath && !showFileDialog) {
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
+      const { showFileDialog = false } = parameters;
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
-        }
+        await this.validateFilePath(filePath, 'Reads file');
         await this.app.fileManager.loadFile(filePath);
         return { success: true, message: `Successfully loaded reads file: ${filePath}`, filePath, fileType: 'reads' };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_reads_file');
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('reads');
         return {
@@ -565,15 +673,13 @@ class FileOperationService {
 
   async loadWigTracks(parameters = {}) {
     try {
-      const { filePaths, showFileDialog = false, multiple = true } = parameters;
-      if (filePaths && !showFileDialog) {
+      const filePaths = parameters.filePaths || parameters.file_paths || parameters.filePath || parameters.file_path;
+      const { showFileDialog = false, multiple = true } = parameters;
+      if (filePaths && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         const pathsArray = Array.isArray(filePaths) ? filePaths : [filePaths];
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          for (const path of pathsArray) {
-            if (!fs.existsSync(path)) throw new Error(`File not found: ${path}`);
-          }
+        for (const wigPath of pathsArray) {
+          await this.validateFilePath(wigPath, 'WIG track file');
         }
         if (pathsArray.length > 1) await this.app.fileManager.loadMultipleWIGFiles(pathsArray);
         else await this.app.fileManager.loadFile(pathsArray[0]);
@@ -585,6 +691,7 @@ class FileOperationService {
           count: pathsArray.length,
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_wig_tracks');
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('tracks');
         return {
@@ -603,13 +710,11 @@ class FileOperationService {
 
   async loadOperonFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false, format = 'auto' } = parameters;
-      if (filePath && !showFileDialog) {
+      const filePath = parameters.filePath || parameters.file_path || parameters.path;
+      const { showFileDialog = false, format = 'auto' } = parameters;
+      if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        if (typeof require !== 'undefined') {
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
-        }
+        await this.validateFilePath(filePath, 'Operon file');
         await this.app.fileManager.loadOperonFile(filePath);
         return {
           success: true,
@@ -619,6 +724,7 @@ class FileOperationService {
           format,
         };
       } else {
+        this.requireExplicitFilePathForBenchmark('load_operon_file');
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         this.app.fileManager.openSpecificFileType('operon');
         return {
@@ -636,16 +742,38 @@ class FileOperationService {
 
   async downloadInternetFile(parameters = {}) {
     try {
-      let { url, destinationPath, filename } = parameters;
+      let {
+        url,
+        destinationPath,
+        destination_path,
+        savePath,
+        save_path,
+        filename,
+        fileName,
+        file_name,
+      } = parameters;
+      destinationPath = destinationPath || destination_path || savePath || save_path;
+      filename = filename || fileName || file_name;
       if (url) url = url.replace(/[`\s]/g, '');
       console.log(`📥 [FileOperationService] Downloading file from: ${url}`);
       if (!url) throw new Error('URL is required for download');
 
       // If no explicit destination was given, use the user-configured working directory
       // so the file lands where set_working_directory points, not the system Downloads folder.
+      let usingWorkingDirectoryDestination = false;
       if (!destinationPath) {
         destinationPath = this.getCurrentWorkingDirectory();
+        usingWorkingDirectoryDestination = true;
         console.log(`📥 [FileOperationService] No destinationPath given; using working directory: ${destinationPath}`);
+      }
+
+      if (destinationPath && window.electronAPI?.approveWorkingDirectory) {
+        const approvalResult = await window.electronAPI.approveWorkingDirectory(destinationPath);
+        if (!approvalResult?.success) {
+          const directoryLabel = usingWorkingDirectoryDestination ? 'Working directory' : 'Download destination';
+          throw new Error(approvalResult?.error || `${directoryLabel} is not approved: ${destinationPath}`);
+        }
+        destinationPath = approvalResult.path || destinationPath;
       }
 
       if (window.electronAPI?.downloadInternetFile) {
@@ -767,26 +895,25 @@ class FileOperationService {
     try {
       // Resolve relative paths against current working directory
       let resolvedPath = filename;
-      if (typeof require !== 'undefined') {
-        const path = require('path');
-        if (!path.isAbsolute(filename)) {
+      const pathModule = this.getPathModule();
+      if (pathModule && typeof pathModule.isAbsolute === 'function') {
+        if (!pathModule.isAbsolute(filename)) {
           const cwd = this.getCurrentWorkingDirectory();
-          resolvedPath = path.resolve(cwd, filename);
+          resolvedPath = pathModule.resolve(cwd, filename);
         }
       }
 
-      if (window.electronAPI?.writeFile) {
-        const result = await window.electronAPI.writeFile(resolvedPath, content);
+      const electronAPI = typeof window !== 'undefined' ? window.electronAPI : null;
+      if (electronAPI?.writeFile) {
+        const result = await electronAPI.writeFile(resolvedPath, content);
+        if (!result?.success) {
+          throw new Error(result?.error || `Failed to write ${formatType} to ${resolvedPath}`);
+        }
         if (this.chatManager.showNotification)
           this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
         return { success: true, filePath: result.filePath || resolvedPath };
       } else {
-        const fs = require('fs').promises;
-        const path = require('path');
-        await fs.writeFile(resolvedPath, content, 'utf8');
-        if (this.chatManager.showNotification)
-          this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
-        return { success: true, filePath: resolvedPath };
+        throw new Error('electronAPI.writeFile is unavailable in the hardened renderer');
       }
     } catch (error) {
       if (this.chatManager.showNotification)
@@ -796,7 +923,13 @@ class FileOperationService {
   }
 
   getCurrentWorkingDirectory() {
-    return this.chatManager.currentWorkingDirectory || process.cwd();
+    if (this.chatManager?.currentWorkingDirectory) {
+      return this.chatManager.currentWorkingDirectory;
+    }
+    if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
+      return process.cwd();
+    }
+    return '/';
   }
 
   // Aliases for ToolExecutionService

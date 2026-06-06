@@ -4,6 +4,7 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { createSecureWebPreferences } = require('./security-utils');
 const net = require('net');
 const UnifiedMCPServer = require('../mcp-server');
 
@@ -243,13 +244,7 @@ function createMCPServerManagerWindow() {
     width: 900,
     height: 750,
     title: 'CodeXomics MCP Server Manager',
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      enableRemoteModule: false,
-      preload: path.join(__dirname, '..', 'preload.js'),
-      sandbox: false,
-    },
+    webPreferences: createSecureWebPreferences(),
     icon: path.join(__dirname, '../assets/icon.png'),
   });
 

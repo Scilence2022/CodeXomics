@@ -696,12 +696,17 @@ class BlastFunctionTools {
       }
 
       if (outputPath) {
-        const fs = require('fs').promises;
-        await fs.writeFile(outputPath, content);
+        if (!window.electronAPI?.writeFile) {
+          throw new Error('Main-process file write API is unavailable');
+        }
+        const writeResult = await window.electronAPI.writeFile(outputPath, content);
+        if (!writeResult?.success) {
+          throw new Error(writeResult?.error || `Failed to export BLAST results to ${outputPath}`);
+        }
 
         return {
           success: true,
-          outputPath: outputPath,
+          outputPath: writeResult.filePath || outputPath,
           format: format,
           size: content.length,
           timestamp: new Date().toISOString(),
@@ -979,8 +984,11 @@ class BlastFunctionTools {
         return currentFile.name.replace(/\.[^/.]+$/, ''); // Remove extension
       }
       if (currentFile.path) {
-        const path = require('path');
-        const fileName = path.basename(currentFile.path);
+        const fileName = String(currentFile.path || '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .filter(Boolean)
+          .pop();
         return fileName.replace(/\.[^/.]+$/, '');
       }
     }

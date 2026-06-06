@@ -56,6 +56,6 @@
 
     console.log('✅ [Primer Integration] ChatManager extended with Primer initialization');
   } else {
-    console.warn('⚠️ [Primer Integration] ChatManager not available globally');
+    // This integration can be loaded before ChatManager is globally registered.
   }
 })();

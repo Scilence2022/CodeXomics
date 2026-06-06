@@ -76,23 +76,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
   async cleanupExportFiles() {
     const exportedFilesDir = this.buildFilePath('exported_files');
 
-    if (typeof require === 'undefined') return;
-
-    const fs = require('fs');
-    try {
-      if (!fs.existsSync(exportedFilesDir)) return;
-
-      const files = fs.readdirSync(exportedFilesDir);
-      for (const file of files) {
-        const filePath = `${exportedFilesDir}/${file}`;
-        if (fs.statSync(filePath).isFile()) {
-          fs.unlinkSync(filePath);
-        }
-      }
-      console.log(`🧹 Cleaned up ${files.length} export files`);
-    } catch (error) {
-      console.warn(`⚠️ Export cleanup error: ${error.message}`);
-    }
+    console.info(`ℹ️ Export cleanup skipped in hardened renderer for ${exportedFilesDir}; filesystem access is main-process only.`);
   }
 
   /**
@@ -2271,7 +2255,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
     }
 
     // PRIORITY CHECK: Target file exists → FULL SCORE (5 points)
-    const fileExists = this.checkTargetFileExists(actualResult, expectedResult);
+    const fileExists = await this.checkTargetFileExists(actualResult, expectedResult);
     if (fileExists) {
       evaluation.score = 5; // FULL SCORE - file export successful
       evaluation.success = true;
@@ -2369,16 +2353,46 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
    * Helper method: Check if target export file exists
    * Attempts to verify file existence through various methods
    */
-  checkTargetFileExists(actualResult, expectedResult) {
-    // Extract target file path
+  async checkTargetFileExists(actualResult, expectedResult) {
+    const getPathFromResult = result => {
+      if (!result || typeof result !== 'object') return null;
+      const params = result.parameters || {};
+      const data = result.result || result.data || {};
+      return (
+        params.filePath ||
+        params.file_path ||
+        params.filename ||
+        params.fileName ||
+        params.outputPath ||
+        params.savePath ||
+        data.filePath ||
+        data.file_path ||
+        data.filename ||
+        result.filePath ||
+        result.file_path ||
+        result.filename ||
+        null
+      );
+    };
+
     let targetFilePath = null;
 
-    // Method 1: From actualResult parameters
-    if (actualResult && actualResult.parameters && actualResult.parameters.filePath) {
-      targetFilePath = actualResult.parameters.filePath;
-    } else if (expectedResult && expectedResult.parameters && expectedResult.parameters.filePath) {
-      // Method 2: From expectedResult parameters as fallback
-      targetFilePath = expectedResult.parameters.filePath;
+    if (Array.isArray(actualResult)) {
+      const matchingCall = actualResult.find(call => call?.tool_name === expectedResult?.tool_name) || actualResult[0];
+      targetFilePath = getPathFromResult(matchingCall);
+    } else {
+      targetFilePath = getPathFromResult(actualResult);
+    }
+
+    if (!targetFilePath && expectedResult?.parameters) {
+      targetFilePath =
+        expectedResult.parameters.filePath ||
+        expectedResult.parameters.file_path ||
+        expectedResult.parameters.filename ||
+        expectedResult.parameters.fileName ||
+        expectedResult.parameters.outputPath ||
+        expectedResult.parameters.savePath ||
+        null;
     }
 
     if (!targetFilePath) {
@@ -2388,19 +2402,10 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
 
     console.log(`🔍 [checkTargetFileExists] Checking file: ${targetFilePath}`);
 
-    // Method 1: Try Node.js fs module (if available)
-    try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs');
-        const exists = fs.existsSync(targetFilePath);
-        console.log(`🔍 [checkTargetFileExists] fs.existsSync result: ${exists}`);
-        return exists;
-      }
-    } catch (error) {
-      console.log(`⚠️ [checkTargetFileExists] fs check failed:`, error.message);
-    }
+    const exists = await this.checkFileExists(targetFilePath);
+    if (exists) return true;
 
-    // Method 2: Check if response mentions file creation
+    // Fallback: Check if response mentions file creation
     if (typeof actualResult === 'string') {
       const fileName = targetFilePath.split('/').pop();
       const fileCreationPatterns = [
@@ -2417,8 +2422,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       }
     }
 
-    // Method 3: Assume success if tool executed successfully (conservative approach)
-    // This is a fallback when we can't verify file existence directly
     console.log(`⚠️ [checkTargetFileExists] Cannot verify file existence directly`);
     return false;
   }

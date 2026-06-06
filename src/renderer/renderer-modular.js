@@ -1,7 +1,9 @@
 /* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
-const path = require('path');
+const rendererPath =
+  (typeof window !== 'undefined' && window.path) ||
+  { basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '' };
 
 // Toast notification helper — replaces alert() with non-blocking notifications
 // Uses NotificationService if available, falls back to alert
@@ -714,9 +716,8 @@ class GenomeBrowser {
 
         // Only start the bridge if it was previously enabled
         if (mcpBridgeEnabled) {
-          this.mcpBridge.start();
           window.mcpBridge = this.mcpBridge;
-          console.log('✅ MCPBridge initialized and started (restored from persisted state)');
+          this.startMCPBridgeIfServerAvailable('initialized');
         } else {
           window.mcpBridge = this.mcpBridge;
           console.log('✅ MCPBridge initialized but not started (was disabled last session)');
@@ -740,8 +741,7 @@ class GenomeBrowser {
             }
 
             if (mcpBridgeEnabled) {
-              this.mcpBridge.start();
-              console.log('✅ MCPBridge loaded and started (restored from persisted state)');
+              this.startMCPBridgeIfServerAvailable('loaded');
             } else {
               console.log('✅ MCPBridge loaded but not started (was disabled last session)');
             }
@@ -756,6 +756,33 @@ class GenomeBrowser {
       }
     } catch (error) {
       console.error('❌ Failed to initialize MCPBridge:', error);
+    }
+  }
+
+  async startMCPBridgeIfServerAvailable(loadState = 'initialized') {
+    if (!this.mcpBridge) return;
+
+    try {
+      const settings =
+        typeof ipcRenderer !== 'undefined' ? await ipcRenderer.invoke('mcp-server-get-settings') : { wsPort: 3003 };
+      const wsPort = settings?.wsPort || 3003;
+      const portStatus =
+        typeof ipcRenderer !== 'undefined'
+          ? await ipcRenderer.invoke('mcp-server-check-port', wsPort)
+          : { available: true };
+
+      if (portStatus.available) {
+        console.log(`✅ MCPBridge ${loadState} but not started (MCP WebSocket port ${wsPort} is not listening)`);
+        this.updateMCPBridgeUI(false);
+        return;
+      }
+
+      this.mcpBridge.start();
+      console.log(`✅ MCPBridge ${loadState} and started (MCP WebSocket port ${wsPort} is listening)`);
+      this.updateMCPBridgeUI(this.mcpBridge.isConnected());
+    } catch (error) {
+      console.warn('⚠️ MCPBridge availability check failed; bridge not started:', error.message);
+      this.updateMCPBridgeUI(false);
     }
   }
 
@@ -6283,44 +6310,8 @@ class GenomeBrowser {
 
     geneDetailsContent.innerHTML = html;
 
-    // Check for Deep Research Report presence and add button if exists
-    try {
-      const fs = require('fs');
-      // path is already declared at top of file
-      // Use gene name or locus tag as symbol, sanitize to match ChatManager logic
-      const safeSymbol = (geneName || 'Unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const reportPath = path.join(process.cwd(), 'reports', `Gene_${safeSymbol}_Research_Report.md`);
-
-      if (fs.existsSync(reportPath)) {
-        const container = document.getElementById('deep-research-report-container');
-        if (container) {
-          const btn = document.createElement('button');
-          btn.className = 'btn gene-action-btn';
-          btn.style.backgroundColor = '#e3f2fd'; // Light blue background
-          btn.style.color = '#1565C0'; // Darker blue text
-          btn.style.borderColor = '#90CAF9';
-          btn.style.marginBottom = '8px';
-          btn.style.width = '100%';
-          btn.style.fontWeight = '600';
-          btn.innerHTML = '<i class="fas fa-file-alt"></i> View Research Report';
-          btn.title = `Open report: ${path.basename(reportPath)}`;
-
-          btn.onclick = () => {
-            try {
-              const { shell } = require('electron');
-              shell.openPath(reportPath);
-            } catch (e) {
-              console.error('Failed to open report:', e);
-              notify('Failed to open report file.');
-            }
-          };
-
-          container.appendChild(btn);
-        }
-      }
-    } catch (err) {
-      console.error('Error checking for gene research report:', err);
-    }
+    // Check for Deep Research Report presence and add button if exists.
+    this.addGeneResearchReportButton(geneName);
 
     // Add event listeners for expandable sections
     this.setupExpandableSequences();
@@ -6342,6 +6333,52 @@ class GenomeBrowser {
       if (geneDetailsSection && geneDetailsSection.style.display !== 'none') {
         this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
       }
+    }
+  }
+
+  async addGeneResearchReportButton(geneName) {
+    try {
+      const api = window.electronAPI;
+      if (!api || typeof api.checkGeneResearchReport !== 'function' || typeof api.openGeneResearchReport !== 'function') {
+        return;
+      }
+
+      const report = await api.checkGeneResearchReport(geneName || 'Unknown');
+      if (!report || !report.success || !report.exists) {
+        return;
+      }
+
+      const container = document.getElementById('deep-research-report-container');
+      if (!container || container.querySelector('.gene-research-report-btn')) {
+        return;
+      }
+
+      const btn = document.createElement('button');
+      btn.className = 'btn gene-action-btn gene-research-report-btn';
+      btn.style.backgroundColor = '#e3f2fd'; // Light blue background
+      btn.style.color = '#1565C0'; // Darker blue text
+      btn.style.borderColor = '#90CAF9';
+      btn.style.marginBottom = '8px';
+      btn.style.width = '100%';
+      btn.style.fontWeight = '600';
+      btn.innerHTML = '<i class="fas fa-file-alt"></i> View Research Report';
+      btn.title = `Open report: ${report.fileName || 'Gene research report'}`;
+
+      btn.onclick = async () => {
+        try {
+          const result = await api.openGeneResearchReport(geneName || 'Unknown');
+          if (!result || !result.success) {
+            notify(result?.error || 'Failed to open report file.', 'error');
+          }
+        } catch (error) {
+          console.error('Failed to open report:', error);
+          notify('Failed to open report file.', 'error');
+        }
+      };
+
+      container.appendChild(btn);
+    } catch (error) {
+      console.warn('Unable to check gene research report:', error.message || error);
     }
   }
 
@@ -8432,12 +8469,20 @@ class GenomeBrowser {
 
   // Helper method to show chat if hidden
   showChatIfHidden() {
-    const chatBox = document.querySelector('.chat-container');
-    if (chatBox && !chatBox.classList.contains('visible')) {
-      const toggleChatBtn = document.getElementById('toggleChatBtn');
-      if (toggleChatBtn) {
-        toggleChatBtn.click();
-      }
+    if (this.chatManager && typeof this.chatManager.showChatBox === 'function') {
+      this.chatManager.showChatBox();
+      return;
+    }
+
+    const chatPanel = document.getElementById('llmChatPanel');
+    if (chatPanel) {
+      chatPanel.style.display = 'flex';
+      return;
+    }
+
+    const toggleChatBtn = document.getElementById('toggleChatBtn');
+    if (toggleChatBtn) {
+      toggleChatBtn.click();
     }
   }
 

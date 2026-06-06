@@ -4,24 +4,36 @@
  * Directly uses @gmod/bam API for optimal performance and compatibility
  */
 
-// In Electron renderer process, we can use require() for Node.js modules
-let BamFile, LocalFile;
+let BamFile;
+let useIpcBamBackend = false;
+
+function hasIpcBamBackend() {
+  return (
+    typeof window !== 'undefined' &&
+    window.electronAPI &&
+    window.electronAPI.bamReader &&
+    typeof window.electronAPI.bamReader.initialize === 'function'
+  );
+}
 
 try {
-  // Import @gmod/bam in Electron renderer process
+  // Import @gmod/bam when running in a Node-capable process.
   const bamModule = require('@gmod/bam');
   BamFile = bamModule.BamFile;
 
   // Import generic-filehandle2 if needed
   try {
-    const fileHandleModule = require('generic-filehandle2');
-    LocalFile = fileHandleModule.LocalFile;
+    require('generic-filehandle2');
   } catch (fileHandleError) {
     console.warn('generic-filehandle2 not available, using built-in file handling');
   }
 } catch (error) {
-  console.error('Failed to import @gmod/bam:', error);
-  throw new Error('@gmod/bam library is required but not available. Please ensure it is installed.');
+  if (hasIpcBamBackend()) {
+    useIpcBamBackend = true;
+    console.info('Using secure IPC-backed BAM reader because direct @gmod/bam access is unavailable:', error.message);
+  } else {
+    console.warn('Direct @gmod/bam access is unavailable and no IPC backend is currently exposed:', error.message);
+  }
 }
 
 class BamReader {
@@ -44,6 +56,52 @@ class BamReader {
       totalQueryTime: 0,
       queryCount: 0,
     };
+    this.backendId = null;
+    this.usesIpcBackend = useIpcBamBackend || (!BamFile && hasIpcBamBackend());
+  }
+
+  applyBackendState(state = {}) {
+    this.filePath = state.filePath || null;
+    this.indexPath = state.indexPath || null;
+    this.isInitialized = !!state.isInitialized;
+    this.hasIndex = !!state.hasIndex;
+    this.indexType = state.indexType || null;
+    this.header = state.header || null;
+    this.references = Array.isArray(state.references) ? state.references : [];
+    this.totalReads = state.totalReads || 0;
+    this.fileSize = state.fileSize || 0;
+    this.indexSize = state.indexSize || 0;
+    this.performanceStats = {
+      queriesWithIndex: 0,
+      queriesWithoutIndex: 0,
+      averageQueryTime: 0,
+      totalQueryTime: 0,
+      queryCount: 0,
+      ...(state.performanceStats || {}),
+    };
+  }
+
+  async initializeViaIpc(filePath, options = {}) {
+    if (!hasIpcBamBackend()) {
+      throw new Error('Secure BAM reader bridge is not available.');
+    }
+
+    this.reset();
+    const result = await window.electronAPI.bamReader.initialize(filePath, options);
+    this.backendId = result.readerId;
+    this.applyBackendState(result.state);
+
+    return {
+      success: true,
+      header: this.header,
+      references: this.references,
+      totalReads: this.totalReads,
+      fileSize: this.fileSize,
+      hasIndex: this.hasIndex,
+      indexType: this.indexType,
+      indexPath: this.indexPath,
+      indexSize: this.indexSize,
+    };
   }
 
   /**
@@ -55,6 +113,14 @@ class BamReader {
    * @returns {Promise<Object>} Initialization result
    */
   async initialize(filePath, options = {}) {
+    if (!this.usesIpcBackend && !BamFile && hasIpcBamBackend()) {
+      this.usesIpcBackend = true;
+    }
+
+    if (this.usesIpcBackend) {
+      return this.initializeViaIpc(filePath, options);
+    }
+
     try {
       console.log('🧬 BamReader: Initializing with file:', filePath);
 
@@ -793,6 +859,22 @@ class BamReader {
    * @returns {Promise<Array>} Array of BAM records
    */
   async getRecordsForRange(chromosome, start, end, settings = {}) {
+    if (this.usesIpcBackend) {
+      if (!this.backendId) {
+        throw new Error('BAM reader not initialized. Call initialize() first.');
+      }
+
+      const result = await window.electronAPI.bamReader.getRecordsForRange(
+        this.backendId,
+        chromosome,
+        start,
+        end,
+        settings
+      );
+      this.applyBackendState(result.state);
+      return result.reads || [];
+    }
+
     const startTime = performance.now();
 
     try {
@@ -1149,6 +1231,47 @@ class BamReader {
    * @param {Object} settings - Conversion settings
    * @param {number} offset - Offset for record numbering (for chunked processing)
    */
+  sanitizeRecordTags(tags) {
+    const sanitizedTags = {};
+
+    if (!tags || typeof tags !== 'object') {
+      return sanitizedTags;
+    }
+
+    Object.entries(tags).forEach(([key, value]) => {
+      const sanitizedValue = this.sanitizeTagValue(value);
+      if (sanitizedValue !== undefined) {
+        sanitizedTags[key] = sanitizedValue;
+      }
+    });
+
+    return sanitizedTags;
+  }
+
+  sanitizeTagValue(value, depth = 0) {
+    if (value === null) return null;
+
+    const valueType = typeof value;
+    if (valueType === 'string' || valueType === 'boolean') return value;
+    if (valueType === 'number') return Number.isFinite(value) ? value : null;
+    if (valueType === 'bigint') return value.toString();
+    if (valueType === 'undefined' || valueType === 'function' || valueType === 'symbol') return undefined;
+
+    if (depth > 1) {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(item => this.sanitizeTagValue(item, depth + 1)).filter(item => item !== undefined);
+    }
+
+    if (ArrayBuffer.isView(value)) {
+      return Array.from(value).slice(0, 1024);
+    }
+
+    return undefined;
+  }
+
   convertRecordsToReads(records, chromosome, settings = {}, offset = 0) {
     const reads = [];
     let filteredCount = 0;
@@ -1236,6 +1359,7 @@ class BamReader {
           lowQualityCount++;
         }
 
+        const tags = this.sanitizeRecordTags(record.tags);
         const read = {
           id: record.name || record.qname || `read_${offset + i}`,
           chromosome: record.refName || chromosome,
@@ -1248,8 +1372,8 @@ class BamReader {
           quality: record.qual || '',
           flags: record.flags || 0,
           templateLength: record.template_length || record.tlen || 0,
-          tags: record.tags || {},
-          isMultiMapping: mappingQuality === 0 || (record.tags && record.tags.NH > 1),
+          tags,
+          isMultiMapping: mappingQuality === 0 || tags.NH > 1,
           // Parse mutations from CIGAR and sequence
           mutations: this.parseMutations(record),
         };
@@ -1593,6 +1717,14 @@ class BamReader {
    * Reset BAM reader state
    */
   reset() {
+    const backendId = this.backendId;
+    if (this.usesIpcBackend && backendId && hasIpcBamBackend()) {
+      window.electronAPI.bamReader.destroy(backendId).catch(error => {
+        console.warn('⚠️ [BamReader] Failed to destroy remote BAM reader:', error.message);
+      });
+    }
+
+    this.backendId = null;
     this.filePath = null;
     this.indexPath = null;
     this.bamFile = null;

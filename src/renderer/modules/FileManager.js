@@ -8,74 +8,148 @@ class FileManager {
     this.currentFile = null;
   }
 
-  async openFile() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig';
-    input.onchange = e => {
-      if (e.target.files.length > 0) {
-        this.loadFile(e.target.files[0].path);
-      }
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      dirname: filePath => String(filePath || '').replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '/',
+      basename: filePath =>
+        String(filePath || '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .filter(Boolean)
+          .pop() || '',
     };
-    input.click();
   }
 
-  openSpecificFileType(fileType, options = {}) {
-    // Close the dropdown menu before opening file dialog
-    this.genomeBrowser.uiManager.closeFileDropdown();
+  async openFile() {
+    await this.openSpecificFileType('any');
+  }
 
-    const input = document.createElement('input');
-    input.type = 'file';
+  getOpenDialogOptions(fileType) {
+    const filtersByType = {
+      genome: [
+        { name: 'Genome Sequence Files', extensions: ['fasta', 'fa', 'fas', 'fna', 'gb', 'gbk', 'gbff', 'genbank'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      annotation: [
+        { name: 'Annotation Files', extensions: ['gff', 'gff3', 'gtf', 'bed'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      variant: [
+        { name: 'Variant Files', extensions: ['vcf'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      reads: [
+        { name: 'Alignment Files', extensions: ['sam', 'bam'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      tracks: [
+        { name: 'Track Files', extensions: ['wig', 'bw', 'bigwig'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      operon: [
+        { name: 'Operon Files', extensions: ['json', 'csv', 'tsv', 'txt', 'operon'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      blast: [
+        { name: 'BLAST Result Files', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      any: [
+        {
+          name: 'All Supported Genome Files',
+          extensions: [
+            'fasta',
+            'fa',
+            'fas',
+            'fna',
+            'gb',
+            'gbk',
+            'gbff',
+            'genbank',
+            'gff',
+            'gff3',
+            'gtf',
+            'bed',
+            'vcf',
+            'sam',
+            'bam',
+            'wig',
+            'bw',
+            'bigwig',
+            'fastq',
+            'fq',
+            'json',
+            'csv',
+            'tsv',
+            'txt',
+            'operon',
+          ],
+        },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    };
+    const normalizedType = filtersByType[fileType] ? fileType : 'any';
 
-    // Set specific file filters based on type
-    switch (fileType) {
-      case 'genome':
-        input.accept = '.fasta,.fa,.gb,.gbk,.gbff,.genbank';
-        break;
-      case 'annotation':
-        input.accept = '.gff,.gtf,.bed';
-        break;
-      case 'variant':
-        input.accept = '.vcf';
-        break;
-      case 'reads':
-        input.accept = '.sam,.bam';
-        break;
-      case 'tracks':
-        input.accept = '.wig,.bw,.bigwig';
-        input.multiple = true; // Allow multiple WIG/BigWig file selection
-        break;
-      case 'operon':
-        input.accept = '.json,.csv,.tsv,.txt,.operon';
-        break;
-      case 'blast':
-        input.accept = '.json';
-        break;
-      case 'any':
-      default:
-        input.accept =
-          '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig,.bw,.bigwig,.json,.csv,.tsv,.txt,.operon';
-        break;
+    return {
+      title:
+        normalizedType === 'any'
+          ? 'Open File'
+          : `Open ${normalizedType.charAt(0).toUpperCase()}${normalizedType.slice(1)} File`,
+      properties: normalizedType === 'tracks' ? ['openFile', 'multiSelections'] : ['openFile'],
+      filters: filtersByType[normalizedType],
+    };
+  }
+
+  async showOpenFileDialog(fileType) {
+    const dialogOptions = this.getOpenDialogOptions(fileType);
+
+    if (typeof window !== 'undefined' && window.electronAPI?.showOpenFileDialog) {
+      return window.electronAPI.showOpenFileDialog(dialogOptions);
     }
 
-    input.onchange = e => {
-      if (e.target.files.length > 0) {
-        if (fileType === 'tracks' && e.target.files.length > 1) {
-          // Handle multiple WIG files
-          this.loadMultipleWIGFiles(Array.from(e.target.files).map(file => file.path));
-        } else if (fileType === 'operon') {
-          // Handle operon file
-          this.loadOperonFile(e.target.files[0].path);
-        } else if (fileType === 'blast') {
-          // Handle blast results file
-          this.loadBlastResultsFile(e.target.files[0].path);
-        } else {
-          // Handle single file with options
-          this.loadFile(e.target.files[0].path, options);
-        }
+    const rendererIpc = typeof window !== 'undefined' ? window.ipcRenderer : null;
+    if (rendererIpc?.invoke) {
+      return rendererIpc.invoke('show-open-file-dialog', dialogOptions);
+    }
+
+    throw new Error('File dialog is unavailable in this environment');
+  }
+
+  async openSpecificFileType(fileType, options = {}) {
+    // Close the dropdown menu before opening file dialog
+    this.genomeBrowser.uiManager?.closeFileDropdown();
+
+    try {
+      const result = await this.showOpenFileDialog(fileType);
+      if (!result || result.canceled) {
+        return;
       }
-    };
-    input.click();
+
+      if (result.success === false) {
+        throw new Error(result.error || 'File selection failed');
+      }
+
+      const filePaths = Array.isArray(result.filePaths) ? result.filePaths : [];
+      if (filePaths.length === 0) {
+        return;
+      }
+
+      if (fileType === 'tracks' && filePaths.length > 1) {
+        await this.loadMultipleWIGFiles(filePaths);
+      } else if (fileType === 'operon') {
+        await this.loadOperonFile(filePaths[0]);
+      } else if (fileType === 'blast') {
+        await this.loadBlastResultsFile(filePaths[0]);
+      } else {
+        await this.loadFile(filePaths[0], options);
+      }
+    } catch (error) {
+      console.error('Error selecting file:', error);
+      this.genomeBrowser.updateStatus(`Failed to select file: ${error.message}`, 'error');
+    }
   }
 
   /**
@@ -808,7 +882,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
   async parseFasta() {
     // Auto-set working directory to the FASTA file's directory
     if (this.currentFile?.path) {
-      const path = require('path');
+      const path = this.getPathModule();
       const fileDir = path.dirname(this.currentFile.path);
       console.log(`📁 Auto-setting working directory to: ${fileDir}`);
 
@@ -863,7 +937,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
     // Show notification about working directory
     if (this.currentFile?.path) {
-      const path = require('path');
+      const path = this.getPathModule();
       const fileDir = path.dirname(this.currentFile.path);
       this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
     }
@@ -887,7 +961,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
     // Auto-set working directory to the GBK file's directory
     if (this.currentFile?.path) {
-      const path = require('path');
+      const path = this.getPathModule();
       const fileDir = path.dirname(this.currentFile.path);
       console.log(`📁 Auto-setting working directory to: ${fileDir}`);
 
@@ -1163,7 +1237,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
     // Show notification about working directory
     if (this.currentFile?.path) {
-      const path = require('path');
+      const path = this.getPathModule();
       const fileDir = path.dirname(this.currentFile.path);
       this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
     }

@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain, nativeTheme } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme, session } = require('electron');
 
 // =============================================================================
 // GPU and WebGL fixes - matching working version configuration
@@ -26,6 +26,7 @@ const wm = require('./main/window-management');
 const mcp = require('./main/mcp-lifecycle');
 const { registerIpcHandlers } = require('./main/ipc-handlers');
 const { registerProjectIpcHandlers } = require('./main/project-ipc');
+const { registerRendererContentSecurityPolicy, rememberApprovedPath } = require('./main/security-utils');
 
 // =============================================================================
 // Application constants
@@ -141,6 +142,7 @@ function openGenBankFile(filePath) {
     dialog.showErrorBox('File Not Found', `The file "${filePath}" could not be found.`);
     return;
   }
+  rememberApprovedPath(filePath);
 
   // If main window exists and is ready, send file directly
   if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
@@ -309,6 +311,7 @@ function buildModuleDeps() {
 
 app.whenReady().then(async () => {
   nativeTheme.themeSource = 'light';
+  registerRendererContentSecurityPolicy(session);
 
   // Set up environment variables for system command execution
   setupEnvironmentVariables();
@@ -338,6 +341,7 @@ app.whenReady().then(async () => {
 
   if (openProjectIndex !== -1 && args[openProjectIndex + 1]) {
     projectToOpen = args[openProjectIndex + 1];
+    rememberApprovedPath(projectToOpen);
     console.log('[Main] App launched with project file:', projectToOpen);
   }
 
@@ -410,6 +414,7 @@ const commandLineFiles = process.argv.slice(1).filter(arg => {
 if (commandLineFiles.length > 0) {
   console.log('[Main] Command-line GenBank files:', commandLineFiles);
   commandLineFiles.forEach(filePath => {
+    rememberApprovedPath(filePath);
     fileOpenQueue.push(filePath);
   });
 }

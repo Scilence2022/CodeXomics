@@ -32,6 +32,9 @@ parameters:
         - '/Users/user/output/visible_region.fasta'
         - 'current_chromosome.fasta'
         - '/tmp/view_sequences.fasta'
+    filePath:
+      type: string
+      description: Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath.
     auto_save:
       type: boolean
       description: >-

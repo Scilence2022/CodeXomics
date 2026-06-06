@@ -2,6 +2,7 @@
 // @ts-check
 
 const { Menu, dialog, app, BrowserWindow } = require('electron');
+const { rememberApprovedDialogPaths } = require('./security-utils');
 
 // External references (set by main module via setMenuDependencies)
 let APP_NAME;
@@ -139,6 +140,7 @@ function createCircosPlotterMenu(circosWindow) {
                 { name: 'All Files', extensions: ['*'] },
               ],
             });
+            rememberApprovedDialogPaths(result);
 
             if (!result.canceled && result.filePaths.length > 0) {
               circosWindow.webContents.send('circos-menu-action', 'open-project', result.filePaths[0]);
@@ -173,6 +175,8 @@ function createCircosPlotterMenu(circosWindow) {
                     { name: 'All Files', extensions: ['*'] },
                   ],
                 });
+                rememberApprovedDialogPaths(result);
+
                 if (!result.canceled && result.filePaths.length > 0) {
                   circosWindow.webContents.send('circos-menu-action', 'import-fasta', result.filePaths[0]);
                 }
@@ -188,6 +192,8 @@ function createCircosPlotterMenu(circosWindow) {
                     { name: 'All Files', extensions: ['*'] },
                   ],
                 });
+                rememberApprovedDialogPaths(result);
+
                 if (!result.canceled && result.filePaths.length > 0) {
                   circosWindow.webContents.send('circos-menu-action', 'import-gff', result.filePaths[0]);
                 }
@@ -203,6 +209,8 @@ function createCircosPlotterMenu(circosWindow) {
                     { name: 'All Files', extensions: ['*'] },
                   ],
                 });
+                rememberApprovedDialogPaths(result);
+
                 if (!result.canceled && result.filePaths.length > 0) {
                   circosWindow.webContents.send('circos-menu-action', 'import-genbank', result.filePaths[0]);
                 }
@@ -693,6 +701,7 @@ function createToolWindowMenu(toolWindow, toolName) {
                 { name: 'All Files', extensions: ['*'] },
               ],
             });
+            rememberApprovedDialogPaths(result);
 
             if (!result.canceled && result.filePaths.length > 0) {
               toolWindow.webContents.send('tool-menu-action', 'open-file', result.filePaths[0]);
@@ -1093,6 +1102,7 @@ function createMenu() {
                 { name: 'All Files', extensions: ['*'] },
               ],
             });
+            rememberApprovedDialogPaths(result);
 
             if (!result.canceled && result.filePaths.length > 0) {
               sendToCurrentMainWindow('file-opened', result.filePaths[0]);
@@ -1127,6 +1137,7 @@ function createMenu() {
                 ],
                 title: 'Open Project',
               });
+              rememberApprovedDialogPaths(result);
 
               if (!result.canceled && result.filePaths.length > 0) {
                 // Send the file path to the Project Manager window
@@ -1196,6 +1207,7 @@ function createMenu() {
               properties: ['openFile'],
               filters: genomeFileDialogFilters,
             });
+            rememberApprovedDialogPaths(result);
 
             if (!result.canceled && result.filePaths.length > 0) {
               openFileInNewMainWindow(result.filePaths[0]);
@@ -2212,6 +2224,7 @@ function createProjectManagerMenu(projectManagerWindow) {
               ],
               title: 'Open Project',
             });
+            rememberApprovedDialogPaths(result);
 
             if (!result.canceled && result.filePaths.length > 0) {
               projectManagerWindow.webContents.send('menu-open-project', result.filePaths[0]);
@@ -2299,6 +2312,7 @@ function createProjectManagerMenu(projectManagerWindow) {
               ],
               title: 'Import Files to Project',
             });
+            rememberApprovedDialogPaths(result);
 
             if (!result.canceled && result.filePaths.length > 0) {
               projectManagerWindow.webContents.send('menu-import-files', result.filePaths);
@@ -2316,6 +2330,7 @@ function createProjectManagerMenu(projectManagerWindow) {
               ],
               title: 'Import Project',
             });
+            rememberApprovedDialogPaths(result);
 
             if (!result.canceled && result.filePaths.length > 0) {
               projectManagerWindow.webContents.send('menu-import-project', result.filePaths[0]);

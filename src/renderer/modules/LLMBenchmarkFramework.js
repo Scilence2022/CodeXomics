@@ -34,6 +34,47 @@ class LLMBenchmarkFramework {
     this.setupEventHandlers();
   }
 
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      join: (...parts) => parts.filter(part => part !== undefined && part !== null && part !== '').join('/').replace(/\/+/g, '/'),
+      resolve: (...parts) => {
+        const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
+        const normalized = joined.replace(/\\/g, '/').replace(/\/+/g, '/');
+        return /^([A-Za-z]:[\\/]|\/)/.test(normalized) ? normalized : `/${normalized}`;
+      },
+    };
+  }
+
+  normalizeDirectoryPath(directoryPath) {
+    const rawPath = String(directoryPath || '').trim();
+    if (!rawPath) return rawPath;
+
+    try {
+      const pathModule = this.getPathModule();
+      if (pathModule && typeof pathModule.resolve === 'function') {
+        return pathModule.resolve(rawPath);
+      }
+    } catch (error) {
+      console.warn(`⚠️ [LLMBenchmarkFramework] Path normalization fallback used: ${error.message}`);
+    }
+
+    return rawPath.replace(/\\/g, '/').replace(/\/+/g, '/');
+  }
+
+  collectGarbageIfAvailable(reason) {
+    const runtimeGlobal =
+      typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : null;
+    if (runtimeGlobal && typeof runtimeGlobal.gc === 'function') {
+      runtimeGlobal.gc();
+      console.log(`🧹 ${reason}`);
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Initialize all test suites
    */
@@ -149,6 +190,8 @@ class LLMBenchmarkFramework {
 
     this.isRunning = true;
     const startTime = Date.now();
+    let benchmarkRunSessionId = null;
+    const previousBenchmarkAutomationActive = this.chatManager?.benchmarkAutomationActive === true;
 
     // Set timeout from options if provided
     // If timeout is null, it means use individual test timeouts
@@ -178,6 +221,19 @@ class LLMBenchmarkFramework {
     this.totalDelayTime = 0;
 
     try {
+      if (this.chatManager) {
+        this.chatManager.benchmarkAutomationActive = true;
+        if (this.chatManager.toolExecutionTracker) {
+          benchmarkRunSessionId = `benchmark_run_${startTime}`;
+          this.chatManager.toolExecutionTracker.startSession(benchmarkRunSessionId, {
+            benchmark: true,
+            scope: 'run',
+            startTime,
+          });
+          console.log(`🔬 [Benchmark] Started run-level tracker session: ${benchmarkRunSessionId}`);
+        }
+      }
+
       const results = {
         startTime: startTime,
         endTime: null,
@@ -289,10 +345,9 @@ class LLMBenchmarkFramework {
           );
 
           // Force garbage collection if memory usage is high
-          if (memoryDelta > 100 * 1024 * 1024 && global.gc) {
+          if (memoryDelta > 100 * 1024 * 1024) {
             // 100MB threshold
-            global.gc();
-            console.log('🧹 Forced garbage collection due to high memory usage');
+            this.collectGarbageIfAvailable('Forced garbage collection due to high memory usage');
           }
         } catch (suiteError) {
           console.error(`❌ Error in test suite ${suiteId}:`, suiteError);
@@ -321,12 +376,19 @@ class LLMBenchmarkFramework {
 
       // Generate report if requested
       if (options.generateReport !== false) {
-        const report = this.reportGenerator.generateReport(results);
+        const report = this.reportGenerator.generateReport(results, options);
         results.report = report;
       }
 
       return results;
     } finally {
+      if (benchmarkRunSessionId && this.chatManager?.toolExecutionTracker) {
+        this.chatManager.toolExecutionTracker.endSession(benchmarkRunSessionId);
+        console.log(`🔬 [Benchmark] Ended run-level tracker session: ${benchmarkRunSessionId}`);
+      }
+      if (this.chatManager) {
+        this.chatManager.benchmarkAutomationActive = previousBenchmarkAutomationActive;
+      }
       this.isRunning = false;
     }
   }
@@ -340,9 +402,8 @@ class LLMBenchmarkFramework {
     console.log('📁 [LLMBenchmarkFramework] Setting up benchmark working directory:', directoryPath);
 
     try {
-      // Ensure directory path is absolute and normalized
-      const path = require('path');
-      const normalizedPath = path.resolve(directoryPath);
+      // Ensure directory path is normalized without depending on unrestricted Node APIs in the renderer.
+      const normalizedPath = this.normalizeDirectoryPath(directoryPath);
 
       // Call ChatManager's setWorkingDirectory method directly
       if (this.chatManager && typeof this.chatManager.setWorkingDirectory === 'function') {
@@ -372,7 +433,7 @@ class LLMBenchmarkFramework {
           this.chatManager.addThinkingMessage(
             `⚠️ **Working Directory Warning**</br>` +
               `• Attempted Directory: \`${normalizedPath}\`</br>` +
-              `• Result: ${result?.message || 'Unknown error'}</br>` +
+              `• Result: ${result?.message || result?.error || 'Unknown error'}</br>` +
               `• Continuing with current working directory</br></br>`
           );
         }
@@ -531,7 +592,7 @@ class LLMBenchmarkFramework {
       // MEMORY OPTIMIZATION: Slim down the test result before storing it in the array.
       // The full llmInteractionData can be 5-15MB per test (logs, prompts, execution data).
       // After evaluation, we only need the scoring-relevant fields in the stored result.
-      const slimResult = this.slimDownTestResult(testResult);
+      const slimResult = await this.slimDownTestResult(testResult);
       results.testResults.push(slimResult);
 
       // MEMORY OPTIMIZATION: Clear the full result reference immediately
@@ -558,10 +619,7 @@ class LLMBenchmarkFramework {
       // MEMORY OPTIMIZATION: Force garbage collection every 5 tests AND check memory
       if (i % 5 === 0) {
         this.checkMemoryUsage();
-        if (global.gc) {
-          global.gc();
-          console.log(`🧹 Memory cleanup performed after test ${i + 1}`);
-        }
+        this.collectGarbageIfAvailable(`Memory cleanup performed after test ${i + 1}`);
       }
 
       // Add configurable delay every 10 tests to prevent rate limiting
@@ -908,18 +966,25 @@ class LLMBenchmarkFramework {
   async executeTest(test) {
     const startTime = Date.now();
 
-    // CRITICAL FIX: Initialize Tool Execution Tracker session for benchmark test
     let benchmarkSessionId = null;
+    let createdTrackerSessionForTest = false;
     if (this.chatManager && this.chatManager.toolExecutionTracker) {
-      benchmarkSessionId = `benchmark_${test.id}_${Date.now()}`;
-      this.chatManager.toolExecutionTracker.startSession(benchmarkSessionId, {
-        testId: test.id,
-        testName: test.name,
-        testType: test.type,
-        benchmark: true,
-        startTime: startTime,
-      });
-      console.log(`🔬 [Benchmark] Started tracker session: ${benchmarkSessionId}`);
+      if (this.chatManager.toolExecutionTracker.currentSessionId) {
+        benchmarkSessionId = this.chatManager.toolExecutionTracker.currentSessionId;
+        this.chatManager.toolExecutionTracker.setCurrentTestId(test.id);
+        console.log(`🔬 [Benchmark] Using tracker session ${benchmarkSessionId} for test ${test.id}`);
+      } else {
+        benchmarkSessionId = `benchmark_${test.id}_${Date.now()}`;
+        createdTrackerSessionForTest = true;
+        this.chatManager.toolExecutionTracker.startSession(benchmarkSessionId, {
+          testId: test.id,
+          testName: test.name,
+          testType: test.type,
+          benchmark: true,
+          startTime: startTime,
+        });
+        console.log(`🔬 [Benchmark] Started tracker session: ${benchmarkSessionId}`);
+      }
     }
 
     // Check if this is a manual evaluation test
@@ -929,7 +994,7 @@ class LLMBenchmarkFramework {
         return await this.executeManualTest(test);
       } finally {
         // End tracker session for manual tests
-        if (benchmarkSessionId && this.chatManager.toolExecutionTracker) {
+        if (benchmarkSessionId && createdTrackerSessionForTest && this.chatManager.toolExecutionTracker) {
           this.chatManager.toolExecutionTracker.endSession(benchmarkSessionId);
           console.log(`🔬 [Benchmark] Ended tracker session for manual test: ${benchmarkSessionId}`);
         }
@@ -1042,7 +1107,7 @@ class LLMBenchmarkFramework {
       }
 
       // CRITICAL FIX: End Tool Execution Tracker session for benchmark test
-      if (benchmarkSessionId && this.chatManager && this.chatManager.toolExecutionTracker) {
+      if (benchmarkSessionId && createdTrackerSessionForTest && this.chatManager && this.chatManager.toolExecutionTracker) {
         this.chatManager.toolExecutionTracker.endSession(benchmarkSessionId);
         console.log(`🔬 [Benchmark] Ended tracker session: ${benchmarkSessionId}`);
       }
@@ -5457,14 +5522,14 @@ class LLMBenchmarkFramework {
   /**
    * Export benchmark results
    */
-  exportResults(format = 'json') {
+  exportResults(format = 'json', options = {}) {
     switch (format) {
       case 'json':
         return JSON.stringify(this.benchmarkResults, null, 2);
       case 'csv':
         return this.reportGenerator.generateCSVReport(this.benchmarkResults);
       case 'html':
-        return this.reportGenerator.generateHTMLReport(this.benchmarkResults);
+        return this.reportGenerator.generateHTMLReport(this.benchmarkResults, options);
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }
@@ -5607,7 +5672,7 @@ class LLMBenchmarkFramework {
    * and only a lightweight summary + disk reference is kept in memory.
    * The UI can load detailed data on demand from disk when the user expands a test.
    */
-  slimDownTestResult(result) {
+  async slimDownTestResult(result) {
     if (!result) return result;
 
     // Build a slim copy with fields needed for reporting/scoring AND UI fallback reconstruction
@@ -5680,7 +5745,7 @@ class LLMBenchmarkFramework {
       };
 
       // Persist full interaction data to disk for on-demand retrieval
-      const diskPath = this.persistInteractionDataToDisk(result.testId, result.suiteId, data);
+      const diskPath = await this.persistInteractionDataToDisk(result.testId, result.suiteId, data);
       if (diskPath) {
         slim.llmInteractionDataSummary.diskPath = diskPath;
       }
@@ -5694,51 +5759,86 @@ class LLMBenchmarkFramework {
    * This allows the UI to load detailed data on demand instead of keeping
    * 5-15MB per test in memory. Data is stored in the app's temp directory.
    */
-  persistInteractionDataToDisk(testId, suiteId, interactionData) {
+  sanitizeBenchmarkFileSegment(value) {
+    return String(value || 'unknown')
+      .replace(/[^A-Za-z0-9._-]/g, '_')
+      .replace(/_+/g, '_')
+      .slice(0, 120);
+  }
+
+  async getBenchmarkDataDirectory(pathModule) {
+    const appPathsResult =
+      typeof window !== 'undefined' && window.electronAPI?.getAppPaths
+        ? await window.electronAPI.getAppPaths()
+        : null;
+    const appPaths = appPathsResult?.success ? appPathsResult.paths || {} : {};
+    const baseDir = appPaths.temp || appPaths.userData;
+
+    if (baseDir) {
+      return pathModule.join(baseDir, 'codexomics-benchmark-data');
+    }
+
+    const osTmpDir =
+      typeof window !== 'undefined' && window.os && typeof window.os.tmpdir === 'function'
+        ? window.os.tmpdir()
+        : '';
+
+    return osTmpDir ? pathModule.join(osTmpDir, 'codexomics-benchmark-data') : null;
+  }
+
+  getInteractionDataReplacer() {
+    const circularReplacer = this.getCircularReplacer();
+    return (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return circularReplacer(key, value);
+    };
+  }
+
+  async persistInteractionDataToDisk(testId, suiteId, interactionData) {
     try {
-      const path = require('path');
-      const os = require('os');
+      const pathModule = this.getPathModule();
+      const electronAPI = typeof window !== 'undefined' ? window.electronAPI : null;
 
-      // Use a dedicated benchmark-data directory in the system temp folder
-      const benchmarkDir = path.join(os.tmpdir(), 'codexomics-benchmark-data');
-      const filename = `interaction_${suiteId}_${testId}_${Date.now()}.json`;
-      const filePath = path.join(benchmarkDir, filename);
+      if (!pathModule || typeof pathModule.join !== 'function') {
+        console.warn('[Benchmark] Cannot persist interaction data: path utilities are unavailable');
+        return null;
+      }
 
-      const jsonContent = JSON.stringify(interactionData);
+      const benchmarkDir = await this.getBenchmarkDataDirectory(pathModule);
+      if (!benchmarkDir) {
+        console.warn('[Benchmark] Cannot persist interaction data: no temp or userData directory is available');
+        return null;
+      }
 
-      // Try Electron IPC first (renderer process), then fs directly
-      if (window.electronAPI?.writeFile) {
-        // Ensure directory exists before writing
-        const ensureDir = window.electronAPI.ensureDirectory;
-        const writeOp = ensureDir
-          ? ensureDir(benchmarkDir).then(() => window.electronAPI.writeFile(filePath, jsonContent))
-          : window.electronAPI.writeFile(filePath, jsonContent);
-        writeOp
-          .then(() => {
-            console.log(
-              `💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`
-            );
-          })
-          .catch(err => {
-            console.warn(`[Benchmark] Failed to persist interaction data via IPC: ${err.message}`);
-          });
+      const safeSuiteId = this.sanitizeBenchmarkFileSegment(suiteId);
+      const safeTestId = this.sanitizeBenchmarkFileSegment(testId);
+      const filename = `interaction_${safeSuiteId}_${safeTestId}_${Date.now()}.json`;
+      const filePath = pathModule.join(benchmarkDir, filename);
+
+      const jsonContent = JSON.stringify(interactionData, this.getInteractionDataReplacer());
+
+      if (electronAPI?.writeFile) {
+        if (electronAPI.ensureDirectory) {
+          const ensureResult = await electronAPI.ensureDirectory(benchmarkDir);
+          if (ensureResult?.success === false) {
+            throw new Error(ensureResult.error || `Failed to create benchmark data directory: ${benchmarkDir}`);
+          }
+        }
+
+        const writeResult = await electronAPI.writeFile(filePath, jsonContent);
+        if (writeResult?.success === false) {
+          throw new Error(writeResult.error || `Failed to write benchmark interaction data: ${filePath}`);
+        }
+
+        console.log(
+          `💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`
+        );
         return filePath;
       } else {
-        // Fallback: use fs directly (works in main process or Node.js context)
-        try {
-          const fs = require('fs');
-          if (!fs.existsSync(benchmarkDir)) {
-            fs.mkdirSync(benchmarkDir, { recursive: true });
-          }
-          fs.writeFileSync(filePath, jsonContent, 'utf8');
-          console.log(
-            `💾 [Benchmark] Persisted interaction data to: ${filePath} (${(jsonContent.length / 1024).toFixed(1)} KB)`
-          );
-          return filePath;
-        } catch (fsError) {
-          console.warn(`[Benchmark] Failed to persist interaction data via fs: ${fsError.message}`);
-          return null;
-        }
+        console.warn('[Benchmark] Cannot persist interaction data: electronAPI.writeFile is unavailable');
+        return null;
       }
     } catch (error) {
       console.warn(`[Benchmark] Failed to persist interaction data for ${testId}: ${error.message}`);
@@ -5755,12 +5855,17 @@ class LLMBenchmarkFramework {
 
     try {
       if (window.electronAPI?.readFile) {
-        const content = await window.electronAPI.readFile(diskPath);
+        const result = await window.electronAPI.readFile(diskPath);
+        if (result?.success === false) {
+          throw new Error(result.error || `Failed to read interaction data: ${diskPath}`);
+        }
+        const content = typeof result === 'string' ? result : result?.data;
+        if (typeof content !== 'string') {
+          throw new Error('Interaction data read returned no text content');
+        }
         return JSON.parse(content);
       } else {
-        const fs = require('fs').promises;
-        const content = await fs.readFile(diskPath, 'utf8');
-        return JSON.parse(content);
+        throw new Error('electronAPI.readFile is unavailable in the hardened renderer');
       }
     } catch (error) {
       console.warn(`[Benchmark] Failed to load interaction data from ${diskPath}: ${error.message}`);

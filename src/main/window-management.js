@@ -4,6 +4,7 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const dialog = require('electron').dialog;
+const { createSecureWebPreferences } = require('./security-utils');
 
 // External references (set by main module via setWindowMgmtDependencies)
 let mainWindow;
@@ -64,13 +65,7 @@ function createWindow() {
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: false,
-      webSecurity: false,
-      cache: false,
-    },
+    webPreferences: createSecureWebPreferences({ cache: false }),
     icon: path.join(__dirname, '../assets/icon.png'),
     show: false,
   });
@@ -239,16 +234,7 @@ function createCircosWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'Circos Genome Plotter - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       show: false,
@@ -312,14 +298,7 @@ function createKEGGWindow() {
       height: 1000,
       minWidth: 1200,
       minHeight: 800,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'KEGG Pathway Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -352,14 +331,7 @@ function createGOWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'Gene Ontology (GO) Analyzer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -392,16 +364,7 @@ function createUniProtWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'Search UniProt Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -434,16 +397,7 @@ function createInterProWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'InterPro Domain Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -476,16 +430,7 @@ function createNCBIWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'Search NCBI Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -520,16 +465,7 @@ function createSTRINGWindow() {
       height: 1000,
       minWidth: 1200,
       minHeight: 800,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'STRING Protein Networks - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -562,16 +498,7 @@ function createDAVIDWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'DAVID Functional Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -604,16 +531,7 @@ function createReactomeWindow() {
       height: 1000,
       minWidth: 1200,
       minHeight: 800,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'Reactome Pathway Browser - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -646,16 +564,7 @@ function createPDBWindow() {
       height: 1000,
       minWidth: 1200,
       minHeight: 800,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'PDB Structure Viewer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -688,16 +597,7 @@ function createGeneAnnotationRefineWindow() {
       height: 1000,
       minWidth: 1200,
       minHeight: 800,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'Gene Annotation Refine - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -730,16 +630,7 @@ function createBlastDownloaderWindow() {
       height: 800,
       minWidth: 1000,
       minHeight: 600,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'BLAST+ Tools Downloader - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -783,16 +674,7 @@ function createBlastConfigWindow() {
       height: 750,
       minWidth: 900,
       minHeight: 650,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'Configure BLAST Tools - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -881,17 +763,10 @@ async function createProGenFixerWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        enableRemoteModule: false,
-        webSecurity: false, // Allow loading external URLs
-        // Enable clipboard and keyboard functionality
+      webPreferences: createSecureWebPreferences({
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      }),
       title: 'ProGenFixer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -1069,17 +944,10 @@ async function createDeepGeneResearchWindow(params = {}) {
       height: 1000,
       minWidth: 1200,
       minHeight: 800,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        enableRemoteModule: false,
-        webSecurity: false, // Allow loading external URLs
-        // Enable clipboard and keyboard functionality
+      webPreferences: createSecureWebPreferences({
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      }),
       title: 'Deep Gene Research - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -1306,17 +1174,10 @@ async function createChopchopWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        enableRemoteModule: false,
-        webSecurity: false, // Allow loading external URLs
-        // Enable clipboard and keyboard functionality
+      webPreferences: createSecureWebPreferences({
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
-        // Explicitly disable sandbox to prevent /tmp access issues on Linux
-        sandbox: false,
-      },
+      }),
       title: 'CHOPCHOP CRISPR Toolbox - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -1437,16 +1298,10 @@ async function createCustomExternalToolWindow(toolData) {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        enableRemoteModule: false,
-        webSecurity: false,
-
-        allowRunningInsecureContent: true,
+      webPreferences: createSecureWebPreferences({
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
-      },
+      }),
       title: `${toolData.name} - CodeXomics`,
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -1740,12 +1595,7 @@ function createProjectManagerWindow() {
       width: 1200,
       height: 800,
       minHeight: 600,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        enableRemoteModule: false,
-        preload: path.join(__dirname, '..', 'preload.js'),
-      },
+      webPreferences: createSecureWebPreferences(),
       title: 'Project Manager - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       resizable: true,
@@ -2182,11 +2032,7 @@ function openTestFile(filename) {
     const testWindow = new BrowserWindow({
       width: 1200,
       height: 800,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: false,
-      },
+      webPreferences: createSecureWebPreferences(),
       title: `Test: ${filename}`,
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     });

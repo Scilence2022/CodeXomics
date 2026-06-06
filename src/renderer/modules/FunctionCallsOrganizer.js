@@ -10,6 +10,7 @@ class FunctionCallsOrganizer {
 
     // Track dynamically registered plugin tools
     this.dynamicPluginTools = new Map();
+    this.dynamicRegistryTools = new Map();
 
     // 功能分类定义
     this.functionCategories = {
@@ -84,11 +85,46 @@ class FunctionCallsOrganizer {
           'list_annotations',
           'search_annotations',
           // File loading tools - CRITICAL FIX
+          'load_genome',
           'load_genome_file',
+          'load_fasta',
+          'load_fasta_file',
+          'load_genbank',
+          'load_genbank_file',
+          'load_gbk',
+          'load_gbk_file',
+          'load_annotation',
           'load_annotation_file',
+          'load_bed',
+          'load_bed_file',
+          'load_gff',
+          'load_gff_file',
+          'load_gff3',
+          'load_gff3_file',
+          'load_gtf',
+          'load_gtf_file',
+          'load_variant',
           'load_variant_file',
+          'load_vcf',
+          'load_vcf_file',
+          'load_reads',
           'load_reads_file',
+          'load_bam',
+          'load_bam_file',
+          'load_sam',
+          'load_sam_file',
+          'load_wig',
+          'load_wig_file',
           'load_wig_tracks',
+          'load_bigwig',
+          'load_bigwig_file',
+          'load_bedgraph',
+          'load_bedgraph_file',
+          'load_track',
+          'load_track_file',
+          'load_tracks',
+          'load_operon',
+          'load_operons',
           'load_operon_file',
           'get_loaded_files_list',
         ],
@@ -371,6 +407,12 @@ class FunctionCallsOrganizer {
           'clear_primer_annotations',
         ],
       },
+
+      registryDynamic: {
+        priority: 3,
+        description: 'Dynamically registered tools from the canonical tool registry manifest',
+        functions: [],
+      },
     };
 
     // 功能映射表
@@ -388,6 +430,75 @@ class FunctionCallsOrganizer {
       }
     }
     return mapping;
+  }
+
+  /**
+   * Register tools from the canonical registry snapshot so execution planning
+   * stays aligned with tools_registry YAML and the generated runtime manifest.
+   */
+  registerToolRegistrySnapshot(snapshot = {}) {
+    try {
+      for (const [toolName, metadata] of this.dynamicRegistryTools.entries()) {
+        const category = this.functionCategories[metadata.category];
+        if (category && Array.isArray(category.functions)) {
+          category.functions = category.functions.filter(functionName => functionName !== toolName);
+        }
+      }
+      this.dynamicRegistryTools.clear();
+      this.functionToCategory = this.buildFunctionMapping();
+
+      const tools = Array.isArray(snapshot.tools) ? snapshot.tools : Object.values(snapshot.toolsByName || {});
+      const builtInTools = Array.isArray(snapshot.builtInTools) ? snapshot.builtInTools : [];
+
+      for (const tool of [...tools, ...builtInTools]) {
+        if (!tool || !tool.name || this.functionToCategory.has(tool.name)) {
+          continue;
+        }
+
+        const categoryName = this.mapRegistryCategoryToFunctionCategory(tool);
+        if (!this.functionCategories[categoryName]) {
+          this.functionCategories[categoryName] = {
+            priority: 3,
+            description: 'Dynamically registered tools',
+            functions: [],
+          };
+        }
+
+        this.functionCategories[categoryName].functions.push(tool.name);
+        this.dynamicRegistryTools.set(tool.name, {
+          category: categoryName,
+          registryCategory: tool.category,
+          source: tool.source || 'tool-registry',
+          isBuiltIn: !!tool.isBuiltIn,
+        });
+      }
+
+      this.functionToCategory = this.buildFunctionMapping();
+      console.log(
+        `✅ [FunctionCallsOrganizer] Registered ${this.dynamicRegistryTools.size} registry-backed dynamic tools`
+      );
+    } catch (error) {
+      console.warn('[FunctionCallsOrganizer] Failed to register tool registry snapshot:', error.message);
+    }
+  }
+
+  mapRegistryCategoryToFunctionCategory(tool = {}) {
+    const category = tool.category || '';
+    const toolName = String(tool.name || '');
+
+    if (category === 'file_loading') return 'dataRetrieval';
+    if (['navigation', 'state', 'system', 'utility', 'track_settings'].includes(category)) return 'browserActions';
+    if (['sequence', 'primer_design'].includes(category)) return 'sequenceAnalysis';
+    if (['annotation', 'data_management', 'file_operations', 'export', 'actions'].includes(category)) {
+      return 'dataManipulation';
+    }
+    if (['blast', 'pathway'].includes(category)) return 'blastSearch';
+    if (category === 'external_apis' && toolName.includes('blast')) return 'blastSearch';
+    if (['database', 'protein', 'external_apis'].includes(category)) return 'databaseIntegration';
+    if (category === 'coordination') return 'coordination';
+    if (category === 'benchmark') return 'benchmarkManagement';
+    if (category === 'task_management') return 'browserActions';
+    return 'registryDynamic';
   }
 
   /**
@@ -561,11 +672,46 @@ class FunctionCallsOrganizer {
 
     // File loading tools should be executed sequentially for proper dependency order
     const fileLoadingTools = [
+      'load_genome',
       'load_genome_file',
+      'load_fasta',
+      'load_fasta_file',
+      'load_genbank',
+      'load_genbank_file',
+      'load_gbk',
+      'load_gbk_file',
+      'load_annotation',
       'load_annotation_file',
+      'load_bed',
+      'load_bed_file',
+      'load_gff',
+      'load_gff_file',
+      'load_gff3',
+      'load_gff3_file',
+      'load_gtf',
+      'load_gtf_file',
+      'load_variant',
       'load_variant_file',
+      'load_vcf',
+      'load_vcf_file',
+      'load_reads',
       'load_reads_file',
+      'load_bam',
+      'load_bam_file',
+      'load_sam',
+      'load_sam_file',
+      'load_wig',
+      'load_wig_file',
       'load_wig_tracks',
+      'load_bigwig',
+      'load_bigwig_file',
+      'load_bedgraph',
+      'load_bedgraph_file',
+      'load_track',
+      'load_track_file',
+      'load_tracks',
+      'load_operon',
+      'load_operons',
       'load_operon_file',
     ];
 

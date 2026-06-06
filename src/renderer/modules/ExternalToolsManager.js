@@ -454,13 +454,22 @@ class ExternalToolsManager {
   }
 
   /**
+   * Get the renderer IPC bridge exposed by preload.
+   */
+  getIpcRenderer() {
+    return (
+      (typeof window !== 'undefined' && window.ipcRenderer) ||
+      (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null)
+    );
+  }
+
+  /**
    * Update main menu to reflect current tools
    */
   updateMainMenu() {
-    // Send IPC message to main process to update menu
-    if (typeof require !== 'undefined') {
-      const { ipcRenderer } = require('electron');
-      ipcRenderer.send('update-external-tools-menu', this.getAllTools());
+    const rendererIpc = this.getIpcRenderer();
+    if (rendererIpc?.send) {
+      rendererIpc.send('update-external-tools-menu', this.getAllTools());
     }
   }
 
@@ -468,22 +477,24 @@ class ExternalToolsManager {
    * Open an external tool
    */
   openTool(toolData) {
-    if (typeof require !== 'undefined') {
-      const { ipcRenderer } = require('electron');
+    const rendererIpc = this.getIpcRenderer();
+    if (!rendererIpc?.send) {
+      console.warn('[ExternalToolsManager] IPC bridge unavailable; cannot open external tool');
+      return;
+    }
 
-      if (toolData.type === 'builtin') {
-        // Handle built-in tools with existing functions
-        if (toolData.key === 'deepGeneResearch') {
-          ipcRenderer.send('open-deep-gene-research-window');
-        } else if (toolData.key === 'chopchop') {
-          ipcRenderer.send('open-chopchop-window');
-        } else if (toolData.key === 'progenfixer') {
-          ipcRenderer.send('open-progenfixer-window');
-        }
-      } else if (toolData.type === 'custom') {
-        // Handle custom tools
-        ipcRenderer.send('open-custom-external-tool', toolData);
+    if (toolData.type === 'builtin') {
+      // Handle built-in tools with existing functions
+      if (toolData.key === 'deepGeneResearch') {
+        rendererIpc.send('open-deep-gene-research-window');
+      } else if (toolData.key === 'chopchop') {
+        rendererIpc.send('open-chopchop-window');
+      } else if (toolData.key === 'progenfixer') {
+        rendererIpc.send('open-progenfixer-window');
       }
+    } else if (toolData.type === 'custom') {
+      // Handle custom tools
+      rendererIpc.send('open-custom-external-tool', toolData);
     }
   }
 

@@ -6,8 +6,22 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
+function evaluateRendererGlobal(relativePath, globalName) {
+  const filePath = path.join(process.cwd(), relativePath);
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const fn = new Function(`${content}; return globalThis.${globalName};`);
+  return fn();
+}
+
+function loadPolicySupport() {
+  evaluateRendererGlobal('src/renderer/modules/chat/services/ToolCapabilityPolicy.js', 'ToolCapabilityPolicy');
+  evaluateRendererGlobal('src/renderer/modules/chat/services/ToolExecutionPolicy.js', 'ToolExecutionPolicy');
+}
+
 // Helper to load LLMContextService in a node-compatible way
 function loadLLMContextServiceClass() {
+  loadPolicySupport();
+
   const servicePath = path.join(process.cwd(), 'src/renderer/modules/chat/services/LLMContextService.js');
   let content = fs.readFileSync(servicePath, 'utf-8');
   // Strip window assignment to avoid JSDOM/window requirements
@@ -114,6 +128,58 @@ function loadChatManagerClass() {
 describe('Tool Policy - Parameter Normalization and Matching', () => {
   const LLMContextService = loadLLMContextServiceClass();
   const MockChatManager = loadChatManagerClass();
+
+  it('should keep execution policies in dedicated hardcoded policy classes', () => {
+    const contextSource = fs.readFileSync(
+      path.join(process.cwd(), 'src/renderer/modules/chat/services/LLMContextService.js'),
+      'utf8'
+    );
+    const capabilitySource = fs.readFileSync(
+      path.join(process.cwd(), 'src/renderer/modules/chat/services/ToolCapabilityPolicy.js'),
+      'utf8'
+    );
+    const executionSource = fs.readFileSync(
+      path.join(process.cwd(), 'src/renderer/modules/chat/services/ToolExecutionPolicy.js'),
+      'utf8'
+    );
+
+    expect(contextSource).toContain('getToolExecutionPolicy()');
+    expect(contextSource).not.toContain('const toolPolicies = {');
+    expect(capabilitySource).toContain('class ToolCapabilityPolicy');
+    expect(executionSource).toContain('class ToolExecutionPolicy');
+    expect(executionSource).not.toMatch(/\.ya?ml|\.json/);
+  });
+
+  it('should include benchmark tools in an explicit system utility policy', () => {
+    const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
+    const capabilityPolicy = new ToolCapabilityPolicy();
+
+    expect(capabilityPolicy.getPolicyForTool('start_benchmark').name).toBe('system_utility');
+    expect(capabilityPolicy.getPolicyForTool('export_benchmark_results').name).toBe('system_utility');
+    expect(capabilityPolicy.getPolicyForTool('set_working_directory').name).toBe('system_utility');
+  });
+
+  it('should not apply global repetition limits to system utility tools', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const policy = new ToolExecutionPolicy({
+      chatManager: {
+        configManager: {
+          get: (key, fallback) => {
+            if (key === 'chatboxSettings') return {};
+            return fallback;
+          },
+        },
+        getToolExecutionKey: (toolName, parameters) => `${toolName}:${JSON.stringify(parameters)}`,
+        getToolExecutionCount: () => 99,
+        getToolExecutionCountByName: () => 99,
+        wasToolExecutedSuccessfully: () => true,
+      },
+    });
+
+    expect(policy.shouldAllowToolExecution({ tool_name: 'start_benchmark', parameters: { suite: 'quick' } }, [])).toBe(
+      true
+    );
+  });
 
   it('should normalize parameters order-independently (LLMContextService)', () => {
     const service = new LLMContextService({}, {});

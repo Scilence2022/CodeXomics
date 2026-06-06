@@ -41,6 +41,29 @@ describe('IPC Handlers Module', () => {
   it('should handle file operations IPC', () => {
     expect(content).toContain('read-file');
     expect(content).toContain('write-file');
+    expect(content).toContain('approve-working-directory');
+    expect(content).toContain('get-app-paths');
+  });
+
+  it('should expose scoped tool registry IPC', () => {
+    expect(content).toContain('ToolRegistryService');
+    expect(content).toContain('tool-registry:get-snapshot');
+    expect(content).toContain('tool-registry:get-metadata');
+    expect(content).toContain('tool-registry:get-tool');
+    expect(content).toContain('tool-registry:reload');
+  });
+
+  it('should expose scoped gene research report IPC', () => {
+    expect(content).toContain('check-gene-research-report');
+    expect(content).toContain('open-gene-research-report');
+    expect(content).toContain('resolveGeneResearchReportPath');
+  });
+
+  it('should expose scoped sidecar file IPC', () => {
+    expect(content).toContain('load-sidecar-file');
+    expect(content).toContain('save-sidecar-file');
+    expect(content).toContain('check-sidecar-file');
+    expect(content).toContain('resolveSidecarPaths');
   });
 
   it('should handle MCP server IPC', () => {

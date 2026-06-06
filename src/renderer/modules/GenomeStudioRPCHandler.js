@@ -7,15 +7,9 @@
 
 // Access ipcRenderer without redeclaring
 let genomeRPCIpc;
-try {
-  if (typeof ipcRenderer !== 'undefined') {
-    genomeRPCIpc = ipcRenderer;
-  } else {
-    genomeRPCIpc = require('electron').ipcRenderer;
-  }
-} catch (e) {
-  genomeRPCIpc = require('electron').ipcRenderer;
-}
+genomeRPCIpc =
+  (typeof window !== 'undefined' && window.ipcRenderer) ||
+  (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
 
 class GenomeStudioRPCHandler {
   constructor() {
@@ -349,4 +343,10 @@ class GenomeStudioRPCHandler {
   }
 }
 
-module.exports = GenomeStudioRPCHandler;
+if (typeof window !== 'undefined') {
+  window.GenomeStudioRPCHandler = GenomeStudioRPCHandler;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = GenomeStudioRPCHandler;
+}

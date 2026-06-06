@@ -36,7 +36,6 @@ class ModalDragManager {
   makeDraggable(modalSelector) {
     const modal = document.querySelector(modalSelector);
     if (!modal) {
-      console.warn(`Modal not found: ${modalSelector}`);
       return;
     }
 

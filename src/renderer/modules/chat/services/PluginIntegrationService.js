@@ -92,4 +92,10 @@ class PluginIntegrationService {
   }
 }
 
-module.exports = PluginIntegrationService;
+if (typeof window !== 'undefined') {
+  window.PluginIntegrationService = PluginIntegrationService;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = PluginIntegrationService;
+}

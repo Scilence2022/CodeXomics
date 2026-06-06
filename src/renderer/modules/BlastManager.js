@@ -50,42 +50,30 @@ class BlastManager {
     });
   }
 
+  canUseRendererFileSystem() {
+    return false;
+  }
+
+  canUseLocalBlastRuntime() {
+    return !!(typeof window !== 'undefined' && window.electronAPI?.blast?.runCommand);
+  }
+
   /**
    * Load saved BLAST configuration from file
    */
   loadSavedBlastConfig() {
     try {
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
-
-      const homeDir = os.homedir();
-      const platform = os.platform();
-
-      let configDir;
-      if (platform === 'win32') {
-        const appData = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
-        configDir = path.join(appData, 'GenomeAIStudio');
-      } else if (platform === 'darwin') {
-        configDir = path.join(homeDir, 'Library', 'Application Support', 'GenomeAIStudio');
-      } else {
-        configDir = path.join(homeDir, '.config', 'GenomeAIStudio');
-      }
-
-      const configPath = path.join(configDir, 'blast-config.json');
-
-      if (fs.existsSync(configPath)) {
-        const data = fs.readFileSync(configPath, 'utf8');
-        const config = JSON.parse(data);
-        console.log('BlastManager: Loaded saved BLAST configuration:', config);
+      const storedConfig = localStorage.getItem('blast-config');
+      if (storedConfig) {
+        const config = JSON.parse(storedConfig);
+        console.log('BlastManager: Loaded BLAST configuration from localStorage:', config);
         return config;
-      } else {
-        console.log('BlastManager: No saved BLAST configuration found');
       }
     } catch (error) {
-      console.error('BlastManager: Failed to load saved BLAST configuration:', error);
+      console.warn('BlastManager: Failed to load localStorage BLAST configuration:', error.message);
     }
 
+    console.debug('BlastManager: File-backed BLAST config unavailable in hardened renderer');
     return null;
   }
 
@@ -93,10 +81,7 @@ class BlastManager {
    * Get platform-specific BLAST+ installation path
    */
   getPlatformBlastPath() {
-    const os = require('os');
-    const path = require('path');
-    const platform = os.platform();
-    const homeDir = os.homedir();
+    const platform = this.getPlatformName();
 
     switch (platform) {
       case 'win32':
@@ -115,10 +100,9 @@ class BlastManager {
    * Prioritizes current file directory, falls back to user data directory
    */
   getPlatformDbPath() {
-    const os = require('os');
-    const path = require('path');
-    const platform = os.platform();
-    const homeDir = os.homedir();
+    const path = this.getPathModule();
+    const platform = this.getPlatformName();
+    const homeDir = this.getHomeDirectoryFallback();
 
     // Try to get current file directory first
     const currentFileDir = this.getCurrentFileDirectory();
@@ -129,7 +113,7 @@ class BlastManager {
     // Fallback to platform-specific user data directory
     switch (platform) {
       case 'win32':
-        const appData = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+        const appData = path.join(homeDir, 'AppData', 'Local');
         return path.join(appData, 'GenomeAIStudio', 'blast', 'db');
       case 'darwin':
         return path.join(homeDir, 'Library', 'Application Support', 'GenomeAIStudio', 'blast', 'db');
@@ -164,41 +148,86 @@ class BlastManager {
     }
 
     if (currentFilePath) {
-      const path = require('path');
+      const path = this.getPathModule();
       return path.dirname(currentFilePath);
     }
 
     return null;
   }
 
+  parseBlastCommand(command) {
+    const args = [];
+    let current = '';
+    let quote = null;
+    let escaped = false;
+
+    for (const char of String(command || '')) {
+      if (escaped) {
+        current += char;
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (quote) {
+        if (char === quote) {
+          quote = null;
+        } else {
+          current += char;
+        }
+        continue;
+      }
+
+      if (char === '"' || char === "'") {
+        quote = char;
+        continue;
+      }
+
+      if (/\s/.test(char)) {
+        if (current) {
+          args.push(current);
+          current = '';
+        }
+        continue;
+      }
+
+      current += char;
+    }
+
+    if (escaped) current += '\\';
+    if (current) args.push(current);
+    return args;
+  }
+
   /**
    * Create directory using cross-platform method
    */
   async createDirectoryAsync(dirPath) {
-    const fs = require('fs');
-    const path = require('path');
-
-    try {
-      // Use Node.js built-in recursive directory creation
-      await fs.promises.mkdir(dirPath, { recursive: true });
-      console.log(`BlastManager: Created directory: ${dirPath}`);
-      return true;
-    } catch (error) {
-      // If fs.promises.mkdir fails, try synchronous version
-      try {
-        fs.mkdirSync(dirPath, { recursive: true });
-        console.log(`BlastManager: Created directory (sync): ${dirPath}`);
-        return true;
-      } catch (syncError) {
-        console.error(`BlastManager: Failed to create directory ${dirPath}:`, error);
-        throw new Error(`Failed to create directory ${dirPath}: ${error.message}`);
+    if (typeof window !== 'undefined' && window.electronAPI?.ensureDirectory) {
+      const result = await window.electronAPI.ensureDirectory(dirPath);
+      if (!result?.success) {
+        throw new Error(result?.error || `Failed to create directory ${dirPath}`);
       }
+      console.log(`BlastManager: Created directory via main process: ${result.path || dirPath}`);
+      return true;
     }
+
+    throw new Error('Main-process directory API is unavailable');
   }
 
   async initializeLocalBlast() {
     console.log('BlastManager: Initializing local BLAST...');
     try {
+      if (!this.canUseLocalBlastRuntime()) {
+        console.info('BlastManager: Local BLAST command execution is unavailable in the hardened renderer');
+        this.enableLocalBlast();
+        return;
+      }
+
       // Check if BLAST+ is installed
       const isInstalled = await this.checkBlastInstallation();
       console.log('BlastManager: BLAST+ installed status:', isInstalled);
@@ -216,7 +245,7 @@ class BlastManager {
         );
       }
     } catch (error) {
-      console.error('Error initializing local BLAST:', error);
+      console.warn('Error initializing local BLAST:', error.message);
       // Still enable the UI for database creation
       this.enableLocalBlast();
     }
@@ -224,6 +253,18 @@ class BlastManager {
 
   async checkBlastInstallation() {
     console.log('BlastManager: Checking BLAST+ installation...');
+    if (typeof window !== 'undefined' && window.electronAPI?.blast?.detectInstallation) {
+      const detection = await window.electronAPI.blast.detectInstallation();
+      if (detection?.installed || detection?.found) {
+        this.config.blastExecutablePath = detection.path;
+        this.config.installedBlastVersion = detection.version;
+        console.log(`BlastManager: Found BLAST+ via main process at ${detection.path}: v${detection.version}`);
+        return true;
+      }
+      console.warn('BlastManager: BLAST+ not detected by main process:', detection?.error || detection?.message);
+      return false;
+    }
+
     try {
       // First try direct command execution
       const command = 'blastn -version';
@@ -253,87 +294,18 @@ class BlastManager {
   }
 
   async tryFallbackBlastDetection() {
-    console.log('BlastManager: Trying fallback BLAST+ detection methods...');
-
-    // Try common installation paths
-    const os = require('os');
-    const path = require('path');
-    const fs = require('fs');
-
-    const homeDir = os.homedir();
-    const commonPaths = [
-      'blastn', // Already in PATH
-      '/usr/local/bin/blastn', // Common Unix installation
-      '/usr/bin/blastn', // System installation
-      '/opt/homebrew/bin/blastn', // Homebrew on Apple Silicon
-      '/usr/local/blast+/bin/blastn', // Custom installation
-      path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'), // User installation
-      path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'), // Local installation
-      path.join(homeDir, '.local', 'bin', 'blastn'), // Local bin
-      '/opt/blast+/bin/blastn', // Alternative custom installation
-      'C:\\Program Files\\NCBI\\blast+\\bin\\blastn.exe', // Windows default
-      'C:\\blast+\\bin\\blastn.exe', // Windows alternative
-    ];
-
-    for (const blastPath of commonPaths) {
-      try {
-        console.log(`BlastManager: Trying path: ${blastPath}`);
-
-        // Check if file exists for absolute paths
-        if (blastPath.includes('/') || blastPath.includes('\\')) {
-          if (!fs.existsSync(blastPath)) {
-            console.debug(`BlastManager: Path ${blastPath} does not exist`);
-            continue;
-          }
-        }
-
-        const command = `"${blastPath}" -version`;
-        const result = await this.runCommand(command);
-
-        const versionMatch = result.match(/blastn: ([\d.]+)/);
-        if (versionMatch) {
-          const installedVersion = versionMatch[1];
-          console.log(`BlastManager: Found BLAST+ at ${blastPath}: v${installedVersion}`);
-
-          // Store the working path and version
-          this.config.blastExecutablePath = blastPath;
-          this.config.installedBlastVersion = installedVersion;
-          return true;
-        }
-      } catch (error) {
-        // Continue trying other paths
-        console.debug(`BlastManager: Path ${blastPath} not accessible:`, error.message);
-      }
-    }
-
-    console.warn('BlastManager: BLAST+ not found in any common locations');
+    console.debug('BlastManager: Skipping renderer fallback BLAST+ detection; main-process detection is required');
     return false;
   }
 
   async checkAndFixBlastDatabaseDirectory() {
-    const fs = require('fs');
-    const path = require('path');
-
     try {
       // Get current database path (may change based on current file location)
       const localDbPath = this.getCurrentDatabasePath();
       this.config.localDbPath = localDbPath; // Update config with current path
 
-      // Check if directory exists
-      if (!fs.existsSync(localDbPath)) {
-        console.log('BlastManager: Creating BLAST database directory:', localDbPath);
-        await this.createDirectoryAsync(localDbPath);
-        return true;
-      }
-
-      // Check if directory is writable
-      try {
-        await fs.promises.access(localDbPath, fs.constants.W_OK);
-        return true;
-      } catch (error) {
-        console.error('BlastManager: BLAST database directory not writable:', localDbPath);
-        throw new Error(`BLAST database directory not writable: ${localDbPath}`);
-      }
+      await this.createDirectoryAsync(localDbPath);
+      return true;
     } catch (error) {
       console.error('BlastManager: Error checking BLAST database directory:', error);
       throw error;
@@ -346,203 +318,58 @@ class BlastManager {
   getCurrentDatabasePath() {
     const currentFileDir = this.getCurrentFileDirectory();
     if (currentFileDir) {
-      const path = require('path');
+      const path = this.getPathModule();
       return path.join(currentFileDir, 'blast_db');
     }
     return this.config.localDbPath; // Fallback to configured path
   }
 
-  async runCommand(command, workingDirectory = null) {
-    return new Promise((resolve, reject) => {
-      const { exec, execFile } = require('child_process');
-      const path = require('path');
-      const fs = require('fs');
-
-      // Check if it's a BLAST-related command
-      const isBlastCommand = ['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'].some(
-        cmd => command.startsWith(cmd)
-      );
-
-      let finalCommand = command;
-      let execOptions = { maxBuffer: 10 * 1024 * 1024 }; // 10MB buffer
-
-      if (workingDirectory) {
-        execOptions.cwd = workingDirectory;
-        console.log('BlastManager: Setting working directory to:', workingDirectory);
+  async runCommand(command, workingDirectory = null, options = {}) {
+    if (typeof window !== 'undefined' && window.electronAPI?.blast?.runCommand) {
+      const tokens = this.parseBlastCommand(command);
+      const executable = tokens[0];
+      const args = tokens.slice(1);
+      if (!executable) {
+        throw new Error('BLAST command is required');
       }
 
-      if (isBlastCommand) {
-        // Set BLASTDB environment variable
-        const localDbPath = this.getCurrentDatabasePath();
-
-        console.log('BlastManager: Detected BLAST command, isBlastCommand:', isBlastCommand);
-        console.log('BlastManager: Command includes makeblastdb:', command.includes('makeblastdb'));
-        console.log('BlastManager: Full command:', command);
-
-        // Check if BLASTDB directory exists, create it if it doesn't
-        if (!fs.existsSync(localDbPath)) {
-          try {
-            fs.mkdirSync(localDbPath, { recursive: true });
-            console.log('BlastManager: Created BLASTDB directory:', localDbPath);
-          } catch (error) {
-            console.error('BlastManager: Failed to create BLASTDB directory:', error);
-            reject(new Error(`Failed to create BLASTDB directory: ${error.message}`));
-            return;
-          }
-        }
-
-        // Add BLASTDB to environment
-        execOptions.env = { ...process.env, BLASTDB: localDbPath };
-
-        // Special handling for makeblastdb - use execFile to avoid shell quoting issues with paths containing spaces
-        if (command.includes('makeblastdb')) {
-          console.log('========== ENTERING EXECFILE CODE PATH FOR MAKEBLASTDB ==========');
-          console.log('BlastManager: Original makeblastdb command:', command);
-
-          // Parse the command into executable and arguments
-          // Remove the executable name to get just the arguments
-          let commandStr = command.replace(/^makeblastdb\s+/, '');
-          console.log('BlastManager: Command string after removing executable:', commandStr);
-
-          const args = [];
-          // Parse arguments - handle both quoted and unquoted values
-          let currentArg = '';
-          let inQuotes = false;
-          let isFlag = false;
-
-          for (let i = 0; i < commandStr.length; i++) {
-            const char = commandStr[i];
-
-            if (char === '"') {
-              inQuotes = !inQuotes;
-              continue;
-            }
-
-            if (char === ' ' && !inQuotes) {
-              if (currentArg) {
-                args.push(currentArg);
-                currentArg = '';
-                isFlag = false;
-              }
-              continue;
-            }
-
-            currentArg += char;
-          }
-
-          // Add the last argument
-          if (currentArg) {
-            args.push(currentArg);
-          }
-
-          console.log('BlastManager: Parsed arguments array:', args);
-
-          // Determine makeblastdb executable path
-          let executable = 'makeblastdb';
-          if (this.config.blastExecutablePath) {
-            const blastDir = path.dirname(this.config.blastExecutablePath);
-            executable = path.join(blastDir, 'makeblastdb' + (process.platform === 'win32' ? '.exe' : ''));
-            console.log(`BlastManager: Using configured makeblastdb path: ${executable}`);
-          } else {
-            console.log('BlastManager: No configured path, using system makeblastdb');
-          }
-
-          // DEBUG: Write arguments to a temp file for inspection
-          try {
-            const fs = require('fs');
-            const os = require('os');
-            const debugPath = path.join(os.tmpdir(), 'makeblastdb-args-debug.json');
-            fs.writeFileSync(
-              debugPath,
-              JSON.stringify(
-                {
-                  executable: executable,
-                  args: args,
-                  originalCommand: command,
-                  timestamp: new Date().toISOString(),
-                },
-                null,
-                2
-              )
-            );
-            console.log('BlastManager: Debug info written to:', debugPath);
-          } catch (debugError) {
-            console.error('BlastManager: Failed to write debug info:', debugError);
-          }
-
-          console.log('BlastManager: Running makeblastdb with execFile');
-          console.log('BlastManager: Executable:', executable);
-          console.log('BlastManager: Arguments:', JSON.stringify(args));
-          console.log('BlastManager: BLASTDB:', localDbPath);
-
-          execFile(executable, args, execOptions, (error, stdout, stderr) => {
-            if (error) {
-              console.error('BlastManager: makeblastdb execution error:', error);
-              console.error('BlastManager: makeblastdb stderr:', stderr);
-              console.error('BlastManager: Executed command would be:', executable, args.join(' '));
-              reject(new Error(`makeblastdb failed: ${error.message}${stderr ? ' STDERR: ' + stderr.trim() : ''}`));
-              return;
-            }
-            resolve(stdout);
-          });
-          return; // Exit early - we handled this command
-        }
-
-        // Use detected BLAST executable path if available
-        if (this.config.blastExecutablePath) {
-          const blastCommands = ['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'];
-          for (const cmd of blastCommands) {
-            if (command.startsWith(cmd)) {
-              const blastDir = path.dirname(this.config.blastExecutablePath);
-              const commandExe = path.join(blastDir, cmd + (process.platform === 'win32' ? '.exe' : ''));
-              finalCommand = command.replace(cmd, `"${commandExe}"`);
-              console.log(`BlastManager: Using detected BLAST path: ${commandExe}`);
-              break;
-            }
-          }
-        }
-
-        console.log('BlastManager: Running BLAST command with BLASTDB:', localDbPath);
-        console.log('BlastManager: Command:', finalCommand);
-      }
-
-      exec(finalCommand, execOptions, (error, stdout, stderr) => {
-        if (error) {
-          console.error('BlastManager: Command execution error:', error);
-          console.error('BlastManager: Command stderr:', stderr);
-
-          // Provide more specific error messages for common BLAST issues
-          if (stderr && stderr.includes('Database memory map file error')) {
-            reject(
-              new Error(
-                `BLAST database error: The database directory may be corrupted or inaccessible. Please check permissions for: ${this.config.localDbPath}`
-              )
-            );
-          } else if (stderr && stderr.includes('BLAST Database error')) {
-            reject(new Error(`BLAST database error: ${stderr.trim()}`));
-          } else if (stderr && stderr.includes('is empty')) {
-            reject(
-              new Error(
-                `makeblastdb failed: File appears empty or unreadable. Check file format and permissions. Error: ${stderr.trim()}`
-              )
-            );
-          } else if (stderr && stderr.includes('No such file or directory')) {
-            reject(new Error(`makeblastdb failed: File not found in working directory. Error: ${stderr.trim()}`));
-          } else if (command.includes('makeblastdb')) {
-            // Enhanced error reporting for makeblastdb specifically
-            let errorMessage = `makeblastdb failed: ${error.message}`;
-            if (stderr) {
-              errorMessage += ` STDERR: ${stderr.trim()}`;
-            }
-            reject(new Error(errorMessage));
-          } else {
-            reject(error);
-          }
-          return;
-        }
-        resolve(stdout);
+      const localDbPath = options.localDbPath || workingDirectory || this.getCurrentDatabasePath();
+      const result = await window.electronAPI.blast.runCommand({
+        executable,
+        args,
+        workingDirectory,
+        localDbPath,
+        blastExecutablePath: this.config.blastExecutablePath,
       });
-    });
+
+      if (result?.success) {
+        return result.stdout || '';
+      }
+
+      const stderr = result?.stderr || '';
+      if (stderr.includes('Database memory map file error')) {
+        throw new Error(
+          `BLAST database error: The database directory may be corrupted or inaccessible. Please check permissions for: ${this.config.localDbPath}`
+        );
+      }
+      if (stderr.includes('BLAST Database error')) {
+        throw new Error(`BLAST database error: ${stderr.trim()}`);
+      }
+      if (stderr.includes('is empty')) {
+        throw new Error(
+          `makeblastdb failed: File appears empty or unreadable. Check file format and permissions. Error: ${stderr.trim()}`
+        );
+      }
+      if (stderr.includes('No such file or directory')) {
+        throw new Error(`makeblastdb failed: File not found in working directory. Error: ${stderr.trim()}`);
+      }
+      if (command.includes('makeblastdb')) {
+        throw new Error(`makeblastdb failed: ${result?.error || 'Command failed'}${stderr ? ' STDERR: ' + stderr.trim() : ''}`);
+      }
+      throw new Error(result?.error || 'BLAST command failed');
+    }
+
+    throw new Error('Local BLAST command execution requires main-process IPC in the hardened renderer');
   }
 
   enableLocalBlast() {
@@ -565,7 +392,7 @@ class BlastManager {
 
   async loadLocalDatabases() {
     try {
-      const path = require('path');
+      const path = this.getPathModule();
       // Get list of local databases - properly quote the path to handle spaces
       const dbPath = this.config.localDbPath;
       const result = await this.runCommand(`blastdbcmd -list "${dbPath}"`);
@@ -671,7 +498,7 @@ class BlastManager {
       const command = this.buildMakeBlastDbCommand(params);
 
       // Execute makeblastdb
-      await this.runCommand(command);
+      await this.runCommand(command, null, { localDbPath: targetDir });
 
       // Reload databases
       await this.loadLocalDatabases();
@@ -687,7 +514,7 @@ class BlastManager {
 
     // Use custom output directory if provided, otherwise use current database path
     const targetDir = outputDir || this.getCurrentDatabasePath();
-    const path = require('path');
+    const path = this.getPathModule();
     const outputPath = path.join(targetDir, dbName);
 
     // Build command - will be parsed into arguments for execFile
@@ -1161,7 +988,11 @@ class BlastManager {
   }
 
   async validateStoredDatabases() {
-    const fs = require('fs').promises;
+    if (typeof window === 'undefined' || !window.electronAPI?.checkFileExists) {
+      console.debug('BlastManager: Skipping local database file validation without renderer fs access');
+      return;
+    }
+
     let removedCount = 0;
 
     for (const [dbId, database] of this.customDatabases) {
@@ -1173,8 +1004,9 @@ class BlastManager {
 
           for (const ext of extensions) {
             try {
-              await fs.access(database.dbPath + ext);
-              foundFiles++;
+              if (await this.fileExistsViaMain(database.dbPath + ext)) {
+                foundFiles++;
+              }
             } catch (error) {
               // File doesn't exist
             }
@@ -1523,7 +1355,7 @@ class BlastManager {
       this.appendLog(`Database name: ${dbName}`);
 
       // Create database in the same directory as the source file
-      const path = require('path');
+      const path = this.getPathModule();
       const sourceDirectory = path.dirname(filePath);
       const dbFileName = `${dbId}`;
       const outputPath = path.join(sourceDirectory, dbFileName);
@@ -1556,29 +1388,26 @@ class BlastManager {
         this.appendLog(`Running: makeblastdb -in "${filePath}" -dbtype ${dbType} -out "${outputPath}"`);
 
         try {
-          // Create the actual BLAST database
-          // Use relative paths to avoid issues with spaces in absolute paths
-          const path = require('path');
-          const fileName = path.basename(filePath);
+          // Create the actual BLAST database through main-process IPC.
+          const path = this.getPathModule();
           const sourceDirectory = path.dirname(filePath);
-          const outputName = path.basename(outputPath);
-
-          // Check if source file exists and is readable
-          const fs = require('fs');
-          if (!fs.existsSync(filePath)) {
-            throw new Error(`Source file not found: ${filePath}`);
-          }
+          let databaseDirectory = sourceDirectory;
+          let databaseOutputPath = outputPath;
 
           // Validate file content
           try {
-            const stats = await fs.promises.stat(filePath);
-            if (stats.size === 0) {
+            const fileInfo = await window.electronAPI?.getSelectedFileInfo?.(filePath);
+            if (!fileInfo?.success) {
+              throw new Error(fileInfo?.error || `Source file not found: ${filePath}`);
+            }
+            if (fileInfo.info?.size === 0) {
               throw new Error(`Source file is empty: ${filePath}`);
             }
 
             // Check if file has FASTA content
-            const fileContent = await fs.promises.readFile(filePath, 'utf8');
-            if (!fileContent.trim()) {
+            const fileContentResult = await window.electronAPI?.readFile?.(filePath);
+            const fileContent = fileContentResult?.data || '';
+            if (!fileContentResult?.success || !fileContent.trim()) {
               throw new Error(`Source file contains no content: ${filePath}`);
             }
 
@@ -1624,80 +1453,47 @@ class BlastManager {
             const sequences = fileContent.split('>').filter(seq => seq.trim()).length;
 
             this.appendLog(
-              `✓ File validation passed: ${(stats.size / 1024).toFixed(2)} KB, ${sequences} sequences, first header: ${firstLine.substring(0, 50)}${firstLine.length > 50 ? '...' : ''}`
+              `✓ File validation passed: ${((fileInfo.info?.size || 0) / 1024).toFixed(2)} KB, ${sequences} sequences, first header: ${firstLine.substring(0, 50)}${firstLine.length > 50 ? '...' : ''}`
             );
           } catch (error) {
-            if (error.code === 'EACCES') {
-              throw new Error(`Cannot read source file (permission denied): ${filePath}`);
-            } else if (error.code === 'ENOENT') {
-              throw new Error(`Source file not found: ${filePath}`);
-            } else {
-              throw error;
-            }
+            throw error;
           }
 
-          // Check if source directory is writable
           try {
-            await fs.promises.access(sourceDirectory, fs.constants.W_OK);
+            await this.createDirectoryAsync(sourceDirectory);
           } catch (error) {
-            throw new Error(`Cannot write to source directory: ${sourceDirectory}. Please check permissions.`);
-          }
-
-          // Build command with properly escaped paths
-          const escapedFileName = fileName.replace(/"/g, '\\"');
-          const escapedOutputName = outputName.replace(/"/g, '\\"');
-          const escapedDbName = dbName.replace(/"/g, '\\"');
-          const makeblastdbCmd = `makeblastdb -in "${escapedFileName}" -dbtype ${dbType} -out "${escapedOutputName}" -title "${escapedDbName}"`;
-
-          this.appendLog(`Executing: ${makeblastdbCmd} in directory: ${sourceDirectory}`);
-
-          // Additional debugging - verify file is still accessible from working directory
-          const fileInWorkingDir = path.join(sourceDirectory, fileName);
-          if (!fs.existsSync(fileInWorkingDir)) {
-            throw new Error(`File not accessible from working directory: ${fileInWorkingDir}`);
-          }
-
-          // Additional debugging - list files in working directory
-          try {
-            const filesInDir = await fs.promises.readdir(sourceDirectory);
+            databaseDirectory = await this.getAppTempDirectory();
+            databaseOutputPath = path.join(databaseDirectory, dbFileName);
             this.appendLog(
-              `Files in working directory: ${filesInDir.filter(f => f.includes('.fasta') || f.includes('.fa')).join(', ')}`
+              `⚠ Source directory is not writable through CodeXomics security policy; using temp directory: ${databaseDirectory}`,
+              'warning'
             );
-          } catch (error) {
-            this.appendLog(`⚠ Could not list directory contents: ${error.message}`, 'warning');
           }
+
+          // Build command with absolute paths so it can run from the main process without renderer fs access.
+          const escapedFilePath = filePath.replace(/"/g, '\\"');
+          const escapedOutputPath = databaseOutputPath.replace(/"/g, '\\"');
+          const escapedDbName = dbName.replace(/"/g, '\\"');
+          const makeblastdbCmd = `makeblastdb -in "${escapedFilePath}" -dbtype ${dbType} -out "${escapedOutputPath}" -title "${escapedDbName}"`;
+
+          this.appendLog(`Executing: ${makeblastdbCmd}`);
 
           // Execute command in the source directory
-          try {
-            await this.runCommand(makeblastdbCmd, sourceDirectory);
-          } catch (error) {
-            // If relative path fails, try absolute path as fallback
-            if (error.message.includes('is empty') || error.message.includes('No such file')) {
-              this.appendLog(`⚠ Relative path failed, trying absolute path...`, 'warning');
-              const escapedFilePath = filePath.replace(/"/g, '\\"');
-              const escapedOutputPath = outputPath.replace(/"/g, '\\"');
-              const escapedDbNameFallback = dbName.replace(/"/g, '\\"');
-              const absoluteCmd = `makeblastdb -in "${escapedFilePath}" -dbtype ${dbType} -out "${escapedOutputPath}" -title "${escapedDbNameFallback}"`;
-              this.appendLog(`Retrying with absolute paths: ${absoluteCmd}`);
-              await this.runCommand(absoluteCmd);
-            } else {
-              throw error;
-            }
-          }
+          await this.runCommand(makeblastdbCmd, null, { localDbPath: databaseDirectory });
 
           // Mark as ready and store additional metadata
           const dbEntry = this.customDatabases.get(dbId);
           dbEntry.status = 'ready';
-          dbEntry.dbPath = outputPath;
-          dbEntry.sourceDirectory = sourceDirectory;
-          dbEntry.location = 'source_directory';
+          dbEntry.dbPath = databaseOutputPath;
+          dbEntry.sourceDirectory = databaseDirectory;
+          dbEntry.location = databaseDirectory === sourceDirectory ? 'source_directory' : 'temp_directory';
           dbEntry.lastUsed = new Date().toISOString();
 
           // Also add to config.localDatabases so it appears in BLAST search dropdown
           this.config.localDatabases.set(dbId, {
             name: dbId,
             type: dbType === 'nucl' ? 'blastn' : 'blastp', // Convert to BLAST type format
-            path: sourceDirectory,
+            path: databaseDirectory,
             description: `Custom ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database: ${dbName}`,
             sequences: 'Unknown', // Will be updated if stats are available
             letters: 'Unknown',
@@ -1711,8 +1507,9 @@ class BlastManager {
           const createdFiles = [];
           for (const ext of extensions) {
             try {
-              await require('fs').promises.access(outputPath + ext);
-              createdFiles.push(dbId + ext);
+              if (await this.fileExistsViaMain(databaseOutputPath + ext)) {
+                createdFiles.push(dbId + ext);
+              }
             } catch (error) {
               // File doesn't exist
             }
@@ -1899,23 +1696,9 @@ class BlastManager {
       } else {
         // Create the actual BLAST database
         try {
-          // Get target directory for database files (same as genome file directory)
-          const currentFile = this.app?.fileManager?.currentFile;
-          let outputDir = null;
-
-          // Try to get the directory from the current file path
-          if (currentFile && currentFile.path) {
-            outputDir = require('path').dirname(currentFile.path);
-            console.log(`BlastManager: Creating database in genome directory: ${outputDir}`);
-          } else if (currentFile && currentFile.info?.path) {
-            // Fallback: try info.path
-            outputDir = require('path').dirname(currentFile.info.path);
-            console.log(`BlastManager: Creating database in genome directory (from info.path): ${outputDir}`);
-          } else {
-            // Last resort: use the directory of the temp file
-            outputDir = require('path').dirname(tempFile);
-            console.log(`BlastManager: Using temp file directory for database: ${outputDir}`);
-          }
+          const path = this.getPathModule();
+          const outputDir = path.dirname(tempFile);
+          console.log(`BlastManager: Creating database in sequence file directory: ${outputDir}`);
 
           await this.createLocalDatabase({
             inputFile: tempFile,
@@ -1927,7 +1710,7 @@ class BlastManager {
 
           // Update database info with success status
           this.customDatabases.get(dbId).status = 'ready';
-          this.customDatabases.get(dbId).dbPath = require('path').join(outputDir, dbId); // Store actual database path
+          this.customDatabases.get(dbId).dbPath = path.join(outputDir, dbId); // Store actual database path
           this.customDatabases.get(dbId).outputDir = outputDir; // Store output directory for reference
 
           // Also add to config.localDatabases so it appears in BLAST search dropdown
@@ -2367,12 +2150,13 @@ class BlastManager {
       // Delete database files if they exist
       if (database.dbPath) {
         try {
-          const fs = require('fs').promises;
           const extensions = database.type === 'nucl' ? ['.nhr', '.nin', '.nsq'] : ['.phr', '.pin', '.psq'];
 
           for (const ext of extensions) {
             try {
-              await fs.unlink(database.dbPath + ext);
+              if (typeof window !== 'undefined' && window.electronAPI?.deletePhysicalFile) {
+                await window.electronAPI.deletePhysicalFile(database.dbPath + ext);
+              }
               console.log(`Deleted database file: ${database.dbPath + ext}`);
             } catch (error) {
               console.warn(`Could not delete file ${database.dbPath + ext}:`, error.message);
@@ -2442,27 +2226,34 @@ class BlastManager {
         return;
       }
 
-      // Create FASTA file in the same directory as the GBK file
-      const path = require('path');
-      const fs = require('fs');
-
+      const path = this.getPathModule();
       const gbkDir = path.dirname(currentPath);
       const gbkBasename = path.basename(currentPath, path.extname(currentPath));
       const fastaPath = path.join(gbkDir, `${gbkBasename}.fasta`);
 
       // Check if FASTA file already exists
-      if (fs.existsSync(fastaPath)) {
+      if (await this.fileExistsViaMain(fastaPath)) {
         console.log(`FASTA file already exists: ${fastaPath}`);
         this.appendLog(`✓ FASTA file already exists: ${path.basename(fastaPath)}`, 'info');
         return fastaPath;
       }
 
-      // Write FASTA file
-      fs.writeFileSync(fastaPath, fastaContent);
-      console.log(`Created FASTA file: ${fastaPath}`);
-      this.appendLog(`✓ Created FASTA file: ${path.basename(fastaPath)}`, 'success');
+      let writtenPath = fastaPath;
+      try {
+        writtenPath = await this.writeTextFileViaMain(fastaPath, fastaContent);
+      } catch (writeError) {
+        const tempDir = await this.getAppTempDirectory();
+        const fallbackPath = path.join(tempDir, `${gbkBasename}_${Date.now()}.fasta`);
+        console.warn(
+          `BlastManager: Could not write FASTA next to GBK (${writeError.message}); retrying in temp directory`
+        );
+        writtenPath = await this.writeTextFileViaMain(fallbackPath, fastaContent);
+      }
 
-      return fastaPath;
+      console.log(`Created FASTA file: ${writtenPath}`);
+      this.appendLog(`✓ Created FASTA file: ${path.basename(writtenPath)}`, 'success');
+
+      return writtenPath;
     } catch (error) {
       console.error('Error creating FASTA file:', error);
       this.appendLog(`⚠ Could not create FASTA file: ${error.message}`, 'warning');
@@ -2764,8 +2555,6 @@ class BlastManager {
         this.createDatabaseFromLoadedGenome();
       });
       console.log('✓ Create local database button listener added');
-    } else {
-      console.warn('✗ Create local database button not found');
     }
 
     console.log('BlastManager: All event listeners setup completed');
@@ -4599,9 +4388,6 @@ class BlastManager {
 
   async validateDatabase(databasePath, blastType) {
     try {
-      const fs = require('fs').promises;
-      const path = require('path');
-
       // Check if database files exist
       const expectedExtensions = ['.nhr', '.nin', '.nsq']; // For nucleotide databases
       if (blastType === 'blastp' || blastType === 'blastx') {
@@ -4612,8 +4398,10 @@ class BlastManager {
       for (const ext of expectedExtensions) {
         try {
           const filePath = databasePath + ext;
-          await fs.access(filePath);
-          foundFiles++;
+          if (typeof window !== 'undefined' && window.electronAPI?.checkFileExists) {
+            const result = await window.electronAPI.checkFileExists(filePath);
+            if (result?.exists) foundFiles++;
+          }
         } catch (error) {
           // File doesn't exist
         }
@@ -4646,14 +4434,80 @@ class BlastManager {
     }
   }
 
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      join: (...parts) => parts.filter(Boolean).join('/').replace(/\/+/g, '/'),
+      dirname: filePath => String(filePath || '').replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '/',
+      basename: filePath =>
+        String(filePath || '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .filter(Boolean)
+          .pop() || '',
+    };
+  }
+
+  getPlatformName() {
+    if (typeof window !== 'undefined' && window.os && typeof window.os.platform === 'function') {
+      return window.os.platform();
+    }
+    return 'linux';
+  }
+
+  getHomeDirectoryFallback() {
+    if (typeof window !== 'undefined' && window.os && typeof window.os.homedir === 'function') {
+      const homeDir = window.os.homedir();
+      if (homeDir) return homeDir;
+    }
+    return '/tmp';
+  }
+
+  sanitizeFileNamePart(value, fallback = 'blast') {
+    const safeValue = String(value || fallback)
+      .replace(/[^A-Za-z0-9._-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    return safeValue || fallback;
+  }
+
+  async getAppTempDirectory() {
+    if (typeof window !== 'undefined' && window.electronAPI?.getAppPaths) {
+      const result = await window.electronAPI.getAppPaths();
+      if (result?.success && result.paths) {
+        return result.paths.temp || result.paths.userData;
+      }
+    }
+    return '/tmp';
+  }
+
+  async fileExistsViaMain(filePath) {
+    if (typeof window !== 'undefined' && window.electronAPI?.checkFileExists) {
+      const result = await window.electronAPI.checkFileExists(filePath);
+      return !!result?.exists;
+    }
+
+    return false;
+  }
+
+  async writeTextFileViaMain(filePath, content) {
+    if (!window.electronAPI?.writeFile) {
+      throw new Error('Main-process file write API is unavailable');
+    }
+    const result = await window.electronAPI.writeFile(filePath, content);
+    if (!result?.success) {
+      throw new Error(result?.error || `Failed to write file: ${filePath}`);
+    }
+    return result.filePath || filePath;
+  }
+
   async createTempFastaFile(sequence) {
-    const tempDir = require('os').tmpdir();
-    const tempFile = require('path').join(tempDir, `blast_query_${Date.now()}.fa`);
-
+    const path = this.getPathModule();
+    const tempDir = await this.getAppTempDirectory();
+    const tempFile = path.join(tempDir, `blast_query_${Date.now()}.fa`);
     const fastaContent = `>Query_sequence\n${sequence}`;
-    await require('fs').promises.writeFile(tempFile, fastaContent);
-
-    return tempFile;
+    return await this.writeTextFileViaMain(tempFile, fastaContent);
   }
 
   buildBlastCommand(params, queryFile) {
@@ -4691,7 +4545,7 @@ class BlastManager {
   }
 
   resolveDatabasePath(databaseValue) {
-    const path = require('path');
+    const path = this.getPathModule();
     if (!databaseValue) {
       throw new Error('Database value is required');
     }
@@ -4721,9 +4575,7 @@ class BlastManager {
         }
 
         // Fallback to default path construction - use static directory name
-        const os = require('os');
-        const documentsPath = os.homedir() + '/Documents';
-        const blastDbPath = path.join(documentsPath, 'CodeXomics Projects', 'blast_databases', dbId);
+        const blastDbPath = path.join(this.config.localDbPath || this.getPlatformDbPath(), dbId);
         return blastDbPath;
       } else {
         throw new Error(`Custom database not found: ${dbId}`);
@@ -4992,7 +4844,9 @@ class BlastManager {
 
   async cleanupTempFile(file) {
     try {
-      await require('fs').promises.unlink(file);
+      if (typeof window !== 'undefined' && window.electronAPI?.deletePhysicalFile) {
+        await window.electronAPI.deletePhysicalFile(file);
+      }
     } catch (error) {
       console.warn('Failed to clean up temporary file:', error);
     }
@@ -6184,34 +6038,10 @@ class BlastManager {
       // Write to temporary file
       const tempFile = await this.writeSequenceToFile(fastaContent, dbName, dbType);
 
-      // Create database using makeblastdb
-      // Get target directory for database files (same as genome file directory)
-      // Try multiple approaches to get the current file path
-      let outputDir = this.config.localDbPath; // Default fallback
-      let currentFilePath = null;
-
-      // Approach 1: From FileManager.currentFile.path (primary structure)
-      const currentFile = this.app?.fileManager?.currentFile;
-      if (currentFile && currentFile.path) {
-        currentFilePath = currentFile.path;
-      }
-
-      // Approach 2: From FileManager.currentFile.info.path (alternative structure)
-      if (!currentFilePath && currentFile && currentFile.info?.path) {
-        currentFilePath = currentFile.info.path;
-      }
-
-      // Approach 3: Check if there's a global file path stored
-      if (!currentFilePath && this.app?.currentFilePath) {
-        currentFilePath = this.app.currentFilePath;
-      }
-
-      if (currentFilePath) {
-        outputDir = require('path').dirname(currentFilePath);
-        console.log(`BlastManager: Creating database in genome directory: ${outputDir}`);
-      } else {
-        console.log('BlastManager: Current file path not available, using default directory');
-      }
+      // Create database using makeblastdb in the same directory where the generated FASTA was actually written.
+      const path = this.getPathModule();
+      const outputDir = path.dirname(tempFile);
+      console.log(`BlastManager: Creating database in sequence file directory: ${outputDir}`);
 
       await this.createLocalDatabase({
         inputFile: tempFile,
@@ -6399,12 +6229,10 @@ class BlastManager {
   }
 
   async writeSequenceToFile(fastaContent, dbName, dbType) {
-    const fs = require('fs').promises;
-    const path = require('path');
-    const os = require('os');
+    const path = this.getPathModule();
 
-    // Try to get current file directory first, fallback to temp directory
-    let targetDir = os.tmpdir(); // Default fallback
+    // Try to get current file directory first, fallback to the main-process temp directory.
+    let targetDir = await this.getAppTempDirectory();
     let currentFilePath = null;
 
     // Try multiple approaches to get the current file path
@@ -6432,10 +6260,24 @@ class BlastManager {
       console.log('BlastManager: Current file path not available, using temp directory');
     }
 
-    const fileName = `${dbName}_${dbType}_${Date.now()}.fasta`;
-    const filePath = path.join(targetDir, fileName);
+    const fileName = `${this.sanitizeFileNamePart(dbName)}_${this.sanitizeFileNamePart(dbType)}_${Date.now()}.fasta`;
+    let filePath = path.join(targetDir, fileName);
 
-    await fs.writeFile(filePath, fastaContent);
+    try {
+      filePath = await this.writeTextFileViaMain(filePath, fastaContent);
+    } catch (error) {
+      if (!currentFilePath) {
+        throw error;
+      }
+
+      const fallbackDir = await this.getAppTempDirectory();
+      const fallbackPath = path.join(fallbackDir, fileName);
+      console.warn(
+        `BlastManager: Genome directory write failed (${error.message}); retrying in temp directory: ${fallbackDir}`
+      );
+      filePath = await this.writeTextFileViaMain(fallbackPath, fastaContent);
+    }
+
     console.log(`BlastManager: Wrote sequence to ${filePath}`);
 
     return filePath;

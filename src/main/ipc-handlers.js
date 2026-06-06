@@ -12,6 +12,389 @@
 const { ipcMain, app, dialog, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const {
+  createSecureWebPreferences,
+  permissionBroker,
+  ALL_FILE_CAPABILITIES,
+  FILE_CAPABILITIES,
+  rememberApprovedPath,
+  rememberApprovedDialogPaths,
+  getDefaultWritableRoots,
+  assertAllowedFileAccess,
+  assertPluginPath,
+  safePluginJoin,
+  safeExtractAdmZip,
+  sanitizePluginId,
+} = require('./security-utils');
+const { ToolRegistryService } = require('./tool-registry-service');
+
+let BamReaderClass = null;
+const BLAST_EXECUTABLES = new Set(['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx']);
+const LOCALE_NAMESPACES = new Set(['common', 'menu', 'dialogs', 'notifications', 'tracks']);
+const LOCALE_CODE_PATTERN = /^[A-Za-z]{2}(?:-[A-Za-z0-9]+)?$/;
+const CONFIG_FILES = Object.freeze({
+  main: 'config.json',
+  llm: 'llm-config.json',
+  ui: 'ui-preferences.json',
+  chat: 'chat-history.json',
+  app: 'app-settings.json',
+  generalSettings: 'general-settings.json',
+  chatboxSettings: 'chatbox-settings.json',
+  evolution: 'conversation-evolution-data.json',
+  blast: 'blast-databases.json',
+  marketplace: 'marketplace-settings.json',
+});
+
+function getBamReaderClass() {
+  if (!BamReaderClass) {
+    BamReaderClass = require('../renderer/modules/BamReader');
+  }
+  return BamReaderClass;
+}
+
+function parseCommandLine(command) {
+  const args = [];
+  let current = '';
+  let quote = null;
+  let escaped = false;
+
+  for (const char of String(command || '')) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current) {
+        args.push(current);
+        current = '';
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (escaped) current += '\\';
+  if (current) args.push(current);
+  return args;
+}
+
+function getBlastExecutableName(executablePath) {
+  return path.basename(String(executablePath || ''), path.extname(String(executablePath || ''))).toLowerCase();
+}
+
+function isTrustedBlastExecutablePath(executablePath) {
+  if (!executablePath || typeof executablePath !== 'string') return false;
+  const resolvedPath = path.resolve(executablePath);
+  const trustedDirs = [
+    '/usr/bin',
+    '/usr/local/bin',
+    '/opt/homebrew/bin',
+    '/usr/local/blast+/bin',
+    '/opt/blast+/bin',
+  ];
+  return trustedDirs.some(dirPath => isSubPathSafe(dirPath, resolvedPath));
+}
+
+function isSubPathSafe(parentPath, targetPath) {
+  const relative = path.relative(path.resolve(parentPath), path.resolve(targetPath));
+  return relative === '' || (!!relative && !relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function resolvePluginPaths() {
+  const isDevelopment = !app.isPackaged;
+
+  if (isDevelopment) {
+    const builtinPluginsPath = path.join(__dirname, '..', 'renderer', 'modules', 'Plugins');
+    return {
+      isDevelopment,
+      builtinPluginsPath,
+      userPluginsPath: path.join(builtinPluginsPath, 'UserInstalled'),
+    };
+  }
+
+  return {
+    isDevelopment,
+    builtinPluginsPath: path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins'),
+    userPluginsPath: path.join(app.getPath('userData'), 'plugins'),
+  };
+}
+
+function sanitizeOpenFileDialogOptions(options = {}) {
+  const allowedProperties = new Set(['openFile', 'multiSelections', 'showHiddenFiles']);
+  const properties = Array.isArray(options.properties)
+    ? options.properties.filter(property => allowedProperties.has(property))
+    : ['openFile'];
+
+  if (!properties.includes('openFile')) {
+    properties.unshift('openFile');
+  }
+
+  const filters = Array.isArray(options.filters)
+    ? options.filters
+        .map(filter => {
+          const name =
+            typeof filter.name === 'string' && filter.name.trim() ? filter.name.trim().slice(0, 80) : 'Files';
+          const extensions = Array.isArray(filter.extensions)
+            ? filter.extensions
+                .map(extension =>
+                  String(extension || '')
+                    .trim()
+                    .replace(/^\./, '')
+                )
+                .filter(extension => extension === '*' || /^[A-Za-z0-9]+$/.test(extension))
+                .slice(0, 50)
+            : [];
+          return extensions.length > 0 ? { name, extensions } : null;
+        })
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
+
+  return {
+    title: typeof options.title === 'string' && options.title.trim() ? options.title.trim().slice(0, 120) : 'Open File',
+    properties,
+    filters: filters.length > 0 ? filters : [{ name: 'All Files', extensions: ['*'] }],
+  };
+}
+
+function getLocalesRoot() {
+  return path.join(__dirname, '..', 'locales');
+}
+
+function sanitizeLocaleCode(language) {
+  const locale = String(language || '').trim();
+  return LOCALE_CODE_PATTERN.test(locale) ? locale : 'en';
+}
+
+function sanitizeLocaleNamespace(namespace) {
+  const safeNamespace = String(namespace || '').trim();
+  if (!LOCALE_NAMESPACES.has(safeNamespace)) {
+    throw new Error(`Unsupported locale namespace: ${safeNamespace}`);
+  }
+  return safeNamespace;
+}
+
+function readLocaleNamespace(language, namespace) {
+  const localeRoot = getLocalesRoot();
+  const safeLanguage = sanitizeLocaleCode(language);
+  const safeNamespace = sanitizeLocaleNamespace(namespace);
+  const candidatePath = path.join(localeRoot, safeLanguage, `${safeNamespace}.json`);
+  const fallbackPath = path.join(localeRoot, 'en', `${safeNamespace}.json`);
+  const selectedPath = fs.existsSync(candidatePath) ? candidatePath : fallbackPath;
+
+  if (!fs.existsSync(selectedPath)) {
+    return { language: safeLanguage, namespace: safeNamespace, data: {} };
+  }
+
+  return {
+    language: path.basename(path.dirname(selectedPath)),
+    namespace: safeNamespace,
+    data: JSON.parse(fs.readFileSync(selectedPath, 'utf8')),
+  };
+}
+
+function getConfigStorageDir() {
+  return path.join(app.getPath('userData'), 'config');
+}
+
+function getConfigStoragePaths() {
+  const dir = getConfigStorageDir();
+  return Object.fromEntries(Object.entries(CONFIG_FILES).map(([section, filename]) => [section, path.join(dir, filename)]));
+}
+
+function readConfigFileIfPresent(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function writeJsonFile(filePath, data) {
+  const payload = JSON.stringify(data || {}, null, 2);
+  const byteLength = Buffer.byteLength(payload, 'utf8');
+  if (byteLength > 100 * 1024 * 1024) {
+    throw new Error(`Configuration section is too large to persist safely: ${(byteLength / 1024 / 1024).toFixed(1)} MB`);
+  }
+  fs.writeFileSync(filePath, payload, 'utf8');
+}
+
+function resolveBlastExecutable(appInstance, commandToken, configuredBlastPath) {
+  const commandName = getBlastExecutableName(commandToken);
+  if (!BLAST_EXECUTABLES.has(commandName)) {
+    throw new Error(`Blocked non-BLAST command: ${commandName}`);
+  }
+
+  if (configuredBlastPath && typeof configuredBlastPath === 'string') {
+    let safeConfiguredPath = null;
+    try {
+      safeConfiguredPath = assertAllowedFileAccess(appInstance, configuredBlastPath, {
+        operation: 'execute configured BLAST binary',
+        mustExist: true,
+      });
+    } catch (error) {
+      if (isTrustedBlastExecutablePath(configuredBlastPath) && fs.existsSync(configuredBlastPath)) {
+        safeConfiguredPath = path.resolve(configuredBlastPath);
+      } else {
+        throw error;
+      }
+    }
+
+    const configuredName = getBlastExecutableName(configuredBlastPath);
+    if (configuredName === 'blastn') {
+      const executable = path.join(
+        path.dirname(safeConfiguredPath),
+        `${commandName}${process.platform === 'win32' ? '.exe' : ''}`
+      );
+      return executable;
+    }
+  }
+
+  return commandName;
+}
+
+function runBlastVersionCheck(executablePath) {
+  const { execFile } = require('child_process');
+  return new Promise(resolve => {
+    const commandName = getBlastExecutableName(executablePath);
+    if (!BLAST_EXECUTABLES.has(commandName)) {
+      resolve({ found: false, error: `Not a supported BLAST executable: ${executablePath}` });
+      return;
+    }
+
+    execFile(executablePath, ['-version'], { timeout: 15000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) {
+        resolve({ found: false, error: error.message, stderr });
+        return;
+      }
+
+      const output = stdout || stderr || '';
+      const versionMatch = output.match(/(?:blastn|blastp|blastx|tblastn|tblastx|makeblastdb|blastdbcmd):\s*([\d.]+)/i);
+      resolve({
+        found: true,
+        version: versionMatch ? versionMatch[1] : 'Unknown',
+        path: executablePath,
+        output,
+      });
+    });
+  });
+}
+
+async function findBlastExecutable() {
+  const os = require('os');
+  const homeDir = os.homedir();
+  const commonPaths = [
+    '/usr/local/bin/blastn',
+    '/usr/bin/blastn',
+    '/opt/homebrew/bin/blastn',
+    '/usr/local/blast+/bin/blastn',
+    path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'),
+    path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'),
+    path.join(homeDir, '.local', 'bin', 'blastn'),
+    '/opt/blast+/bin/blastn',
+  ];
+
+  const pathResult = await runBlastVersionCheck('blastn');
+  if (pathResult.found) return { ...pathResult, method: 'PATH' };
+
+  for (const blastPath of commonPaths) {
+    if (!fs.existsSync(blastPath)) continue;
+    const result = await runBlastVersionCheck(blastPath);
+    if (result.found) return { ...result, method: 'Common Path' };
+  }
+
+  return { found: false, error: 'BLAST+ not found in PATH or common installation locations' };
+}
+
+function toIpcSafeValue(value, seen = new WeakSet(), depth = 0) {
+  if (value === null) return null;
+
+  const valueType = typeof value;
+  if (valueType === 'string' || valueType === 'boolean') return value;
+  if (valueType === 'number') return Number.isFinite(value) ? value : null;
+  if (valueType === 'bigint') return value.toString();
+  if (valueType === 'undefined' || valueType === 'function' || valueType === 'symbol') return undefined;
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (Buffer.isBuffer(value)) {
+    return value.toString('base64');
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return Array.from(value);
+  }
+
+  if (value instanceof ArrayBuffer) {
+    return Array.from(new Uint8Array(value));
+  }
+
+  if (depth > 8 || typeof value !== 'object') {
+    return undefined;
+  }
+
+  if (seen.has(value)) {
+    return undefined;
+  }
+
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    const safeArray = value.map(item => toIpcSafeValue(item, seen, depth + 1)).filter(item => item !== undefined);
+    seen.delete(value);
+    return safeArray;
+  }
+
+  const safeObject = {};
+  Object.entries(value).forEach(([key, item]) => {
+    const safeItem = toIpcSafeValue(item, seen, depth + 1);
+    if (safeItem !== undefined) {
+      safeObject[key] = safeItem;
+    }
+  });
+  seen.delete(value);
+  return safeObject;
+}
+
+function getBamReaderState(reader) {
+  return toIpcSafeValue({
+    filePath: reader.filePath,
+    indexPath: reader.indexPath,
+    isInitialized: reader.isInitialized,
+    hasIndex: reader.hasIndex,
+    indexType: reader.indexType,
+    header: reader.header,
+    references: reader.references,
+    totalReads: reader.totalReads,
+    fileSize: reader.fileSize,
+    indexSize: reader.indexSize,
+    performanceStats: { ...reader.performanceStats },
+  });
+}
 
 /**
  * Register all non-Project-Manager IPC handlers.
@@ -109,6 +492,64 @@ function registerIpcHandlers(deps) {
     saveMCPServerSettings,
     checkPortAvailable,
   } = deps;
+  const bamReaders = new Map();
+
+  const getOwnedBamReader = (event, readerId) => {
+    const entry = bamReaders.get(readerId);
+    if (!entry || entry.ownerWebContentsId !== event.sender.id) {
+      throw new Error('BAM reader is not available for this window');
+    }
+    return entry.reader;
+  };
+
+  const resolveGeneResearchReportPath = geneSymbol => {
+    const safeSymbol = String(geneSymbol || 'Unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `Gene_${safeSymbol}_Research_Report.md`;
+    const reportsDir = path.resolve(process.cwd(), 'reports');
+    const reportPath = path.resolve(reportsDir, fileName);
+
+    if (path.dirname(reportPath) !== reportsDir) {
+      throw new Error('Invalid gene research report path');
+    }
+
+    return { reportPath, fileName };
+  };
+
+  const hashString = value => {
+    let hash = 0;
+    const input = String(value || '');
+    for (let i = 0; i < input.length; i += 1) {
+      hash = (hash << 5) - hash + input.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(16);
+  };
+
+  const resolveSidecarPaths = genomePath => {
+    const safeGenomePath = assertAllowedFileAccess(app, genomePath, {
+      operation: 'sidecar access',
+      mustExist: true,
+    });
+    const parsed = path.parse(safeGenomePath);
+    const sidecarPath = path.resolve(parsed.dir, `${parsed.name}.CodeXomics`);
+    const fallbackDir = path.resolve(app.getPath('userData'), 'sidecar');
+    const fallbackPath = path.resolve(fallbackDir, `${hashString(safeGenomePath)}.CodeXomics`);
+
+    if (path.dirname(sidecarPath) !== parsed.dir || path.dirname(fallbackPath) !== fallbackDir) {
+      throw new Error('Invalid sidecar path');
+    }
+
+    return { safeGenomePath, sidecarPath, fallbackDir, fallbackPath };
+  };
+
+  const toolRegistryService = deps.toolRegistryService || new ToolRegistryService({ app });
+  const broadcastToolRegistryUpdated = snapshot => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('tool-registry-updated', snapshot);
+      }
+    }
+  };
 
   // =====================================================================
   // 1. Tool Execution IPC
@@ -155,6 +596,28 @@ function registerIpcHandlers(deps) {
   });
 
   // =====================================================================
+  // 1a. Dynamic Tool Registry IPC
+  // =====================================================================
+
+  ipcMain.handle('tool-registry:get-snapshot', async () => {
+    return await toolRegistryService.getSnapshot();
+  });
+
+  ipcMain.handle('tool-registry:get-metadata', async () => {
+    return await toolRegistryService.getMetadata();
+  });
+
+  ipcMain.handle('tool-registry:get-tool', async (event, toolName) => {
+    return await toolRegistryService.getTool(toolName);
+  });
+
+  ipcMain.handle('tool-registry:reload', async () => {
+    const snapshot = await toolRegistryService.reload();
+    broadcastToolRegistryUpdated(snapshot);
+    return snapshot;
+  });
+
+  // =====================================================================
   // 2. Plugin Path Resolution IPC Handlers
   // =====================================================================
 
@@ -163,26 +626,7 @@ function registerIpcHandlers(deps) {
    * Returns different paths based on whether app is packaged
    */
   ipcMain.handle('get-plugin-paths', async () => {
-    const isDevelopment = !app.isPackaged;
-
-    let builtinPluginsPath;
-    let userPluginsPath;
-
-    if (isDevelopment) {
-      // Development: use source directory
-      builtinPluginsPath = path.join(__dirname, 'renderer', 'modules', 'Plugins');
-      userPluginsPath = path.join(__dirname, 'renderer', 'modules', 'Plugins', 'UserInstalled');
-    } else {
-      // Production: builtin plugins are in ASAR, user plugins in userData
-      builtinPluginsPath = path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins');
-      userPluginsPath = path.join(app.getPath('userData'), 'plugins');
-    }
-
-    return {
-      isDevelopment,
-      builtinPluginsPath,
-      userPluginsPath,
-    };
+    return resolvePluginPaths();
   });
 
   /**
@@ -190,11 +634,12 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('ensure-directory', async (event, dirPath) => {
     try {
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-        console.log('Created directory:', dirPath);
+      const safeDirPath = assertAllowedFileAccess(app, dirPath, { operation: 'create directory' });
+      if (!fs.existsSync(safeDirPath)) {
+        fs.mkdirSync(safeDirPath, { recursive: true });
+        console.log('Created directory:', safeDirPath);
       }
-      return { success: true, path: dirPath };
+      return { success: true, path: safeDirPath };
     } catch (error) {
       console.error('Failed to create directory:', error);
       return { success: false, error: error.message };
@@ -206,17 +651,18 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('list-plugins', async (event, pluginPath) => {
     try {
-      if (!fs.existsSync(pluginPath)) {
+      const safePluginPath = assertPluginPath(app, pluginPath);
+      if (!fs.existsSync(safePluginPath)) {
         return { success: true, plugins: [] };
       }
 
-      const items = fs.readdirSync(pluginPath, { withFileTypes: true });
+      const items = fs.readdirSync(safePluginPath, { withFileTypes: true });
       const plugins = items
         .filter(item => item.isDirectory())
         .map(item => ({
           id: item.name,
-          path: path.join(pluginPath, item.name),
-          hasManifest: fs.existsSync(path.join(pluginPath, item.name, 'plugin.json')),
+          path: path.join(safePluginPath, item.name),
+          hasManifest: fs.existsSync(path.join(safePluginPath, item.name, 'plugin.json')),
         }));
 
       return { success: true, plugins };
@@ -238,7 +684,10 @@ function registerIpcHandlers(deps) {
         { name: 'All Files', extensions: ['*'] },
       ],
     });
-    return result;
+    return rememberApprovedDialogPaths(result, {
+      source: 'user-plugin-file-dialog',
+      operation: 'select-plugin-file',
+    });
   });
 
   /**
@@ -246,7 +695,8 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('get-plugin-file-info', async (event, filePath) => {
     try {
-      const stats = fs.statSync(filePath);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'inspect plugin file', mustExist: true });
+      const stats = fs.statSync(safeFilePath);
       return {
         exists: true,
         isDirectory: stats.isDirectory(),
@@ -267,7 +717,8 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('read-plugin-file', async (event, filePath) => {
     try {
-      return fs.readFileSync(filePath, 'utf8');
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'read plugin file', mustExist: true });
+      return fs.readFileSync(safeFilePath, 'utf8');
     } catch (error) {
       throw new Error(`Failed to read plugin file: ${error.message}`);
     }
@@ -277,7 +728,131 @@ function registerIpcHandlers(deps) {
    * Check if file exists
    */
   ipcMain.handle('check-file-exists', async (event, filePath) => {
-    return fs.existsSync(filePath);
+    try {
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'check file' });
+      return fs.existsSync(safeFilePath);
+    } catch (error) {
+      return false;
+    }
+  });
+
+  ipcMain.handle('check-gene-research-report', async (event, geneSymbol) => {
+    try {
+      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol);
+      return {
+        success: true,
+        exists: fs.existsSync(reportPath),
+        fileName,
+      };
+    } catch (error) {
+      return { success: false, exists: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('save-gene-research-report', async (event, geneSymbol, report) => {
+    try {
+      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol);
+      const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
+
+      if (!reportStr.trim()) {
+        return { success: false, error: 'Report content is empty' };
+      }
+
+      fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+      fs.writeFileSync(reportPath, reportStr, 'utf8');
+
+      return {
+        success: true,
+        fileName,
+        reportPath,
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('open-gene-research-report', async (event, geneSymbol) => {
+    try {
+      const { reportPath } = resolveGeneResearchReportPath(geneSymbol);
+
+      if (!fs.existsSync(reportPath)) {
+        return { success: false, error: 'Gene research report does not exist' };
+      }
+
+      const { shell } = require('electron');
+      const openError = await shell.openPath(reportPath);
+      if (openError) {
+        return { success: false, error: openError };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('load-sidecar-file', async (event, genomePath) => {
+    try {
+      const { safeGenomePath, sidecarPath, fallbackPath } = resolveSidecarPaths(genomePath);
+      const readPath = fs.existsSync(sidecarPath) ? sidecarPath : fallbackPath;
+
+      if (!fs.existsSync(readPath)) {
+        return { success: true, exists: false, data: null };
+      }
+
+      const content = await fs.promises.readFile(readPath, 'utf8');
+      return {
+        success: true,
+        exists: true,
+        path: readPath,
+        data: JSON.parse(content),
+        sourceFile: path.basename(safeGenomePath),
+      };
+    } catch (error) {
+      return { success: false, exists: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('save-sidecar-file', async (event, genomePath, data) => {
+    try {
+      const { safeGenomePath, sidecarPath, fallbackDir, fallbackPath } = resolveSidecarPaths(genomePath);
+      const content = JSON.stringify(
+        {
+          ...(data || {}),
+          sourceFile: data?.sourceFile || path.basename(safeGenomePath),
+          lastModified: data?.lastModified || new Date().toISOString(),
+        },
+        null,
+        2
+      );
+
+      try {
+        await fs.promises.writeFile(sidecarPath, content, 'utf8');
+        return { success: true, path: sidecarPath, fallback: false };
+      } catch (writeError) {
+        if (!['EACCES', 'EROFS', 'EPERM', 'ENOENT'].includes(writeError.code)) {
+          throw writeError;
+        }
+
+        await fs.promises.mkdir(fallbackDir, { recursive: true });
+        await fs.promises.writeFile(fallbackPath, content, 'utf8');
+        return { success: true, path: fallbackPath, fallback: true };
+      }
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('check-sidecar-file', async (event, genomePath) => {
+    try {
+      const { sidecarPath, fallbackPath } = resolveSidecarPaths(genomePath);
+      return {
+        success: true,
+        exists: fs.existsSync(sidecarPath) || fs.existsSync(fallbackPath),
+      };
+    } catch (error) {
+      return { success: false, exists: false, error: error.message };
+    }
   });
 
   /**
@@ -286,22 +861,7 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('scan-plugin-directory', async () => {
     try {
-      const paths = await (async () => {
-        const isDevelopment = !app.isPackaged;
-        if (isDevelopment) {
-          return {
-            isDevelopment,
-            builtinPluginsPath: path.join(__dirname, 'renderer', 'modules', 'Plugins'),
-            userPluginsPath: path.join(__dirname, 'renderer', 'modules', 'Plugins', 'UserInstalled'),
-          };
-        } else {
-          return {
-            isDevelopment,
-            builtinPluginsPath: path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins'),
-            userPluginsPath: path.join(app.getPath('userData'), 'plugins'),
-          };
-        }
-      })();
+      const paths = resolvePluginPaths();
 
       const plugins = [];
 
@@ -415,18 +975,27 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
     try {
-      const stats = fs.statSync(pluginPath);
+      let safePluginPath;
+      try {
+        safePluginPath = assertPluginPath(app, pluginPath, 'plugin metadata path');
+      } catch (pluginPathError) {
+        safePluginPath = assertAllowedFileAccess(app, pluginPath, {
+          operation: 'load plugin metadata',
+          mustExist: true,
+        });
+      }
+      const stats = fs.statSync(safePluginPath);
 
       if (stats.isDirectory()) {
         // Try to load plugin.json
-        const manifestPath = path.join(pluginPath, 'plugin.json');
+        const manifestPath = path.join(safePluginPath, 'plugin.json');
         if (fs.existsSync(manifestPath)) {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
           return { success: true, metadata: manifest };
         }
 
         // Try to load from package.json
-        const packagePath = path.join(pluginPath, 'package.json');
+        const packagePath = path.join(safePluginPath, 'package.json');
         if (fs.existsSync(packagePath)) {
           const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
           return {
@@ -441,14 +1010,14 @@ function registerIpcHandlers(deps) {
             },
           };
         }
-      } else if (stats.isFile() && pluginPath.endsWith('.js')) {
+      } else if (stats.isFile() && safePluginPath.endsWith('.js')) {
         // Parse JavaScript file for metadata
-        const content = fs.readFileSync(pluginPath, 'utf8');
+        const content = fs.readFileSync(safePluginPath, 'utf8');
         const lines = content.split('\n');
 
         const metadata = {
-          id: path.basename(pluginPath, '.js'),
-          name: path.basename(pluginPath, '.js'),
+          id: path.basename(safePluginPath, '.js'),
+          name: path.basename(safePluginPath, '.js'),
           description: 'No description',
           version: '1.0.0',
           author: 'Unknown',
@@ -496,8 +1065,14 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('extract-plugin-zip', async (event, zipPath) => {
     try {
+      assertAllowedFileAccess(app, zipPath, {
+        operation: 'extract plugin zip',
+        mustExist: true,
+      });
       // Create temp directory for extraction
-      const tempDir = path.join(app.getPath('temp'), `plugin-${Date.now()}`);
+      const tempDir = assertAllowedFileAccess(app, path.join(app.getPath('temp'), `plugin-${Date.now()}`), {
+        operation: 'create plugin extraction directory',
+      });
       fs.mkdirSync(tempDir, { recursive: true });
 
       // Note: This is a placeholder - you'll need to add a zip extraction library
@@ -519,6 +1094,11 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('copy-plugin-directory', async (event, sourcePath, destPath) => {
     try {
+      const safeSourcePath = assertAllowedFileAccess(app, sourcePath, {
+        operation: 'copy plugin source',
+        mustExist: true,
+      });
+      const safeDestPath = assertPluginPath(app, destPath, 'plugin destination');
       // Recursive directory copy
       const copyRecursive = (src, dest) => {
         if (!fs.existsSync(dest)) {
@@ -539,7 +1119,7 @@ function registerIpcHandlers(deps) {
         }
       };
 
-      copyRecursive(sourcePath, destPath);
+      copyRecursive(safeSourcePath, safeDestPath);
       return { success: true };
     } catch (error) {
       console.error('Failed to copy plugin directory:', error);
@@ -552,11 +1132,16 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('copy-plugin-file', async (event, sourcePath, destPath) => {
     try {
-      const destDir = path.dirname(destPath);
+      const safeSourcePath = assertAllowedFileAccess(app, sourcePath, {
+        operation: 'copy plugin file source',
+        mustExist: true,
+      });
+      const safeDestPath = assertPluginPath(app, destPath, 'plugin destination file');
+      const destDir = path.dirname(safeDestPath);
       if (!fs.existsSync(destDir)) {
         fs.mkdirSync(destDir, { recursive: true });
       }
-      fs.copyFileSync(sourcePath, destPath);
+      fs.copyFileSync(safeSourcePath, safeDestPath);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -568,11 +1153,12 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('write-plugin-file', async (event, filePath, content) => {
     try {
-      const dir = path.dirname(filePath);
+      const safeFilePath = assertPluginPath(app, filePath, 'plugin file');
+      const dir = path.dirname(safeFilePath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(filePath, content, 'utf8');
+      fs.writeFileSync(safeFilePath, content, 'utf8');
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -584,19 +1170,21 @@ function registerIpcHandlers(deps) {
    * Handles both JSON (mock packages) and ZIP (real packages) data
    */
   ipcMain.handle('write-plugin-files', async (event, options) => {
-    const { pluginId, installPath, data, manifest } = options;
-
-    console.log(`[Main] Writing plugin files for ${pluginId} to ${installPath}`);
-
     try {
+      const { pluginId, installPath, data, manifest } = options || {};
+      const safePluginId = sanitizePluginId(pluginId);
+      const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
+
+      console.log(`[Main] Writing plugin files for ${safePluginId} to ${safeInstallPath}`);
+
       // Create plugin directory if it doesn't exist
-      if (!fs.existsSync(installPath)) {
-        fs.mkdirSync(installPath, { recursive: true });
-        console.log(`[Main] Created plugin directory: ${installPath}`);
+      if (!fs.existsSync(safeInstallPath)) {
+        fs.mkdirSync(safeInstallPath, { recursive: true });
+        console.log(`[Main] Created plugin directory: ${safeInstallPath}`);
       }
 
       // Write manifest file (plugin.json)
-      const manifestPath = path.join(installPath, 'plugin.json');
+      const manifestPath = safePluginJoin(app, safeInstallPath, 'plugin.json', 'plugin manifest');
       fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
       console.log(`[Main] Wrote manifest to: ${manifestPath}`);
 
@@ -604,7 +1192,7 @@ function registerIpcHandlers(deps) {
       if (data) {
         if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'number') {
           // Binary data sent as byte array - could be a ZIP file
-          const zipPath = path.join(installPath, `${pluginId}.zip`);
+          const zipPath = safePluginJoin(app, safeInstallPath, `${safePluginId}.zip`, 'plugin zip');
           const buffer = Buffer.from(data);
           fs.writeFileSync(zipPath, buffer);
           console.log(`[Main] Wrote ZIP file (${buffer.length} bytes): ${zipPath}`);
@@ -613,24 +1201,24 @@ function registerIpcHandlers(deps) {
           try {
             const AdmZip = require('adm-zip');
             const zip = new AdmZip(buffer);
-            zip.extractAllTo(installPath, true);
+            safeExtractAdmZip(app, zip, safeInstallPath);
             // Remove the zip file after extraction
             fs.unlinkSync(zipPath);
-            console.log(`[Main] Extracted ZIP file to ${installPath}`);
+            console.log(`[Main] Extracted ZIP file to ${safeInstallPath}`);
           } catch (extractError) {
             // If adm-zip is not available or extraction fails, keep the ZIP for manual extraction
             console.log(`[Main] ZIP extraction not available, keeping ZIP file: ${extractError.message}`);
           }
         } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
           // Binary data (ArrayBuffer/TypedArray) - should not normally reach here after IPC
-          const zipPath = path.join(installPath, `${pluginId}.zip`);
+          const zipPath = safePluginJoin(app, safeInstallPath, `${safePluginId}.zip`, 'plugin zip');
           const buffer = Buffer.from(data);
           fs.writeFileSync(zipPath, buffer);
           console.log(`[Main] Wrote binary data (${buffer.length} bytes): ${zipPath}`);
         } else if (typeof data === 'object' && !Array.isArray(data)) {
           // JSON package (mock package with files object)
           for (const [filename, content] of Object.entries(data)) {
-            const filePath = path.join(installPath, filename);
+            const filePath = safePluginJoin(app, safeInstallPath, filename, 'plugin package file');
             const fileDir = path.dirname(filePath);
 
             if (!fs.existsSync(fileDir)) {
@@ -650,22 +1238,22 @@ function registerIpcHandlers(deps) {
       }
 
       // Create an index.js entry point if not provided
-      const indexPath = path.join(installPath, 'index.js');
+      const indexPath = safePluginJoin(app, safeInstallPath, 'index.js', 'plugin index');
       if (!fs.existsSync(indexPath)) {
-        const defaultIndex = `// Plugin: ${pluginId}\n// Auto-generated entry point\nmodule.exports = ${JSON.stringify(manifest, null, 2)};\n`;
+        const defaultIndex = `// Plugin: ${safePluginId}\n// Auto-generated entry point\nmodule.exports = ${JSON.stringify(manifest, null, 2)};\n`;
         fs.writeFileSync(indexPath, defaultIndex, 'utf8');
         console.log(`[Main] Created default index.js`);
       }
 
-      console.log(`[Main] Plugin ${pluginId} installed successfully to ${installPath}`);
+      console.log(`[Main] Plugin ${safePluginId} installed successfully to ${safeInstallPath}`);
 
       return {
         success: true,
-        installPath,
-        files: fs.readdirSync(installPath),
+        installPath: safeInstallPath,
+        files: fs.readdirSync(safeInstallPath),
       };
     } catch (error) {
-      console.error(`[Main] Failed to write plugin files for ${pluginId}:`, error);
+      console.error('[Main] Failed to write plugin files:', error);
       return {
         success: false,
         error: error.message,
@@ -678,20 +1266,22 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('load-plugin-from-disk', async (event, options) => {
     const { pluginId, installPath } = options;
+    const safePluginId = sanitizePluginId(pluginId);
+    const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
 
-    console.log(`[Main] Loading plugin ${pluginId} from ${installPath}`);
+    console.log(`[Main] Loading plugin ${safePluginId} from ${safeInstallPath}`);
 
     try {
       // Check if plugin directory exists
-      if (!fs.existsSync(installPath)) {
+      if (!fs.existsSync(safeInstallPath)) {
         return {
           success: false,
-          error: `Plugin directory not found: ${installPath}`,
+          error: `Plugin directory not found: ${safeInstallPath}`,
         };
       }
 
       // Read manifest
-      const manifestPath = path.join(installPath, 'plugin.json');
+      const manifestPath = safePluginJoin(app, safeInstallPath, 'plugin.json', 'plugin manifest');
       if (!fs.existsSync(manifestPath)) {
         return {
           success: false,
@@ -702,27 +1292,27 @@ function registerIpcHandlers(deps) {
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
       // List all files in plugin directory
-      const files = fs.readdirSync(installPath);
+      const files = fs.readdirSync(safeInstallPath);
 
       // Read index.js if exists
       let indexContent = null;
-      const indexPath = path.join(installPath, 'index.js');
+      const indexPath = safePluginJoin(app, safeInstallPath, 'index.js', 'plugin index');
       if (fs.existsSync(indexPath)) {
         indexContent = fs.readFileSync(indexPath, 'utf8');
       }
 
-      console.log(`[Main] Loaded plugin ${pluginId} with ${files.length} files`);
+      console.log(`[Main] Loaded plugin ${safePluginId} with ${files.length} files`);
 
       return {
         success: true,
-        pluginId,
+        pluginId: safePluginId,
         manifest,
         files,
         indexContent,
-        installPath,
+        installPath: safeInstallPath,
       };
     } catch (error) {
-      console.error(`[Main] Failed to load plugin ${pluginId}:`, error);
+      console.error(`[Main] Failed to load plugin ${safePluginId}:`, error);
       return {
         success: false,
         error: error.message,
@@ -735,13 +1325,15 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('delete-plugin-files', async (event, options) => {
     const { pluginId, installPath } = options;
+    const safePluginId = sanitizePluginId(pluginId);
+    const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
 
-    console.log(`[Main] Deleting plugin ${pluginId} from ${installPath}`);
+    console.log(`[Main] Deleting plugin ${safePluginId} from ${safeInstallPath}`);
 
     try {
       // Check if plugin directory exists
-      if (!fs.existsSync(installPath)) {
-        console.log(`[Main] Plugin directory doesn't exist, nothing to delete: ${installPath}`);
+      if (!fs.existsSync(safeInstallPath)) {
+        console.log(`[Main] Plugin directory doesn't exist, nothing to delete: ${safeInstallPath}`);
         return {
           success: true,
           message: 'Plugin directory already deleted',
@@ -763,17 +1355,17 @@ function registerIpcHandlers(deps) {
         }
       };
 
-      deleteRecursive(installPath);
+      deleteRecursive(safeInstallPath);
 
-      console.log(`[Main] Deleted plugin directory: ${installPath}`);
+      console.log(`[Main] Deleted plugin directory: ${safeInstallPath}`);
 
       return {
         success: true,
-        pluginId,
-        deletedPath: installPath,
+        pluginId: safePluginId,
+        deletedPath: safeInstallPath,
       };
     } catch (error) {
-      console.error(`[Main] Failed to delete plugin ${pluginId}:`, error);
+      console.error(`[Main] Failed to delete plugin ${safePluginId}:`, error);
       return {
         success: false,
         error: error.message,
@@ -788,10 +1380,14 @@ function registerIpcHandlers(deps) {
   // IPC handlers
   ipcMain.handle('read-file', async (event, filePath) => {
     try {
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'read file',
+        mustExist: true,
+      });
       // Check file size first
-      const stats = fs.statSync(filePath);
+      const stats = fs.statSync(safeFilePath);
       const fileSizeMB = stats.size / (1024 * 1024);
-      const extension = path.extname(filePath).toLowerCase();
+      const extension = path.extname(safeFilePath).toLowerCase();
 
       // For BAM files, don't try to read as text
       if (extension === '.bam') {
@@ -829,12 +1425,12 @@ function registerIpcHandlers(deps) {
         const { promisify } = require('util');
         const gunzip = promisify(zlib.gunzip);
 
-        const compressedData = fs.readFileSync(filePath);
+        const compressedData = fs.readFileSync(safeFilePath);
         const decompressedData = await gunzip(compressedData);
         const data = decompressedData.toString('utf8');
         return { success: true, data, isGzipped: true };
       } else {
-        const data = fs.readFileSync(filePath, 'utf8');
+        const data = fs.readFileSync(safeFilePath, 'utf8');
         return { success: true, data };
       }
     } catch (error) {
@@ -846,10 +1442,39 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('show-save-dialog', async (event, options) => {
     try {
       const result = await dialog.showSaveDialog(mainWindow, options);
-      return result;
+      return rememberApprovedDialogPaths(result, {
+        source: 'user-save-dialog',
+        capabilities: [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE],
+        operation: 'show-save-dialog',
+      });
     } catch (error) {
       console.error('Error showing save dialog:', error);
       return { canceled: true, error: error.message };
+    }
+  });
+
+  ipcMain.handle('show-open-file-dialog', async (event, options = {}) => {
+    try {
+      const ownerWindow = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+      const result = await dialog.showOpenDialog(ownerWindow, sanitizeOpenFileDialogOptions(options));
+
+      if (result.canceled) {
+        return { success: false, canceled: true, filePaths: [] };
+      }
+
+      rememberApprovedDialogPaths(result, {
+        source: 'user-open-dialog',
+        capabilities: [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE],
+        operation: 'show-open-file-dialog',
+      });
+      return {
+        success: true,
+        canceled: false,
+        filePaths: result.filePaths,
+      };
+    } catch (error) {
+      console.error('Error showing open file dialog:', error);
+      return { success: false, canceled: false, filePaths: [], error: error.message };
     }
   });
 
@@ -857,24 +1482,25 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('write-file', async (event, filePath, content) => {
     try {
       const path = require('path');
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'write file' });
 
       // Ensure directory exists
-      const directory = path.dirname(filePath);
+      const directory = path.dirname(safeFilePath);
       if (!fs.existsSync(directory)) {
         fs.mkdirSync(directory, { recursive: true });
       }
 
       // Write the file
-      fs.writeFileSync(filePath, content, 'utf8');
+      fs.writeFileSync(safeFilePath, content, 'utf8');
 
       // Verify file was written
-      if (fs.existsSync(filePath)) {
-        const stats = fs.statSync(filePath);
-        console.log(`File written successfully: ${filePath} (${stats.size} bytes)`);
+      if (fs.existsSync(safeFilePath)) {
+        const stats = fs.statSync(safeFilePath);
+        console.log(`File written successfully: ${safeFilePath} (${stats.size} bytes)`);
         return {
           success: true,
-          filePath: filePath,
-          fileName: path.basename(filePath),
+          filePath: safeFilePath,
+          fileName: path.basename(safeFilePath),
           fileSize: stats.size,
         };
       } else {
@@ -886,24 +1512,185 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  // BAM file handling has been moved to renderer process using direct @gmod/bam API
-  // This eliminates IPC overhead and provides better performance
-  // The BamReader class in renderer/modules/BamReader.js now handles all BAM operations directly
+  ipcMain.handle('approve-working-directory', async (event, directoryPath, options = {}) => {
+    try {
+      if (!directoryPath || typeof directoryPath !== 'string') {
+        throw new Error('Working directory approval requires a valid directory path');
+      }
+
+      const resolvedPath = path.resolve(directoryPath);
+      const rootPath = path.parse(resolvedPath).root;
+      if (resolvedPath === rootPath) {
+        throw new Error('Refusing to approve filesystem root as a working directory');
+      }
+
+      let created = false;
+      const existingGrant =
+        permissionBroker.findGrant(resolvedPath, { capability: FILE_CAPABILITIES.WRITE }) ||
+        permissionBroker.findGrant(resolvedPath, { capability: FILE_CAPABILITIES.READ });
+      let insideDefaultRoot = false;
+      try {
+        assertAllowedFileAccess(app, resolvedPath, {
+          operation: 'approve working directory',
+          allowApproved: false,
+        });
+        insideDefaultRoot = true;
+      } catch (error) {
+        insideDefaultRoot = false;
+      }
+
+      if (!insideDefaultRoot && !existingGrant) {
+        throw new Error(
+          `Working directory outside approved application directories requires prior user selection: ${resolvedPath}`
+        );
+      }
+
+      if (!fs.existsSync(resolvedPath)) {
+        if (!options.createIfMissing) {
+          throw new Error(`Directory does not exist: ${resolvedPath}`);
+        }
+
+        const allowedCreatePath = assertAllowedFileAccess(app, resolvedPath, {
+          operation: 'create working directory',
+          allowApproved: true,
+        });
+        fs.mkdirSync(allowedCreatePath, { recursive: true });
+        created = true;
+      }
+
+      const stats = fs.statSync(resolvedPath);
+      if (!stats.isDirectory()) {
+        throw new Error(`Path is not a directory: ${resolvedPath}`);
+      }
+
+      try {
+        fs.accessSync(resolvedPath, fs.constants.R_OK | fs.constants.W_OK);
+      } catch (error) {
+        throw new Error(`Working directory is not readable and writable: ${resolvedPath}`);
+      }
+
+      permissionBroker.grantPath(resolvedPath, {
+        source: existingGrant?.source || (insideDefaultRoot ? 'app-default-root' : 'prior-user-approval'),
+        reason: 'Working directory approved after path validation',
+        capabilities: ALL_FILE_CAPABILITIES,
+        recursive: true,
+        operation: 'approve-working-directory',
+      });
+      return {
+        success: true,
+        path: resolvedPath,
+        created,
+        permissions: {
+          readable: true,
+          writable: true,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  });
+
+  ipcMain.handle('bam-reader:initialize', async (event, filePath, options = {}) => {
+    try {
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open BAM file',
+        mustExist: true,
+      });
+      const safeOptions = { ...(options || {}) };
+
+      if (safeOptions.indexPath) {
+        safeOptions.indexPath = assertAllowedFileAccess(app, safeOptions.indexPath, {
+          operation: 'open BAM index file',
+          mustExist: true,
+        });
+      }
+
+      const BamReader = getBamReaderClass();
+      const reader = new BamReader();
+      const result = await reader.initialize(safeFilePath, safeOptions);
+      const readerId = crypto.randomUUID();
+      const ownerWebContentsId = event.sender.id;
+
+      bamReaders.set(readerId, {
+        reader,
+        ownerWebContentsId,
+      });
+
+      event.sender.once('destroyed', () => {
+        for (const [storedReaderId, entry] of bamReaders.entries()) {
+          if (entry.ownerWebContentsId === ownerWebContentsId) {
+            entry.reader.reset();
+            bamReaders.delete(storedReaderId);
+          }
+        }
+      });
+
+      const state = getBamReaderState(reader);
+      return toIpcSafeValue({
+        success: !!result?.success,
+        readerId,
+        state,
+        header: state.header,
+        references: state.references,
+        totalReads: state.totalReads,
+        fileSize: state.fileSize,
+        hasIndex: state.hasIndex,
+        indexType: state.indexType,
+        indexPath: state.indexPath,
+        indexSize: state.indexSize,
+      });
+    } catch (error) {
+      console.error('Failed to initialize BAM reader:', error);
+      throw new Error(`Failed to initialize BAM reader: ${error.message}`);
+    }
+  });
+
+  ipcMain.handle('bam-reader:get-records-for-range', async (event, readerId, chromosome, start, end, settings = {}) => {
+    try {
+      const reader = getOwnedBamReader(event, readerId);
+      const reads = await reader.getRecordsForRange(chromosome, start, end, settings);
+      return toIpcSafeValue({
+        reads: toIpcSafeValue(reads),
+        state: getBamReaderState(reader),
+      });
+    } catch (error) {
+      console.error('Failed to query BAM reader:', error);
+      throw new Error(`Failed to query BAM reader: ${error.message}`);
+    }
+  });
+
+  ipcMain.handle('bam-reader:destroy', async (event, readerId) => {
+    try {
+      const reader = getOwnedBamReader(event, readerId);
+      reader.reset();
+      bamReaders.delete(readerId);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
 
   ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 1024) => {
     try {
-      const stats = fs.statSync(filePath);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'stream file',
+        mustExist: true,
+      });
+      const stats = fs.statSync(safeFilePath);
       const fileSize = stats.size;
       let totalRead = 0;
       let buffer = '';
       let lineCount = 0;
 
       console.log(
-        `Starting stream read of ${(fileSize / (1024 * 1024)).toFixed(1)} MB file: ${path.basename(filePath)}`
+        `Starting stream read of ${(fileSize / (1024 * 1024)).toFixed(1)} MB file: ${path.basename(safeFilePath)}`
       );
 
       return new Promise((resolve, reject) => {
-        const stream = fs.createReadStream(filePath, {
+        const stream = fs.createReadStream(safeFilePath, {
           encoding: 'utf8',
           highWaterMark: chunkSize,
         });
@@ -973,14 +1760,129 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('get-file-info', async (event, filePath) => {
     try {
-      const stats = fs.statSync(filePath);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'inspect file',
+        mustExist: true,
+      });
+      const stats = fs.statSync(safeFilePath);
       return {
         success: true,
         info: {
           size: stats.size,
           modified: stats.mtime,
-          name: path.basename(filePath),
-          extension: path.extname(filePath),
+          name: path.basename(safeFilePath),
+          extension: path.extname(safeFilePath),
+          isDirectory: stats.isDirectory(),
+          isFile: stats.isFile(),
+          path: safeFilePath,
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('get-app-paths', async () => {
+    const safeGetPath = name => {
+      try {
+        return app.getPath(name);
+      } catch (error) {
+        return '';
+      }
+    };
+
+    return {
+      success: true,
+      paths: {
+        appPath: app.getAppPath(),
+        userData: safeGetPath('userData'),
+        temp: safeGetPath('temp'),
+        downloads: safeGetPath('downloads'),
+        documents: safeGetPath('documents'),
+      },
+    };
+  });
+
+  ipcMain.handle('get-locale-data', async (event, language, namespace) => {
+    try {
+      return {
+        success: true,
+        ...readLocaleNamespace(language, namespace),
+      };
+    } catch (error) {
+      return { success: false, error: error.message, language: sanitizeLocaleCode(language), namespace, data: {} };
+    }
+  });
+
+  ipcMain.handle('get-locale-languages', async () => {
+    try {
+      const localeRoot = getLocalesRoot();
+      const languages = fs
+        .readdirSync(localeRoot, { withFileTypes: true })
+        .filter(entry => entry.isDirectory() && LOCALE_CODE_PATTERN.test(entry.name))
+        .map(entry => entry.name);
+      return { success: true, languages };
+    } catch (error) {
+      return { success: false, error: error.message, languages: ['en'] };
+    }
+  });
+
+  // i18n handlers are registered by i18n-main.js setupIPC() — do not duplicate here
+
+  ipcMain.handle('get-sanitizer-config', async () => ({
+    success: true,
+    allowDataAttributes: true,
+    allowAriaAttributes: true,
+  }));
+
+  ipcMain.handle('config:load', async () => {
+    try {
+      const dir = getConfigStorageDir();
+      const paths = getConfigStoragePaths();
+      const config = {};
+      for (const [section, filePath] of Object.entries(paths)) {
+        const data = readConfigFileIfPresent(filePath);
+        if (data !== null) {
+          config[section] = data;
+        }
+      }
+
+      return {
+        success: true,
+        config,
+        configPath: {
+          dir,
+          ...paths,
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error.message, config: {} };
+    }
+  });
+
+  ipcMain.handle('config:save', async (event, config = {}) => {
+    try {
+      const dir = getConfigStorageDir();
+      const paths = getConfigStoragePaths();
+      fs.mkdirSync(dir, { recursive: true });
+
+      writeJsonFile(paths.main, {
+        version: config.version || '0.7.0-beta',
+        lastModified: new Date().toISOString(),
+      });
+
+      for (const [section, filePath] of Object.entries(paths)) {
+        if (section === 'main') continue;
+        if (config[section] !== undefined) {
+          writeJsonFile(filePath, config[section]);
+        }
+      }
+
+      return {
+        success: true,
+        configPath: {
+          dir,
+          ...paths,
         },
       };
     } catch (error) {
@@ -1033,6 +1935,10 @@ function registerIpcHandlers(deps) {
       if (result.canceled) {
         return { success: false, canceled: true };
       }
+      rememberApprovedDialogPaths(result, {
+        source: 'user-attachment-dialog',
+        operation: 'select-attachment-files',
+      });
 
       return {
         success: true,
@@ -1050,27 +1956,34 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('copy-attachment-file', async (event, sourcePath, targetDir, filename) => {
     try {
+      const safeSourcePath = assertAllowedFileAccess(app, sourcePath, {
+        operation: 'copy attachment source',
+        mustExist: true,
+      });
+      const safeTargetDir = assertAllowedFileAccess(app, targetDir, { operation: 'copy attachment target' });
       // Validate source file exists
-      if (!fs.existsSync(sourcePath)) {
+      if (!fs.existsSync(safeSourcePath)) {
         return { success: false, error: 'Source file does not exist' };
       }
 
       // Ensure target directory exists
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
+      if (!fs.existsSync(safeTargetDir)) {
+        fs.mkdirSync(safeTargetDir, { recursive: true });
       }
 
       // Determine target path
-      const targetFilename = filename || path.basename(sourcePath);
-      const targetPath = path.join(targetDir, targetFilename);
+      const targetFilename = path.basename(filename || path.basename(safeSourcePath));
+      const targetPath = assertAllowedFileAccess(app, path.join(safeTargetDir, targetFilename), {
+        operation: 'copy attachment target file',
+      });
 
       // Copy file
-      fs.copyFileSync(sourcePath, targetPath);
+      fs.copyFileSync(safeSourcePath, targetPath);
 
       // Get file info
       const stats = fs.statSync(targetPath);
 
-      console.log(`Attachment copied: ${sourcePath} -> ${targetPath}`);
+      console.log(`Attachment copied: ${safeSourcePath} -> ${targetPath}`);
 
       return {
         success: true,
@@ -1092,14 +2005,15 @@ function registerIpcHandlers(deps) {
       if (!filePath) {
         return { success: false, error: 'File path is required' };
       }
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'delete attachment' });
 
-      if (!fs.existsSync(filePath)) {
-        console.log(`Attachment file does not exist, skipping deletion: ${filePath}`);
+      if (!fs.existsSync(safeFilePath)) {
+        console.log(`Attachment file does not exist, skipping deletion: ${safeFilePath}`);
         return { success: true, message: 'File does not exist' };
       }
 
-      fs.unlinkSync(filePath);
-      console.log(`Attachment deleted: ${filePath}`);
+      fs.unlinkSync(safeFilePath);
+      console.log(`Attachment deleted: ${safeFilePath}`);
 
       return { success: true, message: 'Attachment deleted successfully' };
     } catch (error) {
@@ -1116,15 +2030,19 @@ function registerIpcHandlers(deps) {
       if (!filePath) {
         return { success: false, error: 'File path is required' };
       }
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open attachment',
+        mustExist: true,
+      });
 
-      if (!fs.existsSync(filePath)) {
+      if (!fs.existsSync(safeFilePath)) {
         return { success: false, error: 'File does not exist' };
       }
 
       const { shell } = require('electron');
-      await shell.openPath(filePath);
+      await shell.openPath(safeFilePath);
 
-      console.log(`Opened attachment: ${filePath}`);
+      console.log(`Opened attachment: ${safeFilePath}`);
       return { success: true };
     } catch (error) {
       console.error('Error opening attachment file:', error);
@@ -1176,10 +2094,13 @@ function registerIpcHandlers(deps) {
 
       // Parse URL to get protocol and filename
       const urlObj = new URL(url);
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        return { success: false, error: 'Only HTTP and HTTPS downloads are allowed' };
+      }
       const protocol = urlObj.protocol === 'https:' ? require('https') : require('http');
 
       // Determine filename from URL if not provided
-      const extractedFilename = filename || path.basename(urlObj.pathname) || 'downloaded_file';
+      const extractedFilename = path.basename(filename || path.basename(urlObj.pathname) || 'downloaded_file');
 
       // Determine destination directory
       let destDir = destinationPath;
@@ -1188,12 +2109,15 @@ function registerIpcHandlers(deps) {
         destDir = path.join(app.getPath('downloads'));
       }
 
-      // Ensure destination directory exists
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
-      }
+      const safeDestDir = assertAllowedFileAccess(app, destDir, { operation: 'download destination' });
+      const fullPath = assertAllowedFileAccess(app, path.join(safeDestDir, extractedFilename), {
+        operation: 'download target',
+      });
 
-      const fullPath = path.join(destDir, extractedFilename);
+      // Ensure destination directory exists after validation
+      if (!fs.existsSync(safeDestDir)) {
+        fs.mkdirSync(safeDestDir, { recursive: true });
+      }
 
       return new Promise(resolve => {
         const file = fs.createWriteStream(fullPath);
@@ -1204,12 +2128,10 @@ function registerIpcHandlers(deps) {
             console.log(`[Download] Following redirect to: ${response.headers.location}`);
             file.close();
             fs.unlinkSync(fullPath);
-
-            // Recursively follow redirect
-            ipcMain.emit('download-internet-file', event, {
-              url: response.headers.location,
-              destinationPath,
-              filename,
+            resolve({
+              success: false,
+              error: 'Redirected downloads must be retried with the final HTTPS URL',
+              redirectUrl: response.headers.location,
             });
             return;
           }
@@ -1288,39 +2210,39 @@ function registerIpcHandlers(deps) {
     const { filePath, title } = options;
 
     try {
-      console.log(`[Markdown Viewer] Opening: ${filePath}`);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open markdown viewer',
+        mustExist: true,
+        allowedRoots: [app.getAppPath(), ...getDefaultWritableRoots(app)],
+      });
+      console.log(`[Markdown Viewer] Opening: ${safeFilePath}`);
 
       // Validate file path
-      if (!filePath || typeof filePath !== 'string') {
+      if (!safeFilePath || typeof safeFilePath !== 'string') {
         return { success: false, error: 'Invalid file path provided' };
       }
 
       // Check if file exists
-      if (!fs.existsSync(filePath)) {
-        return { success: false, error: `File not found: ${filePath}` };
+      if (!fs.existsSync(safeFilePath)) {
+        return { success: false, error: `File not found: ${safeFilePath}` };
       }
 
       // Check file extension
-      const ext = path.extname(filePath).toLowerCase();
+      const ext = path.extname(safeFilePath).toLowerCase();
       if (ext !== '.md' && ext !== '.markdown') {
         console.warn(`[Markdown Viewer] File is not a markdown file: ${ext}`);
       }
 
       // Read the file content
-      const content = fs.readFileSync(filePath, 'utf8');
-      const fileName = path.basename(filePath);
+      const content = fs.readFileSync(safeFilePath, 'utf8');
+      const fileName = path.basename(safeFilePath);
       const windowTitle = title || `${fileName} - Markdown Viewer`;
 
       // Create viewer window
       const viewerWindow = new BrowserWindow({
         width: 900,
         height: 700,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          enableRemoteModule: false,
-          preload: path.join(__dirname, '..', 'preload.js'),
-        },
+        webPreferences: createSecureWebPreferences(),
         title: windowTitle,
         icon: path.join(__dirname, '..', 'assets', 'icon.png'),
         resizable: true,
@@ -1344,7 +2266,7 @@ function registerIpcHandlers(deps) {
       viewerWindow.webContents.on('did-finish-load', () => {
         viewerWindow.webContents.send('load-markdown', {
           content: content,
-          filePath: filePath,
+          filePath: safeFilePath,
           fileName: fileName,
           title: windowTitle,
         });
@@ -1490,6 +2412,10 @@ function registerIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result, {
+          source: 'user-load-file-dialog',
+          operation: 'select-and-load-file',
+        });
         return {
           success: true,
           canceled: false,
@@ -1871,12 +2797,7 @@ function registerIpcHandlers(deps) {
       const resourceManagerWindow = new BrowserWindow({
         width: 1000,
         height: 700,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          enableRemoteModule: false,
-          preload: path.join(__dirname, '..', 'preload.js'),
-        },
+        webPreferences: createSecureWebPreferences(),
         title: 'Resource Manager - CodeXomics',
         icon: path.join(__dirname, '..', 'assets', 'icon.png'),
         resizable: true,
@@ -1997,9 +2918,16 @@ function registerIpcHandlers(deps) {
             extensions: [
               'fasta',
               'fa',
+              'fas',
+              'fna',
+              'gb',
+              'gbk',
+              'gbff',
+              'genbank',
               'gff',
               'gff3',
               'gtf',
+              'bed',
               'vcf',
               'bam',
               'sam',
@@ -2015,6 +2943,7 @@ function registerIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result);
         const filePath = result.filePaths[0];
         // Send to main window for loading
         mainWindow.webContents.send('load-file', filePath);
@@ -2136,16 +3065,7 @@ function registerIpcHandlers(deps) {
         height: 800,
         minWidth: 800,
         minHeight: 600,
-        webPreferences: {
-          nodeIntegration: true,
-          contextIsolation: false,
-          enableRemoteModule: true,
-          webSecurity: false,
-
-          allowRunningInsecureContent: true,
-          // Explicitly disable sandbox to prevent /tmp access issues on Linux
-          sandbox: false,
-        },
+        webPreferences: createSecureWebPreferences(),
         title: `Debug Tool - ${fileName}`,
         icon: path.join(__dirname, '..', 'assets', 'icon.png'),
         show: false,
@@ -3024,77 +3944,138 @@ function registerIpcHandlers(deps) {
   // 15. System Checks IPC Handlers
   // =====================================================================
 
+  ipcMain.handle('blast:detect-installation', async () => {
+    try {
+      const result = await findBlastExecutable();
+      return {
+        success: true,
+        installed: result.found,
+        found: result.found,
+        message: result.found
+          ? `BLAST+ installed successfully (version ${result.version})`
+          : 'BLAST+ not found or not installed',
+        version: result.version || null,
+        path: result.path || null,
+        method: result.method || null,
+        output: result.output || null,
+        error: result.error || null,
+      };
+    } catch (error) {
+      return { success: false, installed: false, found: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('blast:select-executable', async () => {
+    try {
+      const result = await dialog.showOpenDialog(null, {
+        title: 'Select BLAST+ Executable',
+        properties: ['openFile'],
+        filters: process.platform === 'win32' ? [{ name: 'Executable', extensions: ['exe'] }] : undefined,
+      });
+      rememberApprovedDialogPaths(result);
+      return result;
+    } catch (error) {
+      return { canceled: true, error: error.message };
+    }
+  });
+
+  ipcMain.handle('blast:verify-executable', async (event, executablePath) => {
+    try {
+      let safeExecutablePath = null;
+      try {
+        safeExecutablePath = assertAllowedFileAccess(app, executablePath, {
+          operation: 'verify BLAST executable',
+          mustExist: true,
+        });
+      } catch (error) {
+        if (isTrustedBlastExecutablePath(executablePath) && fs.existsSync(executablePath)) {
+          safeExecutablePath = path.resolve(executablePath);
+        } else {
+          throw error;
+        }
+      }
+      const result = await runBlastVersionCheck(safeExecutablePath);
+      return {
+        success: result.found,
+        found: result.found,
+        version: result.version || null,
+        path: safeExecutablePath,
+        output: result.output || null,
+        error: result.error || null,
+      };
+    } catch (error) {
+      return { success: false, found: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('blast:run-command', async (event, options = {}) => {
+    try {
+      const { execFile } = require('child_process');
+
+      let executableToken = options.executable;
+      let args = Array.isArray(options.args) ? options.args.map(arg => String(arg)) : null;
+      if (!executableToken || !args) {
+        const tokens = parseCommandLine(options.command || '');
+        executableToken = tokens[0];
+        args = tokens.slice(1);
+      }
+
+      if (!executableToken) {
+        throw new Error('BLAST command is required');
+      }
+
+      const executable = resolveBlastExecutable(app, executableToken, options.blastExecutablePath);
+      const execOptions = { maxBuffer: 10 * 1024 * 1024 };
+
+      if (options.workingDirectory) {
+        execOptions.cwd = assertAllowedFileAccess(app, options.workingDirectory, {
+          operation: 'use BLAST working directory',
+          mustExist: true,
+        });
+      }
+
+      const isVersionCommand = args.includes('-version') || args.includes('--version');
+      if (options.localDbPath && !isVersionCommand) {
+        const localDbPath = assertAllowedFileAccess(app, options.localDbPath, {
+          operation: 'use BLAST database directory',
+        });
+        if (!fs.existsSync(localDbPath)) {
+          fs.mkdirSync(localDbPath, { recursive: true });
+        }
+        execOptions.env = { ...process.env, BLASTDB: localDbPath };
+      }
+
+      return await new Promise(resolve => {
+        execFile(executable, args, execOptions, (error, stdout, stderr) => {
+          if (error) {
+            resolve({
+              success: false,
+              error: error.message,
+              stdout,
+              stderr,
+              executable,
+              args,
+            });
+            return;
+          }
+
+          resolve({
+            success: true,
+            stdout,
+            stderr,
+            executable,
+            args,
+          });
+        });
+      });
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // IPC handler for BLAST installation check
   ipcMain.on('check-blast-installation', event => {
     console.log('IPC: Checking BLAST installation...');
-    const { exec } = require('child_process');
-    const path = require('path');
-    const fs = require('fs');
-    const os = require('os');
-
-    // Function to check BLAST+ at specific path
-    function checkBlastAtPath(blastPath) {
-      return new Promise(resolve => {
-        const command = `"${blastPath}" -version`;
-        console.log('Checking BLAST at:', command);
-
-        exec(command, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ found: false, error: error.message });
-          } else {
-            const versionMatch = stdout.match(/blastn: ([\d.]+)/);
-            const version = versionMatch ? versionMatch[1] : 'Unknown version';
-            resolve({
-              found: true,
-              version: version,
-              path: blastPath,
-              output: stdout,
-            });
-          }
-        });
-      });
-    }
-
-    // Function to find BLAST+ executable
-    async function findBlastExecutable() {
-      const homeDir = os.homedir();
-      const commonPaths = [
-        '/usr/local/bin/blastn',
-        '/usr/bin/blastn',
-        '/opt/homebrew/bin/blastn',
-        '/usr/local/blast+/bin/blastn',
-        path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'),
-        path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'),
-        path.join(homeDir, '.local', 'bin', 'blastn'),
-        '/opt/blast+/bin/blastn',
-      ];
-
-      // First try direct command execution (for PATH-based installations)
-      try {
-        const result = await checkBlastAtPath('blastn');
-        if (result.found) {
-          return result;
-        }
-      } catch (error) {
-        console.log('Direct blastn command failed, trying specific paths...');
-      }
-
-      // Try specific paths
-      for (const blastPath of commonPaths) {
-        try {
-          if (fs.existsSync(blastPath)) {
-            const result = await checkBlastAtPath(blastPath);
-            if (result.found) {
-              return result;
-            }
-          }
-        } catch (error) {
-          continue;
-        }
-      }
-
-      return { found: false, error: 'BLAST+ not found in any common locations' };
-    }
 
     // Execute the search
     findBlastExecutable()

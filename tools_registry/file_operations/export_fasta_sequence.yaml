@@ -32,6 +32,9 @@ parameters:
         - '/Users/user/output/genome_sequences.fasta'
         - 'selected_genes.fasta'
         - '/tmp/chromosome_1.fasta'
+    filePath:
+      type: string
+      description: Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath.
     auto_save:
       type: boolean
       description: >-

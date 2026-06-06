@@ -1,8 +1,6 @@
 /**
  * ChatManager - Handles LLM chat interface and MCP communication
  */
-// Note: fs and path are required locally inside addToolResultMessage to avoid global scope conflicts
-
 class ChatManager {
   constructor(app, configManager = null) {
     this.app = app;
@@ -96,6 +94,11 @@ class ChatManager {
     // Initialize Dynamic Tools Registry System
     this.dynamicTools = null;
     this.dynamicToolsEnabled = true;
+    this.builtInTools = null;
+    this.builtInToolsMap = new Map();
+    this._toolRegistryUpdateListenerRegistered = false;
+    this._pendingToolRegistrySnapshot = null;
+    this.toolRegistryDiagnostics = [];
     this._dynamicToolsReady = false;
     this.initializeDynamicTools()
       .then(() => {
@@ -126,21 +129,8 @@ class ChatManager {
     // Initialize working directory
     this.initializeWorkingDirectory();
 
-    // Initialize modularized services first - UI initialization depends on them
-    this.services = {
-      execution: new window.ToolExecutionService(this.app, this),
-      file: new window.FileOperationService(this.app, this),
-      analysis: new window.GenomeAnalysisService(this.app, this),
-      protein: new window.ProteinService(this.app, this),
-      blast: new window.BlastService(this.app, this),
-      annotation: new window.AnnotationService(this.app, this),
-      intent: new window.IntentParserService(this.app, this),
-      context: new window.LLMContextService(this.app, this),
-      ui: new window.UIService(this.app, this),
-      restriction: new window.RestrictionDigestService(this.app, this),
-      gel: new window.GelElectrophoresisService(this.app, this),
-      task: new window.TaskService(this.app, this),
-    };
+    this.services = {};
+    this.initializeServices();
 
     // Legacy MCP connection check (kept for backward compatibility)
     this.checkAndSetupMCPConnection();
@@ -153,6 +143,37 @@ class ChatManager {
       // Update agent system button state after UI is ready
       this.updateMultiAgentToggleButton();
     }, 100);
+  }
+
+  initializeServices() {
+    const serviceDefinitions = [
+      ['execution', 'ToolExecutionService'],
+      ['file', 'FileOperationService'],
+      ['analysis', 'GenomeAnalysisService'],
+      ['protein', 'ProteinService'],
+      ['blast', 'BlastService'],
+      ['annotation', 'AnnotationService'],
+      ['intent', 'IntentParserService'],
+      ['context', 'LLMContextService'],
+      ['ui', 'UIService'],
+      ['restriction', 'RestrictionDigestService'],
+      ['gel', 'GelElectrophoresisService'],
+      ['task', 'TaskService'],
+    ];
+
+    for (const [key, className] of serviceDefinitions) {
+      const ServiceClass = window[className];
+      if (typeof ServiceClass !== 'function') {
+        console.warn(`[ChatManager] ${className} not available; ${key} service disabled`);
+        continue;
+      }
+
+      try {
+        this.services[key] = new ServiceClass(this.app, this);
+      } catch (error) {
+        console.warn(`[ChatManager] Failed to initialize ${className}:`, error);
+      }
+    }
   }
 
   /**
@@ -685,6 +706,9 @@ class ChatManager {
       // Initialize the smart executor
       if (typeof SmartExecutor !== 'undefined') {
         this.smartExecutor = new SmartExecutor(this);
+        if (this._pendingToolRegistrySnapshot) {
+          this.registerToolRegistrySnapshotWithOrganizer(this._pendingToolRegistrySnapshot);
+        }
         // SmartExecutor initialized successfully
       } else {
         // SmartExecutor not available, falling back to standard execution
@@ -836,92 +860,107 @@ class ChatManager {
         await this.initializePrimerFunctionTools();
       }
 
-      // Check if we can access file system to verify tools_registry directory
-      if (window.require) {
-        try {
-          const fs = window.require('fs');
-          const path = window.require('path');
-
-          // Check different possible locations
-          const possibleDirs = [
-            path.join(__dirname, '../../tools_registry'),
-            path.join(__dirname, '../../../tools_registry'),
-            path.join(process.cwd(), 'tools_registry'),
-            path.join(process.resourcesPath, 'tools_registry'),
-          ];
-
-          // Checking tools_registry directory locations:
-          for (const dir of possibleDirs) {
-            try {
-              const exists = fs.existsSync(dir);
-              // Directory check result
-              if (exists) {
-                const files = fs.readdirSync(dir);
-                // Files found
-              }
-            } catch (e) {
-              // Directory check error
-            }
-          }
-        } catch (e) {
-          // Could not access filesystem for directory check
-        }
-      }
-
-      // Try different path resolution strategies for packaged vs development
-      let SystemIntegration;
-      const possiblePaths = [
-        '../../tools_registry/system_integration', // Development path
-        '../../../tools_registry/system_integration', // Alternative dev path
-        './tools_registry/system_integration', // Packaged relative path
-        'tools_registry/system_integration', // Direct path
-      ];
-
-      let loadedPath = null;
-      for (const tryPath of possiblePaths) {
-        try {
-          // Trying to load SystemIntegration from path
-          SystemIntegration = require(tryPath);
-          loadedPath = tryPath;
-          // Successfully loaded SystemIntegration from path
-          break;
-        } catch (pathError) {
-          // Failed to load from path
-        }
-      }
-
-      if (!SystemIntegration) {
-        throw new Error('Could not load SystemIntegration from any path');
-      }
-
-      // SystemIntegration loaded
-
-      if (SystemIntegration) {
-        // Creating SystemIntegration instance...
-        this.dynamicTools = new SystemIntegration();
-        // Calling initialize()...
-        const initialized = await this.dynamicTools.initialize();
-        // Initialize result
-
-        if (initialized) {
-          // Dynamic Tools Registry System initialized
-          // Loaded from path
-
-          // Connect PluginManager to Dynamic Tools Bridge
-          this.connectPluginManagerToDynamicTools();
-        } else {
-          // Dynamic Tools Registry System failed to initialize, using fallback
-          this.dynamicToolsEnabled = false;
-        }
-      } else {
-        // SystemIntegration not available
+      if (!window.electronAPI || typeof window.electronAPI.getToolRegistrySnapshot !== 'function') {
+        this.toolRegistryDiagnostics = [
+          {
+            severity: 'warning',
+            message: 'Tool registry IPC API is not available',
+            source: 'renderer',
+          },
+        ];
         this.dynamicToolsEnabled = false;
+        console.warn('[ChatManager] Dynamic Tools Registry disabled: IPC API is not available');
+        return;
       }
+
+      const snapshot = await window.electronAPI.getToolRegistrySnapshot();
+      if (!snapshot || (!Array.isArray(snapshot.tools) && !snapshot.toolsByName)) {
+        this.toolRegistryDiagnostics = [
+          {
+            severity: 'error',
+            message: 'Tool registry snapshot is invalid',
+            source: 'renderer',
+          },
+        ];
+        this.dynamicToolsEnabled = false;
+        console.warn('[ChatManager] Dynamic Tools Registry disabled: invalid snapshot');
+        return;
+      }
+
+      this.toolRegistryDiagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
+      if (snapshot.success === false && this.toolRegistryDiagnostics.length > 0) {
+        console.warn('[ChatManager] Tool registry snapshot reported diagnostics:', this.toolRegistryDiagnostics);
+      }
+
+      if (snapshot.success === false && (!snapshot.tools || snapshot.tools.length === 0)) {
+        this.dynamicToolsEnabled = false;
+        console.warn('[ChatManager] Dynamic Tools Registry disabled: snapshot contains no usable tools');
+        return;
+      }
+
+      this.dynamicTools = this.createDynamicToolsSnapshotAdapter(snapshot);
+      this.builtInTools = this.dynamicTools.builtInTools;
+      this.builtInToolsMap = this.dynamicTools.builtInTools.builtInToolsMap;
+      this.registerToolRegistrySnapshotWithOrganizer(snapshot);
+      this.dynamicToolsEnabled = true;
+
+      if (
+        !this._toolRegistryUpdateListenerRegistered &&
+        typeof window.electronAPI.onToolRegistryUpdated === 'function'
+      ) {
+        window.electronAPI.onToolRegistryUpdated(updatedSnapshot => {
+          try {
+            this.dynamicTools = this.createDynamicToolsSnapshotAdapter(updatedSnapshot);
+            this.builtInTools = this.dynamicTools.builtInTools;
+            this.builtInToolsMap = this.dynamicTools.builtInTools.builtInToolsMap;
+            this.registerToolRegistrySnapshotWithOrganizer(updatedSnapshot);
+            this.dynamicToolsEnabled = true;
+            this.connectPluginManagerToDynamicTools();
+            console.log('[ChatManager] Tool registry snapshot updated', this.dynamicTools.integrationStatus);
+          } catch (updateError) {
+            console.warn('[ChatManager] Failed to apply updated tool registry snapshot:', updateError.message);
+          }
+        });
+        this._toolRegistryUpdateListenerRegistered = true;
+      }
+
+      console.log('[ChatManager] Dynamic Tools Registry initialized from main-process snapshot', {
+        tools: snapshot.counts?.tools || 0,
+        builtInTools: snapshot.counts?.builtInTools || 0,
+        registryHash: snapshot.registryHash,
+      });
+
+      // Connect PluginManager to Dynamic Tools Bridge
+      this.connectPluginManagerToDynamicTools();
     } catch (error) {
       // Failed to initialize Dynamic Tools Registry System
       // Error details
+      console.warn('[ChatManager] Failed to initialize Dynamic Tools Registry from snapshot:', error.message);
       this.dynamicToolsEnabled = false;
     }
+  }
+
+  registerToolRegistrySnapshotWithOrganizer(snapshot) {
+    this._pendingToolRegistrySnapshot = snapshot;
+    const organizer = this.smartExecutor?.organizer;
+    if (!organizer || typeof organizer.registerToolRegistrySnapshot !== 'function') {
+      return;
+    }
+
+    organizer.registerToolRegistrySnapshot(snapshot);
+  }
+
+  /**
+   * Create a renderer-side adapter for the main-process tool registry snapshot.
+   * The adapter preserves the old SystemIntegration method shape without giving
+   * the renderer direct filesystem access to tools_registry/.
+   */
+  createDynamicToolsSnapshotAdapter(snapshot) {
+    if (typeof DynamicToolsSnapshotAdapter === 'undefined') {
+      throw new Error('DynamicToolsSnapshotAdapter script is not available');
+    }
+
+    return new DynamicToolsSnapshotAdapter(snapshot, this);
   }
 
   /**
@@ -929,25 +968,17 @@ class ChatManager {
    */
   async initializeToolExecutionTracker() {
     try {
-      // Initializing Tool Execution Tracker...
-
-      // Check if ToolExecutionTracker is available globally
       if (typeof ToolExecutionTracker !== 'undefined') {
         this.toolExecutionTracker = new ToolExecutionTracker();
-        // Tool Execution Tracker initialized successfully
       } else {
-        // Try to load the module
         await this.loadScript('modules/ToolExecutionTracker.js');
 
         if (typeof ToolExecutionTracker !== 'undefined') {
           this.toolExecutionTracker = new ToolExecutionTracker();
-          // Tool Execution Tracker loaded and initialized successfully
-        } else {
-          // ToolExecutionTracker not available
         }
       }
     } catch (error) {
-      // Failed to initialize Tool Execution Tracker
+      console.warn('[ChatManager] Failed to initialize Tool Execution Tracker:', error.message);
     }
   }
 
@@ -955,12 +986,10 @@ class ChatManager {
    * Get the last user query for Dynamic Tools Registry intent analysis
    */
   getLastUserQuery() {
-    // Try to get the current message being processed
     if (this.currentMessage) {
       return this.currentMessage;
     }
 
-    // Fallback to chat history
     if (this.chatHistory.length === 0) return '';
     const lastMessage = this.chatHistory[this.chatHistory.length - 1];
     return lastMessage.role === 'user' ? lastMessage.content : '';
@@ -971,18 +1000,15 @@ class ChatManager {
    * @returns {boolean} True if in benchmark mode
    */
   isBenchmarkMode() {
-    // Check if benchmark interface is open
     const benchmarkInterface = document.getElementById('benchmarkInterface');
     if (benchmarkInterface && benchmarkInterface.style.display !== 'none') {
       return true;
     }
 
-    // Check if any benchmark is currently running
     if (window.benchmarkUI && window.benchmarkUI.isRunning) {
       return true;
     }
 
-    // Check if we have an active benchmark manager
     if (this.app?.benchmarkManager?.isRunning) {
       return true;
     }
@@ -990,85 +1016,30 @@ class ChatManager {
     return false;
   }
 
-  /**
-   * Load genome file (FASTA/GenBank) - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @param {string} parameters.fileType - File type hint ('fasta', 'genbank', 'auto')
-   * @returns {Object} Load result
-   */
   async loadGenomeFile(parameters = {}) {
     return this.services.file.loadGenomeFile(parameters);
   }
 
-  /**
-   * Load annotation file (GFF/BED) - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @param {string} parameters.fileType - File type hint ('gff', 'bed', 'auto')
-   * @param {boolean} parameters.mergeWithExisting - Whether to merge with existing annotations (default: false)
-   * @returns {Object} Load result
-   */
   async loadAnnotationFile(parameters = {}) {
     return this.services.file.loadAnnotationFile(parameters);
   }
 
-  /**
-   * Load variant file (VCF) - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @returns {Object} Load result
-   */
   async loadVariantFile(parameters = {}) {
     return this.services.file.loadVariantFile(parameters);
   }
 
-  /**
-   * Load reads file (SAM/BAM) - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @returns {Object} Load result
-   */
   async loadReadsFile(parameters = {}) {
     return this.services.file.loadReadsFile(parameters);
   }
 
-  /**
-   * Load WIG tracks - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string|string[]} parameters.filePaths - Direct file path(s) (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @param {boolean} parameters.multiple - Allow multiple file selection (default: true)
-   * @returns {Object} Load result
-   */
   async loadWigTracks(parameters = {}) {
     return this.services.file.loadWigTracks(parameters);
   }
 
-  /**
-   * Load operon file - Built-in function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - Direct file path (optional)
-   * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
-   * @param {string} parameters.format - File format hint ('json', 'csv', 'txt', 'auto')
-   * @returns {Object} Load result
-   */
   async loadOperonFile(parameters = {}) {
     return this.services.file.loadOperonFile(parameters);
   }
 
-  /**
-   * Download a file from the internet - Built-in utility function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.url - The URL to download from
-   * @param {string} parameters.destinationPath - The local directory to save to (optional)
-   * @param {string} parameters.filename - Custom filename (optional)
-   * @returns {Object} Download result
-   */
   async downloadInternetFile(parameters = {}) {
     if (!this.services || !this.services.file) {
       console.error('[ChatManager] file not initialized');
@@ -1077,27 +1048,19 @@ class ChatManager {
     return this.services.file.downloadInternetFile(parameters);
   }
 
-  /**
-   * Open and view a markdown file - Built-in utility function tool
-   * @param {Object} parameters - Tool parameters
-   * @param {string} parameters.filePath - The path to the markdown file
-   * @param {string} parameters.title - Custom window title (optional)
-   * @returns {Object} Viewer result
-   */
   async viewMarkdownFile(parameters = {}) {
     try {
       const { filePath, title } = parameters;
-
-      console.log(`📄 [ChatManager] Opening markdown file: ${filePath}`);
 
       if (!filePath) {
         throw new Error('File path is required');
       }
 
-      // Main renderer window uses nodeIntegration:true / contextIsolation:false (no preload),
-      // so window.electronAPI is undefined here. Use require('electron').ipcRenderer directly.
-      const { ipcRenderer } = require('electron');
-      const result = await ipcRenderer.invoke('open-markdown-viewer', { filePath, title });
+      if (!window.electronAPI?.openMarkdownViewer) {
+        throw new Error('Markdown viewer IPC bridge is unavailable');
+      }
+
+      const result = await window.electronAPI.openMarkdownViewer({ filePath, title });
 
       if (result.success) {
         return {
@@ -1108,9 +1071,9 @@ class ChatManager {
           windowTitle: result.windowTitle,
           tool: 'view_markdown_file',
         };
-      } else {
-        throw new Error(result.error || 'Failed to open markdown viewer');
       }
+
+      throw new Error(result.error || 'Failed to open markdown viewer');
     } catch (error) {
       console.error('❌ [ChatManager] Error opening markdown viewer:', error);
       return {
@@ -1121,28 +1084,15 @@ class ChatManager {
     }
   }
 
-  /**
-   * Get list of loaded files - Built-in function tool
-   * Returns information about all currently loaded files in the genome browser
-   * @param {Object} parameters - Tool parameters (optional)
-   * @param {boolean} parameters.includeMetadata - Include detailed file metadata (default: true)
-   * @returns {Object} Loaded files list result
-   */
-
   async getLoadedFilesList(parameters = {}) {
     try {
       const { includeMetadata = true } = parameters;
-
-      // [ChatManager] Getting loaded files list
 
       if (!this.app) {
         throw new Error('Application not available');
       }
 
-      // Get loaded files from genome browser
       const loadedFiles = this.app.loadedFiles || [];
-
-      // Format the file list
       const filesList = loadedFiles.map(file => {
         const baseInfo = {
           name: file.name,
@@ -1162,7 +1112,7 @@ class ChatManager {
         return baseInfo;
       });
 
-      const result = {
+      return {
         success: true,
         message: `Found ${filesList.length} loaded file(s)`,
         filesCount: filesList.length,
@@ -1170,14 +1120,8 @@ class ChatManager {
         tool: 'get_loaded_files_list',
         timestamp: new Date().toISOString(),
       };
-
-      // [ChatManager] TOOL EXECUTED: get_loaded_files_list - Retrieved file list
-
-      return result;
     } catch (error) {
-      // [ChatManager] Error getting loaded files list
-
-      const errorResult = {
+      return {
         success: false,
         error: error.message,
         filesCount: 0,
@@ -1185,8 +1129,6 @@ class ChatManager {
         tool: 'get_loaded_files_list',
         timestamp: new Date().toISOString(),
       };
-
-      return errorResult;
     }
   }
 
@@ -1204,111 +1146,103 @@ class ChatManager {
     const directory_path = parameters.directory_path || parameters.working_directory;
     const { use_home_directory = false, create_if_missing = false, validate_permissions = true } = parameters;
 
-    // [ChatManager] Setting working directory
-
     try {
       let targetPath;
       const previousDirectory = this.getCurrentWorkingDirectory();
+      const pathModule = this.getPathModule();
+      const isAbsolutePath = candidatePath => {
+        if (pathModule && typeof pathModule.isAbsolute === 'function') {
+          return pathModule.isAbsolute(candidatePath);
+        }
+        return /^(?:\/|[A-Za-z]:[\\/])/.test(String(candidatePath || ''));
+      };
 
-      // Determine target directory
       if (use_home_directory) {
-        const os = require('os');
-        targetPath = os.homedir();
-        // [ChatManager] Using home directory
+        const osModule = typeof window !== 'undefined' ? window.os : null;
+        targetPath =
+          osModule && typeof osModule.homedir === 'function' && osModule.homedir()
+            ? osModule.homedir()
+            : this.getCurrentWorkingDirectory();
       } else if (directory_path) {
-        const path = require('path');
-        // Handle both absolute and relative paths
-        targetPath = path.isAbsolute(directory_path) ? directory_path : path.resolve(process.cwd(), directory_path);
-        // [ChatManager] Target directory
+        targetPath = isAbsolutePath(directory_path)
+          ? directory_path
+          : pathModule && typeof pathModule.resolve === 'function'
+            ? pathModule.resolve(this.getCurrentWorkingDirectory(), directory_path)
+            : `${this.getCurrentWorkingDirectory().replace(/\/+$/g, '')}/${directory_path}`;
       } else {
         throw new Error('Either directory_path or use_home_directory must be provided');
       }
 
-      // Validate and setup directory
-      const fs = require('fs');
-      const path = require('path');
-
-      // Check if directory exists
-      if (!fs.existsSync(targetPath)) {
-        if (create_if_missing) {
-          // [ChatManager] Creating directory
-          fs.mkdirSync(targetPath, { recursive: true });
-        } else {
-          throw new Error(`Directory '${targetPath}' does not exist`);
-        }
-      }
-
-      // Validate it's actually a directory
-      const stats = fs.statSync(targetPath);
-      if (!stats.isDirectory()) {
-        throw new Error(`Path '${targetPath}' is not a directory`);
-      }
-
-      // Check permissions if requested
+      let createdDirectory = false;
       const permissions = { readable: false, writable: false };
-      if (validate_permissions) {
-        try {
-          fs.accessSync(targetPath, fs.constants.R_OK);
-          permissions.readable = true;
-        } catch (e) {
-          // [ChatManager] Directory not readable
+
+      if (typeof window !== 'undefined' && window.electronAPI?.approveWorkingDirectory) {
+        const approvalResult = await window.electronAPI.approveWorkingDirectory(targetPath, {
+          createIfMissing: create_if_missing,
+        });
+        if (!approvalResult?.success) {
+          throw new Error(approvalResult?.error || `Directory '${targetPath}' is not available`);
         }
 
-        try {
-          fs.accessSync(targetPath, fs.constants.W_OK);
-          permissions.writable = true;
-        } catch (e) {
-          // [ChatManager] Directory not writable
+        targetPath = approvalResult.path || targetPath;
+        createdDirectory = !!approvalResult.created;
+        permissions.readable = !!approvalResult.permissions?.readable;
+        permissions.writable = validate_permissions ? !!approvalResult.permissions?.writable : false;
+      } else if (typeof window !== 'undefined' && window.electronAPI?.getSelectedFileInfo) {
+        let infoResult = await window.electronAPI.getSelectedFileInfo(targetPath);
+        if ((!infoResult || !infoResult.success) && create_if_missing && window.electronAPI.ensureDirectory) {
+          const createResult = await window.electronAPI.ensureDirectory(targetPath);
+          if (!createResult?.success) {
+            throw new Error(createResult?.error || `Failed to create directory '${targetPath}'`);
+          }
+          createdDirectory = true;
+          infoResult = await window.electronAPI.getSelectedFileInfo(targetPath);
         }
 
-        if (!permissions.readable) {
-          throw new Error(`Permission denied: Cannot read directory '${targetPath}'`);
+        if (!infoResult || !infoResult.success) {
+          throw new Error(infoResult?.error || `Directory '${targetPath}' does not exist`);
         }
+
+        if (!infoResult.info?.isDirectory) {
+          throw new Error(`Path '${targetPath}' is not a directory`);
+        }
+
+        permissions.readable = true;
+        permissions.writable = validate_permissions ? true : false;
+        targetPath = infoResult.info.path || targetPath;
+      } else {
+        throw new Error('Working directory validation requires electronAPI.approveWorkingDirectory');
       }
 
-      // Set the working directory
-      process.chdir(targetPath);
+      if (typeof process !== 'undefined' && typeof process.chdir === 'function') {
+        process.chdir(targetPath);
+      }
 
-      // Store in ChatManager state for persistence
       this.currentWorkingDirectory = targetPath;
 
-      // Save to config for persistence across sessions
       if (this.configManager) {
         this.configManager.set('workingDirectory', targetPath);
       }
 
-      const result = {
+      return {
         success: true,
-        message:
-          create_if_missing && !fs.existsSync(targetPath)
-            ? `Working directory set to ${targetPath} (created)`
-            : `Working directory set to ${targetPath}`,
+        message: createdDirectory
+          ? `Working directory set to ${targetPath} (created)`
+          : `Working directory set to ${targetPath}`,
         current_directory: targetPath,
         previous_directory: previousDirectory,
         permissions: permissions,
         tool: 'set_working_directory',
         timestamp: new Date().toISOString(),
       };
-
-      // Enhanced logging for benchmark tool detection recording
-      // [ChatManager] TOOL EXECUTED: set_working_directory - Directory changed
-
-      return result;
     } catch (error) {
-      // [ChatManager] Error setting working directory
-
-      const errorResult = {
+      return {
         success: false,
         error: error.message,
         attempted_path: directory_path || (use_home_directory ? 'user home directory' : 'undefined'),
         tool: 'set_working_directory',
         timestamp: new Date().toISOString(),
       };
-
-      // Log error for benchmark tool detection recording
-      // [ChatManager] TOOL ERROR: set_working_directory - Failed
-
-      return errorResult;
     }
   }
 
@@ -1317,7 +1251,35 @@ class ChatManager {
    * @returns {string} Current working directory path
    */
   getCurrentWorkingDirectory() {
-    return this.currentWorkingDirectory || process.cwd();
+    if (this.currentWorkingDirectory) {
+      return this.currentWorkingDirectory;
+    }
+
+    if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
+      return process.cwd();
+    }
+
+    const os = typeof window !== 'undefined' ? window.os : null;
+    const homeDir = os && typeof os.homedir === 'function' ? os.homedir() : '';
+    if (homeDir) {
+      return homeDir;
+    }
+
+    return '/';
+  }
+
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      isAbsolute: filePath => /^(?:\/|[A-Za-z]:[\\/])/.test(String(filePath || '')),
+      resolve: (...parts) => {
+        const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
+        const normalized = joined.replace(/\\/g, '/').replace(/\/+/g, '/');
+        return /^(?:\/|[A-Za-z]:[\\/])/.test(normalized) ? normalized : `/${normalized}`;
+      },
+    };
   }
 
   /**
@@ -1331,22 +1293,26 @@ class ChatManager {
         savedDirectory = this.configManager.get('workingDirectory', null);
       }
 
-      if (savedDirectory && require('fs').existsSync(savedDirectory)) {
+      if (savedDirectory) {
         this.currentWorkingDirectory = savedDirectory;
-        process.chdir(savedDirectory);
+        if (typeof process !== 'undefined' && typeof process.chdir === 'function') {
+          process.chdir(savedDirectory);
+        }
         // [ChatManager] Restored working directory
       } else {
         // Default to user home directory
-        const os = require('os');
-        const homeDir = os.homedir();
+        const os = typeof window !== 'undefined' ? window.os : null;
+        const homeDir = os && typeof os.homedir === 'function' ? os.homedir() : this.getCurrentWorkingDirectory();
         this.currentWorkingDirectory = homeDir;
-        process.chdir(homeDir);
+        if (typeof process !== 'undefined' && typeof process.chdir === 'function') {
+          process.chdir(homeDir);
+        }
         // [ChatManager] Initialized working directory to home
       }
     } catch (error) {
       // [ChatManager] Error initializing working directory
-      // Fallback to current process directory
-      this.currentWorkingDirectory = process.cwd();
+      // Fallback to a stable renderer-safe directory placeholder.
+      this.currentWorkingDirectory = this.getCurrentWorkingDirectory();
     }
   }
 
@@ -3747,13 +3713,25 @@ class ChatManager {
   }
 
   createChatInterface() {
+    const existingChatPanel = document.getElementById('llmChatPanel');
+    if (existingChatPanel) {
+      existingChatPanel.style.display = 'flex';
+      this.ensureChatPanelInViewport(existingChatPanel);
+      this.configManager.set('chat.visible', true);
+      return;
+    }
+
     // Calculate right-bottom position
     const defaultSize = { width: 400, height: 600 };
     const defaultPosition = this.getDefaultChatPosition();
 
     // Load saved position and size
-    const savedPosition = this.configManager.get('chat.position', defaultPosition);
-    const savedSize = this.configManager.get('chat.size', defaultSize);
+    const savedSize = this.normalizeChatSize(this.configManager.get('chat.size', defaultSize), defaultSize);
+    const savedPosition = this.normalizeChatPosition(
+      this.configManager.get('chat.position', defaultPosition),
+      savedSize,
+      defaultPosition
+    );
 
     // Create chat panel HTML
     const chatHTML = `
@@ -3870,7 +3848,11 @@ class ChatManager {
         `;
 
     // Insert chat panel into the page
-    const appDiv = document.getElementById('app');
+    const appDiv = document.getElementById('app') || document.body;
+    if (!appDiv) {
+      console.error('ChatBox could not be created because no document container is available');
+      return;
+    }
     appDiv.insertAdjacentHTML('beforeend', chatHTML);
 
     // Initial render of welcome cards will be handled in initializeChatBoxSettings()
@@ -3879,10 +3861,10 @@ class ChatManager {
     // Ensure ChatBox is visible by default
     const chatPanel = document.getElementById('llmChatPanel');
     if (chatPanel) {
-      // Check if there's a saved visibility state
-      const savedVisibility = this.configManager.get('chat.visible', true);
-      chatPanel.style.display = savedVisibility ? 'flex' : 'none';
-      console.log('ChatBox created with visibility:', savedVisibility ? 'visible' : 'hidden');
+      chatPanel.style.display = 'flex';
+      this.ensureChatPanelInViewport(chatPanel);
+      this.configManager.set('chat.visible', true);
+      console.log('ChatBox created with visibility: visible');
     }
 
     // Setup dragging and resizing
@@ -3909,6 +3891,8 @@ class ChatManager {
           chatPanel.style.left = freshDefaultPos.x + 'px';
           chatPanel.style.top = freshDefaultPos.y + 'px';
         }
+
+        this.ensureChatPanelInViewport(chatPanel);
       }
 
       // Restore dock state from config
@@ -3936,6 +3920,63 @@ class ChatManager {
     console.log('Chat position calculation:', { viewportWidth, viewportHeight, x, y, defaultSize });
 
     return { x, y };
+  }
+
+  getChatViewport() {
+    return {
+      width: Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0),
+      height: Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0),
+    };
+  }
+
+  normalizeChatSize(size, fallback = { width: 400, height: 600 }) {
+    const viewport = this.getChatViewport();
+    const width = Number(size?.width);
+    const height = Number(size?.height);
+    const maxWidth = Math.max(320, viewport.width - 20);
+    const maxHeight = Math.max(420, viewport.height - 20);
+
+    return {
+      width: Math.max(300, Math.min(Number.isFinite(width) ? width : fallback.width, maxWidth)),
+      height: Math.max(400, Math.min(Number.isFinite(height) ? height : fallback.height, maxHeight)),
+    };
+  }
+
+  normalizeChatPosition(position, size, fallback = this.getDefaultChatPosition()) {
+    const viewport = this.getChatViewport();
+    const rawX = Number(position?.x);
+    const rawY = Number(position?.y);
+    const x = Number.isFinite(rawX) ? rawX : fallback.x;
+    const y = Number.isFinite(rawY) ? rawY : fallback.y;
+    const maxLeft = Math.max(10, viewport.width - size.width - 10);
+    const maxTop = Math.max(10, viewport.height - size.height - 10);
+
+    return {
+      x: Math.max(10, Math.min(x, maxLeft)),
+      y: Math.max(10, Math.min(y, maxTop)),
+    };
+  }
+
+  ensureChatPanelInViewport(chatPanel) {
+    if (!chatPanel || chatPanel.classList.contains('docked')) return;
+
+    const currentSize = {
+      width: parseInt(chatPanel.style.width, 10),
+      height: parseInt(chatPanel.style.height, 10),
+    };
+    const size = this.normalizeChatSize(currentSize);
+    const position = this.normalizeChatPosition(
+      {
+        x: parseInt(chatPanel.style.left, 10),
+        y: parseInt(chatPanel.style.top, 10),
+      },
+      size
+    );
+
+    chatPanel.style.left = position.x + 'px';
+    chatPanel.style.top = position.y + 'px';
+    chatPanel.style.width = size.width + 'px';
+    chatPanel.style.height = size.height + 'px';
   }
 
   /**
@@ -3975,6 +4016,7 @@ class ChatManager {
         if (needsUpdate) {
           chatPanel.style.left = newLeft + 'px';
           chatPanel.style.top = newTop + 'px';
+          this.ensureChatPanelInViewport(chatPanel);
           console.log('Chat position adjusted on resize:', { newLeft, newTop });
         }
       }
@@ -4370,6 +4412,7 @@ class ChatManager {
     const chatPanel = document.getElementById('llmChatPanel');
     if (chatPanel) {
       chatPanel.style.display = 'flex';
+      this.ensureChatPanelInViewport(chatPanel);
       this.configManager.set('chat.visible', true);
       console.log('ChatBox forced to visible');
     }
@@ -7901,12 +7944,11 @@ ${coreTools}
     console.log(`[ChatManager] listGenomeWindows called`);
     console.log(`[ChatManager] this.app.windowId: ${this.app.windowId}`);
     try {
-      // Use Electron IPC to query the main process window registry
-      let ipc;
-      try {
-        ipc = typeof ipcRenderer !== 'undefined' ? ipcRenderer : require('electron').ipcRenderer;
-      } catch (e) {
-        ipc = require('electron').ipcRenderer;
+      const ipc =
+        (typeof window !== 'undefined' && window.ipcRenderer) ||
+        (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
+      if (!ipc?.invoke) {
+        throw new Error('IPC bridge unavailable');
       }
 
       console.log(`[ChatManager] Calling ipc.invoke('list-genome-windows')`);
@@ -7941,11 +7983,11 @@ ${coreTools}
     }
 
     try {
-      let ipc;
-      try {
-        ipc = typeof ipcRenderer !== 'undefined' ? ipcRenderer : require('electron').ipcRenderer;
-      } catch (e) {
-        ipc = require('electron').ipcRenderer;
+      const ipc =
+        (typeof window !== 'undefined' && window.ipcRenderer) ||
+        (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
+      if (!ipc?.invoke) {
+        throw new Error('IPC bridge unavailable');
       }
 
       const result = await ipc.invoke('focus-genome-window', windowId);
@@ -15883,6 +15925,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const generateReport = parameters.generate_report !== undefined ? parameters.generate_report : true;
     const includeCharts = parameters.include_charts !== undefined ? parameters.include_charts : true;
     const includeRawData = parameters.include_raw_data !== undefined ? parameters.include_raw_data : false;
+    const includeLLMInteractions =
+      parameters.include_llm_interactions !== undefined ? parameters.include_llm_interactions : true;
+    const llmInteractionsFailedOnly =
+      parameters.llm_interactions_failed_only !== undefined ? parameters.llm_interactions_failed_only : false;
     const stopOnError = parameters.stop_on_error !== undefined ? parameters.stop_on_error : false;
 
     // Open the interface first so the user can see progress
@@ -15916,6 +15962,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         if (chartsEl) chartsEl.checked = includeCharts;
         const rawDataEl = document.getElementById('includeRawData');
         if (rawDataEl) rawDataEl.checked = includeRawData;
+        const includeLLMEl = document.getElementById('includeLLMInteractions');
+        if (includeLLMEl) includeLLMEl.checked = includeLLMInteractions;
+        const failedOnlyEl = document.getElementById('llmInteractionsFailedOnly');
+        if (failedOnlyEl) failedOnlyEl.checked = llmInteractionsFailedOnly;
         const stopOnErrorEl = document.getElementById('stopOnError');
         if (stopOnErrorEl) stopOnErrorEl.checked = stopOnError;
 
@@ -15934,6 +15984,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
               generateReport,
               includeCharts,
               includeRawData,
+              includeLLMInteractions,
+              llmInteractionsFailedOnly,
               stopOnError,
             })
             .catch(err => console.error('[startBenchmark] Fallback run error:', err));
@@ -16100,13 +16152,15 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     const format = (parameters.format || 'json').toLowerCase();
+    const llmInteractionsFailedOnly =
+      parameters.llm_interactions_failed_only !== undefined ? parameters.llm_interactions_failed_only : false;
     const validFormats = ['json', 'csv', 'html'];
     if (!validFormats.includes(format)) {
       return { success: false, error: `Invalid format '${format}'. Supported formats: json, csv, html` };
     }
 
     try {
-      await bm.framework.exportResults(format);
+      await bm.framework.exportResults(format, { llmInteractionsFailedOnly });
       return { success: true, message: `Benchmark results exported as ${format}` };
     } catch (err) {
       return { success: false, error: `Export failed: ${err.message}` };

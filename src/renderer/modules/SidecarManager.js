@@ -21,7 +21,7 @@ class SidecarManager {
   getSidecarPath(genomePath) {
     if (!genomePath) return null;
 
-    const path = require('path');
+    const path = window.path;
     const dir = path.dirname(genomePath);
     const basename = path.basename(genomePath, path.extname(genomePath));
 
@@ -44,25 +44,32 @@ class SidecarManager {
       return this.cache.get(genomePath);
     }
 
-    const sidecarPath = this.getSidecarPath(genomePath);
-
     try {
-      const fs = require('fs').promises;
-      const content = await fs.readFile(sidecarPath, 'utf-8');
-      const data = JSON.parse(content);
+      if (!window.electronAPI || typeof window.electronAPI.loadSidecarFile !== 'function') {
+        const defaultData = this.getDefaultData(genomePath);
+        this.cache.set(genomePath, defaultData);
+        return defaultData;
+      }
 
-      console.log(`📂 Loaded sidecar data from: ${sidecarPath}`);
-      this.cache.set(genomePath, data);
-      return data;
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        // File doesn't exist yet, return default structure
+      const result = await window.electronAPI.loadSidecarFile(genomePath);
+
+      if (!result || !result.success) {
+        throw new Error(result?.error || 'Sidecar file API unavailable');
+      }
+
+      if (!result.exists) {
         console.log(`📄 No sidecar file found for ${genomePath}, using defaults`);
         const defaultData = this.getDefaultData(genomePath);
         this.cache.set(genomePath, defaultData);
         return defaultData;
       }
 
+      const data = result.data || this.getDefaultData(genomePath);
+
+      console.log(`📂 Loaded sidecar data from: ${result.path || this.getSidecarPath(genomePath)}`);
+      this.cache.set(genomePath, data);
+      return data;
+    } catch (error) {
       console.error(`❌ Error loading sidecar file: ${error.message}`);
       return this.getDefaultData(genomePath);
     }
@@ -107,22 +114,19 @@ class SidecarManager {
    * @private
    */
   async _performSave(genomePath, data) {
-    const sidecarPath = this.getSidecarPath(genomePath);
-
     try {
-      const fs = require('fs').promises;
-      const content = JSON.stringify(data, null, 2);
-      await fs.writeFile(sidecarPath, content, 'utf-8');
+      if (!window.electronAPI || typeof window.electronAPI.saveSidecarFile !== 'function') {
+        return;
+      }
 
-      console.log(`💾 Saved sidecar data to: ${sidecarPath}`);
+      const result = await window.electronAPI.saveSidecarFile(genomePath, data);
+      if (!result || !result.success) {
+        throw new Error(result?.error || 'Sidecar file API unavailable');
+      }
+
+      console.log(`💾 Saved sidecar data to: ${result.path || this.getSidecarPath(genomePath)}`);
     } catch (error) {
       console.error(`❌ Error saving sidecar file: ${error.message}`);
-
-      // Try fallback to app data directory if write permission fails
-      if (error.code === 'EACCES' || error.code === 'EROFS') {
-        console.warn('⚠️ Write permission denied, attempting fallback save...');
-        await this._saveFallback(genomePath, data);
-      }
     }
   }
 
@@ -131,35 +135,10 @@ class SidecarManager {
    * @private
    */
   async _saveFallback(genomePath, data) {
-    try {
-      const path = require('path');
-      const fs = require('fs').promises;
-
-      // Get app data directory
-      let appDataDir;
-      if (window.electronAPI && window.electronAPI.getAppDataPath) {
-        appDataDir = await window.electronAPI.getAppDataPath();
-      } else {
-        appDataDir = require('os').homedir();
-      }
-
-      const fallbackDir = path.join(appDataDir, '.codexomics', 'sidecar');
-      await fs.mkdir(fallbackDir, { recursive: true });
-
-      // Use hash of original path as filename to avoid conflicts
-      const hash = this._hashString(genomePath);
-      const fallbackPath = path.join(fallbackDir, `${hash}.CodeXomics`);
-
-      // Store original path in data for reference
-      data._originalPath = genomePath;
-
-      const content = JSON.stringify(data, null, 2);
-      await fs.writeFile(fallbackPath, content, 'utf-8');
-
-      console.log(`💾 Saved sidecar data to fallback location: ${fallbackPath}`);
-    } catch (fallbackError) {
-      console.error(`❌ Fallback save also failed: ${fallbackError.message}`);
-    }
+    await this._performSave(genomePath, {
+      ...(data || {}),
+      _originalPath: genomePath,
+    });
   }
 
   /**
@@ -191,7 +170,7 @@ class SidecarManager {
    * @returns {Object} Default data structure
    */
   getDefaultData(genomePath = null) {
-    const path = require('path');
+    const path = window.path;
     return {
       version: '1.0',
       sourceFile: genomePath ? path.basename(genomePath) : null,
@@ -251,12 +230,14 @@ class SidecarManager {
    * @returns {Promise<boolean>} True if sidecar exists
    */
   async exists(genomePath) {
-    const sidecarPath = this.getSidecarPath(genomePath);
     try {
-      const fs = require('fs').promises;
-      await fs.access(sidecarPath);
-      return true;
-    } catch {
+      if (!window.electronAPI || typeof window.electronAPI.checkSidecarFile !== 'function') {
+        return false;
+      }
+
+      const result = await window.electronAPI.checkSidecarFile(genomePath);
+      return Boolean(result && result.success && result.exists);
+    } catch (error) {
       return false;
     }
   }

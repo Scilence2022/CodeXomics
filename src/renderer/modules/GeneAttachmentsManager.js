@@ -35,6 +35,44 @@ class GeneAttachmentsManager {
     this.init();
   }
 
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '',
+      dirname: filePath => {
+        const normalized = String(filePath || '').replace(/\\/g, '/');
+        const index = normalized.lastIndexOf('/');
+        return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
+      },
+      extname: filePath => {
+        const base = String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '';
+        const index = base.lastIndexOf('.');
+        return index > 0 ? base.slice(index) : '';
+      },
+      join: (...parts) => parts.filter(part => part !== undefined && part !== null && part !== '').join('/').replace(/\/+/g, '/'),
+    };
+  }
+
+  async getFileInfo(filePath) {
+    if (typeof window !== 'undefined' && window.electronAPI?.getSelectedFileInfo) {
+      const result = await window.electronAPI.getSelectedFileInfo(filePath);
+      if (result?.success) {
+        return result.info;
+      }
+    }
+    return null;
+  }
+
+  async fileExists(filePath) {
+    if (typeof window !== 'undefined' && window.electronAPI?.checkFileExists) {
+      const result = await window.electronAPI.checkFileExists(filePath);
+      return !!result?.exists;
+    }
+    return false;
+  }
+
   /**
    * Initialize the manager and load saved attachments
    */
@@ -79,7 +117,7 @@ class GeneAttachmentsManager {
     try {
       // Try to get project-based storage first
       if (this.genomeBrowser.currentFilePath) {
-        const path = require('path');
+        const path = this.getPathModule();
         const projectDir = path.dirname(this.genomeBrowser.currentFilePath);
         let attachmentsDir = path.join(projectDir, 'attachments');
 
@@ -98,7 +136,7 @@ class GeneAttachmentsManager {
         if (result.success) {
           let basePath = result.path;
           if (geneId) {
-            const path = require('path');
+            const path = this.getPathModule();
             const safeGeneId = geneId.replace(/[^a-zA-Z0-9_-]/g, '_');
             basePath = path.join(basePath, safeGeneId);
           }
@@ -106,9 +144,8 @@ class GeneAttachmentsManager {
         }
       }
 
-      // Final fallback - use current working directory
-      const path = require('path');
-      let attachmentsDir = path.join(process.cwd(), 'gene_attachments');
+      const path = this.getPathModule();
+      let attachmentsDir = path.join('/', 'gene_attachments');
       if (geneId) {
         const safeGeneId = geneId.replace(/[^a-zA-Z0-9_-]/g, '_');
         attachmentsDir = path.join(attachmentsDir, safeGeneId);
@@ -144,34 +181,23 @@ class GeneAttachmentsManager {
       if (!fileInfo) {
         let result = null;
 
-        // Use ipcRenderer directly for file selection (most reliable)
-        try {
-          const { ipcRenderer } = require('electron');
-          console.log('📎 Using direct ipcRenderer for file selection');
-
-          // Use the existing 'selectMultipleFiles' IPC handler
-          result = await ipcRenderer.invoke('selectMultipleFiles');
-          console.log('File selection result:', result);
-        } catch (ipcError) {
-          console.warn('Direct ipcRenderer failed, trying electronAPI fallback:', ipcError);
-
-          // Fallback to electronAPI if ipcRenderer is not available
-          if (window.electronAPI && window.electronAPI.selectMultipleFiles) {
-            result = await window.electronAPI.selectMultipleFiles();
-          } else if (window.electronAPI && window.electronAPI.selectAttachmentFiles) {
-            result = await window.electronAPI.selectAttachmentFiles({
-              title: 'Select Attachment Files',
-              filters: [
-                { name: 'All Supported Files', extensions: this.settings.allowedExtensions },
-                { name: 'All Files', extensions: ['*'] },
-              ],
-              properties: ['openFile', 'multiSelections'],
-            });
-          } else {
-            console.error('No file selection method available!');
-            this.showNotification('File selection not available', 'error');
-            return null;
-          }
+        if (window.electronAPI?.selectMultipleFiles) {
+          result = await window.electronAPI.selectMultipleFiles();
+        } else if (window.electronAPI?.selectAttachmentFiles) {
+          result = await window.electronAPI.selectAttachmentFiles({
+            title: 'Select Attachment Files',
+            filters: [
+              { name: 'All Supported Files', extensions: this.settings.allowedExtensions },
+              { name: 'All Files', extensions: ['*'] },
+            ],
+            properties: ['openFile', 'multiSelections'],
+          });
+        } else if (window.ipcRenderer?.invoke) {
+          result = await window.ipcRenderer.invoke('selectMultipleFiles');
+        } else {
+          console.error('No file selection method available!');
+          this.showNotification('File selection not available', 'error');
+          return null;
         }
 
         if (!result.success || !result.filePaths || result.filePaths.length === 0) {
@@ -217,8 +243,7 @@ class GeneAttachmentsManager {
    */
   async processAndStoreFile(geneId, sourcePath) {
     try {
-      const path = require('path');
-      const fs = require('fs');
+      const path = this.getPathModule();
 
       // Get file info
       const filename = path.basename(sourcePath);
@@ -232,8 +257,8 @@ class GeneAttachmentsManager {
       // Get file stats
       let fileSize = 0;
       try {
-        const stats = fs.statSync(sourcePath);
-        fileSize = stats.size;
+        const fileInfo = await this.getFileInfo(sourcePath);
+        fileSize = fileInfo?.size || 0;
 
         // Check file size
         const maxSizeBytes = this.settings.maxFileSizeMB * 1024 * 1024;
@@ -251,18 +276,19 @@ class GeneAttachmentsManager {
         throw new Error('Could not determine storage path');
       }
 
-      // Ensure storage directory exists
-      if (!fs.existsSync(storagePath)) {
-        fs.mkdirSync(storagePath, { recursive: true });
-      }
-
       // Generate unique filename to avoid conflicts
       const attachmentId = this.generateAttachmentId();
       const storedFilename = `${attachmentId}_${filename}`;
       const storedPath = path.join(storagePath, storedFilename);
 
       // Copy file to storage location
-      fs.copyFileSync(sourcePath, storedPath);
+      if (!window.electronAPI?.copyAttachmentFile) {
+        throw new Error('Main-process attachment copy API is unavailable');
+      }
+      const copyResult = await window.electronAPI.copyAttachmentFile(sourcePath, storagePath, storedFilename);
+      if (!copyResult?.success) {
+        throw new Error(copyResult?.error || `Failed to copy attachment: ${filename}`);
+      }
 
       // Create attachment metadata
       const attachment = {
@@ -270,12 +296,12 @@ class GeneAttachmentsManager {
         geneId: geneId,
         filename: filename,
         storedFilename: storedFilename,
-        storedPath: storedPath,
+        storedPath: copyResult.targetPath || storedPath,
         originalPath: sourcePath,
         extension: ext,
         mimeType: this.getMimeType(ext),
-        size: fileSize,
-        sizeFormatted: this.formatFileSize(fileSize),
+        size: copyResult.size || fileSize,
+        sizeFormatted: this.formatFileSize(copyResult.size || fileSize),
         addedDate: new Date().toISOString(),
         description: '',
       };
@@ -311,9 +337,8 @@ class GeneAttachmentsManager {
 
       // Delete the physical file
       try {
-        const fs = require('fs');
-        if (fs.existsSync(attachment.storedPath)) {
-          fs.unlinkSync(attachment.storedPath);
+        if (window.electronAPI?.deleteAttachmentFile) {
+          await window.electronAPI.deleteAttachmentFile(attachment.storedPath);
           console.log(`🗑️ Deleted attachment file: ${attachment.storedPath}`);
         }
       } catch (e) {
@@ -352,9 +377,7 @@ class GeneAttachmentsManager {
         return false;
       }
 
-      // Check if file exists
-      const fs = require('fs');
-      if (!fs.existsSync(attachment.storedPath)) {
+      if (!(await this.fileExists(attachment.storedPath))) {
         this.showNotification('Attachment file not found', 'error');
         return false;
       }
@@ -372,9 +395,13 @@ class GeneAttachmentsManager {
         }
       }
 
-      // Open with system default application
-      const { shell } = require('electron');
-      await shell.openPath(attachment.storedPath);
+      if (!window.electronAPI?.openAttachmentFile) {
+        throw new Error('Main-process attachment open API is unavailable');
+      }
+      const openResult = await window.electronAPI.openAttachmentFile(attachment.storedPath);
+      if (!openResult?.success) {
+        throw new Error(openResult?.error || `Failed to open attachment: ${attachment.filename}`);
+      }
       return true;
     } catch (error) {
       console.error('Error opening attachment:', error);
@@ -446,15 +473,12 @@ class GeneAttachmentsManager {
       this.attachments.clear();
       for (const [geneId, attachments] of Object.entries(metadata)) {
         if (Array.isArray(attachments)) {
-          // Validate that files still exist
-          const validAttachments = attachments.filter(att => {
-            try {
-              const fs = require('fs');
-              return fs.existsSync(att.storedPath);
-            } catch (e) {
-              return false;
+          const validAttachments = [];
+          for (const att of attachments) {
+            if (await this.fileExists(att.storedPath)) {
+              validAttachments.push(att);
             }
-          });
+          }
 
           if (validAttachments.length > 0) {
             this.attachments.set(geneId, validAttachments);
@@ -659,9 +683,8 @@ class GeneAttachmentsManager {
     for (const [geneId, attachments] of this.attachments) {
       for (const attachment of attachments) {
         try {
-          const fs = require('fs');
-          if (fs.existsSync(attachment.storedPath)) {
-            fs.unlinkSync(attachment.storedPath);
+          if (window.electronAPI?.deleteAttachmentFile) {
+            await window.electronAPI.deleteAttachmentFile(attachment.storedPath);
           }
         } catch (e) {
           console.warn('Could not delete file:', e);

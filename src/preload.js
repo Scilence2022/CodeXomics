@@ -1,4 +1,325 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, shell } = require('electron');
+
+const allowedInvokeChannels = [
+  'mcp-server-start',
+  'mcp-server-stop',
+  'mcp-server-status',
+  'mcp-server-get-settings',
+  'mcp-server-save-settings',
+  'mcp-server-check-port',
+  'broadcast-theme-to-pm',
+  'request-current-theme',
+  'show-save-dialog',
+  'show-open-file-dialog',
+  'write-file',
+  'read-file',
+  'read-file-stream',
+  'get-file-info',
+  'getFileInfo',
+  'get-app-paths',
+  'checkFileExists',
+  'check-file-exists',
+  'check-gene-research-report',
+  'save-gene-research-report',
+  'open-gene-research-report',
+  'load-sidecar-file',
+  'save-sidecar-file',
+  'check-sidecar-file',
+  'copy-plugin-directory',
+  'copy-plugin-file',
+  'createNewMainWindow',
+  'ensure-directory',
+  'approve-working-directory',
+  'extract-plugin-zip',
+  'get-plugin-file-info',
+  'open-markdown-viewer',
+  'openFolderInExplorer',
+  'download-internet-file',
+  'read-plugin-file',
+  'save-refined-annotation',
+  'scan-plugin-directory',
+  'select-plugin-file',
+  'selectFastaFile',
+  'selectMultipleFiles',
+  'show-directory-dialog',
+  'write-plugin-file',
+  'tool-registry:get-snapshot',
+  'tool-registry:get-metadata',
+  'tool-registry:get-tool',
+  'tool-registry:reload',
+  'i18n:getCurrentLanguage',
+  'i18n:changeLanguage',
+  'get-locale-data',
+  'get-locale-languages',
+  'get-sanitizer-config',
+  'config:load',
+  'config:save',
+  'bam-reader:initialize',
+  'bam-reader:get-records-for-range',
+  'bam-reader:destroy',
+  'blast:detect-installation',
+  'blast:run-command',
+  'blast:select-executable',
+  'blast:verify-executable',
+];
+
+const allowedListenChannels = [
+  'menu-new-project',
+  'menu-open-project',
+  'menu-save-project',
+  'menu-save-project-as',
+  'menu-export-xml',
+  'menu-export-json',
+  'menu-export-archive',
+  'menu-import-files',
+  'menu-import-project',
+  'menu-close-project',
+  'menu-undo',
+  'menu-redo',
+  'menu-cut',
+  'menu-copy',
+  'menu-paste',
+  'menu-select-all',
+  'menu-clear-selection',
+  'menu-find-files',
+  'menu-find-replace',
+  'menu-refresh',
+  'menu-view-mode',
+  'menu-sort-by',
+  'menu-toggle-hidden-files',
+  'menu-toggle-file-extensions',
+  'menu-toggle-sidebar',
+  'menu-toggle-details-panel',
+  'menu-project-properties',
+  'menu-project-statistics',
+  'menu-create-folder',
+  'menu-auto-organize',
+  'menu-group-by-date',
+  'menu-clean-empty-folders',
+  'menu-backup-project',
+  'menu-restore-backup',
+  'menu-archive-project',
+  'menu-delete-project',
+  'menu-validate-files',
+  'menu-find-duplicates',
+  'menu-check-integrity',
+  'menu-convert-fasta-genbank',
+  'menu-convert-gff-bed',
+  'menu-custom-conversion',
+  'menu-batch-rename',
+  'menu-batch-move',
+  'menu-batch-delete',
+  'menu-open-genome-viewer',
+  'menu-open-external-editor',
+  'menu-open-file-explorer',
+  'menu-preferences',
+  'menu-help',
+  'menu-keyboard-shortcuts',
+  'menu-user-guide',
+  'menu-file-formats',
+  'menu-best-practices',
+  'menu-report-issue',
+  'menu-send-feedback',
+  'menu-about',
+  'request-current-project-for-download',
+  'tool-menu-action',
+  'mcp-server-manager-menu-action',
+  'mcp-server-status-update',
+  'mcp-server-status-changed',
+  'mcp-server-log',
+  'mcp-server-client-update',
+  'sync-theme',
+  'set-window-id',
+  'file-opened',
+  'show-search',
+  'show-goto',
+  'show-panel',
+  'show-all-panels',
+  'show-plugin-management',
+  'show-plugin-marketplace',
+  'show-smart-execution-demo',
+  'open-resource-manager',
+  'configure-llms',
+  'configure-external-tools',
+  'open-enzyme-browser',
+  'open-dna-marker-browser',
+  'configure-search',
+  'mcp-settings',
+  'multi-agent-settings',
+  'general-settings',
+  'chatbox-settings',
+  'check-file-status',
+  'load-file',
+  'open-project-file',
+  'save-current-project',
+  'save-project-as',
+  'export-project-xml',
+  'open-recent-project',
+  'clear-recent-projects',
+  'menu-load-genome',
+  'menu-load-annotation-merge',
+  'menu-load-annotation-new',
+  'menu-load-variant',
+  'menu-load-reads',
+  'menu-load-wig',
+  'menu-load-operon',
+  'menu-load-blast',
+  'menu-load-any',
+  'menu-export-fasta',
+  'menu-export-genbank',
+  'menu-export-cds',
+  'menu-export-protein',
+  'menu-export-gff',
+  'menu-export-bed',
+  'menu-export-current-view',
+  'menu-export-configure',
+  'action-copy-sequence',
+  'action-copy-reverse-complement-sequence',
+  'action-cut-sequence',
+  'action-paste-sequence',
+  'action-paste-sequence-reverse',
+  'action-delete-sequence',
+  'action-insert-sequence',
+  'action-insert-sequence-reverse',
+  'show-action-list',
+  'execute-all-actions',
+  'create-checkpoint',
+  'rollback-checkpoint',
+  'mcp-tool-call',
+  'execute-tool-request',
+  'show-notification',
+  'request-theme-for-pm',
+  'resource-update',
+  'resource-removed',
+  'resource-added',
+  'create-new-project',
+  'load-project-from-menu',
+  'set-download-type',
+  'set-active-project',
+  'before-window-close',
+  'load-markdown',
+  'download-progress',
+  'file-lines-chunk',
+  'file-stream-complete',
+  'file-read-progress',
+  'tool-registry-updated',
+];
+
+const allowedSendChannels = [
+  'close-resource-manager',
+  'project-manager-current-project-response',
+  'analyze-in-chatbox',
+  'main-window-status-response',
+  'mcp-tool-response',
+  'internal-mcp-server-ready',
+  'internal-mcp-server-stopped',
+  'open-chopchop-window',
+  'open-custom-external-tool',
+  'open-deep-gene-research-window',
+  'open-gene-annotation-refine',
+  'open-progenfixer-window',
+  'open-project-manager',
+  'open-resource-manager',
+  'request-llm-interpretation',
+  'request-pending-data',
+  'tool-response',
+  'update-external-tools-menu',
+  'update-window-genome-name',
+  'window-ready',
+];
+
+const safeIpcRenderer = {
+  invoke: (channel, ...args) => {
+    if (allowedInvokeChannels.includes(channel)) {
+      return ipcRenderer.invoke(channel, ...args);
+    }
+    return Promise.reject(new Error(`Blocked IPC invoke for unapproved channel: ${channel}`));
+  },
+  on: (channel, listener) => {
+    if (allowedListenChannels.includes(channel)) {
+      ipcRenderer.on(channel, listener);
+    } else {
+      console.warn(`[preload] Blocked IPC listener for unapproved channel: ${channel}`);
+    }
+  },
+  send: (channel, ...args) => {
+    if (allowedSendChannels.includes(channel)) {
+      ipcRenderer.send(channel, ...args);
+    } else {
+      console.warn(`[preload] Blocked IPC send for unapproved channel: ${channel}`);
+    }
+  },
+  removeListener: (channel, listener) => {
+    if (allowedListenChannels.includes(channel)) {
+      ipcRenderer.removeListener(channel, listener);
+    }
+  },
+  removeAllListeners: channel => {
+    const allowedChannels = [...allowedListenChannels, ...allowedSendChannels, ...allowedInvokeChannels];
+    if (allowedChannels.includes(channel)) {
+      ipcRenderer.removeAllListeners(channel);
+    } else {
+      console.warn(`[preload] Blocked removeAllListeners for unapproved channel: ${channel}`);
+    }
+  },
+};
+
+const safePath = {
+  basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '',
+  dirname: filePath => {
+    const normalized = String(filePath || '').replace(/\\/g, '/');
+    const index = normalized.lastIndexOf('/');
+    return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
+  },
+  extname: filePath => {
+    const base = safePath.basename(filePath);
+    const index = base.lastIndexOf('.');
+    return index > 0 ? base.slice(index) : '';
+  },
+  join: (...parts) => {
+    const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
+    return joined.replace(/\/+/g, '/').replace(/([^:])\/+$/g, '$1');
+  },
+  isAbsolute: filePath => /^(?:\/|[A-Za-z]:[\\/])/.test(String(filePath || '')),
+  resolve: (...parts) => {
+    const joined = safePath.join(...parts);
+    if (!joined) return '.';
+    const normalized = String(joined).replace(/\\/g, '/');
+    if (/^(?:\/|[A-Za-z]:\/)/.test(normalized)) return normalized;
+    return `/${normalized}`.replace(/\/+/g, '/');
+  },
+};
+
+const safeOs = {
+  arch: () => process.arch,
+  homedir: () => '',
+  platform: () => process.platform,
+  release: () => {
+    if (typeof process.getSystemVersion === 'function') {
+      return process.getSystemVersion();
+    }
+    return '';
+  },
+  tmpdir: () => '',
+};
+
+const safeRequire = moduleName => {
+  switch (moduleName) {
+    case 'electron':
+      return {
+        ipcRenderer: safeIpcRenderer,
+        shell: {
+          openExternal: url => shell.openExternal(url),
+        },
+      };
+    case 'path':
+      return safePath;
+    case 'os':
+      return safeOs;
+    default:
+      throw new Error(`Blocked renderer require('${moduleName}') after security hardening`);
+  }
+};
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
@@ -12,7 +333,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // File operations
   selectAndLoadFile: () => ipcRenderer.invoke('select-and-load-file'),
-  getFileInfo: filePath => ipcRenderer.invoke('get-file-info', filePath),
+  showOpenFileDialog: options => ipcRenderer.invoke('show-open-file-dialog', options),
+  getSelectedFileInfo: filePath => ipcRenderer.invoke('get-file-info', filePath),
 
   // Directory selection for benchmark
   showDirectoryDialog: options => ipcRenderer.invoke('show-directory-dialog', options),
@@ -61,6 +383,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createTempFile: (fileName, content) => ipcRenderer.invoke('createTempFile', fileName, content),
   getFileInfo: filePath => ipcRenderer.invoke('getFileInfo', filePath),
   checkFileExists: filePath => ipcRenderer.invoke('checkFileExists', filePath),
+  getAppPaths: () => ipcRenderer.invoke('get-app-paths'),
+  getLocaleData: (language, namespace) => ipcRenderer.invoke('get-locale-data', language, namespace),
+  getLocaleLanguages: () => ipcRenderer.invoke('get-locale-languages'),
+  getCurrentLanguage: () => ipcRenderer.invoke('i18n:getCurrentLanguage'),
+  changeLanguage: language => ipcRenderer.invoke('i18n:changeLanguage', language),
+  loadConfigData: () => ipcRenderer.invoke('config:load'),
+  saveConfigData: config => ipcRenderer.invoke('config:save', config),
+  checkGeneResearchReport: geneSymbol => ipcRenderer.invoke('check-gene-research-report', geneSymbol),
+  saveGeneResearchReport: (geneSymbol, report) => ipcRenderer.invoke('save-gene-research-report', geneSymbol, report),
+  openGeneResearchReport: geneSymbol => ipcRenderer.invoke('open-gene-research-report', geneSymbol),
+  loadSidecarFile: genomePath => ipcRenderer.invoke('load-sidecar-file', genomePath),
+  saveSidecarFile: (genomePath, data) => ipcRenderer.invoke('save-sidecar-file', genomePath, data),
+  checkSidecarFile: genomePath => ipcRenderer.invoke('check-sidecar-file', genomePath),
   deletePhysicalFile: filePath => ipcRenderer.invoke('deletePhysicalFile', filePath),
   updateRecentProjects: recentProjects => ipcRenderer.invoke('updateRecentProjects', recentProjects),
 
@@ -88,8 +423,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Plugin management APIs
   scanPluginDirectory: () => ipcRenderer.invoke('scan-plugin-directory'),
-  readPluginFile: filePath => ipcRenderer.invoke('read-plugin-file', filePath),
   loadPluginMetadata: pluginPath => ipcRenderer.invoke('load-plugin-metadata', pluginPath),
+  approveWorkingDirectory: (directoryPath, options) =>
+    ipcRenderer.invoke('approve-working-directory', directoryPath, options),
 
   // Event listeners
   onResourceUpdate: callback => {
@@ -104,6 +440,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('resource-added', callback);
   },
 
+  onMenuAction: callback => {
+    if (typeof callback !== 'function') {
+      return;
+    }
+    safeIpcRenderer.on('tool-menu-action', (event, action, data) => {
+      callback(action, data);
+    });
+  },
+
   // Project Manager specific event listeners
   onCreateNewProject: callback => {
     ipcRenderer.on('create-new-project', callback);
@@ -115,7 +460,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Remove listeners
   removeAllListeners: channel => {
-    ipcRenderer.removeAllListeners(channel);
+    safeIpcRenderer.removeAllListeners(channel);
   },
 
   // Genomic Data Download APIs
@@ -149,6 +494,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File reading API for project manager
   readFile: filePath => ipcRenderer.invoke('read-file', filePath),
 
+  // BAM reader APIs
+  bamReader: {
+    initialize: (filePath, options) => ipcRenderer.invoke('bam-reader:initialize', filePath, options),
+    getRecordsForRange: (readerId, chromosome, start, end, settings) =>
+      ipcRenderer.invoke('bam-reader:get-records-for-range', readerId, chromosome, start, end, settings),
+    destroy: readerId => ipcRenderer.invoke('bam-reader:destroy', readerId),
+  },
+
+  // BLAST local runtime APIs
+  blast: {
+    detectInstallation: () => ipcRenderer.invoke('blast:detect-installation'),
+    runCommand: options => ipcRenderer.invoke('blast:run-command', options),
+    selectExecutable: () => ipcRenderer.invoke('blast:select-executable'),
+    verifyExecutable: executablePath => ipcRenderer.invoke('blast:verify-executable', executablePath),
+  },
+
   // Plugin path resolution APIs
   getPluginPaths: () => ipcRenderer.invoke('get-plugin-paths'),
   ensureDirectory: dirPath => ipcRenderer.invoke('ensure-directory', dirPath),
@@ -158,7 +519,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectPluginFile: () => ipcRenderer.invoke('select-plugin-file'),
   getPluginFileInfo: filePath => ipcRenderer.invoke('get-plugin-file-info', filePath),
   readPluginFile: filePath => ipcRenderer.invoke('read-plugin-file', filePath),
-  checkFileExists: filePath => ipcRenderer.invoke('check-file-exists', filePath),
+  checkPluginFileExists: filePath => ipcRenderer.invoke('check-file-exists', filePath),
   extractPluginZip: zipPath => ipcRenderer.invoke('extract-plugin-zip', zipPath),
   copyPluginDirectory: (sourcePath, destPath) => ipcRenderer.invoke('copy-plugin-directory', sourcePath, destPath),
   copyPluginFile: (sourcePath, destPath) => ipcRenderer.invoke('copy-plugin-file', sourcePath, destPath),
@@ -173,6 +534,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadInternetFile: options => ipcRenderer.invoke('download-internet-file', options),
   openMarkdownViewer: options => ipcRenderer.invoke('open-markdown-viewer', options),
 
+  // Dynamic tool registry APIs
+  getToolRegistrySnapshot: () => ipcRenderer.invoke('tool-registry:get-snapshot'),
+  getToolRegistryMetadata: () => ipcRenderer.invoke('tool-registry:get-metadata'),
+  getToolDefinition: toolName => ipcRenderer.invoke('tool-registry:get-tool', toolName),
+  reloadToolRegistry: () => ipcRenderer.invoke('tool-registry:reload'),
+  onToolRegistryUpdated: callback => {
+    if (typeof callback !== 'function') {
+      return;
+    }
+    safeIpcRenderer.on('tool-registry-updated', (event, snapshot) => {
+      callback(snapshot);
+    });
+  },
+
   // Gene Attachments APIs
   selectAttachmentFiles: options => ipcRenderer.invoke('select-attachment-files', options),
   copyAttachmentFile: (sourcePath, targetDir, filename) =>
@@ -183,28 +558,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // MCP Server APIs
   invoke: (channel, ...args) => {
-    const validChannels = [
-      'mcp-server-start',
-      'mcp-server-stop',
-      'mcp-server-status',
-      'mcp-server-get-settings',
-      'mcp-server-save-settings',
-      'mcp-server-check-port',
-      'broadcast-theme-to-pm',
-      'request-current-theme',
-    ];
-    if (validChannels.includes(channel)) {
+    if (allowedInvokeChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);
     }
   },
   on: (channel, callback) => {
-    const validChannels = [
-      'mcp-server-status-update',
-      'mcp-server-status-changed',
-      'mcp-server-log',
-      'mcp-server-client-update',
-    ];
-    if (validChannels.includes(channel)) {
+    if (allowedListenChannels.includes(channel)) {
       ipcRenderer.on(channel, (event, ...args) => callback(...args));
     }
   },
@@ -222,113 +581,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Expose ipcRenderer for menu system event handling
   ipcRenderer: {
     on: (channel, listener) => {
-      // Whitelist of allowed channels for security
-      const validChannels = [
-        'menu-new-project',
-        'menu-open-project',
-        'menu-save-project',
-        'menu-save-project-as',
-        'menu-export-xml',
-        'menu-export-json',
-        'menu-export-archive',
-        'menu-import-files',
-        'menu-import-project',
-        'menu-close-project',
-        'menu-undo',
-        'menu-redo',
-        'menu-cut',
-        'menu-copy',
-        'menu-paste',
-        'menu-select-all',
-        'menu-clear-selection',
-        'menu-find-files',
-        'menu-find-replace',
-        'menu-refresh',
-        'menu-view-mode',
-        'menu-sort-by',
-        'menu-toggle-hidden-files',
-        'menu-toggle-file-extensions',
-        'menu-toggle-sidebar',
-        'menu-toggle-details-panel',
-        'menu-project-properties',
-        'menu-project-statistics',
-        'menu-create-folder',
-        'menu-auto-organize',
-        'menu-group-by-date',
-        'menu-clean-empty-folders',
-        'menu-backup-project',
-        'menu-restore-backup',
-        'menu-archive-project',
-        'menu-delete-project',
-        'menu-validate-files',
-        'menu-find-duplicates',
-        'menu-check-integrity',
-        'menu-convert-fasta-genbank',
-        'menu-convert-gff-bed',
-        'menu-custom-conversion',
-        'menu-batch-rename',
-        'menu-batch-move',
-        'menu-batch-delete',
-        'menu-open-genome-viewer',
-        'menu-open-external-editor',
-        'menu-open-file-explorer',
-        'menu-preferences',
-        'menu-help',
-        'menu-keyboard-shortcuts',
-        'menu-user-guide',
-        'menu-file-formats',
-        'menu-best-practices',
-        'menu-report-issue',
-        'menu-send-feedback',
-        'menu-about',
-        'request-current-project-for-download',
-        'tool-menu-action',
-        'mcp-server-manager-menu-action',
-        'mcp-server-status-update',
-        'mcp-server-status-changed',
-        'mcp-server-log',
-        'mcp-server-client-update',
-        'sync-theme',
-      ];
-
-      if (validChannels.includes(channel)) {
-        ipcRenderer.on(channel, listener);
-      }
+      safeIpcRenderer.on(channel, listener);
     },
     send: (channel, ...args) => {
-      // Whitelist of allowed send channels for security
-      const validSendChannels = ['close-resource-manager', 'project-manager-current-project-response'];
-
-      if (validSendChannels.includes(channel)) {
-        ipcRenderer.send(channel, ...args);
-      }
+      safeIpcRenderer.send(channel, ...args);
+    },
+    invoke: (channel, ...args) => {
+      return safeIpcRenderer.invoke(channel, ...args);
+    },
+    removeListener: (channel, listener) => {
+      safeIpcRenderer.removeListener(channel, listener);
     },
     removeAllListeners: channel => {
-      // Security: validate channel against whitelist before removing listeners
-      const allowedChannels = [
-        'resource-update',
-        'resource-removed',
-        'resource-added',
-        'create-new-project',
-        'load-project-from-menu',
-        'set-download-type',
-        'set-active-project',
-        'before-window-close',
-        'mcp-server-status-update',
-        'mcp-server-status-changed',
-        'mcp-server-log',
-        'mcp-server-client-update',
-        'sync-theme',
-        'load-markdown',
-        'download-progress',
-        ...validChannels,
-        ...validSendChannels,
-      ];
-      if (allowedChannels.includes(channel)) {
-        ipcRenderer.removeAllListeners(channel);
-      } else {
-        console.warn(`[preload] Blocked removeAllListeners for unapproved channel: ${channel}`);
-      }
+      safeIpcRenderer.removeAllListeners(channel);
     },
 
     // ===========================================================================
@@ -364,5 +629,10 @@ contextBridge.exposeInMainWorld('nodeAPI', {
   platform: process.platform,
   version: process.version,
 });
+
+contextBridge.exposeInMainWorld('ipcRenderer', safeIpcRenderer);
+contextBridge.exposeInMainWorld('require', safeRequire);
+contextBridge.exposeInMainWorld('path', safePath);
+contextBridge.exposeInMainWorld('os', safeOs);
 
 console.log('Resource Manager preload script loaded');

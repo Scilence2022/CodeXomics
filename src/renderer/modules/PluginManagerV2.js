@@ -554,8 +554,15 @@ class PluginManagerV2 {
     }
 
     if (definition.type === 'visualization') {
-      if (!definition.supportedDataTypes || !definition.executor) {
-        throw new Error('Visualization plugins must define supportedDataTypes and executor');
+      const hasSupportedDataTypes =
+        Array.isArray(definition.supportedDataTypes) && definition.supportedDataTypes.length > 0;
+      const hasVisualizationMethod =
+        typeof definition.executor === 'function' ||
+        typeof definition.renderNetwork === 'function' ||
+        typeof definition.visualize === 'function';
+
+      if (!hasSupportedDataTypes || !hasVisualizationMethod) {
+        throw new Error('Visualization plugins must define supportedDataTypes and a callable visualization method');
       }
     }
   }
@@ -1293,106 +1300,11 @@ class PluginManagerV2 {
       return plugin._instance;
     }
 
-    try {
-      const path = require('path');
-      const fs = require('fs');
-
-      // Find the plugin's index.js
-      let indexPath = null;
-
-      // Try to find project root
-      let basePath = null;
-      if (typeof __dirname !== 'undefined') {
-        let searchPath = __dirname;
-        for (let i = 0; i < 15; i++) {
-          try {
-            if (
-              fs.existsSync(path.join(searchPath, 'package.json')) &&
-              fs.existsSync(path.join(searchPath, 'src', 'renderer', 'modules'))
-            ) {
-              basePath = searchPath;
-              break;
-            }
-          } catch (e) {
-            /* ignore */
-          }
-          const parent = path.dirname(searchPath);
-          if (parent === searchPath) break;
-          searchPath = parent;
-        }
-      }
-
-      if (basePath) {
-        const version = plugin.version || '1.0.0';
-        const candidates = [
-          path.join(basePath, 'packages/marketplace-server/marketplace-data/plugins', pluginId, version, 'index.js'),
-          path.join(basePath, 'src/renderer/modules/Plugins/UserInstalled', pluginId, version, 'index.js'),
-          path.join(basePath, 'src/renderer/modules/Plugins', pluginId, version, 'index.js'),
-        ];
-
-        for (const candidate of candidates) {
-          try {
-            if (fs.existsSync(candidate)) {
-              indexPath = candidate;
-              break;
-            }
-          } catch (e) {
-            /* ignore */
-          }
-        }
-      }
-
-      if (!indexPath) {
-        console.warn(`[PluginManagerV2] Cannot find index.js for plugin '${pluginId}'`);
-        return null;
-      }
-
-      console.log(`[PluginManagerV2] Loading plugin instance from: ${indexPath}`);
-
-      // Require the plugin module
-      const PluginModule = require(indexPath);
-      const PluginClass = PluginModule.default || PluginModule;
-
-      // Find the plugin class (should be the default export or the first class)
-      let instance = null;
-      if (typeof PluginClass === 'function') {
-        instance = new PluginClass();
-      } else if (typeof PluginClass === 'object' && PluginClass !== null) {
-        // Already an instance
-        instance = PluginClass;
-      }
-
-      if (instance) {
-        // Try to activate the plugin with a minimal context
-        if (typeof instance.activate === 'function') {
-          const context = {
-            subscriptions: [],
-            registerCommand: (cmdId, handler) => {
-              if (this.commandRegistry) {
-                this.commandRegistry.registerCommand(cmdId, handler, { extensionId: pluginId });
-              }
-              return { dispose: () => {} };
-            },
-            registerVisualization: () => ({ dispose: () => {} }),
-          };
-          try {
-            await instance.activate(context);
-          } catch (activateError) {
-            console.warn(`[PluginManagerV2] Plugin '${pluginId}' activate() failed:`, activateError.message);
-          }
-        }
-
-        // Cache the instance
-        plugin._instance = instance;
-        console.log(`[PluginManagerV2] Plugin '${pluginId}' instance loaded and cached`);
-        return instance;
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`[PluginManagerV2] Failed to load instance for '${pluginId}':`, error.message);
-      return null;
-    }
+    console.warn(
+      `[PluginManagerV2] Dynamic plugin module loading is disabled for '${pluginId}' until a sandboxed plugin host is available`
+    );
+    plugin.codeExecutionBlocked = true;
+    return null;
   }
 
   /**

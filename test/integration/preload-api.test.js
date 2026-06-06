@@ -37,8 +37,20 @@ describe('Preload API Structure', () => {
       'getLocaleData',
       'getLocaleLanguages',
       'getAppPaths',
+      'approveWorkingDirectory',
       'getSanitizerConfig',
+      'checkGeneResearchReport',
+      'openGeneResearchReport',
+      'loadSidecarFile',
+      'saveSidecarFile',
+      'checkSidecarFile',
+      'getToolRegistrySnapshot',
+      'getToolRegistryMetadata',
+      'getToolDefinition',
+      'reloadToolRegistry',
+      'onToolRegistryUpdated',
       'invoke',
+      'onMenuAction',
       'ipcRenderer',
       'removeAllListeners',
     ];
@@ -52,9 +64,13 @@ describe('Preload API Structure', () => {
 
   describe('IPC channel validation', () => {
     it('should validate invoke channels', () => {
-      expect(preloadContent).toContain('validChannels');
+      expect(preloadContent).toContain('allowedInvokeChannels');
       expect(preloadContent).toContain('mcp-server-start');
       expect(preloadContent).toContain('mcp-server-stop');
+      expect(preloadContent).toContain('tool-registry:get-snapshot');
+      expect(preloadContent).toContain('tool-registry:reload');
+      expect(preloadContent).toContain('approve-working-directory');
+      expect(preloadContent).toContain('get-app-paths');
     });
 
     it('should validate on() listener channels', () => {
@@ -73,6 +89,7 @@ describe('Preload API Structure', () => {
       // The preload should only expose specific, validated methods
       // This check ensures we don't have `exposeInMainWorld('ipcRenderer', ipcRenderer)`
       expect(preloadContent).toContain("exposeInMainWorld('electronAPI'");
+      expect(preloadContent).not.toContain("exposeInMainWorld('ipcRenderer', ipcRenderer)");
     });
 
     it('removeAllListeners should have channel whitelist', () => {

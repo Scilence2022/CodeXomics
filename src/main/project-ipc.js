@@ -13,6 +13,42 @@
 const { ipcMain, dialog, app, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const {
+  createSecureWebPreferences,
+  rememberApprovedPath,
+  rememberApprovedDialogPaths,
+  assertAllowedFileAccess,
+} = require('./security-utils');
+
+function assertSafeProjectSegment(value, label = 'name') {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`Invalid project ${label}`);
+  }
+
+  const trimmed = value.trim();
+  const hasControlCharacter = [...trimmed].some(char => char.charCodeAt(0) < 32);
+  if (trimmed !== path.basename(trimmed) || /[<>:"/\\|?*]/.test(trimmed) || hasControlCharacter) {
+    throw new Error(`Invalid project ${label}`);
+  }
+  return trimmed;
+}
+
+function assertSafeProjectRelativePath(value, label = 'relative path') {
+  if (!value) return '';
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid project ${label}`);
+  }
+
+  const normalized = value.replace(/\\/g, '/');
+  const parts = normalized.split('/').filter(Boolean);
+  if (
+    path.isAbsolute(value) ||
+    parts.some(part => part === '..' || /[<>:"|?*]/.test(part) || [...part].some(char => char.charCodeAt(0) < 32))
+  ) {
+    throw new Error(`Invalid project ${label}`);
+  }
+  return parts.join(path.sep);
+}
 
 /**
  * Register all Project Manager IPC handlers.
@@ -26,6 +62,7 @@ const fs = require('fs');
  * @param {Function} deps.unregisterGenomeWindow - Unregister a genome window
  * @param {Function} deps.cleanupWindowRegistration - Cleanup window registration
  * @param {BrowserWindow} deps.currentActiveWindow - Currently active window
+ * @param {Function} deps.setCurrentActiveWindow - Set current active window reference
  * @param {Function} deps.createMenu - Menu creation function
  * @param {Function} deps.createToolWindowMenu - Tool window menu creation
  * @param {Function} deps.getCurrentMainWindow - Get current main window reference
@@ -39,11 +76,31 @@ function registerProjectIpcHandlers(deps) {
     registerGenomeWindow,
     unregisterGenomeWindow,
     cleanupWindowRegistration,
-    currentActiveWindow,
     createMenu,
     createToolWindowMenu,
     getCurrentMainWindow,
   } = deps;
+
+  const setActiveMainWindow = win => {
+    if (typeof deps.setCurrentActiveWindow === 'function') {
+      deps.setCurrentActiveWindow(win);
+    } else {
+      deps.currentActiveWindow = win;
+    }
+  };
+
+  const clearActiveMainWindow = win => {
+    if (typeof deps.getCurrentActiveWindow === 'function' && typeof deps.setCurrentActiveWindow === 'function') {
+      if (deps.getCurrentActiveWindow() === win) {
+        deps.setCurrentActiveWindow(null);
+      }
+      return;
+    }
+
+    if (deps.currentActiveWindow === win) {
+      deps.currentActiveWindow = null;
+    }
+  };
 
   // Handler for showing project open dialog
   ipcMain.handle('show-project-open-dialog', async (event, projectName) => {
@@ -72,6 +129,10 @@ function registerProjectIpcHandlers(deps) {
   // Handler for opening project in new process
   ipcMain.handle('open-project-in-new-process', async (event, filePath) => {
     try {
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open project in new process',
+        mustExist: true,
+      });
       const { spawn } = require('child_process');
       const electronPath = process.execPath;
       const appPath = app.getAppPath();
@@ -79,10 +140,10 @@ function registerProjectIpcHandlers(deps) {
       console.log('🚀 Starting new application instance...');
       console.log('   Electron path:', electronPath);
       console.log('   App path:', appPath);
-      console.log('   Project file:', filePath);
+      console.log('   Project file:', safeFilePath);
 
       // Start new process with project file path as argument
-      const child = spawn(electronPath, [appPath, '--open-project', filePath], {
+      const child = spawn(electronPath, [appPath, '--open-project', safeFilePath], {
         detached: true,
         stdio: 'ignore',
       });
@@ -109,6 +170,10 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result, {
+          source: 'user-project-directory-dialog',
+          operation: 'selectProjectDirectory',
+        });
         return { success: true, filePath: result.filePaths[0] };
       }
 
@@ -134,6 +199,10 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result, {
+          source: 'user-project-file-dialog',
+          operation: 'selectProjectFile',
+        });
         return { success: true, filePath: result.filePaths[0] };
       }
 
@@ -177,6 +246,10 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result, {
+          source: 'user-project-files-dialog',
+          operation: 'selectMultipleFiles',
+        });
         return { success: true, filePaths: result.filePaths };
       }
 
@@ -201,6 +274,10 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result, {
+          source: 'user-blast-fasta-dialog',
+          operation: 'selectFastaFile',
+        });
         return { success: true, filePath: result.filePaths[0] };
       }
 
@@ -213,7 +290,9 @@ function registerProjectIpcHandlers(deps) {
   // Handle project creation
   ipcMain.handle('createProjectDirectory', async (event, location, projectName) => {
     try {
-      const projectPath = path.join(location, projectName);
+      const safeLocation = assertAllowedFileAccess(app, location, { operation: 'create project directory' });
+      const safeProjectName = assertSafeProjectSegment(projectName, 'name');
+      const projectPath = path.join(safeLocation, safeProjectName);
 
       // Create project directory if it doesn't exist
       if (!fs.existsSync(projectPath)) {
@@ -229,6 +308,7 @@ function registerProjectIpcHandlers(deps) {
         }
       });
 
+      rememberApprovedPath(projectPath);
       return { success: true, projectPath: projectPath };
     } catch (error) {
       return { success: false, error: error.message };
@@ -238,8 +318,12 @@ function registerProjectIpcHandlers(deps) {
   // Handle project file loading
   ipcMain.handle('loadProjectFile', async (event, filePath) => {
     try {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const fileName = path.basename(filePath);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'load project file',
+        mustExist: true,
+      });
+      const content = fs.readFileSync(safeFilePath, 'utf8');
+      const fileName = path.basename(safeFilePath);
       return { success: true, content: content, fileName: fileName };
     } catch (error) {
       return { success: false, error: error.message };
@@ -249,8 +333,12 @@ function registerProjectIpcHandlers(deps) {
   // Handle opening file in main window
   ipcMain.handle('openFileInMainWindow', async (event, filePath) => {
     try {
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open file in main window',
+        mustExist: true,
+      });
       if (deps.mainWindow && !deps.mainWindow.isDestroyed()) {
-        deps.mainWindow.webContents.send('load-file', filePath);
+        deps.mainWindow.webContents.send('load-file', safeFilePath);
         deps.mainWindow.focus();
         return { success: true, message: 'File opened in main window' };
       } else {
@@ -265,14 +353,18 @@ function registerProjectIpcHandlers(deps) {
   ipcMain.handle('openFolderInExplorer', async (event, folderPath) => {
     try {
       const { shell } = require('electron');
+      const safeFolderPath = assertAllowedFileAccess(app, folderPath, {
+        operation: 'open folder',
+        mustExist: true,
+      });
 
       // 检查文件夹是否存在
-      if (!fs.existsSync(folderPath)) {
+      if (!fs.existsSync(safeFolderPath)) {
         return { success: false, error: 'Folder does not exist' };
       }
 
       // 在资源管理器中打开文件夹
-      await shell.openPath(folderPath);
+      await shell.openPath(safeFolderPath);
       return { success: true, message: 'Folder opened in explorer' };
     } catch (error) {
       return { success: false, error: error.message };
@@ -282,21 +374,30 @@ function registerProjectIpcHandlers(deps) {
   // Handle moving file within project
   ipcMain.handle('moveFileInProject', async (event, currentPath, projectName, targetFolderPath) => {
     try {
-      if (!fs.existsSync(currentPath)) {
+      const safeCurrentPath = assertAllowedFileAccess(app, currentPath, {
+        operation: 'move project file',
+        mustExist: true,
+      });
+      const safeProjectName = assertSafeProjectSegment(projectName, 'name');
+      const safeTargetFolderPath = assertSafeProjectRelativePath(targetFolderPath, 'target folder');
+
+      if (!fs.existsSync(safeCurrentPath)) {
         return { success: false, error: 'Source file does not exist' };
       }
 
       // 修正：构建目标路径，不使用额外的data目录
       const documentsPath = app.getPath('documents');
       const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
-      const targetDir = path.join(projectsDir, projectName, targetFolderPath);
+      const targetDir = assertAllowedFileAccess(app, path.join(projectsDir, safeProjectName, safeTargetFolderPath), {
+        operation: 'move project file destination',
+      });
 
       // 确保目标目录存在
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
       }
 
-      const fileName = path.basename(currentPath);
+      const fileName = path.basename(safeCurrentPath);
       const targetPath = path.join(targetDir, fileName);
 
       // 如果目标文件已存在，生成新的文件名
@@ -310,9 +411,9 @@ function registerProjectIpcHandlers(deps) {
       }
 
       // 移动文件
-      fs.renameSync(currentPath, finalTargetPath);
+      fs.renameSync(safeCurrentPath, finalTargetPath);
 
-      console.log(`✅ File moved from ${currentPath} to ${finalTargetPath}`);
+      console.log(`✅ File moved from ${safeCurrentPath} to ${finalTargetPath}`);
       return { success: true, newPath: finalTargetPath, message: 'File moved successfully' };
     } catch (error) {
       console.error('Error moving file:', error);
@@ -323,13 +424,19 @@ function registerProjectIpcHandlers(deps) {
   // Handle renaming file within project
   ipcMain.handle('renameFileInProject', async (event, currentPath, newFileName) => {
     try {
-      if (!fs.existsSync(currentPath)) {
+      const safeCurrentPath = assertAllowedFileAccess(app, currentPath, {
+        operation: 'rename project file',
+        mustExist: true,
+      });
+      const safeNewFileName = assertSafeProjectSegment(newFileName, 'file name');
+
+      if (!fs.existsSync(safeCurrentPath)) {
         return { success: false, error: 'Source file does not exist' };
       }
 
       // 获取文件目录和构建新的文件路径
-      const fileDir = path.dirname(currentPath);
-      const newFilePath = path.join(fileDir, newFileName);
+      const fileDir = path.dirname(safeCurrentPath);
+      const newFilePath = path.join(fileDir, safeNewFileName);
 
       // 检查新文件名是否已存在
       if (fs.existsSync(newFilePath)) {
@@ -337,19 +444,14 @@ function registerProjectIpcHandlers(deps) {
       }
 
       // 验证新文件名是否合法
-      const invalidChars = /[<>:"/\\|?*]/;
-      if (invalidChars.test(newFileName)) {
-        return { success: false, error: 'File name contains invalid characters' };
-      }
-
       // 重命名文件
-      fs.renameSync(currentPath, newFilePath);
+      fs.renameSync(safeCurrentPath, newFilePath);
 
-      console.log(`✅ File renamed from ${currentPath} to ${newFilePath}`);
+      console.log(`✅ File renamed from ${safeCurrentPath} to ${newFilePath}`);
       return {
         success: true,
         newPath: newFilePath,
-        oldPath: currentPath,
+        oldPath: safeCurrentPath,
         message: 'File renamed successfully',
       };
     } catch (error) {
@@ -458,11 +560,17 @@ function registerProjectIpcHandlers(deps) {
   // Handle creating project folder
   ipcMain.handle('createProjectFolder', async (event, projectName, folderName) => {
     try {
+      const safeProjectName = assertSafeProjectSegment(projectName, 'name');
+      const safeFolderName = assertSafeProjectSegment(folderName, 'folder name');
       const documentsPath = app.getPath('documents');
       const dirResult = await ipcMain.invoke('getProjectDirectoryName');
       const projectsDir = path.join(documentsPath, dirResult.directoryName);
-      const projectDir = path.join(projectsDir, projectName);
-      const folderPath = path.join(projectDir, folderName);
+      const projectDir = assertAllowedFileAccess(app, path.join(projectsDir, safeProjectName), {
+        operation: 'create project folder root',
+      });
+      const folderPath = assertAllowedFileAccess(app, path.join(projectDir, safeFolderName), {
+        operation: 'create project folder',
+      });
 
       // 确保项目目录存在
       if (!fs.existsSync(projectDir)) {
@@ -579,6 +687,10 @@ function registerProjectIpcHandlers(deps) {
     let windowId = null;
 
     try {
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open file in new main window',
+        mustExist: true,
+      });
       // Generate a unique window ID for multi-window support
       windowId = deps.generateWindowId();
       console.log(`📋 [createNewMainWindow] Creating new window with ID: ${windowId}`);
@@ -589,15 +701,7 @@ function registerProjectIpcHandlers(deps) {
         height: 900,
         minWidth: 800,
         minHeight: 600,
-        webPreferences: {
-          nodeIntegration: true,
-          contextIsolation: false,
-          enableRemoteModule: true,
-          webSecurity: false,
-
-          allowRunningInsecureContent: true,
-          cache: false,
-        },
+        webPreferences: createSecureWebPreferences({ cache: false }),
         icon: path.join(__dirname, '../assets/icon.png'),
         show: false,
       });
@@ -637,8 +741,8 @@ function registerProjectIpcHandlers(deps) {
 
             // Wait a bit more and then send the file
             setTimeout(() => {
-              console.log(`📋 [createNewMainWindow] Sending load-file event to ${windowId}: ${filePath}`);
-              newMainWindow.webContents.send('load-file', filePath);
+              console.log(`📋 [createNewMainWindow] Sending load-file event to ${windowId}: ${safeFilePath}`);
+              newMainWindow.webContents.send('load-file', safeFilePath);
             }, 500);
           }, 1500); // Extended delay for complete module initialization
         }
@@ -650,7 +754,7 @@ function registerProjectIpcHandlers(deps) {
         newMainWindow.show();
         // Set focus to new window and ensure proper menu
         newMainWindow.focus();
-        deps.currentActiveWindow = newMainWindow;
+        setActiveMainWindow(newMainWindow);
         deps.createMenu(); // Set main window menu immediately
         console.log(`📋 [createNewMainWindow] Window ${windowId} shown and focused with main menu set`);
       });
@@ -660,10 +764,18 @@ function registerProjectIpcHandlers(deps) {
 
       // Handle window focus to manage menu properly
       newMainWindow.on('focus', () => {
-        if (deps.currentActiveWindow !== newMainWindow) {
-          deps.currentActiveWindow = newMainWindow;
+        if (typeof deps.getCurrentActiveWindow !== 'function' || deps.getCurrentActiveWindow() !== newMainWindow) {
+          setActiveMainWindow(newMainWindow);
           deps.createMenu(); // Set main window menu when focused
           console.log(`📋 [createNewMainWindow] Window ${windowId} focused - set main menu`);
+        }
+      });
+
+      newMainWindow.webContents.on('focus', () => {
+        if (typeof deps.getCurrentActiveWindow !== 'function' || deps.getCurrentActiveWindow() !== newMainWindow) {
+          setActiveMainWindow(newMainWindow);
+          deps.createMenu(); // Set main window menu when focused
+          console.log(`📋 [createNewMainWindow] Window ${windowId} webContents focused - set main menu`);
         }
       });
 
@@ -671,9 +783,7 @@ function registerProjectIpcHandlers(deps) {
       newMainWindow.on('closed', () => {
         console.log(`📋 [createNewMainWindow] Window ${windowId} closed`);
         deps.unregisterGenomeWindow(windowId);
-        if (deps.currentActiveWindow === newMainWindow) {
-          deps.currentActiveWindow = null;
-        }
+        clearActiveMainWindow(newMainWindow);
       });
 
       // Handle errors
@@ -700,7 +810,11 @@ function registerProjectIpcHandlers(deps) {
   // Handle scanning project folder for new files and folders
   ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, existingFolderStructure = []) => {
     try {
-      if (!fs.existsSync(projectPath)) {
+      const safeProjectPath = assertAllowedFileAccess(app, projectPath, {
+        operation: 'scan project folder',
+        mustExist: true,
+      });
+      if (!fs.existsSync(safeProjectPath)) {
         return { success: false, error: 'Project folder does not exist' };
       }
 
@@ -774,7 +888,7 @@ function registerProjectIpcHandlers(deps) {
             } else if (stats.isFile()) {
               // Process file
               const tempId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-              const projectRelativePath = getProjectRelativePath(itemPath, projectPath);
+              const projectRelativePath = getProjectRelativePath(itemPath, safeProjectPath);
 
               // Check if this file path already exists (use relative path for comparison)
               const isDuplicate = existingFileIds.some(
@@ -821,9 +935,9 @@ function registerProjectIpcHandlers(deps) {
       }
 
       // Start scanning from project root
-      scanDirectory(projectPath);
+      scanDirectory(safeProjectPath);
 
-      console.log(`📁 Scanned project folder: ${projectPath}`);
+      console.log(`📁 Scanned project folder: ${safeProjectPath}`);
       console.log(`🆕 Found ${newFiles.length} new files (using relative paths)`);
       console.log(`📂 Found ${newFolders.length} new folders`);
 
@@ -831,7 +945,7 @@ function registerProjectIpcHandlers(deps) {
         success: true,
         newFiles: newFiles,
         newFolders: newFolders,
-        scannedPath: projectPath,
+        scannedPath: safeProjectPath,
         totalNewFiles: newFiles.length,
         totalNewFolders: newFolders.length,
         summary: {
@@ -941,8 +1055,10 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePath) {
-        fs.writeFileSync(result.filePath, content, 'utf8');
-        return { success: true, filePath: result.filePath };
+        rememberApprovedDialogPaths(result);
+        const safeFilePath = assertAllowedFileAccess(app, result.filePath, { operation: 'save file' });
+        fs.writeFileSync(safeFilePath, content, 'utf8');
+        return { success: true, filePath: safeFilePath };
       }
 
       return { success: false, canceled: true };
@@ -978,15 +1094,17 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePath) {
+        rememberApprovedDialogPaths(result);
+        const safeFilePath = assertAllowedFileAccess(app, result.filePath, { operation: 'save project file' });
         // 确保父目录存在
-        const parentDir = path.dirname(result.filePath);
+        const parentDir = path.dirname(safeFilePath);
         if (!fs.existsSync(parentDir)) {
           fs.mkdirSync(parentDir, { recursive: true });
         }
 
-        fs.writeFileSync(result.filePath, content, 'utf8');
-        console.log(`✅ Project saved: ${result.filePath}`);
-        return { success: true, filePath: result.filePath };
+        fs.writeFileSync(safeFilePath, content, 'utf8');
+        console.log(`✅ Project saved: ${safeFilePath}`);
+        return { success: true, filePath: safeFilePath };
       }
 
       return { success: false, canceled: true };
@@ -1003,17 +1121,18 @@ function registerProjectIpcHandlers(deps) {
       if (!filePath) {
         throw new Error('File path is required for direct save');
       }
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'save project file directly' });
 
       // 确保父目录存在
-      const parentDir = path.dirname(filePath);
+      const parentDir = path.dirname(safeFilePath);
       if (!fs.existsSync(parentDir)) {
         fs.mkdirSync(parentDir, { recursive: true });
       }
 
       // 直接写入文件，不显示对话框
-      fs.writeFileSync(filePath, content, 'utf8');
-      console.log(`✅ Project saved directly: ${filePath}`);
-      return { success: true, filePath: filePath };
+      fs.writeFileSync(safeFilePath, content, 'utf8');
+      console.log(`✅ Project saved directly: ${safeFilePath}`);
+      return { success: true, filePath: safeFilePath };
     } catch (error) {
       console.error('Error saving project file directly:', error);
       return { success: false, error: error.message };
@@ -1024,7 +1143,12 @@ function registerProjectIpcHandlers(deps) {
   ipcMain.handle('createTempFile', async (event, fileName, content) => {
     try {
       const tempDir = app.getPath('temp');
-      const tempFilePath = path.join(tempDir, 'codexomics_temp_' + Date.now() + '_' + fileName);
+      const safeFileName = assertSafeProjectSegment(path.basename(fileName || 'temp.txt'), 'temporary file name');
+      const tempFilePath = assertAllowedFileAccess(
+        app,
+        path.join(tempDir, `codexomics_temp_${Date.now()}_${safeFileName}`),
+        { operation: 'create temporary file' }
+      );
 
       fs.writeFileSync(tempFilePath, content, 'utf8');
 
@@ -1052,8 +1176,12 @@ function registerProjectIpcHandlers(deps) {
   // Handle getting file information
   ipcMain.handle('getFileInfo', async (event, filePath) => {
     try {
-      const stats = fs.statSync(filePath);
-      const fileName = path.basename(filePath);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'inspect file',
+        mustExist: true,
+      });
+      const stats = fs.statSync(safeFilePath);
+      const fileName = path.basename(safeFilePath);
 
       return {
         success: true,
@@ -1071,7 +1199,8 @@ function registerProjectIpcHandlers(deps) {
   // Handle checking if file exists
   ipcMain.handle('checkFileExists', async (event, filePath) => {
     try {
-      const exists = fs.existsSync(filePath);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'check file' });
+      const exists = fs.existsSync(safeFilePath);
       return { success: true, exists: exists };
     } catch (error) {
       return { success: false, exists: false, error: error.message };
@@ -1084,15 +1213,18 @@ function registerProjectIpcHandlers(deps) {
       if (!filePath) {
         throw new Error('File path is required for deletion');
       }
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'delete physical file',
+      });
 
-      if (!fs.existsSync(filePath)) {
-        console.log(`File does not exist, skipping deletion: ${filePath}`);
+      if (!fs.existsSync(safeFilePath)) {
+        console.log(`File does not exist, skipping deletion: ${safeFilePath}`);
         return { success: true, message: 'File does not exist' };
       }
 
       // Delete the file
-      fs.unlinkSync(filePath);
-      console.log(`✅ File deleted: ${filePath}`);
+      fs.unlinkSync(safeFilePath);
+      console.log(`✅ File deleted: ${safeFilePath}`);
       return { success: true, message: 'File deleted successfully' };
     } catch (error) {
       console.error('Error deleting file:', error);
@@ -1162,14 +1294,23 @@ function registerProjectIpcHandlers(deps) {
   // Handle copying files to project directory
   ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folderPath) => {
     try {
-      const os = require('os');
+      const safeSourcePath = assertAllowedFileAccess(app, sourcePath, {
+        operation: 'copy file to project',
+        mustExist: true,
+      });
+      const safeProjectName = assertSafeProjectSegment(projectName, 'name');
+      const safeFolderPath = assertSafeProjectRelativePath(folderPath, 'folder path');
 
       // 修正：直接使用项目目录结构，不要额外的data子目录
       const documentsPath = app.getPath('documents');
       const dirResult = await ipcMain.invoke('getProjectDirectoryName');
       const projectsDir = path.join(documentsPath, dirResult.directoryName);
-      const projectDir = path.join(projectsDir, projectName);
-      const targetFolderDir = path.join(projectDir, folderPath);
+      const projectDir = assertAllowedFileAccess(app, path.join(projectsDir, safeProjectName), {
+        operation: 'copy file project directory',
+      });
+      const targetFolderDir = assertAllowedFileAccess(app, path.join(projectDir, safeFolderPath), {
+        operation: 'copy file target folder',
+      });
 
       // 确保目录存在
       if (!fs.existsSync(projectsDir)) {
@@ -1183,18 +1324,18 @@ function registerProjectIpcHandlers(deps) {
       }
 
       // 获取源文件名
-      const fileName = path.basename(sourcePath);
+      const fileName = path.basename(safeSourcePath);
       const targetPath = path.join(targetFolderDir, fileName);
 
       // 检查源文件是否存在
-      if (!fs.existsSync(sourcePath)) {
-        throw new Error(`Source file does not exist: ${sourcePath}`);
+      if (!fs.existsSync(safeSourcePath)) {
+        throw new Error(`Source file does not exist: ${safeSourcePath}`);
       }
 
       // 复制文件
-      fs.copyFileSync(sourcePath, targetPath);
+      fs.copyFileSync(safeSourcePath, targetPath);
 
-      console.log(`✅ File copied from ${sourcePath} to ${targetPath}`);
+      console.log(`✅ File copied from ${safeSourcePath} to ${targetPath}`);
 
       return {
         success: true,
@@ -1214,17 +1355,19 @@ function registerProjectIpcHandlers(deps) {
   // Handle creating new project structure
   ipcMain.handle('createNewProjectStructure', async (event, location, projectName) => {
     try {
-      console.log(`🏗️ Creating project structure: "${projectName}" at "${location}"`);
+      const safeLocation = assertAllowedFileAccess(app, location, { operation: 'create new project structure' });
+      const safeProjectName = assertSafeProjectSegment(projectName, 'name');
+      console.log(`🏗️ Creating project structure: "${safeProjectName}" at "${safeLocation}"`);
 
       // 新的目录结构：所有文件都在项目目录内
-      const projectDir = path.join(location, projectName);
+      const projectDir = path.join(safeLocation, safeProjectName);
       const projectFilePath = path.join(projectDir, 'Project.GAI'); // 固定文件名
 
       // 检查项目目录是否已存在
       if (fs.existsSync(projectDir)) {
         return {
           success: false,
-          error: `Project directory "${projectName}" already exists at this location`,
+          error: `Project directory "${safeProjectName}" already exists at this location`,
         };
       }
 
@@ -1245,6 +1388,7 @@ function registerProjectIpcHandlers(deps) {
       console.log(`✅ Project structure created successfully`);
       console.log(`📁 Project directory: ${projectDir}`);
       console.log(`📄 Project file will be: ${projectFilePath}`);
+      rememberApprovedPath(projectDir);
 
       return {
         success: true,
@@ -1264,24 +1408,25 @@ function registerProjectIpcHandlers(deps) {
   // Handle saving project to specific file
   ipcMain.handle('saveProjectToSpecificFile', async (event, filePath, content) => {
     try {
-      console.log(`💾 Saving project file to: ${filePath}`);
+      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'save project to specific file' });
+      console.log(`💾 Saving project file to: ${safeFilePath}`);
 
       // 确保目录存在
-      const dirPath = path.dirname(filePath);
+      const dirPath = path.dirname(safeFilePath);
       if (!fs.existsSync(dirPath)) {
         console.log(`📁 Creating directory: ${dirPath}`);
         fs.mkdirSync(dirPath, { recursive: true });
       }
 
       // 写入文件
-      fs.writeFileSync(filePath, content, 'utf8');
+      fs.writeFileSync(safeFilePath, content, 'utf8');
 
       // 验证文件是否创建成功
-      if (fs.existsSync(filePath)) {
-        const stats = fs.statSync(filePath);
-        console.log(`✅ Project file saved successfully: ${filePath}`);
+      if (fs.existsSync(safeFilePath)) {
+        const stats = fs.statSync(safeFilePath);
+        console.log(`✅ Project file saved successfully: ${safeFilePath}`);
         console.log(`📊 File size: ${stats.size} bytes`);
-        return { success: true, filePath: filePath, size: stats.size };
+        return { success: true, filePath: safeFilePath, size: stats.size };
       } else {
         throw new Error('File was not created successfully');
       }
@@ -1304,6 +1449,7 @@ function registerProjectIpcHandlers(deps) {
       });
 
       if (!result.canceled && result.filePaths.length > 0) {
+        rememberApprovedDialogPaths(result);
         return {
           success: true,
           selectedDirectory: result.filePaths[0],
@@ -1367,12 +1513,16 @@ function registerProjectIpcHandlers(deps) {
   // Handle checking if project exists
   ipcMain.handle('checkProjectExists', async (event, directory, projectName) => {
     try {
+      const safeDirectory = assertAllowedFileAccess(app, directory, {
+        operation: 'check project exists',
+      });
+      const safeProjectName = assertSafeProjectSegment(projectName, 'name');
       // 新结构：检查项目目录内的 Project.GAI 文件
-      const projectDir = path.join(directory, projectName);
+      const projectDir = path.join(safeDirectory, safeProjectName);
       const newProjectFilePath = path.join(projectDir, 'Project.GAI');
 
       // 向后兼容：也检查旧结构
-      const oldProjectFilePath = path.join(directory, `${projectName}.prj.GAI`);
+      const oldProjectFilePath = path.join(safeDirectory, `${safeProjectName}.prj.GAI`);
 
       const newFileExists = fs.existsSync(newProjectFilePath);
       const oldFileExists = fs.existsSync(oldProjectFilePath);
@@ -1398,8 +1548,20 @@ function registerProjectIpcHandlers(deps) {
   // Handle copying project to new location
   ipcMain.handle('copyProject', async (event, sourceProjectFile, sourceDataFolder, targetDirectory, projectName) => {
     try {
+      const safeSourceProjectFile = assertAllowedFileAccess(app, sourceProjectFile, {
+        operation: 'copy source project file',
+        mustExist: true,
+      });
+      const safeSourceDataFolder = assertAllowedFileAccess(app, sourceDataFolder, {
+        operation: 'copy source project data',
+        mustExist: true,
+      });
+      const safeTargetDirectory = assertAllowedFileAccess(app, targetDirectory, {
+        operation: 'copy project target directory',
+      });
+      const safeProjectName = assertSafeProjectSegment(projectName, 'name');
       // 新结构：目标项目目录和文件
-      const targetProjectDir = path.join(targetDirectory, projectName);
+      const targetProjectDir = path.join(safeTargetDirectory, safeProjectName);
       const targetProjectFile = path.join(targetProjectDir, 'Project.GAI');
 
       // 创建目标项目目录
@@ -1408,15 +1570,15 @@ function registerProjectIpcHandlers(deps) {
       }
 
       // 复制项目文件到新位置
-      if (fs.existsSync(sourceProjectFile)) {
-        fs.copyFileSync(sourceProjectFile, targetProjectFile);
-        console.log(`✅ Copied project file: ${sourceProjectFile} → ${targetProjectFile}`);
+      if (fs.existsSync(safeSourceProjectFile)) {
+        fs.copyFileSync(safeSourceProjectFile, targetProjectFile);
+        console.log(`✅ Copied project file: ${safeSourceProjectFile} → ${targetProjectFile}`);
       }
 
       // 复制数据文件夹内容（如果源数据文件夹存在且不同于目标目录）
-      if (fs.existsSync(sourceDataFolder) && sourceDataFolder !== targetProjectDir) {
-        await copyDirectoryRecursive(sourceDataFolder, targetProjectDir);
-        console.log(`✅ Copied data folder: ${sourceDataFolder} → ${targetProjectDir}`);
+      if (fs.existsSync(safeSourceDataFolder) && safeSourceDataFolder !== targetProjectDir) {
+        await copyDirectoryRecursive(safeSourceDataFolder, targetProjectDir);
+        console.log(`✅ Copied data folder: ${safeSourceDataFolder} → ${targetProjectDir}`);
       }
 
       return {
@@ -1924,6 +2086,10 @@ function registerProjectIpcHandlers(deps) {
         properties: ['openDirectory'],
         title: 'Select Output Directory',
       });
+      rememberApprovedDialogPaths(result, {
+        source: 'user-directory-dialog',
+        operation: 'selectDirectory',
+      });
 
       return {
         success: true,
@@ -2091,12 +2257,20 @@ function registerProjectIpcHandlers(deps) {
         const http = require('http');
         const fs = require('fs');
         const path = require('path');
+        const urlObj = new URL(url);
+
+        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+          throw new Error('Only HTTP and HTTPS downloads are allowed');
+        }
 
         // If project info is provided, download to project directory with intelligent categorization
-        let finalOutputPath = outputPath;
+        let finalOutputPath = assertAllowedFileAccess(app, outputPath, { operation: 'download file' });
         if (projectInfo && projectInfo.dataFolderPath) {
+          const safeProjectDataPath = assertAllowedFileAccess(app, projectInfo.dataFolderPath, {
+            operation: 'download project directory',
+          });
           // Determine file category based on extension, URL, and database type
-          const fileName = path.basename(outputPath);
+          const fileName = path.basename(finalOutputPath);
 
           // Extract database type from enhanced project info or URL/filename patterns
           let databaseType = null;
@@ -2123,41 +2297,59 @@ function registerProjectIpcHandlers(deps) {
           let targetDir;
           if (category) {
             // Create categorized subdirectory
-            targetDir = path.join(projectInfo.dataFolderPath, category);
+            targetDir = assertAllowedFileAccess(app, path.join(safeProjectDataPath, category), {
+              operation: 'download category directory',
+            });
             console.log(
               `📁 Intelligent categorization: ${fileName} -> ${category}/ (database: ${databaseType || 'auto-detected'})`
             );
           } else {
             // Place in root directory for unclassifiable files
-            targetDir = projectInfo.dataFolderPath;
+            targetDir = safeProjectDataPath;
             console.log(`📁 Root directory placement: ${fileName} (unclassifiable type)`);
           }
 
           if (!fs.existsSync(targetDir)) {
             fs.mkdirSync(targetDir, { recursive: true });
           }
-          finalOutputPath = path.join(targetDir, fileName);
+          finalOutputPath = assertAllowedFileAccess(app, path.join(targetDir, fileName), {
+            operation: 'download target file',
+          });
         }
 
         // 确保输出目录存在
-        const outputDir = path.dirname(finalOutputPath);
+        const outputDir = assertAllowedFileAccess(app, path.dirname(finalOutputPath), {
+          operation: 'download output directory',
+        });
         if (!fs.existsSync(outputDir)) {
           fs.mkdirSync(outputDir, { recursive: true });
         }
 
         // 选择适当的协议
-        const client = url.startsWith('https:') ? https : http;
+        const client = urlObj.protocol === 'https:' ? https : http;
 
         const file = fs.createWriteStream(finalOutputPath);
 
         const request = client.get(url, response => {
           // 处理重定向
           if (response.statusCode === 301 || response.statusCode === 302) {
-            const redirectUrl = response.headers.location;
+            const redirectUrl = new URL(response.headers.location, urlObj).toString();
+            const redirectUrlObj = new URL(redirectUrl);
+            if (!['http:', 'https:'].includes(redirectUrlObj.protocol)) {
+              file.close();
+              if (fs.existsSync(finalOutputPath)) {
+                fs.unlinkSync(finalOutputPath);
+              }
+              resolve({
+                success: false,
+                error: 'Blocked unsafe download redirect protocol',
+              });
+              return;
+            }
             console.log(`Redirecting to: ${redirectUrl}`);
 
             // 递归处理重定向
-            const redirectClient = redirectUrl.startsWith('https:') ? https : http;
+            const redirectClient = redirectUrlObj.protocol === 'https:' ? https : http;
             const redirectRequest = redirectClient.get(redirectUrl, redirectResponse => {
               if (redirectResponse.statusCode === 200) {
                 redirectResponse.pipe(file);
@@ -2208,7 +2400,9 @@ function registerProjectIpcHandlers(deps) {
                 });
               } else {
                 file.close();
-                fs.unlinkSync(finalOutputPath); // 删除空文件
+                if (fs.existsSync(finalOutputPath)) {
+                  fs.unlinkSync(finalOutputPath); // 删除空文件
+                }
                 resolve({
                   success: false,
                   error: `HTTP ${redirectResponse.statusCode}: ${redirectResponse.statusMessage}`,
@@ -2218,7 +2412,9 @@ function registerProjectIpcHandlers(deps) {
 
             redirectRequest.on('error', error => {
               file.close();
-              fs.unlinkSync(finalOutputPath);
+              if (fs.existsSync(finalOutputPath)) {
+                fs.unlinkSync(finalOutputPath);
+              }
               resolve({
                 success: false,
                 error: error.message,
@@ -2272,7 +2468,9 @@ function registerProjectIpcHandlers(deps) {
             });
           } else {
             file.close();
-            fs.unlinkSync(finalOutputPath); // 删除空文件
+            if (fs.existsSync(finalOutputPath)) {
+              fs.unlinkSync(finalOutputPath); // 删除空文件
+            }
             resolve({
               success: false,
               error: `HTTP ${response.statusCode}: ${response.statusMessage}`,

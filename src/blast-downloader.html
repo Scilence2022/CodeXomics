@@ -475,11 +475,28 @@
     </div>
 
     <script>
-      const { shell, ipcRenderer } = require('electron');
-      const os = require('os');
-      const path = require('path');
-      const fs = require('fs');
-      const https = require('https');
+      const electronBridge = window.require ? window.require('electron') : null;
+      const ipcRenderer = window.ipcRenderer || electronBridge?.ipcRenderer || null;
+      const os =
+        window.os || {
+          platform: () => navigator.platform || 'unknown',
+          arch: () => (navigator.userAgentData?.architecture === 'arm' ? 'arm64' : 'x64'),
+          release: () => '',
+        };
+      const path =
+        window.path || {
+          basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '',
+          dirname: filePath => {
+            const normalized = String(filePath || '').replace(/\\/g, '/');
+            const index = normalized.lastIndexOf('/');
+            return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
+          },
+          join: (...parts) =>
+            parts
+              .filter(part => part !== undefined && part !== null && part !== '')
+              .join('/')
+              .replace(/\/+/g, '/'),
+        };
 
       // Global variables
       let downloadInProgress = false;
@@ -499,11 +516,22 @@
         initializeDownloader();
       });
 
-      function initializeDownloader() {
+      async function initializeDownloader() {
         logMessage('Initializing BLAST+ downloader...', 'info');
+        setupDownloadProgressListener();
         detectSystemInfo();
+        await determineSavePath();
         checkLatestVersion();
-        determineSavePath();
+      }
+
+      function setupDownloadProgressListener() {
+        if (!window.electronAPI?.onDownloadProgress) return;
+        window.electronAPI.onDownloadProgress(data => {
+          if (!downloadInProgress) return;
+          downloadedBytes = data.downloadedBytes || downloadedBytes;
+          totalBytes = data.totalBytes || totalBytes;
+          updateProgress(data.progress || 0, `Downloading: ${data.progress || 0}%`);
+        });
       }
 
       function detectSystemInfo() {
@@ -572,38 +600,28 @@
       }
 
       async function fetchLatestBlastVersion() {
-        return new Promise((resolve, reject) => {
-          const ftpUrl = 'https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/VERSION';
+        const ftpUrl = 'https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/VERSION';
+        const response = await fetch(ftpUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch version information: HTTP ${response.status}`);
+        }
 
-          https
-            .get(ftpUrl, res => {
-              let data = '';
-              res.on('data', chunk => (data += chunk));
-              res.on('end', () => {
-                try {
-                  const version = data.trim();
-                  const platform = os.platform();
-                  const arch = os.arch();
+        const version = (await response.text()).trim();
+        const platform = os.platform();
+        const arch = os.arch();
 
-                  let estimatedSize = '285 MB';
-                  if (platform === 'win32') {
-                    estimatedSize = arch === 'x64' ? '320 MB' : '290 MB';
-                  } else if (platform === 'darwin') {
-                    estimatedSize = arch === 'arm64' ? '275 MB' : '285 MB';
-                  }
+        let estimatedSize = '285 MB';
+        if (platform === 'win32') {
+          estimatedSize = arch === 'x64' ? '320 MB' : '290 MB';
+        } else if (platform === 'darwin') {
+          estimatedSize = arch === 'arm64' ? '275 MB' : '285 MB';
+        }
 
-                  resolve({
-                    version: version,
-                    releaseDate: new Date().toISOString().split('T')[0],
-                    size: estimatedSize,
-                  });
-                } catch (error) {
-                  reject(new Error('Failed to parse version information'));
-                }
-              });
-            })
-            .on('error', reject);
-        });
+        return {
+          version: version,
+          releaseDate: new Date().toISOString().split('T')[0],
+          size: estimatedSize,
+        };
       }
 
       function determineDownloadUrl() {
@@ -642,11 +660,13 @@
         logMessage(`Download URL determined: ${filename}`, 'info');
       }
 
-      function determineSavePath() {
-        const homeDir = os.homedir();
-        const downloadsDir = path.join(homeDir, 'Downloads');
-
-        savePath = downloadsDir;
+      async function determineSavePath() {
+        try {
+          const result = await window.electronAPI?.getAppPaths?.();
+          savePath = result?.paths?.downloads || 'Downloads';
+        } catch (error) {
+          savePath = 'Downloads';
+        }
         document.getElementById('savePath').textContent = savePath;
         logMessage(`Save location: ${savePath}`, 'info');
       }
@@ -663,10 +683,10 @@
         // Update button states
         document.getElementById('downloadBtn').disabled = true;
         document.getElementById('downloadBtn').style.display = 'none';
-        document.getElementById('pauseBtn').disabled = false;
-        document.getElementById('pauseBtn').style.display = 'inline-flex';
-        document.getElementById('cancelBtn').disabled = false;
-        document.getElementById('cancelBtn').style.display = 'inline-flex';
+        document.getElementById('pauseBtn').disabled = true;
+        document.getElementById('pauseBtn').style.display = 'none';
+        document.getElementById('cancelBtn').disabled = true;
+        document.getElementById('cancelBtn').style.display = 'none';
         document.getElementById('progressContainer').style.display = 'block';
         document.getElementById('downloadedFileInfo').style.display = 'none';
 
@@ -702,110 +722,15 @@
       }
 
       function pauseDownload() {
-        if (!downloadInProgress || downloadPaused) return;
-
-        downloadPaused = true;
-
-        // Abort current request
-        if (currentRequest) {
-          currentRequest.destroy();
-          currentRequest = null;
-        }
-
-        // Close file stream
-        if (currentFileStream) {
-          currentFileStream.end();
-          currentFileStream = null;
-        }
-
-        logMessage('Download paused at ' + (downloadedBytes / 1024 / 1024).toFixed(2) + ' MB', 'warning');
-        updateStatus('Download paused', 'ready');
-
-        // Update button states
-        document.getElementById('pauseBtn').disabled = true;
-        document.getElementById('pauseBtn').style.display = 'none';
-        document.getElementById('resumeBtn').disabled = false;
-        document.getElementById('resumeBtn').style.display = 'inline-flex';
+        logMessage('Pause/resume is unavailable in the hardened downloader. The current download will continue.', 'warning');
       }
 
       async function resumeDownload() {
-        if (!downloadPaused) return;
-
-        downloadPaused = false;
-        logMessage('Resuming download from ' + (downloadedBytes / 1024 / 1024).toFixed(2) + ' MB', 'info');
-        updateStatus('Downloading...', 'downloading');
-
-        // Update button states
-        document.getElementById('resumeBtn').disabled = true;
-        document.getElementById('resumeBtn').style.display = 'none';
-        document.getElementById('pauseBtn').disabled = false;
-        document.getElementById('pauseBtn').style.display = 'inline-flex';
-
-        try {
-          const filePath = await downloadBlastPackage(true);
-
-          if (!downloadPaused) {
-            downloadedFilePath = filePath;
-            const fileName = path.basename(filePath);
-
-            document.getElementById('downloadedFileName').textContent = fileName;
-            document.getElementById('downloadedFilePath').textContent = filePath;
-            document.getElementById('downloadedFileInfo').style.display = 'block';
-            document.getElementById('openFolderBtn').disabled = false;
-
-            logMessage('BLAST+ download completed successfully!', 'success');
-            updateStatus('Download complete', 'complete');
-
-            resetDownloadButtons();
-          }
-        } catch (error) {
-          if (error.message !== 'Download paused' && error.message !== 'Download cancelled') {
-            logMessage('Download failed: ' + error.message, 'error');
-            updateStatus('Download failed', 'error');
-            resetDownloadButtons();
-          }
-        } finally {
-          if (!downloadPaused) {
-            downloadInProgress = false;
-          }
-        }
+        logMessage('Resume is unavailable because downloads are handled by the main process.', 'warning');
       }
 
       function cancelDownload() {
-        if (!downloadInProgress) return;
-
-        // Abort current request
-        if (currentRequest) {
-          currentRequest.destroy();
-          currentRequest = null;
-        }
-
-        // Close file stream
-        if (currentFileStream) {
-          currentFileStream.end();
-          currentFileStream = null;
-        }
-
-        // Delete partial file
-        if (tempFilePath && fs.existsSync(tempFilePath)) {
-          try {
-            fs.unlinkSync(tempFilePath);
-            logMessage('Partial download file deleted', 'info');
-          } catch (error) {
-            logMessage('Failed to delete partial file: ' + error.message, 'warning');
-          }
-        }
-
-        downloadInProgress = false;
-        downloadPaused = false;
-        downloadedBytes = 0;
-        totalBytes = 0;
-        tempFilePath = null;
-
-        logMessage('Download cancelled', 'warning');
-        updateStatus('Download cancelled', 'ready');
-
-        resetDownloadButtons();
+        logMessage('Cancel is unavailable once the main-process download has started.', 'warning');
       }
 
       function resetDownloadButtons() {
@@ -822,193 +747,53 @@
       async function downloadBlastPackage(resume = false) {
         logMessage(`${resume ? 'Resuming' : 'Starting'} download from ${downloadUrl}`, 'info');
 
-        return new Promise((resolve, reject) => {
-          const filename = path.basename(downloadUrl);
-          const filePath = path.join(savePath, filename);
-          tempFilePath = filePath + '.download';
+        if (!window.electronAPI?.downloadInternetFile) {
+          throw new Error('Main-process download API is unavailable');
+        }
 
-          logMessage(`Saving to: ${filePath}`, 'info');
+        const filename = path.basename(downloadUrl);
+        let activeUrl = downloadUrl;
 
-          // Check if complete file already exists
-          if (fs.existsSync(filePath) && !resume) {
-            logMessage(`File already exists, verifying...`, 'info');
-            const stats = fs.statSync(filePath);
-            if (stats.size > 100 * 1024 * 1024) {
-              logMessage(`Using existing file: ${filename}`, 'success');
-              updateProgress(100, 'Download complete');
-              resolve(filePath);
-              return;
-            } else {
-              logMessage(`Existing file incomplete, re-downloading...`, 'warning');
-              fs.unlinkSync(filePath);
-            }
-          }
-
-          // Check for partial download
-          let startByte = 0;
-          if (resume && fs.existsSync(tempFilePath)) {
-            const stats = fs.statSync(tempFilePath);
-            startByte = stats.size;
-            downloadedBytes = startByte;
-            logMessage(`Found partial download: ${(startByte / 1024 / 1024).toFixed(2)} MB`, 'info');
-          } else if (!resume && fs.existsSync(tempFilePath)) {
-            // Clean up old partial downloads
-            fs.unlinkSync(tempFilePath);
-            downloadedBytes = 0;
-          }
-
-          // Create or append to file stream
-          const fileOptions = resume && startByte > 0 ? { flags: 'a' } : { flags: 'w' };
-          currentFileStream = fs.createWriteStream(tempFilePath, fileOptions);
-
-          // Prepare request options with range header
-          const requestOptions = {
-            headers: startByte > 0 ? { Range: `bytes=${startByte}-` } : {},
-          };
-
-          currentRequest = https.get(downloadUrl, requestOptions, response => {
-            // Handle redirects
-            if (response.statusCode === 302 || response.statusCode === 301) {
-              logMessage(`Following redirect...`, 'info');
-              currentRequest = https.get(response.headers.location, requestOptions, handleResponse);
-              return;
-            }
-
-            handleResponse(response);
+        for (let attempt = 0; attempt < 5; attempt++) {
+          logMessage(`Saving to: ${path.join(savePath, filename)}`, 'info');
+          const result = await window.electronAPI.downloadInternetFile({
+            url: activeUrl,
+            destinationPath: savePath,
+            filename,
           });
 
-          function handleResponse(response) {
-            // Check for partial content or full content
-            if (response.statusCode !== 200 && response.statusCode !== 206) {
-              currentFileStream.close();
-              fs.unlink(tempFilePath, () => {});
-              reject(new Error(`Download failed: HTTP ${response.statusCode}`));
-              return;
-            }
-
-            // Get total size
-            if (response.statusCode === 206) {
-              // Partial content - parse content-range header
-              const contentRange = response.headers['content-range'];
-              if (contentRange) {
-                const match = contentRange.match(/bytes\s+(\d+)-(\d+)\/(\d+)/);
-                if (match) {
-                  totalBytes = parseInt(match[3]);
-                }
-              }
-            } else {
-              // Full content
-              totalBytes = parseInt(response.headers['content-length'] || '0');
-            }
-
-            let lastLogTime = 0;
-
-            logMessage(
-              `${resume ? 'Resuming' : 'Starting'} download: ${(totalBytes / 1024 / 1024).toFixed(1)}MB total, ${(downloadedBytes / 1024 / 1024).toFixed(1)}MB downloaded`,
-              'info'
-            );
-
-            response.on('data', chunk => {
-              if (downloadPaused) {
-                response.destroy();
-                return;
-              }
-
-              downloadedBytes += chunk.length;
-              const now = Date.now();
-
-              if (totalBytes > 0) {
-                const percent = ((downloadedBytes / totalBytes) * 100).toFixed(1);
-                updateProgress(percent, `Downloading: ${percent}%`);
-
-                if (now - lastLogTime > 2000) {
-                  const mbDownloaded = (downloadedBytes / 1024 / 1024).toFixed(1);
-                  const mbTotal = (totalBytes / 1024 / 1024).toFixed(1);
-                  logMessage(`Download progress: ${percent}% (${mbDownloaded}MB/${mbTotal}MB)`, 'info');
-                  lastLogTime = now;
-                }
-              }
-            });
-
-            response.pipe(currentFileStream);
-
-            currentFileStream.on('finish', () => {
-              currentFileStream.close();
-
-              if (downloadPaused) {
-                logMessage('Download paused - partial file saved', 'info');
-                reject(new Error('Download paused'));
-                return;
-              }
-
-              // Rename temp file to final file
-              try {
-                if (fs.existsSync(filePath)) {
-                  fs.unlinkSync(filePath);
-                }
-                fs.renameSync(tempFilePath, filePath);
-
-                const finalSize = fs.statSync(filePath).size;
-                logMessage(`Download completed: ${filename} (${(finalSize / 1024 / 1024).toFixed(1)}MB)`, 'success');
-                updateProgress(100, 'Download complete');
-
-                // Clean up
-                currentRequest = null;
-                currentFileStream = null;
-                tempFilePath = null;
-
-                resolve(filePath);
-              } catch (error) {
-                reject(new Error(`Failed to finalize download: ${error.message}`));
-              }
-            });
-
-            currentFileStream.on('error', error => {
-              fs.unlink(tempFilePath, () => {});
-              reject(new Error(`File write error: ${error.message}`));
-            });
+          if (result?.redirectUrl) {
+            activeUrl = new URL(result.redirectUrl, activeUrl).toString();
+            logMessage(`Following redirect to: ${activeUrl}`, 'info');
+            continue;
           }
 
-          currentRequest.on('error', error => {
-            if (currentFileStream) {
-              currentFileStream.close();
-            }
+          if (!result?.success) {
+            throw new Error(result?.error || 'Download failed');
+          }
 
-            if (!downloadPaused) {
-              fs.unlink(tempFilePath, () => {});
-              reject(new Error(`Download error: ${error.message}`));
-            } else {
-              reject(new Error('Download paused'));
-            }
-          });
+          updateProgress(100, 'Download complete');
+          const sizeText = result.fileSize ? ` (${(result.fileSize / 1024 / 1024).toFixed(1)}MB)` : '';
+          logMessage(`Download completed: ${result.filename || filename}${sizeText}`, 'success');
+          return result.filePath;
+        }
 
-          currentRequest.setTimeout(30000, () => {
-            currentRequest.destroy();
-            if (currentFileStream) {
-              currentFileStream.close();
-            }
-
-            if (!downloadPaused) {
-              fs.unlink(tempFilePath, () => {});
-              reject(new Error('Download timeout (30 seconds)'));
-            }
-          });
-        });
+        throw new Error('Too many download redirects');
       }
 
-      function openDownloadedFile() {
+      async function openDownloadedFile() {
         if (downloadedFilePath) {
-          shell.openPath(downloadedFilePath);
-          logMessage('Opening downloaded file...', 'info');
+          await window.electronAPI?.openFolderInExplorer?.(path.dirname(downloadedFilePath));
+          logMessage('Opened downloaded file location', 'info');
         }
       }
 
-      function openDownloadFolder() {
+      async function openDownloadFolder() {
         if (downloadedFilePath) {
-          shell.showItemInFolder(downloadedFilePath);
+          await window.electronAPI?.openFolderInExplorer?.(path.dirname(downloadedFilePath));
           logMessage('Opened download location', 'info');
         } else {
-          shell.openPath(savePath);
+          await window.electronAPI?.openFolderInExplorer?.(savePath);
           logMessage('Opened downloads folder', 'info');
         }
       }
