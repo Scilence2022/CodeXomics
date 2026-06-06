@@ -372,10 +372,10 @@ class BlastConfigManager {
     if (this.config.blastExecutablePath) {
       // Update the Current Configuration display
       configDiv.innerHTML = `
-                <div style="margin-bottom: 8px;"><strong>Executable Path:</strong> ${this.config.blastExecutablePath}</div>
-                ${this.config.blastVersion ? `<div style="margin-bottom: 8px;"><strong>Version:</strong> v${this.config.blastVersion}</div>` : ''}
-                ${this.config.lastDetection ? `<div style="margin-bottom: 8px;"><strong>Last Detection:</strong> ${new Date(this.config.lastDetection).toLocaleString()}</div>` : ''}
-                ${this.config.detectedPaths?.directory ? `<div><strong>Installation Directory:</strong> ${this.config.detectedPaths.directory}</div>` : ''}
+                <div class="config-row"><strong>Executable Path:</strong> ${this.config.blastExecutablePath}</div>
+                ${this.config.blastVersion ? `<div class="config-row"><strong>Version:</strong> v${this.config.blastVersion}</div>` : ''}
+                ${this.config.lastDetection ? `<div class="config-row"><strong>Last Detection:</strong> ${new Date(this.config.lastDetection).toLocaleString()}</div>` : ''}
+                ${this.config.detectedPaths?.directory ? `<div class="config-row"><strong>Installation Directory:</strong> ${this.config.detectedPaths.directory}</div>` : ''}
             `;
 
       // Populate the manual input field with saved path

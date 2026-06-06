@@ -34,6 +34,25 @@ let arrangeMainWindowFocus;
 let arrangeProjectManagerFocus;
 let arrangeWindowsVertical;
 let arrangeWindowsCascade;
+
+function isMainGenomeWindow(win) {
+  return !!(win && !win.isDestroyed() && win.windowId);
+}
+
+function restoreMainMenuAfterToolWindow(toolName, reason) {
+  setTimeout(() => {
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    const currentMainWindow =
+      (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) ||
+      (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
+
+    if (isMainGenomeWindow(focusedWindow) || (!focusedWindow && currentMainWindow)) {
+      currentActiveWindow = focusedWindow || currentMainWindow;
+      createMenu();
+      console.log(`Restored main menu after ${toolName} ${reason}`);
+    }
+  }, 50);
+}
 let resetWindowPositions;
 
 const genomeFileDialogFilters = [
@@ -987,11 +1006,8 @@ function createToolWindowMenu(toolWindow, toolName) {
   toolWindow.on('blur', () => {
     if (currentActiveWindow === toolWindow) {
       currentActiveWindow = null;
-      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()) {
-        createMenu();
-        console.log(`Restored main menu after ${toolName} blur`);
-      }
     }
+    restoreMainMenuAfterToolWindow(toolName, 'blur');
   });
 
   // 当窗口关闭时清理
@@ -999,11 +1015,8 @@ function createToolWindowMenu(toolWindow, toolName) {
     toolMenuTemplates.delete(toolWindow.id);
     if (currentActiveWindow === toolWindow) {
       currentActiveWindow = null;
-      // 恢复到主窗口菜单
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        createMenu(); // 重新创建主窗口菜单
-      }
     }
+    restoreMainMenuAfterToolWindow(toolName, 'close');
   });
 
   // 如果这是当前活动窗口，立即设置菜单
