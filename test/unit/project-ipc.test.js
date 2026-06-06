@@ -70,4 +70,12 @@ describe('Project IPC Module', () => {
   it('should use deps parameter pattern', () => {
     expect(content).toContain('function registerProjectIpcHandlers(deps)');
   });
+
+  it('createNewMainWindow should update the shared active-window tracker', () => {
+    expect(content).toContain('const setActiveMainWindow = win =>');
+    expect(content).toContain("typeof deps.setCurrentActiveWindow === 'function'");
+    expect(content).toContain('deps.setCurrentActiveWindow(win)');
+    expect(content).toContain("newMainWindow.webContents.on('focus'");
+    expect(content).toContain('clearActiveMainWindow(newMainWindow)');
+  });
 });

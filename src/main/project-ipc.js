@@ -62,6 +62,7 @@ function assertSafeProjectRelativePath(value, label = 'relative path') {
  * @param {Function} deps.unregisterGenomeWindow - Unregister a genome window
  * @param {Function} deps.cleanupWindowRegistration - Cleanup window registration
  * @param {BrowserWindow} deps.currentActiveWindow - Currently active window
+ * @param {Function} deps.setCurrentActiveWindow - Set current active window reference
  * @param {Function} deps.createMenu - Menu creation function
  * @param {Function} deps.createToolWindowMenu - Tool window menu creation
  * @param {Function} deps.getCurrentMainWindow - Get current main window reference
@@ -75,11 +76,31 @@ function registerProjectIpcHandlers(deps) {
     registerGenomeWindow,
     unregisterGenomeWindow,
     cleanupWindowRegistration,
-    currentActiveWindow,
     createMenu,
     createToolWindowMenu,
     getCurrentMainWindow,
   } = deps;
+
+  const setActiveMainWindow = win => {
+    if (typeof deps.setCurrentActiveWindow === 'function') {
+      deps.setCurrentActiveWindow(win);
+    } else {
+      deps.currentActiveWindow = win;
+    }
+  };
+
+  const clearActiveMainWindow = win => {
+    if (typeof deps.getCurrentActiveWindow === 'function' && typeof deps.setCurrentActiveWindow === 'function') {
+      if (deps.getCurrentActiveWindow() === win) {
+        deps.setCurrentActiveWindow(null);
+      }
+      return;
+    }
+
+    if (deps.currentActiveWindow === win) {
+      deps.currentActiveWindow = null;
+    }
+  };
 
   // Handler for showing project open dialog
   ipcMain.handle('show-project-open-dialog', async (event, projectName) => {
@@ -733,7 +754,7 @@ function registerProjectIpcHandlers(deps) {
         newMainWindow.show();
         // Set focus to new window and ensure proper menu
         newMainWindow.focus();
-        deps.currentActiveWindow = newMainWindow;
+        setActiveMainWindow(newMainWindow);
         deps.createMenu(); // Set main window menu immediately
         console.log(`📋 [createNewMainWindow] Window ${windowId} shown and focused with main menu set`);
       });
@@ -743,10 +764,18 @@ function registerProjectIpcHandlers(deps) {
 
       // Handle window focus to manage menu properly
       newMainWindow.on('focus', () => {
-        if (deps.currentActiveWindow !== newMainWindow) {
-          deps.currentActiveWindow = newMainWindow;
+        if (typeof deps.getCurrentActiveWindow !== 'function' || deps.getCurrentActiveWindow() !== newMainWindow) {
+          setActiveMainWindow(newMainWindow);
           deps.createMenu(); // Set main window menu when focused
           console.log(`📋 [createNewMainWindow] Window ${windowId} focused - set main menu`);
+        }
+      });
+
+      newMainWindow.webContents.on('focus', () => {
+        if (typeof deps.getCurrentActiveWindow !== 'function' || deps.getCurrentActiveWindow() !== newMainWindow) {
+          setActiveMainWindow(newMainWindow);
+          deps.createMenu(); // Set main window menu when focused
+          console.log(`📋 [createNewMainWindow] Window ${windowId} webContents focused - set main menu`);
         }
       });
 
@@ -754,9 +783,7 @@ function registerProjectIpcHandlers(deps) {
       newMainWindow.on('closed', () => {
         console.log(`📋 [createNewMainWindow] Window ${windowId} closed`);
         deps.unregisterGenomeWindow(windowId);
-        if (deps.currentActiveWindow === newMainWindow) {
-          deps.currentActiveWindow = null;
-        }
+        clearActiveMainWindow(newMainWindow);
       });
 
       // Handle errors
