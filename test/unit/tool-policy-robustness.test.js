@@ -35,7 +35,7 @@ function loadLLMContextServiceClass() {
 // Helper to load ChatManager in a node-compatible way
 function loadChatManagerClass() {
   const managerPath = path.join(process.cwd(), 'src/renderer/modules/ChatManager.js');
-  let content = fs.readFileSync(managerPath, 'utf-8');
+  const content = fs.readFileSync(managerPath, 'utf-8');
 
   // ChatManager has various browser/electron-specific dependencies at the top,
   // so we extract only the helper methods we want to test.
@@ -502,6 +502,131 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(service.messageHasMultiStepIntent('pan right')).toBe(false);
   });
 
+  it('detects multi-step intent from enumerated lists and multiple analysis verbs', () => {
+    const service = new LLMContextService({}, {});
+
+    // Comma + coordinating conjunction (Oxford-list) enumeration.
+    expect(
+      service.messageHasMultiStepIntent(
+        'calculate sequence statistics for the current genome, perform a genome-wide ' +
+          'codon usage analysis, and compute the overall genome gc content.'
+      )
+    ).toBe(true);
+    // Two distinct analysis verbs without a list conjunction.
+    expect(service.messageHasMultiStepIntent('calculate sequence statistics, perform codon analysis')).toBe(true);
+    expect(service.messageHasMultiStepIntent('calculate the gc content and export the region features')).toBe(true);
+
+    // Single analysis verb stays on the fast path even if it repeats.
+    expect(service.messageHasMultiStepIntent('analyze codon usage for the genome')).toBe(false);
+    expect(service.messageHasMultiStepIntent('calculate the gc content for the current region')).toBe(false);
+  });
+
+  it('should NOT terminate early on a compound analysis request that contains a single-execution keyword', () => {
+    const service = new LLMContextService({}, {});
+
+    // Regression: the message contains the substring "codon usage analysis"
+    // (a single-execution pattern), but it is one of three enumerated steps.
+    // Terminating after an exploratory get_genome_info call would drop the
+    // remaining analyses and the final summary.
+    const shouldTerminate = service.shouldTerminateAfterToolExecution(
+      [{ tool_name: 'get_genome_info', parameters: {} }],
+      [{ tool: 'get_genome_info', result: { success: true, genomeInfo: { length: 4641652 } } }],
+      'Calculate sequence statistics for the current genome, perform a genome-wide ' +
+        'codon usage analysis, and compute the overall genome GC content.'
+    );
+
+    expect(shouldTerminate).toBe(false);
+  });
+
+  it('renders get_genome_info as a readable summary instead of raw JSON', () => {
+    const service = new LLMContextService({}, {});
+
+    const response = service.generateSingleToolResponse(
+      { tool_name: 'get_genome_info', parameters: {} },
+      {
+        result: {
+          success: true,
+          genomeInfo: {
+            name: 'Unknown',
+            length: 4641652,
+            loadedFiles: [{ name: 'ECOLI.gbk', type: 'GenBank' }],
+            chromosomes: ['U00096'],
+            annotations: { hasData: false, totalFeatures: 0, featureCounts: {} },
+            statistics: { chromosomeStats: { U00096: { length: 4641652, gcPercent: 50.79 } } },
+          },
+        },
+      }
+    );
+
+    expect(response).toContain('Genome Information');
+    expect(response).toContain('4,641,652 bp');
+    expect(response).toContain('U00096');
+    expect(response).toContain('50.79% GC');
+    expect(response).toContain('ECOLI.gbk');
+    // Must NOT be a raw JSON dump.
+    expect(response).not.toContain('```json');
+    expect(response).not.toContain('Full Results');
+  });
+
+  it('renders compute_gc as a readable summary instead of raw JSON', () => {
+    const service = new LLMContextService({}, {});
+
+    const response = service.generateSingleToolResponse(
+      { tool_name: 'compute_gc', parameters: {} },
+      { result: { gcContent: 50.79, chromosome: 'U00096', start: 1, end: 4641652, length: 4641652 } }
+    );
+
+    expect(response).toContain('GC Content');
+    expect(response).toContain('50.79%');
+    expect(response).toContain('AT content: 49.21%');
+    expect(response).not.toContain('```json');
+  });
+
+  it('renders the Dynamic Tool registration listing as a categorized visualization', () => {
+    const service = new LLMContextService({}, {});
+
+    const html = service.renderAvailableToolsVisualization({
+      success: true,
+      tool: 'list_available_tools',
+      total_tools: 3,
+      categories: {
+        navigation: {
+          name: 'Navigation & State Management',
+          count: 2,
+          tools: [
+            { name: 'navigate_to_position', description: 'Move the browser to a region' },
+            { name: 'zoom_in', description: 'Zoom into the current view' },
+          ],
+        },
+        sequence: {
+          name: 'Sequence Analysis',
+          count: 1,
+          tools: [{ name: 'compute_gc', description: 'Compute GC content' }],
+        },
+      },
+    });
+
+    expect(html).toContain('Available Tools (3)');
+    expect(html).toContain('Navigation &amp; State Management'); // HTML-escaped category name
+    expect(html).toContain('navigate_to_position');
+    expect(html).toContain('Compute GC content'); // descriptions surfaced
+    // Readable visualization, not a raw dump.
+    expect(html).not.toContain('```');
+    expect(html).not.toContain('Object(');
+  });
+
+  it('renders the tools visualization from a flat tool list and handles the empty case', () => {
+    const service = new LLMContextService({}, {});
+
+    const flat = service.renderAvailableToolsVisualization({ tools: ['alpha_tool', 'beta_tool'] });
+    expect(flat).toContain('All Tools');
+    expect(flat).toContain('alpha_tool');
+    expect(flat).toContain('beta_tool');
+
+    const empty = service.renderAvailableToolsVisualization({ categories: {} });
+    expect(empty).toContain('No tools available');
+  });
+
   it('should support case-insensitive track names in LLMContextService policy validation', () => {
     const mockChatManager = {
       configManager: {
@@ -520,7 +645,7 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     const toolLower = { tool_name: 'toggle_track', parameters: { trackName: 'blast', action: 'show' } };
 
     const originalGetElementById = global.document.getElementById;
-    let checkedState = true;
+    const checkedState = true;
     global.document.getElementById = id => {
       if (id === 'trackBlast') {
         return { checked: checkedState };

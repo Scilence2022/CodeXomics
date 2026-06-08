@@ -13,13 +13,15 @@ class LLMContextService {
     console.log('formatToolResult called with:', { toolName, parameters, result });
 
     switch (toolName) {
-      case 'navigate_to_position':
+      case 'navigate_to_position': {
         const rangeInfo = result.usedDefaultRange ? ' (2000bp default range)' : '';
         return `✅ Navigated to ${result.chromosome}:${result.start}-${result.end}${rangeInfo}`;
+      }
 
-      case 'open_new_tab':
+      case 'open_new_tab': {
         const tabRangeInfo = result.usedDefaultRange ? ' (2000bp default range)' : '';
         return `🗂️ Opened new tab: ${result.title}${tabRangeInfo}`;
+      }
 
       case 'switch_to_tab':
         return `🗂️ Switched to tab: ${result.tab_title || result.message}`;
@@ -160,7 +162,7 @@ class LLMContextService {
             : '• No restriction sites found')
         );
 
-      case 'virtual_digest':
+      case 'virtual_digest': {
         const digestHeader = `Virtual Digest with ${result.enzymes.join(', ')}:\n`;
         const digestStats =
           `• Total cut sites: ${result.totalSites}\n` +
@@ -186,8 +188,9 @@ class LLMContextService {
                 .join('\n')}`
             : '';
         return digestHeader + digestStats + enzymeInfo + fragmentInfo;
+      }
 
-      case 'simulate_gel_electrophoresis':
+      case 'simulate_gel_electrophoresis': {
         if (result.success === false) {
           return `⚠️ ${result.error}\n💡 ${result.hint || ''}`;
         }
@@ -208,8 +211,9 @@ class LLMContextService {
                 )}${result.fragmentSizes.length > 15 ? `\n  ... and ${result.fragmentSizes.length - 15} more` : ''}`
             : '';
         return gelHeader + gelStats + gelFragments;
+      }
 
-      case 'sequence_statistics':
+      case 'sequence_statistics': {
         let statsOutput = `Sequence Statistics for ${result.region}:\n`;
         if (result.statistics.composition) {
           const comp = result.statistics.composition;
@@ -224,6 +228,7 @@ class LLMContextService {
           statsOutput += `• AT/GC skew analysis: ${result.statistics.skew.length} data points\n`;
         }
         return statsOutput;
+      }
 
       case 'codon_usage_analysis':
         return (
@@ -318,7 +323,7 @@ class LLMContextService {
             : '')
         );
 
-      case 'get_file_info':
+      case 'get_file_info': {
         let fileOutput = `File Information ${result.fileType !== 'all' ? `(${result.fileType})` : ''}:\n`;
 
         if (result.fileInfo.genome) {
@@ -340,6 +345,7 @@ class LLMContextService {
         }
 
         return fileOutput;
+      }
 
       case 'export_region_features':
         return (
@@ -851,7 +857,42 @@ class LLMContextService {
       ' && ',
     ];
 
-    return sequencingCues.some(cue => message.includes(cue));
+    if (sequencingCues.some(cue => message.includes(cue))) return true;
+
+    // Enumerated actions written as a list: "do X, do Y, and/or/then do Z".
+    // A comma immediately followed by a coordinating conjunction strongly signals
+    // multiple discrete steps, even when a clause contains a single-execution
+    // keyword (e.g. "... a genome-wide codon usage analysis, and compute the GC
+    // content" must not be treated as a one-shot "codon usage analysis" command).
+    if (/,\s*(?:and|or|then)\s/.test(message)) return true;
+
+    // Multiple DISTINCT analysis/action verbs (e.g. "calculate ... perform ...
+    // compute ...") indicate a compound request. Requiring two different verbs
+    // avoids misclassifying a single command that merely repeats one verb. The
+    // list is intentionally limited to analysis verbs so single search/navigation
+    // commands ("find ...", "navigate ...", "show ...") stay eligible for the
+    // single-execution fast path.
+    const actionVerbs = [
+      'calculate',
+      'compute',
+      'perform',
+      'analyze',
+      'analyse',
+      'export',
+      'translate',
+      'design',
+      'generate',
+      'measure',
+    ];
+    const distinctVerbs = new Set();
+    for (const verb of actionVerbs) {
+      if (new RegExp(`\\b${verb}\\b`).test(message)) {
+        distinctVerbs.add(verb);
+        if (distinctVerbs.size >= 2) return true;
+      }
+    }
+
+    return false;
   }
 
   normalizeParams(params) {
@@ -921,12 +962,7 @@ class LLMContextService {
   }
 
   shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults = []) {
-    return this.getToolExecutionPolicy().shouldAllowToolExecution(
-      tool,
-      conversationHistory,
-      currentRound,
-      toolResults
-    );
+    return this.getToolExecutionPolicy().shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults);
   }
 
   generateSingleToolResponse(tool, result) {
@@ -1451,6 +1487,73 @@ ${data.mostFrequentCodons
           return 'Genome-wide codon usage analysis completed, but no results were obtained.';
         }
 
+      case 'get_genome_info': {
+        const info = result.result?.genomeInfo || result.result;
+        if (!info || typeof info !== 'object') {
+          return 'Genome information retrieved, but no details were available.';
+        }
+
+        const formatBp = bp => (typeof bp === 'number' ? `${bp.toLocaleString()} bp` : 'Unknown');
+
+        let response = `🧬 **Genome Information**\n\n`;
+        response += `- **Name:** ${info.name || 'Unknown'}\n`;
+        response += `- **Total length:** ${formatBp(info.length)}\n`;
+
+        const chromosomes = Array.isArray(info.chromosomes) ? info.chromosomes : [];
+        if (chromosomes.length > 0) {
+          response += `- **Chromosomes (${chromosomes.length}):** ${chromosomes.join(', ')}\n`;
+        }
+
+        if (info.annotations) {
+          const total = info.annotations.totalFeatures || 0;
+          response += `- **Annotated features:** ${total.toLocaleString()}\n`;
+        }
+
+        const chromosomeStats = info.statistics?.chromosomeStats;
+        if (chromosomeStats && typeof chromosomeStats === 'object') {
+          response += `\n**Per-chromosome statistics:**\n`;
+          for (const [chrom, stats] of Object.entries(chromosomeStats)) {
+            const gc = typeof stats.gcPercent === 'number' ? `${stats.gcPercent}% GC` : 'GC n/a';
+            response += `- **${chrom}:** ${formatBp(stats.length)}, ${gc}\n`;
+          }
+        }
+
+        const loadedFiles = Array.isArray(info.loadedFiles) ? info.loadedFiles : [];
+        if (loadedFiles.length > 0) {
+          response += `\n**Loaded files (${loadedFiles.length}):**\n`;
+          for (const file of loadedFiles) {
+            response += `- ${file.name}${file.type ? ` (${file.type})` : ''}\n`;
+          }
+        }
+
+        return response;
+      }
+
+      case 'compute_gc': {
+        const gcData = result.result || {};
+        const gcValue = gcData.gcContent ?? gcData.gcPercent ?? gcData.gc ?? gcData.percentage;
+        if (gcValue === undefined || gcValue === null) {
+          return 'GC content calculation completed, but no value was returned.';
+        }
+
+        const gcNumber = Number(gcValue);
+        const gcDisplay = Number.isFinite(gcNumber) ? `${gcNumber.toFixed(2)}%` : `${gcValue}`;
+        const atDisplay = Number.isFinite(gcNumber) ? ` | AT content: ${(100 - gcNumber).toFixed(2)}%` : '';
+
+        let response = `🧬 **GC Content**\n\n- **GC content:** ${gcDisplay}${atDisplay}\n`;
+        const region =
+          gcData.chromosome && gcData.start !== undefined && gcData.end !== undefined
+            ? `${gcData.chromosome}:${gcData.start}-${gcData.end}`
+            : gcData.region;
+        if (region) {
+          response += `- **Region:** ${region}\n`;
+        }
+        if (typeof gcData.length === 'number') {
+          response += `- **Length analyzed:** ${gcData.length.toLocaleString()} bp\n`;
+        }
+        return response;
+      }
+
       default:
         // For unknown tools (including MCP tools), show full results if available
         if (result.result) {
@@ -1486,9 +1589,8 @@ ${data.mostFrequentCodons
                 `⏱️ **Created**: ${new Date(createdAt).toLocaleString()}\n\n` +
                 `🔄 The system will automatically update this message as the research progresses...`
               );
-            }
-            // If result has a summary or message, use it
-            else if (result.result.summary || result.result.message) {
+            } else if (result.result.summary || result.result.message) {
+              // If result has a summary or message, use it
               return `✅ **Tool Execution Results for ${tool.tool_name}**\n\n${result.result.summary || result.result.message}`;
             } else {
               // Otherwise, try to format the entire result
@@ -2343,6 +2445,82 @@ PLUGIN SYSTEM FUNCTIONS:
 ${this.chatManager.getPluginSystemInfo()}`;
   }
 
+  /**
+   * Render the Dynamic Tool registration system's available-tools listing as a
+   * readable, categorized HTML visualization.
+   *
+   * Accepts the result of `list_available_tools`, which may carry either a
+   * `categories` map ({ [key]: { name, count, tools: [{ name, description }] } })
+   * and/or a flat `tools` array. Falls back gracefully when only a flat list is
+   * present, and uses a self-contained HTML escaper so it works even when the
+   * ChatManager helper is unavailable (e.g. in unit tests).
+   *
+   * @param {{ total_tools?: number, categories?: object, tools?: Array }} data
+   * @returns {string} HTML markup
+   */
+  renderAvailableToolsVisualization(data) {
+    const escape = value => {
+      const str = String(value ?? '');
+      if (this.chatManager && typeof this.chatManager.escapeHtml === 'function') {
+        return this.chatManager.escapeHtml(str);
+      }
+      return str.replace(
+        /[&<>"']/g,
+        ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]
+      );
+    };
+
+    const categories = data && typeof data.categories === 'object' && data.categories ? data.categories : {};
+    let categoryEntries = Object.entries(categories);
+
+    // Fall back to a single synthetic category when only a flat tools list exists.
+    if (categoryEntries.length === 0 && Array.isArray(data?.tools) && data.tools.length > 0) {
+      categoryEntries = [['all', { name: 'All Tools', tools: data.tools }]];
+    }
+
+    const categoryToolCount = categoryEntries.reduce(
+      (sum, [, info]) => sum + (info.count ?? (info.tools?.length || 0)),
+      0
+    );
+    let totalTools = data?.total_tools;
+    if (totalTools === undefined || totalTools === null) {
+      totalTools = Array.isArray(data?.tools) && data.tools.length > 0 ? data.tools.length : categoryToolCount;
+    }
+
+    let html = `<div style="margin-top: 8px; padding: 12px; background: #f3f8ff; border-radius: 8px; border-left: 4px solid #2196F3;">`;
+    html += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.05em;"><i class="fas fa-toolbox"></i> Available Tools (${totalTools})</h3>`;
+
+    if (categoryEntries.length === 0) {
+      html += `<div style="color: #777;">No tools available.</div></div>`;
+      return html;
+    }
+
+    for (const [catKey, catInfo] of categoryEntries) {
+      const tools = Array.isArray(catInfo?.tools) ? catInfo.tools : [];
+      const count = catInfo?.count ?? tools.length;
+      const catName = catInfo?.name || catKey;
+
+      html += `<details style="margin: 6px 0;" open>`;
+      html += `<summary style="cursor: pointer; color: #1565C0; font-weight: 600;">${escape(catName)} <span style="color: #888; font-weight: 400;">(${count})</span></summary>`;
+      html += `<div style="margin: 6px 0 6px 12px;">`;
+      for (const tool of tools) {
+        const name = typeof tool === 'string' ? tool : tool?.name;
+        if (!name) continue;
+        const description = typeof tool === 'object' && tool.description ? tool.description : '';
+        html += `<div style="margin: 3px 0;">`;
+        html += `<code style="background: #e8f0fe; color: #1a3d6e; padding: 1px 5px; border-radius: 3px;">${escape(name)}</code>`;
+        if (description) {
+          html += `<span style="color: #555; font-size: 0.9em;"> — ${escape(description)}</span>`;
+        }
+        html += `</div>`;
+      }
+      html += `</div></details>`;
+    }
+
+    html += `</div>`;
+    return html;
+  }
+
   addToolResultMessage(toolResults) {
     const successCount = toolResults.filter(r => r.success).length;
     const failCount = toolResults.filter(r => !r.success).length;
@@ -2446,6 +2624,15 @@ ${this.chatManager.getPluginSystemInfo()}`;
             console.error('Error processing deep-gene-research result:', e);
             resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
           }
+        } else if (
+          result.tool === 'list_available_tools' &&
+          resultData &&
+          (resultData.categories || resultData.tools)
+        ) {
+          // Dynamic Tool registration system: render the available-tools listing as a
+          // readable, categorized visualization instead of a raw key-value/JSON dump.
+          resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
+          resultDisplay += this.renderAvailableToolsVisualization(resultData);
         } else {
           // Standard display for other tools
           resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
@@ -2468,8 +2655,9 @@ ${this.chatManager.getPluginSystemInfo()}`;
         }
       } else {
         resultDisplay += `<span style="color: #F44336;">Status: Failed</span>`;
-        if (result.error)
+        if (result.error) {
           resultDisplay += `<br><span style="color: #F44336; font-size: 0.9em;">Error: ${result.error}</span>`;
+        }
       }
 
       resultDisplay += `</div>`;

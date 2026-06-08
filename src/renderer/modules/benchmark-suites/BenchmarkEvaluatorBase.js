@@ -353,12 +353,71 @@ class BenchmarkEvaluatorBase {
    * @param {number} [timeoutMs] - Timeout for staleness check
    * @param {boolean} [earlyReturn=false] - If true, accept 'running' status as successful submission
    */
+  /**
+   * Return the list of tool executions for the current interaction, normalized to
+   * { toolName, parameters, status, startTime }.
+   *
+   * Primary source is the ToolExecutionTracker session. When that is empty — which is
+   * the case whenever the live execution path doesn't feed the tracker — we fall back
+   * to ChatManager.getLastExecutionData(), the same authoritative record the ChatBox
+   * relies on. This keeps every tracker-based evaluator working off real execution
+   * results instead of silently degrading to brittle response-text regex matching.
+   */
+  getTrackedExecutions() {
+    const tracker = window.chatManager && window.chatManager.toolExecutionTracker;
+    if (tracker && typeof tracker.getSessionExecutions === 'function') {
+      const sessionExecutions = tracker.getSessionExecutions();
+      if (Array.isArray(sessionExecutions) && sessionExecutions.length > 0) {
+        return sessionExecutions;
+      }
+    }
+    return this.deriveExecutionsFromExecutionData();
+  }
+
+  /**
+   * Build normalized tracker-style execution records from ChatManager.getLastExecutionData().
+   * Each executed function call is paired with its first unconsumed tool result (calls
+   * and results are recorded in execution order) to recover per-call success state.
+   */
+  deriveExecutionsFromExecutionData() {
+    const executionData =
+      window.chatManager &&
+      typeof window.chatManager.getLastExecutionData === 'function' &&
+      window.chatManager.getLastExecutionData();
+
+    if (!executionData || !Array.isArray(executionData.functionCalls)) {
+      return [];
+    }
+
+    const pendingResults = Array.isArray(executionData.toolResults) ? [...executionData.toolResults] : [];
+    const fallbackStart = executionData.startTime || Date.now();
+
+    return executionData.functionCalls
+      .map(call => {
+        const toolName = call.tool_name || call.toolName || call.tool;
+        let success = true;
+        const resultIndex = pendingResults.findIndex(r => (r.tool || r.tool_name) === toolName);
+        if (resultIndex !== -1) {
+          success = pendingResults[resultIndex].success !== false;
+          pendingResults.splice(resultIndex, 1);
+        }
+        const parsedTimestamp = call.timestamp ? Date.parse(call.timestamp) : NaN;
+        return {
+          toolName,
+          parameters: call.parameters || {},
+          status: success ? 'completed' : 'failed',
+          startTime: Number.isFinite(parsedTimestamp) ? parsedTimestamp : fallbackStart,
+          success,
+        };
+      })
+      .filter(exec => exec.toolName);
+  }
+
   checkToolExecutionTracker(expectedToolName, timeoutMs, earlyReturn = false) {
-    if (!window.chatManager || !window.chatManager.toolExecutionTracker) {
+    const recentExecutions = this.getTrackedExecutions();
+    if (recentExecutions.length === 0) {
       return { found: false };
     }
-    const tracker = window.chatManager.toolExecutionTracker;
-    const recentExecutions = tracker.getSessionExecutions();
     const effectiveTimeout =
       timeoutMs || (this.framework && this.framework.testTimeout) || BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT;
 
@@ -398,11 +457,10 @@ class BenchmarkEvaluatorBase {
   }
 
   getRecentToolMatches(expectedToolNames, timeoutMs = BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT, expectedParams = null) {
-    if (!window.chatManager || !window.chatManager.toolExecutionTracker) {
+    const recentExecutions = this.getTrackedExecutions();
+    if (recentExecutions.length === 0) {
       return { matched: [], unmatched: [...expectedToolNames], matchDetails: [] };
     }
-    const tracker = window.chatManager.toolExecutionTracker;
-    const recentExecutions = tracker.getSessionExecutions();
     const now = Date.now();
 
     const matched = [];
