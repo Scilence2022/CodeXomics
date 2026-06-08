@@ -859,7 +859,7 @@ class MemorySystem {
       if (memoryContext.context?.userPreferences) {
         const preferences = memoryContext.context.userPreferences;
         Object.keys(preferences).forEach(key => {
-          if (optimized.hasOwnProperty(key) && typeof preferences[key] === 'object') {
+          if (Object.prototype.hasOwnProperty.call(optimized, key) && typeof preferences[key] === 'object') {
             optimized[key] = { ...optimized[key], ...preferences[key] };
           }
         });
@@ -982,22 +982,6 @@ class MemorySystem {
   /**
    * Get optimization summary
    */
-  getOptimizationSummary(original, optimized) {
-    const optimizations = [];
-
-    Object.keys(optimized).forEach(key => {
-      if (original[key] !== optimized[key]) {
-        optimizations.push({
-          parameter: key,
-          original: original[key],
-          optimized: optimized[key],
-          changeType: this.classifyChange(original[key], optimized[key]),
-        });
-      }
-    });
-
-    return optimizations;
-  }
 
   /**
    * Classify the type of parameter change

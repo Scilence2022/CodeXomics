@@ -225,8 +225,9 @@ class NavigationManager {
     gb.displayGenomeView(chromosome, sequence);
 
     if (gb.genomeNavigationBar) gb.genomeNavigationBar.update();
-    if (gb.tabManager)
-      gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validatedEnd, { source: 'navigation' });
+    if (gb.tabManager) {
+gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validatedEnd, { source: 'navigation' });
+}
 
     return { success: true, chromosome, start: validatedStart, end: validatedEnd };
   }
@@ -339,7 +340,7 @@ class NavigationManager {
     // If range hasn't changed significantly, skip update
     if (Math.abs(newRange - currentRange) < 1) return;
 
-    let newStart, newEnd;
+    let newStart; let newEnd;
 
     if (this.wheelZoomConfig.zoomToCursor) {
       // Calculate cursor position within the genome browser
@@ -760,7 +761,7 @@ class NavigationManager {
     }
 
     const sequence = this.genomeBrowser.currentSequence[currentChr];
-    let start, end;
+    let start; let end;
 
     // Parse different formats: "1000", "1000-2000", "chr1:1000-2000"
     if (input.includes(':')) {
@@ -1345,7 +1346,7 @@ class NavigationManager {
 
     const positionChange = Math.round((deltaX * currentRange) / elementWidth);
 
-    let newStart, newEnd;
+    let newStart; let newEnd;
 
     if (this.circularMode) {
       // Circular mode: wrap positions around using modulo arithmetic
@@ -1701,7 +1702,7 @@ class NavigationManager {
 
       e.preventDefault();
 
-      let newEnd = newStart + currentRange;
+      const newEnd = newStart + currentRange;
 
       // In circular mode, newEnd can exceed sequence length (wrapping)
       this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
@@ -2591,7 +2592,7 @@ class NavigationManager {
   initializeModalDragResize(modal, modalContent) {
     let isDragging = false;
     let isResizing = false;
-    let startX, startY, startWidth, startHeight, startLeft, startTop;
+    let startX; let startY; let startWidth; let startHeight; let startLeft; let startTop;
 
     // Drag functionality
     const header = modalContent.querySelector('.modal-header');

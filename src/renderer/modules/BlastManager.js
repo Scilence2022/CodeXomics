@@ -1395,7 +1395,6 @@ class BlastManager {
           let databaseOutputPath = outputPath;
 
           // Validate file content
-          try {
             const fileInfo = await window.electronAPI?.getSelectedFileInfo?.(filePath);
             if (!fileInfo?.success) {
               throw new Error(fileInfo?.error || `Source file not found: ${filePath}`);
@@ -1455,9 +1454,6 @@ class BlastManager {
             this.appendLog(
               `✓ File validation passed: ${((fileInfo.info?.size || 0) / 1024).toFixed(2)} KB, ${sequences} sequences, first header: ${firstLine.substring(0, 50)}${firstLine.length > 50 ? '...' : ''}`
             );
-          } catch (error) {
-            throw error;
-          }
 
           try {
             await this.createDirectoryAsync(sourceDirectory);
@@ -1951,7 +1947,7 @@ class BlastManager {
         window.$(modal).modal('show');
 
         // Clean up modal when hidden
-        window.$(modal).on('hidden.bs.modal', function () {
+        window.$(modal).on('hidden.bs.modal', function() {
           modal.remove();
         });
       } else {
@@ -2104,7 +2100,7 @@ class BlastManager {
   }
 
   translateToProtein(nucleotideSeq, codonTable) {
-    let proteinSeq = '';
+    const proteinSeq = '';
 
     // Find all possible reading frames and take the longest ORF
     let longestORF = '';
@@ -6742,7 +6738,7 @@ class BlastManager {
     const isDescending = sortOrder?.textContent.includes('Desc');
 
     this.filteredHits.sort((a, b) => {
-      let valueA, valueB;
+      let valueA; let valueB;
 
       switch (sortBy) {
         case 'bitScore':

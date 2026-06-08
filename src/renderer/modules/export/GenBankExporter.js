@@ -279,10 +279,12 @@ class GenBankExporter {
     if (strain) content += `                     /strain="${strain}"\n`;
     if (sourceFeatures.host) content += `                     /host="${sourceFeatures.host}"\n`;
     if (sourceFeatures.country) content += `                     /country="${sourceFeatures.country}"\n`;
-    if (sourceFeatures.collection_date)
-      content += `                     /collection_date="${sourceFeatures.collection_date}"\n`;
-    if (sourceFeatures.isolation_source)
-      content += `                     /isolation_source="${sourceFeatures.isolation_source}"\n`;
+    if (sourceFeatures.collection_date) {
+content += `                     /collection_date="${sourceFeatures.collection_date}"\n`;
+}
+    if (sourceFeatures.isolation_source) {
+content += `                     /isolation_source="${sourceFeatures.isolation_source}"\n`;
+}
 
     // All other features
     if (features && features.length > 0) {

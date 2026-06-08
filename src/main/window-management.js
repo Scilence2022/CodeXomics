@@ -178,6 +178,33 @@ function getCurrentMainWindow() {
   return mainWindows.length > 0 ? mainWindows[0] : null;
 }
 
+// Helper functions for surfacing settings-related notifications to the renderer.
+// Mirrors the equivalent helpers in ipc-handlers.js; defined here because the
+// settings flows in this module call them directly.
+function showSettingsWarning(title, message) {
+  const win = getCurrentMainWindow();
+  if (win && win.webContents) {
+    win.webContents.send('show-notification', {
+      type: 'warning',
+      title,
+      message,
+      duration: 5000,
+    });
+  }
+}
+
+function showSettingsError(title, message) {
+  const win = getCurrentMainWindow();
+  if (win && win.webContents) {
+    win.webContents.send('show-notification', {
+      type: 'error',
+      title,
+      message,
+      duration: 8000,
+    });
+  }
+}
+
 // Helper function to safely send message to current main window
 
 function sendToCurrentMainWindow(channel, ...args) {

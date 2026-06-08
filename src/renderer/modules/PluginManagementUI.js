@@ -4756,7 +4756,7 @@ class PluginManagementUI {
     } catch (error) {
       console.error('❌ Failed to open Plugin Marketplace:', error);
 
-      let errorMessage = 'Failed to open Plugin Marketplace: ' + error.message;
+      const errorMessage = 'Failed to open Plugin Marketplace: ' + error.message;
       let suggestions = '';
 
       if (error.message.includes('not initialized') || error.message.includes('required')) {

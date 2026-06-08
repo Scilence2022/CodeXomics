@@ -245,7 +245,7 @@ class LLMBenchmarkFramework {
 
       // Calculate total test count for accurate progress tracking
       let totalTestCount = 0;
-      let completedTestCount = 0;
+      const completedTestCount = 0;
 
       for (const [suiteId, testSuite] of this.testSuites.entries()) {
         if (options.suites && !options.suites.includes(suiteId)) {
@@ -862,7 +862,7 @@ class LLMBenchmarkFramework {
       metrics: {},
     };
 
-    let partialTestResult = null;
+    const partialTestResult = null;
 
     try {
       // Determine timeout based on configuration
@@ -1048,7 +1048,7 @@ class LLMBenchmarkFramework {
       const llmInteractionResult = await this.sendTestInstruction(test.instruction, instructionOptions);
 
       // Handle both old format (string) and new format (object with interactionData)
-      let llmResponse, interactionData;
+      let llmResponse; let interactionData;
       if (typeof llmInteractionResult === 'string') {
         // Old format - just response string
         llmResponse = llmInteractionResult;
@@ -1762,11 +1762,10 @@ class LLMBenchmarkFramework {
       this.displayTestError(error, options);
 
       // Return error with interaction data
-      throw {
-        originalError: error,
-        interactionData: interactionData,
-        message: `LLM communication failed: ${error.message}`,
-      };
+      const wrappedError = new Error(`LLM communication failed: ${error.message}`);
+      wrappedError.originalError = error;
+      wrappedError.interactionData = interactionData;
+      throw wrappedError;
     }
   }
 
@@ -3389,7 +3388,7 @@ class LLMBenchmarkFramework {
 
     // Infer function type based on response content
     let inferredFunction = null;
-    let inferredParams = {};
+    const inferredParams = {};
 
     // Gene search patterns
     if (lowerResponse.includes('gene') || lowerResponse.includes('search')) {
@@ -3611,13 +3610,9 @@ class LLMBenchmarkFramework {
    * Capture tool executions from the current session
    */
   captureToolExecutions() {
-    try {
-      // This would need to be integrated with ChatManager's tool execution tracking
-      // For now, return empty array as placeholder
-      return [];
-    } catch (error) {
-      return [];
-    }
+    // This would need to be integrated with ChatManager's tool execution tracking
+    // For now, return empty array as placeholder
+    return [];
   }
 
   /**
@@ -3758,41 +3753,6 @@ class LLMBenchmarkFramework {
    * Calculate instruction complexity score (5-point scale)
    * CRITICAL FIX: Enforce 5-point scale as per memory requirements
    */
-  calculateInstructionComplexity(instruction) {
-    try {
-      let complexity = 1.0; // Base complexity (low end of 5-point scale)
-
-      // Base complexity from length (scale to 5-point system)
-      const lengthFactor = Math.min(1.5, instruction.length / 100); // Cap at 1.5 points
-      complexity += lengthFactor;
-
-      // Technical terms increase complexity (scale to 5-point system)
-      const technicalTerms = ['gene', 'protein', 'sequence', 'analysis', 'search', 'navigate', 'position'];
-      const foundTerms = technicalTerms.filter(term => instruction.toLowerCase().includes(term));
-      complexity += Math.min(1.5, foundTerms.length * 0.3); // Cap at 1.5 points
-
-      // Multiple actions increase complexity (scale to 5-point system)
-      const actionWords = ['and', 'then', 'also', 'additionally', 'furthermore'];
-      const foundActions = actionWords.filter(word => instruction.toLowerCase().includes(word));
-      complexity += Math.min(1.0, foundActions.length * 0.25); // Cap at 1.0 point
-
-      // Complex sentence structures
-      const sentences = instruction.split(/[.!?]+/).length;
-      if (sentences > 2) {
-        complexity += Math.min(0.5, (sentences - 2) * 0.1);
-      }
-
-      // Parameter specifications
-      const parameterPatterns = instruction.match(/["'][^"']+["']/g);
-      if (parameterPatterns && parameterPatterns.length > 0) {
-        complexity += Math.min(0.5, parameterPatterns.length * 0.1);
-      }
-
-      return Math.max(0, Math.min(5, complexity));
-    } catch (error) {
-      return null;
-    }
-  }
 
   /**
    * Calculate instruction ambiguity score (5-point scale)
@@ -5032,7 +4992,7 @@ class LLMBenchmarkFramework {
 
     // Check required fields
     if (expectedResult.requiredFields) {
-      const foundFields = expectedResult.requiredFields.filter(field => actualResult.hasOwnProperty(field));
+      const foundFields = expectedResult.requiredFields.filter(field => Object.prototype.hasOwnProperty.call(actualResult, field));
       score += (foundFields.length / expectedResult.requiredFields.length) * 60;
     }
 
@@ -5185,7 +5145,7 @@ class LLMBenchmarkFramework {
     if (expectedKeys.length === 0) return 50; // No parameters expected
 
     let score = 0;
-    let maxScore = expectedKeys.length * 50; // 50 points per parameter
+    const maxScore = expectedKeys.length * 50; // 50 points per parameter
 
     console.log('🔍 Comparing parameters:', {
       actual: actual,

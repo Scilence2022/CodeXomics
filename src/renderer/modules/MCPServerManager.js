@@ -1368,7 +1368,7 @@ class MCPServerManager {
           // Try to read response as a stream with timeout
           const reader = response.body.getReader();
           const decoder = new TextDecoder('utf-8');
-          let chunks = [];
+          const chunks = [];
           let done = false;
           let timeoutId;
 
@@ -1757,7 +1757,7 @@ class MCPServerManager {
       let filename = `research-report-${taskId}.${format}`;
 
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?([^\"]+)"?/);
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1];
         }

@@ -2,9 +2,9 @@ const fs = require('fs');
 
 const content = fs.readFileSync('src/renderer/modules/ChatManager.js', 'utf8');
 
-const regex = /^  (?:async )?([A-Za-z0-9_]+)\([^)]*\) {/gm;
+const regex = /^ {2}(?:async )?([A-Za-z0-9_]+)\([^)]*\) {/gm;
 let match;
-let methods = [];
+const methods = [];
 
 while ((match = regex.exec(content)) !== null) {
   const methodName = match[1];
@@ -17,8 +17,9 @@ while ((match = regex.exec(content)) !== null) {
     methodName === 'for' ||
     methodName === 'while' ||
     methodName === 'catch'
-  )
-    continue;
+  ) {
+continue;
+}
 
   const bodyStartIndex = content.indexOf('{', startChar);
 
@@ -52,7 +53,7 @@ while ((match = regex.exec(content)) !== null) {
       continue;
     }
 
-    if (char === "'" || char === '"' || char === '\`') {
+    if (char === "'" || char === '"' || char === '`') {
       inString = true;
       stringChar = char;
     } else if (char === '/' && nextChar === '/') {

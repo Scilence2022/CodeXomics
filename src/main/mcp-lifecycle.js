@@ -28,6 +28,9 @@ let getCurrentActiveWindow;
 let setCurrentActiveWindow;
 
 async function startUnifiedMCPServer() {
+  // Declared outside the try so the catch block can reference the loaded ports
+  // when reporting EADDRINUSE conflicts.
+  let settings = null;
   try {
     if (unifiedServerStatus === 'running') {
       console.log('Unified Claude MCP Server is already running');
@@ -42,7 +45,7 @@ async function startUnifiedMCPServer() {
     unifiedServerStatus = 'starting';
 
     // Load settings and check for port conflicts
-    const settings = loadMCPServerSettings();
+    settings = loadMCPServerSettings();
 
     // Pre-flight port check
     const httpCheck = await checkPortAvailable(settings.httpPort);
@@ -137,10 +140,10 @@ async function startUnifiedMCPServer() {
     let conflictPort = null;
     let conflictType = null;
     if (msg.includes('HTTP port') && msg.includes('already in use')) {
-      conflictPort = settings.httpPort;
+      conflictPort = settings ? settings.httpPort : null;
       conflictType = 'http';
     } else if (msg.includes('WebSocket port') && msg.includes('already in use')) {
-      conflictPort = settings.wsPort;
+      conflictPort = settings ? settings.wsPort : null;
       conflictType = 'ws';
     }
 

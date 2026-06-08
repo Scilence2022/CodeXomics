@@ -1769,7 +1769,7 @@ function registerIpcHandlers(deps) {
           } catch (chunkError) {
             console.error('Error processing chunk:', chunkError);
             stream.destroy();
-            reject({ success: false, error: `Error processing data chunk: ${chunkError.message}` });
+            resolve({ success: false, error: `Error processing data chunk: ${chunkError.message}` });
           }
         });
 
@@ -1788,13 +1788,13 @@ function registerIpcHandlers(deps) {
             resolve({ success: true, totalLines: lineCount, size: totalRead });
           } catch (endError) {
             console.error('Error finalizing stream:', endError);
-            reject({ success: false, error: `Error finalizing stream: ${endError.message}` });
+            resolve({ success: false, error: `Error finalizing stream: ${endError.message}` });
           }
         });
 
         stream.on('error', error => {
           console.error('Stream error:', error);
-          reject({ success: false, error: `File read error: ${error.message}` });
+          resolve({ success: false, error: `File read error: ${error.message}` });
         });
       });
     } catch (error) {

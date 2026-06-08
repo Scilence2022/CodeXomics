@@ -3745,7 +3745,7 @@ class ChatManager {
    * Uses Electron IPC for secure file system access
    */
   async writeFileDirectly(content, filename, formatType) {
-    return this.services.file.writeFileDirectly(content, filePath, fileType);
+    return this.services.file.writeFileDirectly(content, filename, formatType);
   }
 
   getVisibleTracks() {
@@ -5826,8 +5826,6 @@ class ChatManager {
                     promptText += msg.content + '\n\n';
                   } else if (msg.content.text) {
                     promptText += msg.content.text + '\n\n';
-                  } else if (msg.content.type === 'text' && msg.content.text) {
-                    promptText += msg.content.text + '\n\n';
                   }
                 }
               }
@@ -6152,8 +6150,9 @@ class ChatManager {
       normalizedHeader.includes('built-in') ||
       normalizedHeader.includes('directly available') ||
       normalizedHeader.includes('extended tools')
-    )
-      return 'dynamicTools';
+    ) {
+return 'dynamicTools';
+}
     if (normalizedHeader.includes('example')) return 'toolExamples';
     if (normalizedHeader.includes('guideline') || normalizedHeader.includes('selection')) return 'toolGuidelines';
     if (normalizedHeader.includes('response format')) return 'responseFormat';
@@ -8842,7 +8841,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Execute delete sequence function directly
    */
   async executeDeleteSequence(parameters) {
-    try {
       const { chromosome, start, end, strand = '+' } = parameters;
 
       // Validate parameters
@@ -8887,16 +8885,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       };
 
       return result;
-    } catch (error) {
-      throw error;
-    }
   }
 
   /**
    * Execute delete gene function by name
    */
   async executeDeleteGene(parameters) {
-    try {
       const { geneName, chromosome } = parameters;
 
       // Validate parameters
@@ -8950,16 +8944,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       };
 
       return result;
-    } catch (error) {
-      throw error;
-    }
   }
 
   /**
    * Execute action function through UI response functions
    */
   async executeActionFunction(functionName, parameters) {
-    try {
       // Use window.genomeBrowser for access
       const genomeBrowser = window.genomeBrowser;
 
@@ -8976,9 +8966,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const result = await genomeBrowser.actionManager.executeActionFunction(functionName, parameters);
 
       return result;
-    } catch (error) {
-      throw error;
-    }
   }
 
   getCurrentContext() {
@@ -9346,7 +9333,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // Convert escaped markdown links like [text](url) that weren't rendered
       // This handles cases where content wasn't markdown-parsed
-      html = html.replace(/\[([^\]]+)\]\((http[s]?:\/\/[^\s\)]+\/api\/mcp\/[^\s\)]+)\)/g, (match, label, url) => {
+      html = html.replace(/\[([^\]]+)\]\((http[s]?:\/\/[^\s)]+\/api\/mcp\/[^\s)]+)\)/g, (match, label, url) => {
         return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="mcp-download-link">${label}</a>`;
       });
 
@@ -10078,9 +10065,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     return this.services.analysis.translateSequence(params);
   }
 
-  async calculateGCContent(params) {
-    return this.services.analysis.calculateGCContent(params);
-  }
 
   async findOpenReadingFrames(params) {
     return this.services.analysis.findOpenReadingFrames(params);
@@ -11644,37 +11628,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   /**
    * Start a new chat conversation
    */
-  startNewChat() {
-    // Add conversation separator to mark the end of current conversation
-    if (this.configManager.getChatHistory().length > 0) {
-      this.configManager.addChatMessage('--- CONVERSATION_SEPARATOR ---', 'system', new Date().toISOString());
-    }
-
-    // Clear the UI display only, keep history
-    const messagesContainer = document.getElementById('chatMessages');
-    const welcomeMessage = messagesContainer.querySelector('.welcome-message');
-    messagesContainer.innerHTML = '';
-    if (welcomeMessage) {
-      messagesContainer.appendChild(welcomeMessage);
-    }
-
-    // Clear chat input box
-    const chatInput = document.getElementById('chatInput');
-    if (chatInput) {
-      chatInput.value = '';
-      chatInput.style.height = 'auto'; // Reset height for auto-resize
-    }
-
-    // Add a new conversation indicator in UI only
-    this.displayChatMessage(
-      '🆕 **New conversation started**',
-      'assistant',
-      new Date().toISOString(),
-      'new-conversation-' + Date.now()
-    );
-
-    console.log('Started new chat conversation');
-  }
 
   /**
    * Copy selected text from the page
@@ -12630,9 +12583,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   /**
    * Fetch protein structure from PDB database
    */
-  async fetchProteinStructure(parameters) {
-    return this.services.protein.fetchProteinStructure(parameters);
-  }
 
   /**
    * Download PDB file content from RCSB PDB database
@@ -14863,7 +14813,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         statistics.totalCitations = parsedData.statistics.totalCitations || parsedData.statistics.citations || 0;
         statistics.processedPapers = parsedData.statistics.processedPapers || parsedData.statistics.papers || 0;
       } else if (report && typeof report === 'string') {
-        const doiMatches = report.match(/DOI:\s*[0-9.\/a-zA-Z-]+/gi);
+        const doiMatches = report.match(/DOI:\s*[0-9./a-zA-Z-]+/gi);
         const pmidMatches = report.match(/PMID:\s*[0-9]+/gi);
         statistics.totalCitations = (doiMatches ? doiMatches.length : 0) + (pmidMatches ? pmidMatches.length : 0);
       }

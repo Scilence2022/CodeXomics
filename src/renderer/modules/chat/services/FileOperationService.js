@@ -778,8 +778,8 @@ class FileOperationService {
 
       if (window.electronAPI?.downloadInternetFile) {
         const result = await window.electronAPI.downloadInternetFile({ url, destinationPath, filename });
-        if (result.success)
-          return {
+        if (result.success) {
+return {
             success: true,
             message: `Successfully downloaded file to: ${result.filePath}`,
             filePath: result.filePath,
@@ -788,11 +788,12 @@ class FileOperationService {
             url,
             tool: 'download_internet_file',
           };
+}
         throw new Error(result.error || 'Download failed');
       } else if (window.ipcRenderer) {
         const result = await window.ipcRenderer.invoke('download-internet-file', { url, destinationPath, filename });
-        if (result.success)
-          return {
+        if (result.success) {
+return {
             success: true,
             message: `Successfully downloaded file to: ${result.filePath}`,
             filePath: result.filePath,
@@ -801,6 +802,7 @@ class FileOperationService {
             url,
             tool: 'download_internet_file',
           };
+}
         throw new Error(result.error || 'Download failed');
       } else {
         throw new Error('electronAPI.downloadInternetFile not available');
@@ -828,8 +830,8 @@ class FileOperationService {
         }
       }
       text = text.replace(/🔗\s*(\/api\/mcp\/download\/[^\s\n`"<>]+)/g, (m, p) => `🔗 [Download](${baseUrl}${p})`);
-      text = text.replace(/(?<!\(|\[|")(\/api\/mcp\/download\/[^\s\n\)`"<>]+)/g, (m, p) => `[${p}](${baseUrl}${p})`);
-      text = text.replace(/\[([^\]]+)\]\((\/api\/mcp\/[^\s\n\)]+)\)/g, (m, l, p) => `[${l}](${baseUrl}${p})`);
+      text = text.replace(/(?<!\(|\[|")(\/api\/mcp\/download\/[^\s\n)`"<>]+)/g, (m, p) => `[${p}](${baseUrl}${p})`);
+      text = text.replace(/\[([^\]]+)\]\((\/api\/mcp\/[^\s\n)]+)\)/g, (m, l, p) => `[${l}](${baseUrl}${p})`);
       return text;
     } catch (error) {
       console.error('Error converting MCP download URLs:', error);
@@ -862,8 +864,9 @@ class FileOperationService {
         if (!result.canceled && result.filePath) {
           const writeResult = await window.electronAPI.writeFile(result.filePath, content);
           if (writeResult.success) {
-            if (this.chatManager.showNotification)
-              this.chatManager.showNotification(`${formatType} saved successfully`, 'success');
+            if (this.chatManager.showNotification) {
+this.chatManager.showNotification(`${formatType} saved successfully`, 'success');
+}
             return { success: true, filePath: result.filePath };
           } else throw new Error(`Failed to write file: ${writeResult.error}`);
         }
@@ -873,8 +876,9 @@ class FileOperationService {
         return { success: true, method: 'browser_download' };
       }
     } catch (error) {
-      if (this.chatManager.showNotification)
-        this.chatManager.showNotification(`Failed to save ${formatType}: ${error.message}`, 'error');
+      if (this.chatManager.showNotification) {
+this.chatManager.showNotification(`Failed to save ${formatType}: ${error.message}`, 'error');
+}
       throw error;
     }
   }
@@ -909,15 +913,17 @@ class FileOperationService {
         if (!result?.success) {
           throw new Error(result?.error || `Failed to write ${formatType} to ${resolvedPath}`);
         }
-        if (this.chatManager.showNotification)
-          this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
+        if (this.chatManager.showNotification) {
+this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
+}
         return { success: true, filePath: result.filePath || resolvedPath };
       } else {
         throw new Error('electronAPI.writeFile is unavailable in the hardened renderer');
       }
     } catch (error) {
-      if (this.chatManager.showNotification)
-        this.chatManager.showNotification(`Failed to export ${formatType}: ${error.message}`, 'error');
+      if (this.chatManager.showNotification) {
+this.chatManager.showNotification(`Failed to export ${formatType}: ${error.message}`, 'error');
+}
       throw error;
     }
   }

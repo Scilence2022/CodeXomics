@@ -136,7 +136,7 @@ class UnifiedSequenceProcessing {
       }
 
       const sequenceUpper = sequence.toUpperCase();
-      let gcContent, gcCount, totalBases, statistics;
+      let gcContent; let gcCount; let totalBases; let statistics;
 
       switch (method) {
         case 'standard':
@@ -431,7 +431,7 @@ class UnifiedSequenceProcessing {
     }
 
     for (const base of sequence.toUpperCase()) {
-      if (counts.hasOwnProperty(base)) {
+      if (Object.prototype.hasOwnProperty.call(counts, base)) {
         counts[base]++;
       }
     }

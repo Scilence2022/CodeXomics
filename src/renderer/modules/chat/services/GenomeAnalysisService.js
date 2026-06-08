@@ -30,7 +30,7 @@ class GenomeAnalysisService {
     // Comprehensive statistical counts by gene type (e.g., CDS, tRNA, rRNA)
     if (include_annotations && this.app.currentAnnotations) {
       let totalFeatures = 0;
-      let featureCounts = {};
+      const featureCounts = {};
 
       const chromosomes = Object.keys(this.app.currentAnnotations);
       for (const chr of chromosomes) {

@@ -271,7 +271,7 @@ class PluginSubmissionUI {
     const fileInput = modal.querySelector('#plugin-files');
     const uploadedFilesList = modal.querySelector('#uploaded-files-list');
 
-    let uploadedFiles = [];
+    const uploadedFiles = [];
 
     fileUploadArea.addEventListener('click', () => {
       fileInput.click();

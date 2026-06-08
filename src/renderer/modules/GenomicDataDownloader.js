@@ -1642,7 +1642,7 @@ class GenomicDataDownloader {
     const rettype = formatToRettype[fileFormat] || 'fasta';
 
     // For some databases and formats, we need different parameters
-    let retmode = 'text';
+    const retmode = 'text';
 
     // Assembly database doesn't support efetch, return FTP link instead
     if (database === 'assembly') {

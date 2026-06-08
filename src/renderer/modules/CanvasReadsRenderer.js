@@ -277,20 +277,6 @@ class CanvasReadsRenderer {
     return Math.max(this.options.minFontSize, Math.min(this.options.maxFontSize, fontSize));
   }
 
-  updateOptions(newOptions = {}) {
-    this.options = { ...this.options, ...newOptions };
-
-    // Use updated options to setup canvas dimensions again (as height might change)
-    this.setupCanvas();
-
-    // Recalculate text metrics if needed
-    if (this.options.showSequences) {
-      this.calculateTextMetrics();
-    }
-
-    // Force re-render
-    this.render();
-  }
 
   render() {
     const startTime = performance.now();
@@ -755,7 +741,7 @@ class CanvasReadsRenderer {
 
     // FIX: Simplify index calculation to match SVG mode logic
     // Direct mapping from genomic offset to sequence index
-    let startIndex, endIndex;
+    let startIndex; let endIndex;
     if (actualReadLength <= 1) {
       startIndex = 0;
       endIndex = actualReadLength - 1;
@@ -872,10 +858,10 @@ class CanvasReadsRenderer {
     const maxFontSize = this.options.maxFontSize || 14;
 
     // Font size based on available width per character (leave padding)
-    let widthBasedFontSize = Math.floor(pixelsPerBase * 0.8);
+    const widthBasedFontSize = Math.floor(pixelsPerBase * 0.8);
 
     // Font size based on read height (leave some vertical padding)
-    let heightBasedFontSize = Math.floor(readHeight * 0.7);
+    const heightBasedFontSize = Math.floor(readHeight * 0.7);
 
     // Use the smaller of the two constraints
     let optimalFontSize = Math.min(widthBasedFontSize, heightBasedFontSize);
@@ -1057,7 +1043,7 @@ class CanvasReadsRenderer {
   setupResizeObserver() {
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(entries => {
-        for (let entry of entries) {
+        for (const entry of entries) {
           if (entry.target === this.container) {
             this.handleResize();
           }

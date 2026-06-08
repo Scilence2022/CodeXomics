@@ -379,7 +379,7 @@ class ExtensionHostProxy {
     const startTime = performance.now();
 
     try {
-      const result = await method.apply(null, args);
+      const result = await method(...args);
 
       const duration = performance.now() - startTime;
       this._host._resourceMonitor?.recordOperation(duration);

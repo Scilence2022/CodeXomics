@@ -46,7 +46,7 @@ const extractedCode = {
   intent: '',
 };
 
-const regex = /^  (?:async )?([A-Za-z0-9_]+)\([^)]*\) {/gm;
+const regex = /^ {2}(?:async )?([A-Za-z0-9_]+)\([^)]*\) {/gm;
 let match;
 const foundMethods = [];
 
@@ -120,19 +120,19 @@ while ((match = regex.exec(content)) !== null) {
   }
 }
 
-foundMethods.sort(function (a, b) {
+foundMethods.sort(function(a, b) {
   return b.startIndex - a.startIndex;
 });
 
 for (const m of foundMethods) {
-  extractedCode[m.serviceName] = m.fullBody.replace(/^  /gm, '  ') + '\n\n' + extractedCode[m.serviceName];
+  extractedCode[m.serviceName] = m.fullBody.replace(/^ {2}/gm, '  ') + '\n\n' + extractedCode[m.serviceName];
 
   const sigMatch = m.fullBody.match(/(?:async )?[a-zA-Z0-9_]+\s*\(([^)]*)\)/);
   const params = sigMatch ? sigMatch[1] : '';
 
   const argsList = params
     .split(',')
-    .map(function (p) {
+    .map(function(p) {
       return p.split('=')[0].trim();
     })
     .join(', ');
@@ -175,7 +175,7 @@ for (const m of foundMethods) {
 }
 
 if (foundMethods.length > 0) {
-  const appendToService = function (serviceFile, code) {
+  const appendToService = function(serviceFile, code) {
     if (!code) return;
     const fp = path.resolve(
       '/Users/song/Github-Repos/GenomeAIStudio_1/src/renderer/modules/chat/services/' + serviceFile
@@ -269,7 +269,7 @@ if (foundMethods.length > 0) {
   }
 
   // Restore constructor modifications done by earlier phases BEFORE we save!
-  let lines = content.split('\n');
+  const lines = content.split('\n');
   const injectIndex = lines.findIndex(l => l.includes('annotation: new window.AnnotationService(this.app, this)'));
   if (injectIndex !== -1 && !lines[injectIndex + 1].includes('intent:')) {
     lines[injectIndex] = lines[injectIndex].replace('this)', 'this),');

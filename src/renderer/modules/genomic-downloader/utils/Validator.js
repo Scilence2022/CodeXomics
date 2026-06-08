@@ -31,7 +31,7 @@ class Validator {
 
         // Validate database
         const validDatabases = ['nucleotide', 'protein', 'assembly', 'genome', 'sra', 'pubmed'];
-        if (database && !valid Databases.includes(database)) {
+        if (database && !validDatabases.includes(database)) {
             errors.push(new ValidationError(`Invalid database: ${database}. Must be one of: ${validDatabases.join(', ')}`, 'database'));
         }
 

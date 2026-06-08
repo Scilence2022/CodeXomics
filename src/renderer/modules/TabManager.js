@@ -1789,7 +1789,7 @@ class TabManager {
         if (
           checkbox &&
           this.genomeBrowser.trackVisibility &&
-          this.genomeBrowser.trackVisibility.hasOwnProperty(trackType)
+          Object.prototype.hasOwnProperty.call(this.genomeBrowser.trackVisibility, trackType)
         ) {
           checkbox.checked = this.genomeBrowser.trackVisibility[trackType];
         }
@@ -1822,7 +1822,7 @@ class TabManager {
 
       sidebarTrackTypes.forEach(({ type, id }) => {
         const checkbox = document.getElementById(id);
-        if (checkbox && this.genomeBrowser.trackVisibility && this.genomeBrowser.trackVisibility.hasOwnProperty(type)) {
+        if (checkbox && this.genomeBrowser.trackVisibility && Object.prototype.hasOwnProperty.call(this.genomeBrowser.trackVisibility, type)) {
           checkbox.checked = this.genomeBrowser.trackVisibility[type];
         }
       });
@@ -3002,7 +3002,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 // Global debugging function for position indicators
-window.debugPositionIndicators = function () {
+window.debugPositionIndicators = function() {
   console.log('=== Position Indicators Debug ===');
 
   const tabs = document.querySelectorAll('.genome-tab');
@@ -3065,7 +3065,7 @@ window.debugPositionIndicators = function () {
 };
 
 // Add to global scope for easy access
-window.forcePositionIndicatorVisibility = function () {
+window.forcePositionIndicatorVisibility = function() {
   if (window.genomeBrowser && window.genomeBrowser.tabManager) {
     window.genomeBrowser.tabManager.forcePositionIndicatorVisibility();
   } else {

@@ -60,7 +60,7 @@ const vi = {
 };
 
 function jest_fn() {
-  const fn = function (...args) {
+  const fn = function(...args) {
     fn._calls.push(args);
     return fn._returnVal;
   };

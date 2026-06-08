@@ -1110,7 +1110,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
       }
 
       // Handle multi-line qualifier values - improved efficiency
-      if (line.match(/^\s{21}[^\/]/) && currentFeature && currentQualifierKey) {
+      if (line.match(/^\s{21}[^/]/) && currentFeature && currentQualifierKey) {
         const continuationValue = line.trim().replace(/^"/, '').replace(/"$/, '');
 
         // Get the current qualifier value (handle both single values and arrays)

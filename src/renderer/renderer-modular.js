@@ -7,9 +7,9 @@ const rendererPath =
 
 // Toast notification helper — replaces alert() with non-blocking notifications
 // Uses NotificationService if available, falls back to alert
-const notify = (function () {
+const notify = (function() {
   let _ns = null;
-  return function (message, type = 'warn') {
+  return function(message, type = 'warn') {
     if (!_ns && typeof NotificationService !== 'undefined') {
       _ns = new NotificationService();
       window._notificationService = _ns;
@@ -11260,19 +11260,19 @@ class TrackStateManager {
 }
 
 // Load MicrobeGenomicsFunctions for chat integration
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
   // Dynamically load MicrobeGenomicsFunctions if not already loaded
   if (!window.MicrobeFns) {
     const script = document.createElement('script');
     script.src = './modules/MicrobeGenomicsFunctions.js';
-    script.onload = function () {
+    script.onload = function() {
       console.log('MicrobeGenomicsFunctions loaded successfully');
       // Trigger re-initialization of ChatManager if it exists
       if (window.chatManager && window.chatManager.initializeMicrobeGenomicsFunctions) {
         window.chatManager.initializeMicrobeGenomicsFunctions();
       }
     };
-    script.onerror = function () {
+    script.onerror = function() {
       console.error('Failed to load MicrobeGenomicsFunctions');
     };
     document.head.appendChild(script);

@@ -199,7 +199,7 @@ class IntentParserService {
       }
 
       // Clean up residual 'json' text between objects
-      let normalized = cleanResponse
+      const normalized = cleanResponse
         .replace(/}\s*json\s*{/g, '}\n{')
         .replace(/^json\s*/, '')
         .replace(/\s*json\s*$/, '')

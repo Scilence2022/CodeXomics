@@ -203,6 +203,7 @@ class PluginRealTestDemonstrator {
           if (!response.ok) throw new Error('Demo file not found via fetch');
 
           const scriptContent = await response.text();
+          // eslint-disable-next-line no-eval -- intentional: dynamically loads a plugin demo script to define its class
           eval(scriptContent); // Execute script to define class
 
           // Get class from global scope based on plugin ID

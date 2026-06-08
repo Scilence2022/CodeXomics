@@ -640,7 +640,7 @@ class MicrobeGenomicsFunctions {
     const maxResults = 500;
 
     for (const chr of chromosomes) {
-      let fullSeq = gb.currentSequence[chr];
+      const fullSeq = gb.currentSequence[chr];
       if (!fullSeq) continue;
 
       // Apply region bounds
@@ -1033,7 +1033,7 @@ class MicrobeGenomicsFunctions {
 
     // Get the genomic DNA sequence for the gene region
     const fullSequence = gb.currentSequence[chromosome];
-    let geneSequence = fullSequence.substring(feature.start - 1, feature.end);
+    const geneSequence = fullSequence.substring(feature.start - 1, feature.end);
 
     // Determine gene name and locus tag for result
     const geneName = gb.getQualifierValue(feature.qualifiers, 'gene') || identifier;

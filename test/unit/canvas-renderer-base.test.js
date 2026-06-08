@@ -142,7 +142,7 @@ function mockContainer() {
 }
 
 describe('CanvasRendererBase', () => {
-  let container, renderer;
+  let container; let renderer;
 
   beforeEach(() => {
     container = mockContainer();

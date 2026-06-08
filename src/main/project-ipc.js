@@ -10,7 +10,7 @@
  * @module project-ipc
  */
 
-const { ipcMain, dialog, app, BrowserWindow } = require('electron');
+const { ipcMain, dialog, app, BrowserWindow, Menu, MenuItem } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const {
@@ -831,13 +831,13 @@ function registerProjectIpcHandlers(deps) {
       });
 
       // Helper function to get project-relative path
-      function getProjectRelativePath(absolutePath, projectBasePath) {
+      const getProjectRelativePath = (absolutePath, projectBasePath) => {
         const relativePath = path.relative(projectBasePath, absolutePath);
         return relativePath.replace(/\\/g, '/'); // Normalize path separators
-      }
+      };
 
       // Helper function to scan directory recursively
-      function scanDirectory(dirPath, relativePath = '', currentFolderPath = []) {
+      const scanDirectory = (dirPath, relativePath = '', currentFolderPath = []) => {
         const items = fs.readdirSync(dirPath);
 
         items.forEach(item => {
@@ -932,7 +932,7 @@ function registerProjectIpcHandlers(deps) {
             console.warn(`Error processing ${itemPath}:`, fileError.message);
           }
         });
-      }
+      };
 
       // Start scanning from project root
       scanDirectory(safeProjectPath);

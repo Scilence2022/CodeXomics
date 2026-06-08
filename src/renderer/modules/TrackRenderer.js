@@ -2899,46 +2899,6 @@ class TrackRenderer {
   /**
    * Create individual base element
    */
-  createBaseElement(base, index, viewport, fontSize, charWidth) {
-    const baseElement = document.createElement('span');
-    baseElement.className = `base-${base.toLowerCase()} sequence-base-inline`;
-    baseElement.textContent = base;
-
-    // FIX: Calculate exact positioning to fill entire container
-    const totalSequenceLength = viewport.end - viewport.start;
-    // Each character should take exactly its portion of the available space
-    const exactCharWidth = 100 / totalSequenceLength; // Use percentage-based width
-    const leftPosition = index * exactCharWidth;
-
-    baseElement.style.cssText = `
-            position: absolute;
-            left: ${leftPosition}%;
-            width: ${exactCharWidth}%;
-            height: 100%;
-            font-size: ${fontSize}px;
-            font-family: 'Courier New', Consolas, Monaco, monospace;
-            font-weight: bold;
-            text-align: center;
-            line-height: 1.2;
-            overflow: hidden;
-            white-space: nowrap;
-            box-sizing: border-box;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-
-    // Add tooltip with position info
-    // FIX: Remove +1 offset - index is already 0-based within the subsequence
-    const circularSequenceLength = this.getSequenceLength();
-    const position =
-      this.isCircularModeEnabled() && circularSequenceLength > 0
-        ? this.normalizeCircularPosition(viewport.start + index, circularSequenceLength)
-        : viewport.start + index;
-    baseElement.title = `Position: ${position}, Base: ${base}`;
-
-    return baseElement;
-  }
 
   createGCTrack(chromosome, sequence) {
     const { track, trackContent } = this.createTrackBase('gc', chromosome);
@@ -4006,9 +3966,6 @@ class TrackRenderer {
             }
           } else {
             // No sampling applied - show 100%
-            const totalReadsCount = enableVerticalScroll
-              ? readRows.reduce((sum, row) => sum + row.length, 0)
-              : visibleReadsCount;
             statsText += ` | All reads shown (100%)`;
           }
         }
@@ -9892,17 +9849,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }, 0);
   }
 
-  handleWIGTrackDragEnd(e) {
-    e.currentTarget.classList.remove('wig-track-dragging');
-    e.currentTarget.style.opacity = '1';
-
-    // Remove any drag-over indicators from items
-    const items = document.querySelectorAll('.wig-track-item');
-    items.forEach(item => {
-      item.style.borderLeft = '';
-      item.style.paddingLeft = '';
-    });
-  }
 
   handleWIGTrackDragOver(e) {
     if (e.preventDefault) {
@@ -14412,21 +14358,6 @@ This action cannot be undone.`;
   /**
    * Get base color for reference sequence display
    */
-  getBaseColor(base) {
-    const baseColors = {
-      A: '#e74c3c',
-      T: '#3498db',
-      G: '#2ecc71',
-      C: '#f39c12',
-      a: '#e74c3c',
-      t: '#3498db',
-      g: '#2ecc71',
-      c: '#f39c12',
-      N: '#95a5a6',
-      n: '#95a5a6',
-    };
-    return baseColors[base] || baseColors['N'];
-  }
 
   /**
    * Create sequence visualization for Genes & Features track
@@ -14621,17 +14552,6 @@ This action cannot be undone.`;
   /**
    * Get color for DNA base - using standard biochemical color scheme
    */
-  getBaseColor(base) {
-    const colors = {
-      A: '#FF0000', // Bright Red (Adenine)
-      T: '#0000FF', // Bright Blue (Thymine)
-      G: '#00AA00', // Bright Green (Guanine)
-      C: '#FF8800', // Bright Orange (Cytosine)
-      U: '#0000FF', // Bright Blue (Uracil, same as T)
-      N: '#666666', // Dark Gray (Unknown/any base)
-    };
-    return colors[base.toUpperCase()] || '#333333';
-  }
 
   /**
    * Calculate coverage data for visualization

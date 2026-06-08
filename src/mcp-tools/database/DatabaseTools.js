@@ -232,7 +232,7 @@ class DatabaseTools {
         throw new Error('Query or organism is required for UniProt search');
       }
 
-      let queryParts = [];
+      const queryParts = [];
       if (query) {
         if (searchType === 'gene_name') queryParts.push(`(gene:${query})`);
         else if (searchType === 'protein_name') queryParts.push(`(protein_name:${query})`);

@@ -164,7 +164,7 @@ class CanvasGenesRenderer {
   setupResizeObserver() {
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(entries => {
-        for (let entry of entries) {
+        for (const entry of entries) {
           if (entry.target === this.container) {
             this.handleResize();
           }

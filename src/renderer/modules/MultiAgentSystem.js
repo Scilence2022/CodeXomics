@@ -565,7 +565,7 @@ class MultiAgentSystem {
    */
   updateResourceMetrics() {
     // Calculate current resource usage
-    let totalAllocated = {
+    const totalAllocated = {
       cpu: 0,
       memory: 0,
       network: 0,

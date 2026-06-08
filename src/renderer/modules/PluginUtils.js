@@ -141,7 +141,7 @@ const PluginUtils = {
 
     for (const seq of sequences) {
       for (const base of seq.toUpperCase()) {
-        if (counts.hasOwnProperty(base)) {
+        if (Object.prototype.hasOwnProperty.call(counts, base)) {
           counts[base]++;
         } else {
           counts.N++;
@@ -589,11 +589,11 @@ const PluginUtils = {
 };
 
 // Standalone utility functions for direct use
-PluginUtils.calculateGCContent = function (sequence) {
+PluginUtils.calculateGCContent = function(sequence) {
   return PluginUtils.calculateGC(sequence);
 };
 
-PluginUtils.calculateSequenceDiversity = function (sequences, metric = 'shannon') {
+PluginUtils.calculateSequenceDiversity = function(sequences, metric = 'shannon') {
   switch (metric) {
     case 'shannon':
       return PluginUtils.calculateShannonDiversity(sequences);

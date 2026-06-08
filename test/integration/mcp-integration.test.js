@@ -44,7 +44,7 @@ describe('MCP Tool Modules Integration', () => {
   });
 
   it('every tool module should export a class or module with getTools method', () => {
-    let issues = [];
+    const issues = [];
     for (const mod of modules) {
       const content = fs.readFileSync(mod.path, 'utf-8');
       const hasGetTools = content.includes('getTools') || content.includes('get_tools');
@@ -56,7 +56,7 @@ describe('MCP Tool Modules Integration', () => {
   });
 
   it('every tool module should accept server in constructor or as parameter', () => {
-    let issues = [];
+    const issues = [];
     for (const mod of modules) {
       const content = fs.readFileSync(mod.path, 'utf-8');
       const acceptsServer =
@@ -72,7 +72,7 @@ describe('MCP Tool Modules Integration', () => {
   });
 
   it('tool definition objects should specify name, description, and input schema', () => {
-    let issues = [];
+    const issues = [];
     for (const mod of modules) {
       const content = fs.readFileSync(mod.path, 'utf-8');
       const hasName = content.includes('name:');
@@ -92,7 +92,7 @@ describe('MCP Tool Modules Integration', () => {
   });
 
   it('tool handlers should exist for each tool definition', () => {
-    let issues = [];
+    const issues = [];
     for (const mod of modules) {
       const content = fs.readFileSync(mod.path, 'utf-8');
       const hasHandler = content.includes('handler:') || content.includes('callback:');

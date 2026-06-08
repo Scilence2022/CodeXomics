@@ -666,34 +666,6 @@ class ConfigManager {
     }
   }
 
-  migrateBlastDatabasesFromLocalStorage() {
-    try {
-      const blastDatabases = localStorage.getItem('blast_custom_databases');
-      if (!blastDatabases) return;
-
-      const savedData = JSON.parse(blastDatabases);
-      let databases;
-      if (Array.isArray(savedData)) {
-        databases = savedData;
-      } else if (savedData.databases) {
-        databases = savedData.databases;
-      }
-
-      if (!databases) return;
-
-      const databasesObject = {};
-      databases.forEach(([id, data]) => {
-        databasesObject[id] = data;
-      });
-
-      this.config.blast.customDatabases = databasesObject;
-      this.config.blast.metadata.lastUpdated = new Date().toISOString();
-      this.config.blast.metadata.totalDatabases = databases.length;
-      console.log(`Migrated ${databases.length} BLAST databases from localStorage`);
-    } catch (error) {
-      console.error('Error migrating BLAST databases from localStorage:', error);
-    }
-  }
 
   /**
    * Save configuration

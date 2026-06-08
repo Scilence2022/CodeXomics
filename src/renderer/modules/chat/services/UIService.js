@@ -133,10 +133,10 @@ class UIService {
     const dockContainer = document.getElementById('chatDockContainer');
     const dockSplitter = document.getElementById('chatDockSplitter');
     let isDragging = false;
-    let startX, startY, startLeft, startTop;
-    let dragThreshold = 5; // Minimum pixels to consider as drag
+    let startX; let startY; let startLeft; let startTop;
+    const dragThreshold = 5; // Minimum pixels to consider as drag
     let hasMoved = false;
-    let dockIndicator = null;
+    const dockIndicator = null;
 
     chatHeader.addEventListener('mousedown', e => {
       // Don't drag if clicking on buttons

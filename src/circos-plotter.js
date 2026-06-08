@@ -1767,7 +1767,7 @@ class CircosPlotter {
     }
     let entropy = 0;
     const total = sequence.length;
-    for (const char in counts) {
+    for (const char of Object.keys(counts)) {
       const p = counts[char] / total;
       if (p > 0) entropy -= p * Math.log2(p);
     }
@@ -2060,9 +2060,9 @@ class CircosPlotter {
       const targetX = Math.cos(targetRadians) * linkRadius;
       const targetY = Math.sin(targetRadians) * linkRadius;
 
-      let linkColor,
-        strokeWidth,
-        dashPattern = [];
+      let linkColor;
+        let strokeWidth;
+        let dashPattern = [];
       if (link.value >= 0.7) {
         linkColor = theme.links.strong;
         strokeWidth = Math.max(3, link.value * 5);
@@ -2510,9 +2510,9 @@ class CircosPlotter {
       path.moveTo(sourceX, sourceY);
       path.quadraticCurveTo(0, 0, targetX, targetY);
 
-      let linkColor,
-        strokeWidth,
-        strokeDasharray = 'none';
+      let linkColor;
+        let strokeWidth;
+        let strokeDasharray = 'none';
 
       if (link.value >= 0.7) {
         linkColor = theme.links.strong;

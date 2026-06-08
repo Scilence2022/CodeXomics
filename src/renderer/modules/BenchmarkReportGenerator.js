@@ -530,20 +530,23 @@ class BenchmarkReportGenerator {
       stats.qualityMetrics.excellence * 0.2 +
       stats.reliabilityMetrics.scoreReliability * 0.2;
 
-    if (score >= 85)
-      return { level: 'Excellent', score: score.toFixed(1), description: 'Outstanding performance across all metrics' };
-    if (score >= 75)
-      return {
+    if (score >= 85) {
+return { level: 'Excellent', score: score.toFixed(1), description: 'Outstanding performance across all metrics' };
+}
+    if (score >= 75) {
+return {
         level: 'Good',
         score: score.toFixed(1),
         description: 'Strong performance with minor areas for improvement',
       };
-    if (score >= 65)
-      return {
+}
+    if (score >= 65) {
+return {
         level: 'Satisfactory',
         score: score.toFixed(1),
         description: 'Acceptable performance with room for enhancement',
       };
+}
     return {
       level: 'Needs Improvement',
       score: score.toFixed(1),

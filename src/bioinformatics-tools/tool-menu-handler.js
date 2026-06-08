@@ -580,7 +580,7 @@ You can:
       'textarea[class*="input"]',
     ];
 
-    for (let selector of candidates) {
+    for (const selector of candidates) {
       const element = document.querySelector(selector);
       if (element) return element;
     }
@@ -603,7 +603,7 @@ You can:
       '.results-panel',
     ];
 
-    for (let selector of candidates) {
+    for (const selector of candidates) {
       const element = document.querySelector(selector);
       if (element) return element;
     }
