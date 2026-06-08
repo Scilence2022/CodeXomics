@@ -1324,12 +1324,23 @@ class ChatManager {
    * @param {string} parameters.category - Optional category filter
    * @param {boolean} parameters.include_details - Include detailed descriptions
    * @param {string} parameters.format - 'summary' or 'detailed'
+   * @param {string} parameters.userQuery - Optional user query; when provided and the
+   *   dynamic tools registry supports relevance selection, the listing is narrowed to
+   *   the same query-relevant subset that is actually sent to the LLM (mirrors
+   *   generateDynamicSystemPrompt/selectRelevantTools), instead of the full registry.
+   * @param {Object} parameters.context - Optional studio context used for relevance scoring
    * @returns {Object} List of available tools organized by category
    */
   async listAvailableTools(parameters = {}) {
-    const { category = null, include_details = false, format = 'summary' } = parameters;
+    const {
+      category = null,
+      include_details = false,
+      format = 'summary',
+      userQuery = null,
+      context = null,
+    } = parameters;
 
-    console.log('📋 [ChatManager] Listing available tools', { category, include_details, format });
+    console.log('📋 [ChatManager] Listing available tools', { category, include_details, format, userQuery });
 
     try {
       const result = {
@@ -1337,18 +1348,31 @@ class ChatManager {
         tool: 'list_available_tools',
         timestamp: new Date().toISOString(),
         total_tools: 0,
+        total_registered: 0,
         categories: {},
         tools: [],
         filtered_category: category,
+        query_filtered: false,
       };
 
       // Get tools from dynamic tools registry if available
       if (this.dynamicToolsEnabled && this.dynamicTools) {
         try {
-          const allTools = await this.dynamicTools.getAllTools();
+          const fullRegistry = await this.dynamicTools.getAllTools();
+          result.total_registered = Array.isArray(fullRegistry) ? fullRegistry.length : 0;
+
+          // When a user query is supplied and the registry can score relevance, narrow
+          // the listing to the same subset that will actually be offered to the LLM for
+          // this request — otherwise the inventory misleadingly shows every registered
+          // tool no matter what the user asked for.
+          let toolsToList = fullRegistry;
+          if (userQuery && typeof this.dynamicTools.selectRelevantTools === 'function') {
+            toolsToList = this.dynamicTools.selectRelevantTools(userQuery, context || {});
+            result.query_filtered = true;
+          }
 
           // Organize by category
-          for (const tool of allTools) {
+          for (const tool of toolsToList) {
             const cat = tool.category || 'uncategorized';
 
             // Skip if category filter is set and doesn't match
@@ -1481,7 +1505,13 @@ class ChatManager {
    */
   formatToolsSummary(result) {
     let message = `📋 **Available Tools Summary**\n\n`;
-    message += `**Total Tools:** ${result.total_tools}\n\n`;
+    if (result.query_filtered && result.total_registered > result.total_tools) {
+      message +=
+        `**Tools selected for this request:** ${result.total_tools} ` +
+        `(of ${result.total_registered} registered)\n\n`;
+    } else {
+      message += `**Total Tools:** ${result.total_tools}\n\n`;
+    }
 
     for (const [catKey, catInfo] of Object.entries(result.categories)) {
       message += `### ${catInfo.name || catKey} (${catInfo.count} tools)\n`;
@@ -1533,7 +1563,13 @@ class ChatManager {
     if (!this.showThinkingProcess) return;
 
     try {
-      const toolsResult = await this.listAvailableTools({ format: 'summary' });
+      // Pass the current user query/context through so the listing reflects the same
+      // query-relevant subset that buildSystemMessage()/generateDynamicSystemPrompt()
+      // actually hands to the LLM, rather than the full static registry — otherwise
+      // this panel always reports the same total no matter what the user asked.
+      const userQuery = this.getLastUserQuery();
+      const context = this.getCurrentContext ? this.getCurrentContext() : null;
+      const toolsResult = await this.listAvailableTools({ format: 'summary', userQuery, context });
 
       // Even when enumeration fails, surface a brief note so the panel never goes
       // silently missing — the user explicitly wants tool visibility before round 1.
@@ -1550,6 +1586,10 @@ class ChatManager {
       console.log(`🧰 [ChatManager] Rendering ${total} available tool(s) into thinking process`);
 
       const sourceLabel = this.dynamicToolsEnabled && this.dynamicTools ? 'Dynamic Tool registry' : 'core registry';
+      const countLabel =
+        toolsResult.query_filtered && toolsResult.total_registered > total
+          ? `${total} selected for this request, of ${toolsResult.total_registered} registered`
+          : `${total}`;
 
       if (!total) {
         this.updateThinkingMessage(
@@ -1572,7 +1612,7 @@ class ChatManager {
       const block =
         `<br><details style="margin: 6px 0;">` +
         `<summary style="cursor: pointer; color: #1565C0; font-weight: 600;">` +
-        `🧰 Available tools from ${sourceLabel} (${total}) — click to expand</summary>` +
+        `🧰 Available tools from ${sourceLabel} (${countLabel}) — click to expand</summary>` +
         `${inner}</details>`;
 
       this.updateThinkingMessage(block);
