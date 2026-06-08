@@ -8,7 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
-import fsAsync from 'fs/promises';
+
 import path from 'path';
 
 const MAIN_JS = path.join(process.cwd(), 'src/main.js');

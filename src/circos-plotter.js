@@ -2230,7 +2230,7 @@ class CircosPlotter {
     this.calculateChromosomeAngles();
 
     const processedChromosomes = this.dataProcessor.processChromosomes(this.data.chromosomes, theme);
-    const processedLinks = this.dataProcessor.processLinks(this.data.links, processedChromosomes, theme);
+    this.dataProcessor.processLinks(this.data.links, processedChromosomes, theme);
 
     this.drawChromosomes(g, processedChromosomes);
 
@@ -2281,7 +2281,7 @@ class CircosPlotter {
       trackOffset = (maxTrackNumber + 1) * (this.geneHeight + 2) + 10;
 
       if (this.multiTrackManager.geneTracks.protein_coding.enabled) {
-        const cdsGenes = this.multiTrackManager.groupGenesByType(this.data.genes).protein_coding || [];
+        this.multiTrackManager.groupGenesByType(this.data.genes).protein_coding || [];
       }
     }
     return trackOffset;

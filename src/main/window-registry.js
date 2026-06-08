@@ -1,8 +1,6 @@
 'use strict';
 // @ts-check
 
-const { BrowserWindow } = require('electron');
-
 // External references (set by main module)
 let mainWindow;
 let unifiedMCPServer;

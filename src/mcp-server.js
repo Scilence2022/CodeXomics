@@ -28,9 +28,9 @@ const {
 
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+require('path');
 const WebSocket = require('ws');
-const http = require('http');
+require('http');
 
 // Import the organized tools integrator
 const ToolsIntegrator = require('./mcp-tools/ToolsIntegrator.js');
@@ -784,7 +784,7 @@ class StandardClaudeMCPServer extends EventEmitter {
   }
 
   async handleWebSocketMessage(message, sessionId) {
-    const { method, params, id, jsonrpc } = message;
+    const { method, params, id } = message;
 
     // Validate session
     const sessionValidation = this.authManager.validateSession(sessionId);
@@ -1616,8 +1616,8 @@ class StandardClaudeMCPServer extends EventEmitter {
       }
 
       // Close all client bridges
-      for (const [bridgeId, bridge] of this.clientBridges.entries()) {
-        for (const [reqId, req] of bridge.pendingRequests.entries()) {
+      for (const [, bridge] of this.clientBridges.entries()) {
+        for (const [, req] of bridge.pendingRequests.entries()) {
           clearTimeout(req.timeout);
           req.reject(new Error('Server stopping'));
         }
@@ -1645,7 +1645,7 @@ class StandardClaudeMCPServer extends EventEmitter {
       }
 
       // Clear pending requests
-      for (const [requestId, pendingRequest] of this.pendingRequests) {
+      for (const [, pendingRequest] of this.pendingRequests) {
         clearTimeout(pendingRequest.timeout);
         pendingRequest.reject(new Error('Server stopping'));
       }

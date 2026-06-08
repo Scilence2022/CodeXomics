@@ -4,7 +4,7 @@
  * Validates the in-memory cache used for function call caching
  * with TTL-based eviction in the renderer process.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // Lightweight reimplementation matching src/renderer/modules/MemoryLayers/ShortTermMemory.js pattern
 class ShortTermMemory {

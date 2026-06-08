@@ -4,7 +4,7 @@
  * Validates the BenchmarkEvaluatorBase pattern which has 4 subclasses
  * and follows the same inheritance pattern as the proposed ToolBase framework.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 // Replicate the BenchmarkEvaluatorBase pattern from the codebase
 class BenchmarkEvaluatorBase {

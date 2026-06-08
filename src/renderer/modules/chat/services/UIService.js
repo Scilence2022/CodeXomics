@@ -130,13 +130,13 @@ class UIService {
   setupChatDragging() {
     const chatPanel = document.getElementById('llmChatPanel');
     const chatHeader = document.getElementById('chatHeader');
-    const dockContainer = document.getElementById('chatDockContainer');
-    const dockSplitter = document.getElementById('chatDockSplitter');
+    document.getElementById('chatDockContainer');
+    document.getElementById('chatDockSplitter');
     let isDragging = false;
     let startX; let startY; let startLeft; let startTop;
     const dragThreshold = 5; // Minimum pixels to consider as drag
     let hasMoved = false;
-    const dockIndicator = null;
+
 
     chatHeader.addEventListener('mousedown', e => {
       // Don't drag if clicking on buttons

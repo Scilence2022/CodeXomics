@@ -604,7 +604,7 @@ class EnhancedCitationDisplay {
    */
   generateCitationItem(citation) {
     const literatureInfo = this.literatureData.get(citation.id);
-    const hasLiteratureData = literatureInfo && !literatureInfo.error;
+    literatureInfo && !literatureInfo.error;
 
     let content = '';
 

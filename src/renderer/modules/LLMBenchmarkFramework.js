@@ -115,7 +115,7 @@ class LLMBenchmarkFramework {
    * Strips any existing count suffix before appending the current count
    */
   updateSuiteNamesWithCounts() {
-    for (const [id, suite] of this.testSuites.entries()) {
+    for (const [, suite] of this.testSuites.entries()) {
       if (suite.suiteName) {
         const count = suite.getTestCount();
         // Remove any existing count suffix like " (122)" or " (4)"
@@ -245,7 +245,7 @@ class LLMBenchmarkFramework {
 
       // Calculate total test count for accurate progress tracking
       let totalTestCount = 0;
-      const completedTestCount = 0;
+
 
       for (const [suiteId, testSuite] of this.testSuites.entries()) {
         if (options.suites && !options.suites.includes(suiteId)) {
@@ -862,7 +862,6 @@ class LLMBenchmarkFramework {
       metrics: {},
     };
 
-    const partialTestResult = null;
 
     try {
       // Determine timeout based on configuration
@@ -1463,8 +1462,7 @@ class LLMBenchmarkFramework {
       // CRITICAL FIX: Save original context mode before any potential errors
       // This ensures only the current test instruction is sent, not the entire conversation history
       const originalContextMode = this.chatManager.contextModeEnabled;
-      const originalShowThinkingProcess = this.chatManager.showThinkingProcess;
-      const originalShowToolCalls = this.chatManager.showToolCalls;
+
 
       try {
         // CRITICAL FIX: Enable context mode for benchmark tests to prevent token overflow
@@ -1944,10 +1942,9 @@ class LLMBenchmarkFramework {
    * Display detailed LLM processing information
    */
   displayLLMProcessingDetails(instruction, options = {}) {
-    const testInfo = options.testInfo || {};
+    options.testInfo || {};
 
     // Get LLM configuration details
-    let llmConfig = 'Unknown';
     let modelName = 'Unknown';
     let provider = 'Unknown';
 
@@ -1959,7 +1956,6 @@ class LLMBenchmarkFramework {
           if (currentProvider && config.providers[currentProvider]) {
             provider = currentProvider;
             modelName = config.providers[currentProvider].model;
-            llmConfig = `${provider} (${modelName})`;
           }
         }
       }
@@ -2506,7 +2502,7 @@ class LLMBenchmarkFramework {
    * Display test error information
    */
   displayTestError(error, options = {}) {
-    const testInfo = options.testInfo || {};
+    options.testInfo || {};
 
     this.chatManager.updateThinkingMessage(
       `\n\n❌ Test Execution Error:\n` +

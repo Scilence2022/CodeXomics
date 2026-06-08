@@ -1627,7 +1627,7 @@ class ProteinService {
   }
 
   async searchInterproEntry(parameters) {
-    const { search_term, search_terms, search_type = 'any', entry_type, max_results = 20 } = parameters;
+    const { search_term, search_terms, entry_type, max_results = 20 } = parameters;
     try {
       let term = search_term;
       if (!term && search_terms && search_terms.length > 0) {
@@ -1670,7 +1670,7 @@ class ProteinService {
   }
 
   async getInterproEntryDetails(parameters) {
-    const { interproId, includeProteins = false, includeStructures = false } = parameters;
+    const { interproId } = parameters;
     try {
       if (!interproId) throw new Error('interproId is required');
 

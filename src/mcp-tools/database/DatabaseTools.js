@@ -3,7 +3,7 @@
  * Handles UniProt and InterPro database searches and analysis
  */
 
-const https = require('https');
+require('https');
 
 class DatabaseTools {
   constructor(server) {
@@ -338,7 +338,7 @@ class DatabaseTools {
         throw new Error(`File not found: ${filePath}`);
       }
 
-      const content = fs.readFileSync(filePath, 'utf8');
+      fs.readFileSync(filePath, 'utf8');
       const fileName = path.basename(filePath);
       const windowTitle = title || fileName;
 

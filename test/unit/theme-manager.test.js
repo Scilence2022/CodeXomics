@@ -4,15 +4,8 @@
  * Validates the ThemeManager preset/style propagation pattern used
  * across the genome browser, Circos plotter, and Project Manager.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
-// Mock CSSStyleDeclaration and document.documentElement
-const mockStyle = {};
-const mockDocumentElement = {
-  style: mockStyle,
-  setAttribute: vi.fn(),
-  getAttribute: vi.fn(() => null),
-};
 
 // Replicate ThemeManager pattern from codebase
 class ThemeManager {

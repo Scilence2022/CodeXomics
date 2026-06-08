@@ -1527,7 +1527,7 @@ class TabManager {
     }
 
     let draggedElement = null;
-    let draggedElementIndex = -1;
+
     let dropIndicator = null;
 
     // Create drop indicator element
@@ -1587,7 +1587,6 @@ class TabManager {
       // Drag start event
       item.addEventListener('dragstart', e => {
         draggedElement = item;
-        draggedElementIndex = Array.from(trackControlsContainer.children).indexOf(item);
 
         // Visual feedback
         item.classList.add('dragging');
@@ -2041,8 +2040,8 @@ class TabManager {
     // Tab settings modal controls
     const modal = document.getElementById('tabSettingsModal');
     const tabCacheEnabled = document.getElementById('tabCacheEnabled');
-    const maxCacheSize = document.getElementById('maxCacheSize');
-    const cacheTimeout = document.getElementById('cacheTimeout');
+    document.getElementById('maxCacheSize');
+    document.getElementById('cacheTimeout');
     const clearCacheBtn = document.getElementById('clearCacheBtn');
     const saveTabSettingsBtn = document.getElementById('saveTabSettingsBtn');
     const resetTabSettingsBtn = document.getElementById('resetTabSettingsBtn');

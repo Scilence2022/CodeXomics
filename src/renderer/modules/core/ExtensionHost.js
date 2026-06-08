@@ -180,7 +180,7 @@ class ExtensionHostProtocol {
    * Cancel all pending requests
    */
   cancelAll() {
-    for (const [id, pending] of this._pendingRequests) {
+    for (const [, pending] of this._pendingRequests) {
       clearTimeout(pending.timeout);
       pending.reject(new Error('Request cancelled'));
     }

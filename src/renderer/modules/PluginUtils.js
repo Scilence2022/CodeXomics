@@ -536,7 +536,7 @@ const PluginUtils = {
     // Calculate correlations between different metrics
     if (results.length < 2) return {};
 
-    const correlations = {};
+
     // This would contain actual correlation calculations
     // For now, return placeholder
     return {

@@ -10,7 +10,7 @@
 const i18next = require('i18next');
 const Backend = require('i18next-fs-backend');
 const path = require('path');
-const { app, ipcMain } = require('electron');
+const { ipcMain } = require('electron');
 
 // Supported languages
 const SUPPORTED_LANGUAGES = ['en', 'zh-CN'];

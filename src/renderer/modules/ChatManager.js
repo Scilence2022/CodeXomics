@@ -217,7 +217,7 @@ class ChatManager {
           this.updateSettingsFromManager();
 
           // Check if Dynamic Tools Registry setting changed
-          const dynamicToolsRegistryEnabled = this.configManager.get(
+          this.configManager.get(
             'chatboxSettings.enableDynamicToolsRegistry',
             true
           );
@@ -1805,7 +1805,7 @@ class ChatManager {
     });
 
     this.mcpServerManager.on('serverError', data => {
-      const serverName = data.server?.name || data.serverId || 'Unknown Server';
+      data.server?.name || data.serverId || 'Unknown Server';
       // [ChatManager] MCP Server error
     });
 
@@ -2659,7 +2659,7 @@ class ChatManager {
    * Switch to a specific tab by ID, name, or index
    */
   async switchToTab(params) {
-    const { tab_id, tab_name, tab_index, clientId } = params;
+    const { tab_id, tab_name, tab_index } = params;
 
     console.log('🔧 [ChatManager] switchToTab called with params:', params);
 
@@ -3617,7 +3617,7 @@ class ChatManager {
 
     if (this.app && this.app.exportManager) {
       try {
-        let exportResult;
+        let _exportResult;
 
         switch (format.toLowerCase()) {
           case 'fasta':
@@ -3625,21 +3625,21 @@ class ChatManager {
               // Export specific region
               const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
               const fastaContent = `>${chromosome}:${start}-${end}\n${sequence}`;
-              exportResult = { content: fastaContent, type: 'text' };
+              _exportResult = { content: fastaContent, type: 'text' };
             } else {
-              exportResult = await this.app.exportManager.exportFASTA();
+              _exportResult = await this.app.exportManager.exportFASTA();
             }
             break;
           case 'genbank':
           case 'gb':
-            exportResult = await this.app.exportManager.exportGenBank();
+            _exportResult = await this.app.exportManager.exportGenBank();
             break;
           case 'gff':
           case 'gff3':
-            exportResult = await this.app.exportManager.exportGFF();
+            _exportResult = await this.app.exportManager.exportGFF();
             break;
           case 'bed':
-            exportResult = await this.app.exportManager.exportBED();
+            _exportResult = await this.app.exportManager.exportBED();
             break;
           default:
             throw new Error(`Unsupported export format: ${format}`);
@@ -5959,16 +5959,7 @@ class ChatManager {
       'toolCategories',
       'memoryContext',
     ];
-    const defaultToggles = {
-      systemInstructions: true,
-      currentContext: true,
-      dynamicTools: true,
-      toolExamples: true,
-      toolGuidelines: true,
-      responseFormat: true,
-      toolCategories: true,
-      memoryContext: true,
-    };
+
 
     const order = this.configManager.get('chatboxSettings.systemPromptSectionOrder', defaultOrder);
     const toggles = {};
@@ -6006,7 +5997,7 @@ class ChatManager {
     }
 
     // Add any sections from the original prompt that weren't mapped
-    for (const [header, content] of Object.entries(sections)) {
+    for (const [header,] of Object.entries(sections)) {
       const isMapped = this.mapHeaderToSectionKey(header);
       if (!isMapped || !toggles[isMapped]) continue;
       // Already included above
@@ -6826,9 +6817,8 @@ return 'dynamicTools';
       search_terms,
       search_type = 'all',
       entry_type = 'all',
-      database_source = [],
-      max_results = 50,
-      include_statistics = true,
+
+
     } = parameters;
 
     console.log('🔍 [ChatManager] Searching InterPro entries:', {
@@ -6899,8 +6889,8 @@ return 'dynamicTools';
       interpro_id,
       entry_name,
       include_proteins = true,
-      include_structures = true,
-      output_format = 'detailed',
+
+
     } = parameters;
 
     console.log('📖 [ChatManager] Getting InterPro entry details:', {
@@ -6974,8 +6964,8 @@ return 'dynamicTools';
       query_fields,
       boolean_operator = 'AND',
       filters = {},
-      max_results = 100,
-      sort_by = 'relevance',
+
+
     } = parameters;
 
     console.log('🔍 [ChatManager] Advanced UniProt search:', {
@@ -7048,7 +7038,7 @@ return 'dynamicTools';
       include_sequence = true,
       include_features = true,
       include_function = true,
-      format = 'detailed',
+
     } = parameters;
 
     console.log('📖 [ChatManager] Getting UniProt entry:', {
@@ -8587,40 +8577,7 @@ ${coreTools}
     const toolCount = context.genomeBrowser.toolSources.total;
 
     // Get a sample of key tools from each category
-    const keyTools = [
-      // Navigation & State
-      'navigate_to_position',
-      'get_current_state',
-      'jump_to_gene',
-      'zoom_to_gene',
-      'open_new_tab',
-      // Search & Discovery
-      'search_features',
-      'find_gene_by_name',
-      'search_sequence_motif',
-      // Sequence Analysis
-      'get_sequence',
-      'translate_dna',
-      'compute_gc',
-      'reverse_complement',
-      // Advanced Analysis
-      'analyze_region',
-      'predict_promoter',
-      'find_restriction_sites',
-      // BLAST & External
-      'blast_search',
-      'blast_sequence_from_region',
-      // Protein Structure
-      'open_protein_viewer',
-      'fetch_protein_structure',
-      'search_pdb_structures',
-      // Data Management
-      'get_genome_info',
-      'export_data',
-      'create_annotation',
-      // System & File Management
-      'set_working_directory',
-    ];
+
 
     return `
 ===CRITICAL INSTRUCTION FOR TOOL CALLS===
@@ -9319,20 +9276,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     try {
-      // Get MCP base URL
-      let baseUrl = 'http://localhost:3000';
-      if (this.mcpServerManager) {
-        const deepGeneServer = this.mcpServerManager.servers?.get('deep-gene-research');
-        if (deepGeneServer && deepGeneServer.url) {
-          try {
-            const urlObj = new URL(deepGeneServer.url);
-            baseUrl = `${urlObj.protocol}//${urlObj.host}`;
-          } catch (e) {
-            /* ignore */
-          }
-        }
-      }
-
       // Convert escaped markdown links like [text](url) that weren't rendered
       // This handles cases where content wasn't markdown-parsed
       html = html.replace(/\[([^\]]+)\]\((http[s]?:\/\/[^\s)]+\/api\/mcp\/[^\s)]+)\)/g, (match, label, url) => {
@@ -9869,7 +9812,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     console.log('Displaying chat history with', history.length, 'messages');
 
     // Preserve welcome message but clear other messages
-    const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+    messagesContainer.querySelector('.welcome-message');
 
     // Clear all messages except welcome
     const existingMessages = messagesContainer.querySelectorAll('.message:not(.welcome-message .message)');
@@ -10591,7 +10534,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       return [];
     }
 
-    const originalChr = document.getElementById('chromosomeSelect')?.value;
+    document.getElementById('chromosomeSelect')?.value;
     const annotations = this.app.currentAnnotations[chromosome];
     const searchTerm = geneName.toLowerCase();
     const results = [];
@@ -11363,7 +11306,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   // 6. SEQUENCE COMPARISON AND ANALYSIS
   async compareRegions(params) {
-    const { region1, region2, alignmentType = 'simple' } = params;
+    const { region1, region2 } = params;
 
     // Parse regions (format: "chr:start-end")
     const parseRegion = regionStr => {
@@ -16268,4 +16211,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   deleteTask(params) {
     return this.services.task.deleteTask(params);
   }
+}
+
+// Export for Node/test environments; in the renderer this class is loaded as a script-tag global.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ChatManager;
 }

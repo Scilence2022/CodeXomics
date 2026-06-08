@@ -765,7 +765,7 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
 
     // Parse different formats: "1000", "1000-2000", "chr1:1000-2000"
     if (input.includes(':')) {
-      const [chr, range] = input.split(':');
+      const [, range] = input.split(':');
       if (range.includes('-')) {
         const [s, e] = range.split('-');
         start = parseInt(s) - 1; // Convert to 0-based
@@ -2592,7 +2592,7 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
   initializeModalDragResize(modal, modalContent) {
     let isDragging = false;
     let isResizing = false;
-    let startX; let startY; let startWidth; let startHeight; let startLeft; let startTop;
+    let startX; let startY; let startWidth; let startHeight;
 
     // Drag functionality
     const header = modalContent.querySelector('.modal-header');

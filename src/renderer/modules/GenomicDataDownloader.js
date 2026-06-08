@@ -963,7 +963,7 @@ class GenomicDataDownloader {
 
   async searchEnsembl(searchTerm) {
     // Ensembl REST API搜索
-    const division = document.getElementById('division')?.value || 'vertebrates';
+    document.getElementById('division')?.value || 'vertebrates';
     const url = `https://rest.ensembl.org/taxonomy/name/${encodeURIComponent(searchTerm)}?content-type=application/json`;
 
     const response = await fetch(url);
@@ -1140,7 +1140,7 @@ class GenomicDataDownloader {
   getCategoryPreview(result) {
     const fileFormat = document.getElementById('fileFormat').value;
     const extension = this.getFileExtension(fileFormat);
-    const mockFilePath = `${result.accession}${extension}`;
+
 
     // Simulate the categorization logic from main.js
     const database = result.database;
@@ -1214,7 +1214,7 @@ class GenomicDataDownloader {
     categorySummaryHtml += '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
 
     Object.entries(categoryDistribution).forEach(([category, count]) => {
-      const categoryInfo = this.getCategoryPreview({ database: null }); // Get default info
+      this.getCategoryPreview({ database: null }); // Get default info
       // Find the actual category info
       let actualInfo = { icon: '📁', color: '#607d8b' };
       for (const result of results) {

@@ -92,7 +92,6 @@ describe('MCP Tool Modules Integration', () => {
   });
 
   it('tool handlers should exist for each tool definition', () => {
-    const issues = [];
     for (const mod of modules) {
       const content = fs.readFileSync(mod.path, 'utf-8');
       const hasHandler = content.includes('handler:') || content.includes('callback:');

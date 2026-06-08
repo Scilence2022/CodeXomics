@@ -18,7 +18,7 @@ const {
   permissionBroker,
   ALL_FILE_CAPABILITIES,
   FILE_CAPABILITIES,
-  rememberApprovedPath,
+
   rememberApprovedDialogPaths,
   getDefaultWritableRoots,
   assertAllowedFileAccess,
@@ -496,24 +496,21 @@ function registerIpcHandlers(deps) {
   const {
     mainWindow,
     windowRegistry,
-    pendingRegistrations,
+
     getUnifiedMCPServer,
     setUnifiedMCPServer,
     getUnifiedServerStatus,
     setUnifiedServerStatus,
-    toolMenuTemplates,
-    currentActiveWindow,
-    fileOpenQueue,
+
+
     analyzerPendingData,
     getWindowRegistryStatus,
     syncWindowsWithMCPServer,
-    registerGenomeWindow,
-    unregisterGenomeWindow,
+
+
     getCurrentMainWindow,
-    createMCPServerManagerWindow,
-    createResourceManagerWindow,
-    createDebugWindow,
-    createCircosWindow,
+
+
     createKEGGWindow,
     createGOWindow,
     createUniProtWindow,
@@ -525,13 +522,13 @@ function registerIpcHandlers(deps) {
     createPDBWindow,
     createGeneAnnotationRefineWindow,
     createBlastDownloaderWindow,
-    createBlastConfigWindow,
+
     createProGenFixerWindow,
     createDeepGeneResearchWindow,
     createChopchopWindow,
     createCustomExternalToolWindow,
     createMenu,
-    createCircosPlotterMenu,
+
     updateMCPServerMenu,
     loadMCPServerSettings,
     saveMCPServerSettings,
@@ -3158,7 +3155,7 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('get-circos-genome-data', async event => {
     try {
       // Get the sender window (Circos window)
-      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      BrowserWindow.fromWebContents(event.sender);
 
       // Get main window data
       const mainWindow = getCurrentMainWindow();
@@ -3825,29 +3822,7 @@ function registerIpcHandlers(deps) {
   // =====================================================================
 
   // Helper functions for user notifications
-  function showSettingsWarning(title, message) {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send('show-notification', {
-        type: 'warning',
-        title: title,
-        message: message,
-        duration: 5000,
-      });
-    }
-  }
 
-  function showSettingsError(title, message) {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send('show-notification', {
-        type: 'error',
-        title: title,
-        message: message,
-        duration: 8000,
-      });
-    }
-  }
 
   // General Settings IPC handlers
   ipcMain.handle('get-general-settings', async () => {

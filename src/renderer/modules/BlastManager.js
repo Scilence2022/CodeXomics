@@ -1676,7 +1676,7 @@ class BlastManager {
 
       // Check if we need to create a FASTA file from GBK source (only for nucleotide)
       if (dbType === 'nucl') {
-        const fastaFilePath = await this.createFastaFileIfNeeded(genomeName, fastaContent);
+        await this.createFastaFileIfNeeded(genomeName, fastaContent);
       }
 
       // Create temporary file
@@ -2102,8 +2102,6 @@ class BlastManager {
   }
 
   translateToProtein(nucleotideSeq, codonTable) {
-    const proteinSeq = '';
-
     // Find all possible reading frames and take the longest ORF
     let longestORF = '';
 
@@ -3964,7 +3962,7 @@ class BlastManager {
 
       if (!ridMatch) {
         // Enhanced error reporting
-        const debugInfo = this.logBlastDebugInfo(params, responseText);
+        this.logBlastDebugInfo(params, responseText);
 
         // Check if response contains error messages
         if (responseText.includes('error') || responseText.includes('Error')) {
@@ -4612,7 +4610,7 @@ class BlastManager {
       if (parts.length < 15) continue; // Skip lines with insufficient columns (now expecting 17 fields)
 
       const [
-        qseqid,
+        ,
         sseqid,
         pident,
         length,
@@ -4650,7 +4648,7 @@ class BlastManager {
       const identityPercent = parseFloat(pident) || 0;
       const bitScore = parseFloat(bitscore) || 0;
       const queryCovsPercent = parseFloat(qcovs) || 0;
-      const queryCovsHspPercent = parseFloat(qcovhsp) || 0;
+      parseFloat(qcovhsp) || 0;
       const mismatches = parseInt(mismatch) || 0;
       const gaps = parseInt(gapopen) || 0;
 
@@ -5669,7 +5667,7 @@ class BlastManager {
       return;
     }
 
-    const rawOutput = this.searchResults.rawOutput || this.searchResults.rawText || 'No raw output available';
+    this.searchResults.rawOutput || this.searchResults.rawText || 'No raw output available';
     const isRealResults = this.searchResults.isRealResults !== false;
 
     // Create modal for raw output
@@ -6324,7 +6322,7 @@ class BlastManager {
   }
 
   createRealisticHit(index, params, sequenceType, database) {
-    const databaseInfo = this.getDatabaseInfo(database);
+    this.getDatabaseInfo(database);
     const organisms = this.getOrganismsForDatabase(database);
     const organism = organisms[Math.floor(Math.random() * organisms.length)];
 
@@ -6905,4 +6903,9 @@ class BlastManager {
 
     this.app.utils.showModal('BLAST Result Details', modalContent, 'modal-lg');
   }
+}
+
+// Export for Node/test environments; in the renderer this class is loaded as a script-tag global.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = BlastManager;
 }

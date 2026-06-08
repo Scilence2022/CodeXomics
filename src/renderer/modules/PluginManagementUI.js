@@ -2374,7 +2374,7 @@ class PluginManagementUI {
       this.settings.enablePluginDebug = enableDebug;
 
       // Save to local storage
-      const storageSuccess = this.saveSettingsToStorage();
+      this.saveSettingsToStorage();
 
       // Also save to configManager for compatibility
       if (this.configManager) {

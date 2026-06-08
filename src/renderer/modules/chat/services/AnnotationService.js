@@ -297,7 +297,7 @@ class AnnotationService {
 
     for (const item of updatesList) {
       try {
-        const result = await this.updateAnnotation({
+        await this.updateAnnotation({
           identifier: item.identifier,
           chromosome: item.chromosome,
           updates: item.updates,

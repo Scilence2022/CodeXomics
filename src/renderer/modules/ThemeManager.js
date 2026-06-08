@@ -596,7 +596,7 @@ class ThemeManager {
         await this.configManager.waitForInit();
       }
 
-      const styleBeforeLoad = this.currentStyle;
+
       await this.loadStyle();
 
       // Always call applyStyle() to ensure CSS custom properties are set.

@@ -357,7 +357,7 @@ class CanvasReadsRenderer {
 
     // Calculate pixels per base pair
     const pixelsPerBp = this.canvasWidth / bpLength;
-    const charWidth = pixelsPerBp;
+
 
     // Only render if we have a reasonable width per base
     if (pixelsPerBp > 0.1) {

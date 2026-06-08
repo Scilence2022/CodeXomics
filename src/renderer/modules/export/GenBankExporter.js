@@ -73,7 +73,7 @@ class GenBankExporter {
    * @returns {string} GenBank formatted content for chromosome
    */
   generateChromosomeContent(params) {
-    const { chromosome, sequence, features, actions, executionId, options } = params;
+    const { chromosome, sequence, features, actions, executionId } = params;
 
     if (!sequence) {
       throw new Error(`No sequence provided for chromosome ${chromosome}`);

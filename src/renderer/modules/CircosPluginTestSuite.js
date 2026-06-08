@@ -213,11 +213,7 @@ class CircosPluginTestSuite {
 
     try {
       // Check if Circos window can be created
-      const circosWindow = {
-        width: 1200,
-        height: 800,
-        title: 'Circos Genome Plotter Test',
-      };
+
 
       // Simulate window creation test
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -532,7 +528,7 @@ class CircosPluginTestSuite {
     try {
       const colorSchemes = ['viridis', 'plasma', 'warm', 'cool'];
 
-      for (const scheme of colorSchemes) {
+      for (let i = 0; i < colorSchemes.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 25));
       }
 
@@ -563,7 +559,7 @@ class CircosPluginTestSuite {
       // Simulate switching between themes
       const themes = ['default', 'dark', 'custom'];
 
-      for (const theme of themes) {
+      for (let i = 0; i < themes.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
 
@@ -645,7 +641,7 @@ class CircosPluginTestSuite {
     try {
       const resolutions = ['2x', '4x', '8x'];
 
-      for (const res of resolutions) {
+      for (let i = 0; i < resolutions.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 

@@ -2218,7 +2218,7 @@ class TrackRenderer {
 
     // Create gradient for gene background
     const gradientId = `gene-gradient-${gene.start}-${gene.end}-${rowIndex}`;
-    const gradient = GeneShapeCreators.createSVGGeneGradient(this, defs, gradientId, operonInfo.color);
+    GeneShapeCreators.createSVGGeneGradient(this, defs, gradientId, operonInfo.color);
 
     // Create gene shape based on strand direction and truncation state
     const geneShape = GeneShapeCreators.createSVGGeneShape(
@@ -2627,7 +2627,7 @@ class TrackRenderer {
     );
 
     // Count visible and hidden genes
-    const totalGenes = visibleGenes.length;
+
     let visibleGenesCount = 0;
     let hiddenGenesCount = 0;
 
@@ -2781,7 +2781,7 @@ class TrackRenderer {
         `;
 
     // Simplified DOM rendering with basic adaptive sizing
-    const sequenceLength = viewport.end - viewport.start;
+
     const adaptiveHeight = Math.max(20, 14 * 1.4);
     seqDisplay.style.height = `${adaptiveHeight}px`;
 
@@ -4548,7 +4548,7 @@ class TrackRenderer {
     settings
   ) {
     const maxVisibleRows = settings.maxVisibleRows || 10;
-    const scrollbarWidth = 16; // Standard scrollbar width
+     // Standard scrollbar width
 
     // Calculate dimensions
     const rowHeight = readHeight + rowSpacing;
@@ -5021,7 +5021,6 @@ class TrackRenderer {
 
     // Render each visible row
     visibleRows.forEach((rowReads, rowIndex) => {
-      const actualRowIndex = startRow + rowIndex;
       const y = rowIndex * (readHeight + rowSpacing);
 
       this.renderReadRowCanvas(ctx, rowReads, viewport, y, readHeight, settings, containerWidth);
@@ -5697,7 +5696,7 @@ class TrackRenderer {
     // CRITICAL FIX: Calculate offset using actual sequence length (matching Canvas renderer fix)
     // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
     const genomicStart = read.start;
-    const genomicEnd = read.end; // Use BAM end coordinate directly (0-based exclusive)
+     // Use BAM end coordinate directly (0-based exclusive)
 
     const startOffset = Math.max(0, visibleStart - genomicStart);
     const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart - 1); // Convert visibleEnd from 0-based exclusive to 0-based inclusive
@@ -5883,7 +5882,7 @@ class TrackRenderer {
     referenceGroup.appendChild(bg);
 
     // Always show reference sequence text when reference is enabled
-    const basesPerPixel = range / containerWidth;
+
     const effectiveRefSettings = { ...settings };
 
     // Calculate optimal font size if auto sizing is enabled
@@ -6316,8 +6315,8 @@ class TrackRenderer {
     // Get constraints
     const minFontSize = 4; // Very small minimum for force mode
     const maxFontSize = Math.min(16, Math.max(6, readHeight + 2)); // Allow font to be slightly larger than read height
-    const minPixelsPerChar = 4; // Minimum pixels needed per character
-    const maxPixelsPerChar = 12; // Maximum useful pixels per character
+     // Minimum pixels needed per character
+     // Maximum useful pixels per character
 
     // Calculate font size based on available space
     let optimalFontSize = Math.floor(pixelsPerBase * 0.8); // Leave some padding
@@ -6759,7 +6758,7 @@ class TrackRenderer {
     const plotHeight = viewHeight - 2 * padding;
     const centerY = viewHeight / 2;
     const gcHeight = centerY - padding;
-    const skewHeight = centerY - padding;
+
 
     // Create gradient definitions
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -7409,7 +7408,7 @@ class TrackRenderer {
     const finalRows = [];
     // Iterate over the ordered map to build final rows
     // CHANGE: Consolidate all elements of the same type onto a SINGLE row (allowing overlaps)
-    for (const [type, genesForType] of typeMap.entries()) {
+    for (const [, genesForType] of typeMap.entries()) {
       if (genesForType.length === 0) continue;
 
       // All genes of this type go on ONE row (overlaps are allowed)
@@ -7528,7 +7527,7 @@ class TrackRenderer {
       });
 
       // Process operon groups first (try to place all genes of an operon in the same row)
-      for (const [operonName, operonGenes] of operonGroups) {
+      for (const [, operonGenes] of operonGroups) {
         // Sort operon genes by position
         operonGenes.sort((a, b) => a.start - b.start);
 
@@ -8020,7 +8019,7 @@ class TrackRenderer {
   // Calculate intelligent tick spacing for detailed view
   calculateDetailedTickSpacing(range, width) {
     const targetMajorTicks = Math.max(3, Math.min(8, width / 100));
-    const targetMinorTicks = targetMajorTicks * 5;
+
 
     // Base intervals to choose from
     const baseIntervals = [
@@ -8234,7 +8233,7 @@ class TrackRenderer {
       const values = visibleData.map(point => point.value);
       const minValue = Math.min(...values);
       const maxValue = Math.max(...values);
-      const valueRange = maxValue - minValue;
+
 
       // Create track element
       const trackElement = document.createElement('div');
@@ -8732,7 +8731,7 @@ class TrackRenderer {
 
     // Create gradient for action background
     const gradientId = `action-gradient-${action.id}`;
-    const gradient = this.createSVGActionGradient(defs, gradientId, actionColor);
+    this.createSVGActionGradient(defs, gradientId, actionColor);
 
     // Create action layout with separate symbol and text areas
     if (elementWidth > 30) {

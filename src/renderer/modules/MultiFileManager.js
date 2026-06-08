@@ -248,7 +248,7 @@ class MultiFileManager {
     const files = [];
 
     // Add BAM files
-    for (const [fileId, bamFile] of this.bamFiles) {
+    for (const [, bamFile] of this.bamFiles) {
       files.push({
         ...bamFile.metadata,
         trackId: bamFile.trackId,
@@ -256,7 +256,7 @@ class MultiFileManager {
     }
 
     // Add VCF files
-    for (const [fileId, vcfFile] of this.vcfFiles) {
+    for (const [, vcfFile] of this.vcfFiles) {
       files.push({
         ...vcfFile.metadata,
         trackId: vcfFile.trackId,
@@ -365,4 +365,9 @@ class MultiFileManager {
 
     console.log('All files cleared from MultiFileManager');
   }
+}
+
+// Export for Node/test environments; in the renderer this class is loaded as a script-tag global.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = MultiFileManager;
 }

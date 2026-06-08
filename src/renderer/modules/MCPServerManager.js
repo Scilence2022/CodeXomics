@@ -414,7 +414,6 @@ class MCPServerManager {
       const toolEndpoints = ['/tools', '/api/tools', '/mcp/tools', '/api/mcp/tools', '/tools/list', '/api/tools/list'];
 
       let tools = [];
-      let foundTools = false;
 
       for (const endpoint of toolEndpoints) {
         try {
@@ -442,11 +441,9 @@ class MCPServerManager {
               const data = JSON.parse(responseText);
               if (data.tools && Array.isArray(data.tools)) {
                 tools = data.tools;
-                foundTools = true;
                 break;
               } else if (Array.isArray(data)) {
                 tools = data;
-                foundTools = true;
                 break;
               }
             } catch (jsonError) {
@@ -1071,10 +1068,7 @@ class MCPServerManager {
         if (!ws) return reject(new Error('Discovery: WebSocket not connected'));
 
         const requestId = this.generateRequestId();
-        const handler = data => {
-          // This is a placeholder as we don't have a good response correlation mechanism in this class yet
-          // Ideally we would add to a map of pending requests
-        };
+
 
         ws.send(
           JSON.stringify({

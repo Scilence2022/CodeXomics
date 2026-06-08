@@ -74,7 +74,7 @@ class BenchmarkReportGenerator {
    * Generate comprehensive report
    */
   generateReport(benchmarkResults, options = {}) {
-    const reportType = options.type || 'detailed';
+    options.type || 'detailed';
     const includeCharts = options.includeCharts !== false;
     const includeRawData = options.includeRawData === true;
     const includeLLMInteractions = options.includeLLMInteractions !== false; // Default to true

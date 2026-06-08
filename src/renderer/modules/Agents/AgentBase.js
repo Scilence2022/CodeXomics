@@ -503,7 +503,7 @@ class AgentBase {
    * Apply optimization rules
    */
   applyOptimizationRules(data) {
-    for (const [category, rules] of this.optimizationRules) {
+    for (const [, rules] of this.optimizationRules) {
       for (const rule of rules) {
         if (rule.condition(data)) {
           rule.action(data);
@@ -622,7 +622,7 @@ class AgentBase {
     this.isActive = false;
 
     // Complete current tasks
-    for (const [taskId, taskContext] of this.currentTasks) {
+    for (const [taskId,] of this.currentTasks) {
       console.log(`⏳ Completing task ${taskId} before shutdown`);
       // Could implement graceful shutdown logic here
     }

@@ -103,7 +103,7 @@ class BlastConfigManager {
    */
   async autoDetectBlast() {
     const detectBtn = document.getElementById('detectBtn');
-    const statusDiv = document.getElementById('detectionStatus');
+    document.getElementById('detectionStatus');
     const resultsDiv = document.getElementById('detectionResults');
 
     // Disable button and show loading
@@ -401,4 +401,9 @@ class BlastConfigManager {
     statusDiv.textContent = message;
     statusDiv.style.display = 'block';
   }
+}
+
+// Export for Node/test environments; in the renderer this class is loaded as a script-tag global.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = BlastConfigManager;
 }

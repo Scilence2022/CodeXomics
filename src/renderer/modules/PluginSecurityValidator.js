@@ -328,7 +328,7 @@ class PluginSecurityValidator {
     let riskScore = 0;
 
     // Check against security patterns
-    for (const [category, patterns] of Object.entries(this.securityPatterns)) {
+    for (const [, patterns] of Object.entries(this.securityPatterns)) {
       for (const pattern of patterns) {
         const matches = mockCode.match(pattern.pattern);
         if (matches) {

@@ -60,7 +60,7 @@ class FileOperationService {
   async loadGenomeFile(parameters = {}) {
     try {
       const filePath = parameters.filePath || parameters.file_path || parameters.path;
-      const { showFileDialog = false, fileType = 'auto' } = parameters;
+      const { showFileDialog = false } = parameters;
 
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) {
@@ -113,7 +113,7 @@ class FileOperationService {
       const filePath = parameters.filePath || parameters.file_path || parameters.path;
       const {
         showFileDialog = false,
-        fileType = 'auto',
+
         loadMode,
         mergeWithExisting: mergeParam,
       } = parameters;

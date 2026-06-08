@@ -254,7 +254,7 @@ class ReadsManager {
       const fields = trimmed.split('\t');
       if (fields.length < 11) continue;
 
-      const [qname, flag, rname, pos, mapq, cigar, rnext, pnext, tlen, seq, qual] = fields;
+      const [qname, flag, rname, pos, mapq, cigar, , , , seq, qual] = fields;
 
       // Skip unmapped reads
       if (rname === '*' || pos === '0') continue;
@@ -396,13 +396,13 @@ class ReadsManager {
    * Handle navigation change - clear distant cache entries
    */
   onNavigationChange(chromosome, start, end) {
-    const currentRegionKey = this.getRegionKey(chromosome, start, end);
+    this.getRegionKey(chromosome, start, end);
     const regionSize = end - start;
     const clearDistance = regionSize * 10; // Clear cache entries more than 10 regions away
 
     const entriesToRemove = [];
 
-    for (const [key, data] of this.cache.entries()) {
+    for (const [key,] of this.cache.entries()) {
       const [keyChromosome, keyRange] = key.split(':');
 
       // Different chromosome - remove immediately
@@ -638,8 +638,6 @@ class ReadsManager {
     const reads = [];
 
     return new Promise((resolve, reject) => {
-      let processedLines = 0;
-
       const linesHandler = (event, { lines }) => {
         for (const line of lines) {
           const trimmed = line.trim();
@@ -648,7 +646,7 @@ class ReadsManager {
           const fields = trimmed.split('\t');
           if (fields.length < 11) continue;
 
-          const [qname, flag, rname, pos, mapq, cigar, rnext, pnext, tlen, seq, qual] = fields;
+          const [qname, flag, rname, pos, mapq, cigar, , , , seq, qual] = fields;
 
           // Skip unmapped reads
           if (rname === '*' || pos === '0') continue;
@@ -675,8 +673,6 @@ class ReadsManager {
 
             reads.push(read);
           }
-
-          processedLines++;
         }
       };
 

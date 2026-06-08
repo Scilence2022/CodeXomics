@@ -647,7 +647,7 @@ class MicrobeGenomicsFunctions {
       const seqStart = start != null ? start : 0;
       const seqEnd = end != null ? end : fullSeq.length;
       const seq = (caseSensitive ? fullSeq : fullSeq.toUpperCase()).substring(seqStart, seqEnd);
-      const regionLen = seqEnd - seqStart;
+
 
       if (maxMismatches === 0) {
         // ---- Fast regex path ----
@@ -1081,7 +1081,7 @@ class MicrobeGenomicsFunctions {
 
     const geneNames = new Set();
 
-    for (const [chr, features] of Object.entries(gb.currentAnnotations)) {
+    for (const [, features] of Object.entries(gb.currentAnnotations)) {
       features.forEach(feature => {
         const qualifiers = feature.qualifiers || {};
         if (qualifiers.gene) {
@@ -1165,7 +1165,7 @@ class MicrobeGenomicsFunctions {
     if (str1.length === 0 || str2.length === 0) return 0;
 
     const longer = str1.length > str2.length ? str1 : str2;
-    const shorter = str1.length > str2.length ? str2 : str1;
+    str1.length > str2.length ? str2 : str1;
 
     const editDistance = this.levenshteinDistance(str1, str2);
     return 1 - editDistance / longer.length;

@@ -1110,3 +1110,8 @@ class CheckpointManager {
     console.log('🧹 CheckpointManager destroyed');
   }
 }
+
+// Export for Node/test environments; in the renderer this class is loaded as a script-tag global.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = CheckpointManager;
+}

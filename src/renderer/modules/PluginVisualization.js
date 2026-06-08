@@ -157,8 +157,7 @@ const PluginVisualization = {
   drawAlignmentGrid(container, sequences, options = {}) {
     const maxLength = Math.max(...sequences.map(seq => seq.sequence.length));
     const blockSize = options.blockSize || 50;
-    const charWidth = 8;
-    const lineHeight = 20;
+
 
     // Create alignment blocks
     for (let start = 0; start < maxLength; start += blockSize) {
