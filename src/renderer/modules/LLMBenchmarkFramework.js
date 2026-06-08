@@ -12,7 +12,7 @@ class LLMBenchmarkFramework {
     this.isRunning = false;
     this.testTimeout = 120000; // 2 minutes default timeout
     this.useIndividualTimeouts = false; // Default to using global timeout
-    this.testDelay = 60000; // 1 minute default delay every 10 tests to avoid rate limits
+    this.testDelay = 0; // default no delay every 10 tests to avoid rate limits
     this.totalDelayTime = 0; // Track total delay time to subtract from final duration
     this.statisticsEngine = new BenchmarkStatistics();
     this.reportGenerator = new BenchmarkReportGenerator();
@@ -2522,6 +2522,44 @@ class LLMBenchmarkFramework {
    * Parse test response based on test type
    * Note: ChatManager handles function calls internally and returns the final text response
    */
+  /**
+   * Return the authoritative list of function calls that actually executed during the
+   * most recent ChatManager interaction, recovering each call's success state from the
+   * recorded tool results. This is the same data source the ChatBox uses, so benchmark
+   * tool detection stays in lock-step with real execution behavior.
+   * @returns {Array<{tool_name: string, parameters: object, success: boolean, status: string}>}
+   */
+  getExecutedFunctionCalls() {
+    const executionData = this.chatManager?.getLastExecutionData?.();
+    if (!executionData || !Array.isArray(executionData.functionCalls)) {
+      return [];
+    }
+
+    // Pair each call with its first unconsumed tool result (calls and results are
+    // recorded in execution order) to recover success/failure per call.
+    const pendingResults = Array.isArray(executionData.toolResults) ? [...executionData.toolResults] : [];
+
+    return executionData.functionCalls
+      .map(call => {
+        const toolName = call.tool_name || call.toolName || call.tool;
+        let success = true;
+        const resultIndex = pendingResults.findIndex(r => (r.tool || r.tool_name) === toolName);
+        if (resultIndex !== -1) {
+          success = pendingResults[resultIndex].success !== false;
+          pendingResults.splice(resultIndex, 1);
+        }
+        return {
+          tool_name: toolName,
+          parameters: call.parameters || {},
+          success,
+          status: success ? 'completed' : 'failed',
+          detectionMethod: 'execution_data',
+          executed: true,
+        };
+      })
+      .filter(call => call.tool_name);
+  }
+
   async parseTestResponse(response, test) {
     if (!response) {
       return null;
@@ -2546,6 +2584,18 @@ class LLMBenchmarkFramework {
       steps: this.extractWorkflowSteps(response),
       parseDebugInfo: parseDebugInfo, // Include parse debug info
     };
+
+    // Attach the authoritative list of tools that actually executed during this
+    // interaction. ChatManager records every executed function call across all
+    // function-call rounds in getLastExecutionData() — the same ground truth the
+    // ChatBox relies on. Evaluators must score against this rather than re-deriving
+    // tools from the final assistant text, which omits intermediate tool calls and
+    // causes multi-step workflows (e.g. "compute GC then export BED") to be reported
+    // as "tool not detected".
+    const executedFunctionCalls = this.getExecutedFunctionCalls();
+    if (executedFunctionCalls.length > 0) {
+      parsedResponse.executedFunctionCalls = executedFunctionCalls;
+    }
 
     console.log('📊 Parsed response structure:', parsedResponse);
     console.log('🔍 ParseDebugInfo extracted:', parseDebugInfo);
