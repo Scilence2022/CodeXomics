@@ -8917,6 +8917,7 @@ class TrackRenderer {
     switch (actionType) {
       case 'copy_sequence':
         // Duplicate/copy symbol - two overlapping rectangles
+        {
         const rect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect1.setAttribute('x', centerX - symbolSize / 2 + 1);
         rect1.setAttribute('y', centerY - symbolSize / 2 + 1);
@@ -8940,9 +8941,11 @@ class TrackRenderer {
         symbolGroup.appendChild(rect2);
         symbolGroup.appendChild(rect1);
         break;
+        }
 
       case 'cut_sequence':
         // Vertical scissors symbol with heads pointing up
+        {
         const leftBlade = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const leftBladePath = `
                     M ${centerX - symbolSize / 6} ${centerY - symbolSize / 3}
@@ -9022,9 +9025,11 @@ class TrackRenderer {
         symbolGroup.appendChild(rightHandle);
         symbolGroup.appendChild(pivot);
         break;
+        }
 
       case 'paste_sequence':
         // Clipboard symbol
+        {
         const clipboardBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         clipboardBase.setAttribute('x', centerX - symbolSize / 3);
         clipboardBase.setAttribute('y', centerY - symbolSize / 2);
@@ -9046,9 +9051,11 @@ class TrackRenderer {
         symbolGroup.appendChild(clipboardBase);
         symbolGroup.appendChild(clipboardTop);
         break;
+        }
 
       case 'delete_sequence':
         // Enhanced trash/delete symbol with better proportions
+        {
         const trashBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         trashBase.setAttribute('x', centerX - symbolSize / 3);
         trashBase.setAttribute('y', centerY - symbolSize / 6);
@@ -9115,9 +9122,11 @@ class TrackRenderer {
         symbolGroup.appendChild(line2);
         symbolGroup.appendChild(line3);
         break;
+        }
 
       case 'insert_sequence':
         // Plus/insert symbol
+        {
         const plusH = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         plusH.setAttribute('x1', centerX - symbolSize / 3);
         plusH.setAttribute('y1', centerY);
@@ -9139,9 +9148,11 @@ class TrackRenderer {
         symbolGroup.appendChild(plusH);
         symbolGroup.appendChild(plusV);
         break;
+        }
 
       case 'replace_sequence':
         // Refresh/replace symbol
+        {
         symbolPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const replacePath = `
                     M ${centerX - symbolSize / 3} ${centerY}
@@ -9157,9 +9168,11 @@ class TrackRenderer {
         symbolPath.setAttribute('stroke-linecap', 'round');
         symbolGroup.appendChild(symbolPath);
         break;
+        }
 
       default:
         // Default: simple dot
+        {
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', centerX);
         circle.setAttribute('cy', centerY);
@@ -9167,6 +9180,7 @@ class TrackRenderer {
         circle.setAttribute('fill', '#ffffff');
         symbolGroup.appendChild(circle);
         break;
+        }
     }
 
     return symbolGroup;
@@ -12703,6 +12717,7 @@ This action cannot be undone.`;
 
     switch (trackType) {
       case 'genes':
+        {
         const renderingModeElement = modal.querySelector('#genesRenderingMode');
         const maxRowsElement = modal.querySelector('#genesMaxRows');
         const showOperonsElement = modal.querySelector('#genesShowOperonsSameRow');
@@ -12762,6 +12777,7 @@ This action cannot be undone.`;
 
         console.log('Collected gene settings from form:', settings);
         break;
+        }
 
       case 'gc':
         settings.contentColor = modal.querySelector('#gcContentColor').value;
@@ -12773,6 +12789,7 @@ This action cannot be undone.`;
 
       case 'reads':
         // Rendering method settings
+        {
         const renderingModeSelect = modal.querySelector('#readsRenderingMode');
         settings.renderingMode = renderingModeSelect ? renderingModeSelect.value : 'canvas';
 
@@ -12845,9 +12862,11 @@ This action cannot be undone.`;
         settings.showMismatches = modal.querySelector('#readsHighlightMismatches').checked; // Alias for compatibility
         settings.mismatchColor = modal.querySelector('#readsMismatchColor').value;
         break;
+        }
 
       case 'sequence':
         // View Mode settings (traditional sequence view)
+        {
         {
           const currentSequenceSettings = this.getTrackSettings('sequence') || {};
           if (Number.isFinite(Number(currentSequenceSettings.panelHeight))) {
@@ -12959,9 +12978,11 @@ This action cannot be undone.`;
 
         // Edit Mode settings removed - only using view mode
         break;
+        }
 
       case 'wigTracks':
         // Collect track spacing
+        {
         const trackSpacingEl = modal.querySelector('#wigTrackSpacing');
         if (trackSpacingEl) {
           settings.trackSpacing = parseInt(trackSpacingEl.value) || 5;
@@ -12984,9 +13005,11 @@ This action cannot be undone.`;
           settings.defaultTrackHeight = parseInt(defaultHeightEl.value) || 30;
         }
         break;
+        }
 
       case 'sequenceLine':
         // Basic display settings
+        {
         settings.fontSize = parseInt(modal.querySelector('#sequenceLineFontSize').value) || 14;
         settings.fontFamily = modal.querySelector('#sequenceLineFontFamily').value || 'Courier New, monospace';
 
@@ -13010,6 +13033,7 @@ This action cannot be undone.`;
         settings.maxHeight = parseInt(modal.querySelector('#sequenceLineMaxHeight').value) || 50;
         settings.adaptiveHeight = modal.querySelector('#sequenceLineAdaptiveHeight').checked;
         break;
+        }
 
       case 'blast':
         // BLAST-specific settings collection
@@ -13066,9 +13090,11 @@ This action cannot be undone.`;
 
       default:
         // For other track types that use the default track height input
+        {
         const defaultHeightInput = modal.querySelector('#defaultTrackHeight');
         settings.height = defaultHeightInput ? parseInt(defaultHeightInput.value) : 80;
         break;
+        }
     }
 
     return settings;

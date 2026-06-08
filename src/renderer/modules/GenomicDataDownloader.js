@@ -573,15 +573,19 @@ class GenomicDataDownloader {
       switch (this.currentDownloadType) {
         case 'ncbi-unified':
           // Get the selected database type from the UI
+          {
           const ncbiDb = document.getElementById('ncbiDatabase')?.value || 'nucleotide';
           results = await this.searchNCBIUnified(searchTerm, ncbiDb);
           break;
+          }
 
         case 'embl-unified':
           // Get the selected database type from the UI
+          {
           const emblDb = document.getElementById('emblDatabase')?.value || 'embl-sequences';
           results = await this.searchEMBLUnified(searchTerm, emblDb);
           break;
+          }
 
         case 'ncbi-genbank':
         case 'ncbi-refseq':
@@ -754,6 +758,7 @@ class GenomicDataDownloader {
     switch (database) {
       case 'assembly':
         // Store FTP paths for proper file downloads
+        {
         const ftpPath = summary.ftppath_refseq || summary.ftppath_genbank;
         const assemblyAccession = summary.assemblyaccession || summary.caption || id;
 
@@ -776,6 +781,7 @@ class GenomicDataDownloader {
             ? this.constructAssemblyDownloadUrl(ftpPath, assemblyAccession, 'genbank')
             : baseResult.downloadUrl,
         };
+        }
 
       case 'genome':
         return {

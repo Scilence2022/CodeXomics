@@ -3808,11 +3808,13 @@ function registerIpcHandlers(deps) {
         webContents.setZoomLevel(webContents.getZoomLevel() - 0.5);
         break;
       case 'toggle-fullscreen':
+        {
         const window = BrowserWindow.fromWebContents(webContents);
         if (window) {
           window.setFullScreen(!window.isFullScreen());
         }
         break;
+        }
       default:
         console.log('Unknown Deep Gene Research menu action:', action);
     }

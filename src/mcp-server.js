@@ -819,12 +819,14 @@ class StandardClaudeMCPServer extends EventEmitter {
         };
 
       case 'tools/list':
+        {
         const tools = this.toolsIntegrator.getAvailableTools();
         return {
           jsonrpc: '2.0',
           result: { tools },
           id,
         };
+        }
 
       case 'tools/call':
         try {
@@ -985,6 +987,7 @@ class StandardClaudeMCPServer extends EventEmitter {
 
       switch (method) {
         case 'initialize':
+          {
           this.serverLog('info', '🔄 Handling initialize request');
           this.clientInfo = params?.clientInfo;
           this.protocolVersion = params?.protocolVersion || '2024-11-05';
@@ -1011,6 +1014,7 @@ class StandardClaudeMCPServer extends EventEmitter {
             id,
           };
           break;
+          }
 
         case 'initialized':
           this.serverLog('info', '✅ Handling initialized notification');
@@ -1019,6 +1023,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           return res.status(204).send();
 
         case 'tools/list':
+          {
           this.serverLog('info', '📋 Handling tools/list request');
           const availableTools = this.toolsIntegrator.getAvailableTools();
           response = {
@@ -1029,8 +1034,10 @@ class StandardClaudeMCPServer extends EventEmitter {
             id,
           };
           break;
+          }
 
         case 'tools/call':
+          {
           this.serverLog('info', '🔧 Handling tools/call request');
           const { name: toolName, arguments: args } = params;
           const startTime = Date.now();
@@ -1077,6 +1084,7 @@ class StandardClaudeMCPServer extends EventEmitter {
             };
           }
           break;
+          }
 
         case 'ping':
           this.serverLog('info', '🏓 Handling ping request');

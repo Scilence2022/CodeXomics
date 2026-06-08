@@ -1841,6 +1841,7 @@ class LLMBenchmarkFramework {
         return '• LLM should identify and execute appropriate function calls';
 
       case 'workflow':
+        {
         const steps = expectedResult.expectedSteps || [];
         const functions = expectedResult.expectedFunctions || [];
         return (
@@ -1848,14 +1849,17 @@ class LLMBenchmarkFramework {
           `&nbsp;&nbsp;&nbsp;• Expected steps:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${steps.length > 0 ? steps.join(' → ') : 'Complex workflow sequence'}<br>` +
           `&nbsp;&nbsp;&nbsp;• Expected functions:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${functions.length > 0 ? functions.join(', ') : 'Multiple coordinated functions'}`
         );
+        }
 
       case 'text_analysis':
+        {
         const keywords = expectedResult.requiredKeywords || [];
         return (
           `&nbsp;&nbsp;&nbsp;• LLM should provide comprehensive text analysis<br>` +
           `&nbsp;&nbsp;&nbsp;• Required elements:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${keywords.length > 0 ? keywords.join(', ') : 'Analytical content'}<br>` +
           `&nbsp;&nbsp;&nbsp;• Minimum quality threshold:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${expectedResult.minWords || 'Standard'} words`
         );
+        }
 
       default:
         return (

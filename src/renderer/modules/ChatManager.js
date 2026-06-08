@@ -1919,12 +1919,14 @@ class ChatManager {
 
       switch (status) {
         case 'connected':
+          {
           statusIcon.classList.add('connected');
           const connectedCount = this.mcpServerManager.getConnectedServersCount();
           statusText.textContent = connectedCount > 0 ? `Connected (${connectedCount} servers)` : 'Connected';
           if (connectBtn) connectBtn.disabled = true;
           if (disconnectBtn) disconnectBtn.disabled = false;
           break;
+          }
         case 'connecting':
           statusIcon.classList.add('connecting');
           statusText.textContent = 'Connecting...';
@@ -9796,6 +9798,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           break;
 
         case 'csv':
+          {
           const csvHeader = 'Timestamp,Sender,Message\n';
           const csvContent = history
             .map(msg => {
@@ -9807,6 +9810,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           filename = `chat-history-${new Date().toISOString().split('T')[0]}.csv`;
           mimeType = 'text/csv';
           break;
+          }
 
         default:
           throw new Error(`Unsupported export format: ${format}`);
@@ -9955,6 +9959,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           this.addMessageToChat('✅ All configurations exported', 'assistant');
           break;
         case 5: // Show summary
+          {
           const summary = this.configManager.getConfigSummary();
           this.addMessageToChat(
             `📊 **Configuration Summary:**\n` +
@@ -9968,7 +9973,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             'assistant'
           );
           break;
+          }
         case 6: // Debug storage info
+          {
           const storageInfo = this.configManager.getStorageInfo();
           this.addMessageToChat(
             `🔧 **Storage Debug Info:**\n` +
@@ -9981,7 +9988,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             'assistant'
           );
           break;
+          }
         case 7: // Test MicrobeGenomics integration
+          {
           const integrationResult = this.testMicrobeGenomicsIntegration();
           this.addMessageToChat(
             `🧬 **MicrobeGenomics Integration Test:**\n` +
@@ -9994,7 +10003,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             'assistant'
           );
           break;
+          }
         case 8: // Test tool execution
+          {
           const executionResult = await this.testToolExecution();
           this.addMessageToChat(
             `🔧 **Tool Execution Test:**\n` +
@@ -10006,6 +10017,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             'assistant'
           );
           break;
+          }
       }
     } catch (error) {
       this.addMessageToChat(`❌ Error: ${error.message}`, 'assistant', true);

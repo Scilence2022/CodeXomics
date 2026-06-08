@@ -113,8 +113,10 @@ class BlastManager {
     // Fallback to platform-specific user data directory
     switch (platform) {
       case 'win32':
+        {
         const appData = path.join(homeDir, 'AppData', 'Local');
         return path.join(appData, 'GenomeAIStudio', 'blast', 'db');
+        }
       case 'darwin':
         return path.join(homeDir, 'Library', 'Application Support', 'GenomeAIStudio', 'blast', 'db');
       case 'linux':
