@@ -2456,9 +2456,16 @@ ${this.chatManager.getPluginSystemInfo()}`;
    * ChatManager helper is unavailable (e.g. in unit tests).
    *
    * @param {{ total_tools?: number, categories?: object, tools?: Array }} data
+   * @param {{ title?: string, categoriesOpen?: boolean }} [options]
+   *   - title: heading text (default "Available Tools")
+   *   - categoriesOpen: whether each category starts expanded (default true). Pass
+   *     false for dense, list-everything contexts (e.g. the pre-request thinking
+   *     panel) so the registry doesn't dominate the view.
    * @returns {string} HTML markup
    */
-  renderAvailableToolsVisualization(data) {
+  renderAvailableToolsVisualization(data, options = {}) {
+    const title = options.title || 'Available Tools';
+    const categoriesOpen = options.categoriesOpen !== false;
     const escape = value => {
       const str = String(value ?? '');
       if (this.chatManager && typeof this.chatManager.escapeHtml === 'function') {
@@ -2488,7 +2495,7 @@ ${this.chatManager.getPluginSystemInfo()}`;
     }
 
     let html = `<div style="margin-top: 8px; padding: 12px; background: #f3f8ff; border-radius: 8px; border-left: 4px solid #2196F3;">`;
-    html += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.05em;"><i class="fas fa-toolbox"></i> Available Tools (${totalTools})</h3>`;
+    html += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.05em;"><i class="fas fa-toolbox"></i> ${escape(title)} (${totalTools})</h3>`;
 
     if (categoryEntries.length === 0) {
       html += `<div style="color: #777;">No tools available.</div></div>`;
@@ -2500,7 +2507,7 @@ ${this.chatManager.getPluginSystemInfo()}`;
       const count = catInfo?.count ?? tools.length;
       const catName = catInfo?.name || catKey;
 
-      html += `<details style="margin: 6px 0;" open>`;
+      html += `<details style="margin: 6px 0;"${categoriesOpen ? ' open' : ''}>`;
       html += `<summary style="cursor: pointer; color: #1565C0; font-weight: 600;">${escape(catName)} <span style="color: #888; font-weight: 400;">(${count})</span></summary>`;
       html += `<div style="margin: 6px 0 6px 12px;">`;
       for (const tool of tools) {

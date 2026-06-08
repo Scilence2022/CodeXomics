@@ -627,6 +627,37 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(empty).toContain('No tools available');
   });
 
+  it('supports a custom title and collapsed categories for the pre-request thinking panel', () => {
+    const service = new LLMContextService({}, {});
+
+    const data = {
+      total_tools: 1,
+      categories: {
+        navigation: {
+          name: 'Navigation',
+          count: 1,
+          tools: [{ name: 'navigate_to_position', description: 'Move the browser to a region' }],
+        },
+      },
+    };
+
+    // Default: title is "Available Tools" and categories render expanded.
+    const defaultHtml = service.renderAvailableToolsVisualization(data);
+    expect(defaultHtml).toContain('Available Tools (1)');
+    expect(defaultHtml).toContain('<details style="margin: 6px 0;" open>');
+
+    // Options: custom heading and collapsed categories (no ` open` on the <details>).
+    const collapsed = service.renderAvailableToolsVisualization(data, {
+      title: 'Registered Tools',
+      categoriesOpen: false,
+    });
+    expect(collapsed).toContain('Registered Tools (1)');
+    expect(collapsed).toContain('<details style="margin: 6px 0;">');
+    expect(collapsed).not.toContain('<details style="margin: 6px 0;" open>');
+    // The tool itself is still listed even while collapsed.
+    expect(collapsed).toContain('navigate_to_position');
+  });
+
   it('should support case-insensitive track names in LLMContextService policy validation', () => {
     const mockChatManager = {
       configManager: {
