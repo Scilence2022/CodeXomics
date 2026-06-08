@@ -797,8 +797,8 @@ const PluginImplementations = {
     let total = 0;
 
     sequences.forEach(seq => {
-      for (let base of seq.toUpperCase()) {
-        if (counts.hasOwnProperty(base)) {
+      for (const base of seq.toUpperCase()) {
+        if (Object.prototype.hasOwnProperty.call(counts, base)) {
           counts[base]++;
           total++;
         }
@@ -828,9 +828,9 @@ const PluginImplementations = {
   },
 
   calculateGCSkew(sequence) {
-    let g = 0,
-      c = 0;
-    for (let base of sequence.toUpperCase()) {
+    let g = 0;
+      let c = 0;
+    for (const base of sequence.toUpperCase()) {
       if (base === 'G') g++;
       else if (base === 'C') c++;
     }
@@ -839,13 +839,13 @@ const PluginImplementations = {
 
   calculateSequenceEntropy(sequence) {
     const counts = {};
-    for (let base of sequence.toUpperCase()) {
+    for (const base of sequence.toUpperCase()) {
       counts[base] = (counts[base] || 0) + 1;
     }
 
     const length = sequence.length;
     let entropy = 0;
-    for (let count of Object.values(counts)) {
+    for (const count of Object.values(counts)) {
       const p = count / length;
       entropy -= p * Math.log2(p);
     }
@@ -870,7 +870,7 @@ const PluginImplementations = {
   getBasicSequenceStats(sequence) {
     const len = sequence.length;
     const counts = { A: 0, T: 0, G: 0, C: 0, N: 0 };
-    for (let base of sequence.toUpperCase()) {
+    for (const base of sequence.toUpperCase()) {
       counts[base] = (counts[base] || 0) + 1;
     }
 

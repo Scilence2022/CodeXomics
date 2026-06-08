@@ -10,7 +10,7 @@
  * @module project-ipc
  */
 
-const { ipcMain, dialog, app, BrowserWindow } = require('electron');
+const { ipcMain, dialog, app, BrowserWindow, Menu, MenuItem } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const {
@@ -68,19 +68,6 @@ function assertSafeProjectRelativePath(value, label = 'relative path') {
  * @param {Function} deps.getCurrentMainWindow - Get current main window reference
  */
 function registerProjectIpcHandlers(deps) {
-  const {
-    mainWindow,
-    windowRegistry,
-    createProjectManagerWindow,
-    generateWindowId,
-    registerGenomeWindow,
-    unregisterGenomeWindow,
-    cleanupWindowRegistration,
-    createMenu,
-    createToolWindowMenu,
-    getCurrentMainWindow,
-  } = deps;
-
   const setActiveMainWindow = win => {
     if (typeof deps.setCurrentActiveWindow === 'function') {
       deps.setCurrentActiveWindow(win);
@@ -831,13 +818,13 @@ function registerProjectIpcHandlers(deps) {
       });
 
       // Helper function to get project-relative path
-      function getProjectRelativePath(absolutePath, projectBasePath) {
+      const getProjectRelativePath = (absolutePath, projectBasePath) => {
         const relativePath = path.relative(projectBasePath, absolutePath);
         return relativePath.replace(/\\/g, '/'); // Normalize path separators
-      }
+      };
 
       // Helper function to scan directory recursively
-      function scanDirectory(dirPath, relativePath = '', currentFolderPath = []) {
+      const scanDirectory = (dirPath, relativePath = '', currentFolderPath = []) => {
         const items = fs.readdirSync(dirPath);
 
         items.forEach(item => {
@@ -932,7 +919,7 @@ function registerProjectIpcHandlers(deps) {
             console.warn(`Error processing ${itemPath}:`, fileError.message);
           }
         });
-      }
+      };
 
       // Start scanning from project root
       scanDirectory(safeProjectPath);
@@ -1469,12 +1456,12 @@ function registerProjectIpcHandlers(deps) {
   // Handle saving refined gene annotation
   ipcMain.handle('save-refined-annotation', async (event, data) => {
     try {
-      const { gene, originalAnnotation, refinedAnnotation, timestamp } = data;
+      const { gene, refinedAnnotation } = data;
 
       console.log('Saving refined annotation for gene:', gene);
 
       // Get the main window to access the genome browser
-      const mainWindow = deps.getCurrentMainWindow();
+      deps.getCurrentMainWindow();
       if (!deps.mainWindow || !deps.mainWindow.webContents) {
         throw new Error('Main window not available');
       }
@@ -1617,7 +1604,9 @@ function registerProjectIpcHandlers(deps) {
     }
   }
 
+
   // Create Genomic Download Window
+  // eslint-disable-next-line no-unused-vars -- retained for the genomic-download menu flow; mirrors the window-management.js implementation
   function createGenomicDownloadWindow(downloadType) {
     try {
       console.log(`Creating Genomic Download window for: ${downloadType}`);
@@ -2108,10 +2097,6 @@ function registerProjectIpcHandlers(deps) {
   // Project management functions for genomic data download
   let currentActiveProject = null;
 
-  function checkActiveProject() {
-    // Check if there's an active project loaded
-    return currentActiveProject !== null;
-  }
 
   function getCurrentProjectInfo() {
     return currentActiveProject;

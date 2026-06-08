@@ -110,7 +110,7 @@ class CoordinatorAgent extends AgentBase {
    */
   async coordinateTask(parameters, strategy) {
     try {
-      const { task, priority = 'normal', timeout = 30000 } = parameters;
+      const { task, timeout = 30000 } = parameters;
 
       if (!task) {
         throw new Error('Task is required');
@@ -224,7 +224,7 @@ class CoordinatorAgent extends AgentBase {
       }
 
       // 按优先级排序结果
-      const sortedResults = results.sort((a, b) => b.priority - a.priority);
+      results.sort((a, b) => b.priority - a.priority);
 
       // 整合结果
       const integratedResult = {
@@ -1092,7 +1092,7 @@ class WorkflowEngine {
     }
 
     // Fallback: Find the appropriate agent in the multi-agent system
-    for (const [agentName, agent] of this.coordinatorAgent.multiAgentSystem.agents) {
+    for (const [, agent] of this.coordinatorAgent.multiAgentSystem.agents) {
       if (agent.canExecute(step.type, stepParameters).canExecute) {
         return await agent.executeFunction(step.type, stepParameters, {});
       }

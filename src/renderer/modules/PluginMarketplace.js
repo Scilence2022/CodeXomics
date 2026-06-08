@@ -915,7 +915,7 @@ class PluginMarketplace {
     }
 
     // Search across all sources
-    for (const [sourceId, source] of this.marketplaceSources) {
+    for (const [sourceId,] of this.marketplaceSources) {
       try {
         const plugin = await this.findPluginInSource(sourceId, pluginId);
         if (plugin) {
@@ -954,10 +954,6 @@ class PluginMarketplace {
    */
   async findPluginInLocalSource(source, pluginId) {
     try {
-      // Read plugin manifest from local file system
-      const pluginPath = source.url.replace('file://', '');
-      const manifestPath = `${pluginPath}/${pluginId}/manifest.json`;
-
       // For browser environment, we can't access file system directly
       // This would need to be implemented via IPC in Electron
       console.warn('Local plugin source not fully implemented - requires IPC bridge');

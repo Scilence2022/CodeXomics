@@ -534,7 +534,7 @@ class PluginMarketplaceUI {
           const isInstalled = installInfo.isInstalled;
           const installedVersion = installInfo.version;
           const needsUpdate = installInfo.needsUpdate;
-          const updateAvailable = needsUpdate && plugin.version;
+          needsUpdate && plugin.version;
 
           return `
                 <div style="border: 1px solid ${isInstalled ? '#4CAF50' : '#ddd'}; border-radius: 6px; padding: 15px; 

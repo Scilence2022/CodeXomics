@@ -794,7 +794,7 @@ class MemorySystem {
    * Calculate performance multiplier for token limit
    */
   calculatePerformanceMultiplier() {
-    const { memoryAccesses, cacheHitRate } = this.memoryMetrics;
+    const { cacheHitRate } = this.memoryMetrics;
 
     if (cacheHitRate > 0.8) {
       return 1.2; // High performance allows more tokens
@@ -859,7 +859,7 @@ class MemorySystem {
       if (memoryContext.context?.userPreferences) {
         const preferences = memoryContext.context.userPreferences;
         Object.keys(preferences).forEach(key => {
-          if (optimized.hasOwnProperty(key) && typeof preferences[key] === 'object') {
+          if (Object.prototype.hasOwnProperty.call(optimized, key) && typeof preferences[key] === 'object') {
             optimized[key] = { ...optimized[key], ...preferences[key] };
           }
         });
@@ -965,7 +965,7 @@ class MemorySystem {
 
     Object.keys(patternCount).forEach(patternKey => {
       if (patternCount[patternKey] >= commonThreshold) {
-        const [key, type, value] = patternKey.split(':');
+        const [key, , value] = patternKey.split(':');
         if (key && value) {
           try {
             commonPatterns[key] = JSON.parse(value);
@@ -982,22 +982,6 @@ class MemorySystem {
   /**
    * Get optimization summary
    */
-  getOptimizationSummary(original, optimized) {
-    const optimizations = [];
-
-    Object.keys(optimized).forEach(key => {
-      if (original[key] !== optimized[key]) {
-        optimizations.push({
-          parameter: key,
-          original: original[key],
-          optimized: optimized[key],
-          changeType: this.classifyChange(original[key], optimized[key]),
-        });
-      }
-    });
-
-    return optimizations;
-  }
 
   /**
    * Classify the type of parameter change
@@ -1403,7 +1387,7 @@ class MemorySystem {
       const toolPattern = this.shortTermMemory.getToolUsagePattern();
 
       // Analyze usage patterns
-      const highFreqTools = Array.from(toolPattern.entries())
+      Array.from(toolPattern.entries())
         .filter(([_, count]) => count > 10)
         .map(([tool]) => tool);
 
@@ -2640,11 +2624,11 @@ class ShortTermMemory {
   calculateMemoryUsage() {
     let totalSize = 0;
 
-    for (const [key, entry] of this.cache) {
+    for (const [, entry] of this.cache) {
       totalSize += JSON.stringify(entry).length;
     }
 
-    for (const [key, entry] of this.predictiveCache) {
+    for (const [, entry] of this.predictiveCache) {
       totalSize += JSON.stringify(entry).length;
     }
 
@@ -2941,7 +2925,7 @@ class MediumTermMemory {
    */
   async search(functionName, parameters) {
     const results = [];
-    for (const [key, workflow] of this.workflowPatterns) {
+    for (const [, workflow] of this.workflowPatterns) {
       if (workflow.pattern.tools.includes(functionName)) {
         results.push({
           ...workflow,
@@ -3172,7 +3156,7 @@ class LongTermMemory {
    */
   async search(functionName, parameters) {
     const results = [];
-    for (const [domain, knowledge] of this.knowledgeBase) {
+    for (const [, knowledge] of this.knowledgeBase) {
       for (const k of knowledge) {
         if (k.functionName === functionName && this.matchesQuery(k, parameters)) {
           results.push({

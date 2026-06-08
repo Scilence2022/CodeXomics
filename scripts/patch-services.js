@@ -42,7 +42,7 @@ function replaceMethod(methodName, delegationCode) {
   }
 
   // 2. Scan forward to find the start of the method body
-  let bodyStartIndex = content.indexOf('{', argsEndIndex);
+  const bodyStartIndex = content.indexOf('{', argsEndIndex);
   if (bodyStartIndex === -1) {
     console.warn(`Could not find start of body for ${methodName}`);
     return;
@@ -79,7 +79,7 @@ function replaceMethod(methodName, delegationCode) {
       continue;
     }
 
-    if (char === "'" || char === '"' || char === '\`') {
+    if (char === "'" || char === '"' || char === '`') {
       inString = true;
       stringChar = char;
     } else if (char === '/' && nextChar === '/') {

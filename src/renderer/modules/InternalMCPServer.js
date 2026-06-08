@@ -440,7 +440,7 @@ class InternalMCPServer {
     // Comprehensive statistical counts by gene type (e.g., CDS, tRNA, rRNA)
     if (include_annotations && this.genomeStudio.currentAnnotations) {
       let totalFeatures = 0;
-      let featureCounts = {};
+      const featureCounts = {};
 
       const chromosomes = Object.keys(this.genomeStudio.currentAnnotations);
       for (const chr of chromosomes) {

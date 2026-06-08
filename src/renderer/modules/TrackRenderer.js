@@ -2218,7 +2218,7 @@ class TrackRenderer {
 
     // Create gradient for gene background
     const gradientId = `gene-gradient-${gene.start}-${gene.end}-${rowIndex}`;
-    const gradient = GeneShapeCreators.createSVGGeneGradient(this, defs, gradientId, operonInfo.color);
+    GeneShapeCreators.createSVGGeneGradient(this, defs, gradientId, operonInfo.color);
 
     // Create gene shape based on strand direction and truncation state
     const geneShape = GeneShapeCreators.createSVGGeneShape(
@@ -2627,7 +2627,7 @@ class TrackRenderer {
     );
 
     // Count visible and hidden genes
-    const totalGenes = visibleGenes.length;
+
     let visibleGenesCount = 0;
     let hiddenGenesCount = 0;
 
@@ -2781,7 +2781,7 @@ class TrackRenderer {
         `;
 
     // Simplified DOM rendering with basic adaptive sizing
-    const sequenceLength = viewport.end - viewport.start;
+
     const adaptiveHeight = Math.max(20, 14 * 1.4);
     seqDisplay.style.height = `${adaptiveHeight}px`;
 
@@ -2899,46 +2899,6 @@ class TrackRenderer {
   /**
    * Create individual base element
    */
-  createBaseElement(base, index, viewport, fontSize, charWidth) {
-    const baseElement = document.createElement('span');
-    baseElement.className = `base-${base.toLowerCase()} sequence-base-inline`;
-    baseElement.textContent = base;
-
-    // FIX: Calculate exact positioning to fill entire container
-    const totalSequenceLength = viewport.end - viewport.start;
-    // Each character should take exactly its portion of the available space
-    const exactCharWidth = 100 / totalSequenceLength; // Use percentage-based width
-    const leftPosition = index * exactCharWidth;
-
-    baseElement.style.cssText = `
-            position: absolute;
-            left: ${leftPosition}%;
-            width: ${exactCharWidth}%;
-            height: 100%;
-            font-size: ${fontSize}px;
-            font-family: 'Courier New', Consolas, Monaco, monospace;
-            font-weight: bold;
-            text-align: center;
-            line-height: 1.2;
-            overflow: hidden;
-            white-space: nowrap;
-            box-sizing: border-box;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-
-    // Add tooltip with position info
-    // FIX: Remove +1 offset - index is already 0-based within the subsequence
-    const circularSequenceLength = this.getSequenceLength();
-    const position =
-      this.isCircularModeEnabled() && circularSequenceLength > 0
-        ? this.normalizeCircularPosition(viewport.start + index, circularSequenceLength)
-        : viewport.start + index;
-    baseElement.title = `Position: ${position}, Base: ${base}`;
-
-    return baseElement;
-  }
 
   createGCTrack(chromosome, sequence) {
     const { track, trackContent } = this.createTrackBase('gc', chromosome);
@@ -4006,9 +3966,6 @@ class TrackRenderer {
             }
           } else {
             // No sampling applied - show 100%
-            const totalReadsCount = enableVerticalScroll
-              ? readRows.reduce((sum, row) => sum + row.length, 0)
-              : visibleReadsCount;
             statsText += ` | All reads shown (100%)`;
           }
         }
@@ -4591,7 +4548,7 @@ class TrackRenderer {
     settings
   ) {
     const maxVisibleRows = settings.maxVisibleRows || 10;
-    const scrollbarWidth = 16; // Standard scrollbar width
+     // Standard scrollbar width
 
     // Calculate dimensions
     const rowHeight = readHeight + rowSpacing;
@@ -5064,7 +5021,6 @@ class TrackRenderer {
 
     // Render each visible row
     visibleRows.forEach((rowReads, rowIndex) => {
-      const actualRowIndex = startRow + rowIndex;
       const y = rowIndex * (readHeight + rowSpacing);
 
       this.renderReadRowCanvas(ctx, rowReads, viewport, y, readHeight, settings, containerWidth);
@@ -5740,7 +5696,7 @@ class TrackRenderer {
     // CRITICAL FIX: Calculate offset using actual sequence length (matching Canvas renderer fix)
     // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
     const genomicStart = read.start;
-    const genomicEnd = read.end; // Use BAM end coordinate directly (0-based exclusive)
+     // Use BAM end coordinate directly (0-based exclusive)
 
     const startOffset = Math.max(0, visibleStart - genomicStart);
     const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart - 1); // Convert visibleEnd from 0-based exclusive to 0-based inclusive
@@ -5926,7 +5882,7 @@ class TrackRenderer {
     referenceGroup.appendChild(bg);
 
     // Always show reference sequence text when reference is enabled
-    const basesPerPixel = range / containerWidth;
+
     const effectiveRefSettings = { ...settings };
 
     // Calculate optimal font size if auto sizing is enabled
@@ -6359,8 +6315,8 @@ class TrackRenderer {
     // Get constraints
     const minFontSize = 4; // Very small minimum for force mode
     const maxFontSize = Math.min(16, Math.max(6, readHeight + 2)); // Allow font to be slightly larger than read height
-    const minPixelsPerChar = 4; // Minimum pixels needed per character
-    const maxPixelsPerChar = 12; // Maximum useful pixels per character
+     // Minimum pixels needed per character
+     // Maximum useful pixels per character
 
     // Calculate font size based on available space
     let optimalFontSize = Math.floor(pixelsPerBase * 0.8); // Leave some padding
@@ -6802,7 +6758,7 @@ class TrackRenderer {
     const plotHeight = viewHeight - 2 * padding;
     const centerY = viewHeight / 2;
     const gcHeight = centerY - padding;
-    const skewHeight = centerY - padding;
+
 
     // Create gradient definitions
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -7452,7 +7408,7 @@ class TrackRenderer {
     const finalRows = [];
     // Iterate over the ordered map to build final rows
     // CHANGE: Consolidate all elements of the same type onto a SINGLE row (allowing overlaps)
-    for (const [type, genesForType] of typeMap.entries()) {
+    for (const [, genesForType] of typeMap.entries()) {
       if (genesForType.length === 0) continue;
 
       // All genes of this type go on ONE row (overlaps are allowed)
@@ -7571,7 +7527,7 @@ class TrackRenderer {
       });
 
       // Process operon groups first (try to place all genes of an operon in the same row)
-      for (const [operonName, operonGenes] of operonGroups) {
+      for (const [, operonGenes] of operonGroups) {
         // Sort operon genes by position
         operonGenes.sort((a, b) => a.start - b.start);
 
@@ -8063,7 +8019,7 @@ class TrackRenderer {
   // Calculate intelligent tick spacing for detailed view
   calculateDetailedTickSpacing(range, width) {
     const targetMajorTicks = Math.max(3, Math.min(8, width / 100));
-    const targetMinorTicks = targetMajorTicks * 5;
+
 
     // Base intervals to choose from
     const baseIntervals = [
@@ -8277,7 +8233,7 @@ class TrackRenderer {
       const values = visibleData.map(point => point.value);
       const minValue = Math.min(...values);
       const maxValue = Math.max(...values);
-      const valueRange = maxValue - minValue;
+
 
       // Create track element
       const trackElement = document.createElement('div');
@@ -8775,7 +8731,7 @@ class TrackRenderer {
 
     // Create gradient for action background
     const gradientId = `action-gradient-${action.id}`;
-    const gradient = this.createSVGActionGradient(defs, gradientId, actionColor);
+    this.createSVGActionGradient(defs, gradientId, actionColor);
 
     // Create action layout with separate symbol and text areas
     if (elementWidth > 30) {
@@ -8960,6 +8916,7 @@ class TrackRenderer {
     switch (actionType) {
       case 'copy_sequence':
         // Duplicate/copy symbol - two overlapping rectangles
+        {
         const rect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect1.setAttribute('x', centerX - symbolSize / 2 + 1);
         rect1.setAttribute('y', centerY - symbolSize / 2 + 1);
@@ -8983,9 +8940,11 @@ class TrackRenderer {
         symbolGroup.appendChild(rect2);
         symbolGroup.appendChild(rect1);
         break;
+        }
 
       case 'cut_sequence':
         // Vertical scissors symbol with heads pointing up
+        {
         const leftBlade = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const leftBladePath = `
                     M ${centerX - symbolSize / 6} ${centerY - symbolSize / 3}
@@ -9065,9 +9024,11 @@ class TrackRenderer {
         symbolGroup.appendChild(rightHandle);
         symbolGroup.appendChild(pivot);
         break;
+        }
 
       case 'paste_sequence':
         // Clipboard symbol
+        {
         const clipboardBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         clipboardBase.setAttribute('x', centerX - symbolSize / 3);
         clipboardBase.setAttribute('y', centerY - symbolSize / 2);
@@ -9089,9 +9050,11 @@ class TrackRenderer {
         symbolGroup.appendChild(clipboardBase);
         symbolGroup.appendChild(clipboardTop);
         break;
+        }
 
       case 'delete_sequence':
         // Enhanced trash/delete symbol with better proportions
+        {
         const trashBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         trashBase.setAttribute('x', centerX - symbolSize / 3);
         trashBase.setAttribute('y', centerY - symbolSize / 6);
@@ -9158,9 +9121,11 @@ class TrackRenderer {
         symbolGroup.appendChild(line2);
         symbolGroup.appendChild(line3);
         break;
+        }
 
       case 'insert_sequence':
         // Plus/insert symbol
+        {
         const plusH = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         plusH.setAttribute('x1', centerX - symbolSize / 3);
         plusH.setAttribute('y1', centerY);
@@ -9182,9 +9147,11 @@ class TrackRenderer {
         symbolGroup.appendChild(plusH);
         symbolGroup.appendChild(plusV);
         break;
+        }
 
       case 'replace_sequence':
         // Refresh/replace symbol
+        {
         symbolPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const replacePath = `
                     M ${centerX - symbolSize / 3} ${centerY}
@@ -9200,9 +9167,11 @@ class TrackRenderer {
         symbolPath.setAttribute('stroke-linecap', 'round');
         symbolGroup.appendChild(symbolPath);
         break;
+        }
 
       default:
         // Default: simple dot
+        {
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', centerX);
         circle.setAttribute('cy', centerY);
@@ -9210,6 +9179,7 @@ class TrackRenderer {
         circle.setAttribute('fill', '#ffffff');
         symbolGroup.appendChild(circle);
         break;
+        }
     }
 
     return symbolGroup;
@@ -9892,17 +9862,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }, 0);
   }
 
-  handleWIGTrackDragEnd(e) {
-    e.currentTarget.classList.remove('wig-track-dragging');
-    e.currentTarget.style.opacity = '1';
-
-    // Remove any drag-over indicators from items
-    const items = document.querySelectorAll('.wig-track-item');
-    items.forEach(item => {
-      item.style.borderLeft = '';
-      item.style.paddingLeft = '';
-    });
-  }
 
   handleWIGTrackDragOver(e) {
     if (e.preventDefault) {
@@ -12757,6 +12716,7 @@ This action cannot be undone.`;
 
     switch (trackType) {
       case 'genes':
+        {
         const renderingModeElement = modal.querySelector('#genesRenderingMode');
         const maxRowsElement = modal.querySelector('#genesMaxRows');
         const showOperonsElement = modal.querySelector('#genesShowOperonsSameRow');
@@ -12816,6 +12776,7 @@ This action cannot be undone.`;
 
         console.log('Collected gene settings from form:', settings);
         break;
+        }
 
       case 'gc':
         settings.contentColor = modal.querySelector('#gcContentColor').value;
@@ -12827,6 +12788,7 @@ This action cannot be undone.`;
 
       case 'reads':
         // Rendering method settings
+        {
         const renderingModeSelect = modal.querySelector('#readsRenderingMode');
         settings.renderingMode = renderingModeSelect ? renderingModeSelect.value : 'canvas';
 
@@ -12899,9 +12861,11 @@ This action cannot be undone.`;
         settings.showMismatches = modal.querySelector('#readsHighlightMismatches').checked; // Alias for compatibility
         settings.mismatchColor = modal.querySelector('#readsMismatchColor').value;
         break;
+        }
 
       case 'sequence':
         // View Mode settings (traditional sequence view)
+        {
         {
           const currentSequenceSettings = this.getTrackSettings('sequence') || {};
           if (Number.isFinite(Number(currentSequenceSettings.panelHeight))) {
@@ -13013,9 +12977,11 @@ This action cannot be undone.`;
 
         // Edit Mode settings removed - only using view mode
         break;
+        }
 
       case 'wigTracks':
         // Collect track spacing
+        {
         const trackSpacingEl = modal.querySelector('#wigTrackSpacing');
         if (trackSpacingEl) {
           settings.trackSpacing = parseInt(trackSpacingEl.value) || 5;
@@ -13038,9 +13004,11 @@ This action cannot be undone.`;
           settings.defaultTrackHeight = parseInt(defaultHeightEl.value) || 30;
         }
         break;
+        }
 
       case 'sequenceLine':
         // Basic display settings
+        {
         settings.fontSize = parseInt(modal.querySelector('#sequenceLineFontSize').value) || 14;
         settings.fontFamily = modal.querySelector('#sequenceLineFontFamily').value || 'Courier New, monospace';
 
@@ -13064,6 +13032,7 @@ This action cannot be undone.`;
         settings.maxHeight = parseInt(modal.querySelector('#sequenceLineMaxHeight').value) || 50;
         settings.adaptiveHeight = modal.querySelector('#sequenceLineAdaptiveHeight').checked;
         break;
+        }
 
       case 'blast':
         // BLAST-specific settings collection
@@ -13120,9 +13089,11 @@ This action cannot be undone.`;
 
       default:
         // For other track types that use the default track height input
+        {
         const defaultHeightInput = modal.querySelector('#defaultTrackHeight');
         settings.height = defaultHeightInput ? parseInt(defaultHeightInput.value) : 80;
         break;
+        }
     }
 
     return settings;
@@ -14412,21 +14383,6 @@ This action cannot be undone.`;
   /**
    * Get base color for reference sequence display
    */
-  getBaseColor(base) {
-    const baseColors = {
-      A: '#e74c3c',
-      T: '#3498db',
-      G: '#2ecc71',
-      C: '#f39c12',
-      a: '#e74c3c',
-      t: '#3498db',
-      g: '#2ecc71',
-      c: '#f39c12',
-      N: '#95a5a6',
-      n: '#95a5a6',
-    };
-    return baseColors[base] || baseColors['N'];
-  }
 
   /**
    * Create sequence visualization for Genes & Features track
@@ -14621,17 +14577,6 @@ This action cannot be undone.`;
   /**
    * Get color for DNA base - using standard biochemical color scheme
    */
-  getBaseColor(base) {
-    const colors = {
-      A: '#FF0000', // Bright Red (Adenine)
-      T: '#0000FF', // Bright Blue (Thymine)
-      G: '#00AA00', // Bright Green (Guanine)
-      C: '#FF8800', // Bright Orange (Cytosine)
-      U: '#0000FF', // Bright Blue (Uracil, same as T)
-      N: '#666666', // Dark Gray (Unknown/any base)
-    };
-    return colors[base.toUpperCase()] || '#333333';
-  }
 
   /**
    * Calculate coverage data for visualization

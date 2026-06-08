@@ -151,7 +151,7 @@ class DeepResearchAgent extends AgentBase {
    */
   findDeepResearchServer() {
     if (!this.mcpServerManager) return null;
-    for (const [serverId, server] of this.mcpServerManager.servers) {
+    for (const [, server] of this.mcpServerManager.servers) {
       if (
         server.name === 'deep-research' ||
         server.name.includes('deep-research') ||

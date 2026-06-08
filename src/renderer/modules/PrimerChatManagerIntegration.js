@@ -8,7 +8,7 @@
  */
 
 // This script initializes the primer subsystem
-(function () {
+(function() {
   'use strict';
 
   console.log('🧬 [Primer Integration] Loading Primer ChatManager integration...');

@@ -402,7 +402,7 @@ class UnifiedDNATranslation {
    * @returns {Object} Codon usage analysis
    */
   static analyzeCodonUsage(sequence, geneticCode = 'standard') {
-    const codonTable = this.getGeneticCodeTable(geneticCode);
+    this.getGeneticCodeTable(geneticCode);
     const codonCounts = {};
     const sequenceUpper = sequence.toUpperCase();
 

@@ -680,7 +680,7 @@ class GeneAttachmentsManager {
    */
   async clearAllAttachments() {
     // Delete all physical files
-    for (const [geneId, attachments] of this.attachments) {
+    for (const [, attachments] of this.attachments) {
       for (const attachment of attachments) {
         try {
           if (window.electronAPI?.deleteAttachmentFile) {

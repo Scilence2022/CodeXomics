@@ -308,10 +308,12 @@ class MultiAgentSettingsManager {
         if (cms.llmMaxTokens !== undefined) this.currentSettings.multiAgentLLMMaxTokens = cms.llmMaxTokens;
         if (cms.llmTimeout !== undefined) this.currentSettings.multiAgentLLMTimeout = cms.llmTimeout;
         if (cms.llmRetryAttempts !== undefined) this.currentSettings.multiAgentLLMRetryAttempts = cms.llmRetryAttempts;
-        if (cms.llmUseSystemPrompt !== undefined)
-          this.currentSettings.multiAgentLLMUseSystemPrompt = cms.llmUseSystemPrompt;
-        if (cms.llmEnableFunctionCalling !== undefined)
-          this.currentSettings.multiAgentLLMEnableFunctionCalling = cms.llmEnableFunctionCalling;
+        if (cms.llmUseSystemPrompt !== undefined) {
+this.currentSettings.multiAgentLLMUseSystemPrompt = cms.llmUseSystemPrompt;
+}
+        if (cms.llmEnableFunctionCalling !== undefined) {
+this.currentSettings.multiAgentLLMEnableFunctionCalling = cms.llmEnableFunctionCalling;
+}
       }
 
       console.log('Multi-Agent Settings loaded:', this.currentSettings);

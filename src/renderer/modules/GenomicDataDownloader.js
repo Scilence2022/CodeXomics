@@ -573,15 +573,19 @@ class GenomicDataDownloader {
       switch (this.currentDownloadType) {
         case 'ncbi-unified':
           // Get the selected database type from the UI
+          {
           const ncbiDb = document.getElementById('ncbiDatabase')?.value || 'nucleotide';
           results = await this.searchNCBIUnified(searchTerm, ncbiDb);
           break;
+          }
 
         case 'embl-unified':
           // Get the selected database type from the UI
+          {
           const emblDb = document.getElementById('emblDatabase')?.value || 'embl-sequences';
           results = await this.searchEMBLUnified(searchTerm, emblDb);
           break;
+          }
 
         case 'ncbi-genbank':
         case 'ncbi-refseq':
@@ -754,6 +758,7 @@ class GenomicDataDownloader {
     switch (database) {
       case 'assembly':
         // Store FTP paths for proper file downloads
+        {
         const ftpPath = summary.ftppath_refseq || summary.ftppath_genbank;
         const assemblyAccession = summary.assemblyaccession || summary.caption || id;
 
@@ -776,6 +781,7 @@ class GenomicDataDownloader {
             ? this.constructAssemblyDownloadUrl(ftpPath, assemblyAccession, 'genbank')
             : baseResult.downloadUrl,
         };
+        }
 
       case 'genome':
         return {
@@ -957,7 +963,7 @@ class GenomicDataDownloader {
 
   async searchEnsembl(searchTerm) {
     // Ensembl REST API搜索
-    const division = document.getElementById('division')?.value || 'vertebrates';
+    document.getElementById('division')?.value || 'vertebrates';
     const url = `https://rest.ensembl.org/taxonomy/name/${encodeURIComponent(searchTerm)}?content-type=application/json`;
 
     const response = await fetch(url);
@@ -1134,7 +1140,7 @@ class GenomicDataDownloader {
   getCategoryPreview(result) {
     const fileFormat = document.getElementById('fileFormat').value;
     const extension = this.getFileExtension(fileFormat);
-    const mockFilePath = `${result.accession}${extension}`;
+
 
     // Simulate the categorization logic from main.js
     const database = result.database;
@@ -1208,7 +1214,7 @@ class GenomicDataDownloader {
     categorySummaryHtml += '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
 
     Object.entries(categoryDistribution).forEach(([category, count]) => {
-      const categoryInfo = this.getCategoryPreview({ database: null }); // Get default info
+      this.getCategoryPreview({ database: null }); // Get default info
       // Find the actual category info
       let actualInfo = { icon: '📁', color: '#607d8b' };
       for (const result of results) {
@@ -1642,7 +1648,7 @@ class GenomicDataDownloader {
     const rettype = formatToRettype[fileFormat] || 'fasta';
 
     // For some databases and formats, we need different parameters
-    let retmode = 'text';
+    const retmode = 'text';
 
     // Assembly database doesn't support efetch, return FTP link instead
     if (database === 'assembly') {

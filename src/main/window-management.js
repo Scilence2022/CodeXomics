@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const dialog = require('electron').dialog;
@@ -10,11 +10,7 @@ const { createSecureWebPreferences } = require('./security-utils');
 let mainWindow;
 let currentActiveWindow;
 let toolMenuTemplates;
-let APP_NAME;
-let VERSION_INFO;
-let unifiedMCPServer;
-let unifiedServerStatus;
-let fileOpenQueue;
+
 
 // External function references (set by main module)
 let generateWindowId;
@@ -26,20 +22,15 @@ let createCircosPlotterMenu;
 let createToolWindowMenu;
 let createProjectManagerMenu;
 let createDeepGeneResearchMenu;
-let createMCPServerManagerWindow;
+
 let codeXomicsRPC;
 let processFileQueue;
-let updateMCPServerMenu;
+
 
 function setWindowMgmtDependencies(deps) {
   if (deps.mainWindow !== undefined) mainWindow = deps.mainWindow;
   if (deps.currentActiveWindow !== undefined) currentActiveWindow = deps.currentActiveWindow;
   if (deps.toolMenuTemplates !== undefined) toolMenuTemplates = deps.toolMenuTemplates;
-  if (deps.APP_NAME !== undefined) APP_NAME = deps.APP_NAME;
-  if (deps.VERSION_INFO !== undefined) VERSION_INFO = deps.VERSION_INFO;
-  if (deps.unifiedMCPServer !== undefined) unifiedMCPServer = deps.unifiedMCPServer;
-  if (deps.unifiedServerStatus !== undefined) unifiedServerStatus = deps.unifiedServerStatus;
-  if (deps.fileOpenQueue !== undefined) fileOpenQueue = deps.fileOpenQueue;
   if (deps.generateWindowId !== undefined) generateWindowId = deps.generateWindowId;
   if (deps.registerGenomeWindow !== undefined) registerGenomeWindow = deps.registerGenomeWindow;
   if (deps.unregisterGenomeWindow !== undefined) unregisterGenomeWindow = deps.unregisterGenomeWindow;
@@ -49,10 +40,8 @@ function setWindowMgmtDependencies(deps) {
   if (deps.createToolWindowMenu !== undefined) createToolWindowMenu = deps.createToolWindowMenu;
   if (deps.createProjectManagerMenu !== undefined) createProjectManagerMenu = deps.createProjectManagerMenu;
   if (deps.createDeepGeneResearchMenu !== undefined) createDeepGeneResearchMenu = deps.createDeepGeneResearchMenu;
-  if (deps.createMCPServerManagerWindow !== undefined) createMCPServerManagerWindow = deps.createMCPServerManagerWindow;
   if (deps.codeXomicsRPC !== undefined) codeXomicsRPC = deps.codeXomicsRPC;
   if (deps.processFileQueue !== undefined) processFileQueue = deps.processFileQueue;
-  if (deps.updateMCPServerMenu !== undefined) updateMCPServerMenu = deps.updateMCPServerMenu;
 }
 
 function createWindow() {
@@ -176,6 +165,33 @@ function getCurrentMainWindow() {
   const mainWindows = BrowserWindow.getAllWindows().filter(win => !win.isDestroyed() && win.windowId);
 
   return mainWindows.length > 0 ? mainWindows[0] : null;
+}
+
+// Helper functions for surfacing settings-related notifications to the renderer.
+// Mirrors the equivalent helpers in ipc-handlers.js; defined here because the
+// settings flows in this module call them directly.
+function showSettingsWarning(title, message) {
+  const win = getCurrentMainWindow();
+  if (win && win.webContents) {
+    win.webContents.send('show-notification', {
+      type: 'warning',
+      title,
+      message,
+      duration: 5000,
+    });
+  }
+}
+
+function showSettingsError(title, message) {
+  const win = getCurrentMainWindow();
+  if (win && win.webContents) {
+    win.webContents.send('show-notification', {
+      type: 'error',
+      title,
+      message,
+      duration: 8000,
+    });
+  }
 }
 
 // Helper function to safely send message to current main window
@@ -1566,11 +1582,13 @@ ipcMain.on('deep-gene-research-menu-action', (event, action) => {
       webContents.setZoomLevel(webContents.getZoomLevel() - 0.5);
       break;
     case 'toggle-fullscreen':
+      {
       const window = BrowserWindow.fromWebContents(webContents);
       if (window) {
         window.setFullScreen(!window.isFullScreen());
       }
       break;
+      }
     default:
       console.log('Unknown Deep Gene Research menu action:', action);
   }

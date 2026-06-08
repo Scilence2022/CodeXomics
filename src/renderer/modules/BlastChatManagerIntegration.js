@@ -5,7 +5,7 @@
  */
 
 // This script extends ChatManager with BLAST functionality
-(function () {
+(function() {
   'use strict';
 
   console.log('🔬 [BLAST Integration] Loading BLAST ChatManager integration...');

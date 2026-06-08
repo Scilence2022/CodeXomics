@@ -115,7 +115,7 @@ class SmartExecutor {
     const executionPlan = strategy.executionPlan;
 
     // Check if any tools were skipped because they weren't in category mapping
-    const requestedToolNames = toolRequests.map(t => t.tool_name);
+    toolRequests.map(t => t.tool_name);
     const planToolNames = new Set();
 
     // Collect all tool names from the execution plan
@@ -409,7 +409,7 @@ class SmartExecutor {
    * 获取优化建议
    */
   getOptimizationSuggestions(userMessage) {
-    const messageKeywords = this.organizer.extractKeywords(userMessage.toLowerCase());
+    this.organizer.extractKeywords(userMessage.toLowerCase());
     const suggestions = [];
 
     // 基于历史性能数据提供建议

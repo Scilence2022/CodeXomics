@@ -13,6 +13,7 @@ const SERVICE_PATH = path.join(process.cwd(), 'src/renderer/modules/chat/service
 
 function createParser() {
   const code = fs.readFileSync(SERVICE_PATH, 'utf-8').replace('window.IntentParserService = IntentParserService;', '');
+  // eslint-disable-next-line no-new-func -- intentional: loads the service source under test into an isolated function scope
   const fn = new Function(code + '; return IntentParserService;');
   const IntentParserService = fn();
   return new IntentParserService({}, {});

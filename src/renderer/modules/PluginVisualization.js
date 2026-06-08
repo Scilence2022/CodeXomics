@@ -157,8 +157,7 @@ const PluginVisualization = {
   drawAlignmentGrid(container, sequences, options = {}) {
     const maxLength = Math.max(...sequences.map(seq => seq.sequence.length));
     const blockSize = options.blockSize || 50;
-    const charWidth = 8;
-    const lineHeight = 20;
+
 
     // Create alignment blocks
     for (let start = 0; start < maxLength; start += blockSize) {
@@ -401,16 +400,22 @@ const PluginVisualization = {
   valueToColor(intensity, colorScheme = 'blue-red') {
     switch (colorScheme) {
       case 'blue-red':
+        {
         const r = Math.round(intensity * 255);
         const b = Math.round((1 - intensity) * 255);
         return `rgb(${r}, 0, ${b})`;
+        }
       case 'green-red':
+        {
         const red = Math.round(intensity * 255);
         const green = Math.round((1 - intensity) * 255);
         return `rgb(${red}, ${green}, 0)`;
+        }
       default:
+        {
         const gray = Math.round(intensity * 255);
         return `rgb(${gray}, ${gray}, ${gray})`;
+        }
     }
   },
 

@@ -122,7 +122,7 @@ class PluginFunctionCallsIntegrator {
     info += 'PLUGIN SYSTEM FUNCTIONS:\\n';
     info += '======================\\n';
 
-    for (const [pluginId, group] of pluginGroups) {
+    for (const [, group] of pluginGroups) {
       info += `\\n**${group.plugin.name}** (${group.plugin.version}):\\n`;
 
       for (const func of group.functions) {

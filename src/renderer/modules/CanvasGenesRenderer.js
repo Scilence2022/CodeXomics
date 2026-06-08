@@ -164,7 +164,7 @@ class CanvasGenesRenderer {
   setupResizeObserver() {
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(entries => {
-        for (let entry of entries) {
+        for (const entry of entries) {
           if (entry.target === this.container) {
             this.handleResize();
           }
@@ -201,7 +201,7 @@ class CanvasGenesRenderer {
     this.geneHitRegions = [];
 
     // Calculate common rendering parameters
-    const containerWidth = this.canvasWidth;
+
     const viewportRange = this.viewport.end - this.viewport.start;
     const baseRange = 10000;
     const zoomFactor = baseRange / viewportRange;
@@ -325,7 +325,7 @@ class CanvasGenesRenderer {
    */
   drawGeneShape(gene, width, height, operonInfo, isLeftTruncated, isRightTruncated, strokeWidth) {
     const geneType = gene.type.toLowerCase();
-    const gradientId = this.getGradientId(geneType);
+    this.getGradientId(geneType);
 
     // Set fill style (gradient)
     // Note: Canvas gradients are relative to coordinate system, so we create one for this specific rect

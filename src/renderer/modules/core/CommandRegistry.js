@@ -431,6 +431,7 @@ class CommandRegistry {
       });
 
       // Evaluate
+      // eslint-disable-next-line no-new-func -- intentional: evaluates a sanitized when-clause enablement expression
       return new Function(`return ${expr}`)();
     } catch (error) {
       console.warn(`Failed to evaluate enablement: ${expression}`, error);

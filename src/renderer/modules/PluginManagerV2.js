@@ -1016,7 +1016,7 @@ class PluginManagerV2 {
     }
 
     const pluginId = parts[0];
-    const functionName = parts[1]; // visualize, renderNetwork, etc.
+     // visualize, renderNetwork, etc.
 
     console.log(`🎨 [PluginManagerV2] Executing visualization tool: ${toolName}`);
 

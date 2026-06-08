@@ -315,7 +315,6 @@ function assertAllowedFileAccess(app, targetPath, options = {}) {
     if (grant) {
       return resolvedPath;
     }
-
   }
 
   const allowed = allowedRoots.some(root => isSubPath(root, resolvedPath));

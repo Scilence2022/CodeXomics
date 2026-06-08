@@ -180,7 +180,7 @@ class ExtensionHostProtocol {
    * Cancel all pending requests
    */
   cancelAll() {
-    for (const [id, pending] of this._pendingRequests) {
+    for (const [, pending] of this._pendingRequests) {
       clearTimeout(pending.timeout);
       pending.reject(new Error('Request cancelled'));
     }
@@ -379,7 +379,7 @@ class ExtensionHostProxy {
     const startTime = performance.now();
 
     try {
-      const result = await method.apply(null, args);
+      const result = await method(...args);
 
       const duration = performance.now() - startTime;
       this._host._resourceMonitor?.recordOperation(duration);

@@ -338,7 +338,6 @@ class BenchmarkManager {
     }
 
     try {
-      const latestResults = history[history.length - 1];
       const exportData = this.framework.exportResults('json');
 
       // Create download

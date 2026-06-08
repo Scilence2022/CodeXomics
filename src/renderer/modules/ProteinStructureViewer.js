@@ -1017,7 +1017,7 @@ class ProteinStructureViewer {
 
       stage
         .loadFile(dataUrl, { ext: 'pdb' })
-        .then(function (comp) {
+        .then(function(comp) {
           console.log('PDB structure loaded successfully');
           component = comp;
 
@@ -1059,7 +1059,7 @@ class ProteinStructureViewer {
             }
           }
         })
-        .catch(function (error) {
+        .catch(function(error) {
           console.error('Error loading PDB structure:', error);
 
           // Clean up the object URL in case of error

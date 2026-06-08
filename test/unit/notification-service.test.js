@@ -1,7 +1,7 @@
 /**
  * NotificationService Unit Tests
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const NotificationService =
   (await import('../../src/renderer/modules/core/NotificationService.js')).default ||
@@ -35,7 +35,7 @@ describe('NotificationService', () => {
 
     it('should reuse existing container if present', () => {
       const first = document.getElementById('notification-container');
-      const ns2 = new NotificationService();
+      new NotificationService();
       const second = document.getElementById('notification-container');
       expect(second).toBe(first);
     });

@@ -9,7 +9,7 @@ import path from 'path';
 // Helper to load classes in a Node-compatible way
 function loadClasses() {
   const agentBasePath = path.join(process.cwd(), 'src/renderer/modules/Agents/AgentBase.js');
-  let agentBaseContent = fs.readFileSync(agentBasePath, 'utf-8');
+  const agentBaseContent = fs.readFileSync(agentBasePath, 'utf-8');
 
   const navAgentPath = path.join(process.cwd(), 'src/renderer/modules/Agents/NavigationAgent.js');
   let navAgentContent = fs.readFileSync(navAgentPath, 'utf-8');

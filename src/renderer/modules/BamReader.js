@@ -829,26 +829,6 @@ class BamReader {
    * Reset the BAM reader state
    * @private
    */
-  reset() {
-    this.filePath = null;
-    this.indexPath = null;
-    this.bamFile = null;
-    this.isInitialized = false;
-    this.hasIndex = false;
-    this.indexType = null;
-    this.header = null;
-    this.references = [];
-    this.totalReads = 0;
-    this.fileSize = 0;
-    this.indexSize = 0;
-    this.performanceStats = {
-      queriesWithIndex: 0,
-      queriesWithoutIndex: 0,
-      averageQueryTime: 0,
-      totalQueryTime: 0,
-      queryCount: 0,
-    };
-  }
 
   /**
    * Read BAM records for a specific genomic region using @gmod/bam directly
@@ -1173,7 +1153,7 @@ class BamReader {
         );
 
         // Pre-allocate array capacity to avoid repeated reallocation
-        reads = new Array();
+        reads = [];
 
         for (let i = 0; i < allRecords.length; i += CHUNK_SIZE) {
           const chunkEnd = Math.min(i + CHUNK_SIZE, allRecords.length);
@@ -1805,7 +1785,7 @@ class BamReader {
    * @param {number} end - End position
    * @param {number} chunkSize - Chunk size for streaming
    */
-  async *streamReadsForRegion(chromosome, start, end, chunkSize = 10000) {
+  async* streamReadsForRegion(chromosome, start, end, chunkSize = 10000) {
     // For now, just return all reads in one chunk
     // Future enhancement: implement chunked reading for very large regions
     const reads = await this.getRecordsForRange(chromosome, start, end);

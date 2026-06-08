@@ -302,7 +302,7 @@ class ShortTermMemory {
   getToolUsagePattern() {
     const patterns = new Map();
 
-    for (const [key, entry] of this.memory.entries()) {
+    for (const [, entry] of this.memory.entries()) {
       const toolName = entry.functionName;
       if (!patterns.has(toolName)) {
         patterns.set(toolName, {

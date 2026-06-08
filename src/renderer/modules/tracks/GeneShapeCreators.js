@@ -1715,8 +1715,8 @@ class GeneShapeCreators {
         if (transform) {
           const translateMatch = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
           if (translateMatch) {
-            const x = parseFloat(translateMatch[1]);
-            const y = parseFloat(translateMatch[2]);
+            parseFloat(translateMatch[1]);
+            parseFloat(translateMatch[2]);
 
             // Recalculate text positioning based on new container width
             const textGroup = textElement.parentElement;

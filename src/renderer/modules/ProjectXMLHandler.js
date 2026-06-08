@@ -393,7 +393,7 @@ class ProjectXMLHandler {
   formatXML(xmlString) {
     const PADDING = '  '; // 两个空格作为缩进
     const reg = /(>)(<)(\/*)/g;
-    let formatted = xmlString.replace(reg, '$1\r\n$2$3');
+    const formatted = xmlString.replace(reg, '$1\r\n$2$3');
     let pad = 0;
 
     return formatted
@@ -404,7 +404,7 @@ class ProjectXMLHandler {
           indent = 0;
         } else if (line.match(/^<\/\w/) && pad > 0) {
           pad -= 1;
-        } else if (line.match(/^<\w[^>]*[^\/]>.*$/)) {
+        } else if (line.match(/^<\w[^>]*[^/]>.*$/)) {
           indent = 1;
         } else {
           indent = 0;

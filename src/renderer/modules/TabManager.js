@@ -1527,7 +1527,7 @@ class TabManager {
     }
 
     let draggedElement = null;
-    let draggedElementIndex = -1;
+
     let dropIndicator = null;
 
     // Create drop indicator element
@@ -1587,7 +1587,6 @@ class TabManager {
       // Drag start event
       item.addEventListener('dragstart', e => {
         draggedElement = item;
-        draggedElementIndex = Array.from(trackControlsContainer.children).indexOf(item);
 
         // Visual feedback
         item.classList.add('dragging');
@@ -1789,7 +1788,7 @@ class TabManager {
         if (
           checkbox &&
           this.genomeBrowser.trackVisibility &&
-          this.genomeBrowser.trackVisibility.hasOwnProperty(trackType)
+          Object.prototype.hasOwnProperty.call(this.genomeBrowser.trackVisibility, trackType)
         ) {
           checkbox.checked = this.genomeBrowser.trackVisibility[trackType];
         }
@@ -1822,7 +1821,7 @@ class TabManager {
 
       sidebarTrackTypes.forEach(({ type, id }) => {
         const checkbox = document.getElementById(id);
-        if (checkbox && this.genomeBrowser.trackVisibility && this.genomeBrowser.trackVisibility.hasOwnProperty(type)) {
+        if (checkbox && this.genomeBrowser.trackVisibility && Object.prototype.hasOwnProperty.call(this.genomeBrowser.trackVisibility, type)) {
           checkbox.checked = this.genomeBrowser.trackVisibility[type];
         }
       });
@@ -2041,8 +2040,8 @@ class TabManager {
     // Tab settings modal controls
     const modal = document.getElementById('tabSettingsModal');
     const tabCacheEnabled = document.getElementById('tabCacheEnabled');
-    const maxCacheSize = document.getElementById('maxCacheSize');
-    const cacheTimeout = document.getElementById('cacheTimeout');
+    document.getElementById('maxCacheSize');
+    document.getElementById('cacheTimeout');
     const clearCacheBtn = document.getElementById('clearCacheBtn');
     const saveTabSettingsBtn = document.getElementById('saveTabSettingsBtn');
     const resetTabSettingsBtn = document.getElementById('resetTabSettingsBtn');
@@ -3002,7 +3001,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 // Global debugging function for position indicators
-window.debugPositionIndicators = function () {
+window.debugPositionIndicators = function() {
   console.log('=== Position Indicators Debug ===');
 
   const tabs = document.querySelectorAll('.genome-tab');
@@ -3065,7 +3064,7 @@ window.debugPositionIndicators = function () {
 };
 
 // Add to global scope for easy access
-window.forcePositionIndicatorVisibility = function () {
+window.forcePositionIndicatorVisibility = function() {
   if (window.genomeBrowser && window.genomeBrowser.tabManager) {
     window.genomeBrowser.tabManager.forcePositionIndicatorVisibility();
   } else {

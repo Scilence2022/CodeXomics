@@ -141,7 +141,7 @@ const PluginUtils = {
 
     for (const seq of sequences) {
       for (const base of seq.toUpperCase()) {
-        if (counts.hasOwnProperty(base)) {
+        if (Object.prototype.hasOwnProperty.call(counts, base)) {
           counts[base]++;
         } else {
           counts.N++;
@@ -536,7 +536,7 @@ const PluginUtils = {
     // Calculate correlations between different metrics
     if (results.length < 2) return {};
 
-    const correlations = {};
+
     // This would contain actual correlation calculations
     // For now, return placeholder
     return {
@@ -589,11 +589,11 @@ const PluginUtils = {
 };
 
 // Standalone utility functions for direct use
-PluginUtils.calculateGCContent = function (sequence) {
+PluginUtils.calculateGCContent = function(sequence) {
   return PluginUtils.calculateGC(sequence);
 };
 
-PluginUtils.calculateSequenceDiversity = function (sequences, metric = 'shannon') {
+PluginUtils.calculateSequenceDiversity = function(sequences, metric = 'shannon') {
   switch (metric) {
     case 'shannon':
       return PluginUtils.calculateShannonDiversity(sequences);

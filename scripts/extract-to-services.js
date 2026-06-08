@@ -114,14 +114,14 @@ for (const [serviceName, methods] of Object.entries(moves)) {
   for (const method of methods) {
     const extracted = extractMethod(content, method);
     if (extracted) {
-      extractedCode[serviceName] += extracted.fullBody.replace(/^  /gm, '  ') + '\\n\\n';
+      extractedCode[serviceName] += extracted.fullBody.replace(/^ {2}/gm, '  ') + '\\n\\n';
 
       const sigMatch = extracted.fullBody.match(/(?:async )?[a-zA-Z0-9_]+\s*\(([^)]*)\)/);
       const params = sigMatch ? sigMatch[1] : '';
 
       const argsList = params
         .split(',')
-        .map(function (p) {
+        .map(function(p) {
           return p.split('=')[0].trim();
         })
         .join(', ');
@@ -212,7 +212,7 @@ if (extractedCode.ui) {
 }
 
 // Append to existing services
-const appendToService = function (serviceFile, code) {
+const appendToService = function(serviceFile, code) {
   if (!code) return;
   const fp = path.resolve(
     '/Users/song/Github-Repos/GenomeAIStudio_1/src/renderer/modules/chat/services/' + serviceFile

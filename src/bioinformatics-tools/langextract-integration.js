@@ -50,33 +50,33 @@ class LangExtractIntegration {
 
       // Pathway patterns
       pathway: [
-        /pathway[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /metabolic\s+pathway[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /biosynthetic\s+pathway[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /degradation\s+pathway[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
+        /pathway[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /metabolic\s+pathway[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /biosynthetic\s+pathway[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /degradation\s+pathway[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
       ],
 
       // Regulation patterns
       regulation: [
         /regulated\s+by\s+([^.]*?)(?:\.|$)/gi,
-        /regulation[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /feedback\s+inhibition\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /allosteric\s+regulation\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /transcriptional\s+regulation\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
+        /regulation[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /feedback\s+inhibition\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /allosteric\s+regulation\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /transcriptional\s+regulation\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
       ],
 
       // Structure patterns
       structure: [
-        /structure[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /homomer[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /heteromer[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /domain[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
-        /subunit[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
+        /structure[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /homomer[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /heteromer[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /domain[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
+        /subunit[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
       ],
 
       // Cofactor patterns
       cofactors: [
-        /cofactor[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
+        /cofactor[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
         /requires?\s+([^.]*?)(?:\.|$)/gi,
         /dependent\s+on\s+([^.]*?)(?:\.|$)/gi,
         /activated\s+by\s+([^.]*?)(?:\.|$)/gi,
@@ -84,14 +84,14 @@ class LangExtractIntegration {
 
       // Substrate patterns
       substrates: [
-        /substrate[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
+        /substrate[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
         /binds?\s+([^.]*?)(?:\.|$)/gi,
         /interacts?\s+with\s+([^.]*?)(?:\.|$)/gi,
       ],
 
       // Product patterns
       products: [
-        /product[s]?\s*[:\-]?\s*([^.]*?)(?:\.|$)/gi,
+        /product[s]?\s*[:-]?\s*([^.]*?)(?:\.|$)/gi,
         /produces?\s+([^.]*?)(?:\.|$)/gi,
         /generates?\s+([^.]*?)(?:\.|$)/gi,
         /yields?\s+([^.]*?)(?:\.|$)/gi,
@@ -99,19 +99,19 @@ class LangExtractIntegration {
 
       // EC number patterns
       ecNumber: [
-        /EC\s*[:\-]?\s*([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/gi,
-        /enzyme\s+commission\s+number[s]?\s*[:\-]?\s*([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/gi,
+        /EC\s*[:-]?\s*([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/gi,
+        /enzyme\s+commission\s+number[s]?\s*[:-]?\s*([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/gi,
       ],
 
       // GO term patterns
-      goTerms: [/GO\s*[:\-]?\s*([0-9]+)/gi, /gene\s+ontology\s*[:\-]?\s*([0-9]+)/gi, /GO:([0-9]+)/gi],
+      goTerms: [/GO\s*[:-]?\s*([0-9]+)/gi, /gene\s+ontology\s*[:-]?\s*([0-9]+)/gi, /GO:([0-9]+)/gi],
 
       // Reference patterns
       references: [
-        /PMID\s*[:\-]?\s*([0-9]+)/gi,
-        /PubMed\s*[:\-]?\s*([0-9]+)/gi,
-        /doi\s*[:\-]?\s*([0-9]+\.[0-9]+\/[^\\s]+)/gi,
-        /DOI\s*[:\-]?\s*([0-9]+\.[0-9]+\/[^\\s]+)/gi,
+        /PMID\s*[:-]?\s*([0-9]+)/gi,
+        /PubMed\s*[:-]?\s*([0-9]+)/gi,
+        /doi\s*[:-]?\s*([0-9]+\.[0-9]+\/[^\\s]+)/gi,
+        /DOI\s*[:-]?\s*([0-9]+\.[0-9]+\/[^\\s]+)/gi,
       ],
     };
   }

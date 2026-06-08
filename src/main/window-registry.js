@@ -1,8 +1,6 @@
 'use strict';
 // @ts-check
 
-const { BrowserWindow } = require('electron');
-
 // External references (set by main module)
 let mainWindow;
 let unifiedMCPServer;
@@ -244,7 +242,7 @@ function getWindowRegistryStatus() {
   const windows = [];
   let validCount = 0;
   let destroyedCount = 0;
-  let pendingCount = pendingRegistrations.size;
+  const pendingCount = pendingRegistrations.size;
 
   for (const [windowId, info] of windowRegistry.entries()) {
     const isDestroyed = info.window ? info.window.isDestroyed() : true;

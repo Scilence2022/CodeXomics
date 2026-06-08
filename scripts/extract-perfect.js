@@ -34,7 +34,7 @@ for (const [service, methods] of Object.entries(moves)) {
   }
 }
 
-const regex = /^  (?:async )?([A-Za-z0-9_]+)\([^)]*\) {/gm;
+const regex = /^ {2}(?:async )?([A-Za-z0-9_]+)\([^)]*\) {/gm;
 let match;
 const extractedMethods = [];
 
@@ -112,7 +112,7 @@ extractedMethods.sort((a, b) => b.startIndex - a.startIndex);
 const extractedCode = { analysis: '', protein: '', file: '', context: '', ui: '', intent: '' };
 
 for (const m of extractedMethods) {
-  extractedCode[m.serviceName] = m.fullBody.replace(/^  /gm, '  ') + '\n\n' + extractedCode[m.serviceName];
+  extractedCode[m.serviceName] = m.fullBody.replace(/^ {2}/gm, '  ') + '\n\n' + extractedCode[m.serviceName];
 
   const sigMatch = m.fullBody.match(/(?:async )?[a-zA-Z0-9_]+\s*\(([^)]*)\)/);
   const params = sigMatch ? sigMatch[1] : '';

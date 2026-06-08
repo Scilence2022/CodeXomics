@@ -351,7 +351,6 @@ class FileManager {
 
     const lines = content.split('\n');
     const operons = [];
-    let headerLine = null;
 
     console.log(`📊 Total lines: ${lines.length}`);
 
@@ -372,7 +371,6 @@ class FileManager {
 
       // Detect header line (contains column numbers like "1)" or field names)
       if (trimmedLine.includes('operonId') || trimmedLine.includes('1)operonId')) {
-        headerLine = trimmedLine;
         console.log(`📋 Found header line at line ${i + 1}`);
         continue;
       }
@@ -1110,7 +1108,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
       }
 
       // Handle multi-line qualifier values - improved efficiency
-      if (line.match(/^\s{21}[^\/]/) && currentFeature && currentQualifierKey) {
+      if (line.match(/^\s{21}[^/]/) && currentFeature && currentQualifierKey) {
         const continuationValue = line.trim().replace(/^"/, '').replace(/"$/, '');
 
         // Get the current qualifier value (handle both single values and arrays)
@@ -1340,12 +1338,10 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
   parseGenBankLocation(feature, location) {
     // Enhanced location parsing - handles various GenBank location formats
-    let isComplement = false;
     let cleanLocation = location;
 
     // Handle complement locations
     if (location.includes('complement')) {
-      isComplement = true;
       feature.strand = -1;
       cleanLocation = location.replace(/complement\(|\)/g, '');
     }
@@ -1629,7 +1625,7 @@ Original error: ${error.message}`;
       const fields = trimmed.split('\t');
       if (fields.length < 9) continue;
 
-      const [seqname, source, feature, start, end, score, strand, frame, attribute] = fields;
+      const [seqname, source, feature, start, end, score, strand, , attribute] = fields;
 
       if (!newAnnotations[seqname]) {
         newAnnotations[seqname] = [];

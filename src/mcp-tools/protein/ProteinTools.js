@@ -3,7 +3,7 @@
  * Handles protein structure retrieval, PDB searches, and AlphaFold integration
  */
 
-const https = require('https');
+require('https');
 
 class ProteinTools {
   constructor(server) {

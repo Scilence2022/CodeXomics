@@ -221,7 +221,7 @@ class ToolSystemVerifier {
   verifyBuiltinIntegration() {
     this.log('🔍', 'Test 7: Verifying built-in tools integration');
 
-    const expectedBuiltinCategories = ['database', 'protein_structure', 'export', 'file_loading'];
+
     let issues = 0;
 
     // Check that built-in tools are properly mapped

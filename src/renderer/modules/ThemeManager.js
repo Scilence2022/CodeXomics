@@ -13,7 +13,7 @@ class ThemeManager {
     // and applies CSS custom properties before any external scripts load.
     // Check if the inline script already set a style so we stay in sync.
     try {
-      var hint = localStorage.getItem('_uiStyleHint');
+      const hint = localStorage.getItem('_uiStyleHint');
       if (hint && hint !== 'default') {
         this.currentStyle = hint;
       }
@@ -596,7 +596,7 @@ class ThemeManager {
         await this.configManager.waitForInit();
       }
 
-      const styleBeforeLoad = this.currentStyle;
+
       await this.loadStyle();
 
       // Always call applyStyle() to ensure CSS custom properties are set.

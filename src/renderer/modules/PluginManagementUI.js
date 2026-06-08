@@ -2374,7 +2374,7 @@ class PluginManagementUI {
       this.settings.enablePluginDebug = enableDebug;
 
       // Save to local storage
-      const storageSuccess = this.saveSettingsToStorage();
+      this.saveSettingsToStorage();
 
       // Also save to configManager for compatibility
       if (this.configManager) {
@@ -4756,7 +4756,7 @@ class PluginManagementUI {
     } catch (error) {
       console.error('❌ Failed to open Plugin Marketplace:', error);
 
-      let errorMessage = 'Failed to open Plugin Marketplace: ' + error.message;
+      const errorMessage = 'Failed to open Plugin Marketplace: ' + error.message;
       let suggestions = '';
 
       if (error.message.includes('not initialized') || error.message.includes('required')) {

@@ -136,11 +136,12 @@ class UnifiedSequenceProcessing {
       }
 
       const sequenceUpper = sequence.toUpperCase();
-      let gcContent, gcCount, totalBases, statistics;
+      let gcContent; let gcCount; let totalBases; let statistics;
 
       switch (method) {
         case 'standard':
           // Standard GC calculation
+          {
           const g = (sequenceUpper.match(/G/g) || []).length;
           const c = (sequenceUpper.match(/C/g) || []).length;
           const a = (sequenceUpper.match(/A/g) || []).length;
@@ -179,9 +180,11 @@ class UnifiedSequenceProcessing {
             method: 'standard',
           };
           break;
+          }
 
         case 'weighted':
           // Weighted GC calculation considering ambiguous bases
+          {
           const baseCounts = this.countBases(sequenceUpper, includeAmbiguous);
           gcCount = baseCounts.g + baseCounts.c;
           totalBases = Object.values(baseCounts).reduce((a, b) => a + b, 0);
@@ -195,9 +198,11 @@ class UnifiedSequenceProcessing {
             method: 'weighted',
           };
           break;
+          }
 
         case 'window':
           // Sliding window GC calculation
+          {
           const windows = [];
           for (let i = 0; i <= sequenceUpper.length - windowSize; i++) {
             const window = sequenceUpper.substring(i, i + windowSize);
@@ -223,6 +228,7 @@ class UnifiedSequenceProcessing {
             windowData: windows,
           };
           break;
+          }
 
         default:
           throw new Error(`Unknown GC calculation method: ${method}`);
@@ -431,7 +437,7 @@ class UnifiedSequenceProcessing {
     }
 
     for (const base of sequence.toUpperCase()) {
-      if (counts.hasOwnProperty(base)) {
+      if (Object.prototype.hasOwnProperty.call(counts, base)) {
         counts[base]++;
       }
     }

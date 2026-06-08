@@ -172,19 +172,19 @@ class ChatBoxSettingsManager {
     await this.configManager.set('chatboxSettings', this.settings);
 
     // Sync Function Call Settings to the main LLM configuration
-    if (this.settings.hasOwnProperty('functionCallRounds')) {
+    if (Object.prototype.hasOwnProperty.call(this.settings, 'functionCallRounds')) {
       await this.configManager.set('llm.functionCallRounds', this.settings.functionCallRounds);
     }
-    if (this.settings.hasOwnProperty('enableEarlyCompletion')) {
+    if (Object.prototype.hasOwnProperty.call(this.settings, 'enableEarlyCompletion')) {
       await this.configManager.set('llm.enableEarlyCompletion', this.settings.enableEarlyCompletion);
     }
-    if (this.settings.hasOwnProperty('completionThreshold')) {
+    if (Object.prototype.hasOwnProperty.call(this.settings, 'completionThreshold')) {
       await this.configManager.set('llm.completionThreshold', this.settings.completionThreshold);
     }
-    if (this.settings.hasOwnProperty('maxSameToolDifferentParams')) {
+    if (Object.prototype.hasOwnProperty.call(this.settings, 'maxSameToolDifferentParams')) {
       await this.configManager.set('llm.maxSameToolDifferentParams', this.settings.maxSameToolDifferentParams);
     }
-    if (this.settings.hasOwnProperty('maxSameToolIdenticalParams')) {
+    if (Object.prototype.hasOwnProperty.call(this.settings, 'maxSameToolIdenticalParams')) {
       await this.configManager.set('llm.maxSameToolIdenticalParams', this.settings.maxSameToolIdenticalParams);
     }
 
@@ -200,14 +200,14 @@ class ChatBoxSettingsManager {
    * Get a specific setting
    */
   getSetting(key, defaultValue = null) {
-    return this.settings.hasOwnProperty(key) ? this.settings[key] : defaultValue;
+    return Object.prototype.hasOwnProperty.call(this.settings, key) ? this.settings[key] : defaultValue;
   }
 
   /**
    * Set a specific setting
    */
   async setSetting(key, value) {
-    if (this.settings.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(this.settings, key)) {
       this.settings[key] = value;
       await this.saveSettings();
       return true;
@@ -223,7 +223,7 @@ class ChatBoxSettingsManager {
     let hasChanges = false;
 
     for (const [key, value] of Object.entries(newSettings)) {
-      if (this.settings.hasOwnProperty(key) && this.settings[key] !== value) {
+      if (Object.prototype.hasOwnProperty.call(this.settings, key) && this.settings[key] !== value) {
         this.settings[key] = value;
         hasChanges = true;
       }
@@ -2076,7 +2076,7 @@ class ChatBoxSettingsManager {
     // Check which settings will change BEFORE updating them
     const changedKeys = [];
     for (const [key, value] of Object.entries(newSettings)) {
-      if (this.settings.hasOwnProperty(key) && this.settings[key] !== value) {
+      if (Object.prototype.hasOwnProperty.call(this.settings, key) && this.settings[key] !== value) {
         changedKeys.push(key);
       }
     }

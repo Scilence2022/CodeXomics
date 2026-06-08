@@ -167,19 +167,6 @@ class ProjectManagerWindow {
 
   // ====== 项目管理功能 ======
 
-  createNewProject() {
-    const modal = document.getElementById('newProjectModal');
-    if (modal) {
-      // 清空表单
-      document.getElementById('projectName').value = '';
-      document.getElementById('projectDescription').value = '';
-
-      // 设置默认项目位置
-      this.setDefaultProjectLocation();
-
-      modal.style.display = 'block';
-    }
-  }
 
   async setDefaultProjectLocation() {
     try {
@@ -354,32 +341,6 @@ class ProjectManagerWindow {
     }
   }
 
-  selectProject(projectId) {
-    this.currentProject = this.projects.get(projectId);
-    this.currentPath = [];
-
-    if (this.currentProject) {
-      this.currentProject.metadata.lastOpened = new Date().toISOString();
-
-      // 更新UI
-      this.renderProjectContent();
-      this.updateActiveTreeItem(projectId);
-      this.updateContentTitle();
-
-      // 显示项目内容
-      document.getElementById('projectOverview').style.display = 'none';
-      document.getElementById('projectContent').style.display = 'block';
-
-      this.updateStatusBar(`Opened: ${this.currentProject.name}`);
-      this.saveProjects(); // 保存最后打开时间
-
-      // 更新详细信息面板
-      this.updateDetailsPanel();
-
-      // 自动刷新Projects & Workspaces显示
-      this.autoRefreshProjectsAndWorkspaces();
-    }
-  }
 
   // ====== UI渲染功能 ======
 
@@ -742,12 +703,6 @@ class ProjectManagerWindow {
   /**
    * 增强的addSubfolder方法
    */
-  addSubfolder() {
-    this.hideContextMenus();
-    if (!this.currentContextFolderPath || !this.currentProject) return;
-
-    this.createSubfolderInPath(this.currentContextFolderPath);
-  }
 
   navigateToFolder(path) {
     this.currentPath = path;
@@ -2648,34 +2603,6 @@ class ProjectManagerWindow {
 
   // ==================== PROJECT MENU METHODS ====================
 
-  showProjectProperties() {
-    if (!this.currentProject) {
-      this.showNotification('No project selected', 'warning');
-      return;
-    }
-
-    const properties = `
-📁 Project Properties
-
-Name: ${this.currentProject.name}
-Description: ${this.currentProject.description || 'No description'}
-Location: ${this.currentProject.location || 'Unknown'}
-Created: ${this.formatDate(this.currentProject.created)}
-Modified: ${this.formatDate(this.currentProject.modified)}
-
-📊 Statistics:
-Files: ${this.currentProject.files?.length || 0}
-Folders: ${this.currentProject.folders?.length || 0}
-Total Size: ${this.formatFileSize(this.currentProject.metadata?.totalSize || 0)}
-
-🔧 Status:
-Has Unsaved Changes: ${this.currentProject.hasUnsavedChanges ? 'Yes' : 'No'}
-Project File: ${this.currentProject.projectFilePath || 'Not set'}
-Data Folder: ${this.currentProject.dataFolderPath || 'Not set'}
-        `.trim();
-
-    alert(properties);
-  }
 
   showProjectStatistics() {
     if (!this.currentProject) {
@@ -4284,8 +4211,9 @@ Built with ❤️ for the bioinformatics community.
       !confirm(
         `Are you sure you want to delete "${file.name}"?\n\nThis will delete both the project record AND the physical file from disk.`
       )
-    )
-      return;
+    ) {
+return;
+}
 
     try {
       // Get the absolute path of the file

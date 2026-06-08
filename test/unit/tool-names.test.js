@@ -8,17 +8,14 @@ import path from 'path';
 const TOOL_NAMES_PATH = path.join(process.cwd(), 'src/renderer/modules/chat/constants/ToolNames.js');
 
 describe('ToolNames Constants', () => {
-  let ToolNames;
-
   beforeAll(async () => {
     // Need to mock DOM since ToolNames may reference window
     const content = fs.readFileSync(TOOL_NAMES_PATH, 'utf-8');
     // Check if it's a module or global definition
     const exportsMatch = content.match(/module\.exports\s*=\s*\{([^}]+)\}/s);
     if (exportsMatch) {
-      // It exports specific values
-      const mod = await import(TOOL_NAMES_PATH + '?t=' + Date.now());
-      ToolNames = mod.default || mod;
+      // It exports specific values — import to validate the module loads cleanly
+      await import(TOOL_NAMES_PATH + '?t=' + Date.now());
     }
   });
 

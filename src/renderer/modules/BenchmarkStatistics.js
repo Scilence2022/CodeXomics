@@ -338,7 +338,7 @@ class BenchmarkStatistics {
    * Calculate quality metrics
    */
   calculateQualityMetrics(testResults) {
-    const successfulTests = testResults.filter(t => t.success);
+    testResults.filter(t => t.success);
     const highScoreTests = testResults.filter(t => t.score / t.maxScore >= 0.8);
     const lowErrorTests = testResults.filter(t => t.errors.length === 0);
 

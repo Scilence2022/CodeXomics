@@ -431,7 +431,7 @@ class CanvasSequenceRenderer {
     }
 
     // Calculate layout positions
-    let dnaY, proteinStartY;
+    let dnaY; let proteinStartY;
     if (this.options.showProteinTranslation) {
       // DNA sequence at top, proteins below
       dnaY = this.options.padding + this.charHeight / 2;
@@ -601,7 +601,7 @@ class CanvasSequenceRenderer {
   setupResizeObserver() {
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(entries => {
-        for (let entry of entries) {
+        for (const entry of entries) {
           if (entry.target === this.container) {
             this.handleResize();
           }

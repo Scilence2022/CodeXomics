@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const targetFile = path.resolve('/Users/song/Github-Repos/GenomeAIStudio_1/src/renderer/modules/ChatManager.js');
-let content = fs.readFileSync(targetFile, 'utf8');
+const content = fs.readFileSync(targetFile, 'utf8');
 
 function extractMethod(contentStr, methodName) {
   const startMarker = '  ' + methodName + '(';
@@ -42,7 +42,7 @@ function extractMethod(contentStr, methodName) {
       continue;
     }
 
-    if (char === "'" || char === '"' || char === '\`') {
+    if (char === "'" || char === '"' || char === '`') {
       inString = true;
       stringChar = char;
     } else if (char === '/' && nextChar === '/') {

@@ -18,7 +18,7 @@ const {
   permissionBroker,
   ALL_FILE_CAPABILITIES,
   FILE_CAPABILITIES,
-  rememberApprovedPath,
+
   rememberApprovedDialogPaths,
   getDefaultWritableRoots,
   assertAllowedFileAccess,
@@ -496,24 +496,21 @@ function registerIpcHandlers(deps) {
   const {
     mainWindow,
     windowRegistry,
-    pendingRegistrations,
+
     getUnifiedMCPServer,
     setUnifiedMCPServer,
     getUnifiedServerStatus,
     setUnifiedServerStatus,
-    toolMenuTemplates,
-    currentActiveWindow,
-    fileOpenQueue,
+
+
     analyzerPendingData,
     getWindowRegistryStatus,
     syncWindowsWithMCPServer,
-    registerGenomeWindow,
-    unregisterGenomeWindow,
+
+
     getCurrentMainWindow,
-    createMCPServerManagerWindow,
-    createResourceManagerWindow,
-    createDebugWindow,
-    createCircosWindow,
+
+
     createKEGGWindow,
     createGOWindow,
     createUniProtWindow,
@@ -525,13 +522,13 @@ function registerIpcHandlers(deps) {
     createPDBWindow,
     createGeneAnnotationRefineWindow,
     createBlastDownloaderWindow,
-    createBlastConfigWindow,
+
     createProGenFixerWindow,
     createDeepGeneResearchWindow,
     createChopchopWindow,
     createCustomExternalToolWindow,
     createMenu,
-    createCircosPlotterMenu,
+
     updateMCPServerMenu,
     loadMCPServerSettings,
     saveMCPServerSettings,
@@ -1769,7 +1766,7 @@ function registerIpcHandlers(deps) {
           } catch (chunkError) {
             console.error('Error processing chunk:', chunkError);
             stream.destroy();
-            reject({ success: false, error: `Error processing data chunk: ${chunkError.message}` });
+            resolve({ success: false, error: `Error processing data chunk: ${chunkError.message}` });
           }
         });
 
@@ -1788,13 +1785,13 @@ function registerIpcHandlers(deps) {
             resolve({ success: true, totalLines: lineCount, size: totalRead });
           } catch (endError) {
             console.error('Error finalizing stream:', endError);
-            reject({ success: false, error: `Error finalizing stream: ${endError.message}` });
+            resolve({ success: false, error: `Error finalizing stream: ${endError.message}` });
           }
         });
 
         stream.on('error', error => {
           console.error('Stream error:', error);
-          reject({ success: false, error: `File read error: ${error.message}` });
+          resolve({ success: false, error: `File read error: ${error.message}` });
         });
       });
     } catch (error) {
@@ -3158,7 +3155,7 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('get-circos-genome-data', async event => {
     try {
       // Get the sender window (Circos window)
-      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      BrowserWindow.fromWebContents(event.sender);
 
       // Get main window data
       const mainWindow = getCurrentMainWindow();
@@ -3808,11 +3805,13 @@ function registerIpcHandlers(deps) {
         webContents.setZoomLevel(webContents.getZoomLevel() - 0.5);
         break;
       case 'toggle-fullscreen':
+        {
         const window = BrowserWindow.fromWebContents(webContents);
         if (window) {
           window.setFullScreen(!window.isFullScreen());
         }
         break;
+        }
       default:
         console.log('Unknown Deep Gene Research menu action:', action);
     }
@@ -3823,29 +3822,7 @@ function registerIpcHandlers(deps) {
   // =====================================================================
 
   // Helper functions for user notifications
-  function showSettingsWarning(title, message) {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send('show-notification', {
-        type: 'warning',
-        title: title,
-        message: message,
-        duration: 5000,
-      });
-    }
-  }
 
-  function showSettingsError(title, message) {
-    const mainWindow = getCurrentMainWindow();
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send('show-notification', {
-        type: 'error',
-        title: title,
-        message: message,
-        duration: 8000,
-      });
-    }
-  }
 
   // General Settings IPC handlers
   ipcMain.handle('get-general-settings', async () => {

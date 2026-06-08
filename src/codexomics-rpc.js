@@ -6,7 +6,7 @@
  * for efficient local communication.
  */
 
-const { ipcMain, BrowserWindow } = require('electron');
+const { ipcMain } = require('electron');
 const { EventEmitter } = require('events');
 
 class GenomeStudioRPC extends EventEmitter {
@@ -198,7 +198,7 @@ class GenomeStudioRPC extends EventEmitter {
   // Clean up resources
   destroy() {
     // Clear all pending requests
-    for (const [requestId, pendingRequest] of this.pendingRequests) {
+    for (const [, pendingRequest] of this.pendingRequests) {
       clearTimeout(pendingRequest.timeout);
       pendingRequest.reject(new Error('RPC interface destroyed'));
     }

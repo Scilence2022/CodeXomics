@@ -463,7 +463,7 @@ class PluginDependencyResolver {
 
     for (const item of installOrder) {
       // Get plugin details with resolved version
-      let plugin = await this.marketplace.findPlugin(item.id);
+      const plugin = await this.marketplace.findPlugin(item.id);
 
       if (!plugin) {
         throw new Error(`Plugin ${item.id} not found for installation`);
