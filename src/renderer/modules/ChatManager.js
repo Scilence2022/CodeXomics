@@ -42,6 +42,7 @@ class ChatManager {
 
     // 思考过程和工具调用显示 - 现在从设置管理器获取
     this.showThinkingProcess = true;
+    this.showAvailableTools = true;
     this.showToolCalls = true;
     this.showToolCallSource = true;
     this.showDetailedToolData = true;
@@ -282,6 +283,7 @@ class ChatManager {
   updateSettingsFromManager() {
     if (this.chatBoxSettingsManager) {
       this.showThinkingProcess = this.chatBoxSettingsManager.getSetting('showThinkingProcess', true);
+      this.showAvailableTools = this.chatBoxSettingsManager.getSetting('showAvailableTools', true);
       this.showToolCalls = this.chatBoxSettingsManager.getSetting('showToolCalls', true);
       this.showToolCallSource = this.chatBoxSettingsManager.getSetting('showToolCallSource', true);
       this.showDetailedToolData = this.chatBoxSettingsManager.getSetting('showDetailedToolData', true);
@@ -1506,6 +1508,80 @@ class ChatManager {
     }
 
     return message;
+  }
+
+  /**
+   * Render the Dynamic Tool registration system's available-tools listing into the
+   * thinking-process panel, before the first LLM round of a request. This gives the
+   * user visibility into exactly which dynamically-registered tools the agent can use
+   * for the current query.
+   *
+   * The listing is wrapped in a collapsed <details> so it never dominates the panel;
+   * the user can expand it to inspect the full categorized registry. Failures are
+   * swallowed — surfacing the tool inventory must never block request processing.
+   */
+  async displayAvailableToolsInThinking() {
+    console.log('🧰 [ChatManager] displayAvailableToolsInThinking invoked', {
+      showThinkingProcess: this.showThinkingProcess,
+      showAvailableTools: this.showAvailableTools,
+      dynamicToolsEnabled: this.dynamicToolsEnabled,
+    });
+
+    // Controlled by its own ChatBox setting ("Show available tools"). It renders into
+    // the thinking-process panel, so the thinking process must also be visible.
+    if (this.showAvailableTools === false) return;
+    if (!this.showThinkingProcess) return;
+
+    try {
+      const toolsResult = await this.listAvailableTools({ format: 'summary' });
+
+      // Even when enumeration fails, surface a brief note so the panel never goes
+      // silently missing — the user explicitly wants tool visibility before round 1.
+      if (!toolsResult || toolsResult.success === false) {
+        console.warn('🧰 [ChatManager] listAvailableTools returned no usable result', toolsResult);
+        this.updateThinkingMessage(
+          `<br><span style="color: #888;">🧰 Tool registry unavailable for this request.</span>`
+        );
+        return;
+      }
+
+      const total =
+        toolsResult.total_tools ?? (Array.isArray(toolsResult.tools) ? toolsResult.tools.length : 0);
+      console.log(`🧰 [ChatManager] Rendering ${total} available tool(s) into thinking process`);
+
+      const sourceLabel = this.dynamicToolsEnabled && this.dynamicTools ? 'Dynamic Tool registry' : 'core registry';
+
+      if (!total) {
+        this.updateThinkingMessage(
+          `<br><span style="color: #888;">🧰 No tools registered in the ${sourceLabel}.</span>`
+        );
+        return;
+      }
+
+      const contextService = this.services && this.services.context;
+      let inner = '';
+      if (contextService && typeof contextService.renderAvailableToolsVisualization === 'function') {
+        inner = contextService.renderAvailableToolsVisualization(toolsResult, {
+          title: 'Registered Tools',
+          categoriesOpen: false,
+        });
+      } else {
+        inner = `<div style="color: #555;">${total} tools registered.</div>`;
+      }
+
+      const block =
+        `<br><details style="margin: 6px 0;">` +
+        `<summary style="cursor: pointer; color: #1565C0; font-weight: 600;">` +
+        `🧰 Available tools from ${sourceLabel} (${total}) — click to expand</summary>` +
+        `${inner}</details>`;
+
+      this.updateThinkingMessage(block);
+    } catch (error) {
+      console.warn('[ChatManager] Failed to display available tools in thinking process:', error);
+      this.updateThinkingMessage(
+        `<br><span style="color: #888;">🧰 Tool registry unavailable (${this.escapeHtml ? this.escapeHtml(error.message || 'error') : 'error'}).</span>`
+      );
+    }
   }
 
   /**
@@ -4641,6 +4717,10 @@ class ChatManager {
           );
         }
       }
+
+      // Surface the Dynamic Tool registration inventory before the first LLM round so
+      // the user can see exactly which tools the agent has available for this request.
+      await this.displayAvailableToolsInThinking();
 
       // Get memory context for conversation
       let memoryContext = null;
@@ -15920,7 +16000,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const suites = parameters.suites || ['automatic_simple', 'automatic_complex'];
     const timeout = parameters.timeout !== undefined ? parameters.timeout : 120000;
-    const testDelay = parameters.test_delay !== undefined ? parameters.test_delay : 60000;
+    const testDelay = parameters.test_delay !== undefined ? parameters.test_delay : 0;
     const generateReport = parameters.generate_report !== undefined ? parameters.generate_report : true;
     const includeCharts = parameters.include_charts !== undefined ? parameters.include_charts : true;
     const includeRawData = parameters.include_raw_data !== undefined ? parameters.include_raw_data : false;

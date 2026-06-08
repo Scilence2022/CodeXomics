@@ -412,8 +412,8 @@ class BenchmarkManager {
                         <div class="config-section">
                             <h3>Batch Delay (Rate Limit)</h3>
                             <select id="customTestDelay">
-                                <option value="0">No delay</option>
-                                <option value="60000" selected>1 minute</option>
+                                <option value="0" selected>No delay</option>
+                                <option value="60000">1 minute</option>
                                 <option value="120000">2 minutes</option>
                                 <option value="180000">3 minutes</option>
                                 <option value="240000">4 minutes</option>
@@ -560,7 +560,7 @@ class BenchmarkManager {
         includeRawData: dialog.querySelector('#customIncludeRawData').checked,
         stopOnError: dialog.querySelector('#customStopOnError').checked,
         timeout: parseInt(dialog.querySelector('#customTimeout').value),
-        testDelay: parseInt(dialog.querySelector('#customTestDelay')?.value || '60000'),
+        testDelay: parseInt(dialog.querySelector('#customTestDelay')?.value || '0'),
       };
 
       // Close dialog

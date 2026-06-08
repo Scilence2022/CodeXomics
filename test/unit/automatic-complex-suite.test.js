@@ -453,4 +453,90 @@ describe('AutomaticComplexSuite', () => {
       expect(evalResult.success).toBe(false); // Complex workflows now require at least 60% tool coverage.
     });
   });
+
+  describe('Authoritative execution-data tool detection (GC + Export regression)', () => {
+    it('extractWorkflowCalls must not let text `steps` shadow real executed tool calls', () => {
+      // Shape produced by LLMBenchmarkFramework.parseTestResponse: a final assistant
+      // text yields plain-string `steps`, while the real tools live in executedFunctionCalls.
+      const parsedResponse = {
+        content: 'I calculated the GC content and exported the region features to a BED file.',
+        steps: ['Calculate the GC content for the current view region', 'Export the region features to a BED file'],
+        functionCalls: [],
+        executedFunctionCalls: [
+          { tool_name: 'calc_region_gc', parameters: {}, success: true },
+          {
+            tool_name: 'export_bed_format',
+            parameters: { filePath: '/tmp/region_features.bed' },
+            success: true,
+          },
+        ],
+      };
+
+      const calls = suite.extractWorkflowCalls(parsedResponse);
+      expect(calls.map(c => suite.getToolNameFromCall(c))).toEqual(['calc_region_gc', 'export_bed_format']);
+    });
+
+    it('evaluateWorkflowCall detects the GC+export workflow from execution data, not response text', async () => {
+      const actualResult = {
+        content: 'Done: GC content computed and features exported.',
+        // Text-only heuristics would extract these strings and find no tool names.
+        steps: ['Calculated GC content', 'Exported BED file'],
+        functionCalls: [],
+        executedFunctionCalls: [
+          { tool_name: 'calc_region_gc', parameters: {}, success: true },
+          {
+            tool_name: 'export_bed_format',
+            parameters: { filePath: '/Users/song/Documents/exported_files/region_features.bed' },
+            success: true,
+          },
+        ],
+      };
+      const expectedResult = {
+        tool_sequence: ['calc_region_gc', 'export_bed_format'],
+        parameters: [{}, { filePath: '/Users/song/Documents/exported_files/region_features.bed' }],
+      };
+      const testResult = { id: 'analysis_auto_01', category: 'sequence_analysis', maxScore: 10, bonusScore: 2 };
+
+      const evalResult = await suite.evaluateWorkflowCall(actualResult, expectedResult, testResult);
+      expect(evalResult.success).toBe(true);
+      expect(evalResult.details.orderedMatches).toBe(2);
+      expect(evalResult.errors.length).toBe(0);
+    });
+
+    it('getTrackedExecutions falls back to ChatManager.getLastExecutionData() when the tracker is empty', () => {
+      const previous = global.window.chatManager.getLastExecutionData;
+      global.window.chatManager.getLastExecutionData = () => ({
+        startTime: Date.now(),
+        functionCalls: [
+          { tool_name: 'calc_region_gc', parameters: {}, timestamp: new Date().toISOString() },
+          {
+            tool_name: 'export_bed_format',
+            parameters: { filePath: '/tmp/region_features.bed' },
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        toolResults: [
+          { tool: 'calc_region_gc', success: true },
+          { tool: 'export_bed_format', success: true },
+        ],
+      });
+
+      try {
+        const executions = suite.getTrackedExecutions();
+        expect(executions.map(e => e.toolName)).toEqual(['calc_region_gc', 'export_bed_format']);
+        expect(executions.every(e => e.status === 'completed')).toBe(true);
+
+        // A failed tool result must be reflected as a failed execution.
+        global.window.chatManager.getLastExecutionData = () => ({
+          startTime: Date.now(),
+          functionCalls: [{ tool_name: 'export_bed_format', parameters: {}, timestamp: new Date().toISOString() }],
+          toolResults: [{ tool: 'export_bed_format', success: false, error: 'write failed' }],
+        });
+        const failed = suite.getTrackedExecutions();
+        expect(failed[0].status).toBe('failed');
+      } finally {
+        global.window.chatManager.getLastExecutionData = previous;
+      }
+    });
+  });
 });

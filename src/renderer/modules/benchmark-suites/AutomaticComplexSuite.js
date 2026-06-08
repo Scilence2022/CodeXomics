@@ -1167,18 +1167,29 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       return [];
     }
 
+    // Candidate arrays in priority order. `executedFunctionCalls` is the authoritative
+    // record of tools that actually ran (captured from ChatManager.getLastExecutionData()),
+    // so it is preferred over anything derived from the assistant's final text. Note
+    // `result.steps` holds plain text lines (from extractWorkflowSteps) with no tool
+    // names — it must never shadow a real tool-call array, so each candidate is only
+    // accepted when at least one entry resolves to a tool name.
     const nestedCallArrays = [
+      result.executedFunctionCalls,
+      result.functionCalls,
       result.results,
       result.toolCalls,
       result.tool_calls,
       result.calls,
-      result.steps,
       result.executions,
+      result.steps,
     ];
 
-    const nestedCalls = nestedCallArrays.find(candidate => Array.isArray(candidate));
-    if (nestedCalls) {
-      return nestedCalls.map(call => this.normalizeResultParameters(call));
+    for (const candidate of nestedCallArrays) {
+      if (!Array.isArray(candidate) || candidate.length === 0) continue;
+      const normalized = candidate.map(call => this.normalizeResultParameters(call));
+      if (normalized.some(call => this.getToolNameFromCall(call))) {
+        return normalized;
+      }
     }
 
     return this.getToolNameFromCall(result) ? [this.normalizeResultParameters(result)] : [];
@@ -1479,14 +1490,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     timeoutMs = BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT,
     expectedParams = []
   ) {
-    if (!window.chatManager || !window.chatManager.toolExecutionTracker) {
-      return this.matchWorkflowCallsToExpected([], expectedTools, expectedParams);
-    }
-
-    const tracker = window.chatManager.toolExecutionTracker;
     const now = Date.now();
-    const recentExecutions = tracker
-      .getSessionExecutions()
+    const recentExecutions = this.getTrackedExecutions()
       .filter(exec => exec.status === 'completed' && now - exec.startTime < timeoutMs)
       .sort((a, b) => a.startTime - b.startTime)
       .map(exec => ({

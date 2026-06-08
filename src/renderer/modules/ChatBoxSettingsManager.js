@@ -8,6 +8,7 @@ class ChatBoxSettingsManager {
     this.settings = {
       // Display settings
       showThinkingProcess: true,
+      showAvailableTools: true, // Show available tools (Dynamic Tool registry) before the first LLM round
       showToolCalls: true,
       showToolCallSource: true, // Show tool call source
       showDetailedToolData: true, // Show detailed tool data
@@ -242,6 +243,7 @@ class ChatBoxSettingsManager {
     const defaultSettings = {
       // Display settings
       showThinkingProcess: true,
+      showAvailableTools: true,
       showToolCalls: true,
       showToolCallSource: true,
       showDetailedToolData: true,
@@ -635,7 +637,15 @@ class ChatBoxSettingsManager {
                                     </label>
                                     <small class="help-text">Display the AI's reasoning and analysis steps</small>
                                 </div>
-                                
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="showAvailableTools" class="setting-checkbox">
+                                        Show available tools
+                                    </label>
+                                    <small class="help-text">List the tools from the Dynamic Tool registry in the thinking process before the first LLM round</small>
+                                </div>
+
                                 <div class="form-group">
                                     <label>
                                         <input type="checkbox" id="hideThinkingAfterConversation" class="setting-checkbox">
@@ -2155,6 +2165,7 @@ class ChatBoxSettingsManager {
       memoryCleanupInterval: 'Memory Cleanup Interval',
       memoryMaxEntries: 'Memory Max Entries',
       showThinkingProcess: 'Thinking Process Display',
+      showAvailableTools: 'Available Tools Display',
       showToolCalls: 'Tool Calls Display',
       showToolCallSource: 'Tool Call Source Display',
       showDetailedToolData: 'Detailed Tool Data',

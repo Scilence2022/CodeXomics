@@ -739,8 +739,8 @@ class BenchmarkUI {
                                     <div>
                                         <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Batch Delay (Rate Limit):</label>
                                         <select id="testDelay">
-                                            <option value="0">No delay</option>
-                                            <option value="60000" selected>1 minute</option>
+                                            <option value="0" selected>No delay</option>
+                                            <option value="60000">1 minute</option>
                                             <option value="120000">2 minutes</option>
                                             <option value="180000">3 minutes</option>
                                             <option value="240000">4 minutes</option>
@@ -3587,7 +3587,7 @@ class BenchmarkUI {
       verboseLogging: document.getElementById('verboseLogging')?.checked || false,
       timeout: timeoutValue === -1 ? null : timeoutValue, // null means use individual test timeouts
       useIndividualTimeouts: timeoutValue === -1, // Flag to indicate individual timeout mode
-      testDelay: parseInt(document.getElementById('testDelay')?.value || '60000'), // Delay every 10 tests to avoid rate limits
+      testDelay: parseInt(document.getElementById('testDelay')?.value || '0'), // Delay every 10 tests to avoid rate limits
       concurrency: parseInt(document.getElementById('concurrency')?.value || '1'),
       defaultDirectory: this.getDefaultDirectory(), // CRITICAL: Include default directory
       onProgress: (progress, suiteId, suiteResult) => {
