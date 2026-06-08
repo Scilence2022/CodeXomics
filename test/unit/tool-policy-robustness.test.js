@@ -463,6 +463,45 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(shouldTerminate).toBe(true);
   });
 
+  it('should NOT terminate early when the message chains a follow-up action ("and then")', () => {
+    const service = new LLMContextService({}, {});
+
+    // Regression: "Navigate ... and then zoom in 10x" matches the loose
+    // "navigate to" single-execution pattern, but the user clearly requested a
+    // second step. Early termination after navigate would drop the zoom_in.
+    const shouldTerminate = service.shouldTerminateAfterToolExecution(
+      [{ tool_name: 'navigate_to_position', parameters: { start: 1230000, end: 1300000 } }],
+      [
+        {
+          tool: 'navigate_to_position',
+          result: {
+            success: true,
+            chromosome: 'U00096',
+            start: 1230000,
+            end: 1300000,
+            message: 'Navigated to U00096:1230000-1300000',
+          },
+        },
+      ],
+      'Navigate to region 1230000 to 1300000 and then zoom in 10x to see the features.'
+    );
+
+    expect(shouldTerminate).toBe(false);
+  });
+
+  it('detects multi-step intent from common sequencing cues', () => {
+    const service = new LLMContextService({}, {});
+
+    expect(service.messageHasMultiStepIntent('navigate to gene lacZ and then zoom in')).toBe(true);
+    expect(service.messageHasMultiStepIntent('go to position 5000, then pan right')).toBe(true);
+    expect(service.messageHasMultiStepIntent('load genome; show genes')).toBe(true);
+    expect(service.messageHasMultiStepIntent('navigate to position 1000. after that toggle gc')).toBe(true);
+
+    // Single-action messages must stay eligible for early termination
+    expect(service.messageHasMultiStepIntent('navigate to position 1230000-1300000')).toBe(false);
+    expect(service.messageHasMultiStepIntent('pan right')).toBe(false);
+  });
+
   it('should support case-insensitive track names in LLMContextService policy validation', () => {
     const mockChatManager = {
       configManager: {

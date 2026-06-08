@@ -585,6 +585,16 @@ class LLMContextService {
     // Check if this is a simple search task that likely doesn't need follow-up
     const message = originalMessage.toLowerCase();
 
+    // GUARD: Never terminate early when the user clearly requested multiple sequential
+    // steps (e.g. "navigate ... and then zoom in 10x"). The single-execution heuristic
+    // below matches loose substrings like "navigate to" and would otherwise drop any
+    // follow-up action the model intended to perform on a later round. Continuing the
+    // loop costs at most one extra LLM round; terminating early silently loses work.
+    if (this.messageHasMultiStepIntent(message)) {
+      console.log('Skipping early termination: message indicates multiple sequential steps');
+      return false;
+    }
+
     // Simple task patterns that typically complete with one tool call
     const singleExecutionPatterns = [
       // Search patterns
@@ -809,6 +819,39 @@ class LLMContextService {
 
     // For complex tasks or failed searches, continue with normal flow
     return false;
+  }
+
+  /**
+   * Detect whether a user message describes more than one sequential action.
+   * Used to suppress the single-execution early-termination heuristic so that
+   * follow-up steps (e.g. "navigate ... and then zoom in 10x") are not dropped.
+   * @param {string} message - already lower-cased user message
+   * @returns {boolean}
+   */
+  messageHasMultiStepIntent(message) {
+    if (!message || typeof message !== 'string') return false;
+
+    // Sequencing / conjunction cues that connect two or more actions.
+    const sequencingCues = [
+      ' and then ',
+      ' then ',
+      ', then',
+      'after that',
+      'afterward',
+      'afterwards',
+      'followed by',
+      'subsequently',
+      'next, ',
+      ' next ',
+      'finally',
+      ' and also ',
+      ' as well as ',
+      // Hard separators frequently used to chain commands
+      ';',
+      ' && ',
+    ];
+
+    return sequencingCues.some(cue => message.includes(cue));
   }
 
   normalizeParams(params) {
