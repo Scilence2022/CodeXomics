@@ -58,15 +58,44 @@ describe('AutomaticComplexSuite', () => {
       const tests = suite.getTests();
       const testIds = tests.map(t => t.id);
 
-      // Total of 19 tests expected
-      expect(tests.length).toBe(19);
+      // Total of 23 tests expected
+      expect(tests.length).toBe(23);
+      expect(testIds).toEqual([
+        'file_auto_01',
+        'nav_auto_01',
+        'analysis_auto_01',
+        'analysis_auto_02',
+        'analysis_auto_complex_03',
+        'analysis_auto_complex_05',
+        'restrict_auto_01',
+        'gel_auto_01',
+        'gel_auto_03',
+        'gel_auto_workflow_02',
+        'annotation_auto_complex_01',
+        'track_auto_complex_01',
+        'primer_auto_01',
+        'primer_auto_complex_01',
+        'primer_auto_complex_02',
+        'export_auto_complex_01',
+        'export_auto_complex_02',
+        'ui_auto_01',
+        'ui_auto_complex_02',
+        'protein_auto_complex_01',
+        'protein_auto_complex_02',
+        'blast_auto_complex_01',
+        'blast_auto_complex_02',
+      ]);
 
       // Verify the new complex test cases exist
       expect(testIds).toContain('annotation_auto_complex_01');
       expect(testIds).toContain('track_auto_complex_01');
       expect(testIds).toContain('protein_auto_complex_01');
       expect(testIds).toContain('blast_auto_complex_01');
+      expect(testIds).toContain('blast_auto_complex_02');
+      expect(testIds).toContain('export_auto_complex_02');
+      expect(testIds).toContain('ui_auto_complex_02');
       expect(testIds).toContain('primer_auto_complex_01');
+      expect(testIds).toContain('primer_auto_complex_02');
       expect(testIds).toContain('protein_auto_complex_02');
       expect(testIds).toContain('analysis_auto_complex_05');
 
@@ -76,6 +105,17 @@ describe('AutomaticComplexSuite', () => {
       expect(annotationTest.category).toBe('annotations');
       expect(annotationTest.complexity).toBe('complex');
       expect(annotationTest.evaluation).toBe('automatic');
+
+      const tabLifecycleTest = tests.find(t => t.id === 'ui_auto_complex_02');
+      expect(tabLifecycleTest.expectedResult.tool_sequence).toEqual(['open_new_tab', 'switch_to_tab', 'close_tab']);
+
+      const primerLifecycleTest = tests.find(t => t.id === 'primer_auto_complex_02');
+      expect(primerLifecycleTest.expectedResult.tool_sequence).toEqual([
+        'design_primers',
+        'add_primer_annotation',
+        'list_primer_annotations',
+        'clear_primer_annotations',
+      ]);
     });
 
     it('should resolve default directory fallback and build paths correctly', () => {
@@ -213,6 +253,146 @@ describe('AutomaticComplexSuite', () => {
       expect(evalResult.score).toBeGreaterThanOrEqual(10);
       expect(evalResult.errors.length).toBe(0);
     });
+
+    it('evaluateWorkflowCall should require duplicate workflow tools to be called multiple times', async () => {
+      const actualResult = [
+        { tool_name: 'get_track_status', parameters: {} },
+        {
+          tool_name: 'toggle_track',
+          parameters: {
+            track_name: 'GC Content',
+            action: 'show',
+          },
+        },
+        { tool_name: 'get_track_status', parameters: {} },
+      ];
+
+      const expectedResult = {
+        tool_sequence: ['get_track_status', 'toggle_track', 'toggle_track', 'get_track_status'],
+        parameters: [
+          {},
+          {
+            trackName: 'GC Content',
+            action: 'show',
+          },
+          {
+            trackName: 'Variants',
+            action: 'hide',
+          },
+          {},
+        ],
+      };
+
+      const testResult = {
+        id: 'track_auto_complex_01',
+        maxScore: 15,
+        category: 'track_control',
+      };
+
+      const evalResult = await suite.evaluateWorkflowCall(actualResult, expectedResult, testResult);
+      expect(evalResult.success).toBe(false);
+      expect(evalResult.details.orderedMatches).toBe(3);
+      expect(evalResult.errors.join(' ')).toContain('toggle_track');
+    });
+
+    it('evaluateWorkflowCall should fail workflows executed out of order', async () => {
+      const actualResult = [
+        {
+          tool_name: 'zoom_in',
+          parameters: {
+            factor: 10,
+          },
+        },
+        {
+          tool_name: 'navigate_to_position',
+          parameters: {
+            start: 1230000,
+            end: 1300000,
+          },
+        },
+      ];
+
+      const expectedResult = {
+        tool_sequence: ['navigate_to_position', 'zoom_in'],
+        parameters: [{ start: 1230000, end: 1300000 }, { factor: 10 }],
+      };
+
+      const testResult = {
+        id: 'nav_auto_01',
+        maxScore: 10,
+        category: 'navigation',
+      };
+
+      const evalResult = await suite.evaluateWorkflowCall(actualResult, expectedResult, testResult);
+      expect(evalResult.success).toBe(false);
+      expect(evalResult.details.unorderedMatches).toBe(2);
+      expect(evalResult.details.orderedMatches).toBe(1);
+      expect(evalResult.errors.join(' ')).toContain('expected order');
+    });
+
+    it('evaluateWorkflowCall should fail when ordered tools have critical parameter mismatches', async () => {
+      const actualResult = [
+        { tool_name: 'get_track_status', parameters: {} },
+        {
+          tool_name: 'toggle_track',
+          parameters: {
+            trackName: 'Variants',
+            action: 'show',
+          },
+        },
+      ];
+
+      const expectedResult = {
+        tool_sequence: ['get_track_status', 'toggle_track'],
+        parameters: [
+          {},
+          {
+            trackName: 'GC Content',
+            action: 'show',
+          },
+        ],
+      };
+
+      const testResult = {
+        id: 'track_auto_complex_01',
+        maxScore: 10,
+        category: 'track_control',
+      };
+
+      const evalResult = await suite.evaluateWorkflowCall(actualResult, expectedResult, testResult);
+      expect(evalResult.success).toBe(false);
+      expect(evalResult.details.orderedMatches).toBe(2);
+      expect(evalResult.errors.join(' ')).toContain('Critical parameters');
+    });
+
+    it('getRecentOrderedWorkflowMatches should consume tracker executions in order', () => {
+      const now = Date.now();
+      global.window.chatManager.toolExecutionTracker.getSessionExecutions = () => [
+        {
+          toolName: 'toggle_track',
+          parameters: { trackName: 'GC Content', action: 'show' },
+          status: 'completed',
+          startTime: now - 3000,
+        },
+        {
+          toolName: 'get_track_status',
+          parameters: {},
+          status: 'completed',
+          startTime: now - 2000,
+        },
+      ];
+
+      const match = suite.getRecentOrderedWorkflowMatches(['get_track_status', 'toggle_track'], 120000, [
+        {},
+        { trackName: 'GC Content', action: 'show' },
+      ]);
+
+      expect(match.unorderedMatches).toBe(2);
+      expect(match.orderedMatches).toBe(1);
+      expect(match.hasOutOfOrder).toBe(true);
+
+      global.window.chatManager.toolExecutionTracker.getSessionExecutions = () => [];
+    });
   });
 
   describe('Natural Language Workflow Response Parser Routing', () => {
@@ -270,7 +450,7 @@ describe('AutomaticComplexSuite', () => {
       // Tool matches = 1/3. Baseline = 15 * 0.3 = 5 (since 'successfully' is present). Remaining points = 15 - 5 = 10.
       // Tool score = floor(10 * 1/3) = 3. Total score = 8/15.
       expect(evalResult.score).toBe(8);
-      expect(evalResult.success).toBe(true); // 8/15 >= 6 (40% threshold)
+      expect(evalResult.success).toBe(false); // Complex workflows now require at least 60% tool coverage.
     });
   });
 });

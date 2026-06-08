@@ -30,7 +30,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       // UI Interaction
       open_new_tab: [/open.*tab/i, /new.*tab/i, /tab.*opened/i],
       close_tab: [/close.*tab/i, /tab.*closed/i],
-      switch_tab: [/switch.*tab/i, /tab.*switched/i],
+      switch_to_tab: [/switch.*tab/i, /tab.*switched/i],
 
       // Track Controls
       get_track_status: [/track status/i, /visibility status/i, /tracks.*status/i],
@@ -41,13 +41,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       blast_list_databases: [/list.*databases/i, /available.*databases/i],
       blast_search_online: [/online blast/i, /blastn/i, /ncbi blast/i],
       blast_search_local: [/local blast/i, /blast.*local/i],
-      blast_get_subject_sequence: [/subject sequence/i, /blast.*sequence/i],
 
       // Primer Design
       design_primers: [/design primers/i, /primer design/i, /pcr primers/i],
       calculate_primer_properties: [/primer properties/i, /melting temperature/i, /tm/i],
       find_primer_binding_sites: [/binding sites/i, /primer binding/i, /mismatch tolerance/i],
       add_primer_annotation: [/add.*primer/i, /primer.*annotation/i, /primer.*added/i],
+      list_primer_annotations: [/list.*primer/i, /primer.*listed/i, /primer annotations/i],
+      clear_primer_annotations: [/clear.*primer/i, /primer.*cleared/i, /remove.*primer/i],
 
       // Protein & Structure
       get_uniprot_entry: [/uniprot entry/i, /p04637/i, /p53/i],
@@ -65,6 +66,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       sequence_statistics: [/sequence stats/i, /statistics/i, /stats/i],
       genome_codon_usage_analysis: [/codon usage/i, /codon frequency/i],
       compute_gc: [/genome gc/i, /overall gc/i, /gc content/i],
+      get_sequence: [/current visible dna/i, /visible sequence/i, /get.*sequence/i],
       find_restriction_sites: [/restriction sites/i, /sites/i, /ecori sites/i],
       virtual_digest: [/virtual digest/i, /digest fragments/i, /digest.*completed/i],
       simulate_gel_electrophoresis: [/gel electrophoresis/i, /agarose gel/i, /simulate gel/i, /ladder/i],
@@ -145,14 +147,56 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     console.log(' [AutomaticComplexSuite] Starting export file cleanup...');
     console.log(` [AutomaticComplexSuite] Checking directory: ${exportedFilesDir}`);
 
-    console.info('ℹ️ [AutomaticComplexSuite] Export cleanup skipped in hardened renderer; filesystem access is main-process only.');
+    console.info(
+      'ℹ️ [AutomaticComplexSuite] Export cleanup skipped in hardened renderer; filesystem access is main-process only.'
+    );
+  }
+
+  /**
+   * Keep state-sensitive tests late and data/context setup early.
+   */
+  getPreferredTestOrder() {
+    return [
+      'file_auto_01',
+      'nav_auto_01',
+      'analysis_auto_01',
+      'analysis_auto_02',
+      'analysis_auto_complex_03',
+      'analysis_auto_complex_05',
+      'restrict_auto_01',
+      'gel_auto_01',
+      'gel_auto_03',
+      'gel_auto_workflow_02',
+      'annotation_auto_complex_01',
+      'track_auto_complex_01',
+      'primer_auto_01',
+      'primer_auto_complex_01',
+      'primer_auto_complex_02',
+      'export_auto_complex_01',
+      'export_auto_complex_02',
+      'ui_auto_01',
+      'ui_auto_complex_02',
+      'protein_auto_complex_01',
+      'protein_auto_complex_02',
+      'blast_auto_complex_01',
+      'blast_auto_complex_02',
+    ];
+  }
+
+  orderTestsForStableExecution(tests) {
+    const preferredOrder = new Map(this.getPreferredTestOrder().map((id, index) => [id, index]));
+    return [...tests].sort((a, b) => {
+      const aOrder = preferredOrder.has(a.id) ? preferredOrder.get(a.id) : Number.MAX_SAFE_INTEGER;
+      const bOrder = preferredOrder.has(b.id) ? preferredOrder.get(b.id) : Number.MAX_SAFE_INTEGER;
+      return aOrder - bOrder;
+    });
   }
 
   /**
    * Initialize automatic complex test cases
    */
   initializeTests() {
-    return [
+    const tests = [
       // FILE LOADING WORKFLOW - Automatic + Complex
       {
         id: 'file_auto_01',
@@ -279,6 +323,34 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateDataExportWorkflow.bind(this),
       },
 
+      {
+        id: 'export_auto_complex_02',
+        name: 'Current View Navigation and FASTA Export',
+        type: 'workflow',
+        category: 'file_export',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: `Navigate to region 100000 to 120000, then export the current visible view as FASTA to file: ${this.buildFilePath('exported_files/current_view_region.fasta')} with coordinates included.`,
+        expectedResult: {
+          tool_sequence: ['navigate_to_position', 'export_current_view_fasta'],
+          parameters: [
+            {
+              chromosome: '<current_chromosome>',
+              start: 100000,
+              end: 120000,
+            },
+            {
+              filePath: this.buildFilePath('exported_files/current_view_region.fasta'),
+              includeCoordinates: true,
+            },
+          ],
+        },
+        maxScore: 12,
+        bonusScore: 2,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
       // UI INTERACTION TASKS - Automatic + Complex
       {
         id: 'ui_auto_01',
@@ -299,7 +371,32 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateMultipleTabOpeningCall.bind(this),
       },
 
-      // TEST 6: EXPORT WORKFLOW - Automatic + Complex
+      {
+        id: 'ui_auto_complex_02',
+        name: 'Tab Lifecycle Workflow',
+        type: 'workflow',
+        category: 'ui_interaction',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction:
+          'Open a new tab for a focused analysis, switch to the newly opened tab, then close that tab to return to the original analysis context.',
+        expectedResult: {
+          tool_sequence: ['open_new_tab', 'switch_to_tab', 'close_tab'],
+          parameters: [
+            {},
+            {
+              tabIndex: '<new_tab_index>',
+            },
+            {},
+          ],
+        },
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      // SEQUENCE ANALYSIS WORKFLOWS - Automatic + Complex
       {
         id: 'analysis_auto_01',
         name: 'GC Content and Export',
@@ -318,7 +415,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
-      // TEST 9: GENOME STATS - Automatic + Complex
       {
         id: 'analysis_auto_02',
         name: 'Genome Statistics Suite',
@@ -642,6 +738,37 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       },
 
       {
+        id: 'blast_auto_complex_02',
+        name: 'Local BLAST Database and Search Workflow',
+        type: 'workflow',
+        category: 'blast',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: `Create a local nucleotide BLAST database named 'ecoli_local_db' from FASTA file '${this.buildFilePath('ECOLI.fasta')}', list local BLAST databases to verify it exists, then run a local blastn search against 'ecoli_local_db' for the query sequence 'ATGCGATCGATC' with e-value threshold 0.01.`,
+        expectedResult: {
+          tool_sequence: ['blast_create_database', 'blast_list_databases', 'blast_search_local'],
+          parameters: [
+            {
+              inputFile: this.buildFilePath('ECOLI.fasta'),
+              dbName: 'ecoli_local_db',
+              dbType: 'nucleotide',
+            },
+            {},
+            {
+              sequence: 'ATGCGATCGATC',
+              blastType: 'blastn',
+              database: 'ecoli_local_db',
+              evalue: '0.01',
+            },
+          ],
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 120000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
         id: 'primer_auto_complex_01',
         name: 'Primer Design, Property Calculation, and Binding Search',
         type: 'workflow',
@@ -668,6 +795,51 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         maxScore: 15,
         bonusScore: 3,
         timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
+        id: 'primer_auto_complex_02',
+        name: 'Primer Annotation Display Lifecycle',
+        type: 'workflow',
+        category: 'primer_design',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction:
+          "Design primers for the 'lacZ' gene, add a primer annotation named 'lacZ_forward_display' on chromosome 'NC_000913' from 365529 to 365552 on the plus strand using sequence 'ATGACCATGATTACGGATTCACT', list primer annotations in that region, and then clear primer annotations from chromosome 'NC_000913' with confirmation.",
+        expectedResult: {
+          tool_sequence: [
+            'design_primers',
+            'add_primer_annotation',
+            'list_primer_annotations',
+            'clear_primer_annotations',
+          ],
+          parameters: [
+            {
+              geneName: 'lacZ',
+            },
+            {
+              name: 'lacZ_forward_display',
+              chromosome: 'NC_000913',
+              start: 365529,
+              end: 365552,
+              strand: '+',
+              sequence: 'ATGACCATGATTACGGATTCACT',
+            },
+            {
+              chromosome: 'NC_000913',
+              start: 365529,
+              end: 365552,
+            },
+            {
+              chromosome: 'NC_000913',
+              confirm: true,
+            },
+          ],
+        },
+        maxScore: 20,
+        bonusScore: 4,
+        timeout: 120000,
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
@@ -701,6 +873,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
     ];
+
+    return this.orderTestsForStableExecution(tests);
   }
 
   /**
@@ -942,6 +1116,390 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     return expected;
   }
 
+  getWorkflowExpectedTools(expectedResult) {
+    if (!expectedResult) return [];
+    if (Array.isArray(expectedResult.tool_sequence)) return expectedResult.tool_sequence;
+    return expectedResult.tool_name ? [expectedResult.tool_name] : [];
+  }
+
+  getWorkflowExpectedParameters(expectedResult) {
+    if (!expectedResult || !expectedResult.parameters) return [];
+    return Array.isArray(expectedResult.parameters) ? expectedResult.parameters : [expectedResult.parameters];
+  }
+
+  getToolNameFromCall(call) {
+    if (!call || typeof call !== 'object') return '';
+    return (
+      call.tool_name ||
+      call.toolName ||
+      call.tool ||
+      call.function_name ||
+      call.function_call?.name ||
+      call.tool_call?.name ||
+      call.function?.name ||
+      call.name ||
+      ''
+    );
+  }
+
+  getParametersFromCall(call) {
+    if (!call || typeof call !== 'object') return undefined;
+    let params =
+      call.parameters ?? call.params ?? call.arguments ?? call.args ?? call.parameter ?? call.argument ?? call.arg;
+
+    if (typeof params === 'string') {
+      try {
+        params = JSON.parse(params);
+      } catch (e) {
+        // Keep plain string parameters as-is.
+      }
+    }
+
+    return params;
+  }
+
+  extractWorkflowCalls(result) {
+    if (Array.isArray(result)) {
+      return result.map(call => this.normalizeResultParameters(call));
+    }
+
+    if (!result || typeof result !== 'object') {
+      return [];
+    }
+
+    const nestedCallArrays = [
+      result.results,
+      result.toolCalls,
+      result.tool_calls,
+      result.calls,
+      result.steps,
+      result.executions,
+    ];
+
+    const nestedCalls = nestedCallArrays.find(candidate => Array.isArray(candidate));
+    if (nestedCalls) {
+      return nestedCalls.map(call => this.normalizeResultParameters(call));
+    }
+
+    return this.getToolNameFromCall(result) ? [this.normalizeResultParameters(result)] : [];
+  }
+
+  isSuccessfulWorkflowCall(call) {
+    return call && call.success !== false && !call.error && call.status !== 'failed';
+  }
+
+  isPlaceholderExpectedValue(value) {
+    return typeof value === 'string' && value.startsWith('<') && value.endsWith('>');
+  }
+
+  hasConcreteExpectedValue(value) {
+    if (this.isPlaceholderExpectedValue(value)) return false;
+    if (Array.isArray(value)) return value.some(item => this.hasConcreteExpectedValue(item));
+    if (value && typeof value === 'object') {
+      return Object.values(value).some(item => this.hasConcreteExpectedValue(item));
+    }
+    return value !== undefined;
+  }
+
+  getConcreteExpectedParameters(params) {
+    if (!params || typeof params !== 'object' || Array.isArray(params)) return {};
+
+    return Object.entries(params).reduce((concrete, [key, value]) => {
+      if (this.hasConcreteExpectedValue(value)) {
+        concrete[key] = value;
+      }
+      return concrete;
+    }, {});
+  }
+
+  getParameterAliasCandidates(key) {
+    const aliases = {
+      filePath: ['filename', 'path', 'outputPath'],
+      filename: ['filePath', 'path', 'outputPath'],
+      inputFile: ['filePath', 'filename', 'path'],
+      database: ['dbName', 'databaseName'],
+      dbName: ['database', 'databaseName'],
+      tabIndex: ['index', 'tab'],
+      sequence: ['primerSequence', 'dna'],
+      primerSequence: ['sequence'],
+      dna: ['sequence'],
+      includeCoordinates: ['include_coordinate', 'includeCoords'],
+    };
+
+    return [key, ...(aliases[key] || [])];
+  }
+
+  getActualParameterValue(actualParams, expectedKey) {
+    if (!actualParams || typeof actualParams !== 'object') {
+      return { found: false, value: undefined };
+    }
+
+    for (const candidateKey of this.getParameterAliasCandidates(expectedKey)) {
+      if (Object.prototype.hasOwnProperty.call(actualParams, candidateKey)) {
+        return { found: true, value: actualParams[candidateKey] };
+      }
+    }
+
+    return { found: false, value: undefined };
+  }
+
+  workflowValuesMatch(actualValue, expectedValue) {
+    if (this.isPlaceholderExpectedValue(expectedValue)) {
+      return actualValue !== undefined && actualValue !== null;
+    }
+
+    if (Array.isArray(expectedValue)) {
+      if (!Array.isArray(actualValue)) return false;
+      const remainingActual = [...actualValue];
+      return expectedValue.every(expectedItem => {
+        const matchIndex = remainingActual.findIndex(actualItem => this.workflowValuesMatch(actualItem, expectedItem));
+        if (matchIndex === -1) return false;
+        remainingActual.splice(matchIndex, 1);
+        return true;
+      });
+    }
+
+    if (expectedValue && typeof expectedValue === 'object') {
+      return this.workflowParametersMatch(actualValue, expectedValue);
+    }
+
+    if (typeof expectedValue === 'number') {
+      const numericActual = Number(actualValue);
+      return Number.isFinite(numericActual) && numericActual === expectedValue;
+    }
+
+    if (typeof expectedValue === 'boolean') {
+      if (typeof actualValue === 'boolean') return actualValue === expectedValue;
+      if (typeof actualValue === 'string') return actualValue.toLowerCase() === String(expectedValue);
+      return false;
+    }
+
+    if (typeof expectedValue === 'string') {
+      if (actualValue === undefined || actualValue === null) return false;
+      const actualText = String(actualValue).replace(/\\/g, '/');
+      const expectedText = expectedValue.replace(/\\/g, '/');
+      const actualLower = actualText.toLowerCase();
+      const expectedLower = expectedText.toLowerCase();
+
+      if (actualLower === expectedLower) return true;
+      if (actualLower.endsWith(`/${expectedLower}`) || expectedLower.endsWith(`/${actualLower}`)) return true;
+
+      const actualBase = actualLower.split('/').pop();
+      const expectedBase = expectedLower.split('/').pop();
+      if (actualBase && expectedBase && actualBase === expectedBase) return true;
+
+      return this.calculateStringSimilarity(actualText, expectedText) >= 0.8;
+    }
+
+    return actualValue === expectedValue;
+  }
+
+  workflowParametersMatch(actualParams, expectedParams) {
+    if (!expectedParams || Object.keys(expectedParams).length === 0) return true;
+    if (!actualParams || typeof actualParams !== 'object') return false;
+
+    const normalizedActual = this.normalizeParameterKeys(actualParams);
+    const normalizedExpected = this.normalizeParameterKeys(expectedParams);
+
+    return Object.entries(normalizedExpected).every(([expectedKey, expectedValue]) => {
+      const actualCandidate = this.getActualParameterValue(normalizedActual, expectedKey);
+      if (!actualCandidate.found) {
+        return !this.hasConcreteExpectedValue(expectedValue);
+      }
+      return this.workflowValuesMatch(actualCandidate.value, expectedValue);
+    });
+  }
+
+  matchWorkflowCallsToExpected(actualCalls, expectedTools, expectedParams = []) {
+    const normalizedCalls = actualCalls.map(call => this.normalizeResultParameters(call));
+    let normalizedExpectedParams = [];
+    if (Array.isArray(expectedParams)) {
+      normalizedExpectedParams = expectedParams;
+    } else if (expectedParams) {
+      normalizedExpectedParams = [expectedParams];
+    }
+    const expectedCount = expectedTools.length;
+    const actualTools = normalizedCalls.map(call => this.getToolNameFromCall(call)).filter(Boolean);
+
+    const availableForUnordered = normalizedCalls.map((call, index) => ({ call, index, used: false }));
+    const unorderedMatchedTools = [];
+
+    expectedTools.forEach(expectedTool => {
+      const match = availableForUnordered.find(item => {
+        if (item.used || !this.isSuccessfulWorkflowCall(item.call)) return false;
+        return this.matchToolName(this.getToolNameFromCall(item.call), expectedTool);
+      });
+
+      if (match) {
+        match.used = true;
+        unorderedMatchedTools.push(expectedTool);
+      }
+    });
+
+    const orderedMatchedTools = [];
+    const matchDetails = [];
+    const missingTools = [];
+    const parameterMismatches = [];
+    const criticalParameterMismatches = [];
+    let parameterMatches = 0;
+    let criticalParameterSteps = 0;
+    let criticalParameterMatches = 0;
+    let searchStart = 0;
+
+    expectedTools.forEach((expectedTool, expectedIndex) => {
+      let matchedIndex = -1;
+      for (let callIndex = searchStart; callIndex < normalizedCalls.length; callIndex++) {
+        const call = normalizedCalls[callIndex];
+        if (!this.isSuccessfulWorkflowCall(call)) continue;
+        if (this.matchToolName(this.getToolNameFromCall(call), expectedTool)) {
+          matchedIndex = callIndex;
+          break;
+        }
+      }
+
+      if (matchedIndex === -1) {
+        missingTools.push(expectedTool);
+        return;
+      }
+
+      const call = normalizedCalls[matchedIndex];
+      const expectedParam = normalizedExpectedParams[expectedIndex] || {};
+      const actualParams = this.getParametersFromCall(call);
+      const concreteExpectedParams = this.getConcreteExpectedParameters(expectedParam);
+      const hasCriticalParameters = Object.keys(concreteExpectedParams).length > 0;
+      const paramsVerified = this.workflowParametersMatch(actualParams, expectedParam);
+      const criticalParamsVerified =
+        !hasCriticalParameters || this.workflowParametersMatch(actualParams, concreteExpectedParams);
+
+      if (paramsVerified) {
+        parameterMatches++;
+      } else {
+        parameterMismatches.push(expectedTool);
+      }
+
+      if (hasCriticalParameters) {
+        criticalParameterSteps++;
+        if (criticalParamsVerified) {
+          criticalParameterMatches++;
+        } else {
+          criticalParameterMismatches.push(expectedTool);
+        }
+      }
+
+      orderedMatchedTools.push(expectedTool);
+      matchDetails.push({
+        tool: expectedTool,
+        actualTool: this.getToolNameFromCall(call),
+        actualIndex: matchedIndex,
+        expectedIndex,
+        paramsVerified,
+        criticalParamsVerified,
+      });
+      searchStart = matchedIndex + 1;
+    });
+
+    return {
+      expectedCount,
+      actualTools,
+      orderedMatchedTools,
+      unorderedMatchedTools,
+      orderedMatches: orderedMatchedTools.length,
+      unorderedMatches: unorderedMatchedTools.length,
+      parameterMatches,
+      criticalParameterSteps,
+      criticalParameterMatches,
+      missingTools,
+      parameterMismatches,
+      criticalParameterMismatches,
+      matchDetails,
+      hasOutOfOrder: unorderedMatchedTools.length > orderedMatchedTools.length,
+    };
+  }
+
+  calculateWorkflowMatchScore(matchResult, maxScore) {
+    const expectedCount = Math.max(matchResult.expectedCount, 1);
+    const scoreRatio =
+      0.4 * (matchResult.unorderedMatches / expectedCount) +
+      0.4 * (matchResult.orderedMatches / expectedCount) +
+      0.2 * (matchResult.parameterMatches / expectedCount);
+
+    return Math.min(maxScore, Math.round(maxScore * scoreRatio));
+  }
+
+  isWorkflowMatchSuccessful(matchResult, score, maxScore) {
+    const passScore = Math.ceil(maxScore * BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_SIMPLE);
+    return (
+      matchResult.expectedCount > 0 &&
+      matchResult.orderedMatches === matchResult.expectedCount &&
+      matchResult.criticalParameterMatches === matchResult.criticalParameterSteps &&
+      score >= passScore
+    );
+  }
+
+  buildWorkflowEvaluationFromMatch(matchResult, testResult) {
+    const evaluation = {
+      success: false,
+      score: this.calculateWorkflowMatchScore(matchResult, testResult.maxScore || 10),
+      maxScore: testResult.maxScore || 10,
+      errors: [],
+      warnings: [],
+      details: {
+        expectedTools: matchResult.expectedCount,
+        orderedMatches: matchResult.orderedMatches,
+        unorderedMatches: matchResult.unorderedMatches,
+        parameterMatches: matchResult.parameterMatches,
+        criticalParameterMatches: matchResult.criticalParameterMatches,
+        criticalParameterSteps: matchResult.criticalParameterSteps,
+        actualTools: matchResult.actualTools,
+      },
+    };
+
+    if (matchResult.hasOutOfOrder) {
+      evaluation.errors.push('Workflow tools were detected but not in the expected order');
+    }
+
+    if (matchResult.missingTools.length > 0) {
+      evaluation.errors.push(`Missing ordered workflow tools: ${matchResult.missingTools.join(', ')}`);
+    }
+
+    if (matchResult.criticalParameterMismatches.length > 0) {
+      evaluation.errors.push(
+        `Critical parameters did not match for: ${matchResult.criticalParameterMismatches.join(', ')}`
+      );
+    } else if (matchResult.parameterMismatches.length > 0) {
+      evaluation.warnings.push(`Non-critical parameter mismatch for: ${matchResult.parameterMismatches.join(', ')}`);
+    }
+
+    evaluation.success = this.isWorkflowMatchSuccessful(matchResult, evaluation.score, evaluation.maxScore);
+    return evaluation;
+  }
+
+  getRecentOrderedWorkflowMatches(
+    expectedTools,
+    timeoutMs = BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT,
+    expectedParams = []
+  ) {
+    if (!window.chatManager || !window.chatManager.toolExecutionTracker) {
+      return this.matchWorkflowCallsToExpected([], expectedTools, expectedParams);
+    }
+
+    const tracker = window.chatManager.toolExecutionTracker;
+    const now = Date.now();
+    const recentExecutions = tracker
+      .getSessionExecutions()
+      .filter(exec => exec.status === 'completed' && now - exec.startTime < timeoutMs)
+      .sort((a, b) => a.startTime - b.startTime)
+      .map(exec => ({
+        tool_name: exec.toolName,
+        parameters: this.normalizeParameterKeys(exec.parameters || {}),
+        status: exec.status,
+        success: true,
+        execution: exec,
+      }));
+
+    return this.matchWorkflowCallsToExpected(recentExecutions, expectedTools, expectedParams);
+  }
+
   /**
    * Evaluator methods - delegates to BenchmarkEvaluatorBase for unified logic.
    * Fix Problem 4: Single source of truth for evaluation.
@@ -1119,6 +1677,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   async evaluateWorkflowCall(actualResult, expectedResult, testResult) {
     const normalizedActual = this.normalizeResultParameters(actualResult);
     const normalizedExpected = this.normalizeExpectedParameters(expectedResult);
+    const expectedTools = this.getWorkflowExpectedTools(normalizedExpected);
+    const expectedParams = this.getWorkflowExpectedParameters(normalizedExpected);
+    const workflowCalls = this.extractWorkflowCalls(normalizedActual);
 
     const evaluation = {
       success: false,
@@ -1131,6 +1692,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     if (!normalizedActual) {
       evaluation.errors.push('No result obtained from workflow execution');
       return evaluation;
+    }
+
+    if (workflowCalls.length > 1) {
+      const matchResult = this.matchWorkflowCallsToExpected(workflowCalls, expectedTools, expectedParams);
+      return this.buildWorkflowEvaluationFromMatch(matchResult, testResult);
     }
 
     // Handle both structured tool results AND natural language responses
@@ -1151,45 +1717,20 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       }
     }
 
-    // For workflows, award points based on completion
-    if (Array.isArray(normalizedActual) && normalizedActual.length > 1) {
-      evaluation.score = Math.ceil(evaluation.maxScore * BenchmarkEvaluatorBase.THRESHOLDS.WORKFLOW_BASELINE);
-
-      // Check if expected tools are present
-      if (normalizedExpected.tool_sequence) {
-        const actualTools = normalizedActual.map(call => call.tool_name);
-        const expectedTools = normalizedExpected.tool_sequence;
-
-        let toolMatches = 0;
-        expectedTools.forEach(expectedTool => {
-          if (actualTools.some(actualTool => this.matchToolName(actualTool, expectedTool))) {
-            toolMatches++;
-          }
-        });
-
-        if (expectedTools.length > 0) {
-          const remainingPoints = evaluation.maxScore - evaluation.score;
-          const toolScore = Math.floor(remainingPoints * (toolMatches / expectedTools.length));
-          evaluation.score += toolScore;
-        }
-      }
-    } else {
-      // Single step workflow
-      const singleStepEval = await this.evaluateBasicFunctionCall(
-        normalizedActual,
-        {
-          tool_name: normalizedExpected.tool_sequence?.[0] || normalizedExpected.tool_name,
-          parameters: normalizedExpected.parameters?.[0] || normalizedExpected.parameters,
-        },
-        testResult
-      );
-      evaluation.score = singleStepEval.score;
-      evaluation.errors = singleStepEval.errors;
-      evaluation.warnings = singleStepEval.warnings;
-    }
-
+    // Single step workflow fallback
+    const singleStepEval = await this.evaluateBasicFunctionCall(
+      workflowCalls[0] || normalizedActual,
+      {
+        tool_name: expectedTools[0] || normalizedExpected.tool_name,
+        parameters: expectedParams[0] || normalizedExpected.parameters,
+      },
+      testResult
+    );
+    evaluation.score = singleStepEval.score;
+    evaluation.errors = singleStepEval.errors;
+    evaluation.warnings = singleStepEval.warnings;
     evaluation.success =
-      evaluation.score >= Math.ceil(evaluation.maxScore * BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_COMPLEX);
+      evaluation.score >= Math.ceil(evaluation.maxScore * BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_SIMPLE);
     return evaluation;
   }
 
@@ -1219,42 +1760,30 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     console.log(` [WorkflowCall] Parsing response text:`, responseText.substring(0, 500));
 
-    const expectedTools = expectedResult.tool_sequence || [];
-    if (expectedTools.length === 0) {
-      const expectedTool = expectedResult.tool_name;
-      if (expectedTool) {
-        expectedTools.push(expectedTool);
-      }
-    }
+    const expectedTools = this.getWorkflowExpectedTools(expectedResult);
+    const expectedParams = this.getWorkflowExpectedParameters(expectedResult);
 
     if (expectedTools.length === 0) {
       evaluation.errors.push('No expected tools defined for evaluation');
       return evaluation;
     }
 
-    const expectedParams = expectedResult.parameters || null;
-    const { matched: trackerMatches, matchDetails } = this.getRecentToolMatches(
+    const trackerMatchResult = this.getRecentOrderedWorkflowMatches(
       expectedTools,
       BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT,
       expectedParams
     );
 
-    if (trackerMatches.length > 0) {
-      const baselineScore = Math.ceil(evaluation.maxScore * BenchmarkEvaluatorBase.THRESHOLDS.WORKFLOW_BASELINE);
-      const remainingPoints = evaluation.maxScore - baselineScore;
-      const toolScore = Math.floor(remainingPoints * (trackerMatches.length / expectedTools.length));
-
-      evaluation.score = baselineScore + toolScore;
-      evaluation.success =
-        evaluation.score >= Math.ceil(evaluation.maxScore * BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_COMPLEX);
-      const paramsNote = matchDetails.some(d => d.paramsVerified) ? ' (params verified)' : '';
-      evaluation.warnings.push(
-        `Evaluated via Tool Execution Tracker (${trackerMatches.length}/${expectedTools.length} tools executed${paramsNote})`
+    if (trackerMatchResult.unorderedMatches > 0) {
+      const trackerEvaluation = this.buildWorkflowEvaluationFromMatch(trackerMatchResult, testResult);
+      const paramsNote = trackerMatchResult.matchDetails.some(d => d.paramsVerified) ? ' (params verified)' : '';
+      trackerEvaluation.warnings.push(
+        `Evaluated via Tool Execution Tracker (${trackerMatchResult.orderedMatches}/${expectedTools.length} tools in order${paramsNote})`
       );
       console.log(
-        ` [WorkflowCall] TRACKER: Matches: ${trackerMatches.length}/${expectedTools.length}. Score: ${evaluation.score}`
+        ` [WorkflowCall] TRACKER: Ordered matches: ${trackerMatchResult.orderedMatches}/${expectedTools.length}. Score: ${trackerEvaluation.score}`
       );
-      return evaluation;
+      return trackerEvaluation;
     }
 
     const generalSuccessPatterns = [
@@ -1289,8 +1818,13 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     }
 
     evaluation.score = baselineScore + toolScore;
+    const requiredToolMatches = Math.ceil(expectedTools.length * BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_EXPORT_PASS);
     evaluation.success =
-      evaluation.score >= Math.ceil(evaluation.maxScore * BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_COMPLEX);
+      toolMatches >= requiredToolMatches &&
+      evaluation.score >= Math.ceil(evaluation.maxScore * BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_SIMPLE);
+    if (evaluation.success) {
+      evaluation.warnings.push('Natural-language fallback cannot verify strict tool order');
+    }
 
     console.log(`/ [WorkflowCall] Natural language parsing results:`);
     console.log(`   Score: ${evaluation.score}/${evaluation.maxScore}`);
@@ -1519,11 +2053,13 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     const exportExpectedTools = expectedResult.tool_sequence || [];
     const exportExpectedParams = expectedResult.parameters || null;
-    const { matched: trackerMatchedExportTools, matchDetails: exportMatchDetails } = this.getRecentToolMatches(
+    const exportTrackerMatch = this.getRecentOrderedWorkflowMatches(
       exportExpectedTools,
       BenchmarkEvaluatorBase.TIMEOUTS.EXPORT_WORKFLOW,
       exportExpectedParams
     );
+    const trackerMatchedExportTools = exportTrackerMatch.orderedMatchedTools;
+    const exportMatchDetails = exportTrackerMatch.matchDetails;
 
     if (trackerMatchedExportTools.length > 0) {
       console.log(
@@ -1546,6 +2082,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       const paramsNote = exportMatchDetails.some(d => d.paramsVerified) ? ' (params verified)' : '';
       evaluation.details.toolsExecuted = trackerMatchedExportTools;
       evaluation.details.evaluationMethod = 'execution_tracker';
+
+      if (exportTrackerMatch.hasOutOfOrder) {
+        evaluation.warnings.push('Export tools were detected but not in the requested order');
+      }
 
       if (
         trackerMatchedExportTools.length >=
