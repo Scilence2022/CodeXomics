@@ -4851,23 +4851,28 @@ class ChatManager {
         const multipleToolCalls = this.parseMultipleToolCalls(response);
 
         // Determine which tools to execute
-        let toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : toolCall ? [toolCall] : [];
-        const detectedToolCount = toolsToExecute.length;
-
-        const executionFilter = this.filterExecutableToolInstances(
-          toolsToExecute,
+        const detectedTools = multipleToolCalls.length > 0 ? multipleToolCalls : toolCall ? [toolCall] : [];
+        const detectedToolCount = detectedTools.length;
+        const pendingExecution = this.createPendingToolExecutionQueue(
+          detectedTools,
           successfulToolExecutionCounts,
-          message
+          message,
+          conversationHistory,
+          currentRound
         );
-        toolsToExecute = executionFilter.executableTools;
-        const alreadyExecutedToolCount = executionFilter.suppressedTools.length;
+        let pendingToolExecutionQueue = pendingExecution.pendingTools;
+        let toolsToExecute = pendingToolExecutionQueue.slice();
+        const alreadyExecutedToolCount = pendingExecution.suppressedTools.length;
+        const policyBlockedToolCount = pendingExecution.policyBlockedTools.length;
 
         // Display tool detection information
         if (this.showThinkingProcess) {
           if (toolsToExecute.length > 0) {
             this.updateThinkingMessage(
-              `🔍 Detected ${toolsToExecute.length} tool call(s): ${toolsToExecute.map(t => t.tool_name).join(', ')}`
+              `🔍 Detected ${detectedToolCount} tool call(s), queued ${toolsToExecute.length}: ${toolsToExecute.map(t => t.tool_name).join(', ')}`
             );
+          } else if (detectedToolCount > 0) {
+            this.updateThinkingMessage(`🔍 Detected ${detectedToolCount} tool call(s), none queued for execution`);
           } else {
             this.updateThinkingMessage(`💬 No tool calls detected - conversational response`);
           }
@@ -4876,25 +4881,9 @@ class ChatManager {
               `♻️ Ignored ${alreadyExecutedToolCount} already-completed tool call(s) from this request`
             );
           }
-        }
-
-        // Apply intelligent tool execution policies instead of simple re-executable sets
-        const toolsBeforeFilter = toolsToExecute.length;
-        toolsToExecute = toolsToExecute.filter(tool => {
-          const shouldAllow = this.shouldAllowToolExecution(tool, conversationHistory, currentRound, []);
-          if (!shouldAllow) {
-            console.log(`🚫 [Policy] Blocking execution of: ${tool.tool_name}`);
-            this.showThinkingProcess && this.updateThinkingMessage(`🚫 Policy blocked: ${tool.tool_name}`);
-            return false;
+          if (policyBlockedToolCount > 0) {
+            this.updateThinkingMessage(`🚫 Policy blocked ${policyBlockedToolCount} tool call(s)`);
           }
-          console.log(`✅ [Policy] Allowing execution of: ${tool.tool_name}`);
-          return true;
-        });
-
-        if (this.showThinkingProcess && toolsBeforeFilter > toolsToExecute.length) {
-          this.updateThinkingMessage(
-            `⚠️ Filtered ${toolsBeforeFilter - toolsToExecute.length} tool(s) by execution policy`
-          );
         }
 
         if (detectedToolCount > 0 && toolsToExecute.length === 0 && alreadyExecutedToolCount > 0) {
@@ -4902,7 +4891,7 @@ class ChatManager {
           console.log('The LLM repeated tool calls that already completed in this user request.');
           console.log(
             'Suppressed tools:',
-            executionFilter.suppressedTools.map(tool => tool.tool_name)
+            pendingExecution.suppressedTools.map(tool => tool.tool_name)
           );
           console.log('=======================================');
 
@@ -4970,7 +4959,8 @@ class ChatManager {
                 );
                 if (shouldAllow) {
                   console.log('✅ [Policy] Found allowed tool call from previous round:', previousToolCall);
-                  toolsToExecute = [previousToolCall];
+                  pendingToolExecutionQueue = [previousToolCall];
+                  toolsToExecute = pendingToolExecutionQueue.slice();
                   break;
                 } else {
                   console.log(`🚫 [Policy] Tool not allowed for re-execution: ${previousToolCall.tool_name}`);
@@ -5045,7 +5035,8 @@ class ChatManager {
             // Use Smart Executor if available and enabled
             if (this.smartExecutor && this.isSmartExecutionEnabled) {
               console.log('🚀 Using Smart Executor for optimized execution');
-              const smartResult = await this.smartExecutor.smartExecute(message, toolsToExecute);
+              const smartToolsToExecute = pendingToolExecutionQueue.splice(0, pendingToolExecutionQueue.length);
+              const smartResult = await this.smartExecutor.smartExecute(message, smartToolsToExecute);
 
               if (smartResult.success) {
                 toolResults = smartResult.results;
@@ -5092,56 +5083,11 @@ class ChatManager {
                 }
               } else {
                 console.warn('Smart execution failed, falling back to standard execution:', smartResult.error);
-                // Fallback to sequential execution
-                toolResults = [];
-                for (const tool of toolsToExecute) {
-                  const recordedParameters = this.cloneToolParameters(tool.parameters);
-                  const executionParameters = this.cloneToolParameters(tool.parameters);
-                  try {
-                    const result = await this.executeToolByName(tool.tool_name, executionParameters);
-                    toolResults.push({
-                      tool: tool.tool_name,
-                      parameters: recordedParameters,
-                      success: true,
-                      result: result,
-                      error: null,
-                    });
-                  } catch (error) {
-                    toolResults.push({
-                      tool: tool.tool_name,
-                      parameters: recordedParameters,
-                      success: false,
-                      result: null,
-                      error: error.message,
-                    });
-                  }
-                }
+                pendingToolExecutionQueue.push(...smartToolsToExecute);
+                toolResults = await this.executePendingToolExecutionQueue(pendingToolExecutionQueue);
               }
             } else {
-              // Standard sequential execution
-              toolResults = [];
-              for (const tool of toolsToExecute) {
-                const recordedParameters = this.cloneToolParameters(tool.parameters);
-                const executionParameters = this.cloneToolParameters(tool.parameters);
-                try {
-                  const result = await this.executeToolByName(tool.tool_name, executionParameters);
-                  toolResults.push({
-                    tool: tool.tool_name,
-                    parameters: recordedParameters,
-                    success: true,
-                    result: result,
-                    error: null,
-                  });
-                } catch (error) {
-                  toolResults.push({
-                    tool: tool.tool_name,
-                    parameters: recordedParameters,
-                    success: false,
-                    result: null,
-                    error: error.message,
-                  });
-                }
-              }
+              toolResults = await this.executePendingToolExecutionQueue(pendingToolExecutionQueue);
             }
 
             console.log('Tool execution completed. Results:', toolResults);
@@ -6460,6 +6406,52 @@ return 'dynamicTools';
     return 1;
   }
 
+  createPendingToolExecutionQueue(
+    detectedTools,
+    successfulToolExecutionCounts,
+    originalMessage,
+    conversationHistory,
+    currentRound
+  ) {
+    const executionFilter = this.filterExecutableToolInstances(
+      detectedTools,
+      successfulToolExecutionCounts,
+      originalMessage
+    );
+    const pendingTools = [];
+    const policyBlockedTools = [];
+    const plannedToolResults = [];
+
+    for (const tool of executionFilter.executableTools) {
+      const shouldAllow = this.shouldAllowToolExecution(tool, conversationHistory, currentRound, plannedToolResults);
+      if (!shouldAllow) {
+        console.log(`🚫 [Policy] Blocking execution of: ${tool.tool_name}`);
+        this.showThinkingProcess && this.updateThinkingMessage(`🚫 Policy blocked: ${tool.tool_name}`);
+        policyBlockedTools.push(tool);
+        continue;
+      }
+
+      console.log(`✅ [Policy] Queueing execution of: ${tool.tool_name}`);
+      const queuedTool = {
+        tool_name: tool.tool_name,
+        parameters: this.cloneToolParameters(tool.parameters),
+      };
+      pendingTools.push(queuedTool);
+      plannedToolResults.push({
+        tool: queuedTool.tool_name,
+        parameters: queuedTool.parameters,
+        success: true,
+        pending: true,
+      });
+    }
+
+    return {
+      pendingTools,
+      suppressedTools: executionFilter.suppressedTools,
+      policyBlockedTools,
+    };
+  }
+
   filterExecutableToolInstances(toolsToExecute, successfulToolExecutionCounts, originalMessage) {
     const plannedToolExecutionCounts = new Map();
     const executableTools = [];
@@ -6485,6 +6477,41 @@ return 'dynamicTools';
     }
 
     return { executableTools, suppressedTools };
+  }
+
+  async executePendingToolExecutionQueue(pendingToolExecutionQueue) {
+    const toolResults = [];
+
+    while (pendingToolExecutionQueue.length > 0) {
+      if (this.conversationState?.abortController && this.conversationState.abortController.signal.aborted) {
+        throw new Error('AbortError');
+      }
+
+      const tool = pendingToolExecutionQueue.shift();
+      const recordedParameters = this.cloneToolParameters(tool.parameters);
+      const executionParameters = this.cloneToolParameters(tool.parameters);
+
+      try {
+        const result = await this.executeToolByName(tool.tool_name, executionParameters);
+        toolResults.push({
+          tool: tool.tool_name,
+          parameters: recordedParameters,
+          success: true,
+          result: result,
+          error: null,
+        });
+      } catch (error) {
+        toolResults.push({
+          tool: tool.tool_name,
+          parameters: recordedParameters,
+          success: false,
+          result: null,
+          error: error.message,
+        });
+      }
+    }
+
+    return toolResults;
   }
 
   normalizeParams(params) {

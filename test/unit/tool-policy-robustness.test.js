@@ -51,10 +51,16 @@ function loadChatManagerClass() {
     /getToolExecutionKey\s*\(toolName,\s*parameters\s*=\s*\{\}\)\s*\{[\s\S]*?\}\n\n\s*getRequestedToolExecutionLimit/
   );
   const getRequestedToolExecutionLimitMatch = content.match(
-    /getRequestedToolExecutionLimit\s*\(originalMessage,\s*tool\)\s*\{[\s\S]*?\}\n\n\s*filterExecutableToolInstances/
+    /\n\s{2}getRequestedToolExecutionLimit\s*\(originalMessage,\s*tool\)\s*\{[\s\S]*?\}\n\n\s{2}createPendingToolExecutionQueue/
+  );
+  const createPendingToolExecutionQueueMatch = content.match(
+    /\n\s{2}createPendingToolExecutionQueue\s*\([\s\S]*?\n\s{2}\}\n\n\s{2}filterExecutableToolInstances/
   );
   const filterExecutableToolInstancesMatch = content.match(
-    /filterExecutableToolInstances\s*\(toolsToExecute,\s*successfulToolExecutionCounts,\s*originalMessage\)\s*\{[\s\S]*?\}\n\n\s*normalizeParams/
+    /\n\s{2}filterExecutableToolInstances\s*\(toolsToExecute,\s*successfulToolExecutionCounts,\s*originalMessage\)\s*\{[\s\S]*?\}\n\n\s{2}async executePendingToolExecutionQueue/
+  );
+  const executePendingToolExecutionQueueMatch = content.match(
+    /\n\s{2}async executePendingToolExecutionQueue\s*\(pendingToolExecutionQueue\)\s*\{[\s\S]*?\}\n\n\s{2}normalizeParams/
   );
   const normalizeParamsMatch = content.match(/normalizeParams\s*\(params\)\s*\{[\s\S]*?\}\n\n\s*areParametersEqual/);
   const areParametersEqualMatch = content.match(
@@ -86,10 +92,16 @@ function loadChatManagerClass() {
     ? getToolExecutionKeyMatch[0].replace('getRequestedToolExecutionLimit', '')
     : '';
   const getRequestedToolExecutionLimitCode = getRequestedToolExecutionLimitMatch
-    ? getRequestedToolExecutionLimitMatch[0].replace('filterExecutableToolInstances', '')
+    ? getRequestedToolExecutionLimitMatch[0].replace(/\n\n\s{2}createPendingToolExecutionQueue$/, '')
+    : '';
+  const createPendingToolExecutionQueueCode = createPendingToolExecutionQueueMatch
+    ? createPendingToolExecutionQueueMatch[0].replace(/\n\n\s{2}filterExecutableToolInstances$/, '')
     : '';
   const filterExecutableToolInstancesCode = filterExecutableToolInstancesMatch
-    ? filterExecutableToolInstancesMatch[0].replace('normalizeParams', '')
+    ? filterExecutableToolInstancesMatch[0].replace(/\n\n\s{2}async executePendingToolExecutionQueue$/, '')
+    : '';
+  const executePendingToolExecutionQueueCode = executePendingToolExecutionQueueMatch
+    ? executePendingToolExecutionQueueMatch[0].replace(/\n\n\s{2}normalizeParams$/, '')
     : '';
   const normalizeParamsCode = normalizeParamsMatch ? normalizeParamsMatch[0].replace('areParametersEqual', '') : '';
   const areParametersEqualCode = areParametersEqualMatch ? areParametersEqualMatch[0].replace('/**', '') : '';
@@ -109,7 +121,9 @@ function loadChatManagerClass() {
       ${normalizeToolParamsCode}
       ${getToolExecutionKeyCode}
       ${getRequestedToolExecutionLimitCode}
+      ${createPendingToolExecutionQueueCode}
       ${filterExecutableToolInstancesCode}
+      ${executePendingToolExecutionQueueCode}
       ${normalizeParamsCode}
       ${areParametersEqualCode}
       ${areToolParametersEqualCode}
@@ -273,6 +287,104 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     const repeatedResult = manager.filterExecutableToolInstances([tool, tool], new Map(), 'pan right twice');
     expect(repeatedResult.executableTools).toHaveLength(2);
     expect(repeatedResult.suppressedTools).toHaveLength(0);
+  });
+
+  it('should build a pending execution queue from detected tool calls', () => {
+    const manager = new MockChatManager();
+    manager.showThinkingProcess = false;
+    manager.updateThinkingMessage = () => {};
+    manager.shouldAllowToolExecution = tool => tool.parameters.search_query !== 'blocked';
+    const tools = [
+      { tool_name: 'search_uniprot_database', parameters: { search_query: 'DNA polymerase I' } },
+      { tool_name: 'search_uniprot_database', parameters: { search_query: 'blocked' } },
+    ];
+
+    const result = manager.createPendingToolExecutionQueue(tools, new Map(), 'search polymerases', [], 2);
+    tools[0].parameters.search_query = 'mutated after queueing';
+
+    expect(result.pendingTools).toHaveLength(1);
+    expect(result.pendingTools[0].parameters.search_query).toBe('DNA polymerase I');
+    expect(result.policyBlockedTools).toHaveLength(1);
+    expect(result.suppressedTools).toHaveLength(0);
+  });
+
+  it('should consume pending tool calls as each item is dispatched', async () => {
+    const manager = new MockChatManager();
+    const queue = [
+      { tool_name: 'search_uniprot_database', parameters: { search_query: 'DNA polymerase I' } },
+      { tool_name: 'search_uniprot_database', parameters: { search_query: 'fail' } },
+    ];
+    const queueLengthsDuringDispatch = [];
+    manager.executeToolByName = async (toolName, parameters) => {
+      queueLengthsDuringDispatch.push(queue.length);
+      if (parameters.search_query === 'fail') {
+        throw new Error('simulated failure');
+      }
+      return { ok: true, toolName };
+    };
+
+    const results = await manager.executePendingToolExecutionQueue(queue);
+
+    expect(queue).toHaveLength(0);
+    expect(queueLengthsDuringDispatch).toEqual([1, 0]);
+    expect(results).toEqual([
+      {
+        tool: 'search_uniprot_database',
+        parameters: { search_query: 'DNA polymerase I' },
+        success: true,
+        result: { ok: true, toolName: 'search_uniprot_database' },
+        error: null,
+      },
+      {
+        tool: 'search_uniprot_database',
+        parameters: { search_query: 'fail' },
+        success: false,
+        result: null,
+        error: 'simulated failure',
+      },
+    ]);
+  });
+
+  it('should allow external API follow-up calls with different parameters but block exact repeats', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const manager = new MockChatManager();
+    manager.configManager = {
+      get: (key, fallback) => {
+        if (key === 'chatboxSettings') return {};
+        return fallback;
+      },
+    };
+    const policy = new ToolExecutionPolicy({ chatManager: manager });
+    const history = [
+      {
+        role: 'system',
+        content:
+          'Tool execution completed: search_uniprot_database executed successfully with parameters: {"organism":"Escherichia coli","reviewed_only":true,"search_query":"polymerase"}: {"count":20}',
+      },
+    ];
+
+    expect(
+      policy.shouldAllowToolExecution(
+        {
+          tool_name: 'search_uniprot_database',
+          parameters: { search_query: 'DNA polymerase I', organism: 'Escherichia coli', reviewed_only: true },
+        },
+        history,
+        2,
+        []
+      )
+    ).toBe(true);
+    expect(
+      policy.shouldAllowToolExecution(
+        {
+          tool_name: 'search_uniprot_database',
+          parameters: { search_query: 'polymerase', organism: 'Escherichia coli', reviewed_only: true },
+        },
+        history,
+        2,
+        []
+      )
+    ).toBe(false);
   });
 
   it('should compare parameters correctly (ChatManager areParametersEqual)', () => {

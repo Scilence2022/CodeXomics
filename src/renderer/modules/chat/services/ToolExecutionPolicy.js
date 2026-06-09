@@ -242,7 +242,7 @@ class ToolExecutionPolicy {
     }
 
     if (policyName === 'external_api') {
-      return this.allowIfNotRecent(toolName, conversationHistory, 30000, 'External API operation rate limited');
+      return this.shouldAllowExternalApiOperation(toolName, toolKey, conversationHistory);
     }
 
     if (policyName === 'track_operations') {
@@ -271,6 +271,16 @@ class ToolExecutionPolicy {
       console.log(`[Policy] ${message}: ${toolName}`);
       return false;
     }
+    return true;
+  }
+
+  shouldAllowExternalApiOperation(toolName, toolKey, conversationHistory) {
+    const existingExecution = this.chatManager.findExistingExecution(toolKey, conversationHistory);
+    if (existingExecution && existingExecution.success) {
+      console.log(`[Policy] External API call already succeeded with same parameters: ${toolName}`);
+      return false;
+    }
+
     return true;
   }
 
