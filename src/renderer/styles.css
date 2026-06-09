@@ -9679,6 +9679,7 @@ input:checked + .slider:before {
 
 .blast-modal-content {
   width: 90vw;
+  max-width: none;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
