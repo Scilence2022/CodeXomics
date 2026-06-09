@@ -19,7 +19,7 @@ function createService() {
   const GenomeAnalysisService = loadGenomeAnalysisServiceClass();
   const app = {
     currentChromosome: 'chr1',
-    currentPosition: { start: 2, end: 5 },
+    currentPosition: { start: 0, end: 5 },
     currentSequence: {
       chr1: 'ATGCGCNN',
       chr2: 'AAAA',
@@ -55,8 +55,9 @@ describe('calc_region_gc tool', () => {
 
     const result = await service.calcRegionGc({});
 
-    expect(result.region).toBe('chr1:2-5');
-    expect(result.gcContent).toBe(75);
+    expect(result.region).toBe('chr1:1-5');
+    expect(result.sequence).toBe('ATGCG');
+    expect(result.gcContent).toBe(60);
   });
 
   it('fails early for coordinates outside the loaded chromosome', async () => {

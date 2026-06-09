@@ -1694,6 +1694,7 @@ class ChatManager {
 
     // Enhanced context with detailed genome browser state
     const genomeState = context.genomeBrowser.currentState;
+    const externalCurrentPosition = this.toExternalGenomePosition(genomeState.currentPosition);
     // For navigation tools, consider data available if there's a current chromosome
     const hasData = genomeState.loadedFiles.length > 0 || genomeState.currentChromosome;
 
@@ -1707,7 +1708,7 @@ class ChatManager {
       // Detailed genome browser state
       genomeBrowser: {
         currentChromosome: genomeState.currentChromosome,
-        currentPosition: genomeState.currentPosition,
+        currentPosition: externalCurrentPosition,
         visibleTracks: genomeState.visibleTracks || [],
         loadedFiles: genomeState.loadedFiles,
         sequenceLength: genomeState.sequenceLength,
@@ -1716,9 +1717,22 @@ class ChatManager {
       },
 
       // Legacy fields for backward compatibility
-      loadedGenome: genomeState,
+      loadedGenome: {
+        ...genomeState,
+        currentPosition: externalCurrentPosition,
+        viewingRegion: genomeState.viewingRegion
+          ? {
+              ...genomeState.viewingRegion,
+              start: externalCurrentPosition?.start,
+              length:
+                externalCurrentPosition && Number.isFinite(externalCurrentPosition.end)
+                  ? externalCurrentPosition.end - externalCurrentPosition.start + 1
+                  : genomeState.viewingRegion.length,
+            }
+          : null,
+      },
       activeTracks: genomeState.visibleTracks || [],
-      currentPosition: genomeState.currentPosition || null,
+      currentPosition: externalCurrentPosition,
     };
   }
 
@@ -1731,6 +1745,21 @@ class ChatManager {
       return this.app.genomeData.currentAnalysis.category;
     }
     return null;
+  }
+
+  toExternalGenomePosition(position) {
+    if (!position) {
+      return null;
+    }
+
+    const start = Number(position.start);
+    const end = Number(position.end);
+
+    return {
+      ...position,
+      start: Number.isFinite(start) ? start + 1 : position.start,
+      end: Number.isFinite(end) ? end : position.end,
+    };
   }
 
   /**
@@ -7740,6 +7769,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
    */
   getDetailedCurrentState(context) {
     const state = context.genomeBrowser.currentState;
+    const currentPosition = this.toExternalGenomePosition(state.currentPosition);
     const tracks = this.getVisibleTracks();
     const mcpServers = this.mcpServerManager.getServerStatus();
     const connectedServers = mcpServers.filter(s => s.connected);
@@ -7748,8 +7778,8 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
 
 NAVIGATION & POSITION:
 - Current Chromosome: ${state.currentChromosome || 'None'}
-- Current Position: ${state.currentPosition ? `${state.currentPosition.start}-${state.currentPosition.end}` : 'None'}
-- Position Range: ${state.currentPosition ? `${(state.currentPosition.end - state.currentPosition.start + 1).toLocaleString()} bp` : 'N/A'}
+- Current Position: ${currentPosition ? `${currentPosition.start}-${currentPosition.end}` : 'None'}
+- Position Range: ${currentPosition ? `${(currentPosition.end - currentPosition.start + 1).toLocaleString()} bp` : 'N/A'}
 - Sequence Length: ${state.sequenceLength ? state.sequenceLength.toLocaleString() : 'Unknown'} bp
 
 DATA STATUS:

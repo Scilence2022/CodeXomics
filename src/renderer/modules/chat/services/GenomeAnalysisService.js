@@ -835,7 +835,7 @@ class GenomeAnalysisService {
 
     // 4. Fallback to current browser position if positions are missing
     if (start === null && this.app && this.app.currentPosition) {
-      start = this.app.currentPosition.start;
+      start = this.app.currentPosition.start + 1;
     }
     if (end === null && this.app && this.app.currentPosition) {
       end = this.app.currentPosition.end;
