@@ -112,11 +112,10 @@ class BlastManager {
 
     // Fallback to platform-specific user data directory
     switch (platform) {
-      case 'win32':
-        {
+      case 'win32': {
         const appData = path.join(homeDir, 'AppData', 'Local');
         return path.join(appData, 'GenomeAIStudio', 'blast', 'db');
-        }
+      }
       case 'darwin':
         return path.join(homeDir, 'Library', 'Application Support', 'GenomeAIStudio', 'blast', 'db');
       case 'linux':
@@ -335,7 +334,8 @@ class BlastManager {
         throw new Error('BLAST command is required');
       }
 
-      const localDbPath = options.localDbPath || workingDirectory || this.getCurrentDatabasePath();
+      const localDbPath =
+        options.localDbPath || workingDirectory || this.config.localDbPath || this.getCurrentDatabasePath();
       const result = await window.electronAPI.blast.runCommand({
         executable,
         args,
@@ -351,7 +351,7 @@ class BlastManager {
       const stderr = result?.stderr || '';
       if (stderr.includes('Database memory map file error')) {
         throw new Error(
-          `BLAST database error: The database directory may be corrupted or inaccessible. Please check permissions for: ${this.config.localDbPath}`
+          `BLAST database error: The database directory may be corrupted or inaccessible. Please check permissions for: ${localDbPath}`
         );
       }
       if (stderr.includes('BLAST Database error')) {
@@ -366,7 +366,9 @@ class BlastManager {
         throw new Error(`makeblastdb failed: File not found in working directory. Error: ${stderr.trim()}`);
       }
       if (command.includes('makeblastdb')) {
-        throw new Error(`makeblastdb failed: ${result?.error || 'Command failed'}${stderr ? ' STDERR: ' + stderr.trim() : ''}`);
+        throw new Error(
+          `makeblastdb failed: ${result?.error || 'Command failed'}${stderr ? ' STDERR: ' + stderr.trim() : ''}`
+        );
       }
       throw new Error(result?.error || 'BLAST command failed');
     }
@@ -420,12 +422,13 @@ class BlastManager {
             if (dbName && dbType) {
               console.log(`Found local database: ${dbName}, Type: ${dbType}, Path: ${dbPathFull}`);
               // Get database statistics - Use the base name for getting stats
-              const stats = await this.getDatabaseStats(dbName);
+              const dbDirectory = path.dirname(dbPathFull);
+              const stats = await this.getDatabaseStats(dbPathFull, dbDirectory);
 
               this.config.localDatabases.set(dbName, {
                 name: dbName,
                 type: dbType,
-                path: path.dirname(dbPathFull), // Store the directory path
+                path: dbDirectory, // Store the directory path
                 description: `Local ${dbTypeRaw} database`,
                 sequences: stats.sequences,
                 letters: stats.letters,
@@ -443,10 +446,13 @@ class BlastManager {
     }
   }
 
-  async getDatabaseStats(dbName) {
+  async getDatabaseStats(dbName, dbDirectory = null) {
     try {
       // Get database statistics using blastdbcmd
-      const result = await this.runCommand(`blastdbcmd -db ${dbName} -info`);
+      const escapedDbName = String(dbName).replace(/"/g, '\\"');
+      const result = await this.runCommand(`blastdbcmd -db "${escapedDbName}" -info`, null, {
+        localDbPath: dbDirectory || this.config.localDbPath,
+      });
 
       // Parse the output to extract statistics
       const stats = {
@@ -1397,65 +1403,65 @@ class BlastManager {
           let databaseOutputPath = outputPath;
 
           // Validate file content
-            const fileInfo = await window.electronAPI?.getSelectedFileInfo?.(filePath);
-            if (!fileInfo?.success) {
-              throw new Error(fileInfo?.error || `Source file not found: ${filePath}`);
-            }
-            if (fileInfo.info?.size === 0) {
-              throw new Error(`Source file is empty: ${filePath}`);
-            }
+          const fileInfo = await window.electronAPI?.getSelectedFileInfo?.(filePath);
+          if (!fileInfo?.success) {
+            throw new Error(fileInfo?.error || `Source file not found: ${filePath}`);
+          }
+          if (fileInfo.info?.size === 0) {
+            throw new Error(`Source file is empty: ${filePath}`);
+          }
 
-            // Check if file has FASTA content
-            const fileContentResult = await window.electronAPI?.readFile?.(filePath);
-            const fileContent = fileContentResult?.data || '';
-            if (!fileContentResult?.success || !fileContent.trim()) {
-              throw new Error(`Source file contains no content: ${filePath}`);
-            }
+          // Check if file has FASTA content
+          const fileContentResult = await window.electronAPI?.readFile?.(filePath);
+          const fileContent = fileContentResult?.data || '';
+          if (!fileContentResult?.success || !fileContent.trim()) {
+            throw new Error(`Source file contains no content: ${filePath}`);
+          }
 
-            // Enhanced FASTA format validation
-            const lines = fileContent.split('\n');
-            const firstLine = lines[0].trim();
+          // Enhanced FASTA format validation
+          const lines = fileContent.split('\n');
+          const firstLine = lines[0].trim();
 
-            // Check if first line starts with '>' (proper FASTA header)
-            if (!firstLine.startsWith('>')) {
-              throw new Error(
-                `File does not appear to be in FASTA format (first line should start with '>'): ${filePath}`
-              );
-            }
+          // Check if first line starts with '>' (proper FASTA header)
+          if (!firstLine.startsWith('>')) {
+            throw new Error(
+              `File does not appear to be in FASTA format (first line should start with '>'): ${filePath}`
+            );
+          }
 
-            // Validate FASTA structure - should have headers and sequences
-            let headerCount = 0;
-            let hasSequenceData = false;
+          // Validate FASTA structure - should have headers and sequences
+          let headerCount = 0;
+          let hasSequenceData = false;
 
-            for (let i = 0; i < Math.min(lines.length, 100); i++) {
-              // Check first 100 lines
-              const line = lines[i].trim();
-              if (line.startsWith('>')) {
-                headerCount++;
-              } else if (line && /^[ACGTUNRYSWKMBDHV-]+$/i.test(line)) {
-                hasSequenceData = true;
-              } else if (line && line.length > 0 && !/^[ACGTUNRYSWKMBDHV-]+$/i.test(line)) {
-                // Check if it looks like GenBank or other format
-                if (line.includes('LOCUS') || line.includes('ACCESSION') || line.includes('VERSION')) {
-                  throw new Error(`File appears to be in GenBank format, not FASTA: ${filePath}`);
-                }
+          for (let i = 0; i < Math.min(lines.length, 100); i++) {
+            // Check first 100 lines
+            const line = lines[i].trim();
+            if (line.startsWith('>')) {
+              headerCount++;
+            } else if (line && /^[ACGTUNRYSWKMBDHV-]+$/i.test(line)) {
+              hasSequenceData = true;
+            } else if (line && line.length > 0 && !/^[ACGTUNRYSWKMBDHV-]+$/i.test(line)) {
+              // Check if it looks like GenBank or other format
+              if (line.includes('LOCUS') || line.includes('ACCESSION') || line.includes('VERSION')) {
+                throw new Error(`File appears to be in GenBank format, not FASTA: ${filePath}`);
               }
             }
+          }
 
-            if (headerCount === 0) {
-              throw new Error(`File does not contain valid FASTA headers: ${filePath}`);
-            }
+          if (headerCount === 0) {
+            throw new Error(`File does not contain valid FASTA headers: ${filePath}`);
+          }
 
-            if (!hasSequenceData) {
-              throw new Error(`File does not contain valid nucleotide/protein sequence data: ${filePath}`);
-            }
+          if (!hasSequenceData) {
+            throw new Error(`File does not contain valid nucleotide/protein sequence data: ${filePath}`);
+          }
 
-            // Count total sequences for reporting
-            const sequences = fileContent.split('>').filter(seq => seq.trim()).length;
+          // Count total sequences for reporting
+          const sequences = fileContent.split('>').filter(seq => seq.trim()).length;
 
-            this.appendLog(
-              `✓ File validation passed: ${((fileInfo.info?.size || 0) / 1024).toFixed(2)} KB, ${sequences} sequences, first header: ${firstLine.substring(0, 50)}${firstLine.length > 50 ? '...' : ''}`
-            );
+          this.appendLog(
+            `✓ File validation passed: ${((fileInfo.info?.size || 0) / 1024).toFixed(2)} KB, ${sequences} sequences, first header: ${firstLine.substring(0, 50)}${firstLine.length > 50 ? '...' : ''}`
+          );
 
           try {
             await this.createDirectoryAsync(sourceDirectory);
@@ -1949,7 +1955,7 @@ class BlastManager {
         window.$(modal).modal('show');
 
         // Clean up modal when hidden
-        window.$(modal).on('hidden.bs.modal', function() {
+        window.$(modal).on('hidden.bs.modal', function () {
           modal.remove();
         });
       } else {
@@ -4436,7 +4442,12 @@ class BlastManager {
     }
     return {
       join: (...parts) => parts.filter(Boolean).join('/').replace(/\/+/g, '/'),
-      dirname: filePath => String(filePath || '').replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '/',
+      dirname: filePath =>
+        String(filePath || '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .slice(0, -1)
+          .join('/') || '/',
       basename: filePath =>
         String(filePath || '')
           .replace(/\\/g, '/')
@@ -6738,7 +6749,8 @@ class BlastManager {
     const isDescending = sortOrder?.textContent.includes('Desc');
 
     this.filteredHits.sort((a, b) => {
-      let valueA; let valueB;
+      let valueA;
+      let valueB;
 
       switch (sortBy) {
         case 'bitScore':

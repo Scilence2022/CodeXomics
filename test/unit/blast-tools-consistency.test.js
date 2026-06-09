@@ -165,6 +165,15 @@ describe('BLAST Tool Registry Consistency', () => {
       expect(content).toContain('const localDb = this.config.localDatabases.get(databaseValue)');
       expect(content).toContain('path.join(localDb.path, localDb.name || databaseValue)');
     });
+
+    it('should query scanned BLAST database stats by absolute database path', () => {
+      const escapedDbNameToken = '$' + '{escapedDbName}';
+
+      expect(content).toContain('const stats = await this.getDatabaseStats(dbPathFull, dbDirectory)');
+      expect(content).toContain('async getDatabaseStats(dbName, dbDirectory = null)');
+      expect(content).toContain(`blastdbcmd -db "${escapedDbNameToken}" -info`);
+      expect(content).toContain('localDbPath: dbDirectory || this.config.localDbPath');
+    });
   });
 
   describe('FunctionCallsOrganizer BLAST entries', () => {
