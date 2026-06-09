@@ -918,7 +918,7 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(collapsed).toContain('navigate_to_position');
   });
 
-  it('should support case-insensitive track names in LLMContextService policy validation', () => {
+  it('should allow idempotent case-insensitive track requests through to the tool implementation', () => {
     const mockChatManager = {
       configManager: {
         get: (key, fallback) => {
@@ -948,8 +948,48 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
       const allowedUpper = service.shouldAllowToolExecution(toolUpper, []);
       const allowedLower = service.shouldAllowToolExecution(toolLower, []);
 
-      expect(allowedUpper).toBe(false);
-      expect(allowedLower).toBe(false);
+      expect(allowedUpper).toBe(true);
+      expect(allowedLower).toBe(true);
+    } finally {
+      global.document.getElementById = originalGetElementById;
+    }
+  });
+
+  it('should allow explicit show and hide track requests even when tracks are already in that state', () => {
+    const mockChatManager = {
+      configManager: {
+        get: (key, fallback) => {
+          if (key === 'chatboxSettings') return {};
+          return fallback;
+        },
+      },
+      parseMultipleToolCalls: () => [],
+      getToolExecutionKey: (toolName, parameters) => `${toolName}:${JSON.stringify(parameters)}`,
+      getToolExecutionCount: () => 0,
+    };
+    const service = new LLMContextService({}, mockChatManager);
+
+    const originalGetElementById = global.document.getElementById;
+    global.document.getElementById = id => {
+      if (id === 'trackGC') {
+        return { checked: true };
+      }
+      if (id === 'trackVariants') {
+        return { checked: false };
+      }
+      return null;
+    };
+
+    try {
+      expect(
+        service.shouldAllowToolExecution({ tool_name: 'toggle_track', parameters: { track_name: 'gc', visible: true } })
+      ).toBe(true);
+      expect(
+        service.shouldAllowToolExecution({
+          tool_name: 'toggle_track',
+          parameters: { track_name: 'variants', visible: false },
+        })
+      ).toBe(true);
     } finally {
       global.document.getElementById = originalGetElementById;
     }

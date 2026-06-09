@@ -379,12 +379,6 @@ class ToolExecutionPolicy {
     const normalizedCurrentTrack = this.normalizeTrackName(currentTrack);
     const currentVisibleState = this.resolveRequestedVisibleState(currentTrack, currentAction, currentVisible);
 
-    const currentCheckbox = this.getTrackCheckbox(currentTrack);
-    if (currentCheckbox && currentVisibleState !== undefined && currentCheckbox.checked === currentVisibleState) {
-      console.log(`[Policy] Track already in requested state: ${currentTrack} (${currentAction || currentVisible})`);
-      return false;
-    }
-
     const now = Date.now();
     const timeWindowMs = 3000;
 
