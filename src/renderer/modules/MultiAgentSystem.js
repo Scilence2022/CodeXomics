@@ -833,7 +833,6 @@ class MultiAgentSystem {
         'calculate_gc_content',
         'compute_gc',
         'calc_region_gc',
-        'sequence_statistics',
         'codon_usage_analysis',
         'analyze_codon_usage',
         'genome_codon_usage_analysis',

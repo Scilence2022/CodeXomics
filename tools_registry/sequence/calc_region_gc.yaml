@@ -54,9 +54,9 @@ relationships:
   depends_on: ['get_sequence']
   conflicts_with: []
   enhances: ['get_sequence', 'compute_gc']
-  alternatives: ['compute_gc', 'sequence_statistics']
+  alternatives: ['compute_gc']
   prerequisites: ['load_genome_file']
-  follow_up: ['get_sequence', 'sequence_statistics']
+  follow_up: ['get_sequence']
 metadata:
   usage_count: 0
   success_rate: 0

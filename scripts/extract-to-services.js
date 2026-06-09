@@ -78,7 +78,7 @@ function extractMethod(contentStr, methodName) {
 }
 
 const moves = {
-  analysis: ['genomeCodonUsageAnalysis', 'sequenceStatistics', 'aminoAcidComposition'],
+  analysis: ['genomeCodonUsageAnalysis', 'aminoAcidComposition'],
   protein: ['analyzeInterProDomains', 'processUniProtResults'],
   file: ['convertMCPDownloadUrls'],
   context: [

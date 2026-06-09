@@ -36,7 +36,7 @@
 |    1 | `file_auto_01`               | file_loading      | `load_genome_file`, `load_reads_file`, `load_variant_file`, `load_wig_tracks`                    | 下游 genome、reads、variant、track 流程的基础上下文，必须最先执行。     |
 |    2 | `nav_auto_01`                | navigation        | `navigate_to_position`, `zoom_in`                                                                | 建立 current-region 上下文，同时验证导航后缩放的顺序。                  |
 |    3 | `analysis_auto_01`           | sequence_analysis | `calc_region_gc`, `export_bed_format`                                                            | 验证当前视图区域分析到 BED 导出的链路。                                 |
-|    4 | `analysis_auto_02`           | sequence_analysis | `sequence_statistics`, `genome_codon_usage_analysis`, `compute_gc`                               | 覆盖 genome 级统计、codon usage 和整体 GC。                             |
+|    4 | `analysis_auto_02`           | sequence_analysis | `get_genome_info`, `genome_codon_usage_analysis`, `compute_gc`                                   | 覆盖 genome 信息、codon usage 和整体 GC。                               |
 |    5 | `analysis_auto_complex_03`   | sequence_analysis | `get_coding_sequence`, `translate_dna`, `calculate_molecular_weight`                             | 覆盖从基因 CDS 到翻译产物再到蛋白性质计算的数据流。                     |
 |    6 | `analysis_auto_complex_05`   | sequence_analysis | `get_sequence`, `calculate_entropy`, `reverse_complement`, `translate_dna`                       | 覆盖 visible sequence 在熵、反向互补和翻译任务中的复用。                |
 |    7 | `restrict_auto_01`           | restriction       | `virtual_digest`                                                                                 | 保留为高级领域单工具 smoke test，用于快速验证 digest 工具可调用。       |

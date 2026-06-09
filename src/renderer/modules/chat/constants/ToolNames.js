@@ -55,7 +55,6 @@ const TOOL_NAMES = {
     SIMULATE_GEL_ELECTROPHORESIS: 'simulate_gel_electrophoresis',
     LIST_DNA_MARKERS: 'list_dna_markers',
     GET_DNA_MARKER_INFO: 'get_dna_marker_info',
-    SEQUENCE_STATISTICS: 'sequence_statistics',
     CODON_USAGE_ANALYSIS: 'codon_usage_analysis',
     GENOME_CODON_USAGE_ANALYSIS: 'genome_codon_usage_analysis',
     AMINO_ACID_COMPOSITION: 'amino_acid_composition',

@@ -85,8 +85,7 @@ class AnalysisAgent extends AgentBase {
     this.toolMapping.set('compute_gc', this.computeGC.bind(this));
     this.toolMapping.set('calc_region_gc', this.calcRegionGC.bind(this));
 
-    // 序列统计
-    this.toolMapping.set('sequence_statistics', this.sequenceStatistics.bind(this));
+    // 密码子使用分析
     this.toolMapping.set('codon_usage_analysis', this.codonUsageAnalysis.bind(this));
     this.toolMapping.set('analyze_codon_usage', this.analyzeCodonUsage.bind(this));
     this.toolMapping.set('genome_codon_usage_analysis', this.codonUsageAnalysis.bind(this));
@@ -314,48 +313,6 @@ class AnalysisAgent extends AgentBase {
       }
 
       return await analysisService.calcRegionGc(parameters);
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * 序列统计
-   */
-  async sequenceStatistics(parameters, strategy) {
-    try {
-      const { sequence, include = ['composition', 'length', 'gc'] } = parameters;
-
-      if (!sequence) {
-        throw new Error('Sequence is required');
-      }
-
-      const stats = {};
-
-      if (include.includes('length')) {
-        stats.length = sequence.length;
-      }
-
-      if (include.includes('composition')) {
-        stats.composition = {
-          A: (sequence.match(/A/g) || []).length,
-          T: (sequence.match(/T/g) || []).length,
-          G: (sequence.match(/G/g) || []).length,
-          C: (sequence.match(/C/g) || []).length,
-        };
-      }
-
-      if (include.includes('gc') && this.sequenceUtils) {
-        stats.gcContent = this.sequenceUtils.calculateGCContent(sequence);
-      }
-
-      return {
-        success: true,
-        statistics: stats,
-      };
     } catch (error) {
       return {
         success: false,

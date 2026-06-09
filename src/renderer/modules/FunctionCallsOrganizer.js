@@ -142,7 +142,6 @@ class FunctionCallsOrganizer {
           'calculate_entropy',
           'calc_region_gc',
           'compute_gc',
-          'sequence_statistics',
           'codon_usage_analysis',
           'analyze_codon_usage',
           'amino_acid_composition',

@@ -63,7 +63,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       calculate_entropy: [/entropy/i, /sequence entropy/i],
       translate_dna: [/translate.*dna/i, /translated/i, /protein sequence/i],
       calculate_molecular_weight: [/molecular weight/i, /mw/i, /weight/i],
-      sequence_statistics: [/sequence stats/i, /statistics/i, /stats/i],
       genome_codon_usage_analysis: [/codon usage/i, /codon frequency/i],
       compute_gc: [/genome gc/i, /overall gc/i, /gc content/i],
       get_sequence: [/current visible dna/i, /visible sequence/i, /get.*sequence/i],
@@ -423,9 +422,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Calculate sequence statistics for the current genome, perform a genome-wide codon usage analysis, and compute the overall genome GC content.',
+          'Get current genome information, perform a genome-wide codon usage analysis, and compute the overall genome GC content.',
         expectedResult: {
-          tool_sequence: ['sequence_statistics', 'genome_codon_usage_analysis', 'compute_gc'],
+          tool_sequence: ['get_genome_info', 'genome_codon_usage_analysis', 'calc_region_gc'],
           parameters: [{}, {}, {}],
         },
         maxScore: 15,

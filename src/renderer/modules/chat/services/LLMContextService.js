@@ -213,23 +213,6 @@ class LLMContextService {
         return gelHeader + gelStats + gelFragments;
       }
 
-      case 'sequence_statistics': {
-        let statsOutput = `Sequence Statistics for ${result.region}:\n`;
-        if (result.statistics.composition) {
-          const comp = result.statistics.composition;
-          statsOutput += `• Length: ${comp.length.toLocaleString()} bp\n`;
-          statsOutput += `• Composition: A=${comp.A.percentage}%, T=${comp.T.percentage}%, G=${comp.G.percentage}%, C=${comp.C.percentage}%\n`;
-          statsOutput += `• GC content: ${comp.GC.percentage}%\n`;
-        }
-        if (result.statistics.complexity) {
-          statsOutput += `• Low complexity regions: ${result.statistics.complexity.lowComplexityRegions}\n`;
-        }
-        if (result.statistics.skew) {
-          statsOutput += `• AT/GC skew analysis: ${result.statistics.skew.length} data points\n`;
-        }
-        return statsOutput;
-      }
-
       case 'codon_usage_analysis':
         return (
           `Codon Usage Analysis for ${result.geneName}:\n` +
@@ -1713,7 +1696,6 @@ Sequence Analysis:
   - calc_region_gc: Calculate GC content for chromosome coordinates or the current browser region
   - compute_gc: Calculate GC content for an already-provided DNA sequence
   - reverse_complement: Get reverse complement
-  - sequence_statistics: Analyze sequence composition
 
 Advanced Analysis:
   - blast_search: BLAST sequence similarity
@@ -1953,7 +1935,7 @@ SEARCH FUNCTIONS GUIDE:
 
 ANALYSIS FUNCTIONS:
 - Sequence: get_coding_sequence, translate_dna, reverse_complement
-- Composition: compute_gc, sequence_statistics, codon_usage_analysis
+- Composition: compute_gc, calc_region_gc, codon_usage_analysis
 - Features: predict_promoter, predict_rbs, find_restriction_sites
 - Comparison: blast_search, compare_regions, find_similar_sequences
 - Editing: copy_sequence, cut_sequence, paste_sequence, delete_sequence, insert_sequence, replace_sequence
@@ -2163,7 +2145,8 @@ CRITICAL DISTINCTION - Search Functions:
 
 Common Analysis Tools:
 - Find restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
-- Calculate GC content: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition"]}}
+- Calculate GC content for a chromosome region: {"tool_name": "calc_region_gc", "parameters": {}}
+- Calculate GC content for a provided sequence: {"tool_name": "compute_gc", "parameters": {"sequence": "ATGC"}}
 - Search motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}
 
 Protein Structure Tools:
@@ -2390,7 +2373,8 @@ CRITICAL DISTINCTION - Search Functions:
 
 Common Analysis Tools:
 - Find restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
-- Calculate GC content: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition"]}}
+- Calculate GC content for a chromosome region: {"tool_name": "calc_region_gc", "parameters": {}}
+- Calculate GC content for a provided sequence: {"tool_name": "compute_gc", "parameters": {"sequence": "ATGC"}}
 - Search motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}
 
 Protein Structure Tools:

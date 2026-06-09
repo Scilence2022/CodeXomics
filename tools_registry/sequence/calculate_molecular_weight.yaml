@@ -51,8 +51,8 @@ sample_usages:
 relationships:
   depends_on: ['get_sequence']
   conflicts_with: []
-  enhances: ['sequence_statistics', 'translate_dna']
-  alternatives: ['sequence_statistics']
+  enhances: ['translate_dna']
+  alternatives: []
   prerequisites: []
   follow_up: ['calculate_melting_temp', 'compute_gc']
 metadata:

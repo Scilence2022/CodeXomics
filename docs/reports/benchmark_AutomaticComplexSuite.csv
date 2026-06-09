@@ -2,7 +2,7 @@ Category,Test ID,Test Name,Instruction
 file_loading,file_auto_01,Complete Genomic Data Loading Workflow,"Load genome file ""./ECOLI.gbk""; Load aligned read file ""./1655_C10.sorted.bam""; Load variant VCF ""./1655_C10.mutations.vcf""; Load WIG files ""./sample.wig"", ""./another_sample.wig"""
 navigation,nav_auto_01,Navigate and Zoom Complex Analysis,Navigate to region 1230000 to 1300000 and then zoom in 10x to see the features.
 sequence_analysis,analysis_auto_01,GC Content and Export,Calculate the GC content for the current view region and then export the region features to a BED file named './exported_files/region_features.bed'.
-sequence_analysis,analysis_auto_02,Genome Statistics Suite,"Calculate sequence statistics for the current genome, perform a genome-wide codon usage analysis, and compute the overall genome GC content."
+sequence_analysis,analysis_auto_02,Genome Statistics Suite,"Get current genome information, perform a genome-wide codon usage analysis, and compute the overall genome GC content."
 sequence_analysis,analysis_auto_complex_03,Coding Sequence Translation Workflow,"Retrieve the coding sequence for the lacZ gene, translate that coding sequence in reading frame 1, and calculate the molecular weight of the translated protein sequence."
 sequence_analysis,analysis_auto_complex_05,Sequence Composition and Strand Workflow,"Get the current visible DNA sequence, calculate its entropy, compute its reverse complement, and translate the same DNA sequence in reading frame 1."
 restriction,restrict_auto_01,Virtual Digest,Perform a virtual restriction digest with EcoRI and HindIII enzymes of genome sequence in current view.

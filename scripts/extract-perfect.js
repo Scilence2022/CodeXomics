@@ -4,7 +4,7 @@ const targetFile = path.resolve('src/renderer/modules/ChatManager.js');
 let content = fs.readFileSync(targetFile, 'utf8');
 
 const moves = {
-  analysis: ['genomeCodonUsageAnalysis', 'sequenceStatistics', 'aminoAcidComposition'],
+  analysis: ['genomeCodonUsageAnalysis', 'aminoAcidComposition'],
   protein: ['analyzeInterProDomains', 'processUniProtResults'],
   file: [],
   context: [

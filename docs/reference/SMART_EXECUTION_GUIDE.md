@@ -53,7 +53,6 @@
 
 - `translate_sequence` - 翻译序列
 - `calculate_gc_content` - 计算GC含量
-- `sequence_statistics` - 序列统计
 - `codon_usage_analysis` - 密码子使用分析
 - `calculate_melting_temp` - 计算熔解温度
 

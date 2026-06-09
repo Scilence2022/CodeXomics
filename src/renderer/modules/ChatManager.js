@@ -217,10 +217,7 @@ class ChatManager {
           this.updateSettingsFromManager();
 
           // Check if Dynamic Tools Registry setting changed
-          this.configManager.get(
-            'chatboxSettings.enableDynamicToolsRegistry',
-            true
-          );
+          this.configManager.get('chatboxSettings.enableDynamicToolsRegistry', true);
         });
 
         // Set global reference for settings modal
@@ -1455,7 +1452,14 @@ class ChatManager {
       },
       sequence: {
         name: 'Sequence Analysis',
-        tools: ['get_sequence', 'translate_dna', 'reverse_complement', 'compute_gc', 'calc_region_gc', 'get_coding_sequence'],
+        tools: [
+          'get_sequence',
+          'translate_dna',
+          'reverse_complement',
+          'compute_gc',
+          'calc_region_gc',
+          'get_coding_sequence',
+        ],
       },
       database: {
         name: 'Database Integration',
@@ -1581,8 +1585,7 @@ class ChatManager {
         return;
       }
 
-      const total =
-        toolsResult.total_tools ?? (Array.isArray(toolsResult.tools) ? toolsResult.tools.length : 0);
+      const total = toolsResult.total_tools ?? (Array.isArray(toolsResult.tools) ? toolsResult.tools.length : 0);
       console.log(`🧰 [ChatManager] Rendering ${total} available tool(s) into thinking process`);
 
       const sourceLabel = this.dynamicToolsEnabled && this.dynamicTools ? 'Dynamic Tool registry' : 'core registry';
@@ -1947,15 +1950,14 @@ class ChatManager {
       statusIcon.className = 'fas fa-circle';
 
       switch (status) {
-        case 'connected':
-          {
+        case 'connected': {
           statusIcon.classList.add('connected');
           const connectedCount = this.mcpServerManager.getConnectedServersCount();
           statusText.textContent = connectedCount > 0 ? `Connected (${connectedCount} servers)` : 'Connected';
           if (connectBtn) connectBtn.disabled = true;
           if (disconnectBtn) disconnectBtn.disabled = false;
           break;
-          }
+        }
         case 'connecting':
           statusIcon.classList.add('connecting');
           statusText.textContent = 'Connecting...';
@@ -5957,7 +5959,6 @@ class ChatManager {
       'memoryContext',
     ];
 
-
     const order = this.configManager.get('chatboxSettings.systemPromptSectionOrder', defaultOrder);
     const toggles = {};
     for (const key of defaultOrder) {
@@ -5994,7 +5995,7 @@ class ChatManager {
     }
 
     // Add any sections from the original prompt that weren't mapped
-    for (const [header,] of Object.entries(sections)) {
+    for (const [header] of Object.entries(sections)) {
       const isMapped = this.mapHeaderToSectionKey(header);
       if (!isMapped || !toggles[isMapped]) continue;
       // Already included above
@@ -6141,8 +6142,8 @@ class ChatManager {
       normalizedHeader.includes('directly available') ||
       normalizedHeader.includes('extended tools')
     ) {
-return 'dynamicTools';
-}
+      return 'dynamicTools';
+    }
     if (normalizedHeader.includes('example')) return 'toolExamples';
     if (normalizedHeader.includes('guideline') || normalizedHeader.includes('selection')) return 'toolGuidelines';
     if (normalizedHeader.includes('response format')) return 'responseFormat';
@@ -7080,14 +7081,7 @@ return 'dynamicTools';
    * Search InterPro database for entries
    */
   async searchInterProEntry(parameters) {
-    const {
-      search_term,
-      search_terms,
-      search_type = 'all',
-      entry_type = 'all',
-
-
-    } = parameters;
+    const { search_term, search_terms, search_type = 'all', entry_type = 'all' } = parameters;
 
     console.log('🔍 [ChatManager] Searching InterPro entries:', {
       search_term,
@@ -7153,13 +7147,7 @@ return 'dynamicTools';
    * Get detailed information for an InterPro entry
    */
   async getInterProEntryDetails(parameters) {
-    const {
-      interpro_id,
-      entry_name,
-      include_proteins = true,
-
-
-    } = parameters;
+    const { interpro_id, entry_name, include_proteins = true } = parameters;
 
     console.log('📖 [ChatManager] Getting InterPro entry details:', {
       interpro_id,
@@ -7228,13 +7216,7 @@ return 'dynamicTools';
    * Advanced UniProt search with multiple filters
    */
   async advancedUniProtSearch(parameters) {
-    const {
-      query_fields,
-      boolean_operator = 'AND',
-      filters = {},
-
-
-    } = parameters;
+    const { query_fields, boolean_operator = 'AND', filters = {} } = parameters;
 
     console.log('🔍 [ChatManager] Advanced UniProt search:', {
       query_fields,
@@ -7306,7 +7288,6 @@ return 'dynamicTools';
       include_sequence = true,
       include_features = true,
       include_function = true,
-
     } = parameters;
 
     console.log('📖 [ChatManager] Getting UniProt entry:', {
@@ -7880,13 +7861,7 @@ TOOL AVAILABILITY:
         'reverse_complement',
         'compute_gc',
       ],
-      'GENOMIC FEATURES': [
-        'predict_promoter',
-        'predict_rbs',
-        'search_sequence_motif',
-        'find_restriction_sites',
-        'sequence_statistics',
-      ],
+      'GENOMIC FEATURES': ['predict_promoter', 'predict_rbs', 'search_sequence_motif', 'find_restriction_sites'],
       'PROTEIN STRUCTURE': [
         'search_pdb_structures',
         'open_protein_viewer',
@@ -8847,7 +8822,6 @@ ${coreTools}
 
     // Get a sample of key tools from each category
 
-
     return `
 ===CRITICAL INSTRUCTION FOR TOOL CALLS===
 When a user asks you to perform ANY action that requires using tools, you MUST respond with ONLY a JSON object:
@@ -9069,131 +9043,131 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Execute delete sequence function directly
    */
   async executeDeleteSequence(parameters) {
-      const { chromosome, start, end, strand = '+' } = parameters;
+    const { chromosome, start, end, strand = '+' } = parameters;
 
-      // Validate parameters
-      if (!chromosome || start === undefined || end === undefined) {
-        throw new Error('Missing required parameters: chromosome, start, end');
-      }
+    // Validate parameters
+    if (!chromosome || start === undefined || end === undefined) {
+      throw new Error('Missing required parameters: chromosome, start, end');
+    }
 
-      if (start > end) {
-        throw new Error('Start position must be less than or equal to end position');
-      }
+    if (start > end) {
+      throw new Error('Start position must be less than or equal to end position');
+    }
 
-      // Use MicrobeGenomicsFunctions if available
-      if (window.MicrobeFns && window.MicrobeFns.delete_sequence) {
-        const result = window.MicrobeFns.delete_sequence(chromosome, start, end);
-        return result;
-      }
-
-      // Fallback to ActionManager if MicrobeFns not available
-      const genomeBrowser = window.genomeBrowser;
-      if (!genomeBrowser || !genomeBrowser.actionManager) {
-        throw new Error('Neither MicrobeFns nor ActionManager available');
-      }
-
-      const target = `${chromosome}:${start}-${end}`;
-      const length = end - start + 1;
-      const metadata = { chromosome, start, end, strand, selectionSource: 'function_call' };
-
-      const actionId = genomeBrowser.actionManager.addAction(
-        genomeBrowser.actionManager.ACTION_TYPES.DELETE_SEQUENCE,
-        target,
-        `Delete ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
-        metadata
-      );
-
-      const result = {
-        success: true,
-        actionId: actionId,
-        action: 'delete',
-        target: target,
-        length: length,
-        message: `Delete action queued for ${chromosome}:${start}-${end} (${length} bp)`,
-      };
-
+    // Use MicrobeGenomicsFunctions if available
+    if (window.MicrobeFns && window.MicrobeFns.delete_sequence) {
+      const result = window.MicrobeFns.delete_sequence(chromosome, start, end);
       return result;
+    }
+
+    // Fallback to ActionManager if MicrobeFns not available
+    const genomeBrowser = window.genomeBrowser;
+    if (!genomeBrowser || !genomeBrowser.actionManager) {
+      throw new Error('Neither MicrobeFns nor ActionManager available');
+    }
+
+    const target = `${chromosome}:${start}-${end}`;
+    const length = end - start + 1;
+    const metadata = { chromosome, start, end, strand, selectionSource: 'function_call' };
+
+    const actionId = genomeBrowser.actionManager.addAction(
+      genomeBrowser.actionManager.ACTION_TYPES.DELETE_SEQUENCE,
+      target,
+      `Delete ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
+      metadata
+    );
+
+    const result = {
+      success: true,
+      actionId: actionId,
+      action: 'delete',
+      target: target,
+      length: length,
+      message: `Delete action queued for ${chromosome}:${start}-${end} (${length} bp)`,
+    };
+
+    return result;
   }
 
   /**
    * Execute delete gene function by name
    */
   async executeDeleteGene(parameters) {
-      const { geneName, chromosome } = parameters;
+    const { geneName, chromosome } = parameters;
 
-      // Validate parameters
-      if (!geneName) {
-        throw new Error('Missing required parameter: geneName (can be gene name or locus tag)');
-      }
+    // Validate parameters
+    if (!geneName) {
+      throw new Error('Missing required parameter: geneName (can be gene name or locus tag)');
+    }
 
-      // First, find the gene using existing search functionality
-      const searchResult = await this.searchGeneByName({ name: geneName, chromosome });
+    // First, find the gene using existing search functionality
+    const searchResult = await this.searchGeneByName({ name: geneName, chromosome });
 
-      if (!searchResult.found || !searchResult.genes || searchResult.genes.length === 0) {
-        throw new Error(
-          `Gene/locus tag "${geneName}" not found${chromosome ? ` in chromosome ${chromosome}` : ''}. Make sure the gene name or locus tag is correct.`
-        );
-      }
+    if (!searchResult.found || !searchResult.genes || searchResult.genes.length === 0) {
+      throw new Error(
+        `Gene/locus tag "${geneName}" not found${chromosome ? ` in chromosome ${chromosome}` : ''}. Make sure the gene name or locus tag is correct.`
+      );
+    }
 
-      // Get the first matching gene (prefer CDS over other features)
-      const targetGene = searchResult.genes.find(gene => gene.type === 'CDS') || searchResult.genes[0];
+    // Get the first matching gene (prefer CDS over other features)
+    const targetGene = searchResult.genes.find(gene => gene.type === 'CDS') || searchResult.genes[0];
 
-      if (!targetGene || !targetGene.start || !targetGene.end) {
-        throw new Error(`Invalid gene data for "${geneName}": missing coordinates`);
-      }
+    if (!targetGene || !targetGene.start || !targetGene.end) {
+      throw new Error(`Invalid gene data for "${geneName}": missing coordinates`);
+    }
 
-      const geneChromosome = targetGene.chromosome || searchResult.chromosome;
-      const geneStart = targetGene.start;
-      const geneEnd = targetGene.end;
-      const geneStrand = targetGene.strand || '+';
+    const geneChromosome = targetGene.chromosome || searchResult.chromosome;
+    const geneStart = targetGene.start;
+    const geneEnd = targetGene.end;
+    const geneStrand = targetGene.strand || '+';
 
-      // Use the delete_sequence functionality with gene coordinates
-      const deleteResult = await this.executeDeleteSequence({
+    // Use the delete_sequence functionality with gene coordinates
+    const deleteResult = await this.executeDeleteSequence({
+      chromosome: geneChromosome,
+      start: geneStart,
+      end: geneEnd,
+      strand: geneStrand,
+    });
+
+    // Enhance the result with gene-specific information
+    const result = {
+      ...deleteResult,
+      deletedGene: {
+        name: geneName,
         chromosome: geneChromosome,
         start: geneStart,
         end: geneEnd,
         strand: geneStrand,
-      });
+        length: geneEnd - geneStart + 1,
+        type: targetGene.type,
+        product: targetGene.qualifiers?.product || 'Unknown protein',
+      },
+      message: `Gene/locus tag "${geneName}" deletion queued: ${geneChromosome}:${geneStart}-${geneEnd} (${geneEnd - geneStart + 1} bp)`,
+    };
 
-      // Enhance the result with gene-specific information
-      const result = {
-        ...deleteResult,
-        deletedGene: {
-          name: geneName,
-          chromosome: geneChromosome,
-          start: geneStart,
-          end: geneEnd,
-          strand: geneStrand,
-          length: geneEnd - geneStart + 1,
-          type: targetGene.type,
-          product: targetGene.qualifiers?.product || 'Unknown protein',
-        },
-        message: `Gene/locus tag "${geneName}" deletion queued: ${geneChromosome}:${geneStart}-${geneEnd} (${geneEnd - geneStart + 1} bp)`,
-      };
-
-      return result;
+    return result;
   }
 
   /**
    * Execute action function through UI response functions
    */
   async executeActionFunction(functionName, parameters) {
-      // Use window.genomeBrowser for access
-      const genomeBrowser = window.genomeBrowser;
+    // Use window.genomeBrowser for access
+    const genomeBrowser = window.genomeBrowser;
 
-      if (!genomeBrowser) {
-        throw new Error('Genome browser not available via window.genomeBrowser');
-      }
+    if (!genomeBrowser) {
+      throw new Error('Genome browser not available via window.genomeBrowser');
+    }
 
-      if (!genomeBrowser.actionManager) {
-        throw new Error('ActionManager not available in genome browser');
-      }
+    if (!genomeBrowser.actionManager) {
+      throw new Error('ActionManager not available in genome browser');
+    }
 
-      // Use ActionManager's executeActionFunction method which delegates to function* methods
-      // This ensures parameters are used instead of showing UI dialogs
-      const result = await genomeBrowser.actionManager.executeActionFunction(functionName, parameters);
+    // Use ActionManager's executeActionFunction method which delegates to function* methods
+    // This ensures parameters are used instead of showing UI dialogs
+    const result = await genomeBrowser.actionManager.executeActionFunction(functionName, parameters);
 
-      return result;
+    return result;
   }
 
   getCurrentContext() {
@@ -9237,7 +9211,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'compute_gc',
       'calc_region_gc',
       'reverse_complement',
-      'sequence_statistics',
       'codon_usage_analysis',
       'analyze_codon_usage',
       'calculate_entropy',
@@ -10008,8 +9981,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           mimeType = 'text/plain';
           break;
 
-        case 'csv':
-          {
+        case 'csv': {
           const csvHeader = 'Timestamp,Sender,Message\n';
           const csvContent = history
             .map(msg => {
@@ -10021,7 +9993,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           filename = `chat-history-${new Date().toISOString().split('T')[0]}.csv`;
           mimeType = 'text/csv';
           break;
-          }
+        }
 
         default:
           throw new Error(`Unsupported export format: ${format}`);
@@ -10169,8 +10141,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           await this.configManager.exportConfig();
           this.addMessageToChat('✅ All configurations exported', 'assistant');
           break;
-        case 5: // Show summary
-          {
+        case 5: { // Show summary
           const summary = this.configManager.getConfigSummary();
           this.addMessageToChat(
             `📊 **Configuration Summary:**\n` +
@@ -10184,9 +10155,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             'assistant'
           );
           break;
-          }
-        case 6: // Debug storage info
-          {
+        }
+        case 6: { // Debug storage info
           const storageInfo = this.configManager.getStorageInfo();
           this.addMessageToChat(
             `🔧 **Storage Debug Info:**\n` +
@@ -10199,9 +10169,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             'assistant'
           );
           break;
-          }
-        case 7: // Test MicrobeGenomics integration
-          {
+        }
+        case 7: { // Test MicrobeGenomics integration
           const integrationResult = this.testMicrobeGenomicsIntegration();
           this.addMessageToChat(
             `🧬 **MicrobeGenomics Integration Test:**\n` +
@@ -10214,9 +10183,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             'assistant'
           );
           break;
-          }
-        case 8: // Test tool execution
-          {
+        }
+        case 8: { // Test tool execution
           const executionResult = await this.testToolExecution();
           this.addMessageToChat(
             `🔧 **Tool Execution Test:**\n` +
@@ -10228,7 +10196,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             'assistant'
           );
           break;
-          }
+        }
       }
     } catch (error) {
       this.addMessageToChat(`❌ Error: ${error.message}`, 'assistant', true);
@@ -10287,7 +10255,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   async translateSequence(params) {
     return this.services.analysis.translateSequence(params);
   }
-
 
   async findOpenReadingFrames(params) {
     return this.services.analysis.findOpenReadingFrames(params);
@@ -11402,15 +11369,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   async listRestrictionEnzymes(params = {}) {
     return await this.services.restriction.listEnzymes(params);
-  }
-
-  // 4. ENHANCED SEQUENCE STATISTICS
-  async sequenceStatistics(params) {
-    if (!this.services || !this.services.analysis) {
-      console.error('[ChatManager] analysis not initialized');
-      return;
-    }
-    return await this.services.analysis.sequenceStatistics(params);
   }
 
   async codonUsageAnalysis(params) {
@@ -14441,7 +14399,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // Analysis Agent - 数据分析和统计
       compare_regions: 'Analysis Agent',
-      sequence_statistics: 'Analysis Agent',
       codon_usage_analysis: 'Analysis Agent',
       analyze_codon_usage: 'Analysis Agent',
       calculate_entropy: 'Analysis Agent',

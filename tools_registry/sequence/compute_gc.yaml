@@ -74,8 +74,8 @@ sample_usages:
 relationships:
   depends_on: ['get_sequence']
   conflicts_with: []
-  enhances: ['sequence_statistics']
-  alternatives: ['sequence_statistics']
+  enhances: ['calc_region_gc']
+  alternatives: ['calc_region_gc']
   prerequisites: []
   follow_up: ['translate_dna', 'predict_promoter']
 

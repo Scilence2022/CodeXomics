@@ -67,7 +67,6 @@ const KNOWN_EXCEPTIONS = {
     'search_by_position',
     'search_intergenic_regions',
     'search_motif',
-    'sequence_statistics',
     'toggle_annotation_track',
   ],
   functionOrganizerMissingRegistry: [
@@ -102,7 +101,6 @@ const KNOWN_EXCEPTIONS = {
     'search_by_position',
     'search_intergenic_regions',
     'search_motif',
-    'sequence_statistics',
   ],
   llmPolicyMissingRegistry: [
     'delete_feature',
