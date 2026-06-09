@@ -184,6 +184,7 @@ class ToolCapabilityPolicy {
           'get_sequence',
           'get_current_region',
           'get_visible_tracks',
+          'get_track_status',
           'get_annotation',
           'list_annotations',
           'search_annotations',

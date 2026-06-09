@@ -258,18 +258,22 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(manager.getToolExecutionKey('design_primers', { targetSequence })).toContain(targetSequence);
   });
 
-  it('should suppress duplicate tool instances after successful execution in the same request', () => {
+  it('should allow a fresh identical tool call from a later model round', () => {
     const manager = new MockChatManager();
-    const tool = { tool_name: 'pan_right', parameters: { amount: 500 } };
+    const tool = { tool_name: 'get_track_status', parameters: {} };
     const successfulCounts = new Map([[manager.getToolExecutionKey(tool.tool_name, tool.parameters), 1]]);
 
-    const result = manager.filterExecutableToolInstances([tool], successfulCounts, 'pan right');
+    const result = manager.filterExecutableToolInstances(
+      [tool],
+      successfulCounts,
+      'check track status, show GC, hide variants, then check track status again'
+    );
 
-    expect(result.executableTools).toHaveLength(0);
-    expect(result.suppressedTools).toHaveLength(1);
+    expect(result.executableTools).toHaveLength(1);
+    expect(result.suppressedTools).toHaveLength(0);
   });
 
-  it('should suppress repeated design primer calls when the LLM echoes resolved targetSequence', () => {
+  it('should leave cross-round primer repeats for execution policy when the LLM echoes resolved targetSequence', () => {
     const manager = new MockChatManager();
     const firstTool = { tool_name: 'design_primers', parameters: { geneName: 'lysC' } };
     const repeatedTool = {
@@ -287,8 +291,46 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
       'please design primers to amplify lysC gene'
     );
 
-    expect(result.executableTools).toHaveLength(0);
-    expect(result.suppressedTools).toHaveLength(1);
+    expect(result.executableTools).toHaveLength(1);
+    expect(result.suppressedTools).toHaveLength(0);
+  });
+
+  it('should allow get_track_status to rerun after track visibility changes', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
+    const manager = new MockChatManager();
+    manager.configManager = {
+      get: (key, fallback) => {
+        if (key === 'chatboxSettings') return {};
+        return fallback;
+      },
+    };
+
+    const policy = new ToolExecutionPolicy({ chatManager: manager });
+    const tool = { tool_name: 'get_track_status', parameters: {} };
+    const unchangedHistory = [
+      {
+        role: 'system',
+        content: 'Tool execution completed: get_track_status executed successfully with parameters: {}: {"gc":false}',
+      },
+    ];
+    const changedHistory = [
+      ...unchangedHistory,
+      {
+        role: 'system',
+        content:
+          'Tool execution completed: toggle_track executed successfully with parameters: {"track_name":"gc","visible":true}: {"visible":true}',
+      },
+      {
+        role: 'system',
+        content:
+          'Tool execution completed: toggle_track executed successfully with parameters: {"track_name":"variants","visible":false}: {"visible":false}',
+      },
+    ];
+
+    expect(new ToolCapabilityPolicy().getPolicyForTool('get_track_status').name).toBe('state');
+    expect(policy.shouldAllowToolExecution(tool, unchangedHistory, 2, [])).toBe(false);
+    expect(policy.shouldAllowToolExecution(tool, changedHistory, 2, [])).toBe(true);
   });
 
   it('should cap duplicate tool instances within a single model response unless the user asked for repeats', () => {
@@ -323,7 +365,7 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(result.suppressedTools).toHaveLength(0);
   });
 
-  it('should retain structured execution state for queued, blocked, and suppressed tool calls', () => {
+  it('should retain structured execution state for queued, blocked, and same-response suppressed tool calls', () => {
     const manager = new MockChatManager();
     manager.showThinkingProcess = false;
     manager.updateThinkingMessage = () => {};
@@ -338,7 +380,7 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     const state = manager.createToolExecutionState('retrieve lacZ, translate it, and calculate molecular weight');
 
     const result = manager.createPendingToolExecutionQueue(
-      [completedTool, blockedTool, queuedTool],
+      [completedTool, completedTool, blockedTool, queuedTool],
       successfulCounts,
       state.originalMessage,
       [],
@@ -346,10 +388,15 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
       state
     );
 
-    expect(result.pendingTools).toHaveLength(1);
+    expect(result.pendingTools).toHaveLength(2);
     expect(result.pendingTools[0].executionId).toBeDefined();
-    expect(state.records.map(record => record.status)).toEqual(['suppressed', 'blocked', 'queued']);
-    expect(state.records.map(record => record.tool)).toEqual(['get_coding_sequence', 'blocked_tool', 'translate_dna']);
+    expect(state.records.map(record => record.status)).toEqual(['suppressed', 'queued', 'blocked', 'queued']);
+    expect(state.records.map(record => record.tool)).toEqual([
+      'get_coding_sequence',
+      'get_coding_sequence',
+      'blocked_tool',
+      'translate_dna',
+    ]);
   });
 
   it('should update execution state with success/failure results and inject it as a user-visible state message', () => {

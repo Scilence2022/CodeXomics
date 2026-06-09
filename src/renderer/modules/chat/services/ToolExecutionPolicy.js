@@ -109,6 +109,10 @@ class ToolExecutionPolicy {
       'open_new_tab',
       'load_genome_file',
       'load_annotation_file',
+      'toggle_track',
+      'toggle_annotation_track',
+      'set_track_settings',
+      'set_all_track_settings',
     ];
 
     for (let i = lastExecIdx + 1; i < conversationHistory.length; i++) {
@@ -131,8 +135,7 @@ class ToolExecutionPolicy {
   shouldAllowToolExecution(tool, conversationHistory = [], currentRound, toolResults = []) {
     const toolKey = this.getToolKey(tool);
     const toolName = tool.tool_name;
-    const { name: applicablePolicyName, policy: applicablePolicy } =
-      this.capabilityPolicy.getPolicyForTool(toolName);
+    const { name: applicablePolicyName, policy: applicablePolicy } = this.capabilityPolicy.getPolicyForTool(toolName);
 
     if (applicablePolicyName) {
       console.log(`[Policy] Applied ${applicablePolicyName} policy to ${toolName}`);
@@ -249,11 +252,32 @@ class ToolExecutionPolicy {
       return this.shouldAllowTrackOperation(tool, conversationHistory);
     }
 
+    if (policyName === 'state') {
+      return this.shouldAllowStateQuery(toolName, toolKey, conversationHistory);
+    }
+
     if (policyType === 'parameter_based') {
       return this.allowIfNoSuccessfulExistingExecution(toolName, toolKey, conversationHistory);
     }
 
     return true;
+  }
+
+  shouldAllowStateQuery(toolName, toolKey, conversationHistory) {
+    const existingExecution = this.chatManager.findExistingExecution(toolKey, conversationHistory);
+    if (!existingExecution || !existingExecution.success) {
+      return true;
+    }
+
+    if (this.hasViewStateChangedSinceLastExecution(toolName, conversationHistory)) {
+      console.log(`[Policy] State changed since last ${toolName}; allowing refreshed state query`);
+      return true;
+    }
+
+    console.log(
+      `[Policy] State query already succeeded with same parameters and no intervening state change: ${toolName}`
+    );
+    return false;
   }
 
   allowIfNoSuccessfulExistingExecution(toolName, toolKey, conversationHistory) {

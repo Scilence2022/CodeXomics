@@ -4798,7 +4798,6 @@ class ChatManager {
       let currentRound = 0;
       let finalResponse = null;
       let taskCompleted = false;
-      const executedTools = new Set(); // Track executed tools to prevent re-execution
       const successfulToolExecutionCounts = new Map(); // Track successful tool instances within this user request
       const toolExecutionState = this.createToolExecutionState(message);
       let lastSuccessfulResults = [];
@@ -4874,9 +4873,9 @@ class ChatManager {
           currentRound,
           toolExecutionState
         );
-        let pendingToolExecutionQueue = pendingExecution.pendingTools;
-        let toolsToExecute = pendingToolExecutionQueue.slice();
-        const alreadyExecutedToolCount = pendingExecution.suppressedTools.length;
+        const pendingToolExecutionQueue = pendingExecution.pendingTools;
+        const toolsToExecute = pendingToolExecutionQueue.slice();
+        const duplicateSuppressedToolCount = pendingExecution.suppressedTools.length;
         const policyBlockedToolCount = pendingExecution.policyBlockedTools.length;
 
         // Display tool detection information
@@ -4890,9 +4889,9 @@ class ChatManager {
           } else {
             this.updateThinkingMessage(`💬 No tool calls detected - conversational response`);
           }
-          if (alreadyExecutedToolCount > 0) {
+          if (duplicateSuppressedToolCount > 0) {
             this.updateThinkingMessage(
-              `♻️ Ignored ${alreadyExecutedToolCount} already-completed tool call(s) from this request`
+              `♻️ Ignored ${duplicateSuppressedToolCount} duplicate tool instance(s) from this response`
             );
           }
           if (policyBlockedToolCount > 0) {
@@ -4903,10 +4902,10 @@ class ChatManager {
         if (
           detectedToolCount > 0 &&
           toolsToExecute.length === 0 &&
-          (alreadyExecutedToolCount > 0 || policyBlockedToolCount > 0)
+          (duplicateSuppressedToolCount > 0 || policyBlockedToolCount > 0)
         ) {
           console.log('=== NON-EXECUTABLE TOOL CALLS DETECTED ===');
-          console.log('The LLM produced tool calls that were already completed or blocked by policy.');
+          console.log('The LLM produced duplicate tool instances or calls blocked by policy.');
           console.log(
             'Suppressed tools:',
             pendingExecution.suppressedTools.map(tool => tool.tool_name)
@@ -4935,7 +4934,7 @@ class ChatManager {
                 ? this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools)
                 : policyBlockedToolCount > 0
                   ? 'The requested tool call was blocked by the tool execution policy.'
-                  : 'The requested action has already been completed.';
+                  : 'The response repeated the same tool call beyond the requested repeat limit.';
             break;
           }
 
@@ -4943,78 +4942,8 @@ class ChatManager {
           continue;
         }
 
-        // CRITICAL FIX: If current response has no tools, check previous assistant messages
-        // in conversation history for unexecuted tool calls
-        // This covers both empty responses and task completion responses
-        if (toolsToExecute.length === 0) {
-          console.log('=== CHECKING PREVIOUS ROUNDS FOR UNEXECUTED TOOL CALLS ===');
-          console.log('Current conversation history length:', conversationHistory.length);
-          console.log('Current response has no tools, looking for previous tool calls...');
-
-          // Log the entire conversation history for debugging
-          conversationHistory.forEach((msg, index) => {
-            console.log(
-              `History[${index}] Role: ${msg.role}, Content length: ${msg.content ? msg.content.length : 'null'}`
-            );
-            if (msg.content && msg.content.length < 200) {
-              console.log(`History[${index}] Content preview:`, msg.content);
-            }
-          });
-
-          // Look for tool results in history to mark as executed
-          conversationHistory.forEach(msg => {
-            if (msg.role === 'system' && msg.content && msg.content.includes('executed successfully')) {
-              // Extract tool name from result message
-              const toolMatch = msg.content.match(/(\w+) executed successfully/);
-              if (toolMatch) {
-                executedTools.add(toolMatch[1]);
-              }
-            }
-          });
-
-          console.log('Already executed tools:', Array.from(executedTools));
-
-          for (let i = conversationHistory.length - 1; i >= 0; i--) {
-            const msg = conversationHistory[i];
-            console.log(`Examining message ${i}: role=${msg.role}, has_content=${!!msg.content}`);
-            if (msg.role === 'assistant' && msg.content) {
-              console.log(`Checking assistant message ${i} for tool calls:`, msg.content);
-              const previousToolCall = this.parseToolCall(msg.content);
-              console.log(`Parse result for message ${i}:`, previousToolCall);
-              if (previousToolCall) {
-                const prevToolKey = `${previousToolCall.tool_name}:${JSON.stringify(previousToolCall.parameters)}`;
-                const wasSuccessful =
-                  this.wasToolExecutedSuccessfully(prevToolKey, conversationHistory) ||
-                  executedTools.has(previousToolCall.tool_name);
-                if (wasSuccessful) {
-                  // eslint-disable-next-line no-console
-                  console.log(`🚫 [Policy] Already executed successfully: ${previousToolCall.tool_name}`);
-                  continue;
-                }
-                const shouldAllow = this.shouldAllowToolExecution(
-                  previousToolCall,
-                  conversationHistory,
-                  currentRound,
-                  []
-                );
-                if (shouldAllow) {
-                  console.log('✅ [Policy] Found allowed tool call from previous round:', previousToolCall);
-                  pendingToolExecutionQueue = [previousToolCall];
-                  toolsToExecute = pendingToolExecutionQueue.slice();
-                  break;
-                } else {
-                  console.log(`🚫 [Policy] Tool not allowed for re-execution: ${previousToolCall.tool_name}`);
-                }
-              } else {
-                console.log(`❌ No tool call found in message ${i}`);
-              }
-            } else {
-              console.log(`Skipping message ${i}: role=${msg.role}, has_content=${!!msg.content}`);
-            }
-          }
-          console.log('Final toolsToExecute after history check:', toolsToExecute);
-          console.log('=== END PREVIOUS ROUNDS CHECK ===');
-        }
+        // Tool detection is intentionally scoped to the latest LLM response.
+        // Previous assistant messages may contain already-executed calls and must not seed a new queue.
 
         // Check for task completion signals if early completion is enabled
         // BUT ONLY if there are NO tool calls to execute
@@ -5166,48 +5095,6 @@ class ChatManager {
               this.lastExecutionData.toolResults.push(...toolResults);
               this.lastExecutionData.rounds = currentRound;
             }
-
-            // Track executed tools to prevent infinite loops
-            // Be more selective about which tools to track for re-execution prevention
-            const nonReExecutableTools = new Set([
-              'blast_search',
-              'fetch_protein_structure',
-              'get_uniprot_entry',
-              'create_annotation',
-              'export_data',
-              'delete_feature',
-            ]);
-
-            // File loading tools should be tracked when they succeed to prevent re-execution with same parameters
-            const fileLoadingTools = new Set([
-              'load_genome_file',
-              'load_annotation_file',
-              'load_variant_file',
-              'load_reads_file',
-              'load_wig_tracks',
-              'load_operon_file',
-            ]);
-
-            toolsToExecute.forEach(tool => {
-              const toolKey = this.getToolExecutionKey(tool.tool_name, tool.parameters);
-
-              // Track non-re-executable tools and successful file loading operations
-              if (nonReExecutableTools.has(tool.tool_name)) {
-                executedTools.add(toolKey);
-                console.log(`🔒 Tracking execution for non-re-executable tool: ${tool.tool_name}`);
-              } else if (fileLoadingTools.has(tool.tool_name)) {
-                // Only track file loading tools if they succeed
-                const result = toolResults.find(r => r.tool === tool.tool_name);
-                if (result && result.success) {
-                  executedTools.add(toolKey);
-                  console.log(`🔒 Tracking successful file loading execution: ${tool.tool_name}`);
-                } else {
-                  console.log(`🔄 Not tracking failed file loading execution: ${tool.tool_name}`);
-                }
-              } else {
-                console.log(`🔄 Not tracking execution for re-executable tool: ${tool.tool_name}`);
-              }
-            });
 
             // 显示工具执行结果
             this.showToolCalls && this.addToolResultMessage(toolResults);
@@ -6650,7 +6537,7 @@ class ChatManager {
     for (const tool of executionFilter.suppressedTools) {
       this.recordToolExecutionState(toolExecutionState, tool, 'suppressed', {
         round: currentRound,
-        reason: 'already completed or requested repeat limit reached',
+        reason: 'duplicate tool instance in latest response or requested repeat limit reached',
       });
     }
 
@@ -6705,13 +6592,20 @@ class ChatManager {
       const alreadyPlanned = plannedToolExecutionCounts.get(toolKey) || 0;
       const requestedLimit = this.getRequestedToolExecutionLimit(originalMessage, tool);
 
-      if (alreadySucceeded + alreadyPlanned >= requestedLimit) {
+      if (alreadyPlanned >= requestedLimit) {
         console.log(
           `♻️ [ToolLoop] Suppressing duplicate tool instance: ${tool.tool_name} ` +
-            `(completed/planned ${alreadySucceeded + alreadyPlanned}/${requestedLimit})`
+            `(planned ${alreadyPlanned}/${requestedLimit}, previous successes ${alreadySucceeded})`
         );
         suppressedTools.push(tool);
         continue;
+      }
+
+      if (alreadySucceeded > 0) {
+        console.log(
+          `🔄 [ToolLoop] Treating new-round tool call as fresh: ${tool.tool_name} ` +
+            `(previous successes ${alreadySucceeded})`
+        );
       }
 
       plannedToolExecutionCounts.set(toolKey, alreadyPlanned + 1);
@@ -10141,7 +10035,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           await this.configManager.exportConfig();
           this.addMessageToChat('✅ All configurations exported', 'assistant');
           break;
-        case 5: { // Show summary
+        case 5: {
+          // Show summary
           const summary = this.configManager.getConfigSummary();
           this.addMessageToChat(
             `📊 **Configuration Summary:**\n` +
@@ -10156,7 +10051,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           );
           break;
         }
-        case 6: { // Debug storage info
+        case 6: {
+          // Debug storage info
           const storageInfo = this.configManager.getStorageInfo();
           this.addMessageToChat(
             `🔧 **Storage Debug Info:**\n` +
@@ -10170,7 +10066,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           );
           break;
         }
-        case 7: { // Test MicrobeGenomics integration
+        case 7: {
+          // Test MicrobeGenomics integration
           const integrationResult = this.testMicrobeGenomicsIntegration();
           this.addMessageToChat(
             `🧬 **MicrobeGenomics Integration Test:**\n` +
@@ -10184,7 +10081,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           );
           break;
         }
-        case 8: { // Test tool execution
+        case 8: {
+          // Test tool execution
           const executionResult = await this.testToolExecution();
           this.addMessageToChat(
             `🔧 **Tool Execution Test:**\n` +
