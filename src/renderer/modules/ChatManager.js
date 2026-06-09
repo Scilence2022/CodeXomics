@@ -1364,7 +1364,11 @@ class ChatManager {
           // tool no matter what the user asked for.
           let toolsToList = fullRegistry;
           if (userQuery && typeof this.dynamicTools.selectRelevantTools === 'function') {
-            toolsToList = this.dynamicTools.selectRelevantTools(userQuery, context || {});
+            toolsToList = this.dynamicTools.selectRelevantTools(
+              userQuery,
+              context || {},
+              this.getDynamicToolsSelectionLimit()
+            );
             result.query_filtered = true;
           }
 
@@ -1813,10 +1817,22 @@ class ChatManager {
     return {
       enabled: settingsEnabled && this.dynamicToolsEnabled,
       settingsEnabled: settingsEnabled,
+      limitSelection: this.configManager.get('chatboxSettings.limitDynamicToolsSelection', false),
+      selectionLimit: this.getDynamicToolsSelectionLimit(),
       systemEnabled: this.dynamicToolsEnabled,
       initialized: this.dynamicTools !== null,
       status: this.dynamicTools ? this.dynamicTools.getIntegrationStatus() : null,
     };
+  }
+
+  getDynamicToolsSelectionLimit() {
+    const shouldLimit = this.configManager.get('chatboxSettings.limitDynamicToolsSelection', false);
+    if (!shouldLimit) return Infinity;
+
+    const configuredLimit = Number(this.configManager.get('chatboxSettings.dynamicToolsSelectionLimit', 35));
+    if (!Number.isFinite(configuredLimit) || configuredLimit < 1) return 35;
+
+    return Math.floor(configuredLimit);
   }
 
   setupMCPServerEventHandlers() {
@@ -5792,7 +5808,9 @@ class ChatManager {
         console.log('🔧 [buildSystemMessage] Context:', context);
         console.log('🔧 [buildSystemMessage] Last user query:', lastUserQuery);
 
-        const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context);
+        const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context, {
+          selectionLimit: this.getDynamicToolsSelectionLimit(),
+        });
         console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
 
         // Apply section configuration filtering to dynamic prompt

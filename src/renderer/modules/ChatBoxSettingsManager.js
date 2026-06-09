@@ -39,6 +39,8 @@ class ChatBoxSettingsManager {
       enableAbortButton: true,
       useOptimizedPrompt: true, // Use optimized system prompt
       enableDynamicToolsRegistry: true, // Enable Dynamic Tools Registry
+      limitDynamicToolsSelection: false, // Limit dynamically selected tools per request
+      dynamicToolsSelectionLimit: 35, // Maximum selected tools when limiting is enabled
 
       // Tool priority settings
       toolPriority: ['local', 'genomics', 'plugins', 'mcp'], // Tool priority order
@@ -274,6 +276,8 @@ class ChatBoxSettingsManager {
       enableAbortButton: true,
       useOptimizedPrompt: true,
       enableDynamicToolsRegistry: true,
+      limitDynamicToolsSelection: false,
+      dynamicToolsSelectionLimit: 35,
 
       // Tool priority settings
       toolPriority: ['local', 'genomics', 'plugins', 'mcp'],
@@ -381,6 +385,15 @@ class ChatBoxSettingsManager {
 
     if (typeof this.settings.typingIndicatorDelay !== 'number' || this.settings.typingIndicatorDelay < 0) {
       errors.push('typingIndicatorDelay must be a non-negative number');
+    }
+
+    if (
+      typeof this.settings.dynamicToolsSelectionLimit !== 'number' ||
+      !Number.isFinite(this.settings.dynamicToolsSelectionLimit) ||
+      this.settings.dynamicToolsSelectionLimit < 1 ||
+      this.settings.dynamicToolsSelectionLimit > 500
+    ) {
+      errors.push('dynamicToolsSelectionLimit must be between 1 and 500');
     }
 
     // Validate enum settings
@@ -969,6 +982,20 @@ class ChatBoxSettingsManager {
                                         Enable Dynamic Tools Registry
                                     </label>
                                     <small class="help-text">Intelligently select tools based on user intent and context. When disabled, uses the comprehensive system prompt with all tools.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="limitDynamicToolsSelection" class="setting-checkbox">
+                                        Limit dynamic tools selected per request
+                                    </label>
+                                    <small class="help-text">Cap the number of dynamically selected tools sent to the model. Disabled by default so all relevant registry matches can be included.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dynamicToolsSelectionLimit">Dynamic tools selection limit:</label>
+                                    <input type="number" id="dynamicToolsSelectionLimit" class="input-full" min="1" max="500" step="1">
+                                    <small class="help-text">Maximum selected tools when the limit option is enabled. The previous default cap was 35.</small>
                                 </div>
                                 
                                 <div class="form-group">
@@ -1662,8 +1689,12 @@ class ChatBoxSettingsManager {
 
     // Get other relevant settings from UI
     const dynamicToolsCheckbox = modal.querySelector('#enableDynamicToolsRegistry');
+    const limitDynamicToolsCheckbox = modal.querySelector('#limitDynamicToolsSelection');
+    const dynamicToolsLimitInput = modal.querySelector('#dynamicToolsSelectionLimit');
     const optimizedPromptCheckbox = modal.querySelector('#useOptimizedPrompt');
     const dynamicEnabled = dynamicToolsCheckbox ? dynamicToolsCheckbox.checked : true;
+    const limitDynamicToolsSelection = limitDynamicToolsCheckbox ? limitDynamicToolsCheckbox.checked : false;
+    const dynamicToolsSelectionLimit = dynamicToolsLimitInput ? parseInt(dynamicToolsLimitInput.value, 10) || 35 : 35;
     const optimizedEnabled = optimizedPromptCheckbox ? optimizedPromptCheckbox.checked : true;
 
     // Save current config values so we can restore them after preview
@@ -1677,6 +1708,8 @@ class ChatBoxSettingsManager {
         customSystemPrompt: customPrompt,
         systemPromptSectionOrder: sectionOrder,
         enableDynamicToolsRegistry: dynamicEnabled,
+        limitDynamicToolsSelection,
+        dynamicToolsSelectionLimit,
         useOptimizedPrompt: optimizedEnabled,
       };
       for (const [key, value] of Object.entries(sectionToggles)) {
@@ -2179,6 +2212,9 @@ class ChatBoxSettingsManager {
       rememberSize: 'Remember Size',
       startMinimized: 'Start Minimized',
       useOptimizedPrompt: 'Use Optimized Prompt',
+      enableDynamicToolsRegistry: 'Enable Dynamic Tools Registry',
+      limitDynamicToolsSelection: 'Limit Dynamic Tools Selection',
+      dynamicToolsSelectionLimit: 'Dynamic Tools Selection Limit',
       debugMode: 'Debug Mode',
       logToolCalls: 'Log Tool Calls',
       chatboxModelType: 'Primary Model Type',

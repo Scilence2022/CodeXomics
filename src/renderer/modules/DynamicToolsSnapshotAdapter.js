@@ -10,9 +10,7 @@ class DynamicToolsSnapshotAdapter {
     this.chatManager = chatManager;
     this.snapshot = {
       ...snapshot,
-      tools: Array.isArray(snapshot?.tools)
-        ? snapshot.tools
-        : Object.values(snapshot?.toolsByName || {}),
+      tools: Array.isArray(snapshot?.tools) ? snapshot.tools : Object.values(snapshot?.toolsByName || {}),
       builtInTools: Array.isArray(snapshot?.builtInTools) ? snapshot.builtInTools : [],
       categories: snapshot?.categories || { categories: {} },
       counts: snapshot?.counts || {},
@@ -20,9 +18,7 @@ class DynamicToolsSnapshotAdapter {
     };
 
     this.toolsByName = new Map(
-      this.snapshot.tools
-        .map(tool => [this.getToolName(tool), tool])
-        .filter(([name]) => name)
+      this.snapshot.tools.map(tool => [this.getToolName(tool), tool]).filter(([name]) => name)
     );
     this.usageStats = new Map();
     this.pluginManager = null;
@@ -167,12 +163,7 @@ class DynamicToolsSnapshotAdapter {
 
   scoreTool(tool, query, context = {}) {
     const text = String(query || '').toLowerCase();
-    const fields = [
-      tool.name,
-      tool.description,
-      tool.category,
-      ...(Array.isArray(tool.keywords) ? tool.keywords : []),
-    ]
+    const fields = [tool.name, tool.description, tool.category, ...(Array.isArray(tool.keywords) ? tool.keywords : [])]
       .join(' ')
       .toLowerCase();
 
@@ -210,7 +201,7 @@ class DynamicToolsSnapshotAdapter {
     return score;
   }
 
-  selectRelevantTools(query, context = {}, limit = 35) {
+  selectRelevantTools(query, context = {}, limit = Infinity) {
     const allowCoordination = this.isAgentSystemEnabled(context);
     const validTools = this.snapshot.tools.filter(tool => {
       if (!tool || !tool.name) return false;
@@ -295,9 +286,7 @@ class DynamicToolsSnapshotAdapter {
       usages.push(`- ${tool.name}: "${sample.user_query}" -> ${sample.tool_call}`);
       if (usages.length >= 8) break;
     }
-    return usages.length > 0
-      ? usages.join('\n')
-      : '- Use JSON tool calls with the exact tool name and parameters.';
+    return usages.length > 0 ? usages.join('\n') : '- Use JSON tool calls with the exact tool name and parameters.';
   }
 
   buildPrompt(tools, context = {}) {
@@ -305,9 +294,7 @@ class DynamicToolsSnapshotAdapter {
     const pluginTools = tools.filter(tool => tool.source === 'plugin');
     const extendedTools = tools.filter(tool => !builtInTools.includes(tool) && tool.source !== 'plugin');
     const genomeContext = context.genomeBrowser || {};
-    const visibleTracks = Array.isArray(genomeContext.visibleTracks)
-      ? genomeContext.visibleTracks.join(', ')
-      : 'None';
+    const visibleTracks = Array.isArray(genomeContext.visibleTracks) ? genomeContext.visibleTracks.join(', ') : 'None';
     const loadedFiles = Array.isArray(genomeContext.loadedFiles) ? genomeContext.loadedFiles.length : 0;
 
     const builtInDescriptions =
@@ -530,8 +517,8 @@ For multiple sequential tool calls, respond with multiple JSON objects, each in 
     };
   }
 
-  async generateDynamicSystemPrompt(userQuery, context = {}) {
-    const selectedTools = this.selectRelevantTools(userQuery, context);
+  async generateDynamicSystemPrompt(userQuery, context = {}, options = {}) {
+    const selectedTools = this.selectRelevantTools(userQuery, context, options.selectionLimit);
     return {
       systemPrompt: this.buildPrompt(selectedTools, context),
       toolsUsed: selectedTools.map(tool => tool.name),
