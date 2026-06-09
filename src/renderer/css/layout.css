@@ -59,18 +59,21 @@
 /* Toolbar Layout */
 .toolbar {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 24px;
   padding: 12px 20px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
 }
 
 .toolbar-section {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
   position: relative;
 }
 
