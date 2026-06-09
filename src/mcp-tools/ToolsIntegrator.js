@@ -190,7 +190,17 @@ class ToolsIntegrator {
         if (toolName === 'compute_gc') {
           return { gcContent: this.sequenceTools.calculateGCContent(parameters.sequence) };
         } else if (toolName === 'translate_dna') {
-          return { protein: this.sequenceTools.translateDNA(parameters.dna, parameters.frame) };
+          const frame =
+            parameters.frame !== undefined
+              ? Number(parameters.frame)
+              : parameters.reading_frame !== undefined
+                ? Math.max(0, Number(parameters.reading_frame) - 1)
+                : 0;
+          return {
+            protein: this.sequenceTools.translateDNA(parameters.dna, frame),
+            frame,
+            reading_frame: frame + 1,
+          };
         } else if (toolName === 'reverse_complement') {
           return { reverseComplement: this.sequenceTools.reverseComplement(parameters.dna) };
         } else if (toolName === 'calculate_molecular_weight') {

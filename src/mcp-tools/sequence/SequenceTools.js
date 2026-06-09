@@ -46,6 +46,7 @@ class SequenceTools {
           properties: {
             dna: { type: 'string', description: 'DNA sequence to translate' },
             frame: { type: 'number', description: 'Reading frame (0, 1, or 2)', default: 0 },
+            reading_frame: { type: 'number', description: 'Reading frame (1, 2, or 3)', enum: [1, 2, 3] },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
           required: ['dna'],

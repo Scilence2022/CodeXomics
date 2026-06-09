@@ -2315,6 +2315,14 @@ class ChatManager {
         }
         if (methodName === 'calculateMolecularWeight') {
           result = this.MicrobeFns[methodName](seq, parameters.type || 'auto');
+        } else if (methodName === 'translateDNA') {
+          const frame =
+            parameters.frame !== undefined
+              ? Number(parameters.frame)
+              : parameters.reading_frame !== undefined
+                ? Math.max(0, Number(parameters.reading_frame) - 1)
+                : 0;
+          result = this.MicrobeFns[methodName](seq, frame);
         } else {
           result = this.MicrobeFns[methodName](seq);
         }
@@ -4788,6 +4796,7 @@ class ChatManager {
       let taskCompleted = false;
       const executedTools = new Set(); // Track executed tools to prevent re-execution
       const successfulToolExecutionCounts = new Map(); // Track successful tool instances within this user request
+      const toolExecutionState = this.createToolExecutionState(message);
       let lastSuccessfulResults = [];
       let lastSuccessfulTools = [];
 
@@ -4858,7 +4867,8 @@ class ChatManager {
           successfulToolExecutionCounts,
           message,
           conversationHistory,
-          currentRound
+          currentRound,
+          toolExecutionState
         );
         let pendingToolExecutionQueue = pendingExecution.pendingTools;
         let toolsToExecute = pendingToolExecutionQueue.slice();
@@ -4886,21 +4896,47 @@ class ChatManager {
           }
         }
 
-        if (detectedToolCount > 0 && toolsToExecute.length === 0 && alreadyExecutedToolCount > 0) {
-          console.log('=== DUPLICATE TOOL CALLS SUPPRESSED ===');
-          console.log('The LLM repeated tool calls that already completed in this user request.');
+        if (
+          detectedToolCount > 0 &&
+          toolsToExecute.length === 0 &&
+          (alreadyExecutedToolCount > 0 || policyBlockedToolCount > 0)
+        ) {
+          console.log('=== NON-EXECUTABLE TOOL CALLS DETECTED ===');
+          console.log('The LLM produced tool calls that were already completed or blocked by policy.');
           console.log(
             'Suppressed tools:',
             pendingExecution.suppressedTools.map(tool => tool.tool_name)
           );
+          console.log(
+            'Policy blocked tools:',
+            pendingExecution.policyBlockedTools.map(tool => tool.tool_name)
+          );
           console.log('=======================================');
 
-          taskCompleted = true;
-          finalResponse =
-            lastSuccessfulResults.length > 0
-              ? this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools)
-              : 'The requested action has already been completed.';
-          break;
+          toolExecutionState.consecutiveSuppressedRounds = (toolExecutionState.consecutiveSuppressedRounds || 0) + 1;
+
+          conversationHistory.push({
+            role: 'assistant',
+            content: response || JSON.stringify(pendingExecution.suppressedTools),
+          });
+          this.appendToolExecutionStateMessage(conversationHistory, toolExecutionState, {
+            reason: 'duplicate tool call suppressed',
+            includeAllRecords: false,
+          });
+
+          if (toolExecutionState.consecutiveSuppressedRounds >= 2 || currentRound >= maxRounds) {
+            taskCompleted = true;
+            finalResponse =
+              lastSuccessfulResults.length > 0
+                ? this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools)
+                : policyBlockedToolCount > 0
+                  ? 'The requested tool call was blocked by the tool execution policy.'
+                  : 'The requested action has already been completed.';
+            break;
+          }
+
+          console.log('Continuing after non-executable tool calls so the model can provide the next requested step.');
+          continue;
         }
 
         // CRITICAL FIX: If current response has no tools, check previous assistant messages
@@ -5091,6 +5127,8 @@ class ChatManager {
             }
 
             console.log('Tool execution completed. Results:', toolResults);
+            toolExecutionState.consecutiveSuppressedRounds = 0;
+            this.markToolExecutionResults(toolExecutionState, toolsToExecute, toolResults, currentRound);
 
             // Show execution results in thinking process
             if (this.showThinkingProcess) {
@@ -5287,6 +5325,13 @@ class ChatManager {
                 }
                 break;
               }
+            }
+
+            if (!taskCompleted && toolResults.length > 0) {
+              this.appendToolExecutionStateMessage(conversationHistory, toolExecutionState, {
+                reason: 'tool execution results',
+                includeAllRecords: false,
+              });
             }
           } catch (error) {
             console.error('=== TOOL EXECUTION EXCEPTION ===');
@@ -5576,10 +5621,14 @@ class ChatManager {
 
     // ─── General sanitization for any result ─────────────────────────────
 
-    // Truncate known sequence-like string fields
+    // Truncate known sequence-like string fields. Chainable sequence tools need
+    // enough context for follow-up calls such as CDS → translation → protein MW.
+    const sequenceFieldLimit = ['get_coding_sequence', 'translate_dna', 'calculate_molecular_weight'].includes(toolName)
+      ? 12000
+      : 1000;
     const sequenceFields = ['sequence', 'codingSequence', 'proteinSequence', 'coding_sequence', 'protein_sequence'];
     for (const field of sequenceFields) {
-      if (sanitized[field] && typeof sanitized[field] === 'string' && sanitized[field].length > 1000) {
+      if (sanitized[field] && typeof sanitized[field] === 'string' && sanitized[field].length > sequenceFieldLimit) {
         const originalLength = sanitized[field].length;
         sanitized[field] =
           sanitized[field].substring(0, 500) +
@@ -6406,12 +6455,185 @@ return 'dynamicTools';
     return 1;
   }
 
+  createToolExecutionState(originalMessage) {
+    return {
+      originalMessage,
+      records: [],
+      lastInjectedRecordCount: 0,
+      consecutiveSuppressedRounds: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  recordToolExecutionState(toolExecutionState, tool, status, details = {}) {
+    if (!toolExecutionState || !tool || !tool.tool_name) {
+      return null;
+    }
+
+    const now = new Date().toISOString();
+    const record = {
+      id: details.id || `tool_exec_${toolExecutionState.records.length + 1}`,
+      tool: tool.tool_name,
+      parameters: this.cloneToolParameters(tool.parameters || {}),
+      normalizedParameters: this.normalizeToolParams(tool.tool_name, tool.parameters || {}),
+      status,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const optionalFields = [
+      'round',
+      'queuedRound',
+      'completedRound',
+      'reason',
+      'error',
+      'resultSummary',
+      'requestedLimit',
+    ];
+    optionalFields.forEach(field => {
+      if (details[field] !== undefined) {
+        record[field] = details[field];
+      }
+    });
+
+    toolExecutionState.records.push(record);
+    toolExecutionState.updatedAt = now;
+    return record;
+  }
+
+  updateToolExecutionStateRecord(toolExecutionState, executionId, updates = {}) {
+    if (!toolExecutionState || !executionId) {
+      return null;
+    }
+
+    const record = toolExecutionState.records.find(item => item.id === executionId);
+    if (!record) {
+      return null;
+    }
+
+    Object.assign(record, updates, { updatedAt: new Date().toISOString() });
+    toolExecutionState.updatedAt = record.updatedAt;
+    return record;
+  }
+
+  createToolResultSummary(result) {
+    if (!result) {
+      return null;
+    }
+
+    const resultData = Object.prototype.hasOwnProperty.call(result, 'result') ? result.result : result;
+    if (resultData === null || resultData === undefined) {
+      return resultData;
+    }
+
+    if (typeof this.sanitizeResultForLLM === 'function') {
+      return this.sanitizeResultForLLM(resultData, result.tool);
+    }
+
+    return resultData;
+  }
+
+  markToolExecutionResults(toolExecutionState, toolsToExecute, toolResults, currentRound) {
+    if (!toolExecutionState || !Array.isArray(toolsToExecute) || !Array.isArray(toolResults)) {
+      return;
+    }
+
+    toolsToExecute.forEach((tool, index) => {
+      if (!tool.executionId) {
+        return;
+      }
+
+      const result =
+        toolResults[index] ||
+        toolResults.find(
+          item =>
+            item.tool === tool.tool_name &&
+            this.areToolParametersEqual(tool.tool_name, item.parameters || {}, tool.parameters || {})
+        );
+
+      if (!result) {
+        return;
+      }
+
+      this.updateToolExecutionStateRecord(toolExecutionState, tool.executionId, {
+        status: result.success ? 'success' : 'failed',
+        completedRound: currentRound,
+        error: result.success ? null : result.error || 'Unknown error',
+        resultSummary: result.success ? this.createToolResultSummary(result) : null,
+      });
+    });
+  }
+
+  buildToolExecutionStateMessage(toolExecutionState, options = {}) {
+    if (!toolExecutionState || !Array.isArray(toolExecutionState.records) || toolExecutionState.records.length === 0) {
+      return '';
+    }
+
+    const includeAllRecords = options.includeAllRecords === true;
+    const startIndex = includeAllRecords ? 0 : toolExecutionState.lastInjectedRecordCount || 0;
+    const recordsForMessage = toolExecutionState.records.slice(startIndex);
+    if (recordsForMessage.length === 0) {
+      return '';
+    }
+
+    const counts = toolExecutionState.records.reduce((acc, record) => {
+      acc[record.status] = (acc[record.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const compactRecords = recordsForMessage.map(record => {
+      const item = {
+        id: record.id,
+        tool: record.tool,
+        status: record.status,
+        parameters: record.normalizedParameters,
+      };
+
+      if (record.round !== undefined) item.round = record.round;
+      if (record.queuedRound !== undefined) item.queuedRound = record.queuedRound;
+      if (record.completedRound !== undefined) item.completedRound = record.completedRound;
+      if (record.reason) item.reason = record.reason;
+      if (record.error) item.error = record.error;
+      if (record.resultSummary !== undefined && record.resultSummary !== null) item.result = record.resultSummary;
+
+      return item;
+    });
+
+    return (
+      `[Tool Execution State]\n` +
+      `This is execution state for the current user request, not a new task.\n` +
+      `Original request: ${toolExecutionState.originalMessage}\n` +
+      `Status totals: ${JSON.stringify(counts)}\n` +
+      `New or updated records:\n${JSON.stringify(compactRecords, null, 2)}\n\n` +
+      `Use successful tool results above as context for the next step. ` +
+      `Do not call a tool with status "success" again using the same parameters unless the user explicitly requested a repeat. ` +
+      `If the original request still has unfinished steps, respond with ONLY the next JSON tool call(s). ` +
+      `If all requested steps are complete, provide the final answer.`
+    );
+  }
+
+  appendToolExecutionStateMessage(conversationHistory, toolExecutionState, options = {}) {
+    const message = this.buildToolExecutionStateMessage(toolExecutionState, options);
+    if (!message) {
+      return false;
+    }
+
+    conversationHistory.push({
+      role: 'user',
+      content: message,
+    });
+    toolExecutionState.lastInjectedRecordCount = toolExecutionState.records.length;
+    return true;
+  }
+
   createPendingToolExecutionQueue(
     detectedTools,
     successfulToolExecutionCounts,
     originalMessage,
     conversationHistory,
-    currentRound
+    currentRound,
+    toolExecutionState = null
   ) {
     const executionFilter = this.filterExecutableToolInstances(
       detectedTools,
@@ -6422,20 +6644,37 @@ return 'dynamicTools';
     const policyBlockedTools = [];
     const plannedToolResults = [];
 
+    for (const tool of executionFilter.suppressedTools) {
+      this.recordToolExecutionState(toolExecutionState, tool, 'suppressed', {
+        round: currentRound,
+        reason: 'already completed or requested repeat limit reached',
+      });
+    }
+
     for (const tool of executionFilter.executableTools) {
       const shouldAllow = this.shouldAllowToolExecution(tool, conversationHistory, currentRound, plannedToolResults);
       if (!shouldAllow) {
         console.log(`🚫 [Policy] Blocking execution of: ${tool.tool_name}`);
         this.showThinkingProcess && this.updateThinkingMessage(`🚫 Policy blocked: ${tool.tool_name}`);
         policyBlockedTools.push(tool);
+        this.recordToolExecutionState(toolExecutionState, tool, 'blocked', {
+          round: currentRound,
+          reason: 'tool execution policy blocked this call',
+        });
         continue;
       }
 
       console.log(`✅ [Policy] Queueing execution of: ${tool.tool_name}`);
+      const executionRecord = this.recordToolExecutionState(toolExecutionState, tool, 'queued', {
+        queuedRound: currentRound,
+      });
       const queuedTool = {
         tool_name: tool.tool_name,
         parameters: this.cloneToolParameters(tool.parameters),
       };
+      if (executionRecord) {
+        queuedTool.executionId = executionRecord.id;
+      }
       pendingTools.push(queuedTool);
       plannedToolResults.push({
         tool: queuedTool.tool_name,

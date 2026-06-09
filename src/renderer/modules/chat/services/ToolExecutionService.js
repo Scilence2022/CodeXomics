@@ -410,6 +410,19 @@ class ToolExecutionService {
   // Extract positional arguments for MicrobeGenomicsFunctions static methods
   // These methods expect individual args, not a params object
   _extractMGFArgs(toolName, parameters) {
+    if (toolName === 'translate_dna' && parameters) {
+      const seq = parameters.dna || parameters.sequence || parameters.dna_sequence;
+      if (typeof seq === 'string') {
+        const frame =
+          parameters.frame !== undefined
+            ? Number(parameters.frame)
+            : parameters.reading_frame !== undefined
+              ? Math.max(0, Number(parameters.reading_frame) - 1)
+              : 0;
+        return [seq, frame];
+      }
+    }
+
     const argMappings = {
       search_sequence_motif: [], // Pass full params object - searchSequenceMotif handles object deconstruction internally
       find_gene: ['name'], // legacy alias
@@ -419,7 +432,7 @@ class ToolExecutionService {
       search_intergenic_regions: ['chromosome', 'minLength', 'min_length'],
       compute_gc: ['dna', 'sequence', 'dna_sequence'],
       reverse_complement: ['dna', 'sequence', 'dna_sequence'],
-      translate_dna: ['dna', 'sequence', 'dna_sequence'],
+      translate_dna: ['dna', 'sequence', 'dna_sequence', 'reading_frame', 'frame'],
       find_orfs: ['dna', 'sequence', 'dna_sequence'],
       calculate_entropy: ['sequence', 'dna', 'dna_sequence'],
       calc_region_gc: ['chromosome', 'start', 'end'],

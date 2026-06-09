@@ -32,6 +32,13 @@ function loadLLMContextServiceClass() {
   return fn({});
 }
 
+function loadToolExecutionServiceClass() {
+  const servicePath = path.join(process.cwd(), 'src/renderer/modules/chat/services/ToolExecutionService.js');
+  const content = fs.readFileSync(servicePath, 'utf-8');
+  const fn = new Function('window', `${content}; return ToolExecutionService;`);
+  return fn({});
+}
+
 // Helper to load ChatManager in a node-compatible way
 function loadChatManagerClass() {
   const managerPath = path.join(process.cwd(), 'src/renderer/modules/ChatManager.js');
@@ -51,7 +58,10 @@ function loadChatManagerClass() {
     /getToolExecutionKey\s*\(toolName,\s*parameters\s*=\s*\{\}\)\s*\{[\s\S]*?\}\n\n\s*getRequestedToolExecutionLimit/
   );
   const getRequestedToolExecutionLimitMatch = content.match(
-    /\n\s{2}getRequestedToolExecutionLimit\s*\(originalMessage,\s*tool\)\s*\{[\s\S]*?\}\n\n\s{2}createPendingToolExecutionQueue/
+    /\n\s{2}getRequestedToolExecutionLimit\s*\(originalMessage,\s*tool\)\s*\{[\s\S]*?\}\n\n\s{2}createToolExecutionState/
+  );
+  const toolExecutionStateMethodsMatch = content.match(
+    /\n\s{2}createToolExecutionState\s*\(originalMessage\)\s*\{[\s\S]*?\}\n\n\s{2}createPendingToolExecutionQueue/
   );
   const createPendingToolExecutionQueueMatch = content.match(
     /\n\s{2}createPendingToolExecutionQueue\s*\([\s\S]*?\n\s{2}\}\n\n\s{2}filterExecutableToolInstances/
@@ -92,7 +102,10 @@ function loadChatManagerClass() {
     ? getToolExecutionKeyMatch[0].replace('getRequestedToolExecutionLimit', '')
     : '';
   const getRequestedToolExecutionLimitCode = getRequestedToolExecutionLimitMatch
-    ? getRequestedToolExecutionLimitMatch[0].replace(/\n\n\s{2}createPendingToolExecutionQueue$/, '')
+    ? getRequestedToolExecutionLimitMatch[0].replace(/\n\n\s{2}createToolExecutionState$/, '')
+    : '';
+  const toolExecutionStateMethodsCode = toolExecutionStateMethodsMatch
+    ? toolExecutionStateMethodsMatch[0].replace(/\n\n\s{2}createPendingToolExecutionQueue$/, '')
     : '';
   const createPendingToolExecutionQueueCode = createPendingToolExecutionQueueMatch
     ? createPendingToolExecutionQueueMatch[0].replace(/\n\n\s{2}filterExecutableToolInstances$/, '')
@@ -121,6 +134,7 @@ function loadChatManagerClass() {
       ${normalizeToolParamsCode}
       ${getToolExecutionKeyCode}
       ${getRequestedToolExecutionLimitCode}
+      ${toolExecutionStateMethodsCode}
       ${createPendingToolExecutionQueueCode}
       ${filterExecutableToolInstancesCode}
       ${executePendingToolExecutionQueueCode}
@@ -141,6 +155,7 @@ function loadChatManagerClass() {
 
 describe('Tool Policy - Parameter Normalization and Matching', () => {
   const LLMContextService = loadLLMContextServiceClass();
+  const ToolExecutionService = loadToolExecutionServiceClass();
   const MockChatManager = loadChatManagerClass();
 
   it('should keep execution policies in dedicated hardcoded policy classes', () => {
@@ -306,6 +321,92 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(result.pendingTools[0].parameters.search_query).toBe('DNA polymerase I');
     expect(result.policyBlockedTools).toHaveLength(1);
     expect(result.suppressedTools).toHaveLength(0);
+  });
+
+  it('should retain structured execution state for queued, blocked, and suppressed tool calls', () => {
+    const manager = new MockChatManager();
+    manager.showThinkingProcess = false;
+    manager.updateThinkingMessage = () => {};
+    manager.shouldAllowToolExecution = tool => tool.tool_name !== 'blocked_tool';
+
+    const completedTool = { tool_name: 'get_coding_sequence', parameters: { gene_name: 'lacZ' } };
+    const blockedTool = { tool_name: 'blocked_tool', parameters: { id: 1 } };
+    const queuedTool = { tool_name: 'translate_dna', parameters: { dna: 'ATG', reading_frame: 1 } };
+    const successfulCounts = new Map([
+      [manager.getToolExecutionKey(completedTool.tool_name, completedTool.parameters), 1],
+    ]);
+    const state = manager.createToolExecutionState('retrieve lacZ, translate it, and calculate molecular weight');
+
+    const result = manager.createPendingToolExecutionQueue(
+      [completedTool, blockedTool, queuedTool],
+      successfulCounts,
+      state.originalMessage,
+      [],
+      2,
+      state
+    );
+
+    expect(result.pendingTools).toHaveLength(1);
+    expect(result.pendingTools[0].executionId).toBeDefined();
+    expect(state.records.map(record => record.status)).toEqual(['suppressed', 'blocked', 'queued']);
+    expect(state.records.map(record => record.tool)).toEqual(['get_coding_sequence', 'blocked_tool', 'translate_dna']);
+  });
+
+  it('should update execution state with success/failure results and inject it as a user-visible state message', () => {
+    const manager = new MockChatManager();
+    manager.showThinkingProcess = false;
+    manager.updateThinkingMessage = () => {};
+    manager.shouldAllowToolExecution = () => true;
+    const state = manager.createToolExecutionState('retrieve lacZ, translate it, and calculate molecular weight');
+    const tools = [
+      { tool_name: 'get_coding_sequence', parameters: { gene_name: 'lacZ' } },
+      { tool_name: 'calculate_molecular_weight', parameters: { sequence: 'BAD' } },
+    ];
+
+    const queued = manager.createPendingToolExecutionQueue(tools, new Map(), state.originalMessage, [], 1, state);
+    manager.markToolExecutionResults(
+      state,
+      queued.pendingTools,
+      [
+        {
+          tool: 'get_coding_sequence',
+          parameters: { gene_name: 'lacZ' },
+          success: true,
+          result: { codingSequence: 'ATGAAATAG', length: 9 },
+          error: null,
+        },
+        {
+          tool: 'calculate_molecular_weight',
+          parameters: { sequence: 'BAD' },
+          success: false,
+          result: null,
+          error: 'invalid sequence',
+        },
+      ],
+      1
+    );
+
+    expect(state.records[0].status).toBe('success');
+    expect(state.records[0].resultSummary.codingSequence).toBe('ATGAAATAG');
+    expect(state.records[1].status).toBe('failed');
+    expect(state.records[1].error).toBe('invalid sequence');
+
+    const history = [];
+    expect(manager.appendToolExecutionStateMessage(history, state)).toBe(true);
+    expect(history).toHaveLength(1);
+    expect(history[0].role).toBe('user');
+    expect(history[0].content).toContain('[Tool Execution State]');
+    expect(history[0].content).toContain('"status": "success"');
+    expect(history[0].content).toContain('"status": "failed"');
+    expect(history[0].content).toContain('Do not call a tool with status "success" again');
+  });
+
+  it('should translate one-based reading_frame into zero-based MicrobeGenomics frame arguments', () => {
+    const service = new ToolExecutionService({}, {});
+
+    expect(service._extractMGFArgs('translate_dna', { dna: 'AAATTT', reading_frame: 1 })).toEqual(['AAATTT', 0]);
+    expect(service._extractMGFArgs('translate_dna', { dna: 'AAATTT', reading_frame: 2 })).toEqual(['AAATTT', 1]);
+    expect(service._extractMGFArgs('translate_dna', { dna: 'AAATTT', frame: 2 })).toEqual(['AAATTT', 2]);
   });
 
   it('should consume pending tool calls as each item is dispatched', async () => {

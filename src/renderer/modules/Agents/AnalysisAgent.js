@@ -203,7 +203,13 @@ class AnalysisAgent extends AgentBase {
    */
   async translateDNA(parameters, strategy) {
     try {
-      const { dna, frame = 0 } = parameters;
+      const { dna } = parameters;
+      const frame =
+        parameters.frame !== undefined
+          ? Number(parameters.frame)
+          : parameters.reading_frame !== undefined
+            ? Math.max(0, Number(parameters.reading_frame) - 1)
+            : 0;
 
       if (!dna) {
         throw new Error('DNA sequence is required');
