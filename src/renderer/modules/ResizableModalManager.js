@@ -51,15 +51,15 @@ class ResizableModalManager {
     const currentStyle = window.getComputedStyle(modalContent);
     const originalMaxWidth = currentStyle.maxWidth;
     if (originalMaxWidth && originalMaxWidth !== 'none' && !modalContent.hasAttribute('data-max-width')) {
-      const parsedMax = parseInt(originalMaxWidth, 10);
-      if (!isNaN(parsedMax) && parsedMax > 0) {
+      const parsedMax = this.parseCssDimension(originalMaxWidth, null, 'width', modalContent);
+      if (Number.isFinite(parsedMax) && parsedMax > 0) {
         modalContent.setAttribute('data-max-width', parsedMax.toString());
       }
     }
     const originalMinWidth = currentStyle.minWidth;
     if (originalMinWidth && originalMinWidth !== '0px' && !modalContent.hasAttribute('data-min-width')) {
-      const parsedMin = parseInt(originalMinWidth, 10);
-      if (!isNaN(parsedMin) && parsedMin > 0) {
+      const parsedMin = this.parseCssDimension(originalMinWidth, null, 'width', modalContent);
+      if (Number.isFinite(parsedMin) && parsedMin > 0) {
         modalContent.setAttribute('data-min-width', parsedMin.toString());
       }
     }
@@ -214,16 +214,62 @@ class ResizableModalManager {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
 
+  parseCssDimension(value, fallback, axis = 'width', referenceElement = null) {
+    if (typeof value !== 'string') return fallback;
+
+    const trimmedValue = value.trim().toLowerCase();
+    if (!trimmedValue || ['auto', 'none', 'initial', 'inherit', 'unset'].includes(trimmedValue)) {
+      return fallback;
+    }
+
+    const numericValue = parseFloat(trimmedValue);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      return fallback;
+    }
+
+    if (trimmedValue.endsWith('px')) {
+      return numericValue;
+    }
+
+    if (trimmedValue.endsWith('vw')) {
+      return (window.innerWidth * numericValue) / 100;
+    }
+
+    if (trimmedValue.endsWith('vh')) {
+      return (window.innerHeight * numericValue) / 100;
+    }
+
+    if (trimmedValue.endsWith('vmin')) {
+      return (Math.min(window.innerWidth, window.innerHeight) * numericValue) / 100;
+    }
+
+    if (trimmedValue.endsWith('vmax')) {
+      return (Math.max(window.innerWidth, window.innerHeight) * numericValue) / 100;
+    }
+
+    if (trimmedValue.endsWith('%')) {
+      const parentRect = referenceElement?.parentElement?.getBoundingClientRect();
+      const parentSize = axis === 'height' ? parentRect?.height : parentRect?.width;
+      const viewportSize = axis === 'height' ? window.innerHeight : window.innerWidth;
+      const baseSize = parentSize && parentSize > 0 ? parentSize : viewportSize;
+      return (baseSize * numericValue) / 100;
+    }
+
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+
   clamp(value, min, max) {
     return Math.max(min, Math.min(value, max));
   }
 
   syncInitialWidth(modalContent) {
     const constraints = this.getResizeConstraints(modalContent);
+    const style = window.getComputedStyle(modalContent);
     const rectWidth = modalContent.getBoundingClientRect().width;
-    const inlineWidth = this.parsePositiveInteger(modalContent.style.width, rectWidth);
-    const currentWidth = inlineWidth > 100 ? inlineWidth : rectWidth;
-    const baseWidth = currentWidth > 100 ? currentWidth : constraints.minWidth;
+    const inlineWidth = this.parseCssDimension(modalContent.style.width, null, 'width', modalContent);
+    const cssWidth = this.parseCssDimension(style.width, null, 'width', modalContent);
+    const currentWidth = inlineWidth || (rectWidth > 0 ? rectWidth : cssWidth);
+    const baseWidth = currentWidth && currentWidth > 100 ? currentWidth : constraints.minWidth;
     const nextWidth = this.clamp(baseWidth, constraints.minWidth, constraints.maxWidth);
 
     if (!modalContent.style.width || Math.round(currentWidth) !== Math.round(nextWidth)) {
@@ -238,20 +284,20 @@ class ResizableModalManager {
     const defaultMaxHeight = Math.max(window.innerHeight * 2, 1200);
     const cssMaxWidth =
       style.maxWidth && style.maxWidth !== 'none'
-        ? this.parsePositiveInteger(style.maxWidth, defaultMaxWidth)
+        ? this.parseCssDimension(style.maxWidth, defaultMaxWidth, 'width', modalContent)
         : defaultMaxWidth;
     const cssMaxHeight =
       style.maxHeight && style.maxHeight !== 'none'
-        ? this.parsePositiveInteger(style.maxHeight, defaultMaxHeight)
+        ? this.parseCssDimension(style.maxHeight, defaultMaxHeight, 'height', modalContent)
         : defaultMaxHeight;
 
     const configuredMinWidth = this.parsePositiveInteger(
       modalContent.getAttribute('data-min-width'),
-      this.parsePositiveInteger(style.minWidth, 400)
+      this.parseCssDimension(style.minWidth, 400, 'width', modalContent)
     );
     const configuredMinHeight = this.parsePositiveInteger(
       modalContent.getAttribute('data-min-height'),
-      this.parsePositiveInteger(style.minHeight, 300)
+      this.parseCssDimension(style.minHeight, 300, 'height', modalContent)
     );
     const configuredMaxWidth = this.parsePositiveInteger(modalContent.getAttribute('data-max-width'), cssMaxWidth);
     const configuredMaxHeight = this.parsePositiveInteger(modalContent.getAttribute('data-max-height'), cssMaxHeight);

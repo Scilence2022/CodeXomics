@@ -9678,8 +9678,8 @@ input:checked + .slider:before {
 }
 
 .blast-modal-content {
-  width: 90vw;
-  max-width: none;
+  width: 60vw;
+  max-width: 90vw;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
