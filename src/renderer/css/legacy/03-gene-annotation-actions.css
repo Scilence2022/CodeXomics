@@ -1,0 +1,1006 @@
+/* Gene annotation action legacy styles
+ * Extracted from src/renderer/styles.css to keep the renderer CSS entry point small.
+ */
+
+/* Enhanced Refine Annotation Button Styling */
+.gene-refine-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 8px 16px;
+  min-width: auto;
+  width: auto;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  text-transform: none;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gene-refine-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.gene-refine-btn:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #a855f7 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+}
+
+.gene-refine-btn:hover::before {
+  left: 100%;
+}
+
+.gene-refine-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.gene-refine-btn i {
+  font-size: 13px;
+  margin-right: 6px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.gene-refine-btn:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(139, 92, 246, 0.3),
+    0 4px 16px rgba(139, 92, 246, 0.4);
+}
+
+/* Enhanced Edit Annotation Button for consistency */
+.gene-edit-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 8px 16px;
+  min-width: auto;
+  width: auto;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  text-transform: none;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gene-edit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.gene-edit-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.gene-edit-btn:hover::before {
+  left: 100%;
+}
+
+.gene-edit-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.gene-edit-btn i {
+  font-size: 13px;
+  margin-right: 6px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.gene-edit-btn:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.3),
+    0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+/* Enhanced Deep Gene Research Button Styling */
+.gene-deep-research-btn {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 50%, #a93226 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 8px 16px;
+  min-width: auto;
+  width: auto;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  text-transform: none;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gene-deep-research-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.gene-deep-research-btn:hover {
+  background: linear-gradient(135deg, #c0392b 0%, #a93226 50%, #922b21 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(231, 76, 60, 0.4);
+}
+
+.gene-deep-research-btn:hover::before {
+  left: 100%;
+}
+
+.gene-deep-research-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
+
+.gene-deep-research-btn i {
+  font-size: 13px;
+  margin-right: 6px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.gene-deep-research-btn:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(231, 76, 60, 0.3),
+    0 4px 16px rgba(231, 76, 60, 0.4);
+}
+
+.gene-element.selected {
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.8),
+    0 0 15px rgba(59, 130, 246, 0.4);
+  z-index: 15 !important;
+  border-width: 3px !important;
+  border-color: #3b82f6 !important;
+  animation: selectedPulse 2s infinite;
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
+}
+
+/* Border-thickening highlight effect for selected genes - only apply to visual elements, not text */
+.gene-element.selected.border-highlight {
+  animation: selectedBorderThick 2s infinite;
+  border-width: 6px !important;
+  border-color: #3b82f6 !important;
+  box-shadow:
+    0 0 0 2px rgba(59, 130, 246, 0.6),
+    0 0 20px rgba(59, 130, 246, 0.5);
+  outline: 3px solid rgba(59, 130, 246, 0.8);
+  outline-offset: 1px;
+}
+
+/* Ensure text inside gene elements is not affected by border changes */
+.gene-element.selected.border-highlight * {
+  font-weight: normal !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+
+@keyframes selectedBorderThick {
+  0%,
+  100% {
+    border-width: 6px !important;
+    box-shadow:
+      0 0 0 2px rgba(59, 130, 246, 0.6),
+      0 0 20px rgba(59, 130, 246, 0.5);
+    outline: 3px solid rgba(59, 130, 246, 0.8);
+  }
+
+  50% {
+    border-width: 8px !important;
+    box-shadow:
+      0 0 0 3px rgba(59, 130, 246, 0.8),
+      0 0 25px rgba(59, 130, 246, 0.7);
+    outline: 4px solid rgba(59, 130, 246, 1);
+  }
+}
+
+.genome-viewer-section {
+  flex: 1;
+  flex-shrink: 0;
+  overflow-y: auto;
+  position: relative;
+  min-height: 200px;
+  order: 1;
+  /* Position before splitter (order: 2) and sequence-display-section (order: 3) */
+}
+
+@keyframes selectedPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(59, 130, 246, 0.8),
+      0 0 15px rgba(59, 130, 246, 0.4);
+    outline: 2px solid rgba(59, 130, 246, 0.6);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(59, 130, 246, 1),
+      0 0 20px rgba(59, 130, 246, 0.6);
+    outline: 3px solid rgba(59, 130, 246, 0.8);
+  }
+}
+
+.genes-svg-container {
+  overflow: visible;
+}
+
+.svg-gene-element {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    filter 0.2s ease;
+  transform-origin: center;
+}
+
+.svg-gene-element:hover {
+  filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.gene-triangle.left-truncated,
+.gene-arrow.left-truncated,
+.gene-triangle.right-truncated,
+.gene-arrow.right-truncated {
+  opacity: 0.95;
+}
+
+.svg-gene-element .left-truncated:hover,
+.svg-gene-element .right-truncated:hover {
+  filter: brightness(1.2) drop-shadow(0 3px 6px rgba(255, 100, 0, 0.5));
+}
+
+.svg-gene-element.promoter path,
+.svg-gene-element.promoter rect {
+  fill: url(#promoter-gradient) !important;
+  stroke: #2c5aa0 !important;
+}
+
+.svg-gene-element.terminator path,
+.svg-gene-element.terminator rect {
+  fill: url(#terminator-gradient) !important;
+  stroke: #8b0000 !important;
+}
+
+.svg-gene-element.regulatory path,
+.svg-gene-element.regulatory rect {
+  fill: url(#regulatory-gradient) !important;
+  stroke: #ff6b35 !important;
+}
+
+.svg-gene-element.repeat_region path,
+.svg-gene-element.repeat_region rect {
+  fill: #ef4444 !important;
+  stroke: #991b1b !important;
+}
+
+.svg-gene-element.trna path,
+.svg-gene-element.trna rect {
+  fill: url(#trna-gradient) !important;
+  stroke: #228b22 !important;
+}
+
+.svg-gene-element.rrna path,
+.svg-gene-element.rrna rect {
+  fill: url(#rrna-gradient) !important;
+  stroke: #006400 !important;
+}
+
+.svg-gene-element.mrna path,
+.svg-gene-element.mrna rect {
+  fill: url(#mrna-gradient) !important;
+  stroke: #32cd32 !important;
+}
+
+.svg-gene-element.selected,
+g.svg-gene-element.selected,
+rect.svg-gene-element.selected,
+path.svg-gene-element.selected {
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.9)) brightness(1.1);
+  animation: svgSelectedPulse 2s infinite;
+  opacity: 1 !important;
+}
+
+/* Border-thickening highlight effect for SVG gene elements - only apply to visual elements */
+.svg-gene-element.selected.border-highlight,
+g.svg-gene-element.selected.border-highlight,
+rect.svg-gene-element.selected.border-highlight,
+path.svg-gene-element.selected.border-highlight {
+  filter: drop-shadow(0 0 12px rgba(59, 130, 246, 1)) brightness(1.2);
+  animation: svgSelectedBorderThick 2s infinite;
+  opacity: 1 !important;
+  stroke-width: 6 !important;
+  stroke: #3b82f6 !important;
+}
+
+/* Ensure SVG text elements are not affected by stroke changes */
+.svg-gene-element.selected.border-highlight text,
+g.svg-gene-element.selected.border-highlight text,
+rect.svg-gene-element.selected.border-highlight text,
+path.svg-gene-element.selected.border-highlight text {
+  stroke-width: 0 !important;
+  stroke: none !important;
+  font-weight: normal !important;
+}
+
+@keyframes svgSelectedPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.9)) brightness(1.1);
+    stroke-width: 3;
+  }
+
+  50% {
+    filter: drop-shadow(0 0 16px rgba(59, 130, 246, 1)) brightness(1.2);
+    stroke-width: 4;
+  }
+}
+
+@keyframes svgSelectedBorderThick {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 12px rgba(59, 130, 246, 1)) brightness(1.2);
+    stroke-width: 6;
+  }
+
+  50% {
+    filter: drop-shadow(0 0 18px rgba(59, 130, 246, 1.2)) brightness(1.3);
+    stroke-width: 8;
+  }
+}
+
+.genes-svg-container text,
+.reads-svg-container text {
+  vector-effect: non-scaling-stroke !important;
+  font-feature-settings: 'kern' 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform-origin: center center !important;
+  transform: scale(1, 1) !important;
+}
+
+.svg-text-protected {
+  pointer-events: none;
+  transform-origin: center center;
+  transform-box: content-box;
+  contain: layout;
+}
+
+.svg-text-protected text {
+  transform: scale(1, 1) !important;
+  transform-origin: center center !important;
+  text-rendering: geometricPrecision;
+  shape-rendering: optimizeQuality;
+  font-stretch: normal;
+  font-variant: normal;
+}
+
+.genes-svg-container text[data-resize-protected='true'] {
+  vector-effect: non-scaling-stroke !important;
+  transform: scale(1, 1) !important;
+  transform-origin: center center !important;
+  font-stretch: normal !important;
+  white-space: nowrap !important;
+  text-rendering: geometricPrecision !important;
+}
+
+.genes-svg-container,
+.reads-svg-container {
+  shape-rendering: optimizeSpeed;
+  text-rendering: optimizeSpeed;
+  transform-style: preserve-3d;
+  contain: layout;
+}
+
+.track-content svg {
+  max-width: 100%;
+  height: auto;
+  transform-origin: top left;
+}
+
+.sequence-selected {
+  background: rgba(59, 130, 246, 0.3) !important;
+  border-radius: 3px !important;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.gene-sequence-selected {
+  background: rgba(59, 130, 246, 0.4) !important;
+}
+
+.gene-zoom-btn {
+  background: var(--primary-color);
+  color: white;
+}
+
+.gene-zoom-btn:hover {
+  background: var(--primary-hover);
+}
+
+.gene-copy-btn {
+  background: var(--success-color);
+  color: white;
+}
+
+.gene-copy-btn:hover {
+  background: #0ea5e9;
+}
+
+.gene-copy-translation-btn {
+  background: #8b5cf6;
+  color: white;
+}
+
+.gene-copy-translation-btn:hover {
+  background: #7c3aed;
+}
+
+.actions-track {
+  position: relative;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f8f9fa;
+  margin-bottom: 2px;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.actions-svg-container {
+  overflow: visible;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.svg-action-element {
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+}
+
+.svg-action-element:hover {
+  opacity: 0.8;
+  filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  z-index: 3;
+}
+
+.svg-action-element.copy-sequence path {
+  fill: url(#copy-gradient) !important;
+  stroke: #3b82f6 !important;
+  stroke-width: 1.5 !important;
+}
+
+.svg-action-element.cut-sequence path {
+  fill: url(#cut-gradient) !important;
+  stroke: #ef4444 !important;
+  stroke-width: 1.5 !important;
+}
+
+.svg-action-element.paste-sequence path {
+  fill: url(#paste-gradient) !important;
+  stroke: #10b981 !important;
+  stroke-width: 1.5 !important;
+}
+
+.svg-action-element.delete-sequence path {
+  fill: url(#delete-gradient) !important;
+  stroke: #f59e0b !important;
+  stroke-width: 1.5 !important;
+}
+
+.svg-action-element.insert-sequence path {
+  fill: url(#insert-gradient) !important;
+  stroke: #8b5cf6 !important;
+  stroke-width: 1.5 !important;
+}
+
+.svg-action-element.replace-sequence path {
+  fill: url(#replace-gradient) !important;
+  stroke: #06b6d4 !important;
+  stroke-width: 1.5 !important;
+}
+
+.svg-action-element[data-action-status='executing'] path {
+  stroke-dasharray: 3, 3 !important;
+  stroke-width: 2 !important;
+  animation: actionExecuting 1.5s infinite linear;
+}
+
+.svg-action-element[data-action-status='completed'] {
+  opacity: 0.7;
+}
+
+.svg-action-element[data-action-status='completed'] path {
+  stroke: #10b981 !important;
+  stroke-width: 2 !important;
+}
+
+.svg-action-element[data-action-status='failed'] path {
+  stroke: #ef4444 !important;
+  stroke-width: 2 !important;
+  stroke-dasharray: 2, 2 !important;
+}
+
+@keyframes actionExecuting {
+  0% {
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    stroke-dashoffset: 12;
+  }
+}
+
+.svg-action-text-protected {
+  pointer-events: none;
+  transform-origin: center center;
+  position: relative;
+  z-index: 4;
+}
+
+.svg-action-text-protected text {
+  vector-effect: non-scaling-stroke !important;
+  font-family: 'Arial', sans-serif !important;
+  font-weight: 500 !important;
+  fill: #ffffff !important;
+  text-rendering: geometricPrecision;
+}
+
+.unified-actions-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  z-index: 1;
+}
+
+.actions-track-stats {
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  color: #666;
+  border: 1px solid #ddd;
+  z-index: 5;
+}
+
+.no-actions-message,
+.no-actions-visible-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #666;
+  font-style: italic;
+  font-size: 12px;
+  text-align: center;
+  z-index: 1;
+}
+
+.actions-svg-container text {
+  vector-effect: non-scaling-stroke !important;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform: scale(1, 1) !important;
+  transform-origin: center center !important;
+}
+
+.add-feature-btn {
+  background: var(--success-color);
+  color: white;
+  border: none;
+  margin-right: 4px;
+  transition: all 0.2s ease;
+}
+
+.add-feature-btn:hover {
+  background: #0ea5e9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.add-feature-btn:active {
+  transform: translateY(0);
+}
+
+.add-feature-btn i {
+  margin-right: 4px;
+}
+
+.more-features-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 180px;
+  padding: 4px;
+  flex-direction: column;
+}
+
+.dropdown-feature-btn {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #495057;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: background-color 0.2s ease;
+  width: 100%;
+}
+
+.dropdown-feature-btn:hover {
+  background-color: #f8f9fa;
+}
+
+.dropdown-feature-btn i {
+  margin-right: 8px;
+  width: 16px;
+  text-align: center;
+}
+
+.more-features-dropdown {
+  margin-top: 8px;
+}
+
+.plugin-management-tabs {
+  width: 100%;
+}
+
+.plugin-management-tabs .tab-header {
+  display: flex;
+  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 20px;
+}
+
+.plugin-management-tabs .tab-btn {
+  background: none;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6c757d;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plugin-management-tabs .tab-btn:hover {
+  color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.plugin-management-tabs .tab-btn.active {
+  color: #007bff;
+  border-bottom-color: #007bff;
+  font-weight: 600;
+}
+
+.plugin-management-tabs .tab-content {
+  display: none;
+}
+
+.plugin-management-tabs .tab-content.active {
+  display: block;
+}
+
+.plugin-section {
+  margin-bottom: 30px;
+}
+
+.plugin-section h4 {
+  color: #495057;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plugins-list {
+  display: grid;
+  gap: 15px;
+}
+
+.plugin-card {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  background: var(--bg-primary);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.plugin-card:hover {
+  border-color: #007bff;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.15);
+}
+
+.plugin-card.available-plugin {
+  border-color: #28a745;
+  background: #f8fff9;
+}
+
+.plugin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.plugin-info {
+  flex: 1;
+}
+
+.plugin-name {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plugin-version {
+  background: #007bff;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.plugin-status {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.plugin-status.status-enabled {
+  background: #d4edda;
+  color: #155724;
+}
+
+.plugin-status.status-disabled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.plugin-status.status-available {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.plugin-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.plugin-description {
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.plugin-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.plugin-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.plugin-directory {
+  margin-top: 20px;
+}
+
+.settings-section {
+  margin-bottom: 25px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.settings-section h4 {
+  color: #495057;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.input-group .input-full {
+  flex: 1;
+}
+
+.help-text {
+  font-size: 12px;
+  color: #6c757d;
+  margin-top: 4px;
+  display: block;
+}
+
+.no-plugins,
+.loading,
+.error {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.error {
+  color: #dc3545;
+}
+
+.plugin-message {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  animation: slideIn 0.3s ease;
+}
+
+.plugin-message-info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.plugin-message-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.plugin-message-error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 400px;
+  height: 600px;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+.chat-panel.minimized {
+  height: 60px !important;
+  min-height: 60px !important;
+}
+
+.chat-panel.minimized .chat-messages,
+.chat-panel.minimized .chat-input-container {
+  display: none !important;
+}
+
+.chat-panel.minimized .resize-handle {
+  display: none;
+}
+
+.chat-panel.minimized {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  /* Enhanced positioning for minimized state */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Ensure smooth position transitions */
+}
+
