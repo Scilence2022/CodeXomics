@@ -396,7 +396,7 @@ class CanvasGenesRenderer {
    * Draw standard gene arrow/triangle path
    */
   drawStandardShapePath(gene, width, height, isLeftTruncated, isRightTruncated) {
-    const isForward = gene.strand != -1; // Use loose equality to handle string "-1"
+    const isForward = gene.strand !== -1 && gene.strand !== '-1'; // Handle numeric and string "-1"
     const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
 
     // Zigzag parameters
@@ -513,7 +513,7 @@ class CanvasGenesRenderer {
    */
   drawSpecializedShapePath(gene, width, height, isLeftTruncated, isRightTruncated) {
     const geneType = gene.type.toLowerCase();
-    const isForward = gene.strand != -1;
+    const isForward = gene.strand !== -1 && gene.strand !== '-1';
 
     // Custom shapes for specific types
     if (geneType === 'rrna') {

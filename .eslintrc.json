@@ -100,14 +100,12 @@
     "no-tabs": "off",
     "brace-style": "off",
     "no-empty": ["error", { "allowEmptyCatch": true }],
-    "no-unused-vars": ["error", { "args": "none", "caughtErrors": "none", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }],
-    "max-len": [
-      "warn",
-      {
-        "code": 120
-      }
+    "no-unused-vars": [
+      "error",
+      { "args": "none", "caughtErrors": "none", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }
     ],
-    "no-console": "warn",
+    "max-len": "off",
+    "no-console": "off",
     "no-eval": "error",
     "no-implied-eval": "error",
     "no-new-func": "error",
@@ -133,18 +131,9 @@
   },
   "overrides": [
     {
-      "files": ["src/main.js"],
-      "rules": {
-        "no-console": "off"
-      }
-    },
-    {
       "files": ["test/**/*.js"],
       "env": {
         "jest": true
-      },
-      "rules": {
-        "no-console": "off"
       }
     }
   ],

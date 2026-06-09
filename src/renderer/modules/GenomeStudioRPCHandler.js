@@ -6,10 +6,8 @@
  */
 
 // Access ipcRenderer without redeclaring
-let genomeRPCIpc;
-genomeRPCIpc =
-  (typeof window !== 'undefined' && window.ipcRenderer) ||
-  (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
+const genomeRPCIpc =
+  (typeof window !== 'undefined' && window.ipcRenderer) || (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
 
 class GenomeStudioRPCHandler {
   constructor() {

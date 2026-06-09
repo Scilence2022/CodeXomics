@@ -4548,7 +4548,7 @@ class TrackRenderer {
     settings
   ) {
     const maxVisibleRows = settings.maxVisibleRows || 10;
-     // Standard scrollbar width
+    // Standard scrollbar width
 
     // Calculate dimensions
     const rowHeight = readHeight + rowSpacing;
@@ -5696,7 +5696,7 @@ class TrackRenderer {
     // CRITICAL FIX: Calculate offset using actual sequence length (matching Canvas renderer fix)
     // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
     const genomicStart = read.start;
-     // Use BAM end coordinate directly (0-based exclusive)
+    // Use BAM end coordinate directly (0-based exclusive)
 
     const startOffset = Math.max(0, visibleStart - genomicStart);
     const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart - 1); // Convert visibleEnd from 0-based exclusive to 0-based inclusive
@@ -6315,8 +6315,8 @@ class TrackRenderer {
     // Get constraints
     const minFontSize = 4; // Very small minimum for force mode
     const maxFontSize = Math.min(16, Math.max(6, readHeight + 2)); // Allow font to be slightly larger than read height
-     // Minimum pixels needed per character
-     // Maximum useful pixels per character
+    // Minimum pixels needed per character
+    // Maximum useful pixels per character
 
     // Calculate font size based on available space
     let optimalFontSize = Math.floor(pixelsPerBase * 0.8); // Leave some padding
@@ -6758,7 +6758,6 @@ class TrackRenderer {
     const plotHeight = viewHeight - 2 * padding;
     const centerY = viewHeight / 2;
     const gcHeight = centerY - padding;
-
 
     // Create gradient definitions
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -8020,7 +8019,6 @@ class TrackRenderer {
   calculateDetailedTickSpacing(range, width) {
     const targetMajorTicks = Math.max(3, Math.min(8, width / 100));
 
-
     // Base intervals to choose from
     const baseIntervals = [
       1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000,
@@ -8233,7 +8231,6 @@ class TrackRenderer {
       const values = visibleData.map(point => point.value);
       const minValue = Math.min(...values);
       const maxValue = Math.max(...values);
-
 
       // Create track element
       const trackElement = document.createElement('div');
@@ -8914,9 +8911,8 @@ class TrackRenderer {
     let symbolPath;
 
     switch (actionType) {
-      case 'copy_sequence':
-        // Duplicate/copy symbol - two overlapping rectangles
-        {
+      case 'copy_sequence': // Duplicate/copy symbol - two overlapping rectangles
+      {
         const rect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect1.setAttribute('x', centerX - symbolSize / 2 + 1);
         rect1.setAttribute('y', centerY - symbolSize / 2 + 1);
@@ -8940,11 +8936,10 @@ class TrackRenderer {
         symbolGroup.appendChild(rect2);
         symbolGroup.appendChild(rect1);
         break;
-        }
+      }
 
-      case 'cut_sequence':
-        // Vertical scissors symbol with heads pointing up
-        {
+      case 'cut_sequence': // Vertical scissors symbol with heads pointing up
+      {
         const leftBlade = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const leftBladePath = `
                     M ${centerX - symbolSize / 6} ${centerY - symbolSize / 3}
@@ -9024,11 +9019,10 @@ class TrackRenderer {
         symbolGroup.appendChild(rightHandle);
         symbolGroup.appendChild(pivot);
         break;
-        }
+      }
 
-      case 'paste_sequence':
-        // Clipboard symbol
-        {
+      case 'paste_sequence': // Clipboard symbol
+      {
         const clipboardBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         clipboardBase.setAttribute('x', centerX - symbolSize / 3);
         clipboardBase.setAttribute('y', centerY - symbolSize / 2);
@@ -9050,11 +9044,10 @@ class TrackRenderer {
         symbolGroup.appendChild(clipboardBase);
         symbolGroup.appendChild(clipboardTop);
         break;
-        }
+      }
 
-      case 'delete_sequence':
-        // Enhanced trash/delete symbol with better proportions
-        {
+      case 'delete_sequence': // Enhanced trash/delete symbol with better proportions
+      {
         const trashBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         trashBase.setAttribute('x', centerX - symbolSize / 3);
         trashBase.setAttribute('y', centerY - symbolSize / 6);
@@ -9121,11 +9114,10 @@ class TrackRenderer {
         symbolGroup.appendChild(line2);
         symbolGroup.appendChild(line3);
         break;
-        }
+      }
 
-      case 'insert_sequence':
-        // Plus/insert symbol
-        {
+      case 'insert_sequence': // Plus/insert symbol
+      {
         const plusH = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         plusH.setAttribute('x1', centerX - symbolSize / 3);
         plusH.setAttribute('y1', centerY);
@@ -9147,11 +9139,10 @@ class TrackRenderer {
         symbolGroup.appendChild(plusH);
         symbolGroup.appendChild(plusV);
         break;
-        }
+      }
 
-      case 'replace_sequence':
-        // Refresh/replace symbol
-        {
+      case 'replace_sequence': // Refresh/replace symbol
+      {
         symbolPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const replacePath = `
                     M ${centerX - symbolSize / 3} ${centerY}
@@ -9167,11 +9158,10 @@ class TrackRenderer {
         symbolPath.setAttribute('stroke-linecap', 'round');
         symbolGroup.appendChild(symbolPath);
         break;
-        }
+      }
 
-      default:
-        // Default: simple dot
-        {
+      default: // Default: simple dot
+      {
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', centerX);
         circle.setAttribute('cy', centerY);
@@ -9179,7 +9169,7 @@ class TrackRenderer {
         circle.setAttribute('fill', '#ffffff');
         symbolGroup.appendChild(circle);
         break;
-        }
+      }
     }
 
     return symbolGroup;
@@ -9861,7 +9851,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       e.currentTarget.style.opacity = '0.4';
     }, 0);
   }
-
 
   handleWIGTrackDragOver(e) {
     if (e.preventDefault) {
@@ -11954,8 +11943,7 @@ This action cannot be undone.`;
     // First check if we have instance-level saved settings
     if (fileId && this.trackSettings[instanceKey]) {
       // Merge type-level defaults with instance overrides
-      const typeDefaults =
-        this.trackSettings[trackType] || this._getCachedDefaultTrackSettingsWithFallback(trackType);
+      const typeDefaults = this.trackSettings[trackType] || this._getCachedDefaultTrackSettingsWithFallback(trackType);
       return { ...typeDefaults, ...this.trackSettings[instanceKey] };
     }
 
@@ -12715,8 +12703,7 @@ This action cannot be undone.`;
     const settings = {};
 
     switch (trackType) {
-      case 'genes':
-        {
+      case 'genes': {
         const renderingModeElement = modal.querySelector('#genesRenderingMode');
         const maxRowsElement = modal.querySelector('#genesMaxRows');
         const showOperonsElement = modal.querySelector('#genesShowOperonsSameRow');
@@ -12776,7 +12763,7 @@ This action cannot be undone.`;
 
         console.log('Collected gene settings from form:', settings);
         break;
-        }
+      }
 
       case 'gc':
         settings.contentColor = modal.querySelector('#gcContentColor').value;
@@ -12786,9 +12773,8 @@ This action cannot be undone.`;
         settings.height = parseInt(modal.querySelector('#gcTrackHeight').value) || 140;
         break;
 
-      case 'reads':
-        // Rendering method settings
-        {
+      case 'reads': // Rendering method settings
+      {
         const renderingModeSelect = modal.querySelector('#readsRenderingMode');
         settings.renderingMode = renderingModeSelect ? renderingModeSelect.value : 'canvas';
 
@@ -12861,11 +12847,10 @@ This action cannot be undone.`;
         settings.showMismatches = modal.querySelector('#readsHighlightMismatches').checked; // Alias for compatibility
         settings.mismatchColor = modal.querySelector('#readsMismatchColor').value;
         break;
-        }
+      }
 
-      case 'sequence':
-        // View Mode settings (traditional sequence view)
-        {
+      case 'sequence': // View Mode settings (traditional sequence view)
+      {
         {
           const currentSequenceSettings = this.getTrackSettings('sequence') || {};
           if (Number.isFinite(Number(currentSequenceSettings.panelHeight))) {
@@ -12876,13 +12861,13 @@ This action cannot be undone.`;
         const showIndicatorsEl = modal.querySelector('#sequenceShowIndicators');
         if (showIndicatorsEl) settings.showIndicators = showIndicatorsEl.checked;
 
-        var showProteinSequenceEl = modal.querySelector('#sequenceShowProteinSequence');
+        const showProteinSequenceEl = modal.querySelector('#sequenceShowProteinSequence');
         if (showProteinSequenceEl) settings.showProteinSequence = showProteinSequenceEl.checked;
 
-        var showPrimersEl = modal.querySelector('#sequenceShowPrimers');
+        const showPrimersEl = modal.querySelector('#sequenceShowPrimers');
         if (showPrimersEl) settings.showPrimers = showPrimersEl.checked;
 
-        var copyFormatEl = modal.querySelector('#sequenceCopyFormat');
+        const copyFormatEl = modal.querySelector('#sequenceCopyFormat');
         if (copyFormatEl) settings.copyFormat = copyFormatEl.value === 'fasta' ? 'fasta' : 'clean';
 
         const indicatorHeightEl = modal.querySelector('#sequenceIndicatorHeight');
@@ -12977,11 +12962,10 @@ This action cannot be undone.`;
 
         // Edit Mode settings removed - only using view mode
         break;
-        }
+      }
 
-      case 'wigTracks':
-        // Collect track spacing
-        {
+      case 'wigTracks': // Collect track spacing
+      {
         const trackSpacingEl = modal.querySelector('#wigTrackSpacing');
         if (trackSpacingEl) {
           settings.trackSpacing = parseInt(trackSpacingEl.value) || 5;
@@ -13004,11 +12988,10 @@ This action cannot be undone.`;
           settings.defaultTrackHeight = parseInt(defaultHeightEl.value) || 30;
         }
         break;
-        }
+      }
 
-      case 'sequenceLine':
-        // Basic display settings
-        {
+      case 'sequenceLine': // Basic display settings
+      {
         settings.fontSize = parseInt(modal.querySelector('#sequenceLineFontSize').value) || 14;
         settings.fontFamily = modal.querySelector('#sequenceLineFontFamily').value || 'Courier New, monospace';
 
@@ -13032,7 +13015,7 @@ This action cannot be undone.`;
         settings.maxHeight = parseInt(modal.querySelector('#sequenceLineMaxHeight').value) || 50;
         settings.adaptiveHeight = modal.querySelector('#sequenceLineAdaptiveHeight').checked;
         break;
-        }
+      }
 
       case 'blast':
         // BLAST-specific settings collection
@@ -13087,13 +13070,12 @@ This action cannot be undone.`;
         settings.fileSpacing = parseInt(modal.querySelector('#variantsFileSpacing').value) || 10;
         break;
 
-      default:
-        // For other track types that use the default track height input
-        {
+      default: // For other track types that use the default track height input
+      {
         const defaultHeightInput = modal.querySelector('#defaultTrackHeight');
         settings.height = defaultHeightInput ? parseInt(defaultHeightInput.value) : 80;
         break;
-        }
+      }
     }
 
     return settings;

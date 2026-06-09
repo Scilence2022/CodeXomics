@@ -22,8 +22,10 @@ describe('ChatBox visibility startup behavior', () => {
     const servicesIndex = content.indexOf('this.initializeServices();');
 
     expect(content).toContain('initializeServices()');
-    expect(content).toContain("console.warn(`[ChatManager] ${className} not available; ${key} service disabled`);");
-    expect(content).toContain("console.warn(`[ChatManager] Failed to initialize ${className}:`, error);");
+    // eslint-disable-next-line no-template-curly-in-string -- asserting the literal source text is present
+    expect(content).toContain('console.warn(`[ChatManager] ${className} not available; ${key} service disabled`);');
+    // eslint-disable-next-line no-template-curly-in-string -- asserting the literal source text is present
+    expect(content).toContain('console.warn(`[ChatManager] Failed to initialize ${className}:`, error);');
     expect(uiIndex).toBeGreaterThan(-1);
     expect(servicesIndex).toBeGreaterThan(-1);
     expect(servicesIndex).toBeLessThan(uiIndex);

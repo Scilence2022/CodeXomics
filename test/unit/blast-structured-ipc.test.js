@@ -39,6 +39,7 @@ describe('BLAST structured IPC hardening', () => {
 
     expect(source).toContain('executable: tool');
     expect(source).toContain("args: ['-version']");
+    // eslint-disable-next-line no-template-curly-in-string -- asserting the literal source text is absent
     expect(source).not.toContain('command: `${tool} -version`');
   });
 

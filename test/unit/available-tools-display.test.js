@@ -52,6 +52,8 @@ function baseMock(overrides = {}) {
       captured.push(block);
     },
     escapeHtml: s => s,
+    getLastUserQuery: () => '',
+    getCurrentContext: () => ({}),
     ...overrides,
   };
   return { mock, captured };

@@ -219,8 +219,6 @@ class StandardClaudeMCPServer extends EventEmitter {
       const startTime = Date.now();
 
       try {
-        let result;
-
         // Agent mode: intercept all tool calls and route through the agent
         if (this.mode === 'agent' && toolName !== 'codexomics_chat') {
           this.serverLog('info', `🤖 [Agent Mode] Routing tool '${toolName}' through agent`);
@@ -231,7 +229,7 @@ class StandardClaudeMCPServer extends EventEmitter {
 
         // Execute tool with 30 second timeout (extended to 120s for agent mode)
         const timeout = this.mode === 'agent' ? 120000 : 30000;
-        result = await Promise.race([
+        const result = await Promise.race([
           this.toolsIntegrator.executeTool(toolName, args, args?.clientId),
           new Promise((_, reject) => {
             setTimeout(() => {
@@ -818,15 +816,14 @@ class StandardClaudeMCPServer extends EventEmitter {
           id,
         };
 
-      case 'tools/list':
-        {
+      case 'tools/list': {
         const tools = this.toolsIntegrator.getAvailableTools();
         return {
           jsonrpc: '2.0',
           result: { tools },
           id,
         };
-        }
+      }
 
       case 'tools/call':
         try {
@@ -986,8 +983,7 @@ class StandardClaudeMCPServer extends EventEmitter {
       let response;
 
       switch (method) {
-        case 'initialize':
-          {
+        case 'initialize': {
           this.serverLog('info', '🔄 Handling initialize request');
           this.clientInfo = params?.clientInfo;
           this.protocolVersion = params?.protocolVersion || '2024-11-05';
@@ -1014,7 +1010,7 @@ class StandardClaudeMCPServer extends EventEmitter {
             id,
           };
           break;
-          }
+        }
 
         case 'initialized':
           this.serverLog('info', '✅ Handling initialized notification');
@@ -1022,8 +1018,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           // Notifications don't need responses
           return res.status(204).send();
 
-        case 'tools/list':
-          {
+        case 'tools/list': {
           this.serverLog('info', '📋 Handling tools/list request');
           const availableTools = this.toolsIntegrator.getAvailableTools();
           response = {
@@ -1034,10 +1029,9 @@ class StandardClaudeMCPServer extends EventEmitter {
             id,
           };
           break;
-          }
+        }
 
-        case 'tools/call':
-          {
+        case 'tools/call': {
           this.serverLog('info', '🔧 Handling tools/call request');
           const { name: toolName, arguments: args } = params;
           const startTime = Date.now();
@@ -1084,7 +1078,7 @@ class StandardClaudeMCPServer extends EventEmitter {
             };
           }
           break;
-          }
+        }
 
         case 'ping':
           this.serverLog('info', '🏓 Handling ping request');
