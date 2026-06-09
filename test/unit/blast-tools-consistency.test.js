@@ -174,6 +174,16 @@ describe('BLAST Tool Registry Consistency', () => {
       expect(content).toContain(`blastdbcmd -db "${escapedDbNameToken}" -info`);
       expect(content).toContain('localDbPath: dbDirectory || this.config.localDbPath');
     });
+
+    it('should name quick BLAST databases from generated FASTA basenames', () => {
+      const dbNameToken = '$' + '{dbName}';
+
+      expect(content).toContain('const dbName = this.getQuickDatabaseBaseName(genomeName, dbType)');
+      expect(content).toContain('dbId = dbName');
+      expect(content).toContain(`fileName: \`${dbNameToken}.fasta\``);
+      expect(content).toContain("replace(/\\.(fasta|fa|fas|txt|gbk|gb|genbank)$/i, '')");
+      expect(content).not.toContain('dbId = `quick_${dbName');
+    });
   });
 
   describe('FunctionCallsOrganizer BLAST entries', () => {

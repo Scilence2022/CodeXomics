@@ -1583,10 +1583,10 @@ class BlastManager {
         statusContent.innerHTML = `<div class="alert alert-info">Creating ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database for ${genomeName}...</div>`;
       }
 
-      // Create database name and ID
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
-      const dbName = `${genomeName}_${dbType === 'nucl' ? 'nucleotide' : 'protein'}_${timestamp}`;
-      dbId = `quick_${dbName.replace(/[^a-zA-Z0-9_]/g, '_')}_${Date.now()}`;
+      // Use the generated FASTA basename as the database name so user-facing
+      // database entries match the files created on disk.
+      const dbName = this.getQuickDatabaseBaseName(genomeName, dbType);
+      dbId = dbName;
 
       // Generate FASTA content based on database type
       let fastaContent = '';
@@ -1681,12 +1681,18 @@ class BlastManager {
       this.populateAvailableDatabasesList();
 
       // Check if we need to create a FASTA file from GBK source (only for nucleotide)
+      let tempFile = null;
       if (dbType === 'nucl') {
-        await this.createFastaFileIfNeeded(genomeName, fastaContent);
+        tempFile = await this.createFastaFileIfNeeded(genomeName, fastaContent, dbName);
       }
 
-      // Create temporary file
-      const tempFile = await this.writeSequenceToFile(fastaContent, dbName, dbType);
+      // Create FASTA file used by makeblastdb. For GBK nucleotide sources this
+      // reuses the generated source-adjacent FASTA file above.
+      if (!tempFile) {
+        tempFile = await this.writeSequenceToFile(fastaContent, dbName, dbType, {
+          fileName: `${dbName}.fasta`,
+        });
+      }
 
       // Check if BLAST+ is installed
       const isBlastInstalled = await this.checkBlastInstallation();
@@ -1706,7 +1712,7 @@ class BlastManager {
 
           await this.createLocalDatabase({
             inputFile: tempFile,
-            dbName: dbId, // Use dbId instead of dbName for unique identification
+            dbName: dbId,
             dbType: dbType,
             title: `${genomeName} - ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database`,
             outputDir: outputDir,
@@ -1955,7 +1961,7 @@ class BlastManager {
         window.$(modal).modal('show');
 
         // Clean up modal when hidden
-        window.$(modal).on('hidden.bs.modal', function () {
+        window.$(modal).on('hidden.bs.modal', () => {
           modal.remove();
         });
       } else {
@@ -2207,17 +2213,38 @@ class BlastManager {
     }
   }
 
+  getCurrentGenomeFilePath() {
+    const currentFile = this.app?.fileManager?.currentFile;
+    if (currentFile?.path) return currentFile.path;
+    if (currentFile?.info?.path) return currentFile.info.path;
+    if (this.app?.currentFilePath) return this.app.currentFilePath;
+    return null;
+  }
+
+  stripGenomeFileExtension(fileName) {
+    return String(fileName || '').replace(/\.(fasta|fa|fas|txt|gbk|gb|genbank)$/i, '');
+  }
+
+  getQuickDatabaseBaseName(genomeName, dbType) {
+    const path = this.getPathModule();
+    const currentFilePath = this.getCurrentGenomeFilePath();
+    const sourceName = currentFilePath ? path.basename(currentFilePath) : genomeName || 'genome';
+    const sourceBaseName = this.stripGenomeFileExtension(sourceName);
+    const sanitizedBaseName = this.sanitizeFileNamePart(sourceBaseName) || 'genome';
+
+    return dbType === 'prot' ? `${sanitizedBaseName}_protein` : sanitizedBaseName;
+  }
+
   // Create FASTA file from GBK if needed
-  async createFastaFileIfNeeded(genomeName, fastaContent) {
+  async createFastaFileIfNeeded(genomeName, fastaContent, fastaBaseName = null) {
     try {
       // Check if the current loaded file is a GBK file
-      const currentFile = this.app?.fileManager?.currentFile;
-      if (!currentFile || !currentFile.info?.path) {
+      const currentPath = this.getCurrentGenomeFilePath();
+      if (!currentPath) {
         console.log('No current file path available, skipping FASTA file creation');
-        return;
+        return null;
       }
 
-      const currentPath = currentFile.info.path;
       const isGbkFile =
         currentPath.toLowerCase().endsWith('.gbk') ||
         currentPath.toLowerCase().endsWith('.gb') ||
@@ -2230,8 +2257,9 @@ class BlastManager {
 
       const path = this.getPathModule();
       const gbkDir = path.dirname(currentPath);
-      const gbkBasename = path.basename(currentPath, path.extname(currentPath));
-      const fastaPath = path.join(gbkDir, `${gbkBasename}.fasta`);
+      const gbkBasename = fastaBaseName || this.stripGenomeFileExtension(path.basename(currentPath));
+      const sanitizedBasename = this.sanitizeFileNamePart(gbkBasename) || 'genome';
+      const fastaPath = path.join(gbkDir, `${sanitizedBasename}.fasta`);
 
       // Check if FASTA file already exists
       if (await this.fileExistsViaMain(fastaPath)) {
@@ -2245,7 +2273,7 @@ class BlastManager {
         writtenPath = await this.writeTextFileViaMain(fastaPath, fastaContent);
       } catch (writeError) {
         const tempDir = await this.getAppTempDirectory();
-        const fallbackPath = path.join(tempDir, `${gbkBasename}_${Date.now()}.fasta`);
+        const fallbackPath = path.join(tempDir, `${sanitizedBasename}.fasta`);
         console.warn(
           `BlastManager: Could not write FASTA next to GBK (${writeError.message}); retrying in temp directory`
         );
@@ -6235,7 +6263,7 @@ class BlastManager {
     return fastaContent;
   }
 
-  async writeSequenceToFile(fastaContent, dbName, dbType) {
+  async writeSequenceToFile(fastaContent, dbName, dbType, options = {}) {
     const path = this.getPathModule();
 
     // Try to get current file directory first, fallback to the main-process temp directory.
@@ -6267,7 +6295,9 @@ class BlastManager {
       console.log('BlastManager: Current file path not available, using temp directory');
     }
 
-    const fileName = `${this.sanitizeFileNamePart(dbName)}_${this.sanitizeFileNamePart(dbType)}_${Date.now()}.fasta`;
+    const fileName =
+      options.fileName ||
+      `${this.sanitizeFileNamePart(dbName)}_${this.sanitizeFileNamePart(dbType)}_${Date.now()}.fasta`;
     let filePath = path.join(targetDir, fileName);
 
     try {
