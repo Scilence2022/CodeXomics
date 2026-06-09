@@ -359,7 +359,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'ui_interaction',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: 'Open Five new tabs for parallel genome analysis.',
+        instruction: 'Open Five new tabs.',
         expectedResult: {
           tool_name: 'open_new_tab',
           parameters: {},
@@ -379,7 +379,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Open a new tab for a focused analysis, switch to the newly opened tab, then close that tab to return to the original analysis context.',
+          'Open a new tab, switch to the newly opened tab, then close that tab to return to the original analysis context.',
         expectedResult: {
           tool_sequence: ['open_new_tab', 'switch_to_tab', 'close_tab'],
           parameters: [
