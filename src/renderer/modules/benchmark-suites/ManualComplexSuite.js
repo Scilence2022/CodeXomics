@@ -102,8 +102,8 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         instruction:
           "Find all genes with names containing 'ara' and perform integrated analysis of their chromosomal clustering.",
         expectedResult: {
-          tool_sequence: ['find_gene_by_name', 'analyze_region'],
-          parameters: [{ name: 'ara', exact_match: false }, 'sequence_analysis_parameters'],
+          tool_sequence: ['find_gene_by_name', 'get_sequence'],
+          parameters: [{ name: 'ara', exact_match: false }, 'sequence_parameters'],
         },
         maxScore: 10,
         bonusScore: 2,

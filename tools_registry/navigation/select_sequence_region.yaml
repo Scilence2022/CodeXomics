@@ -58,7 +58,7 @@ relationships:
   enhances: ['navigate_to_position', 'get_sequence', 'get_sequence_selection']
   alternatives: ['select_gene']
   prerequisites: []
-  follow_up: ['get_sequence', 'copy_sequence', 'analyze_region', 'export_fasta_sequence']
+  follow_up: ['get_sequence', 'copy_sequence', 'export_fasta_sequence']
 metadata:
   usage_count: 0
   success_rate: 0

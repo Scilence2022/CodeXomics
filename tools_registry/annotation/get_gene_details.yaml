@@ -50,7 +50,7 @@ relationships:
   enhances: ['get_annotation', 'list_annotations']
   alternatives: ['get_annotation']
   prerequisites: []
-  follow_up: ['get_sequence', 'analyze_region']
+  follow_up: ['get_sequence']
 
 returns:
   type: object

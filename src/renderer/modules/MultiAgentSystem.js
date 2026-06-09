@@ -843,7 +843,6 @@ class MultiAgentSystem {
         'predict_promoter',
         'predict_rbs',
         'predict_terminator',
-        'analyze_region',
         'compare_regions',
         'find_similar_sequences',
         'find_restriction_sites',

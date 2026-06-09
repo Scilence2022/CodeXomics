@@ -159,12 +159,6 @@ class ToolDefinitionCreator {
         keywords: ['create', 'annotation', 'user', 'defined'],
         priority: 2,
       },
-      analyze_region: {
-        category: 'data_management',
-        description: 'Analyze a genomic region and return features',
-        keywords: ['analyze', 'region', 'genomic', 'features'],
-        priority: 1,
-      },
       export_data: {
         category: 'data_management',
         description: 'Export sequence or annotation data',

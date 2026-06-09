@@ -67,7 +67,7 @@ sample_usages:
 # Tool relationships
 relationships:
   depends_on: ['load_genome_file']
-  enhances: ['analyze_region', 'search_features']
+  enhances: ['search_features']
   follow_up: ['get_current_state', 'navigate_to_position']
 
 # Integration requirements

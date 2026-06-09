@@ -139,7 +139,6 @@ class ToolCapabilityPolicy {
         tools: [
           'codon_usage_analysis',
           'compute_gc',
-          'analyze_region',
           'translate_dna',
           'reverse_complement',
           'get_coding_sequence',

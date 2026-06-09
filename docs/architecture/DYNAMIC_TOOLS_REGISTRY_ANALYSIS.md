@@ -123,7 +123,7 @@ categories:
      conflicts_with: []
      enhances: ['get_current_state', 'search_features']
      alternatives: ['jump_to_gene']
-     follow_up: ['get_sequence', 'analyze_region']
+     follow_up: ['get_sequence']
    ```
 
 6. **性能元数据**

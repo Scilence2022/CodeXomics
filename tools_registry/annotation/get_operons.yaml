@@ -54,7 +54,7 @@ relationships:
   enhances: ['list_annotations', 'get_gene_details', 'load_operon_file']
   alternatives: ['list_annotations', 'get_nearby_features']
   prerequisites: ['load_genome_file', 'load_annotation_file']
-  follow_up: ['get_gene_details', 'get_sequence', 'analyze_region']
+  follow_up: ['get_gene_details', 'get_sequence']
 
 returns:
   type: object

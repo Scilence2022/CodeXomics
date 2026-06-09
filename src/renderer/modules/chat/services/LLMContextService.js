@@ -52,9 +52,6 @@ class LLMContextService {
       case 'create_annotation':
         return `✨ Created ${result.type} annotation "${result.name}" at ${result.chromosome}:${result.start}-${result.end}`;
 
-      case 'analyze_region':
-        return `🔬 Analyzed region ${result.chromosome}:${result.start}-${result.end} (${result.length}bp, ${result.gcContent}% GC, ${result.featureCount || 0} features)`;
-
       case 'export_data':
         return `💾 Exported ${result.format.toUpperCase()} data successfully. File has been downloaded.`;
 
@@ -733,7 +730,6 @@ class LLMContextService {
       'focus_on_gene',
       'codon_usage_analysis',
       'compute_gc',
-      'analyze_region',
       'analyze_interpro_domains',
       'load_genome_file',
       'load_annotation_file',
@@ -1716,7 +1712,6 @@ Sequence Analysis:
   - sequence_statistics: Analyze sequence composition
 
 Advanced Analysis:
-  - analyze_region: Comprehensive region analysis
   - blast_search: BLAST sequence similarity
   - predict_promoter: Predict promoter regions
   - find_restriction_sites: Find enzyme cut sites

@@ -646,7 +646,6 @@ translate_sequence(sequence, frame);
 calculate_gc_content(sequence);
 reverse_complement(sequence);
 predict_promoter(sequence);
-analyze_region(chromosome, start, end);
 find_restriction_sites(sequence);
 ```
 
@@ -825,13 +824,7 @@ functionCategories = {
   },
   advancedAnalysis: {
     priority: 4,
-    functions: [
-      'predict_promoter',
-      'analyze_region',
-      'find_restriction_sites',
-      'melting_temperature',
-      'molecular_weight_calc',
-    ],
+    functions: ['predict_promoter', 'find_restriction_sites', 'melting_temperature', 'molecular_weight_calc'],
   },
   externalAPI: {
     priority: 5,
@@ -903,7 +896,6 @@ functionToCategory = new Map([
 
   // Advanced Analysis
   ['predict_promoter', 'advancedAnalysis'],
-  ['analyze_region', 'advancedAnalysis'],
   ['find_restriction_sites', 'advancedAnalysis'],
 
   // External APIs

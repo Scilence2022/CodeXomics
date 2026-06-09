@@ -80,7 +80,7 @@ sample_usages:
 # Tool relationships
 relationships:
   depends_on: ['load_genome_file']
-  enhances: ['search_features', 'analyze_region', 'get_operons']
+  enhances: ['search_features', 'get_operons']
   follow_up: ['get_current_state', 'find_gene_by_name']
 
 # Integration requirements

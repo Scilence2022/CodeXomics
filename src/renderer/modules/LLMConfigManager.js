@@ -3145,7 +3145,6 @@ You have access to tools that can:
 - Retrieve DNA sequences (use tool: 'get_sequence', parameters: {chromosome: string, start: number, end: number})
 - Toggle track visibility (use tool: 'toggle_track', parameters: {trackName: string, visible: boolean})
 - Create annotations (use tool: 'create_annotation', parameters: {type: string, name: string, chromosome: string, start: number, end: number, strand: number, description?: string})
-- Analyze genomic regions (use tool: 'analyze_region', parameters: {chromosome: string, start: number, end: number, includeFeatures?: boolean, includeGC?: boolean})
 - Export data (use tool: 'export_data', parameters: {format: string, chromosome?: string, start?: number, end?: number})
 
 CRITICAL FUNCTION SELECTION RULES:

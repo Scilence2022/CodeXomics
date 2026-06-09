@@ -67,7 +67,7 @@ relationships:
   enhances: ['jump_to_gene', 'get_selected_gene', 'get_gene_details']
   alternatives: ['jump_to_gene']
   prerequisites: []
-  follow_up: ['get_sequence', 'analyze_region', 'copy_sequence', 'edit_annotation']
+  follow_up: ['get_sequence', 'copy_sequence', 'edit_annotation']
 metadata:
   usage_count: 0
   success_rate: 0

@@ -1034,8 +1034,6 @@ class BenchmarkEvaluatorBase {
       'execute_actions',
       'get_action_list',
       'clear_actions',
-      // Analysis
-      'analyze_region',
       // UI
       'open_new_tab',
       'switch_to_tab',

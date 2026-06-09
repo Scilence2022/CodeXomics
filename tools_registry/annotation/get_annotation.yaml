@@ -75,7 +75,7 @@ relationships:
   enhances: ['list_annotations', 'search_annotations']
   alternatives: ['search_annotations', 'list_annotations']
   prerequisites: []
-  follow_up: ['get_sequence', 'analyze_region']
+  follow_up: ['get_sequence']
 
 returns:
   type: object

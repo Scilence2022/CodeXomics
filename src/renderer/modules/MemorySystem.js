@@ -1921,7 +1921,6 @@ class MemorySystem {
 
   isComplexAnalysis(functionName) {
     const complexFunctions = [
-      'analyze_region',
       'compare_regions',
       'find_similar_sequences',
       'build_phylogenetic_tree',

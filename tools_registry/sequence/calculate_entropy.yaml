@@ -36,7 +36,7 @@ sample_usages:
 relationships:
   depends_on: ['get_sequence']
   conflicts_with: []
-  enhances: ['sequence_statistics', 'analyze_region']
+  enhances: ['sequence_statistics']
   alternatives: ['sequence_statistics']
   prerequisites: []
   follow_up: ['compute_gc', 'translate_dna']

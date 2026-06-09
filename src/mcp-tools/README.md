@@ -170,7 +170,6 @@ Tools for accessing biological databases:
 Tools for data annotation, export, and analysis:
 
 - `create_annotation` - Create annotations
-- `analyze_region` - Analyze genomic regions
 - `export_data` - Export data
 - `codon_usage_analysis` - Analyze codon usage
 

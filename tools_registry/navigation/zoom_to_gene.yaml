@@ -77,7 +77,7 @@ relationships:
   enhances: ['navigate_to_position', 'jump_to_gene']
   alternatives: ['select_gene', 'jump_to_gene']
   prerequisites: []
-  follow_up: ['get_sequence', 'get_gene_details', 'analyze_region']
+  follow_up: ['get_sequence', 'get_gene_details']
 metadata:
   usage_count: 0
   success_rate: 0

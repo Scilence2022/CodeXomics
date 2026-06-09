@@ -83,7 +83,7 @@ sample_usages:
 relationships:
   depends_on: ['load_genome_file']
   enhances: ['toggle_track', 'get_current_state']
-  follow_up: ['navigate_to_position', 'analyze_region']
+  follow_up: ['navigate_to_position']
 
 # Integration requirements
 integration_requirements: ['data']

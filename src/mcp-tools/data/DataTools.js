@@ -58,23 +58,6 @@ class DataTools {
         },
       },
 
-      analyze_region: {
-        name: 'analyze_region',
-        description: 'Analyze a genomic region and return features, GC content, etc.',
-        parameters: {
-          type: 'object',
-          properties: {
-            chromosome: { type: 'string', description: 'Chromosome name' },
-            start: { type: 'number', description: 'Start position' },
-            end: { type: 'number', description: 'End position' },
-            includeFeatures: { type: 'boolean', description: 'Include gene/feature annotations' },
-            includeGC: { type: 'boolean', description: 'Include GC content analysis' },
-            clientId: { type: 'string', description: 'Browser client ID' },
-          },
-          required: ['chromosome', 'start', 'end'],
-        },
-      },
-
       export_data: {
         name: 'export_data',
         description: 'Export sequence or annotation data',

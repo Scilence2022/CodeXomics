@@ -203,7 +203,6 @@ const TOOL_NAMES = {
   SYSTEM: {
     SET_WORKING_DIRECTORY: 'set_working_directory',
     LIST_AVAILABLE_TOOLS: 'list_available_tools',
-    ANALYZE_REGION: 'analyze_region',
     SWITCH_UI_STYLE: 'switch_ui_style',
     TOGGLE_SETTINGS_MODAL: 'toggle_settings_modal',
   },

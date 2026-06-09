@@ -1,6 +1,6 @@
 name: list_annotations
 version: 1.0.0
-description: 'List genome annotations in a specified region or chromosome with filtering by feature type. Use this when the user asks to list, show, or display annotations/genes/features in a region. Returns structured annotation data with position, type, strand, gene name, and product. NOT the same as search_annotations which searches by keyword, or analyze_region which does statistical analysis.'
+description: 'List genome annotations in a specified region or chromosome with filtering by feature type. Use this when the user asks to list, show, or display annotations/genes/features in a region. Returns structured annotation data with position, type, strand, gene name, and product. NOT the same as search_annotations which searches by keyword.'
 category: annotation
 subcategory: annotation_crud
 keywords:
@@ -75,7 +75,7 @@ relationships:
   depends_on: []
   conflicts_with: []
   enhances: ['search_annotations', 'get_annotation']
-  alternatives: ['search_annotations', 'analyze_region']
+  alternatives: ['search_annotations']
   prerequisites: []
   follow_up: ['get_annotation', 'search_annotations']
 

@@ -13,12 +13,8 @@ describe('tool registry consistency validation', () => {
 
     expect(report.success).toBe(true);
     expect(report.errors).toEqual([]);
-    expect(report.counts.registryTools).toBeGreaterThanOrEqual(180);
-    expect(report.comparisons['ToolNames.js'].allowedExceptions).toEqual(
-      KNOWN_EXCEPTIONS.toolNamesMissingRegistry
-    );
-    expect(report.comparisons['src/mcp-tools schemas'].allowedExceptions).toEqual(
-      KNOWN_EXCEPTIONS.mcpMissingRegistry
-    );
+    expect(report.counts.registryTools).toBeGreaterThanOrEqual(178);
+    expect(report.comparisons['ToolNames.js'].allowedExceptions).toEqual(KNOWN_EXCEPTIONS.toolNamesMissingRegistry);
+    expect(report.comparisons['src/mcp-tools schemas'].allowedExceptions).toEqual(KNOWN_EXCEPTIONS.mcpMissingRegistry);
   });
 });

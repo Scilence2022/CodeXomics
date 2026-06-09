@@ -69,7 +69,6 @@
 
 包含的功能：
 
-- `analyze_region` - 区域分析
 - `find_intergenic_regions` - 查找基因间区域
 - `predict_promoter` - 预测启动子
 - `predict_terminator` - 预测终止子

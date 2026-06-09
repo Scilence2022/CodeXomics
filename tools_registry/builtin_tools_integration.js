@@ -708,13 +708,6 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
-    this.builtInToolsMap.set('analyze_region', {
-      method: 'analyzeRegion',
-      category: 'annotation',
-      type: 'built-in',
-      priority: 1,
-    });
-
     this.builtInToolsMap.set('get_gene_details', {
       method: 'getGeneDetails',
       category: 'annotation',
@@ -2142,14 +2135,6 @@ class BuiltInToolsIntegration {
         name: 'find_intergenic_regions',
         confidence: 0.9,
         reason: 'Intergenic regions query keywords detected',
-      });
-    }
-
-    if (/\b(analyze\s+region|region\s+analysis|features\s+in\s+region)\b/i.test(query)) {
-      relevantTools.push({
-        name: 'analyze_region',
-        confidence: 0.85,
-        reason: 'Region analysis keywords detected',
       });
     }
 

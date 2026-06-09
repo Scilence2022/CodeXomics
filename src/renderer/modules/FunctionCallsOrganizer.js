@@ -156,7 +156,6 @@ class FunctionCallsOrganizer {
         priority: 4,
         description: 'Advanced analysis and prediction tools',
         functions: [
-          'analyze_region',
           'find_intergenic_regions',
           'search_intergenic_regions',
           'find_restriction_sites',

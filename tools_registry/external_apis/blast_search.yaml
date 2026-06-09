@@ -105,7 +105,7 @@ relationships:
   enhances: ['analyze_interpro_domains']
   alternatives: ['advanced_blast_search', 'batch_blast_search']
   prerequisites: []
-  follow_up: ['get_uniprot_entry', 'search_alphafold_structures', 'analyze_region']
+  follow_up: ['get_uniprot_entry', 'search_alphafold_structures']
 
 # Performance and usage statistics
 metadata:

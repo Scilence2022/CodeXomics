@@ -51,7 +51,6 @@ tools_registry/
 │   └── get_interpro_entry_details.yaml
 ├── data_management/                    # Data Management Tools
 │   ├── create_annotation.yaml
-│   ├── analyze_region.yaml
 │   ├── export_data.yaml
 │   └── codon_usage_analysis.yaml
 ├── pathway/                            # Pathway & BLAST Tools

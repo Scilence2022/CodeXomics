@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-06T03:38:58.519Z",
-  "registryHash": "8b97a64fd6a969aa9127110c6e92e2933ea4c18a257140bab4e262b7f85fc80e",
+  "generatedAt": "2026-06-09T11:44:42.576Z",
+  "registryHash": "2afb4f2743e8fa505ea237119789e8d2a7f619677469a0a3c7c7ecc78048ec8d",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 179,
-    "appTools": 179,
+    "tools": 178,
+    "appTools": 178,
     "userTools": 0,
-    "uniqueTools": 173,
+    "uniqueTools": 172,
     "categories": 18,
-    "builtInTools": 143,
+    "builtInTools": 142,
     "diagnostics": 12
   },
   "categories": {
@@ -574,8 +574,7 @@
         ],
         "prerequisites": [],
         "follow_up": [
-          "get_sequence",
-          "analyze_region"
+          "get_sequence"
         ]
       },
       "returns": {
@@ -756,8 +755,7 @@
         ],
         "prerequisites": [],
         "follow_up": [
-          "get_sequence",
-          "analyze_region"
+          "get_sequence"
         ]
       },
       "returns": {
@@ -1026,8 +1024,7 @@
         ],
         "follow_up": [
           "get_gene_details",
-          "get_sequence",
-          "analyze_region"
+          "get_sequence"
         ]
       },
       "returns": {
@@ -1110,7 +1107,7 @@
     {
       "name": "list_annotations",
       "version": "1.0.0",
-      "description": "List genome annotations in a specified region or chromosome with filtering by feature type. Use this when the user asks to list, show, or display annotations/genes/features in a region. Returns structured annotation data with position, type, strand, gene name, and product. NOT the same as search_annotations which searches by keyword, or analyze_region which does statistical analysis.",
+      "description": "List genome annotations in a specified region or chromosome with filtering by feature type. Use this when the user asks to list, show, or display annotations/genes/features in a region. Returns structured annotation data with position, type, strand, gene name, and product. NOT the same as search_annotations which searches by keyword.",
       "category": "annotation",
       "subcategory": "annotation_crud",
       "keywords": [
@@ -1202,8 +1199,7 @@
           "get_annotation"
         ],
         "alternatives": [
-          "search_annotations",
-          "analyze_region"
+          "search_annotations"
         ],
         "prerequisites": [],
         "follow_up": [
@@ -3930,91 +3926,6 @@
       "execution_type": "client",
       "implementation": {},
       "builtin": null
-    },
-    {
-      "name": "analyze_region",
-      "version": "1.0.0",
-      "description": "Analyze a genomic region and return features",
-      "category": "data_management",
-      "keywords": [
-        "analyze",
-        "region",
-        "genomic",
-        "features"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 15000,
-        "retries": 2,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "clientId": {
-            "type": "string",
-            "description": "Browser client ID for multi-window support",
-            "default": "default"
-          }
-        },
-        "required": []
-      },
-      "sample_usages": [
-        {
-          "user_query": "Use analyze_region to analyze genomic data",
-          "tool_call": "analyze_region(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use analyze_region for analyze a genomic region and return features",
-          "expected_result": "Result from analyze_region analysis"
-        }
-      ],
-      "relationships": {
-        "depends_on": [],
-        "conflicts_with": [],
-        "enhances": [],
-        "alternatives": [],
-        "prerequisites": [],
-        "follow_up": []
-      },
-      "metadata": {
-        "usage_count": 0,
-        "success_rate": 0,
-        "avg_execution_time": 0,
-        "last_used": null,
-        "tags": [
-          "data_management",
-          "core",
-          "essential"
-        ],
-        "complexity": "simple",
-        "usage_pattern": "frequent"
-      },
-      "error_handling": {},
-      "returns": {
-        "success": "boolean - Whether operation was successful",
-        "result": "object - Operation result"
-      },
-      "source": "app_registry",
-      "sourceFile": "data_management/analyze_region.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "analyzeRegion"
-      },
-      "builtin": {
-        "name": "analyze_region",
-        "method": "analyzeRegion",
-        "category": "annotation",
-        "type": "built-in",
-        "priority": 1,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
     },
     {
       "name": "blast_detect_sequence_type",
@@ -7537,8 +7448,7 @@
         "prerequisites": [],
         "follow_up": [
           "get_uniprot_entry",
-          "search_alphafold_structures",
-          "analyze_region"
+          "search_alphafold_structures"
         ]
       },
       "metadata": {
@@ -8910,8 +8820,7 @@
         ],
         "enhances": [
           "search_features",
-          "get_gene_details",
-          "analyze_region"
+          "get_gene_details"
         ],
         "follow_up": [
           "find_gene_by_name",
@@ -9255,7 +9164,6 @@
         ],
         "enhances": [
           "search_features",
-          "analyze_region",
           "get_operons"
         ],
         "follow_up": [
@@ -9415,7 +9323,6 @@
           "load_genome_file"
         ],
         "enhances": [
-          "analyze_region",
           "get_current_state"
         ],
         "follow_up": [
@@ -9574,7 +9481,6 @@
           "load_genome_file"
         ],
         "enhances": [
-          "analyze_region",
           "search_features"
         ],
         "follow_up": [
@@ -9753,8 +9659,7 @@
           "get_current_state"
         ],
         "follow_up": [
-          "navigate_to_position",
-          "analyze_region"
+          "navigate_to_position"
         ]
       },
       "integration_requirements": [
@@ -12391,7 +12296,6 @@
         "prerequisites": [],
         "follow_up": [
           "get_sequence",
-          "analyze_region",
           "get_coding_sequence"
         ],
         "recommendation": "Use jump_to_gene first for direct navigation, use this for fuzzy/partial searches"
@@ -13274,8 +13178,7 @@
         ],
         "prerequisites": [],
         "follow_up": [
-          "get_sequence",
-          "analyze_region"
+          "get_sequence"
         ]
       },
       "metadata": {
@@ -13470,7 +13373,6 @@
         "prerequisites": [],
         "follow_up": [
           "get_sequence",
-          "analyze_region",
           "search_features"
         ]
       },
@@ -14467,7 +14369,6 @@
         "prerequisites": [],
         "follow_up": [
           "get_sequence",
-          "analyze_region",
           "copy_sequence",
           "edit_annotation"
         ]
@@ -14602,7 +14503,6 @@
         "follow_up": [
           "get_sequence",
           "copy_sequence",
-          "analyze_region",
           "export_fasta_sequence"
         ]
       },
@@ -15546,8 +15446,7 @@
         "prerequisites": [],
         "follow_up": [
           "get_sequence",
-          "get_gene_details",
-          "analyze_region"
+          "get_gene_details"
         ]
       },
       "metadata": {
@@ -18579,8 +18478,7 @@
         ],
         "conflicts_with": [],
         "enhances": [
-          "sequence_statistics",
-          "analyze_region"
+          "sequence_statistics"
         ],
         "alternatives": [
           "sequence_statistics"
@@ -18885,7 +18783,6 @@
         ],
         "conflicts_with": [],
         "enhances": [
-          "analyze_region",
           "sequence_statistics"
         ],
         "alternatives": [
@@ -19379,8 +19276,7 @@
         "follow_up": [
           "compute_gc",
           "translate_dna",
-          "reverse_complement",
-          "analyze_region"
+          "reverse_complement"
         ]
       },
       "metadata": {
@@ -23617,8 +23513,7 @@
         ],
         "prerequisites": [],
         "follow_up": [
-          "get_sequence",
-          "analyze_region"
+          "get_sequence"
         ]
       },
       "returns": {
@@ -23799,8 +23694,7 @@
         ],
         "prerequisites": [],
         "follow_up": [
-          "get_sequence",
-          "analyze_region"
+          "get_sequence"
         ]
       },
       "returns": {
@@ -24069,8 +23963,7 @@
         ],
         "follow_up": [
           "get_gene_details",
-          "get_sequence",
-          "analyze_region"
+          "get_sequence"
         ]
       },
       "returns": {
@@ -24153,7 +24046,7 @@
     "list_annotations": {
       "name": "list_annotations",
       "version": "1.0.0",
-      "description": "List genome annotations in a specified region or chromosome with filtering by feature type. Use this when the user asks to list, show, or display annotations/genes/features in a region. Returns structured annotation data with position, type, strand, gene name, and product. NOT the same as search_annotations which searches by keyword, or analyze_region which does statistical analysis.",
+      "description": "List genome annotations in a specified region or chromosome with filtering by feature type. Use this when the user asks to list, show, or display annotations/genes/features in a region. Returns structured annotation data with position, type, strand, gene name, and product. NOT the same as search_annotations which searches by keyword.",
       "category": "annotation",
       "subcategory": "annotation_crud",
       "keywords": [
@@ -24245,8 +24138,7 @@
           "get_annotation"
         ],
         "alternatives": [
-          "search_annotations",
-          "analyze_region"
+          "search_annotations"
         ],
         "prerequisites": [],
         "follow_up": [
@@ -26973,91 +26865,6 @@
       "execution_type": "client",
       "implementation": {},
       "builtin": null
-    },
-    "analyze_region": {
-      "name": "analyze_region",
-      "version": "1.0.0",
-      "description": "Analyze a genomic region and return features",
-      "category": "data_management",
-      "keywords": [
-        "analyze",
-        "region",
-        "genomic",
-        "features"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 15000,
-        "retries": 2,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "clientId": {
-            "type": "string",
-            "description": "Browser client ID for multi-window support",
-            "default": "default"
-          }
-        },
-        "required": []
-      },
-      "sample_usages": [
-        {
-          "user_query": "Use analyze_region to analyze genomic data",
-          "tool_call": "analyze_region(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use analyze_region for analyze a genomic region and return features",
-          "expected_result": "Result from analyze_region analysis"
-        }
-      ],
-      "relationships": {
-        "depends_on": [],
-        "conflicts_with": [],
-        "enhances": [],
-        "alternatives": [],
-        "prerequisites": [],
-        "follow_up": []
-      },
-      "metadata": {
-        "usage_count": 0,
-        "success_rate": 0,
-        "avg_execution_time": 0,
-        "last_used": null,
-        "tags": [
-          "data_management",
-          "core",
-          "essential"
-        ],
-        "complexity": "simple",
-        "usage_pattern": "frequent"
-      },
-      "error_handling": {},
-      "returns": {
-        "success": "boolean - Whether operation was successful",
-        "result": "object - Operation result"
-      },
-      "source": "app_registry",
-      "sourceFile": "data_management/analyze_region.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "analyzeRegion"
-      },
-      "builtin": {
-        "name": "analyze_region",
-        "method": "analyzeRegion",
-        "category": "annotation",
-        "type": "built-in",
-        "priority": 1,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
     },
     "blast_detect_sequence_type": {
       "name": "blast_detect_sequence_type",
@@ -30580,8 +30387,7 @@
         "prerequisites": [],
         "follow_up": [
           "get_uniprot_entry",
-          "search_alphafold_structures",
-          "analyze_region"
+          "search_alphafold_structures"
         ]
       },
       "metadata": {
@@ -31953,8 +31759,7 @@
         ],
         "enhances": [
           "search_features",
-          "get_gene_details",
-          "analyze_region"
+          "get_gene_details"
         ],
         "follow_up": [
           "find_gene_by_name",
@@ -32298,7 +32103,6 @@
         ],
         "enhances": [
           "search_features",
-          "analyze_region",
           "get_operons"
         ],
         "follow_up": [
@@ -32458,7 +32262,6 @@
           "load_genome_file"
         ],
         "enhances": [
-          "analyze_region",
           "get_current_state"
         ],
         "follow_up": [
@@ -32617,7 +32420,6 @@
           "load_genome_file"
         ],
         "enhances": [
-          "analyze_region",
           "search_features"
         ],
         "follow_up": [
@@ -32796,8 +32598,7 @@
           "get_current_state"
         ],
         "follow_up": [
-          "navigate_to_position",
-          "analyze_region"
+          "navigate_to_position"
         ]
       },
       "integration_requirements": [
@@ -34916,7 +34717,6 @@
         "prerequisites": [],
         "follow_up": [
           "get_sequence",
-          "analyze_region",
           "get_coding_sequence"
         ],
         "recommendation": "Use jump_to_gene first for direct navigation, use this for fuzzy/partial searches"
@@ -35799,8 +35599,7 @@
         ],
         "prerequisites": [],
         "follow_up": [
-          "get_sequence",
-          "analyze_region"
+          "get_sequence"
         ]
       },
       "metadata": {
@@ -35995,7 +35794,6 @@
         "prerequisites": [],
         "follow_up": [
           "get_sequence",
-          "analyze_region",
           "search_features"
         ]
       },
@@ -36992,7 +36790,6 @@
         "prerequisites": [],
         "follow_up": [
           "get_sequence",
-          "analyze_region",
           "copy_sequence",
           "edit_annotation"
         ]
@@ -37127,7 +36924,6 @@
         "follow_up": [
           "get_sequence",
           "copy_sequence",
-          "analyze_region",
           "export_fasta_sequence"
         ]
       },
@@ -38071,8 +37867,7 @@
         "prerequisites": [],
         "follow_up": [
           "get_sequence",
-          "get_gene_details",
-          "analyze_region"
+          "get_gene_details"
         ]
       },
       "metadata": {
@@ -41104,8 +40899,7 @@
         ],
         "conflicts_with": [],
         "enhances": [
-          "sequence_statistics",
-          "analyze_region"
+          "sequence_statistics"
         ],
         "alternatives": [
           "sequence_statistics"
@@ -41410,7 +41204,6 @@
         ],
         "conflicts_with": [],
         "enhances": [
-          "analyze_region",
           "sequence_statistics"
         ],
         "alternatives": [
@@ -41904,8 +41697,7 @@
         "follow_up": [
           "compute_gc",
           "translate_dna",
-          "reverse_complement",
-          "analyze_region"
+          "reverse_complement"
         ]
       },
       "metadata": {
@@ -46793,16 +46585,6 @@
       "source": "builtin_tools_map"
     },
     {
-      "name": "analyze_region",
-      "method": "analyzeRegion",
-      "category": "annotation",
-      "type": "built-in",
-      "priority": 1,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    {
       "name": "get_gene_details",
       "method": "getGeneDetails",
       "category": "annotation",
@@ -48218,16 +48000,6 @@
     "create_annotation": {
       "name": "create_annotation",
       "method": "createAnnotation",
-      "category": "annotation",
-      "type": "built-in",
-      "priority": 1,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    "analyze_region": {
-      "name": "analyze_region",
-      "method": "analyzeRegion",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,

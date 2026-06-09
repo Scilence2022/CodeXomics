@@ -87,7 +87,7 @@ relationships:
   enhances: ['get_current_state', 'search_features']
   alternatives: ['jump_to_gene']
   prerequisites: []
-  follow_up: ['get_sequence', 'analyze_region', 'search_features']
+  follow_up: ['get_sequence', 'search_features']
 
 # Performance and usage statistics
 metadata:

@@ -401,11 +401,6 @@
       "file": "search_uniprot_database.yaml"
     },
     {
-      "name": "analyze_region",
-      "category": "data_management",
-      "file": "analyze_region.yaml"
-    },
-    {
       "name": "blast_detect_sequence_type",
       "category": "data_management",
       "file": "blast_detect_sequence_type.yaml"

@@ -87,7 +87,7 @@ relationships:
   enhances: ['compute_gc', 'translate_dna', 'search_sequence_motif']
   alternatives: ['get_coding_sequence']
   prerequisites: []
-  follow_up: ['compute_gc', 'translate_dna', 'reverse_complement', 'analyze_region']
+  follow_up: ['compute_gc', 'translate_dna', 'reverse_complement']
 
 # Performance and usage statistics
 metadata:

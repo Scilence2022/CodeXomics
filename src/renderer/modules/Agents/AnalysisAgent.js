@@ -102,7 +102,6 @@ class AnalysisAgent extends AgentBase {
     this.toolMapping.set('predict_terminator', this.predictTerminator.bind(this));
 
     // 区域分析
-    this.toolMapping.set('analyze_region', this.analyzeRegion.bind(this));
     this.toolMapping.set('compare_regions', this.compareRegions.bind(this));
     this.toolMapping.set('find_similar_sequences', this.findSimilarSequences.bind(this));
 
@@ -611,46 +610,6 @@ class AnalysisAgent extends AgentBase {
         terminatorScore,
         sequence: seq,
         prediction: terminatorScore > 0.7 ? 'likely' : terminatorScore > 0.4 ? 'possible' : 'unlikely',
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * 分析区域
-   */
-  async analyzeRegion(parameters, strategy) {
-    try {
-      const { chromosome, start, end } = parameters;
-
-      if (!chromosome || start === undefined || end === undefined) {
-        throw new Error('Chromosome, start, and end are required');
-      }
-
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const sequence = await this.sequenceUtils.getSequence(chromosome, start, end);
-      const gcContent = this.sequenceUtils.calculateGCContent(sequence);
-      const orfs = this.sequenceUtils.findORFs(sequence, 30);
-
-      return {
-        success: true,
-        region: { chromosome, start, end },
-        sequence: sequence,
-        gcContent,
-        orfCount: orfs.length,
-        orfs: orfs.map(orf => ({
-          start: orf.start,
-          end: orf.end,
-          length: orf.end - orf.start,
-          frame: orf.frame,
-        })),
       };
     } catch (error) {
       return {

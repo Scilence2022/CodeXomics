@@ -3589,74 +3589,6 @@ class ChatManager {
     throw new Error('Annotation creation not available');
   }
 
-  async analyzeRegion(params = {}) {
-    if (!params || typeof params !== 'object') {
-      params = {};
-    }
-
-    let currentState = null;
-    try {
-      currentState = this.getCurrentState ? this.getCurrentState() : null;
-    } catch (_error) {
-      currentState = null;
-    }
-
-    const currentPosition = this.app?.currentPosition || currentState?.currentPosition || null;
-    const chromosome =
-      params.chromosome ||
-      params.chrom ||
-      params.chr ||
-      params.target ||
-      this.app?.currentChromosome ||
-      currentState?.currentChromosome;
-
-    const startValue =
-      params.start !== undefined ? params.start : params.begin !== undefined ? params.begin : currentPosition?.start;
-    const endValue = params.end !== undefined ? params.end : params.stop !== undefined ? params.stop : currentPosition?.end;
-    const start = Number.parseInt(startValue, 10);
-    const end = Number.parseInt(endValue, 10);
-
-    if (!chromosome || !Number.isFinite(start) || !Number.isFinite(end)) {
-      throw new Error(
-        'analyze_region requires chromosome, start, and end, or an active current region in the genome browser'
-      );
-    }
-
-    if (start > end) {
-      throw new Error(`analyze_region start (${start}) must be less than or equal to end (${end})`);
-    }
-
-    const shouldIncludeFeatures = params.includeFeatures === true || params.include_features === true;
-    const shouldIncludeGC = params.includeGC === true || params.include_gc === true;
-
-    const analysis = {
-      chromosome: chromosome,
-      start: start,
-      end: end,
-      length: end - start + 1,
-    };
-
-    // Get sequence if available
-    if (this.app && this.app.getSequenceForRegion) {
-      analysis.sequence = await this.app.getSequenceForRegion(chromosome, start, end);
-    }
-
-    // Get features if requested
-    if (shouldIncludeFeatures && this.app.currentAnnotations) {
-      analysis.features = this.app.currentAnnotations.filter(
-        feature => feature.chromosome === chromosome && feature.start >= start && feature.end <= end
-      );
-    }
-
-    // Calculate GC content if requested
-    if (shouldIncludeGC && analysis.sequence) {
-      const gcCount = (analysis.sequence.match(/[GC]/gi) || []).length;
-      analysis.gcContent = ((gcCount / analysis.sequence.length) * 100).toFixed(2);
-    }
-
-    return analysis;
-  }
-
   async exportData(params) {
     const { format, chromosome, start, end } = params;
 
@@ -8124,7 +8056,6 @@ ${coreTools}
 
       // Annotation tools
       create_annotation: () => this.createAnnotation(parameters),
-      analyze_region: () => this.analyzeRegion(parameters),
       get_gene_details: () => this.getGeneDetails(parameters),
       get_operons: () => this.getOperons(parameters),
       zoom_to_gene: () => this.zoomToGene(parameters),
@@ -8898,7 +8829,7 @@ KEY TOOLS BY CATEGORY:
 Navigation & State: navigate_to_position, get_current_state, jump_to_gene, zoom_to_gene, select_gene, select_sequence_region, open_new_tab
 Search & Discovery: search_features, find_gene_by_name, search_sequence_motif
 Sequence Analysis: get_sequence, translate_dna, compute_gc, reverse_complement  
-Advanced Analysis: analyze_region, predict_promoter, find_restriction_sites
+Advanced Analysis: predict_promoter, find_restriction_sites
 BLAST & External: blast_search, blast_sequence_from_region
 Protein Structure: open_protein_viewer, fetch_protein_structure
 Data Management: get_genome_info, export_data, create_annotation
@@ -9279,7 +9210,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'calculate_molecular_weight',
 
       // Advanced Analysis
-      'analyze_region',
       'compare_regions',
       'find_similar_sequences',
       'find_restriction_sites',
@@ -14476,7 +14406,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       select_sequence_region: 'Navigation Agent',
 
       // Analysis Agent - 数据分析和统计
-      analyze_region: 'Analysis Agent',
       compare_regions: 'Analysis Agent',
       sequence_statistics: 'Analysis Agent',
       codon_usage_analysis: 'Analysis Agent',

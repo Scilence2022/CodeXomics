@@ -69,7 +69,7 @@ relationships:
   enhances: ['navigate_to_position', 'get_sequence']
   alternatives: ['jump_to_gene'] # jump_to_gene is preferred for direct navigation
   prerequisites: []
-  follow_up: ['get_sequence', 'analyze_region', 'get_coding_sequence']
+  follow_up: ['get_sequence', 'get_coding_sequence']
   recommendation: 'Use jump_to_gene first for direct navigation, use this for fuzzy/partial searches'
 
 # Performance and usage statistics

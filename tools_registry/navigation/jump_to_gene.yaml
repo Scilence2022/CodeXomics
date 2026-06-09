@@ -54,7 +54,7 @@ relationships:
   enhances: ['navigate_to_position']
   alternatives: ['find_gene_by_name'] # Use this as fallback if gene name not found
   prerequisites: []
-  follow_up: ['get_sequence', 'analyze_region']
+  follow_up: ['get_sequence']
 metadata:
   usage_count: 0
   success_rate: 0
