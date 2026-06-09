@@ -124,14 +124,15 @@ Tools for genome browser navigation and state management:
 - `find_gene_by_name` - Search specific gene
 - `toggle_track` - Show/hide tracks
 
-### 2. Sequence Analysis (7 tools)
+### 2. Sequence Analysis (8 tools)
 
 **Location:** `sequence/SequenceTools.js`
 
 Tools for DNA/RNA sequence analysis and manipulation:
 
 - `get_sequence` - Get DNA sequence for region
-- `compute_gc` - Calculate GC content
+- `compute_gc` - Calculate GC content for a provided DNA sequence string
+- `calc_region_gc` - Calculate GC content for genome coordinates or the current browser region
 - `translate_dna` - Translate DNA to protein
 - `reverse_complement` - Get reverse complement
 - `search_sequence_motif` - Search sequence motifs

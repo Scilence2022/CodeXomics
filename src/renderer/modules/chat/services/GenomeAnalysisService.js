@@ -88,6 +88,58 @@ class GenomeAnalysisService {
     throw new Error('Sequence retrieval not available');
   }
 
+  async calcRegionGc(params = {}) {
+    const { chromosome, start, end } = this._normalizeRegionParams(params);
+
+    if (!this.app?.currentSequence?.[chromosome]) {
+      throw new Error(`Chromosome ${chromosome} not loaded`);
+    }
+
+    const chromosomeLength = this.app.currentSequence[chromosome].length;
+    if (!Number.isFinite(start) || !Number.isFinite(end)) {
+      throw new Error('calc_region_gc requires numeric start and end coordinates or an active current region');
+    }
+    if (start < 1 || end < 1 || start > chromosomeLength || end > chromosomeLength) {
+      throw new Error(
+        `calc_region_gc region ${chromosome}:${start}-${end} is outside chromosome bounds (1-${chromosomeLength})`
+      );
+    }
+    if (start > end) {
+      throw new Error(`calc_region_gc start (${start}) must be less than or equal to end (${end})`);
+    }
+
+    let sequence;
+    if (this.app && typeof this.app.getSequenceForRegion === 'function') {
+      sequence = await this.app.getSequenceForRegion(chromosome, start, end);
+    } else {
+      sequence = this.app.currentSequence[chromosome].substring(start - 1, end);
+    }
+
+    const normalizedSequence = String(sequence || '').replace(/\s/g, '').toUpperCase();
+    const gcCount = (normalizedSequence.match(/[GC]/g) || []).length;
+    const atCount = (normalizedSequence.match(/[AT]/g) || []).length;
+    const nCount = (normalizedSequence.match(/N/g) || []).length;
+    const length = normalizedSequence.length;
+    const gcContent = length > 0 ? Math.round((gcCount / length) * 10000) / 100 : 0;
+    const atContent = length > 0 ? Math.round((atCount / length) * 10000) / 100 : 0;
+
+    return {
+      success: true,
+      chromosome,
+      start,
+      end,
+      region: `${chromosome}:${start}-${end}`,
+      length,
+      gcContent,
+      gcPercent: gcContent,
+      atContent,
+      gcCount,
+      atCount,
+      nCount,
+      sequence,
+    };
+  }
+
   async sequenceStatistics(params) {
     const { include = ['basic', 'composition', 'complexity'], sequence, sequenceType = 'dna' } = params;
 

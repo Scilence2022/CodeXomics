@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-09T11:44:42.576Z",
-  "registryHash": "2afb4f2743e8fa505ea237119789e8d2a7f619677469a0a3c7c7ecc78048ec8d",
+  "generatedAt": "2026-06-09T13:27:19.929Z",
+  "registryHash": "9766480ba54814368fc4d20c8352223b857636d71b1dde62cae15bc230398ab8",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 178,
-    "appTools": 178,
+    "tools": 179,
+    "appTools": 179,
     "userTools": 0,
-    "uniqueTools": 172,
+    "uniqueTools": 173,
     "categories": 18,
-    "builtInTools": 142,
+    "builtInTools": 143,
     "diagnostics": 12
   },
   "categories": {
@@ -18405,6 +18405,146 @@
         "name": "search_pdb_structures",
         "method": "searchPDBStructures",
         "category": "protein",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "calc_region_gc",
+      "version": "1.0.0",
+      "description": "Calculate GC content for a chromosome coordinate range from the currently loaded genome. Use this for genomic positions or the current browser region; use compute_gc only when the DNA sequence string is already provided.",
+      "category": "sequence",
+      "keywords": [
+        "gc",
+        "content",
+        "region",
+        "chromosome",
+        "current region",
+        "genomic position",
+        "coordinate"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": true,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome or contig name. If omitted, the current selected/browsed chromosome is used."
+          },
+          "start": {
+            "type": "number",
+            "description": "1-based start coordinate. If omitted, the current visible region start is used.",
+            "minimum": 1
+          },
+          "end": {
+            "type": "number",
+            "description": "1-based inclusive end coordinate. If omitted, the current visible region end is used.",
+            "minimum": 1
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "What is the GC content of the current view?",
+          "tool_call": "calc_region_gc()",
+          "thought": "User wants GC content for the current browser region, so use genomic coordinates from the active view.",
+          "expected_result": "GC content percentage for the current visible chromosome interval"
+        },
+        {
+          "user_query": "Calculate GC content for chr1 from 1000 to 2500",
+          "tool_call": "calc_region_gc(chromosome='chr1', start=1000, end=2500)",
+          "thought": "User provided chromosome coordinates, so calculate directly from the loaded genome region.",
+          "expected_result": "GC content percentage and nucleotide counts for chr1:1000-2500"
+        },
+        {
+          "user_query": "Calculate GC content of this DNA sequence ATGCGC",
+          "tool_call": "compute_gc(sequence='ATGCGC')",
+          "thought": "User provided the sequence string itself, so compute_gc is the appropriate sequence-based tool instead of calc_region_gc.",
+          "expected_result": "GC content for the provided sequence string"
+        }
+      ],
+      "relationships": {
+        "depends_on": [
+          "get_sequence"
+        ],
+        "conflicts_with": [],
+        "enhances": [
+          "get_sequence",
+          "compute_gc"
+        ],
+        "alternatives": [
+          "compute_gc",
+          "sequence_statistics"
+        ],
+        "prerequisites": [
+          "load_genome_file"
+        ],
+        "follow_up": [
+          "get_sequence",
+          "sequence_statistics"
+        ]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": [
+          "sequence",
+          "analysis",
+          "gc",
+          "region"
+        ],
+        "complexity": "simple",
+        "usage_pattern": "common"
+      },
+      "error_handling": {
+        "no_genome_loaded": "Returns an error if no genome sequence is loaded",
+        "no_current_chromosome": "Returns an error if chromosome is omitted and no chromosome is selected",
+        "invalid_coordinates": "Returns an error if coordinates are outside chromosome bounds or start is greater than end"
+      },
+      "returns": {
+        "success": "boolean - Whether calculation was successful",
+        "chromosome": "string - Chromosome used for the calculation",
+        "start": "number - 1-based start coordinate",
+        "end": "number - 1-based inclusive end coordinate",
+        "region": "string - Region label in chromosome:start-end format",
+        "length": "number - Number of bases analyzed",
+        "gcContent": "number - GC percentage for the region",
+        "atContent": "number - AT percentage for the region",
+        "gcCount": "number - Count of G and C bases",
+        "atCount": "number - Count of A and T bases"
+      },
+      "source": "app_registry",
+      "sourceFile": "sequence/calc_region_gc.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "calcRegionGc"
+      },
+      "builtin": {
+        "name": "calc_region_gc",
+        "method": "calcRegionGc",
+        "category": "sequence",
         "type": "built-in",
         "priority": 1,
         "isBuiltIn": true,
@@ -40833,6 +40973,146 @@
         "source": "builtin_tools_map"
       }
     },
+    "calc_region_gc": {
+      "name": "calc_region_gc",
+      "version": "1.0.0",
+      "description": "Calculate GC content for a chromosome coordinate range from the currently loaded genome. Use this for genomic positions or the current browser region; use compute_gc only when the DNA sequence string is already provided.",
+      "category": "sequence",
+      "keywords": [
+        "gc",
+        "content",
+        "region",
+        "chromosome",
+        "current region",
+        "genomic position",
+        "coordinate"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": true,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome or contig name. If omitted, the current selected/browsed chromosome is used."
+          },
+          "start": {
+            "type": "number",
+            "description": "1-based start coordinate. If omitted, the current visible region start is used.",
+            "minimum": 1
+          },
+          "end": {
+            "type": "number",
+            "description": "1-based inclusive end coordinate. If omitted, the current visible region end is used.",
+            "minimum": 1
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "What is the GC content of the current view?",
+          "tool_call": "calc_region_gc()",
+          "thought": "User wants GC content for the current browser region, so use genomic coordinates from the active view.",
+          "expected_result": "GC content percentage for the current visible chromosome interval"
+        },
+        {
+          "user_query": "Calculate GC content for chr1 from 1000 to 2500",
+          "tool_call": "calc_region_gc(chromosome='chr1', start=1000, end=2500)",
+          "thought": "User provided chromosome coordinates, so calculate directly from the loaded genome region.",
+          "expected_result": "GC content percentage and nucleotide counts for chr1:1000-2500"
+        },
+        {
+          "user_query": "Calculate GC content of this DNA sequence ATGCGC",
+          "tool_call": "compute_gc(sequence='ATGCGC')",
+          "thought": "User provided the sequence string itself, so compute_gc is the appropriate sequence-based tool instead of calc_region_gc.",
+          "expected_result": "GC content for the provided sequence string"
+        }
+      ],
+      "relationships": {
+        "depends_on": [
+          "get_sequence"
+        ],
+        "conflicts_with": [],
+        "enhances": [
+          "get_sequence",
+          "compute_gc"
+        ],
+        "alternatives": [
+          "compute_gc",
+          "sequence_statistics"
+        ],
+        "prerequisites": [
+          "load_genome_file"
+        ],
+        "follow_up": [
+          "get_sequence",
+          "sequence_statistics"
+        ]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": [
+          "sequence",
+          "analysis",
+          "gc",
+          "region"
+        ],
+        "complexity": "simple",
+        "usage_pattern": "common"
+      },
+      "error_handling": {
+        "no_genome_loaded": "Returns an error if no genome sequence is loaded",
+        "no_current_chromosome": "Returns an error if chromosome is omitted and no chromosome is selected",
+        "invalid_coordinates": "Returns an error if coordinates are outside chromosome bounds or start is greater than end"
+      },
+      "returns": {
+        "success": "boolean - Whether calculation was successful",
+        "chromosome": "string - Chromosome used for the calculation",
+        "start": "number - 1-based start coordinate",
+        "end": "number - 1-based inclusive end coordinate",
+        "region": "string - Region label in chromosome:start-end format",
+        "length": "number - Number of bases analyzed",
+        "gcContent": "number - GC percentage for the region",
+        "atContent": "number - AT percentage for the region",
+        "gcCount": "number - Count of G and C bases",
+        "atCount": "number - Count of A and T bases"
+      },
+      "source": "app_registry",
+      "sourceFile": "sequence/calc_region_gc.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "calcRegionGc"
+      },
+      "builtin": {
+        "name": "calc_region_gc",
+        "method": "calcRegionGc",
+        "category": "sequence",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "calculate_entropy": {
       "name": "calculate_entropy",
       "version": "1.1.0",
@@ -45764,6 +46044,16 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "calc_region_gc",
+      "method": "calcRegionGc",
+      "category": "sequence",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "set_working_directory",
       "method": "setWorkingDirectory",
       "category": "system",
@@ -47179,6 +47469,16 @@
     "compute_gc": {
       "name": "compute_gc",
       "method": "calculateGCContent",
+      "category": "sequence",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "calc_region_gc": {
+      "name": "calc_region_gc",
+      "method": "calcRegionGc",
       "category": "sequence",
       "type": "built-in",
       "priority": 1,

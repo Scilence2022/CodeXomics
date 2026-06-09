@@ -1455,7 +1455,7 @@ class ChatManager {
       },
       sequence: {
         name: 'Sequence Analysis',
-        tools: ['get_sequence', 'translate_dna', 'reverse_complement', 'compute_gc', 'get_coding_sequence'],
+        tools: ['get_sequence', 'translate_dna', 'reverse_complement', 'compute_gc', 'calc_region_gc', 'get_coding_sequence'],
       },
       database: {
         name: 'Database Integration',
@@ -3231,6 +3231,10 @@ class ChatManager {
 
   async getSequence(params) {
     return this.services.analysis.getSequence(params);
+  }
+
+  async calcRegionGc(params) {
+    return this.services.analysis.calcRegionGc(params);
   }
 
   async toggleTrack(params) {
@@ -8046,6 +8050,7 @@ ${coreTools}
 
       // Sequence tools
       get_sequence: () => this.getSequence(parameters),
+      calc_region_gc: () => this.calcRegionGc(parameters),
       translate_sequence: () => this.executeMicrobeFunction('translateDNA', parameters),
       calculate_gc_content: () => this.calculateGCContent(parameters),
 
@@ -13573,7 +13578,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         'translateDNA',
         'findORFs',
         'calculateEntropy',
-        'calcRegionGC',
         'calculateMeltingTemp',
         'calculateMolecularWeight',
         'analyzeCodonUsage',

@@ -115,6 +115,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('calc_region_gc', {
+      method: 'calcRegionGc',
+      category: 'sequence',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('set_working_directory', {
       method: 'setWorkingDirectory',
       category: 'system',
@@ -1635,7 +1642,16 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(gc|content)\b/i.test(query)) {
+    if (
+      /\b(gc|content)\b/i.test(query) &&
+      /\b(region|current\s+(view|region)|chromosome|chr|coordinate|position|genomic)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'calc_region_gc',
+        confidence: 0.9,
+        reason: 'Genomic region GC content keywords detected',
+      });
+    } else if (/\b(gc|content)\b/i.test(query)) {
       relevantTools.push({
         name: 'compute_gc',
         confidence: 0.8,

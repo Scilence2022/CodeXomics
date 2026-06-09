@@ -72,6 +72,9 @@ class LLMContextService {
       case 'calculate_gc_content':
         return `📊 GC content analysis for ${result.chromosome}:${result.region}: Overall ${result.overallGCContent}% GC (${result.length}bp analyzed in ${result.totalWindows} windows)`;
 
+      case 'calc_region_gc':
+        return `📊 GC content for ${result.region || `${result.chromosome}:${result.start}-${result.end}`}: ${result.gcContent ?? result.gcPercent}% GC (${result.length}bp)`;
+
       case 'get_operons':
         return `🧬 Found ${result.operonsFound} operons in ${result.chromosome}: ${result.operons
           .slice(0, 3)
@@ -1707,7 +1710,8 @@ Search & Discovery:
 Sequence Analysis:
   - get_sequence: Extract DNA sequence
   - translate_dna: Translate DNA to protein
-  - compute_gc: Calculate GC content
+  - calc_region_gc: Calculate GC content for chromosome coordinates or the current browser region
+  - compute_gc: Calculate GC content for an already-provided DNA sequence
   - reverse_complement: Get reverse complement
   - sequence_statistics: Analyze sequence composition
 
@@ -1756,6 +1760,8 @@ Basic Navigation:
 
 Sequence Analysis:
   {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+  {"tool_name": "calc_region_gc", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+  {"tool_name": "calc_region_gc", "parameters": {}}
   {"tool_name": "compute_gc", "parameters": {"sequence": "ATGCGCTATCG"}}
   {"tool_name": "translate_dna", "parameters": {"dna": "ATGAAATAG", "frame": 0}}
 

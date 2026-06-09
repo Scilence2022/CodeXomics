@@ -38,6 +38,31 @@ class SequenceTools {
         },
       },
 
+      calc_region_gc: {
+        name: 'calc_region_gc',
+        description:
+          'Calculate GC content for a chromosome coordinate range from the currently loaded genome. Prefer this for genomic positions or the current browser region; use compute_gc when the sequence string is already provided.',
+        parameters: {
+          type: 'object',
+          properties: {
+            chromosome: {
+              type: 'string',
+              description: 'Chromosome name. If omitted, uses the current selected/browsed chromosome.',
+            },
+            start: {
+              type: 'number',
+              description: '1-based start coordinate. If omitted, uses the current visible region start.',
+            },
+            end: {
+              type: 'number',
+              description: '1-based inclusive end coordinate. If omitted, uses the current visible region end.',
+            },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+          required: [],
+        },
+      },
+
       translate_dna: {
         name: 'translate_dna',
         description: 'Translate DNA sequence to protein (amino acid sequence)',

@@ -495,6 +495,8 @@ class ToolsIntegrator {
       search_features: p =>
         `Search for features matching "${p.query}"${p.featureType ? ` of type ${p.featureType}` : ''}`,
       get_sequence: p => `Get the DNA sequence from ${p.chromosome || 'current chromosome'}:${p.start}-${p.end}`,
+      calc_region_gc: p =>
+        `Calculate GC content for ${p.chromosome || 'the current chromosome'}${p.start && p.end ? `:${p.start}-${p.end}` : ' in the current browser region'}`,
       compute_gc: p =>
         `Calculate GC content of the sequence: ${p.sequence?.substring(0, 50)}${p.sequence?.length > 50 ? '...' : ''}`,
       search_uniprot_database: p =>

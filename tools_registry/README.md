@@ -32,6 +32,7 @@ tools_registry/
 ├── sequence/                           # Sequence Analysis Tools
 │   ├── get_sequence.yaml
 │   ├── compute_gc.yaml
+│   ├── calc_region_gc.yaml
 │   ├── translate_dna.yaml
 │   ├── reverse_complement.yaml
 │   ├── search_sequence_motif.yaml

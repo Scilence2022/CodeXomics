@@ -308,37 +308,12 @@ class AnalysisAgent extends AgentBase {
    */
   async calcRegionGC(parameters, strategy) {
     try {
-      const { chromosome, start, end, windowSize = 1000 } = parameters;
-
-      if (!chromosome || start === undefined || end === undefined) {
-        throw new Error('Chromosome, start, and end are required');
+      const analysisService = this.multiAgentSystem?.chatManager?.services?.analysis;
+      if (!analysisService || typeof analysisService.calcRegionGc !== 'function') {
+        throw new Error('GenomeAnalysisService.calcRegionGc not available');
       }
 
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const sequence = await this.sequenceUtils.getSequence(chromosome, start, end);
-      const gcContent = this.sequenceUtils.calculateGCContent(sequence);
-
-      // 计算滑动窗口GC含量
-      const windowGC = [];
-      for (let i = 0; i <= sequence.length - windowSize; i += windowSize) {
-        const windowSeq = sequence.substring(i, i + windowSize);
-        const windowGCContent = this.sequenceUtils.calculateGCContent(windowSeq);
-        windowGC.push({
-          position: start + i,
-          gcContent: windowGCContent,
-        });
-      }
-
-      return {
-        success: true,
-        overallGC: gcContent,
-        windowGC: windowGC,
-        region: { chromosome, start, end },
-        windowSize,
-      };
+      return await analysisService.calcRegionGc(parameters);
     } catch (error) {
       return {
         success: false,

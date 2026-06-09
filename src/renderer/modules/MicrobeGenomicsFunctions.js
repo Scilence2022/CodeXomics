@@ -279,20 +279,6 @@ class MicrobeGenomicsFunctions {
   /* --------------------------------------------------------- */
 
   /**
-   * Compute GC% for a genomic region
-   * @param {string} chromosome - Chromosome name
-   * @param {number} start - Start position
-   * @param {number} end - End position
-   * @returns {number} GC percentage
-   */
-  static calcRegionGC(chromosome, start, end) {
-    const gb = window.genomeBrowser;
-    if (!gb || !gb.currentSequence[chromosome]) return 0;
-    const seq = gb.currentSequence[chromosome].substring(start, end);
-    return this.computeGC(seq);
-  }
-
-  /**
    * Calculate melting temperature of DNA sequence
    * @param {string} dna - DNA sequence
    * @returns {number} Estimated melting temperature in Celsius
@@ -1262,7 +1248,7 @@ class MicrobeGenomicsFunctions {
       },
       calculation: {
         description: 'Functions for genomic calculations and statistics',
-        functions: ['calcRegionGC', 'calculateMeltingTemp', 'calculateMolecularWeight', 'analyzeCodonUsage'],
+        functions: ['calculateMeltingTemp', 'calculateMolecularWeight', 'analyzeCodonUsage'],
       },
       prediction: {
         description: 'Functions to predict genomic features and motifs',

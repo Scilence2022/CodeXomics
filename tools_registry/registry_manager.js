@@ -89,6 +89,7 @@ class ToolsRegistryManager {
       'find_gene_by_name',
       'get_sequence',
       'compute_gc',
+      'calc_region_gc',
     ];
 
     for (const toolName of criticalTools) {
@@ -1093,6 +1094,7 @@ class ToolsRegistryManager {
       'find_gene_by_name',
       'get_sequence',
       'compute_gc',
+      'calc_region_gc',
     ];
 
     const tools = [];

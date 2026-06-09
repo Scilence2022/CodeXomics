@@ -1041,20 +1041,6 @@ calculateEntropy(sequence) {
     return entropy;
 }
 
-calcRegionGC(chromosome, start, end) {
-    // 基因组区域GC含量计算
-    const sequence = this.getSequence(chromosome, start, end);
-    let gcCount = 0;
-
-    for (const base of sequence) {
-        if (base === 'G' || base === 'C') {
-            gcCount++;
-        }
-    }
-
-    return (gcCount / sequence.length) * 100;
-}
-
 calculateMeltingTemp(sequence) {
     // DNA熔解温度估算（简化模型）
     const gcContent = this.calculateGCContent(sequence);
