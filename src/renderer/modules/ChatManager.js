@@ -3589,8 +3589,45 @@ class ChatManager {
     throw new Error('Annotation creation not available');
   }
 
-  async analyzeRegion(params) {
-    const { chromosome, start, end, includeFeatures, includeGC } = params;
+  async analyzeRegion(params = {}) {
+    if (!params || typeof params !== 'object') {
+      params = {};
+    }
+
+    let currentState = null;
+    try {
+      currentState = this.getCurrentState ? this.getCurrentState() : null;
+    } catch (_error) {
+      currentState = null;
+    }
+
+    const currentPosition = this.app?.currentPosition || currentState?.currentPosition || null;
+    const chromosome =
+      params.chromosome ||
+      params.chrom ||
+      params.chr ||
+      params.target ||
+      this.app?.currentChromosome ||
+      currentState?.currentChromosome;
+
+    const startValue =
+      params.start !== undefined ? params.start : params.begin !== undefined ? params.begin : currentPosition?.start;
+    const endValue = params.end !== undefined ? params.end : params.stop !== undefined ? params.stop : currentPosition?.end;
+    const start = Number.parseInt(startValue, 10);
+    const end = Number.parseInt(endValue, 10);
+
+    if (!chromosome || !Number.isFinite(start) || !Number.isFinite(end)) {
+      throw new Error(
+        'analyze_region requires chromosome, start, and end, or an active current region in the genome browser'
+      );
+    }
+
+    if (start > end) {
+      throw new Error(`analyze_region start (${start}) must be less than or equal to end (${end})`);
+    }
+
+    const shouldIncludeFeatures = params.includeFeatures === true || params.include_features === true;
+    const shouldIncludeGC = params.includeGC === true || params.include_gc === true;
 
     const analysis = {
       chromosome: chromosome,
@@ -3605,14 +3642,14 @@ class ChatManager {
     }
 
     // Get features if requested
-    if (includeFeatures && this.app.currentAnnotations) {
+    if (shouldIncludeFeatures && this.app.currentAnnotations) {
       analysis.features = this.app.currentAnnotations.filter(
         feature => feature.chromosome === chromosome && feature.start >= start && feature.end <= end
       );
     }
 
     // Calculate GC content if requested
-    if (includeGC && analysis.sequence) {
+    if (shouldIncludeGC && analysis.sequence) {
       const gcCount = (analysis.sequence.match(/[GC]/gi) || []).length;
       analysis.gcContent = ((gcCount / analysis.sequence.length) * 100).toFixed(2);
     }

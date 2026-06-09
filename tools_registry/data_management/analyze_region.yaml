@@ -1,33 +1,55 @@
 name: analyze_region
 version: 1.0.0
-description: Analyze a genomic region and return features
+description: Analyze a specific genomic interval and optionally return sequence, features, and GC content
 category: data_management
 keywords:
   - analyze
   - region
   - genomic
   - features
+  - gc
+  - chromosome
 priority: 1
 execution:
   type: client
   timeout: 15000
   retries: 2
   requires_auth: false
-  requires_data: false
+  requires_data: true
   requires_network: false
 parameters:
   type: object
   properties:
+    chromosome:
+      type: string
+      description: Chromosome or contig name to analyze, for example chr1 or NC_000913.3
+    start:
+      type: number
+      description: 1-based start coordinate of the genomic interval
+    end:
+      type: number
+      description: 1-based end coordinate of the genomic interval
+    includeFeatures:
+      type: boolean
+      description: Whether to include annotations fully contained in the interval
+      default: true
+    includeGC:
+      type: boolean
+      description: Whether to calculate GC content for the interval sequence
+      default: true
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
-  required: []
+  required:
+    - chromosome
+    - start
+    - end
 sample_usages:
-  - user_query: Use analyze_region to analyze genomic data
-    tool_call: analyze_region(parameter1='value1', parameter2='value2')
-    thought: User wants to use analyze_region for analyze a genomic region and return features
-    expected_result: Result from analyze_region analysis
+  - user_query: Analyze chr1 from 1000 to 2500 and include GC content
+    tool_call: analyze_region(chromosome='chr1', start=1000, end=2500, includeFeatures=true, includeGC=true)
+    thought: User wants interval-level genomic analysis for a specific chromosome range
+    expected_result: Region sequence, length, matching annotations, and GC content
 relationships:
   depends_on: []
   conflicts_with: []
