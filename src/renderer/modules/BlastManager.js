@@ -725,6 +725,34 @@ class BlastManager {
     this.addCustomDatabaseOptions(activeType);
   }
 
+  refreshDatabaseUi(options = {}) {
+    const { service = null, blastType = null } = options;
+
+    if (service) {
+      const serviceButton = document.querySelector(`.service-tabs .service-tab[data-service="${service}"]`);
+      if (serviceButton && !serviceButton.disabled) {
+        document.querySelectorAll('.service-tabs .service-tab').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        serviceButton.classList.add('active');
+      }
+    }
+
+    if (blastType) {
+      const blastTypeButton = document.querySelector(`.blast-type-tabs .tab-button[data-blast-type="${blastType}"]`);
+      if (blastTypeButton) {
+        document.querySelectorAll('.blast-type-tabs .tab-button').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        blastTypeButton.classList.add('active');
+      }
+    }
+
+    this.populateAvailableDatabasesList();
+    this.updateExistingLocalDatabases();
+    this.updateDatabaseOptions(blastType);
+  }
+
   addCustomDatabaseOptions(blastType) {
     const select = document.getElementById('blastDatabase');
     if (!select || !this.customDatabases) return;
@@ -1744,19 +1772,34 @@ class BlastManager {
       // Save custom databases to storage
       await this.saveCustomDatabases();
 
+      const createdDatabase = this.customDatabases.get(dbId);
+      const createdBlastType = dbType === 'nucl' ? 'blastn' : 'blastp';
+
       // Update status
       if (statusContent) {
         statusContent.innerHTML = `<div class="alert alert-success">Successfully created ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database: ${dbName}</div>`;
       }
 
       // Update UI
-      this.populateAvailableDatabasesList();
-      this.updateDatabaseOptions();
+      this.refreshDatabaseUi({ service: 'local', blastType: createdBlastType });
 
       this.showNotification(
         `${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} database created successfully: ${dbName}`,
         'success'
       );
+
+      return {
+        success: true,
+        database: {
+          id: dbId,
+          name: dbName,
+          type: dbType,
+          blastType: createdBlastType,
+          dbPath: createdDatabase?.dbPath || null,
+          outputDir: createdDatabase?.outputDir || null,
+          tempFile: tempFile || null,
+        },
+      };
     } catch (error) {
       console.error('Error creating quick database:', error);
 
@@ -1774,6 +1817,11 @@ class BlastManager {
       }
 
       this.showNotification(`Failed to create database: ${error.message}`, 'error');
+      return {
+        success: false,
+        error: error.message,
+        databaseId: dbId || null,
+      };
     }
   }
 

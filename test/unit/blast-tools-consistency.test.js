@@ -184,6 +184,19 @@ describe('BLAST Tool Registry Consistency', () => {
       expect(content).toContain("replace(/\\.(fasta|fa|fas|txt|gbk|gb|genbank)$/i, '')");
       expect(content).not.toContain('dbId = `quick_${dbName');
     });
+
+    it('should refresh BLAST Search database UI after quick database creation', () => {
+      const blastFunctionTools = readFile('src/renderer/modules/BlastFunctionTools.js');
+
+      expect(content).toContain('refreshDatabaseUi(options = {})');
+      expect(content).toContain("this.refreshDatabaseUi({ service: 'local', blastType: createdBlastType })");
+      expect(content).toContain('database: {');
+      expect(blastFunctionTools).toContain('const nuclDb = nuclResult.database');
+      expect(blastFunctionTools).toContain('const protDb = protResult.database');
+      expect(blastFunctionTools).toContain(
+        "this.blastManager.refreshDatabaseUi({ service: 'local', blastType: preferredBlastType })"
+      );
+    });
   });
 
   describe('FunctionCallsOrganizer BLAST entries', () => {

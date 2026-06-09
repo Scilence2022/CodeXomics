@@ -1031,13 +1031,9 @@ class BlastFunctionTools {
       if (createNucleotide) {
         try {
           const nuclResult = await this.blastManager.createQuickDatabase('nucl');
-          if (nuclResult !== false) {
-            // Get the database name from customDatabases
-            const nuclDb = Array.from(this.blastManager.customDatabases.values())
-              .filter(db => db.source === 'quick' && db.type === 'nucl')
-              .sort((a, b) => new Date(b.created) - new Date(a.created))[0];
-
-            if (nuclDb) {
+          if (nuclResult?.success) {
+            const nuclDb = nuclResult.database;
+            if (nuclDb?.id) {
               results.databases.nucleotide = {
                 name: nuclDb.id,
                 displayName: nuclDb.name,
@@ -1058,13 +1054,9 @@ class BlastFunctionTools {
       if (createProtein) {
         try {
           const protResult = await this.blastManager.createQuickDatabase('prot');
-          if (protResult !== false) {
-            // Get the database name from customDatabases
-            const protDb = Array.from(this.blastManager.customDatabases.values())
-              .filter(db => db.source === 'quick' && db.type === 'prot')
-              .sort((a, b) => new Date(b.created) - new Date(a.created))[0];
-
-            if (protDb) {
+          if (protResult?.success) {
+            const protDb = protResult.database;
+            if (protDb?.id) {
               results.databases.protein = {
                 name: protDb.id,
                 displayName: protDb.name,
@@ -1079,6 +1071,11 @@ class BlastFunctionTools {
         } catch (error) {
           results.messages.push(`Failed to create protein database: ${error.message}`);
         }
+      }
+
+      const preferredBlastType = results.databases.nucleotide ? 'blastn' : results.databases.protein ? 'blastp' : null;
+      if (preferredBlastType && typeof this.blastManager.refreshDatabaseUi === 'function') {
+        this.blastManager.refreshDatabaseUi({ service: 'local', blastType: preferredBlastType });
       }
 
       results.timestamp = new Date().toISOString();
