@@ -10,6 +10,7 @@ import yaml from 'js-yaml';
 
 const require = createRequire(import.meta.url);
 const originalGenomeBrowser = window.genomeBrowser;
+const settingsPath = path.join(process.cwd(), 'src/renderer/modules/ChatBoxSettingsManager.js');
 
 function loadOpenNewTabHarness() {
   const managerPath = path.join(process.cwd(), 'src/renderer/modules/ChatManager.js');
@@ -32,6 +33,38 @@ afterEach(() => {
 });
 
 describe('open_new_tab tool', () => {
+  it('exposes enabled-by-default ChatBox controls with a maximum of twenty', () => {
+    const settingsSource = fs.readFileSync(settingsPath, 'utf-8');
+    const enabledDefaults = settingsSource.match(/enableRepeatedOpenNewTab:\s*true/g) || [];
+    const limitDefaults = settingsSource.match(/maxRepeatedOpenNewTabCalls:\s*20/g) || [];
+
+    expect(enabledDefaults.length).toBeGreaterThanOrEqual(2);
+    expect(limitDefaults.length).toBeGreaterThanOrEqual(2);
+    expect(settingsSource).toContain('id="enableRepeatedOpenNewTab"');
+    expect(settingsSource).toContain('id="maxRepeatedOpenNewTabCalls"');
+    expect(settingsSource).toContain('id="maxRepeatedOpenNewTabCalls" class="input-full" min="1" max="20"');
+    expect(settingsSource).toContain('Allow Explicit Multi-Tab Requests');
+  });
+
+  it('normalizes persisted multi-tab settings to the supported range', async () => {
+    const ChatBoxSettingsManager = require('../../src/renderer/modules/ChatBoxSettingsManager.js');
+    const configManager = {
+      waitForInit: async () => {},
+      get: (key, fallback) => {
+        if (key === 'chatboxSettings') {
+          return { enableRepeatedOpenNewTab: false, maxRepeatedOpenNewTabCalls: 99 };
+        }
+        return fallback;
+      },
+    };
+
+    const manager = new ChatBoxSettingsManager(configManager);
+    await manager._initPromise;
+
+    expect(manager.getSetting('enableRepeatedOpenNewTab')).toBe(false);
+    expect(manager.getSetting('maxRepeatedOpenNewTabCalls')).toBe(20);
+  });
+
   it('keeps the built-in YAML and MCP parameter schemas synchronized', () => {
     const yamlPath = path.join(process.cwd(), 'tools_registry/navigation/open_new_tab.yaml');
     const definition = yaml.load(fs.readFileSync(yamlPath, 'utf-8'));

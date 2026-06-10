@@ -365,6 +365,21 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(manager.getRequestedToolExecutionLimit('create 99 new tabs', tool)).toBe(20);
   });
 
+  it('should apply ChatBox settings to the explicit tab request budget', () => {
+    const manager = new MockChatManager();
+    const tool = { tool_name: 'open_new_tab', parameters: {} };
+
+    manager.configManager = {
+      get: key =>
+        key === 'chatboxSettings' ? { enableRepeatedOpenNewTab: true, maxRepeatedOpenNewTabCalls: 3 } : undefined,
+    };
+    expect(manager.getRequestedToolExecutionLimit('open five new tabs', tool)).toBe(3);
+
+    manager.configManager.get = key =>
+      key === 'chatboxSettings' ? { enableRepeatedOpenNewTab: false, maxRepeatedOpenNewTabCalls: 20 } : undefined;
+    expect(manager.getRequestedToolExecutionLimit('open five new tabs', tool)).toBe(1);
+  });
+
   it('should queue five explicitly requested tabs in one model response', () => {
     const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
     const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
@@ -470,6 +485,31 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
 
     expect(policy.shouldAllowToolExecution(tool, [], 1, plannedResults.slice(0, 19))).toBe(true);
     expect(policy.shouldAllowToolExecution(tool, [], 1, plannedResults)).toBe(false);
+  });
+
+  it('should apply ChatBox settings to the per-round tab limit', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
+    const manager = new MockChatManager();
+    manager.configManager = {
+      get: key =>
+        key === 'chatboxSettings' ? { enableRepeatedOpenNewTab: true, maxRepeatedOpenNewTabCalls: 3 } : undefined,
+    };
+    const policy = new ToolExecutionPolicy({
+      chatManager: manager,
+      capabilityPolicy: new ToolCapabilityPolicy(),
+    });
+    const tool = { tool_name: 'open_new_tab', parameters: {} };
+    const twoPlanned = Array.from({ length: 2 }, () => ({ tool: 'open_new_tab', pending: true }));
+    const threePlanned = Array.from({ length: 3 }, () => ({ tool: 'open_new_tab', pending: true }));
+
+    expect(policy.shouldAllowToolExecution(tool, [], 1, twoPlanned)).toBe(true);
+    expect(policy.shouldAllowToolExecution(tool, [], 1, threePlanned)).toBe(false);
+
+    manager.configManager.get = key =>
+      key === 'chatboxSettings' ? { enableRepeatedOpenNewTab: false, maxRepeatedOpenNewTabCalls: 20 } : undefined;
+    expect(policy.shouldAllowToolExecution(tool, [], 1, [])).toBe(true);
+    expect(policy.shouldAllowToolExecution(tool, [], 1, [{ tool: 'open_new_tab', pending: true }])).toBe(false);
   });
 
   it('should build a pending execution queue from detected tool calls', () => {

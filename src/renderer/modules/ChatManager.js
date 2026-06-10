@@ -6320,6 +6320,18 @@ class ChatManager {
   getRequestedToolExecutionLimit(originalMessage, tool) {
     if (!tool || !tool.tool_name) return 1;
 
+    let maximumRequestedExecutions = 20;
+    if (tool.tool_name === 'open_new_tab') {
+      const chatboxSettings = this.configManager?.get('chatboxSettings', {}) || {};
+      if (chatboxSettings.enableRepeatedOpenNewTab === false) {
+        return 1;
+      }
+      const configuredLimit = Number(chatboxSettings.maxRepeatedOpenNewTabCalls);
+      if (Number.isFinite(configuredLimit)) {
+        maximumRequestedExecutions = Math.max(1, Math.min(Math.trunc(configuredLimit), 20));
+      }
+    }
+
     const message = String(originalMessage || '').toLowerCase();
     const numberWords = {
       once: 1,
@@ -6339,7 +6351,7 @@ class ChatManager {
 
     const numericMatch = message.match(/\b(\d{1,2})\s*(?:x|times?|rounds?|steps?)\b/);
     if (numericMatch) {
-      return Math.max(1, Math.min(parseInt(numericMatch[1], 10), 20));
+      return Math.max(1, Math.min(parseInt(numericMatch[1], 10), maximumRequestedExecutions));
     }
 
     const repeatNounsByTool = {
@@ -6349,7 +6361,7 @@ class ChatManager {
     if (repeatNoun) {
       const nounNumericMatch = message.match(new RegExp(`\\b(\\d{1,2})\\s+${repeatNoun}\\b`));
       if (nounNumericMatch) {
-        return Math.max(1, Math.min(parseInt(nounNumericMatch[1], 10), 20));
+        return Math.max(1, Math.min(parseInt(nounNumericMatch[1], 10), maximumRequestedExecutions));
       }
     }
 
@@ -6359,11 +6371,11 @@ class ChatManager {
           ? new RegExp(`\\b${word}\\b`)
           : new RegExp(`\\b${word}\\s+(?:times?|rounds?|steps?)\\b`);
       if (pattern.test(message)) {
-        return count;
+        return Math.min(count, maximumRequestedExecutions);
       }
 
       if (repeatNoun && new RegExp(`\\b${word}\\s+${repeatNoun}\\b`).test(message)) {
-        return count;
+        return Math.min(count, maximumRequestedExecutions);
       }
     }
 

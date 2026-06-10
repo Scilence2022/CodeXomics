@@ -223,7 +223,16 @@ class ToolExecutionPolicy {
     }
 
     if (policyType === 'bounded_repeat') {
-      const maxCallsPerRound = 20;
+      const chatboxSettings = this.chatManager.configManager?.get('chatboxSettings', {}) || {};
+      if (toolName === 'open_new_tab' && chatboxSettings.enableRepeatedOpenNewTab === false) {
+        const alreadyPlanned = toolResults.some(r => r.tool === toolName);
+        return !alreadyPlanned;
+      }
+
+      const configuredLimit = Number(chatboxSettings.maxRepeatedOpenNewTabCalls);
+      const maxCallsPerRound = Number.isFinite(configuredLimit)
+        ? Math.max(1, Math.min(Math.trunc(configuredLimit), 20))
+        : 20;
       const plannedCalls = toolResults.filter(r => r.tool === toolName).length;
       if (plannedCalls >= maxCallsPerRound) {
         console.log(`[Policy] Maximum repeatable calls per round reached (${maxCallsPerRound}): ${toolName}`);

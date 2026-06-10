@@ -80,6 +80,8 @@ class ChatBoxSettingsManager {
       completionThreshold: 0.7,
       maxSameToolDifferentParams: 3, // Default limit for different parameters
       maxSameToolIdenticalParams: 2, // Default limit for identical parameters
+      enableRepeatedOpenNewTab: true,
+      maxRepeatedOpenNewTabCalls: 20,
 
       // Model Selection Settings
       chatboxModelType: 'auto',
@@ -130,6 +132,11 @@ class ChatBoxSettingsManager {
 
     const savedSettings = this.configManager.get('chatboxSettings', {});
     this.settings = { ...this.settings, ...savedSettings };
+    this.settings.enableRepeatedOpenNewTab = this.settings.enableRepeatedOpenNewTab !== false;
+    const repeatedTabLimit = Number(this.settings.maxRepeatedOpenNewTabCalls);
+    this.settings.maxRepeatedOpenNewTabCalls = Number.isFinite(repeatedTabLimit)
+      ? Math.max(1, Math.min(Math.trunc(repeatedTabLimit), 20))
+      : 20;
 
     // Backward compatibility: migrate llm.systemPrompt to chatboxSettings.customSystemPrompt
     if (!this.settings.customSystemPrompt) {
@@ -317,6 +324,8 @@ class ChatBoxSettingsManager {
       completionThreshold: 0.7,
       maxSameToolDifferentParams: 3,
       maxSameToolIdenticalParams: 2,
+      enableRepeatedOpenNewTab: true,
+      maxRepeatedOpenNewTabCalls: 20,
 
       // Model Selection Settings
       chatboxModelType: 'auto',
@@ -394,6 +403,15 @@ class ChatBoxSettingsManager {
       this.settings.dynamicToolsSelectionLimit > 500
     ) {
       errors.push('dynamicToolsSelectionLimit must be between 1 and 500');
+    }
+
+    if (
+      typeof this.settings.maxRepeatedOpenNewTabCalls !== 'number' ||
+      !Number.isInteger(this.settings.maxRepeatedOpenNewTabCalls) ||
+      this.settings.maxRepeatedOpenNewTabCalls < 1 ||
+      this.settings.maxRepeatedOpenNewTabCalls > 20
+    ) {
+      errors.push('maxRepeatedOpenNewTabCalls must be an integer between 1 and 20');
     }
 
     // Validate enum settings
@@ -800,6 +818,18 @@ class ChatBoxSettingsManager {
                                     <label for="maxSameToolIdenticalParams">Max Execution of Same Tool (Identical Parameters):</label>
                                     <input type="number" id="maxSameToolIdenticalParams" class="input-full" min="1" max="10" step="1">
                                     <small class="help-text">Maximum number of times the same tool can be called with the exact same parameters. Prevents infinite loops when a tool fails or provides unexpected output.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableRepeatedOpenNewTab" class="setting-checkbox">
+                                        Allow Explicit Multi-Tab Requests
+                                    </label>
+                                    <small class="help-text">Allow open_new_tab to run multiple times when the user explicitly requests multiple tabs. Disable this to permit only one new tab per request.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="maxRepeatedOpenNewTabCalls">Maximum Tabs per Explicit Request:</label>
+                                    <input type="number" id="maxRepeatedOpenNewTabCalls" class="input-full" min="1" max="20" step="1">
+                                    <small class="help-text">Maximum open_new_tab calls allowed in both one model round and the full user request (1-20).</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="completionThreshold">Task Completion Confidence Threshold:</label>
@@ -1990,6 +2020,23 @@ class ChatBoxSettingsManager {
 
     // Setup range slider event listeners
     this.setupRangeSliders(modal);
+    this.setupRepeatedOpenNewTabControls(modal);
+  }
+
+  setupRepeatedOpenNewTabControls(modal) {
+    const enabledInput = modal.querySelector('#enableRepeatedOpenNewTab');
+    const limitInput = modal.querySelector('#maxRepeatedOpenNewTabCalls');
+    if (!enabledInput || !limitInput) return;
+
+    const syncDisabledState = () => {
+      limitInput.disabled = !enabledInput.checked;
+    };
+
+    if (!enabledInput.dataset.repeatControlBound) {
+      enabledInput.addEventListener('change', syncDisabledState);
+      enabledInput.dataset.repeatControlBound = 'true';
+    }
+    syncDisabledState();
   }
 
   /**
@@ -2192,6 +2239,8 @@ class ChatBoxSettingsManager {
       functionCallRounds: 'Maximum Function Call Rounds',
       enableEarlyCompletion: 'Enable Early Task Completion',
       completionThreshold: 'Task Completion Confidence Threshold',
+      enableRepeatedOpenNewTab: 'Allow Explicit Multi-Tab Requests',
+      maxRepeatedOpenNewTabCalls: 'Maximum Tabs per Explicit Request',
       memorySystemEnabled: 'Memory System',
       memoryCacheEnabled: 'Memory Caching',
       memoryOptimizationEnabled: 'Memory Optimization',
