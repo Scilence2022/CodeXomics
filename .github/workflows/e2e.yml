@@ -1,0 +1,38 @@
+name: E2E (Electron smoke)
+
+# Manual trigger only for now. The Electron smoke test launches the real app and
+# needs a display (xvfb) plus the system libraries below. Validate this workflow
+# via "Run workflow" once, then promote it to run on pull_request by uncommenting
+# the trigger below so it gates merges.
+on:
+  workflow_dispatch:
+  # pull_request:
+  #   branches: [main, master, develop]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Electron runtime libraries + xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb libnss3 libatk-bridge2.0-0 libatk1.0-0 libcups2 \
+            libgtk-3-0 libgbm1 libasound2t64 libxshmfence1 libxss1 || \
+          sudo apt-get install -y \
+            xvfb libnss3 libatk-bridge2.0-0 libatk1.0-0 libcups2 \
+            libgtk-3-0 libgbm1 libasound2 libxshmfence1 libxss1
+
+      - name: Run Electron smoke test (headless via xvfb)
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" npm run test:e2e

@@ -41,6 +41,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "prepare": "husky"
   },
   "keywords": [
@@ -68,6 +69,7 @@
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@electron/notarize": "^2.5.0",
+    "@playwright/test": "^1.60.0",
     "@vitest/coverage-v8": "^4.1.8",
     "concurrently": "^8.2.2",
     "electron": "^42.4.0",
