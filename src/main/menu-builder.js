@@ -1850,6 +1850,13 @@ function createMenu() {
             require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/issues');
           },
         },
+        { type: 'separator' },
+        {
+          label: 'Check for Updates…',
+          click: () => {
+            require('./updater').checkForUpdates();
+          },
+        },
       ],
     },
     // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）

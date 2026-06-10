@@ -27,6 +27,16 @@ const mcp = require('./main/mcp-lifecycle');
 const { registerIpcHandlers } = require('./main/ipc-handlers');
 const { registerProjectIpcHandlers } = require('./main/project-ipc');
 const { registerRendererContentSecurityPolicy, rememberApprovedPath } = require('./main/security-utils');
+const logging = require('./main/logging');
+const { initUpdater } = require('./main/updater');
+
+// =============================================================================
+// Crash capture + structured logging — initialize as early as possible so that
+// startup errors and native crashes are recorded. console.* in the main process
+// is routed to a rotating log file from here on.
+// =============================================================================
+logging.startCrashReporter();
+logging.initLogging();
 
 // =============================================================================
 // Application constants
@@ -364,6 +374,9 @@ app.whenReady().then(async () => {
 
   // Process queued files from file associations
   processFileQueue();
+
+  // Kick off a background auto-update check (packaged builds only)
+  initUpdater();
 
   // If a project file was specified, open Project Manager with that project
   if (projectToOpen) {

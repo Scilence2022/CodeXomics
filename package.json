@@ -67,6 +67,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
+    "@electron/notarize": "^2.5.0",
     "@vitest/coverage-v8": "^4.1.8",
     "concurrently": "^8.2.2",
     "electron": "^27.3.11",
@@ -90,6 +91,8 @@
     "cors": "^2.8.5",
     "d3": "^7.8.5",
     "dompurify": "^3.4.2",
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9",
     "express": "^4.22.1",
     "file-saver": "^2.0.5",
     "generic-filehandle": "^3.4.0",
@@ -123,7 +126,15 @@
   "build": {
     "appId": "com.codexomics.app",
     "productName": "CodeXomics",
-    "copyright": "Copyright © 2024 ${author}",
+    "copyright": "Copyright © 2026 ${author}",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Scilence2022",
+        "repo": "CodeXomics"
+      }
+    ],
+    "afterSign": "build/notarize.js",
     "directories": {
       "output": "dist",
       "buildResources": "build"
