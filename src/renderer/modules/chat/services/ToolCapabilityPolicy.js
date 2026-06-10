@@ -57,7 +57,6 @@ class ToolCapabilityPolicy {
 
       ui_operations: {
         tools: [
-          'open_new_tab',
           'close_tab',
           'switch_tab',
           'create_annotation',
@@ -69,6 +68,11 @@ class ToolCapabilityPolicy {
           'export_data',
         ],
         policy: 'once_per_round',
+      },
+
+      repeatable_ui_operations: {
+        tools: ['open_new_tab'],
+        policy: 'bounded_repeat',
       },
 
       position_navigation: {

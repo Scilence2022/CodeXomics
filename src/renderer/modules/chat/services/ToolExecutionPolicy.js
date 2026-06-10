@@ -163,7 +163,7 @@ class ToolExecutionPolicy {
   }
 
   shouldAllowWithinGlobalLimits(toolName, toolKey, applicablePolicyName, conversationHistory) {
-    const exemptedPolicies = ['scroll_operations', 'zoom_operations', 'system_utility'];
+    const exemptedPolicies = ['scroll_operations', 'zoom_operations', 'system_utility', 'repeatable_ui_operations'];
     if (exemptedPolicies.includes(applicablePolicyName)) {
       return true;
     }
@@ -219,6 +219,16 @@ class ToolExecutionPolicy {
     const toolName = tool.tool_name;
 
     if (policyType === 'always_allowed') {
+      return true;
+    }
+
+    if (policyType === 'bounded_repeat') {
+      const maxCallsPerRound = 20;
+      const plannedCalls = toolResults.filter(r => r.tool === toolName).length;
+      if (plannedCalls >= maxCallsPerRound) {
+        console.log(`[Policy] Maximum repeatable calls per round reached (${maxCallsPerRound}): ${toolName}`);
+        return false;
+      }
       return true;
     }
 

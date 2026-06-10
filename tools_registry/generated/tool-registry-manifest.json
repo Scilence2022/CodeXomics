@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-09T13:56:26.330Z",
-  "registryHash": "95602fcd3671e0a2e9fec657d6c161d7894a9da0ee4839d2069e0a267dfd1a08",
+  "generatedAt": "2026-06-10T05:55:44.694Z",
+  "registryHash": "39c31005cf94c93eaa2592caea2eaed43f55a7dc283cb0ba6b660387e054c38b",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -11168,7 +11168,7 @@
     {
       "name": "open_new_tab",
       "version": "1.0.0",
-      "description": "Open a new browser tab for parallel genome analysis. Use this to compare different genomic regions or analyze multiple locations simultaneously.",
+      "description": "Open one new analysis tab. Call this tool multiple times when the user explicitly requests multiple tabs.",
       "category": "navigation",
       "keywords": ["open", "new", "tab", "window", "parallel", "analysis", "compare", "multiple", "browser", "create"],
       "priority": 2,
@@ -11185,28 +11185,27 @@
         "properties": {
           "title": {
             "type": "string",
-            "description": "Title for the new tab",
-            "default": "New Analysis"
+            "description": "Custom title for the new tab. If omitted, the title is generated from the active position."
           },
-          "copy_current_view": {
-            "type": "boolean",
-            "description": "Whether to copy the current view to the new tab",
-            "default": false
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome name for the new tab (optional if geneName is provided)"
           },
-          "initial_position": {
-            "type": "object",
-            "description": "Initial genomic position for the new tab (optional)",
-            "properties": {
-              "chromosome": {
-                "type": "string"
-              },
-              "start": {
-                "type": "number"
-              },
-              "end": {
-                "type": "number"
-              }
-            }
+          "start": {
+            "type": "number",
+            "description": "One-based start position (optional if position or geneName is provided)"
+          },
+          "end": {
+            "type": "number",
+            "description": "One-based end position (optional if position or geneName is provided)"
+          },
+          "position": {
+            "type": "number",
+            "description": "Center position; creates a 2000 bp range when start and end are omitted"
+          },
+          "geneName": {
+            "type": "string",
+            "description": "Gene name to search for and focus on in the new tab"
           },
           "clientId": {
             "type": "string",
@@ -11219,21 +11218,21 @@
       "sample_usages": [
         {
           "user_query": "Open a new tab for comparison",
-          "tool_call": "open_new_tab(title='Comparison View', copy_current_view=false)",
-          "thought": "User wants a new tab for parallel analysis without copying current view",
-          "expected_result": "New browser tab opens with default view ready for analysis"
+          "tool_call": "open_new_tab(title='Comparison View')",
+          "thought": "User wants one new tab inheriting the active genome and view",
+          "expected_result": "New analysis tab opens with the requested title and current view"
         },
         {
-          "user_query": "Copy this view to a new tab",
-          "tool_call": "open_new_tab(copy_current_view=true)",
-          "thought": "User wants to duplicate current view in a new tab",
-          "expected_result": "New tab opens with identical view to current tab"
+          "user_query": "Open five new tabs",
+          "tool_call": "Call open_new_tab() five times",
+          "thought": "Each call creates one tab, so five explicit calls are required",
+          "expected_result": "Five new tabs open and each call reports its own result"
         },
         {
           "user_query": "Open new tab at position 50000",
-          "tool_call": "open_new_tab(initial_position={chromosome: 'U00096', start: 49000, end: 51000})",
+          "tool_call": "open_new_tab(chromosome='U00096', position=50000)",
           "thought": "User wants new tab starting at specific position",
-          "expected_result": "New tab opens showing the specified genomic region"
+          "expected_result": "New tab opens showing a 2000 bp region centered on the specified position"
         }
       ],
       "relationships": {
@@ -29983,7 +29982,7 @@
     "open_new_tab": {
       "name": "open_new_tab",
       "version": "1.0.0",
-      "description": "Open a new browser tab for parallel genome analysis. Use this to compare different genomic regions or analyze multiple locations simultaneously.",
+      "description": "Open one new analysis tab. Call this tool multiple times when the user explicitly requests multiple tabs.",
       "category": "navigation",
       "keywords": ["open", "new", "tab", "window", "parallel", "analysis", "compare", "multiple", "browser", "create"],
       "priority": 2,
@@ -30000,28 +29999,27 @@
         "properties": {
           "title": {
             "type": "string",
-            "description": "Title for the new tab",
-            "default": "New Analysis"
+            "description": "Custom title for the new tab. If omitted, the title is generated from the active position."
           },
-          "copy_current_view": {
-            "type": "boolean",
-            "description": "Whether to copy the current view to the new tab",
-            "default": false
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome name for the new tab (optional if geneName is provided)"
           },
-          "initial_position": {
-            "type": "object",
-            "description": "Initial genomic position for the new tab (optional)",
-            "properties": {
-              "chromosome": {
-                "type": "string"
-              },
-              "start": {
-                "type": "number"
-              },
-              "end": {
-                "type": "number"
-              }
-            }
+          "start": {
+            "type": "number",
+            "description": "One-based start position (optional if position or geneName is provided)"
+          },
+          "end": {
+            "type": "number",
+            "description": "One-based end position (optional if position or geneName is provided)"
+          },
+          "position": {
+            "type": "number",
+            "description": "Center position; creates a 2000 bp range when start and end are omitted"
+          },
+          "geneName": {
+            "type": "string",
+            "description": "Gene name to search for and focus on in the new tab"
           },
           "clientId": {
             "type": "string",
@@ -30034,21 +30032,21 @@
       "sample_usages": [
         {
           "user_query": "Open a new tab for comparison",
-          "tool_call": "open_new_tab(title='Comparison View', copy_current_view=false)",
-          "thought": "User wants a new tab for parallel analysis without copying current view",
-          "expected_result": "New browser tab opens with default view ready for analysis"
+          "tool_call": "open_new_tab(title='Comparison View')",
+          "thought": "User wants one new tab inheriting the active genome and view",
+          "expected_result": "New analysis tab opens with the requested title and current view"
         },
         {
-          "user_query": "Copy this view to a new tab",
-          "tool_call": "open_new_tab(copy_current_view=true)",
-          "thought": "User wants to duplicate current view in a new tab",
-          "expected_result": "New tab opens with identical view to current tab"
+          "user_query": "Open five new tabs",
+          "tool_call": "Call open_new_tab() five times",
+          "thought": "Each call creates one tab, so five explicit calls are required",
+          "expected_result": "Five new tabs open and each call reports its own result"
         },
         {
           "user_query": "Open new tab at position 50000",
-          "tool_call": "open_new_tab(initial_position={chromosome: 'U00096', start: 49000, end: 51000})",
+          "tool_call": "open_new_tab(chromosome='U00096', position=50000)",
           "thought": "User wants new tab starting at specific position",
-          "expected_result": "New tab opens showing the specified genomic region"
+          "expected_result": "New tab opens showing a 2000 bp region centered on the specified position"
         }
       ],
       "relationships": {

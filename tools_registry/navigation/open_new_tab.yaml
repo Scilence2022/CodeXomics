@@ -1,6 +1,6 @@
 name: open_new_tab
 version: 1.0.0
-description: 'Open a new browser tab for parallel genome analysis. Use this to compare different genomic regions or analyze multiple locations simultaneously.'
+description: 'Open one new analysis tab. Call this tool multiple times when the user explicitly requests multiple tabs.'
 category: navigation
 keywords:
   - open
@@ -26,22 +26,22 @@ parameters:
   properties:
     title:
       type: string
-      description: 'Title for the new tab'
-      default: 'New Analysis'
-    copy_current_view:
-      type: boolean
-      description: 'Whether to copy the current view to the new tab'
-      default: false
-    initial_position:
-      type: object
-      description: 'Initial genomic position for the new tab (optional)'
-      properties:
-        chromosome:
-          type: string
-        start:
-          type: number
-        end:
-          type: number
+      description: 'Custom title for the new tab. If omitted, the title is generated from the active position.'
+    chromosome:
+      type: string
+      description: 'Chromosome name for the new tab (optional if geneName is provided)'
+    start:
+      type: number
+      description: 'One-based start position (optional if position or geneName is provided)'
+    end:
+      type: number
+      description: 'One-based end position (optional if position or geneName is provided)'
+    position:
+      type: number
+      description: 'Center position; creates a 2000 bp range when start and end are omitted'
+    geneName:
+      type: string
+      description: 'Gene name to search for and focus on in the new tab'
     clientId:
       type: string
       description: Browser client ID for multi-window support
@@ -49,19 +49,19 @@ parameters:
   required: []
 sample_usages:
   - user_query: 'Open a new tab for comparison'
-    tool_call: "open_new_tab(title='Comparison View', copy_current_view=false)"
-    thought: 'User wants a new tab for parallel analysis without copying current view'
-    expected_result: 'New browser tab opens with default view ready for analysis'
+    tool_call: "open_new_tab(title='Comparison View')"
+    thought: 'User wants one new tab inheriting the active genome and view'
+    expected_result: 'New analysis tab opens with the requested title and current view'
 
-  - user_query: 'Copy this view to a new tab'
-    tool_call: 'open_new_tab(copy_current_view=true)'
-    thought: 'User wants to duplicate current view in a new tab'
-    expected_result: 'New tab opens with identical view to current tab'
+  - user_query: 'Open five new tabs'
+    tool_call: 'Call open_new_tab() five times'
+    thought: 'Each call creates one tab, so five explicit calls are required'
+    expected_result: 'Five new tabs open and each call reports its own result'
 
   - user_query: 'Open new tab at position 50000'
-    tool_call: "open_new_tab(initial_position={chromosome: 'U00096', start: 49000, end: 51000})"
+    tool_call: "open_new_tab(chromosome='U00096', position=50000)"
     thought: 'User wants new tab starting at specific position'
-    expected_result: 'New tab opens showing the specified genomic region'
+    expected_result: 'New tab opens showing a 2000 bp region centered on the specified position'
 relationships:
   depends_on: []
   conflicts_with: []

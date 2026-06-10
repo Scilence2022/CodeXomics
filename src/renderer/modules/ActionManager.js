@@ -7153,7 +7153,7 @@ class ActionManager {
         if (searchResults && searchResults.length > 0) {
           const gene = searchResults[0];
           console.log(`🔧 [ActionManager] Found gene:`, gene);
-          tabId = this.genomeBrowser.tabManager.createTabForGene(gene, 500);
+          tabId = this.genomeBrowser.tabManager.createTabForGene(gene, 500, finalTitle);
           finalTitle = finalTitle || `Gene: ${gene.name || gene.id || geneName}`;
         } else {
           throw new Error(`Gene '${geneName}' not found`);

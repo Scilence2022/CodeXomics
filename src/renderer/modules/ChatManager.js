@@ -2508,7 +2508,7 @@ class ChatManager {
         if (geneResults.count > 0 && geneResults.results.length > 0) {
           const gene = geneResults.results[0];
           // Use the UI response function instead of direct manager access
-          tabId = genomeBrowser.tabManager.createTabForGene(gene, 500);
+          tabId = genomeBrowser.tabManager.createTabForGene(gene, 500, finalTitle);
           finalTitle = finalTitle || `Gene: ${gene.name || gene.id || geneName}`;
         } else {
           throw new Error(`Gene '${geneName}' not found`);
@@ -2550,21 +2550,13 @@ class ChatManager {
           throw new Error('Missing required parameters: start and end positions, or position parameter');
         }
       } else {
-        // Create new tab with current position - use the same method as the + button
-        // This is the key change: use the actual UI response function
-        const newTabButton = document.getElementById('newTabButton');
-        if (newTabButton) {
-          // Simulate the + button click to use the actual UI response function
-          newTabButton.click();
-          // Get the newly created tab ID from the tab manager
-          const tabIds = Array.from(genomeBrowser.tabManager.tabs.keys());
-          tabId = tabIds[tabIds.length - 1]; // Get the most recently created tab
-          finalTitle = finalTitle || 'New Tab';
-        } else {
-          // Fallback to direct manager access if button not found
-          tabId = genomeBrowser.tabManager.createNewTab(finalTitle);
-          finalTitle = finalTitle || 'New Tab';
-        }
+        // Use the same TabManager operation as the + button while preserving a supplied title.
+        tabId = genomeBrowser.tabManager.createNewTab(finalTitle);
+        finalTitle = finalTitle || genomeBrowser.tabManager.tabStates?.get(tabId)?.title || 'New Tab';
+      }
+
+      if (!tabId) {
+        throw new Error('Tab manager did not create a new tab');
       }
 
       console.log(`✅ [ChatManager] Successfully created new tab: ${tabId} - ${finalTitle}`);
@@ -6350,12 +6342,27 @@ class ChatManager {
       return Math.max(1, Math.min(parseInt(numericMatch[1], 10), 20));
     }
 
+    const repeatNounsByTool = {
+      open_new_tab: '(?:(?:new|additional|analysis|browser)\\s+)*(?:tabs?|windows?)',
+    };
+    const repeatNoun = repeatNounsByTool[tool.tool_name];
+    if (repeatNoun) {
+      const nounNumericMatch = message.match(new RegExp(`\\b(\\d{1,2})\\s+${repeatNoun}\\b`));
+      if (nounNumericMatch) {
+        return Math.max(1, Math.min(parseInt(nounNumericMatch[1], 10), 20));
+      }
+    }
+
     for (const [word, count] of Object.entries(numberWords)) {
       const pattern =
         word === 'once' || word === 'twice' || word === 'thrice'
           ? new RegExp(`\\b${word}\\b`)
           : new RegExp(`\\b${word}\\s+(?:times?|rounds?|steps?)\\b`);
       if (pattern.test(message)) {
+        return count;
+      }
+
+      if (repeatNoun && new RegExp(`\\b${word}\\s+${repeatNoun}\\b`).test(message)) {
         return count;
       }
     }
@@ -6601,19 +6608,36 @@ class ChatManager {
 
   filterExecutableToolInstances(toolsToExecute, successfulToolExecutionCounts, originalMessage) {
     const plannedToolExecutionCounts = new Map();
+    const plannedToolNameCounts = new Map();
+    const successfulToolNameCounts = new Map();
     const executableTools = [];
     const suppressedTools = [];
 
+    successfulToolExecutionCounts.forEach((count, toolKey) => {
+      const separatorIndex = toolKey.indexOf(':');
+      const toolName = separatorIndex === -1 ? toolKey : toolKey.substring(0, separatorIndex);
+      successfulToolNameCounts.set(toolName, (successfulToolNameCounts.get(toolName) || 0) + count);
+    });
+
     for (const tool of toolsToExecute) {
       const toolKey = this.getToolExecutionKey(tool.tool_name, tool.parameters);
-      const alreadySucceeded = successfulToolExecutionCounts.get(toolKey) || 0;
-      const alreadyPlanned = plannedToolExecutionCounts.get(toolKey) || 0;
+      const policyEntry = this.services?.context
+        ?.getToolExecutionPolicy?.()
+        ?.capabilityPolicy?.getPolicyForTool(tool.tool_name);
+      const isRequestBoundedRepeat = policyEntry?.policy?.policy === 'bounded_repeat';
+      const alreadySucceeded = isRequestBoundedRepeat
+        ? successfulToolNameCounts.get(tool.tool_name) || 0
+        : successfulToolExecutionCounts.get(toolKey) || 0;
+      const alreadyPlanned = isRequestBoundedRepeat
+        ? plannedToolNameCounts.get(tool.tool_name) || 0
+        : plannedToolExecutionCounts.get(toolKey) || 0;
       const requestedLimit = this.getRequestedToolExecutionLimit(originalMessage, tool);
+      const usedRequestBudget = isRequestBoundedRepeat ? alreadySucceeded + alreadyPlanned : alreadyPlanned;
 
-      if (alreadyPlanned >= requestedLimit) {
+      if (usedRequestBudget >= requestedLimit) {
         console.log(
           `♻️ [ToolLoop] Suppressing duplicate tool instance: ${tool.tool_name} ` +
-            `(planned ${alreadyPlanned}/${requestedLimit}, previous successes ${alreadySucceeded})`
+            `(request budget ${usedRequestBudget}/${requestedLimit}, previous successes ${alreadySucceeded})`
         );
         suppressedTools.push(tool);
         continue;
@@ -6626,7 +6650,11 @@ class ChatManager {
         );
       }
 
-      plannedToolExecutionCounts.set(toolKey, alreadyPlanned + 1);
+      if (isRequestBoundedRepeat) {
+        plannedToolNameCounts.set(tool.tool_name, alreadyPlanned + 1);
+      } else {
+        plannedToolExecutionCounts.set(toolKey, alreadyPlanned + 1);
+      }
       executableTools.push(tool);
     }
 

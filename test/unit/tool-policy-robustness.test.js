@@ -188,6 +188,15 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(capabilityPolicy.getPolicyForTool('set_working_directory').name).toBe('system_utility');
   });
 
+  it('should classify open_new_tab as a bounded repeatable UI operation', () => {
+    const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
+    const capabilityPolicy = new ToolCapabilityPolicy();
+    const result = capabilityPolicy.getPolicyForTool('open_new_tab');
+
+    expect(result.name).toBe('repeatable_ui_operations');
+    expect(result.policy.policy).toBe('bounded_repeat');
+  });
+
   it('should not apply global repetition limits to system utility tools', () => {
     const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
     const policy = new ToolExecutionPolicy({
@@ -344,6 +353,123 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     const repeatedResult = manager.filterExecutableToolInstances([tool, tool], new Map(), 'pan right twice');
     expect(repeatedResult.executableTools).toHaveLength(2);
     expect(repeatedResult.suppressedTools).toHaveLength(0);
+  });
+
+  it('should recognize tab counts expressed as nouns and enforce the hard request cap', () => {
+    const manager = new MockChatManager();
+    const tool = { tool_name: 'open_new_tab', parameters: {} };
+
+    expect(manager.getRequestedToolExecutionLimit('open five new tabs', tool)).toBe(5);
+    expect(manager.getRequestedToolExecutionLimit('open 5 tabs', tool)).toBe(5);
+    expect(manager.getRequestedToolExecutionLimit('create five new analysis tabs', tool)).toBe(5);
+    expect(manager.getRequestedToolExecutionLimit('create 99 new tabs', tool)).toBe(20);
+  });
+
+  it('should queue five explicitly requested tabs in one model response', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
+    const manager = new MockChatManager();
+    const capabilityPolicy = new ToolCapabilityPolicy();
+    const policy = new ToolExecutionPolicy({ chatManager: manager, capabilityPolicy });
+    manager.services = {
+      context: {
+        getToolExecutionPolicy: () => policy,
+      },
+    };
+    manager.showThinkingProcess = false;
+    manager.updateThinkingMessage = () => {};
+    manager.shouldAllowToolExecution = (...args) => policy.shouldAllowToolExecution(...args);
+
+    const tools = Array.from({ length: 6 }, (_, index) => ({
+      tool_name: 'open_new_tab',
+      parameters: { title: `New Tab ${index + 1}` },
+    }));
+    const result = manager.createPendingToolExecutionQueue(tools, new Map(), 'open five new tabs', [], 1);
+
+    expect(result.pendingTools).toHaveLength(5);
+    expect(result.pendingTools.map(tool => tool.parameters.title)).toEqual([
+      'New Tab 1',
+      'New Tab 2',
+      'New Tab 3',
+      'New Tab 4',
+      'New Tab 5',
+    ]);
+    expect(result.suppressedTools).toHaveLength(1);
+    expect(result.policyBlockedTools).toHaveLength(0);
+  });
+
+  it('should apply a repeatable tool request budget across model rounds', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
+    const manager = new MockChatManager();
+    const capabilityPolicy = new ToolCapabilityPolicy();
+    const policy = new ToolExecutionPolicy({ chatManager: manager, capabilityPolicy });
+    manager.services = {
+      context: {
+        getToolExecutionPolicy: () => policy,
+      },
+    };
+    manager.showThinkingProcess = false;
+    manager.updateThinkingMessage = () => {};
+    manager.shouldAllowToolExecution = (...args) => policy.shouldAllowToolExecution(...args);
+
+    const successfulCounts = new Map([
+      [manager.getToolExecutionKey('open_new_tab', { title: 'New Tab 1' }), 1],
+      [manager.getToolExecutionKey('open_new_tab', { title: 'New Tab 2' }), 1],
+    ]);
+    const tools = Array.from({ length: 4 }, (_, index) => ({
+      tool_name: 'open_new_tab',
+      parameters: { title: `Later Tab ${index + 1}` },
+    }));
+    const result = manager.createPendingToolExecutionQueue(tools, successfulCounts, 'open five new tabs', [], 2);
+
+    expect(result.pendingTools).toHaveLength(3);
+    expect(result.suppressedTools).toHaveLength(1);
+  });
+
+  it('should allow only one tab when the user did not request a repeat', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
+    const manager = new MockChatManager();
+    const capabilityPolicy = new ToolCapabilityPolicy();
+    const policy = new ToolExecutionPolicy({ chatManager: manager, capabilityPolicy });
+    manager.services = {
+      context: {
+        getToolExecutionPolicy: () => policy,
+      },
+    };
+    manager.showThinkingProcess = false;
+    manager.updateThinkingMessage = () => {};
+    manager.shouldAllowToolExecution = (...args) => policy.shouldAllowToolExecution(...args);
+
+    const result = manager.createPendingToolExecutionQueue(
+      [
+        { tool_name: 'open_new_tab', parameters: { title: 'Requested Tab' } },
+        { tool_name: 'open_new_tab', parameters: { title: 'Unrequested Tab' } },
+      ],
+      new Map(),
+      'open a new tab',
+      [],
+      1
+    );
+
+    expect(result.pendingTools).toHaveLength(1);
+    expect(result.suppressedTools).toHaveLength(1);
+  });
+
+  it('should cap repeatable UI operations at twenty planned calls per round', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
+    const manager = new MockChatManager();
+    const policy = new ToolExecutionPolicy({
+      chatManager: manager,
+      capabilityPolicy: new ToolCapabilityPolicy(),
+    });
+    const tool = { tool_name: 'open_new_tab', parameters: {} };
+    const plannedResults = Array.from({ length: 20 }, () => ({ tool: 'open_new_tab', pending: true }));
+
+    expect(policy.shouldAllowToolExecution(tool, [], 1, plannedResults.slice(0, 19))).toBe(true);
+    expect(policy.shouldAllowToolExecution(tool, [], 1, plannedResults)).toBe(false);
   });
 
   it('should build a pending execution queue from detected tool calls', () => {

@@ -400,7 +400,7 @@ class TabManager {
     const currentGenome = this.genomeBrowser.currentSequence || null;
     const currentAnnotations = this.genomeBrowser.currentAnnotations || null;
     const currentVariants = this.genomeBrowser.currentVariants || null;
-    const currentChromosome = this.genomeBrowser.currentChromosome || null;
+    const currentChromosome = specificPosition?.chromosome || this.genomeBrowser.currentChromosome || null;
 
     // Use specific position if provided, otherwise use current position
     let position;
@@ -962,23 +962,23 @@ class TabManager {
       title = `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`;
     }
 
-    const specificPosition = { start: start - 1, end }; // Convert to 0-based internally
+    const specificPosition = { chromosome, start: start - 1, end }; // Convert to 0-based internally
     return this.createNewTab(title, specificPosition);
   }
 
   /**
    * Create a new tab focused on a specific gene
    */
-  createTabForGene(gene, padding = 500) {
+  createTabForGene(gene, padding = 500, title = null) {
     const newStart = Math.max(0, gene.start - padding);
     const newEnd = gene.end + padding;
-    const title = `Gene: ${gene.name || gene.id || 'Unknown'}`;
+    const finalTitle = title || `Gene: ${gene.name || gene.id || 'Unknown'}`;
 
     return this.createTabForPosition(
       gene.chromosome || this.genomeBrowser.currentChromosome,
       newStart + 1,
       newEnd,
-      title
+      finalTitle
     );
   }
 

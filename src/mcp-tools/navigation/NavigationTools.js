@@ -33,7 +33,7 @@ class NavigationTools {
       open_new_tab: {
         name: 'open_new_tab',
         description:
-          'Open a new tab window for parallel genome analysis. Can open tab for specific position, gene, or current state.',
+          'Open one new analysis tab for a position, gene, or the current view. Call the tool multiple times only when the user explicitly requests multiple tabs.',
         parameters: {
           type: 'object',
           properties: {
@@ -45,7 +45,10 @@ class NavigationTools {
               description: 'Center position (creates 2000bp range if start/end not provided)',
             },
             geneName: { type: 'string', description: 'Gene name to open tab for (searches and focuses on gene)' },
-            title: { type: 'string', description: 'Custom title for the new tab (optional)' },
+            title: {
+              type: 'string',
+              description: 'Custom title for the new tab; generated from the active position when omitted',
+            },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
         },
