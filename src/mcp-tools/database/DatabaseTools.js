@@ -322,8 +322,76 @@ class DatabaseTools {
     }
   }
 
-  async advancedUniProtSearch(parameters) {
-    return await this.server.advancedUniProtSearch(parameters);
+  async advancedUniProtSearch(parameters = {}) {
+    // Server-side implementation - directly query UniProt API
+    const {
+      proteinName,
+      geneName,
+      organism,
+      keywords,
+      subcellularLocation,
+      function: fnFilter,
+      reviewedOnly = false,
+      limit = 25,
+    } = parameters;
+
+    try {
+      const queryParts = [];
+      if (proteinName) queryParts.push(`(protein_name:"${proteinName}")`);
+      if (geneName) queryParts.push(`(gene:"${geneName}")`);
+      if (organism) queryParts.push(`(organism_name:"${organism}")`);
+      if (keywords) {
+        const kwList = Array.isArray(keywords) ? keywords : [keywords];
+        kwList.filter(Boolean).forEach(kw => queryParts.push(`(keyword:"${kw}")`));
+      }
+      if (subcellularLocation) queryParts.push(`(cc_scl_term:"${subcellularLocation}")`);
+      if (fnFilter) queryParts.push(`(cc_function:"${fnFilter}")`);
+      if (reviewedOnly) queryParts.push(`(reviewed:true)`);
+
+      if (queryParts.length === 0) {
+        throw new Error('At least one search parameter must be provided');
+      }
+
+      const queryString = queryParts.join(' AND ');
+      const fields = 'accession,id,protein_name,gene_names,organism_name,length,reviewed';
+      const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(queryString)}&fields=${fields}&size=${limit}&format=json`;
+
+      console.log(`[DatabaseTools] advancedUniProtSearch: ${searchUrl}`);
+      const response = await fetch(searchUrl);
+
+      if (!response.ok) {
+        throw new Error(`UniProt API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      const results = (data.results || []).map(protein => ({
+        uniprotId: protein.primaryAccession,
+        entryName: protein.uniProtkbId,
+        proteinName:
+          protein.proteinDescription?.recommendedName?.fullName?.value ||
+          protein.proteinDescription?.submissionNames?.[0]?.fullName?.value ||
+          'Unknown',
+        genes: (protein.genes || []).map(g => g.geneName?.value).filter(Boolean),
+        organism: protein.organism?.scientificName || 'Unknown',
+        length: protein.sequence?.length || 0,
+        reviewed: protein.entryType === 'UniProtKB reviewed (Swiss-Prot)',
+      }));
+
+      return {
+        success: true,
+        tool: 'advanced_uniprot_search',
+        count: results.length,
+        results: results,
+      };
+    } catch (error) {
+      console.error('advancedUniProtSearch error:', error);
+      return {
+        success: false,
+        error: error.message,
+        tool: 'advanced_uniprot_search',
+      };
+    }
   }
 
   async getUniProtEntry(parameters = {}) {
@@ -467,102 +535,336 @@ class DatabaseTools {
     }
   }
 
-  async analyzeInterProDomains(parameters) {
-    return await this.server.analyzeInterProDomains(parameters);
-  }
-
-  async searchInterProEntry(parameters) {
-    return await this.server.searchInterProEntry(parameters);
-  }
-
-  async getInterProEntryDetails(parameters) {
-    return await this.server.getInterProEntryDetails(parameters);
-  }
-
-  async searchUniProtBySequence(sequence, limit = 50) {
-    return await this.server.searchUniProtBySequence(sequence, limit);
-  }
-
-  async submitInterProJob(sequence, applications) {
-    return await this.server.submitInterProJob(sequence, applications);
-  }
-
-  async waitForInterProResults(jobId, maxWaitTime = 300000) {
-    return await this.server.waitForInterProResults(jobId, maxWaitTime);
-  }
-
-  async processInterProResults(results, sequence, includeGoTerms, includePathways, includeMatchSequence) {
-    return await this.server.processInterProResults(
-      results,
+  async analyzeInterProDomains(parameters = {}) {
+    // Server-side implementation - directly query InterProScan 5 REST API (EBI)
+    const {
       sequence,
-      includeGoTerms,
-      includePathways,
-      includeMatchSequence
-    );
+      uniprot_id,
+      geneName,
+      organism = null,
+      applications = ['Pfam', 'SMART', 'PROSITE'],
+      goterms = true,
+      pathways = true,
+      include_superfamilies = true,
+    } = parameters;
+
+    try {
+      // Resolve a target sequence from sequence / uniprot_id / geneName
+      let targetSequence = sequence;
+      let proteinInfo = null;
+
+      if (!targetSequence) {
+        if (uniprot_id) {
+          const uniprotResponse = await fetch(`https://rest.uniprot.org/uniprotkb/${uniprot_id}.fasta`);
+          if (!uniprotResponse.ok) {
+            throw new Error(`UniProt ID ${uniprot_id} not found`);
+          }
+          const fastaText = await uniprotResponse.text();
+          const lines = fastaText.split('\n');
+          targetSequence = lines.slice(1).join('').replace(/\s/g, '');
+          proteinInfo = { id: uniprot_id, name: uniprot_id, organism, length: targetSequence.length };
+        } else if (geneName) {
+          const searchOrganism = organism || 'Homo sapiens';
+          const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=gene:${geneName}+AND+organism_name:${encodeURIComponent(searchOrganism)}&format=fasta&size=1`;
+          const searchResponse = await fetch(searchUrl);
+          if (!searchResponse.ok) {
+            throw new Error(`Gene ${geneName} not found in UniProt`);
+          }
+          const fastaText = await searchResponse.text();
+          if (!fastaText.trim()) {
+            throw new Error(`No sequence found for gene ${geneName}`);
+          }
+          const lines = fastaText.split('\n');
+          targetSequence = lines.slice(1).join('').replace(/\s/g, '');
+          const header = lines[0];
+          const resolvedId = header.split('|')[1];
+          const organismMatch = header.match(/OS=([^=]+?)(?:OX=|GN=|PE=|SV=|$)/);
+          proteinInfo = {
+            id: resolvedId,
+            name: geneName,
+            organism: organismMatch ? organismMatch[1].trim() : searchOrganism,
+            length: targetSequence.length,
+          };
+        }
+      }
+
+      if (!targetSequence || targetSequence.length < 10) {
+        throw new Error('No valid protein sequence provided. Please provide sequence, uniprot_id, or geneName.');
+      }
+
+      const cleanSequence = targetSequence.replace(/[^ACDEFGHIKLMNPQRSTVWY]/gi, '').toUpperCase();
+
+      // Submit job to InterProScan 5
+      // https://www.ebi.ac.uk/Tools/services/rest/iprscan5/parameterdetails/appl
+      const applMapping = {
+        Pfam: 'PfamA',
+        SMART: 'SMART',
+        PROSITE: 'PrositeProfiles',
+        ProSiteProfiles: 'PrositeProfiles',
+        ProSitePatterns: 'PrositePatterns',
+        PANTHER: 'Panther',
+        Gene3D: 'Gene3d',
+        HAMAP: 'HAMAP',
+        Hamap: 'HAMAP',
+        PRINTS: 'PRINTS',
+        PIRSF: 'PIRSF',
+        PIRSR: 'PIRSR',
+        SUPERFAMILY: 'SuperFamily',
+        NCBIfam: 'NCBIfam',
+        TIGRFAMs: 'NCBIfam',
+        SFLD: 'SFLD',
+        CDD: 'CDD',
+        Phobius: 'Phobius',
+        SignalP: 'SignalP_EUK',
+        SignalP_EUK: 'SignalP_EUK',
+        SignalP_GRAM_POSITIVE: 'SignalP_GRAM_POSITIVE',
+        SignalP_GRAM_NEGATIVE: 'SignalP_GRAM_NEGATIVE',
+        Coils: 'Coils',
+        MobiDBLite: 'MobiDBLite',
+        TMHMM: 'TMHMM',
+        AntiFam: 'AntiFam',
+        FunFam: 'FunFam',
+      };
+
+      const applCodes = applications.map(app => {
+        const mappedCode = applMapping[app];
+        if (mappedCode) return mappedCode;
+        const key = Object.keys(applMapping).find(k => k.toLowerCase() === app.toLowerCase());
+        return key ? applMapping[key] : app;
+      });
+
+      const submitUrl = 'https://www.ebi.ac.uk/Tools/services/rest/iprscan5/run';
+      const formData = new URLSearchParams();
+      formData.append('email', 'CodeXomics@yeah.net');
+      formData.append('title', 'CodeXomics');
+      formData.append('sequence', cleanSequence);
+      formData.append('appl', applCodes.join(','));
+      if (goterms) formData.append('goterms', 'true');
+      if (pathways) formData.append('pathways', 'true');
+
+      console.log(`[DatabaseTools] analyzeInterProDomains: submitting ${cleanSequence.length} AA to InterProScan`);
+      const submitResponse = await fetch(submitUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'text/plain' },
+        body: formData.toString(),
+      });
+
+      if (!submitResponse.ok) {
+        const errorText = await submitResponse.text();
+        throw new Error(
+          `InterPro API submission failed (${submitResponse.status}): ${errorText || submitResponse.statusText}`
+        );
+      }
+
+      const jobId = await submitResponse.text();
+      console.log(`[DatabaseTools] InterPro job submitted: ${jobId}`);
+
+      // Poll for results (5 minute max, 5s intervals)
+      let attempts = 0;
+      const maxAttempts = 60;
+      let status = 'RUNNING';
+
+      while (status === 'RUNNING' && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        const statusResponse = await fetch(`https://www.ebi.ac.uk/Tools/services/rest/iprscan5/status/${jobId}`);
+        status = await statusResponse.text();
+        attempts++;
+        if (status === 'FINISHED') break;
+        if (status === 'FAILED' || status === 'ERROR') {
+          throw new Error('InterPro analysis failed');
+        }
+      }
+
+      if (status !== 'FINISHED') {
+        throw new Error('InterPro analysis timeout - sequence may be too long or service is busy');
+      }
+
+      const resultResponse = await fetch(`https://www.ebi.ac.uk/Tools/services/rest/iprscan5/result/${jobId}/json`);
+      if (!resultResponse.ok) {
+        throw new Error('Failed to retrieve InterPro results');
+      }
+      const interproData = await resultResponse.json();
+
+      const domains = [];
+      const goTerms = [];
+      const pathwayData = [];
+
+      if (interproData.results && interproData.results[0]) {
+        const matches = interproData.results[0].matches || [];
+        matches.forEach(match => {
+          const signature = match.signature || {};
+          (match.locations || []).forEach(loc => {
+            domains.push({
+              accession: signature.accession,
+              name: signature.name || signature.description || 'Unknown',
+              type: signature.type || 'Domain',
+              start: loc.start,
+              end: loc.end,
+              evalue: loc.score || 0,
+              database: signature.signatureLibraryRelease?.library || 'InterPro',
+              description: signature.description || '',
+              interpro_entry: match.entry?.accession || null,
+            });
+          });
+
+          if (match.entry && match.entry.goXRefs) {
+            match.entry.goXRefs.forEach(go => {
+              goTerms.push({ id: go.id, category: go.category, name: go.name });
+            });
+          }
+
+          if (match.entry && match.entry.pathwayXRefs) {
+            match.entry.pathwayXRefs.forEach(pathway => {
+              pathwayData.push({ id: pathway.id, name: pathway.name, database: pathway.databaseName });
+            });
+          }
+        });
+      }
+
+      const coveredPositions = new Set();
+      domains.forEach(d => {
+        for (let i = d.start; i <= d.end; i++) coveredPositions.add(i);
+      });
+      const coverage = ((coveredPositions.size / cleanSequence.length) * 100).toFixed(2);
+
+      return {
+        success: true,
+        tool: 'analyze_interpro_domains',
+        job_id: jobId,
+        protein_info: proteinInfo || {
+          id: 'USER_PROVIDED',
+          name: 'User sequence',
+          organism: organism || 'Not specified',
+          length: cleanSequence.length,
+        },
+        sequence_length: cleanSequence.length,
+        analysis_parameters: {
+          applications,
+          include_go_terms: goterms,
+          include_pathways: pathways,
+          include_superfamilies,
+        },
+        domain_architecture: domains,
+        go_terms: goTerms,
+        pathways: pathwayData,
+        summary: {
+          total_domains: domains.length,
+          domain_coverage: parseFloat(coverage),
+          databases_searched: applications,
+          go_terms_found: goTerms.length,
+          pathways_found: pathwayData.length,
+        },
+        message: `Found ${domains.length} protein domains using real InterPro API`,
+        api_source: 'InterProScan 5 REST API (EBI)',
+      };
+    } catch (error) {
+      console.error('analyzeInterProDomains error:', error);
+      return {
+        success: false,
+        tool: 'analyze_interpro_domains',
+        error: error.message,
+      };
+    }
   }
 
-  async simulateInterProAnalysis(sequence, applications) {
-    return await this.server.simulateInterProAnalysis(sequence, applications);
+  async searchInterProEntry(parameters = {}) {
+    // Server-side implementation - directly query InterPro REST API (EBI)
+    const { search_term, search_terms, entry_type, max_results = 20 } = parameters;
+
+    try {
+      let term = search_term;
+      if (!term && search_terms && search_terms.length > 0) {
+        term = search_terms.join(' ');
+      }
+      if (!term) throw new Error('search_term is required');
+
+      let searchUrl = `https://www.ebi.ac.uk/interpro/api/entry/interpro/?search=${encodeURIComponent(term)}`;
+      if (entry_type && entry_type !== 'all') searchUrl += `&type=${encodeURIComponent(entry_type.toLowerCase())}`;
+      searchUrl += `&page_size=${max_results}`;
+
+      console.log(`[DatabaseTools] searchInterProEntry: ${searchUrl}`);
+      const response = await fetch(searchUrl);
+
+      if (!response.ok) {
+        throw new Error(`InterPro API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      const results = (data.results || []).map(entry => ({
+        interproId: entry.metadata?.accession || entry.accession,
+        name: entry.metadata?.name?.name || entry.metadata?.name || 'Unknown',
+        type: entry.metadata?.type || 'Unknown',
+        proteinCount: entry.protein_count || 0,
+        integrated: entry.metadata?.integrated || null,
+        description: entry.metadata?.description?.[0] || 'No description available',
+      }));
+
+      return {
+        success: true,
+        tool: 'search_interpro_entry',
+        count: results.length,
+        results: results,
+      };
+    } catch (error) {
+      console.error('searchInterProEntry error:', error);
+      return {
+        success: false,
+        tool: 'search_interpro_entry',
+        error: error.message,
+      };
+    }
   }
 
-  formatInterProEntry(entry, includeProteins = false, includeStructures = false) {
-    return this.server.formatInterProEntry(entry, includeProteins, includeStructures);
-  }
+  async getInterProEntryDetails(parameters = {}) {
+    // Server-side implementation - directly query InterPro REST API (EBI)
+    const interproId = parameters.interproId || parameters.interpro_id;
 
-  extractProteinName(entry) {
-    return this.server.extractProteinName(entry);
-  }
+    try {
+      if (!interproId) throw new Error('interproId is required');
 
-  extractAlternativeNames(entry) {
-    return this.server.extractAlternativeNames(entry);
-  }
+      const upperId = interproId.toUpperCase();
+      const detailUrl = `https://www.ebi.ac.uk/interpro/api/entry/interpro/${encodeURIComponent(upperId)}`;
 
-  extractGeneNames(entry) {
-    return this.server.extractGeneNames(entry);
-  }
+      console.log(`[DatabaseTools] getInterProEntryDetails: ${detailUrl}`);
+      const response = await fetch(detailUrl);
 
-  extractProteinFunction(entry) {
-    return this.server.extractProteinFunction(entry);
-  }
+      if (!response.ok) {
+        throw new Error(`InterPro API error: ${response.status} ${response.statusText}`);
+      }
 
-  extractSubcellularLocation(entry) {
-    return this.server.extractSubcellularLocation(entry);
-  }
+      const data = await response.json();
+      const meta = data.metadata || data;
 
-  extractPathways(entry) {
-    return this.server.extractPathways(entry);
-  }
+      const details = {
+        interproId: meta.accession,
+        name: meta.name?.name || meta.name || 'Unknown',
+        shortName: meta.name?.short || '',
+        type: meta.type || 'Unknown',
+        description: (meta.description || []).map(d => d.text).join(' '),
+        proteinCount: data.protein_count || 0,
+        goTerms: (meta.go_terms || []).map(go => ({ id: go.identifier, name: go.name, category: go.category })),
+        integratedSignatures: Object.keys(meta.member_databases || {}),
+        literature: Object.values(meta.literature || {}).map(lit => ({
+          pmid: lit.PMID,
+          title: lit.title,
+          author: lit.author,
+        })),
+      };
 
-  extractProteinFeatures(entry) {
-    return this.server.extractProteinFeatures(entry);
-  }
-
-  extractKeywords(entry) {
-    return this.server.extractKeywords(entry);
-  }
-
-  extractGOTerms(entry) {
-    return this.server.extractGOTerms(entry);
-  }
-
-  extractCrossReferences(entry) {
-    return this.server.extractCrossReferences(entry);
-  }
-
-  calculateSequenceSimilarity(seq1, seq2) {
-    return this.server.calculateSequenceSimilarity(seq1, seq2);
-  }
-
-  classifyDomainType(signature) {
-    return this.server.classifyDomainType(signature);
-  }
-
-  calculateDomainCoverage(matches, sequenceLength) {
-    return this.server.calculateDomainCoverage(matches, sequenceLength);
-  }
-
-  makeHTTPSRequest(options, postData = null) {
-    return this.server.makeHTTPSRequest(options, postData);
+      return {
+        success: true,
+        tool: 'get_interpro_entry_details',
+        details: details,
+      };
+    } catch (error) {
+      console.error('getInterProEntryDetails error:', error);
+      return {
+        success: false,
+        tool: 'get_interpro_entry_details',
+        error: error.message,
+      };
+    }
   }
 }
 

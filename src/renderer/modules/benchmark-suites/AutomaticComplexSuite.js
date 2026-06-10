@@ -822,7 +822,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Search the UniProt database for the human protein BRCA1 and verify whether the UniProt ID P38398 is present. Then retrieve the representative sequence using that UniProt ID, perform an InterPro domain analysis to identify key domains, and search the PDB database to find structurally resolved BRCA1 structures.',
+          'Search the UniProt database for the E.coli K12 protein DapA and verify whether the UniProt ID P0A6L2 is present. Then retrieve the representative sequence using that UniProt ID, perform an InterPro domain analysis to identify key domains, and search the PDB database to find structurally resolved DapA structures.',
         expectedResult: {
           tool_sequence: [
             'search_uniprot_database',
@@ -832,9 +832,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           ],
           parameters: [
             {
-              search_query: 'BRCA1',
+              search_query: 'DapA',
               search_type: 'protein_name',
-              organism: 'Homo sapiens',
+              organism: 'Escherichia coli K-12',
             },
             {
               search_query: 'BRCA1',
