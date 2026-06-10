@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-10T05:55:44.694Z",
-  "registryHash": "39c31005cf94c93eaa2592caea2eaed43f55a7dc283cb0ba6b660387e054c38b",
+  "generatedAt": "2026-06-10T06:49:24.089Z",
+  "registryHash": "5d838f3e3fa49c260a8dc18b17a2e444a1569c856b8e4261c7b80c90c3ddb56f",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -14585,8 +14585,8 @@
     },
     {
       "name": "fetch_alphafold_structure",
-      "version": "1.1.0",
-      "description": "Download and cache AlphaFold protein structure data by UniProt ID or gene name. Returns structure file and metadata.",
+      "version": "1.2.0",
+      "description": "Download and cache the current AlphaFold protein structure selected from official prediction metadata by UniProt ID or gene name. PDB confidence values are returned per residue and remain embedded in the PDB B-factor column.",
       "category": "protein",
       "keywords": ["fetch", "download", "alphafold", "structure", "uniprot", "pdb", "cache"],
       "priority": 1,
@@ -14596,7 +14596,7 @@
         "retries": 2,
         "requires_auth": false,
         "requires_data": false,
-        "requires_network": false
+        "requires_network": true
       },
       "parameters": {
         "type": "object",
@@ -14620,7 +14620,7 @@
           },
           "format": {
             "type": "string",
-            "enum": ["pdb", "cif", "both"],
+            "enum": ["pdb", "cif"],
             "description": "Structure file format to download",
             "default": "pdb"
           },
@@ -14654,12 +14654,6 @@
           "tool_call": "fetch_alphafold_structure(geneName='lacZ', organism='Escherichia coli', include_confidence=true)",
           "thought": "User wants lacZ structure from E. coli with confidence scores",
           "expected_result": "lacZ structure file with per-residue confidence information"
-        },
-        {
-          "user_query": "Download protein structure in both PDB and CIF formats",
-          "tool_call": "fetch_alphafold_structure(uniprot_id='P0A7B8', format='both', cache_locally=true)",
-          "thought": "User wants structure in multiple formats with local caching",
-          "expected_result": "Both PDB and CIF files downloaded and cached locally"
         }
       ],
       "relationships": {
@@ -14685,13 +14679,20 @@
       },
       "returns": {
         "success": "boolean - Whether structure download was successful",
-        "structure_file": "string - Path to downloaded structure file",
-        "uniprot_id": "string - UniProt ID of the protein",
-        "file_format": "string - Format of downloaded file (pdb/cif)",
-        "file_size": "number - Size of structure file in bytes",
-        "confidence_data": "array - Per-residue confidence scores (if requested)",
-        "download_time": "number - Time taken to download in milliseconds",
-        "cached": "boolean - Whether file was cached locally"
+        "structureFile": "string - Path to the temporary local structure file when cache_locally is enabled and file caching is available",
+        "uniprotId": "string - UniProt ID of the protein",
+        "structureId": "string - AlphaFold model entity identifier",
+        "modelVersion": "number - Current AlphaFold model version reported by prediction metadata",
+        "modelCreatedDate": "string - Model creation date reported by AlphaFold",
+        "globalMetricValue": "number - AlphaFold global confidence metric when available",
+        "format": "string - Downloaded file format (pdb/cif)",
+        "dataLength": "number - Size of structure data in characters",
+        "_dataRef": "string - In-memory cache reference that can be passed to open_protein_viewer as data_ref",
+        "confidence": "object - Summary pLDDT statistics (if requested)",
+        "confidenceScores": "array - Per-residue pLDDT confidence scores from PDB alpha-carbon B-factors (if requested)",
+        "confidenceLocation": "string - Location of confidence values in the downloaded PDB data",
+        "cached": "boolean - Whether file was cached locally",
+        "memoryCached": "boolean - Whether structure data is available through _dataRef"
       },
       "source": "app_registry",
       "sourceFile": "protein/fetch_alphafold_structure.yaml",
@@ -14840,31 +14841,35 @@
     },
     {
       "name": "open_protein_viewer",
-      "version": "1.1.0",
-      "description": "Open interactive 3D protein structure viewer for PDB structures in a separate window with molecular visualization tools.",
+      "version": "1.2.0",
+      "description": "Open an interactive 3D protein structure viewer from cached data, a local PDB file, an online PDB URL, a UniProt/AlphaFold accession, a PDB ID, or a gene name. Online structures are downloaded automatically.",
       "category": "protein",
       "keywords": ["open", "viewer", "3d", "protein", "structure", "pdb", "molecular", "visualization"],
       "priority": 1,
       "execution": {
-        "type": "server",
+        "type": "built-in",
         "timeout": 30000,
         "retries": 2,
         "requires_auth": false,
         "requires_data": false,
-        "requires_network": true
+        "requires_network": false
       },
       "parameters": {
         "type": "object",
         "properties": {
           "pdb_id": {
             "type": "string",
-            "description": "PDB ID of structure to visualize (e.g., '1TUP', '2BEG')",
-            "pattern": "^[0-9][A-Z0-9]{3}$",
-            "examples": ["1TUP", "2BEG", "4HHB", "1LMB"]
+            "description": "RCSB PDB ID. For backward compatibility, UniProt accessions and AlphaFold model IDs are also recognized.",
+            "examples": ["1TUP", "2BEG", "P04637", "AF-P04637-F1-model_v6"]
+          },
+          "uniprot_id": {
+            "type": "string",
+            "description": "UniProt accession used to download the corresponding AlphaFold PDB model (e.g., 'P04637')",
+            "examples": ["P04637", "P00350", "P0A7B8"]
           },
           "geneName": {
             "type": "string",
-            "description": "Gene name as alternative to PDB ID (opens best available structure)",
+            "description": "Gene name as an alternative identifier; resolves and downloads the best available AlphaFold structure",
             "examples": ["p53", "lacZ", "dnaA", "hemoglobin"]
           },
           "organism": {
@@ -14872,6 +14877,27 @@
             "description": "Organism name for gene name searches",
             "default": "Homo sapiens",
             "examples": ["Homo sapiens", "Escherichia coli", "Mus musculus"]
+          },
+          "file_path": {
+            "type": "string",
+            "description": "Absolute path to a local PDB file accessible to CodeXomics",
+            "examples": ["/Users/name/Downloads/AF-P04637-F1-model_v6.pdb", "C:\\\\Data\\\\1TUP.pdb"]
+          },
+          "structure_url": {
+            "type": "string",
+            "description": "HTTP(S) URL of a PDB file to download and open automatically",
+            "examples": [
+              "https://alphafold.ebi.ac.uk/files/AF-P04637-F1-model_v6.pdb",
+              "https://files.rcsb.org/download/1TUP.pdb"
+            ]
+          },
+          "data_ref": {
+            "type": "string",
+            "description": "Cached structure reference returned as _dataRef by fetch_alphafold_structure or fetch_protein_structure"
+          },
+          "protein_name": {
+            "type": "string",
+            "description": "Optional display name for the structure"
           },
           "representation": {
             "type": "string",
@@ -14902,7 +14928,7 @@
           },
           "viewer_type": {
             "type": "string",
-            "enum": ["molstar", "ngl", "pymol", "default"],
+            "enum": ["ngl", "default"],
             "description": "Molecular viewer to use",
             "default": "default"
           },
@@ -14915,6 +14941,12 @@
         "required": []
       },
       "sample_usages": [
+        {
+          "user_query": "Open the AlphaFold model that was just downloaded for p53",
+          "tool_call": "open_protein_viewer(uniprot_id='P04637', representation='cartoon', color_scheme='temperature')",
+          "thought": "The UniProt accession identifies the AlphaFold model directly; the viewer downloads it if it is not already cached",
+          "expected_result": "AlphaFold p53 structure opens as a cartoon colored by confidence values stored in the PDB B-factor column"
+        },
         {
           "user_query": "Open p53 crystal structure in 3D viewer",
           "tool_call": "open_protein_viewer(pdb_id='1TUP', representation='cartoon', show_ligands=true)",
@@ -14932,6 +14964,12 @@
           "tool_call": "open_protein_viewer(geneName='hemoglobin', show_ligands=true, center_on_ligand=true, representation='surface')",
           "thought": "User wants hemoglobin structure centered on heme group with surface representation",
           "expected_result": "Hemoglobin structure with surface view centered on heme ligand"
+        },
+        {
+          "user_query": "Open a downloaded local AlphaFold PDB file",
+          "tool_call": "open_protein_viewer(file_path='/path/to/AF-P04637-F1-model_v6.pdb', representation='cartoon')",
+          "thought": "The requested structure already exists on disk and can be loaded directly",
+          "expected_result": "Local PDB file opens in the interactive viewer without another network request"
         }
       ],
       "relationships": {
@@ -14957,13 +14995,12 @@
       },
       "returns": {
         "success": "boolean - Whether viewer opened successfully",
-        "viewer_url": "string - URL of the opened viewer window",
-        "structure_id": "string - PDB ID or identifier of loaded structure",
-        "protein_name": "string - Name of the protein being visualized",
-        "resolution": "number - Resolution of the structure (if available)",
-        "representation_used": "string - 3D representation style applied",
-        "ligands_displayed": "array - List of ligands shown in the structure",
-        "viewer_type": "string - Type of molecular viewer used"
+        "structureId": "string - PDB ID, AlphaFold model ID, or local/URL-derived identifier of the loaded structure",
+        "pdbId": "string - RCSB PDB ID when an experimental structure was loaded",
+        "uniprotId": "string - UniProt accession when an AlphaFold structure was loaded",
+        "representationUsed": "string - Requested 3D representation style",
+        "colorSchemeUsed": "string - Requested structure color scheme",
+        "source": "string - Resolved source such as Structure cache, Local PDB file, Online PDB URL, AlphaFold, or RCSB PDB"
       },
       "source": "app_registry",
       "sourceFile": "protein/open_protein_viewer.yaml",
@@ -33399,8 +33436,8 @@
     },
     "fetch_alphafold_structure": {
       "name": "fetch_alphafold_structure",
-      "version": "1.1.0",
-      "description": "Download and cache AlphaFold protein structure data by UniProt ID or gene name. Returns structure file and metadata.",
+      "version": "1.2.0",
+      "description": "Download and cache the current AlphaFold protein structure selected from official prediction metadata by UniProt ID or gene name. PDB confidence values are returned per residue and remain embedded in the PDB B-factor column.",
       "category": "protein",
       "keywords": ["fetch", "download", "alphafold", "structure", "uniprot", "pdb", "cache"],
       "priority": 1,
@@ -33410,7 +33447,7 @@
         "retries": 2,
         "requires_auth": false,
         "requires_data": false,
-        "requires_network": false
+        "requires_network": true
       },
       "parameters": {
         "type": "object",
@@ -33434,7 +33471,7 @@
           },
           "format": {
             "type": "string",
-            "enum": ["pdb", "cif", "both"],
+            "enum": ["pdb", "cif"],
             "description": "Structure file format to download",
             "default": "pdb"
           },
@@ -33468,12 +33505,6 @@
           "tool_call": "fetch_alphafold_structure(geneName='lacZ', organism='Escherichia coli', include_confidence=true)",
           "thought": "User wants lacZ structure from E. coli with confidence scores",
           "expected_result": "lacZ structure file with per-residue confidence information"
-        },
-        {
-          "user_query": "Download protein structure in both PDB and CIF formats",
-          "tool_call": "fetch_alphafold_structure(uniprot_id='P0A7B8', format='both', cache_locally=true)",
-          "thought": "User wants structure in multiple formats with local caching",
-          "expected_result": "Both PDB and CIF files downloaded and cached locally"
         }
       ],
       "relationships": {
@@ -33499,13 +33530,20 @@
       },
       "returns": {
         "success": "boolean - Whether structure download was successful",
-        "structure_file": "string - Path to downloaded structure file",
-        "uniprot_id": "string - UniProt ID of the protein",
-        "file_format": "string - Format of downloaded file (pdb/cif)",
-        "file_size": "number - Size of structure file in bytes",
-        "confidence_data": "array - Per-residue confidence scores (if requested)",
-        "download_time": "number - Time taken to download in milliseconds",
-        "cached": "boolean - Whether file was cached locally"
+        "structureFile": "string - Path to the temporary local structure file when cache_locally is enabled and file caching is available",
+        "uniprotId": "string - UniProt ID of the protein",
+        "structureId": "string - AlphaFold model entity identifier",
+        "modelVersion": "number - Current AlphaFold model version reported by prediction metadata",
+        "modelCreatedDate": "string - Model creation date reported by AlphaFold",
+        "globalMetricValue": "number - AlphaFold global confidence metric when available",
+        "format": "string - Downloaded file format (pdb/cif)",
+        "dataLength": "number - Size of structure data in characters",
+        "_dataRef": "string - In-memory cache reference that can be passed to open_protein_viewer as data_ref",
+        "confidence": "object - Summary pLDDT statistics (if requested)",
+        "confidenceScores": "array - Per-residue pLDDT confidence scores from PDB alpha-carbon B-factors (if requested)",
+        "confidenceLocation": "string - Location of confidence values in the downloaded PDB data",
+        "cached": "boolean - Whether file was cached locally",
+        "memoryCached": "boolean - Whether structure data is available through _dataRef"
       },
       "source": "app_registry",
       "sourceFile": "protein/fetch_alphafold_structure.yaml",
@@ -33654,31 +33692,35 @@
     },
     "open_protein_viewer": {
       "name": "open_protein_viewer",
-      "version": "1.1.0",
-      "description": "Open interactive 3D protein structure viewer for PDB structures in a separate window with molecular visualization tools.",
+      "version": "1.2.0",
+      "description": "Open an interactive 3D protein structure viewer from cached data, a local PDB file, an online PDB URL, a UniProt/AlphaFold accession, a PDB ID, or a gene name. Online structures are downloaded automatically.",
       "category": "protein",
       "keywords": ["open", "viewer", "3d", "protein", "structure", "pdb", "molecular", "visualization"],
       "priority": 1,
       "execution": {
-        "type": "server",
+        "type": "built-in",
         "timeout": 30000,
         "retries": 2,
         "requires_auth": false,
         "requires_data": false,
-        "requires_network": true
+        "requires_network": false
       },
       "parameters": {
         "type": "object",
         "properties": {
           "pdb_id": {
             "type": "string",
-            "description": "PDB ID of structure to visualize (e.g., '1TUP', '2BEG')",
-            "pattern": "^[0-9][A-Z0-9]{3}$",
-            "examples": ["1TUP", "2BEG", "4HHB", "1LMB"]
+            "description": "RCSB PDB ID. For backward compatibility, UniProt accessions and AlphaFold model IDs are also recognized.",
+            "examples": ["1TUP", "2BEG", "P04637", "AF-P04637-F1-model_v6"]
+          },
+          "uniprot_id": {
+            "type": "string",
+            "description": "UniProt accession used to download the corresponding AlphaFold PDB model (e.g., 'P04637')",
+            "examples": ["P04637", "P00350", "P0A7B8"]
           },
           "geneName": {
             "type": "string",
-            "description": "Gene name as alternative to PDB ID (opens best available structure)",
+            "description": "Gene name as an alternative identifier; resolves and downloads the best available AlphaFold structure",
             "examples": ["p53", "lacZ", "dnaA", "hemoglobin"]
           },
           "organism": {
@@ -33686,6 +33728,27 @@
             "description": "Organism name for gene name searches",
             "default": "Homo sapiens",
             "examples": ["Homo sapiens", "Escherichia coli", "Mus musculus"]
+          },
+          "file_path": {
+            "type": "string",
+            "description": "Absolute path to a local PDB file accessible to CodeXomics",
+            "examples": ["/Users/name/Downloads/AF-P04637-F1-model_v6.pdb", "C:\\\\Data\\\\1TUP.pdb"]
+          },
+          "structure_url": {
+            "type": "string",
+            "description": "HTTP(S) URL of a PDB file to download and open automatically",
+            "examples": [
+              "https://alphafold.ebi.ac.uk/files/AF-P04637-F1-model_v6.pdb",
+              "https://files.rcsb.org/download/1TUP.pdb"
+            ]
+          },
+          "data_ref": {
+            "type": "string",
+            "description": "Cached structure reference returned as _dataRef by fetch_alphafold_structure or fetch_protein_structure"
+          },
+          "protein_name": {
+            "type": "string",
+            "description": "Optional display name for the structure"
           },
           "representation": {
             "type": "string",
@@ -33716,7 +33779,7 @@
           },
           "viewer_type": {
             "type": "string",
-            "enum": ["molstar", "ngl", "pymol", "default"],
+            "enum": ["ngl", "default"],
             "description": "Molecular viewer to use",
             "default": "default"
           },
@@ -33729,6 +33792,12 @@
         "required": []
       },
       "sample_usages": [
+        {
+          "user_query": "Open the AlphaFold model that was just downloaded for p53",
+          "tool_call": "open_protein_viewer(uniprot_id='P04637', representation='cartoon', color_scheme='temperature')",
+          "thought": "The UniProt accession identifies the AlphaFold model directly; the viewer downloads it if it is not already cached",
+          "expected_result": "AlphaFold p53 structure opens as a cartoon colored by confidence values stored in the PDB B-factor column"
+        },
         {
           "user_query": "Open p53 crystal structure in 3D viewer",
           "tool_call": "open_protein_viewer(pdb_id='1TUP', representation='cartoon', show_ligands=true)",
@@ -33746,6 +33815,12 @@
           "tool_call": "open_protein_viewer(geneName='hemoglobin', show_ligands=true, center_on_ligand=true, representation='surface')",
           "thought": "User wants hemoglobin structure centered on heme group with surface representation",
           "expected_result": "Hemoglobin structure with surface view centered on heme ligand"
+        },
+        {
+          "user_query": "Open a downloaded local AlphaFold PDB file",
+          "tool_call": "open_protein_viewer(file_path='/path/to/AF-P04637-F1-model_v6.pdb', representation='cartoon')",
+          "thought": "The requested structure already exists on disk and can be loaded directly",
+          "expected_result": "Local PDB file opens in the interactive viewer without another network request"
         }
       ],
       "relationships": {
@@ -33771,13 +33846,12 @@
       },
       "returns": {
         "success": "boolean - Whether viewer opened successfully",
-        "viewer_url": "string - URL of the opened viewer window",
-        "structure_id": "string - PDB ID or identifier of loaded structure",
-        "protein_name": "string - Name of the protein being visualized",
-        "resolution": "number - Resolution of the structure (if available)",
-        "representation_used": "string - 3D representation style applied",
-        "ligands_displayed": "array - List of ligands shown in the structure",
-        "viewer_type": "string - Type of molecular viewer used"
+        "structureId": "string - PDB ID, AlphaFold model ID, or local/URL-derived identifier of the loaded structure",
+        "pdbId": "string - RCSB PDB ID when an experimental structure was loaded",
+        "uniprotId": "string - UniProt accession when an AlphaFold structure was loaded",
+        "representationUsed": "string - Requested 3D representation style",
+        "colorSchemeUsed": "string - Requested structure color scheme",
+        "source": "string - Resolved source such as Structure cache, Local PDB file, Online PDB URL, AlphaFold, or RCSB PDB"
       },
       "source": "app_registry",
       "sourceFile": "protein/open_protein_viewer.yaml",

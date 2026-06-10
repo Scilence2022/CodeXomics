@@ -338,7 +338,7 @@ class LLMContextService {
         );
 
       case 'open_protein_viewer':
-        return `✓ Opened protein viewer for ${result.geneName}`;
+        return `✓ Opened protein viewer for ${result.structureId || result.uniprotId || result.pdbId || result.geneName || 'structure'}${result.source ? ` from ${result.source}` : ''}`;
 
       default:
         return `✅ Tool ${toolName} executed successfully`;

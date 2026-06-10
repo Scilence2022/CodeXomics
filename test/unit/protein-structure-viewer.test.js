@@ -76,6 +76,24 @@ describe('ProteinStructureViewer Theme Propagation', () => {
     expect(mockWindow.addEventListener).toHaveBeenCalledWith('uiStyleChanged', expect.any(Function));
   });
 
+  it('should normalize tool representation and confidence coloring options for NGL', () => {
+    expect(
+      viewer.normalizeViewerOptions({
+        representation: 'ball_stick',
+        colorScheme: 'temperature',
+        showLigands: false,
+        showWaters: true,
+        centerOnLigand: true,
+      })
+    ).toEqual({
+      representation: 'ball+stick',
+      colorScheme: 'bfactor',
+      showLigands: false,
+      showWaters: true,
+      centerOnLigand: true,
+    });
+  });
+
   it('should apply current theme immediately on window creation', () => {
     const mockDoc = {
       write: vi.fn(),

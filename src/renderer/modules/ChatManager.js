@@ -5384,6 +5384,14 @@ class ChatManager {
             note: 'Full PDB data omitted to prevent context overflow. Use downloadUrl or _dataRef to access.',
           };
         }
+        if (Array.isArray(sanitized.confidenceScores) && sanitized.confidenceScores.length > 50) {
+          const residueCount = sanitized.confidenceScores.length;
+          sanitized.confidenceScores = {
+            residueCount,
+            note: 'Per-residue confidence scores omitted from LLM context. The complete scores remain available in the tool result and PDB B-factor column.',
+            sample: sanitized.confidenceScores.slice(0, 10),
+          };
+        }
         break;
 
       case 'genome_codon_usage_analysis':
@@ -12595,8 +12603,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Open protein structure viewer
    */
   async openProteinViewer(params) {
-    let { pdbData, proteinName, pdbId, uniprotId, geneName, _dataRef } = params;
-
     try {
       // Check if protein structure viewer is available
       if (!window.proteinStructureViewer || !window.proteinStructureViewer.openStructureViewer) {
@@ -12607,104 +12613,34 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         };
       }
 
-      // If a _dataRef is provided, try to retrieve cached structure data first
-      if (!pdbData && _dataRef && this.services && this.services.protein) {
-        const cachedData = this.services.protein.getCachedStructureData(_dataRef);
-        if (cachedData) {
-          pdbData = cachedData;
-          proteinName = proteinName || pdbId || uniprotId || geneName || 'Cached Structure';
-          console.log('🔬 [openProteinViewer] Retrieved structure data from cache via _dataRef:', _dataRef);
-        } else {
-          console.warn('🔬 [openProteinViewer] _dataRef cache miss, will try download fallback:', _dataRef);
-        }
-      }
-
-      // If no pdbData provided but uniprotId is available, fetch AlphaFold structure
-      if (!pdbData && uniprotId) {
-        console.log(
-          '🔬 [openProteinViewer] No PDB data provided, fetching AlphaFold structure for UniProt ID:',
-          uniprotId
-        );
-        try {
-          const alphaFoldResult = await this.downloadAlphaFoldStructure(uniprotId, 'pdb');
-          if (alphaFoldResult && alphaFoldResult.pdbData) {
-            pdbData = alphaFoldResult.pdbData;
-            proteinName = proteinName || uniprotId;
-            console.log(
-              '🔬 [openProteinViewer] Successfully downloaded AlphaFold structure data, pdbData length:',
-              pdbData.length
-            );
-          } else {
-            console.warn('🔬 [openProteinViewer] Failed to download AlphaFold data for', uniprotId);
-          }
-        } catch (fetchError) {
-          console.warn('🔬 [openProteinViewer] AlphaFold download failed:', fetchError.message);
-        }
-      }
-      // If no pdbData provided but pdbId is available, fetch the PDB structure
-      if (!pdbData && pdbId) {
-        console.log('🔬 [openProteinViewer] No PDB data provided, fetching structure for PDB ID:', pdbId);
-
-        try {
-          // Directly download PDB file from RCSB database
-          console.log('🔬 [openProteinViewer] Directly downloading PDB structure for ID:', pdbId);
-          const pdbDataFromDownload = await this.downloadPDBFile(pdbId);
-
-          if (pdbDataFromDownload) {
-            pdbData = pdbDataFromDownload;
-            proteinName = proteinName || pdbId;
-            console.log(
-              '🔬 [openProteinViewer] Successfully downloaded protein structure data, pdbData length:',
-              pdbData.length
-            );
-          } else {
-            console.warn('🔬 [openProteinViewer] Failed to download PDB data for', pdbId);
-          }
-        } catch (fetchError) {
-          console.warn('🔬 [openProteinViewer] PDB download failed:', fetchError.message);
-        }
-      }
-
-      // Validate that we now have the required data
-      // If no structure data could be obtained, return a graceful failure instead of throwing
-      if (!pdbData) {
-        const identifier = pdbId || uniprotId || geneName || 'unknown';
-        const attemptedSources = [];
-        if (uniprotId) attemptedSources.push('AlphaFold');
-        if (pdbId) attemptedSources.push('RCSB PDB');
-
+      if (!this.services?.protein?.resolveStructureViewerInput) {
         return {
           success: false,
-          error: `No protein structure data available for ${identifier}`,
-          pdbId: pdbId,
-          uniprotId: uniprotId,
-          geneName: geneName,
-          attemptedSources: attemptedSources,
-          message:
-            `Could not retrieve protein structure for ${identifier}.` +
-            (attemptedSources.length > 0
-              ? ` Attempted sources: ${attemptedSources.join(', ')}. This may be due to network issues, the structure not being available in the database, or an invalid identifier.`
-              : ' No structure source (PDB ID or UniProt ID) was provided.'),
-          suggestions: [
-            'Verify the PDB ID or UniProt ID is correct',
-            'Check your internet connection',
-            'Try searching for the structure first using search_alphafold_structures or search_pdb_structures',
-          ],
+          error: 'Protein structure source resolver is unavailable.',
+          message: 'Cannot open protein viewer: protein service not found.',
         };
       }
 
-      if (!proteinName) {
-        proteinName = pdbId || 'Unknown Protein';
-      }
+      const resolved = await this.services.protein.resolveStructureViewerInput(params);
+      if (!resolved.success) return resolved;
 
       // Open the 3D viewer
-      window.proteinStructureViewer.openStructureViewer(pdbData, proteinName, pdbId);
+      window.proteinStructureViewer.openStructureViewer(
+        resolved.pdbData,
+        resolved.proteinName,
+        resolved.structureId,
+        resolved.viewerOptions
+      );
 
       return {
         success: true,
-        pdbId: pdbId,
-        uniprotId: uniprotId,
-        message: `Opened 3D protein structure viewer for ${proteinName} (${pdbId || uniprotId || ''})`,
+        pdbId: resolved.pdbId,
+        uniprotId: resolved.uniprotId,
+        structureId: resolved.structureId,
+        source: resolved.source,
+        representationUsed: resolved.viewerOptions.representation,
+        colorSchemeUsed: resolved.viewerOptions.colorScheme,
+        message: `Opened 3D protein structure viewer for ${resolved.proteinName} (${resolved.structureId}) from ${resolved.source}.`,
       };
     } catch (error) {
       console.error('Error in openProteinViewer:', error);
@@ -12987,35 +12923,26 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    */
   async downloadAlphaFoldStructure(uniprotId, format = 'pdb') {
     try {
-      console.log(`Downloading AlphaFold structure for ${uniprotId} in ${format} format`);
-
-      const downloadUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`;
-
-      console.log('AlphaFold download URL:', downloadUrl);
-
-      const response = await fetch(downloadUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to download AlphaFold structure: ${response.status} ${response.statusText}`);
+      const result = await this.services.protein.fetchAlphaFoldStructure({
+        uniprotId,
+        format,
+        includeConfidence: true,
+      });
+      if (!result.success) {
+        throw new Error(result.error || `No AlphaFold structure found for ${uniprotId}`);
       }
 
-      const pdbData = await response.text();
-
-      if (!pdbData || pdbData.length < 100) {
-        throw new Error('Downloaded PDB data appears to be invalid or too short');
+      const pdbData = this.services.protein.getCachedStructureData(result._dataRef);
+      if (!pdbData) {
+        throw new Error('AlphaFold structure was downloaded but could not be read from cache');
       }
-
-      console.log(`Successfully downloaded AlphaFold structure for ${uniprotId}, size: ${pdbData.length} characters`);
-
-      // Extract metadata from PDB header
-      const confidenceInfo = this.extractAlphaFoldConfidence(pdbData);
-      const modelDate = this.extractModelDate(pdbData);
 
       return {
-        pdbData: pdbData,
-        confidence: confidenceInfo,
-        modelDate: modelDate,
+        pdbData,
+        confidence: result.confidence,
+        modelDate: result.modelCreatedDate,
         source: 'AlphaFold',
-        downloadUrl: downloadUrl,
+        downloadUrl: result.downloadUrl,
       };
     } catch (error) {
       console.error('AlphaFold structure download error:', error);

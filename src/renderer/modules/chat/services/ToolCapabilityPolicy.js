@@ -171,7 +171,7 @@ class ToolCapabilityPolicy {
       },
 
       display_operations: {
-        tools: ['show_hide_features', 'set_view_mode', 'refresh_view'],
+        tools: ['show_hide_features', 'set_view_mode', 'refresh_view', 'open_protein_viewer'],
         policy: 'once_per_round',
       },
 

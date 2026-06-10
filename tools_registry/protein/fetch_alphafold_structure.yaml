@@ -1,6 +1,6 @@
 name: fetch_alphafold_structure
-version: 1.1.0
-description: 'Download and cache AlphaFold protein structure data by UniProt ID or gene name. Returns structure file and metadata.'
+version: 1.2.0
+description: 'Download and cache the current AlphaFold protein structure selected from official prediction metadata by UniProt ID or gene name. PDB confidence values are returned per residue and remain embedded in the PDB B-factor column.'
 category: protein
 keywords: ['fetch', 'download', 'alphafold', 'structure', 'uniprot', 'pdb', 'cache']
 priority: 1
@@ -10,7 +10,7 @@ execution:
   retries: 2
   requires_auth: false
   requires_data: false
-  requires_network: false
+  requires_network: true
 parameters:
   type: object
   properties:
@@ -30,7 +30,7 @@ parameters:
       examples: ['Homo sapiens', 'Escherichia coli', 'Mus musculus']
     format:
       type: string
-      enum: ['pdb', 'cif', 'both']
+      enum: ['pdb', 'cif']
       description: 'Structure file format to download'
       default: 'pdb'
     include_confidence:
@@ -57,10 +57,6 @@ sample_usages:
     thought: 'User wants lacZ structure from E. coli with confidence scores'
     expected_result: 'lacZ structure file with per-residue confidence information'
 
-  - user_query: 'Download protein structure in both PDB and CIF formats'
-    tool_call: "fetch_alphafold_structure(uniprot_id='P0A7B8', format='both', cache_locally=true)"
-    thought: 'User wants structure in multiple formats with local caching'
-    expected_result: 'Both PDB and CIF files downloaded and cached locally'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -84,10 +80,17 @@ error_handling:
   structure_not_found: Returns error if structure not found
 returns:
   success: 'boolean - Whether structure download was successful'
-  structure_file: 'string - Path to downloaded structure file'
-  uniprot_id: 'string - UniProt ID of the protein'
-  file_format: 'string - Format of downloaded file (pdb/cif)'
-  file_size: 'number - Size of structure file in bytes'
-  confidence_data: 'array - Per-residue confidence scores (if requested)'
-  download_time: 'number - Time taken to download in milliseconds'
+  structureFile: 'string - Path to the temporary local structure file when cache_locally is enabled and file caching is available'
+  uniprotId: 'string - UniProt ID of the protein'
+  structureId: 'string - AlphaFold model entity identifier'
+  modelVersion: 'number - Current AlphaFold model version reported by prediction metadata'
+  modelCreatedDate: 'string - Model creation date reported by AlphaFold'
+  globalMetricValue: 'number - AlphaFold global confidence metric when available'
+  format: 'string - Downloaded file format (pdb/cif)'
+  dataLength: 'number - Size of structure data in characters'
+  _dataRef: 'string - In-memory cache reference that can be passed to open_protein_viewer as data_ref'
+  confidence: 'object - Summary pLDDT statistics (if requested)'
+  confidenceScores: 'array - Per-residue pLDDT confidence scores from PDB alpha-carbon B-factors (if requested)'
+  confidenceLocation: 'string - Location of confidence values in the downloaded PDB data'
   cached: 'boolean - Whether file was cached locally'
+  memoryCached: 'boolean - Whether structure data is available through _dataRef'

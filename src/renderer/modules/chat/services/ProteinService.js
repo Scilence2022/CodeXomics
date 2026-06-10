@@ -65,21 +65,45 @@ class ProteinService {
    * Downloads the PDB format structure from AlphaFold EBI and returns structured data.
    */
   async fetchAlphaFoldStructure(parameters) {
-    const uniprotId = parameters.uniprotId || parameters.uniprot_id;
+    let uniprotId = parameters.uniprotId || parameters.uniprot_id;
+    const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
+    const organism = parameters.organism || 'Homo sapiens';
     const format = parameters.format || 'pdb';
+    const includeConfidence = parameters.includeConfidence ?? parameters.include_confidence ?? true;
+    const cacheLocally = parameters.cacheLocally ?? parameters.cache_locally ?? true;
 
     try {
-      if (!uniprotId) throw new Error('UniProt ID is required for AlphaFold structure fetch');
+      if (!uniprotId && geneName) {
+        const matches = await this.chatManager.performAlphaFoldSearch(geneName, organism, 1);
+        uniprotId = matches?.[0]?.uniprotId;
+      }
+      if (!uniprotId) throw new Error('UniProt ID or resolvable gene name is required for AlphaFold structure fetch');
+      uniprotId = String(uniprotId).trim().toUpperCase();
 
       console.log(`[ProteinService] Fetching AlphaFold structure for UniProt: ${uniprotId}, format: ${format}`);
 
-      // Download from AlphaFold EBI
-      const downloadUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.${format}`;
+      let alphaFoldMetadata = null;
+      try {
+        alphaFoldMetadata = await this._getAlphaFoldDownloadMetadata(uniprotId);
+      } catch (metadataError) {
+        console.warn(
+          '[ProteinService] AlphaFold metadata lookup failed; using legacy direct URL:',
+          metadataError.message
+        );
+      }
+
+      const formatUrlField = format === 'cif' ? 'cifUrl' : 'pdbUrl';
+      const downloadUrl =
+        alphaFoldMetadata?.[formatUrlField] ||
+        `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.${format}`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-
-      const response = await fetch(downloadUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
+      let response;
+      try {
+        response = await fetch(downloadUrl, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -114,14 +138,38 @@ class ProteinService {
       const cacheKey = `alphafold_${uniprotId}_${Date.now()}`;
       this._cacheStructureData(cacheKey, pdbData);
 
+      const confidenceData = includeConfidence ? this._extractAlphaFoldConfidence(pdbData) : null;
+      let structureFile = null;
+      const structureId = alphaFoldMetadata?.modelEntityId || `AF-${uniprotId}-F1`;
+
+      if (cacheLocally && typeof window.electronAPI?.createTempFile === 'function') {
+        const fileName = this._getStructureFileName(downloadUrl, `${structureId}.${format}`);
+        const fileResult = await window.electronAPI.createTempFile(fileName, pdbData);
+        if (fileResult?.success) {
+          structureFile = fileResult.filePath;
+        } else {
+          console.warn('[ProteinService] Could not create local AlphaFold cache file:', fileResult?.error);
+        }
+      }
+
       return {
         success: true,
         tool: 'fetch_alphafold_structure',
         uniprotId: uniprotId,
+        structureId,
+        modelVersion: alphaFoldMetadata?.latestVersion || null,
+        modelCreatedDate: alphaFoldMetadata?.modelCreatedDate || null,
+        globalMetricValue: alphaFoldMetadata?.globalMetricValue ?? null,
         format: format,
         dataLength: pdbData.length,
         downloadUrl: downloadUrl,
         _dataRef: cacheKey,
+        structureFile,
+        memoryCached: true,
+        cached: Boolean(structureFile),
+        confidence: confidenceData?.summary || null,
+        confidenceScores: confidenceData?.scores || null,
+        confidenceLocation: includeConfidence ? 'PDB B-factor column (pLDDT)' : null,
         timestamp: new Date().toISOString(),
         message: `Successfully fetched AlphaFold structure for ${uniprotId} (${pdbData.length} chars). Use _dataRef or downloadUrl to access the structure data.`,
       };
@@ -169,6 +217,347 @@ class ProteinService {
       console.warn(`[ProteinService] Cache miss for: ${refKey}`);
     }
     return data || null;
+  }
+
+  /**
+   * Normalize public tool parameter aliases before resolving a viewer source.
+   * Dynamic registry calls use snake_case while internal callers mostly use camelCase.
+   */
+  normalizeStructureViewerParameters(parameters = {}) {
+    return {
+      pdbData: parameters.pdbData || parameters.pdb_data || parameters.structureData || parameters.structure_data,
+      proteinName: parameters.proteinName || parameters.protein_name,
+      pdbId: parameters.pdbId || parameters.pdb_id,
+      uniprotId: parameters.uniprotId || parameters.uniprot_id,
+      geneName: parameters.geneName || parameters.gene_name || parameters.gene,
+      organism: parameters.organism || 'Homo sapiens',
+      filePath: parameters.filePath || parameters.file_path || parameters.structureFile || parameters.structure_file,
+      structureUrl:
+        parameters.structureUrl ||
+        parameters.structure_url ||
+        parameters.downloadUrl ||
+        parameters.download_url ||
+        parameters.url,
+      dataRef: parameters._dataRef || parameters.dataRef || parameters.data_ref,
+      representation: parameters.representation || 'cartoon',
+      colorScheme: parameters.colorScheme || parameters.color_scheme || 'chain',
+      showLigands: parameters.showLigands ?? parameters.show_ligands ?? true,
+      showWaters: parameters.showWaters ?? parameters.show_waters ?? false,
+      centerOnLigand: parameters.centerOnLigand ?? parameters.center_on_ligand ?? false,
+      viewerType: parameters.viewerType || parameters.viewer_type || 'default',
+    };
+  }
+
+  /**
+   * Resolve raw PDB text from cache, disk, URL, AlphaFold, RCSB, or a gene name.
+   * The returned structure data stays in renderer memory and is never sent to the LLM.
+   */
+  async resolveStructureViewerInput(parameters = {}) {
+    const normalized = this.normalizeStructureViewerParameters(parameters);
+    const attemptedSources = [];
+    const sourceErrors = [];
+
+    const buildResult = (pdbData, metadata) => {
+      this._validatePdbData(pdbData, metadata.source);
+      return {
+        success: true,
+        pdbData,
+        proteinName:
+          normalized.proteinName ||
+          metadata.proteinName ||
+          metadata.pdbId ||
+          metadata.uniprotId ||
+          normalized.geneName ||
+          'Protein Structure',
+        pdbId: metadata.pdbId || null,
+        uniprotId: metadata.uniprotId || null,
+        structureId: metadata.structureId || metadata.pdbId || metadata.uniprotId || 'local-structure',
+        source: metadata.source,
+        attemptedSources,
+        viewerOptions: {
+          representation: normalized.representation,
+          colorScheme: normalized.colorScheme,
+          showLigands: normalized.showLigands,
+          showWaters: normalized.showWaters,
+          centerOnLigand: normalized.centerOnLigand,
+          viewerType: normalized.viewerType,
+        },
+      };
+    };
+
+    const trySource = async (label, resolver) => {
+      attemptedSources.push(label);
+      try {
+        return await resolver();
+      } catch (error) {
+        console.warn(`[ProteinService] ${label} viewer source failed:`, error.message);
+        sourceErrors.push({ source: label, error: error.message });
+        return null;
+      }
+    };
+
+    if (normalized.pdbData) {
+      const inlineResult = await trySource('Inline PDB data', async () =>
+        buildResult(normalized.pdbData, {
+          source: 'Inline PDB data',
+          pdbId: normalized.pdbId,
+          uniprotId: normalized.uniprotId,
+        })
+      );
+      if (inlineResult) return inlineResult;
+    }
+
+    if (normalized.dataRef) {
+      const cacheResult = await trySource('Structure cache', async () => {
+        const cachedData = this.getCachedStructureData(normalized.dataRef);
+        if (!cachedData) throw new Error(`No cached structure found for reference ${normalized.dataRef}`);
+        return buildResult(cachedData, {
+          source: 'Structure cache',
+          pdbId: normalized.pdbId,
+          uniprotId: normalized.uniprotId,
+        });
+      });
+      if (cacheResult) return cacheResult;
+    }
+
+    if (normalized.filePath) {
+      const fileResult = await trySource('Local PDB file', async () => {
+        const pdbData = await this._readLocalStructureFile(normalized.filePath);
+        return buildResult(pdbData, {
+          source: 'Local PDB file',
+          structureId: this._getStructureNameFromPath(normalized.filePath),
+        });
+      });
+      if (fileResult) return fileResult;
+    }
+
+    if (normalized.structureUrl) {
+      const urlResult = await trySource('Online PDB URL', async () => {
+        const pdbData = await this._downloadStructureUrl(normalized.structureUrl);
+        return buildResult(pdbData, {
+          source: 'Online PDB URL',
+          structureId: this._getStructureNameFromPath(normalized.structureUrl),
+        });
+      });
+      if (urlResult) return urlResult;
+    }
+
+    let pdbId = normalized.pdbId ? String(normalized.pdbId).trim() : null;
+    let uniprotId = normalized.uniprotId ? String(normalized.uniprotId).trim().toUpperCase() : null;
+    const alphaFoldMatch = pdbId?.match(/^AF-([A-Z0-9]{6,10})-F\d+(?:-MODEL_V\d+)?(?:\.PDB)?$/i);
+
+    if (!uniprotId && alphaFoldMatch) {
+      uniprotId = alphaFoldMatch[1].toUpperCase();
+      pdbId = null;
+    } else if (!uniprotId && pdbId && !/^[0-9][A-Z0-9]{3}$/i.test(pdbId) && /^[A-Z0-9]{6,10}$/i.test(pdbId)) {
+      // Older prompts passed UniProt accessions through pdbId. Preserve that workflow.
+      uniprotId = pdbId.toUpperCase();
+      pdbId = null;
+    }
+
+    if (uniprotId) {
+      const alphaFoldResult = await trySource('AlphaFold', async () => {
+        const fetched = await this.fetchAlphaFoldStructure({ uniprotId, format: 'pdb', includeConfidence: true });
+        if (!fetched.success) throw new Error(fetched.error || `No AlphaFold structure found for ${uniprotId}`);
+        const pdbData = this.getCachedStructureData(fetched._dataRef);
+        if (!pdbData) throw new Error('AlphaFold structure was downloaded but could not be read from cache');
+        return buildResult(pdbData, {
+          source: 'AlphaFold',
+          uniprotId,
+          structureId: fetched.structureId || `AF-${uniprotId}-F1`,
+        });
+      });
+      if (alphaFoldResult) return alphaFoldResult;
+    }
+
+    if (pdbId) {
+      const normalizedPdbId = pdbId.toUpperCase();
+      const pdbResult = await trySource('RCSB PDB', async () => {
+        if (!/^[0-9][A-Z0-9]{3}$/.test(normalizedPdbId)) {
+          throw new Error(`Invalid PDB ID: ${pdbId}`);
+        }
+        const fetched = await this.fetchProteinStructure({ pdbId: normalizedPdbId });
+        if (!fetched.success) throw new Error(fetched.error || `No PDB structure found for ${normalizedPdbId}`);
+        const pdbData = this.getCachedStructureData(fetched._dataRef);
+        if (!pdbData) throw new Error('PDB structure was downloaded but could not be read from cache');
+        return buildResult(pdbData, {
+          source: 'RCSB PDB',
+          pdbId: normalizedPdbId,
+        });
+      });
+      if (pdbResult) return pdbResult;
+    }
+
+    if (normalized.geneName) {
+      const geneResult = await trySource('Gene name lookup', async () => {
+        const matches = await this.chatManager.performAlphaFoldSearch(normalized.geneName, normalized.organism, 1);
+        const match = matches?.[0];
+        if (!match?.uniprotId) {
+          throw new Error(`No AlphaFold structure found for ${normalized.geneName} in ${normalized.organism}`);
+        }
+        const fetched = await this.fetchAlphaFoldStructure({
+          uniprotId: match.uniprotId,
+          format: 'pdb',
+          includeConfidence: true,
+        });
+        if (!fetched.success) throw new Error(fetched.error || `No AlphaFold structure found for ${match.uniprotId}`);
+        const pdbData = this.getCachedStructureData(fetched._dataRef);
+        if (!pdbData) throw new Error('Resolved AlphaFold structure could not be read from cache');
+        return buildResult(pdbData, {
+          source: 'AlphaFold gene lookup',
+          uniprotId: match.uniprotId,
+          structureId: fetched.structureId || `AF-${match.uniprotId}-F1`,
+          proteinName: match.proteinName,
+        });
+      });
+      if (geneResult) return geneResult;
+    }
+
+    const identifier =
+      normalized.filePath ||
+      normalized.structureUrl ||
+      uniprotId ||
+      pdbId ||
+      normalized.geneName ||
+      'unknown structure';
+    return {
+      success: false,
+      error: `No protein structure data available for ${identifier}`,
+      message:
+        attemptedSources.length > 0
+          ? `Could not load ${identifier}. Attempted sources: ${attemptedSources.join(', ')}.`
+          : 'No structure source was provided. Pass PDB data, a cache reference, local file path, URL, UniProt ID, PDB ID, or gene name.',
+      pdbId: pdbId || null,
+      uniprotId: uniprotId || null,
+      geneName: normalized.geneName || null,
+      attemptedSources,
+      sourceErrors,
+    };
+  }
+
+  _extractAlphaFoldConfidence(pdbData) {
+    const scores = [];
+
+    for (const line of pdbData.split('\n')) {
+      if (!line.startsWith('ATOM') || line.substring(12, 16).trim() !== 'CA') continue;
+
+      const plddt = Number.parseFloat(line.substring(60, 66).trim());
+      if (!Number.isFinite(plddt)) continue;
+
+      scores.push({
+        chain: line.substring(21, 22).trim() || 'A',
+        residueName: line.substring(17, 20).trim(),
+        residueNumber: Number.parseInt(line.substring(22, 26).trim(), 10),
+        insertionCode: line.substring(26, 27).trim() || null,
+        plddt,
+      });
+    }
+
+    if (scores.length === 0) return null;
+
+    const values = scores.map(score => score.plddt);
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    const round = value => Math.round(value * 100) / 100;
+
+    return {
+      summary: {
+        average: round(average),
+        min: round(Math.min(...values)),
+        max: round(Math.max(...values)),
+        residueCount: scores.length,
+        interpretation: this._interpretAlphaFoldConfidence(average),
+      },
+      scores,
+    };
+  }
+
+  async _getAlphaFoldDownloadMetadata(uniprotId) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(`https://alphafold.ebi.ac.uk/api/prediction/${encodeURIComponent(uniprotId)}`, {
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`AlphaFold prediction API returned HTTP ${response.status}`);
+      }
+
+      const predictions = await response.json();
+      if (!Array.isArray(predictions) || predictions.length === 0) {
+        throw new Error(`No AlphaFold prediction metadata found for ${uniprotId}`);
+      }
+
+      return (
+        predictions.find(prediction => prediction.uniprotAccession?.toUpperCase() === uniprotId.toUpperCase()) ||
+        predictions[0]
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  _interpretAlphaFoldConfidence(confidence) {
+    if (confidence >= 90) return 'Very high (pLDDT > 90)';
+    if (confidence >= 70) return 'Confident (pLDDT 70-90)';
+    if (confidence >= 50) return 'Low (pLDDT 50-70)';
+    return 'Very low (pLDDT < 50)';
+  }
+
+  _validatePdbData(pdbData, source = 'structure source') {
+    if (typeof pdbData !== 'string' || pdbData.trim().length === 0) {
+      throw new Error(`${source} returned empty structure data`);
+    }
+    if (!/^(?:ATOM {2}|HETATM|MODEL |HEADER)/m.test(pdbData)) {
+      throw new Error(`${source} did not return valid PDB data`);
+    }
+  }
+
+  async _readLocalStructureFile(filePath) {
+    const readFile = window.electronAPI?.readFile;
+    if (typeof readFile !== 'function') {
+      throw new Error('Local file reading is unavailable in this renderer');
+    }
+
+    const result = await readFile(filePath);
+    if (!result?.success) {
+      throw new Error(result?.error || `Could not read ${filePath}`);
+    }
+    return result.data;
+  }
+
+  async _downloadStructureUrl(structureUrl) {
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(structureUrl);
+    } catch (_error) {
+      throw new Error(`Invalid structure URL: ${structureUrl}`);
+    }
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new Error('Structure URL must use HTTP or HTTPS');
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    try {
+      const response = await fetch(parsedUrl.toString(), { signal: controller.signal });
+      if (!response.ok) {
+        throw new Error(`Structure download returned HTTP ${response.status}`);
+      }
+      return await response.text();
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  _getStructureNameFromPath(filePathOrUrl) {
+    const cleanPath = String(filePathOrUrl).split(/[?#]/, 1)[0];
+    const fileName = cleanPath.split(/[\\/]/).pop() || 'local-structure';
+    return fileName.replace(/\.pdb$/i, '') || 'local-structure';
+  }
+
+  _getStructureFileName(filePathOrUrl, fallback) {
+    const cleanPath = String(filePathOrUrl).split(/[?#]/, 1)[0];
+    return cleanPath.split(/[\\/]/).pop() || fallback;
   }
 
   /**
@@ -375,14 +764,8 @@ class ProteinService {
 
   async checkAlphaFoldAvailability(uniprotId) {
     try {
-      const checkUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const response = await fetch(checkUrl, { method: 'HEAD', signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (response.ok) return true;
-      if (response.status === 404) return false;
-      return false;
+      const metadata = await this._getAlphaFoldDownloadMetadata(uniprotId);
+      return Boolean(metadata?.pdbUrl);
     } catch (error) {
       if (error.name === 'AbortError') console.warn(`Timeout checking AlphaFold for ${uniprotId}`);
       else console.warn(`Could not check AlphaFold for ${uniprotId}:`, error.message);

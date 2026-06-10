@@ -1,33 +1,52 @@
 name: open_protein_viewer
-version: 1.1.0
-description: 'Open interactive 3D protein structure viewer for PDB structures in a separate window with molecular visualization tools.'
+version: 1.2.0
+description: 'Open an interactive 3D protein structure viewer from cached data, a local PDB file, an online PDB URL, a UniProt/AlphaFold accession, a PDB ID, or a gene name. Online structures are downloaded automatically.'
 category: protein
 keywords: ['open', 'viewer', '3d', 'protein', 'structure', 'pdb', 'molecular', 'visualization']
 priority: 1
 execution:
-  type: server
+  type: built-in
   timeout: 30000
   retries: 2
   requires_auth: false
   requires_data: false
-  requires_network: true
+  requires_network: false
 parameters:
   type: object
   properties:
     pdb_id:
       type: string
-      description: "PDB ID of structure to visualize (e.g., '1TUP', '2BEG')"
-      pattern: '^[0-9][A-Z0-9]{3}$'
-      examples: ['1TUP', '2BEG', '4HHB', '1LMB']
+      description: 'RCSB PDB ID. For backward compatibility, UniProt accessions and AlphaFold model IDs are also recognized.'
+      examples: ['1TUP', '2BEG', 'P04637', 'AF-P04637-F1-model_v6']
+    uniprot_id:
+      type: string
+      description: "UniProt accession used to download the corresponding AlphaFold PDB model (e.g., 'P04637')"
+      examples: ['P04637', 'P00350', 'P0A7B8']
     geneName:
       type: string
-      description: 'Gene name as alternative to PDB ID (opens best available structure)'
+      description: 'Gene name as an alternative identifier; resolves and downloads the best available AlphaFold structure'
       examples: ['p53', 'lacZ', 'dnaA', 'hemoglobin']
     organism:
       type: string
       description: 'Organism name for gene name searches'
       default: 'Homo sapiens'
       examples: ['Homo sapiens', 'Escherichia coli', 'Mus musculus']
+    file_path:
+      type: string
+      description: 'Absolute path to a local PDB file accessible to CodeXomics'
+      examples: ['/Users/name/Downloads/AF-P04637-F1-model_v6.pdb', 'C:\\Data\\1TUP.pdb']
+    structure_url:
+      type: string
+      description: 'HTTP(S) URL of a PDB file to download and open automatically'
+      examples:
+        - 'https://alphafold.ebi.ac.uk/files/AF-P04637-F1-model_v6.pdb'
+        - 'https://files.rcsb.org/download/1TUP.pdb'
+    data_ref:
+      type: string
+      description: 'Cached structure reference returned as _dataRef by fetch_alphafold_structure or fetch_protein_structure'
+    protein_name:
+      type: string
+      description: 'Optional display name for the structure'
     representation:
       type: string
       enum: ['cartoon', 'surface', 'stick', 'ball_stick', 'ribbon']
@@ -52,7 +71,7 @@ parameters:
       default: false
     viewer_type:
       type: string
-      enum: ['molstar', 'ngl', 'pymol', 'default']
+      enum: ['ngl', 'default']
       description: 'Molecular viewer to use'
       default: 'default'
     clientId:
@@ -61,6 +80,11 @@ parameters:
       default: 'default'
   required: []
 sample_usages:
+  - user_query: 'Open the AlphaFold model that was just downloaded for p53'
+    tool_call: "open_protein_viewer(uniprot_id='P04637', representation='cartoon', color_scheme='temperature')"
+    thought: 'The UniProt accession identifies the AlphaFold model directly; the viewer downloads it if it is not already cached'
+    expected_result: 'AlphaFold p53 structure opens as a cartoon colored by confidence values stored in the PDB B-factor column'
+
   - user_query: 'Open p53 crystal structure in 3D viewer'
     tool_call: "open_protein_viewer(pdb_id='1TUP', representation='cartoon', show_ligands=true)"
     thought: 'User wants to visualize p53 crystal structure with bound DNA'
@@ -75,6 +99,11 @@ sample_usages:
     tool_call: "open_protein_viewer(geneName='hemoglobin', show_ligands=true, center_on_ligand=true, representation='surface')"
     thought: 'User wants hemoglobin structure centered on heme group with surface representation'
     expected_result: 'Hemoglobin structure with surface view centered on heme ligand'
+
+  - user_query: 'Open a downloaded local AlphaFold PDB file'
+    tool_call: "open_protein_viewer(file_path='/path/to/AF-P04637-F1-model_v6.pdb', representation='cartoon')"
+    thought: 'The requested structure already exists on disk and can be loaded directly'
+    expected_result: 'Local PDB file opens in the interactive viewer without another network request'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -98,10 +127,9 @@ error_handling:
   structure_not_found: Returns error if structure not found
 returns:
   success: 'boolean - Whether viewer opened successfully'
-  viewer_url: 'string - URL of the opened viewer window'
-  structure_id: 'string - PDB ID or identifier of loaded structure'
-  protein_name: 'string - Name of the protein being visualized'
-  resolution: 'number - Resolution of the structure (if available)'
-  representation_used: 'string - 3D representation style applied'
-  ligands_displayed: 'array - List of ligands shown in the structure'
-  viewer_type: 'string - Type of molecular viewer used'
+  structureId: 'string - PDB ID, AlphaFold model ID, or local/URL-derived identifier of the loaded structure'
+  pdbId: 'string - RCSB PDB ID when an experimental structure was loaded'
+  uniprotId: 'string - UniProt accession when an AlphaFold structure was loaded'
+  representationUsed: 'string - Requested 3D representation style'
+  colorSchemeUsed: 'string - Requested structure color scheme'
+  source: 'string - Resolved source such as Structure cache, Local PDB file, Online PDB URL, AlphaFold, or RCSB PDB'

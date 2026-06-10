@@ -375,12 +375,14 @@ class ProteinStructureViewer {
   /**
    * Open 3D protein structure viewer in new window
    */
-  openStructureViewer(pdbData, proteinName, pdbId) {
+  openStructureViewer(pdbData, proteinName, pdbId, options = {}) {
     // Check WebGL support before opening viewer
     if (!this.webglSupported) {
       this.showWebGLErrorDialog(proteinName, pdbId);
       return;
     }
+
+    const viewerOptions = this.normalizeViewerOptions(options);
 
     const windowId = `protein-${pdbId}-${Date.now()}`;
 
@@ -422,7 +424,7 @@ class ProteinStructureViewer {
         if (viewerWindow.nglReady && viewerWindow.NGL) {
           console.log('NGL is ready, initializing viewer...');
           viewerWindow.document.getElementById('loading').textContent = 'Loading protein structure...';
-          this.initializeNGLViewer(viewerWindow, pdbData, proteinName, pdbId);
+          this.initializeNGLViewer(viewerWindow, pdbData, proteinName, pdbId, viewerOptions);
         } else if (viewerWindow.closed) {
           console.log('Viewer window was closed before NGL loaded');
           return;
@@ -439,6 +441,39 @@ class ProteinStructureViewer {
     this.structureWindows.set(windowId, viewerWindow);
 
     console.log('Protein viewer window created with ID:', windowId);
+  }
+
+  normalizeViewerOptions(options = {}) {
+    const representationMap = {
+      cartoon: 'cartoon',
+      surface: 'surface',
+      stick: 'licorice',
+      ball_stick: 'ball+stick',
+      'ball+stick': 'ball+stick',
+      ribbon: 'ribbon',
+      spacefill: 'spacefill',
+      backbone: 'backbone',
+    };
+    const colorSchemeMap = {
+      chain: 'chainid',
+      chainid: 'chainid',
+      secondary: 'sstruc',
+      sstruc: 'sstruc',
+      atom: 'element',
+      element: 'element',
+      residue: 'residueindex',
+      residueindex: 'residueindex',
+      temperature: 'bfactor',
+      bfactor: 'bfactor',
+    };
+
+    return {
+      representation: representationMap[options.representation] || 'cartoon',
+      colorScheme: colorSchemeMap[options.colorScheme] || 'chainid',
+      showLigands: options.showLigands ?? true,
+      showWaters: options.showWaters ?? false,
+      centerOnLigand: options.centerOnLigand ?? false,
+    };
   }
 
   /**
@@ -953,7 +988,7 @@ class ProteinStructureViewer {
   /**
    * Initialize NGL viewer in the protein window
    */
-  initializeNGLViewer(viewerWindow, pdbData, proteinName, pdbId) {
+  initializeNGLViewer(viewerWindow, pdbData, proteinName, pdbId, options = {}) {
     try {
       console.log('Initializing NGL viewer for:', pdbId);
       console.log('PDB data length:', pdbData ? pdbData.length : 'No data');
@@ -997,9 +1032,31 @@ class ProteinStructureViewer {
       console.log('NGL stage created successfully');
 
       // Add representation controls
-      let currentRepresentation = 'cartoon';
+      const viewerOptions = this.normalizeViewerOptions(options);
+      let currentRepresentation = viewerOptions.representation;
       let spinning = false;
       let component = null;
+
+      const addRepresentations = comp => {
+        comp.addRepresentation(currentRepresentation, {
+          colorScheme: viewerOptions.colorScheme,
+          sele: 'polymer',
+        });
+
+        if (viewerOptions.showLigands) {
+          comp.addRepresentation('ball+stick', {
+            colorScheme: 'element',
+            sele: 'hetero and not water',
+          });
+        }
+
+        if (viewerOptions.showWaters) {
+          comp.addRepresentation('ball+stick', {
+            colorScheme: 'element',
+            sele: 'water',
+          });
+        }
+      };
 
       // Validate PDB data
       if (!pdbData || pdbData.length === 0) {
@@ -1017,7 +1074,7 @@ class ProteinStructureViewer {
 
       stage
         .loadFile(dataUrl, { ext: 'pdb' })
-        .then(function(comp) {
+        .then(comp => {
           console.log('PDB structure loaded successfully');
           component = comp;
 
@@ -1026,14 +1083,16 @@ class ProteinStructureViewer {
 
           try {
             // Add default representation with error handling
-            comp.addRepresentation(currentRepresentation, {
-              colorScheme: 'chainid',
-            });
+            addRepresentations(comp);
 
             console.log('Representation added');
 
             // Auto view
-            comp.autoView();
+            if (viewerOptions.centerOnLigand && viewerOptions.showLigands) {
+              comp.autoView('hetero and not water');
+            } else {
+              comp.autoView();
+            }
 
             console.log('Auto view applied');
 
@@ -1059,7 +1118,7 @@ class ProteinStructureViewer {
             }
           }
         })
-        .catch(function(error) {
+        .catch(error => {
           console.error('Error loading PDB structure:', error);
 
           // Clean up the object URL in case of error
@@ -1118,9 +1177,7 @@ class ProteinStructureViewer {
 
         console.log('New representation:', currentRepresentation);
 
-        component.addRepresentation(currentRepresentation, {
-          colorScheme: 'chainid',
-        });
+        addRepresentations(component);
       };
 
       viewerWindow.toggleSpin = () => {

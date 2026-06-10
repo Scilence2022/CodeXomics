@@ -28,16 +28,33 @@ class ProteinTools {
 
       open_protein_viewer: {
         name: 'open_protein_viewer',
-        description: 'Open 3D protein structure viewer in a separate window',
+        description:
+          'Open a 3D protein structure viewer from cached data, a local PDB file, an online URL, a UniProt/AlphaFold accession, a PDB ID, or a gene name',
         parameters: {
           type: 'object',
           properties: {
-            pdbData: { type: 'string', description: 'PDB structure data' },
-            proteinName: { type: 'string', description: 'Protein name for display' },
-            pdbId: { type: 'string', description: 'PDB ID' },
+            pdbData: { type: 'string', description: 'Inline PDB structure data for internal calls' },
+            proteinName: { type: 'string', description: 'Optional protein name for display' },
+            pdbId: { type: 'string', description: 'RCSB PDB ID, UniProt accession, or AlphaFold model ID' },
+            pdb_id: { type: 'string', description: 'Snake-case alias for pdbId' },
+            uniprotId: { type: 'string', description: 'UniProt accession for AlphaFold download' },
+            uniprot_id: { type: 'string', description: 'Snake-case alias for uniprotId' },
+            geneName: { type: 'string', description: 'Gene name to resolve through UniProt/AlphaFold' },
+            organism: { type: 'string', description: 'Organism used for gene-name resolution' },
+            filePath: { type: 'string', description: 'Absolute local PDB file path' },
+            file_path: { type: 'string', description: 'Snake-case alias for filePath' },
+            structureUrl: { type: 'string', description: 'HTTP(S) PDB URL to download and open' },
+            structure_url: { type: 'string', description: 'Snake-case alias for structureUrl' },
+            dataRef: { type: 'string', description: 'Cached data reference returned by a structure fetch tool' },
+            data_ref: { type: 'string', description: 'Snake-case alias for dataRef' },
+            representation: { type: 'string', description: 'cartoon, surface, stick, ball_stick, or ribbon' },
+            color_scheme: { type: 'string', description: 'chain, secondary, atom, residue, or temperature' },
+            show_ligands: { type: 'boolean', description: 'Show ligands and cofactors' },
+            show_waters: { type: 'boolean', description: 'Show water molecules' },
+            center_on_ligand: { type: 'boolean', description: 'Center the initial view on the largest ligand' },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
-          required: ['pdbData', 'proteinName'],
+          required: [],
         },
       },
 
@@ -77,12 +94,18 @@ class ProteinTools {
         parameters: {
           type: 'object',
           properties: {
-            uniprotId: { type: 'string', description: 'UniProt ID (e.g., P53_HUMAN)' },
-            geneName: { type: 'string', description: 'Gene name for display purposes' },
+            uniprotId: { type: 'string', description: 'UniProt accession (e.g., P04637)' },
+            uniprot_id: { type: 'string', description: 'Snake-case alias for uniprotId (e.g., P04637)' },
+            geneName: { type: 'string', description: 'Gene name to resolve to a UniProt accession' },
             format: { type: 'string', description: 'Structure format (pdb or cif)', default: 'pdb' },
+            include_confidence: {
+              type: 'boolean',
+              description: 'Return summary and per-residue pLDDT confidence scores',
+              default: true,
+            },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
-          required: ['uniprotId'],
+          required: [],
         },
       },
 
