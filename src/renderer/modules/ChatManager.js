@@ -7271,42 +7271,85 @@ class ChatManager {
         }
       }
 
-      // Fallback implementation
-      const entryId = uniprot_id || 'P04637';
-      const gene = geneName || 'TP53';
-      const displayOrganism = organism || (geneName ? 'Homo sapiens' : 'Not specified');
+      // Fallback implementation - directly query UniProt REST API
+      let accession = uniprot_id || parameters.uniprotId;
+      const gene = geneName || parameters.gene_name;
+      const includeCrossRefs = parameters.includeCrossRefs ?? parameters.include_cross_refs ?? false;
+
+      if (!accession) {
+        if (!gene) {
+          throw new Error('Either uniprot_id or geneName is required');
+        }
+
+        const queryParts = [`(gene:${gene})`];
+        if (organism) queryParts.push(`(organism_name:"${organism}")`);
+        const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(queryParts.join(' AND '))}&fields=accession&size=1&format=json`;
+
+        const searchResponse = await fetch(searchUrl);
+        if (!searchResponse.ok) {
+          throw new Error(`UniProt search error: ${searchResponse.status} ${searchResponse.statusText}`);
+        }
+        const searchData = await searchResponse.json();
+        accession = searchData.results?.[0]?.primaryAccession;
+        if (!accession) {
+          throw new Error(`No UniProt entry found for gene "${gene}"${organism ? ` in ${organism}` : ''}`);
+        }
+      }
+
+      const entryUrl = `https://rest.uniprot.org/uniprotkb/${encodeURIComponent(accession)}.json`;
+      const response = await fetch(entryUrl);
+      if (!response.ok) {
+        throw new Error(`UniProt API error: ${response.status} ${response.statusText}`);
+      }
+      const entry = await response.json();
+
+      const functionComment = (entry.comments || []).find(c => c.commentType === 'FUNCTION');
+      const functionDescription = functionComment?.texts?.[0]?.value || '';
 
       const result = {
         success: true,
         tool: 'get_uniprot_entry',
         timestamp: new Date().toISOString(),
         entry_info: {
-          uniprot_id: entryId,
-          protein_name: `${gene} protein`,
-          organism: displayOrganism,
-          status: 'reviewed',
+          uniprot_id: entry.primaryAccession,
+          entry_name: entry.uniProtkbId,
+          protein_name:
+            entry.proteinDescription?.recommendedName?.fullName?.value ||
+            entry.proteinDescription?.submissionNames?.[0]?.fullName?.value ||
+            'Unknown',
+          organism: entry.organism?.scientificName || 'Unknown',
+          genes: (entry.genes || []).map(g => g.geneName?.value).filter(Boolean),
+          status: entry.entryType === 'UniProtKB reviewed (Swiss-Prot)' ? 'reviewed' : 'unreviewed',
         },
-        sequence_length: 393,
-        message: `Retrieved UniProt entry for ${gene}`,
-        note: 'This is a demonstration result. Real implementation would connect to UniProt API.',
+        sequence_length: entry.sequence?.length || 0,
+        message: `Retrieved UniProt entry for ${entry.primaryAccession}`,
       };
 
       if (include_sequence) {
-        result.protein_sequence = 'MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGP...';
+        result.protein_sequence = entry.sequence?.value || '';
       }
 
       if (include_features) {
-        result.features = [
-          { type: 'Domain', description: 'DNA-binding', start: 102, end: 292 },
-          { type: 'Region', description: 'Transactivation', start: 1, end: 61 },
-        ];
+        result.features = (entry.features || []).map(f => ({
+          type: f.type,
+          description: f.description || '',
+          start: f.location?.start?.value,
+          end: f.location?.end?.value,
+        }));
       }
 
       if (include_function) {
         result.function = {
-          description: 'Tumor suppressor protein',
-          go_terms: ['GO:0006355', 'GO:0045786'],
+          description: functionDescription,
+          go_terms: (entry.uniProtKBCrossReferences || []).filter(ref => ref.database === 'GO').map(ref => ref.id),
         };
+      }
+
+      if (includeCrossRefs) {
+        result.cross_references = (entry.uniProtKBCrossReferences || []).map(ref => ({
+          database: ref.database,
+          id: ref.id,
+        }));
       }
 
       return result;

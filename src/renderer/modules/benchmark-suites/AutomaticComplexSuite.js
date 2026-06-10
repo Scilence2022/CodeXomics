@@ -655,7 +655,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {},
             {
-              trackName: 'GC Content',
+              trackName: 'gc',
               action: 'show',
             },
             {
@@ -684,16 +684,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           tool_sequence: ['get_uniprot_entry', 'fetch_alphafold_structure', 'open_protein_viewer'],
           parameters: [
             {
-              uniprotId: 'P04637',
-              geneName: 'p53',
+              uniprot_id: 'P04637',
             },
             {
-              uniprotId: 'P04637',
-              geneName: 'p53',
+              uniprot_id: 'P04637',
               format: 'pdb',
             },
             {
-              pdbId: 'P04637',
+              uniprot_id: 'P04637',
               representation: 'cartoon',
             },
           ],
@@ -824,13 +822,24 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Search UniProt database for human protein "BRCA1", retrieve its InterPro domain annotations to identify key domains, and then search the PDB database to find structurally resolved structures for BRCA1.',
+          'Search the UniProt database for the human protein BRCA1 and verify whether the UniProt ID P38398 is present. Then retrieve the representative sequence using that UniProt ID, perform an InterPro domain analysis to identify key domains, and search the PDB database to find structurally resolved BRCA1 structures.',
         expectedResult: {
-          tool_sequence: ['search_uniprot_database', 'analyze_interpro_domains', 'search_pdb_structures'],
+          tool_sequence: [
+            'search_uniprot_database',
+            'get_uniprot_entry',
+            'analyze_interpro_domains',
+            'search_pdb_structures',
+          ],
           parameters: [
             {
-              query: 'BRCA1',
-              organism: 'human',
+              search_query: 'BRCA1',
+              search_type: 'protein_name',
+              organism: 'Homo sapiens',
+            },
+            {
+              search_query: 'BRCA1',
+              organism: 'Homo sapiens',
+              include_sequence: true,
             },
             {
               uniprotId: 'P38398',

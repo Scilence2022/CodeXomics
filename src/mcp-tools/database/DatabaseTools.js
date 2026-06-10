@@ -67,11 +67,21 @@ class DatabaseTools {
           type: 'object',
           properties: {
             uniprotId: { type: 'string', description: 'UniProt accession ID' },
+            geneName: {
+              type: 'string',
+              description: 'Gene name to resolve to a UniProt entry (used when uniprotId is not provided)',
+            },
+            organism: { type: 'string', description: 'Organism name to narrow gene name resolution' },
             includeSequence: { type: 'boolean', description: 'Include protein sequence', default: true },
             includeFeatures: { type: 'boolean', description: 'Include protein features', default: true },
+            includeFunction: {
+              type: 'boolean',
+              description: 'Include function description and GO terms',
+              default: true,
+            },
             includeCrossRefs: { type: 'boolean', description: 'Include cross-references', default: false },
           },
-          required: ['uniprotId'],
+          required: [],
         },
       },
 
@@ -316,8 +326,105 @@ class DatabaseTools {
     return await this.server.advancedUniProtSearch(parameters);
   }
 
-  async getUniProtEntry(parameters) {
-    return await this.server.getUniProtEntry(parameters);
+  async getUniProtEntry(parameters = {}) {
+    // Server-side implementation - directly query UniProt API
+    const { uniprotId, uniprot_id, geneName, gene_name, organism } = parameters;
+
+    const includeSequence = parameters.includeSequence ?? parameters.include_sequence ?? true;
+    const includeFeatures = parameters.includeFeatures ?? parameters.include_features ?? true;
+    const includeFunction = parameters.includeFunction ?? parameters.include_function ?? true;
+    const includeCrossRefs = parameters.includeCrossRefs ?? parameters.include_cross_refs ?? false;
+
+    let accession = uniprotId || uniprot_id;
+    const gene = geneName || gene_name;
+
+    try {
+      if (!accession) {
+        if (!gene) {
+          throw new Error('Either uniprotId or geneName is required');
+        }
+
+        const queryParts = [`(gene:${gene})`];
+        if (organism) queryParts.push(`(organism_name:"${organism}")`);
+        const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(queryParts.join(' AND '))}&fields=accession&size=1&format=json`;
+
+        console.log(`[DatabaseTools] getUniProtEntry resolving gene: ${searchUrl}`);
+        const searchResponse = await fetch(searchUrl);
+        if (!searchResponse.ok) {
+          throw new Error(`UniProt search error: ${searchResponse.status} ${searchResponse.statusText}`);
+        }
+        const searchData = await searchResponse.json();
+        accession = searchData.results?.[0]?.primaryAccession;
+        if (!accession) {
+          throw new Error(`No UniProt entry found for gene "${gene}"${organism ? ` in ${organism}` : ''}`);
+        }
+      }
+
+      const entryUrl = `https://rest.uniprot.org/uniprotkb/${encodeURIComponent(accession)}.json`;
+      console.log(`[DatabaseTools] getUniProtEntry: ${entryUrl}`);
+      const response = await fetch(entryUrl);
+      if (!response.ok) {
+        throw new Error(`UniProt API error: ${response.status} ${response.statusText}`);
+      }
+      const entry = await response.json();
+
+      const functionComment = (entry.comments || []).find(c => c.commentType === 'FUNCTION');
+      const functionDescription = functionComment?.texts?.[0]?.value || '';
+
+      const result = {
+        success: true,
+        tool: 'get_uniprot_entry',
+        entry_info: {
+          uniprot_id: entry.primaryAccession,
+          entry_name: entry.uniProtkbId,
+          protein_name:
+            entry.proteinDescription?.recommendedName?.fullName?.value ||
+            entry.proteinDescription?.submissionNames?.[0]?.fullName?.value ||
+            'Unknown',
+          organism: entry.organism?.scientificName || 'Unknown',
+          genes: (entry.genes || []).map(g => g.geneName?.value).filter(Boolean),
+          status: entry.entryType === 'UniProtKB reviewed (Swiss-Prot)' ? 'reviewed' : 'unreviewed',
+        },
+        sequence_length: entry.sequence?.length || 0,
+        message: `Retrieved UniProt entry for ${entry.primaryAccession}`,
+      };
+
+      if (includeSequence) {
+        result.protein_sequence = entry.sequence?.value || '';
+      }
+
+      if (includeFeatures) {
+        result.features = (entry.features || []).map(f => ({
+          type: f.type,
+          description: f.description || '',
+          start: f.location?.start?.value,
+          end: f.location?.end?.value,
+        }));
+      }
+
+      if (includeFunction) {
+        result.function = {
+          description: functionDescription,
+          go_terms: (entry.uniProtKBCrossReferences || []).filter(ref => ref.database === 'GO').map(ref => ref.id),
+        };
+      }
+
+      if (includeCrossRefs) {
+        result.cross_references = (entry.uniProtKBCrossReferences || []).map(ref => ({
+          database: ref.database,
+          id: ref.id,
+        }));
+      }
+
+      return result;
+    } catch (error) {
+      console.error('getUniProtEntry error:', error);
+      return {
+        success: false,
+        error: error.message,
+        tool: 'get_uniprot_entry',
+      };
+    }
   }
 
   async viewMarkdownFile(parameters = {}) {
