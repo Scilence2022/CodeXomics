@@ -15,6 +15,8 @@
 
 let initialized = false;
 let manualCheckInProgress = false;
+let initialCheckTimer = null;
+const INITIAL_UPDATE_CHECK_DELAY_MS = 15000;
 
 function getAutoUpdater() {
   const { autoUpdater } = require('electron-updater');
@@ -105,9 +107,12 @@ function initUpdater() {
       promptInstall(info);
     });
 
-    autoUpdater.checkForUpdates().catch(err => {
-      console.error('[updater] initial check failed:', err && err.message ? err.message : err);
-    });
+    initialCheckTimer = setTimeout(() => {
+      initialCheckTimer = null;
+      autoUpdater.checkForUpdates().catch(err => {
+        console.error('[updater] initial check failed:', err && err.message ? err.message : err);
+      });
+    }, INITIAL_UPDATE_CHECK_DELAY_MS);
   } catch (error) {
     console.error('[updater] init failed:', error && error.message ? error.message : error);
   }
@@ -134,6 +139,10 @@ function checkForUpdates() {
     }
     if (!initialized) {
       initUpdater();
+    }
+    if (initialCheckTimer) {
+      clearTimeout(initialCheckTimer);
+      initialCheckTimer = null;
     }
     manualCheckInProgress = true;
     getAutoUpdater()

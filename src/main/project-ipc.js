@@ -688,7 +688,7 @@ function registerProjectIpcHandlers(deps) {
         height: 900,
         minWidth: 800,
         minHeight: 600,
-        webPreferences: createSecureWebPreferences({ cache: false }),
+        webPreferences: createSecureWebPreferences(),
         icon: path.join(__dirname, '../assets/icon.png'),
         show: false,
       });
@@ -703,36 +703,11 @@ function registerProjectIpcHandlers(deps) {
       // Set up the new window with same initialization as original main window
       newMainWindow.loadFile(path.join(__dirname, '..', 'renderer/index.html'));
 
-      // Clear cache aggressively to ensure fresh file loading (same as original)
-      newMainWindow.webContents.session.clearCache();
-      newMainWindow.webContents.session.clearStorageData();
-
-      // Handle multiple reload cycles to ensure proper initialization
-      let reloadCount = 0;
-      const maxReloads = 1; // Only one reload cycle
-
-      newMainWindow.webContents.on('did-finish-load', () => {
-        if (reloadCount < maxReloads) {
-          console.log(`📋 [createNewMainWindow] Reload cycle ${reloadCount + 1}/${maxReloads} for ${windowId}`);
-          reloadCount++;
-          newMainWindow.webContents.reload();
-        } else {
-          console.log(`📋 [createNewMainWindow] Window ${windowId} fully loaded, waiting for complete initialization`);
-          // Window is fully loaded, wait for DOM and modules to be ready
-          setTimeout(() => {
-            console.log(`📋 [createNewMainWindow] Sending initialization events to ${windowId}`);
-            // Send windowId to renderer process for MCPBridge identification
-            newMainWindow.webContents.send('set-window-id', windowId);
-            // Send a test message to verify the window is responsive
-            newMainWindow.webContents.send('ping-test');
-
-            // Wait a bit more and then send the file
-            setTimeout(() => {
-              console.log(`📋 [createNewMainWindow] Sending load-file event to ${windowId}: ${safeFilePath}`);
-              newMainWindow.webContents.send('load-file', safeFilePath);
-            }, 500);
-          }, 1500); // Extended delay for complete module initialization
-        }
+      newMainWindow.webContents.once('did-finish-load', () => {
+        console.log(`📋 [createNewMainWindow] Window ${windowId} loaded; sending initialization events`);
+        newMainWindow.webContents.send('set-window-id', windowId);
+        newMainWindow.webContents.send('ping-test');
+        newMainWindow.webContents.send('load-file', safeFilePath);
       });
 
       // Show window when ready
@@ -746,8 +721,9 @@ function registerProjectIpcHandlers(deps) {
         console.log(`📋 [createNewMainWindow] Window ${windowId} shown and focused with main menu set`);
       });
 
-      // Open DevTools to debug UI issues (same as original main window)
-      newMainWindow.webContents.openDevTools();
+      if (process.argv.includes('--dev')) {
+        newMainWindow.webContents.openDevTools({ mode: 'detach' });
+      }
 
       // Handle window focus to manage menu properly
       newMainWindow.on('focus', () => {
@@ -1604,7 +1580,6 @@ function registerProjectIpcHandlers(deps) {
     }
   }
 
-
   // Create Genomic Download Window
   // eslint-disable-next-line no-unused-vars -- retained for the genomic-download menu flow; mirrors the window-management.js implementation
   function createGenomicDownloadWindow(downloadType) {
@@ -2096,7 +2071,6 @@ function registerProjectIpcHandlers(deps) {
 
   // Project management functions for genomic data download
   let currentActiveProject = null;
-
 
   function getCurrentProjectInfo() {
     return currentActiveProject;

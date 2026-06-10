@@ -11,7 +11,6 @@ let mainWindow;
 let currentActiveWindow;
 let toolMenuTemplates;
 
-
 // External function references (set by main module)
 let generateWindowId;
 let registerGenomeWindow;
@@ -26,6 +25,11 @@ let createDeepGeneResearchMenu;
 let codeXomicsRPC;
 let processFileQueue;
 
+function openDevToolsInDevelopment(browserWindow) {
+  if (process.argv.includes('--dev')) {
+    browserWindow.webContents.openDevTools({ mode: 'detach' });
+  }
+}
 
 function setWindowMgmtDependencies(deps) {
   if (deps.mainWindow !== undefined) mainWindow = deps.mainWindow;
@@ -54,7 +58,7 @@ function createWindow() {
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    webPreferences: createSecureWebPreferences({ cache: false }),
+    webPreferences: createSecureWebPreferences(),
     icon: path.join(__dirname, '../assets/icon.png'),
     show: false,
   });
@@ -90,9 +94,7 @@ function createWindow() {
   });
 
   // Open DevTools for debugging (can be disabled in production)
-  if (process.argv.includes('--dev')) {
-    newWindow.webContents.openDevTools();
-  }
+  openDevToolsInDevelopment(newWindow);
 
   // When this specific window gains focus, make it the active main window and
   // rebuild the menu so that menu actions target this window.  We close over
@@ -278,8 +280,7 @@ function createCircosWindow() {
       }
     });
 
-    // Open DevTools for debugging
-    circosWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(circosWindow);
 
     // Handle window closed
     circosWindow.on('closed', () => {
@@ -328,7 +329,7 @@ function createKEGGWindow() {
       createToolWindowMenu(keggWindow, 'KEGG Pathway Analysis');
     });
 
-    keggWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(keggWindow);
 
     keggWindow.on('closed', () => {
       console.log('KEGG Pathway Analysis window closed');
@@ -361,7 +362,7 @@ function createGOWindow() {
       createToolWindowMenu(goWindow, 'Gene Ontology Analyzer');
     });
 
-    goWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(goWindow);
 
     goWindow.on('closed', () => {
       console.log('GO Analyzer window closed');
@@ -394,7 +395,7 @@ function createUniProtWindow() {
       createToolWindowMenu(uniprotWindow, 'Search UniProt Database');
     });
 
-    uniprotWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(uniprotWindow);
 
     uniprotWindow.on('closed', () => {
       console.log('UniProt Search window closed');
@@ -427,7 +428,7 @@ function createInterProWindow() {
       createToolWindowMenu(interproWindow, 'InterPro Domain Analysis');
     });
 
-    interproWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(interproWindow);
 
     interproWindow.on('closed', () => {
       console.log('InterPro Analyzer window closed');
@@ -460,7 +461,7 @@ function createNCBIWindow() {
       createToolWindowMenu(ncbiWindow, 'Search NCBI Database');
     });
 
-    ncbiWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(ncbiWindow);
 
     ncbiWindow.on('closed', () => {
       console.log('NCBI Browser window closed');
@@ -495,7 +496,7 @@ function createSTRINGWindow() {
       createToolWindowMenu(stringWindow, 'STRING Protein Networks');
     });
 
-    stringWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(stringWindow);
 
     stringWindow.on('closed', () => {
       console.log('STRING Networks window closed');
@@ -528,7 +529,7 @@ function createDAVIDWindow() {
       createToolWindowMenu(davidWindow, 'DAVID Functional Analysis');
     });
 
-    davidWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(davidWindow);
 
     davidWindow.on('closed', () => {
       console.log('DAVID Analyzer window closed');
@@ -561,7 +562,7 @@ function createReactomeWindow() {
       createToolWindowMenu(reactomeWindow, 'Reactome Pathway Browser');
     });
 
-    reactomeWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(reactomeWindow);
 
     reactomeWindow.on('closed', () => {
       console.log('Reactome Browser window closed');
@@ -594,7 +595,7 @@ function createPDBWindow() {
       createToolWindowMenu(pdbWindow, 'PDB Structure Viewer');
     });
 
-    pdbWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(pdbWindow);
 
     pdbWindow.on('closed', () => {
       console.log('PDB Structure Viewer window closed');
@@ -627,7 +628,7 @@ function createGeneAnnotationRefineWindow() {
       createToolWindowMenu(geneAnnotationRefineWindow, 'Gene Annotation Refine');
     });
 
-    geneAnnotationRefineWindow.webContents.openDevTools();
+    openDevToolsInDevelopment(geneAnnotationRefineWindow);
 
     geneAnnotationRefineWindow.on('closed', () => {
       console.log('Gene Annotation Refine window closed');
@@ -1581,14 +1582,13 @@ ipcMain.on('deep-gene-research-menu-action', (event, action) => {
     case 'zoom-out':
       webContents.setZoomLevel(webContents.getZoomLevel() - 0.5);
       break;
-    case 'toggle-fullscreen':
-      {
+    case 'toggle-fullscreen': {
       const window = BrowserWindow.fromWebContents(webContents);
       if (window) {
         window.setFullScreen(!window.isFullScreen());
       }
       break;
-      }
+    }
     default:
       console.log('Unknown Deep Gene Research menu action:', action);
   }

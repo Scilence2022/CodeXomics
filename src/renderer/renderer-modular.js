@@ -12,9 +12,9 @@ console.log('Executing src/renderer/renderer-modular.js');
 
 // Toast notification helper — replaces alert() with non-blocking notifications
 // Uses NotificationService if available, falls back to alert
-const notify = (function() {
+const notify = (function () {
   let _ns = null;
-  return function(message, type = 'warn') {
+  return function (message, type = 'warn') {
     if (!_ns && typeof NotificationService !== 'undefined') {
       _ns = new NotificationService();
       window._notificationService = _ns;
@@ -428,6 +428,7 @@ class GenomeBrowser {
     // Step 5.1: Benchmark System (will be loaded on demand when menu is accessed)
     console.log('🧪 Benchmark System will be loaded on demand...');
     this.benchmarkManager = null; // Initialize as null, will be created when needed
+    this.benchmarkInitializationPromise = null;
 
     // Step 5.2: Initialize MultiAgentSettingsManager
     console.log('🤖 About to initialize MultiAgentSettingsManager...');
@@ -439,9 +440,9 @@ class GenomeBrowser {
       console.error('❌ Error initializing MultiAgentSettingsManager:', error);
     }
 
-    // Step 5.5: Initialize Plugin Management UI
-    console.log('🧩 About to initialize PluginManagementUI...');
-    this.initializePluginManagementUI();
+    // Step 5.5: Plugin Management UI and its development tools load on first use.
+    this.pluginManagementUI = null;
+    this.pluginManagementInitializationPromise = null;
 
     // Step 5.6: Initialize General Settings Manager
     console.log('⚙️ About to initialize GeneralSettingsManager...');
@@ -856,26 +857,35 @@ class GenomeBrowser {
       console.log('🧪 Benchmark System already initialized');
       return this.benchmarkManager;
     }
+    if (this.benchmarkInitializationPromise) {
+      return this.benchmarkInitializationPromise;
+    }
 
     console.log('🧪 Loading Benchmark System on demand...');
 
-    try {
-      // Load benchmark modules
-      await this.loadBenchmarkModules();
+    this.benchmarkInitializationPromise = (async () => {
+      try {
+        await this.loadBenchmarkModules();
 
-      // Initialize benchmark system
-      if (typeof BenchmarkManager !== 'undefined') {
+        if (typeof BenchmarkManager === 'undefined') {
+          throw new Error('BenchmarkManager class not available after loading modules');
+        }
+
         this.benchmarkManager = new BenchmarkManager(this, this.chatManager, this.configManager);
         window.benchmarkManager = this.benchmarkManager;
+        await this.benchmarkManager.initializationPromise;
         console.log('✅ Benchmark System loaded and initialized successfully');
         return this.benchmarkManager;
-      } else {
-        throw new Error('BenchmarkManager class not available after loading modules');
+      } catch (error) {
+        this.benchmarkManager = null;
+        console.error('❌ Failed to load Benchmark System on demand:', error);
+        throw error;
+      } finally {
+        this.benchmarkInitializationPromise = null;
       }
-    } catch (error) {
-      console.error('❌ Failed to load Benchmark System on demand:', error);
-      throw error;
-    }
+    })();
+
+    return this.benchmarkInitializationPromise;
   }
 
   /**
@@ -885,6 +895,11 @@ class GenomeBrowser {
     const modules = [
       'modules/BenchmarkStatistics.js',
       'modules/BenchmarkReportGenerator.js',
+      'modules/benchmark-suites/BenchmarkEvaluatorBase.js',
+      'modules/benchmark-suites/AutomaticComplexSuite.js',
+      'modules/benchmark-suites/AutomaticSimpleSuite.js',
+      'modules/benchmark-suites/ManualComplexSuite.js',
+      'modules/benchmark-suites/ManualSuite.js',
       'modules/LLMBenchmarkFramework.js',
       'modules/BenchmarkUI.js',
       'modules/BenchmarkManager.js',
@@ -893,18 +908,14 @@ class GenomeBrowser {
     console.log('📦 Loading benchmark modules...');
 
     for (const modulePath of modules) {
-      if (!document.querySelector(`script[src="${modulePath}"]`)) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = modulePath;
-          script.onload = resolve;
-          script.onerror = error => {
-            console.warn(`⚠️ Failed to load ${modulePath}:`, error);
-            resolve(); // Continue even if some modules fail
-          };
-          document.head.appendChild(script);
-        });
-      }
+      if (document.querySelector(`script[src="${modulePath}"]`)) continue;
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = modulePath;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Failed to load ${modulePath}`));
+        document.head.appendChild(script);
+      });
     }
 
     console.log('✅ Benchmark modules loaded');
@@ -3065,76 +3076,19 @@ class GenomeBrowser {
     });
 
     // Handle plugin menu actions
-    ipcRenderer.on('show-plugin-management', () => {
+    ipcRenderer.on('show-plugin-management', async () => {
       console.log('🧩 Plugin Management requested from main menu');
-
-      // Try to show the modal directly if PluginManagementUI is available
-      if (window.pluginManagementUI) {
-        console.log('✅ PluginManagementUI found globally, showing modal directly...');
-        window.pluginManagementUI.showPluginModal();
-      } else if (this.pluginManagementUI) {
-        console.log('✅ PluginManagementUI found on instance, showing modal directly...');
-        this.pluginManagementUI.showPluginModal();
-      } else {
-        console.warn('⚠️ PluginManagementUI not yet initialized, retrying in 500ms...');
-        setTimeout(() => {
-          if (window.pluginManagementUI) {
-            console.log('🔄 Retry: Using global PluginManagementUI...');
-            window.pluginManagementUI.showPluginModal();
-          } else {
-            console.error('❌ Plugin Management system not available after retry');
-            // Fallback: show a simple notification
-            if (window.genomeBrowser && window.genomeBrowser.showNotification) {
-              window.genomeBrowser.showNotification(
-                'Plugin Management system is still initializing. Please try again in a moment.',
-                'warning'
-              );
-            }
-          }
-        }, 500);
+      const pluginManagementUI = await this.initializePluginManagementUI();
+      if (pluginManagementUI) {
+        pluginManagementUI.showPluginModal();
       }
     });
 
-    ipcRenderer.on('show-plugin-marketplace', () => {
+    ipcRenderer.on('show-plugin-marketplace', async () => {
       console.log('🛒 Plugin Marketplace requested from main menu');
-
-      // Try multiple approaches to open plugin marketplace
-      const pluginMarketplaceBtn = document.getElementById('pluginMarketplaceBtn');
-
-      if (pluginMarketplaceBtn) {
-        console.log('✅ Plugin Marketplace button found, clicking...');
-        pluginMarketplaceBtn.click();
-      } else {
-        console.warn('⚠️ Plugin Marketplace button not found, trying direct approach...');
-
-        // Try to show the marketplace directly if PluginManagementUI is available
-        if (window.pluginManagementUI) {
-          console.log('✅ PluginManagementUI found globally, opening marketplace directly...');
-          window.pluginManagementUI.openPluginMarketplace();
-        } else if (this.pluginManagementUI) {
-          console.log('✅ PluginManagementUI found on instance, opening marketplace directly...');
-          this.pluginManagementUI.openPluginMarketplace();
-        } else {
-          console.warn('⚠️ PluginManagementUI not yet initialized, retrying in 500ms...');
-          setTimeout(() => {
-            const retryBtn = document.getElementById('pluginMarketplaceBtn');
-            if (retryBtn) {
-              console.log('🔄 Retry: Plugin Marketplace button found, clicking...');
-              retryBtn.click();
-            } else if (window.pluginManagementUI) {
-              console.log('🔄 Retry: Opening marketplace directly...');
-              window.pluginManagementUI.openPluginMarketplace();
-            } else {
-              // Fallback: show a simple notification
-              if (window.genomeBrowser && window.genomeBrowser.showNotification) {
-                window.genomeBrowser.showNotification(
-                  'Plugin Marketplace system is still initializing. Please try again in a moment.',
-                  'warning'
-                );
-              }
-            }
-          }, 500);
-        }
+      const pluginManagementUI = await this.initializePluginManagementUI();
+      if (pluginManagementUI) {
+        pluginManagementUI.openPluginMarketplace();
       }
     });
 
@@ -10466,10 +10420,14 @@ class GenomeBrowser {
     try {
       await this.updateMCPServerStatus();
 
-      // Check status periodically
-      setInterval(() => {
-        this.updateMCPServerStatus();
-      }, 5000); // Check every 5 seconds
+      const refreshStatus = () => {
+        if (document.visibilityState === 'visible') {
+          this.updateMCPServerStatus();
+        }
+      };
+
+      this.mcpStatusInterval = setInterval(refreshStatus, 15000);
+      document.addEventListener('visibilitychange', refreshStatus);
     } catch (error) {
       console.error('Error initializing MCP server status:', error);
     }
@@ -10791,48 +10749,55 @@ class GenomeBrowser {
    * Initialize Plugin Management UI with retry mechanism
    */
   async initializePluginManagementUI() {
-    let attempts = 0;
-    const maxAttempts = 10;
-    const delay = 200; // 200ms delay between attempts
+    if (this.pluginManagementUI) return this.pluginManagementUI;
+    if (this.pluginManagementInitializationPromise) return this.pluginManagementInitializationPromise;
 
-    const tryInitialize = async () => {
-      attempts++;
-
+    this.pluginManagementInitializationPromise = (async () => {
       try {
-        // Wait for ChatManager's plugin manager to be fully initialized
-        if (this.chatManager && this.chatManager.waitForPluginManager) {
-          console.log('🔄 Waiting for ChatManager.pluginManager to be ready...');
+        if (this.chatManager?.waitForPluginManager) {
           await this.chatManager.waitForPluginManager();
-          console.log('✅ ChatManager.pluginManager is ready');
+        }
+        if (!this.chatManager?.pluginManager) {
+          throw new Error('Plugin manager is not available');
         }
 
-        if (this.chatManager && this.chatManager.pluginManager) {
-          this.pluginManagementUI = new PluginManagementUI(this.chatManager.pluginManager, this.configManager);
-          window.pluginManagementUI = this.pluginManagementUI; // Make globally available for onclick handlers
-          console.log('✅ PluginManagementUI initialized successfully');
-          return true;
-        } else if (attempts < maxAttempts) {
-          console.log(`🔄 PluginManager not ready yet, retrying... (${attempts}/${maxAttempts})`);
-          setTimeout(tryInitialize, delay);
-          return false;
-        } else {
-          console.warn(
-            '⚠️ PluginManager not available after maximum attempts, PluginManagementUI initialization failed'
-          );
-          return false;
-        }
+        await this.loadPluginDevelopmentModules();
+        this.pluginManagementUI = new PluginManagementUI(this.chatManager.pluginManager, this.configManager);
+        window.pluginManagementUI = this.pluginManagementUI;
+        return this.pluginManagementUI;
       } catch (error) {
         console.error('❌ Error initializing PluginManagementUI:', error);
-        if (attempts < maxAttempts) {
-          setTimeout(tryInitialize, delay);
-          return false;
-        } else {
-          return false;
-        }
+        this.showNotification('Plugin Management could not be initialized.', 'error');
+        return null;
+      } finally {
+        this.pluginManagementInitializationPromise = null;
       }
-    };
+    })();
 
-    return tryInitialize();
+    return this.pluginManagementInitializationPromise;
+  }
+
+  async loadPluginDevelopmentModules() {
+    const modules = [
+      'modules/PluginTestHelpers.js',
+      'modules/CircosPluginTestSuite.js',
+      'modules/PluginTestFramework.js',
+      'modules/PluginTestManager.js',
+      'modules/PluginDemoGenerator.js',
+      'modules/PluginRealTestDemonstrator.js',
+      'modules/PluginTestWindowMenuManager.js',
+    ];
+
+    for (const modulePath of modules) {
+      if (document.querySelector(`script[src="${modulePath}"]`)) continue;
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = modulePath;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Failed to load ${modulePath}`));
+        document.head.appendChild(script);
+      });
+    }
   }
 
   /**
@@ -11268,19 +11233,19 @@ class TrackStateManager {
 }
 
 // Load MicrobeGenomicsFunctions for chat integration
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // Dynamically load MicrobeGenomicsFunctions if not already loaded
   if (!window.MicrobeFns) {
     const script = document.createElement('script');
     script.src = './modules/MicrobeGenomicsFunctions.js';
-    script.onload = function() {
+    script.onload = function () {
       console.log('MicrobeGenomicsFunctions loaded successfully');
       // Trigger re-initialization of ChatManager if it exists
       if (window.chatManager && window.chatManager.initializeMicrobeGenomicsFunctions) {
         window.chatManager.initializeMicrobeGenomicsFunctions();
       }
     };
-    script.onerror = function() {
+    script.onerror = function () {
       console.error('Failed to load MicrobeGenomicsFunctions');
     };
     document.head.appendChild(script);

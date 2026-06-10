@@ -25,13 +25,15 @@ function getLogger() {
 function initLogging() {
   try {
     const log = require('electron-log/main');
+    const isDevelopment = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
 
     // Sets up the IPC channel used by electron-log/renderer and (best-effort)
     // renderer console capture.
     log.initialize();
 
-    log.transports.file.level = 'info';
-    log.transports.console.level = process.env.NODE_ENV === 'production' ? 'warn' : 'debug';
+    log.transports.file.level = isDevelopment ? 'info' : 'warn';
+    log.transports.file.sync = false;
+    log.transports.console.level = isDevelopment ? 'debug' : 'warn';
     // Keep individual log files bounded; electron-log rotates to <name>.old.log.
     log.transports.file.maxSize = 10 * 1024 * 1024; // 10 MB
 

@@ -2,14 +2,6 @@
 
 const { app, BrowserWindow, dialog, ipcMain, nativeTheme, session } = require('electron');
 
-// =============================================================================
-// GPU and WebGL fixes - matching working version configuration
-// =============================================================================
-app.commandLine.appendSwitch('ignore-gpu-blacklist');
-app.commandLine.appendSwitch('enable-webgl');
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('use-angle', 'gl');
-
 const path = require('path');
 const fs = require('fs');
 
