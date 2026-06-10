@@ -34,7 +34,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       // Track Controls
       get_track_status: [/track status/i, /visibility status/i, /tracks.*status/i],
-      toggle_track: [/toggle.*track/i, /track.*toggled/i, /display.*track/i, /hide.*track/i],
+      toggle_track: [
+        /toggle.*track/i,
+        /track.*toggled/i,
+        /display.*track/i,
+        /show.*track/i,
+        /hide.*track/i,
+        /primer track/i,
+      ],
 
       // BLAST
       blast_create_database: [/blast.*database/i, /database.*created/i, /ecoli_db/i],
@@ -49,6 +56,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       add_primer_annotation: [/add.*primer/i, /primer.*annotation/i, /primer.*added/i],
       list_primer_annotations: [/list.*primer/i, /primer.*listed/i, /primer annotations/i],
       clear_primer_annotations: [/clear.*primer/i, /primer.*cleared/i, /remove.*primer/i],
+      jump_to_gene: [/jump.*gene/i, /navigate.*gene/i, /go to.*gene/i, /jumped to/i],
+      zoom_to_gene: [/zoom.*gene/i, /zoomed to/i, /zoom.*lysc/i],
+      navigate_to_position: [/navigate.*position/i, /navigated to/i, /jump.*position/i],
 
       // Protein & Structure
       get_uniprot_entry: [/uniprot entry/i, /p04637/i, /p53/i],
@@ -794,25 +804,38 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       {
         id: 'primer_auto_complex_02',
-        name: 'Primer Design with Upstream RBS Coverage',
-        type: 'function_call',
+        name: 'Primer Design with Upstream RBS, Annotation & Track Display',
+        type: 'workflow',
         category: 'primer_design',
-        complexity: 'moderate',
+        complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Design primers to amplify the lysC gene, including > 50bp of upstream sequence to capture the RBS.',
+          'Design primers to amplify the lysC gene, including 50bp of upstream sequence to capture the RBS. Then add primers, navigate to position around lysC and toggle on the primer track to view their presence.',
         expectedResult: {
-          tool_name: 'design_primers',
-          parameters: {
-            geneName: 'lysC',
-            upstreamBp: 50,
-          },
+          // Navigation step accepts any of these interchangeable tools - any one match satisfies the step.
+          tool_sequence: [
+            'design_primers',
+            'add_primer_annotation',
+            ['jump_to_gene', 'zoom_to_gene', 'navigate_to_position'],
+            'toggle_track',
+          ],
+          parameters: [
+            {
+              geneName: 'lysC',
+              upstreamBp: 50,
+            },
+            {},
+            {},
+            {
+              trackName: 'primers',
+              action: 'show',
+            },
+          ],
         },
-        maxScore: 10,
-        bonusScore: 2,
-        timeout: 30000,
-        earlyReturn: true,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
       {
@@ -1112,6 +1135,35 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     return Array.isArray(expectedResult.parameters) ? expectedResult.parameters : [expectedResult.parameters];
   }
 
+  /**
+   * A workflow step in `tool_sequence` may list multiple interchangeable tool names
+   * (e.g. ['jump_to_gene', 'zoom_to_gene', 'navigate_to_position']) - any one of them
+   * satisfies that step. This returns a human-readable label for such a step.
+   */
+  formatToolNameForDisplay(expectedTool) {
+    return Array.isArray(expectedTool) ? expectedTool.join(' | ') : expectedTool;
+  }
+
+  /**
+   * The first alternative of a (possibly multi-alternative) expected tool entry, used
+   * where a single representative tool name is required (e.g. single-step fallback evaluation).
+   */
+  getPrimaryToolName(expectedTool) {
+    return Array.isArray(expectedTool) ? expectedTool[0] : expectedTool;
+  }
+
+  /**
+   * Combined natural-language success patterns for an expected tool entry, including
+   * patterns for every alternative when the entry lists multiple interchangeable tools.
+   */
+  getToolSuccessPatterns(expectedTool) {
+    const alternatives = Array.isArray(expectedTool) ? expectedTool : [expectedTool];
+    return alternatives.flatMap(tool => {
+      const normTool = this.normalizeToolName(tool);
+      return this.toolSuccessPatterns[normTool] || [new RegExp(normTool.replace(/_/g, '.*'), 'i')];
+    });
+  }
+
   getToolNameFromCall(call) {
     if (!call || typeof call !== 'object') return '';
     return (
@@ -1354,7 +1406,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       }
 
       if (matchedIndex === -1) {
-        missingTools.push(expectedTool);
+        missingTools.push(this.formatToolNameForDisplay(expectedTool));
         return;
       }
 
@@ -1370,7 +1422,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       if (paramsVerified) {
         parameterMatches++;
       } else {
-        parameterMismatches.push(expectedTool);
+        parameterMismatches.push(this.formatToolNameForDisplay(expectedTool));
       }
 
       if (hasCriticalParameters) {
@@ -1378,13 +1430,13 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         if (criticalParamsVerified) {
           criticalParameterMatches++;
         } else {
-          criticalParameterMismatches.push(expectedTool);
+          criticalParameterMismatches.push(this.formatToolNameForDisplay(expectedTool));
         }
       }
 
       orderedMatchedTools.push(expectedTool);
       matchDetails.push({
-        tool: expectedTool,
+        tool: this.formatToolNameForDisplay(expectedTool),
         actualTool: this.getToolNameFromCall(call),
         actualIndex: matchedIndex,
         expectedIndex,
@@ -1711,7 +1763,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     const singleStepEval = await this.evaluateBasicFunctionCall(
       workflowCalls[0] || normalizedActual,
       {
-        tool_name: expectedTools[0] || normalizedExpected.tool_name,
+        tool_name: this.getPrimaryToolName(expectedTools[0]) || normalizedExpected.tool_name,
         parameters: expectedParams[0] || normalizedExpected.parameters,
       },
       testResult
@@ -1787,14 +1839,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     let toolMatches = 0;
     expectedTools.forEach(tool => {
-      const normTool = this.normalizeToolName(tool);
-      const patterns = this.toolSuccessPatterns[normTool] || [new RegExp(normTool.replace(/_/g, '.*'), 'i')];
+      const patterns = this.getToolSuccessPatterns(tool);
       const detected = patterns.some(pattern => pattern.test(responseText));
+      const toolLabel = this.formatToolNameForDisplay(tool);
       if (detected) {
         toolMatches++;
-        console.log(` [WorkflowCall] Detected tool execution: ${tool}`);
+        console.log(` [WorkflowCall] Detected tool execution: ${toolLabel}`);
       } else {
-        console.log(` [WorkflowCall] Tool execution not detected: ${tool}`);
+        console.log(` [WorkflowCall] Tool execution not detected: ${toolLabel}`);
       }
     });
 

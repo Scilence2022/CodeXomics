@@ -90,8 +90,14 @@ class BenchmarkEvaluatorBase {
   /**
    * Check whether two tool names match, with normalization support.
    * Returns 'exact' for identical strings, 'normalized' for snake_case equivalence, or false.
+   *
+   * `expected` may also be an array of alternative tool names (e.g. ['jump_to_gene', 'zoom_to_gene']),
+   * representing tools that are interchangeable for a given workflow step. Any one match is sufficient.
    */
   matchToolName(actual, expected) {
+    if (Array.isArray(expected)) {
+      return expected.reduce((match, alternative) => match || this.matchToolName(actual, alternative), false);
+    }
     if (actual === expected) return 'exact';
     if (this.normalizeToolName(actual) === this.normalizeToolName(expected)) return 'normalized';
     if (this.canonicalizeToolName(actual) === this.canonicalizeToolName(expected)) return 'alias';
