@@ -627,7 +627,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {
               name: 'regulatory_region_A',
-              chromosome: 'U00096',
+              chromosome: '<current_chromosome>',
               start: 150000,
               end: 150500,
               type: 'regulatory',
@@ -639,7 +639,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               },
             },
             {
-              chromosome: 'U00096',
+              chromosome: '<current_chromosome>',
               start: 150000,
               end: 150500,
             },
@@ -719,20 +719,21 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'blast',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Create a new nucleotide BLAST database named 'ecoli_db' from input FASTA file '${this.buildFilePath('ECOLI.fasta')}', then list the available BLAST databases to verify, and run a local blastn search against the 'ecoli_db' database for the query sequence 'ATGCGATCGATC'.`,
+        instruction: `Create a new nucleotide BLAST database of currently loaded E. coli genome, then list the available BLAST databases to verify, and run a local blastn search against the database for the query sequence 'TTAGTTGGCGTCATCAAAGCTGAAGACATCTTCGCAGGCTTGCTGCAATGCGCTGTCACTTTGGATATTGCAGTTGCGCGTCCAGCCGGTGACGCCGTTGCGTTATCCCAACCCGGTGTCATGACGACGCTTAGCCCATTAGACTTTCTTGCCCGGTCAGCGACACC'.`,
         expectedResult: {
-          tool_sequence: ['blast_create_database', 'blast_list_databases', 'blast_search_local'],
+          tool_sequence: ['blast_create_quick_db_for_current_genome', 'blast_list_databases', 'blast_search_local'],
           parameters: [
             {
-              inputFile: this.buildFilePath('ECOLI.fasta'),
-              dbName: 'ecoli_db',
-              dbType: 'nucleotide',
+              createNucleotide: true,
             },
-            {},
             {
-              sequence: 'ATGCGATCGATC',
+              includeLocal: true,
+            },
+            {
+              sequence:
+                'TTAGTTGGCGTCATCAAAGCTGAAGACATCTTCGCAGGCTTGCTGCAATGCGCTGTCACTTTGGATATTGCAGTTGCGCGTCCAGCCGGTGACGCCGTTGCGTTATCCCAACCCGGTGTCATGACGACGCTTAGCCCATTAGACTTTCTTGCCCGGTCAGCGACACC',
               blastType: 'blastn',
-              database: 'ecoli_db',
+              database: 'U00096',
             },
           ],
         },
@@ -749,20 +750,19 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'blast',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Create a new protein BLAST database named 'ecoli_protein_db' from input FASTA file '${this.buildFilePath('exported_files/exported_proteins.fasta')}', then list the available BLAST databases to verify, and run a local blastp search against the 'ecoli_protein_db' database for the query sequence 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ'.`,
+        instruction: `Create a new protein BLAST database Ecoli_protein for the currently loaded E. coli genome, then list the available BLAST databases to verify, and run a local blastp search against the database for the query sequence 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ'.`,
         expectedResult: {
-          tool_sequence: ['blast_create_database', 'blast_list_databases', 'blast_search_local'],
+          tool_sequence: ['blast_create_protein_db_from_genome', 'blast_list_databases', 'blast_search_local'],
           parameters: [
             {
-              inputFile: this.buildFilePath('exported_files/exported_proteins.fasta'),
-              dbName: 'ecoli_protein_db',
-              dbType: 'protein',
+              chromosome: '<current_chromosome>',
+              dbName: 'Ecoli_protein',
             },
             {},
             {
               sequence: 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ',
               blastType: 'blastp',
-              database: 'ecoli_protein_db',
+              database: 'Ecoli_protein',
             },
           ],
         },
