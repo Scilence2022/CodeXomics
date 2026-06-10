@@ -13,6 +13,7 @@ const { ipcMain, app, dialog, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const VERSION_INFO = require('../version');
 const {
   createSecureWebPreferences,
   permissionBroker,
@@ -139,13 +140,7 @@ function findExecutableOnPath(executableName) {
 function isTrustedBlastExecutablePath(executablePath) {
   if (!executablePath || typeof executablePath !== 'string') return false;
   const resolvedPath = path.resolve(executablePath);
-  const trustedDirs = [
-    '/usr/bin',
-    '/usr/local/bin',
-    '/opt/homebrew/bin',
-    '/usr/local/blast+/bin',
-    '/opt/blast+/bin',
-  ];
+  const trustedDirs = ['/usr/bin', '/usr/local/bin', '/opt/homebrew/bin', '/usr/local/blast+/bin', '/opt/blast+/bin'];
   return trustedDirs.some(dirPath => isSubPathSafe(dirPath, resolvedPath));
 }
 
@@ -253,7 +248,9 @@ function getConfigStorageDir() {
 
 function getConfigStoragePaths() {
   const dir = getConfigStorageDir();
-  return Object.fromEntries(Object.entries(CONFIG_FILES).map(([section, filename]) => [section, path.join(dir, filename)]));
+  return Object.fromEntries(
+    Object.entries(CONFIG_FILES).map(([section, filename]) => [section, path.join(dir, filename)])
+  );
 }
 
 function readConfigFileIfPresent(filePath) {
@@ -267,7 +264,9 @@ function writeJsonFile(filePath, data) {
   const payload = JSON.stringify(data || {}, null, 2);
   const byteLength = Buffer.byteLength(payload, 'utf8');
   if (byteLength > 100 * 1024 * 1024) {
-    throw new Error(`Configuration section is too large to persist safely: ${(byteLength / 1024 / 1024).toFixed(1)} MB`);
+    throw new Error(
+      `Configuration section is too large to persist safely: ${(byteLength / 1024 / 1024).toFixed(1)} MB`
+    );
   }
   fs.writeFileSync(filePath, payload, 'utf8');
 }
@@ -502,14 +501,11 @@ function registerIpcHandlers(deps) {
     getUnifiedServerStatus,
     setUnifiedServerStatus,
 
-
     analyzerPendingData,
     getWindowRegistryStatus,
     syncWindowsWithMCPServer,
 
-
     getCurrentMainWindow,
-
 
     createKEGGWindow,
     createGOWindow,
@@ -737,7 +733,10 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('get-plugin-file-info', async (event, filePath) => {
     try {
-      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'inspect plugin file', mustExist: true });
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'inspect plugin file',
+        mustExist: true,
+      });
       const stats = fs.statSync(safeFilePath);
       return {
         exists: true,
@@ -1909,7 +1908,7 @@ function registerIpcHandlers(deps) {
       fs.mkdirSync(dir, { recursive: true });
 
       writeJsonFile(paths.main, {
-        version: config.version || '0.7.0-beta',
+        version: config.version || VERSION_INFO.fullVersion,
         lastModified: new Date().toISOString(),
       });
 
@@ -3804,14 +3803,13 @@ function registerIpcHandlers(deps) {
       case 'zoom-out':
         webContents.setZoomLevel(webContents.getZoomLevel() - 0.5);
         break;
-      case 'toggle-fullscreen':
-        {
+      case 'toggle-fullscreen': {
         const window = BrowserWindow.fromWebContents(webContents);
         if (window) {
           window.setFullScreen(!window.isFullScreen());
         }
         break;
-        }
+      }
       default:
         console.log('Unknown Deep Gene Research menu action:', action);
     }
@@ -3822,7 +3820,6 @@ function registerIpcHandlers(deps) {
   // =====================================================================
 
   // Helper functions for user notifications
-
 
   // General Settings IPC handlers
   ipcMain.handle('get-general-settings', async () => {

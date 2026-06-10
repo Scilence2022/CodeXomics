@@ -1022,6 +1022,7 @@
       </div>
     </div>
 
+    <script src="../version.js"></script>
     <script src="./langextract-integration.js"></script>
     <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
     <script>
@@ -4098,7 +4099,7 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
             alert(`About ${toolName}
 
 Gene Annotation Refine Tool
-Version 1.0.0
+${(window.VERSION_INFO && window.VERSION_INFO.displayFullVersion) || ''}
 
 Enhance gene annotations using Deep Research Reports and AI-powered analysis.`);
             break;

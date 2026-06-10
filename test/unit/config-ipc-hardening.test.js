@@ -35,7 +35,7 @@ describe('ConfigManager IPC hardening', () => {
   it('cleans the complete config object before main-process IPC save', () => {
     const source = fs.readFileSync(CONFIG_MANAGER, 'utf8');
 
-    expect(source).toContain('const configForPersistence = {');
+    expect(source).toContain('const configForPersistence = this.buildPersistableConfig()');
     expect(source).toContain('const cleanConfig = this.validateAndCleanData(configForPersistence)');
     expect(source).toContain('window.electronAPI.saveConfigData(cleanConfig)');
   });
