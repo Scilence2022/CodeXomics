@@ -422,7 +422,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Get current genome information, perform a genome-wide codon usage analysis, and compute the overall genome GC content.',
+          'Retrieve the current genome information, perform genome-wide codon usage analysis, and calculate the GC content of the region currently being viewed.',
         expectedResult: {
           tool_sequence: ['get_genome_info', 'genome_codon_usage_analysis', 'calc_region_gc'],
           parameters: [{}, {}, {}],

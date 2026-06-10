@@ -4,7 +4,7 @@
   
   <!-- Header text -->
   <text x="330" y="80" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="36" font-weight="bold">CodeXomics</text>
-  <text x="330" y="110" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="18">v0.7beta Beta</text>
+  <text x="330" y="110" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="18">v0.722 Beta</text>
   <text x="330" y="135" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="14">AI-Powered Bioinformatics Platform</text>
   
   <!-- Icon Placeholders (Visual guides only) -->
