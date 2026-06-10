@@ -615,15 +615,15 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          "Create a new custom regulatory annotation named 'regulatory_region_A' on chromosome 'NC_000913' spanning start position 150000 to end position 155000, then update its description to 'Highly conserved regulatory region', and list all annotations in that region to verify.",
+          "Create a new custom regulatory annotation named 'regulatory_region_A' on chromosome 'U00096' spanning start position 150000 to end position 150500, then update its description to 'Highly conserved regulatory region', and list all annotations in that region to verify.",
         expectedResult: {
           tool_sequence: ['create_annotation', 'update_annotation', 'list_annotations'],
           parameters: [
             {
               name: 'regulatory_region_A',
-              chromosome: 'NC_000913',
+              chromosome: 'U00096',
               start: 150000,
-              end: 155000,
+              end: 150500,
               type: 'regulatory',
             },
             {
@@ -631,9 +631,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               description: 'Highly conserved regulatory region',
             },
             {
-              chromosome: 'NC_000913',
+              chromosome: 'U00096',
               start: 150000,
-              end: 155000,
+              end: 150500,
             },
           ],
         },
@@ -743,14 +743,13 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'blast',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Create a local nucleotide BLAST database named 'ecoli_local_db' from FASTA file '${this.buildFilePath('ECOLI.fasta')}', list local BLAST databases to verify it exists, then run a local blastn search against 'ecoli_local_db' for the query sequence 'ATGCGATCGATC' with e-value threshold 0.01.`,
+        instruction: `Create a local nucleotide BLAST database for currently loaded genome, list local BLAST databases to verify it exists, then run a local blastn search against 'ecoli_local_db' for the query sequence 'ATGCGATCGATC' with e-value threshold 0.01.`,
         expectedResult: {
-          tool_sequence: ['blast_create_database', 'blast_list_databases', 'blast_search_local'],
+          tool_sequence: ['blast_create_quick_db_for_current_genome', 'blast_list_databases', 'blast_search_local'],
           parameters: [
             {
-              inputFile: this.buildFilePath('ECOLI.fasta'),
-              dbName: 'ecoli_local_db',
-              dbType: 'nucleotide',
+              createNucleotide: true,
+              createProtein: false,
             },
             {},
             {
