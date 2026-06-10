@@ -656,7 +656,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {},
             {
               trackName: 'GC Content',
-              action: 'on',
+              action: 'show',
             },
             {
               trackName: 'Variants',
@@ -706,14 +706,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       {
         id: 'blast_auto_complex_01',
-        name: 'BLAST Database Creation and Online Search',
+        name: 'Nucleotide BLAST Database Creation and Local Search',
         type: 'workflow',
         category: 'blast',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Create a new nucleotide BLAST database named 'ecoli_db' from input FASTA file '${this.buildFilePath('ECOLI.fasta')}', then list the available BLAST databases to verify, and run an online blastn search against NCBI 'nt' database for the query sequence 'ATGCGATCGATC'.`,
+        instruction: `Create a new nucleotide BLAST database named 'ecoli_db' from input FASTA file '${this.buildFilePath('ECOLI.fasta')}', then list the available BLAST databases to verify, and run a local blastn search against the 'ecoli_db' database for the query sequence 'ATGCGATCGATC'.`,
         expectedResult: {
-          tool_sequence: ['blast_create_database', 'blast_list_databases', 'blast_search_online'],
+          tool_sequence: ['blast_create_database', 'blast_list_databases', 'blast_search_local'],
           parameters: [
             {
               inputFile: this.buildFilePath('ECOLI.fasta'),
@@ -724,7 +724,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               sequence: 'ATGCGATCGATC',
               blastType: 'blastn',
-              database: 'nt',
+              database: 'ecoli_db',
             },
           ],
         },
@@ -736,25 +736,25 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       {
         id: 'blast_auto_complex_02',
-        name: 'Local BLAST Database and Search Workflow',
+        name: 'Protein BLAST Database Creation and Local Search',
         type: 'workflow',
         category: 'blast',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Create a local nucleotide BLAST database for currently loaded genome, list local BLAST databases to verify it exists, then run a local blastn search against 'ecoli_local_db' for the query sequence 'ATGCGATCGATC' with e-value threshold 0.01.`,
+        instruction: `Create a new protein BLAST database named 'ecoli_protein_db' from input FASTA file '${this.buildFilePath('exported_files/exported_proteins.fasta')}', then list the available BLAST databases to verify, and run a local blastp search against the 'ecoli_protein_db' database for the query sequence 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ'.`,
         expectedResult: {
-          tool_sequence: ['blast_create_quick_db_for_current_genome', 'blast_list_databases', 'blast_search_local'],
+          tool_sequence: ['blast_create_database', 'blast_list_databases', 'blast_search_local'],
           parameters: [
             {
-              createNucleotide: true,
-              createProtein: false,
+              inputFile: this.buildFilePath('exported_files/exported_proteins.fasta'),
+              dbName: 'ecoli_protein_db',
+              dbType: 'protein',
             },
             {},
             {
-              sequence: 'ATGCGATCGATC',
-              blastType: 'blastn',
-              database: 'ecoli_local_db',
-              evalue: '0.01',
+              sequence: 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ',
+              blastType: 'blastp',
+              database: 'ecoli_protein_db',
             },
           ],
         },
@@ -796,47 +796,24 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       {
         id: 'primer_auto_complex_02',
-        name: 'Primer Annotation Display Lifecycle',
-        type: 'workflow',
+        name: 'Primer Design with Upstream RBS Coverage',
+        type: 'function_call',
         category: 'primer_design',
-        complexity: 'complex',
+        complexity: 'moderate',
         evaluation: 'automatic',
-        instruction:
-          "Design primers for the 'lacZ' gene, add a primer annotation named 'lacZ_forward_display' on chromosome 'NC_000913' from 365529 to 365552 on the plus strand using sequence 'ATGACCATGATTACGGATTCACT', list primer annotations in that region, and then clear primer annotations from chromosome 'NC_000913' with confirmation.",
+        instruction: 'Design primers to amplify the lysC gene, including 50bp of upstream sequence to capture the RBS.',
         expectedResult: {
-          tool_sequence: [
-            'design_primers',
-            'add_primer_annotation',
-            'list_primer_annotations',
-            'clear_primer_annotations',
-          ],
-          parameters: [
-            {
-              geneName: 'lacZ',
-            },
-            {
-              name: 'lacZ_forward_display',
-              chromosome: 'NC_000913',
-              start: 365529,
-              end: 365552,
-              strand: '+',
-              sequence: 'ATGACCATGATTACGGATTCACT',
-            },
-            {
-              chromosome: 'NC_000913',
-              start: 365529,
-              end: 365552,
-            },
-            {
-              chromosome: 'NC_000913',
-              confirm: true,
-            },
-          ],
+          tool_name: 'design_primers',
+          parameters: {
+            geneName: 'lysC',
+            upstreamBp: 50,
+          },
         },
-        maxScore: 20,
-        bonusScore: 4,
-        timeout: 120000,
-        evaluator: this.evaluateWorkflowCall.bind(this),
+        maxScore: 10,
+        bonusScore: 2,
+        timeout: 30000,
+        earlyReturn: true,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
       {

@@ -109,13 +109,13 @@ describe('AutomaticComplexSuite', () => {
       const tabLifecycleTest = tests.find(t => t.id === 'ui_auto_complex_02');
       expect(tabLifecycleTest.expectedResult.tool_sequence).toEqual(['open_new_tab', 'switch_to_tab', 'close_tab']);
 
-      const primerLifecycleTest = tests.find(t => t.id === 'primer_auto_complex_02');
-      expect(primerLifecycleTest.expectedResult.tool_sequence).toEqual([
-        'design_primers',
-        'add_primer_annotation',
-        'list_primer_annotations',
-        'clear_primer_annotations',
-      ]);
+      const primerUpstreamTest = tests.find(t => t.id === 'primer_auto_complex_02');
+      expect(primerUpstreamTest.type).toBe('function_call');
+      expect(primerUpstreamTest.expectedResult.tool_name).toBe('design_primers');
+      expect(primerUpstreamTest.expectedResult.parameters).toEqual({
+        geneName: 'lysC',
+        upstreamBp: 50,
+      });
     });
 
     it('should resolve default directory fallback and build paths correctly', () => {
