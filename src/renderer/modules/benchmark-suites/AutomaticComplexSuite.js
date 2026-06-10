@@ -799,7 +799,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'primer_design',
         complexity: 'moderate',
         evaluation: 'automatic',
-        instruction: 'Design primers to amplify the lysC gene, including 50bp of upstream sequence to capture the RBS.',
+        instruction:
+          'Design primers to amplify the lysC gene, including > 50bp of upstream sequence to capture the RBS.',
         expectedResult: {
           tool_name: 'design_primers',
           parameters: {
@@ -822,7 +823,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Search the UniProt database for the E.coli K12 protein DapA and verify whether the UniProt ID P0A6L2 is present. Then retrieve the representative sequence using that UniProt ID, perform an InterPro domain analysis to identify key domains, and search the PDB database to find structurally resolved DapA structures.',
+          'Search the UniProt database for the E.coli protein DapA and verify whether the UniProt ID P0A6L2 is present. Then retrieve the representative sequence using that UniProt ID, perform an InterPro domain analysis to identify key domains, and search the PDB database to find structurally resolved DapA structures.',
         expectedResult: {
           tool_sequence: [
             'search_uniprot_database',
@@ -834,18 +835,20 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               search_query: 'DapA',
               search_type: 'protein_name',
-              organism: 'Escherichia coli K-12',
+              organism: 'Escherichia coli',
             },
             {
-              search_query: 'BRCA1',
-              organism: 'Homo sapiens',
+              uniprot_id: 'P0A6L2',
               include_sequence: true,
             },
             {
-              uniprotId: 'P38398',
+              sequence:
+                'MFTGSIVAIVTPMDEKGNVCRASLKKLIDYHVASGTSAIVSVGTTGESATLNHDEHADVVMMTLDLADGRIPVIAGTGANATAEAISLTQRFNDSGIVGCLTVTPYYNRPSQEGLYQHFKAIAEHTDLPQILYNVPSRTGCDLLPETVGRLAKVKNIIGIKEATGNLTRVNQIKELVSDDFVLLSGDDASALDFMQLGGHGVISVTANVAARDMAQMCKLAAEGHFAEARVINQRLMPLHNKLFVEPNPIPVKWACKELGLVATDTLRLPMTPITDSGRETVRAALKHAGLL',
+              analysis_type: 'domains',
             },
             {
-              query: 'BRCA1',
+              geneName: 'DapA',
+              organism: 'Escherichia coli',
             },
           ],
         },
