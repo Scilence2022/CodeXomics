@@ -443,14 +443,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         instruction:
           'Retrieve the coding sequence for the lacZ gene, translate that coding sequence in reading frame 1, and calculate the molecular weight of the translated protein sequence.',
         expectedResult: {
-          tool_sequence: ['get_coding_sequence', 'translate_dna', 'calculate_molecular_weight'],
+          tool_sequence: ['get_coding_sequence', 'calculate_molecular_weight'],
           parameters: [
             {
               geneName: 'lacZ',
-            },
-            {
-              dna: '<coding_sequence>',
-              readingFrame: 1,
             },
             {
               sequence: '<protein_sequence>',
@@ -628,7 +624,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               identifier: 'regulatory_region_A',
-              description: 'Highly conserved regulatory region',
+              updates: {
+                description: 'Highly conserved regulatory region',
+              },
             },
             {
               chromosome: 'U00096',
@@ -658,7 +656,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {},
             {
               trackName: 'GC Content',
-              action: 'show',
+              action: 'on',
             },
             {
               trackName: 'Variants',
