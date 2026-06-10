@@ -1,4 +1,24 @@
 // @ts-check
+const DYNAMIC_TOOL_STOP_WORDS = new Set([
+  'the',
+  'and',
+  'for',
+  'with',
+  'this',
+  'that',
+  'from',
+  'into',
+  'please',
+  'can',
+  'could',
+  'would',
+  'should',
+  'tell',
+  'show',
+  'about',
+  'your',
+]);
+
 /**
  * Renderer-side adapter for main-process tool registry snapshots.
  *
@@ -170,7 +190,7 @@ class DynamicToolsSnapshotAdapter {
     const terms = text
       .split(/[^a-z0-9_]+/)
       .map(term => term.trim())
-      .filter(term => term.length > 2);
+      .filter(term => term.length > 2 && !DYNAMIC_TOOL_STOP_WORDS.has(term));
 
     let score = 0;
     const toolName = String(tool.name || '').toLowerCase();
@@ -189,15 +209,23 @@ class DynamicToolsSnapshotAdapter {
     }
 
     for (const term of terms) {
-      if (fields.includes(term)) score += 0.7;
+      // A single broad word such as "sequence" appears in many genomic tools.
+      // Treat free-text field matches as weak evidence; two matching terms are
+      // enough to pass selection, while exact names and keywords remain strong.
+      if (fields.includes(term)) score += 0.35;
     }
 
-    if (tool.isBuiltIn || this.builtInTools.builtInToolsMap.has(tool.name)) score += 1;
     if (tool.execution?.requires_data && context.hasData === false) score -= 1.5;
     if (tool.execution?.requires_network && context.hasNetwork === false) score -= 1.5;
 
-    const priority = Number.isFinite(tool.priority) ? tool.priority : 5;
-    score += Math.max(0, 6 - priority) * 0.2;
+    // Built-in status and registry priority are ranking preferences, not relevance
+    // evidence. Applying them to unmatched tools makes every built-in exceed the
+    // selection threshold, so unrelated prompts receive the full registry.
+    if (score > 0) {
+      if (tool.isBuiltIn || this.builtInTools.builtInToolsMap.has(tool.name)) score += 0.1;
+      const priority = Number.isFinite(tool.priority) ? tool.priority : 5;
+      score += Math.max(0, 6 - priority) * 0.02;
+    }
     return score;
   }
 
