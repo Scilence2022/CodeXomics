@@ -29,15 +29,33 @@ const FILE_CAPABILITIES = Object.freeze({
 
 const ALL_FILE_CAPABILITIES = Object.freeze(Object.values(FILE_CAPABILITIES));
 
+// Content Security Policy applied to all renderer responses.
+//
+// Hardening notes (see SECURITY.md for the tracked follow-ups):
+//  - script-src lists the exact CDNs the bundled tool windows load from instead
+//    of a blanket `https:`. 'unsafe-inline' remains because the renderer and the
+//    standalone tool HTML still rely on inline <script> blocks; removing it
+//    requires migrating those to nonces/external files (tracked follow-up).
+//  - style-src / font-src enforce TLS by enumerating the CDN/font hosts in use
+//    rather than allowing arbitrary `https: http:` origins.
+//  - img-src and connect-src remain broad: the genome browser and external-tool
+//    windows fetch images and data from many bioinformatics services (and the
+//    user-configurable DeepGeneResearch endpoint is currently plain HTTP).
+//  - object-src 'none', base-uri 'self', frame-ancestors 'none' and form-action
+//    'self' lock down plugin/clickjacking/navigation vectors. No 'unsafe-eval'.
 const RENDERER_CONTENT_SECURITY_POLICY = [
   "default-src 'self' data: blob: file:",
-  "script-src 'self' 'unsafe-inline' https://d3js.org https://cdn.jsdelivr.net data: blob:",
-  "style-src 'self' 'unsafe-inline' https: http: data:",
+  "script-src 'self' 'unsafe-inline' https://d3js.org https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com data: blob:",
+  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com data:",
   "img-src 'self' data: blob: https: http: file:",
-  "font-src 'self' https: http: data:",
+  "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com data:",
   "connect-src 'self' https: http: ws: wss: data: blob:",
   "object-src 'none'",
   "base-uri 'self'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
 ].join('; ');
 
 function registerRendererContentSecurityPolicy(electronSession) {
@@ -140,9 +158,7 @@ class PermissionBroker {
     const stats = this.getStatsIfAvailable(resolvedPath);
     const isDirectory = !!stats?.isDirectory?.();
     const recursive = options.recursive !== undefined ? !!options.recursive : isDirectory;
-    const defaultCapabilities = isDirectory
-      ? ALL_FILE_CAPABILITIES
-      : [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE];
+    const defaultCapabilities = isDirectory ? ALL_FILE_CAPABILITIES : [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE];
 
     const grant = {
       id: `grant-${Date.now()}-${this.nextGrantId++}`,
@@ -224,7 +240,9 @@ class PermissionBroker {
         continue;
       }
 
-      const pathMatches = grant.recursive ? isSubPath(grant.path, resolvedPath) : path.resolve(grant.path) === resolvedPath;
+      const pathMatches = grant.recursive
+        ? isSubPath(grant.path, resolvedPath)
+        : path.resolve(grant.path) === resolvedPath;
       if (pathMatches) {
         return grant;
       }

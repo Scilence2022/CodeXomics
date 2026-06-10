@@ -2,14 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
+    <!-- Required for the V8 JavaScript engine under the hardened runtime. -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
+    <!-- Part of the standard Electron entitlement set; needed by V8 on some
+         macOS versions. Tracked for minimization once notarized launch is
+         verified without it (see SECURITY.md). -->
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
     <true/>
-    <key>com.apple.security.cs.debugger</key>
-    <true/>
+    <!-- Allows bundled native node modules (e.g. sharp, @gmod/bam) to load.
+         Tracked for removal if all native modules are signed by the same team. -->
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
+    <!-- com.apple.security.cs.debugger intentionally removed: it permits attaching
+         a debugger to the app and must not ship in production builds. -->
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
     <key>com.apple.security.files.downloads.read-write</key>

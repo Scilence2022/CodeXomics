@@ -14,6 +14,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const VERSION_INFO = require('../version');
+const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store');
 const {
   createSecureWebPreferences,
   permissionBroker,
@@ -1884,7 +1885,9 @@ function registerIpcHandlers(deps) {
       for (const [section, filePath] of Object.entries(paths)) {
         const data = readConfigFileIfPresent(filePath);
         if (data !== null) {
-          config[section] = data;
+          // Decrypt any safeStorage-encrypted secret fields back to plaintext so
+          // the renderer continues to work with plaintext keys in memory.
+          config[section] = decryptSecretsInPlace(data);
         }
       }
 
@@ -1915,7 +1918,10 @@ function registerIpcHandlers(deps) {
       for (const [section, filePath] of Object.entries(paths)) {
         if (section === 'main') continue;
         if (config[section] !== undefined) {
-          writeJsonFile(filePath, config[section]);
+          // Encrypt secret fields (API keys) at rest via the OS keychain before
+          // writing. The incoming config is an IPC structured-clone copy, so
+          // mutating it here does not affect the renderer's in-memory state.
+          writeJsonFile(filePath, encryptSecretsInPlace(config[section]));
         }
       }
 
