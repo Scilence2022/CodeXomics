@@ -1,4 +1,4 @@
-# CodeXomics AI Agent Rules - v0.7beta
+# CodeXomics AI Agent Rules - v0.722
 
 This file is the operational contract for AI coding assistants working in the CodeXomics repository. For architectural background and project memory, read `Memory.md`.
 

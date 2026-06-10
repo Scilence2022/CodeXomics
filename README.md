@@ -4,10 +4,10 @@
 
 ### AI-powered bioinformatics analysis platform
 
-[![Version](https://img.shields.io/badge/version-v0.7beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![Version](https://img.shields.io/badge/version-v0.722-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
-[![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-42.4.0-47848f.svg)](https://www.electronjs.org/)
 
 CodeXomics is a cross-platform Electron desktop application for genome visualization, AI-assisted biological analysis, tool execution, plugin development, and Model Context Protocol (MCP) integration.
 

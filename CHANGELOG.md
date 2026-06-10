@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.722.0] - 2026-06-10 - PRODUCTION-READINESS RELEASE
+
+**🚀 Milestone: Production hardening across security, release engineering, and CI**
+
+### 🔒 Security
+
+- Encrypt LLM API keys at rest using the OS keychain via Electron `safeStorage` (`src/main/secret-store.js`); legacy plaintext configs are migrated automatically on next save.
+- Harden the renderer Content Security Policy: explicit CDN allowlist for `script-src`, TLS-only `style-src`/`font-src`, and new `frame-ancestors 'none'`, `form-action 'self'`, `worker-src`, `manifest-src` directives (no `unsafe-eval`).
+- Remove the `com.apple.security.cs.debugger` macOS entitlement (must not ship in production).
+- Add `SECURITY.md` with a private vulnerability-disclosure policy and tracked hardening follow-ups.
+
+### 📦 Release Engineering
+
+- Upgrade Electron `27.3.11` → `42.4.0` (off end-of-life) and electron-builder to `25.x`; production dependency audit is clean (0 vulnerabilities).
+- Add auto-update via `electron-updater` with a background check on launch, a restart-to-install prompt, and a **Help → Check for Updates…** menu item.
+- Add code-signing + Apple notarization support through an env-var-driven `afterSign` hook (`build/notarize.js`) and a GitHub Releases publish feed; document the process in `RELEASING.md`.
+- Add structured logging and crash capture via `electron-log` + `crashReporter` (`src/main/logging.js`).
+
+### ✅ Quality & CI
+
+- Green CI baseline: fixed lint and a stale test, removed unused dependencies, and added version + tool-registry + coverage gates plus a packaging smoke job.
+- Add a Vitest coverage floor and a Playwright Electron end-to-end smoke test harness (`npm run test:e2e`).
+- Add `docs/developer-guides/TESTING_AND_DECOMPOSITION.md` documenting the testing strategy and a decomposition plan for the largest modules.
+
 ### ✨ New Features
 
 - Added a dedicated Primers track with toolbar toggle, track settings support, and ChatBox/MCP primer annotation list/clear tools.

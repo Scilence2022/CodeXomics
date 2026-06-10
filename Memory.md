@@ -1,4 +1,4 @@
-# CodeXomics Project Memory - v0.7beta
+# CodeXomics Project Memory - v0.722
 
 This document preserves project context, architectural decisions, implementation constraints, and discovered knowledge for agents working on CodeXomics.
 
@@ -8,9 +8,9 @@ CodeXomics is an AI-powered bioinformatics desktop platform built with Electron,
 
 Current version sources:
 
-- `package.json`: `0.7.0-beta`
-- `src/version.js`: major `0`, minor `7`, patch `0`, prerelease `beta`
-- Display version: `v0.7beta`
+- `package.json`: `0.722.0`
+- `src/version.js`: major `0`, minor `722`, patch `0`, prerelease `` (none)
+- Display version: `v0.722`
 
 Core entry points:
 
