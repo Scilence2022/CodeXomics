@@ -1,6 +1,6 @@
 # Getting Started With CodeXomics
 
-This guide gets CodeXomics `0.7.0-beta` running, connected to an AI provider, and ready to inspect genomic data.
+This guide gets CodeXomics `0.722.0` running, connected to an AI provider, and ready to inspect genomic data. The application displays this release as `v0.722`.
 
 ## Requirements
 
@@ -17,11 +17,15 @@ Optional tools:
 - A local LLM server such as Ollama for offline or local model workflows.
 - BLAST+ for local sequence alignment. CodeXomics includes BLAST setup and management workflows.
 
+Building from source requires Node.js 20 or 22 and npm 10 or newer. The packaged application uses Electron `41.7.1`.
+
 ## Install
 
 ### Download A Release
 
 Use the [GitHub Releases page](https://github.com/Scilence2022/CodeXomics/releases) and choose the build for your operating system.
+
+Published installers may lag behind the current source release. Check the release title and artifact version before downloading.
 
 ### Build From Source
 

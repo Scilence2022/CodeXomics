@@ -10,7 +10,7 @@ edit_uri: edit/main/docs/
 theme:
   name: material
   language: en
-  favicon: assets/favicon.ico
+  favicon: assets/logo.png
   logo: assets/logo.png
   palette:
     - media: '(prefers-color-scheme: light)'
@@ -80,8 +80,8 @@ markdown_extensions:
 extra:
   version:
     method: mike
-    name: v0.7.0-beta
-    default: v0.7.0-beta
+    name: v0.722.0
+    default: v0.722.0
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/Scilence2022/CodeXomics
@@ -104,6 +104,7 @@ nav:
       - AI Assistant Guidelines: developer-guides/AI_ASSISTANT_GUIDELINES.md
       - Plugin Development: developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md
       - Build Instructions: developer-guides/build-instructions.md
+      - Testing And Decomposition: developer-guides/TESTING_AND_DECOMPOSITION.md
       - Actions System:
           - Documentation: developer-guides/ACTIONS_SYSTEM_DOCUMENTATION.md
           - Quick Reference: developer-guides/ACTIONS_QUICK_REFERENCE.md
@@ -118,6 +119,7 @@ nav:
       - Benchmark Methods: reference/BENCHMARK_METHODS.md
       - Workspace Migration: reference/WORKSPACE_MIGRATION_GUIDE.md
   - Release Notes:
+      - v0.722.0: release-notes/RELEASE_NOTES_v0.722.md
       - Release Guide: release-notes/RELEASE_GUIDE.md
       - v0.533beta: release-notes/RELEASE_NOTES_v0.533beta.md
       - v0.532beta: release-notes/RELEASE_NOTES_v0.532beta.md

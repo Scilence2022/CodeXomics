@@ -1,4 +1,4 @@
-# CodeXomics AI Agent Rules - v0.722
+# CodeXomics AI Agent Rules - v0.722.0
 
 This file is the operational contract for AI coding assistants working in the CodeXomics repository. For architectural background and project memory, read `Memory.md`.
 
@@ -10,6 +10,15 @@ This file is the operational contract for AI coding assistants working in the Co
 - Keep MkDocs navigation paths relative to `docs/`. Root files such as `Agents.md` and `Memory.md` are not valid nav targets unless mirrored under `docs/`.
 - Preserve YAML indentation in `mkdocs.yml`.
 - Markdown artifacts should use standard GitHub Flavored Markdown unless a MkDocs Material extension is intentionally used.
+- Run `npm run docs:validate` after changing canonical docs, public docs, version metadata, MkDocs configuration, or the Pages workflow.
+- The live site is generated from the same `docs/` source. Never patch the `gh-pages` branch or generated `site/` files by hand; use `npm run docs:deploy` when an online publication is requested.
+
+Versioned documentation must agree on all of the following:
+
+- Semantic application version: `0.722.0` in `package.json`, `src/version.js`, `CHANGELOG.md`, and current release notes.
+- Display version: `v0.722` where the compact in-app label is being described.
+- Documentation release label: `v0.722.0` in `mkdocs.yml` and the public documentation release selector.
+- Runtime baseline: Node.js 20 or 22, npm 10+, and Electron `41.7.1`.
 
 ## 2. Adding Or Changing Tools
 
@@ -123,5 +132,6 @@ Current local facts to keep in mind:
 
 - Commit completed changes with a concise conventional commit message.
 - Maintain semantic version consistency in `package.json`, `src/version.js`, `CHANGELOG.md`, and release notes when doing release/version work.
+- Update the current version references in `README.md`, `Agents.md`, `Memory.md`, `docs/index.md`, `docs/user-guides/GETTING_STARTED.md`, and `mkdocs.yml` when cutting a release.
 - Do not manually edit `package-lock.json`; run `npm install` if dependencies change.
 - If editing build or Pages config, validate with the relevant command before committing when tooling is available.

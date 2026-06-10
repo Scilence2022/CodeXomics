@@ -1,4 +1,4 @@
-# CodeXomics Project Memory - v0.722
+# CodeXomics Project Memory - v0.722.0
 
 This document preserves project context, architectural decisions, implementation constraints, and discovered knowledge for agents working on CodeXomics.
 
@@ -11,6 +11,8 @@ Current version sources:
 - `package.json`: `0.722.0`
 - `src/version.js`: major `0`, minor `722`, patch `0`, prerelease `` (none)
 - Display version: `v0.722`
+- Documentation release label: `v0.722.0`
+- Runtime baseline: Node.js 20 or 22, npm 10+, Electron `41.7.1`
 
 Core entry points:
 
@@ -274,14 +276,24 @@ Important files:
 
 Do not treat `site/` as source.
 
-Deployment Note:
+Validation and deployment:
 
-- While a `Deploy Documentation` GitHub Actions workflow exists for push events to `main`, repository environment protection rules for the `github-pages` environment prevent deployments from the `main` branch directly.
-- The authoritative deployment mechanism is running `mkdocs gh-deploy` locally. This compiles the docs to the `site/` directory, commits it to the `gh-pages` branch, and pushes it to `origin/gh-pages`, updating the live site.
+- `npm run docs:validate` checks canonical/public version alignment and runs `mkdocs build --strict`.
+- `.github/workflows/docs.yml` performs the same checks for relevant changes on `main` and can deploy through GitHub Pages when repository environment rules permit it.
+- `npm run docs:deploy` is the supported direct publication path. It builds from `docs/`, commits generated output to `gh-pages`, and pushes that branch. Never edit generated output directly.
+- The live site is `https://scilence2022.github.io/CodeXomics/`.
 
 ## 13. Recent Engineering Memory
 
-Recent changes on the `codex/fix-p0-security-boundaries` branch focused on restoring ChatBox startup behavior and making benchmark workflows compatible with a hardened Electron renderer.
+The `0.722.0` production-readiness line combines security hardening, release engineering, CI coverage, documentation governance, and renderer-boundary fixes. The source release uses Electron `41.7.1` so installation remains compatible with the supported Node.js 20 and 22 CI matrix.
+
+Release engineering memory:
+
+- LLM API keys use Electron `safeStorage` through `src/main/secret-store.js`.
+- Structured logging and crash capture live in `src/main/logging.js`.
+- Auto-update support uses `electron-updater`, with release publishing configured for GitHub.
+- CI validates lint, versions, tool-registry consistency, test coverage, and an unpacked packaging smoke build.
+- The Playwright Electron smoke suite is available through `npm run test:e2e`; its GitHub Actions workflow remains manually triggered.
 
 Security hardening and renderer boundary:
 
@@ -352,6 +364,9 @@ npm test
 npm run lint
 npm run version-sync
 npm run version-validate
+npm run docs:serve
+npm run docs:validate
+npm run docs:deploy
 npm run build
 npm run build:mac
 npm run build:win

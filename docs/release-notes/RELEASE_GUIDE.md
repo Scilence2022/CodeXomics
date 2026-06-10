@@ -12,12 +12,15 @@ Keep these files synchronized for release work:
 - `CHANGELOG.md`
 - `docs/release-notes/RELEASE_NOTES_<version>.md`
 - `mkdocs.yml` version metadata when publishing documentation for a new release line
+- `README.md`, `Agents.md`, `Memory.md`, and `docs/index.md`
+- `docs/user-guides/GETTING_STARTED.md`
 
 Use the existing version scripts where possible:
 
 ```bash
 npm run version-sync
 npm run version-validate
+npm run docs:validate
 ```
 
 ## Pre-Release Checklist
@@ -39,6 +42,9 @@ npm run version-validate
 npm test
 npm run lint
 npm run version-validate
+npm run tool-registry:validate
+npm run test:coverage
+npm run docs:validate
 ```
 
 Run focused tests when the release touches a specific subsystem, for example MCP, plugin, benchmark, tool registry, or renderer modules.
@@ -59,7 +65,7 @@ The macOS build path uses the DMG background generation scripts before packaging
 Create release notes under `docs/release-notes/` with a filename that includes the version, for example:
 
 ```text
-RELEASE_NOTES_v0.7beta.md
+RELEASE_NOTES_v0.722.md
 ```
 
 Recommended sections:
@@ -77,8 +83,8 @@ Recommended sections:
 Use the display tag style used by the project, for example:
 
 ```bash
-git tag -a v0.7beta -m "Release v0.7beta"
-git push origin v0.7beta
+git tag -a v0.722.0 -m "Release v0.722.0"
+git push origin v0.722.0
 ```
 
 ## GitHub Release
@@ -89,10 +95,16 @@ Upload generated assets from `dist/` and paste the release notes. Mark prereleas
 
 The Pages source is `docs/` and `mkdocs.yml`. Do not edit generated `site/` output directly.
 
-Before publishing:
+Before publishing, validate the canonical documents and strict site build:
 
 ```bash
-mkdocs build --strict
+npm run docs:validate
 ```
 
-If the local environment does not have MkDocs plugins installed, install the documented MkDocs dependencies in your release environment and rebuild there.
+Publish through the Pages workflow on `main` or directly from the current checkout:
+
+```bash
+npm run docs:deploy
+```
+
+Do not edit `site/` or generated `gh-pages` content manually.

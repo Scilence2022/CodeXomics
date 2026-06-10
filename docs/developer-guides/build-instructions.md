@@ -1,520 +1,200 @@
-# Build Instructions for CodeXomics
+# Build Instructions
 
-## Overview
+This guide describes the supported development and packaging workflow for CodeXomics `0.722.0`.
 
-This document provides comprehensive instructions for building CodeXomics with all recent enhancements including AI integration, enhanced visualization, and improved architecture.
+## Supported Toolchain
 
-## 🆕 Recent Updates
+| Component        | Supported baseline                       |
+| ---------------- | ---------------------------------------- |
+| Node.js          | 20.x or 22.x                             |
+| npm              | 10 or newer                              |
+| Electron         | `41.7.1`                                 |
+| electron-builder | `25.x`                                   |
+| Python           | 3.11 recommended for local MkDocs builds |
 
-### **Enhanced Features**
+Node.js 20 and 22 are exercised by CI. Use an active LTS release and avoid changing the Electron pin without testing both CI versions and an unpacked package build.
 
-- **Fixed AI Search Function Calling** - Corrected search behavior for better accuracy
-- **SVG-based GC Content Visualization** - Crisp, scalable graphics with dynamic calculations
-- **Improved Modular Architecture** - Better code organization and maintainability
-- **Enhanced Configuration Management** - Centralized configuration with persistent storage
-- **Better Error Handling** - Graceful degradation and user feedback
+## Platform Requirements
 
-### **New Dependencies**
+=== "macOS"
 
-- **Enhanced AI Integration** - Updated LLM provider support
-- **SVG Graphics** - Native SVG support for better visualization
-- **Configuration Persistence** - File-based configuration management
+    - A current supported macOS release.
+    - Xcode Command Line Tools: `xcode-select --install`.
+    - Apple signing credentials only when producing distributable signed builds.
 
-## 📋 Prerequisites
+=== "Windows"
 
-### **System Requirements**
+    - Windows 10 or newer.
+    - Visual Studio Build Tools with the Desktop development with C++ workload when native modules need compilation.
+    - An Authenticode certificate only for signed release builds.
 
-- **Node.js**: Version 18.0.0 or higher (LTS recommended)
-- **npm**: Version 8.0.0 or higher (included with Node.js)
-- **Operating System**:
-  - macOS 10.15 (Catalina) or higher
-  - Windows 10 version 1903 or higher
-  - Linux Ubuntu 18.04 or equivalent
+=== "Linux"
 
-### **Development Tools**
+    - A current Ubuntu/Debian-compatible distribution.
+    - Standard compiler and Electron runtime libraries.
 
-- **Git**: For version control and repository management
-- **Code Editor**: VS Code, Atom, or similar (VS Code recommended)
-- **Terminal/Command Prompt**: For running build commands
+    ```bash
+    sudo apt-get update
+    sudo apt-get install -y build-essential libnss3 libatk-bridge2.0-0 \
+      libatk1.0-0 libcups2 libgtk-3-0 libgbm1 libasound2 libxshmfence1 libxss1
+    ```
 
-### **Optional Tools**
-
-- **Electron Forge CLI**: For advanced building and packaging
-- **Node Version Manager (nvm)**: For managing Node.js versions
-- **Yarn**: Alternative package manager (optional)
-
-## 🛠️ Installation Steps
-
-### **1. Clone the Repository**
+## Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/electron-GenomeViewer.git
-cd electron-GenomeViewer
-
-# Check repository status
-git status
-git log --oneline -10  # View recent commits
-```
-
-### **2. Install Dependencies**
-
-```bash
-# Install all required packages
+git clone https://github.com/Scilence2022/CodeXomics.git
+cd CodeXomics
 npm install
-
-# Verify installation
-npm list --depth=0
 ```
 
-**Core Dependencies:**
+Use `npm ci` in clean CI or release environments when the lockfile is already current.
 
-- `electron`: ^27.0.0 - Main Electron framework
-- `electron-builder`: ^24.6.4 - Building and packaging
-- `fs-extra`: ^11.1.1 - Enhanced file system operations
-- `path`: Native Node.js module for path operations
+Do not manually edit `package-lock.json`. If dependencies change, update the lockfile through npm.
 
-**Development Dependencies:**
-
-- `electron-rebuild`: For native module compatibility
-- `concurrently`: For running multiple scripts simultaneously
-- `wait-on`: For waiting on services during development
-
-### **3. Verify Installation**
+## Run Locally
 
 ```bash
-# Check Node.js and npm versions
-node --version
-npm --version
-
-# Verify Electron installation
-npx electron --version
-
-# Run basic tests (if available)
-npm test
-```
-
-## 🔨 Build Process
-
-### **Development Build**
-
-```bash
-# Start development server with hot reload
-npm run dev
-
-# Alternative: Start without hot reload
 npm start
-
-# Run in debug mode
-npm run debug
+npm run dev
 ```
 
-### **Production Build**
+Optional combined services:
 
 ```bash
-# Build for current platform
-npm run build
-
-# Build for specific platforms
-npm run build:mac     # macOS
-npm run build:win     # Windows
-npm run build:linux   # Linux
-
-# Build for all platforms (requires appropriate OS or CI)
-npm run build:all
+npm run mcp-server
+npm run start-with-mcp
+npm run marketplace:start
+npm run start-with-marketplace
+npm run start-full
 ```
 
-### **Advanced Build Options**
+## Validate Before Packaging
 
 ```bash
-# Build with specific Electron version
-npm run build -- --electron-version=27.0.0
-
-# Build for specific architecture
-npm run build:mac -- --arch=x64     # Intel Macs
-npm run build:mac -- --arch=arm64   # Apple Silicon Macs
-npm run build:win -- --arch=x64     # 64-bit Windows
-npm run build:win -- --arch=ia32    # 32-bit Windows
-
-# Create installer packages
-npm run dist
-```
-
-## ⚙️ Configuration
-
-### **Application Configuration**
-
-The application uses a centralized configuration system with the following structure:
-
-```javascript
-// Default configuration locations
-~/.codexomics/config.json          // Main configuration
-~/.codexomics/llm-config.json      // AI/LLM settings
-~/.codexomics/ui-preferences.json  // UI preferences
-~/.codexomics/chat-history.json    // Chat history
-~/.codexomics/app-settings.json    // Application settings
-```
-
-### **Build Configuration**
-
-Edit `package.json` to customize build settings:
-
-```json
-{
-  "build": {
-    "appId": "com.genomeai.studio",
-    "productName": "CodeXomics",
-    "directories": {
-      "output": "dist",
-      "buildResources": "build"
-    },
-    "files": ["src/**/*", "package.json", "!src/**/*.md", "!**/node_modules/**"],
-    "mac": {
-      "category": "public.app-category.education",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": ["x64", "arm64"]
-        }
-      ]
-    },
-    "win": {
-      "target": "nsis",
-      "arch": ["x64"]
-    },
-    "linux": {
-      "target": "AppImage",
-      "category": "Science"
-    }
-  }
-}
-```
-
-### **Environment Variables**
-
-Set up environment variables for development:
-
-```bash
-# Create .env file (optional)
-echo "NODE_ENV=development" > .env
-echo "DEBUG=true" >> .env
-echo "LOG_LEVEL=info" >> .env
-
-# For production builds
-export NODE_ENV=production
-```
-
-## 🔧 Development Workflow
-
-### **File Structure**
-
-```
-CodeXomics/
-├── src/
-│   ├── main/                    # Main process files
-│   │   ├── main.js             # Main Electron process
-│   │   └── menu.js             # Application menu
-│   └── renderer/               # Renderer process files
-│       ├── index.html          # Main HTML file
-│       ├── styles.css          # Styles
-│       ├── renderer-modular.js # Main application logic
-│       └── modules/            # Modular architecture
-│           ├── FileManager.js      # File operations
-│           ├── TrackRenderer.js    # Visualization
-│           ├── NavigationManager.js # Search & navigation
-│           ├── UIManager.js        # Interface management
-│           ├── SequenceUtils.js    # Sequence processing
-│           ├── ChatManager.js      # AI assistant
-│           ├── LLMConfigManager.js # AI configuration
-│           └── ConfigManager.js    # Configuration management
-├── assets/                     # Application assets
-├── build/                      # Build resources
-├── dist/                       # Build output
-└── sample_data/               # Test data files
-```
-
-### **Code Style and Standards**
-
-```bash
-# Install linting tools (optional)
-npm install --save-dev eslint prettier
-
-# Run linting
-npx eslint src/
-
-# Format code
-npx prettier --write src/
-```
-
-**Coding Standards:**
-
-- Use ES6+ features consistently
-- Follow modular architecture patterns
-- Add JSDoc comments for functions
-- Use meaningful variable names
-- Handle errors gracefully
-
-### **Testing**
-
-```bash
-# Run unit tests (if implemented)
-npm test
-
-# Run integration tests
-npm run test:integration
-
-# Run end-to-end tests
-npm run test:e2e
-
-# Generate coverage report
+npm run lint
+npm run version-validate
+npm run tool-registry:validate
 npm run test:coverage
+npm run docs:validate
 ```
 
-## 📦 Packaging and Distribution
-
-### **Create Distribution Packages**
+The Electron smoke suite launches the real application and may require a display server on Linux:
 
 ```bash
-# Create installers for all platforms
+npm run test:e2e
+```
+
+## Package The Application
+
+Fast unpacked package for the current platform:
+
+```bash
+npm run pack
+```
+
+Installer/package builds without publishing:
+
+```bash
 npm run dist
-
-# Platform-specific distributions
-npm run dist:mac    # Creates .dmg file
-npm run dist:win    # Creates .exe installer
-npm run dist:linux  # Creates .AppImage file
+npm run build:mac
+npm run build:win
+npm run build:linux
 ```
 
-### **Output Files**
+Cross-platform packaging generally requires building on each target operating system. `npm run build:all` is available, but native signing and platform tooling still apply.
 
-After successful build, find distribution files in:
+Generated packages are written to `dist/`, which is build output and should not be edited manually.
 
-```
-dist/
-├── mac/
-│   └── codexomics-1.0.0.dmg
-├── win-unpacked/
-│   └── codexomics-Setup-1.0.0.exe
-└── linux-unpacked/
-    └── codexomics-1.0.0.AppImage
-```
+Configured targets:
 
-### **Code Signing (Production)**
+| Platform | Targets                 | Architectures |
+| -------- | ----------------------- | ------------- |
+| macOS    | DMG and ZIP             | x64 and arm64 |
+| Windows  | NSIS and portable EXE   | x64           |
+| Linux    | AppImage, Snap, and DEB | x64           |
 
-For production releases, configure code signing:
+## Signing And Publishing
 
-```json
-// In package.json build configuration
-{
-  "build": {
-    "mac": {
-      "identity": "Developer ID Application: Your Name (TEAM_ID)"
-    },
-    "win": {
-      "certificateFile": "path/to/certificate.p12",
-      "certificatePassword": "password"
-    }
-  }
-}
-```
+Release credentials are supplied through environment variables and must never be committed.
 
-## 🐛 Troubleshooting
-
-### **Common Build Issues**
-
-**Node.js Version Conflicts:**
+macOS signing and notarization:
 
 ```bash
-# Use Node Version Manager
-nvm install 18
-nvm use 18
-
-# Verify version
-node --version
+export CSC_LINK="/path/to/DeveloperID.p12"
+export CSC_KEY_PASSWORD="<certificate password>"
+export APPLE_ID="you@example.com"
+export APPLE_APP_SPECIFIC_PASSWORD="<app-specific password>"
+export APPLE_TEAM_ID="XXXXXXXXXX"
 ```
 
-**Native Module Compilation:**
+Windows signing:
 
 ```bash
-# Rebuild native modules
-npm run electron-rebuild
-
-# Alternative: Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
+export CSC_LINK="/path/to/codesign.pfx"
+export CSC_KEY_PASSWORD="<certificate password>"
 ```
 
-**Permission Issues (macOS/Linux):**
+GitHub publishing:
 
 ```bash
-# Fix npm permissions
-sudo chown -R $(whoami) ~/.npm
-sudo chown -R $(whoami) /usr/local/lib/node_modules
+export GH_TOKEN="<token with repository release access>"
+npx electron-builder --mac --win --linux --publish always
 ```
 
-**Memory Issues During Build:**
+See the root [`RELEASING.md`](https://github.com/Scilence2022/CodeXomics/blob/main/RELEASING.md) for the complete signed-release and auto-update workflow.
+
+## Documentation Builds
 
 ```bash
-# Increase Node.js memory limit
+npm run docs:serve
+npm run docs:validate
+npm run docs:deploy
+```
+
+- `docs:serve` starts a local preview.
+- `docs:validate` checks release metadata and runs a strict MkDocs build.
+- `docs:deploy` publishes generated output to the `gh-pages` branch.
+
+The source is always `docs/` plus `mkdocs.yml`; never edit `site/` directly.
+
+## Troubleshooting
+
+### Clean Dependency Reinstall
+
+Prefer preserving the lockfile:
+
+```bash
+rm -rf node_modules
+npm ci
+```
+
+### Native Module Problems
+
+```bash
+npx electron-builder install-app-deps
+```
+
+Confirm the active Node.js version matches the supported matrix before rebuilding.
+
+### Build Memory
+
+```bash
 export NODE_OPTIONS="--max-old-space-size=4096"
 npm run build
 ```
 
-### **Platform-Specific Issues**
-
-**macOS:**
+### Linux Headless Smoke Test
 
 ```bash
-# Install Xcode Command Line Tools if needed
-xcode-select --install
-
-# Trust certificates for code signing
-security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain certificate.crt
+xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" npm run test:e2e
 ```
 
-**Windows:**
+### Version Mismatch
+
+`src/version.js` is the application version source. After intentionally changing it, synchronize and validate:
 
 ```bash
-# Install Windows Build Tools
-npm install --global windows-build-tools
-
-# Alternative: Install Visual Studio Build Tools
+npm run version-sync
+npm run version-validate
+npm run docs:validate
 ```
-
-**Linux:**
-
-```bash
-# Install required libraries
-sudo apt-get install build-essential libnss3-dev libgconf-2-4
-```
-
-### **Runtime Issues**
-
-**Configuration Problems:**
-
-- Check configuration file permissions
-- Verify configuration directory exists: `~/.codexomics/`
-- Reset configuration: Delete config directory and restart
-
-**AI Integration Issues:**
-
-- Verify API keys are properly configured
-- Check network connectivity for LLM providers
-- Review LLM provider configuration in settings
-
-**File Loading Problems:**
-
-- Ensure sample data files are accessible
-- Check file permissions and format compatibility
-- Verify file paths in error messages
-
-## 🚀 Performance Optimization
-
-### **Build Optimization**
-
-```json
-// Optimize build performance in package.json
-{
-  "build": {
-    "compression": "maximum",
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
-  }
-}
-```
-
-### **Runtime Optimization**
-
-- Enable hardware acceleration for SVG rendering
-- Use efficient data structures for large genomic files
-- Implement lazy loading for visualization components
-- Optimize memory usage with proper cleanup
-
-## 📚 Additional Resources
-
-### **Documentation**
-
-- [Electron Documentation](https://www.electronjs.org/docs)
-- [Electron Builder Guide](https://www.electron.build/)
-- [Node.js Documentation](https://nodejs.org/docs/)
-
-### **Community Support**
-
-- [Electron Discord](https://discord.gg/electron)
-- [GitHub Issues](https://github.com/your-repo/issues)
-- [Stack Overflow](https://stackoverflow.com/questions/tagged/electron)
-
-### **Development Tools**
-
-- [Electron DevTools Extension](https://github.com/MarshallOfSound/electron-devtools-installer)
-- [Electron Fiddle](https://www.electronjs.org/fiddle) - For testing Electron code
-- [Spectron](https://github.com/electron-userland/spectron) - For testing Electron apps
-
-## 🔄 Continuous Integration
-
-### **GitHub Actions Example**
-
-```yaml
-# .github/workflows/build.yml
-name: Build and Release
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - run: npm ci
-      - run: npm run build
-      - run: npm run dist
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ matrix.os }}-build
-          path: dist/
-```
-
-## 📝 Release Process
-
-### **Version Management**
-
-```bash
-# Update version
-npm version patch  # 1.0.0 -> 1.0.1
-npm version minor  # 1.0.0 -> 1.1.0
-npm version major  # 1.0.0 -> 2.0.0
-
-# Create git tag
-git tag -a v1.0.0 -m "Release version 1.0.0"
-git push origin v1.0.0
-```
-
-### **Release Checklist**
-
-- [ ] Update version numbers in package.json
-- [ ] Update CHANGELOG.md with new features
-- [ ] Test on all target platforms
-- [ ] Update documentation
-- [ ] Create release notes
-- [ ] Tag release in git
-- [ ] Build and upload distribution packages
-- [ ] Update download links
-- [ ] Announce release
-
-This comprehensive build guide ensures successful compilation and distribution of CodeXomics with all its advanced features and improvements.

@@ -4,10 +4,12 @@ This guide summarizes the current CodeXomics development workflow and architectu
 
 ## Prerequisites
 
-- Node.js 16 or newer.
-- npm 8 or newer.
+- Node.js 20 or 22.
+- npm 10 or newer.
 - Git.
 - Platform build tools required by Electron Builder for your operating system.
+
+The `0.722.0` source tree pins Electron `41.7.1` for compatibility with the supported Node.js CI matrix.
 
 ## Setup
 
@@ -38,6 +40,9 @@ npm run dev
 | `npm run lint`              | Run ESLint                                    |
 | `npm run version-sync`      | Synchronize version fields                    |
 | `npm run version-validate`  | Validate version consistency                  |
+| `npm run docs:serve`        | Preview the MkDocs site locally               |
+| `npm run docs:validate`     | Validate docs and build the site strictly     |
+| `npm run docs:deploy`       | Publish documentation to `gh-pages`           |
 | `npm run build`             | Build the current platform                    |
 | `npm run build:mac`         | Build macOS packages                          |
 | `npm run build:win`         | Build Windows packages                        |
@@ -218,11 +223,19 @@ Do:
 - Add implementation content under `docs/developer-guides/`.
 - Add deep architecture content under `docs/architecture/`.
 - Keep root `README.md`, `Agents.md`, and `Memory.md` accurate.
+- Keep semantic version, compact display version, and MkDocs release label distinct and synchronized.
 
 Do not:
 
 - Edit generated `site/` output directly.
 - Point MkDocs nav at root-level files outside `docs/`.
+- Hand-edit generated content on the `gh-pages` branch.
+
+Run this before committing documentation or release metadata changes:
+
+```bash
+npm run docs:validate
+```
 
 ## Contribution Notes
 

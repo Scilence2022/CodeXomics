@@ -33,6 +33,9 @@ jobs:
       - name: Validate version consistency
         run: npm run version-validate
 
+      - name: Validate documentation metadata
+        run: node scripts/validate-documentation.js
+
       - name: Validate tool registry consistency
         run: npm run tool-registry:validate
 

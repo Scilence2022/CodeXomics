@@ -8,6 +8,8 @@ This page summarizes the repository rules that matter most to AI coding assistan
 - Do not edit generated `site/` output directly.
 - Keep MkDocs nav paths relative to `docs/`.
 - Keep root `README.md`, `Agents.md`, and `Memory.md` synchronized with public docs when behavior changes.
+- Keep `0.722.0` semantic release references, the `v0.722` display label, and the `v0.722.0` MkDocs release label synchronized.
+- Validate documentation changes with `npm run docs:validate`; publish requested online updates with `npm run docs:deploy`.
 
 ## Tool Changes
 

@@ -844,6 +844,6 @@ A: AI provides helpful insights but should be validated. Use benchmark tests to 
 
 ---
 
-**CodeXomics v0.7beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
+**CodeXomics v0.722** - Intelligent Bioinformatics Analysis with Multi-Agent AI
 
 Made with ❤️ by the CodeXomics Team

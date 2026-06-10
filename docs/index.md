@@ -2,11 +2,13 @@
 
 **AI-powered bioinformatics analysis platform**
 
-[![Version](https://img.shields.io/badge/version-0.7.0--beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![Version](https://img.shields.io/badge/version-0.722.0-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Scilence2022/CodeXomics/blob/main/LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 
 CodeXomics is a cross-platform Electron workspace for genome visualization, AI-assisted biological analysis, plugin development, benchmark testing, and Model Context Protocol (MCP) integration.
+
+The current source release is `0.722.0`, displayed as `v0.722` in the application. Published installers on GitHub Releases may lag behind the source tree.
 
 <div class="grid cards" markdown>
 
@@ -48,7 +50,8 @@ CodeXomics is a cross-platform Electron workspace for genome visualization, AI-a
 
 | Area                   | Current state                                                                          |
 | ---------------------- | -------------------------------------------------------------------------------------- |
-| Application version    | `0.7.0-beta` (`v0.7beta` display)                                                      |
+| Application version    | `0.722.0` (`v0.722` display)                                                           |
+| Runtime baseline       | Node.js 20/22 for source builds; Electron `41.7.1`                                     |
 | Tool registry          | 180 YAML schemas across 18 active categories                                           |
 | Built-in ChatBox tools | 143 mapped local tools                                                                 |
 | MCP tools mode         | 95 tools exposed                                                                       |
@@ -57,6 +60,10 @@ CodeXomics is a cross-platform Electron workspace for genome visualization, AI-a
 | UI styling             | Vanilla CSS with default, professional, minimal, pastel, elegant, and midnight presets |
 
 ## Core Capabilities
+
+!!! info "Production-readiness release"
+
+    Version `0.722.0` adds secure credential storage, hardened renderer boundaries, structured logging and crash capture, auto-update support, stronger CI gates, and an Electron smoke-test harness. See the [v0.722.0 release notes](release-notes/RELEASE_NOTES_v0.722.md).
 
 ### Genome Visualization
 
@@ -95,6 +102,7 @@ CodeXomics is a cross-platform Electron workspace for genome visualization, AI-a
 | Architecture         | [Multi-Agent System](architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md) |
 | BLAST                | [BLAST Guide](reference/BLAST_GUIDE.md)                                                     |
 | Benchmarks           | [Benchmark Methods](reference/BENCHMARK_METHODS.md)                                         |
+| Current release      | [v0.722.0 Release Notes](release-notes/RELEASE_NOTES_v0.722.md)                             |
 
 ## Repository Links
 

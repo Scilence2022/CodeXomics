@@ -1,6 +1,6 @@
 # Plugin Development Guide
 
-Welcome to the **CodeXomics Plugin Development Guide**! This guide helps you create plugins for the CodeXomics v0.7beta platform and Plugin API 2.0.0.
+Welcome to the **CodeXomics Plugin Development Guide**! This guide helps you create plugins for the CodeXomics `0.722.0` platform and Plugin API `2.0.0`.
 
 ## 📋 Table of Contents
 
@@ -915,4 +915,4 @@ class GenomeCircosPlugin {
 
 **Happy plugin development!** 🚀
 
-_This guide covers CodeXomics v0.7beta plugin development. For the latest updates and API changes, check the project repository._
+_This guide covers CodeXomics 0.722.0 and Plugin API 2.0.0. For the latest updates and API changes, check the project repository._

@@ -7,9 +7,11 @@
 [![Version](https://img.shields.io/badge/version-v0.722-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
-[![Electron](https://img.shields.io/badge/Electron-42.4.0-47848f.svg)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-41.7.1-47848f.svg)](https://www.electronjs.org/)
 
 CodeXomics is a cross-platform Electron desktop application for genome visualization, AI-assisted biological analysis, tool execution, plugin development, and Model Context Protocol (MCP) integration.
+
+Current source release: `0.722.0` (`v0.722` in the application UI). Published installers on GitHub Releases may lag behind the source release.
 
 [Documentation](https://scilence2022.github.io/CodeXomics/) •
 [Getting Started](docs/user-guides/GETTING_STARTED.md) •
@@ -45,6 +47,8 @@ Core capabilities:
 Download the latest available build from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases).
 
 ### Build From Source
+
+Source builds require Node.js 20 or 22 and npm 10 or newer.
 
 ```bash
 git clone https://github.com/Scilence2022/CodeXomics.git
@@ -198,12 +202,23 @@ GitHub Pages is built from `docs/` using MkDocs Material and configured by [mkdo
 
 Do not edit generated `site/` output directly. Update files under `docs/` and rebuild Pages from source.
 
+Local documentation commands:
+
+```bash
+npm run docs:serve      # Preview at http://127.0.0.1:8000
+npm run docs:validate   # Check version/docs consistency and build strictly
+npm run docs:deploy     # Publish the current docs to gh-pages
+```
+
+The public site is deployed from the same `docs/` sources. Release documentation must keep `README.md`, `Agents.md`, `Memory.md`, `CHANGELOG.md`, `docs/`, and `mkdocs.yml` synchronized.
+
 ## Development
 
 ```bash
 npm test                  # Vitest unit and integration suites
 npm run lint              # ESLint
 npm run version-validate  # Version consistency checks
+npm run docs:validate     # Documentation consistency and strict MkDocs build
 ```
 
 The project uses vanilla JavaScript, vanilla CSS, Electron, Node.js, D3, DOMPurify, NGL, js-yaml, Vitest, and npm workspaces. TypeScript, React, TailwindCSS, Bootstrap, and atomic CSS frameworks are not part of the application stack.

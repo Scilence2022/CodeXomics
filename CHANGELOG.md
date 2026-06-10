@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- Synchronize the canonical repository documents and MkDocs site with version `0.722.0`.
+- Add current production-readiness release notes, Node.js 20/22 build guidance, strict documentation validation, and a supported GitHub Pages deployment workflow.
+- Correct the documented Electron runtime from `42.4.0` to the Node 20-compatible `41.7.1` restored after the release cut.
+
 ## [0.722.0] - 2026-06-10 - PRODUCTION-READINESS RELEASE
 
 **🚀 Milestone: Production hardening across security, release engineering, and CI**
@@ -20,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Release Engineering
 
-- Upgrade Electron `27.3.11` → `42.4.0` (off end-of-life) and electron-builder to `25.x`; production dependency audit is clean (0 vulnerabilities).
+- Upgrade Electron `27.3.11` to `41.7.1` (off end-of-life) and electron-builder to `25.x`; production dependency audit is clean (0 vulnerabilities).
 - Add auto-update via `electron-updater` with a background check on launch, a restart-to-install prompt, and a **Help → Check for Updates…** menu item.
 - Add code-signing + Apple notarization support through an env-var-driven `afterSign` hook (`build/notarize.js`) and a GitHub Releases publish feed; document the process in `RELEASING.md`.
 - Add structured logging and crash capture via `electron-log` + `crashReporter` (`src/main/logging.js`).

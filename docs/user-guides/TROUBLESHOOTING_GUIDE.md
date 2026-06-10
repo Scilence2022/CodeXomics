@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you resolve common issues encountered while using **CodeXomics v0.7beta**.
+This guide helps you resolve common issues encountered while using **CodeXomics 0.722.0** (displayed as `v0.722`).
 
 ## 🚨 Common Installation Issues
 
@@ -424,4 +424,4 @@ curl -I https://codexomics-marketplace.com/api/health
 
 **Still having issues?** Contact our support team with detailed information about your problem, including system specifications and error messages.
 
-_This guide covers CodeXomics v0.7beta. Check for updates to both the application and this documentation._
+_This guide covers CodeXomics 0.722.0. Check for updates to both the application and this documentation._
