@@ -494,16 +494,33 @@ class BlastManager {
       }
 
       // Get target directory (prefer current file directory or use params.outputDir)
-      const targetDir = params.outputDir || this.getCurrentDatabasePath();
+      const requestedDir = params.outputDir || this.getCurrentDatabasePath();
 
-      // Create database directory if it doesn't exist using cross-platform method
-      await this.createDirectoryAsync(targetDir);
+      // Create database directory if it doesn't exist using cross-platform method.
+      // If the requested directory is blocked by the CodeXomics file-access policy
+      // (e.g. a genome loaded from outside the approved roots), fall back to the app
+      // temp directory instead of failing outright. This keeps every database-creation
+      // path resilient rather than relying on each caller to pre-resolve a writable dir.
+      let targetDir = requestedDir;
+      try {
+        await this.createDirectoryAsync(requestedDir);
+      } catch (dirError) {
+        const fallbackDir = await this.getAppTempDirectory();
+        if (fallbackDir === requestedDir) {
+          throw dirError;
+        }
+        console.warn(
+          `BlastManager: Database directory "${requestedDir}" is not writable through the security policy (${dirError.message}); using temp directory: ${fallbackDir}`
+        );
+        await this.createDirectoryAsync(fallbackDir);
+        targetDir = fallbackDir;
+      }
 
-      // Update config to use the target directory
+      // Update config to use the resolved target directory
       this.config.localDbPath = targetDir;
 
-      // Build makeblastdb command
-      const command = this.buildMakeBlastDbCommand(params);
+      // Build makeblastdb command against the resolved directory
+      const command = this.buildMakeBlastDbCommand({ ...params, outputDir: targetDir });
 
       // Execute makeblastdb
       await this.runCommand(command, null, { localDbPath: targetDir });
@@ -515,6 +532,70 @@ class BlastManager {
     } catch (error) {
       throw new Error(`Failed to create local database: ${error.message}`);
     }
+  }
+
+  /**
+   * Request write permission for an explicitly chosen BLAST database directory.
+   *
+   * The CodeXomics file-access policy only auto-allows the default writable roots
+   * (userData/temp/downloads/documents) plus paths the user has already selected
+   * through a dialog. When a caller targets a directory outside that set, this
+   * method asks the main process to approve it; if approval needs explicit consent
+   * and `promptIfNeeded` is set, a native folder picker is shown so the user can
+   * confirm (or pick) the destination, which grants it for the rest of the session.
+   *
+   * @param {string} directoryPath - The directory the caller wants to write into.
+   * @param {{ promptIfNeeded?: boolean }} options
+   * @returns {Promise<{ approved: boolean, path: string|null, cancelled?: boolean }>}
+   */
+  async approveDatabaseDirectory(directoryPath, options = {}) {
+    const { promptIfNeeded = false } = options;
+    const api = typeof window !== 'undefined' ? window.electronAPI : null;
+
+    if (!directoryPath || typeof directoryPath !== 'string') {
+      return { approved: false, path: null };
+    }
+
+    // Step 1: try to approve directly. Succeeds when the directory is inside a
+    // default writable root or already covered by a prior user grant.
+    if (api?.approveWorkingDirectory) {
+      try {
+        const result = await api.approveWorkingDirectory(directoryPath, { createIfMissing: true });
+        if (result?.success) {
+          return { approved: true, path: result.path || directoryPath };
+        }
+      } catch (error) {
+        console.warn(`BlastManager: Direct directory approval failed for "${directoryPath}":`, error.message);
+      }
+    }
+
+    // Step 2: the directory needs explicit user consent. Pop up a folder picker so
+    // the user can confirm the destination (selecting it issues a recursive grant
+    // via rememberApprovedDialogPaths in the main process).
+    if (promptIfNeeded && api?.showDirectoryDialog) {
+      try {
+        const picked = await api.showDirectoryDialog({
+          title: 'Approve a folder to store the BLAST database',
+          defaultPath: directoryPath,
+        });
+
+        if (picked?.canceled || !picked?.filePaths?.length) {
+          return { approved: false, path: null, cancelled: true };
+        }
+
+        const chosen = picked.filePaths[0];
+        const confirmed = await api.approveWorkingDirectory(chosen, { createIfMissing: true });
+        if (confirmed?.success) {
+          return { approved: true, path: confirmed.path || chosen };
+        }
+        return { approved: false, path: chosen };
+      } catch (error) {
+        console.warn(`BlastManager: Directory permission prompt failed for "${directoryPath}":`, error.message);
+        return { approved: false, path: null };
+      }
+    }
+
+    return { approved: false, path: directoryPath };
   }
 
   buildMakeBlastDbCommand(params) {

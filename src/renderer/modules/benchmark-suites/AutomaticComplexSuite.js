@@ -665,11 +665,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {},
             {
-              trackName: 'gc',
+              track_name: 'gc',
               action: 'show',
             },
             {
-              trackName: 'Variants',
+              track_name: 'Variants',
               action: 'hide',
             },
             {},
@@ -689,7 +689,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          "Retrieve the UniProt entry details for human protein p53 using accession ID 'P04637', download its AlphaFold 3D structure in PDB format with confidence scores, and then open the structure in the interactive 3D protein viewer using cartoon representation.",
+          "Retrieve the UniProt entry details for human protein p53 using accession ID 'P04637', download its AlphaFold 3D structure, and then open the AlphaFold structure in the interactive 3D protein viewer using cartoon representation.",
         expectedResult: {
           tool_sequence: ['get_uniprot_entry', 'fetch_alphafold_structure', 'open_protein_viewer'],
           parameters: [
@@ -714,18 +714,20 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       {
         id: 'blast_auto_complex_01',
-        name: 'Nucleotide BLAST Database Creation and Local Search',
+        name: 'Quick Nucleotide BLAST Database Creation and Local Search',
         type: 'workflow',
         category: 'blast',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Create a new nucleotide BLAST database of currently loaded E. coli genome, then list the available BLAST databases to verify, and run a local blastn search against the database for the query sequence 'TTAGTTGGCGTCATCAAAGCTGAAGACATCTTCGCAGGCTTGCTGCAATGCGCTGTCACTTTGGATATTGCAGTTGCGCGTCCAGCCGGTGACGCCGTTGCGTTATCCCAACCCGGTGTCATGACGACGCTTAGCCCATTAGACTTTCTTGCCCGGTCAGCGACACC'.`,
+        instruction: `Create a new nucleotide BLAST database of currently loaded E. coli genome using name 'ecoli_nucl', then list the available BLAST databases to verify, and run a local blastn search against the database for the query sequence 'TTAGTTGGCGTCATCAAAGCTGAAGACATCTTCGCAGGCTTGCTGCAATGCGCTGTCACTTTGGATATTGCAGTTGCGCGTCCAGCCGGTGACGCCGTTGCGTTATCCCAACCCGGTGTCATGACGACGCTTAGCCCATTAGACTTTCTTGCCCGGTCAGCGACACC'.`,
         expectedResult: {
-          tool_sequence: ['blast_create_quick_db_for_current_genome', 'blast_list_databases', 'blast_search_local'],
+          tool_sequence: [
+            ['blast_create_db_from_genome', 'quick_db_for_current_genome'],
+            'blast_list_databases',
+            'blast_search_local',
+          ],
           parameters: [
-            {
-              createNucleotide: true,
-            },
+            {},
             {
               includeLocal: true,
             },
@@ -733,7 +735,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               sequence:
                 'TTAGTTGGCGTCATCAAAGCTGAAGACATCTTCGCAGGCTTGCTGCAATGCGCTGTCACTTTGGATATTGCAGTTGCGCGTCCAGCCGGTGACGCCGTTGCGTTATCCCAACCCGGTGTCATGACGACGCTTAGCCCATTAGACTTTCTTGCCCGGTCAGCGACACC',
               blastType: 'blastn',
-              database: 'U00096',
+              database: 'ecoli_nucl',
             },
           ],
         },
@@ -745,17 +747,20 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       {
         id: 'blast_auto_complex_02',
-        name: 'Protein BLAST Database Creation and Local Search',
+        name: 'Quick Protein BLAST Database Creation and Local Search',
         type: 'workflow',
         category: 'blast',
         complexity: 'complex',
         evaluation: 'automatic',
         instruction: `Create a new protein BLAST database Ecoli_protein for the currently loaded E. coli genome, then list the available BLAST databases to verify, and run a local blastp search against the database for the query sequence 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ'.`,
         expectedResult: {
-          tool_sequence: ['blast_create_protein_db_from_genome', 'blast_list_databases', 'blast_search_local'],
+          tool_sequence: [
+            ['blast_create_protein_db_from_genome', 'blast_create_quick_db_for_current_genome'],
+            'blast_list_databases',
+            'blast_search_local',
+          ],
           parameters: [
             {
-              chromosome: '<current_chromosome>',
               dbName: 'Ecoli_protein',
             },
             {},
@@ -857,7 +862,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {
               search_query: 'DapA',
-              search_type: 'protein_name',
+              search_type: 'gene_name',
               organism: 'Escherichia coli',
             },
             {
@@ -870,7 +875,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               analysis_type: 'domains',
             },
             {
-              geneName: 'DapA',
+              geneName: 'dapA',
               organism: 'Escherichia coli',
             },
           ],

@@ -313,7 +313,7 @@ class BlastFunctionTools {
    * Create BLAST database from FASTA file
    */
   async createBlastDatabase(params) {
-    const { inputFile, dbName, dbType, title, parseSeqids = true, outputDir } = params;
+    const { inputFile, dbName, dbType, title, parseSeqids = true, outputDir, requireApproval = true } = params;
 
     if (!inputFile) {
       throw new Error('inputFile parameter is required');
@@ -328,13 +328,43 @@ class BlastFunctionTools {
     }
 
     try {
+      // Resolve where the database is written.
+      //  - No outputDir: default to the directory of the currently loaded genome
+      //    file. createLocalDatabase transparently falls back to the app temp
+      //    directory if that location is blocked by the file-access policy.
+      //  - Explicit outputDir: this is a deliberate, possibly out-of-sandbox
+      //    location, so it requires additional permission approval (which may
+      //    prompt the user with a folder picker). Internal genome tools that pass
+      //    a pre-validated outputDir set requireApproval:false to skip the prompt.
+      let resolvedOutputDir;
+      if (outputDir) {
+        if (requireApproval) {
+          const approval = await this.blastManager.approveDatabaseDirectory(outputDir, { promptIfNeeded: true });
+          if (!approval.approved) {
+            return {
+              success: false,
+              error: approval.cancelled
+                ? `Permission not granted: database directory selection was cancelled (${outputDir})`
+                : `Permission denied for database directory: ${outputDir}`,
+              parameters: { inputFile, dbName, dbType, outputDir },
+              timestamp: new Date().toISOString(),
+            };
+          }
+          resolvedOutputDir = approval.path;
+        } else {
+          resolvedOutputDir = outputDir;
+        }
+      } else {
+        resolvedOutputDir = this.blastManager.getCurrentFileDirectory() || this.blastManager.config.localDbPath;
+      }
+
       await this.blastManager.createLocalDatabase({
         inputFile,
         dbName,
         dbType,
         title: title || `${dbName} database`,
         parseSeqids,
-        outputDir: outputDir || this.blastManager.config.localDbPath,
+        outputDir: resolvedOutputDir,
       });
 
       // Reload databases
@@ -346,7 +376,7 @@ class BlastFunctionTools {
           name: dbName,
           type: dbType,
           title: title || `${dbName} database`,
-          path: outputDir || this.blastManager.config.localDbPath,
+          path: resolvedOutputDir,
         },
         message: `BLAST database "${dbName}" created successfully`,
         timestamp: new Date().toISOString(),
@@ -507,8 +537,13 @@ class BlastFunctionTools {
       // Create FASTA content
       const fastaContent = `>${chromosome}\n${genomeData.sequence}\n`;
 
-      // Write to temporary file
+      // Write to temporary file (genome directory, or approved temp fallback)
       const tempFile = await this.blastManager.writeSequenceToFile(fastaContent, finalDbName, dbType);
+
+      // Co-locate the database with the already-approved temp FASTA. The directory
+      // is pre-validated, so skip the explicit-directory approval prompt.
+      const path = this.blastManager.getPathModule();
+      const outputDir = path.dirname(tempFile);
 
       // Create database
       const result = await this.createBlastDatabase({
@@ -517,6 +552,8 @@ class BlastFunctionTools {
         dbType: dbType,
         title: `${finalDbName} - ${chromosome}`,
         parseSeqids: true,
+        outputDir,
+        requireApproval: false,
       });
 
       // Clean up temp file
@@ -561,8 +598,20 @@ class BlastFunctionTools {
       // Translate DNA to proteins (6-frame translation)
       const fastaContent = this.blastManager.translateDNAToProteins(genomeData.sequence, chromosome);
 
-      // Write to temporary file
+      // Write to temporary file. writeSequenceToFile targets the genome directory
+      // and transparently falls back to the app temp directory when the genome
+      // directory is blocked by the CodeXomics file-access policy, so the returned
+      // path is always inside a writable, approved location.
       const tempFile = await this.blastManager.writeSequenceToFile(fastaContent, finalDbName, 'prot');
+
+      // Co-locate the BLAST database with the temp FASTA so makeblastdb writes to
+      // the same approved directory. Without this, createBlastDatabase falls back to
+      // config.localDbPath (e.g. <genome_dir>/blast_db), which is frequently outside
+      // the approved roots and fails with a directory-permission error — the very
+      // failure that blast_create_quick_db_for_current_genome avoids by passing an
+      // explicit outputDir derived from the temp file.
+      const path = this.blastManager.getPathModule();
+      const outputDir = path.dirname(tempFile);
 
       // Create protein database
       const result = await this.createBlastDatabase({
@@ -571,6 +620,8 @@ class BlastFunctionTools {
         dbType: 'prot',
         title: `${finalDbName} - ${chromosome} proteins`,
         parseSeqids: true,
+        outputDir,
+        requireApproval: false,
       });
 
       // Clean up temp file
