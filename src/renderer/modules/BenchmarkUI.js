@@ -3913,6 +3913,7 @@ class BenchmarkUI {
     // Display detailed results with filter options
     if (resultsContent) {
       resultsContent.innerHTML = `
+                ${this.renderDynamicToolsAnalysis(results)}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h3 style="color: var(--text-primary); margin: 0;">📋 Detailed Results</h3>
                     <div style="display: flex; gap: 10px;">
@@ -3939,6 +3940,88 @@ class BenchmarkUI {
         document.getElementById('filteredResults').innerHTML = this.renderFilteredResults(results, 'failed');
       });
     }
+  }
+
+  renderDynamicToolsAnalysis(results) {
+    const analysis = results?.overallStats?.dynamicToolsAnalysis;
+
+    if (!analysis?.available) {
+      return `
+                <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: var(--bg-secondary);">
+                    <h3 style="color: var(--text-primary); margin: 0 0 8px 0;">Dynamic Tools</h3>
+                    <div style="font-size: 13px; color: var(--text-secondary);">
+                        Dynamic tool statistics will appear here after running a benchmark with captured prompt metadata.
+                    </div>
+                </div>
+            `;
+    }
+
+    const selectedToolCount = analysis.selectedToolCount || {};
+    const tokenSavings = analysis.tokenSavings || {};
+    const percentSavings = analysis.percentSavings || {};
+    const topPrompts = analysis.topTokenSavingPrompts || [];
+
+    return `
+                <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: var(--bg-primary);">
+                    <div style="display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px;">
+                        <h3 style="color: var(--text-primary); margin: 0;">Dynamic Tools</h3>
+                        <span style="font-size: 12px; color: var(--text-secondary);">
+                            ${analysis.analyzedPrompts || 0}/${analysis.totalPrompts || 0} prompts analyzed
+                        </span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px;">
+                        <div style="background: var(--bg-secondary); padding: 12px; border-radius: 6px;">
+                            <div style="font-size: 12px; color: var(--text-secondary);">Avg Tools / Prompt</div>
+                            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary);">${this.formatBenchmarkNumber(selectedToolCount.mean, 1)}</div>
+                        </div>
+                        <div style="background: var(--bg-secondary); padding: 12px; border-radius: 6px;">
+                            <div style="font-size: 12px; color: var(--text-secondary);">Tool Count Range</div>
+                            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary);">${this.formatBenchmarkNumber(selectedToolCount.min, 0)}-${this.formatBenchmarkNumber(selectedToolCount.max, 0)}</div>
+                        </div>
+                        <div style="background: var(--bg-secondary); padding: 12px; border-radius: 6px;">
+                            <div style="font-size: 12px; color: var(--text-secondary);">Tokens Saved</div>
+                            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary);">${this.formatBenchmarkInteger(analysis.totalEstimatedTokensSaved || tokenSavings.total)}</div>
+                        </div>
+                        <div style="background: var(--bg-secondary); padding: 12px; border-radius: 6px;">
+                            <div style="font-size: 12px; color: var(--text-secondary);">Avg Savings</div>
+                            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary);">${this.formatBenchmarkNumber(analysis.averageEstimatedPercentSaved || percentSavings.mean, 1)}%</div>
+                        </div>
+                    </div>
+                    ${
+                      topPrompts.length > 0
+                        ? `
+                    <details style="font-size: 13px; color: var(--text-secondary);">
+                        <summary style="cursor: pointer; color: var(--text-primary); font-weight: 600;">Top token-saving prompts</summary>
+                        <div style="margin-top: 10px; display: grid; gap: 8px;">
+                            ${topPrompts
+                              .slice(0, 5)
+                              .map(
+                                prompt => `
+                                <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
+                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${prompt.testName || prompt.testId || 'Unknown prompt'}</span>
+                                    <span>${this.formatBenchmarkInteger(prompt.selectedToolCount)} tools</span>
+                                    <span>${this.formatBenchmarkInteger(prompt.estimatedTokensSaved)} tokens saved</span>
+                                </div>
+                            `
+                              )
+                              .join('')}
+                        </div>
+                    </details>
+                    `
+                        : ''
+                    }
+                </div>
+            `;
+  }
+
+  formatBenchmarkNumber(value, decimals = 1) {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue.toFixed(decimals) : (0).toFixed(decimals);
+  }
+
+  formatBenchmarkInteger(value) {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? Math.round(numberValue).toLocaleString() : '0';
   }
 
   /**
@@ -5157,6 +5240,7 @@ class BenchmarkUI {
                             <div style="font-size: 24px; font-weight: bold;">\${Math.round(results.duration / 1000)}s</div>
                         </div>
                     </div>
+                    \${this.renderDynamicToolsAnalysis(results)}
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3>Test Suite Results</h3>
                         <div style="display: flex; gap: 10px;">
@@ -5185,6 +5269,79 @@ class BenchmarkUI {
                 
                 // Enable export
                 document.getElementById('exportResults').disabled = false;
+            }
+
+            renderDynamicToolsAnalysis(results) {
+                const analysis = results?.overallStats?.dynamicToolsAnalysis;
+
+                if (!analysis?.available) {
+                    return \`
+                        <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: var(--bg-secondary);">
+                            <h3 style="margin: 0 0 8px 0;">Dynamic Tools</h3>
+                            <div style="font-size: 13px; color: var(--text-secondary);">
+                                Dynamic tool statistics will appear here after running a benchmark with captured prompt metadata.
+                            </div>
+                        </div>
+                    \`;
+                }
+
+                const selectedToolCount = analysis.selectedToolCount || {};
+                const tokenSavings = analysis.tokenSavings || {};
+                const percentSavings = analysis.percentSavings || {};
+                const topPrompts = analysis.topTokenSavingPrompts || [];
+
+                return \`
+                    <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: white;">
+                        <div style="display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px;">
+                            <h3 style="margin: 0;">Dynamic Tools</h3>
+                            <span style="font-size: 12px; color: var(--text-secondary);">
+                                \${analysis.analyzedPrompts || 0}/\${analysis.totalPrompts || 0} prompts analyzed
+                            </span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px;">
+                            <div style="background: var(--bg-secondary); padding: 12px; border-radius: 6px;">
+                                <div style="font-size: 12px; color: var(--text-secondary);">Avg Tools / Prompt</div>
+                                <div style="font-size: 22px; font-weight: 700;">\${this.formatBenchmarkNumber(selectedToolCount.mean, 1)}</div>
+                            </div>
+                            <div style="background: var(--bg-secondary); padding: 12px; border-radius: 6px;">
+                                <div style="font-size: 12px; color: var(--text-secondary);">Tool Count Range</div>
+                                <div style="font-size: 22px; font-weight: 700;">\${this.formatBenchmarkNumber(selectedToolCount.min, 0)}-\${this.formatBenchmarkNumber(selectedToolCount.max, 0)}</div>
+                            </div>
+                            <div style="background: var(--bg-secondary); padding: 12px; border-radius: 6px;">
+                                <div style="font-size: 12px; color: var(--text-secondary);">Tokens Saved</div>
+                                <div style="font-size: 22px; font-weight: 700;">\${this.formatBenchmarkInteger(analysis.totalEstimatedTokensSaved || tokenSavings.total)}</div>
+                            </div>
+                            <div style="background: var(--bg-secondary); padding: 12px; border-radius: 6px;">
+                                <div style="font-size: 12px; color: var(--text-secondary);">Avg Savings</div>
+                                <div style="font-size: 22px; font-weight: 700;">\${this.formatBenchmarkNumber(analysis.averageEstimatedPercentSaved || percentSavings.mean, 1)}%</div>
+                            </div>
+                        </div>
+                        \${topPrompts.length > 0 ? \`
+                            <details style="font-size: 13px; color: var(--text-secondary);">
+                                <summary style="cursor: pointer; color: var(--text-primary); font-weight: 600;">Top token-saving prompts</summary>
+                                <div style="margin-top: 10px; display: grid; gap: 8px;">
+                                    \${topPrompts.slice(0, 5).map(prompt => \`
+                                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
+                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${prompt.testName || prompt.testId || 'Unknown prompt'}</span>
+                                            <span>\${this.formatBenchmarkInteger(prompt.selectedToolCount)} tools</span>
+                                            <span>\${this.formatBenchmarkInteger(prompt.estimatedTokensSaved)} tokens saved</span>
+                                        </div>
+                                    \`).join('')}
+                                </div>
+                            </details>
+                        \` : ''}
+                    </div>
+                \`;
+            }
+
+            formatBenchmarkNumber(value, decimals = 1) {
+                const numberValue = Number(value);
+                return Number.isFinite(numberValue) ? numberValue.toFixed(decimals) : (0).toFixed(decimals);
+            }
+
+            formatBenchmarkInteger(value) {
+                const numberValue = Number(value);
+                return Number.isFinite(numberValue) ? Math.round(numberValue).toLocaleString() : '0';
             }
 
             /**
