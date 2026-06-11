@@ -1746,6 +1746,9 @@ Sequence Analysis:
   {"tool_name": "calc_region_gc", "parameters": {}}
   {"tool_name": "compute_gc", "parameters": {"sequence": "ATGCGCTATCG"}}
   {"tool_name": "translate_dna", "parameters": {"dna": "ATGAAATAG", "frame": 0}}
+  {"tool_name": "calculate_entropy", "parameters": {"sequence": "{get_sequence.sequence}"}}
+  {"tool_name": "reverse_complement", "parameters": {"sequence": "{get_sequence.sequence}"}}
+  {"tool_name": "translate_dna", "parameters": {"dna": "{get_sequence.sequence}", "reading_frame": 1}}
 
 Search Operations:
   {"tool_name": "find_gene_by_name", "parameters": {"name": "lacZ"}}
@@ -1801,6 +1804,11 @@ ${this.chatManager.getOptimizedToolContext()}
 ===FUNCTION CALLING FORMAT===
 CRITICAL: Always respond with ONLY a JSON object when using tools. No explanatory text around the JSON.
 Format: {"tool_name": "tool_name", "parameters": {"param": "value"}}
+
+Tool result references:
+- For chained tools in the same response or later rounds, use "{tool_name.field}" instead of copying large results.
+- Example sequence reuse: get_sequence first, then {"tool_name": "calculate_entropy", "parameters": {"sequence": "{get_sequence.sequence}"}}.
+- Whole-field references preserve the original value type, so arrays/objects can be passed as "{virtual_digest.fragmentDetails}".
 
 ${toolPriority}
 
@@ -2085,6 +2093,11 @@ CORRECT format:
 {"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
 {"tool_name": "open_new_tab", "parameters": {"geneName": "lacZ"}}
 
+Tool result references:
+- For chained tools in the same response or later rounds, use "{tool_name.field}" instead of copying large results.
+- Example: after get_sequence, use {"tool_name": "reverse_complement", "parameters": {"sequence": "{get_sequence.sequence}"}}.
+- Whole-field references preserve arrays/objects, e.g. {"tool_name": "simulate_gel_electrophoresis", "parameters": {"fragments": "{virtual_digest.fragmentDetails}"}}.
+
 Tool Selection Priority:
 1. First try MCP server tools (if available and connected)
 2. Use MicrobeGenomicsFunctions for specialized genomic analysis
@@ -2310,6 +2323,11 @@ CORRECT format:
 {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
 {"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
 {"tool_name": "open_new_tab", "parameters": {"geneName": "lacZ"}}
+
+Tool result references:
+- For chained tools in the same response or later rounds, use "{tool_name.field}" instead of copying large results.
+- Example: after get_sequence, use {"tool_name": "reverse_complement", "parameters": {"sequence": "{get_sequence.sequence}"}}.
+- Whole-field references preserve arrays/objects, e.g. {"tool_name": "simulate_gel_electrophoresis", "parameters": {"fragments": "{virtual_digest.fragmentDetails}"}}.
 
 Tool Selection Priority:
 1. First try MCP server tools (if available and connected)

@@ -4809,6 +4809,7 @@ class ChatManager {
       let taskCompleted = false;
       const successfulToolExecutionCounts = new Map(); // Track successful tool instances within this user request
       const toolExecutionState = this.createToolExecutionState(message);
+      const toolReferenceResults = [];
       let lastSuccessfulResults = [];
       let lastSuccessfulTools = [];
 
@@ -5009,9 +5010,15 @@ class ChatManager {
             }
 
             let toolResults;
+            const hasToolParameterReferences = toolsToExecute.some(tool =>
+              this.toolParametersContainReferences(tool.parameters)
+            );
+            if (hasToolParameterReferences && this.showThinkingProcess) {
+              this.updateThinkingMessage(`🔗 Resolving tool result references sequentially`);
+            }
 
             // Use Smart Executor if available and enabled
-            if (this.smartExecutor && this.isSmartExecutionEnabled) {
+            if (this.smartExecutor && this.isSmartExecutionEnabled && !hasToolParameterReferences) {
               console.log('🚀 Using Smart Executor for optimized execution');
               const smartToolsToExecute = pendingToolExecutionQueue.splice(0, pendingToolExecutionQueue.length);
               const smartResult = await this.smartExecutor.smartExecute(message, smartToolsToExecute);
@@ -5062,13 +5069,20 @@ class ChatManager {
               } else {
                 console.warn('Smart execution failed, falling back to standard execution:', smartResult.error);
                 pendingToolExecutionQueue.push(...smartToolsToExecute);
-                toolResults = await this.executePendingToolExecutionQueue(pendingToolExecutionQueue);
+                toolResults = await this.executePendingToolExecutionQueue(
+                  pendingToolExecutionQueue,
+                  toolReferenceResults
+                );
               }
             } else {
-              toolResults = await this.executePendingToolExecutionQueue(pendingToolExecutionQueue);
+              toolResults = await this.executePendingToolExecutionQueue(
+                pendingToolExecutionQueue,
+                toolReferenceResults
+              );
             }
 
             console.log('Tool execution completed. Results:', toolResults);
+            this.addToolResultsToReferenceContext(toolReferenceResults, toolResults);
             toolExecutionState.consecutiveSuppressedRounds = 0;
             this.markToolExecutionResults(toolExecutionState, toolsToExecute, toolResults, currentRound);
 
@@ -6776,8 +6790,9 @@ class ChatManager {
     return { executableTools, suppressedTools };
   }
 
-  async executePendingToolExecutionQueue(pendingToolExecutionQueue) {
+  async executePendingToolExecutionQueue(pendingToolExecutionQueue, referenceToolResults = []) {
     const toolResults = [];
+    const referenceContext = Array.isArray(referenceToolResults) ? referenceToolResults.slice() : [];
 
     while (pendingToolExecutionQueue.length > 0) {
       if (this.conversationState?.abortController && this.conversationState.abortController.signal.aborted) {
@@ -6786,17 +6801,20 @@ class ChatManager {
 
       const tool = pendingToolExecutionQueue.shift();
       const recordedParameters = this.cloneToolParameters(tool.parameters);
-      const executionParameters = this.cloneToolParameters(tool.parameters);
+      let executionParameters;
 
       try {
+        executionParameters = this.resolveToolParameterReferences(recordedParameters, referenceContext);
         const result = await this.executeToolByName(tool.tool_name, executionParameters);
-        toolResults.push({
+        const toolResult = {
           tool: tool.tool_name,
           parameters: recordedParameters,
           success: true,
           result: result,
           error: null,
-        });
+        };
+        toolResults.push(toolResult);
+        referenceContext.push(toolResult);
       } catch (error) {
         toolResults.push({
           tool: tool.tool_name,
@@ -6809,6 +6827,210 @@ class ChatManager {
     }
 
     return toolResults;
+  }
+
+  addToolResultsToReferenceContext(referenceContext, toolResults) {
+    if (!Array.isArray(referenceContext) || !Array.isArray(toolResults)) {
+      return;
+    }
+
+    for (const result of toolResults) {
+      if (result && result.success && !referenceContext.includes(result)) {
+        referenceContext.push(result);
+      }
+    }
+  }
+
+  toolParametersContainReferences(parameters) {
+    if (parameters === null || parameters === undefined) {
+      return false;
+    }
+
+    if (typeof parameters === 'string') {
+      return this.extractToolReferenceExpressions(parameters).length > 0;
+    }
+
+    if (Array.isArray(parameters)) {
+      return parameters.some(value => this.toolParametersContainReferences(value));
+    }
+
+    if (typeof parameters === 'object') {
+      return Object.values(parameters).some(value => this.toolParametersContainReferences(value));
+    }
+
+    return false;
+  }
+
+  resolveToolParameterReferences(parameters, referenceToolResults = []) {
+    if (parameters === null || parameters === undefined) {
+      return parameters;
+    }
+
+    if (typeof parameters === 'string') {
+      return this.resolveToolReferenceString(parameters, referenceToolResults);
+    }
+
+    if (Array.isArray(parameters)) {
+      return parameters.map(value => this.resolveToolParameterReferences(value, referenceToolResults));
+    }
+
+    if (typeof parameters === 'object') {
+      const resolved = {};
+      for (const [key, value] of Object.entries(parameters)) {
+        resolved[key] = this.resolveToolParameterReferences(value, referenceToolResults);
+      }
+      return resolved;
+    }
+
+    return parameters;
+  }
+
+  resolveToolReferenceString(value, referenceToolResults = []) {
+    const references = this.extractToolReferenceExpressions(value);
+    if (references.length === 0) {
+      return value;
+    }
+
+    const trimmed = value.trim();
+    const fullReference = this.extractWholeToolReferenceExpression(trimmed);
+    if (fullReference) {
+      return this.resolveToolReferenceExpression(fullReference, referenceToolResults);
+    }
+
+    return value.replace(this.getToolReferencePattern(), (match, doubleBracedReference, singleBracedReference) => {
+      const reference = doubleBracedReference || singleBracedReference;
+      const resolved = this.resolveToolReferenceExpression(reference, referenceToolResults);
+      if (resolved === null || resolved === undefined) {
+        return '';
+      }
+      if (typeof resolved === 'object') {
+        return JSON.stringify(resolved);
+      }
+      return String(resolved);
+    });
+  }
+
+  extractToolReferenceExpressions(value) {
+    if (typeof value !== 'string') {
+      return [];
+    }
+
+    const references = [];
+    const pattern = this.getToolReferencePattern();
+    let match;
+    while ((match = pattern.exec(value)) !== null) {
+      references.push(match[1] || match[2]);
+    }
+    return references;
+  }
+
+  extractWholeToolReferenceExpression(value) {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const wholeReference = value.match(
+      /^\{\{\s*([A-Za-z][\w.-]*(?:\[[^\]]+\])?(?:\.[A-Za-z_$][\w$-]*(?:\[[^\]]+\])?)*)\s*\}\}$/
+    );
+    if (wholeReference) {
+      return wholeReference[1];
+    }
+
+    const singleBraceReference = value.match(
+      /^\{\s*([A-Za-z][\w.-]*(?:\[[^\]]+\])?(?:\.[A-Za-z_$][\w$-]*(?:\[[^\]]+\])?)*)\s*\}$/
+    );
+    return singleBraceReference ? singleBraceReference[1] : null;
+  }
+
+  getToolReferencePattern() {
+    return /\{\{\s*([A-Za-z][\w.-]*(?:\[[^\]]+\])?(?:\.[A-Za-z_$][\w$-]*(?:\[[^\]]+\])?)*)\s*\}\}|\{\s*([A-Za-z][\w.-]*(?:\[[^\]]+\])?(?:\.[A-Za-z_$][\w$-]*(?:\[[^\]]+\])?)*)\s*\}/g;
+  }
+
+  resolveToolReferenceExpression(referenceExpression, referenceToolResults = []) {
+    const reference = String(referenceExpression || '').trim();
+    const match = this.findToolResultForReference(reference, referenceToolResults);
+    if (!match) {
+      throw new Error(`Unresolved tool result reference: {${reference}}`);
+    }
+
+    const { toolResult, resultPath } = match;
+    const resultData = Object.prototype.hasOwnProperty.call(toolResult, 'result') ? toolResult.result : toolResult;
+    if (!resultPath) {
+      return resultData;
+    }
+
+    const directValue = this.getValueByReferencePath(resultData, resultPath);
+    if (directValue !== undefined) {
+      return directValue;
+    }
+
+    const wrapperValue = this.getValueByReferencePath(toolResult, resultPath);
+    if (wrapperValue !== undefined) {
+      return wrapperValue;
+    }
+
+    throw new Error(`Unresolved tool result reference path: {${reference}}`);
+  }
+
+  findToolResultForReference(reference, referenceToolResults = []) {
+    if (!Array.isArray(referenceToolResults) || referenceToolResults.length === 0) {
+      return null;
+    }
+
+    const successfulResults = referenceToolResults.filter(result => result && result.success !== false && result.tool);
+    let bestMatch = null;
+
+    for (let index = successfulResults.length - 1; index >= 0; index--) {
+      const result = successfulResults[index];
+      const toolName = result.tool;
+      if (reference === toolName || reference.startsWith(`${toolName}.`)) {
+        if (!bestMatch || toolName.length > bestMatch.toolResult.tool.length) {
+          bestMatch = {
+            toolResult: result,
+            resultPath: reference === toolName ? '' : reference.substring(toolName.length + 1),
+          };
+        }
+      }
+    }
+
+    return bestMatch;
+  }
+
+  getValueByReferencePath(source, pathExpression) {
+    if (!pathExpression) {
+      return source;
+    }
+
+    if (source === null || source === undefined) {
+      return undefined;
+    }
+
+    const tokens = this.parseReferencePath(pathExpression);
+    let current = source;
+    for (const token of tokens) {
+      if (current === null || current === undefined) {
+        return undefined;
+      }
+      current = current[token];
+    }
+
+    return current;
+  }
+
+  parseReferencePath(pathExpression) {
+    const tokens = [];
+    const pattern = /([A-Za-z_$][\w$-]*)|\[([^\]]+)\]/g;
+    let match;
+    while ((match = pattern.exec(pathExpression)) !== null) {
+      if (match[1] !== undefined) {
+        tokens.push(match[1]);
+      } else if (match[2] !== undefined) {
+        const rawIndex = match[2].trim().replace(/^['"]|['"]$/g, '');
+        const numericIndex = Number(rawIndex);
+        tokens.push(Number.isInteger(numericIndex) && String(numericIndex) === rawIndex ? numericIndex : rawIndex);
+      }
+    }
+    return tokens;
   }
 
   normalizeParams(params) {

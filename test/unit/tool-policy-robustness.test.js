@@ -70,7 +70,10 @@ function loadChatManagerClass() {
     /\n\s{2}filterExecutableToolInstances\s*\(toolsToExecute,\s*successfulToolExecutionCounts,\s*originalMessage\)\s*\{[\s\S]*?\}\n\n\s{2}async executePendingToolExecutionQueue/
   );
   const executePendingToolExecutionQueueMatch = content.match(
-    /\n\s{2}async executePendingToolExecutionQueue\s*\(pendingToolExecutionQueue\)\s*\{[\s\S]*?\}\n\n\s{2}normalizeParams/
+    /\n\s{2}async executePendingToolExecutionQueue\s*\(pendingToolExecutionQueue,\s*referenceToolResults\s*=\s*\[\]\)\s*\{[\s\S]*?\}\n\n\s{2}addToolResultsToReferenceContext/
+  );
+  const toolReferenceMethodsMatch = content.match(
+    /\n\s{2}addToolResultsToReferenceContext\s*\(referenceContext,\s*toolResults\)\s*\{[\s\S]*?\}\n\n\s{2}normalizeParams/
   );
   const normalizeParamsMatch = content.match(/normalizeParams\s*\(params\)\s*\{[\s\S]*?\}\n\n\s*areParametersEqual/);
   const areParametersEqualMatch = content.match(
@@ -114,7 +117,10 @@ function loadChatManagerClass() {
     ? filterExecutableToolInstancesMatch[0].replace(/\n\n\s{2}async executePendingToolExecutionQueue$/, '')
     : '';
   const executePendingToolExecutionQueueCode = executePendingToolExecutionQueueMatch
-    ? executePendingToolExecutionQueueMatch[0].replace(/\n\n\s{2}normalizeParams$/, '')
+    ? executePendingToolExecutionQueueMatch[0].replace(/\n\n\s{2}addToolResultsToReferenceContext$/, '')
+    : '';
+  const toolReferenceMethodsCode = toolReferenceMethodsMatch
+    ? toolReferenceMethodsMatch[0].replace(/\n\n\s{2}normalizeParams$/, '')
     : '';
   const normalizeParamsCode = normalizeParamsMatch ? normalizeParamsMatch[0].replace('areParametersEqual', '') : '';
   const areParametersEqualCode = areParametersEqualMatch ? areParametersEqualMatch[0].replace('/**', '') : '';
@@ -138,6 +144,7 @@ function loadChatManagerClass() {
       ${createPendingToolExecutionQueueCode}
       ${filterExecutableToolInstancesCode}
       ${executePendingToolExecutionQueueCode}
+      ${toolReferenceMethodsCode}
       ${normalizeParamsCode}
       ${areParametersEqualCode}
       ${areToolParametersEqualCode}
@@ -655,6 +662,89 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
         success: false,
         result: null,
         error: 'simulated failure',
+      },
+    ]);
+  });
+
+  it('should resolve same-batch tool result references before execution', async () => {
+    const manager = new MockChatManager();
+    const calls = [];
+    const queue = [
+      { tool_name: 'get_sequence', parameters: { chromosome: 'U00096', start: 100000, end: 101000 } },
+      { tool_name: 'calculate_entropy', parameters: { sequence: '{get_sequence.sequence}' } },
+      { tool_name: 'reverse_complement', parameters: { sequence: '{{get_sequence.sequence}}' } },
+      { tool_name: 'translate_dna', parameters: { dna: 'prefix-{get_sequence.length}', reading_frame: 1 } },
+    ];
+
+    manager.conversationState = {};
+    manager.executeToolByName = async (toolName, parameters) => {
+      calls.push({ toolName, parameters });
+      if (toolName === 'get_sequence') {
+        return { chromosome: 'U00096', start: 100000, end: 101000, sequence: 'ATGCGT', length: 6 };
+      }
+      return { ok: true, parameters };
+    };
+
+    const results = await manager.executePendingToolExecutionQueue(queue);
+
+    expect(calls).toEqual([
+      { toolName: 'get_sequence', parameters: { chromosome: 'U00096', start: 100000, end: 101000 } },
+      { toolName: 'calculate_entropy', parameters: { sequence: 'ATGCGT' } },
+      { toolName: 'reverse_complement', parameters: { sequence: 'ATGCGT' } },
+      { toolName: 'translate_dna', parameters: { dna: 'prefix-6', reading_frame: 1 } },
+    ]);
+    expect(results[1].parameters).toEqual({ sequence: '{get_sequence.sequence}' });
+    expect(results.every(result => result.success)).toBe(true);
+  });
+
+  it('should preserve referenced object and array values for whole-parameter references', () => {
+    const manager = new MockChatManager();
+    const fragments = [
+      { start: 1, end: 100, length: 100 },
+      { start: 101, end: 250, length: 150 },
+    ];
+    const referenceResults = [
+      {
+        tool: 'virtual_digest',
+        parameters: {},
+        success: true,
+        result: { fragmentDetails: fragments },
+      },
+    ];
+
+    const resolved = manager.resolveToolParameterReferences(
+      {
+        fragments: '{virtual_digest.fragmentDetails}',
+        largest: '{virtual_digest.fragmentDetails[1].length}',
+      },
+      referenceResults
+    );
+
+    expect(resolved.fragments).toBe(fragments);
+    expect(resolved.largest).toBe(150);
+  });
+
+  it('should fail unresolved tool result references instead of executing literal placeholders', async () => {
+    const manager = new MockChatManager();
+    const calls = [];
+    const queue = [{ tool_name: 'calculate_entropy', parameters: { sequence: '{get_sequence.sequence}' } }];
+
+    manager.conversationState = {};
+    manager.executeToolByName = async (toolName, parameters) => {
+      calls.push({ toolName, parameters });
+      return { ok: true };
+    };
+
+    const results = await manager.executePendingToolExecutionQueue(queue);
+
+    expect(calls).toEqual([]);
+    expect(results).toEqual([
+      {
+        tool: 'calculate_entropy',
+        parameters: { sequence: '{get_sequence.sequence}' },
+        success: false,
+        result: null,
+        error: 'Unresolved tool result reference: {get_sequence.sequence}',
       },
     ]);
   });
