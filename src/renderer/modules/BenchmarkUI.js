@@ -789,6 +789,9 @@ class BenchmarkUI {
                             <button class="btn btn-success" id="exportResults" disabled>
                                 <span>📊</span> Export Results
                             </button>
+                            <button class="btn" id="viewDynamicToolsStats" disabled style="background: #2c7be5; color: white;">
+                                <span>🧰</span> Dynamic Tools Stats
+                            </button>
                             <button class="btn" id="exportLLMInteractions" disabled style="background: #9b59b6; color: white;">
                                 <span>🤖</span> Export LLM Interactions
                             </button>
@@ -972,12 +975,14 @@ class BenchmarkUI {
     const startBtn = document.getElementById('startBenchmark');
     const stopBtn = document.getElementById('stopBenchmark');
     const exportBtn = document.getElementById('exportResults');
+    const dynamicToolsBtn = document.getElementById('viewDynamicToolsStats');
     const testBtn = document.getElementById('testManualDialog');
     const browseBtn = document.getElementById('browseDirectoryBtn');
 
     if (startBtn) startBtn.onclick = () => this.startMainWindowBenchmark();
     if (stopBtn) stopBtn.onclick = () => this.stopMainWindowBenchmark();
     if (exportBtn) exportBtn.onclick = () => this.exportMainWindowResults();
+    if (dynamicToolsBtn) dynamicToolsBtn.onclick = () => this.showDynamicToolsStats();
     if (testBtn) testBtn.onclick = () => this.triggerTestManualDialog();
     if (browseBtn) browseBtn.onclick = () => this.browseDefaultDirectory();
 
@@ -2268,6 +2273,7 @@ class BenchmarkUI {
       // Update UI
       document.getElementById('startBenchmark').disabled = true;
       document.getElementById('stopBenchmark').disabled = false;
+      this.setDynamicToolsStatsButtonEnabled(false);
       document.getElementById('progressSection').style.display = 'block';
 
       // Display current model information
@@ -2354,6 +2360,7 @@ class BenchmarkUI {
       document.getElementById('startBenchmark').disabled = false;
       document.getElementById('stopBenchmark').disabled = true;
       document.getElementById('exportResults').disabled = false;
+      this.setDynamicToolsStatsButtonEnabled(!!this.currentResults);
 
       // Enable LLM interaction export button
       const exportLLMBtn = document.getElementById('exportLLMInteractions');
@@ -3855,6 +3862,7 @@ class BenchmarkUI {
     const resultsContent = document.getElementById('resultsContent');
 
     if (resultsSection) resultsSection.style.display = 'block';
+    this.setDynamicToolsStatsButtonEnabled(true);
 
     const stats = results.overallStats;
 
@@ -3947,7 +3955,7 @@ class BenchmarkUI {
 
     if (!analysis?.available) {
       return `
-                <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: var(--bg-secondary);">
+                <div id="dynamicToolsStatsPanel" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: var(--bg-secondary);">
                     <h3 style="color: var(--text-primary); margin: 0 0 8px 0;">Dynamic Tools</h3>
                     <div style="font-size: 13px; color: var(--text-secondary);">
                         Dynamic tool statistics will appear here after running a benchmark with captured prompt metadata.
@@ -3962,7 +3970,7 @@ class BenchmarkUI {
     const topPrompts = analysis.topTokenSavingPrompts || [];
 
     return `
-                <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: var(--bg-primary);">
+                <div id="dynamicToolsStatsPanel" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: var(--bg-primary);">
                     <div style="display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px;">
                         <h3 style="color: var(--text-primary); margin: 0;">Dynamic Tools</h3>
                         <span style="font-size: 12px; color: var(--text-secondary);">
@@ -4022,6 +4030,39 @@ class BenchmarkUI {
   formatBenchmarkInteger(value) {
     const numberValue = Number(value);
     return Number.isFinite(numberValue) ? Math.round(numberValue).toLocaleString() : '0';
+  }
+
+  setDynamicToolsStatsButtonEnabled(enabled) {
+    const button = document.getElementById('viewDynamicToolsStats');
+    if (button) {
+      button.disabled = !enabled;
+      button.title = enabled
+        ? 'View dynamic tool count and token-saving statistics'
+        : 'Available after a benchmark run completes';
+    }
+  }
+
+  showDynamicToolsStats() {
+    if (!this.currentResults) {
+      return;
+    }
+
+    const resultsSection = document.getElementById('resultsSection');
+    const panel = document.getElementById('dynamicToolsStatsPanel');
+
+    if (resultsSection) {
+      resultsSection.style.display = 'block';
+    }
+
+    if (panel) {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      panel.style.outline = '2px solid #2c7be5';
+      panel.style.outlineOffset = '2px';
+      setTimeout(() => {
+        panel.style.outline = '';
+        panel.style.outlineOffset = '';
+      }, 1600);
+    }
   }
 
   /**
@@ -4310,6 +4351,9 @@ class BenchmarkUI {
                     <button id="exportResults" style="background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; margin: 0 5px;" disabled>
                         📊 Export Detailed Results
                     </button>
+                    <button id="viewDynamicToolsStats" style="background: #2c7be5; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; margin: 0 5px;" disabled title="Available after a benchmark run completes">
+                        🧰 Dynamic Tools Stats
+                    </button>
                 </div>
             </div>
 
@@ -4427,6 +4471,7 @@ class BenchmarkUI {
                 document.getElementById('startBenchmark').onclick = () => this.startBenchmark();
                 document.getElementById('stopBenchmark').onclick = () => this.stopBenchmark();
                 document.getElementById('exportResults').onclick = () => this.exportResults();
+                document.getElementById('viewDynamicToolsStats').onclick = () => this.showDynamicToolsStats();
 
                 // Keyboard shortcuts
                 document.addEventListener('keydown', (e) => {
@@ -4993,6 +5038,7 @@ class BenchmarkUI {
                     // Update UI
                     document.getElementById('startBenchmark').disabled = true;
                     document.getElementById('stopBenchmark').disabled = false;
+                    this.setDynamicToolsStatsButtonEnabled(false);
                     document.getElementById('progressSection').style.display = 'block';
                     
                     // Reset progress counters for new benchmark run
@@ -5037,6 +5083,7 @@ class BenchmarkUI {
                     document.getElementById('startBenchmark').disabled = false;
                     document.getElementById('stopBenchmark').disabled = true;
                     document.getElementById('exportResults').disabled = false;
+                    this.setDynamicToolsStatsButtonEnabled(!!this.currentResults);
                 }
             }
 
@@ -5223,6 +5270,7 @@ class BenchmarkUI {
                 const resultsContent = document.getElementById('resultsContent');
                 
                 resultsSection.style.display = 'block';
+                this.setDynamicToolsStatsButtonEnabled(true);
                 
                 const stats = results.overallStats;
                 resultsContent.innerHTML = \`
@@ -5276,7 +5324,7 @@ class BenchmarkUI {
 
                 if (!analysis?.available) {
                     return \`
-                        <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: var(--bg-secondary);">
+                        <div id="dynamicToolsStatsPanel" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: var(--bg-secondary);">
                             <h3 style="margin: 0 0 8px 0;">Dynamic Tools</h3>
                             <div style="font-size: 13px; color: var(--text-secondary);">
                                 Dynamic tool statistics will appear here after running a benchmark with captured prompt metadata.
@@ -5291,7 +5339,7 @@ class BenchmarkUI {
                 const topPrompts = analysis.topTokenSavingPrompts || [];
 
                 return \`
-                    <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: white;">
+                    <div id="dynamicToolsStatsPanel" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 18px; background: white;">
                         <div style="display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px;">
                             <h3 style="margin: 0;">Dynamic Tools</h3>
                             <span style="font-size: 12px; color: var(--text-secondary);">
@@ -5342,6 +5390,39 @@ class BenchmarkUI {
             formatBenchmarkInteger(value) {
                 const numberValue = Number(value);
                 return Number.isFinite(numberValue) ? Math.round(numberValue).toLocaleString() : '0';
+            }
+
+            setDynamicToolsStatsButtonEnabled(enabled) {
+                const button = document.getElementById('viewDynamicToolsStats');
+                if (button) {
+                    button.disabled = !enabled;
+                    button.title = enabled
+                        ? 'View dynamic tool count and token-saving statistics'
+                        : 'Available after a benchmark run completes';
+                }
+            }
+
+            showDynamicToolsStats() {
+                if (!this.currentResults) {
+                    return;
+                }
+
+                const resultsSection = document.getElementById('resultsSection');
+                const panel = document.getElementById('dynamicToolsStatsPanel');
+
+                if (resultsSection) {
+                    resultsSection.style.display = 'block';
+                }
+
+                if (panel) {
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    panel.style.outline = '2px solid #2c7be5';
+                    panel.style.outlineOffset = '2px';
+                    setTimeout(() => {
+                        panel.style.outline = '';
+                        panel.style.outlineOffset = '';
+                    }, 1600);
+                }
             }
 
             /**
