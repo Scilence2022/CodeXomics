@@ -39,7 +39,11 @@ class LLMBenchmarkFramework {
       return window.path;
     }
     return {
-      join: (...parts) => parts.filter(part => part !== undefined && part !== null && part !== '').join('/').replace(/\/+/g, '/'),
+      join: (...parts) =>
+        parts
+          .filter(part => part !== undefined && part !== null && part !== '')
+          .join('/')
+          .replace(/\/+/g, '/'),
       resolve: (...parts) => {
         const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
         const normalized = joined.replace(/\\/g, '/').replace(/\/+/g, '/');
@@ -245,7 +249,6 @@ class LLMBenchmarkFramework {
 
       // Calculate total test count for accurate progress tracking
       let totalTestCount = 0;
-
 
       for (const [suiteId, testSuite] of this.testSuites.entries()) {
         if (options.suites && !options.suites.includes(suiteId)) {
@@ -862,7 +865,6 @@ class LLMBenchmarkFramework {
       metrics: {},
     };
 
-
     try {
       // Determine timeout based on configuration
       let timeoutMs;
@@ -1047,7 +1049,8 @@ class LLMBenchmarkFramework {
       const llmInteractionResult = await this.sendTestInstruction(test.instruction, instructionOptions);
 
       // Handle both old format (string) and new format (object with interactionData)
-      let llmResponse; let interactionData;
+      let llmResponse;
+      let interactionData;
       if (typeof llmInteractionResult === 'string') {
         // Old format - just response string
         llmResponse = llmInteractionResult;
@@ -1106,7 +1109,12 @@ class LLMBenchmarkFramework {
       }
 
       // CRITICAL FIX: End Tool Execution Tracker session for benchmark test
-      if (benchmarkSessionId && createdTrackerSessionForTest && this.chatManager && this.chatManager.toolExecutionTracker) {
+      if (
+        benchmarkSessionId &&
+        createdTrackerSessionForTest &&
+        this.chatManager &&
+        this.chatManager.toolExecutionTracker
+      ) {
         this.chatManager.toolExecutionTracker.endSession(benchmarkSessionId);
         console.log(`🔬 [Benchmark] Ended tracker session: ${benchmarkSessionId}`);
       }
@@ -1393,6 +1401,7 @@ class LLMBenchmarkFramework {
       interactionData.request.systemPromptLength = capturedSystemPrompt ? capturedSystemPrompt.length : 0;
       interactionData.request.contextLength = this.getChatContextLength();
       interactionData.request.availableTools = this.getAvailableTools();
+      interactionData.request.dynamicToolsAnalysis = this.captureDynamicToolsAnalysis(capturedSystemPrompt);
 
       // MEMORY OPTIMIZATION: Removed fullPrompt storage — it's just systemPrompt + instruction,
       // both of which are already stored separately. Building and storing it again is pure duplication.
@@ -1463,7 +1472,6 @@ class LLMBenchmarkFramework {
       // This ensures only the current test instruction is sent, not the entire conversation history
       const originalContextMode = this.chatManager.contextModeEnabled;
 
-
       try {
         // CRITICAL FIX: Enable context mode for benchmark tests to prevent token overflow
         this.chatManager.contextModeEnabled = true;
@@ -1493,6 +1501,13 @@ class LLMBenchmarkFramework {
 
         // Use ChatManager's sendToLLM method
         response = await this.chatManager.sendToLLM(instruction);
+        const actualPromptMetadata = this.captureDynamicToolsAnalysis();
+        if (actualPromptMetadata) {
+          interactionData.request.dynamicToolsAnalysis = actualPromptMetadata;
+          if (actualPromptMetadata.promptLength) {
+            interactionData.request.systemPromptLength = actualPromptMetadata.promptLength;
+          }
+        }
 
         // Capture response timing
         const requestEndTime = Date.now();
@@ -1838,8 +1853,7 @@ class LLMBenchmarkFramework {
         }
         return '• LLM should identify and execute appropriate function calls';
 
-      case 'workflow':
-        {
+      case 'workflow': {
         const steps = expectedResult.expectedSteps || [];
         const functions = expectedResult.expectedFunctions || [];
         return (
@@ -1847,17 +1861,16 @@ class LLMBenchmarkFramework {
           `&nbsp;&nbsp;&nbsp;• Expected steps:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${steps.length > 0 ? steps.join(' → ') : 'Complex workflow sequence'}<br>` +
           `&nbsp;&nbsp;&nbsp;• Expected functions:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${functions.length > 0 ? functions.join(', ') : 'Multiple coordinated functions'}`
         );
-        }
+      }
 
-      case 'text_analysis':
-        {
+      case 'text_analysis': {
         const keywords = expectedResult.requiredKeywords || [];
         return (
           `&nbsp;&nbsp;&nbsp;• LLM should provide comprehensive text analysis<br>` +
           `&nbsp;&nbsp;&nbsp;• Required elements:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${keywords.length > 0 ? keywords.join(', ') : 'Analytical content'}<br>` +
           `&nbsp;&nbsp;&nbsp;• Minimum quality threshold:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${expectedResult.minWords || 'Standard'} words`
         );
-        }
+      }
 
       default:
         return (
@@ -3522,6 +3535,54 @@ class LLMBenchmarkFramework {
     }
   }
 
+  captureDynamicToolsAnalysis(systemPrompt = null) {
+    try {
+      const metadata = this.chatManager?.lastSystemPromptMetadata;
+      if (!metadata) {
+        return systemPrompt
+          ? {
+              mode: 'unknown',
+              selectedToolCount: 0,
+              selectedBuiltInToolCount: 0,
+              selectedRegistryToolCount: 0,
+              selectedPluginToolCount: 0,
+              selectedToolsByCategory: {},
+              promptLength: systemPrompt.length,
+              promptTokenEstimate: this.estimateTokenCount(systemPrompt),
+              baselinePromptLength: systemPrompt.length,
+              baselineTokenEstimate: this.estimateTokenCount(systemPrompt),
+              estimatedTokensSaved: 0,
+              estimatedPercentSaved: 0,
+            }
+          : null;
+      }
+
+      return {
+        mode: metadata.mode,
+        generatedAt: metadata.generatedAt,
+        userQuery: metadata.userQuery,
+        dynamicToolsEnabled: metadata.dynamicToolsEnabled,
+        selectedToolCount: metadata.selectedToolCount || 0,
+        selectedBuiltInToolCount: metadata.selectedBuiltInToolCount || 0,
+        selectedRegistryToolCount: metadata.selectedRegistryToolCount || 0,
+        selectedPluginToolCount: metadata.selectedPluginToolCount || 0,
+        selectedToolsByCategory: metadata.selectedToolsByCategory || {},
+        selectedToolNames: Array.isArray(metadata.selectedTools) ? metadata.selectedTools.map(tool => tool.name) : [],
+        promptLength: metadata.promptLength || (systemPrompt ? systemPrompt.length : 0),
+        promptTokenEstimate: metadata.promptTokenEstimate || this.estimateTokenCount(systemPrompt || ''),
+        baselineMode: metadata.baselineMode,
+        baselineToolCount: metadata.baselineToolCount || 0,
+        baselinePromptLength: metadata.baselinePromptLength || 0,
+        baselineTokenEstimate: metadata.baselineTokenEstimate || 0,
+        estimatedTokensSaved: metadata.estimatedTokensSaved || 0,
+        estimatedPercentSaved: metadata.estimatedPercentSaved || 0,
+      };
+    } catch (error) {
+      console.warn('Failed to capture dynamic tools benchmark analysis:', error);
+      return null;
+    }
+  }
+
   /**
    * Get current chat context length
    */
@@ -4992,7 +5053,9 @@ class LLMBenchmarkFramework {
 
     // Check required fields
     if (expectedResult.requiredFields) {
-      const foundFields = expectedResult.requiredFields.filter(field => Object.prototype.hasOwnProperty.call(actualResult, field));
+      const foundFields = expectedResult.requiredFields.filter(field =>
+        Object.prototype.hasOwnProperty.call(actualResult, field)
+      );
       score += (foundFields.length / expectedResult.requiredFields.length) * 60;
     }
 
@@ -5743,6 +5806,7 @@ class LLMBenchmarkFramework {
         executionRounds: data.response?.executionRounds,
         totalExecutionTime: data.response?.totalExecutionTime,
         tokenUsage: data.response?.tokenUsage,
+        dynamicToolsAnalysis: data.request?.dynamicToolsAnalysis,
         functionCallCount: data.response?.functionCalls?.length || 0,
         toolExecutionCount: data.response?.toolExecutions?.length || 0,
         // Analysis summary
@@ -5778,9 +5842,7 @@ class LLMBenchmarkFramework {
 
   async getBenchmarkDataDirectory(pathModule) {
     const appPathsResult =
-      typeof window !== 'undefined' && window.electronAPI?.getAppPaths
-        ? await window.electronAPI.getAppPaths()
-        : null;
+      typeof window !== 'undefined' && window.electronAPI?.getAppPaths ? await window.electronAPI.getAppPaths() : null;
     const appPaths = appPathsResult?.success ? appPathsResult.paths || {} : {};
     const baseDir = appPaths.temp || appPaths.userData;
 
@@ -5789,9 +5851,7 @@ class LLMBenchmarkFramework {
     }
 
     const osTmpDir =
-      typeof window !== 'undefined' && window.os && typeof window.os.tmpdir === 'function'
-        ? window.os.tmpdir()
-        : '';
+      typeof window !== 'undefined' && window.os && typeof window.os.tmpdir === 'function' ? window.os.tmpdir() : '';
 
     return osTmpDir ? pathModule.join(osTmpDir, 'codexomics-benchmark-data') : null;
   }

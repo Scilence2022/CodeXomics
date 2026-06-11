@@ -97,6 +97,7 @@ class ChatManager {
     this.dynamicToolsEnabled = true;
     this.builtInTools = null;
     this.builtInToolsMap = new Map();
+    this.lastSystemPromptMetadata = null;
     this._toolRegistryUpdateListenerRegistered = false;
     this._pendingToolRegistrySnapshot = null;
     this.toolRegistryDiagnostics = [];
@@ -5696,6 +5697,8 @@ class ChatManager {
   }
 
   async buildSystemMessage() {
+    this.lastSystemPromptMetadata = null;
+
     // [MCP Integration] Check for specific MCP server prompts first
     if (this.mcpServerManager && this.mcpServerManager.serverPrompts) {
       for (const [serverId, prompts] of this.mcpServerManager.serverPrompts) {
@@ -5814,11 +5817,18 @@ class ChatManager {
         console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
 
         // Apply section configuration filtering to dynamic prompt
-        const filteredPrompt = this.applySystemPromptSectionConfig(
+        const filteredPrompt = await this.applySystemPromptSectionConfig(
           promptData.systemPrompt,
           sectionConfig,
           currentUserQuery
         );
+        this.lastSystemPromptMetadata = await this.createSystemPromptMetadata({
+          mode: 'dynamic',
+          prompt: filteredPrompt,
+          promptData,
+          context,
+          userQuery: lastUserQuery,
+        });
         return filteredPrompt;
       } catch (error) {
         console.warn('Dynamic Tools Registry failed, falling back to standard system message:', error);
@@ -5845,7 +5855,92 @@ class ChatManager {
       memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
     }
 
-    return `${baseMessage}${memorySection}`;
+    const fallbackPrompt = `${baseMessage}${memorySection}`;
+    this.lastSystemPromptMetadata = {
+      mode: dynamicToolsRegistryEnabled ? 'fallback' : 'non-dynamic',
+      generatedAt: new Date().toISOString(),
+      userQuery: currentUserQuery,
+      dynamicToolsEnabled: dynamicToolsRegistryEnabled && this.dynamicToolsEnabled && !!this.dynamicTools,
+      selectedToolCount: 0,
+      selectedBuiltInToolCount: 0,
+      selectedRegistryToolCount: 0,
+      selectedPluginToolCount: 0,
+      selectedTools: [],
+      selectedToolsByCategory: {},
+      promptLength: fallbackPrompt.length,
+      promptTokenEstimate: this.estimatePromptTokens(fallbackPrompt),
+      baselinePromptLength: fallbackPrompt.length,
+      baselineTokenEstimate: this.estimatePromptTokens(fallbackPrompt),
+      estimatedTokensSaved: 0,
+      estimatedPercentSaved: 0,
+    };
+    return fallbackPrompt;
+  }
+
+  async createSystemPromptMetadata({ mode, prompt, promptData, context, userQuery }) {
+    const tools = Array.isArray(promptData?.toolsUsed) ? promptData.toolsUsed : [];
+    const selectedTools = tools.map(tool => ({
+      name: tool.name || String(tool),
+      category: tool.category || 'uncategorized',
+      executionType: tool.execution_type || tool.executionType || tool.type || 'unknown',
+      source: tool.source || null,
+    }));
+    const selectedToolsByCategory = selectedTools.reduce((acc, tool) => {
+      acc[tool.category] = (acc[tool.category] || 0) + 1;
+      return acc;
+    }, {});
+    const promptTokenEstimate = this.estimatePromptTokens(prompt);
+    let baselinePromptLength = prompt.length;
+    let baselineTokenEstimate = promptTokenEstimate;
+    let baselineToolCount = promptData?.toolCount || selectedTools.length;
+    let baselineMode = mode;
+
+    if (
+      this.benchmarkAutomationActive === true &&
+      this.dynamicTools &&
+      typeof this.dynamicTools.generateNonDynamicSystemPrompt === 'function'
+    ) {
+      try {
+        const baselinePromptData = await this.dynamicTools.generateNonDynamicSystemPrompt(context || {});
+        if (baselinePromptData?.systemPrompt) {
+          baselinePromptLength = baselinePromptData.systemPrompt.length;
+          baselineTokenEstimate = this.estimatePromptTokens(baselinePromptData.systemPrompt);
+          baselineToolCount = baselinePromptData.toolCount || baselineToolCount;
+          baselineMode = baselinePromptData.mode || 'non-dynamic-comprehensive';
+        }
+      } catch (error) {
+        console.warn('⚠️ [buildSystemMessage] Failed to calculate benchmark dynamic tools baseline:', error);
+      }
+    }
+
+    const estimatedTokensSaved = Math.max(0, baselineTokenEstimate - promptTokenEstimate);
+    const estimatedPercentSaved = baselineTokenEstimate > 0 ? (estimatedTokensSaved / baselineTokenEstimate) * 100 : 0;
+
+    return {
+      mode,
+      generatedAt: new Date().toISOString(),
+      userQuery,
+      dynamicToolsEnabled: true,
+      selectedToolCount: promptData?.toolCount || selectedTools.length,
+      selectedBuiltInToolCount: promptData?.builtInToolsIncluded || 0,
+      selectedRegistryToolCount: promptData?.registryToolsIncluded || 0,
+      selectedPluginToolCount: promptData?.pluginToolsIncluded || 0,
+      selectedTools,
+      selectedToolsByCategory,
+      promptLength: prompt.length,
+      promptTokenEstimate,
+      baselineMode,
+      baselineToolCount,
+      baselinePromptLength,
+      baselineTokenEstimate,
+      estimatedTokensSaved,
+      estimatedPercentSaved,
+    };
+  }
+
+  estimatePromptTokens(text) {
+    if (!text) return 0;
+    return Math.ceil(String(text).length / 4);
   }
 
   /**

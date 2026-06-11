@@ -29,6 +29,13 @@ class BenchmarkReportGenerator {
           standardDeviation: 0,
         },
       },
+      dynamicToolsAnalysis: {
+        available: false,
+        selectedToolCount: { mean: 0 },
+        tokenSavings: { total: 0, mean: 0 },
+        averageEstimatedPercentSaved: 0,
+        perPrompt: [],
+      },
       errorAnalysis: {
         errorRate: 0,
       },
@@ -55,6 +62,18 @@ class BenchmarkReportGenerator {
         duration: {
           ...defaults.performanceStats.duration,
           ...(stats.performanceStats?.duration || {}),
+        },
+      },
+      dynamicToolsAnalysis: {
+        ...defaults.dynamicToolsAnalysis,
+        ...(stats.dynamicToolsAnalysis || {}),
+        selectedToolCount: {
+          ...defaults.dynamicToolsAnalysis.selectedToolCount,
+          ...(stats.dynamicToolsAnalysis?.selectedToolCount || {}),
+        },
+        tokenSavings: {
+          ...defaults.dynamicToolsAnalysis.tokenSavings,
+          ...(stats.dynamicToolsAnalysis?.tokenSavings || {}),
         },
       },
       errorAnalysis: {
@@ -141,12 +160,29 @@ class BenchmarkReportGenerator {
         `Average score: ${stats.scoreStats.percentage.mean.toFixed(1)}%`,
         `Total execution time: ${this.formatDuration(benchmarkResults.duration)}`,
         `Error rate: ${stats.errorAnalysis.errorRate.toFixed(1)}%`,
+        ...this.generateDynamicToolsKeyFindings(stats.dynamicToolsAnalysis),
       ],
       performanceHighlights: this.extractPerformanceHighlights(stats),
       qualityAssessment: this.assessOverallQuality(stats),
       criticalIssues: this.identifyCriticalIssues(stats),
       recommendations: this.getTopRecommendations(stats),
     };
+  }
+
+  generateDynamicToolsKeyFindings(dynamicToolsAnalysis) {
+    if (!dynamicToolsAnalysis?.available) {
+      return [];
+    }
+
+    const averageTools = dynamicToolsAnalysis.selectedToolCount?.mean || 0;
+    const totalTokensSaved =
+      dynamicToolsAnalysis.totalEstimatedTokensSaved || dynamicToolsAnalysis.tokenSavings?.total || 0;
+    const averagePercentSaved = dynamicToolsAnalysis.averageEstimatedPercentSaved || 0;
+
+    return [
+      `Dynamic tools per prompt: ${averageTools.toFixed(1)} average`,
+      `Estimated prompt tokens saved: ${Math.round(totalTokensSaved).toLocaleString()} total (${averagePercentSaved.toFixed(1)}% average)`,
+    ];
   }
 
   /**
@@ -194,6 +230,7 @@ class BenchmarkReportGenerator {
       descriptiveStatistics: {
         scoreDistribution: stats.scoreStats,
         performanceDistribution: stats.performanceStats,
+        dynamicToolsDistribution: stats.dynamicToolsAnalysis,
         reliabilityMetrics: stats.reliabilityMetrics,
       },
       inferentialStatistics: {
@@ -207,6 +244,7 @@ class BenchmarkReportGenerator {
         predictiveModels: this.buildPredictiveModels(benchmarkResults),
       },
       complexityAnalysis: stats.complexityAnalysis,
+      dynamicToolsAnalysis: stats.dynamicToolsAnalysis,
     };
   }
 
@@ -229,6 +267,7 @@ class BenchmarkReportGenerator {
       },
       resourceUtilization: {
         tokenUsage: stats.performanceStats.tokenUsage,
+        dynamicToolsTokenSavings: stats.dynamicToolsAnalysis?.tokenSavings || null,
         memoryUsage: this.estimateMemoryUsage(benchmarkResults),
         efficiency: stats.qualityMetrics.efficiency,
       },
@@ -531,22 +570,22 @@ class BenchmarkReportGenerator {
       stats.reliabilityMetrics.scoreReliability * 0.2;
 
     if (score >= 85) {
-return { level: 'Excellent', score: score.toFixed(1), description: 'Outstanding performance across all metrics' };
-}
+      return { level: 'Excellent', score: score.toFixed(1), description: 'Outstanding performance across all metrics' };
+    }
     if (score >= 75) {
-return {
+      return {
         level: 'Good',
         score: score.toFixed(1),
         description: 'Strong performance with minor areas for improvement',
       };
-}
+    }
     if (score >= 65) {
-return {
+      return {
         level: 'Satisfactory',
         score: score.toFixed(1),
         description: 'Acceptable performance with room for enhancement',
       };
-}
+    }
     return {
       level: 'Needs Improvement',
       score: score.toFixed(1),
@@ -1065,6 +1104,7 @@ return {
                   model: testResult.llmInteractionDataSummary.requestModel,
                   systemPromptLength: testResult.llmInteractionDataSummary.requestSystemPromptLength,
                   contextLength: testResult.llmInteractionDataSummary.requestContextLength,
+                  dynamicToolsAnalysis: testResult.llmInteractionDataSummary.dynamicToolsAnalysis,
                 },
                 response: {
                   responseTime: testResult.llmInteractionDataSummary.responseTime,

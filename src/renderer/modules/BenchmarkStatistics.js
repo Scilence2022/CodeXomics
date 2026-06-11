@@ -53,6 +53,9 @@ class BenchmarkStatistics {
       // Performance statistics
       performanceStats: this.calculatePerformanceStatistics(allTestResults),
 
+      // Dynamic tools and prompt-token savings analysis
+      dynamicToolsAnalysis: this.analyzeDynamicTools(allTestResults),
+
       // Error analysis
       errorAnalysis: this.analyzeErrors(allTestResults),
 
@@ -92,6 +95,7 @@ class BenchmarkStatistics {
       successRate: this.calculateSuccessRate(testResults),
       scoreStats: this.calculateScoreStatistics(testResults),
       performanceStats: this.calculatePerformanceStatistics(testResults),
+      dynamicToolsAnalysis: this.analyzeDynamicTools(testResults),
       errorAnalysis: this.analyzeErrors(testResults),
 
       // Test-specific metrics
@@ -193,6 +197,108 @@ class BenchmarkStatistics {
         averageTestDuration: this.mean(durations),
       },
     };
+  }
+
+  analyzeDynamicTools(testResults) {
+    const perPrompt = testResults
+      .map(test => this.extractDynamicToolsPromptRecord(test))
+      .filter(record => record !== null);
+    const dynamicPromptRecords = perPrompt.filter(record => record.mode === 'dynamic');
+    const selectedToolCounts = perPrompt.map(record => record.selectedToolCount);
+    const builtInToolCounts = perPrompt.map(record => record.selectedBuiltInToolCount);
+    const registryToolCounts = perPrompt.map(record => record.selectedRegistryToolCount);
+    const pluginToolCounts = perPrompt.map(record => record.selectedPluginToolCount);
+    const tokenSavings = perPrompt.map(record => record.estimatedTokensSaved);
+    const percentSavings = perPrompt.map(record => record.estimatedPercentSaved);
+
+    return {
+      available: perPrompt.length > 0,
+      totalPrompts: testResults.length,
+      analyzedPrompts: perPrompt.length,
+      dynamicPrompts: dynamicPromptRecords.length,
+      nonDynamicPrompts: perPrompt.length - dynamicPromptRecords.length,
+      selectedToolCount: this.calculateNumericSummary(selectedToolCounts),
+      selectedBuiltInToolCount: this.calculateNumericSummary(builtInToolCounts),
+      selectedRegistryToolCount: this.calculateNumericSummary(registryToolCounts),
+      selectedPluginToolCount: this.calculateNumericSummary(pluginToolCounts),
+      tokenSavings: this.calculateNumericSummary(tokenSavings),
+      percentSavings: this.calculateNumericSummary(percentSavings),
+      totalEstimatedTokensSaved: this.sum(tokenSavings),
+      averageEstimatedTokensSaved: this.mean(tokenSavings),
+      averageEstimatedPercentSaved: this.mean(percentSavings),
+      topTokenSavingPrompts: [...perPrompt]
+        .sort((a, b) => b.estimatedTokensSaved - a.estimatedTokensSaved)
+        .slice(0, 10),
+      perPrompt,
+    };
+  }
+
+  extractDynamicToolsPromptRecord(test) {
+    const analysis =
+      test.llmInteractionDataSummary?.dynamicToolsAnalysis ||
+      test.llmInteractionData?.request?.dynamicToolsAnalysis ||
+      test.metrics?.dynamicToolsAnalysis;
+
+    if (!analysis) {
+      return null;
+    }
+
+    return {
+      testId: test.testId,
+      testName: test.testName,
+      suiteId: test.suiteId,
+      mode: analysis.mode || 'unknown',
+      selectedToolCount: this.toNumber(analysis.selectedToolCount),
+      selectedBuiltInToolCount: this.toNumber(analysis.selectedBuiltInToolCount),
+      selectedRegistryToolCount: this.toNumber(analysis.selectedRegistryToolCount),
+      selectedPluginToolCount: this.toNumber(analysis.selectedPluginToolCount),
+      baselineToolCount: this.toNumber(analysis.baselineToolCount),
+      promptTokenEstimate: this.toNumber(analysis.promptTokenEstimate),
+      baselineTokenEstimate: this.toNumber(analysis.baselineTokenEstimate),
+      estimatedTokensSaved: this.toNumber(analysis.estimatedTokensSaved),
+      estimatedPercentSaved: this.toNumber(analysis.estimatedPercentSaved),
+      selectedToolsByCategory: analysis.selectedToolsByCategory || {},
+      selectedToolNames: Array.isArray(analysis.selectedToolNames) ? analysis.selectedToolNames : [],
+    };
+  }
+
+  calculateNumericSummary(values) {
+    const numericValues = values.filter(value => Number.isFinite(value));
+
+    if (numericValues.length === 0) {
+      return {
+        count: 0,
+        mean: 0,
+        median: 0,
+        min: 0,
+        max: 0,
+        total: 0,
+        standardDeviation: 0,
+        percentiles: { p25: 0, p50: 0, p75: 0, p90: 0, p95: 0 },
+      };
+    }
+
+    return {
+      count: numericValues.length,
+      mean: this.mean(numericValues),
+      median: this.median(numericValues),
+      min: Math.min(...numericValues),
+      max: Math.max(...numericValues),
+      total: this.sum(numericValues),
+      standardDeviation: this.standardDeviation(numericValues),
+      percentiles: {
+        p25: this.percentile(numericValues, 25),
+        p50: this.percentile(numericValues, 50),
+        p75: this.percentile(numericValues, 75),
+        p90: this.percentile(numericValues, 90),
+        p95: this.percentile(numericValues, 95),
+      },
+    };
+  }
+
+  toNumber(value) {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue : 0;
   }
 
   /**
@@ -759,6 +865,7 @@ class BenchmarkStatistics {
       successRate: 0,
       scoreStats: { raw: {}, percentage: {}, percentiles: {} },
       performanceStats: { duration: {}, responseTime: null, tokenUsage: null },
+      dynamicToolsAnalysis: this.analyzeDynamicTools([]),
       errorAnalysis: { totalErrors: 0, totalWarnings: 0, errorRate: 0 },
     };
   }
