@@ -478,19 +478,32 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Get the current visible DNA sequence, calculate its entropy, compute its reverse complement, and translate the same DNA sequence in reading frame 1.',
+          'Navigate to 100000-101000, then Get the current visible DNA sequence, calculate its entropy, compute its reverse complement, and translate the same DNA sequence in reading frame 1.',
         expectedResult: {
-          tool_sequence: ['get_sequence', 'calculate_entropy', 'reverse_complement', 'translate_dna'],
+          tool_sequence: [
+            ['navigate_to_position', 'navigate_to'],
+            'get_sequence',
+            'calculate_entropy',
+            'reverse_complement',
+            'translate_dna',
+          ],
           parameters: [
-            {},
             {
-              sequence: '<visible_sequence>',
+              start: 100000,
+              end: 101000,
             },
             {
-              sequence: '<visible_sequence>',
+              start: 100000,
+              end: 101000,
             },
             {
-              dna: '<visible_sequence>',
+              sequence: '{get_sequence.sequence}',
+            },
+            {
+              sequence: '{get_sequence.sequence}',
+            },
+            {
+              dna: '{get_sequence.sequence}',
               readingFrame: 1,
             },
           ],
@@ -659,18 +672,18 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Check the current visibility status of all tracks, then display the GC content track, hide the variants track, and check the track status again to confirm the visibility changes.',
+          'Check the current visibility status of all tracks, then show the GC content track, hide the variants track, and check the track status again to confirm the visibility changes.',
         expectedResult: {
           tool_sequence: ['get_track_status', 'toggle_track', 'toggle_track', 'get_track_status'],
           parameters: [
             {},
             {
               track_name: 'gc',
-              action: 'show',
+              visible: true,
             },
             {
               track_name: 'Variants',
-              action: 'hide',
+              visible: false,
             },
             {},
           ],
@@ -833,7 +846,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {},
             {
               trackName: 'primers',
-              action: 'show',
             },
           ],
         },
@@ -1245,8 +1257,25 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     return typeof value === 'string' && value.startsWith('<') && value.endsWith('>');
   }
 
+  isToolResultReferenceValue(value) {
+    if (typeof value !== 'string') return false;
+    const referencePattern = /^\{\{?\s*[A-Za-z][\w.-]*(?:\[[^\]]+\])?(?:\.[A-Za-z_$][\w$-]*(?:\[[^\]]+\])?)+\s*\}?\}$/;
+    return referencePattern.test(value.trim());
+  }
+
+  normalizeToolResultReference(value) {
+    if (!this.isToolResultReferenceValue(value)) return null;
+    return value
+      .trim()
+      .replace(/^\{\{?/, '')
+      .replace(/\}?\}$/, '')
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  }
+
   hasConcreteExpectedValue(value) {
     if (this.isPlaceholderExpectedValue(value)) return false;
+    if (this.isToolResultReferenceValue(value)) return false;
     if (Array.isArray(value)) return value.some(item => this.hasConcreteExpectedValue(item));
     if (value && typeof value === 'object') {
       return Object.values(value).some(item => this.hasConcreteExpectedValue(item));
@@ -1282,6 +1311,68 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     return [key, ...(aliases[key] || [])];
   }
 
+  normalizeTrackNameValue(value) {
+    if (value === undefined || value === null) return '';
+    const text = String(value)
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '');
+    const aliases = {
+      gc: 'gc',
+      gccontent: 'gc',
+      variants: 'variants',
+      variant: 'variants',
+      genes: 'genes',
+      gene: 'genes',
+      primers: 'primers',
+      primer: 'primers',
+      sequence: 'sequence',
+      reads: 'reads',
+      read: 'reads',
+      proteins: 'proteins',
+      protein: 'proteins',
+      actions: 'actions',
+      action: 'actions',
+      wigtracks: 'wigTracks',
+      wig: 'wigTracks',
+      blast: 'blast',
+    };
+    return aliases[text] || text;
+  }
+
+  trackValuesMatch(actualValue, expectedValue) {
+    if (this.isPlaceholderExpectedValue(expectedValue)) {
+      return actualValue !== undefined && actualValue !== null;
+    }
+    return this.normalizeTrackNameValue(actualValue) === this.normalizeTrackNameValue(expectedValue);
+  }
+
+  actionValueToVisible(value) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value !== 'string') return null;
+
+    const normalized = value.toLowerCase().trim();
+    if (['show', 'on', 'enable', 'display', 'visible', 'true'].includes(normalized)) return true;
+    if (['hide', 'off', 'disable', 'hidden', 'false'].includes(normalized)) return false;
+    return null;
+  }
+
+  visibilityValuesMatch(actualValue, expectedValue, actualParams = {}) {
+    const expectedVisible = this.actionValueToVisible(expectedValue);
+    const actualVisible = this.actionValueToVisible(actualValue);
+    if (actualVisible !== null && expectedVisible !== null) {
+      return actualVisible === expectedVisible;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(actualParams, 'action')) {
+      const actionVisible = this.actionValueToVisible(actualParams.action);
+      if (actionVisible !== null && expectedVisible !== null) {
+        return actionVisible === expectedVisible;
+      }
+    }
+
+    return this.workflowValuesMatch(actualValue, expectedValue);
+  }
+
   getActualParameterValue(actualParams, expectedKey) {
     if (!actualParams || typeof actualParams !== 'object') {
       return { found: false, value: undefined };
@@ -1299,6 +1390,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   workflowValuesMatch(actualValue, expectedValue) {
     if (this.isPlaceholderExpectedValue(expectedValue)) {
       return actualValue !== undefined && actualValue !== null;
+    }
+
+    if (this.isToolResultReferenceValue(expectedValue)) {
+      if (actualValue === undefined || actualValue === null) return false;
+      if (this.isToolResultReferenceValue(actualValue)) {
+        return this.normalizeToolResultReference(actualValue) === this.normalizeToolResultReference(expectedValue);
+      }
+      return true;
     }
 
     if (Array.isArray(expectedValue)) {
@@ -1355,9 +1454,28 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     const normalizedExpected = this.normalizeParameterKeys(expectedParams);
 
     return Object.entries(normalizedExpected).every(([expectedKey, expectedValue]) => {
+      if (expectedKey === 'trackName') {
+        const actualCandidate = this.getActualParameterValue(normalizedActual, expectedKey);
+        if (!actualCandidate.found) {
+          return !this.hasConcreteExpectedValue(expectedValue);
+        }
+        return this.trackValuesMatch(actualCandidate.value, expectedValue);
+      }
+
+      if (expectedKey === 'visible' && Object.prototype.hasOwnProperty.call(normalizedActual, 'action')) {
+        return this.visibilityValuesMatch(normalizedActual.visible, expectedValue, normalizedActual);
+      }
+
+      if (expectedKey === 'action' && Object.prototype.hasOwnProperty.call(normalizedActual, 'visible')) {
+        return this.visibilityValuesMatch(normalizedActual.action, expectedValue, normalizedActual);
+      }
+
       const actualCandidate = this.getActualParameterValue(normalizedActual, expectedKey);
       if (!actualCandidate.found) {
         return !this.hasConcreteExpectedValue(expectedValue);
+      }
+      if (expectedKey === 'visible' || expectedKey === 'action') {
+        return this.visibilityValuesMatch(actualCandidate.value, expectedValue, normalizedActual);
       }
       return this.workflowValuesMatch(actualCandidate.value, expectedValue);
     });

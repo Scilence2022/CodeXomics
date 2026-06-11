@@ -110,11 +110,24 @@ describe('AutomaticComplexSuite', () => {
       expect(tabLifecycleTest.expectedResult.tool_sequence).toEqual(['open_new_tab', 'switch_to_tab', 'close_tab']);
 
       const primerUpstreamTest = tests.find(t => t.id === 'primer_auto_complex_02');
-      expect(primerUpstreamTest.type).toBe('function_call');
-      expect(primerUpstreamTest.expectedResult.tool_name).toBe('design_primers');
-      expect(primerUpstreamTest.expectedResult.parameters).toEqual({
+      expect(primerUpstreamTest.type).toBe('workflow');
+      expect(primerUpstreamTest.expectedResult.tool_sequence).toEqual([
+        'design_primers',
+        'add_primer_annotation',
+        ['jump_to_gene', 'zoom_to_gene', 'navigate_to_position'],
+        'toggle_track',
+      ]);
+      expect(primerUpstreamTest.expectedResult.parameters[0]).toEqual({
         geneName: 'lysC',
         upstreamBp: 50,
+      });
+
+      const chainedSequenceTest = tests.find(t => t.id === 'analysis_auto_complex_05');
+      expect(chainedSequenceTest.expectedResult.tool_sequence[0]).toEqual(['navigate_to_position', 'navigate_to']);
+      expect(chainedSequenceTest.expectedResult.parameters[2].sequence).toBe('{get_sequence.sequence}');
+      expect(chainedSequenceTest.expectedResult.parameters[4]).toEqual({
+        dna: '{get_sequence.sequence}',
+        readingFrame: 1,
       });
     });
 
@@ -209,7 +222,7 @@ describe('AutomaticComplexSuite', () => {
   });
 
   describe('Workflow Call Evaluation and Parameter Normalization Integration', () => {
-    it('evaluateWorkflowCall should match parameters even with snake_case/camelCase mismatch', async () => {
+    it('evaluateWorkflowCall should match track aliases and visible/action semantics', async () => {
       const actualResult = [
         {
           tool_name: 'toggle_track',
@@ -231,12 +244,12 @@ describe('AutomaticComplexSuite', () => {
         tool_sequence: ['toggle_track', 'toggle_track'],
         parameters: [
           {
-            trackName: 'GC Content',
-            action: 'show',
+            trackName: 'gc',
+            visible: true,
           },
           {
             trackName: 'Variants',
-            action: 'hide',
+            visible: false,
           },
         ],
       };
@@ -272,12 +285,12 @@ describe('AutomaticComplexSuite', () => {
         parameters: [
           {},
           {
-            trackName: 'GC Content',
-            action: 'show',
+            trackName: 'gc',
+            visible: true,
           },
           {
             trackName: 'Variants',
-            action: 'hide',
+            visible: false,
           },
           {},
         ],
@@ -337,7 +350,7 @@ describe('AutomaticComplexSuite', () => {
           tool_name: 'toggle_track',
           parameters: {
             trackName: 'Variants',
-            action: 'show',
+            visible: true,
           },
         },
       ];
@@ -347,8 +360,8 @@ describe('AutomaticComplexSuite', () => {
         parameters: [
           {},
           {
-            trackName: 'GC Content',
-            action: 'show',
+            trackName: 'gc',
+            visible: true,
           },
         ],
       };
@@ -384,7 +397,7 @@ describe('AutomaticComplexSuite', () => {
 
       const match = suite.getRecentOrderedWorkflowMatches(['get_track_status', 'toggle_track'], 120000, [
         {},
-        { trackName: 'GC Content', action: 'show' },
+        { trackName: 'gc', visible: true },
       ]);
 
       expect(match.unorderedMatches).toBe(2);
@@ -392,6 +405,57 @@ describe('AutomaticComplexSuite', () => {
       expect(match.hasOutOfOrder).toBe(true);
 
       global.window.chatManager.toolExecutionTracker.getSessionExecutions = () => [];
+    });
+
+    it('evaluateWorkflowCall should accept chained tool result references for reused sequences', async () => {
+      const actualResult = [
+        { tool_name: 'navigate_to_position', parameters: { chromosome: 'U00096', start: 100000, end: 101000 } },
+        { tool_name: 'get_sequence', parameters: { chromosome: 'U00096', start: 100000, end: 101000 } },
+        { tool_name: 'calculate_entropy', parameters: { sequence: '{get_sequence.sequence}' } },
+        { tool_name: 'reverse_complement', parameters: { sequence: '{{ get_sequence.sequence }}' } },
+        { tool_name: 'translate_dna', parameters: { dna: 'ATGCGTATG', reading_frame: 1 } },
+      ];
+
+      const expectedResult = {
+        tool_sequence: [
+          ['navigate_to_position', 'navigate_to'],
+          'get_sequence',
+          'calculate_entropy',
+          'reverse_complement',
+          'translate_dna',
+        ],
+        parameters: [
+          { start: 100000, end: 101000 },
+          { start: 100000, end: 101000 },
+          { sequence: '{get_sequence.sequence}' },
+          { sequence: '{get_sequence.sequence}' },
+          { dna: '{get_sequence.sequence}', readingFrame: 1 },
+        ],
+      };
+
+      const testResult = {
+        id: 'analysis_auto_complex_05',
+        maxScore: 20,
+        category: 'sequence_analysis',
+      };
+
+      const evalResult = await suite.evaluateWorkflowCall(actualResult, expectedResult, testResult);
+      expect(evalResult.success).toBe(true);
+      expect(evalResult.details.orderedMatches).toBe(5);
+      expect(evalResult.details.criticalParameterMatches).toBe(evalResult.details.criticalParameterSteps);
+    });
+
+    it('tool result reference expectations should not be treated as concrete critical parameters', () => {
+      expect(suite.isToolResultReferenceValue('{get_sequence.sequence}')).toBe(true);
+      expect(suite.isToolResultReferenceValue('{{ get_sequence.sequence }}')).toBe(true);
+      expect(suite.hasConcreteExpectedValue('{get_sequence.sequence}')).toBe(false);
+      expect(suite.workflowParametersMatch({ sequence: 'ATGCGT' }, { sequence: '{get_sequence.sequence}' })).toBe(true);
+      expect(
+        suite.workflowParametersMatch(
+          { fragments: '{{ virtual_digest.fragmentDetails }}' },
+          { fragments: '{virtual_digest.fragmentDetails}' }
+        )
+      ).toBe(true);
     });
   });
 
