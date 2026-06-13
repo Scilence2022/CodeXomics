@@ -241,6 +241,7 @@ class GenomeBrowser {
 
     // Initialize Tab Management System (for multi-genome analysis) - delayed to ensure DOM is ready
     this.initializeTabManager();
+    this.initializeWindowTabManager();
 
     // Initialize Internal MCP Server for direct communication with main process MCP server
     this.initializeInternalMCPServer();
@@ -829,10 +830,29 @@ class GenomeBrowser {
       if (typeof WindowTabManager !== 'undefined') {
         this.windowTabManager = new WindowTabManager(this);
         window.windowTabManager = this.windowTabManager;
+        this.syncWindowTabIdentity();
         console.log('✅ WindowTabManager initialized successfully');
       }
     } catch (error) {
       console.error('❌ Failed to initialize WindowTabManager:', error);
+    }
+  }
+
+  async syncWindowTabIdentity() {
+    try {
+      const windowId = window.electronAPI?.getWindowId ? await window.electronAPI.getWindowId() : null;
+      if (!windowId) return;
+
+      this.windowId = windowId;
+      if (this.mcpBridge) {
+        this.mcpBridge.setWindowId(windowId);
+      }
+      this.updateAppTitle();
+      if (this.windowTabManager) {
+        this.windowTabManager.setWindowId(windowId);
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to resolve windowId for window tabs:', error.message);
     }
   }
 

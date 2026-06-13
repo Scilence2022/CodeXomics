@@ -17,13 +17,18 @@ class WindowTabManager {
     this.initializeUI();
     this.initializeListeners();
     this.refresh();
+    setTimeout(() => this.refresh(), 300);
+    setTimeout(() => this.refresh(), 1200);
   }
 
   initializeUI() {
     if (this.root || typeof document === 'undefined') return;
 
     const app = document.getElementById('app') || document.body;
-    if (!app) return;
+    if (!app) {
+      setTimeout(() => this.initializeUI(), 100);
+      return;
+    }
 
     this.root = document.createElement('div');
     this.root.id = 'windowTabBar';
