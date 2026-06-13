@@ -148,7 +148,7 @@ function openGenBankFile(filePath) {
   rememberApprovedPath(filePath);
 
   // If main window exists and is ready, send file directly
-  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isLoading()) {
     mainWindow.webContents.send('file-opened', filePath);
     mainWindow.show();
     mainWindow.focus();
@@ -164,7 +164,13 @@ function openGenBankFile(filePath) {
  * Process any queued files that were opened before the app was ready.
  */
 function processFileQueue() {
-  if (fileOpenQueue.length > 0 && mainWindow && !mainWindow.isDestroyed()) {
+  if (
+    fileOpenQueue.length > 0 &&
+    mainWindow &&
+    !mainWindow.isDestroyed() &&
+    mainWindow.webContents &&
+    !mainWindow.webContents.isLoading()
+  ) {
     console.log(`[Main] Processing ${fileOpenQueue.length} queued file(s)`);
     fileOpenQueue.forEach(filePath => {
       mainWindow.webContents.send('file-opened', filePath);
@@ -333,9 +339,19 @@ app.whenReady().then(async () => {
     // Setup IPC handlers for language change events
     i18n.setupIPC(newLang => {
       // Notify all windows about language change
+      const notifiedWebContents = new Set();
       BrowserWindow.getAllWindows().forEach(win => {
-        win.webContents.send('language-changed', newLang);
+        if (win.webContents && !win.webContents.isDestroyed()) {
+          win.webContents.send('language-changed', newLang);
+          notifiedWebContents.add(win.webContents.id);
+        }
       });
+      for (const [, entry] of wr.windowRegistry.entries()) {
+        const win = entry.window || entry;
+        if (win?.webContents && !win.webContents.isDestroyed() && !notifiedWebContents.has(win.webContents.id)) {
+          win.webContents.send('language-changed', newLang);
+        }
+      }
       // Rebuild menus with new language
       mb.createMenu();
       console.log(`[Main] Menus rebuilt for language: ${newLang}`);

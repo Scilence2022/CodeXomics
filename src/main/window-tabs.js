@@ -1,6 +1,7 @@
 'use strict';
 
 const { BrowserWindow, ipcMain } = require('electron');
+const workspaceHostManager = require('./workspace-host-manager');
 
 let windowRegistry;
 let createWindow;
@@ -39,16 +40,16 @@ function getBrowserWindow(windowId) {
 }
 
 function getWindowIdFromWebContents(webContents) {
-  const ownerWindow = BrowserWindow.fromWebContents(webContents);
-  if (ownerWindow?.windowId) return ownerWindow.windowId;
-
-  if (!windowRegistry) return null;
-  for (const [windowId, entry] of windowRegistry.entries()) {
-    const win = entry.window || entry;
-    if (win?.webContents === webContents) return windowId;
+  if (windowRegistry) {
+    for (const [windowId, entry] of windowRegistry.entries()) {
+      const win = entry.window || entry;
+      if (win?.webContents === webContents) return windowId;
+    }
   }
 
-  return null;
+  const ownerWindow = BrowserWindow.fromWebContents(webContents);
+  if (ownerWindow?.windowId) return ownerWindow.windowId;
+  return ownerWindow ? workspaceHostManager.getActiveWindowIdForHost(ownerWindow) : null;
 }
 
 function normalizeWindowId(windowOrId) {
@@ -169,6 +170,9 @@ function sendSnapshotToWindow(windowId) {
   if (!win || win.isDestroyed()) return;
 
   win.webContents.send('window-tabs-updated', getSnapshotForWindow(windowId));
+  if (typeof win.sendHostSnapshot === 'function') {
+    win.sendHostSnapshot(getSnapshotForWindow(windowId));
+  }
 }
 
 function broadcastGroup(groupId) {
@@ -297,11 +301,19 @@ function attachWindowToGroup(windowId, groupId, options = {}) {
   }
   windowToGroup.set(windowId, group.groupId);
 
+  const win = getBrowserWindow(windowId);
+  const anchorWindow = getBrowserWindow(group.activeWindowId) || getBrowserWindow(group.windowIds[0]);
+  if (win && anchorWindow && win !== anchorWindow && typeof win.attachToHostOf === 'function') {
+    const attachResult = win.attachToHostOf(anchorWindow);
+    if (attachResult && attachResult.success === false) {
+      return attachResult;
+    }
+  }
+
   if (options.activate !== false) {
     return activateWindowInGroup(windowId, options);
   }
 
-  const win = getBrowserWindow(windowId);
   const activeWindow = getBrowserWindow(group.activeWindowId);
   const activeBounds = activeWindow && !activeWindow.isDestroyed() ? activeWindow.getBounds() : null;
   if (win && !win.isDestroyed()) {
@@ -444,7 +456,12 @@ function detachWindowTab(targetWindowId, senderWindowId = null) {
   }
 
   const detachedBounds = offsetBounds(baseBounds);
-  if (detachedBounds) {
+  if (typeof targetWindow.detachToNewHost === 'function') {
+    const detachResult = targetWindow.detachToNewHost(detachedBounds);
+    if (detachResult && detachResult.success === false) {
+      return detachResult;
+    }
+  } else if (detachedBounds) {
     targetWindow.setBounds(detachedBounds);
   }
   targetWindow.show();

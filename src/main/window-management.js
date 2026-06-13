@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const dialog = require('electron').dialog;
 const { createSecureWebPreferences } = require('./security-utils');
+const workspaceHostManager = require('./workspace-host-manager');
 
 // External references (set by main module via setWindowMgmtDependencies)
 let mainWindow;
@@ -32,24 +33,6 @@ function openDevToolsInDevelopment(browserWindow) {
   }
 }
 
-function getGenomeWindowTitleBarOptions() {
-  if (process.platform === 'darwin') {
-    return {
-      titleBarStyle: 'hiddenInset',
-      trafficLightPosition: { x: 12, y: 11 },
-    };
-  }
-
-  return {
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#e8eef6',
-      symbolColor: '#334155',
-      height: 38,
-    },
-  };
-}
-
 function setWindowMgmtDependencies(deps) {
   if (deps.mainWindow !== undefined) mainWindow = deps.mainWindow;
   if (deps.currentActiveWindow !== undefined) currentActiveWindow = deps.currentActiveWindow;
@@ -74,45 +57,40 @@ function createWindow(options = {}) {
   // Generate a unique window ID for multi-window support
   const windowId = generateWindowId();
 
-  // Create the browser window
-  const newWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 800,
-    minHeight: 600,
-    ...getGenomeWindowTitleBarOptions(),
-    webPreferences: createSecureWebPreferences(),
-    icon: path.join(__dirname, '../assets/icon.png'),
-    show: false,
+  const effectiveSourceWindow = workspaceSourceWindow || currentActiveWindow;
+  const sourceHandle =
+    effectiveSourceWindow && effectiveSourceWindow.__isGenomeViewHandle
+      ? effectiveSourceWindow
+      : effectiveSourceWindow?.windowId
+        ? workspaceHostManager.getViewHandle(effectiveSourceWindow.windowId)
+        : null;
+
+  const newWindow = workspaceHostManager.createGenomeView({
+    windowId,
+    sourceHandle,
+    activate: false,
   });
 
-  // Update the module-level mainWindow to point to the newest window
+  // Update the module-level mainWindow to point to the newest genome view.
   mainWindow = newWindow;
 
-  // Store windowId on the BrowserWindow object for easy lookup
+  // Store windowId on the handle for compatibility with the previous BrowserWindow path.
   newWindow.windowId = windowId;
 
   // Register in window registry with enhanced error handling
   registerGenomeWindow(windowId, newWindow, { skipResolve: true });
-  console.log(`📋 [createMainWindow] Window ${windowId} registered in registry`);
+  console.log(`📋 [createMainWindow] Genome view ${windowId} registered in registry`);
 
-  // Load the app
-  newWindow.loadFile(path.join(__dirname, '..', 'renderer/index.html'));
-
-  // Show window when ready to prevent visual flash
-  newWindow.once('ready-to-show', () => {
+  const activateWhenReady = () => {
     if (typeof registerWindowTab === 'function') {
       registerWindowTab(newWindow, {
         groupId: workspaceTabGroupId,
-        sourceWindow: workspaceSourceWindow || currentActiveWindow,
+        sourceWindow: effectiveSourceWindow,
         activate: true,
       });
     } else {
       newWindow.show();
     }
-
-    // Send windowId to renderer process for MCPBridge identification
-    newWindow.webContents.send('set-window-id', windowId);
 
     // Initialize RPC interface after window is ready
     codeXomicsRPC.setMainWindow(newWindow);
@@ -122,39 +100,30 @@ function createWindow(options = {}) {
     setTimeout(() => {
       processFileQueue();
     }, 500);
-  });
+  };
 
-  // Open DevTools for debugging (can be disabled in production)
-  openDevToolsInDevelopment(newWindow);
+  if (newWindow.webContents.isLoading()) {
+    newWindow.webContents.once('did-finish-load', activateWhenReady);
+  } else {
+    activateWhenReady();
+  }
 
-  // When this specific window gains focus, make it the active main window and
-  // rebuild the menu so that menu actions target this window.  We close over
-  // `newWindow` (not the mutable `mainWindow`) so the handler always refers to
-  // the correct instance even after additional windows are created.
-  newWindow.on('focus', () => {
-    if (currentActiveWindow !== newWindow) {
-      currentActiveWindow = newWindow;
-      createMenu(); // Rebuild menu so sendToCurrentMainWindow routes to this window
-      console.log(`Switched to main window menu (windowId: ${windowId})`);
-    }
-  });
-
-  // webContents focus also covers clicking inside the window's content area
+  // webContents focus covers clicking inside the active genome view.
   newWindow.webContents.on('focus', () => {
     if (currentActiveWindow !== newWindow) {
       currentActiveWindow = newWindow;
       createMenu();
-      console.log(`Switched to main window menu via webContents focus (windowId: ${windowId})`);
+      console.log(`Switched to main genome view menu (windowId: ${windowId})`);
     }
   });
 
   // Handle window closed
   newWindow.on('closed', () => {
-    console.log(`📋 [createMainWindow] Window ${windowId} closed`);
+    console.log(`📋 [createMainWindow] Genome view ${windowId} closed`);
     unregisterGenomeWindow(windowId);
     // Only clear the module-level mainWindow pointer if it still refers to this
-    // closing window.  When multiple windows are open, mainWindow may already
-    // point to a different (surviving) window.
+    // closing view.  When multiple views are open, mainWindow may already point
+    // to a different surviving view.
     if (mainWindow === newWindow) {
       mainWindow = null;
     }
@@ -163,14 +132,8 @@ function createWindow(options = {}) {
     }
   });
 
-  // Handle errors
-  newWindow.webContents.on('crashed', (event, killed) => {
-    console.error(`📋 [createMainWindow] Window ${windowId} crashed (killed: ${killed})`);
-    cleanupWindowRegistration(windowId);
-  });
-
   newWindow.webContents.on('render-process-gone', (event, details) => {
-    console.error(`📋 [createMainWindow] Window ${windowId} render process gone: ${details.reason}`);
+    console.error(`📋 [createMainWindow] Genome view ${windowId} render process gone: ${details.reason}`);
     cleanupWindowRegistration(windowId);
   });
 
@@ -195,7 +158,7 @@ function getCurrentMainWindow() {
   }
 
   // Last resort: find any main window using the windowId marker
-  const mainWindows = BrowserWindow.getAllWindows().filter(win => !win.isDestroyed() && win.windowId);
+  const mainWindows = workspaceHostManager.getAllViewHandles().filter(win => !win.isDestroyed() && win.windowId);
 
   return mainWindows.length > 0 ? mainWindows[0] : null;
 }
@@ -1749,9 +1712,7 @@ function getDisplayWorkArea() {
 function getMainWindows() {
   const allWindows = BrowserWindow.getAllWindows();
 
-  const mainWindow = allWindows.find(
-    win => win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager') && !win.isDestroyed()
-  );
+  const mainWindow = getCurrentMainWindow() || workspaceHostManager.getAllViewHandles()[0] || null;
 
   const projectManagerWindow = allWindows.find(win => win.getTitle().includes('Project Manager') && !win.isDestroyed());
 

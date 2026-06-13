@@ -825,6 +825,7 @@ class GenomeBrowser {
 
   initializeWindowTabManager() {
     if (this.windowTabManager) return;
+    if (new URLSearchParams(window.location.search || '').get('workspaceView') === '1') return;
 
     try {
       if (typeof WindowTabManager !== 'undefined') {
