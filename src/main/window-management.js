@@ -16,6 +16,7 @@ let generateWindowId;
 let registerGenomeWindow;
 let unregisterGenomeWindow;
 let cleanupWindowRegistration;
+let registerWindowTab;
 let createMenu;
 let createCircosPlotterMenu;
 let createToolWindowMenu;
@@ -39,6 +40,7 @@ function setWindowMgmtDependencies(deps) {
   if (deps.registerGenomeWindow !== undefined) registerGenomeWindow = deps.registerGenomeWindow;
   if (deps.unregisterGenomeWindow !== undefined) unregisterGenomeWindow = deps.unregisterGenomeWindow;
   if (deps.cleanupWindowRegistration !== undefined) cleanupWindowRegistration = deps.cleanupWindowRegistration;
+  if (deps.registerWindowTab !== undefined) registerWindowTab = deps.registerWindowTab;
   if (deps.createMenu !== undefined) createMenu = deps.createMenu;
   if (deps.createCircosPlotterMenu !== undefined) createCircosPlotterMenu = deps.createCircosPlotterMenu;
   if (deps.createToolWindowMenu !== undefined) createToolWindowMenu = deps.createToolWindowMenu;
@@ -48,7 +50,9 @@ function setWindowMgmtDependencies(deps) {
   if (deps.processFileQueue !== undefined) processFileQueue = deps.processFileQueue;
 }
 
-function createWindow() {
+function createWindow(options = {}) {
+  const { workspaceTabGroupId = null, workspaceSourceWindow = null } = options || {};
+
   // Generate a unique window ID for multi-window support
   const windowId = generateWindowId();
 
@@ -78,7 +82,15 @@ function createWindow() {
 
   // Show window when ready to prevent visual flash
   newWindow.once('ready-to-show', () => {
-    newWindow.show();
+    if (typeof registerWindowTab === 'function') {
+      registerWindowTab(newWindow, {
+        groupId: workspaceTabGroupId,
+        sourceWindow: workspaceSourceWindow || currentActiveWindow,
+        activate: true,
+      });
+    } else {
+      newWindow.show();
+    }
 
     // Send windowId to renderer process for MCPBridge identification
     newWindow.webContents.send('set-window-id', windowId);

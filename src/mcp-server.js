@@ -1821,6 +1821,7 @@ class StandardClaudeMCPServer extends EventEmitter {
         windowId,
         genomeName: entry.genomeName || 'No genome loaded',
         isFocused: win.isFocused(),
+        isVisible: win.isVisible(),
         hasWsClient: this.internalClients.has(windowId),
         isDestroyed: false,
       });
@@ -1837,6 +1838,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           windowId,
           genomeName: ws.genomeName || 'No genome loaded',
           isFocused: this.internalClient === ws,
+          isVisible: true,
           hasWsClient: true,
           isDestroyed: false,
         });

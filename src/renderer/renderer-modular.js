@@ -1,4 +1,4 @@
-/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, ipcRenderer */
+/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 (typeof window !== 'undefined' && window.path) || {
@@ -820,6 +820,20 @@ class GenomeBrowser {
         setTimeout(() => this.initializeTabManager(), 1000);
       }
     }, 100); // Initial delay to ensure DOM is ready
+  }
+
+  initializeWindowTabManager() {
+    if (this.windowTabManager) return;
+
+    try {
+      if (typeof WindowTabManager !== 'undefined') {
+        this.windowTabManager = new WindowTabManager(this);
+        window.windowTabManager = this.windowTabManager;
+        console.log('✅ WindowTabManager initialized successfully');
+      }
+    } catch (error) {
+      console.error('❌ Failed to initialize WindowTabManager:', error);
+    }
   }
 
   initializeActionSystem() {
@@ -3044,6 +3058,10 @@ class GenomeBrowser {
       }
       // Update document title to show windowId and loaded genome path
       this.updateAppTitle();
+      this.initializeWindowTabManager();
+      if (this.windowTabManager) {
+        this.windowTabManager.setWindowId(windowId);
+      }
     });
 
     // Listen for MCP Server status updates

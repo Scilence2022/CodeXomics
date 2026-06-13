@@ -19,6 +19,7 @@ let updateMCPServerMenu;
 let startWindowCleanupInterval;
 let stopWindowCleanupInterval;
 let syncWindowsWithMCPServer;
+let switchToWindowTab;
 
 // External MCP Servers Functions
 let mcpServerManagerWindow = null;
@@ -96,6 +97,9 @@ async function startUnifiedMCPServer() {
 
     // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
     unifiedMCPServer.setMainWindowRegistry(windowRegistry);
+    if (typeof switchToWindowTab === 'function') {
+      unifiedMCPServer.switchWindowTab = switchToWindowTab;
+    }
 
     // Start the server
     await unifiedMCPServer.start();
@@ -310,6 +314,7 @@ function setMCPDependencies(deps) {
   if (deps.startWindowCleanupInterval !== undefined) startWindowCleanupInterval = deps.startWindowCleanupInterval;
   if (deps.stopWindowCleanupInterval !== undefined) stopWindowCleanupInterval = deps.stopWindowCleanupInterval;
   if (deps.syncWindowsWithMCPServer !== undefined) syncWindowsWithMCPServer = deps.syncWindowsWithMCPServer;
+  if (deps.switchToWindowTab !== undefined) switchToWindowTab = deps.switchToWindowTab;
   if (deps.createMCPServerManagerMenu !== undefined) createMCPServerManagerMenu = deps.createMCPServerManagerMenu;
   if (deps.createMenu !== undefined) createMenu = deps.createMenu;
   if (deps.getCurrentActiveWindow !== undefined) getCurrentActiveWindow = deps.getCurrentActiveWindow;

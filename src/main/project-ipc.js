@@ -61,6 +61,7 @@ function assertSafeProjectRelativePath(value, label = 'relative path') {
  * @param {Function} deps.registerGenomeWindow - Register a genome window
  * @param {Function} deps.unregisterGenomeWindow - Unregister a genome window
  * @param {Function} deps.cleanupWindowRegistration - Cleanup window registration
+ * @param {Function} deps.registerWindowTab - Register a genome window with the window-level tab coordinator
  * @param {BrowserWindow} deps.currentActiveWindow - Currently active window
  * @param {Function} deps.setCurrentActiveWindow - Set current active window reference
  * @param {Function} deps.createMenu - Menu creation function
@@ -713,7 +714,18 @@ function registerProjectIpcHandlers(deps) {
       // Show window when ready
       newMainWindow.once('ready-to-show', () => {
         console.log(`📋 [createNewMainWindow] Window ${windowId} ready to show`);
-        newMainWindow.show();
+        if (typeof deps.registerWindowTab === 'function') {
+          const sourceWindow =
+            (typeof deps.getCurrentMainWindow === 'function' && deps.getCurrentMainWindow()) ||
+            (typeof deps.getCurrentActiveWindow === 'function' && deps.getCurrentActiveWindow()) ||
+            null;
+          deps.registerWindowTab(newMainWindow, {
+            sourceWindow,
+            activate: true,
+          });
+        } else {
+          newMainWindow.show();
+        }
         // Set focus to new window and ensure proper menu
         newMainWindow.focus();
         setActiveMainWindow(newMainWindow);

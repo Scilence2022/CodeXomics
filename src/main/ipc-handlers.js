@@ -505,6 +505,8 @@ function registerIpcHandlers(deps) {
     analyzerPendingData,
     getWindowRegistryStatus,
     syncWindowsWithMCPServer,
+    switchToWindowTab,
+    notifyWindowGenomeNameChanged,
 
     getCurrentMainWindow,
 
@@ -601,16 +603,33 @@ function registerIpcHandlers(deps) {
     const { requestId, toolName, parameters, clientId } = data;
 
     try {
-      if (!mainWindow || mainWindow.isDestroyed()) {
+      const targetWindowId = parameters?.windowId || null;
+      let forwardedParameters = parameters || {};
+      let targetWindow = null;
+
+      if (targetWindowId && windowRegistry.has(targetWindowId)) {
+        const entry = windowRegistry.get(targetWindowId);
+        targetWindow = entry.window || entry;
+        forwardedParameters = { ...forwardedParameters };
+        delete forwardedParameters.windowId;
+      } else if (targetWindowId) {
+        throw new Error(`Target genome window '${targetWindowId}' was not found`);
+      }
+
+      if (!targetWindow && typeof getCurrentMainWindow === 'function') {
+        targetWindow = getCurrentMainWindow();
+      }
+
+      if (!targetWindow || targetWindow.isDestroyed()) {
         throw new Error('Main window not available for tool execution');
       }
 
       // Forward the tool execution request to the renderer process
-      console.log('[Main] Forwarding tool execution to renderer:', toolName);
-      mainWindow.webContents.send('execute-tool-request', {
+      console.log('[Main] Forwarding tool execution to renderer:', toolName, targetWindow.windowId || 'active');
+      targetWindow.webContents.send('execute-tool-request', {
         requestId,
         toolName,
-        parameters,
+        parameters: forwardedParameters,
         clientId,
       });
     } catch (error) {
@@ -2732,6 +2751,7 @@ function registerIpcHandlers(deps) {
         windowId: id,
         genomeName: info.genomeName || null,
         isFocused: info.window.isFocused(),
+        isVisible: info.window.isVisible(),
         isDestroyed: false,
         status: info.status,
         createdAt: info.createdAt ? info.createdAt.toISOString() : null,
@@ -2777,6 +2797,19 @@ function registerIpcHandlers(deps) {
       return { success: false, error: `Window '${windowId}' is destroyed` };
     }
 
+    if (typeof switchToWindowTab === 'function') {
+      const result = switchToWindowTab(windowId);
+      if (result?.success) {
+        return {
+          success: true,
+          message: `Focused window '${windowId}'`,
+          windowId,
+          genomeName: entry.genomeName || null,
+        };
+      }
+    }
+
+    win.show();
     win.focus();
     return {
       success: true,
@@ -2794,6 +2827,9 @@ function registerIpcHandlers(deps) {
       entry.lastUpdate = new Date();
       entry.status = 'genome-loaded';
       console.log(`[WindowRegistry] Updated genome name for ${windowId}: ${genomeName} (status: ${entry.status})`);
+      if (typeof notifyWindowGenomeNameChanged === 'function') {
+        notifyWindowGenomeNameChanged(windowId);
+      }
     } else {
       console.warn(`[WindowRegistry] Window ${windowId} not found when updating genome name`);
     }

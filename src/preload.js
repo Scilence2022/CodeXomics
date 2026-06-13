@@ -61,6 +61,11 @@ const allowedInvokeChannels = [
   'blast:run-command',
   'blast:select-executable',
   'blast:verify-executable',
+  'window-tabs:list',
+  'window-tabs:switch',
+  'window-tabs:detach',
+  'window-tabs:attach-all',
+  'window-tabs:new-tab',
 ];
 
 const allowedListenChannels = [
@@ -203,6 +208,7 @@ const allowedListenChannels = [
   'file-stream-complete',
   'file-read-progress',
   'tool-registry-updated',
+  'window-tabs-updated',
 ];
 
 const allowedSendChannels = [
@@ -265,7 +271,12 @@ const safeIpcRenderer = {
 };
 
 const safePath = {
-  basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '',
+  basename: filePath =>
+    String(filePath || '')
+      .replace(/\\/g, '/')
+      .split('/')
+      .filter(Boolean)
+      .pop() || '',
   dirname: filePath => {
     const normalized = String(filePath || '').replace(/\\/g, '/');
     const index = normalized.lastIndexOf('/');
@@ -388,6 +399,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getLocaleLanguages: () => ipcRenderer.invoke('get-locale-languages'),
   getCurrentLanguage: () => ipcRenderer.invoke('i18n:getCurrentLanguage'),
   changeLanguage: language => ipcRenderer.invoke('i18n:changeLanguage', language),
+  getWindowTabs: () => ipcRenderer.invoke('window-tabs:list'),
+  switchWindowTab: windowId => ipcRenderer.invoke('window-tabs:switch', windowId),
+  detachWindowTab: windowId => ipcRenderer.invoke('window-tabs:detach', windowId),
+  attachAllGenomeWindows: () => ipcRenderer.invoke('window-tabs:attach-all'),
+  createWindowLevelTab: () => ipcRenderer.invoke('window-tabs:new-tab'),
+  onWindowTabsUpdated: listener => {
+    ipcRenderer.on('window-tabs-updated', listener);
+  },
   loadConfigData: () => ipcRenderer.invoke('config:load'),
   saveConfigData: config => ipcRenderer.invoke('config:save', config),
   checkGeneResearchReport: geneSymbol => ipcRenderer.invoke('check-gene-research-report', geneSymbol),

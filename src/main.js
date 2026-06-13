@@ -15,6 +15,7 @@ const i18n = require('./i18n/i18n-main');
 const wr = require('./main/window-registry');
 const mb = require('./main/menu-builder');
 const wm = require('./main/window-management');
+const wt = require('./main/window-tabs');
 const mcp = require('./main/mcp-lifecycle');
 const { registerIpcHandlers } = require('./main/ipc-handlers');
 const { registerProjectIpcHandlers } = require('./main/project-ipc');
@@ -243,6 +244,14 @@ function buildModuleDeps() {
     startWindowCleanupInterval: wr.startWindowCleanupInterval,
     stopWindowCleanupInterval: wr.stopWindowCleanupInterval,
 
+    // Window-level genome tabs
+    registerWindowTab: wt.registerWindowTab,
+    unregisterWindowTab: wt.unregisterWindowTab,
+    switchToWindowTab: wt.switchToWindowTab,
+    detachWindowTab: wt.detachWindowTab,
+    attachAllWindowsToGroup: wt.attachAllWindowsToGroup,
+    notifyWindowGenomeNameChanged: wt.notifyWindowGenomeNameChanged,
+
     // Window management (window creation functions)
     createWindow: wm.createWindow,
     getCurrentMainWindow: wm.getCurrentMainWindow,
@@ -351,6 +360,8 @@ app.whenReady().then(async () => {
   const deps = buildModuleDeps();
   mb.setMenuDependencies(deps);
   wm.setWindowMgmtDependencies(deps);
+  wt.setWindowTabsDependencies(deps);
+  wt.registerWindowTabIpcHandlers();
   mcp.setMCPDependencies(deps);
   registerIpcHandlers(deps);
   registerProjectIpcHandlers(deps);
@@ -391,6 +402,7 @@ app.whenReady().then(async () => {
       const updatedDeps = buildModuleDeps();
       mb.setMenuDependencies(updatedDeps);
       wm.setWindowMgmtDependencies(updatedDeps);
+      wt.setWindowTabsDependencies(updatedDeps);
     }
   });
 });
