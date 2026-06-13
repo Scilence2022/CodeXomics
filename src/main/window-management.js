@@ -32,6 +32,24 @@ function openDevToolsInDevelopment(browserWindow) {
   }
 }
 
+function getGenomeWindowTitleBarOptions() {
+  if (process.platform === 'darwin') {
+    return {
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 12, y: 11 },
+    };
+  }
+
+  return {
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#e8eef6',
+      symbolColor: '#334155',
+      height: 38,
+    },
+  };
+}
+
 function setWindowMgmtDependencies(deps) {
   if (deps.mainWindow !== undefined) mainWindow = deps.mainWindow;
   if (deps.currentActiveWindow !== undefined) currentActiveWindow = deps.currentActiveWindow;
@@ -62,6 +80,7 @@ function createWindow(options = {}) {
     height: 900,
     minWidth: 800,
     minHeight: 600,
+    ...getGenomeWindowTitleBarOptions(),
     webPreferences: createSecureWebPreferences(),
     icon: path.join(__dirname, '../assets/icon.png'),
     show: false,

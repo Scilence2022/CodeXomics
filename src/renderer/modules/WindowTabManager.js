@@ -13,6 +13,9 @@ class WindowTabManager {
     this.root = null;
     this.tabsContainer = null;
     this.statusElement = null;
+    this.platformClass = /mac/i.test(navigator.platform || '')
+      ? 'window-tabs-platform-darwin'
+      : 'window-tabs-platform-other';
 
     this.initializeUI();
     this.initializeListeners();
@@ -29,6 +32,8 @@ class WindowTabManager {
       setTimeout(() => this.initializeUI(), 100);
       return;
     }
+
+    document.body.classList.add('window-tabs-titlebar', this.platformClass);
 
     this.root = document.createElement('div');
     this.root.id = 'windowTabBar';
@@ -94,8 +99,7 @@ class WindowTabManager {
 
     this.snapshot = snapshot || null;
     const tabs = Array.isArray(snapshot?.tabs) ? snapshot.tabs : [];
-    const totalWindows = snapshot?.totalWindows || tabs.length;
-    const shouldShow = totalWindows > 1 || tabs.length > 1;
+    const shouldShow = snapshot?.success !== false && tabs.length > 0;
 
     this.root.hidden = !shouldShow;
     if (!shouldShow) {
@@ -140,7 +144,7 @@ class WindowTabManager {
     });
 
     if (this.statusElement) {
-      this.statusElement.textContent = tabs.length > 1 ? `${tabs.length} genome windows` : '';
+      this.statusElement.textContent = '';
     }
   }
 

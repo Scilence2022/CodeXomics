@@ -69,6 +69,24 @@ function assertSafeProjectRelativePath(value, label = 'relative path') {
  * @param {Function} deps.getCurrentMainWindow - Get current main window reference
  */
 function registerProjectIpcHandlers(deps) {
+  const getGenomeWindowTitleBarOptions = () => {
+    if (process.platform === 'darwin') {
+      return {
+        titleBarStyle: 'hiddenInset',
+        trafficLightPosition: { x: 12, y: 11 },
+      };
+    }
+
+    return {
+      titleBarStyle: 'hidden',
+      titleBarOverlay: {
+        color: '#e8eef6',
+        symbolColor: '#334155',
+        height: 38,
+      },
+    };
+  };
+
   const setActiveMainWindow = win => {
     if (typeof deps.setCurrentActiveWindow === 'function') {
       deps.setCurrentActiveWindow(win);
@@ -689,6 +707,7 @@ function registerProjectIpcHandlers(deps) {
         height: 900,
         minWidth: 800,
         minHeight: 600,
+        ...getGenomeWindowTitleBarOptions(),
         webPreferences: createSecureWebPreferences(),
         icon: path.join(__dirname, '../assets/icon.png'),
         show: false,
