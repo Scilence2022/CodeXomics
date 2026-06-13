@@ -735,7 +735,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         instruction: `Create a new nucleotide BLAST database of currently loaded E. coli genome using name 'ecoli_nucl', then list the available BLAST databases to verify, and run a local blastn search against the database for the query sequence 'TTAGTTGGCGTCATCAAAGCTGAAGACATCTTCGCAGGCTTGCTGCAATGCGCTGTCACTTTGGATATTGCAGTTGCGCGTCCAGCCGGTGACGCCGTTGCGTTATCCCAACCCGGTGTCATGACGACGCTTAGCCCATTAGACTTTCTTGCCCGGTCAGCGACACC'.`,
         expectedResult: {
           tool_sequence: [
-            ['blast_create_db_from_genome', 'quick_db_for_current_genome'],
+            ['blast_create_db_from_genome', 'quick_db_for_current_genome', 'blast_create_quick_db_for_current_genome'],
             'blast_list_databases',
             'blast_search_local',
           ],
@@ -845,7 +845,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {},
             {},
             {
-              trackName: 'primers',
+              track_name: 'primers',
             },
           ],
         },
@@ -874,7 +874,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {
               search_query: 'DapA',
-              search_type: 'gene_name',
               organism: 'Escherichia coli',
             },
             {
