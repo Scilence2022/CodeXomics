@@ -209,6 +209,25 @@ function getBoundsForActivation(group, fallbackWindowId) {
   return currentWindow && !currentWindow.isDestroyed() ? currentWindow.getBounds() : null;
 }
 
+function showWindowWithoutStealingFocus(win) {
+  if (!win || win.isDestroyed() || win.isVisible()) return;
+
+  if (typeof win.showInactive === 'function') {
+    win.showInactive();
+  } else {
+    win.show();
+  }
+}
+
+function moveWindowToFront(win) {
+  if (!win || win.isDestroyed()) return;
+
+  if (typeof win.moveTop === 'function') {
+    win.moveTop();
+  }
+  win.focus();
+}
+
 function activateWindowInGroup(windowId, options = {}) {
   const groupId = windowToGroup.get(windowId);
   const group = pruneGroup(tabGroups.get(groupId));
@@ -222,26 +241,26 @@ function activateWindowInGroup(windowId, options = {}) {
   const bounds = options.bounds || getBoundsForActivation(group, windowId);
   group.activeWindowId = windowId;
 
-  if (bounds) {
-    try {
-      targetWindow.setBounds(bounds);
-    } catch (error) {
-      console.warn(`[WindowTabs] Failed to set bounds for ${windowId}:`, error.message);
-    }
-  }
-
   for (const tabWindowId of group.windowIds) {
     const win = getBrowserWindow(tabWindowId);
     if (!win || win.isDestroyed()) continue;
 
+    if (bounds) {
+      try {
+        win.setBounds(bounds, false);
+      } catch (error) {
+        console.warn(`[WindowTabs] Failed to set bounds for ${tabWindowId}:`, error.message);
+      }
+    }
+
     if (tabWindowId === windowId) {
       win.show();
-    } else if (group.windowIds.length > 1) {
-      win.hide();
+    } else {
+      showWindowWithoutStealingFocus(win);
     }
   }
 
-  targetWindow.focus();
+  moveWindowToFront(targetWindow);
   setActiveWindow(targetWindow);
   broadcastGroup(group.groupId);
 
@@ -283,8 +302,17 @@ function attachWindowToGroup(windowId, groupId, options = {}) {
   }
 
   const win = getBrowserWindow(windowId);
-  if (win && !win.isDestroyed() && group.windowIds.length > 1 && group.activeWindowId !== windowId) {
-    win.hide();
+  const activeWindow = getBrowserWindow(group.activeWindowId);
+  const activeBounds = activeWindow && !activeWindow.isDestroyed() ? activeWindow.getBounds() : null;
+  if (win && !win.isDestroyed()) {
+    if (activeBounds) {
+      try {
+        win.setBounds(activeBounds, false);
+      } catch (error) {
+        console.warn(`[WindowTabs] Failed to set inactive bounds for ${windowId}:`, error.message);
+      }
+    }
+    showWindowWithoutStealingFocus(win);
   }
   broadcastGroup(group.groupId);
   return { success: true, windowId, groupId: group.groupId };
