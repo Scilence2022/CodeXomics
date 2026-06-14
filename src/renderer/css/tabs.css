@@ -74,12 +74,27 @@
 .window-level-tab-icon {
   flex: 0 0 auto;
   font-size: 12px;
-  color: var(--window-tab-icon-color, var(--primary-color));
+  color: var(--window-tab-icon-color, var(--primary-color)) !important;
+  fill: currentColor !important;
+  --fa-primary-color: currentColor;
+  --fa-secondary-color: currentColor;
   transition: color 0.18s ease;
 }
 
 .window-level-tab.active .window-level-tab-icon {
-  color: var(--window-tab-icon-color, var(--primary-color));
+  color: var(--window-tab-icon-color, var(--primary-color)) !important;
+}
+
+[data-ui-style] .window-level-tab-icon,
+[data-ui-style] .window-level-tab-icon.svg-inline--fa,
+[data-ui-style] .window-level-tab-icon svg {
+  color: var(--primary-color) !important;
+  fill: currentColor !important;
+}
+
+[data-ui-style] .window-level-tab-icon path,
+[data-ui-style] .window-level-tab-icon.svg-inline--fa path {
+  fill: currentColor !important;
 }
 
 .window-level-tab-title {
