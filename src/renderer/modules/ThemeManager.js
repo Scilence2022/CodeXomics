@@ -6,7 +6,7 @@
 class ThemeManager {
   constructor(configManager) {
     this.configManager = configManager;
-    this.currentStyle = 'default'; // 'default' (蓝紫色AI风), 'professional' (专业科研风), or 'minimal' (极简琥珀风)
+    this.currentStyle = 'default'; // 'default' (蓝紫色AI风) plus named style presets
 
     // The early style application (flash-of-default prevention) is handled by
     // the inline <script> in index.html which reads _uiStyleHint from localStorage
@@ -579,6 +579,99 @@ class ThemeManager {
           '--selection-bg': '#d4a5d4',
         },
       },
+      amy: {
+        name: 'Amy',
+        description: 'Bright pink-blue tones with a soft airy feel',
+        icon: 'fa-heart',
+        variables: {
+          // Primary accent - cheerful pink
+          '--primary-color': '#df5fa1',
+          '--primary-hover': '#c7478a',
+          '--primary-rgb': '223, 95, 161',
+
+          // Secondary / neutral
+          '--secondary-color': '#4aa3df',
+
+          // Backgrounds - airy pink-blue whites
+          '--bg-primary': '#fffafd',
+          '--bg-secondary': '#f5fbff',
+          '--bg-tertiary': '#e8f5ff',
+
+          // Text - deep violet-gray for contrast
+          '--text-primary': '#2f2938',
+          '--text-secondary': '#5f6375',
+          '--text-muted': '#8c93a6',
+
+          // Borders - pale blue
+          '--border-color': '#dbe8f5',
+          '--border-hover': '#b9d4ec',
+
+          // Header gradients - clear blue into pink
+          '--header-gradient': 'linear-gradient(135deg, #324a7a 0%, #4aa3df 52%, #df5fa1 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #4aa3df 0%, #df5fa1 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #4aa3df 0%, #df5fa1 100%)',
+
+          // Accent highlights
+          '--accent-indigo': '#4aa3df',
+          '--accent-purple': '#df5fa1',
+          '--accent-violet': '#9f7aea',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #4aa3df 0%, #df5fa1 100%)',
+          '--chat-ai-border': '#df5fa1',
+          '--chat-tab-active': '#df5fa1',
+          '--chat-send-bg': '#df5fa1',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #4aa3df 0%, #df5fa1 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #2f8ccc 0%, #c7478a 100%)',
+
+          // Focus ring
+          '--focus-ring': 'rgba(223, 95, 161, 0.28)',
+          '--focus-ring-intense': 'rgba(223, 95, 161, 0.75)',
+
+          // Selection
+          '--selection-bg': '#df5fa1',
+        },
+        darkVariables: {
+          // Backgrounds - legacy compatibility only
+          '--bg-primary': '#1f1b2d',
+          '--bg-secondary': '#161422',
+          '--bg-tertiary': '#2a2740',
+
+          // Text
+          '--text-primary': '#f6edf7',
+          '--text-secondary': '#c9d8ea',
+          '--text-muted': '#8d9ab2',
+
+          // Borders
+          '--border-color': '#2a2740',
+          '--border-hover': '#3d4260',
+
+          // Header gradients
+          '--header-gradient': 'linear-gradient(135deg, #161422 0%, #245d8f 55%, #df5fa1 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #245d8f 0%, #df5fa1 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #245d8f 0%, #df5fa1 100%)',
+
+          // Accent highlights
+          '--accent-indigo': '#7cc9ff',
+          '--accent-purple': '#df5fa1',
+          '--accent-violet': '#f48bc3',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #245d8f 0%, #df5fa1 100%)',
+          '--chat-ai-border': '#f48bc3',
+          '--chat-tab-active': '#f48bc3',
+          '--chat-send-bg': '#f48bc3',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #7cc9ff 0%, #f48bc3 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #4aa3df 0%, #df5fa1 100%)',
+
+          // Selection
+          '--selection-bg': '#f48bc3',
+        },
+      },
     };
 
     this.isInitialized = false;
@@ -595,7 +688,6 @@ class ThemeManager {
       if (this.configManager?.waitForInit) {
         await this.configManager.waitForInit();
       }
-
 
       await this.loadStyle();
 
@@ -647,6 +739,7 @@ class ThemeManager {
       'style-professional',
       'style-minimal',
       'style-pastel',
+      'style-amy',
       'style-elegant',
       'style-midnight'
     );

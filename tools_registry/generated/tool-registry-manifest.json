@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-10T06:49:24.089Z",
-  "registryHash": "5d838f3e3fa49c260a8dc18b17a2e444a1569c856b8e4261c7b80c90c3ddb56f",
+  "generatedAt": "2026-06-14T14:43:07.973Z",
+  "registryHash": "56df6d1af45e1fa8071e03bfd22a0b78233855cda7e3713a677d1ea341ea0432",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -18676,7 +18676,7 @@
     {
       "name": "switch_ui_style",
       "version": "1.0.0",
-      "description": "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 6 light-mode preset styles.",
+      "description": "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 7 light-mode preset styles.",
       "category": "system",
       "keywords": [
         "ui style",
@@ -18707,9 +18707,9 @@
         "properties": {
           "style_name": {
             "type": "string",
-            "description": "The light-mode UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (navy/cyan accents), 'pastel' (soft pastel colors).",
-            "enum": ["default", "professional", "minimal", "elegant", "midnight", "pastel"],
-            "examples": ["default", "professional", "midnight"]
+            "description": "The light-mode UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (navy/cyan accents), 'pastel' (soft pastel colors), 'amy' (bright pink-blue tones).",
+            "enum": ["default", "professional", "minimal", "elegant", "midnight", "pastel", "amy"],
+            "examples": ["default", "professional", "midnight", "amy"]
           }
         },
         "required": []
@@ -18732,6 +18732,12 @@
           "tool_call": "switch_ui_style(style_name='pastel')",
           "thought": "User wants to apply the Pastel style",
           "expected_result": "UI switches to Pastel style with soft, muted colors"
+        },
+        {
+          "user_query": "Switch to Amy pink-blue style",
+          "tool_call": "switch_ui_style(style_name='amy')",
+          "thought": "User wants the Amy style with bright pink-blue colors",
+          "expected_result": "UI switches to Amy style with bright pink-blue tones"
         }
       ],
       "relationships": {
@@ -37527,7 +37533,7 @@
     "switch_ui_style": {
       "name": "switch_ui_style",
       "version": "1.0.0",
-      "description": "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 6 light-mode preset styles.",
+      "description": "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 7 light-mode preset styles.",
       "category": "system",
       "keywords": [
         "ui style",
@@ -37558,9 +37564,9 @@
         "properties": {
           "style_name": {
             "type": "string",
-            "description": "The light-mode UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (navy/cyan accents), 'pastel' (soft pastel colors).",
-            "enum": ["default", "professional", "minimal", "elegant", "midnight", "pastel"],
-            "examples": ["default", "professional", "midnight"]
+            "description": "The light-mode UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (navy/cyan accents), 'pastel' (soft pastel colors), 'amy' (bright pink-blue tones).",
+            "enum": ["default", "professional", "minimal", "elegant", "midnight", "pastel", "amy"],
+            "examples": ["default", "professional", "midnight", "amy"]
           }
         },
         "required": []
@@ -37583,6 +37589,12 @@
           "tool_call": "switch_ui_style(style_name='pastel')",
           "thought": "User wants to apply the Pastel style",
           "expected_result": "UI switches to Pastel style with soft, muted colors"
+        },
+        {
+          "user_query": "Switch to Amy pink-blue style",
+          "tool_call": "switch_ui_style(style_name='amy')",
+          "thought": "User wants the Amy style with bright pink-blue colors",
+          "expected_result": "UI switches to Amy style with bright pink-blue tones"
         }
       ],
       "relationships": {
