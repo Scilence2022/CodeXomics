@@ -408,6 +408,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   reorderWindowTab: (windowId, targetIndex) => ipcRenderer.invoke('window-tabs:reorder', windowId, targetIndex),
   attachWindowTabToCurrent: (windowId, targetIndex) =>
     ipcRenderer.invoke('window-tabs:attach-to-window', windowId, targetIndex),
+  closeWindowTab: windowId => ipcRenderer.invoke('window-tabs:close', windowId),
   attachAllGenomeWindows: () => ipcRenderer.invoke('window-tabs:attach-all'),
   createWindowLevelTab: () => ipcRenderer.invoke('window-tabs:new-tab'),
   onWindowTabsUpdated: listener => {

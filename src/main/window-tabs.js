@@ -598,6 +598,27 @@ function attachWindowTabToWindow(targetWindowId, anchorWindowId, targetIndex = n
   };
 }
 
+function closeWindowTab(targetWindowId) {
+  if (!targetWindowId) {
+    return { success: false, error: 'targetWindowId is required' };
+  }
+
+  const targetWindow = getBrowserWindow(targetWindowId);
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return { success: false, error: `Window '${targetWindowId}' is not available` };
+  }
+
+  const groupId = windowToGroup.get(targetWindowId);
+  unregisterWindowTab(targetWindowId);
+  targetWindow.close();
+
+  if (!groupId) {
+    broadcastAllWindowTabs();
+  }
+
+  return { success: true, windowId: targetWindowId, closed: true };
+}
+
 function attachAllWindowsToGroup(anchorWindowId) {
   if (!anchorWindowId || !isValidGenomeWindow(anchorWindowId)) {
     return { success: false, error: 'No active genome window is available for grouping' };
@@ -681,6 +702,10 @@ function registerWindowTabIpcHandlers() {
     return attachWindowTabToWindow(targetWindowId, getWindowIdFromWebContents(event.sender), targetIndex);
   });
 
+  ipcMain.handle('window-tabs:close', async (event, targetWindowId) => {
+    return closeWindowTab(targetWindowId || getWindowIdFromWebContents(event.sender));
+  });
+
   ipcMain.handle('window-tabs:new-tab', async event => {
     return createWindowLevelTab(getWindowIdFromWebContents(event.sender));
   });
@@ -697,6 +722,7 @@ module.exports = {
   reorderWindowTab,
   detachWindowTab,
   attachWindowTabToWindow,
+  closeWindowTab,
   attachAllWindowsToGroup,
   createWindowLevelTab,
   getSnapshotForWindow,
