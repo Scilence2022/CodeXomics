@@ -9,8 +9,8 @@
   gap: 6px;
   min-height: 38px;
   padding: 6px 12px 0 78px;
-  background: #e8eef6;
-  border-bottom: 1px solid #c8d3e1;
+  background: var(--window-tab-bar-bg, #e8eef6);
+  border-bottom: 1px solid var(--window-tab-border, #c8d3e1);
   color: var(--text-secondary);
   position: relative;
   z-index: 1002;
@@ -61,20 +61,25 @@
 }
 
 .window-level-tab:hover {
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--window-tab-hover-bg, rgba(255, 255, 255, 0.55));
 }
 
 .window-level-tab.active {
   background: var(--bg-primary);
   color: var(--text-primary);
-  border-color: #c8d3e1;
+  border-color: var(--window-tab-border, #c8d3e1);
   box-shadow: 0 -1px 2px rgba(15, 23, 42, 0.06);
 }
 
 .window-level-tab-icon {
   flex: 0 0 auto;
   font-size: 12px;
-  color: var(--primary-color);
+  color: var(--window-tab-icon-color, var(--primary-color));
+  transition: color 0.18s ease;
+}
+
+.window-level-tab.active .window-level-tab-icon {
+  color: var(--window-tab-icon-color, var(--primary-color));
 }
 
 .window-level-tab-title {

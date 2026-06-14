@@ -56,6 +56,12 @@ html {
   --focus-ring: rgba(59, 130, 246, 0.3);
   --focus-ring-intense: rgba(59, 130, 246, 0.8);
   --selection-bg: #3b82f6;
+
+  /* Window tab strip */
+  --window-tab-bar-bg: color-mix(in srgb, var(--primary-color) 8%, var(--bg-secondary));
+  --window-tab-border: color-mix(in srgb, var(--primary-color) 20%, var(--border-color));
+  --window-tab-hover-bg: color-mix(in srgb, var(--primary-color) 8%, var(--bg-primary));
+  --window-tab-icon-color: var(--primary-color);
 }
 
 body {
