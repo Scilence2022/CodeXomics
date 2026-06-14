@@ -37,14 +37,25 @@
       }
 
       .workspace-titlebar {
+        position: relative;
         height: var(--titlebar-height);
         display: flex;
         align-items: end;
         gap: 8px;
         padding: 4px 112px 0 8px;
         background: var(--titlebar-bg);
-        border-bottom: 1px solid var(--titlebar-border);
         -webkit-app-region: drag;
+      }
+
+      .workspace-titlebar::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: var(--titlebar-border);
+        z-index: 0;
       }
 
       body.platform-darwin .workspace-titlebar {
@@ -60,9 +71,12 @@
         gap: 2px;
         height: 100%;
         overflow: hidden;
+        position: relative;
+        z-index: 1;
       }
 
       .workspace-tab {
+        position: relative;
         width: clamp(120px, 19vw, 230px);
         height: 31px;
         display: inline-flex;
@@ -81,7 +95,8 @@
       .workspace-tab.active {
         background: var(--tab-active-bg);
         border-color: var(--titlebar-border);
-        box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.8) inset;
+        border-bottom: 1px solid var(--tab-active-bg);
+        z-index: 2;
       }
 
       .workspace-tab-icon {
