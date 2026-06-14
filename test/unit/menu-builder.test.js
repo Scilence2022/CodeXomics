@@ -8,16 +8,19 @@ import path from 'path';
 const MB_PATH = path.join(process.cwd(), 'src/main/menu-builder.js');
 const INDEX_PATH = path.join(process.cwd(), 'src/renderer/index.html');
 const RENDERER_PATH = path.join(process.cwd(), 'src/renderer/renderer-modular.js');
+const PRELOAD_PATH = path.join(process.cwd(), 'src/preload.js');
 
 describe('Menu Builder Module', () => {
   let content;
   let indexHtml;
   let rendererContent;
+  let preloadContent;
 
   beforeAll(() => {
     content = fs.readFileSync(MB_PATH, 'utf-8');
     indexHtml = fs.readFileSync(INDEX_PATH, 'utf-8');
     rendererContent = fs.readFileSync(RENDERER_PATH, 'utf-8');
+    preloadContent = fs.readFileSync(PRELOAD_PATH, 'utf-8');
   });
 
   it('should use strict mode', () => {
@@ -110,6 +113,7 @@ describe('Menu Builder Module', () => {
     expect(content).toContain("'co-scientist-manager'");
     expect(rendererContent).toContain("ipcRenderer.on('co-scientist-manager'");
     expect(rendererContent).toContain('openCoScientistManager()');
+    expect(preloadContent).toContain("'co-scientist-manager'");
     expect(indexHtml).toContain('id="coScientistManagerModal"');
     expect(indexHtml).toContain('id="coScientistManagerBtn"');
     expect(indexHtml).toContain('modules/CoScientistManagerUI.js');
