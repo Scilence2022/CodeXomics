@@ -92,6 +92,30 @@
         cursor: default;
       }
 
+      .workspace-tab.dragging {
+        opacity: 0.55;
+      }
+
+      .workspace-tab.drop-before::before,
+      .workspace-tab.drop-after::after {
+        content: '';
+        position: absolute;
+        top: 6px;
+        bottom: 6px;
+        width: 2px;
+        border-radius: 999px;
+        background: var(--accent);
+        z-index: 3;
+      }
+
+      .workspace-tab.drop-before::before {
+        left: -2px;
+      }
+
+      .workspace-tab.drop-after::after {
+        right: -2px;
+      }
+
       .workspace-tab.active {
         background: var(--tab-active-bg);
         border-color: var(--titlebar-border);
@@ -167,10 +191,100 @@
         const tabsElement = document.getElementById('workspaceTabs');
         const newTabButton = document.getElementById('newTabButton');
         const attachAllButton = document.getElementById('attachAllButton');
+        let currentSnapshot = null;
+        let draggingWindowId = null;
 
         document.body.classList.add(/mac/i.test(navigator.platform || '') ? 'platform-darwin' : 'platform-other');
 
+        function getDraggedWindowId(event) {
+          if (draggingWindowId) return draggingWindowId;
+
+          const typedData = event.dataTransfer.getData('application/x-codexomics-window-tab');
+          if (typedData) {
+            try {
+              return JSON.parse(typedData).windowId || null;
+            } catch (error) {
+              return typedData;
+            }
+          }
+          return event.dataTransfer.getData('text/plain') || null;
+        }
+
+        function isTabDragEvent(event) {
+          const types = Array.from(event.dataTransfer && event.dataTransfer.types ? event.dataTransfer.types : []);
+          return (
+            !!draggingWindowId || types.includes('application/x-codexomics-window-tab') || types.includes('text/plain')
+          );
+        }
+
+        function getTabButtonsForDrop(draggedWindowId) {
+          return Array.from(tabsElement.querySelectorAll('.workspace-tab')).filter(button => {
+            return !draggedWindowId || button.dataset.windowId !== draggedWindowId;
+          });
+        }
+
+        function getDropIndex(event, draggedWindowId) {
+          const buttons = getTabButtonsForDrop(draggedWindowId);
+          for (let index = 0; index < buttons.length; index += 1) {
+            const rect = buttons[index].getBoundingClientRect();
+            if (event.clientX < rect.left + rect.width / 2) {
+              return index;
+            }
+          }
+          return buttons.length;
+        }
+
+        function clearDropIndicators() {
+          tabsElement.classList.remove('drop-active');
+          for (const button of tabsElement.querySelectorAll('.workspace-tab')) {
+            button.classList.remove('drop-before', 'drop-after');
+          }
+        }
+
+        function updateDropIndicator(event, draggedWindowId) {
+          clearDropIndicators();
+          tabsElement.classList.add('drop-active');
+          const buttons = getTabButtonsForDrop(draggedWindowId);
+          const dropIndex = getDropIndex(event, draggedWindowId);
+
+          if (!buttons.length) return;
+          if (dropIndex >= buttons.length) {
+            buttons[buttons.length - 1].classList.add('drop-after');
+          } else {
+            buttons[dropIndex].classList.add('drop-before');
+          }
+        }
+
+        function isTabInCurrentGroup(windowId) {
+          const tabs = Array.isArray(currentSnapshot && currentSnapshot.tabs) ? currentSnapshot.tabs : [];
+          return tabs.some(tab => tab.windowId === windowId);
+        }
+
+        async function handleTabDrop(event) {
+          event.preventDefault();
+          event.stopPropagation();
+
+          const draggedWindowId = getDraggedWindowId(event);
+          if (!draggedWindowId || !window.electronAPI) {
+            clearDropIndicators();
+            return;
+          }
+
+          const targetIndex = getDropIndex(event, draggedWindowId);
+          event.dataTransfer.dropEffect = 'move';
+          clearDropIndicators();
+
+          const result = isTabInCurrentGroup(draggedWindowId)
+            ? await window.electronAPI.reorderWindowTab(draggedWindowId, targetIndex)
+            : await window.electronAPI.attachWindowTabToCurrent(draggedWindowId, targetIndex);
+
+          if (result && result.success === false) {
+            console.error('[WorkspaceHost] Tab drop failed:', result.error);
+          }
+        }
+
         function render(snapshot) {
+          currentSnapshot = snapshot || null;
           const tabs = Array.isArray(snapshot && snapshot.tabs) ? snapshot.tabs : [];
           tabsElement.innerHTML = '';
 
@@ -180,6 +294,7 @@
             tabButton.className = `workspace-tab${tab.isActive ? ' active' : ''}`;
             tabButton.title = tab.title || tab.windowId;
             tabButton.dataset.windowId = tab.windowId;
+            tabButton.draggable = true;
 
             const icon = document.createElement('span');
             icon.className = 'workspace-tab-icon';
@@ -194,6 +309,14 @@
             detach.className = 'workspace-tab-detach';
             detach.title = 'Detach tab to its own window';
             detach.textContent = '>';
+            detach.draggable = false;
+            detach.addEventListener('mousedown', event => {
+              event.stopPropagation();
+            });
+            detach.addEventListener('dragstart', event => {
+              event.preventDefault();
+              event.stopPropagation();
+            });
             detach.addEventListener('click', event => {
               event.stopPropagation();
               window.electronAPI && window.electronAPI.detachWindowTab(tab.windowId);
@@ -206,6 +329,41 @@
               if (!tab.isActive && window.electronAPI) {
                 window.electronAPI.switchWindowTab(tab.windowId);
               }
+            });
+            tabButton.addEventListener('dragstart', event => {
+              draggingWindowId = tab.windowId;
+              tabButton.classList.add('dragging');
+              document.body.classList.add('dragging-tab');
+              event.dataTransfer.effectAllowed = 'move';
+              event.dataTransfer.setData(
+                'application/x-codexomics-window-tab',
+                JSON.stringify({
+                  windowId: tab.windowId,
+                  title: tab.title || tab.windowId,
+                })
+              );
+              event.dataTransfer.setData('text/plain', tab.windowId);
+              if (typeof event.dataTransfer.setDragImage === 'function') {
+                event.dataTransfer.setDragImage(tabButton, 18, 14);
+              }
+            });
+            tabButton.addEventListener('dragend', event => {
+              tabButton.classList.remove('dragging');
+              document.body.classList.remove('dragging-tab');
+              clearDropIndicators();
+
+              if (
+                draggingWindowId === tab.windowId &&
+                event.dataTransfer.dropEffect === 'none' &&
+                window.electronAPI &&
+                window.electronAPI.detachWindowTabAt
+              ) {
+                window.electronAPI.detachWindowTabAt(tab.windowId, {
+                  x: event.screenX,
+                  y: event.screenY,
+                });
+              }
+              draggingWindowId = null;
             });
 
             tabsElement.appendChild(tabButton);
@@ -224,6 +382,19 @@
 
         attachAllButton.addEventListener('click', () => {
           window.electronAPI && window.electronAPI.attachAllGenomeWindows();
+        });
+        tabsElement.addEventListener('dragover', event => {
+          if (!isTabDragEvent(event)) return;
+          const draggedWindowId = getDraggedWindowId(event);
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          updateDropIndicator(event, draggedWindowId);
+        });
+        tabsElement.addEventListener('drop', handleTabDrop);
+        tabsElement.addEventListener('dragleave', event => {
+          if (!tabsElement.contains(event.relatedTarget)) {
+            clearDropIndicators();
+          }
         });
 
         if (window.electronAPI && window.electronAPI.onWindowTabsUpdated) {

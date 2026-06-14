@@ -12,6 +12,7 @@ let setCurrentActiveWindow;
 
 const tabGroups = new Map(); // groupId -> { groupId, windowIds: string[], activeWindowId: string }
 const windowToGroup = new Map(); // windowId -> groupId
+const recentTabDropTimes = new Map(); // windowId -> timestamp
 let groupCounter = 0;
 let ipcHandlersRegistered = false;
 
@@ -232,6 +233,34 @@ function moveWindowToFront(win) {
   win.focus();
 }
 
+function normalizeTargetIndex(targetIndex, length) {
+  const parsedIndex = Number(targetIndex);
+  if (!Number.isFinite(parsedIndex)) return length;
+  return Math.max(0, Math.min(length, Math.trunc(parsedIndex)));
+}
+
+function moveWindowIdInGroup(group, windowId, targetIndex) {
+  if (!group || !group.windowIds.includes(windowId)) return group;
+
+  const remainingWindowIds = group.windowIds.filter(id => id !== windowId);
+  const insertIndex = normalizeTargetIndex(targetIndex, remainingWindowIds.length);
+  remainingWindowIds.splice(insertIndex, 0, windowId);
+  group.windowIds = remainingWindowIds;
+  return group;
+}
+
+function markRecentTabDrop(windowId) {
+  recentTabDropTimes.set(windowId, Date.now());
+}
+
+function wasRecentlyDropped(windowId, maxAgeMs = 1000) {
+  const timestamp = recentTabDropTimes.get(windowId);
+  if (!timestamp) return false;
+  const isRecent = Date.now() - timestamp < maxAgeMs;
+  if (!isRecent) recentTabDropTimes.delete(windowId);
+  return isRecent;
+}
+
 function activateWindowInGroup(windowId, options = {}) {
   const groupId = windowToGroup.get(windowId);
   const group = pruneGroup(tabGroups.get(groupId));
@@ -300,11 +329,14 @@ function attachWindowToGroup(windowId, groupId, options = {}) {
     group.windowIds.push(windowId);
   }
   windowToGroup.set(windowId, group.groupId);
+  if (options.targetIndex !== undefined) {
+    moveWindowIdInGroup(group, windowId, options.targetIndex);
+  }
 
   const win = getBrowserWindow(windowId);
   const anchorWindow = getBrowserWindow(group.activeWindowId) || getBrowserWindow(group.windowIds[0]);
   if (win && anchorWindow && win !== anchorWindow && typeof win.attachToHostOf === 'function') {
-    const attachResult = win.attachToHostOf(anchorWindow);
+    const attachResult = win.attachToHostOf(anchorWindow, { activate: options.activate !== false });
     if (attachResult && attachResult.success === false) {
       return attachResult;
     }
@@ -401,6 +433,36 @@ function switchToWindowTab(targetWindowId, senderWindowId = null) {
   return activateWindowInGroup(targetWindowId);
 }
 
+function reorderWindowTab(targetWindowId, targetIndex, senderWindowId = null) {
+  if (!targetWindowId) {
+    return { success: false, error: 'targetWindowId is required' };
+  }
+
+  const groupId = windowToGroup.get(targetWindowId);
+  const group = pruneGroup(tabGroups.get(groupId));
+  if (!group) {
+    return { success: false, error: `Window '${targetWindowId}' is not in a tab group` };
+  }
+
+  if (senderWindowId) {
+    const senderGroupId = windowToGroup.get(senderWindowId);
+    if (senderGroupId && senderGroupId !== group.groupId) {
+      return { success: false, error: 'Tabs can only be reordered within the current window group' };
+    }
+  }
+
+  moveWindowIdInGroup(group, targetWindowId, targetIndex);
+  markRecentTabDrop(targetWindowId);
+  broadcastGroup(group.groupId);
+
+  return {
+    success: true,
+    windowId: targetWindowId,
+    groupId: group.groupId,
+    tabs: getSnapshotForWindow(targetWindowId).tabs,
+  };
+}
+
 function offsetBounds(bounds, offset = 34) {
   if (!bounds) return null;
   return {
@@ -411,9 +473,32 @@ function offsetBounds(bounds, offset = 34) {
   };
 }
 
-function detachWindowTab(targetWindowId, senderWindowId = null) {
+function getDetachedBounds(baseBounds, options = {}) {
+  if (options.bounds && Number.isFinite(options.bounds.width) && Number.isFinite(options.bounds.height)) {
+    return options.bounds;
+  }
+
+  const point = options.screenPoint || null;
+  if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+    const width = baseBounds?.width || 1400;
+    const height = baseBounds?.height || 900;
+    return {
+      x: Math.round(point.x - Math.min(180, width * 0.25)),
+      y: Math.round(point.y - 18),
+      width,
+      height,
+    };
+  }
+
+  return offsetBounds(baseBounds);
+}
+
+function detachWindowTab(targetWindowId, senderWindowId = null, options = {}) {
   if (!targetWindowId) {
     return { success: false, error: 'targetWindowId is required' };
+  }
+  if (options.fromDrag && wasRecentlyDropped(targetWindowId)) {
+    return { success: true, windowId: targetWindowId, detached: false, message: 'Tab was already dropped' };
   }
 
   const groupId = windowToGroup.get(targetWindowId);
@@ -455,7 +540,7 @@ function detachWindowTab(targetWindowId, senderWindowId = null) {
     }
   }
 
-  const detachedBounds = offsetBounds(baseBounds);
+  const detachedBounds = getDetachedBounds(baseBounds, options);
   if (typeof targetWindow.detachToNewHost === 'function') {
     const detachResult = targetWindow.detachToNewHost(detachedBounds);
     if (detachResult && detachResult.success === false) {
@@ -476,6 +561,40 @@ function detachWindowTab(targetWindowId, senderWindowId = null) {
     detached: true,
     windowId: targetWindowId,
     groupId: detachedGroup.groupId,
+  };
+}
+
+function attachWindowTabToWindow(targetWindowId, anchorWindowId, targetIndex = null) {
+  if (!targetWindowId) {
+    return { success: false, error: 'targetWindowId is required' };
+  }
+  if (!anchorWindowId || !isValidGenomeWindow(anchorWindowId)) {
+    return { success: false, error: 'A valid target window is required for tab merge' };
+  }
+
+  const anchorGroup = getOrCreateGroupForWindow(anchorWindowId);
+  if (!anchorGroup) {
+    return { success: false, error: `Target window '${anchorWindowId}' is not available` };
+  }
+
+  const previousGroupId = windowToGroup.get(targetWindowId);
+  const result = attachWindowToGroup(targetWindowId, anchorGroup.groupId, {
+    activate: true,
+    targetIndex,
+  });
+
+  if (result?.success === false) return result;
+  markRecentTabDrop(targetWindowId);
+  if (previousGroupId && previousGroupId !== anchorGroup.groupId) {
+    broadcastGroup(previousGroupId);
+  }
+  broadcastGroup(anchorGroup.groupId);
+
+  return {
+    success: true,
+    windowId: targetWindowId,
+    groupId: anchorGroup.groupId,
+    tabs: getSnapshotForWindow(targetWindowId).tabs,
   };
 }
 
@@ -542,8 +661,24 @@ function registerWindowTabIpcHandlers() {
     return detachWindowTab(targetWindowId || senderWindowId, senderWindowId);
   });
 
+  ipcMain.handle('window-tabs:detach-at', async (event, targetWindowId, screenPoint) => {
+    const senderWindowId = getWindowIdFromWebContents(event.sender);
+    return detachWindowTab(targetWindowId || senderWindowId, senderWindowId, {
+      screenPoint,
+      fromDrag: true,
+    });
+  });
+
   ipcMain.handle('window-tabs:attach-all', async event => {
     return attachAllWindowsToGroup(getWindowIdFromWebContents(event.sender));
+  });
+
+  ipcMain.handle('window-tabs:reorder', async (event, targetWindowId, targetIndex) => {
+    return reorderWindowTab(targetWindowId, targetIndex, getWindowIdFromWebContents(event.sender));
+  });
+
+  ipcMain.handle('window-tabs:attach-to-window', async (event, targetWindowId, targetIndex) => {
+    return attachWindowTabToWindow(targetWindowId, getWindowIdFromWebContents(event.sender), targetIndex);
   });
 
   ipcMain.handle('window-tabs:new-tab', async event => {
@@ -559,7 +694,9 @@ module.exports = {
   registerWindowTab,
   unregisterWindowTab,
   switchToWindowTab,
+  reorderWindowTab,
   detachWindowTab,
+  attachWindowTabToWindow,
   attachAllWindowsToGroup,
   createWindowLevelTab,
   getSnapshotForWindow,

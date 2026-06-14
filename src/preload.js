@@ -404,6 +404,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getWindowTabs: () => ipcRenderer.invoke('window-tabs:list'),
   switchWindowTab: windowId => ipcRenderer.invoke('window-tabs:switch', windowId),
   detachWindowTab: windowId => ipcRenderer.invoke('window-tabs:detach', windowId),
+  detachWindowTabAt: (windowId, screenPoint) => ipcRenderer.invoke('window-tabs:detach-at', windowId, screenPoint),
+  reorderWindowTab: (windowId, targetIndex) => ipcRenderer.invoke('window-tabs:reorder', windowId, targetIndex),
+  attachWindowTabToCurrent: (windowId, targetIndex) =>
+    ipcRenderer.invoke('window-tabs:attach-to-window', windowId, targetIndex),
   attachAllGenomeWindows: () => ipcRenderer.invoke('window-tabs:attach-all'),
   createWindowLevelTab: () => ipcRenderer.invoke('window-tabs:new-tab'),
   onWindowTabsUpdated: listener => {

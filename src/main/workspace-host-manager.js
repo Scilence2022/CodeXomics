@@ -218,8 +218,8 @@ class GenomeViewHandle extends EventEmitter {
     return detachGenomeViewToNewHost(this.windowId, bounds);
   }
 
-  attachToHostOf(anchorHandle) {
-    return moveGenomeViewToWorkspace(this.windowId, anchorHandle?.workspaceId || null);
+  attachToHostOf(anchorHandle, options = {}) {
+    return moveGenomeViewToWorkspace(this.windowId, anchorHandle?.workspaceId || null, options);
   }
 
   sendHostSnapshot(snapshot) {
@@ -298,6 +298,9 @@ function addHandleToWorkspace(handle, workspace, { activate = true } = {}) {
     if (currentWorkspace.activeViewId === handle.windowId) {
       currentWorkspace.activeViewId = currentWorkspace.viewIds[0] || null;
       currentWorkspace.window.__codexomicsActiveGenomeViewId = currentWorkspace.activeViewId;
+      if (currentWorkspace.activeViewId) {
+        activateGenomeView(currentWorkspace.activeViewId, { focusHost: false });
+      }
     }
     if (!currentWorkspace.viewIds.length && isUsableWindow(currentWorkspace.window)) {
       currentWorkspace.window.close();
