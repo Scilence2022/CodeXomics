@@ -8,13 +8,20 @@
     <style>
       :root {
         --titlebar-height: 38px;
-        --titlebar-bg: #e8eef6;
-        --titlebar-border: #c8d5e6;
-        --tab-bg: #dbe6f3;
-        --tab-active-bg: #ffffff;
-        --tab-text: #334155;
-        --tab-muted: #64748b;
-        --accent: #0891b2;
+        --primary-color: #3b82f6;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8fafc;
+        --bg-tertiary: #f1f5f9;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+        --titlebar-bg: color-mix(in srgb, var(--primary-color) 8%, var(--bg-secondary));
+        --titlebar-border: color-mix(in srgb, var(--primary-color) 20%, var(--border-color));
+        --tab-bg: color-mix(in srgb, var(--primary-color) 10%, var(--bg-tertiary));
+        --tab-active-bg: var(--bg-primary);
+        --tab-text: var(--text-primary);
+        --tab-muted: var(--text-secondary);
+        --accent: var(--primary-color);
       }
 
       * {
@@ -131,7 +138,21 @@
         align-items: center;
         justify-content: center;
         color: var(--accent);
+        fill: currentColor;
+        --fa-primary-color: currentColor;
+        --fa-secondary-color: currentColor;
         font-size: 18px;
+      }
+
+      .workspace-tab-icon.svg-inline--fa,
+      .workspace-tab-icon svg {
+        color: var(--accent) !important;
+        fill: currentColor !important;
+      }
+
+      .workspace-tab-icon path,
+      .workspace-tab-icon.svg-inline--fa path {
+        fill: currentColor !important;
       }
 
       .workspace-tab-title {
@@ -210,6 +231,101 @@
 
     <script>
       (() => {
+        const STYLE_PRESETS = {
+          default: {
+            '--primary-color': '#3b82f6',
+            '--bg-primary': '#ffffff',
+            '--bg-secondary': '#f8fafc',
+            '--bg-tertiary': '#f1f5f9',
+            '--text-primary': '#1f2937',
+            '--text-secondary': '#6b7280',
+            '--border-color': '#e5e7eb',
+          },
+          professional: {
+            '--primary-color': '#0d7377',
+            '--bg-primary': '#ffffff',
+            '--bg-secondary': '#f7f8fa',
+            '--bg-tertiary': '#eceef2',
+            '--text-primary': '#1a2332',
+            '--text-secondary': '#4a5568',
+            '--border-color': '#d4d9e0',
+          },
+          minimal: {
+            '--primary-color': '#c87d2f',
+            '--bg-primary': '#fafaf9',
+            '--bg-secondary': '#f5f4f1',
+            '--bg-tertiary': '#eceae5',
+            '--text-primary': '#2c2c2c',
+            '--text-secondary': '#666666',
+            '--border-color': '#e0ddd8',
+          },
+          elegant: {
+            '--primary-color': '#6b6b6b',
+            '--bg-primary': '#ffffff',
+            '--bg-secondary': '#f7f7f8',
+            '--bg-tertiary': '#ededee',
+            '--text-primary': '#1a1a1a',
+            '--text-secondary': '#555555',
+            '--border-color': '#dcdcdc',
+          },
+          midnight: {
+            '--primary-color': '#0891b2',
+            '--bg-primary': '#f8fafc',
+            '--bg-secondary': '#f1f5f9',
+            '--bg-tertiary': '#e2e8f0',
+            '--text-primary': '#0f172a',
+            '--text-secondary': '#475569',
+            '--border-color': '#cbd5e1',
+          },
+          pastel: {
+            '--primary-color': '#b07fb0',
+            '--bg-primary': '#faf8fc',
+            '--bg-secondary': '#f5f0f8',
+            '--bg-tertiary': '#ede6f2',
+            '--text-primary': '#3d3245',
+            '--text-secondary': '#6b5f75',
+            '--border-color': '#e2d9ea',
+          },
+        };
+
+        function applyWorkspaceTheme(themeData = {}) {
+          const style = themeData.style || themeData.uiStyle || 'default';
+          const fallbackVariables = STYLE_PRESETS[style] || STYLE_PRESETS.default;
+          const variables = { ...fallbackVariables, ...(themeData.variables || {}) };
+          const root = document.documentElement;
+
+          root.setAttribute('data-ui-style', style);
+          for (const [key, value] of Object.entries(variables)) {
+            root.style.setProperty(key, value);
+          }
+        }
+
+        async function initializeWorkspaceTheme() {
+          try {
+            const storedThemeData = localStorage.getItem('_globalThemeData');
+            if (storedThemeData) {
+              applyWorkspaceTheme(JSON.parse(storedThemeData));
+            }
+          } catch (_) {}
+
+          try {
+            const result = await window.electronAPI?.loadConfigData?.();
+            const config = result?.config || {};
+            const uiStyle = config.generalSettings?.uiStyle || config.main?.generalSettings?.uiStyle;
+            if (uiStyle) {
+              applyWorkspaceTheme({ style: uiStyle });
+            }
+          } catch (error) {
+            console.warn('[WorkspaceHost] Failed to load UI style:', error.message);
+          }
+
+          try {
+            await window.electronAPI?.ipcRenderer?.invoke?.('request-current-theme');
+          } catch (error) {
+            console.warn('[WorkspaceHost] Failed to request current theme:', error.message);
+          }
+        }
+
         const tabsElement = document.getElementById('workspaceTabs');
         const newTabButton = document.getElementById('newTabButton');
         const attachAllButton = document.getElementById('attachAllButton');
@@ -217,6 +333,11 @@
         let draggingWindowId = null;
 
         document.body.classList.add(/mac/i.test(navigator.platform || '') ? 'platform-darwin' : 'platform-other');
+        initializeWorkspaceTheme();
+
+        window.electronAPI?.ipcRenderer?.on?.('sync-theme', (event, themeData) => {
+          applyWorkspaceTheme(themeData || {});
+        });
 
         function getDraggedWindowId(event) {
           if (draggingWindowId) return draggingWindowId;

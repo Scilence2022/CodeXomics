@@ -3137,6 +3137,14 @@ function registerIpcHandlers(deps) {
         sent = true;
       }
 
+      // Forward to workspace host windows that render the window-level tab strip.
+      for (const workspaceWindow of BrowserWindow.getAllWindows()) {
+        if (workspaceWindow.__codexomicsWorkspaceId && !workspaceWindow.isDestroyed()) {
+          workspaceWindow.webContents.send('sync-theme', themeData);
+          sent = true;
+        }
+      }
+
       return { success: sent };
     } catch (error) {
       return { success: false, error: error.message };
