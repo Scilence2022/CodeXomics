@@ -15,6 +15,7 @@ const i18n = require('./i18n/i18n-main');
 const wr = require('./main/window-registry');
 const mb = require('./main/menu-builder');
 const wm = require('./main/window-management');
+const wt = require('./main/window-tabs');
 const mcp = require('./main/mcp-lifecycle');
 const { registerIpcHandlers } = require('./main/ipc-handlers');
 const { registerProjectIpcHandlers } = require('./main/project-ipc');
@@ -147,7 +148,7 @@ function openGenBankFile(filePath) {
   rememberApprovedPath(filePath);
 
   // If main window exists and is ready, send file directly
-  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isLoading()) {
     mainWindow.webContents.send('file-opened', filePath);
     mainWindow.show();
     mainWindow.focus();
@@ -163,7 +164,13 @@ function openGenBankFile(filePath) {
  * Process any queued files that were opened before the app was ready.
  */
 function processFileQueue() {
-  if (fileOpenQueue.length > 0 && mainWindow && !mainWindow.isDestroyed()) {
+  if (
+    fileOpenQueue.length > 0 &&
+    mainWindow &&
+    !mainWindow.isDestroyed() &&
+    mainWindow.webContents &&
+    !mainWindow.webContents.isLoading()
+  ) {
     console.log(`[Main] Processing ${fileOpenQueue.length} queued file(s)`);
     fileOpenQueue.forEach(filePath => {
       mainWindow.webContents.send('file-opened', filePath);
@@ -242,6 +249,14 @@ function buildModuleDeps() {
     syncWindowsWithMCPServer: wr.syncWindowsWithMCPServer,
     startWindowCleanupInterval: wr.startWindowCleanupInterval,
     stopWindowCleanupInterval: wr.stopWindowCleanupInterval,
+
+    // Window-level genome tabs
+    registerWindowTab: wt.registerWindowTab,
+    unregisterWindowTab: wt.unregisterWindowTab,
+    switchToWindowTab: wt.switchToWindowTab,
+    detachWindowTab: wt.detachWindowTab,
+    attachAllWindowsToGroup: wt.attachAllWindowsToGroup,
+    notifyWindowGenomeNameChanged: wt.notifyWindowGenomeNameChanged,
 
     // Window management (window creation functions)
     createWindow: wm.createWindow,
@@ -324,9 +339,19 @@ app.whenReady().then(async () => {
     // Setup IPC handlers for language change events
     i18n.setupIPC(newLang => {
       // Notify all windows about language change
+      const notifiedWebContents = new Set();
       BrowserWindow.getAllWindows().forEach(win => {
-        win.webContents.send('language-changed', newLang);
+        if (win.webContents && !win.webContents.isDestroyed()) {
+          win.webContents.send('language-changed', newLang);
+          notifiedWebContents.add(win.webContents.id);
+        }
       });
+      for (const [, entry] of wr.windowRegistry.entries()) {
+        const win = entry.window || entry;
+        if (win?.webContents && !win.webContents.isDestroyed() && !notifiedWebContents.has(win.webContents.id)) {
+          win.webContents.send('language-changed', newLang);
+        }
+      }
       // Rebuild menus with new language
       mb.createMenu();
       console.log(`[Main] Menus rebuilt for language: ${newLang}`);
@@ -351,6 +376,8 @@ app.whenReady().then(async () => {
   const deps = buildModuleDeps();
   mb.setMenuDependencies(deps);
   wm.setWindowMgmtDependencies(deps);
+  wt.setWindowTabsDependencies(deps);
+  wt.registerWindowTabIpcHandlers();
   mcp.setMCPDependencies(deps);
   registerIpcHandlers(deps);
   registerProjectIpcHandlers(deps);
@@ -391,6 +418,7 @@ app.whenReady().then(async () => {
       const updatedDeps = buildModuleDeps();
       mb.setMenuDependencies(updatedDeps);
       wm.setWindowMgmtDependencies(updatedDeps);
+      wt.setWindowTabsDependencies(updatedDeps);
     }
   });
 });

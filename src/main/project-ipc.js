@@ -13,12 +13,7 @@
 const { ipcMain, dialog, app, BrowserWindow, Menu, MenuItem } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const {
-  createSecureWebPreferences,
-  rememberApprovedPath,
-  rememberApprovedDialogPaths,
-  assertAllowedFileAccess,
-} = require('./security-utils');
+const { rememberApprovedPath, rememberApprovedDialogPaths, assertAllowedFileAccess } = require('./security-utils');
 
 function assertSafeProjectSegment(value, label = 'name') {
   if (typeof value !== 'string' || !value.trim()) {
@@ -61,6 +56,7 @@ function assertSafeProjectRelativePath(value, label = 'relative path') {
  * @param {Function} deps.registerGenomeWindow - Register a genome window
  * @param {Function} deps.unregisterGenomeWindow - Unregister a genome window
  * @param {Function} deps.cleanupWindowRegistration - Cleanup window registration
+ * @param {Function} deps.registerWindowTab - Register a genome window with the window-level tab coordinator
  * @param {BrowserWindow} deps.currentActiveWindow - Currently active window
  * @param {Function} deps.setCurrentActiveWindow - Set current active window reference
  * @param {Function} deps.createMenu - Menu creation function
@@ -73,19 +69,6 @@ function registerProjectIpcHandlers(deps) {
       deps.setCurrentActiveWindow(win);
     } else {
       deps.currentActiveWindow = win;
-    }
-  };
-
-  const clearActiveMainWindow = win => {
-    if (typeof deps.getCurrentActiveWindow === 'function' && typeof deps.setCurrentActiveWindow === 'function') {
-      if (deps.getCurrentActiveWindow() === win) {
-        deps.setCurrentActiveWindow(null);
-      }
-      return;
-    }
-
-    if (deps.currentActiveWindow === win) {
-      deps.currentActiveWindow = null;
     }
   };
 
@@ -324,9 +307,11 @@ function registerProjectIpcHandlers(deps) {
         operation: 'open file in main window',
         mustExist: true,
       });
-      if (deps.mainWindow && !deps.mainWindow.isDestroyed()) {
-        deps.mainWindow.webContents.send('load-file', safeFilePath);
-        deps.mainWindow.focus();
+      const targetWindow =
+        (typeof deps.getCurrentMainWindow === 'function' && deps.getCurrentMainWindow()) || deps.mainWindow;
+      if (targetWindow && !targetWindow.isDestroyed()) {
+        targetWindow.webContents.send('load-file', safeFilePath);
+        targetWindow.focus();
         return { success: true, message: 'File opened in main window' };
       } else {
         return { success: false, error: 'Main window not available' };
@@ -647,19 +632,21 @@ function registerProjectIpcHandlers(deps) {
   // Handle checking main window status
   ipcMain.handle('checkMainWindowStatus', async () => {
     try {
-      if (deps.mainWindow && !deps.mainWindow.isDestroyed()) {
+      const targetWindow =
+        (typeof deps.getCurrentMainWindow === 'function' && deps.getCurrentMainWindow()) || deps.mainWindow;
+      if (targetWindow && !targetWindow.isDestroyed()) {
         // Send request to main window to check if it has a file open
         return new Promise(resolve => {
           const timeout = setTimeout(() => {
             resolve({ hasOpenFile: false, error: 'Timeout' });
           }, 1000);
 
-          deps.mainWindow.webContents.once('main-window-status-response', (event, hasOpenFile) => {
+          targetWindow.webContents.once('main-window-status-response', (event, hasOpenFile) => {
             clearTimeout(timeout);
             resolve({ hasOpenFile: hasOpenFile });
           });
 
-          deps.mainWindow.webContents.send('check-file-status');
+          targetWindow.webContents.send('check-file-status');
         });
       } else {
         return { hasOpenFile: false, error: 'Main window not available' };
@@ -671,101 +658,36 @@ function registerProjectIpcHandlers(deps) {
 
   // Handle creating new main window with file
   ipcMain.handle('createNewMainWindow', async (event, filePath) => {
-    let windowId = null;
-
     try {
       const safeFilePath = assertAllowedFileAccess(app, filePath, {
         operation: 'open file in new main window',
         mustExist: true,
       });
-      // Generate a unique window ID for multi-window support
-      windowId = deps.generateWindowId();
-      console.log(`📋 [createNewMainWindow] Creating new window with ID: ${windowId}`);
 
-      // Create a new main window with identical configuration to the original
-      const newMainWindow = new BrowserWindow({
-        width: 1400,
-        height: 900,
-        minWidth: 800,
-        minHeight: 600,
-        webPreferences: createSecureWebPreferences(),
-        icon: path.join(__dirname, '../assets/icon.png'),
-        show: false,
+      const sourceWindow =
+        (typeof deps.getCurrentMainWindow === 'function' && deps.getCurrentMainWindow()) ||
+        (typeof deps.getCurrentActiveWindow === 'function' && deps.getCurrentActiveWindow()) ||
+        null;
+      const newMainWindow = deps.createWindow({
+        workspaceSourceWindow: sourceWindow,
       });
 
-      // Store windowId on the BrowserWindow object for easy lookup
-      newMainWindow.windowId = windowId;
-
-      // Register in window registry with skipResolve since we're handling async
-      deps.registerGenomeWindow(windowId, newMainWindow, { skipResolve: true });
-      console.log(`📋 [createNewMainWindow] Window ${windowId} registered in registry`);
-
-      // Set up the new window with same initialization as original main window
-      newMainWindow.loadFile(path.join(__dirname, '..', 'renderer/index.html'));
-
-      newMainWindow.webContents.once('did-finish-load', () => {
-        console.log(`📋 [createNewMainWindow] Window ${windowId} loaded; sending initialization events`);
-        newMainWindow.webContents.send('set-window-id', windowId);
-        newMainWindow.webContents.send('ping-test');
+      const sendFileToNewView = () => {
         newMainWindow.webContents.send('load-file', safeFilePath);
-      });
-
-      // Show window when ready
-      newMainWindow.once('ready-to-show', () => {
-        console.log(`📋 [createNewMainWindow] Window ${windowId} ready to show`);
-        newMainWindow.show();
-        // Set focus to new window and ensure proper menu
         newMainWindow.focus();
         setActiveMainWindow(newMainWindow);
-        deps.createMenu(); // Set main window menu immediately
-        console.log(`📋 [createNewMainWindow] Window ${windowId} shown and focused with main menu set`);
-      });
+        deps.createMenu();
+      };
 
-      if (process.argv.includes('--dev')) {
-        newMainWindow.webContents.openDevTools({ mode: 'detach' });
+      if (newMainWindow.webContents.isLoading()) {
+        newMainWindow.webContents.once('did-finish-load', sendFileToNewView);
+      } else {
+        sendFileToNewView();
       }
 
-      // Handle window focus to manage menu properly
-      newMainWindow.on('focus', () => {
-        if (typeof deps.getCurrentActiveWindow !== 'function' || deps.getCurrentActiveWindow() !== newMainWindow) {
-          setActiveMainWindow(newMainWindow);
-          deps.createMenu(); // Set main window menu when focused
-          console.log(`📋 [createNewMainWindow] Window ${windowId} focused - set main menu`);
-        }
-      });
-
-      newMainWindow.webContents.on('focus', () => {
-        if (typeof deps.getCurrentActiveWindow !== 'function' || deps.getCurrentActiveWindow() !== newMainWindow) {
-          setActiveMainWindow(newMainWindow);
-          deps.createMenu(); // Set main window menu when focused
-          console.log(`📋 [createNewMainWindow] Window ${windowId} webContents focused - set main menu`);
-        }
-      });
-
-      // Handle window closed - cleanup is handled automatically via the 'closed' event listener in registerGenomeWindow
-      newMainWindow.on('closed', () => {
-        console.log(`📋 [createNewMainWindow] Window ${windowId} closed`);
-        deps.unregisterGenomeWindow(windowId);
-        clearActiveMainWindow(newMainWindow);
-      });
-
-      // Handle errors
-      newMainWindow.webContents.on('crashed', (event, killed) => {
-        console.error(`📋 [createNewMainWindow] Window ${windowId} crashed (killed: ${killed})`);
-        deps.cleanupWindowRegistration(windowId);
-      });
-
-      newMainWindow.webContents.on('render-process-gone', (event, details) => {
-        console.error(`📋 [createNewMainWindow] Window ${windowId} render process gone: ${details.reason}`);
-        deps.cleanupWindowRegistration(windowId);
-      });
-
-      return { success: true, message: 'New window created with file', windowId };
+      return { success: true, message: 'New genome tab created with file', windowId: newMainWindow.windowId };
     } catch (error) {
-      console.error(`📋 [createNewMainWindow] Error creating window: ${error.message}`);
-      if (windowId) {
-        deps.cleanupWindowRegistration(windowId);
-      }
+      console.error(`📋 [createNewMainWindow] Error creating genome view: ${error.message}`);
       return { success: false, error: error.message };
     }
   });
@@ -1221,8 +1143,10 @@ function registerProjectIpcHandlers(deps) {
             label: `${project.name}`,
             accelerator: index < 9 ? `CmdOrCtrl+${index + 1}` : undefined,
             click: () => {
-              if (deps.mainWindow && !deps.mainWindow.isDestroyed()) {
-                deps.mainWindow.webContents.send('open-recent-project', project);
+              const targetWindow =
+                (typeof deps.getCurrentMainWindow === 'function' && deps.getCurrentMainWindow()) || deps.mainWindow;
+              if (targetWindow && !targetWindow.isDestroyed()) {
+                targetWindow.webContents.send('open-recent-project', project);
               }
             },
           })
@@ -1235,8 +1159,10 @@ function registerProjectIpcHandlers(deps) {
         new MenuItem({
           label: 'Clear Recent Projects',
           click: () => {
-            if (deps.mainWindow && !deps.mainWindow.isDestroyed()) {
-              deps.mainWindow.webContents.send('clear-recent-projects');
+            const targetWindow =
+              (typeof deps.getCurrentMainWindow === 'function' && deps.getCurrentMainWindow()) || deps.mainWindow;
+            if (targetWindow && !targetWindow.isDestroyed()) {
+              targetWindow.webContents.send('clear-recent-projects');
             }
           },
         })
@@ -1436,14 +1362,15 @@ function registerProjectIpcHandlers(deps) {
 
       console.log('Saving refined annotation for gene:', gene);
 
-      // Get the main window to access the genome browser
-      deps.getCurrentMainWindow();
-      if (!deps.mainWindow || !deps.mainWindow.webContents) {
+      // Get the active genome view to access the genome browser
+      const targetWindow =
+        (typeof deps.getCurrentMainWindow === 'function' && deps.getCurrentMainWindow()) || deps.mainWindow;
+      if (!targetWindow || !targetWindow.webContents) {
         throw new Error('Main window not available');
       }
 
       // Send the refined annotation to the main window for saving
-      const result = await deps.mainWindow.webContents.executeJavaScript(`
+      const result = await targetWindow.webContents.executeJavaScript(`
       (async function() {
         if (window.genomeBrowser && window.genomeBrowser.updateGeneAnnotation) {
           try {

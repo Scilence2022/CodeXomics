@@ -3,6 +3,7 @@
 
 const { Menu, dialog, app, BrowserWindow } = require('electron');
 const { rememberApprovedDialogPaths } = require('./security-utils');
+const workspaceHostManager = require('./workspace-host-manager');
 
 // External references (set by main module via setMenuDependencies)
 let APP_NAME;
@@ -36,7 +37,7 @@ let arrangeWindowsVertical;
 let arrangeWindowsCascade;
 
 function isMainGenomeWindow(win) {
-  return !!(win && !win.isDestroyed() && win.windowId);
+  return !!(win && !win.isDestroyed() && (win.windowId || workspaceHostManager.getActiveWindowIdForHost(win)));
 }
 
 function restoreMainMenuAfterToolWindow(toolName, reason) {
@@ -47,7 +48,7 @@ function restoreMainMenuAfterToolWindow(toolName, reason) {
       (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
 
     if (isMainGenomeWindow(focusedWindow) || (!focusedWindow && currentMainWindow)) {
-      currentActiveWindow = focusedWindow || currentMainWindow;
+      currentActiveWindow = currentMainWindow || focusedWindow;
       createMenu();
       console.log(`Restored main menu after ${toolName} ${reason}`);
     }
@@ -932,8 +933,9 @@ function createToolWindowMenu(toolWindow, toolName) {
           label: 'Return to Main Window',
           accelerator: 'CmdOrCtrl+Shift+M',
           click: () => {
-            if (mainWindow) {
-              mainWindow.focus();
+            const targetWindow = (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow;
+            if (targetWindow) {
+              targetWindow.focus();
             }
           },
         },
@@ -1100,21 +1102,26 @@ function createMenu() {
           label: 'Open File',
           accelerator: 'CmdOrCtrl+O',
           click: async () => {
-            const result = await dialog.showOpenDialog(mainWindow, {
-              properties: ['openFile'],
-              filters: [
-                {
-                  name: 'All Genome Files',
-                  extensions: ['fasta', 'fa', 'gb', 'gbk', 'genbank', 'gff', 'gtf', 'bed', 'vcf', 'bam', 'sam'],
-                },
-                { name: 'FASTA Files', extensions: ['fasta', 'fa'] },
-                { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
-                { name: 'Annotation Files', extensions: ['gff', 'gtf', 'bed'] },
-                { name: 'Variant Files', extensions: ['vcf'] },
-                { name: 'Alignment Files', extensions: ['bam', 'sam'] },
-                { name: 'All Files', extensions: ['*'] },
-              ],
-            });
+            const result = await dialog.showOpenDialog(
+              workspaceHostManager.getNativeWindow(
+                (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow
+              ),
+              {
+                properties: ['openFile'],
+                filters: [
+                  {
+                    name: 'All Genome Files',
+                    extensions: ['fasta', 'fa', 'gb', 'gbk', 'genbank', 'gff', 'gtf', 'bed', 'vcf', 'bam', 'sam'],
+                  },
+                  { name: 'FASTA Files', extensions: ['fasta', 'fa'] },
+                  { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
+                  { name: 'Annotation Files', extensions: ['gff', 'gtf', 'bed'] },
+                  { name: 'Variant Files', extensions: ['vcf'] },
+                  { name: 'Alignment Files', extensions: ['bam', 'sam'] },
+                  { name: 'All Files', extensions: ['*'] },
+                ],
+              }
+            );
             rememberApprovedDialogPaths(result);
 
             if (!result.canceled && result.filePaths.length > 0) {
@@ -1215,7 +1222,7 @@ function createMenu() {
         {
           label: 'Open (New Window)',
           click: async () => {
-            const parentWindow = getCurrentMainWindow() || mainWindow;
+            const parentWindow = workspaceHostManager.getNativeWindow(getCurrentMainWindow() || mainWindow);
             const result = await dialog.showOpenDialog(parentWindow, {
               properties: ['openFile'],
               filters: genomeFileDialogFilters,
@@ -2127,9 +2134,10 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           label: 'Back to Main Window',
           accelerator: 'CmdOrCtrl+Shift+M',
           click: () => {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.focus();
-              mainWindow.show();
+            const targetWindow = (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow;
+            if (targetWindow && !targetWindow.isDestroyed()) {
+              targetWindow.focus();
+              targetWindow.show();
             }
           },
         },

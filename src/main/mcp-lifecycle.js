@@ -19,13 +19,19 @@ let updateMCPServerMenu;
 let startWindowCleanupInterval;
 let stopWindowCleanupInterval;
 let syncWindowsWithMCPServer;
+let switchToWindowTab;
 
 // External MCP Servers Functions
 let mcpServerManagerWindow = null;
 let createMCPServerManagerMenu;
 let createMenu;
+let getCurrentMainWindow;
 let getCurrentActiveWindow;
 let setCurrentActiveWindow;
+
+function getMainGenomeTarget() {
+  return (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow || null;
+}
 
 async function startUnifiedMCPServer() {
   // Declared outside the try so the catch block can reference the loaded ports
@@ -73,7 +79,7 @@ async function startUnifiedMCPServer() {
     }
 
     // Create Unified Claude MCP server with configurable ports
-    unifiedMCPServer = new UnifiedMCPServer(settings.httpPort, settings.wsPort, mainWindow);
+    unifiedMCPServer = new UnifiedMCPServer(settings.httpPort, settings.wsPort, getMainGenomeTarget());
 
     // Forward server log events to the Manager window
     unifiedMCPServer.on('log', logEntry => {
@@ -96,6 +102,9 @@ async function startUnifiedMCPServer() {
 
     // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
     unifiedMCPServer.setMainWindowRegistry(windowRegistry);
+    if (typeof switchToWindowTab === 'function') {
+      unifiedMCPServer.switchWindowTab = switchToWindowTab;
+    }
 
     // Start the server
     await unifiedMCPServer.start();
@@ -113,8 +122,9 @@ async function startUnifiedMCPServer() {
     console.log(`📋 [MCP Server] Window sync result: ${syncResult.synced} synced, ${syncResult.failed} failed`);
 
     // Notify renderer process
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('mcp-server-status-changed', {
+    const targetWindow = getMainGenomeTarget();
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send('mcp-server-status-changed', {
         status: 'running',
         httpPort: settings.httpPort,
         wsPort: settings.wsPort,
@@ -182,8 +192,9 @@ async function stopUnifiedMCPServer() {
     console.log('Unified Claude MCP Server stopped successfully');
 
     // Notify renderer process
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('mcp-server-status-changed', {
+    const targetWindow = getMainGenomeTarget();
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send('mcp-server-status-changed', {
         status: 'stopped',
       });
     }
@@ -276,7 +287,7 @@ function createMCPServerManagerWindow() {
       setCurrentActiveWindow(null);
     }
     mcpServerManagerWindow = null;
-    if (createMenu && mainWindow && !mainWindow.isDestroyed()) {
+    if (createMenu && getMainGenomeTarget() && !getMainGenomeTarget().isDestroyed()) {
       createMenu();
       console.log('Switched back to main window menu from MCP Server Manager');
     }
@@ -294,8 +305,9 @@ function createMCPServerManagerWindow() {
     });
 
     // Request current theme from main renderer
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('request-theme-for-pm');
+    const targetWindow = getMainGenomeTarget();
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send('request-theme-for-pm');
     }
   });
 }
@@ -310,8 +322,10 @@ function setMCPDependencies(deps) {
   if (deps.startWindowCleanupInterval !== undefined) startWindowCleanupInterval = deps.startWindowCleanupInterval;
   if (deps.stopWindowCleanupInterval !== undefined) stopWindowCleanupInterval = deps.stopWindowCleanupInterval;
   if (deps.syncWindowsWithMCPServer !== undefined) syncWindowsWithMCPServer = deps.syncWindowsWithMCPServer;
+  if (deps.switchToWindowTab !== undefined) switchToWindowTab = deps.switchToWindowTab;
   if (deps.createMCPServerManagerMenu !== undefined) createMCPServerManagerMenu = deps.createMCPServerManagerMenu;
   if (deps.createMenu !== undefined) createMenu = deps.createMenu;
+  if (deps.getCurrentMainWindow !== undefined) getCurrentMainWindow = deps.getCurrentMainWindow;
   if (deps.getCurrentActiveWindow !== undefined) getCurrentActiveWindow = deps.getCurrentActiveWindow;
   if (deps.setCurrentActiveWindow !== undefined) setCurrentActiveWindow = deps.setCurrentActiveWindow;
 }

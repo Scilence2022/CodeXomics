@@ -15,6 +15,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const VERSION_INFO = require('../version');
 const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store');
+const workspaceHostManager = require('./workspace-host-manager');
 const {
   createSecureWebPreferences,
   permissionBroker,
@@ -505,6 +506,8 @@ function registerIpcHandlers(deps) {
     analyzerPendingData,
     getWindowRegistryStatus,
     syncWindowsWithMCPServer,
+    switchToWindowTab,
+    notifyWindowGenomeNameChanged,
 
     getCurrentMainWindow,
 
@@ -532,6 +535,8 @@ function registerIpcHandlers(deps) {
     checkPortAvailable,
   } = deps;
   const bamReaders = new Map();
+  const getMainGenomeTarget = () =>
+    (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow || null;
 
   const getOwnedBamReader = (event, readerId) => {
     const entry = bamReaders.get(readerId);
@@ -583,6 +588,13 @@ function registerIpcHandlers(deps) {
 
   const toolRegistryService = deps.toolRegistryService || new ToolRegistryService({ app });
   const broadcastToolRegistryUpdated = snapshot => {
+    for (const [, entry] of windowRegistry.entries()) {
+      const win = entry.window || entry;
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('tool-registry-updated', snapshot);
+      }
+    }
+
     for (const window of BrowserWindow.getAllWindows()) {
       if (!window.isDestroyed()) {
         window.webContents.send('tool-registry-updated', snapshot);
@@ -601,16 +613,33 @@ function registerIpcHandlers(deps) {
     const { requestId, toolName, parameters, clientId } = data;
 
     try {
-      if (!mainWindow || mainWindow.isDestroyed()) {
+      const targetWindowId = parameters?.windowId || null;
+      let forwardedParameters = parameters || {};
+      let targetWindow = null;
+
+      if (targetWindowId && windowRegistry.has(targetWindowId)) {
+        const entry = windowRegistry.get(targetWindowId);
+        targetWindow = entry.window || entry;
+        forwardedParameters = { ...forwardedParameters };
+        delete forwardedParameters.windowId;
+      } else if (targetWindowId) {
+        throw new Error(`Target genome window '${targetWindowId}' was not found`);
+      }
+
+      if (!targetWindow && typeof getCurrentMainWindow === 'function') {
+        targetWindow = getCurrentMainWindow();
+      }
+
+      if (!targetWindow || targetWindow.isDestroyed()) {
         throw new Error('Main window not available for tool execution');
       }
 
       // Forward the tool execution request to the renderer process
-      console.log('[Main] Forwarding tool execution to renderer:', toolName);
-      mainWindow.webContents.send('execute-tool-request', {
+      console.log('[Main] Forwarding tool execution to renderer:', toolName, targetWindow.windowId || 'active');
+      targetWindow.webContents.send('execute-tool-request', {
         requestId,
         toolName,
-        parameters,
+        parameters: forwardedParameters,
         clientId,
       });
     } catch (error) {
@@ -1483,7 +1512,8 @@ function registerIpcHandlers(deps) {
   // Handle save dialog requests
   ipcMain.handle('show-save-dialog', async (event, options) => {
     try {
-      const result = await dialog.showSaveDialog(mainWindow, options);
+      const parentWindow = workspaceHostManager.getNativeWindow(getMainGenomeTarget());
+      const result = await dialog.showSaveDialog(parentWindow, options);
       return rememberApprovedDialogPaths(result, {
         source: 'user-save-dialog',
         capabilities: [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE],
@@ -1497,7 +1527,8 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('show-open-file-dialog', async (event, options = {}) => {
     try {
-      const ownerWindow = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+      const ownerWindow =
+        BrowserWindow.fromWebContents(event.sender) || workspaceHostManager.getNativeWindow(getMainGenomeTarget());
       const result = await dialog.showOpenDialog(ownerWindow, sanitizeOpenFileDialogOptions(options));
 
       if (result.canceled) {
@@ -2545,7 +2576,7 @@ function registerIpcHandlers(deps) {
 
       try {
         // Create Unified Claude MCP server with configurable ports
-        const server = new (require('../mcp-server'))(settings.httpPort, settings.wsPort, mainWindow);
+        const server = new (require('../mcp-server'))(settings.httpPort, settings.wsPort, getMainGenomeTarget());
         setUnifiedMCPServer(server);
 
         // Forward server log events to the Manager window
@@ -2732,6 +2763,7 @@ function registerIpcHandlers(deps) {
         windowId: id,
         genomeName: info.genomeName || null,
         isFocused: info.window.isFocused(),
+        isVisible: info.window.isVisible(),
         isDestroyed: false,
         status: info.status,
         createdAt: info.createdAt ? info.createdAt.toISOString() : null,
@@ -2777,6 +2809,19 @@ function registerIpcHandlers(deps) {
       return { success: false, error: `Window '${windowId}' is destroyed` };
     }
 
+    if (typeof switchToWindowTab === 'function') {
+      const result = switchToWindowTab(windowId);
+      if (result?.success) {
+        return {
+          success: true,
+          message: `Focused window '${windowId}'`,
+          windowId,
+          genomeName: entry.genomeName || null,
+        };
+      }
+    }
+
+    win.show();
     win.focus();
     return {
       success: true,
@@ -2794,6 +2839,9 @@ function registerIpcHandlers(deps) {
       entry.lastUpdate = new Date();
       entry.status = 'genome-loaded';
       console.log(`[WindowRegistry] Updated genome name for ${windowId}: ${genomeName} (status: ${entry.status})`);
+      if (typeof notifyWindowGenomeNameChanged === 'function') {
+        notifyWindowGenomeNameChanged(windowId);
+      }
     } else {
       console.warn(`[WindowRegistry] Window ${windowId} not found when updating genome name`);
     }
@@ -2803,21 +2851,21 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('get-window-id', async event => {
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
 
-    if (!senderWindow) {
-      console.warn(`[IPC] get-window-id: sender window not found`);
-      return null;
-    }
-
-    if (senderWindow.windowId) {
-      return senderWindow.windowId;
-    }
-
-    // Fallback: find in registry by webContents
+    // First resolve embedded genome WebContentsView instances by their own webContents.
     for (const [windowId, info] of windowRegistry.entries()) {
       if (info.window && !info.window.isDestroyed() && info.window.webContents === event.sender) {
         console.log(`[IPC] get-window-id: found ${windowId} via registry fallback`);
         return windowId;
       }
+    }
+
+    if (senderWindow?.windowId) {
+      return senderWindow.windowId;
+    }
+
+    const activeViewId = senderWindow ? workspaceHostManager.getActiveWindowIdForHost(senderWindow) : null;
+    if (activeViewId) {
+      return activeViewId;
     }
 
     // Last resort: try to find by window ID stored on webContents
@@ -2827,6 +2875,11 @@ function registerIpcHandlers(deps) {
         console.log(`[IPC] get-window-id: found ${win.windowId} via BrowserWindow.getAllWindows()`);
         return win.windowId;
       }
+    }
+
+    if (!senderWindow) {
+      console.warn(`[IPC] get-window-id: sender window not found`);
+      return null;
     }
 
     console.warn(`[IPC] get-window-id: window not found in registry (${windowRegistry.size} windows registered)`);
@@ -2912,8 +2965,9 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('refresh-resources', async () => {
     try {
       // Send refresh request to main window and collect current state
-      if (mainWindow) {
-        mainWindow.webContents.send('collect-resource-info');
+      const targetWindow = getMainGenomeTarget();
+      if (targetWindow) {
+        targetWindow.webContents.send('collect-resource-info');
       }
       return { success: true, message: 'Resources refreshed' };
     } catch (error) {
@@ -2945,8 +2999,9 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('open-resource-in-browser', async (event, resourceId) => {
     try {
       // Send message to main window to display the resource
-      if (mainWindow) {
-        mainWindow.webContents.send('open-resource', resourceId);
+      const targetWindow = getMainGenomeTarget();
+      if (targetWindow) {
+        targetWindow.webContents.send('open-resource', resourceId);
       }
       return { success: true, message: 'Resource opened in browser' };
     } catch (error) {
@@ -2957,7 +3012,8 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('select-and-load-file', async () => {
     try {
       const { dialog } = require('electron');
-      const result = await dialog.showOpenDialog(mainWindow, {
+      const targetWindow = getMainGenomeTarget();
+      const result = await dialog.showOpenDialog(workspaceHostManager.getNativeWindow(targetWindow), {
         properties: ['openFile'],
         filters: [
           {
@@ -2992,8 +3048,11 @@ function registerIpcHandlers(deps) {
       if (!result.canceled && result.filePaths.length > 0) {
         rememberApprovedDialogPaths(result);
         const filePath = result.filePaths[0];
+        if (!targetWindow || targetWindow.isDestroyed()) {
+          return { success: false, error: 'Main window not available' };
+        }
         // Send to main window for loading
-        mainWindow.webContents.send('load-file', filePath);
+        targetWindow.webContents.send('load-file', filePath);
         return { success: true, filePath };
       }
 
@@ -3005,8 +3064,9 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('send-to-main-window', async (event, channel, data) => {
     try {
-      if (mainWindow) {
-        mainWindow.webContents.send(channel, data);
+      const targetWindow = getMainGenomeTarget();
+      if (targetWindow) {
+        targetWindow.webContents.send(channel, data);
       }
       return { success: true };
     } catch (error) {
@@ -3087,8 +3147,9 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('request-current-theme', async () => {
     try {
       // Forward the request to main window, which has ThemeManager
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('request-theme-for-pm');
+      const targetWindow = getMainGenomeTarget();
+      if (targetWindow && !targetWindow.isDestroyed()) {
+        targetWindow.webContents.send('request-theme-for-pm');
         return { success: true };
       }
       return { success: false, error: 'Main window not found' };
@@ -3141,8 +3202,9 @@ function registerIpcHandlers(deps) {
       });
 
       // Set parent window for proper window management
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        debugWindow.setParentWindow(mainWindow);
+      const parentWindow = workspaceHostManager.getNativeWindow(getMainGenomeTarget());
+      if (parentWindow && !parentWindow.isDestroyed()) {
+        debugWindow.setParentWindow(parentWindow);
       }
 
       return { success: true, fileName };
@@ -3157,11 +3219,8 @@ function registerIpcHandlers(deps) {
   // =====================================================================
 
   // Handle genome data requests from Circos Plotter
-  ipcMain.handle('get-circos-genome-data', async event => {
+  ipcMain.handle('get-circos-genome-data', async () => {
     try {
-      // Get the sender window (Circos window)
-      BrowserWindow.fromWebContents(event.sender);
-
       // Get main window data
       const mainWindow = getCurrentMainWindow();
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -3502,10 +3561,10 @@ function registerIpcHandlers(deps) {
   // Handle gene sequence requests
   ipcMain.handle('get-gene-sequence', async (event, geneName) => {
     try {
-      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      const targetWindow = getMainGenomeTarget();
 
-      if (senderWindow && senderWindow.mainWindow) {
-        const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
+      if (targetWindow && targetWindow.webContents) {
+        const result = await targetWindow.webContents.executeJavaScript(`
           (async function() {
             if (window.genomeBrowser && '${geneName}') {
               const annotations = window.genomeBrowser.currentAnnotations || {};
@@ -3554,10 +3613,10 @@ function registerIpcHandlers(deps) {
   // Handle region sequence requests
   ipcMain.handle('get-region-sequence', async (event, chromosome, start, end) => {
     try {
-      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      const targetWindow = getMainGenomeTarget();
 
-      if (senderWindow && senderWindow.mainWindow) {
-        const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
+      if (targetWindow && targetWindow.webContents) {
+        const result = await targetWindow.webContents.executeJavaScript(`
           (function() {
             if (window.genomeBrowser) {
               const sequences = window.genomeBrowser.currentSequence || {};
@@ -4064,9 +4123,10 @@ function registerIpcHandlers(deps) {
   // IPC handler for focusing main window
   ipcMain.on('focus-main-window', () => {
     console.log('IPC: Focusing main window...');
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.focus();
-      mainWindow.show();
+    const targetWindow = getMainGenomeTarget();
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.focus();
+      targetWindow.show();
     }
   });
 

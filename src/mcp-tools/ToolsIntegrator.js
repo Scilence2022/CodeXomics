@@ -820,6 +820,19 @@ class ToolsIntegrator {
       return { success: false, error: `Window '${windowId}' is destroyed` };
     }
 
+    if (typeof this.server?.switchWindowTab === 'function') {
+      const result = this.server.switchWindowTab(windowId);
+      if (result?.success) {
+        return {
+          success: true,
+          message: `Activated window '${windowId}'`,
+          windowId,
+          genomeName: entry.genomeName || null,
+        };
+      }
+    }
+
+    win.show();
     win.focus();
     return {
       success: true,
