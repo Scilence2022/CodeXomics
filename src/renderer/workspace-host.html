@@ -82,7 +82,7 @@
         display: inline-flex;
         align-items: center;
         gap: 7px;
-        padding: 0 8px 0 10px;
+        padding: 0 0 0 10px;
         border: 1px solid transparent;
         border-bottom: 0;
         border-radius: 7px 7px 0 0;
@@ -135,6 +135,14 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .workspace-tab-controls {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0;
+        margin-left: 0;
       }
 
       .workspace-tab-detach,
@@ -342,10 +350,14 @@
               window.electronAPI && window.electronAPI.closeWindowTab(tab.windowId);
             });
 
+            const controls = document.createElement('span');
+            controls.className = 'workspace-tab-controls';
+            controls.appendChild(detach);
+            controls.appendChild(closeButton);
+
             tabButton.appendChild(icon);
             tabButton.appendChild(title);
-            tabButton.appendChild(detach);
-            tabButton.appendChild(closeButton);
+            tabButton.appendChild(controls);
             tabButton.addEventListener('click', () => {
               if (!tab.isActive && window.electronAPI) {
                 window.electronAPI.switchWindowTab(tab.windowId);
