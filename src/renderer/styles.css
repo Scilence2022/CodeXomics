@@ -9,3 +9,88 @@
 @import url('./css/legacy/06-blast-and-sequence-modals.css');
 @import url('./css/legacy/07-action-history-and-track-settings.css');
 @import url('./css/legacy/08-mcp-tools.css');
+
+/* VS Code-style splitters: keep a comfortable hit target, but render as a thin line. */
+:root {
+  --splitter-hit-size: 6px;
+  --splitter-line-color: var(--border-color, #e5e7eb);
+  --splitter-line-active-color: var(--primary-color, #3b82f6);
+}
+
+.sidebar-splitter,
+.chat-dock-splitter {
+  width: var(--splitter-hit-size) !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  cursor: col-resize;
+  transition: background-color 0.12s ease;
+}
+
+.sidebar-splitter::before,
+.chat-dock-splitter::before {
+  content: '';
+  width: 1px;
+  height: 100%;
+  background: var(--splitter-line-color);
+  opacity: 1;
+  transition:
+    background-color 0.12s ease,
+    width 0.12s ease;
+}
+
+.sidebar-splitter:hover::before,
+.sidebar-splitter.resizing::before,
+.sidebar-splitter:focus::before,
+.chat-dock-splitter:hover::before,
+.chat-dock-splitter.resizing::before,
+.chat-dock-splitter:focus::before {
+  width: 2px;
+  background: var(--splitter-line-active-color);
+}
+
+.splitter {
+  height: var(--splitter-hit-size) !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  cursor: row-resize;
+  transition: background-color 0.12s ease;
+}
+
+.splitter::before {
+  content: '';
+  width: 100% !important;
+  height: 1px !important;
+  background: var(--splitter-line-color) !important;
+  border-radius: 0 !important;
+  opacity: 1 !important;
+  transition:
+    background-color 0.12s ease,
+    height 0.12s ease;
+}
+
+.splitter:hover::before,
+.splitter.active::before,
+.splitter:focus::before {
+  height: 2px !important;
+  background: var(--splitter-line-active-color) !important;
+}
+
+.sidebar-splitter-handle,
+.chat-dock-splitter-handle {
+  display: none !important;
+}
+
+.sidebar-splitter::after {
+  display: none !important;
+}
+
+.sidebar-splitter.auto-resetting,
+.splitter.active,
+.chat-dock-splitter.resizing {
+  background: transparent !important;
+  box-shadow: none !important;
+}
