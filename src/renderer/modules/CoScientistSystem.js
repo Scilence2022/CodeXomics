@@ -12,7 +12,7 @@ class CoScientistSystem {
     this.app = options.app || null;
     this.chatManager = options.chatManager || null;
     this.storageKey = options.storageKey || 'codexomics.coScientist.sessions.v1';
-    this.storage = options.storage || this.resolveStorage();
+    this.storage = Object.prototype.hasOwnProperty.call(options, 'storage') ? options.storage : this.resolveStorage();
     this.now = typeof options.now === 'function' ? options.now : () => new Date().toISOString();
     this.idGenerator = typeof options.idGenerator === 'function' ? options.idGenerator : null;
     this.sessions = new Map();
@@ -112,6 +112,90 @@ class CoScientistSystem {
       success: true,
       count: sessions.length,
       sessions,
+    };
+  }
+
+  setPersistenceEnabled(enabled) {
+    if (enabled) {
+      if (!this.storage) {
+        this.storage = this.resolveStorage();
+      }
+      this.persist();
+    } else {
+      this.storage = null;
+    }
+
+    return {
+      success: true,
+      persistenceEnabled: Boolean(this.storage),
+    };
+  }
+
+  updateSessionStatus(parameters = {}) {
+    const session = this.getSession(parameters.sessionId);
+    const nextStatus = this.requireString(parameters.status, 'status').toLowerCase();
+    const allowedStatuses = new Set(['active', 'paused', 'archived']);
+    if (!allowedStatuses.has(nextStatus)) {
+      throw new Error(`Unsupported Co-Scientist session status: ${nextStatus}`);
+    }
+
+    const previousStatus = session.status || 'active';
+    session.status = nextStatus;
+    this.touch(session);
+    this.logActivity(session, 'SupervisorAgent', 'session_status_changed', {
+      previousStatus,
+      status: nextStatus,
+    });
+    this.updateSupervisorStats(session);
+    this.persist();
+
+    return {
+      success: true,
+      sessionId: session.id,
+      previousStatus,
+      status: nextStatus,
+      session: this.toSessionSummary(session),
+    };
+  }
+
+  deleteSession(parameters = {}) {
+    const session = this.getSession(parameters.sessionId);
+    const summary = this.toSessionSummary(session);
+    this.sessions.delete(session.id);
+    this.persist();
+
+    return {
+      success: true,
+      sessionId: session.id,
+      deleted: 1,
+      session: summary,
+    };
+  }
+
+  clearSessions(parameters = {}) {
+    const includeActive = parameters.includeActive === true;
+    const statusFilter = parameters.status ? String(parameters.status).toLowerCase() : null;
+    const deletedSessions = [];
+
+    Array.from(this.sessions.values()).forEach(session => {
+      const sessionStatus = session.status || 'active';
+      const shouldDelete = statusFilter
+        ? sessionStatus === statusFilter
+        : includeActive || sessionStatus === 'archived';
+      if (shouldDelete) {
+        deletedSessions.push(this.toSessionSummary(session));
+        this.sessions.delete(session.id);
+      }
+    });
+
+    if (deletedSessions.length > 0) {
+      this.persist();
+    }
+
+    return {
+      success: true,
+      deleted: deletedSessions.length,
+      sessions: deletedSessions,
     };
   }
 
@@ -851,10 +935,15 @@ class CoScientistSystem {
     if (!experiment) return 0.15;
     const text = String(experiment);
     let score = 0.25;
-    if (/\b(assay|experiment|analysis|screen|model|rna-seq|flow|validation|measure|perturb)\b/i.test(text))
+    if (/\b(assay|experiment|analysis|screen|model|rna-seq|flow|validation|measure|perturb)\b/i.test(text)) {
       score += 0.3;
-    if (/\b(control|endpoint|replicate|statistical|compare|baseline|dose|time)\b/i.test(text)) score += 0.25;
-    if (text.length > 120) score += 0.15;
+    }
+    if (/\b(control|endpoint|replicate|statistical|compare|baseline|dose|time)\b/i.test(text)) {
+      score += 0.25;
+    }
+    if (text.length > 120) {
+      score += 0.15;
+    }
     return this.roundScore(Math.min(1, score));
   }
 
@@ -893,10 +982,12 @@ class CoScientistSystem {
     const strengths = [];
     if (linkedEvidence.length > 0) strengths.push('Links to evidence already present in the session memory.');
     if (hypothesis.proposedExperiment) strengths.push('Includes a proposed validation route.');
-    if (hypothesis.parentIds.length > 0)
+    if (hypothesis.parentIds.length > 0) {
       strengths.push('Carries forward tournament and review feedback from a parent hypothesis.');
-    if (strengths.length === 0)
+    }
+    if (strengths.length === 0) {
       strengths.push('Addresses the stated research goal and can be refined in later cycles.');
+    }
     return strengths;
   }
 
@@ -1033,6 +1124,7 @@ class CoScientistSystem {
   migrateSession(session) {
     return {
       ...session,
+      status: session.status || 'active',
       evidence: Array.isArray(session.evidence) ? session.evidence : [],
       hypotheses: Array.isArray(session.hypotheses) ? session.hypotheses : [],
       reviews: Array.isArray(session.reviews) ? session.reviews : [],

@@ -105,6 +105,21 @@ describe('Menu Builder Module', () => {
     expect(rendererContent).toContain('window.actionManager.handleInsertSequence(true)');
   });
 
+  it('Tools menu should expose the Co-Scientist manager', () => {
+    expect(content).toContain("label: 'Co-Scientist Manager'");
+    expect(content).toContain("'co-scientist-manager'");
+    expect(rendererContent).toContain("ipcRenderer.on('co-scientist-manager'");
+    expect(indexHtml).toContain('id="coScientistManagerModal"');
+    expect(indexHtml).toContain('modules/CoScientistManagerUI.js');
+  });
+
+  it('Agent Settings should include a dedicated Co-Scientist tab', () => {
+    expect(indexHtml).toContain('data-tab="co-scientist"');
+    expect(indexHtml).toContain('id="co-scientist-tab"');
+    expect(indexHtml).toContain('id="coScientistEnabled"');
+    expect(indexHtml).toContain('id="coScientistDefaultCycles"');
+  });
+
   it('createCircosPlotterMenu should accept circosWindow param', () => {
     const match = content.match(/function createCircosPlotterMenu\(\s*circosWindow/);
     expect(match).not.toBeNull();

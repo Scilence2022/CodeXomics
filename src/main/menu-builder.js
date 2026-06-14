@@ -1646,6 +1646,12 @@ function createMenu() {
           },
         },
         {
+          label: 'Co-Scientist Manager',
+          click: () => {
+            sendToCurrentMainWindow('co-scientist-manager');
+          },
+        },
+        {
           label: 'CHOPCHOP CRISPR Toolbox',
           accelerator: 'CmdOrCtrl+Alt+H',
           click: async () => {

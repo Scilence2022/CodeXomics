@@ -22,10 +22,19 @@ class CoScientistService {
       throw new Error('CoScientistSystem is not available');
     }
 
-    const system = new SystemClass({
+    const coScientistSettings =
+      this.chatManager?.configManager && typeof this.chatManager.configManager.get === 'function'
+        ? this.chatManager.configManager.get('multiAgentSettings', {})
+        : {};
+    const systemOptions = {
       app: this.app,
       chatManager: this.chatManager,
-    });
+    };
+    if (coScientistSettings?.coScientistPersistSessions === false) {
+      systemOptions.storage = null;
+    }
+
+    const system = new SystemClass(systemOptions);
 
     if (this.chatManager) {
       this.chatManager.coScientistSystem = system;

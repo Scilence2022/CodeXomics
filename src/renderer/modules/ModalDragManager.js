@@ -200,6 +200,7 @@ class ModalDragManager {
       '#actionListModal',
       '#tabSettingsModal',
       '#multiAgentSettingsModal',
+      '#coScientistManagerModal',
       '#chatboxSettingsModal',
       '#advancedSearchModal',
       '#gelElectrophoresisModal',

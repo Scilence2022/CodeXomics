@@ -142,4 +142,58 @@ describe('CoScientistSystem', () => {
     expect(listed.sessions[0].id).toBe(created.sessionId);
     expect(listed.sessions[0].researchGoal).toContain('fibrosis');
   });
+
+  it('updates session status and hides archived sessions by default', () => {
+    const created = system.startSession({
+      researchGoal: 'Map enhancer hypotheses for lineage plasticity',
+    });
+
+    const status = system.updateSessionStatus({
+      sessionId: created.sessionId,
+      status: 'archived',
+    });
+
+    expect(status.success).toBe(true);
+    expect(status.previousStatus).toBe('active');
+    expect(status.session.status).toBe('archived');
+    expect(system.listSessions().count).toBe(0);
+    expect(system.listSessions({ includeArchived: true }).count).toBe(1);
+  });
+
+  it('deletes a specific session', () => {
+    const first = system.startSession({ researchGoal: 'Find phage-host range drivers' });
+    const second = system.startSession({ researchGoal: 'Prioritize stress response markers' });
+
+    const deleted = system.deleteSession({ sessionId: first.sessionId });
+
+    expect(deleted.success).toBe(true);
+    expect(deleted.deleted).toBe(1);
+    expect(system.listSessions({ includeArchived: true }).sessions.map(item => item.id)).toEqual([second.sessionId]);
+  });
+
+  it('clears archived sessions without removing active sessions', () => {
+    const archived = system.startSession({ researchGoal: 'Archive this session' });
+    const active = system.startSession({ researchGoal: 'Keep this session' });
+    system.updateSessionStatus({ sessionId: archived.sessionId, status: 'archived' });
+
+    const cleared = system.clearSessions();
+
+    expect(cleared.success).toBe(true);
+    expect(cleared.deleted).toBe(1);
+    expect(cleared.sessions[0].id).toBe(archived.sessionId);
+    expect(system.listSessions({ includeArchived: true }).sessions.map(item => item.id)).toEqual([active.sessionId]);
+  });
+
+  it('honors explicit disabled persistence', () => {
+    const volatileSystem = new CoScientistSystem({
+      storage: null,
+      idGenerator: prefix => `${prefix}_volatile`,
+      now: () => '2026-06-14T00:00:00.000Z',
+    });
+
+    const result = volatileSystem.startSession({ researchGoal: 'Keep this session in memory only' });
+
+    expect(result.success).toBe(true);
+    expect(volatileSystem.storage).toBeNull();
+  });
 });

@@ -501,10 +501,19 @@ class ChatManager {
         return;
       }
 
-      this.coScientistSystem = new SystemClass({
+      const coScientistSettings =
+        this.configManager && typeof this.configManager.get === 'function'
+          ? this.configManager.get('multiAgentSettings', {})
+          : {};
+      const coScientistOptions = {
         app: this.app,
         chatManager: this,
-      });
+      };
+      if (coScientistSettings?.coScientistPersistSessions === false) {
+        coScientistOptions.storage = null;
+      }
+
+      this.coScientistSystem = new SystemClass(coScientistOptions);
 
       if (typeof window !== 'undefined') {
         window.coScientistSystem = this.coScientistSystem;

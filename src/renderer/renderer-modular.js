@@ -1,4 +1,4 @@
-/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
+/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, CoScientistManagerUI, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 (typeof window !== 'undefined' && window.path) || {
@@ -439,6 +439,16 @@ class GenomeBrowser {
       console.log('✅ MultiAgentSettingsManager initialized successfully');
     } catch (error) {
       console.error('❌ Error initializing MultiAgentSettingsManager:', error);
+    }
+
+    // Step 5.3: Initialize Co-Scientist management UI
+    console.log('🔬 About to initialize CoScientistManagerUI...');
+    try {
+      this.coScientistManagerUI = new CoScientistManagerUI(this.configManager, this.chatManager);
+      window.coScientistManagerUI = this.coScientistManagerUI;
+      console.log('✅ CoScientistManagerUI initialized successfully');
+    } catch (error) {
+      console.error('❌ Error initializing CoScientistManagerUI:', error);
     }
 
     // Step 5.5: Plugin Management UI and its development tools load on first use.
@@ -3211,6 +3221,33 @@ class GenomeBrowser {
             }
           }, 500);
         }
+      }
+    });
+
+    ipcRenderer.on('co-scientist-manager', () => {
+      console.log('🔬 Co-Scientist Manager requested from Tools menu');
+
+      const showManager = () => {
+        if (window.coScientistManagerUI) {
+          window.coScientistManagerUI.showModal();
+          return true;
+        }
+        if (this.coScientistManagerUI) {
+          this.coScientistManagerUI.showModal();
+          return true;
+        }
+        return false;
+      };
+
+      if (!showManager()) {
+        setTimeout(() => {
+          if (!showManager() && window.genomeBrowser?.showNotification) {
+            window.genomeBrowser.showNotification(
+              'Co-Scientist Manager is still initializing. Please try again in a moment.',
+              'warning'
+            );
+          }
+        }, 500);
       }
     });
 
