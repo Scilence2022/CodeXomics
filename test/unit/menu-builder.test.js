@@ -109,7 +109,9 @@ describe('Menu Builder Module', () => {
     expect(content).toContain("label: 'Co-Scientist Manager'");
     expect(content).toContain("'co-scientist-manager'");
     expect(rendererContent).toContain("ipcRenderer.on('co-scientist-manager'");
+    expect(rendererContent).toContain('openCoScientistManager()');
     expect(indexHtml).toContain('id="coScientistManagerModal"');
+    expect(indexHtml).toContain('id="coScientistManagerBtn"');
     expect(indexHtml).toContain('modules/CoScientistManagerUI.js');
   });
 

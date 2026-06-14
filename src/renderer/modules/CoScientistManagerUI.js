@@ -44,6 +44,7 @@ class CoScientistManagerUI {
     this.modal.dataset.initialized = 'true';
 
     this.bindClick('coScientistRefreshBtn', () => this.refresh());
+    this.bindClick('coScientistManagerBtn', () => this.showModal());
     this.bindClick('coScientistStartSessionBtn', () => this.startSession());
     this.bindClick('coScientistRunCycleBtn', () => this.runCycle());
     this.bindClick('coScientistGenerateBtn', () => this.generateHypotheses());
@@ -103,6 +104,7 @@ class CoScientistManagerUI {
 
     this.applySettingsToControls();
     this.modal.classList.add('show');
+    this.modal.style.display = 'flex';
     this.initializeDragAndResize();
     this.refresh();
     this.startAutoRefresh();
@@ -111,6 +113,7 @@ class CoScientistManagerUI {
   hideModal() {
     if (this.modal) {
       this.modal.classList.remove('show');
+      this.modal.style.display = '';
     }
     this.stopAutoRefresh();
   }

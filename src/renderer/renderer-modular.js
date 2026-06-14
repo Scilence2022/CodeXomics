@@ -3078,6 +3078,49 @@ class GenomeBrowser {
     });
   }
 
+  async openCoScientistManager() {
+    try {
+      if (!window.coScientistManagerUI && !this.coScientistManagerUI) {
+        let ManagerClass =
+          window.CoScientistManagerUI || (typeof CoScientistManagerUI !== 'undefined' ? CoScientistManagerUI : null);
+
+        if (!ManagerClass) {
+          await this.loadScript('modules/CoScientistManagerUI.js');
+          ManagerClass =
+            window.CoScientistManagerUI || (typeof CoScientistManagerUI !== 'undefined' ? CoScientistManagerUI : null);
+        }
+
+        if (ManagerClass) {
+          this.coScientistManagerUI = new ManagerClass(this.configManager, this.chatManager);
+          window.coScientistManagerUI = this.coScientistManagerUI;
+        }
+      }
+
+      const manager = window.coScientistManagerUI || this.coScientistManagerUI;
+      if (manager && typeof manager.showModal === 'function') {
+        manager.showModal();
+        return true;
+      }
+
+      const modal = document.getElementById('coScientistManagerModal');
+      if (modal) {
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+        return true;
+      }
+    } catch (error) {
+      console.error('❌ Failed to open Co-Scientist Manager:', error);
+      const modal = document.getElementById('coScientistManagerModal');
+      if (modal) {
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   setupIPC() {
     // Multi-window support: receive windowId from main process
     ipcRenderer.on('set-window-id', (event, windowId) => {
@@ -3224,32 +3267,42 @@ class GenomeBrowser {
       }
     });
 
-    ipcRenderer.on('co-scientist-manager', () => {
+    ipcRenderer.on('co-scientist-manager', async () => {
       console.log('🔬 Co-Scientist Manager requested from Tools menu');
 
-      const showManager = () => {
-        if (window.coScientistManagerUI) {
-          window.coScientistManagerUI.showModal();
-          return true;
-        }
-        if (this.coScientistManagerUI) {
-          this.coScientistManagerUI.showModal();
-          return true;
-        }
-        return false;
-      };
-
-      if (!showManager()) {
+      if (!(await this.openCoScientistManager())) {
         setTimeout(() => {
-          if (!showManager() && window.genomeBrowser?.showNotification) {
-            window.genomeBrowser.showNotification(
-              'Co-Scientist Manager is still initializing. Please try again in a moment.',
-              'warning'
-            );
-          }
+          this.openCoScientistManager().then(opened => {
+            if (opened) return;
+            const modal = document.getElementById('coScientistManagerModal');
+            if (modal) {
+              modal.classList.add('show');
+              modal.style.display = 'flex';
+              return;
+            }
+
+            if (window.genomeBrowser?.showNotification) {
+              window.genomeBrowser.showNotification(
+                'Co-Scientist Manager is still initializing. Please try again in a moment.',
+                'warning'
+              );
+            }
+          });
         }, 500);
       }
     });
+
+    const coScientistManagerBtn = document.getElementById('coScientistManagerBtn');
+    if (coScientistManagerBtn) {
+      coScientistManagerBtn.addEventListener('click', async () => {
+        if (!(await this.openCoScientistManager()) && window.genomeBrowser?.showNotification) {
+          window.genomeBrowser.showNotification(
+            'Co-Scientist Manager is still initializing. Please try again in a moment.',
+            'warning'
+          );
+        }
+      });
+    }
 
     ipcRenderer.on('general-settings', () => {
       const settingsBtn = document.getElementById('settingsBtn');
