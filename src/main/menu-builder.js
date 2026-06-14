@@ -1868,7 +1868,7 @@ function createMenu() {
         {
           label: 'Documentation',
           click: () => {
-            require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/docs');
+            require('electron').shell.openExternal('https://scilence2022.github.io/CodeXomics/');
           },
         },
         {
