@@ -170,7 +170,7 @@
   border: 1px solid #ccc;
   border-bottom: none;
   border-radius: 8px 8px 0 0;
-  padding: 0 12px;
+  padding: 0 32px 0 38px;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
@@ -224,6 +224,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.genome-tab .tab-index-badge {
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  margin-right: 0;
+}
+
 .genome-tab.active .tab-index-badge {
   border-color: rgba(26, 115, 232, 0.32);
   background: rgba(26, 115, 232, 0.12);
@@ -232,6 +239,7 @@
 
 .tab-title {
   flex: 1;
+  min-width: 0;
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
@@ -258,6 +266,13 @@
   color: #666;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.genome-tab .tab-close-button {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  margin-left: 0;
 }
 
 .tab-close-button:hover {
@@ -372,8 +387,8 @@
 .tab-position-visualization {
   position: absolute;
   bottom: 0;
-  left: 12px;
-  right: 36px;
+  left: 38px;
+  right: 8px;
   height: 3px;
   margin-bottom: 1px;
   opacity: 0.8;
@@ -502,8 +517,8 @@
 /* Responsive adjustments for position visualization */
 @media (max-width: 768px) {
   .tab-position-visualization {
-    left: 8px;
-    right: 30px;
+    left: 34px;
+    right: 8px;
     height: 2px;
   }
 
