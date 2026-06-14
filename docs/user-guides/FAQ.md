@@ -10,7 +10,7 @@ CodeXomics is an advanced, AI-powered genome analysis platform that provides com
 
 Version `0.722.0` is the current source release. It consolidates the platform architecture and adds production-readiness work around:
 
-- **Dynamic Tool Registry** with 180 YAML tool schemas across 18 active categories
+- **Dynamic Tool Registry** with 185 YAML tool schemas across 19 active categories
 - **Multi-Agent AI System** with specialized agents for navigation, analysis, data, plugins, external tools, and research
 - **Dual-mode MCP Server** for direct tool calls or agent-routed prompts
 - **Plugin API 2.0.0** with marketplace infrastructure

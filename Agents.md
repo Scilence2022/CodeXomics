@@ -37,8 +37,8 @@ When adding a new AI-callable tool, update every relevant registry. Missing one 
 
 Current local facts to keep in mind:
 
-- `tools_registry/` currently contains 180 YAML tools across 18 active categories.
-- `builtInToolsMap` currently maps 143 built-in tools.
+- `tools_registry/` currently contains 185 YAML tools across 19 active categories.
+- `builtInToolsMap` currently maps 149 built-in tools.
 - MCP tools mode currently exposes 95 tools.
 - MCP agent mode exposes only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.
 
