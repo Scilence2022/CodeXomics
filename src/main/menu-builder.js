@@ -40,6 +40,22 @@ function isMainGenomeWindow(win) {
   return !!(win && !win.isDestroyed() && (win.windowId || workspaceHostManager.getActiveWindowIdForHost(win)));
 }
 
+function toggleCurrentGenomeDevTools() {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  const currentMainWindow =
+    (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) ||
+    (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
+  const targetWindow = isMainGenomeWindow(focusedWindow) ? focusedWindow : currentMainWindow || currentActiveWindow;
+  const result = workspaceHostManager.toggleDevToolsForHost(targetWindow);
+  if (result.handled) return;
+
+  const fallbackWindow = focusedWindow || currentMainWindow || currentActiveWindow;
+  const fallbackWebContents = fallbackWindow && !fallbackWindow.isDestroyed() ? fallbackWindow.webContents : null;
+  if (fallbackWebContents && !fallbackWebContents.isDestroyed()) {
+    fallbackWebContents.toggleDevTools();
+  }
+}
+
 function restoreMainMenuAfterToolWindow(toolName, reason) {
   setTimeout(() => {
     const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -1408,7 +1424,11 @@ function createMenu() {
       submenu: [
         { role: 'reload' },
         { role: 'forceReload' },
-        { role: 'toggleDevTools' },
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+          click: toggleCurrentGenomeDevTools,
+        },
         { type: 'separator' },
         { role: 'resetZoom' },
         { role: 'zoomIn' },
