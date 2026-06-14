@@ -17,9 +17,14 @@
   -webkit-app-region: drag;
 }
 
+.window-tabs-platform-win32 .window-tab-bar,
 .window-tabs-platform-other .window-tab-bar {
   padding-left: 8px;
-  padding-right: 142px;
+  padding-right: 12px;
+}
+
+.window-tabs-titlebar-overlay .window-tab-bar {
+  padding-right: 178px;
 }
 
 .window-tab-bar[hidden] {

@@ -13,9 +13,19 @@ class WindowTabManager {
     this.root = null;
     this.tabsContainer = null;
     this.statusElement = null;
-    this.platformClass = /mac/i.test(navigator.platform || '')
-      ? 'window-tabs-platform-darwin'
-      : 'window-tabs-platform-other';
+    const runtimePlatform =
+      (typeof window.electronAPI?.platform === 'function'
+        ? window.electronAPI.platform()
+        : window.electronAPI?.platform) ||
+      window.nodeAPI?.platform ||
+      navigator.platform ||
+      '';
+    this.platformClass =
+      runtimePlatform === 'darwin' || /mac/i.test(runtimePlatform)
+        ? 'window-tabs-platform-darwin'
+        : runtimePlatform === 'win32' || /win/i.test(runtimePlatform)
+          ? 'window-tabs-platform-win32'
+          : 'window-tabs-platform-other';
 
     this.initializeUI();
     this.initializeListeners();
@@ -34,6 +44,9 @@ class WindowTabManager {
     }
 
     document.body.classList.add('window-tabs-titlebar', this.platformClass);
+    if (navigator.windowControlsOverlay?.visible) {
+      document.body.classList.add('window-tabs-titlebar-overlay');
+    }
 
     this.root = document.createElement('div');
     this.root.id = 'windowTabBar';

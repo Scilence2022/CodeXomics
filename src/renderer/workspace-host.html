@@ -50,7 +50,7 @@
         display: flex;
         align-items: end;
         gap: 8px;
-        padding: 4px 112px 0 8px;
+        padding: 4px 8px 0 8px;
         background: var(--titlebar-bg);
         -webkit-app-region: drag;
       }
@@ -69,6 +69,10 @@
       body.platform-darwin .workspace-titlebar {
         padding-left: 82px;
         padding-right: 8px;
+      }
+
+      body.platform-titlebar-overlay .workspace-titlebar {
+        padding-right: 178px;
       }
 
       .workspace-tabs {
@@ -332,7 +336,24 @@
         let currentSnapshot = null;
         let draggingWindowId = null;
 
-        document.body.classList.add(/mac/i.test(navigator.platform || '') ? 'platform-darwin' : 'platform-other');
+        const runtimePlatform =
+          (typeof window.electronAPI?.platform === 'function'
+            ? window.electronAPI.platform()
+            : window.electronAPI?.platform) ||
+          window.nodeAPI?.platform ||
+          navigator.platform ||
+          '';
+        const platformClass =
+          runtimePlatform === 'darwin' || /mac/i.test(runtimePlatform)
+            ? 'platform-darwin'
+            : runtimePlatform === 'win32' || /win/i.test(runtimePlatform)
+              ? 'platform-win32'
+              : 'platform-other';
+
+        document.body.classList.add(platformClass);
+        if (navigator.windowControlsOverlay?.visible) {
+          document.body.classList.add('platform-titlebar-overlay');
+        }
         initializeWorkspaceTheme();
 
         window.electronAPI?.ipcRenderer?.on?.('sync-theme', (event, themeData) => {

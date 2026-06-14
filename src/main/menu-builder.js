@@ -1886,52 +1886,6 @@ function createMenu() {
         },
       ],
     },
-    // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
-    {
-      label: APP_NAME,
-      submenu: [
-        {
-          label: `About ${APP_NAME}`,
-          click: () => {
-            const currentWindow = getCurrentMainWindow();
-            dialog.showMessageBox(currentWindow || null, {
-              type: 'info',
-              title: `About ${APP_NAME}`,
-              message: VERSION_INFO.appTitle,
-              detail: 'An intelligent genome analysis platform with AI-powered features.',
-              buttons: ['OK'],
-            });
-          },
-        },
-        { type: 'separator' },
-        {
-          label: 'Services',
-          role: 'services',
-          submenu: [],
-        },
-        { type: 'separator' },
-        {
-          label: `Hide ${APP_NAME}`,
-          accelerator: 'Command+H',
-          role: 'hide',
-        },
-        {
-          label: 'Hide Others',
-          accelerator: 'Command+Shift+H',
-          role: 'hideothers',
-        },
-        {
-          label: 'Show All',
-          role: 'unhide',
-        },
-        { type: 'separator' },
-        {
-          label: `Quit ${APP_NAME}`,
-          accelerator: 'Command+Q',
-          click: () => app.quit(),
-        },
-      ],
-    },
   ];
 
   const menu = Menu.buildFromTemplate(template);

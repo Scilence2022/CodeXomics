@@ -56,12 +56,7 @@ function getGenomeWindowTitleBarOptions() {
   }
 
   return {
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#e8eef6',
-      symbolColor: '#334155',
-      height: HOST_BAR_HEIGHT,
-    },
+    autoHideMenuBar: false,
   };
 }
 
