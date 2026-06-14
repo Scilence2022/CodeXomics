@@ -261,6 +261,7 @@ class TabManager {
       // Create tab element without navigating to it
       const tabElement = this.createTabElement(tabId, savedState.title || 'Restored Tab');
       this.tabs.set(tabId, tabElement);
+      this.refreshTabIndexBadges();
 
       // Store the saved state
       this.tabStates.set(tabId, savedState);
@@ -321,6 +322,7 @@ class TabManager {
     const tabState = this.createTabState(tabId, title, specificPosition);
     this.tabs.set(tabId, tabElement);
     this.tabStates.set(tabId, tabState);
+    this.refreshTabIndexBadges();
 
     // Apply position visualization immediately if we have position data
     if (specificPosition) {
@@ -354,9 +356,10 @@ class TabManager {
     const tab = document.createElement('div');
     tab.className = 'genome-tab';
     tab.dataset.tabId = tabId;
+    const tabIndex = this.tabs.has(tabId) ? Array.from(this.tabs.keys()).indexOf(tabId) : this.tabs.size;
 
     tab.innerHTML = `
-            <i class="tab-icon fas fa-dna"></i>
+            <span class="tab-index-badge" title="LLM tab_index ${tabIndex}" aria-label="LLM tab_index ${tabIndex}">${tabIndex}</span>
             <span class="tab-title">${title}</span>
             <div class="tab-position-visualization">
                 <div class="chromosome-track" title="Chromosome position indicator">
@@ -390,6 +393,20 @@ class TabManager {
     }
 
     return tab;
+  }
+
+  /**
+   * Refresh visible 0-based tab indexes used by LLM tab_index parameters.
+   */
+  refreshTabIndexBadges() {
+    Array.from(this.tabs.entries()).forEach(([tabId, tabElement], index) => {
+      const badge = tabElement.querySelector('.tab-index-badge');
+      if (!badge) return;
+      badge.textContent = String(index);
+      badge.title = `LLM tab_index ${index}`;
+      badge.setAttribute('aria-label', `LLM tab_index ${index}`);
+      tabElement.dataset.tabIndex = String(index);
+    });
   }
 
   /**
@@ -606,6 +623,7 @@ class TabManager {
     this.tabs.delete(tabId);
     this.tabStates.delete(tabId);
     this.clearTabCache(tabId);
+    this.refreshTabIndexBadges();
 
     // Remove from persistent storage if enabled
     if (this.isPersistenceEnabled && this.configManager) {

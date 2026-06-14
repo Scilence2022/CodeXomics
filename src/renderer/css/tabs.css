@@ -205,10 +205,29 @@
   }
 }
 
-.tab-icon {
+.tab-index-badge {
+  flex: 0 0 auto;
+  width: 21px;
+  height: 21px;
   margin-right: 8px;
-  font-size: 14px;
-  color: #666;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(8, 145, 178, 0.28);
+  border-radius: 7px;
+  background: rgba(8, 145, 178, 0.1);
+  color: #0e7490;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.genome-tab.active .tab-index-badge {
+  border-color: rgba(26, 115, 232, 0.32);
+  background: rgba(26, 115, 232, 0.12);
+  color: #1a73e8;
 }
 
 .tab-title {
@@ -766,9 +785,8 @@ input:checked + .slider:before {
   min-width: 200px;
 }
 
-.preview-tab .tab-icon {
-  color: #3b82f6;
-  font-size: 14px;
+.preview-tab .tab-index-badge {
+  margin-right: 0;
 }
 
 .preview-tab .tab-title {

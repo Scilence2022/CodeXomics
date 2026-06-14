@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CodeXomics Workspace</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
       :root {
         --titlebar-height: 38px;
@@ -124,9 +125,13 @@
       }
 
       .workspace-tab-icon {
-        flex: 0 0 auto;
+        flex: 0 0 22px;
+        width: 22px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         color: var(--accent);
-        font-weight: 700;
+        font-size: 18px;
       }
 
       .workspace-tab-title {
@@ -313,9 +318,9 @@
             tabButton.dataset.windowId = tab.windowId;
             tabButton.draggable = true;
 
-            const icon = document.createElement('span');
-            icon.className = 'workspace-tab-icon';
-            icon.textContent = 'DNA';
+            const icon = document.createElement('i');
+            icon.className = 'workspace-tab-icon fas fa-dna';
+            icon.setAttribute('aria-hidden', 'true');
 
             const title = document.createElement('span');
             title.className = 'workspace-tab-title';
