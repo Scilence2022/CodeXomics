@@ -61,10 +61,6 @@ class InternalMCPServer {
     // Convert camelCase method name back to snake_case tool name for ChatManager
     const toolName = method.replace(/([A-Z])/g, '_$1').toLowerCase();
 
-    if (toolName === 'codexomics_chat') {
-      return await this.handleCodexomicsChat(parameters);
-    }
-
     // First, try to delegate to ChatManager for comprehensive tool support
     // ChatManager.executeToolByName() handles 70+ tools with priority routing via ToolExecutionService
     const chatManager = this.genomeStudio.chatManager || window.chatManager;
@@ -97,7 +93,6 @@ class InternalMCPServer {
     // These are kept for backward compatibility and as fallback
     switch (method) {
       // Agent mode - codexomics_chat for MCP agent mode
-      case 'codexomics_chat':
       case 'codexomicsChat':
         return await this.handleCodexomicsChat(parameters);
 
