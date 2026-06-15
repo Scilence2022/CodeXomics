@@ -647,11 +647,9 @@ class BenchmarkUI {
                 <div class="benchmark-header" id="benchmarkHeader">
                     <div class="header-content">
                         <h1 class="benchmark-title">
-                            <span class="title-icon">🧪</span>
-                            <span class="title-text">CodeXomics Benchmark</span>
-                            <span class="title-icon">🧪</span>
+                            <span class="title-text">CodeXomics LLM Benchmark</span>
                         </h1>
-                        <div class="benchmark-subtitle">LLM Instruction Following Benchmark</div>
+                       
                     </div>
                     <div class="header-controls">
                         <button class="minimize-benchmark-btn" onclick="event.stopPropagation(); window.benchmarkUI.toggleBenchmarkInterface()" title="Minimize/Expand Interface">
