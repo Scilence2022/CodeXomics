@@ -1,0 +1,281 @@
+/**
+ * Shared UI style accent bridge.
+ *
+ * Legacy CSS still contains blue-purple values in several high-traffic widgets.
+ * Keep those widgets variable-driven here so every preset can switch cleanly
+ * without copying the same override block into each theme file.
+ */
+
+[data-ui-style] .header {
+  background: var(--header-gradient) !important;
+}
+
+[data-ui-style] .welcome-screen {
+  background: var(--welcome-gradient) !important;
+}
+
+[data-ui-style] #chatboxSettingsModal .modal-header,
+[data-ui-style] .chat-panel .chat-header,
+[data-ui-style] .chat-panel.resizable-movable .chat-header,
+[data-ui-style] .chat-header,
+[data-ui-style] .llm-config-modal .modal-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+[data-ui-style] ::selection {
+  background: var(--selection-bg);
+  color: white;
+}
+
+[data-ui-style] ::focus-visible {
+  outline-color: var(--primary-color);
+}
+
+[data-ui-style] .btn:focus,
+[data-ui-style] .search-input:focus,
+[data-ui-style] .position-input:focus,
+[data-ui-style] .dropdown-toggle:focus,
+[data-ui-style] .select:focus,
+[data-ui-style] .input-full:focus,
+[data-ui-style] .form-input:focus,
+[data-ui-style] .form-textarea:focus,
+[data-ui-style] .form-select:focus,
+[data-ui-style] .search-main-input input:focus,
+[data-ui-style] #chatboxSettingsModal .input-full:focus,
+[data-ui-style] #chatboxSettingsModal .select:focus,
+[data-ui-style] .provider-config input:focus,
+[data-ui-style] .provider-config select:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px var(--focus-ring) !important;
+}
+
+[data-ui-style] .btn-gradient,
+[data-ui-style] #blastBtn,
+[data-ui-style] #newChatBtn,
+[data-ui-style] .toolbar-section #toggleChatBtn,
+[data-ui-style] .welcome-buttons .btn-primary,
+[data-ui-style] .multi-agent-activation,
+[data-ui-style] #addFeaturesBtn,
+[data-ui-style] #primerTrackBtn {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .btn-gradient:hover,
+[data-ui-style] #blastBtn:hover,
+[data-ui-style] #newChatBtn:hover,
+[data-ui-style] .toolbar-section #toggleChatBtn:hover,
+[data-ui-style] .welcome-buttons .btn-primary:hover,
+[data-ui-style] #addFeaturesBtn:hover,
+[data-ui-style] #primerTrackBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.28) !important;
+}
+
+[data-ui-style] .btn-primary,
+[data-ui-style] .header #openFileBtn,
+[data-ui-style] .header .btn-primary.dropdown-toggle,
+[data-ui-style] .chat-send-btn,
+[data-ui-style] .chat-input-container .chat-send-btn,
+[data-ui-style] #sendChatBtn,
+[data-ui-style] #sendChatBtn.processing,
+[data-ui-style] .copy-button,
+[data-ui-style] .scroll-to-gene-btn,
+[data-ui-style] .minimize-benchmark-btn,
+[data-ui-style] .progress-bar,
+[data-ui-style] .badge-primary,
+[data-ui-style] .pagination-item.active {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .btn-primary:hover,
+[data-ui-style] .header #openFileBtn:hover,
+[data-ui-style] .header .btn-primary.dropdown-toggle:hover,
+[data-ui-style] .chat-send-btn:hover,
+[data-ui-style] #sendChatBtn:hover,
+[data-ui-style] .minimize-benchmark-btn:hover {
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.28) !important;
+}
+
+[data-ui-style] .chat-tab.active,
+[data-ui-style] .llm-provider-tabs .tab-button.active,
+[data-ui-style] #chatboxSettingsModal .tab-button.active,
+[data-ui-style] .agent-tab.active,
+[data-ui-style] .tab.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .chat-user-message,
+[data-ui-style] .chat-messages .chat-user-message {
+  background: var(--chat-user-bg) !important;
+}
+
+[data-ui-style] .chat-ai-message,
+[data-ui-style] .chat-messages .chat-ai-message {
+  border-left-color: var(--chat-ai-border) !important;
+}
+
+[data-ui-style] .chat-input-wrapper:focus-within {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px var(--focus-ring) !important;
+}
+
+[data-ui-style] .chat-markdown blockquote,
+[data-ui-style] .chat-markdown pre,
+[data-ui-style] .message-text pre,
+[data-ui-style] .message-text blockquote,
+[data-ui-style] .user-message .message-text pre,
+[data-ui-style] .user-message .message-text blockquote {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+[data-ui-style] .chat-markdown a,
+[data-ui-style] .message-text a,
+[data-ui-style] .markdown-content a,
+[data-ui-style] .provider-config .help-text a {
+  color: var(--accent-indigo) !important;
+}
+
+[data-ui-style] .chat-markdown code,
+[data-ui-style] .message-text a:visited {
+  color: var(--primary-hover) !important;
+}
+
+[data-ui-style] .chat-markdown .code-block-header,
+[data-ui-style] .code-block-header,
+[data-ui-style] .message-text pre[class*='language-']::before {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style] .advanced-search-panel,
+[data-ui-style] .track-tooltip,
+[data-ui-style] .notification-info {
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .search-type-btn.active,
+[data-ui-style] .sidebar-section-title,
+[data-ui-style] .thinking-header,
+[data-ui-style] .thinking-header i,
+[data-ui-style] .dropdown-item i,
+[data-ui-style] .dropdown-section-title i,
+[data-ui-style] #chatboxSettingsModal .slider-value,
+[data-ui-style] .notification-info i,
+[data-ui-style] .toggle-label input[type='checkbox']:checked ~ .toggle-text {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style] .agent-badge,
+[data-ui-style] .expand-indicator {
+  background: rgba(var(--primary-rgb), 0.1) !important;
+  color: var(--primary-color) !important;
+  border-color: rgba(var(--primary-rgb), 0.22) !important;
+}
+
+[data-ui-style] .plugin-badge,
+[data-ui-style] .btn-toggle.active,
+[data-ui-style] #chatboxSettingsModal .setting-checkbox:checked {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .gene-info-header,
+[data-ui-style] .thinking-process,
+[data-ui-style] .progress-item {
+  border-left-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .gene-info-header {
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .gene-element.selected {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+
+[data-ui-style] .search-highlight {
+  background: rgba(var(--primary-rgb), 0.15) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .track-gallery-btn:hover,
+[data-ui-style] .track-selection-btn:hover,
+[data-ui-style] .track-settings-btn:hover {
+  color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .track-layout-btn:hover,
+[data-ui-style] .track-ruler-btn:hover {
+  color: var(--secondary-color) !important;
+  border-color: var(--secondary-color) !important;
+}
+
+[data-ui-style] .sidebar-splitter:focus,
+[data-ui-style] .chat-dock-splitter:focus {
+  outline-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .sidebar-splitter:focus .sidebar-splitter-handle,
+[data-ui-style] .chat-dock-splitter:focus .chat-dock-splitter-handle {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style] input[type='checkbox'] {
+  accent-color: var(--primary-color);
+}
+
+[data-ui-style] .mac-toggle input:checked + .mac-toggle-slider,
+[data-ui-style] .toggle-switch input:checked + .toggle-slider,
+[data-ui-style] .toggle-label input[type='checkbox']:checked + .toggle-slider {
+  background-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .track-checkbox input[type='checkbox']:checked,
+[data-ui-style] .feature-checkbox input[type='checkbox']:checked,
+[data-ui-style] .feature-control-item input[type='checkbox']:checked,
+[data-ui-style] .track-control-item input[type='checkbox']:checked,
+[data-ui-style] .track-controls input[type='checkbox']:checked {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .track-checkbox input[type='checkbox']:focus-visible,
+[data-ui-style] .feature-checkbox input[type='checkbox']:focus-visible,
+[data-ui-style] .feature-control-item input[type='checkbox']:focus-visible,
+[data-ui-style] .track-control-item input[type='checkbox']:focus-visible,
+[data-ui-style] .track-controls input[type='checkbox']:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring) !important;
+}
+
+[data-ui-style] .dropdown-feature-btn:hover {
+  background: rgba(var(--primary-rgb), 0.08) !important;
+  color: var(--primary-hover) !important;
+  border-color: rgba(var(--primary-rgb), 0.24) !important;
+}
+
+[data-ui-style] .dropdown-feature-btn:hover i {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style] .spinner {
+  border-top-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .style-preset-card:hover {
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .style-preset-card.active {
+  background: rgba(var(--primary-rgb), 0.06) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style] .style-preset-card.active::after {
+  color: var(--primary-color) !important;
+}

@@ -1,0 +1,38 @@
+/**
+ * Red UI Style Override
+ * Focused crimson style used when data-ui-style="red" is set on the root element.
+ *
+ * Design Philosophy:
+ * - Crimson as the primary action color
+ * - Warm light surfaces to keep long sessions readable
+ * - Dark red-brown headers for contrast without saturating the whole UI
+ */
+
+[data-ui-style='red'] .version-tag {
+  color: #fecaca;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+[data-ui-style='red'] .nav-btn {
+  background: rgba(220, 38, 38, 0.9) !important;
+}
+
+[data-ui-style='red'] .nav-btn:hover {
+  background: rgba(185, 28, 28, 0.98) !important;
+}
+
+[data-ui-style='red'] .mcp-bridge-status-dot.connected {
+  background-color: var(--primary-color);
+  box-shadow: 0 0 6px rgba(220, 38, 38, 0.5);
+}
+
+[data-ui-style='red'] .alert.alert-primary {
+  background: rgba(var(--primary-rgb), 0.08);
+  color: var(--primary-hover);
+  border-color: rgba(var(--primary-rgb), 0.22);
+}
+
+.style-preview-swatch.red-swatch {
+  background: linear-gradient(135deg, #2b1717 0%, #dc2626 100%);
+}

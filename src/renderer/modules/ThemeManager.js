@@ -672,6 +672,99 @@ class ThemeManager {
           '--selection-bg': '#f48bc3',
         },
       },
+      red: {
+        name: 'Red',
+        description: 'Focused crimson tones with warm light surfaces',
+        icon: 'fa-fire',
+        variables: {
+          // Primary accent - balanced crimson
+          '--primary-color': '#dc2626',
+          '--primary-hover': '#b91c1c',
+          '--primary-rgb': '220, 38, 38',
+
+          // Secondary / neutral
+          '--secondary-color': '#7f1d1d',
+
+          // Backgrounds - warm light surfaces
+          '--bg-primary': '#fffafa',
+          '--bg-secondary': '#fff5f5',
+          '--bg-tertiary': '#fee2e2',
+
+          // Text - deep warm charcoal
+          '--text-primary': '#2f1f1f',
+          '--text-secondary': '#624545',
+          '--text-muted': '#9f7a7a',
+
+          // Borders - soft rose-red
+          '--border-color': '#f1c6c6',
+          '--border-hover': '#e79b9b',
+
+          // Header gradients - charcoal into crimson
+          '--header-gradient': 'linear-gradient(135deg, #2b1717 0%, #7f1d1d 58%, #dc2626 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%)',
+
+          // Accent highlights
+          '--accent-indigo': '#dc2626',
+          '--accent-purple': '#991b1b',
+          '--accent-violet': '#ef4444',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%)',
+          '--chat-ai-border': '#dc2626',
+          '--chat-tab-active': '#dc2626',
+          '--chat-send-bg': '#dc2626',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #b91c1c 0%, #ef4444 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)',
+
+          // Focus ring
+          '--focus-ring': 'rgba(220, 38, 38, 0.26)',
+          '--focus-ring-intense': 'rgba(220, 38, 38, 0.72)',
+
+          // Selection
+          '--selection-bg': '#dc2626',
+        },
+        darkVariables: {
+          // Backgrounds - legacy compatibility only
+          '--bg-primary': '#211313',
+          '--bg-secondary': '#170d0d',
+          '--bg-tertiary': '#321818',
+
+          // Text
+          '--text-primary': '#fff1f1',
+          '--text-secondary': '#f1bcbc',
+          '--text-muted': '#b58282',
+
+          // Borders
+          '--border-color': '#3c1c1c',
+          '--border-hover': '#5c2626',
+
+          // Header gradients
+          '--header-gradient': 'linear-gradient(135deg, #170d0d 0%, #5f1515 58%, #dc2626 100%)',
+          '--welcome-gradient': 'linear-gradient(135deg, #5f1515 0%, #dc2626 100%)',
+          '--modal-header-gradient': 'linear-gradient(135deg, #5f1515 0%, #dc2626 100%)',
+
+          // Accent highlights
+          '--accent-indigo': '#f87171',
+          '--accent-purple': '#ef4444',
+          '--accent-violet': '#fca5a5',
+
+          // Chat bubble colors
+          '--chat-user-bg': 'linear-gradient(135deg, #5f1515 0%, #dc2626 100%)',
+          '--chat-ai-border': '#f87171',
+          '--chat-tab-active': '#f87171',
+          '--chat-send-bg': '#f87171',
+
+          // Button gradient
+          '--btn-gradient': 'linear-gradient(135deg, #f87171 0%, #dc2626 100%)',
+          '--btn-gradient-hover': 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+
+          // Selection
+          '--selection-bg': '#f87171',
+        },
+      },
     };
 
     this.isInitialized = false;
@@ -733,16 +826,8 @@ class ThemeManager {
 
     this.currentStyle = styleName;
 
-    // Remove any previous style class from body
-    document.body.classList.remove(
-      'style-default',
-      'style-professional',
-      'style-minimal',
-      'style-pastel',
-      'style-amy',
-      'style-elegant',
-      'style-midnight'
-    );
+    const styleClasses = Object.keys(this.stylePresets).map(style => `style-${style}`);
+    document.body.classList.remove(...styleClasses);
     document.body.classList.add(`style-${styleName}`);
 
     // Set data attribute for CSS selectors

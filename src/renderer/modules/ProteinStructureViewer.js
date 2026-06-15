@@ -966,6 +966,7 @@ class ProteinStructureViewer {
         'style-minimal',
         'style-pastel',
         'style-amy',
+        'style-red',
         'style-elegant',
         'style-midnight'
       );
