@@ -3730,9 +3730,8 @@ class GenomeBrowser {
             activateMultiAgent: parameters.activate_multi_agent || false,
             context: parameters.context || {},
           });
-        }
-        // Use ChatManager's tool execution system
-        if (window.genomeBrowser && window.genomeBrowser.chatManager) {
+        } else if (window.genomeBrowser && window.genomeBrowser.chatManager) {
+          // Use ChatManager's tool execution system
           console.log('📋 [Renderer] Executing tool via ChatManager:', toolName);
           result = await window.genomeBrowser.chatManager.executeToolByName(toolName, parameters);
         } else if (window.chatManager) {
