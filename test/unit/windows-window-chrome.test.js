@@ -18,6 +18,19 @@ describe('Windows window chrome', () => {
     expect(content).not.toContain("titleBarStyle: 'hidden',");
   });
 
+  it('retries genome view layout after Linux maximize state changes', () => {
+    const content = fs.readFileSync(WORKSPACE_HOST_MANAGER_PATH, 'utf8');
+
+    expect(content).toContain('function scheduleLayoutWorkspace');
+    expect(content).toContain('WINDOW_LAYOUT_RETRY_DELAYS_MS = [0, 50, 150]');
+    expect(content).toContain("hostWindow.on('resize', () => scheduleLayoutWorkspace(workspace));");
+    expect(content).toContain("hostWindow.on('maximize', () => scheduleLayoutWorkspace(workspace));");
+    expect(content).toContain("hostWindow.on('unmaximize', () => scheduleLayoutWorkspace(workspace));");
+    expect(content).toContain("hostWindow.on('restore', () => scheduleLayoutWorkspace(workspace));");
+    expect(content).toContain("hostWindow.on('enter-full-screen', () => scheduleLayoutWorkspace(workspace));");
+    expect(content).toContain("hostWindow.on('leave-full-screen', () => scheduleLayoutWorkspace(workspace));");
+  });
+
   it('keeps macOS-only app menu items out of the Windows main menu template', () => {
     const content = fs.readFileSync(MENU_BUILDER_PATH, 'utf8');
     const createMenuStart = content.indexOf('function createMenu()');

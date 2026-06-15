@@ -15,6 +15,7 @@ const DEVTOOLS_BOTTOM_MAX_HEIGHT = 520;
 const DEVTOOLS_MIN_APP_WIDTH = 520;
 const DEVTOOLS_MIN_APP_HEIGHT = 320;
 const DEVTOOLS_SPLITTER_SIZE = 7;
+const WINDOW_LAYOUT_RETRY_DELAYS_MS = [0, 50, 150];
 const DEVTOOLS_SPLITTER_HTML = encodeURIComponent(`<!doctype html>
 <html>
   <head>
@@ -241,6 +242,36 @@ function layoutWorkspace(workspaceOrId) {
       workspace.devToolsDragState = null;
     }
   }
+}
+
+function clearScheduledLayout(workspace) {
+  if (!workspace?.layoutRetryTimers) return;
+  for (const timer of workspace.layoutRetryTimers) {
+    clearTimeout(timer);
+  }
+  workspace.layoutRetryTimers = [];
+}
+
+function scheduleLayoutWorkspace(workspaceOrId, options = {}) {
+  const workspace = typeof workspaceOrId === 'string' ? workspaces.get(workspaceOrId) : workspaceOrId;
+  if (!workspace || !isUsableWindow(workspace.window)) return;
+
+  clearScheduledLayout(workspace);
+
+  if (options.immediate !== false) {
+    layoutWorkspace(workspace);
+  }
+
+  // Linux window managers can emit maximize before Electron reports the final content bounds.
+  workspace.layoutRetryTimers = WINDOW_LAYOUT_RETRY_DELAYS_MS.map(delay =>
+    setTimeout(() => {
+      if (!workspace || !isUsableWindow(workspace.window)) return;
+      layoutWorkspace(workspace);
+      if (delay === WINDOW_LAYOUT_RETRY_DELAYS_MS[WINDOW_LAYOUT_RETRY_DELAYS_MS.length - 1]) {
+        workspace.layoutRetryTimers = [];
+      }
+    }, delay)
+  );
 }
 
 function sendHostSnapshot(handle, snapshot) {
@@ -707,6 +738,7 @@ function createHostWindow(options = {}) {
     activeViewId: null,
     currentDevToolsSplit: null,
     devToolsDragState: null,
+    layoutRetryTimers: [],
     devToolsSplitterLineView: null,
     devToolsSplitterView: null,
   };
@@ -731,12 +763,12 @@ function createHostWindow(options = {}) {
       hostWindow.__codexomicsHostDevToolsDetached = false;
     }
   });
-  hostWindow.on('resize', () => layoutWorkspace(workspace));
-  hostWindow.on('maximize', () => layoutWorkspace(workspace));
-  hostWindow.on('unmaximize', () => layoutWorkspace(workspace));
-  hostWindow.on('restore', () => layoutWorkspace(workspace));
-  hostWindow.on('enter-full-screen', () => layoutWorkspace(workspace));
-  hostWindow.on('leave-full-screen', () => layoutWorkspace(workspace));
+  hostWindow.on('resize', () => scheduleLayoutWorkspace(workspace));
+  hostWindow.on('maximize', () => scheduleLayoutWorkspace(workspace));
+  hostWindow.on('unmaximize', () => scheduleLayoutWorkspace(workspace));
+  hostWindow.on('restore', () => scheduleLayoutWorkspace(workspace));
+  hostWindow.on('enter-full-screen', () => scheduleLayoutWorkspace(workspace));
+  hostWindow.on('leave-full-screen', () => scheduleLayoutWorkspace(workspace));
   hostWindow.on('blur', () => finishDevToolsSplitterDrag(workspace, { restoreFocus: false }));
   hostWindow.on('focus', () => {
     const activeHandle = viewHandles.get(workspace.activeViewId);
@@ -745,6 +777,7 @@ function createHostWindow(options = {}) {
     }
   });
   hostWindow.on('closed', () => {
+    clearScheduledLayout(workspace);
     for (const windowId of [...workspace.viewIds]) {
       removeGenomeView(windowId, { destroyWebContents: true });
     }
@@ -982,6 +1015,7 @@ module.exports = {
   activateGenomeView,
   closeGenomeView,
   layoutWorkspace,
+  scheduleLayoutWorkspace,
   sendHostSnapshot,
   toggleDevToolsForHost,
 };
