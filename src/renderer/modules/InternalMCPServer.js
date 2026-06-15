@@ -58,6 +58,12 @@ class InternalMCPServer {
 
     console.log(`🔧 [InternalMCPServer] Executing method: ${method}`);
 
+    // codexomics_chat is an MCP runtime wrapper, not a ChatManager tool.
+    // Handle it before generic tool delegation so agent-mode chat reaches processAgentPrompt.
+    if (method === 'codexomicsChat') {
+      return await this.handleCodexomicsChat(parameters);
+    }
+
     // Convert camelCase method name back to snake_case tool name for ChatManager
     const toolName = method.replace(/([A-Z])/g, '_$1').toLowerCase();
 
@@ -92,10 +98,6 @@ class InternalMCPServer {
     // Fallback: Direct handlers for core methods that may not be in ChatManager
     // These are kept for backward compatibility and as fallback
     switch (method) {
-      // Agent mode - codexomics_chat for MCP agent mode
-      case 'codexomicsChat':
-        return await this.handleCodexomicsChat(parameters);
-
       // Navigation methods
       case 'navigateToPosition':
         return await this.navigateToPosition(parameters);
