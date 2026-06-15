@@ -75,7 +75,10 @@ describe('Project IPC Module', () => {
     expect(content).toContain('const setActiveMainWindow = win =>');
     expect(content).toContain("typeof deps.setCurrentActiveWindow === 'function'");
     expect(content).toContain('deps.setCurrentActiveWindow(win)');
-    expect(content).toContain("newMainWindow.webContents.on('focus'");
-    expect(content).toContain('clearActiveMainWindow(newMainWindow)');
+    // The createNewMainWindow handler routes the new window through the shared
+    // tracker via setActiveMainWindow (focus-listener wiring now lives in
+    // window-management.js after the WebContentsView migration).
+    expect(content).toContain("ipcMain.handle('createNewMainWindow'");
+    expect(content).toContain('setActiveMainWindow(newMainWindow)');
   });
 });

@@ -34,11 +34,12 @@ describe('Electron performance settings', () => {
 
   it('opens DevTools only through the development guard', () => {
     const windowManagement = read(WINDOW_MANAGEMENT_PATH);
-    const projectIpc = read(PROJECT_IPC_PATH);
 
     expect(windowManagement).toContain('function openDevToolsInDevelopment(browserWindow)');
     expect(windowManagement.match(/\.openDevTools\(/g) || []).toHaveLength(1);
-    expect(projectIpc).toContain("if (process.argv.includes('--dev'))");
+    // DevTools opening is centralized in window-management.js; the single
+    // openDevTools call is wrapped by the --dev guard inside that helper.
+    expect(windowManagement).toContain("if (process.argv.includes('--dev'))");
   });
 
   it('uses asynchronous production logging', () => {
