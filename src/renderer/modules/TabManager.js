@@ -1165,12 +1165,10 @@ class TabManager {
 
     // Multi-window support: Report the loaded genome name to main process for WindowRegistry
     const genomeName = filename
-      ? String(filename)
-          .replace(/\\/g, '/')
-          .split('/')
-          .filter(Boolean)
-          .pop()
+      ? String(filename).replace(/\\/g, '/').split('/').filter(Boolean).pop()
       : Object.keys(genomeData)[0] || 'Unknown';
+    // Stash on the app so late-starting/reconnecting consumers (e.g. MCPBridge) can resync
+    this.genomeBrowser.currentGenomeName = genomeName;
     if (this.genomeBrowser.windowId && typeof ipcRenderer !== 'undefined') {
       ipcRenderer.send('update-window-genome-name', {
         windowId: this.genomeBrowser.windowId,
@@ -1839,7 +1837,11 @@ class TabManager {
 
       sidebarTrackTypes.forEach(({ type, id }) => {
         const checkbox = document.getElementById(id);
-        if (checkbox && this.genomeBrowser.trackVisibility && Object.prototype.hasOwnProperty.call(this.genomeBrowser.trackVisibility, type)) {
+        if (
+          checkbox &&
+          this.genomeBrowser.trackVisibility &&
+          Object.prototype.hasOwnProperty.call(this.genomeBrowser.trackVisibility, type)
+        ) {
           checkbox.checked = this.genomeBrowser.trackVisibility[type];
         }
       });
@@ -3019,7 +3021,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 // Global debugging function for position indicators
-window.debugPositionIndicators = function() {
+window.debugPositionIndicators = function () {
   console.log('=== Position Indicators Debug ===');
 
   const tabs = document.querySelectorAll('.genome-tab');
@@ -3082,7 +3084,7 @@ window.debugPositionIndicators = function() {
 };
 
 // Add to global scope for easy access
-window.forcePositionIndicatorVisibility = function() {
+window.forcePositionIndicatorVisibility = function () {
   if (window.genomeBrowser && window.genomeBrowser.tabManager) {
     window.genomeBrowser.tabManager.forcePositionIndicatorVisibility();
   } else {

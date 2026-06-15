@@ -779,6 +779,12 @@ class GenomeBrowser {
   async startMCPBridgeWithAvailabilityCheck(loadState = 'initialized') {
     if (!this.mcpBridge) return;
 
+    // If a genome was already loaded before the bridge starts/connects, seed it so
+    // list_genome_windows reflects the loaded genome instead of "No genome loaded".
+    if (this.currentGenomeName && !this.mcpBridge.currentGenomeName) {
+      this.mcpBridge.currentGenomeName = this.currentGenomeName;
+    }
+
     let wsPort = 3003;
 
     try {
