@@ -255,6 +255,8 @@ class BenchmarkUI {
 
                 .header-content {
                     width: 100%;
+                    padding: 0 60px;
+                    box-sizing: border-box;
                 }
 
                 .header-controls {
@@ -366,20 +368,35 @@ class BenchmarkUI {
                 }
 
                 .benchmark-title {
-                    font-size: 28px;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                    margin-bottom: 10px;
+                    font-size: 30px;
+                    font-weight: 800;
+                    letter-spacing: 0.5px;
+                    margin: 0 0 6px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 15px;
+                    gap: 12px;
+                }
+
+                .benchmark-title .title-icon {
+                    font-size: 0.85em;
+                    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+                }
+
+                .benchmark-title .title-text {
+                    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+                    -webkit-background-clip: text;
+                    background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    color: transparent;
                 }
 
                 .benchmark-subtitle {
-                    font-size: 16px;
+                    font-size: 14px;
                     color: var(--text-secondary);
-                    font-weight: 400;
+                    font-weight: 500;
+                    letter-spacing: 0.3px;
+                    text-transform: uppercase;
                 }
 
                 .benchmark-section {
@@ -630,11 +647,11 @@ class BenchmarkUI {
                 <div class="benchmark-header" id="benchmarkHeader">
                     <div class="header-content">
                         <h1 class="benchmark-title">
-                            <span>🧪</span>
-                            LLM Instruction Following Benchmark
-                            <span>🧪</span>
+                            <span class="title-icon">🧪</span>
+                            <span class="title-text">CodeXomics Benchmark</span>
+                            <span class="title-icon">🧪</span>
                         </h1>
-
+                        <div class="benchmark-subtitle">LLM Instruction Following Benchmark</div>
                     </div>
                     <div class="header-controls">
                         <button class="minimize-benchmark-btn" onclick="event.stopPropagation(); window.benchmarkUI.toggleBenchmarkInterface()" title="Minimize/Expand Interface">
@@ -4149,7 +4166,7 @@ class BenchmarkUI {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM Instruction Following Benchmark - CodeXomics</title>
+    <title>CodeXomics Benchmark</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -4277,8 +4294,8 @@ class BenchmarkUI {
     <div style="height: calc(100vh - 40px); display: flex; flex-direction: column;">
         <!-- Header -->
         <div style="background: rgba(255, 255, 255, 0.95); padding: 20px 30px; border-bottom: 1px solid rgba(0,0,0,0.1);">
-            <h1 style="color: #2c3e50; font-size: 24px; margin-bottom: 5px;">🧪 LLM Instruction Following Benchmark</h1>
-            <div style="color: #6c757d; font-size: 14px;">Comprehensive testing of LLM instruction following capabilities</div>
+            <h1 style="color: #2c3e50; font-size: 24px; margin-bottom: 5px;">🧪 CodeXomics Benchmark</h1>
+            <div style="color: #6c757d; font-size: 14px;">LLM Instruction Following Benchmark — comprehensive testing of instruction following capabilities</div>
         </div>
 
         <!-- Content -->
@@ -5490,7 +5507,7 @@ class BenchmarkUI {
                     suiteInfo = '\\n- Test counts unavailable (framework not loaded)';
                 }
                 
-                alert('LLM Instruction Following Benchmark v1.0.0\\n\\nComprehensive testing framework for LLM instruction following capabilities.\\n\\n• 4 active test suites\\n• ' + totalTests + ' individual tests\\n• Advanced statistical analysis\\n• Professional reporting\\n\\nActive Test Suites:' + suiteInfo);
+                alert('CodeXomics Benchmark v1.0.0\\n\\nLLM Instruction Following Benchmark — comprehensive testing framework for LLM instruction following capabilities.\\n\\n• 4 active test suites\\n• ' + totalTests + ' individual tests\\n• Advanced statistical analysis\\n• Professional reporting\\n\\nActive Test Suites:' + suiteInfo);
             }
 
             downloadJSON(data, filename) {
