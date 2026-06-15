@@ -58,6 +58,20 @@ class ToolExecutionService {
 
       console.log(`[ToolExecutionService] Executing: ${toolName}`, parameters);
 
+      // MCP agent-mode entry point. Keep this ahead of generic service routing so
+      // codexomics_chat never falls through to the unknown-tool path.
+      if (toolName === 'codexomics_chat') {
+        const chatManager = this.chatManager || window.genomeBrowser?.chatManager || window.chatManager;
+        if (!chatManager || typeof chatManager.processAgentPrompt !== 'function') {
+          throw new Error('processAgentPrompt method not available for codexomics_chat');
+        }
+
+        return await chatManager.processAgentPrompt(parameters?.prompt, {
+          activateMultiAgent: parameters?.activate_multi_agent || false,
+          context: parameters?.context || {},
+        });
+      }
+
       // --- PRIORITY 1: MULTI-AGENT SETTINGS (if handled exclusively) ---
       if (
         ['update_agent_setting', 'get_agent_settings', 'toggle_agent_mode'].includes(toolName) &&

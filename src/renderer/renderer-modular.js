@@ -3606,7 +3606,9 @@ class GenomeBrowser {
       console.log('🔧 MCP tool call received:', data);
 
       try {
-        const { requestId, method, parameters } = data;
+        const { requestId, method, parameters, toolName } = data;
+        const isCodexomicsChatCall =
+          method === 'codexomics_chat' || method === 'codexomicsChat' || toolName === 'codexomics_chat';
 
         // Check if this is an action function call
         if (method && method.startsWith('action_')) {
@@ -3629,7 +3631,12 @@ class GenomeBrowser {
               error: 'ActionManager not available',
             });
           }
-        } else if (method === 'codexomics_chat') {
+        } else if (isCodexomicsChatCall) {
+          if (this.internalMCPServer?.isRunning) {
+            console.log('📥 [Renderer] Letting InternalMCPServer handle codexomics_chat');
+            return;
+          }
+
           // Check if this is a codexomics_chat agent call
           try {
             const chatManager = window.genomeBrowser?.chatManager || window.chatManager;
@@ -3721,7 +3728,7 @@ class GenomeBrowser {
         let result;
 
         // Handle codexomics_chat agent mode
-        if (toolName === 'codexomics_chat') {
+        if (toolName === 'codexomics_chat' || toolName === 'codexomicsChat') {
           const chatManager = window.genomeBrowser?.chatManager || window.chatManager;
           if (!chatManager) {
             throw new Error('ChatManager not available for agent mode');
