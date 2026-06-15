@@ -24,6 +24,7 @@ const {
 
   rememberApprovedDialogPaths,
   getDefaultWritableRoots,
+  getUserPluginRoots,
   assertAllowedFileAccess,
   assertPluginPath,
   safePluginJoin,
@@ -702,7 +703,13 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('ensure-directory', async (event, dirPath) => {
     try {
-      const safeDirPath = assertAllowedFileAccess(app, dirPath, { operation: 'create directory' });
+      // Allow the default writable roots plus the user-installed plugin roots,
+      // since this handler is used to set up the UserInstalled plugins directory
+      // (which is otherwise only reachable through assertPluginPath).
+      const safeDirPath = assertAllowedFileAccess(app, dirPath, {
+        operation: 'create directory',
+        allowedRoots: [...getDefaultWritableRoots(app), ...getUserPluginRoots(app)],
+      });
       if (!fs.existsSync(safeDirPath)) {
         fs.mkdirSync(safeDirPath, { recursive: true });
         console.log('Created directory:', safeDirPath);

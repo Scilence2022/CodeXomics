@@ -185,6 +185,24 @@ describe('security-utils', () => {
     expect(() => securityUtils.assertPluginPath(app, blockedPath)).toThrow(/escapes user plugin directory/);
   });
 
+  it('permits the user-installed plugin directory only when plugin roots are added to allowedRoots', () => {
+    const pluginRoots = securityUtils.getUserPluginRoots(app);
+    const userInstalled = pluginRoots.find(root => root.endsWith(path.join('Plugins', 'UserInstalled')));
+    expect(userInstalled).toBeDefined();
+
+    // Default writable roots alone reject the source-tree plugin dir — this was the
+    // ensure-directory regression that blocked plugin setup in dev mode.
+    expect(() => securityUtils.assertAllowedFileAccess(app, userInstalled, { operation: 'create directory' })).toThrow(
+      /Blocked create directory/
+    );
+
+    // The ensure-directory handler widens allowedRoots to include the plugin roots.
+    const allowedRoots = [...securityUtils.getDefaultWritableRoots(app), ...pluginRoots];
+    expect(
+      securityUtils.assertAllowedFileAccess(app, userInstalled, { operation: 'create directory', allowedRoots })
+    ).toBe(path.resolve(userInstalled));
+  });
+
   it('rejects archive entries that escape the extraction root', () => {
     expect(securityUtils.assertSafeArchiveEntry('plugin/index.js')).toBe('plugin/index.js');
     expect(() => securityUtils.assertSafeArchiveEntry('../index.js')).toThrow(/Unsafe archive entry/);
