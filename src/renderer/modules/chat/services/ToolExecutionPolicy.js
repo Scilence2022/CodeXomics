@@ -163,7 +163,13 @@ class ToolExecutionPolicy {
   }
 
   shouldAllowWithinGlobalLimits(toolName, toolKey, applicablePolicyName, conversationHistory) {
-    const exemptedPolicies = ['scroll_operations', 'zoom_operations', 'system_utility', 'repeatable_ui_operations'];
+    const exemptedPolicies = [
+      'scroll_operations',
+      'zoom_operations',
+      'system_utility',
+      'repeatable_ui_operations',
+      'co_scientist',
+    ];
     if (exemptedPolicies.includes(applicablePolicyName)) {
       return true;
     }
@@ -199,6 +205,7 @@ class ToolExecutionPolicy {
       'position_navigation',
       'track_operations',
       'system_utility',
+      'co_scientist',
     ];
 
     if (!exemptedFromTotalLimit.includes(applicablePolicyName)) {

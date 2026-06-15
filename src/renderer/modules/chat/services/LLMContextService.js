@@ -340,6 +340,24 @@ class LLMContextService {
       case 'open_protein_viewer':
         return `✓ Opened protein viewer for ${result.structureId || result.uniprotId || result.pdbId || result.geneName || 'structure'}${result.source ? ` from ${result.source}` : ''}`;
 
+      case 'start_co_scientist_session':
+        return `Co-Scientist session started: ${result.sessionId} (${result.session?.researchGoal || 'research goal saved'})`;
+
+      case 'list_co_scientist_sessions':
+        return `Co-Scientist sessions: ${result.count || 0} session(s) available`;
+
+      case 'add_co_scientist_evidence':
+        return `Added ${result.added || 0} evidence item(s) to Co-Scientist session ${result.sessionId}`;
+
+      case 'generate_co_scientist_hypotheses':
+        return `Generated ${result.generated || 0} Co-Scientist hypothesis candidate(s) for session ${result.sessionId}`;
+
+      case 'run_co_scientist_cycle':
+        return `Ran ${result.cyclesRun || 0} Co-Scientist cycle(s) for session ${result.sessionId}; iteration ${result.iterations || 0}`;
+
+      case 'get_co_scientist_report':
+        return `Prepared Co-Scientist report for session ${result.sessionId}`;
+
       default:
         return `✅ Tool ${toolName} executed successfully`;
     }

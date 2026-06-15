@@ -1,4 +1,4 @@
-/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
+/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, CoScientistManagerUI, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 (typeof window !== 'undefined' && window.path) || {
@@ -439,6 +439,16 @@ class GenomeBrowser {
       console.log('✅ MultiAgentSettingsManager initialized successfully');
     } catch (error) {
       console.error('❌ Error initializing MultiAgentSettingsManager:', error);
+    }
+
+    // Step 5.3: Initialize Co-Scientist management UI
+    console.log('🔬 About to initialize CoScientistManagerUI...');
+    try {
+      this.coScientistManagerUI = new CoScientistManagerUI(this.configManager, this.chatManager);
+      window.coScientistManagerUI = this.coScientistManagerUI;
+      console.log('✅ CoScientistManagerUI initialized successfully');
+    } catch (error) {
+      console.error('❌ Error initializing CoScientistManagerUI:', error);
     }
 
     // Step 5.5: Plugin Management UI and its development tools load on first use.
@@ -3068,6 +3078,49 @@ class GenomeBrowser {
     });
   }
 
+  async openCoScientistManager() {
+    try {
+      if (!window.coScientistManagerUI && !this.coScientistManagerUI) {
+        let ManagerClass =
+          window.CoScientistManagerUI || (typeof CoScientistManagerUI !== 'undefined' ? CoScientistManagerUI : null);
+
+        if (!ManagerClass) {
+          await this.loadScript('modules/CoScientistManagerUI.js');
+          ManagerClass =
+            window.CoScientistManagerUI || (typeof CoScientistManagerUI !== 'undefined' ? CoScientistManagerUI : null);
+        }
+
+        if (ManagerClass) {
+          this.coScientistManagerUI = new ManagerClass(this.configManager, this.chatManager);
+          window.coScientistManagerUI = this.coScientistManagerUI;
+        }
+      }
+
+      const manager = window.coScientistManagerUI || this.coScientistManagerUI;
+      if (manager && typeof manager.showModal === 'function') {
+        manager.showModal();
+        return true;
+      }
+
+      const modal = document.getElementById('coScientistManagerModal');
+      if (modal) {
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+        return true;
+      }
+    } catch (error) {
+      console.error('❌ Failed to open Co-Scientist Manager:', error);
+      const modal = document.getElementById('coScientistManagerModal');
+      if (modal) {
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   setupIPC() {
     // Multi-window support: receive windowId from main process
     ipcRenderer.on('set-window-id', (event, windowId) => {
@@ -3213,6 +3266,43 @@ class GenomeBrowser {
         }
       }
     });
+
+    ipcRenderer.on('co-scientist-manager', async () => {
+      console.log('🔬 Co-Scientist Manager requested from Tools menu');
+
+      if (!(await this.openCoScientistManager())) {
+        setTimeout(() => {
+          this.openCoScientistManager().then(opened => {
+            if (opened) return;
+            const modal = document.getElementById('coScientistManagerModal');
+            if (modal) {
+              modal.classList.add('show');
+              modal.style.display = 'flex';
+              return;
+            }
+
+            if (window.genomeBrowser?.showNotification) {
+              window.genomeBrowser.showNotification(
+                'Co-Scientist Manager is still initializing. Please try again in a moment.',
+                'warning'
+              );
+            }
+          });
+        }, 500);
+      }
+    });
+
+    const coScientistManagerBtn = document.getElementById('coScientistManagerBtn');
+    if (coScientistManagerBtn) {
+      coScientistManagerBtn.addEventListener('click', async () => {
+        if (!(await this.openCoScientistManager()) && window.genomeBrowser?.showNotification) {
+          window.genomeBrowser.showNotification(
+            'Co-Scientist Manager is still initializing. Please try again in a moment.',
+            'warning'
+          );
+        }
+      });
+    }
 
     ipcRenderer.on('general-settings', () => {
       const settingsBtn = document.getElementById('settingsBtn');

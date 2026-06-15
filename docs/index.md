@@ -52,8 +52,8 @@ The current source release is `0.722.0`, displayed as `v0.722` in the applicatio
 | ---------------------- | -------------------------------------------------------------------------------------- |
 | Application version    | `0.722.0` (`v0.722` display)                                                           |
 | Runtime baseline       | Node.js 20/22 for source builds; Electron `41.7.1`                                     |
-| Tool registry          | 180 YAML schemas across 18 active categories                                           |
-| Built-in ChatBox tools | 143 mapped local tools                                                                 |
+| Tool registry          | 185 YAML schemas across 19 active categories                                           |
+| Built-in ChatBox tools | 149 mapped local tools                                                                 |
 | MCP tools mode         | 95 tools exposed                                                                       |
 | MCP agent mode         | `codexomics_chat`, `list_genome_windows`, `switch_active_window`                       |
 | Runtime agents         | Coordinator, Analysis, Data, Navigation, External, Plugin, DeepResearch                |

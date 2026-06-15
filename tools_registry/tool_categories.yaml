@@ -226,6 +226,20 @@ categories:
       - 'task_tracking'
     tools_count: 5
 
+  co_scientist:
+    name: 'Co-Scientist'
+    description: 'Independent research agent tools for scientific discovery sessions, hypothesis tournaments, evidence feedback, and research reports'
+    icon: '🔬'
+    priority: 2
+    color: '#00A6A6'
+    subcategories:
+      - 'research_sessions'
+      - 'evidence_memory'
+      - 'hypothesis_generation'
+      - 'tournament_ranking'
+      - 'meta_review'
+    tools_count: 6
+
 # Tool priority levels
 priority_levels:
   1: 'Critical - Core functionality tools'

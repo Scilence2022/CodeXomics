@@ -165,6 +165,49 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // Co-Scientist research agent tools
+    this.builtInToolsMap.set('start_co_scientist_session', {
+      method: 'startCoScientistSession',
+      category: 'co_scientist',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('list_co_scientist_sessions', {
+      method: 'listCoScientistSessions',
+      category: 'co_scientist',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('add_co_scientist_evidence', {
+      method: 'addCoScientistEvidence',
+      category: 'co_scientist',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('generate_co_scientist_hypotheses', {
+      method: 'generateCoScientistHypotheses',
+      category: 'co_scientist',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('run_co_scientist_cycle', {
+      method: 'runCoScientistCycle',
+      category: 'co_scientist',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('get_co_scientist_report', {
+      method: 'getCoScientistReport',
+      category: 'co_scientist',
+      type: 'built-in',
+      priority: 2,
+    });
+
     // Database tools - UniProt
     this.builtInToolsMap.set('search_uniprot_database', {
       method: 'searchUniProtDatabase',
@@ -1236,6 +1279,53 @@ class BuiltInToolsIntegration {
           reason: 'Task management keywords detected',
         }
       );
+    }
+
+    // Check for Co-Scientist research workflow patterns
+    if (
+      /\b(co[-\s]?scientist|autonomous\s+scientist|scientific\s+discovery|hypothes(es|is)|research\s+cycle|meta[-\s]?review|tournament\s+ranking)\b/i.test(
+        query
+      ) ||
+      /自主科学家|科学发现|假设生成|假设排序|研究循环/i.test(query)
+    ) {
+      relevantTools.push(
+        {
+          name: 'start_co_scientist_session',
+          confidence: 0.92,
+          reason: 'Co-Scientist research session keywords detected',
+        },
+        {
+          name: 'generate_co_scientist_hypotheses',
+          confidence: 0.9,
+          reason: 'Co-Scientist hypothesis generation keywords detected',
+        },
+        {
+          name: 'run_co_scientist_cycle',
+          confidence: 0.9,
+          reason: 'Co-Scientist discovery cycle keywords detected',
+        },
+        {
+          name: 'get_co_scientist_report',
+          confidence: 0.85,
+          reason: 'Co-Scientist report keywords detected',
+        }
+      );
+
+      if (/\b(evidence|literature|paper|experiment|observation|feedback|result|data)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'add_co_scientist_evidence',
+          confidence: 0.9,
+          reason: 'Co-Scientist evidence or feedback keywords detected',
+        });
+      }
+
+      if (/\b(list|show|display|sessions?|memory|state)\b/i.test(query)) {
+        relevantTools.push({
+          name: 'list_co_scientist_sessions',
+          confidence: 0.82,
+          reason: 'Co-Scientist session listing keywords detected',
+        });
+      }
     }
 
     // Check for file loading patterns

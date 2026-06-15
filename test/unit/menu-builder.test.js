@@ -8,16 +8,19 @@ import path from 'path';
 const MB_PATH = path.join(process.cwd(), 'src/main/menu-builder.js');
 const INDEX_PATH = path.join(process.cwd(), 'src/renderer/index.html');
 const RENDERER_PATH = path.join(process.cwd(), 'src/renderer/renderer-modular.js');
+const PRELOAD_PATH = path.join(process.cwd(), 'src/preload.js');
 
 describe('Menu Builder Module', () => {
   let content;
   let indexHtml;
   let rendererContent;
+  let preloadContent;
 
   beforeAll(() => {
     content = fs.readFileSync(MB_PATH, 'utf-8');
     indexHtml = fs.readFileSync(INDEX_PATH, 'utf-8');
     rendererContent = fs.readFileSync(RENDERER_PATH, 'utf-8');
+    preloadContent = fs.readFileSync(PRELOAD_PATH, 'utf-8');
   });
 
   it('should use strict mode', () => {
@@ -103,6 +106,24 @@ describe('Menu Builder Module', () => {
     expect(rendererContent).toContain('window.actionManager.handlePasteSequence(true)');
     expect(rendererContent).toContain("ipcRenderer.on('action-insert-sequence-reverse'");
     expect(rendererContent).toContain('window.actionManager.handleInsertSequence(true)');
+  });
+
+  it('Tools menu should expose the Co-Scientist manager', () => {
+    expect(content).toContain("label: 'Co-Scientist Manager'");
+    expect(content).toContain("'co-scientist-manager'");
+    expect(rendererContent).toContain("ipcRenderer.on('co-scientist-manager'");
+    expect(rendererContent).toContain('openCoScientistManager()');
+    expect(preloadContent).toContain("'co-scientist-manager'");
+    expect(indexHtml).toContain('id="coScientistManagerModal"');
+    expect(indexHtml).toContain('id="coScientistManagerBtn"');
+    expect(indexHtml).toContain('modules/CoScientistManagerUI.js');
+  });
+
+  it('Agent Settings should include a dedicated Co-Scientist tab', () => {
+    expect(indexHtml).toContain('data-tab="co-scientist"');
+    expect(indexHtml).toContain('id="co-scientist-tab"');
+    expect(indexHtml).toContain('id="coScientistEnabled"');
+    expect(indexHtml).toContain('id="coScientistDefaultCycles"');
   });
 
   it('createCircosPlotterMenu should accept circosWindow param', () => {

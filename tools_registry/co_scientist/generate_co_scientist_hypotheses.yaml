@@ -1,0 +1,79 @@
+name: 'generate_co_scientist_hypotheses'
+version: '1.0.0'
+description: 'Generate or register candidate research hypotheses inside a Co-Scientist session using the Generation agent.'
+category: 'co_scientist'
+keywords:
+  - 'co-scientist'
+  - 'co scientist'
+  - 'generate hypotheses'
+  - 'hypothesis generation'
+  - 'research hypothesis'
+  - 'scientific idea'
+  - 'candidate mechanism'
+  - 'drug repurposing'
+  - 'target discovery'
+priority: 1
+
+execution:
+  type: 'client'
+  timeout: 15000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
+parameters:
+  type: 'object'
+  properties:
+    sessionId:
+      type: 'string'
+      description: 'Co-Scientist session ID.'
+    count:
+      type: 'number'
+      description: 'Number of hypotheses to create when no explicit candidates are supplied.'
+      default: 3
+      minimum: 1
+      maximum: 12
+    strategy:
+      type: 'string'
+      enum: ['generation', 'continued_generation', 'scientist_seed', 'evolution', 'analogy', 'mechanism_search']
+      description: 'Generation strategy label stored in session memory.'
+      default: 'generation'
+    focusAreas:
+      type: 'array'
+      items:
+        type: 'string'
+      description: 'Optional concepts or mechanisms to focus the generation step.'
+      default: []
+    hypotheses:
+      type: 'array'
+      description: 'Optional explicit hypothesis strings or structured hypothesis objects from the LLM/scientist.'
+      items:
+        oneOf:
+          - type: 'string'
+          - type: 'object'
+      default: []
+  required: ['sessionId']
+
+sample_usages:
+  - user_query: 'Generate three Co-Scientist hypotheses for this session.'
+    tool_call: "generate_co_scientist_hypotheses(sessionId='cosci_123', count=3, focusAreas=['RPE phagocytosis', 'ROCK inhibition'])"
+    expected_result: 'Candidate hypotheses are added to the session and queued for reflection and ranking.'
+
+relationships:
+  depends_on: ['start_co_scientist_session']
+  conflicts_with: []
+  enhances: ['run_co_scientist_cycle']
+  alternatives: ['deep_research']
+  follow_up: ['run_co_scientist_cycle']
+
+metadata:
+  tags: ['co-scientist', 'hypothesis', 'generation']
+  complexity: 'moderate'
+  usage_pattern: 'common'
+
+returns:
+  success: 'boolean - Whether hypotheses were generated.'
+  generated: 'number - Number of hypotheses generated.'
+  hypotheses: 'array - Structured hypothesis records.'
+  supervisorStats: 'object - Updated session statistics.'

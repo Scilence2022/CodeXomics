@@ -1,0 +1,94 @@
+name: 'start_co_scientist_session'
+version: '1.0.0'
+description: 'Start an independent Co-Scientist research session for autonomous scientific discovery, hypothesis generation, review, ranking, and experiment planning.'
+category: 'co_scientist'
+keywords:
+  - 'co-scientist'
+  - 'co scientist'
+  - 'scientific discovery'
+  - 'autonomous scientist'
+  - 'research session'
+  - 'hypothesis'
+  - 'experiment planning'
+  - 'start research'
+  - '自主科学家'
+priority: 1
+
+execution:
+  type: 'client'
+  timeout: 10000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
+parameters:
+  type: 'object'
+  properties:
+    researchGoal:
+      type: 'string'
+      description: 'Natural-language scientific research goal for the Co-Scientist session.'
+      examples:
+        - 'Identify testable mechanisms for antimicrobial resistance transfer in phage-related mobile elements.'
+    domain:
+      type: 'string'
+      description: 'Research domain or discipline.'
+      default: 'biomedicine'
+    constraints:
+      type: 'array'
+      items:
+        type: 'string'
+      description: 'Hard constraints the system should respect while generating and evolving hypotheses.'
+      default: []
+    desiredAttributes:
+      type: 'array'
+      items:
+        type: 'string'
+      description: 'Preferred qualities such as novelty, feasibility, low cost, or assay readiness.'
+      default: []
+    safetyNotes:
+      type: 'array'
+      items:
+        type: 'string'
+      description: 'Safety, ethics, containment, or approval notes that should affect review scores.'
+      default: []
+    seedIdeas:
+      type: 'array'
+      description: 'Optional scientist-provided seed hypotheses or idea objects.'
+      items:
+        oneOf:
+          - type: 'string'
+          - type: 'object'
+      default: []
+    initialEvidence:
+      type: 'array'
+      description: 'Optional initial evidence strings or evidence objects.'
+      items:
+        oneOf:
+          - type: 'string'
+          - type: 'object'
+      default: []
+  required: ['researchGoal']
+
+sample_usages:
+  - user_query: 'Start a Co-Scientist project to discover drug repurposing hypotheses for AML.'
+    tool_call: "start_co_scientist_session(researchGoal='Discover testable drug repurposing hypotheses for AML', domain='biomedicine', desiredAttributes=['novel', 'testable'])"
+    expected_result: 'A new Co-Scientist session ID with active discovery agents and persistent session memory.'
+
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['generate_co_scientist_hypotheses', 'run_co_scientist_cycle']
+  alternatives: ['coordinate_task', 'deep_research']
+  follow_up: ['add_co_scientist_evidence', 'generate_co_scientist_hypotheses']
+
+metadata:
+  tags: ['co-scientist', 'research', 'hypothesis', 'scientific-discovery']
+  complexity: 'moderate'
+  usage_pattern: 'occasional'
+
+returns:
+  success: 'boolean - Whether the session was created.'
+  sessionId: 'string - Persistent Co-Scientist session identifier.'
+  session: 'object - Session summary.'
+  agents: 'array - Internal Co-Scientist agent roles.'

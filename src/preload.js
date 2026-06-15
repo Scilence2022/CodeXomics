@@ -152,6 +152,7 @@ const allowedListenChannels = [
   'configure-search',
   'mcp-settings',
   'multi-agent-settings',
+  'co-scientist-manager',
   'general-settings',
   'chatbox-settings',
   'check-file-status',

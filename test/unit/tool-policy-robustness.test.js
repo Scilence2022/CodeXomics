@@ -195,6 +195,15 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(capabilityPolicy.getPolicyForTool('set_working_directory').name).toBe('system_utility');
   });
 
+  it('should include Co-Scientist tools in an explicit repeatable research policy', () => {
+    const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
+    const capabilityPolicy = new ToolCapabilityPolicy();
+
+    expect(capabilityPolicy.getPolicyForTool('start_co_scientist_session').name).toBe('co_scientist');
+    expect(capabilityPolicy.getPolicyForTool('run_co_scientist_cycle').name).toBe('co_scientist');
+    expect(capabilityPolicy.getPolicyForTool('get_co_scientist_report').policy.policy).toBe('always_allowed');
+  });
+
   it('should classify open_new_tab as a bounded repeatable UI operation', () => {
     const ToolCapabilityPolicy = globalThis.ToolCapabilityPolicy;
     const capabilityPolicy = new ToolCapabilityPolicy();
@@ -224,6 +233,28 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(policy.shouldAllowToolExecution({ tool_name: 'start_benchmark', parameters: { suite: 'quick' } }, [])).toBe(
       true
     );
+  });
+
+  it('should not apply global repetition limits to Co-Scientist iteration tools', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const policy = new ToolExecutionPolicy({
+      chatManager: {
+        configManager: {
+          get: (key, fallback) => {
+            if (key === 'chatboxSettings') return {};
+            return fallback;
+          },
+        },
+        getToolExecutionKey: (toolName, parameters) => `${toolName}:${JSON.stringify(parameters)}`,
+        getToolExecutionCount: () => 99,
+        getToolExecutionCountByName: () => 99,
+        wasToolExecutedSuccessfully: () => true,
+      },
+    });
+
+    expect(
+      policy.shouldAllowToolExecution({ tool_name: 'run_co_scientist_cycle', parameters: { sessionId: 'cosci_1' } }, [])
+    ).toBe(true);
   });
 
   it('should normalize parameters order-independently (LLMContextService)', () => {
