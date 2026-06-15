@@ -6,13 +6,12 @@
  */
 import { describe, it, expect } from 'vitest';
 
-
 // Replicate ThemeManager pattern from codebase
 class ThemeManager {
   constructor() {
     this._currentPreset = 'professional';
     this._currentMode = 'light';
-    this._presets = ['professional', 'minimal', 'pastel', 'elegant', 'midnight', 'modern'];
+    this._presets = ['default', 'professional', 'minimal', 'pastel', 'amy', 'red', 'elegant', 'midnight'];
     this._modes = ['light', 'dark'];
   }
 
@@ -58,6 +57,14 @@ class ThemeManager {
 
   _getPresetColors(preset) {
     const presets = {
+      default: {
+        primaryColor: '#3b82f6',
+        backgroundColor: '#f8fafc',
+        surfaceColor: '#ffffff',
+        textColor: '#1f2937',
+        accentColor: '#8b5cf6',
+        borderColor: '#e5e7eb',
+      },
       professional: {
         primaryColor: '#2563eb',
         backgroundColor: '#f8fafc',
@@ -82,6 +89,22 @@ class ThemeManager {
         accentColor: '#f472b6',
         borderColor: '#fce7f3',
       },
+      amy: {
+        primaryColor: '#df5fa1',
+        backgroundColor: '#f5fbff',
+        surfaceColor: '#fffafd',
+        textColor: '#2f2938',
+        accentColor: '#4aa3df',
+        borderColor: '#dbe8f5',
+      },
+      red: {
+        primaryColor: '#dc2626',
+        backgroundColor: '#fff5f5',
+        surfaceColor: '#fffafa',
+        textColor: '#2f1f1f',
+        accentColor: '#ef4444',
+        borderColor: '#f1c6c6',
+      },
       elegant: {
         primaryColor: '#8b5cf6',
         backgroundColor: '#0f0f23',
@@ -97,14 +120,6 @@ class ThemeManager {
         textColor: '#f1f5f9',
         accentColor: '#34d399',
         borderColor: '#334155',
-      },
-      modern: {
-        primaryColor: '#f59e0b',
-        backgroundColor: '#fffbeb',
-        surfaceColor: '#ffffff',
-        textColor: '#78350f',
-        accentColor: '#fbbf24',
-        borderColor: '#fde68a',
       },
     };
     return presets[preset] || presets.professional;
@@ -127,9 +142,10 @@ describe('ThemeManager Pattern', () => {
     theme = new ThemeManager();
   });
 
-  it('should have 6 presets', () => {
-    expect(theme.presets).toHaveLength(6);
+  it('should have 8 presets', () => {
+    expect(theme.presets).toHaveLength(8);
     expect(theme.presets).toContain('professional');
+    expect(theme.presets).toContain('red');
     expect(theme.presets).toContain('midnight');
   });
 
@@ -196,6 +212,6 @@ describe('ThemeManager Pattern', () => {
   it('presets array should be immutable copy', () => {
     const presets = theme.presets;
     presets.push('hacked');
-    expect(theme.presets).toHaveLength(6);
+    expect(theme.presets).toHaveLength(8);
   });
 });

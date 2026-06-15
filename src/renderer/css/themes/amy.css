@@ -1,0 +1,433 @@
+/**
+ * Amy UI Style Override
+ * Bright pink-blue style used when data-ui-style="amy" is set on the root element.
+ *
+ * Design Philosophy:
+ * - Cheerful pink as the primary action color
+ * - Clear sky blue as the balancing secondary tone
+ * - Airy light surfaces with deep text for readable scientific workflows
+ */
+
+/* ===== HEADER OVERRIDES ===== */
+[data-ui-style='amy'] .header {
+  background: var(--header-gradient);
+}
+
+/* ===== WELCOME SCREEN ===== */
+[data-ui-style='amy'] .welcome-screen {
+  background: var(--welcome-gradient);
+}
+
+[data-ui-style='amy'] .welcome-icon {
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 8px rgba(50, 74, 122, 0.3);
+}
+
+[data-ui-style='amy'] .version-tag {
+  color: #fbe8f3;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* ===== BUTTON GRADIENT OVERRIDES ===== */
+[data-ui-style='amy'] .btn-gradient {
+  background: var(--btn-gradient);
+}
+
+[data-ui-style='amy'] .btn-gradient:hover {
+  background: var(--btn-gradient-hover);
+  box-shadow: 0 8px 25px rgba(223, 95, 161, 0.22);
+}
+
+[data-ui-style='amy'] .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(223, 95, 161, 0.2);
+}
+
+[data-ui-style='amy'] .btn:focus {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ===== TRACK BUTTON OVERRIDES ===== */
+[data-ui-style='amy'] .track-gallery-btn:hover {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-ui-style='amy'] .track-layout-btn:hover {
+  color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+/* ===== FOCUS RING OVERRIDES ===== */
+[data-ui-style='amy'] .search-input:focus,
+[data-ui-style='amy'] .position-input:focus,
+[data-ui-style='amy'] .dropdown-toggle:focus,
+[data-ui-style='amy'] .select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-ui-style='amy'] ::focus-visible {
+  outline-color: var(--primary-color);
+}
+
+[data-ui-style='amy'] ::selection {
+  background: var(--selection-bg);
+  color: white;
+}
+
+/* ===== CHATBOX OVERRIDES ===== */
+[data-ui-style='amy'] #chatboxSettingsModal .modal-header,
+[data-ui-style='amy'] .chat-panel .chat-header,
+[data-ui-style='amy'] .chat-header,
+[data-ui-style='amy'] .llm-config-modal .modal-header {
+  background: var(--modal-header-gradient) !important;
+}
+
+[data-ui-style='amy'] .chat-tab.active,
+[data-ui-style='amy'] .llm-provider-tabs .tab-button.active,
+[data-ui-style='amy'] #chatboxSettingsModal .tab-button.active,
+[data-ui-style='amy'] .agent-tab.active,
+[data-ui-style='amy'] .tab.active {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .chat-user-message,
+[data-ui-style='amy'] .chat-messages .chat-user-message {
+  background: var(--chat-user-bg) !important;
+}
+
+[data-ui-style='amy'] .chat-ai-message,
+[data-ui-style='amy'] .chat-messages .chat-ai-message {
+  border-left-color: var(--chat-ai-border) !important;
+}
+
+[data-ui-style='amy'] .chat-send-btn,
+[data-ui-style='amy'] .chat-input-container .chat-send-btn,
+[data-ui-style='amy'] #sendChatBtn,
+[data-ui-style='amy'] #sendChatBtn.processing {
+  background: var(--chat-send-bg) !important;
+}
+
+[data-ui-style='amy'] .chat-send-btn:hover,
+[data-ui-style='amy'] #sendChatBtn:hover {
+  background: var(--primary-hover) !important;
+}
+
+[data-ui-style='amy'] .chat-input-wrapper:focus-within,
+[data-ui-style='amy'] #chatboxSettingsModal .input-full:focus,
+[data-ui-style='amy'] #chatboxSettingsModal .select:focus,
+[data-ui-style='amy'] .provider-config input:focus,
+[data-ui-style='amy'] .provider-config select:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(223, 95, 161, 0.12) !important;
+}
+
+/* ===== MARKDOWN AND MESSAGE OVERRIDES ===== */
+[data-ui-style='amy'] .chat-markdown blockquote,
+[data-ui-style='amy'] .chat-markdown pre,
+[data-ui-style='amy'] .message-text pre,
+[data-ui-style='amy'] .message-text blockquote,
+[data-ui-style='amy'] .user-message .message-text pre,
+[data-ui-style='amy'] .user-message .message-text blockquote {
+  border-left-color: var(--accent-indigo) !important;
+}
+
+[data-ui-style='amy'] .chat-markdown a,
+[data-ui-style='amy'] .message-text a,
+[data-ui-style='amy'] .markdown-content a,
+[data-ui-style='amy'] .provider-config .help-text a {
+  color: var(--accent-indigo) !important;
+}
+
+[data-ui-style='amy'] .message-text a:visited {
+  color: var(--primary-hover) !important;
+}
+
+[data-ui-style='amy'] .chat-markdown code {
+  color: var(--primary-hover);
+}
+
+[data-ui-style='amy'] .chat-markdown .code-block-header,
+[data-ui-style='amy'] .code-block-header {
+  background: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .copy-button {
+  background: var(--primary-color) !important;
+}
+
+/* ===== COMMON ACCENT OVERRIDES ===== */
+[data-ui-style='amy'] .advanced-search-panel,
+[data-ui-style='amy'] .track-tooltip,
+[data-ui-style='amy'] .notification-info {
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .search-type-btn.active,
+[data-ui-style='amy'] .sidebar-section-title,
+[data-ui-style='amy'] .thinking-header,
+[data-ui-style='amy'] .thinking-header i,
+[data-ui-style='amy'] .dropdown-item i,
+[data-ui-style='amy'] #chatboxSettingsModal .slider-value,
+[data-ui-style='amy'] .notification-info i {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .agent-badge,
+[data-ui-style='amy'] .expand-indicator {
+  background: rgba(var(--primary-rgb), 0.1) !important;
+  color: var(--primary-color) !important;
+  border-color: rgba(var(--primary-rgb), 0.2) !important;
+}
+
+[data-ui-style='amy'] .plugin-badge,
+[data-ui-style='amy'] .btn-toggle.active,
+[data-ui-style='amy'] .scroll-to-gene-btn,
+[data-ui-style='amy'] .progress-bar,
+[data-ui-style='amy'] .badge-primary,
+[data-ui-style='amy'] .pagination-item.active,
+[data-ui-style='amy'] #chatboxSettingsModal .setting-checkbox:checked,
+[data-ui-style='amy'] #chatboxSettingsModal .btn-primary,
+[data-ui-style='amy'] .minimize-benchmark-btn,
+[data-ui-style='amy'] .copy-button {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] #chatboxSettingsModal .btn-primary:hover,
+[data-ui-style='amy'] .minimize-benchmark-btn:hover {
+  background: var(--primary-hover) !important;
+}
+
+[data-ui-style='amy'] .spinner {
+  border-top-color: var(--primary-color);
+}
+
+[data-ui-style='amy'] .gene-info-header,
+[data-ui-style='amy'] .thinking-process,
+[data-ui-style='amy'] .progress-item {
+  border-left-color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .gene-info-header {
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .gene-element.selected {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px var(--focus-ring) !important;
+}
+
+[data-ui-style='amy'] .search-highlight {
+  background: rgba(var(--primary-rgb), 0.15) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* ===== NAVIGATION AND TOGGLES ===== */
+[data-ui-style='amy'] .nav-btn {
+  background: rgba(74, 163, 223, 0.9);
+}
+
+[data-ui-style='amy'] .nav-btn:hover {
+  background: rgba(223, 95, 161, 0.95);
+}
+
+[data-ui-style='amy'] .sidebar-splitter:focus {
+  outline-color: var(--primary-color);
+}
+
+[data-ui-style='amy'] .sidebar-splitter:focus .sidebar-splitter-handle {
+  color: var(--primary-color);
+}
+
+[data-ui-style='amy'] .mac-toggle input:checked + .mac-toggle-slider,
+[data-ui-style='amy'] .toggle-label input[type='checkbox']:checked + .toggle-slider {
+  background-color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .toggle-label input[type='checkbox']:checked ~ .toggle-text {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .mcp-bridge-status-dot.connected {
+  background-color: var(--secondary-color);
+  box-shadow: 0 0 6px rgba(74, 163, 223, 0.5);
+}
+
+/* ===== STYLE PREVIEW SWATCH ===== */
+.style-preview-swatch.amy-swatch {
+  background: linear-gradient(135deg, #4aa3df 0%, #df5fa1 100%);
+}
+
+/* ===== ALERT COMPONENTS ===== */
+[data-ui-style='amy'] .alert.alert-primary {
+  background: rgba(74, 163, 223, 0.09);
+  color: #2f8ccc;
+  border-color: rgba(74, 163, 223, 0.22);
+}
+
+/* ===== PRIMARY ACTION BUTTONS ===== */
+[data-ui-style='amy'] #blastBtn,
+[data-ui-style='amy'] #newChatBtn,
+[data-ui-style='amy'] .toolbar-section #toggleChatBtn,
+[data-ui-style='amy'] .welcome-buttons .btn-primary,
+[data-ui-style='amy'] .multi-agent-activation,
+[data-ui-style='amy'] .metric-item,
+[data-ui-style='amy'] .chat-notification.info,
+[data-ui-style='amy'] #addFeaturesBtn,
+[data-ui-style='amy'] #primerTrackBtn {
+  background: var(--btn-gradient) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] #blastBtn:hover,
+[data-ui-style='amy'] #newChatBtn:hover,
+[data-ui-style='amy'] .toolbar-section #toggleChatBtn:hover,
+[data-ui-style='amy'] .welcome-buttons .btn-primary:hover,
+[data-ui-style='amy'] #addFeaturesBtn:hover,
+[data-ui-style='amy'] #primerTrackBtn:hover {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow: 0 4px 12px rgba(223, 95, 161, 0.22) !important;
+}
+
+[data-ui-style='amy'] .welcome-buttons .btn-secondary:hover {
+  background: var(--btn-gradient) !important;
+  color: white !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 4px 15px rgba(74, 163, 223, 0.22) !important;
+}
+
+[data-ui-style='amy'] .toolbar-section #toggleChatBtn.ai-processing {
+  border-color: rgba(223, 95, 161, 0.45) !important;
+}
+
+[data-ui-style='amy'] #addFeaturesBtn.active,
+[data-ui-style='amy'] #primerTrackBtn.active {
+  background: var(--btn-gradient-hover) !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.1),
+    0 2px 6px rgba(223, 95, 161, 0.16) !important;
+}
+
+/* ===== DROPDOWN OVERRIDES ===== */
+[data-ui-style='amy'] .add-features-dropdown {
+  border-color: var(--border-hover) !important;
+  box-shadow: 0 4px 16px rgba(74, 163, 223, 0.12) !important;
+}
+
+[data-ui-style='amy'] .dropdown-section-title {
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-ui-style='amy'] .dropdown-section-title i {
+  color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .dropdown-feature-btn {
+  color: var(--text-primary) !important;
+}
+
+[data-ui-style='amy'] .dropdown-feature-btn:hover {
+  background: linear-gradient(135deg, #f5fbff, #fdeff7) !important;
+  color: var(--primary-hover) !important;
+  border-color: var(--border-hover) !important;
+}
+
+[data-ui-style='amy'] .dropdown-feature-btn:active {
+  background: linear-gradient(135deg, #e8f5ff, #faddec) !important;
+}
+
+[data-ui-style='amy'] .dropdown-feature-btn i {
+  color: var(--text-muted) !important;
+}
+
+[data-ui-style='amy'] .dropdown-feature-btn:hover i {
+  color: var(--secondary-color) !important;
+}
+
+[data-ui-style='amy'] .dropdown-divider {
+  background: linear-gradient(to right, transparent, var(--border-hover), transparent) !important;
+}
+
+/* ===== BENCHMARK UI ===== */
+[data-ui-style='amy'] .benchmark-container {
+  border-color: rgba(74, 163, 223, 0.24) !important;
+}
+
+[data-ui-style='amy'] .benchmark-header {
+  border-bottom-color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .benchmark-header:hover {
+  background: rgba(74, 163, 223, 0.06) !important;
+}
+
+[data-ui-style='amy'] .benchmark-interface.collapsed .benchmark-container {
+  border-color: rgba(223, 95, 161, 0.6) !important;
+}
+
+[data-ui-style='amy'] .benchmark-section,
+[data-ui-style='amy'] .checkbox-item span small {
+  border-color: rgba(74, 163, 223, 0.16) !important;
+}
+
+[data-ui-style='amy'] .checkbox-item span small {
+  background: rgba(74, 163, 223, 0.06) !important;
+}
+
+[data-ui-style='amy'] .checkbox-item input[type='checkbox'] {
+  accent-color: var(--primary-color) !important;
+}
+
+[data-ui-style='amy'] .btn-primary {
+  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%) !important;
+}
+
+[data-ui-style='amy'] .progress-fill {
+  background: linear-gradient(90deg, var(--secondary-color) 0%, var(--primary-color) 100%) !important;
+}
+
+[data-ui-style='amy'] .summary-card {
+  background: linear-gradient(135deg, #4aa3df 0%, #df5fa1 100%) !important;
+  box-shadow: 0 6px 25px rgba(223, 95, 161, 0.2) !important;
+}
+
+[data-ui-style='amy'] .llm-provider-config > .tab-bar::after {
+  background: var(--primary-color) !important;
+}
+
+/* ===== CIRCULAR CHECKBOX OVERRIDES ===== */
+[data-ui-style='amy'] .track-checkbox input[type='checkbox'],
+[data-ui-style='amy'] .feature-checkbox input[type='checkbox'],
+[data-ui-style='amy'] .feature-control-item input[type='checkbox'],
+[data-ui-style='amy'] .track-control-item input[type='checkbox'],
+[data-ui-style='amy'] .track-controls input[type='checkbox'] {
+  border-color: var(--border-hover);
+}
+
+[data-ui-style='amy'] .track-checkbox input[type='checkbox']:hover,
+[data-ui-style='amy'] .feature-checkbox input[type='checkbox']:hover,
+[data-ui-style='amy'] .feature-control-item input[type='checkbox']:hover,
+[data-ui-style='amy'] .track-control-item input[type='checkbox']:hover,
+[data-ui-style='amy'] .track-controls input[type='checkbox']:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(223, 95, 161, 0.12);
+}
+
+[data-ui-style='amy'] .track-checkbox input[type='checkbox']:checked,
+[data-ui-style='amy'] .feature-checkbox input[type='checkbox']:checked,
+[data-ui-style='amy'] .feature-control-item input[type='checkbox']:checked,
+[data-ui-style='amy'] .track-control-item input[type='checkbox']:checked,
+[data-ui-style='amy'] .track-controls input[type='checkbox']:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* ===== LIGHT SURFACE TUNING ===== */
+[data-ui-style='amy'] .gene-filter-controls {
+  background: rgba(245, 251, 255, 0.96);
+  border-color: var(--border-color);
+}

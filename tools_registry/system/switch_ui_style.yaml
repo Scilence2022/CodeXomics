@@ -1,7 +1,7 @@
 # switch_ui_style.yaml
 name: 'switch_ui_style'
 version: '1.0.0'
-description: "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 6 light-mode preset styles."
+description: "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 7 light-mode preset styles."
 category: 'system'
 keywords:
   [
@@ -36,7 +36,7 @@ parameters:
   properties:
     style_name:
       type: 'string'
-      description: "The light-mode UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (navy/cyan accents), 'pastel' (soft pastel colors)."
+      description: "The light-mode UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (navy/cyan accents), 'pastel' (soft pastel colors), 'amy' (bright pink-blue tones)."
       enum:
         - 'default'
         - 'professional'
@@ -44,7 +44,8 @@ parameters:
         - 'elegant'
         - 'midnight'
         - 'pastel'
-      examples: ['default', 'professional', 'midnight']
+        - 'amy'
+      examples: ['default', 'professional', 'midnight', 'amy']
   required: []
 
 # High-quality examples for few-shot learning
@@ -63,6 +64,11 @@ sample_usages:
     tool_call: "switch_ui_style(style_name='pastel')"
     thought: 'User wants to apply the Pastel style'
     expected_result: 'UI switches to Pastel style with soft, muted colors'
+
+  - user_query: 'Switch to Amy pink-blue style'
+    tool_call: "switch_ui_style(style_name='amy')"
+    thought: 'User wants the Amy style with bright pink-blue colors'
+    expected_result: 'UI switches to Amy style with bright pink-blue tones'
 
 # Tool relationships and dependencies
 relationships:
