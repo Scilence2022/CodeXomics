@@ -131,7 +131,7 @@ class BenchmarkReportGenerator {
    */
   generateMetadata(benchmarkResults, options) {
     return {
-      reportTitle: 'LLM Instruction Following Benchmark Report',
+      reportTitle: 'CodeXomics Benchmark Report',
       generatedAt: new Date().toISOString(),
       generatedBy: 'CodeXomics Benchmark Framework',
       version: '1.0.0',
