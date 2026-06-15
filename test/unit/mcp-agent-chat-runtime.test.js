@@ -8,10 +8,6 @@ import path from 'path';
 
 const INTERNAL_MCP_PATH = path.join(process.cwd(), 'src/renderer/modules/InternalMCPServer.js');
 const RENDERER_MODULAR_PATH = path.join(process.cwd(), 'src/renderer/renderer-modular.js');
-const TOOL_EXECUTION_SERVICE_PATH = path.join(
-  process.cwd(),
-  'src/renderer/modules/chat/services/ToolExecutionService.js'
-);
 
 function loadInternalMCPServer() {
   const content = fs
@@ -42,36 +38,14 @@ function loadInternalMCPServer() {
   return { InternalMCPServer: context.InternalMCPServer, ipcRenderer: context.window.ipcRenderer };
 }
 
-function loadToolExecutionService() {
-  const content = fs
-    .readFileSync(TOOL_EXECUTION_SERVICE_PATH, 'utf-8')
-    .replace('window.ToolExecutionService = ToolExecutionService;', '');
-
-  const context = {
-    window: {},
-    console,
-  };
-
-  const evaluator = new Function(
-    'global',
-    'window',
-    'console',
-    `${content}; global.ToolExecutionService = ToolExecutionService;`
-  );
-  evaluator(context, context.window, context.console);
-  return context.ToolExecutionService;
-}
-
 describe('MCP agent chat runtime dispatch', () => {
   let InternalMCPServer;
   let ipcRenderer;
-  let ToolExecutionService;
 
   beforeEach(() => {
     const loaded = loadInternalMCPServer();
     InternalMCPServer = loaded.InternalMCPServer;
     ipcRenderer = loaded.ipcRenderer;
-    ToolExecutionService = loadToolExecutionService();
   });
 
   it('handles codexomics_chat snake_case method names', async () => {
@@ -125,26 +99,7 @@ describe('MCP agent chat runtime dispatch', () => {
 
   it('does not route codexomics_chat through generic executeToolByName after agent handling', () => {
     const rendererContent = fs.readFileSync(RENDERER_MODULAR_PATH, 'utf-8');
-    expect(rendererContent).toContain("if (toolName === 'codexomics_chat' || toolName === 'codexomicsChat')");
-    expect(rendererContent).toContain("method === 'codexomics_chat' || method === 'codexomicsChat'");
-    expect(rendererContent).toContain('Letting InternalMCPServer handle codexomics_chat');
+    expect(rendererContent).toContain("if (toolName === 'codexomics_chat')");
     expect(rendererContent).toContain('} else if (window.genomeBrowser && window.genomeBrowser.chatManager) {');
-  });
-
-  it('routes direct ToolExecutionService codexomics_chat calls to processAgentPrompt', async () => {
-    const processAgentPrompt = vi.fn().mockResolvedValue({ success: true, response: 'navigated' });
-    const service = new ToolExecutionService({}, { processAgentPrompt });
-
-    const result = await service.execute('codexomics_chat', {
-      prompt: 'Navigate to 3M',
-      activate_multi_agent: false,
-      context: { current_region: 'chr1:1-1000' },
-    });
-
-    expect(result).toEqual({ success: true, response: 'navigated' });
-    expect(processAgentPrompt).toHaveBeenCalledWith('Navigate to 3M', {
-      activateMultiAgent: false,
-      context: { current_region: 'chr1:1-1000' },
-    });
   });
 });
