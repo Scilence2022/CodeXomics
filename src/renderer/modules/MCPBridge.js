@@ -19,6 +19,7 @@ class MCPBridge {
     this.quiet = false; // Suppress repeated "not available" logs
     this.windowId = options.windowId || null; // Multi-window support: unique window identifier
     this.enabled = false; // Is the bridge enabled/started?
+    this.currentGenomeName = null; // Last known loaded genome; re-sent on every (re)connect
 
     console.log('[MCPBridge] Initialized, will attempt connection to:', this.wsUrl);
   }
@@ -54,6 +55,9 @@ class MCPBridge {
    * Allows list_genome_windows to accurately describe the active window
    */
   reportGenomeLoaded(genomeName) {
+    // Persist so the genome name survives reconnects and can be replayed when
+    // the bridge connects after a genome was already loaded.
+    this.currentGenomeName = genomeName;
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(
         JSON.stringify({
@@ -61,9 +65,6 @@ class MCPBridge {
           genomeName: genomeName,
         })
       );
-    } else {
-      // Store to send once connected
-      this.pendingGenomeName = genomeName;
     }
   }
 
@@ -123,14 +124,15 @@ class MCPBridge {
           })
         );
 
-        if (this.pendingGenomeName) {
+        // Always replay the current genome name so a server that connected
+        // (or reconnected/restarted) after the genome was loaded stays in sync.
+        if (this.currentGenomeName) {
           this.ws.send(
             JSON.stringify({
               type: 'genome-loaded',
-              genomeName: this.pendingGenomeName,
+              genomeName: this.currentGenomeName,
             })
           );
-          this.pendingGenomeName = null;
         }
 
         // Keep connection alive to prevent server's ConnectionHealthMonitor from marking it stale
