@@ -206,6 +206,12 @@
         color: var(--tab-text);
       }
 
+      .workspace-action.active {
+        background: color-mix(in srgb, var(--accent) 14%, var(--bg-primary));
+        border-color: color-mix(in srgb, var(--accent) 42%, rgba(100, 116, 139, 0.22));
+        color: var(--accent);
+      }
+
       .workspace-actions {
         flex: 0 0 auto;
         height: 31px;
@@ -230,6 +236,9 @@
       <div class="workspace-actions">
         <button class="workspace-action" id="attachAllButton" title="Group all genome windows">[]</button>
         <button class="workspace-action" id="newTabButton" title="New genome tab">+</button>
+        <button class="workspace-action" id="fullScreenButton" title="Enter full screen">
+          <i class="fas fa-expand"></i>
+        </button>
       </div>
     </div>
 
@@ -333,6 +342,7 @@
         const tabsElement = document.getElementById('workspaceTabs');
         const newTabButton = document.getElementById('newTabButton');
         const attachAllButton = document.getElementById('attachAllButton');
+        const fullScreenButton = document.getElementById('fullScreenButton');
         let currentSnapshot = null;
         let draggingWindowId = null;
 
@@ -424,6 +434,15 @@
           return tabs.some(tab => tab.windowId === windowId);
         }
 
+        function updateFullScreenButton(isFullScreen) {
+          if (!fullScreenButton) return;
+          fullScreenButton.classList.toggle('active', !!isFullScreen);
+          fullScreenButton.title = isFullScreen ? 'Exit full screen' : 'Enter full screen';
+          fullScreenButton.innerHTML = isFullScreen
+            ? '<i class="fas fa-compress"></i>'
+            : '<i class="fas fa-expand"></i>';
+        }
+
         async function handleTabDrop(event) {
           event.preventDefault();
           event.stopPropagation();
@@ -451,6 +470,7 @@
           currentSnapshot = snapshot || null;
           const tabs = Array.isArray(snapshot && snapshot.tabs) ? snapshot.tabs : [];
           tabsElement.innerHTML = '';
+          updateFullScreenButton(!!(snapshot && snapshot.isFullScreen));
 
           for (const tab of tabs) {
             const tabButton = document.createElement('button');
@@ -569,6 +589,12 @@
 
         attachAllButton.addEventListener('click', () => {
           window.electronAPI && window.electronAPI.attachAllGenomeWindows();
+        });
+        fullScreenButton.addEventListener('click', async () => {
+          const result = await window.electronAPI?.toggleWindowTabFullScreen?.();
+          if (result && result.success !== false) {
+            updateFullScreenButton(!!result.isFullScreen);
+          }
         });
         tabsElement.addEventListener('dragover', event => {
           if (!isTabDragEvent(event)) return;

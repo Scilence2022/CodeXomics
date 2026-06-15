@@ -255,6 +255,7 @@ function buildModuleDeps() {
     unregisterWindowTab: wt.unregisterWindowTab,
     switchToWindowTab: wt.switchToWindowTab,
     detachWindowTab: wt.detachWindowTab,
+    closeWindowTab: wt.closeWindowTab,
     attachAllWindowsToGroup: wt.attachAllWindowsToGroup,
     notifyWindowGenomeNameChanged: wt.notifyWindowGenomeNameChanged,
 

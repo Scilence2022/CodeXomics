@@ -160,6 +160,12 @@
   color: var(--primary-color);
 }
 
+.window-tab-icon-button.active {
+  background: color-mix(in srgb, var(--primary-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--primary-color) 42%, var(--window-tab-border, #c8d3e1));
+  color: var(--primary-color);
+}
+
 .tab-bar {
   display: flex;
   align-items: center;

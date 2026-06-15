@@ -13,6 +13,7 @@ class WindowTabManager {
     this.root = null;
     this.tabsContainer = null;
     this.statusElement = null;
+    this.fullScreenButton = null;
     const runtimePlatform =
       (typeof window.electronAPI?.platform === 'function'
         ? window.electronAPI.platform()
@@ -63,15 +64,20 @@ class WindowTabManager {
         <button class="window-tab-icon-button" id="newWindowTabBtn" title="New genome window tab">
           <i class="fas fa-plus"></i>
         </button>
+        <button class="window-tab-icon-button" id="windowTabFullScreenBtn" title="Enter full screen">
+          <i class="fas fa-expand"></i>
+        </button>
       </div>
     `;
 
     app.insertBefore(this.root, app.firstElementChild);
     this.tabsContainer = this.root.querySelector('#windowTabStrip');
     this.statusElement = this.root.querySelector('#windowTabStatus');
+    this.fullScreenButton = this.root.querySelector('#windowTabFullScreenBtn');
 
     this.root.querySelector('#attachAllWindowsBtn')?.addEventListener('click', () => this.attachAllWindows());
     this.root.querySelector('#newWindowTabBtn')?.addEventListener('click', () => this.createNewWindowTab());
+    this.fullScreenButton?.addEventListener('click', () => this.toggleFullScreen());
   }
 
   initializeListeners() {
@@ -121,6 +127,7 @@ class WindowTabManager {
     }
 
     this.tabsContainer.innerHTML = '';
+    this.updateFullScreenButton(!!snapshot?.isFullScreen);
 
     tabs.forEach(tab => {
       const tabButton = document.createElement('button');
@@ -215,6 +222,31 @@ class WindowTabManager {
     } catch (error) {
       this.showError(error.message);
     }
+  }
+
+  async toggleFullScreen() {
+    try {
+      const result = window.electronAPI?.toggleWindowTabFullScreen
+        ? await window.electronAPI.toggleWindowTabFullScreen()
+        : await window.ipcRenderer.invoke('window-tabs:toggle-fullscreen');
+
+      if (result && result.success === false) {
+        this.showError(result.error || 'Unable to toggle full screen');
+      } else {
+        this.updateFullScreenButton(!!result?.isFullScreen);
+      }
+    } catch (error) {
+      this.showError(error.message);
+    }
+  }
+
+  updateFullScreenButton(isFullScreen) {
+    if (!this.fullScreenButton) return;
+    this.fullScreenButton.classList.toggle('active', !!isFullScreen);
+    this.fullScreenButton.title = isFullScreen ? 'Exit full screen' : 'Enter full screen';
+    this.fullScreenButton.innerHTML = isFullScreen
+      ? '<i class="fas fa-compress"></i>'
+      : '<i class="fas fa-expand"></i>';
   }
 
   showError(message) {

@@ -65,6 +65,11 @@ const allowedInvokeChannels = [
   'window-tabs:list',
   'window-tabs:switch',
   'window-tabs:detach',
+  'window-tabs:detach-at',
+  'window-tabs:reorder',
+  'window-tabs:attach-to-window',
+  'window-tabs:close',
+  'window-tabs:toggle-fullscreen',
   'window-tabs:attach-all',
   'window-tabs:new-tab',
 ];
@@ -410,6 +415,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   attachWindowTabToCurrent: (windowId, targetIndex) =>
     ipcRenderer.invoke('window-tabs:attach-to-window', windowId, targetIndex),
   closeWindowTab: windowId => ipcRenderer.invoke('window-tabs:close', windowId),
+  toggleWindowTabFullScreen: () => ipcRenderer.invoke('window-tabs:toggle-fullscreen'),
   attachAllGenomeWindows: () => ipcRenderer.invoke('window-tabs:attach-all'),
   createWindowLevelTab: () => ipcRenderer.invoke('window-tabs:new-tab'),
   onWindowTabsUpdated: listener => {

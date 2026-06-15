@@ -40,6 +40,18 @@ function getBrowserWindow(windowId) {
   return entry ? entry.window || entry : null;
 }
 
+function getNativeWindow(windowOrHandle) {
+  if (!windowOrHandle) return null;
+  if (typeof windowOrHandle.getNativeWindow === 'function') {
+    return windowOrHandle.getNativeWindow();
+  }
+  return windowOrHandle;
+}
+
+function getNativeWindowForWindowId(windowId) {
+  return getNativeWindow(getBrowserWindow(windowId));
+}
+
 function getWindowIdFromWebContents(webContents) {
   if (windowRegistry) {
     for (const [windowId, entry] of windowRegistry.entries()) {
@@ -154,6 +166,7 @@ function getSnapshotForWindow(windowId) {
     success: true,
     windowId,
     groupId: group.groupId,
+    isFullScreen: !!getNativeWindowForWindowId(windowId)?.isFullScreen?.(),
     totalWindows: visibleWindows.length,
     groupedWindows: group.windowIds.length,
     canDetach: group.windowIds.length > 1,
@@ -373,6 +386,13 @@ function registerWindowTab(browserWindow, options = {}) {
     browserWindow.on('closed', () => {
       unregisterWindowTab(windowId);
     });
+  }
+
+  const nativeWindow = getNativeWindow(browserWindow);
+  if (nativeWindow && !nativeWindow.__codexomicsWindowTabsFullScreenHooked) {
+    nativeWindow.__codexomicsWindowTabsFullScreenHooked = true;
+    nativeWindow.on('enter-full-screen', broadcastAllWindowTabs);
+    nativeWindow.on('leave-full-screen', broadcastAllWindowTabs);
   }
 
   let groupId = options.groupId || null;
@@ -609,14 +629,41 @@ function closeWindowTab(targetWindowId) {
   }
 
   const groupId = windowToGroup.get(targetWindowId);
+  const group = pruneGroup(tabGroups.get(groupId));
+  const replacementWindowId =
+    group && group.activeWindowId === targetWindowId
+      ? group.windowIds.find(windowId => windowId !== targetWindowId) || null
+      : null;
+
   unregisterWindowTab(targetWindowId);
   targetWindow.close();
+
+  if (replacementWindowId && isValidGenomeWindow(replacementWindowId)) {
+    activateWindowInGroup(replacementWindowId);
+  }
 
   if (!groupId) {
     broadcastAllWindowTabs();
   }
 
   return { success: true, windowId: targetWindowId, closed: true };
+}
+
+function toggleFullScreenForWindowTab(targetWindowId) {
+  if (!targetWindowId) {
+    return { success: false, error: 'targetWindowId is required' };
+  }
+
+  const nativeWindow = getNativeWindowForWindowId(targetWindowId);
+  if (!nativeWindow || nativeWindow.isDestroyed?.()) {
+    return { success: false, error: `Window '${targetWindowId}' is not available` };
+  }
+
+  const isFullScreen = !nativeWindow.isFullScreen();
+  nativeWindow.setFullScreen(isFullScreen);
+  broadcastAllWindowTabs();
+
+  return { success: true, windowId: targetWindowId, isFullScreen };
 }
 
 function attachAllWindowsToGroup(anchorWindowId) {
@@ -706,6 +753,10 @@ function registerWindowTabIpcHandlers() {
     return closeWindowTab(targetWindowId || getWindowIdFromWebContents(event.sender));
   });
 
+  ipcMain.handle('window-tabs:toggle-fullscreen', async event => {
+    return toggleFullScreenForWindowTab(getWindowIdFromWebContents(event.sender));
+  });
+
   ipcMain.handle('window-tabs:new-tab', async event => {
     return createWindowLevelTab(getWindowIdFromWebContents(event.sender));
   });
@@ -723,6 +774,7 @@ module.exports = {
   detachWindowTab,
   attachWindowTabToWindow,
   closeWindowTab,
+  toggleFullScreenForWindowTab,
   attachAllWindowsToGroup,
   createWindowLevelTab,
   getSnapshotForWindow,

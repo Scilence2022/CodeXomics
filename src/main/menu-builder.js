@@ -35,9 +35,34 @@ let arrangeMainWindowFocus;
 let arrangeProjectManagerFocus;
 let arrangeWindowsVertical;
 let arrangeWindowsCascade;
+let closeWindowTab;
 
 function isMainGenomeWindow(win) {
   return !!(win && !win.isDestroyed() && (win.windowId || workspaceHostManager.getActiveWindowIdForHost(win)));
+}
+
+function closeFocusedGenomeTabOrWindow() {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  const currentMainWindow =
+    (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) ||
+    (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
+  const targetWindow = isMainGenomeWindow(focusedWindow)
+    ? focusedWindow
+    : !focusedWindow && isMainGenomeWindow(currentMainWindow)
+      ? currentMainWindow
+      : !focusedWindow && isMainGenomeWindow(currentActiveWindow)
+        ? currentActiveWindow
+        : null;
+  const targetWindowId = targetWindow?.windowId || workspaceHostManager.getActiveWindowIdForHost(targetWindow);
+
+  if (targetWindowId && typeof closeWindowTab === 'function') {
+    closeWindowTab(targetWindowId);
+    return;
+  }
+
+  if (focusedWindow && !focusedWindow.isDestroyed()) {
+    focusedWindow.close();
+  }
 }
 
 function toggleCurrentGenomeDevTools() {
@@ -1770,14 +1795,9 @@ function createMenu() {
           role: 'minimize',
         },
         {
-          label: 'Close',
+          label: 'Close Window Tab',
           accelerator: 'CmdOrCtrl+W',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              focusedWindow.close();
-            }
-          },
+          click: closeFocusedGenomeTabOrWindow,
         },
         { type: 'separator' },
         {
@@ -3159,6 +3179,7 @@ function setMenuDependencies(deps) {
   if (deps.arrangeProjectManagerFocus !== undefined) arrangeProjectManagerFocus = deps.arrangeProjectManagerFocus;
   if (deps.arrangeWindowsVertical !== undefined) arrangeWindowsVertical = deps.arrangeWindowsVertical;
   if (deps.arrangeWindowsCascade !== undefined) arrangeWindowsCascade = deps.arrangeWindowsCascade;
+  if (deps.closeWindowTab !== undefined) closeWindowTab = deps.closeWindowTab;
   if (deps.resetWindowPositions !== undefined) resetWindowPositions = deps.resetWindowPositions;
 }
 
