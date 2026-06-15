@@ -127,7 +127,8 @@
     "arrow-parens": "off",
     "comma-dangle": "off",
     "quotes": "off",
-    "quote-props": "off"
+    "quote-props": "off",
+    "space-before-function-paren": "off"
   },
   "overrides": [
     {
