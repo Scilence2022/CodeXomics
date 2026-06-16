@@ -63,10 +63,11 @@
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
   padding: 0 16px;
+  overflow-x: auto;
 }
 
 .search-tab {
-  padding: 12px 20px;
+  padding: 12px 16px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -78,6 +79,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 0 0 auto;
 }
 
 .search-tab:hover {
@@ -399,6 +401,11 @@
 .search-result-icon.sequence {
   background: rgba(59, 130, 246, 0.1);
   color: #3b82f6;
+}
+
+.search-result-icon.protein {
+  background: rgba(20, 184, 166, 0.1);
+  color: #0f766e;
 }
 
 .search-result-icon.motif {
