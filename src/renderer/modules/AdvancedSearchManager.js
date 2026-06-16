@@ -99,6 +99,9 @@ class AdvancedSearchManager {
                         <button class="search-tab" data-tab="sequence">
                             <i class="fas fa-align-left"></i> Sequence Search
                         </button>
+                        <button class="search-tab" data-tab="protein">
+                            <i class="fas fa-flask"></i> Protein Search
+                        </button>
                         <button class="search-tab" data-tab="motif">
                             <i class="fas fa-puzzle-piece"></i> Motif Search
                         </button>
@@ -224,6 +227,59 @@ class AdvancedSearchManager {
                                 <h4><i class="fas fa-history"></i> Recent Searches</h4>
                             </div>
                             <div class="search-history-list" id="sequenceSearchHistory">
+                                <div class="search-history-empty">No recent searches</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Protein Search Tab -->
+                    <div class="search-tab-content" data-tab="protein">
+                        <div class="search-main-input">
+                            <input type="text" id="proteinSearchInput" placeholder="Enter protein sequence (e.g., MKTAYIAKQRQISFVKSHFSRQ)...">
+                            <button class="btn btn-primary btn-search" onclick="window.advancedSearchManager?.performSearch('protein')">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+
+                        <div class="search-options">
+                            <div class="search-options-header">
+                                <h4><i class="fas fa-sliders-h"></i> Search Options</h4>
+                            </div>
+                            <div class="search-options-grid">
+                                <div class="search-option">
+                                    <label>
+                                        <input type="checkbox" id="proteinSearchCaseSensitive">
+                                        Case sensitive
+                                    </label>
+                                </div>
+                                <div class="search-option">
+                                    <label>
+                                        <input type="checkbox" id="proteinSearchHighlight" checked>
+                                        Highlight coding region
+                                    </label>
+                                </div>
+                                <div class="search-scope-select">
+                                    <label for="proteinSearchScope">Scope:</label>
+                                    <select id="proteinSearchScope">
+                                        <option value="current">Current chromosome</option>
+                                        <option value="all">All chromosomes</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="search-results-preview" id="proteinResultsPreview">
+                            <div class="search-results-preview-empty">
+                                <i class="fas fa-flask"></i>
+                                <p>Enter a protein sequence to search translated CDS features</p>
+                            </div>
+                        </div>
+
+                        <div class="search-history">
+                            <div class="search-history-header">
+                                <h4><i class="fas fa-history"></i> Recent Searches</h4>
+                            </div>
+                            <div class="search-history-list" id="proteinSearchHistory">
                                 <div class="search-history-empty">No recent searches</div>
                             </div>
                         </div>
@@ -479,6 +535,9 @@ class AdvancedSearchManager {
         case 'sequence':
           results = this.searchBySequence(query);
           break;
+        case 'protein':
+          results = this.searchByProtein(query);
+          break;
         case 'motif':
           results = this.searchByMotif(query);
           break;
@@ -617,6 +676,310 @@ class AdvancedSearchManager {
   }
 
   /**
+   * Search translated CDS protein sequences and map peptide hits to genomic coordinates
+   */
+  searchByProtein(query) {
+    const results = [];
+    const currentChr = document.getElementById('chromosomeSelect')?.value;
+    const sequences = this.genomeBrowser.currentSequence || {};
+    const annotations = this.genomeBrowser.currentAnnotations;
+
+    if (!annotations || !currentChr) return results;
+
+    const normalizedQuery = this.normalizeProteinSequence(query);
+    if (!normalizedQuery) {
+      this.genomeBrowser.updateStatus?.('Enter a valid protein sequence to search');
+      return results;
+    }
+
+    const caseSensitive = document.getElementById('proteinSearchCaseSensitive')?.checked || false;
+    const scope = document.getElementById('proteinSearchScope')?.value || 'current';
+    const searchTerm = caseSensitive ? normalizedQuery : normalizedQuery.toUpperCase();
+    const chromosomes = scope === 'all' ? Object.keys(annotations) : [currentChr];
+    const processedFeatures = new Set();
+    const maxResults = 1000;
+
+    for (const chr of chromosomes) {
+      const features = annotations[chr] || [];
+      const chromosomeSequence = sequences[chr] || '';
+
+      for (const feature of features) {
+        if (results.length >= maxResults) break;
+        if (!this.isProteinSearchFeature(feature)) continue;
+
+        const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand || '+'}`;
+        if (processedFeatures.has(featureId)) continue;
+        processedFeatures.add(featureId);
+
+        const proteinSequences = this.getProteinSequencesForFeature(chromosomeSequence, feature);
+        if (proteinSequences.length === 0) continue;
+
+        for (const proteinCandidate of proteinSequences) {
+          if (results.length >= maxResults) break;
+
+          const proteinSequence = proteinCandidate.sequence;
+          const proteinToSearch = caseSensitive ? proteinSequence : proteinSequence.toUpperCase();
+          let index = proteinToSearch.indexOf(searchTerm);
+
+          while (index !== -1 && results.length < maxResults) {
+            const genomicRange = this.mapProteinHitToGenomicRange(feature, index, searchTerm.length);
+            if (genomicRange) {
+              const geneName =
+                this.getFeatureQualifier(feature, 'gene') || this.getFeatureQualifier(feature, 'locus_tag');
+              const product = this.getFeatureQualifier(feature, 'product') || feature.product || 'Translated CDS';
+              const label = geneName || feature.name || feature.id || product;
+              const proteinStart = index + 1;
+              const proteinEnd = index + searchTerm.length;
+              const matchedProteinSequence = proteinSequence.substring(index, index + searchTerm.length);
+
+              results.push({
+                type: 'protein',
+                position: genomicRange.start,
+                end: genomicRange.end,
+                name: `${label} protein match`,
+                details: `${product}; aa ${proteinStart}-${proteinEnd} (${matchedProteinSequence}) on ${feature.strand || '+'} strand`,
+                chromosome: chr,
+                strand: feature.strand || '+',
+                annotation: feature,
+                proteinStart,
+                proteinEnd,
+                matchedProteinSequence,
+                proteinSequence,
+                proteinSource: proteinCandidate.source,
+              });
+            }
+
+            index = proteinToSearch.indexOf(searchTerm, index + 1);
+          }
+        }
+      }
+    }
+
+    return results.sort((a, b) => {
+      const chrCompare = String(a.chromosome || '').localeCompare(String(b.chromosome || ''));
+      return chrCompare || a.position - b.position;
+    });
+  }
+
+  /**
+   * Normalize pasted protein text, including FASTA records, into a searchable sequence
+   */
+  normalizeProteinSequence(sequence) {
+    return String(sequence || '')
+      .split(/\r?\n/)
+      .filter(line => !line.trim().startsWith('>'))
+      .join('')
+      .replace(/[^A-Za-z*]/g, '');
+  }
+
+  /**
+   * Return true when a feature can provide a protein sequence
+   */
+  isProteinSearchFeature(feature) {
+    if (!feature) return false;
+    return feature.type === 'CDS' || !!this.getFeatureQualifier(feature, 'translation');
+  }
+
+  /**
+   * Get searchable protein sequence candidates for a CDS feature
+   */
+  getProteinSequencesForFeature(chromosomeSequence, feature) {
+    const candidates = [];
+    const addCandidate = (sequence, source) => {
+      const normalizedSequence = this.normalizeProteinSequence(sequence).replace(/\*+$/, '');
+      const normalizedKey = normalizedSequence.toUpperCase();
+      if (!normalizedSequence || candidates.some(candidate => candidate.sequence.toUpperCase() === normalizedKey)) {
+        return;
+      }
+      candidates.push({ sequence: normalizedSequence, source });
+    };
+
+    if (chromosomeSequence && Number.isFinite(Number(feature.start)) && Number.isFinite(Number(feature.end))) {
+      try {
+        const cdsSequence = this.extractFeatureSequence(chromosomeSequence, feature);
+        addCandidate(this.translateDNA(cdsSequence), 'computed');
+      } catch (error) {
+        console.warn('Could not translate CDS for protein search:', error);
+      }
+    }
+
+    addCandidate(this.getFeatureQualifier(feature, 'translation') || '', 'qualifier');
+
+    return candidates;
+  }
+
+  /**
+   * Extract feature DNA in coding orientation
+   */
+  extractFeatureSequence(sequence, feature) {
+    const start = Math.max(0, feature.start - 1);
+    const end = Math.min(sequence.length, feature.end);
+    let featureSequence = sequence.substring(start, end);
+
+    if (this.isReverseStrand(feature.strand)) {
+      featureSequence = this.getReverseComplement(featureSequence);
+    }
+
+    return featureSequence;
+  }
+
+  /**
+   * Translate DNA using the app's unified translator when available
+   */
+  translateDNA(sequence) {
+    if (window.UnifiedDNATranslation) {
+      const result = window.UnifiedDNATranslation.translateDNA({
+        sequence,
+        frame: 0,
+        strand: 1,
+        geneticCode: 'standard',
+        includeStops: false,
+        validateInput: true,
+      });
+
+      return result.success ? result.protein : '';
+    }
+
+    const codonTable = {
+      TTT: 'F',
+      TTC: 'F',
+      TTA: 'L',
+      TTG: 'L',
+      TCT: 'S',
+      TCC: 'S',
+      TCA: 'S',
+      TCG: 'S',
+      TAT: 'Y',
+      TAC: 'Y',
+      TAA: '*',
+      TAG: '*',
+      TGT: 'C',
+      TGC: 'C',
+      TGA: '*',
+      TGG: 'W',
+      CTT: 'L',
+      CTC: 'L',
+      CTA: 'L',
+      CTG: 'L',
+      CCT: 'P',
+      CCC: 'P',
+      CCA: 'P',
+      CCG: 'P',
+      CAT: 'H',
+      CAC: 'H',
+      CAA: 'Q',
+      CAG: 'Q',
+      CGT: 'R',
+      CGC: 'R',
+      CGA: 'R',
+      CGG: 'R',
+      ATT: 'I',
+      ATC: 'I',
+      ATA: 'I',
+      ATG: 'M',
+      ACT: 'T',
+      ACC: 'T',
+      ACA: 'T',
+      ACG: 'T',
+      AAT: 'N',
+      AAC: 'N',
+      AAA: 'K',
+      AAG: 'K',
+      AGT: 'S',
+      AGC: 'S',
+      AGA: 'R',
+      AGG: 'R',
+      GTT: 'V',
+      GTC: 'V',
+      GTA: 'V',
+      GTG: 'V',
+      GCT: 'A',
+      GCC: 'A',
+      GCA: 'A',
+      GCG: 'A',
+      GAT: 'D',
+      GAC: 'D',
+      GAA: 'E',
+      GAG: 'E',
+      GGT: 'G',
+      GGC: 'G',
+      GGA: 'G',
+      GGG: 'G',
+    };
+
+    let protein = '';
+    const normalizedSequence = String(sequence || '')
+      .toUpperCase()
+      .replace(/U/g, 'T');
+
+    for (let i = 0; i < normalizedSequence.length - 2; i += 3) {
+      const aminoAcid = codonTable[normalizedSequence.substring(i, i + 3)] || 'X';
+      if (aminoAcid === '*') break;
+      protein += aminoAcid;
+    }
+
+    return protein;
+  }
+
+  /**
+   * Convert amino-acid hit coordinates back to a genomic nucleotide interval
+   */
+  mapProteinHitToGenomicRange(feature, proteinStartIndex, proteinLength) {
+    const featureStart = Number(feature.start);
+    const featureEnd = Number(feature.end);
+
+    if (!Number.isFinite(featureStart) || !Number.isFinite(featureEnd) || proteinLength <= 0) {
+      return null;
+    }
+
+    const aaStart = proteinStartIndex;
+    const aaEnd = proteinStartIndex + proteinLength;
+    let range;
+
+    if (this.isReverseStrand(feature.strand)) {
+      range = {
+        start: Math.max(featureStart - 1, featureEnd - aaEnd * 3),
+        end: Math.min(featureEnd, featureEnd - aaStart * 3),
+      };
+    } else {
+      const codingStart = featureStart - 1;
+      range = {
+        start: Math.max(codingStart, codingStart + aaStart * 3),
+        end: Math.min(featureEnd, codingStart + aaEnd * 3),
+      };
+    }
+
+    if (range.start >= range.end) {
+      return { start: featureStart - 1, end: featureEnd };
+    }
+
+    return range;
+  }
+
+  /**
+   * Determine whether a feature strand is reverse-oriented
+   */
+  isReverseStrand(strand) {
+    return strand === '-' || strand === -1 || strand === '-1';
+  }
+
+  /**
+   * Safely read a feature qualifier value
+   */
+  getFeatureQualifier(feature, key) {
+    if (this.genomeBrowser.getQualifierValue) {
+      return this.genomeBrowser.getQualifierValue(feature.qualifiers, key) || '';
+    }
+
+    const value = feature.qualifiers?.[key];
+    if (Array.isArray(value)) {
+      return value[0] || '';
+    }
+
+    return value || '';
+  }
+
+  /**
    * Search by motif pattern (IUPAC codes)
    */
   searchByMotif(query) {
@@ -717,6 +1080,7 @@ class AdvancedSearchManager {
     const iconClass = {
       gene: 'fas fa-dna',
       sequence: 'fas fa-align-left',
+      protein: 'fas fa-flask',
       motif: 'fas fa-puzzle-piece',
       regex: 'fas fa-asterisk',
     };
@@ -882,7 +1246,14 @@ class AdvancedSearchManager {
    * Update the history display in the modal
    */
   updateHistoryDisplay() {
-    const historyContainers = ['geneSearchHistory', 'sequenceSearchHistory'];
+    const historyContainers = ['geneSearchHistory', 'sequenceSearchHistory', 'proteinSearchHistory'];
+    const historyIcons = {
+      gene: 'dna',
+      sequence: 'align-left',
+      protein: 'flask',
+      motif: 'puzzle-piece',
+      regex: 'asterisk',
+    };
 
     historyContainers.forEach(containerId => {
       const container = document.getElementById(containerId);
@@ -899,7 +1270,7 @@ class AdvancedSearchManager {
         .map(
           item => `
                 <div class="search-history-item" data-query="${item.query}" data-type="${item.type}">
-                    <i class="fas fa-${item.type === 'gene' ? 'dna' : 'align-left'}"></i>
+                    <i class="fas fa-${historyIcons[item.type] || 'search'}"></i>
                     ${item.query}
                 </div>
             `

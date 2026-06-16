@@ -2041,6 +2041,10 @@
   background: var(--primary-color);
 }
 
+.search-result-type.protein {
+  background: #0f766e;
+}
+
 .search-result-position {
   color: var(--text-secondary);
   font-size: 12px;
@@ -2065,4 +2069,3 @@
 .gene-details-content {
   padding: 12px 0;
 }
-
