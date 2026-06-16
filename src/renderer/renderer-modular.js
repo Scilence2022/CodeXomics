@@ -4288,10 +4288,9 @@ class GenomeBrowser {
               // Genes are rendered via canvas, not DOM elements
               if (this.trackRenderer) {
                 const settings = this.trackRenderer.getGeneTrackSettings?.() || {};
-                const layoutMode = settings.layoutMode || 'expanded';
-                const isCompact = layoutMode === 'compact';
-                const geneHeight = settings.geneHeight || (isCompact ? 8 : 12);
-                const rowSpacing = isCompact ? 2 : 6;
+                // Glyph size is fixed (full-size) across all layout modes
+                const geneHeight = settings.geneHeight || 12;
+                const rowSpacing = 6;
                 const rulerHeight = 35;
                 const maxRows = settings.maxRows || 6;
 

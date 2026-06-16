@@ -15778,9 +15778,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           fontFamily: { type: 'string', default: 'Arial, sans-serif', description: 'Gene name font family' },
           layoutMode: {
             type: 'string',
-            enum: ['expanded', 'compact', 'groupByType'],
-            default: 'compact',
-            description: 'Layout mode',
+            enum: ['packed', 'singleRow', 'groupByType'],
+            default: 'packed',
+            description:
+              'Layout mode: "packed" (fill first row, overflow on overlap), "singleRow" (all features on one row), "groupByType" (one row per feature type)',
           },
           enableGlobalDragging: { type: 'boolean', default: true, description: 'Enable global track dragging' },
           highlightEffect: {
