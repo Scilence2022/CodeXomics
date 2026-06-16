@@ -301,11 +301,9 @@ class TrackRenderer {
       // Add layout mode toggle button
       const layoutBtn = document.createElement('button');
       layoutBtn.className = 'track-btn track-layout-btn';
-      // Set initial icon based on current settings
-      const currentLayout = this.getTrackSettings('genes').layoutMode || 'expanded';
-      layoutBtn.innerHTML =
-        currentLayout === 'compact' ? '<i class="fas fa-compress-alt"></i>' : '<i class="fas fa-expand-alt"></i>';
-      layoutBtn.title = `Switch to ${currentLayout === 'compact' ? 'Expanded' : 'Compact'} Layout`;
+      // Set initial icon/tooltip based on current settings (handles all three modes)
+      const currentLayout = this.normalizeLayoutMode(this.getTrackSettings('genes').layoutMode);
+      this.updateLayoutButtonAppearance(layoutBtn, currentLayout);
 
       layoutBtn.addEventListener('click', e => {
         e.stopPropagation();
@@ -1108,7 +1106,7 @@ class TrackRenderer {
   renderPrimerElements(trackContent, visiblePrimers, viewport, settings = {}) {
     const primerRows = this.arrangeGenesInRows(visiblePrimers, viewport.start, viewport.end, [], {
       ...settings,
-      layoutMode: settings.layoutMode || 'expanded',
+      layoutMode: this.normalizeLayoutMode(settings.layoutMode),
     });
     const layout = this.calculatePrimerTrackLayout(primerRows, settings);
     const containerWidth = this.getPrimerTrackRenderableWidth(trackContent);
@@ -2255,17 +2253,10 @@ class TrackRenderer {
     if (trackType !== 'genes') return;
 
     const settings = this.getTrackSettings('genes');
-    const currentMode = settings.layoutMode || 'expanded';
+    const currentMode = this.normalizeLayoutMode(settings.layoutMode);
 
-    // Cycle through modes: expanded → compact → groupByType → expanded
-    let newMode;
-    if (currentMode === 'expanded') {
-      newMode = 'compact';
-    } else if (currentMode === 'compact') {
-      newMode = 'groupByType';
-    } else {
-      newMode = 'expanded';
-    }
+    // Cycle through modes: packed → singleRow → groupByType → packed
+    const newMode = this.getLayoutModeInfo(currentMode).next;
 
     console.log(`Switching ${trackType} layout from ${currentMode} to ${newMode}`);
 
@@ -2276,8 +2267,44 @@ class TrackRenderer {
     // Update button appearance
     this.updateLayoutButtonAppearance(buttonElement, newMode);
 
+    // Report the now-active layout in the status bar below the track
+    const newInfo = this.getLayoutModeInfo(newMode);
+    const statusMessage = `Genes & Features layout: ${newInfo.label}`;
+    if (this.genomeBrowser.uiManager) {
+      this.genomeBrowser.uiManager.updateStatus(statusMessage, { highlight: true, restore: true });
+    } else if (this.genomeBrowser.updateStatus) {
+      this.genomeBrowser.updateStatus(statusMessage);
+    }
+
     // Refresh the track to apply changes
     this.refreshTrack(trackType);
+  }
+
+  /**
+   * Normalize a layout mode to one of the three supported arrangements.
+   * Migrates legacy keys: 'expanded' and 'compact' were both row-packing
+   * arrangements that differed only in glyph size, so they collapse to 'packed'.
+   */
+  normalizeLayoutMode(mode) {
+    if (mode === 'singleRow' || mode === 'packed' || mode === 'groupByType') return mode;
+    // Legacy 'expanded'/'compact' (and anything unknown) → packed rows
+    return 'packed';
+  }
+
+  /**
+   * Single source of truth for layout-mode presentation: icon, human label,
+   * and the mode reached by cycling. Click order: packed → singleRow → groupByType → packed.
+   *   - packed:      first row as much as possible, overflow into more rows on overlap
+   *   - singleRow:   all features on one row, overlaps allowed
+   *   - groupByType: one row per feature type, overlaps allowed
+   */
+  getLayoutModeInfo(mode) {
+    const layoutInfo = {
+      packed: { icon: 'fa-bars', label: 'Packed Rows', next: 'singleRow' },
+      singleRow: { icon: 'fa-ellipsis-h', label: 'Single Row', next: 'groupByType' },
+      groupByType: { icon: 'fa-layer-group', label: 'Group by Type', next: 'packed' },
+    };
+    return layoutInfo[this.normalizeLayoutMode(mode)];
   }
 
   /**
@@ -2348,24 +2375,14 @@ class TrackRenderer {
   updateLayoutButtonAppearance(buttonElement, mode) {
     if (!buttonElement) return;
 
-    let icon;
-    let title;
-    switch (mode) {
-      case 'compact':
-        icon = '<i class="fas fa-compress-alt"></i>';
-        title = 'Switch to Group by Type Layout';
-        break;
-      case 'groupByType':
-        icon = '<i class="fas fa-layer-group"></i>';
-        title = 'Switch to Expanded Layout';
-        break;
-      default: // expanded
-        icon = '<i class="fas fa-expand-alt"></i>';
-        title = 'Switch to Compact Layout';
-    }
+    const info = this.getLayoutModeInfo(mode);
+    const nextLabel = this.getLayoutModeInfo(info.next).label;
 
-    buttonElement.innerHTML = icon;
-    buttonElement.title = title;
+    buttonElement.innerHTML = `<i class="fas ${info.icon}"></i>`;
+    // Tooltip states the currently active mode and what a click switches to
+    buttonElement.title = `Layout: ${info.label} (click to switch to ${nextLabel})`;
+    // Expose active mode for styling / inspection
+    buttonElement.dataset.layoutMode = mode;
   }
 
   /**
@@ -2376,7 +2393,7 @@ class TrackRenderer {
     if (!layoutBtn) return;
 
     const settings = this.getTrackSettings('genes');
-    const currentMode = settings.layoutMode || 'expanded';
+    const currentMode = this.normalizeLayoutMode(settings.layoutMode);
     this.updateLayoutButtonAppearance(layoutBtn, currentMode);
   }
 
@@ -2384,11 +2401,11 @@ class TrackRenderer {
    * Calculate layout parameters for gene track
    */
   calculateGeneTrackLayout(geneRows, settings) {
-    const layoutMode = settings?.layoutMode || 'expanded';
-    const isCompact = layoutMode === 'compact';
+    const layoutMode = this.normalizeLayoutMode(settings?.layoutMode);
 
-    const geneHeight = settings?.geneHeight || (isCompact ? 8 : 12);
-    const rowSpacing = isCompact ? 2 : 6;
+    // Glyph size is fixed (full-size with labels) across all layout modes
+    const geneHeight = settings?.geneHeight || 12;
+    const rowSpacing = 6;
     const rulerHeight = 35;
     const bottomPadding = 0;
 
@@ -7362,14 +7379,25 @@ class TrackRenderer {
 
   // New method to dispatch gene arrangement based on layout mode
   arrangeGenesInRows(genes, viewStart, viewEnd, operons, settings) {
-    const layoutMode = settings?.layoutMode || 'compact';
+    const layoutMode = this.normalizeLayoutMode(settings?.layoutMode);
     console.log(`Arranging genes with layout mode: ${layoutMode}`);
 
     if (layoutMode === 'groupByType') {
       return this.arrangeGenesByType(genes, settings);
     }
-    // Default to compact mode
+    if (layoutMode === 'singleRow') {
+      return this.arrangeGenesSingleRow(genes);
+    }
+    // Default: packed rows (first row as much as possible, overflow on overlap)
     return this.arrangeGenesCompactly(genes, operons, settings);
+  }
+
+  // Arranges all genes on a single row, regardless of overlap
+  arrangeGenesSingleRow(genes) {
+    if (!genes || genes.length === 0) return [];
+    const sortedGenes = [...genes].sort((a, b) => a.start - b.start);
+    console.log(`arrangeGenesSingleRow result: ${sortedGenes.length} features on 1 row`);
+    return [sortedGenes];
   }
 
   // New: Arranges genes by feature type - consolidates all same-type elements on a single row
@@ -8911,8 +8939,8 @@ class TrackRenderer {
     let symbolPath;
 
     switch (actionType) {
-      case 'copy_sequence': // Duplicate/copy symbol - two overlapping rectangles
-      {
+      case 'copy_sequence': {
+        // Duplicate/copy symbol - two overlapping rectangles
         const rect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect1.setAttribute('x', centerX - symbolSize / 2 + 1);
         rect1.setAttribute('y', centerY - symbolSize / 2 + 1);
@@ -8938,8 +8966,8 @@ class TrackRenderer {
         break;
       }
 
-      case 'cut_sequence': // Vertical scissors symbol with heads pointing up
-      {
+      case 'cut_sequence': {
+        // Vertical scissors symbol with heads pointing up
         const leftBlade = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const leftBladePath = `
                     M ${centerX - symbolSize / 6} ${centerY - symbolSize / 3}
@@ -9021,8 +9049,8 @@ class TrackRenderer {
         break;
       }
 
-      case 'paste_sequence': // Clipboard symbol
-      {
+      case 'paste_sequence': {
+        // Clipboard symbol
         const clipboardBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         clipboardBase.setAttribute('x', centerX - symbolSize / 3);
         clipboardBase.setAttribute('y', centerY - symbolSize / 2);
@@ -9046,8 +9074,8 @@ class TrackRenderer {
         break;
       }
 
-      case 'delete_sequence': // Enhanced trash/delete symbol with better proportions
-      {
+      case 'delete_sequence': {
+        // Enhanced trash/delete symbol with better proportions
         const trashBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         trashBase.setAttribute('x', centerX - symbolSize / 3);
         trashBase.setAttribute('y', centerY - symbolSize / 6);
@@ -9116,8 +9144,8 @@ class TrackRenderer {
         break;
       }
 
-      case 'insert_sequence': // Plus/insert symbol
-      {
+      case 'insert_sequence': {
+        // Plus/insert symbol
         const plusH = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         plusH.setAttribute('x1', centerX - symbolSize / 3);
         plusH.setAttribute('y1', centerY);
@@ -9141,8 +9169,8 @@ class TrackRenderer {
         break;
       }
 
-      case 'replace_sequence': // Refresh/replace symbol
-      {
+      case 'replace_sequence': {
+        // Refresh/replace symbol
         symbolPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const replacePath = `
                     M ${centerX - symbolSize / 3} ${centerY}
@@ -9160,8 +9188,8 @@ class TrackRenderer {
         break;
       }
 
-      default: // Default: simple dot
-      {
+      default: {
+        // Default: simple dot
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', centerX);
         circle.setAttribute('cy', centerY);
@@ -10985,11 +11013,11 @@ This action cannot be undone.`;
                             <div class="form-group">
                                 <label for="genesLayoutMode">Layout Mode:</label>
                                 <select id="genesLayoutMode" class="form-select">
-                                    <option value="expanded" ${settings.layoutMode === 'expanded' || !settings.layoutMode ? 'selected' : ''}>Expanded</option>
-                                    <option value="compact" ${settings.layoutMode === 'compact' ? 'selected' : ''}>Compact</option>
-                                    <option value="groupByType" ${settings.layoutMode === 'groupByType' ? 'selected' : ''}>Group by Type</option>
+                                    <option value="packed" ${this.normalizeLayoutMode(settings.layoutMode) === 'packed' ? 'selected' : ''}>Packed Rows</option>
+                                    <option value="singleRow" ${this.normalizeLayoutMode(settings.layoutMode) === 'singleRow' ? 'selected' : ''}>Single Row</option>
+                                    <option value="groupByType" ${this.normalizeLayoutMode(settings.layoutMode) === 'groupByType' ? 'selected' : ''}>Group by Type</option>
                                 </select>
-                                <div class="help-text">"Expanded": Full-size features with labels. "Compact": Smaller features without labels. "Group by Type": Separates features into dedicated rows by type.</div>
+                                <div class="help-text">"Packed Rows": Features fill the first row, overflowing to additional rows only where they overlap. "Single Row": All features on one row, overlaps allowed. "Group by Type": One row per feature type, overlaps allowed.</div>
                             </div>
                             <div class="form-group">
                                 <label for="genesMaxRows">Maximal rows for displaying features:</label>
@@ -11996,7 +12024,7 @@ This action cannot be undone.`;
         fontSize: 24, // Updated default to 24px as requested
         geneNameColor: '#333333', // Default gene name color
         fontFamily: 'Arial, sans-serif',
-        layoutMode: 'compact', // 'compact' or 'groupByType'
+        layoutMode: 'packed', // 'packed' | 'singleRow' | 'groupByType'
         enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false, // Inherit from global setting, default to true
         highlightEffect: 'pulse', // 'pulse', 'border', 'both'
         autoHighlightSequence: true, // Auto-highlight sequence region when gene is selected
@@ -12076,7 +12104,7 @@ This action cannot be undone.`;
         fontSize: 11,
         geneNameColor: '#4a044e',
         fontFamily: 'Arial, sans-serif',
-        layoutMode: 'compact',
+        layoutMode: 'packed',
         enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false,
         highlightEffect: 'border',
         autoHighlightSequence: false,
@@ -12745,7 +12773,7 @@ This action cannot be undone.`;
         settings.fontSize = parseInt(fontSizeElement?.value) || 11;
         settings.geneNameColor = geneNameColorElement?.value || '#333333';
         settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
-        settings.layoutMode = layoutModeElement?.value || 'expanded';
+        settings.layoutMode = this.normalizeLayoutMode(layoutModeElement?.value);
         settings.enableGlobalDragging = enableGlobalDraggingElement?.checked !== false; // Default to true
         settings.wheelZoomSensitivity = parseFloat(wheelZoomSensitivityElement?.value) || 0.1;
         settings.overrideGlobalZoom = overrideGlobalZoomElement?.checked || false;
@@ -12773,8 +12801,8 @@ This action cannot be undone.`;
         settings.height = parseInt(modal.querySelector('#gcTrackHeight').value) || 140;
         break;
 
-      case 'reads': // Rendering method settings
-      {
+      case 'reads': {
+        // Rendering method settings
         const renderingModeSelect = modal.querySelector('#readsRenderingMode');
         settings.renderingMode = renderingModeSelect ? renderingModeSelect.value : 'canvas';
 
@@ -12849,8 +12877,8 @@ This action cannot be undone.`;
         break;
       }
 
-      case 'sequence': // View Mode settings (traditional sequence view)
-      {
+      case 'sequence': {
+        // View Mode settings (traditional sequence view)
         {
           const currentSequenceSettings = this.getTrackSettings('sequence') || {};
           if (Number.isFinite(Number(currentSequenceSettings.panelHeight))) {
@@ -12964,8 +12992,8 @@ This action cannot be undone.`;
         break;
       }
 
-      case 'wigTracks': // Collect track spacing
-      {
+      case 'wigTracks': {
+        // Collect track spacing
         const trackSpacingEl = modal.querySelector('#wigTrackSpacing');
         if (trackSpacingEl) {
           settings.trackSpacing = parseInt(trackSpacingEl.value) || 5;
@@ -12990,8 +13018,8 @@ This action cannot be undone.`;
         break;
       }
 
-      case 'sequenceLine': // Basic display settings
-      {
+      case 'sequenceLine': {
+        // Basic display settings
         settings.fontSize = parseInt(modal.querySelector('#sequenceLineFontSize').value) || 14;
         settings.fontFamily = modal.querySelector('#sequenceLineFontFamily').value || 'Courier New, monospace';
 
@@ -13070,8 +13098,8 @@ This action cannot be undone.`;
         settings.fileSpacing = parseInt(modal.querySelector('#variantsFileSpacing').value) || 10;
         break;
 
-      default: // For other track types that use the default track height input
-      {
+      default: {
+        // For other track types that use the default track height input
         const defaultHeightInput = modal.querySelector('#defaultTrackHeight');
         settings.height = defaultHeightInput ? parseInt(defaultHeightInput.value) : 80;
         break;
