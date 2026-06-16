@@ -1,7 +1,7 @@
 # switch_ui_style.yaml
 name: 'switch_ui_style'
 version: '1.0.0'
-description: "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 7 light-mode preset styles."
+description: "Switch the application's UI visual style/theme. Use this when users ask to change the appearance, color scheme, theme, or visual style of the application. Supports 8 light-mode preset styles."
 category: 'system'
 keywords:
   [
@@ -36,7 +36,7 @@ parameters:
   properties:
     style_name:
       type: 'string'
-      description: "The light-mode UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (navy/cyan accents), 'pastel' (soft pastel colors), 'amy' (bright pink-blue tones)."
+      description: "The light-mode UI style preset to apply. Available styles: 'default' (AI Dynamic - vibrant blue-purple), 'professional' (deep teal, scientific), 'minimal' (warm gray with amber), 'elegant' (monochrome gray), 'midnight' (navy/cyan accents), 'pastel' (soft pastel colors), 'amy' (bright pink-blue tones), 'red' (focused crimson/rose-red)."
       enum:
         - 'default'
         - 'professional'
@@ -45,6 +45,7 @@ parameters:
         - 'midnight'
         - 'pastel'
         - 'amy'
+        - 'red'
       examples: ['default', 'professional', 'midnight', 'amy']
   required: []
 
