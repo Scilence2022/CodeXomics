@@ -5383,6 +5383,10 @@ class TrackRenderer {
       autoFontSize: settings.autoFontSize !== false,
       minFontSize: 8,
       maxFontSize: 14,
+      // Letter-size cap shared by the reference band and the read sequences so
+      // read bases render at the same size as the reference bases.
+      referenceFontSize: settings.referenceFontSize || 12,
+      sequenceFontSize: settings.sequenceFontSize || 6,
       qualityColoring: settings.showQualityColors || false,
       strandColoring: !settings.showQualityColors, // Use strand coloring when not using quality
       mismatchHighlight: settings.highlightMismatches !== false,

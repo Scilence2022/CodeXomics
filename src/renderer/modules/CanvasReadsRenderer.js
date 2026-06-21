@@ -185,6 +185,11 @@ class CanvasReadsRenderer {
 
     this.canvasWidth = Math.max(width, 200);
 
+    // Resolve the effective per-read height for the current zoom (grows when
+    // sequence letters are shown so they fit). Now that canvasWidth is known,
+    // getPixelsPerBp() is meaningful.
+    this.effectiveReadHeight = this.getEffectiveReadHeight();
+
     // Calculate canvas height based on read rows plus reference/coverage space
     const totalRows = this.readRows.length;
     let totalHeight = this.options.topPadding;
@@ -200,8 +205,8 @@ class CanvasReadsRenderer {
       totalHeight += 25; // Reference sequence height (20) + spacing (5)
     }
 
-    // Add space for reads
-    totalHeight += totalRows * (this.options.readHeight + this.options.rowSpacing) + this.options.bottomPadding;
+    // Add space for reads (uses effective height so taller sequence rows fit)
+    totalHeight += totalRows * (this.effectiveReadHeight + this.options.rowSpacing) + this.options.bottomPadding;
 
     this.canvasHeight = totalHeight;
 
@@ -218,6 +223,15 @@ class CanvasReadsRenderer {
 
     // Update container height to match canvas
     this.container.style.height = this.canvasHeight + 'px';
+
+    // Ensure the host track row reserves enough height for the (possibly taller)
+    // sequence canvas so it is not clipped or overlapping the next track. We use
+    // min-height — not height — so we never fight an explicit/splitter-set height,
+    // and it relaxes automatically when zooming back out shrinks the canvas.
+    const host = this.container.parentElement;
+    if (host) {
+      host.style.minHeight = `${this.canvasHeight}px`;
+    }
 
     console.log('🖼️ [CanvasReadsRenderer] Canvas setup:', {
       canvasWidth: this.canvasWidth,
@@ -277,6 +291,54 @@ class CanvasReadsRenderer {
     return Math.max(this.options.minFontSize, Math.min(this.options.maxFontSize, fontSize));
   }
 
+  /**
+   * Horizontal scale of the current viewport (CSS pixels per base pair).
+   * This is the single scale shared by the reference band and the reads, so a
+   * base occupies the same width in both.
+   */
+  getPixelsPerBp() {
+    const range = this.viewport.end - this.viewport.start;
+    return range > 0 ? this.canvasWidth / range : 0;
+  }
+
+  /**
+   * Unified letter size for sequence display. Both the reference sequence and the
+   * aligned reads use this so that read bases render at the SAME size as the
+   * reference bases at any given zoom level (previously reads were shackled to the
+   * tiny readHeight, making them far smaller than the reference). Sized purely from
+   * the horizontal zoom, exactly like the reference band.
+   */
+  getSequenceLetterFontSize(pixelsPerBp = this.getPixelsPerBp()) {
+    // Cap matches the reference font (referenceFontSize, default 12) so the two
+    // never diverge; fall back to maxFontSize when no reference cap is configured.
+    const cap = this.options.referenceFontSize || this.options.maxFontSize || 12;
+    return Math.min(cap, Math.floor(pixelsPerBp * 0.8));
+  }
+
+  /**
+   * Font size actually used to draw read bases at the current zoom (auto mode
+   * mirrors the reference; manual mode honours the user's sequenceFontSize).
+   */
+  getReadSequenceFontSize(pixelsPerBp = this.getPixelsPerBp()) {
+    if (this.options.autoFontSize === false) {
+      return this.options.sequenceFontSize || 6;
+    }
+    return Math.max(this.options.minFontSize || 6, this.getSequenceLetterFontSize(pixelsPerBp));
+  }
+
+  /**
+   * Effective per-read row height. Reads are thin bars when zoomed out, but once
+   * bases become wide enough to render letters we grow the row so the (now
+   * reference-sized) letters fit without overlapping neighbouring rows.
+   */
+  getEffectiveReadHeight() {
+    const base = this.options.readHeight;
+    if (!this.options.showSequences) return base;
+    const pixelsPerBp = this.getPixelsPerBp();
+    // Only grow once bases are wide enough that letters are actually drawn.
+    if (pixelsPerBp < 3) return base;
+    return Math.max(base, this.getReadSequenceFontSize(pixelsPerBp) + 4);
+  }
 
   render() {
     const startTime = performance.now();
@@ -285,6 +347,10 @@ class CanvasReadsRenderer {
     // CRITICAL FIX: Always reset drag transform when rendering
     // This ensures resize operations don't leave the canvas shifted
     this.resetDragTransform();
+
+    // Keep the effective read height in sync with the current zoom for all the
+    // per-row drawing below (setupCanvas also sets it for height calculations).
+    this.effectiveReadHeight = this.getEffectiveReadHeight();
 
     console.log('🎨 [CanvasReadsRenderer] Starting render:', {
       readRows: this.readRows.length,
@@ -358,16 +424,16 @@ class CanvasReadsRenderer {
     // Calculate pixels per base pair
     const pixelsPerBp = this.canvasWidth / bpLength;
 
-
     // Only render if we have a reasonable width per base
     if (pixelsPerBp > 0.1) {
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
 
-      // Choose font size based on zoom level
+      // Choose font size based on zoom level (shared with read sequences so the
+      // two render at the same size).
       const showLetters = pixelsPerBp >= 8;
       if (showLetters) {
-        const fontSize = Math.min(12, Math.floor(pixelsPerBp * 0.8));
+        const fontSize = this.getSequenceLetterFontSize(pixelsPerBp);
         this.ctx.font = `bold ${fontSize}px sans-serif`;
       }
 
@@ -525,7 +591,8 @@ class CanvasReadsRenderer {
       yOffset += 25; // Reference sequence height (20) + spacing (5)
     }
 
-    const y = yOffset + rowIndex * (this.options.readHeight + this.options.rowSpacing);
+    const readHeight = this.effectiveReadHeight || this.options.readHeight;
+    const y = yOffset + rowIndex * (readHeight + this.options.rowSpacing);
 
     rowReads.forEach(read => {
       this.renderRead(read, y);
@@ -554,13 +621,16 @@ class CanvasReadsRenderer {
     // Determine read color based on properties
     const readColor = this.getReadColor(read);
 
+    // Effective row height (grows when sequence letters are shown)
+    const readHeight = this.effectiveReadHeight || this.options.readHeight;
+
     // Store read position for click detection
     this.readPositions.push({
       read: read,
       x: x,
       y: y,
       width: width,
-      height: this.options.readHeight,
+      height: readHeight,
     });
 
     // GUARANTEED VISIBILITY APPROACH: Always ensure something is rendered
@@ -604,15 +674,15 @@ class CanvasReadsRenderer {
       if (read.isMultiMapping) {
         this.ctx.strokeStyle = readColor;
         this.ctx.lineWidth = Math.max(1, this.options.borderWidth || 1);
-        this.ctx.strokeRect(x, y, width, this.options.readHeight);
+        this.ctx.strokeRect(x, y, width, readHeight);
       } else {
         this.ctx.fillStyle = readColor;
-        this.ctx.fillRect(x, y, width, this.options.readHeight);
+        this.ctx.fillRect(x, y, width, readHeight);
 
         // Draw read border for better visibility
         this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
         this.ctx.lineWidth = 0.5;
-        this.ctx.strokeRect(x, y, width, this.options.readHeight);
+        this.ctx.strokeRect(x, y, width, readHeight);
       }
     }
 
@@ -741,7 +811,8 @@ class CanvasReadsRenderer {
 
     // FIX: Simplify index calculation to match SVG mode logic
     // Direct mapping from genomic offset to sequence index
-    let startIndex; let endIndex;
+    let startIndex;
+    let endIndex;
     if (actualReadLength <= 1) {
       startIndex = 0;
       endIndex = actualReadLength - 1;
@@ -792,17 +863,15 @@ class CanvasReadsRenderer {
    */
   renderSequenceText(visibleSequence, x, y, width) {
     const charSpacing = width / visibleSequence.length;
+    const readHeight = this.effectiveReadHeight || this.options.readHeight;
 
-    // Choose font size based on auto-calculate setting - match SVG logic
+    // Choose font size based on auto-calculate setting.
     let fontSize;
     if (this.options.autoFontSize !== false) {
-      // Auto-calculate mode: calculate optimal font size for this visible sequence portion
-      fontSize = this.calculateOptimalSequenceFontSize(visibleSequence.length, width, this.options.readHeight);
-
-      // Be more lenient with font size - use minimum font size as absolute floor
-      if (fontSize < (this.options.minFontSize || 4)) {
-        fontSize = this.options.minFontSize || 4; // Use minimum viable font size
-      }
+      // Auto mode: size read bases exactly like the reference sequence (purely
+      // from the horizontal zoom) so they render at the same, readable size
+      // instead of being shrunk to fit the thin read bar.
+      fontSize = this.getReadSequenceFontSize();
     } else {
       // Manual mode: use user-specified font size settings
       fontSize = this.options.sequenceFontSize || 6;
@@ -814,12 +883,12 @@ class CanvasReadsRenderer {
       }
     }
 
-    // Set font with chosen size
-    this.ctx.font = `${fontSize}px 'Courier New', monospace`;
+    // Set font with chosen size. Bold matches the reference band for legibility.
+    this.ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
 
-    const textY = y + this.options.readHeight / 2;
+    const textY = y + readHeight / 2;
 
     // Calculate character width for proper positioning
     const actualCharWidth = this.ctx.measureText('M').width;
@@ -846,32 +915,6 @@ class CanvasReadsRenderer {
     return charactersRendered > 0;
   }
 
-  /**
-   * Calculate optimal font size for sequence display - matches SVG logic
-   */
-  calculateOptimalSequenceFontSize(sequenceLength, availableWidth, readHeight) {
-    // Calculate pixels per base
-    const pixelsPerBase = availableWidth / sequenceLength;
-
-    // Calculate font size constraints
-    const minFontSize = this.options.minFontSize || 4;
-    const maxFontSize = this.options.maxFontSize || 14;
-
-    // Font size based on available width per character (leave padding)
-    const widthBasedFontSize = Math.floor(pixelsPerBase * 0.8);
-
-    // Font size based on read height (leave some vertical padding)
-    const heightBasedFontSize = Math.floor(readHeight * 0.7);
-
-    // Use the smaller of the two constraints
-    let optimalFontSize = Math.min(widthBasedFontSize, heightBasedFontSize);
-
-    // Apply min/max constraints
-    optimalFontSize = Math.max(minFontSize, Math.min(maxFontSize, optimalFontSize));
-
-    return optimalFontSize;
-  }
-
   renderMismatches(read, x, y, width) {
     if (!read.mismatches) return;
 
@@ -883,7 +926,7 @@ class CanvasReadsRenderer {
         const mismatchWidth = Math.max(2, width / read.sequence.length);
 
         this.ctx.fillStyle = this.mismatchColor;
-        this.ctx.fillRect(mismatchX, y - 1, mismatchWidth, this.options.readHeight + 2);
+        this.ctx.fillRect(mismatchX, y - 1, mismatchWidth, (this.effectiveReadHeight || this.options.readHeight) + 2);
       }
     });
   }
@@ -913,7 +956,7 @@ class CanvasReadsRenderer {
 
         this.ctx.beginPath();
         this.ctx.moveTo(relativeX, y);
-        this.ctx.lineTo(relativeX, y + this.options.readHeight);
+        this.ctx.lineTo(relativeX, y + (this.effectiveReadHeight || this.options.readHeight));
         this.ctx.stroke();
 
         // Reset dashed line
@@ -1090,9 +1133,11 @@ class CanvasReadsRenderer {
 
     const oldWidth = this.canvasWidth;
 
-    // Recalculate container width
-    const containerRect = this.container.getBoundingClientRect();
-    this.canvasWidth = Math.max(containerRect.width, 800);
+    // Re-run full canvas setup: a width change alters pixels-per-bp, which can
+    // change the effective read height (and therefore the canvas/host height)
+    // when sequence letters are shown, so width and height must be recomputed
+    // together.
+    this.setupCanvas();
 
     console.log('📐 [CanvasReadsRenderer] Width update:', {
       oldWidth: oldWidth,
@@ -1102,13 +1147,6 @@ class CanvasReadsRenderer {
 
     // Only re-render if width actually changed
     if (oldWidth !== this.canvasWidth) {
-      // Update canvas dimensions
-      this.canvas.width = this.canvasWidth * this.devicePixelRatio;
-      this.canvas.style.width = this.canvasWidth + 'px';
-
-      // Re-scale context for high-DPI displays (reset first to prevent accumulation)
-      this.ctx.setTransform(this.devicePixelRatio, 0, 0, this.devicePixelRatio, 0, 0);
-
       // Update text metrics if showing sequences
       if (this.options.showSequences) {
         this.calculateTextMetrics();
@@ -1144,13 +1182,19 @@ class CanvasReadsRenderer {
   updateOptions(newOptions) {
     this.options = { ...this.options, ...newOptions };
 
-    // Recalculate metrics if font options changed
+    // Recalculate metrics + canvas size if options that affect the row height or
+    // sequence display changed (these change the effective read height and thus
+    // the canvas/host height, not just the drawing).
     if (
       newOptions.showSequences !== undefined ||
       newOptions.autoFontSize !== undefined ||
       newOptions.minFontSize !== undefined ||
-      newOptions.maxFontSize !== undefined
+      newOptions.maxFontSize !== undefined ||
+      newOptions.referenceFontSize !== undefined ||
+      newOptions.sequenceFontSize !== undefined ||
+      newOptions.readHeight !== undefined
     ) {
+      this.setupCanvas();
       this.calculateTextMetrics();
     }
 
