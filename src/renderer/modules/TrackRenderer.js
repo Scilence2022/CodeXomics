@@ -7981,7 +7981,7 @@ class TrackRenderer {
         }
 
         // Draw label with minimum spacing check - moved up from 32 to 28
-        const label = this.formatDetailedPosition(displayPos);
+        const label = this.formatDetailedPosition(displayPos, majorInterval);
         const labelWidth = ctx.measureText(label).width;
 
         // Check if there's enough space using X positions (works correctly in circular mode)
@@ -8099,13 +8099,45 @@ class TrackRenderer {
     return { majorInterval, minorInterval };
   }
 
-  // Format position for detailed ruler
-  formatDetailedPosition(position) {
-    if (position >= 1000) {
-      return Math.round(position / 1000) + 'K';
-    } else {
-      return position.toString();
+  // Format a position label for the detailed ruler.
+  //
+  // `majorInterval` is the bp spacing between adjacent labels. It determines how
+  // much precision the label needs: when zoomed in so that ticks are < 1 kb
+  // apart, rounding to whole "K" collapses neighbouring ticks (e.g. 4800, 5000
+  // and 5200 all became "5K"). In that case we show the exact coordinate, and
+  // otherwise keep just enough decimals to render each tick value exactly.
+  formatDetailedPosition(position, majorInterval = 1000) {
+    if (position === 0) return '0';
+
+    // Sub-kilobase spacing: show the exact coordinate with thousands separators
+    // so adjacent ticks never collapse to the same rounded label.
+    if (majorInterval < 1000) {
+      return position.toLocaleString();
     }
+
+    // Number of decimals needed to represent the tick step exactly in `unit`.
+    const decimalsForUnit = unit => {
+      let step = majorInterval / unit;
+      let decimals = 0;
+      while (Math.abs(step - Math.round(step)) > 1e-9 && decimals < 3) {
+        step *= 10;
+        decimals++;
+      }
+      return decimals;
+    };
+
+    const formatUnit = (value, unit, suffix) => {
+      let text = value.toFixed(decimalsForUnit(unit));
+      if (text.includes('.')) {
+        text = text.replace(/0+$/, '').replace(/\.$/, '');
+      }
+      return text + suffix;
+    };
+
+    if (position >= 1000000) {
+      return formatUnit(position / 1000000, 1000000, 'M');
+    }
+    return formatUnit(position / 1000, 1000, 'K');
   }
 
   createGCLegend() {
