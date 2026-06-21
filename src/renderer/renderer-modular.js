@@ -4094,6 +4094,12 @@ class GenomeBrowser {
         }
       }
 
+      // Always-present "secondary ruler" decoupled from any data track. Rendered
+      // as the first child so the viewport coordinate axis stays visible and
+      // aligned even when no Genes & Features track exists (e.g. FASTA files).
+      const coordinateRulerBar = this.trackRenderer.createCoordinateRulerBar(chromosome);
+      browserContainer.appendChild(coordinateRulerBar);
+
       // Add tracks without splitters, but make them draggable and resizable
       tracksToShow.forEach((track, index) => {
         // Add the track

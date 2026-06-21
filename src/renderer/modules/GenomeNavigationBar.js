@@ -115,6 +115,33 @@ class GenomeNavigationBar {
             transition: all 0.2s ease;
         `;
 
+    // Create secondary (detailed coordinate) ruler visibility toggle.
+    // The detailed ruler is now a standalone bar above the tracks; this is the
+    // single place to show/hide it, so it works even for FASTA files that have
+    // no Genes & Features track.
+    this.secondaryRulerToggle = document.createElement('button');
+    this.secondaryRulerToggle.className = 'secondary-ruler-toggle-btn';
+    this.secondaryRulerToggle.innerHTML = '<i class="fas fa-ruler-horizontal"></i>';
+    this.secondaryRulerToggle.title = 'Show/Hide detailed coordinate ruler';
+    this.secondaryRulerToggle.style.cssText = `
+            position: absolute;
+            top: 2px;
+            right: 54px;
+            width: 24px;
+            height: 24px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: #ffffff;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #64748b;
+            transition: all 0.2s ease;
+        `;
+
     // Add tooltip for position display
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'navigation-tooltip';
@@ -126,6 +153,7 @@ class GenomeNavigationBar {
     this.container.appendChild(this.rangeIndicator);
     this.container.appendChild(this.selectionToggle);
     this.container.appendChild(this.visibilityToggle);
+    this.container.appendChild(this.secondaryRulerToggle);
     this.container.appendChild(this.tooltip);
 
     // Insert the navigation bar above the genome viewer
@@ -158,6 +186,9 @@ class GenomeNavigationBar {
     // Visibility toggle
     this.visibilityToggle.addEventListener('click', e => this.toggleRulerVisibility(e));
 
+    // Secondary (detailed coordinate) ruler visibility toggle
+    this.secondaryRulerToggle.addEventListener('click', e => this.toggleSecondaryRulerFromNav(e));
+
     // Keyboard navigation
     this.canvas.addEventListener('keydown', e => this.handleKeyDown(e));
     this.canvas.setAttribute('tabindex', '0');
@@ -186,6 +217,12 @@ class GenomeNavigationBar {
     this.container.style.display = 'block';
     this.resizeCanvas();
     this.draw();
+
+    // Keep the secondary-ruler toggle button in sync with the persisted state.
+    const trackRenderer = this.genomeBrowser && this.genomeBrowser.trackRenderer;
+    if (trackRenderer && trackRenderer.elementVisibilityStates) {
+      this.updateSecondaryRulerToggleAppearance(trackRenderer.elementVisibilityStates.genesRuler !== false);
+    }
 
     console.log(`GenomeNavigationBar: Showing navigation for ${chromosome} (${sequenceLength} bp)`);
   }
@@ -997,6 +1034,41 @@ class GenomeNavigationBar {
     this.draw();
 
     console.log(`GenomeNavigationBar: Ruler ${this.isRulerCollapsed ? 'collapsed' : 'expanded'}`);
+  }
+
+  /**
+   * Toggle the standalone detailed coordinate ruler (the "secondary ruler")
+   * that sits above the tracks. Delegates the persisted state to TrackRenderer.
+   */
+  toggleSecondaryRulerFromNav(e) {
+    if (e) e.preventDefault();
+
+    const trackRenderer = this.genomeBrowser && this.genomeBrowser.trackRenderer;
+    if (!trackRenderer || typeof trackRenderer.toggleCoordinateRulerVisibility !== 'function') {
+      console.warn('GenomeNavigationBar: TrackRenderer not available for secondary ruler toggle');
+      return;
+    }
+
+    const visible = trackRenderer.toggleCoordinateRulerVisibility();
+    this.updateSecondaryRulerToggleAppearance(visible);
+
+    console.log(`GenomeNavigationBar: Secondary ruler ${visible ? 'shown' : 'hidden'}`);
+  }
+
+  /**
+   * Reflect the secondary-ruler visibility state on the toggle button.
+   */
+  updateSecondaryRulerToggleAppearance(visible) {
+    if (!this.secondaryRulerToggle) return;
+    if (visible) {
+      this.secondaryRulerToggle.style.background = '#ffffff';
+      this.secondaryRulerToggle.style.color = '#64748b';
+      this.secondaryRulerToggle.title = 'Hide detailed coordinate ruler';
+    } else {
+      this.secondaryRulerToggle.style.background = '#e2e8f0';
+      this.secondaryRulerToggle.style.color = '#94a3b8';
+      this.secondaryRulerToggle.title = 'Show detailed coordinate ruler';
+    }
   }
 
   /**
