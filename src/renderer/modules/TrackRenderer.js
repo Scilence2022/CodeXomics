@@ -311,40 +311,9 @@ class TrackRenderer {
       });
       buttonsContainer.appendChild(layoutBtn);
 
-      // Add ruler toggle button
-      const rulerBtn = document.createElement('button');
-      rulerBtn.className = 'track-btn track-ruler-btn';
-      rulerBtn.innerHTML = '<i class="fas fa-ruler-horizontal"></i>';
-      rulerBtn.title = 'Show/Hide Ruler';
-
-      // Set initial state based on persistent storage
-      if (!this.elementVisibilityStates.genesRuler) {
-        rulerBtn.classList.add('active');
-        rulerBtn.style.color = '#ccc';
-      }
-
-      rulerBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        // Find the track content and then the ruler container
-        const trackElement = trackHeader.parentElement;
-        const rulerContainer = trackElement.querySelector('.detailed-ruler-container');
-
-        // Toggle state
-        this.elementVisibilityStates.genesRuler = !this.elementVisibilityStates.genesRuler;
-
-        if (rulerContainer) {
-          if (this.elementVisibilityStates.genesRuler) {
-            rulerContainer.style.display = 'block';
-            rulerBtn.classList.remove('active');
-            rulerBtn.style.color = '';
-          } else {
-            rulerContainer.style.display = 'none';
-            rulerBtn.classList.add('active');
-            rulerBtn.style.color = '#ccc';
-          }
-        }
-      });
-      buttonsContainer.appendChild(rulerBtn);
+      // The detailed (secondary) ruler is now a standalone bar shared by all
+      // tracks. Its show/hide toggle lives on the genome navigation bar (primary
+      // ruler) — see GenomeNavigationBar.toggleSecondaryRulerFromNav.
 
       // Add circular mode toggle button
       const circularBtn = document.createElement('button');
@@ -407,18 +376,8 @@ class TrackRenderer {
 
     // === GROUP 2: Action buttons ===
 
-    // Add sequence selection button for Genes & Features track
-    if (trackType === 'genes') {
-      const selectionBtn = document.createElement('button');
-      selectionBtn.className = 'track-btn track-selection-btn';
-      selectionBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i>';
-      selectionBtn.title = 'Toggle sequence selection mode';
-      selectionBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        this.toggleSecondaryRulerSelection(trackType);
-      });
-      buttonsContainer.appendChild(selectionBtn);
-    }
+    // The ruler selection-mode toggle now lives on the standalone coordinate
+    // ruler bar itself — see createCoordinateRulerBar.
 
     // Settings button
     const settingsBtn = document.createElement('button');
@@ -952,9 +911,8 @@ class TrackRenderer {
     const settings = this.getTrackSettings('genes');
     console.log('Retrieved gene track settings:', settings);
 
-    // Add detailed ruler for current viewing region
-    const detailedRuler = this.createDetailedRuler(chromosome);
-    trackContent.appendChild(detailedRuler);
+    // The detailed (secondary) ruler is now a standalone bar at the top of the
+    // track stack — see createCoordinateRulerBar — so it is not embedded here.
 
     // Add sequence display if enabled
     if (settings.showSequence) {
@@ -1020,9 +978,7 @@ class TrackRenderer {
     );
     track.appendChild(trackContent);
 
-    // Add detailed ruler for current viewing region
-    const detailedRuler = this.createDetailedRuler(chromosome);
-    trackContent.appendChild(detailedRuler);
+    // Detailed (secondary) ruler is now a standalone bar — see createCoordinateRulerBar.
 
     // Get annotations for this track and chromosome
     const annotations = annotationTrack.annotations[chromosome] || [];
@@ -1072,8 +1028,7 @@ class TrackRenderer {
     const viewport = this.getCurrentViewport();
     const settings = this.getTrackSettings('primers');
 
-    const detailedRuler = this.createDetailedRuler(chromosome);
-    trackContent.appendChild(detailedRuler);
+    // Detailed (secondary) ruler is now a standalone bar — see createCoordinateRulerBar.
 
     const visiblePrimers = this.getVisiblePrimerBindings(chromosome, viewport, settings);
 
@@ -1380,11 +1335,7 @@ class TrackRenderer {
     // Get track settings
     const settings = this.getTrackSettings('blast');
 
-    // Add detailed ruler for current viewing region if enabled in settings
-    if (settings.showRuler) {
-      const detailedRuler = this.createDetailedRuler(chromosome);
-      trackContent.appendChild(detailedRuler);
-    }
+    // Detailed (secondary) ruler is now a standalone bar — see createCoordinateRulerBar.
 
     // Get all BLAST results for the chromosome, not just in the current range
     const allBlastResults = this.genomeBrowser.blastManager.getAllBlastResults(chromosome);
@@ -7814,7 +7765,78 @@ class TrackRenderer {
     return gene1.start < gene2.end + buffer && gene1.end + buffer > gene2.start;
   }
 
-  // Create detailed ruler for current viewing region
+  /**
+   * Create the standalone coordinate ruler bar (the "secondary ruler").
+   *
+   * Historically the detailed ruler lived INSIDE the Genes & Features track, so
+   * it disappeared whenever that track was absent — e.g. a FASTA file with no
+   * annotations, or a view showing only reads/variants. This bar renders the
+   * same detailed ruler at the top of the track stack, independent of any data
+   * track, so the viewport coordinate axis is always available and stays aligned
+   * with the tracks below it.
+   *
+   * NOTE: the class intentionally avoids the "-track" suffix and we do NOT set
+   * dataset.trackType, so this row is skipped by the track-order / height
+   * preservation / reorder logic that queries [class*="-track"].
+   */
+  createCoordinateRulerBar(chromosome) {
+    const bar = document.createElement('div');
+    bar.className = 'coordinate-ruler-bar';
+
+    const visible = !this.elementVisibilityStates || this.elementVisibilityStates.genesRuler !== false;
+    bar.style.cssText = `
+            position: relative;
+            width: 100%;
+            display: ${visible ? 'block' : 'none'};
+        `;
+
+    // Reuse the existing detailed-ruler factory for the canvas + ticks.
+    const detailedRuler = this.createDetailedRuler(chromosome);
+    // The bar now owns visibility, so the inner container is always shown.
+    detailedRuler.style.display = 'block';
+    bar.appendChild(detailedRuler);
+
+    // Drag the ruler to pan the genome (parity with the old in-track ruler,
+    // whose parent track-content was draggable).
+    this.genomeBrowser.makeDraggable(detailedRuler, chromosome);
+
+    // Selection-mode toggle: precise bp selection on the viewport ruler.
+    const selectionBtn = document.createElement('button');
+    selectionBtn.className = 'track-btn coordinate-ruler-selection-btn';
+    selectionBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i>';
+    selectionBtn.title = 'Toggle sequence selection mode on the ruler';
+    selectionBtn.style.cssText = `
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            width: 22px;
+            height: 22px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.8);
+            color: #6c757d;
+            cursor: pointer;
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        `;
+    // Stop mousedown from starting a pan-drag when interacting with the button.
+    selectionBtn.addEventListener('mousedown', e => e.stopPropagation());
+    selectionBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      this.toggleSecondaryRulerSelection();
+    });
+    bar.appendChild(selectionBtn);
+
+    // Bind selection handlers once. They no-op unless the ruler is in selecting
+    // mode (guarded inside handleSecondaryRulerMouseDown).
+    this.setupSecondaryRulerSelection(detailedRuler);
+
+    return bar;
+  }
+
   createDetailedRuler(chromosome) {
     const rulerContainer = document.createElement('div');
     rulerContainer.className = 'detailed-ruler-container';
@@ -10211,45 +10233,29 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
   /**
    * Toggle secondary ruler selection mode for Genes & Features track
    */
-  toggleSecondaryRulerSelection(trackType) {
-    if (trackType !== 'genes') return;
-
-    // Find the detailed ruler in the gene track
-    const geneTrack = document.querySelector('.gene-track');
-    if (!geneTrack) {
-      console.warn('Gene track not found');
+  toggleSecondaryRulerSelection() {
+    // The ruler is now a standalone bar shared by all tracks (works for FASTA).
+    const rulerBar = document.querySelector('.coordinate-ruler-bar');
+    if (!rulerBar) {
+      console.warn('Coordinate ruler bar not found');
       return;
     }
 
-    const detailedRuler = geneTrack.querySelector('.detailed-ruler-container');
+    const detailedRuler = rulerBar.querySelector('.detailed-ruler-container');
     if (!detailedRuler) {
-      console.warn('Detailed ruler not found in gene track');
+      console.warn('Detailed ruler not found');
       return;
     }
 
-    // Find the track content for drag control
-    const trackContent = geneTrack.querySelector('.track-content');
-    if (!trackContent) {
-      console.warn('Track content not found in gene track');
-      return;
-    }
-
-    // Toggle selection mode
+    const selectionBtn = rulerBar.querySelector('.coordinate-ruler-selection-btn');
     const isSelecting = detailedRuler.classList.contains('selecting');
 
     if (isSelecting) {
-      // Exit selection mode
+      // Exit selection mode -> restore drag-to-pan on the ruler.
       detailedRuler.classList.remove('selecting');
-      detailedRuler.style.cursor = 'default';
-
-      // Re-enable dragging for the track content
-      this.enableTrackDragging(trackContent);
-
-      // Clear any existing selection
+      this.genomeBrowser.makeDraggable(detailedRuler, this.genomeBrowser.currentChromosome);
       this.clearSecondaryRulerSelection();
 
-      // Update button appearance
-      const selectionBtn = document.querySelector('.track-selection-btn');
       if (selectionBtn) {
         selectionBtn.style.background = 'rgba(255, 255, 255, 0.8)';
         selectionBtn.style.color = '#6c757d';
@@ -10257,15 +10263,14 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
       console.log('Secondary ruler selection mode disabled - dragging re-enabled');
     } else {
-      // Enter selection mode
+      // Enter selection mode -> disable drag-to-pan so the drag selects instead.
       detailedRuler.classList.add('selecting');
       detailedRuler.style.cursor = 'crosshair';
+      if (detailedRuler._handleDragMouseDown) {
+        detailedRuler.removeEventListener('mousedown', detailedRuler._handleDragMouseDown);
+        detailedRuler._handleDragMouseDown = null;
+      }
 
-      // Disable dragging for the track content
-      this.disableTrackDragging(trackContent);
-
-      // Update button appearance
-      const selectionBtn = document.querySelector('.track-selection-btn');
       if (selectionBtn) {
         selectionBtn.style.background = '#ef4444';
         selectionBtn.style.color = '#ffffff';
@@ -10273,9 +10278,27 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
       console.log('Secondary ruler selection mode enabled - dragging disabled');
     }
+  }
 
-    // Add mouse event listeners for selection
-    this.setupSecondaryRulerSelection(detailedRuler);
+  /**
+   * Toggle visibility of the standalone coordinate ruler bar. Invoked from the
+   * genome navigation bar (primary ruler). Returns the new visibility state.
+   */
+  toggleCoordinateRulerVisibility() {
+    if (!this.elementVisibilityStates) this.elementVisibilityStates = {};
+    this.elementVisibilityStates.genesRuler = this.elementVisibilityStates.genesRuler === false;
+    this.applyCoordinateRulerVisibility();
+    return this.elementVisibilityStates.genesRuler;
+  }
+
+  /**
+   * Apply the persisted genesRuler visibility state to the standalone ruler bar.
+   */
+  applyCoordinateRulerVisibility() {
+    const visible = !this.elementVisibilityStates || this.elementVisibilityStates.genesRuler !== false;
+    document.querySelectorAll('.coordinate-ruler-bar').forEach(bar => {
+      bar.style.display = visible ? 'block' : 'none';
+    });
   }
 
   /**
@@ -10354,6 +10377,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
    */
   handleSecondaryRulerMouseDown(e) {
     if (!e.target.classList.contains('detailed-ruler-canvas')) return;
+    // Only act when the ruler is in selection mode; otherwise let drag-to-pan run.
+    const container = e.target.closest('.detailed-ruler-container');
+    if (!container || !container.classList.contains('selecting')) return;
 
     const rect = e.target.getBoundingClientRect();
     const x = e.clientX - rect.left;
