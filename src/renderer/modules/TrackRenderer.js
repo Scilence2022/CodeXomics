@@ -2116,8 +2116,13 @@ class TrackRenderer {
       }
     }
 
-    // Calculate position and dimensions using adjusted coordinates
-    const geneStart = Math.max(adjustedGeneStart, viewport.start);
+    // Calculate position and dimensions using adjusted coordinates.
+    // Gene coordinates are 1-based (GFF/GenBank), while the sequence/base
+    // rendering treats viewport positions as 0-based array indices. Subtract 1
+    // from the start so the gene's left edge aligns with the left edge of its
+    // first base cell. The end needs no adjustment: a 1-based inclusive end maps
+    // to the same value as a 0-based exclusive end.
+    const geneStart = Math.max(adjustedGeneStart - 1, viewport.start);
     const geneEnd = Math.min(adjustedGeneEnd, viewport.end);
     const left = ((geneStart - viewport.start) / (viewport.end - viewport.start)) * 100;
     const width = ((geneEnd - geneStart) / (viewport.end - viewport.start)) * 100;
@@ -2483,7 +2488,9 @@ class TrackRenderer {
    * Set gene element position and dimensions
    */
   setGeneElementPosition(geneElement, gene, viewport, rowIndex, layout, settings) {
-    const geneStart = Math.max(gene.start, viewport.start);
+    // Gene coordinates are 1-based; viewport/base rendering is 0-based. Subtract
+    // 1 from the start so the gene's left edge aligns with its first base cell.
+    const geneStart = Math.max(gene.start - 1, viewport.start);
     const geneEnd = Math.min(gene.end, viewport.end);
     const left = ((geneStart - viewport.start) / (viewport.end - viewport.start)) * 100;
     const width = ((geneEnd - geneStart) / (viewport.end - viewport.start)) * 100;
