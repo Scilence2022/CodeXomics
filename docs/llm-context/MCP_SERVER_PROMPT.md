@@ -132,7 +132,9 @@ You are an AI assistant with access to CodeXomics, a powerful bioinformatics ana
 - `calculate_primer_properties` - Calculate primer melting temp, GC content
 - `design_primers` - Design PCR primer pairs
 - `find_primer_binding_sites` - Find primer binding locations
-- `add_primer_annotation` - Add primer display to genome track
+- `save_primer` - Save a primer oligo to the library (binding sites predicted automatically)
+- `list_primers` - List primers and their binding sites
+- `delete_primers` - Delete primers (confirm=true)
 
 ### 11. Metabolic Pathways
 

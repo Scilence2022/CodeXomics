@@ -13,6 +13,27 @@ class ExportManager {
     this.loadExportConfig();
   }
 
+  /**
+   * Feature types that are managed by PrimerManager (sidecar), not the genome
+   * annotations. Genome-format exporters must never emit these.
+   */
+  static PRIMER_FEATURE_TYPES = new Set(['primer', 'primer_bind']);
+
+  /**
+   * Return the annotation features for a chromosome that are safe to write into
+   * a genome file. Primers live in the sidecar and are excluded so they never
+   * leak back into exported GBK/GFF/BED files.
+   * @param {string} chromosome
+   * @returns {Array}
+   */
+  getExportableFeatures(chromosome) {
+    const features = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+    return features.filter(feature => {
+      const type = String(feature?.type || '').toLowerCase();
+      return !ExportManager.PRIMER_FEATURE_TYPES.has(type);
+    });
+  }
+
   // Export current genome as FASTA
   exportAsFasta() {
     if (!this.genomeBrowser.currentSequence) {
@@ -48,7 +69,7 @@ class ExportManager {
 
     chromosomes.forEach(chr => {
       const sequence = this.genomeBrowser.currentSequence[chr];
-      const features = this.genomeBrowser.currentAnnotations[chr] || [];
+      const features = this.getExportableFeatures(chr);
 
       // GenBank header
       genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10).replace(/-/g, '-')}\n`;
@@ -675,7 +696,7 @@ class ExportManager {
     const chromosomes = Object.keys(this.genomeBrowser.currentAnnotations);
 
     chromosomes.forEach(chr => {
-      const features = this.genomeBrowser.currentAnnotations[chr] || [];
+      const features = this.getExportableFeatures(chr);
 
       features.forEach((feature, index) => {
         const id = feature.id || feature.name || `feature_${index + 1}`;
@@ -713,7 +734,7 @@ class ExportManager {
     const chromosomes = Object.keys(this.genomeBrowser.currentAnnotations);
 
     chromosomes.forEach(chr => {
-      const features = this.genomeBrowser.currentAnnotations[chr] || [];
+      const features = this.getExportableFeatures(chr);
 
       features.forEach(feature => {
         const name = feature.name || feature.id || 'feature';

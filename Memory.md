@@ -309,6 +309,14 @@ ChatBox startup and visibility:
 - `renderer-modular.js` includes fallback ChatManager initialization and MCPBridge startup guards. MCPBridge should check whether the MCP WebSocket server is actually listening before opening a browser WebSocket, avoiding startup `ERR_CONNECTION_REFUSED` noise.
 - Startup-only warnings from missing optional modals, unavailable sequence data, and delayed primer/chat integration were quieted where they were normal during first render.
 
+Primer subsystem architecture (redesigned):
+
+- Primers are oligos, NOT gene features. Identity (name, sequence, tags, notes, optional 5' tail, optional pinned sites, pairs) is owned by `PrimerManager` and persisted in the per-genome `.CodeXomics` sidecar (`primers` and `primerPairs` keys) — never written into the genome file. `ExportManager.getExportableFeatures()` and the `ActionManager` GBK exporters strip `primer`/`primer_bind` types defensively; legacy primer annotations are migrated into `PrimerManager` and removed from `currentAnnotations` on load.
+- Binding sites are PREDICTED in real time, not stored. `PrimerBindingService` wraps `PrimerDesigner.findBindingSites`, scans the viewport synchronously for an immediate preview and the whole chromosome in a Web Worker (`modules/workers/primer-binding-worker.js`), caches per `(primerId, chromosome, stringency, sequenceVersion)`, and invalidates on file load / stringency change. `getRenderableBindingSites()` merges pinned + predicted sites (pinned wins on overlap); the track/sequence views distinguish them (predicted = dashed/0.72 opacity). "Pinned" sites are rare manual overrides (tailed/degenerate primers, legacy imports).
+- `PrimerLibraryUI` (opened from the Primers dropdown) manages the library: list/search, properties, live binding counts, pairs, CSV/FASTA import-export, stringency, and an opt-in export of binding sites to a SEPARATE GFF / annotated-GBK file (the source genome is never modified).
+- Tool renames (with back-compat aliases via `ToolExecutionService.legacyAliases` + YAML `aliases:`): `add_primer_annotation→save_primer`, `list_primer_annotations→list_primers`, `clear_primer_annotations→delete_primers`. Old names still route. Re-run `npm run tool-registry:generate` after editing primer YAML.
+- Canonical Tm is the nearest-neighbor model (`PrimerDesigner.calculateTm`, used by `calculateProperties`, design output, and `findBindingSites`); the fast salt-adjusted/Wallace `_calculateTm` is retained only for candidate ranking in the design hot loop and as the <14 nt fallback.
+
 Configuration and BLAST under hardened renderer:
 
 - `ConfigManager` should not attempt file-based load/save in the renderer when filesystem access is unavailable. It should use localStorage fallback without first logging blocked `fs` errors.

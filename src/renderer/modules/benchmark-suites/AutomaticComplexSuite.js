@@ -53,9 +53,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       design_primers: [/design primers/i, /primer design/i, /pcr primers/i],
       calculate_primer_properties: [/primer properties/i, /melting temperature/i, /tm/i],
       find_primer_binding_sites: [/binding sites/i, /primer binding/i, /mismatch tolerance/i],
-      add_primer_annotation: [/add.*primer/i, /primer.*annotation/i, /primer.*added/i],
-      list_primer_annotations: [/list.*primer/i, /primer.*listed/i, /primer annotations/i],
-      clear_primer_annotations: [/clear.*primer/i, /primer.*cleared/i, /remove.*primer/i],
+      save_primer: [/add.*primer/i, /save.*primer/i, /primer.*added/i, /primer.*saved/i],
+      list_primers: [/list.*primer/i, /primer.*listed/i, /primer annotations/i],
+      delete_primers: [/clear.*primer/i, /primer.*cleared/i, /remove.*primer/i, /delete.*primer/i],
       jump_to_gene: [/jump.*gene/i, /navigate.*gene/i, /go to.*gene/i, /jumped to/i],
       zoom_to_gene: [/zoom.*gene/i, /zoomed to/i, /zoom.*lysc/i],
       navigate_to_position: [/navigate.*position/i, /navigated to/i, /jump.*position/i],
@@ -833,7 +833,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           // Navigation step accepts any of these interchangeable tools - any one match satisfies the step.
           tool_sequence: [
             'design_primers',
-            'add_primer_annotation',
+            'save_primer',
             ['jump_to_gene', 'zoom_to_gene', 'navigate_to_position'],
             'toggle_track',
           ],

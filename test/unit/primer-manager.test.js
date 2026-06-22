@@ -51,9 +51,9 @@ describe('PrimerManager', () => {
     });
 
     expect(primer.sequence).toBe('ATGCGCTATC');
-    expect(primer.bindingSites[0].bindingSequence).toBe('ATGCGCTATC');
+    expect(primer.pinnedSites[0].bindingSequence).toBe('ATGCGCTATC');
     expect(sidecar.set).toHaveBeenCalledWith('/tmp/example.gbk', 'primers', expect.any(Array));
-    expect(sidecar.store.primers[0].bindingSites[0].chromosome).toBe('chr1');
+    expect(sidecar.store.primers[0].pinnedSites[0].chromosome).toBe('chr1');
   });
 
   it('orients reverse binding sequences for comparison to primer sequence', async () => {
@@ -68,11 +68,59 @@ describe('PrimerManager', () => {
       bindingSites: [{ chromosome: 'chr1', start: 3, end: 12, strand: '-' }],
     });
 
-    expect(primer.bindingSites[0].bindingSequence).toBe('GATAGCGCAT');
-    expect(primer.bindingSites[0].mismatches).toEqual([]);
+    expect(primer.pinnedSites[0].bindingSequence).toBe('GATAGCGCAT');
+    expect(primer.pinnedSites[0].mismatches).toEqual([]);
   });
 
-  it('migrates legacy primer annotations without mutating annotations', async () => {
+  it('imports and exports oligos via CSV (round-trip)', async () => {
+    const genomeBrowser = createGenomeBrowser();
+    const sidecar = createSidecar();
+    const manager = new PrimerManager(genomeBrowser, null, sidecar);
+    await manager.loadPrimers();
+
+    const csv =
+      'name,sequence,fivePrimeTail,tags,notes\nF1,ATGCGCTATC,,cloning|qPCR,first primer\nR1,GATAGCGCAT,,,second';
+    const imported = await manager.importFromCSV(csv);
+    expect(imported).toBe(2);
+    expect(manager.primers.size).toBe(2);
+
+    const exported = manager.exportToCSV();
+    expect(exported).toContain('F1');
+    expect(exported).toContain('ATGCGCTATC');
+    expect(exported).toContain('cloning|qPCR');
+  });
+
+  it('imports oligos from FASTA', async () => {
+    const genomeBrowser = createGenomeBrowser();
+    const manager = new PrimerManager(genomeBrowser, null, createSidecar());
+    await manager.loadPrimers();
+
+    const fasta = '>primerA description here\nATGCGCTATC\n>primerB\nGATAGCGCAT';
+    const imported = await manager.importFromFasta(fasta);
+    expect(imported).toBe(2);
+    const names = manager.listPrimers().map(p => p.name);
+    expect(names).toContain('primerA');
+    expect(names).toContain('primerB');
+  });
+
+  it('creates and persists primer pairs, removing them when an oligo is deleted', async () => {
+    const genomeBrowser = createGenomeBrowser();
+    const sidecar = createSidecar();
+    const manager = new PrimerManager(genomeBrowser, null, sidecar);
+    await manager.loadPrimers();
+
+    const fwd = await manager.addPrimer({ name: 'F', sequence: 'ATGCGCTATC' });
+    const rev = await manager.addPrimer({ name: 'R', sequence: 'GATAGCGCAT' });
+    const pair = await manager.addPair({ name: 'amp1', forwardId: fwd.id, reverseId: rev.id });
+
+    expect(manager.getPairForPrimer(fwd.id)?.id).toBe(pair.id);
+    expect(sidecar.store.primerPairs).toHaveLength(1);
+
+    await manager.removePrimer(fwd.id);
+    expect(manager.listPairs()).toHaveLength(0); // pair removed with its primer
+  });
+
+  it('migrates legacy primer annotations and strips them from the genome', async () => {
     const genomeBrowser = createGenomeBrowser();
     genomeBrowser.currentAnnotations.chr1 = [
       {
@@ -83,7 +131,16 @@ describe('PrimerManager', () => {
         strand: 1,
         qualifiers: { gene: 'legacy-primer', sequence: 'ATGCGCTATC' },
       },
+      {
+        id: 'gene1',
+        type: 'gene',
+        start: 1,
+        end: 15,
+        strand: 1,
+        qualifiers: { gene: 'realGene' },
+      },
     ];
+    genomeBrowser.userDefinedFeatures = { chr1: [...genomeBrowser.currentAnnotations.chr1] };
     const sidecar = createSidecar();
     const manager = new PrimerManager(genomeBrowser, null, sidecar);
     await manager.loadPrimers();
@@ -94,6 +151,10 @@ describe('PrimerManager', () => {
     expect(migrated).toBe(1);
     expect(renderables).toHaveLength(1);
     expect(renderables[0].name).toBe('legacy-primer');
+    // Primer feature is removed from the genome annotations (no GBK leak),
+    // but real genes are left untouched.
     expect(genomeBrowser.currentAnnotations.chr1).toHaveLength(1);
+    expect(genomeBrowser.currentAnnotations.chr1[0].type).toBe('gene');
+    expect(genomeBrowser.userDefinedFeatures.chr1.some(f => f.type === 'primer')).toBe(false);
   });
 });

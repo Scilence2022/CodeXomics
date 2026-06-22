@@ -230,4 +230,30 @@ describe('Primer Designer Mismatch Binding Tests', () => {
       expect(revSite.genomicSequence).toBe('GATAGCGCAT');
     });
   });
+
+  describe('canonical Tm model', () => {
+    const primer20 = 'ATGCGCTATCGGATCGATCG'; // 20 nt
+
+    it('calculate_primer_properties reports the canonical nearest-neighbor Tm', () => {
+      const props = PrimerDesigner.calculateProperties(primer20);
+      expect(props.tm).toBeCloseTo(PrimerDesigner.calculateTm(primer20), 1);
+    });
+
+    it('canonical Tm matches the perfect-match binding Tm from findBindingSites', () => {
+      const template = `AAAAAAAAAA${primer20}AAAAAAAAAA`;
+      const sites = PrimerDesigner.findBindingSites(primer20, template, 0, { scoringMode: 'thermodynamic' });
+      const perfect = sites.find(s => s.strand === '+' && s.mismatches === 0);
+      expect(perfect).toBeDefined();
+      // Both paths use the nearest-neighbor model for a perfectly matched duplex.
+      expect(PrimerDesigner.calculateTm(primer20)).toBeCloseTo(perfect.bindingTm, 0);
+    });
+
+    it('falls back to the fast approximation for very short oligos (<14 nt)', () => {
+      const short = 'ATGCGCTA'; // 8 nt
+      const gCount = (short.match(/G/g) || []).length;
+      const cCount = (short.match(/C/g) || []).length;
+      const gc = ((gCount + cCount) / short.length) * 100;
+      expect(PrimerDesigner.calculateTm(short)).toBeCloseTo(PrimerDesigner._calculateTm(short, gCount, cCount, gc), 5);
+    });
+  });
 });

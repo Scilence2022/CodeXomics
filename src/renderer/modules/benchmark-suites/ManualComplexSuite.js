@@ -233,9 +233,9 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'manual',
         instruction:
-          'Design PCR primers for the lacZ gene, calculate the properties of the forward primer, then add the primer as an annotation on the genome.',
+          'Design PCR primers for the lacZ gene, calculate the properties of the forward primer, then save the primer to the primer library.',
         expectedResult: {
-          tool_sequence: ['design_primers', 'calculate_primer_properties', 'add_primer_annotation'],
+          tool_sequence: ['design_primers', 'calculate_primer_properties', 'save_primer'],
           parameters: [
             { geneName: 'lacZ' },
             { sequence: '<forward_primer_sequence>' },
@@ -248,7 +248,7 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         earlyReturn: true,
         evaluator: this.evaluateWorkflowCall.bind(this),
         manualVerification:
-          'Please verify: 1) design_primers is called for lacZ, 2) calculate_primer_properties is called, 3) add_primer_annotation is called, 4) All tasks are submitted successfully (do not wait for completion).',
+          'Please verify: 1) design_primers is called for lacZ, 2) calculate_primer_properties is called, 3) save_primer is called, 4) All tasks are submitted successfully (do not wait for completion).',
       },
 
       // BLAST WORKFLOW - Manual + Complex

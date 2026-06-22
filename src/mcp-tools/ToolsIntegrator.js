@@ -405,7 +405,7 @@ class ToolsIntegrator {
               }
             );
           default:
-            // add_primer_annotation and any future UI tools go to client
+            // save_primer/list_primers/delete_primers and any future UI tools go to client
             return await this.primerTools.executeClientTool(toolName, parameters, clientId);
         }
       }

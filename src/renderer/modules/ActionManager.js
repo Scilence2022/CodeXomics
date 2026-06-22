@@ -109,7 +109,11 @@ class ActionManager {
         const index = normalized.lastIndexOf('/');
         return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
       },
-      join: (...parts) => parts.filter(part => part !== undefined && part !== null && part !== '').join('/').replace(/\/+/g, '/'),
+      join: (...parts) =>
+        parts
+          .filter(part => part !== undefined && part !== null && part !== '')
+          .join('/')
+          .replace(/\/+/g, '/'),
       resolve: (...parts) => {
         const joined = parts.filter(part => part !== undefined && part !== null && part !== '').join('/');
         const normalized = joined.replace(/\\/g, '/').replace(/\/+/g, '/');
@@ -3036,12 +3040,16 @@ class ActionManager {
           throw new Error('Main-process file write API is unavailable');
         }
 
-        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用electronAPI.writeFile | saveFile=${saveFile}`);
+        console.log(
+          `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK 使用electronAPI.writeFile | saveFile=${saveFile}`
+        );
         const result = await window.electronAPI.writeFile(saveFile, genbankContent);
         if (!result?.success) {
           throw new Error(result?.error || `Unable to write modified GenBank file to ${saveFile}`);
         }
-        console.log(`🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile成功 | saveFile=${saveFile}`);
+        console.log(
+          `🔍 [TRACE-EXECUTE_ACTIONS] generateComprehensiveGBK electronAPI.writeFile成功 | saveFile=${saveFile}`
+        );
       } else {
         // No saveFile provided — use browser download as fallback
         // (Dialog interaction should be handled by the caller before reaching here)
@@ -5691,6 +5699,11 @@ class ActionManager {
 
         // Add features
         features.forEach(feature => {
+          // Primers are managed separately by PrimerManager (sidecar) and must
+          // never be written into an exported genome file.
+          const featureType = String(feature?.type || '').toLowerCase();
+          if (featureType === 'primer' || featureType === 'primer_bind') return;
+
           const location =
             feature.strand === '-'
               ? `complement(${feature.start}..${feature.end})`
@@ -5903,6 +5916,11 @@ class ActionManager {
 
         // Add features
         features.forEach(feature => {
+          // Primers are managed separately by PrimerManager (sidecar) and must
+          // never be written into an exported genome file.
+          const featureType = String(feature?.type || '').toLowerCase();
+          if (featureType === 'primer' || featureType === 'primer_bind') return;
+
           const location =
             feature.strand === '-'
               ? `complement(${feature.start}..${feature.end})`

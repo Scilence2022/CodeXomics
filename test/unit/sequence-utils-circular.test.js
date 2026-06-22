@@ -344,8 +344,28 @@ describe('SequenceUtils circular bottom sequence track', () => {
 
     expect(rows.indexOf(forwardRow)).toBeLessThan(rows.indexOf(lineElement.querySelector('.sequence-line')));
     expect(rows.indexOf(reverseRow)).toBeGreaterThan(rows.indexOf(lineElement.querySelector('.sequence-line')));
-    expect(forwardRow.querySelector('.sequence-primer-binding-segment').textContent).toContain('ATGAAA>');
-    expect(reverseRow.querySelector('.sequence-primer-binding-segment').textContent).toContain('GGGTTT<');
+    // Primer letters are rendered as per-column cells (one per base) aligned to the
+    // genome grid, with a separate background box and a direction arrow.
+    const forwardBases = Array.from(forwardRow.querySelectorAll('.sequence-primer-binding-base'))
+      .map(cell => cell.textContent)
+      .join('');
+    const reverseBases = Array.from(reverseRow.querySelectorAll('.sequence-primer-binding-base'))
+      .map(cell => cell.textContent)
+      .join('');
+    expect(forwardBases).toContain('ATGAAA');
+    expect(reverseBases).toContain('GGGTTT');
+    expect(forwardRow.querySelector('.sequence-primer-binding-box')).toBeTruthy();
+    expect(forwardRow.querySelector('.sequence-primer-direction').textContent).toBe('▶');
+    expect(reverseRow.querySelector('.sequence-primer-direction').textContent).toBe('◀');
     expect(reverseRow.querySelectorAll('.sequence-primer-binding-base.mismatch')).toHaveLength(1);
+
+    // Base cells must sit on a uniform per-column grid so primer letters align with
+    // the genome bases above/below them.
+    const cells = Array.from(forwardRow.querySelectorAll('.sequence-primer-binding-base'));
+    const lefts = cells.map(cell => parseFloat(cell.style.left));
+    const deltas = lefts.slice(1).map((value, i) => Number((value - lefts[i]).toFixed(3)));
+    expect(new Set(deltas).size).toBe(1); // constant column pitch
+    expect(cells[0].style.width).toBe(cells[1].style.width); // one column wide each
+    expect(parseFloat(cells[0].style.width)).toBeCloseTo(deltas[0], 3); // pitch === cell width
   });
 });

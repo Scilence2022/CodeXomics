@@ -1,6 +1,8 @@
-name: add_primer_annotation
-version: 1.0.0
-description: 'Add an interactive primer display to the dedicated Primers track'
+name: save_primer
+aliases:
+  - add_primer_annotation
+version: 1.1.0
+description: 'Save a primer oligo to the primer library (stored separately from the genome, never written into the genome file). Binding sites are predicted automatically; provide chromosome/start/end only to pin a specific manual placement.'
 category: primer_design
 keywords:
   - add primer

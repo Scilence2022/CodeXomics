@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="css/modals.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/primers.css">
     <link rel="stylesheet" href="css/genome-browser.css">
     <link rel="stylesheet" href="css/gene-tracks.css">
     <link rel="stylesheet" href="css/sequence-tracks.css">
@@ -796,6 +797,17 @@
                 <div class="actions-dropdown" id="primersDropdown" style="display: none;">
                     <div class="dropdown-section">
                         <div class="dropdown-section-title">
+                            <i class="fas fa-vials"></i>
+                            Primer Library
+                        </div>
+                        <button id="openPrimerLibraryBtn" class="dropdown-feature-btn" title="Open the primer library">
+                            <i class="fas fa-book"></i>
+                            Open Primer Library
+                        </button>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
                             <i class="fas fa-robot"></i>
                             AI Primer Tools
                         </div>
@@ -1490,7 +1502,6 @@
                         <option value="promoter">Promoter</option>
                         <option value="terminator">Terminator</option>
                         <option value="regulatory">Regulatory Element</option>
-                        <option value="primer">Primer</option>
                         <option value="misc_feature">Miscellaneous Feature</option>
                         <option value="repeat_region">Repeat Region</option>
                         <option value="comment">Comment/Note</option>
@@ -5353,7 +5364,10 @@ Supported formats:
     <script src="modules/SidecarManager.js"></script>
     <script src="modules/GeneAttachmentsManager.js"></script>
     <script src="modules/GeneNotesManager.js"></script>
+    <script src="modules/PrimerDesigner.js"></script>
+    <script src="modules/PrimerBindingService.js"></script>
     <script src="modules/PrimerManager.js"></script>
+    <script src="modules/PrimerLibraryUI.js"></script>
     <script src="modules/ExternalToolsManager.js"></script>
     <script src="modules/MCPServerManager.js"></script>
 

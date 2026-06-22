@@ -2180,27 +2180,39 @@ class SequenceUtils {
     basesElement.className = 'sequence-aligned-bases sequence-primer-binding-bases';
     basesElement.style.width = `${Math.max(1, lineLength * charWidth)}px`;
 
-    const segment = document.createElement('span');
-    segment.className = `sequence-primer-binding-segment ${isReverse ? 'reverse' : 'forward'}`;
-    segment.title = title;
-    segment.style.left = `${startIndex * charWidth}px`;
-    segment.style.width = `${Math.max(1, visibleLength * charWidth)}px`;
-    segment.style.color = color;
-    segment.style.borderColor = borderColor;
+    // Background box spanning the primer's binding extent (visual grouping). The
+    // per-base letters are drawn on top in their own genome-aligned columns.
+    const box = document.createElement('div');
+    box.className = `sequence-primer-binding-box ${isReverse ? 'reverse' : 'forward'}`;
+    box.title = title;
+    box.style.left = `${startIndex * charWidth}px`;
+    box.style.width = `${Math.max(charWidth, visibleLength * charWidth)}px`;
+    box.style.borderColor = borderColor;
+    basesElement.appendChild(box);
 
-    bases.forEach(base => {
-      const baseElement = document.createElement('span');
-      baseElement.className = `sequence-primer-binding-base${base.mismatch ? ' mismatch' : ''}`;
-      baseElement.textContent = base.text;
-      segment.appendChild(baseElement);
+    // One absolutely-positioned cell per base, each exactly charWidth wide and
+    // anchored at its genome column so primer letters sit directly above/below the
+    // matching genome bases (charWidth === the genome row's monospace pitch).
+    bases.forEach((base, i) => {
+      const cell = document.createElement('span');
+      cell.className = `sequence-primer-binding-base${base.mismatch ? ' mismatch' : ''}`;
+      cell.textContent = base.text || '';
+      cell.style.left = `${(startIndex + i) * charWidth}px`;
+      cell.style.width = `${charWidth}px`;
+      cell.style.color = color;
+      basesElement.appendChild(cell);
     });
 
+    // Direction arrow just outside the box edge (3' end).
     const direction = document.createElement('span');
-    direction.className = 'sequence-primer-direction';
-    direction.textContent = isReverse ? '<' : '>';
-    segment.appendChild(direction);
+    direction.className = `sequence-primer-direction ${isReverse ? 'reverse' : 'forward'}`;
+    direction.textContent = isReverse ? '◀' : '▶';
+    direction.style.color = borderColor;
+    direction.style.left = isReverse
+      ? `${startIndex * charWidth - 11}px`
+      : `${(startIndex + visibleLength) * charWidth + 2}px`;
+    basesElement.appendChild(direction);
 
-    basesElement.appendChild(segment);
     row.appendChild(labelElement);
     row.appendChild(strandSpacer);
     row.appendChild(basesElement);

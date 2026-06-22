@@ -179,6 +179,7 @@ class SidecarManager {
       geneNotes: {},
       geneAttachments: {},
       primers: [],
+      primerPairs: [],
     };
   }
 

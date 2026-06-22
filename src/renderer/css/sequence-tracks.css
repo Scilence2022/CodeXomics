@@ -775,61 +775,54 @@
   height: 22px;
 }
 
-.sequence-primer-binding-segment {
+/* Background box spanning the primer's binding extent. */
+.sequence-primer-binding-box {
   position: absolute;
   top: 1px;
   height: 18px;
+  border: 2px solid #a21caf;
+  background: rgba(250, 245, 255, 0.82);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.sequence-primer-binding-box.forward {
+  border-radius: 3px 8px 3px 3px;
+}
+
+.sequence-primer-binding-box.reverse {
+  border-radius: 3px 3px 3px 8px;
+}
+
+/* One cell per base, anchored to the genome column grid (left/width set inline). */
+.sequence-primer-binding-base {
+  position: absolute;
+  top: 2px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  border: 2px solid #a21caf;
-  background: rgba(250, 245, 255, 0.92);
   box-sizing: border-box;
   font-family: 'Courier New', monospace;
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  overflow: visible;
-  white-space: nowrap;
-  pointer-events: auto;
-}
-
-.sequence-primer-binding-segment.forward {
-  border-radius: 3px 8px 3px 3px;
-}
-
-.sequence-primer-binding-segment.reverse {
-  border-radius: 3px 3px 3px 8px;
-}
-
-.sequence-primer-binding-base {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1ch;
+  pointer-events: none;
 }
 
 .sequence-primer-binding-base.mismatch {
-  color: #dc2626;
+  color: #dc2626 !important;
   text-decoration: underline;
   text-decoration-thickness: 2px;
 }
 
 .sequence-primer-direction {
   position: absolute;
-  top: -7px;
+  top: 2px;
   color: inherit;
   font-size: 11px;
   font-weight: 900;
-}
-
-.sequence-primer-binding-segment.forward .sequence-primer-direction {
-  right: -9px;
-}
-
-.sequence-primer-binding-segment.reverse .sequence-primer-direction {
-  left: -9px;
+  pointer-events: none;
 }
 
 /* Ensure position labels maintain consistent width */

@@ -1,4 +1,4 @@
-/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, CoScientistManagerUI, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
+/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, CoScientistManagerUI, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, PrimerBindingService, PrimerLibraryUI, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 (typeof window !== 'undefined' && window.path) || {
@@ -263,6 +263,7 @@ class GenomeBrowser {
     this.mappedOperons = null; // Cache for mapped operons to avoid re-mapping on every view update
     this.operonMappingChromosome = null; // Track which chromosome operons are mapped to
     this.selectedGene = null;
+    this.selectedPrimer = null;
     this.userDefinedFeatures = {};
     this.nextFeatureId = 1;
     this.sequenceSelection = { start: null, end: null, active: false };
@@ -540,6 +541,26 @@ class GenomeBrowser {
       if (typeof PrimerManager !== 'undefined') {
         this.primerManager = new PrimerManager(this, this.configManager, this.sidecarManager);
         window.primerManager = this.primerManager;
+
+        // Wire the real-time binding-site prediction engine. Primer binding sites
+        // are predicted on demand (viewport-scoped, cached, worker-backed) rather
+        // than stored — see PrimerBindingService.
+        if (typeof PrimerBindingService !== 'undefined') {
+          const savedStringency = this.configManager?.get('primers.stringency', null);
+          this.primerBindingService = new PrimerBindingService(
+            this,
+            savedStringency ? { stringency: savedStringency } : {}
+          );
+          this.primerManager.setBindingService(this.primerBindingService);
+          window.primerBindingService = this.primerBindingService;
+          console.log('✅ PrimerBindingService wired for real-time prediction');
+        }
+
+        if (typeof PrimerLibraryUI !== 'undefined') {
+          this.primerLibraryUI = new PrimerLibraryUI(this);
+          window.primerLibraryUI = this.primerLibraryUI;
+        }
+
         console.log('✅ PrimerManager initialized successfully');
       } else {
         console.warn('⚠️ PrimerManager class not found');
@@ -5840,6 +5861,9 @@ class GenomeBrowser {
 
   selectPrimer(primer) {
     this.clearGeneSelection();
+    // Primers have their own selection state (they are oligos, not gene features).
+    // selectedGene is also set so the shared highlight machinery keeps working.
+    this.selectedPrimer = primer;
     this.selectedGene = { gene: primer, operonInfo: null };
     this.highlightSelectedGene(primer);
     this.showPrimerSelectionFeedback(primer);
@@ -8776,6 +8800,7 @@ class GenomeBrowser {
   clearGeneSelection() {
     // Clear selected gene
     this.selectedGene = null;
+    this.selectedPrimer = null;
 
     // Remove selection styling from all gene elements (both regular and SVG)
     const selectedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
@@ -9508,9 +9533,21 @@ class GenomeBrowser {
       }
     });
 
+    document.getElementById('openPrimerLibraryBtn')?.addEventListener('click', () => {
+      this.hidePrimersDropdown();
+      this.primerLibraryUI?.open();
+    });
+
     document.getElementById('manualAddPrimerBtn')?.addEventListener('click', () => {
       this.hidePrimersDropdown();
-      this.showAddFeatureModal('primer');
+      // Primers are oligos, not gene features: open the dedicated primer dialog
+      // (prefilled from any active sequence selection) rather than the annotation
+      // feature modal.
+      if (this.primerLibraryUI) {
+        this.primerLibraryUI.openEdit(null);
+      } else {
+        this.showAddFeatureModal('primer');
+      }
     });
 
     document.getElementById('manualDeletePrimerBtn')?.addEventListener('click', () => {

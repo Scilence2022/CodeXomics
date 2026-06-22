@@ -67,7 +67,9 @@ class PrimerService {
       const sequenceOffset = params.sequenceOffset || 1;
       result.sites = result.sites.map(site => {
         const bindingSequence =
-          site.strand === '-' ? Designer.reverseComplement(site.genomicSequence || site.sequence) : site.genomicSequence || site.sequence;
+          site.strand === '-'
+            ? Designer.reverseComplement(site.genomicSequence || site.sequence)
+            : site.genomicSequence || site.sequence;
         const mismatches = (site.mismatchDetails || []).map(mismatch => ({
           primerIndex: mismatch.position,
           primerBase: mismatch.primer,
@@ -88,9 +90,9 @@ class PrimerService {
     return result;
   }
 
-  // --- add_primer_annotation ---
+  // --- save_primer (alias: add_primer_annotation) ---
 
-  async addPrimerAnnotation(params) {
+  async savePrimer(params) {
     if (!params.chromosome || !params.start || !params.end || !params.name) {
       throw new Error('Missing required fields for annotation: chromosome, start, end, name');
     }
@@ -124,7 +126,7 @@ class PrimerService {
     };
   }
 
-  async listPrimerAnnotations(params = {}) {
+  async listPrimers(params = {}) {
     const manager = this._getPrimerManager();
     const primers = manager
       .getRenderableBindingSites(params.chromosome || null)
@@ -155,11 +157,11 @@ class PrimerService {
     };
   }
 
-  async clearPrimerAnnotations(params = {}) {
+  async deletePrimers(params = {}) {
     const chromosome = params.chromosome;
     const clearAll = params.confirm === true || params.confirm === 'true';
     if (!clearAll) {
-      throw new Error('Set confirm=true to clear primer annotations');
+      throw new Error('Set confirm=true to delete primers');
     }
 
     const manager = this._getPrimerManager();
@@ -170,8 +172,22 @@ class PrimerService {
       success: true,
       removed,
       chromosome: chromosome || 'all',
-      message: `Removed ${removed} primer annotation${removed === 1 ? '' : 's'}`,
+      message: `Removed ${removed} primer${removed === 1 ? '' : 's'}`,
     };
+  }
+
+  // --- Deprecated tool-name aliases (route old names to the new methods) ---
+
+  async addPrimerAnnotation(params) {
+    return this.savePrimer(params);
+  }
+
+  async listPrimerAnnotations(params = {}) {
+    return this.listPrimers(params);
+  }
+
+  async clearPrimerAnnotations(params = {}) {
+    return this.deletePrimers(params);
   }
 
   // --- Private helpers ---
@@ -185,60 +201,13 @@ class PrimerService {
 
   _getPrimerManager() {
     const manager =
-      this.app?.primerManager || this.chatManager?.app?.primerManager || (typeof window !== 'undefined' && window.primerManager);
+      this.app?.primerManager ||
+      this.chatManager?.app?.primerManager ||
+      (typeof window !== 'undefined' && window.primerManager);
     if (!manager) {
       throw new Error('PrimerManager is not loaded. Primer persistence is unavailable.');
     }
     return manager;
-  }
-
-  _getPrimerAnnotations(chromosome = null) {
-    const annotationsByChromosome = this.app?.currentAnnotations || {};
-    const chromosomes = chromosome ? [chromosome] : Object.keys(annotationsByChromosome);
-    const primers = [];
-
-    chromosomes.forEach(chr => {
-      const annotations = annotationsByChromosome[chr] || [];
-      annotations.forEach(feature => {
-        const featureType = String(feature?.type || '').toLowerCase();
-        if (featureType === 'primer' || featureType === 'primer_bind') {
-          primers.push({
-            ...feature,
-            chromosome: feature.chromosome || chr,
-          });
-        }
-      });
-    });
-
-    return primers;
-  }
-
-  _removePrimerAnnotations(chromosome = null) {
-    let removed = 0;
-    const removeFromCollection = (collection, countRemovals = true) => {
-      if (!collection) return;
-      const chromosomes = chromosome ? [chromosome] : Object.keys(collection);
-      chromosomes.forEach(chr => {
-        if (!Array.isArray(collection[chr])) return;
-        const before = collection[chr].length;
-        collection[chr] = collection[chr].filter(feature => {
-          const featureType = String(feature?.type || '').toLowerCase();
-          return featureType !== 'primer' && featureType !== 'primer_bind';
-        });
-        if (countRemovals) {
-          removed += before - collection[chr].length;
-        }
-      });
-    };
-
-    removeFromCollection(this.app?.currentAnnotations, true);
-    removeFromCollection(this.app?.userDefinedFeatures, false);
-
-    if (this.app && typeof this.app.updateGeneDisplay === 'function') {
-      this.app.updateGeneDisplay();
-    }
-
-    return removed;
   }
 
   _showPrimerTrack(chromosome = null) {

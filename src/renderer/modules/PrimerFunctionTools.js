@@ -93,25 +93,16 @@ class PrimerFunctionTools {
           ),
         };
       }),
-
-      add_primer_annotation: buildTool('add_primer_annotation', async params => {
-        throw new Error(
-          'add_primer_annotation requires UI interaction — use PrimerChatManagerIntegration.primerAddAnnotation instead'
-        );
-      }),
-
-      list_primer_annotations: buildTool('list_primer_annotations', async params => {
-        throw new Error(
-          'list_primer_annotations requires UI state — use PrimerService through ChatBox or MCP client routing'
-        );
-      }),
-
-      clear_primer_annotations: buildTool('clear_primer_annotations', async params => {
-        throw new Error(
-          'clear_primer_annotations requires UI state — use PrimerService through ChatBox or MCP client routing'
-        );
-      }),
     };
+
+    // Library tools (save/list/delete) require UI state and are executed by
+    // PrimerService (ChatBox) or via MCP client routing. They are listed here for
+    // discovery but throw if invoked directly through this lightweight wrapper.
+    ['save_primer', 'list_primers', 'delete_primers'].forEach(name => {
+      this.tools[name] = buildTool(name, async () => {
+        throw new Error(`${name} runs through PrimerService (ChatBox) or MCP client routing, not PrimerFunctionTools`);
+      });
+    });
   }
 
   async executeTool(toolName, parameters) {
