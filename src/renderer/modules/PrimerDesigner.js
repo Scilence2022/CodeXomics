@@ -75,7 +75,7 @@ class PrimerDesigner {
     const cCount = (seq.match(/C/g) || []).length;
     const gcContent = ((gCount + cCount) / length) * 100;
 
-    const tm = this._calculateTm(seq, gCount, cCount, gcContent);
+    const tm = this.calculateTm(seq);
 
     const hasHairpinPotential = this._checkHairpinPotential(seq);
 
@@ -95,7 +95,45 @@ class PrimerDesigner {
   }
 
   /**
-   * Unified Tm calculation using salt-adjusted formula with smooth transition.
+   * Canonical melting-temperature model for a perfectly matched primer–template
+   * duplex. Uses the nearest-neighbor thermodynamic model (SantaLucia 1998) — the
+   * SAME engine that findBindingSites uses for binding Tm — so the Tm reported for
+   * a primer is consistent across calculate_primer_properties, design output, and
+   * binding-site prediction.
+   *
+   * For very short oligos (<14 nt) the nearest-neighbor model is unreliable, so a
+   * salt-adjusted / Wallace blend (`_calculateTm`) is used as a documented fast
+   * fallback.
+   *
+   * @param {string} sequence - primer sequence (5'→3')
+   * @param {Object} [options] - { naConcentration, primerConcentration }
+   * @returns {number} Tm in °C
+   */
+  static calculateTm(sequence, options = {}) {
+    const seq = String(sequence || '')
+      .toUpperCase()
+      .replace(/[^ATCG]/g, '');
+    if (seq.length === 0) return 0;
+
+    if (seq.length < 14) {
+      const gCount = (seq.match(/G/g) || []).length;
+      const cCount = (seq.match(/C/g) || []).length;
+      const gcContent = ((gCount + cCount) / seq.length) * 100;
+      return this._calculateTm(seq, gCount, cCount, gcContent);
+    }
+
+    const naConc = Number.isFinite(options.naConcentration) ? options.naConcentration : 0.05;
+    const primerConc = Number.isFinite(options.primerConcentration) ? options.primerConcentration : 250e-9;
+    // A perfectly matched duplex: template === primer, so every nearest-neighbor
+    // step uses Watson–Crick match parameters.
+    return this._calculateBindingTm(seq, seq, naConc, primerConc).tm;
+  }
+
+  /**
+   * Fast salt-adjusted/Wallace Tm approximation. Used internally for ranking the
+   * many candidate sub-sequences during primer design (where only relative Tm
+   * matters and speed is critical) and as the short-oligo fallback for the
+   * canonical calculateTm(). For the canonical reported Tm, use calculateTm().
    * For oligos < 14bp, blends Wallace rule with salt-adjusted to avoid discontinuity.
    */
   static _calculateTm(seq, gCount, cCount, gcContent) {
@@ -185,7 +223,14 @@ class PrimerDesigner {
       );
       if (pairs && pairs.length > 0) {
         pairs.sort((a, b) => a.designScore - b.designScore);
-        return pairs[0];
+        const best = pairs[0];
+        // Candidate ranking used the fast Tm approximation for speed; report the
+        // canonical nearest-neighbor Tm for the selected pair so the design output
+        // agrees with calculate_primer_properties and binding-site prediction.
+        best.forward.tm = Number(this.calculateTm(best.forward.sequence).toFixed(2));
+        best.reverse.tm = Number(this.calculateTm(best.reverse.sequence).toFixed(2));
+        best.tmDifference = Number(Math.abs(best.forward.tm - best.reverse.tm).toFixed(2));
+        return best;
       }
     }
 

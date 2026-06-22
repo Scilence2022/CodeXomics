@@ -1,6 +1,8 @@
-name: clear_primer_annotations
-version: 1.0.0
-description: 'Clear primer annotations from the dedicated Primers track. Requires confirm=true to avoid accidental deletion.'
+name: delete_primers
+aliases:
+  - clear_primer_annotations
+version: 1.1.0
+description: 'Delete primers from the library. Requires confirm=true. Optionally scope to one chromosome to remove only pinned placements there.'
 category: primer_design
 subcategory: display
 keywords:
@@ -36,21 +38,21 @@ parameters:
   required:
     - confirm
 sample_usages:
-  - user_query: 'Clear all primer annotations'
-    tool_call: 'clear_primer_annotations(confirm=true)'
-    thought: 'User wants to remove primer visualizations from all chromosomes'
-    expected_result: 'All primer annotations are removed from the Primers track'
-  - user_query: 'Remove primer annotations from chr1'
-    tool_call: "clear_primer_annotations(chromosome='chr1', confirm=true)"
-    thought: 'User wants to remove primer visualizations from one chromosome'
-    expected_result: 'Primer annotations on chr1 are removed'
+  - user_query: 'Delete all primers'
+    tool_call: 'delete_primers(confirm=true)'
+    thought: 'User wants to remove all primers from the library'
+    expected_result: 'All primers are removed from the library'
+  - user_query: 'Remove pinned primers on chr1'
+    tool_call: "delete_primers(chromosome='chr1', confirm=true)"
+    thought: 'User wants to remove pinned placements on one chromosome'
+    expected_result: 'Pinned primer placements on chr1 are removed'
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ['list_primer_annotations']
+  enhances: ['list_primers']
   alternatives: []
-  prerequisites: ['list_primer_annotations']
-  follow_up: ['list_primer_annotations']
+  prerequisites: ['list_primers']
+  follow_up: ['list_primers']
 metadata:
   usage_count: 0
   success_rate: 0

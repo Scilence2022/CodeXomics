@@ -762,7 +762,7 @@ class LLMContextService {
       'design_primers',
       'calculate_primer_properties',
       'find_primer_binding_sites',
-      'list_primer_annotations',
+      'list_primers',
     ];
 
     const executedTaskCompletingTool = toolsToExecute.some(tool => taskCompletingTools.includes(tool.tool_name));
@@ -1739,9 +1739,9 @@ Primer Design & PCR:
   - calculate_primer_properties: Calculate melting temp, GC content for a primer
   - design_primers: Design a full PCR primer pair; use upstreamBp/downstreamBp and primer length/Tm/GC options
   - find_primer_binding_sites: Find binding locations of a primer on the genome
-  - add_primer_annotation: Add an interactive primer display to the dedicated Primers track
-  - list_primer_annotations: List primers currently displayed in the Primers track
-  - clear_primer_annotations: Clear primers from the Primers track with confirm=true
+  - save_primer: Save a primer oligo to the library (binding sites are predicted automatically; pass chromosome/start/end only to pin a manual placement)
+  - list_primers: List primers in the library and their pinned + predicted binding sites
+  - delete_primers: Delete primers from the library with confirm=true
 
 Protein Structure:
   - open_protein_viewer: Display 3D protein structures
@@ -1800,9 +1800,9 @@ Primer Tools:
   {"tool_name": "design_primers", "parameters": {"geneName": "lysC", "upstreamBp": 50, "targetTm": 60}}
   {"tool_name": "design_primers", "parameters": {"geneName": "lysC", "upstreamBp": 50, "downstreamBp": 30, "primerLength": 22}}
   {"tool_name": "find_primer_binding_sites", "parameters": {"primerSequence": "ATGCGTAC", "chromosome": "chr1"}}
-  {"tool_name": "add_primer_annotation", "parameters": {"name": "Test_Fwd", "chromosome": "chr1", "start": 1000, "end": 1020, "strand": "+"}}
-  {"tool_name": "list_primer_annotations", "parameters": {"chromosome": "chr1"}}
-  {"tool_name": "clear_primer_annotations", "parameters": {"chromosome": "chr1", "confirm": true}}`;
+  {"tool_name": "save_primer", "parameters": {"name": "Test_Fwd", "sequence": "ATGCGTACGTTAGCCTAGCTAG"}}
+  {"tool_name": "list_primers", "parameters": {"chromosome": "chr1"}}
+  {"tool_name": "delete_primers", "parameters": {"chromosome": "chr1", "confirm": true}}`;
 
     return toolsInfo;
   }

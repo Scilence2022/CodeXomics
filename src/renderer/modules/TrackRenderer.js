@@ -1155,6 +1155,9 @@ class TrackRenderer {
     const y = layout.rulerHeight + layout.topPadding + rowIndex * (layout.primerHeight + layout.rowSpacing);
     const centerY = y + layout.primerHeight / 2;
     const isReverse = primer.strand === -1 || primer.strand === '-';
+    // Predicted sites are computed in real time; pinned sites are manual/asserted
+    // placements. They are rendered with distinct emphasis.
+    const isPredicted = primer.origin === 'predicted';
     const oligoSequence = this.getPrimerOligoSequence(primer);
     const genomeSequence = this.getPrimerGenomeBindingSequence(primer);
     const mismatchSummary = this.getPrimerMismatchSummary(oligoSequence, genomeSequence);
@@ -1162,8 +1165,12 @@ class TrackRenderer {
       primer.name || this.getPrimerQualifier(primer, 'label') || this.getPrimerQualifier(primer, 'gene') || 'Primer';
 
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    group.setAttribute('class', `primer-binding-element${isReverse ? ' reverse' : ' forward'}`);
+    group.setAttribute(
+      'class',
+      `primer-binding-element${isReverse ? ' reverse' : ' forward'}${isPredicted ? ' predicted' : ' pinned'}`
+    );
     group.style.cursor = 'pointer';
+    if (isPredicted) group.style.opacity = '0.72';
 
     const stem = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     stem.setAttribute('x1', String(isReverse ? x + width : x));
@@ -1174,6 +1181,7 @@ class TrackRenderer {
     stem.setAttribute('stroke-width', String(layout.primerHeight));
     stem.setAttribute('stroke-linecap', 'round');
     stem.setAttribute('marker-end', 'url(#primerArrowHead)');
+    if (isPredicted) stem.setAttribute('stroke-dasharray', '4 2');
     group.appendChild(stem);
 
     const bindingLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -1225,7 +1233,21 @@ class TrackRenderer {
       mismatchSummary.count > 0
         ? `Mismatches vs genome: ${mismatchSummary.count} at ${mismatchSummary.positions.map(pos => pos + 1).join(', ')}`
         : 'Mismatches vs genome: none detected';
-    title.textContent = `${primerName}\nPosition: ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})\n${sequenceLine}\n${genomeLine}\n${mismatchLine}`;
+    const originLine = isPredicted ? 'Source: predicted (real-time)' : 'Source: pinned (manual)';
+    const scoreLine = Number.isFinite(primer.bindingScore)
+      ? `Binding score: ${primer.bindingScore}${Number.isFinite(primer.tm) ? ` · Tm ${primer.tm}°C` : ''}`
+      : '';
+    title.textContent = [
+      primerName,
+      `Position: ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})`,
+      originLine,
+      sequenceLine,
+      genomeLine,
+      mismatchLine,
+      scoreLine,
+    ]
+      .filter(Boolean)
+      .join('\n');
     group.appendChild(title);
 
     group.addEventListener('click', () => {
@@ -1242,13 +1264,24 @@ class TrackRenderer {
       return count + (this.getPrimerMismatchSummary(oligoSequence, genomeSequence).count > 0 ? 1 : 0);
     }, 0);
 
+    const predictedCount = visiblePrimers.filter(primer => primer.origin === 'predicted').length;
+    const pinnedCount = visiblePrimers.length - predictedCount;
+
     const legend = document.createElement('div');
     legend.className = 'primer-track-legend';
     legend.style.top = `${layout.totalHeight - 18}px`;
-    legend.textContent = `${visiblePrimers.length} primer${visiblePrimers.length === 1 ? '' : 's'} in view`;
-    if (mismatchCount > 0) {
-      legend.textContent += `, ${mismatchCount} with genome differences`;
+    const parts = [`${visiblePrimers.length} site${visiblePrimers.length === 1 ? '' : 's'} in view`];
+    if (predictedCount > 0 && pinnedCount > 0) {
+      parts.push(`${predictedCount} predicted, ${pinnedCount} pinned`);
+    } else if (predictedCount > 0) {
+      parts.push('predicted in real time');
+    } else if (pinnedCount > 0) {
+      parts.push('pinned');
     }
+    if (mismatchCount > 0) {
+      parts.push(`${mismatchCount} with genome differences`);
+    }
+    legend.textContent = parts.join(' · ');
     trackContent.appendChild(legend);
   }
 

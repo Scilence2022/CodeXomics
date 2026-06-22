@@ -113,7 +113,7 @@ describe('AutomaticComplexSuite', () => {
       expect(primerUpstreamTest.type).toBe('workflow');
       expect(primerUpstreamTest.expectedResult.tool_sequence).toEqual([
         'design_primers',
-        'add_primer_annotation',
+        'save_primer',
         ['jump_to_gene', 'zoom_to_gene', 'navigate_to_position'],
         'toggle_track',
       ]);

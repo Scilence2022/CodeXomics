@@ -922,26 +922,29 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
-    this.builtInToolsMap.set('add_primer_annotation', {
+    this.builtInToolsMap.set('save_primer', {
       method: 'primerAddAnnotation',
       category: 'primer_design',
       type: 'built-in',
       priority: 1,
     });
 
-    this.builtInToolsMap.set('list_primer_annotations', {
+    this.builtInToolsMap.set('list_primers', {
       method: 'listPrimerAnnotations',
       category: 'primer_design',
       type: 'built-in',
       priority: 1,
     });
 
-    this.builtInToolsMap.set('clear_primer_annotations', {
+    this.builtInToolsMap.set('delete_primers', {
       method: 'clearPrimerAnnotations',
       category: 'primer_design',
       type: 'built-in',
       priority: 1,
     });
+    // Deprecated tool names (add_primer_annotation/list_primer_annotations/
+    // clear_primer_annotations) are normalized to the canonical names by
+    // ToolExecutionService.legacyAliases, so they are not mapped here.
 
     // Restriction Analysis Tools
     this.builtInToolsMap.set('search_pattern', {
@@ -2115,9 +2118,9 @@ class BuiltInToolsIntegration {
         /\bprimers?\s+.*?\b(display|visuali[sz]e|annotation)\b/i.test(query)
       ) {
         relevantTools.push({
-          name: 'add_primer_annotation',
+          name: 'save_primer',
           confidence: 0.9,
-          reason: 'Primer visualization/annotation keywords detected',
+          reason: 'Primer save/visualization keywords detected',
         });
       }
       if (
@@ -2125,9 +2128,9 @@ class BuiltInToolsIntegration {
         /\bprimers?\s+.*?\b(list|annotations?|current|shown|displayed)\b/i.test(query)
       ) {
         relevantTools.push({
-          name: 'list_primer_annotations',
+          name: 'list_primers',
           confidence: 0.9,
-          reason: 'Primer annotation listing keywords detected',
+          reason: 'Primer listing keywords detected',
         });
       }
       if (
@@ -2135,9 +2138,9 @@ class BuiltInToolsIntegration {
         /\bprimers?\s+.*?\b(clear|remove|delete)\b/i.test(query)
       ) {
         relevantTools.push({
-          name: 'clear_primer_annotations',
+          name: 'delete_primers',
           confidence: 0.9,
-          reason: 'Primer annotation clearing keywords detected',
+          reason: 'Primer deletion keywords detected',
         });
       }
     }

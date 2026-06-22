@@ -280,16 +280,20 @@ class GenBankExporter {
     if (sourceFeatures.host) content += `                     /host="${sourceFeatures.host}"\n`;
     if (sourceFeatures.country) content += `                     /country="${sourceFeatures.country}"\n`;
     if (sourceFeatures.collection_date) {
-content += `                     /collection_date="${sourceFeatures.collection_date}"\n`;
-}
+      content += `                     /collection_date="${sourceFeatures.collection_date}"\n`;
+    }
     if (sourceFeatures.isolation_source) {
-content += `                     /isolation_source="${sourceFeatures.isolation_source}"\n`;
-}
+      content += `                     /isolation_source="${sourceFeatures.isolation_source}"\n`;
+    }
 
     // All other features
     if (features && features.length > 0) {
       features.forEach(feature => {
         if (feature.type === 'source') return;
+        // Primers are managed separately by PrimerManager (sidecar) and must never
+        // be written into an exported genome file.
+        const ftype = String(feature.type || '').toLowerCase();
+        if (ftype === 'primer' || ftype === 'primer_bind') return;
 
         const location = this.formatLocation(feature);
         content += `     ${feature.type.padEnd(16)} ${location}\n`;

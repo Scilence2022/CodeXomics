@@ -61,7 +61,7 @@ Current local facts to keep in mind:
 
 - Policies are hardcoded inside `LLMContextService.shouldAllowToolExecution()`. Do not introduce YAML/JSON policy config or UI toggles unless explicitly requested.
 - Add new tools to an explicit policy category. Unknown tools fall through to the default same-parameters block.
-- Primer tools (`design_primers`, `calculate_primer_properties`, `find_primer_binding_sites`, `add_primer_annotation`, `list_primer_annotations`, `clear_primer_annotations`) belong in a `primer_design` policy category with parameter-sensitive behavior.
+- Primer tools (`design_primers`, `calculate_primer_properties`, `find_primer_binding_sites`, `save_primer`, `list_primers`, `delete_primers`) belong in a `primer_design` policy category with parameter-sensitive behavior. The old `*_primer_annotation` names remain as back-compat aliases via `ToolExecutionService.legacyAliases`.
 - Benchmark tools belong in a system/utility policy path and should not be routed through agents.
 - When debugging `Policy blocked: <tool_name>`, check whether the tool has an explicit policy, whether identical parameters already succeeded, and whether stale system messages are being matched by `wasToolExecutedSuccessfully()`.
 

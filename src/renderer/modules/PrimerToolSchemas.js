@@ -198,8 +198,7 @@ const PRIMER_TOOL_SCHEMAS = {
         },
         max3PrimeMismatches: {
           type: 'number',
-          description:
-            'Maximum mismatches allowed in the last 5 bases at the 3-prime end of the primer (default: 1).',
+          description: 'Maximum mismatches allowed in the last 5 bases at the 3-prime end of the primer (default: 1).',
           minimum: 0,
         },
         minBindingTm: {
@@ -228,9 +227,11 @@ const PRIMER_TOOL_SCHEMAS = {
     },
   },
 
-  add_primer_annotation: {
-    name: 'add_primer_annotation',
-    description: 'Add an interactive primer display to the dedicated Primers track',
+  save_primer: {
+    name: 'save_primer',
+    aliases: ['add_primer_annotation'],
+    description:
+      'Save a primer oligo to the primer library (stored separately from the genome, never written into the genome file). Binding sites are predicted automatically; provide chromosome/start/end only to pin a specific manual placement.',
     parameters: {
       type: 'object',
       properties: {
@@ -272,10 +273,11 @@ const PRIMER_TOOL_SCHEMAS = {
     },
   },
 
-  list_primer_annotations: {
-    name: 'list_primer_annotations',
+  list_primers: {
+    name: 'list_primers',
+    aliases: ['list_primer_annotations'],
     description:
-      'List primer annotations currently displayed in the Primers track, optionally filtered by chromosome or genomic interval.',
+      'List primers in the library and their binding sites (pinned + predicted) for the current chromosome, optionally filtered by genomic interval.',
     parameters: {
       type: 'object',
       properties: {
@@ -296,10 +298,11 @@ const PRIMER_TOOL_SCHEMAS = {
     },
   },
 
-  clear_primer_annotations: {
-    name: 'clear_primer_annotations',
+  delete_primers: {
+    name: 'delete_primers',
+    aliases: ['clear_primer_annotations'],
     description:
-      'Clear primer annotations from the Primers track. Requires confirm=true to prevent accidental deletion.',
+      'Delete primers from the library. Requires confirm=true. Optionally scope to one chromosome to remove only pinned placements there.',
     parameters: {
       type: 'object',
       properties: {
@@ -317,9 +320,26 @@ const PRIMER_TOOL_SCHEMAS = {
   },
 };
 
+// Back-compat aliases: deprecated tool name -> canonical tool name. Old names are
+// still accepted by the dispatcher/routing so existing prompts and saved flows
+// keep working; only the canonical names are advertised to the model.
+const PRIMER_TOOL_ALIASES = {
+  add_primer_annotation: 'save_primer',
+  list_primer_annotations: 'list_primers',
+  clear_primer_annotations: 'delete_primers',
+};
+
 if (typeof module !== 'undefined' && module.exports) {
+  // module.exports IS the schemas map (consumers iterate Object.entries on it),
+  // so expose the alias map as a NON-enumerable property to avoid it being
+  // mistaken for a tool definition.
   module.exports = PRIMER_TOOL_SCHEMAS;
+  Object.defineProperty(module.exports, 'PRIMER_TOOL_ALIASES', {
+    value: PRIMER_TOOL_ALIASES,
+    enumerable: false,
+  });
 }
 if (typeof window !== 'undefined') {
   window.PRIMER_TOOL_SCHEMAS = PRIMER_TOOL_SCHEMAS;
+  window.PRIMER_TOOL_ALIASES = PRIMER_TOOL_ALIASES;
 }

@@ -50,6 +50,10 @@ class ToolExecutionService {
         load_tracks: 'load_wig_tracks',
         load_operon: 'load_operon_file',
         load_operons: 'load_operon_file',
+        // Primer library tools (renamed away from "annotation" framing)
+        add_primer_annotation: 'save_primer',
+        list_primer_annotations: 'list_primers',
+        clear_primer_annotations: 'delete_primers',
       };
       if (legacyAliases[toolName]) {
         console.log(`[ToolExecutionService] Legacy alias: '${toolName}' → '${legacyAliases[toolName]}'`);
@@ -373,6 +377,11 @@ class ToolExecutionService {
       'calculate_primer_properties',
       'design_primers',
       'find_primer_binding_sites',
+      // Canonical library tool names
+      'save_primer',
+      'list_primers',
+      'delete_primers',
+      // Deprecated aliases (still routed for back-compat)
       'add_primer_annotation',
       'list_primer_annotations',
       'clear_primer_annotations',

@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-16T04:16:07.337Z",
-  "registryHash": "7ce2a00861f7057bd950f0b556ae8a58e54b5d4e2c7e596117a72644dab2d0cc",
+  "generatedAt": "2026-06-22T09:48:18.968Z",
+  "registryHash": "f017821baf820b78846b55c1d2b11886f184ee2c1531914e2d9e8bdac4aa95f9",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -14695,83 +14695,6 @@
       "builtin": null
     },
     {
-      "name": "add_primer_annotation",
-      "version": "1.0.0",
-      "description": "Add an interactive primer display to the dedicated Primers track",
-      "category": "primer_design",
-      "keywords": [
-        "add primer",
-        "primer annotation",
-        "primer track",
-        "annotation",
-        "visualization",
-        "track",
-        "display primer"
-      ],
-      "priority": 1,
-      "subcategory": "display",
-      "execution_type": "built-in",
-      "complexity": "moderate",
-      "tags": ["primer", "visualization", "annotation"],
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Name of the primer (e.g., Fwd_1)"
-          },
-          "chromosome": {
-            "type": "string",
-            "description": "Chromosome/replicon ID where the primer binds"
-          },
-          "start": {
-            "type": "number",
-            "description": "Start position (5' end)"
-          },
-          "end": {
-            "type": "number",
-            "description": "End position (3' end)"
-          },
-          "strand": {
-            "type": "string",
-            "description": "Strand (+ or -)"
-          },
-          "description": {
-            "type": "string",
-            "description": "Optional description or properties"
-          },
-          "sequence": {
-            "type": "string",
-            "description": "Optional primer oligo sequence. Use this when the primer intentionally differs from the genomic binding window."
-          },
-          "primerSequence": {
-            "type": "string",
-            "description": "Alias for sequence."
-          }
-        },
-        "required": ["name", "chromosome", "start", "end"]
-      },
-      "source": "app_registry",
-      "sourceFile": "primer_design/add_primer_annotation.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "implementation": {
-        "type": "built-in",
-        "method": "primerAddAnnotation"
-      },
-      "sample_usages": [],
-      "builtin": {
-        "name": "add_primer_annotation",
-        "method": "primerAddAnnotation",
-        "category": "primer_design",
-        "type": "built-in",
-        "priority": 1,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    {
       "name": "calculate_primer_properties",
       "version": "1.0.0",
       "description": "Calculate biochemical properties like melting temperature (Tm), GC content, and length for a given DNA primer sequence (18-35 bp). Use this to check if a sequence is suitable as a PCR or sequencing primer.",
@@ -14813,9 +14736,10 @@
       }
     },
     {
-      "name": "clear_primer_annotations",
-      "version": "1.0.0",
-      "description": "Clear primer annotations from the dedicated Primers track. Requires confirm=true to avoid accidental deletion.",
+      "name": "delete_primers",
+      "aliases": ["clear_primer_annotations"],
+      "version": "1.1.0",
+      "description": "Delete primers from the library. Requires confirm=true. Optionally scope to one chromosome to remove only pinned placements there.",
       "category": "primer_design",
       "subcategory": "display",
       "keywords": ["primer", "primers", "clear primers", "remove primers", "primer annotations", "primer track"],
@@ -14847,25 +14771,25 @@
       },
       "sample_usages": [
         {
-          "user_query": "Clear all primer annotations",
-          "tool_call": "clear_primer_annotations(confirm=true)",
-          "thought": "User wants to remove primer visualizations from all chromosomes",
-          "expected_result": "All primer annotations are removed from the Primers track"
+          "user_query": "Delete all primers",
+          "tool_call": "delete_primers(confirm=true)",
+          "thought": "User wants to remove all primers from the library",
+          "expected_result": "All primers are removed from the library"
         },
         {
-          "user_query": "Remove primer annotations from chr1",
-          "tool_call": "clear_primer_annotations(chromosome='chr1', confirm=true)",
-          "thought": "User wants to remove primer visualizations from one chromosome",
-          "expected_result": "Primer annotations on chr1 are removed"
+          "user_query": "Remove pinned primers on chr1",
+          "tool_call": "delete_primers(chromosome='chr1', confirm=true)",
+          "thought": "User wants to remove pinned placements on one chromosome",
+          "expected_result": "Pinned primer placements on chr1 are removed"
         }
       ],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
-        "enhances": ["list_primer_annotations"],
+        "enhances": ["list_primers"],
         "alternatives": [],
-        "prerequisites": ["list_primer_annotations"],
-        "follow_up": ["list_primer_annotations"]
+        "prerequisites": ["list_primers"],
+        "follow_up": ["list_primers"]
       },
       "metadata": {
         "usage_count": 0,
@@ -14886,7 +14810,7 @@
         "chromosome": "string"
       },
       "source": "app_registry",
-      "sourceFile": "primer_design/clear_primer_annotations.yaml",
+      "sourceFile": "primer_design/delete_primers.yaml",
       "isBuiltIn": true,
       "isExternal": false,
       "implementation": {
@@ -14894,7 +14818,7 @@
         "method": "clearPrimerAnnotations"
       },
       "builtin": {
-        "name": "clear_primer_annotations",
+        "name": "delete_primers",
         "method": "clearPrimerAnnotations",
         "category": "primer_design",
         "type": "built-in",
@@ -15083,10 +15007,10 @@
       "relationships": {
         "depends_on": ["get_sequence", "get_coding_sequence"],
         "conflicts_with": [],
-        "enhances": ["calculate_primer_properties", "find_primer_binding_sites", "add_primer_annotation"],
+        "enhances": ["calculate_primer_properties", "find_primer_binding_sites", "save_primer"],
         "alternatives": [],
         "prerequisites": ["loaded_genome", "loaded_annotations"],
-        "follow_up": ["calculate_primer_properties", "find_primer_binding_sites", "add_primer_annotation"]
+        "follow_up": ["calculate_primer_properties", "find_primer_binding_sites", "save_primer"]
       },
       "source": "app_registry",
       "sourceFile": "primer_design/design_primers.yaml",
@@ -15196,9 +15120,10 @@
       }
     },
     {
-      "name": "list_primer_annotations",
-      "version": "1.0.0",
-      "description": "List primer annotations currently displayed in the dedicated Primers track.",
+      "name": "list_primers",
+      "aliases": ["list_primer_annotations"],
+      "version": "1.1.0",
+      "description": "List primers in the library and their binding sites (pinned + predicted) for the current chromosome, optionally filtered by genomic interval.",
       "category": "primer_design",
       "subcategory": "display",
       "keywords": ["primer", "primers", "list primers", "primer annotations", "primer track"],
@@ -15235,24 +15160,24 @@
       "sample_usages": [
         {
           "user_query": "List primers on the current genome",
-          "tool_call": "list_primer_annotations()",
-          "thought": "User wants to inspect primer annotations displayed in the Primers track",
-          "expected_result": "Primer annotations are returned with coordinates and strand"
+          "tool_call": "list_primers()",
+          "thought": "User wants to inspect primers in the library and their binding sites",
+          "expected_result": "Primers are returned with pinned + predicted binding sites"
         },
         {
-          "user_query": "Show primer annotations on chr1 between 1000 and 2000",
-          "tool_call": "list_primer_annotations(chromosome='chr1', start=1000, end=2000)",
-          "thought": "User wants primer annotations filtered to a region",
-          "expected_result": "Only primers overlapping chr1:1000-2000 are returned"
+          "user_query": "Show primers on chr1 between 1000 and 2000",
+          "tool_call": "list_primers(chromosome='chr1', start=1000, end=2000)",
+          "thought": "User wants primers filtered to a region",
+          "expected_result": "Only primers with sites overlapping chr1:1000-2000 are returned"
         }
       ],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
-        "enhances": ["add_primer_annotation", "toggle_track"],
+        "enhances": ["save_primer", "toggle_track"],
         "alternatives": [],
         "prerequisites": [],
-        "follow_up": ["add_primer_annotation", "clear_primer_annotations"]
+        "follow_up": ["save_primer", "delete_primers"]
       },
       "metadata": {
         "usage_count": 0,
@@ -15270,7 +15195,7 @@
         "primers": "array"
       },
       "source": "app_registry",
-      "sourceFile": "primer_design/list_primer_annotations.yaml",
+      "sourceFile": "primer_design/list_primers.yaml",
       "isBuiltIn": true,
       "isExternal": false,
       "implementation": {
@@ -15278,8 +15203,86 @@
         "method": "listPrimerAnnotations"
       },
       "builtin": {
-        "name": "list_primer_annotations",
+        "name": "list_primers",
         "method": "listPrimerAnnotations",
+        "category": "primer_design",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "save_primer",
+      "aliases": ["add_primer_annotation"],
+      "version": "1.1.0",
+      "description": "Save a primer oligo to the primer library (stored separately from the genome, never written into the genome file). Binding sites are predicted automatically; provide chromosome/start/end only to pin a specific manual placement.",
+      "category": "primer_design",
+      "keywords": [
+        "add primer",
+        "primer annotation",
+        "primer track",
+        "annotation",
+        "visualization",
+        "track",
+        "display primer"
+      ],
+      "priority": 1,
+      "subcategory": "display",
+      "execution_type": "built-in",
+      "complexity": "moderate",
+      "tags": ["primer", "visualization", "annotation"],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the primer (e.g., Fwd_1)"
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome/replicon ID where the primer binds"
+          },
+          "start": {
+            "type": "number",
+            "description": "Start position (5' end)"
+          },
+          "end": {
+            "type": "number",
+            "description": "End position (3' end)"
+          },
+          "strand": {
+            "type": "string",
+            "description": "Strand (+ or -)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description or properties"
+          },
+          "sequence": {
+            "type": "string",
+            "description": "Optional primer oligo sequence. Use this when the primer intentionally differs from the genomic binding window."
+          },
+          "primerSequence": {
+            "type": "string",
+            "description": "Alias for sequence."
+          }
+        },
+        "required": ["name", "chromosome", "start", "end"]
+      },
+      "source": "app_registry",
+      "sourceFile": "primer_design/save_primer.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "implementation": {
+        "type": "built-in",
+        "method": "primerAddAnnotation"
+      },
+      "sample_usages": [],
+      "builtin": {
+        "name": "save_primer",
+        "method": "primerAddAnnotation",
         "category": "primer_design",
         "type": "built-in",
         "priority": 1,
@@ -34241,83 +34244,6 @@
       "implementation": {},
       "builtin": null
     },
-    "add_primer_annotation": {
-      "name": "add_primer_annotation",
-      "version": "1.0.0",
-      "description": "Add an interactive primer display to the dedicated Primers track",
-      "category": "primer_design",
-      "keywords": [
-        "add primer",
-        "primer annotation",
-        "primer track",
-        "annotation",
-        "visualization",
-        "track",
-        "display primer"
-      ],
-      "priority": 1,
-      "subcategory": "display",
-      "execution_type": "built-in",
-      "complexity": "moderate",
-      "tags": ["primer", "visualization", "annotation"],
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Name of the primer (e.g., Fwd_1)"
-          },
-          "chromosome": {
-            "type": "string",
-            "description": "Chromosome/replicon ID where the primer binds"
-          },
-          "start": {
-            "type": "number",
-            "description": "Start position (5' end)"
-          },
-          "end": {
-            "type": "number",
-            "description": "End position (3' end)"
-          },
-          "strand": {
-            "type": "string",
-            "description": "Strand (+ or -)"
-          },
-          "description": {
-            "type": "string",
-            "description": "Optional description or properties"
-          },
-          "sequence": {
-            "type": "string",
-            "description": "Optional primer oligo sequence. Use this when the primer intentionally differs from the genomic binding window."
-          },
-          "primerSequence": {
-            "type": "string",
-            "description": "Alias for sequence."
-          }
-        },
-        "required": ["name", "chromosome", "start", "end"]
-      },
-      "source": "app_registry",
-      "sourceFile": "primer_design/add_primer_annotation.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "implementation": {
-        "type": "built-in",
-        "method": "primerAddAnnotation"
-      },
-      "sample_usages": [],
-      "builtin": {
-        "name": "add_primer_annotation",
-        "method": "primerAddAnnotation",
-        "category": "primer_design",
-        "type": "built-in",
-        "priority": 1,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
     "calculate_primer_properties": {
       "name": "calculate_primer_properties",
       "version": "1.0.0",
@@ -34359,10 +34285,11 @@
         "source": "builtin_tools_map"
       }
     },
-    "clear_primer_annotations": {
-      "name": "clear_primer_annotations",
-      "version": "1.0.0",
-      "description": "Clear primer annotations from the dedicated Primers track. Requires confirm=true to avoid accidental deletion.",
+    "delete_primers": {
+      "name": "delete_primers",
+      "aliases": ["clear_primer_annotations"],
+      "version": "1.1.0",
+      "description": "Delete primers from the library. Requires confirm=true. Optionally scope to one chromosome to remove only pinned placements there.",
       "category": "primer_design",
       "subcategory": "display",
       "keywords": ["primer", "primers", "clear primers", "remove primers", "primer annotations", "primer track"],
@@ -34394,25 +34321,25 @@
       },
       "sample_usages": [
         {
-          "user_query": "Clear all primer annotations",
-          "tool_call": "clear_primer_annotations(confirm=true)",
-          "thought": "User wants to remove primer visualizations from all chromosomes",
-          "expected_result": "All primer annotations are removed from the Primers track"
+          "user_query": "Delete all primers",
+          "tool_call": "delete_primers(confirm=true)",
+          "thought": "User wants to remove all primers from the library",
+          "expected_result": "All primers are removed from the library"
         },
         {
-          "user_query": "Remove primer annotations from chr1",
-          "tool_call": "clear_primer_annotations(chromosome='chr1', confirm=true)",
-          "thought": "User wants to remove primer visualizations from one chromosome",
-          "expected_result": "Primer annotations on chr1 are removed"
+          "user_query": "Remove pinned primers on chr1",
+          "tool_call": "delete_primers(chromosome='chr1', confirm=true)",
+          "thought": "User wants to remove pinned placements on one chromosome",
+          "expected_result": "Pinned primer placements on chr1 are removed"
         }
       ],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
-        "enhances": ["list_primer_annotations"],
+        "enhances": ["list_primers"],
         "alternatives": [],
-        "prerequisites": ["list_primer_annotations"],
-        "follow_up": ["list_primer_annotations"]
+        "prerequisites": ["list_primers"],
+        "follow_up": ["list_primers"]
       },
       "metadata": {
         "usage_count": 0,
@@ -34433,7 +34360,7 @@
         "chromosome": "string"
       },
       "source": "app_registry",
-      "sourceFile": "primer_design/clear_primer_annotations.yaml",
+      "sourceFile": "primer_design/delete_primers.yaml",
       "isBuiltIn": true,
       "isExternal": false,
       "implementation": {
@@ -34441,7 +34368,7 @@
         "method": "clearPrimerAnnotations"
       },
       "builtin": {
-        "name": "clear_primer_annotations",
+        "name": "delete_primers",
         "method": "clearPrimerAnnotations",
         "category": "primer_design",
         "type": "built-in",
@@ -34630,10 +34557,10 @@
       "relationships": {
         "depends_on": ["get_sequence", "get_coding_sequence"],
         "conflicts_with": [],
-        "enhances": ["calculate_primer_properties", "find_primer_binding_sites", "add_primer_annotation"],
+        "enhances": ["calculate_primer_properties", "find_primer_binding_sites", "save_primer"],
         "alternatives": [],
         "prerequisites": ["loaded_genome", "loaded_annotations"],
-        "follow_up": ["calculate_primer_properties", "find_primer_binding_sites", "add_primer_annotation"]
+        "follow_up": ["calculate_primer_properties", "find_primer_binding_sites", "save_primer"]
       },
       "source": "app_registry",
       "sourceFile": "primer_design/design_primers.yaml",
@@ -34742,10 +34669,11 @@
         "source": "builtin_tools_map"
       }
     },
-    "list_primer_annotations": {
-      "name": "list_primer_annotations",
-      "version": "1.0.0",
-      "description": "List primer annotations currently displayed in the dedicated Primers track.",
+    "list_primers": {
+      "name": "list_primers",
+      "aliases": ["list_primer_annotations"],
+      "version": "1.1.0",
+      "description": "List primers in the library and their binding sites (pinned + predicted) for the current chromosome, optionally filtered by genomic interval.",
       "category": "primer_design",
       "subcategory": "display",
       "keywords": ["primer", "primers", "list primers", "primer annotations", "primer track"],
@@ -34782,24 +34710,24 @@
       "sample_usages": [
         {
           "user_query": "List primers on the current genome",
-          "tool_call": "list_primer_annotations()",
-          "thought": "User wants to inspect primer annotations displayed in the Primers track",
-          "expected_result": "Primer annotations are returned with coordinates and strand"
+          "tool_call": "list_primers()",
+          "thought": "User wants to inspect primers in the library and their binding sites",
+          "expected_result": "Primers are returned with pinned + predicted binding sites"
         },
         {
-          "user_query": "Show primer annotations on chr1 between 1000 and 2000",
-          "tool_call": "list_primer_annotations(chromosome='chr1', start=1000, end=2000)",
-          "thought": "User wants primer annotations filtered to a region",
-          "expected_result": "Only primers overlapping chr1:1000-2000 are returned"
+          "user_query": "Show primers on chr1 between 1000 and 2000",
+          "tool_call": "list_primers(chromosome='chr1', start=1000, end=2000)",
+          "thought": "User wants primers filtered to a region",
+          "expected_result": "Only primers with sites overlapping chr1:1000-2000 are returned"
         }
       ],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
-        "enhances": ["add_primer_annotation", "toggle_track"],
+        "enhances": ["save_primer", "toggle_track"],
         "alternatives": [],
         "prerequisites": [],
-        "follow_up": ["add_primer_annotation", "clear_primer_annotations"]
+        "follow_up": ["save_primer", "delete_primers"]
       },
       "metadata": {
         "usage_count": 0,
@@ -34817,7 +34745,7 @@
         "primers": "array"
       },
       "source": "app_registry",
-      "sourceFile": "primer_design/list_primer_annotations.yaml",
+      "sourceFile": "primer_design/list_primers.yaml",
       "isBuiltIn": true,
       "isExternal": false,
       "implementation": {
@@ -34825,8 +34753,86 @@
         "method": "listPrimerAnnotations"
       },
       "builtin": {
-        "name": "list_primer_annotations",
+        "name": "list_primers",
         "method": "listPrimerAnnotations",
+        "category": "primer_design",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "save_primer": {
+      "name": "save_primer",
+      "aliases": ["add_primer_annotation"],
+      "version": "1.1.0",
+      "description": "Save a primer oligo to the primer library (stored separately from the genome, never written into the genome file). Binding sites are predicted automatically; provide chromosome/start/end only to pin a specific manual placement.",
+      "category": "primer_design",
+      "keywords": [
+        "add primer",
+        "primer annotation",
+        "primer track",
+        "annotation",
+        "visualization",
+        "track",
+        "display primer"
+      ],
+      "priority": 1,
+      "subcategory": "display",
+      "execution_type": "built-in",
+      "complexity": "moderate",
+      "tags": ["primer", "visualization", "annotation"],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the primer (e.g., Fwd_1)"
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome/replicon ID where the primer binds"
+          },
+          "start": {
+            "type": "number",
+            "description": "Start position (5' end)"
+          },
+          "end": {
+            "type": "number",
+            "description": "End position (3' end)"
+          },
+          "strand": {
+            "type": "string",
+            "description": "Strand (+ or -)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description or properties"
+          },
+          "sequence": {
+            "type": "string",
+            "description": "Optional primer oligo sequence. Use this when the primer intentionally differs from the genomic binding window."
+          },
+          "primerSequence": {
+            "type": "string",
+            "description": "Alias for sequence."
+          }
+        },
+        "required": ["name", "chromosome", "start", "end"]
+      },
+      "source": "app_registry",
+      "sourceFile": "primer_design/save_primer.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "implementation": {
+        "type": "built-in",
+        "method": "primerAddAnnotation"
+      },
+      "sample_usages": [],
+      "builtin": {
+        "name": "save_primer",
+        "method": "primerAddAnnotation",
         "category": "primer_design",
         "type": "built-in",
         "priority": 1,
@@ -41017,7 +41023,7 @@
       "source": "builtin_tools_map"
     },
     {
-      "name": "add_primer_annotation",
+      "name": "save_primer",
       "method": "primerAddAnnotation",
       "category": "primer_design",
       "type": "built-in",
@@ -41027,7 +41033,7 @@
       "source": "builtin_tools_map"
     },
     {
-      "name": "list_primer_annotations",
+      "name": "list_primers",
       "method": "listPrimerAnnotations",
       "category": "primer_design",
       "type": "built-in",
@@ -41037,7 +41043,7 @@
       "source": "builtin_tools_map"
     },
     {
-      "name": "clear_primer_annotations",
+      "name": "delete_primers",
       "method": "clearPrimerAnnotations",
       "category": "primer_design",
       "type": "built-in",
@@ -42509,8 +42515,8 @@
       "isExternal": false,
       "source": "builtin_tools_map"
     },
-    "add_primer_annotation": {
-      "name": "add_primer_annotation",
+    "save_primer": {
+      "name": "save_primer",
       "method": "primerAddAnnotation",
       "category": "primer_design",
       "type": "built-in",
@@ -42519,8 +42525,8 @@
       "isExternal": false,
       "source": "builtin_tools_map"
     },
-    "list_primer_annotations": {
-      "name": "list_primer_annotations",
+    "list_primers": {
+      "name": "list_primers",
       "method": "listPrimerAnnotations",
       "category": "primer_design",
       "type": "built-in",
@@ -42529,8 +42535,8 @@
       "isExternal": false,
       "source": "builtin_tools_map"
     },
-    "clear_primer_annotations": {
-      "name": "clear_primer_annotations",
+    "delete_primers": {
+      "name": "delete_primers",
       "method": "clearPrimerAnnotations",
       "category": "primer_design",
       "type": "built-in",
@@ -42770,6 +42776,9 @@
     "select_tab": "switch_to_tab",
     "activate_tab": "switch_to_tab",
     "change_tab": "switch_to_tab",
+    "clear_primer_annotations": "delete_primers",
+    "list_primer_annotations": "list_primers",
+    "add_primer_annotation": "save_primer",
     "change_directory": "set_working_directory",
     "cd": "set_working_directory",
     "set_dir": "set_working_directory",

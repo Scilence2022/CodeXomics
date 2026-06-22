@@ -120,6 +120,10 @@ class AnalysisAgent extends AgentBase {
     this.toolMapping.set('calculate_primer_properties', this.calculatePrimerProperties.bind(this));
     this.toolMapping.set('design_primers', this.designPrimers.bind(this));
     this.toolMapping.set('find_primer_binding_sites', this.findPrimerBindingSites.bind(this));
+    this.toolMapping.set('save_primer', this.addPrimerAnnotation.bind(this));
+    this.toolMapping.set('list_primers', this.listPrimerAnnotations.bind(this));
+    this.toolMapping.set('delete_primers', this.clearPrimerAnnotations.bind(this));
+    // Deprecated aliases
     this.toolMapping.set('add_primer_annotation', this.addPrimerAnnotation.bind(this));
     this.toolMapping.set('list_primer_annotations', this.listPrimerAnnotations.bind(this));
     this.toolMapping.set('clear_primer_annotations', this.clearPrimerAnnotations.bind(this));

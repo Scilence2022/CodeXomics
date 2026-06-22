@@ -1,6 +1,8 @@
-name: list_primer_annotations
-version: 1.0.0
-description: 'List primer annotations currently displayed in the dedicated Primers track.'
+name: list_primers
+aliases:
+  - list_primer_annotations
+version: 1.1.0
+description: 'List primers in the library and their binding sites (pinned + predicted) for the current chromosome, optionally filtered by genomic interval.'
 category: primer_design
 subcategory: display
 keywords:
@@ -38,20 +40,20 @@ parameters:
   required: []
 sample_usages:
   - user_query: 'List primers on the current genome'
-    tool_call: 'list_primer_annotations()'
-    thought: 'User wants to inspect primer annotations displayed in the Primers track'
-    expected_result: 'Primer annotations are returned with coordinates and strand'
-  - user_query: 'Show primer annotations on chr1 between 1000 and 2000'
-    tool_call: "list_primer_annotations(chromosome='chr1', start=1000, end=2000)"
-    thought: 'User wants primer annotations filtered to a region'
-    expected_result: 'Only primers overlapping chr1:1000-2000 are returned'
+    tool_call: 'list_primers()'
+    thought: 'User wants to inspect primers in the library and their binding sites'
+    expected_result: 'Primers are returned with pinned + predicted binding sites'
+  - user_query: 'Show primers on chr1 between 1000 and 2000'
+    tool_call: "list_primers(chromosome='chr1', start=1000, end=2000)"
+    thought: 'User wants primers filtered to a region'
+    expected_result: 'Only primers with sites overlapping chr1:1000-2000 are returned'
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ['add_primer_annotation', 'toggle_track']
+  enhances: ['save_primer', 'toggle_track']
   alternatives: []
   prerequisites: []
-  follow_up: ['add_primer_annotation', 'clear_primer_annotations']
+  follow_up: ['save_primer', 'delete_primers']
 metadata:
   usage_count: 0
   success_rate: 0

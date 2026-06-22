@@ -147,7 +147,7 @@ relationships:
   enhances:
     - calculate_primer_properties
     - find_primer_binding_sites
-    - add_primer_annotation
+    - save_primer
   alternatives: []
   prerequisites:
     - loaded_genome
@@ -155,4 +155,4 @@ relationships:
   follow_up:
     - calculate_primer_properties
     - find_primer_binding_sites
-    - add_primer_annotation
+    - save_primer

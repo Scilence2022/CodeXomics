@@ -232,9 +232,9 @@ const TOOL_NAMES = {
     CALCULATE_PRIMER_PROPERTIES: 'calculate_primer_properties',
     DESIGN_PRIMERS: 'design_primers',
     FIND_PRIMER_BINDING_SITES: 'find_primer_binding_sites',
-    ADD_PRIMER_ANNOTATION: 'add_primer_annotation',
-    LIST_PRIMER_ANNOTATIONS: 'list_primer_annotations',
-    CLEAR_PRIMER_ANNOTATIONS: 'clear_primer_annotations',
+    SAVE_PRIMER: 'save_primer',
+    LIST_PRIMERS: 'list_primers',
+    DELETE_PRIMERS: 'delete_primers',
   },
 
   TASK: {
