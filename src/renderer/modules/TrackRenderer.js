@@ -7960,12 +7960,19 @@ class TrackRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    // Ruler ticks point at the CENTRE of each base cell (not its left edge) so
+    // they line up with the base letters drawn by the sequence and reads tracks,
+    // which centre each base at (index + 0.5) * pixelsPerBase. This offset is half
+    // a base wide in pixels: sub-pixel and invisible when zoomed out, and a clean
+    // half-base nudge to the right once individual bases are visible.
+    const halfBase = width / range / 2;
+
     // Major ticks - track drawn X positions for spacing checks (not sequence positions)
     const firstMajorTick = Math.ceil(start / majorInterval) * majorInterval;
     const drawnXPositions = []; // Track X positions to avoid label overlap
 
     for (let pos = firstMajorTick; pos <= end; pos += majorInterval) {
-      const x = ((pos - start) / range) * width;
+      const x = ((pos - start) / range) * width + halfBase;
 
       if (x >= 0 && x <= width) {
         // Draw major tick - reduced height from 22 to 16
@@ -8015,7 +8022,7 @@ class TrackRenderer {
 
         // Skip positions that have major ticks (using normalized position)
         if (checkPos % majorInterval !== 0) {
-          const x = ((pos - start) / range) * width;
+          const x = ((pos - start) / range) * width + halfBase;
 
           if (x >= 0 && x <= width) {
             ctx.beginPath();
@@ -8035,11 +8042,11 @@ class TrackRenderer {
 
       if (start < 0) {
         // Viewport wraps left - origin is at position 0 in the adjusted space
-        originX = ((0 - start) / range) * width;
+        originX = ((0 - start) / range) * width + halfBase;
         originInView = originX >= 0 && originX <= width;
       } else if (end > seqLen) {
         // Viewport wraps right - origin is at seqLen position
-        originX = ((seqLen - start) / range) * width;
+        originX = ((seqLen - start) / range) * width + halfBase;
         originInView = originX >= 0 && originX <= width;
       }
 
