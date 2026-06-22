@@ -148,6 +148,193 @@
   align-items: center;
 }
 
+/* --- Add / edit primer dialog ------------------------------------------- */
+
+.primer-edit-modal .modal-content {
+  width: min(620px, 94vw);
+}
+
+.primer-edit-top {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.primer-edit-top .primer-edit-name {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+}
+
+.primer-edit-stats {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6d28d9;
+  white-space: nowrap;
+  padding-bottom: 8px;
+}
+
+.primer-edit-color {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+.primer-edit-color input[type='color'] {
+  width: 40px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.primer-seq-view {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: var(--surface-1, #f8fafc);
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  letter-spacing: 1px;
+  overflow-x: auto;
+}
+
+.primer-seq-end {
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0;
+  flex: 0 0 auto;
+}
+
+.primer-seq-bases {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.primer-seq-tail {
+  color: #dc2626;
+}
+
+.primer-seq-body {
+  color: #1e293b;
+}
+
+.primer-seq-empty {
+  color: #94a3b8;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.primer-seq-input {
+  border-radius: 0 0 6px 6px !important;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 1px;
+}
+
+.primer-edit-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.primer-edit-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.primer-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.primer-binding-preview {
+  margin-top: 6px;
+}
+
+.primer-binding-preview-head {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.primer-binding-count {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+  font-size: 11px;
+}
+
+.primer-binding-empty {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.primer-binding-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 130px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color, #eef2f7);
+  border-radius: 6px;
+}
+
+.primer-binding-site {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+}
+
+.primer-binding-site:last-child {
+  border-bottom: none;
+}
+
+.primer-binding-site:hover {
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.primer-binding-arrow {
+  color: #6d28d9;
+  font-size: 11px;
+  width: 12px;
+  text-align: center;
+}
+
+.primer-binding-pos {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  color: #1e293b;
+  min-width: 130px;
+}
+
+.primer-binding-meta {
+  color: #64748b;
+}
+
+.primer-binding-more {
+  font-size: 11px;
+  color: #94a3b8;
+  padding: 4px 2px 0;
+}
+
 /* Predicted vs pinned binding-site track emphasis */
 .primer-binding-element.predicted {
   opacity: 0.72;
