@@ -9508,31 +9508,6 @@ class GenomeBrowser {
       this.togglePrimersDropdown();
     });
 
-    // Primer dropdown menu buttons
-    document.getElementById('designPrimersBtn')?.addEventListener('click', () => {
-      this.hidePrimersDropdown();
-      if (window.chatBox) {
-        window.chatBox.setInputText('I want to design primers. Please guide me through the process.');
-        window.chatBox.focusInput();
-      }
-    });
-
-    document.getElementById('calcPrimerPropsBtn')?.addEventListener('click', () => {
-      this.hidePrimersDropdown();
-      if (window.chatBox) {
-        window.chatBox.setInputText('Please calculate the properties of the following primer sequence: ');
-        window.chatBox.focusInput();
-      }
-    });
-
-    document.getElementById('findPrimerSitesBtn')?.addEventListener('click', () => {
-      this.hidePrimersDropdown();
-      if (window.chatBox) {
-        window.chatBox.setInputText('Find binding sites for this primer sequence: ');
-        window.chatBox.focusInput();
-      }
-    });
-
     document.getElementById('openPrimerLibraryBtn')?.addEventListener('click', () => {
       this.hidePrimersDropdown();
       this.primerLibraryUI?.open();
