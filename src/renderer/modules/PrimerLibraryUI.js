@@ -370,14 +370,29 @@ class PrimerLibraryUI {
     const primer = primerId ? this.manager.getPrimer(primerId) : null;
     this._ensureEditModal();
     const modal = document.getElementById(this.editId);
-    modal.querySelector('[data-role="edit-title"]').textContent = primer ? 'Edit primer' : 'Add primer';
+
+    // When adding a new primer, auto-fill the sequence from an active genome
+    // selection (a dragged sequence range or a clicked gene) so the user does not
+    // have to retype it. Existing primers always show their stored sequence.
+    const seq = primer?.sequence || (primer ? '' : this._selectionSequence()) || '';
+
+    const chrLabel = this._genomeLabel();
+    modal.querySelector('[data-role="edit-title"]').textContent =
+      `${primer ? 'Edit' : 'Add'} primer${chrLabel ? ` in ${chrLabel}` : ''}`;
     modal.querySelector('[data-role="f-id"]').value = primer?.id || '';
     modal.querySelector('[data-role="f-name"]').value = primer?.name || '';
-    modal.querySelector('[data-role="f-seq"]').value = primer?.sequence || this._selectionSequence() || '';
+    modal.querySelector('[data-role="f-seq"]').value = seq;
     modal.querySelector('[data-role="f-tail"]').value = primer?.fivePrimeTail || '';
     modal.querySelector('[data-role="f-tags"]').value = (primer?.tags || []).join(', ');
     modal.querySelector('[data-role="f-notes"]').value = primer?.notes || '';
+    modal.querySelector('[data-role="f-color"]').value = primer?.color || '#a21caf';
+    modal.querySelector('[data-role="f-phos"]').checked = Boolean(primer?.fivePrimePhosphate);
+
+    this._refreshEditPreview();
     modal.classList.add('show');
+    // Focus the name when a sequence is already present, otherwise the sequence.
+    const focusEl = seq ? modal.querySelector('[data-role="f-name"]') : modal.querySelector('[data-role="f-seq"]');
+    setTimeout(() => focusEl?.focus(), 0);
   }
 
   _ensureEditModal() {
@@ -393,12 +408,57 @@ class PrimerLibraryUI {
         </div>
         <div class="modal-body">
           <input type="hidden" data-role="f-id" />
-          <div class="form-group"><label>Name</label><input type="text" class="input-full" data-role="f-name" placeholder="e.g. lacZ_F" /></div>
-          <div class="form-group"><label>Sequence (5'→3')</label><input type="text" class="input-full" data-role="f-seq" placeholder="ATGC… (the oligo as ordered)" /></div>
-          <div class="form-group"><label>5' tail (optional)</label><input type="text" class="input-full" data-role="f-tail" placeholder="non-templated 5' extension, e.g. a restriction site" /></div>
-          <div class="form-group"><label>Tags (comma-separated)</label><input type="text" class="input-full" data-role="f-tags" placeholder="cloning, qPCR" /></div>
-          <div class="form-group"><label>Notes</label><textarea class="input-full" rows="2" data-role="f-notes"></textarea></div>
-          <div class="help-text">Binding sites are predicted automatically in real time. Use the genome selection + “Add primer” to pin a manual placement.</div>
+
+          <div class="primer-edit-top">
+            <div class="form-group primer-edit-name">
+              <label>Name</label>
+              <input type="text" class="input-full" data-role="f-name" placeholder="e.g. lacZ_F" />
+            </div>
+            <div class="primer-edit-stats" data-role="edit-stats">—</div>
+            <div class="form-group primer-edit-color">
+              <label>Color</label>
+              <input type="color" data-role="f-color" value="#a21caf" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Sequence (5'→3')</label>
+            <div class="primer-seq-view" data-role="seq-view">
+              <span class="primer-seq-end">5'</span>
+              <span class="primer-seq-bases" data-role="seq-bases"></span>
+              <span class="primer-seq-end">3'</span>
+            </div>
+            <input type="text" class="input-full primer-seq-input" data-role="f-seq" spellcheck="false"
+              placeholder="ATGC… (the oligo as ordered, 5'→3')" />
+          </div>
+
+          <div class="primer-edit-actions-row">
+            <label class="primer-edit-check"><input type="checkbox" data-role="f-phos" /> 5' Phosphorylated</label>
+            <button type="button" class="btn btn-secondary btn-sm" data-action="edit-revcomp" title="Reverse complement the sequence">
+              <i class="fas fa-exchange-alt"></i> Reverse complement
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-action="edit-use-selection" title="Fill from the current genome selection">
+              <i class="fas fa-i-cursor"></i> Use selection
+            </button>
+          </div>
+
+          <div class="primer-edit-grid">
+            <div class="form-group">
+              <label>5' tail (optional)</label>
+              <input type="text" class="input-full" data-role="f-tail" spellcheck="false"
+                placeholder="non-templated 5' extension (shown red), e.g. a restriction site" />
+            </div>
+            <div class="form-group">
+              <label>Tags (comma-separated)</label>
+              <input type="text" class="input-full" data-role="f-tags" placeholder="cloning, qPCR" />
+            </div>
+          </div>
+
+          <div class="form-group"><label>Description / notes</label><textarea class="input-full" rows="2" data-role="f-notes"></textarea></div>
+
+          <div class="primer-binding-preview" data-role="binding-preview"></div>
+
+          <div class="help-text">Binding sites are predicted in real time on the current chromosome. Saving stores only the oligo — the genome file is never modified.</div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" data-action="edit-cancel">Cancel</button>
@@ -406,14 +466,187 @@ class PrimerLibraryUI {
         </div>
       </div>`;
     document.body.appendChild(modal);
+
     modal.addEventListener('click', e => {
       const action = e.target.closest('[data-action]')?.getAttribute('data-action');
       if (action === 'edit-cancel' || e.target === modal) {
         modal.classList.remove('show');
       } else if (action === 'edit-save') {
         this._saveEdit();
+      } else if (action === 'edit-revcomp') {
+        this._reverseComplementField();
+      } else if (action === 'edit-use-selection') {
+        this._fillFromSelection();
+      } else if (action === 'goto-site') {
+        const el = e.target.closest('[data-site-start]');
+        if (el) {
+          const chr = el.getAttribute('data-site-chr');
+          const start = parseInt(el.getAttribute('data-site-start'), 10);
+          const end = parseInt(el.getAttribute('data-site-end'), 10);
+          this.gb.navigationManager?.navigateToPosition(chr, start, end);
+        }
       }
     });
+
+    // Live updates as the sequence or tail changes.
+    const onSeqInput = () => this._refreshEditPreview();
+    modal.querySelector('[data-role="f-seq"]').addEventListener('input', onSeqInput);
+    modal.querySelector('[data-role="f-tail"]').addEventListener('input', onSeqInput);
+  }
+
+  /** Recompute the live stats badge, sequence rendering, and binding preview. */
+  _refreshEditPreview() {
+    const modal = document.getElementById(this.editId);
+    if (!modal) return;
+    const sequence = this.manager.normalizeSequence(modal.querySelector('[data-role="f-seq"]').value);
+    const tail = this.manager.normalizeSequence(modal.querySelector('[data-role="f-tail"]').value);
+
+    this._renderSeqView(modal.querySelector('[data-role="seq-bases"]'), sequence, tail);
+    this._renderEditStats(modal.querySelector('[data-role="edit-stats"]'), sequence);
+
+    // Debounce the (potentially heavier) binding scan.
+    clearTimeout(this._previewTimer);
+    this._previewTimer = setTimeout(() => this._renderBindingPreview(sequence, tail), 180);
+  }
+
+  _renderSeqView(host, sequence, tail) {
+    if (!host) return;
+    if (!sequence) {
+      host.innerHTML = '<span class="primer-seq-empty">enter a sequence…</span>';
+      return;
+    }
+    // Color the leading 5' tail (non-annealing overhang) distinctly, à la SnapGene.
+    const tailLen = tail && sequence.startsWith(tail) ? tail.length : 0;
+    const tailPart = sequence.slice(0, tailLen);
+    const bodyPart = sequence.slice(tailLen);
+    host.innerHTML =
+      (tailPart ? `<span class="primer-seq-tail">${this._esc(tailPart)}</span>` : '') +
+      `<span class="primer-seq-body">${this._esc(bodyPart)}</span>`;
+  }
+
+  _renderEditStats(host, sequence) {
+    if (!host) return;
+    if (!sequence) {
+      host.textContent = '—';
+      return;
+    }
+    const props = this._props(sequence);
+    const mer = `${sequence.length}-mer`;
+    const gc = props && Number.isFinite(props.gcContent) ? `${Math.round(props.gcContent)}% GC` : '';
+    const tm = props && Number.isFinite(props.tm) ? `Tm ${props.tm}°C` : '';
+    host.textContent = [mer, gc, tm].filter(Boolean).join('  /  ');
+  }
+
+  _renderBindingPreview(sequence, tail) {
+    const modal = document.getElementById(this.editId);
+    if (!modal) return;
+    const host = modal.querySelector('[data-role="binding-preview"]');
+    if (!host) return;
+
+    const chr = this.currentChromosome;
+    if (!sequence || sequence.length < 6 || !chr) {
+      host.innerHTML = '';
+      return;
+    }
+
+    const result = this._computePreviewSites(sequence, tail, chr);
+    if (result.tooLarge) {
+      host.innerHTML = `<div class="primer-binding-preview-head">Binding sites on ${this._esc(chr)}</div>
+        <div class="primer-binding-empty">Chromosome too large for a live preview — save the primer and use the track / Locate.</div>`;
+      return;
+    }
+
+    const sites = result.sites;
+    if (!sites.length) {
+      host.innerHTML = `<div class="primer-binding-preview-head">Binding sites on ${this._esc(chr)}</div>
+        <div class="primer-binding-empty">No binding sites at the current stringency.</div>`;
+      return;
+    }
+
+    const shown = sites.slice(0, 8);
+    const rows = shown
+      .map(s => {
+        const arrow = s.strand === '-' ? '◀' : '▶';
+        const mm = s.mismatches === 0 ? 'perfect' : `${s.mismatches} mm`;
+        const tm = Number.isFinite(s.tm) ? `${s.tm}°C` : '—';
+        return `<li class="primer-binding-site" data-action="goto-site" data-site-chr="${this._esc(chr)}" data-site-start="${s.start}" data-site-end="${s.end}" title="Go to ${this._esc(chr)}:${s.start}-${s.end}">
+          <span class="primer-binding-arrow">${arrow}</span>
+          <span class="primer-binding-pos">${s.start.toLocaleString()}–${s.end.toLocaleString()}</span>
+          <span class="primer-binding-meta">${s.annealed} annealed · ${mm} · Tm ${tm}</span>
+        </li>`;
+      })
+      .join('');
+    const more =
+      result.total > shown.length ? `<div class="primer-binding-more">+${result.total - shown.length} more</div>` : '';
+    host.innerHTML = `<div class="primer-binding-preview-head">Binding sites on ${this._esc(chr)} <span class="primer-binding-count">${result.total}</span></div>
+      <ul class="primer-binding-list">${rows}</ul>${more}`;
+  }
+
+  /**
+   * Compute predicted binding sites for the dialog preview on the current
+   * chromosome. Searches with the annealing region (sequence minus 5' tail), using
+   * the library's current stringency plus thermodynamic Tm. 1-based inclusive.
+   */
+  _computePreviewSites(sequence, tail, chromosome) {
+    const Designer = this.designer;
+    const template = this.gb?.currentSequence?.[chromosome];
+    if (!Designer || !template) return { sites: [], total: 0, tooLarge: false };
+    if (template.length > 12000000) return { sites: [], total: 0, tooLarge: true };
+
+    const anneal = tail && sequence.startsWith(tail) ? sequence.slice(tail.length) : sequence;
+    if (!anneal || anneal.length < 6) return { sites: [], total: 0, tooLarge: false };
+
+    const s = this.manager.getStringency?.() || {};
+    let raw;
+    try {
+      raw = Designer.findBindingSites(anneal, template, Number.isFinite(s.maxMismatches) ? s.maxMismatches : 3, {
+        max3PrimeMismatches: Number.isFinite(s.max3PrimeMismatches) ? s.max3PrimeMismatches : 1,
+        scoringMode: 'thermodynamic',
+        naConcentration: s.naConcentration,
+        primerConcentration: s.primerConcentration,
+        maxSites: 200,
+      });
+    } catch (e) {
+      return { sites: [], total: 0, tooLarge: false };
+    }
+
+    const sites = raw.map(site => ({
+      start: site.start + 1, // 0-based → 1-based
+      end: site.end, // half-open end == 1-based inclusive end
+      strand: site.strand,
+      mismatches: site.mismatches || 0,
+      annealed: anneal.length - (site.mismatches || 0),
+      tm: site.bindingTm,
+    }));
+    return { sites, total: raw.length, tooLarge: false };
+  }
+
+  _reverseComplementField() {
+    const modal = document.getElementById(this.editId);
+    const input = modal?.querySelector('[data-role="f-seq"]');
+    if (!input) return;
+    const seq = this.manager.normalizeSequence(input.value);
+    if (!seq) return;
+    input.value = this.manager.reverseComplement(seq);
+    this._refreshEditPreview();
+  }
+
+  _fillFromSelection() {
+    const seq = this._selectionSequence();
+    if (!seq) {
+      this.gb.updateStatus?.('No genome sequence is selected', { duration: 2500 });
+      return;
+    }
+    const modal = document.getElementById(this.editId);
+    const input = modal?.querySelector('[data-role="f-seq"]');
+    if (input) {
+      input.value = seq;
+      this._refreshEditPreview();
+    }
+  }
+
+  _genomeLabel() {
+    return this.gb?.currentFile?.name || this.gb?.fileManager?.currentFileInfo?.name || this.currentChromosome || '';
   }
 
   async _saveEdit() {
@@ -422,6 +655,8 @@ class PrimerLibraryUI {
     const name = modal.querySelector('[data-role="f-name"]').value.trim();
     const sequence = modal.querySelector('[data-role="f-seq"]').value.trim();
     const fivePrimeTail = modal.querySelector('[data-role="f-tail"]').value.trim();
+    const color = modal.querySelector('[data-role="f-color"]').value;
+    const fivePrimePhosphate = modal.querySelector('[data-role="f-phos"]').checked;
     const tags = modal
       .querySelector('[data-role="f-tags"]')
       .value.split(',')
@@ -434,12 +669,14 @@ class PrimerLibraryUI {
       return;
     }
     if (id) {
-      await this.manager.updatePrimer(id, { name, sequence, fivePrimeTail, tags, notes });
+      await this.manager.updatePrimer(id, { name, sequence, fivePrimeTail, color, fivePrimePhosphate, tags, notes });
     } else {
       await this.manager.addPrimer({
         name: name || undefined,
         sequence,
         fivePrimeTail,
+        color,
+        fivePrimePhosphate,
         tags,
         notes,
         source: 'library',
@@ -595,15 +832,29 @@ class PrimerLibraryUI {
 
   _selectionSequence() {
     // Prefill the sequence field from an active genome selection, if available.
-    // The selection state lives in gb.sequenceSelection ({start,end,active,chromosome},
-    // 1-based inclusive); derive the substring from the loaded sequence.
+    // Two selection states exist (both 1-based inclusive):
+    //   • gb.currentSequenceSelection — a manual drag-select on the sequence track
+    //     ({chromosome,start,end}); preferred because it is the most recent explicit pick.
+    //   • gb.sequenceSelection — a clicked gene ({start,end,active,chromosome}).
+    // Derive the substring from the loaded sequence for whichever is present.
     try {
-      const sel = this.gb?.sequenceSelection;
-      if (!sel || !sel.active) return '';
-      const chr = sel.chromosome || this.currentChromosome;
+      const manual = this.gb?.currentSequenceSelection;
+      const gene = this.gb?.sequenceSelection;
+      let chr;
+      let start;
+      let end;
+      if (manual && Number.isFinite(Number.parseInt(manual.start, 10))) {
+        chr = manual.chromosome || this.currentChromosome;
+        start = Number.parseInt(manual.start, 10);
+        end = Number.parseInt(manual.end, 10);
+      } else if (gene && gene.active) {
+        chr = gene.chromosome || this.currentChromosome;
+        start = Number.parseInt(gene.start, 10);
+        end = Number.parseInt(gene.end, 10);
+      } else {
+        return '';
+      }
       const seq = this.gb?.currentSequence?.[chr];
-      const start = Number.parseInt(sel.start, 10);
-      const end = Number.parseInt(sel.end, 10);
       if (!seq || !Number.isFinite(start) || !Number.isFinite(end)) return '';
       const lo = Math.max(0, Math.min(start, end) - 1);
       const hi = Math.min(seq.length, Math.max(start, end));

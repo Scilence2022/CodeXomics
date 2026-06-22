@@ -198,6 +198,10 @@ class PrimerManager {
       tags: Array.isArray(rawPrimer.tags) ? rawPrimer.tags.slice() : [],
       color: rawPrimer.color || '#a21caf',
       fivePrimeTail: this.normalizeSequence(rawPrimer.fivePrimeTail || ''),
+      fivePrimePhosphate:
+        rawPrimer.fivePrimePhosphate === true ||
+        rawPrimer.fivePrimePhosphate === 'true' ||
+        rawPrimer.phosphorylated === true,
       source: rawPrimer.source || 'user',
       createdAt: rawPrimer.createdAt || now,
       updatedAt: rawPrimer.updatedAt || now,
@@ -342,6 +346,7 @@ class PrimerManager {
     if (updates.color !== undefined) primer.color = updates.color;
     if (Array.isArray(updates.tags)) primer.tags = updates.tags.slice();
     if (updates.fivePrimeTail !== undefined) primer.fivePrimeTail = this.normalizeSequence(updates.fivePrimeTail);
+    if (updates.fivePrimePhosphate !== undefined) primer.fivePrimePhosphate = updates.fivePrimePhosphate === true;
     primer.updatedAt = new Date().toISOString();
     await this.savePrimers();
     this.invalidateBindingCache(primerId);
@@ -445,6 +450,7 @@ class PrimerManager {
       tags: [...(primer.tags || [])],
       color: primer.color,
       fivePrimeTail: primer.fivePrimeTail || '',
+      fivePrimePhosphate: primer.fivePrimePhosphate || false,
       source: primer.source,
       createdAt: primer.createdAt,
       updatedAt: primer.updatedAt,

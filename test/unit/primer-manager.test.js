@@ -56,6 +56,28 @@ describe('PrimerManager', () => {
     expect(sidecar.store.primers[0].pinnedSites[0].chromosome).toBe('chr1');
   });
 
+  it("persists color and 5' phosphorylation through add and update", async () => {
+    const genomeBrowser = createGenomeBrowser();
+    const sidecar = createSidecar();
+    const manager = new PrimerManager(genomeBrowser, null, sidecar);
+    await manager.loadPrimers();
+
+    const primer = await manager.addPrimer({
+      name: 'P1',
+      sequence: 'ATGCGCTATC',
+      color: '#123456',
+      fivePrimePhosphate: true,
+    });
+    expect(primer.color).toBe('#123456');
+    expect(primer.fivePrimePhosphate).toBe(true);
+    expect(manager.listPrimers()[0].fivePrimePhosphate).toBe(true);
+
+    await manager.updatePrimer(primer.id, { fivePrimePhosphate: false, color: '#abcdef' });
+    const updated = manager.getPrimer(primer.id);
+    expect(updated.fivePrimePhosphate).toBe(false);
+    expect(updated.color).toBe('#abcdef');
+  });
+
   it('orients reverse binding sequences for comparison to primer sequence', async () => {
     const genomeBrowser = createGenomeBrowser();
     const sidecar = createSidecar();
