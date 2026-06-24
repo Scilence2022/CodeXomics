@@ -1000,7 +1000,6 @@ class CanvasReadsRenderer {
     const canvasX = event.clientX - rect.left;
     const canvasY = event.clientY - rect.top;
 
-    // First check if a specific mutation within a read was clicked
     for (const readPos of this.readPositions) {
       if (
         canvasX >= readPos.x &&
@@ -1009,33 +1008,54 @@ class CanvasReadsRenderer {
         canvasY <= readPos.y + readPos.height
       ) {
         const read = readPos.read;
-        if (read.mutations && read.mutations.length > 0) {
-          // Find if click was on a specific mutation
-          for (const mutation of read.mutations) {
-            const mutationPosInRead = mutation.position - read.start;
-            const readLength = read.sequence ? read.sequence.length : read.end - read.start + 1;
 
-            if (mutationPosInRead >= 0 && mutationPosInRead <= readLength) {
-              const mutationX = readPos.x + (mutationPosInRead / readLength) * readPos.width;
-              const tolerance = 3; // 3px tolerance for clicking narrow mutation lines
-
-              if (Math.abs(canvasX - mutationX) <= tolerance) {
-                console.log('🖱️ [CanvasReadsRenderer] Mutation clicked:', mutation.type, 'at', mutation.position);
-                if (window.genomeBrowser && window.genomeBrowser.selectMutation) {
-                  window.genomeBrowser.selectMutation(read, mutation);
-                  return;
-                }
-              }
-            }
+        const clickedMutation = this.findClickableMutationAt(read, readPos, canvasX);
+        if (clickedMutation) {
+          if (window.genomeBrowser && window.genomeBrowser.selectMutation) {
+            window.genomeBrowser.selectMutation(read, clickedMutation);
+            return;
           }
         }
 
         // If no mutation clicked, handle read selection
-        console.log('🖱️ [CanvasReadsRenderer] Read clicked:', read.id);
         this.showReadDetails(read);
         return;
       }
     }
+  }
+
+  findClickableMutationAt(read, readPos, canvasX) {
+    if (!read.mutations || read.mutations.length === 0) return null;
+    if (readPos.width < 50) return null;
+
+    const readLength = read.sequence ? read.sequence.length : read.end - read.start + 1;
+    const items = [];
+    for (const mutation of read.mutations) {
+      const offset = mutation.position - read.start;
+      if (offset >= 0 && offset <= readLength) {
+        const mx = readPos.x + (offset / readLength) * readPos.width;
+        items.push({ mutation, mx });
+      }
+    }
+    if (items.length === 0) return null;
+
+    items.sort((a, b) => a.mx - b.mx);
+
+    let best = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < items.length; i++) {
+      const dist = Math.abs(canvasX - items[i].mx);
+      const prevGap = i > 0 ? items[i].mx - items[i - 1].mx : Infinity;
+      const nextGap = i < items.length - 1 ? items[i + 1].mx - items[i].mx : Infinity;
+      const minGap = Math.min(prevGap, nextGap);
+      if (minGap < 5) continue;
+      const tolerance = Math.min(3, minGap / 2);
+      if (dist <= tolerance && dist < bestDist) {
+        bestDist = dist;
+        best = items[i].mutation;
+      }
+    }
+    return best;
   }
 
   getReadAtPosition(event) {
