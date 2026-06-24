@@ -822,11 +822,18 @@ class TrackRenderer {
   updateSamplingInputValue(trackElement) {
     const samplingInput = trackElement.querySelector('.track-sampling-input');
     if (samplingInput) {
+      // When the input is disabled, the reads count is below the sampling threshold and
+      // updateSamplingDisplayBasedOnReadsCount() has locked the display to 100%. Do not
+      // override that with the stored percentage, otherwise the dropdown would show e.g.
+      // 20% while greyed out. restoreHeaderState() runs after the threshold check during a
+      // full track rebuild, so this guard keeps the 100% display authoritative.
+      if (samplingInput.disabled) return;
+
       const currentSettings = this.getTrackSettings('reads');
       const currentPercentage = currentSettings.samplingPercentage || 20;
       if (parseInt(samplingInput.value) !== currentPercentage) {
         if (samplingInput.tagName === 'SELECT') {
-          this.syncSamplingHeaderUI(currentPercentage);
+          this.syncSamplingHeaderUI(currentPercentage, trackElement);
         } else {
           samplingInput.value = currentPercentage;
         }
@@ -840,12 +847,16 @@ class TrackRenderer {
    * When sampling is not applied (reads below threshold), show 100%
    * @param {number} readsCount - The number of reads displayed
    * @param {boolean} isSampled - Whether sampling was applied (has _samplingInfo)
+   * @param {HTMLElement} [trackElement=null] - The reads track being built. During a full
+   *   track rebuild (zoom buttons / ruler navigation) the new track is not yet attached to
+   *   the DOM, so callers must pass it explicitly. When omitted (in-place content updates
+   *   such as mouse-wheel zoom), the already-mounted track is located via the DOM.
    */
-  updateSamplingDisplayBasedOnReadsCount(readsCount, isSampled) {
+  updateSamplingDisplayBasedOnReadsCount(readsCount, isSampled, trackElement = null) {
     const currentSettings = this.getTrackSettings('reads');
 
     // Get the sampling control elements
-    const readsTrack = document.querySelector('.reads-track');
+    const readsTrack = trackElement || document.querySelector('.reads-track');
     if (!readsTrack) return;
 
     const trackHeader = readsTrack.querySelector('.track-header');
@@ -869,7 +880,7 @@ class TrackRenderer {
       }
 
       // Update select to show 100% as active
-      this.syncSamplingHeaderUI(100);
+      this.syncSamplingHeaderUI(100, readsTrack);
     } else {
       // Sampling WAS applied (reads count > threshold) - enable controls and show actual percentage
       console.log(`🎲 [TrackRenderer] Sampling applied, showing ${currentSettings.samplingPercentage || 20}%`);
@@ -879,7 +890,7 @@ class TrackRenderer {
       }
       if (samplingInput) {
         // Set value via syncSamplingHeaderUI to handle custom values
-        this.syncSamplingHeaderUI(currentSettings.samplingPercentage || 20);
+        this.syncSamplingHeaderUI(currentSettings.samplingPercentage || 20, readsTrack);
         samplingInput.disabled = false;
         samplingInput.style.background = 'white';
         samplingInput.style.cursor = 'pointer';
@@ -3749,8 +3760,10 @@ class TrackRenderer {
 
       // Update sampling display based on whether sampling was applied
       // Check _samplingInfo to determine if sampling was applied
+      // Pass the freshly-built track: during a full rebuild (zoom buttons / ruler
+      // navigation) it is not yet attached to the DOM.
       const isSampled = visibleReads._samplingInfo !== undefined;
-      this.updateSamplingDisplayBasedOnReadsCount(visibleReads.length, isSampled);
+      this.updateSamplingDisplayBasedOnReadsCount(visibleReads.length, isSampled, track);
 
       // Check if we have any potential filtering issues
       if (visibleReads.length === 0) {
@@ -4369,9 +4382,11 @@ class TrackRenderer {
       });
 
       // Apply sampling via ReadsManager (consistent with SAM path)
+      // Pass the freshly-built track: during a full rebuild (zoom buttons / ruler
+      // navigation) it is not yet attached to the DOM.
       const sampledReads = this.genomeBrowser.readsManager.applySampling(reads, settings);
       const isSampled = sampledReads._samplingInfo !== undefined;
-      this.updateSamplingDisplayBasedOnReadsCount(sampledReads.length, isSampled);
+      this.updateSamplingDisplayBasedOnReadsCount(sampledReads.length, isSampled, track);
 
       if (sampledReads.length === 0) {
         // Try to provide helpful diagnostic information
@@ -13571,8 +13586,10 @@ This action cannot be undone.`;
   /**
    * Sync the sampling header UI (input and preset buttons) with the current percentage
    */
-  syncSamplingHeaderUI(percentage) {
-    const readsTrack = document.querySelector('.reads-track');
+  syncSamplingHeaderUI(percentage, trackElement = null) {
+    // During a full track rebuild the new track is not yet in the DOM, so the caller
+    // passes it explicitly; otherwise fall back to the mounted track in the document.
+    const readsTrack = trackElement || document.querySelector('.reads-track');
     if (!readsTrack) return;
 
     const trackHeader = readsTrack.querySelector('.track-header');
