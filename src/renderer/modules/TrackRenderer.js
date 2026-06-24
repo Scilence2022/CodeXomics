@@ -6151,31 +6151,41 @@ class TrackRenderer {
       return mutation.position >= viewStart && mutation.position <= viewEnd;
     });
 
-    visibleMutations.forEach(mutation => {
-      // CRITICAL FIX: Calculate position within the read using actual sequence length
-      const mutationPosInRead = mutation.position - read.start;
-      const readLength = read.sequence ? read.sequence.length : read.end - read.start + 1;
+    const readLength = read.sequence ? read.sequence.length : read.end - read.start + 1;
+    const minReadWidthForMutationClick = 50;
+    const minClickGapPx = 5;
+    const readWideEnough = readWidth >= minReadWidthForMutationClick;
 
-      // Skip if mutation is outside the read bounds
-      if (mutationPosInRead < 0 || mutationPosInRead > readLength) {
-        return;
-      }
+    const sortedItems = visibleMutations
+      .map(mutation => {
+        const offset = mutation.position - read.start;
+        return { mutation, relativeX: (offset / readLength) * readWidth };
+      })
+      .filter(item => {
+        const offset = item.mutation.position - read.start;
+        return offset >= 0 && offset <= readLength;
+      })
+      .sort((a, b) => a.relativeX - b.relativeX);
 
-      // Calculate x position within the read element
-      const relativeX = (mutationPosInRead / readLength) * readWidth;
+    sortedItems.forEach((item, index) => {
+      const prevGap = index > 0 ? item.relativeX - sortedItems[index - 1].relativeX : Infinity;
+      const nextGap = index < sortedItems.length - 1 ? sortedItems[index + 1].relativeX - item.relativeX : Infinity;
+      item.clickable = readWideEnough && Math.min(prevGap, nextGap) >= minClickGapPx;
+    });
 
-      // Create mutation line
+    sortedItems.forEach(item => {
+      const mutation = item.mutation;
+
       const mutationLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       mutationLine.setAttribute('class', 'mutation-line');
-      mutationLine.setAttribute('x1', relativeX);
+      mutationLine.setAttribute('x1', item.relativeX);
       mutationLine.setAttribute('y1', 0);
-      mutationLine.setAttribute('x2', relativeX);
+      mutationLine.setAttribute('x2', item.relativeX);
       mutationLine.setAttribute('y2', readHeight);
       mutationLine.setAttribute('stroke', mutation.color);
       mutationLine.setAttribute('stroke-width', this.getMutationLineWidth(mutation, settings));
       mutationLine.setAttribute('opacity', settings.mutationOpacity || 0.8);
 
-      // Add mutation-specific styling
       switch (mutation.type) {
         case 'insertion':
           mutationLine.setAttribute('stroke-dasharray', '2,1');
@@ -6188,19 +6198,21 @@ class TrackRenderer {
           break;
       }
 
-      // Add tooltip with mutation information
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       title.textContent = this.formatMutationTooltip(mutation);
       mutationLine.appendChild(title);
 
-      // Add click handler for mutation details
-      mutationLine.style.cursor = 'pointer';
-      mutationLine.addEventListener('click', e => {
-        e.stopPropagation();
-        if (this.genomeBrowser && this.genomeBrowser.selectMutation) {
-          this.genomeBrowser.selectMutation(read, mutation);
-        }
-      });
+      if (item.clickable) {
+        mutationLine.style.cursor = 'pointer';
+        mutationLine.addEventListener('click', e => {
+          e.stopPropagation();
+          if (this.genomeBrowser && this.genomeBrowser.selectMutation) {
+            this.genomeBrowser.selectMutation(read, mutation);
+          }
+        });
+      } else {
+        mutationLine.style.pointerEvents = 'none';
+      }
 
       mutationElements.push(mutationLine);
     });
