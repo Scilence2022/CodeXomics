@@ -355,8 +355,9 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(forwardBases).toContain('ATGAAA');
     expect(reverseBases).toContain('GGGTTT');
     expect(forwardRow.querySelector('.sequence-primer-binding-box')).toBeTruthy();
-    expect(forwardRow.querySelector('.sequence-primer-direction').textContent).toBe('▶');
-    expect(reverseRow.querySelector('.sequence-primer-direction').textContent).toBe('◀');
+    // The 3' terminus carries a solid CSS-triangle arrowhead oriented along the strand.
+    expect(forwardRow.querySelector('.sequence-primer-direction.forward')).toBeTruthy();
+    expect(reverseRow.querySelector('.sequence-primer-direction.reverse')).toBeTruthy();
     expect(reverseRow.querySelectorAll('.sequence-primer-binding-base.mismatch')).toHaveLength(1);
 
     // Base cells must sit on a uniform per-column grid so primer letters align with
