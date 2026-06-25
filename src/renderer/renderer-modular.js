@@ -5938,9 +5938,6 @@ class GenomeBrowser {
 
     // Build HTML
     const safeName = this.escapeHtml(name);
-    const safeNameForPrompt = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    const safeSequenceJs = JSON.stringify(primerSequence || '');
-
     // Primer identity card
     let html = `
       <div class="primer-identity-card">
@@ -5959,29 +5956,15 @@ class GenomeBrowser {
       </div>
     `;
 
-    // Action buttons
+    // Action buttons — wired via event listeners after innerHTML is set (below)
+    // to avoid inline onclick handlers that break when template-literal braces
+    // get misinterpreted as HTML attribute boundaries.
     html += `
       <div class="primer-actions">
-        <button class="primer-action-btn primer-zoom-btn" onclick="
-          if (window.genomeBrowser) {
-            const padding = Math.max(200, ${length} * 3);
-            const newStart = Math.max(0, ${primer.start} - padding);
-            const newEnd = ${primer.end} + padding;
-            window.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
-            const chr = document.getElementById('chromosomeSelect')?.value;
-            if (chr && window.genomeBrowser.currentSequence && window.genomeBrowser.currentSequence[chr]) {
-              window.genomeBrowser.displayGenomeView(chr, window.genomeBrowser.currentSequence[chr]);
-              if (window.genomeBrowser.genomeNavigationBar) window.genomeBrowser.genomeNavigationBar.update();
-              if (window.genomeBrowser.tabManager) window.genomeBrowser.tabManager.updateCurrentTabPosition(chr, newStart + 1, newEnd, { source: 'navigation' });
-            }
-          }
-        " title="Zoom to primer region">
+        <button class="primer-action-btn primer-zoom-btn" title="Zoom to primer region">
           <i class="fas fa-search-plus"></i> Zoom to
         </button>
-        <button class="primer-action-btn primer-copy-btn" onclick="
-          const seq = ${safeSequenceJs};
-          if (seq) { navigator.clipboard.writeText(seq).then(() => { if (window.genomeBrowser) window.genomeBrowser.showNotification('Primer sequence copied', 'success'); }); }
-        " title="Copy sequence to clipboard" ${!primerSequence ? 'disabled' : ''}>
+        <button class="primer-action-btn primer-copy-btn" title="Copy sequence to clipboard" ${!primerSequence ? 'disabled' : ''}>
           <i class="fas fa-copy"></i> Copy Seq
         </button>
       </div>
@@ -6090,16 +6073,50 @@ class GenomeBrowser {
     // AI action
     html += `
       <div class="primer-ai-section">
-        <button class="primer-ai-btn" onclick="if(window.chatBox) { window.chatBox.setInputText('Please calculate the properties of this primer sequence: ${primerSequence || safeNameForPrompt}'); window.chatBox.focusInput(); }">
+        <button class="primer-ai-btn primer-analyze-btn">
           <i class="fas fa-robot"></i> Analyze with AI
         </button>
-        <button class="primer-ai-btn primer-binding-btn" onclick="if(window.chatBox) { window.chatBox.setInputText('Find binding sites for primer ${safeNameForPrompt} in the current genome'); window.chatBox.focusInput(); }">
+        <button class="primer-ai-btn primer-binding-btn">
           <i class="fas fa-crosshairs"></i> Find Binding Sites
         </button>
       </div>
     `;
 
     content.innerHTML = html;
+
+    content.querySelector('.primer-zoom-btn')?.addEventListener('click', () => {
+      if (!window.genomeBrowser) return;
+      const padding = Math.max(200, length * 3);
+      const newStart = Math.max(0, primer.start - padding);
+      const newEnd = primer.end + padding;
+      window.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+      const chr = document.getElementById('chromosomeSelect')?.value;
+      if (chr && window.genomeBrowser.currentSequence?.[chr]) {
+        window.genomeBrowser.displayGenomeView(chr, window.genomeBrowser.currentSequence[chr]);
+        window.genomeBrowser.genomeNavigationBar?.update();
+        window.genomeBrowser.tabManager?.updateCurrentTabPosition(chr, newStart + 1, newEnd, { source: 'navigation' });
+      }
+    });
+
+    if (primerSequence) {
+      content.querySelector('.primer-copy-btn')?.addEventListener('click', () => {
+        navigator.clipboard.writeText(primerSequence).then(() => {
+          window.genomeBrowser?.showNotification('Primer sequence copied', 'success');
+        });
+      });
+    }
+
+    content.querySelector('.primer-analyze-btn')?.addEventListener('click', () => {
+      if (!window.chatBox) return;
+      window.chatBox.setInputText(`Please calculate the properties of this primer sequence: ${primerSequence || name}`);
+      window.chatBox.focusInput();
+    });
+
+    content.querySelector('.primer-binding-btn')?.addEventListener('click', () => {
+      if (!window.chatBox) return;
+      window.chatBox.setInputText(`Find binding sites for primer ${name} in the current genome`);
+      window.chatBox.focusInput();
+    });
   }
 
   getPrimerOligoSequence(primer) {
