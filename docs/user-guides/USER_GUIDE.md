@@ -160,6 +160,10 @@ CodeXomics includes E. coli genome and pathway data for testing.
 
 ### Genome Visualization
 
+![Genome browser overview](../figures/genome-browser-overview.png)
+
+_The genome browser combines a feature track, GC content and skew, multi-track WIG data, the gene details sidebar, and a protein/sequence view._
+
 #### Tracks
 
 **Gene Track** 🧬
@@ -194,11 +198,29 @@ CodeXomics includes E. coli genome and pathway data for testing.
 - Coverage depth display
 - Mismatch highlighting
 
+![Read alignment pileup](../figures/read-alignment-pileup.png)
+
+_Base-level read pileup over a selected gene, with coverage depth shown above the aligned reads._
+
+![Aligned reads and references](../figures/reads-and-references.png)
+
+_Coverage and base-resolution read tracks alongside gene references and operons in the side panel._
+
 **Protein Track** ⚗️
 
 - Translated sequences
 - Protein features and domains
 - Link to structure prediction
+
+**Primer Track** 🧪
+
+- Designed primers rendered directly on the sequence view
+- Forward and reverse orientation indicated by arrow direction
+- Click a primer to open its details
+
+![Primer design on the sequence track](../figures/primer-design.png)
+
+_Designed primers (e.g. `Test-P1`) drawn over the sequence view, aligned to their target coordinates._
 
 #### Track Controls
 
@@ -331,6 +353,10 @@ Tools → Export → GFF/BED
 ### ChatBox Interface
 
 The ChatBox is your interface to CodeXomics' multi-agent AI system.
+
+![AlphaFold protein structure viewer](../figures/protein-structure-alphafold.png)
+
+_The ChatBox can drive analyses such as AlphaFold structure lookup, opening an interactive 3D protein viewer for the selected gene._
 
 #### Basic Queries
 
