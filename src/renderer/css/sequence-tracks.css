@@ -775,23 +775,22 @@
   height: 22px;
 }
 
-/* Background box spanning the primer's binding extent. */
+/* The primer body: a filled, bordered directional bar. Fill, border colour and the
+   5'/3' corner rounding are set inline per primer (strand-aware, custom-colour aware). */
 .sequence-primer-binding-box {
   position: absolute;
   top: 1px;
   height: 18px;
-  border: 2px solid #a21caf;
-  background: rgba(250, 245, 255, 0.82);
+  border: 1.5px solid #7c3aed;
   box-sizing: border-box;
   pointer-events: auto;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.14);
+  transition: box-shadow 0.12s ease, filter 0.12s ease;
 }
 
-.sequence-primer-binding-box.forward {
-  border-radius: 3px 8px 3px 3px;
-}
-
-.sequence-primer-binding-box.reverse {
-  border-radius: 3px 3px 3px 8px;
+.sequence-primer-binding-box:hover {
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
+  filter: brightness(1.04);
 }
 
 /* One cell per base, anchored to the genome column grid (left/width set inline). */
@@ -812,17 +811,40 @@
 
 .sequence-primer-binding-base.mismatch {
   color: #dc2626 !important;
+  background: rgba(220, 38, 38, 0.14);
+  border-radius: 2px;
   text-decoration: underline;
   text-decoration-thickness: 2px;
 }
 
+/* 3' arrowhead drawn as a solid CSS triangle, flush against the bar. Width equals
+   the bar height (top/bottom borders); the pointing border colour is set inline. */
 .sequence-primer-direction {
   position: absolute;
-  top: 2px;
-  color: inherit;
-  font-size: 11px;
-  font-weight: 900;
+  top: 1px;
+  width: 0;
+  height: 0;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
   pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.14));
+}
+
+.sequence-primer-direction.forward {
+  border-left-width: 9px;
+  border-left-style: solid;
+}
+
+.sequence-primer-direction.reverse {
+  border-right-width: 9px;
+  border-right-style: solid;
+}
+
+/* Strand-tinted label chip so the primer name reads as part of its arrow. */
+.sequence-primer-label {
+  font-weight: 700 !important;
+  border-right: 3px solid transparent;
+  padding-right: 6px !important;
 }
 
 /* Ensure position labels maintain consistent width */

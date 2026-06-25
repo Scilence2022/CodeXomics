@@ -2132,6 +2132,14 @@ class SequenceUtils {
           });
         }
 
+        // Which physical termini fall on this line? A primer points 5'→3', so the
+        // arrowhead belongs at the 3' end and the rounded cap at the 5' end. For a
+        // forward primer 5' is at `start` and 3' at `end`; reverse is mirrored. When
+        // the primer wraps across lines, the off-line edge stays flat (a continuation).
+        const is3PrimeEnd = isReverse ? visibleStart === start : visibleEnd === end;
+        const is5PrimeEnd = isReverse ? visibleEnd === end : visibleStart === start;
+        const accentColor = primer.color || (isReverse ? '#0d9488' : '#7c3aed');
+
         return this.createPrimerBindingRow({
           className: `sequence-primer-row ${isReverse ? 'reverse' : 'forward'}`,
           label: this.truncateLabel(this.getFeatureDisplayName(primer), 12),
@@ -2142,8 +2150,12 @@ class SequenceUtils {
           bases: visibleBases,
           isReverse,
           strandLabelWidth: this.strandLabelWidth,
-          color: isReverse ? '#7c2d12' : '#1e3a8a',
-          borderColor: primer.color || (isReverse ? '#a21caf' : '#9333ea'),
+          accentColor,
+          // Letters are a darkened blend of the accent so they stay legible on the
+          // light tinted fill regardless of a custom primer colour.
+          letterColor: `color-mix(in srgb, ${accentColor} 60%, #0f172a)`,
+          is3PrimeEnd,
+          is5PrimeEnd,
           title: `${this.getFeatureDisplayName(primer)} primer ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})`,
         });
       })
@@ -2160,16 +2172,23 @@ class SequenceUtils {
     bases,
     isReverse,
     strandLabelWidth = 20,
-    color,
-    borderColor,
+    accentColor,
+    letterColor,
+    is3PrimeEnd = true,
+    is5PrimeEnd = true,
     title,
   }) {
+    const ARROW_W = 9; // arrowhead width in px (height tracks the bar height via CSS)
+    const RADIUS = '5px';
     const row = document.createElement('div');
     row.className = `sequence-aligned-row sequence-primer-binding-row ${className}`;
 
     const labelElement = document.createElement('span');
-    labelElement.className = 'sequence-position sequence-aligned-label';
+    labelElement.className = `sequence-position sequence-aligned-label sequence-primer-label ${isReverse ? 'reverse' : 'forward'}`;
     labelElement.textContent = label;
+    labelElement.style.color = letterColor;
+    labelElement.style.borderColor = accentColor;
+    labelElement.title = title;
 
     const strandSpacer = document.createElement('span');
     strandSpacer.className = 'sequence-aligned-strand-spacer';
@@ -2180,14 +2199,27 @@ class SequenceUtils {
     basesElement.className = 'sequence-aligned-bases sequence-primer-binding-bases';
     basesElement.style.width = `${Math.max(1, lineLength * charWidth)}px`;
 
-    // Background box spanning the primer's binding extent (visual grouping). The
-    // per-base letters are drawn on top in their own genome-aligned columns.
+    // The primer body: a filled, bordered bar drawn as a directional shape. It is
+    // rounded at the true 5' terminus and runs flat into the arrowhead at the 3'
+    // terminus; edges that continue onto another line stay flat. Per-base letters
+    // are layered on top in their own genome-aligned columns.
     const box = document.createElement('div');
     box.className = `sequence-primer-binding-box ${isReverse ? 'reverse' : 'forward'}`;
     box.title = title;
     box.style.left = `${startIndex * charWidth}px`;
     box.style.width = `${Math.max(charWidth, visibleLength * charWidth)}px`;
-    box.style.borderColor = borderColor;
+    box.style.borderColor = accentColor;
+    box.style.background =
+      `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 18%, transparent), ` +
+      `color-mix(in srgb, ${accentColor} 8%, transparent))`;
+    if (isReverse) {
+      // 5' end (rounded cap) is on the right; 3' end (arrowhead) on the left.
+      box.style.borderRadius = is5PrimeEnd ? `0 ${RADIUS} ${RADIUS} 0` : '0';
+      if (is3PrimeEnd) box.style.borderLeftWidth = '0';
+    } else {
+      box.style.borderRadius = is5PrimeEnd ? `${RADIUS} 0 0 ${RADIUS}` : '0';
+      if (is3PrimeEnd) box.style.borderRightWidth = '0';
+    }
     basesElement.appendChild(box);
 
     // One absolutely-positioned cell per base, each exactly charWidth wide and
@@ -2199,19 +2231,24 @@ class SequenceUtils {
       cell.textContent = base.text || '';
       cell.style.left = `${(startIndex + i) * charWidth}px`;
       cell.style.width = `${charWidth}px`;
-      cell.style.color = color;
+      if (!base.mismatch) cell.style.color = letterColor;
       basesElement.appendChild(cell);
     });
 
-    // Direction arrow just outside the box edge (3' end).
-    const direction = document.createElement('span');
-    direction.className = `sequence-primer-direction ${isReverse ? 'reverse' : 'forward'}`;
-    direction.textContent = isReverse ? '◀' : '▶';
-    direction.style.color = borderColor;
-    direction.style.left = isReverse
-      ? `${startIndex * charWidth - 11}px`
-      : `${(startIndex + visibleLength) * charWidth + 2}px`;
-    basesElement.appendChild(direction);
+    // Solid arrowhead flush with the bar at the 3' terminus, drawn as a CSS
+    // triangle so it crisply tracks the bar height and points along the strand.
+    if (is3PrimeEnd) {
+      const direction = document.createElement('span');
+      direction.className = `sequence-primer-direction ${isReverse ? 'reverse' : 'forward'}`;
+      if (isReverse) {
+        direction.style.left = `${startIndex * charWidth - ARROW_W}px`;
+        direction.style.borderRightColor = accentColor;
+      } else {
+        direction.style.left = `${(startIndex + visibleLength) * charWidth}px`;
+        direction.style.borderLeftColor = accentColor;
+      }
+      basesElement.appendChild(direction);
+    }
 
     row.appendChild(labelElement);
     row.appendChild(strandSpacer);
