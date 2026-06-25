@@ -89,6 +89,36 @@ The current source release is `0.722.0`, displayed as `v0.722` in the applicatio
 - Use tools mode for direct tool calls.
 - Use agent mode when an external client should delegate natural-language prompts to the in-app AI pipeline.
 
+## Screenshots
+
+### Genome browser
+
+Feature track, GC content and skew, multi-track WIG data, the gene details sidebar, and the protein/sequence view.
+
+![Genome browser overview](figures/genome-browser-overview.png)
+
+### Read alignment and references
+
+Coverage and base-resolution sequencing-read tracks alongside gene references and operons in the side panel.
+
+![Aligned reads and references](figures/reads-and-references.png)
+
+Base-level read pileup over a selected gene:
+
+![Read alignment pileup](figures/read-alignment-pileup.png)
+
+### Protein structures
+
+AlphaFold structure lookup and an interactive 3D protein viewer, driven from the AI ChatBox.
+
+![AlphaFold protein structure viewer](figures/protein-structure-alphafold.png)
+
+### Primer design
+
+Designed primers rendered directly on the sequence view.
+
+![Primer design on the sequence track](figures/primer-design.png)
+
 ## Documentation Map
 
 | Section              | Start here                                                                                  |

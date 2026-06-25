@@ -40,6 +40,32 @@ Core capabilities:
 - Local BLAST integration, primer design, protein structure lookup/viewing, pathway tools, benchmark suites, and PubMed/preprint literature lookup.
 - Runtime UI style presets backed by vanilla CSS: default, professional, minimal, pastel, elegant, and midnight.
 
+## Screenshots
+
+<div align="center">
+
+![Genome browser overview](docs/figures/genome-browser-overview.png)
+
+_Genome browser: feature track, GC content and skew, multi-track WIG data, gene details sidebar, and the protein/sequence view._
+
+![Aligned reads and references](docs/figures/reads-and-references.png)
+
+_Base-resolution and coverage read alignment tracks alongside gene references and operons in the side panel._
+
+![AlphaFold protein structure viewer](docs/figures/protein-structure-alphafold.png)
+
+_AlphaFold structure lookup and interactive 3D protein viewer, driven from the AI ChatBox._
+
+![Read alignment pileup](docs/figures/read-alignment-pileup.png)
+
+_Base-level sequencing-read pileup over a selected gene._
+
+![Primer design on the sequence track](docs/figures/primer-design.png)
+
+_Designed primers rendered directly on the sequence view._
+
+</div>
+
 ## Install
 
 ### Download
