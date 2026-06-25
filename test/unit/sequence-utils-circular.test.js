@@ -369,4 +369,72 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(cells[0].style.width).toBe(cells[1].style.width); // one column wide each
     expect(parseFloat(cells[0].style.width)).toBeCloseTo(deltas[0], 3); // pitch === cell width
   });
+
+  it('opens the primer details sidebar when a rendered primer is clicked', () => {
+    utils.genomeBrowser.currentSequence.chr1 = 'ATGAAATGGCCCAAA';
+    utils.genomeBrowser.currentAnnotations.chr1 = [];
+    const renderables = [
+      {
+        type: 'primer_binding',
+        name: 'F-primer',
+        sequence: 'ATGAAA',
+        primerSequence: 'ATGAAA',
+        chromosome: 'chr1',
+        start: 1,
+        end: 6,
+        strand: '+',
+        mismatches: [],
+      },
+      {
+        type: 'primer_binding',
+        name: 'R-primer',
+        sequence: 'TTTGGG',
+        primerSequence: 'TTTGGG',
+        chromosome: 'chr1',
+        start: 10,
+        end: 15,
+        strand: '-',
+        mismatches: [],
+      },
+    ];
+    utils.genomeBrowser.primerManager = { getRenderableBindingSites: () => renderables };
+    utils.genomeBrowser.selectPrimer = vi.fn();
+
+    // The click handler is delegated to the sequence container (so it survives the
+    // renderCache cloning lines); attach it and mount a rendered primer line.
+    const container = document.getElementById('sequenceContent');
+    utils.attachSequenceClickHandlers(container);
+    const lineElement = utils.renderSequenceLine(
+      'ATGAAATGGCCCAAA',
+      0,
+      'chr1',
+      [],
+      [],
+      10,
+      { showPrimers: true },
+      new Map(),
+      {
+        indicators: [],
+        cds: [],
+        primers: renderables,
+      }
+    );
+    container.appendChild(lineElement);
+
+    const forwardBox = lineElement.querySelector('.sequence-primer-row.forward .sequence-primer-binding-box');
+    expect(forwardBox.classList.contains('primer-select-target')).toBe(true);
+    forwardBox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(utils.genomeBrowser.selectPrimer).toHaveBeenCalledTimes(1);
+    expect(utils.genomeBrowser.selectPrimer).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'F-primer', start: 1, end: 6 })
+    );
+
+    // Clicking the reverse primer resolves the other oligo.
+    const reverseBox = lineElement.querySelector('.sequence-primer-row.reverse .sequence-primer-binding-box');
+    reverseBox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(utils.genomeBrowser.selectPrimer).toHaveBeenLastCalledWith(
+      expect.objectContaining({ name: 'R-primer', start: 10, end: 15 })
+    );
+  });
 });

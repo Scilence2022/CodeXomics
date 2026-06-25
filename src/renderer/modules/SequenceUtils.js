@@ -528,7 +528,50 @@ class SequenceUtils {
     container.addEventListener('click', indicatorClickHandler);
     container._geneIndicatorClickHandler = indicatorClickHandler;
 
+    const existingPrimerClickHandler = container._primerSelectClickHandler;
+    if (existingPrimerClickHandler) {
+      container.removeEventListener('click', existingPrimerClickHandler);
+    }
+
+    const primerClickHandler = event => {
+      const target = event.target.closest?.('.primer-select-target');
+      if (!target || !container.contains(target)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      this.handlePrimerSelectClick(target);
+    };
+    container.addEventListener('click', primerClickHandler);
+    container._primerSelectClickHandler = primerClickHandler;
+
     console.log('✅ [SequenceUtils] Cursor mouseleave handler attached (persistence mode)');
+  }
+
+  handlePrimerSelectClick(target) {
+    const primer = this.findPrimerFromSelectTarget(target);
+    if (!primer) {
+      console.warn('⚠️ [SequenceUtils] Could not resolve clicked primer:', target?.dataset || {});
+      return;
+    }
+    this.genomeBrowser.selectPrimer?.(primer);
+  }
+
+  findPrimerFromSelectTarget(target) {
+    const chromosome = target.dataset.chromosome || this.genomeBrowser.currentChromosome;
+    const id = target.dataset.primerId || '';
+    const start = parseInt(target.dataset.primerStart, 10);
+    const end = parseInt(target.dataset.primerEnd, 10);
+    const strand = target.dataset.primerStrand === '-' ? -1 : 1;
+
+    const candidates = this.getPrimerBindingFeatures(chromosome);
+    if (id) {
+      const byId = candidates.find(candidate => candidate.id != null && String(candidate.id) === id);
+      if (byId) return byId;
+    }
+    return candidates.find(candidate => {
+      const candidateReverse = candidate.strand === -1 || candidate.strand === '-';
+      return candidate.start === start && candidate.end === end && candidateReverse === (strand === -1);
+    });
   }
 
   handleGeneIndicatorClick(target) {
@@ -2157,6 +2200,16 @@ class SequenceUtils {
           is3PrimeEnd,
           is5PrimeEnd,
           title: `${this.getFeatureDisplayName(primer)} primer ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})`,
+          // Identity for the delegated click handler that opens the primer details
+          // sidebar. Encoded as data attributes (not a listener) so the value
+          // survives the renderCache's cloneNode reuse, mirroring gene indicators.
+          selectDataset: {
+            primerId: primer.id != null ? String(primer.id) : '',
+            primerStart: String(primer.start),
+            primerEnd: String(primer.end),
+            primerStrand: isReverse ? '-' : '+',
+            chromosome: primer.chromosome || chromosome || '',
+          },
         });
       })
       .filter(Boolean);
@@ -2177,9 +2230,25 @@ class SequenceUtils {
     is3PrimeEnd = true,
     is5PrimeEnd = true,
     title,
+    selectDataset = null,
   }) {
     const ARROW_W = 9; // arrowhead width in px (height tracks the bar height via CSS)
     const RADIUS = '5px';
+    // Flag a node as a click target for the delegated primer-select handler and
+    // stamp it with the primer's identity. Using data attributes (resolved at click
+    // time) instead of a per-node listener keeps selection working after the
+    // renderCache reuses a line via cloneNode, which drops listeners.
+    const markSelectable = node => {
+      if (!selectDataset) return;
+      node.classList.add('primer-select-target');
+      node.style.cursor = 'pointer';
+      node.dataset.primerId = selectDataset.primerId;
+      node.dataset.primerStart = selectDataset.primerStart;
+      node.dataset.primerEnd = selectDataset.primerEnd;
+      node.dataset.primerStrand = selectDataset.primerStrand;
+      node.dataset.chromosome = selectDataset.chromosome;
+    };
+
     const row = document.createElement('div');
     row.className = `sequence-aligned-row sequence-primer-binding-row ${className}`;
 
@@ -2189,6 +2258,7 @@ class SequenceUtils {
     labelElement.style.color = letterColor;
     labelElement.style.borderColor = accentColor;
     labelElement.title = title;
+    markSelectable(labelElement);
 
     const strandSpacer = document.createElement('span');
     strandSpacer.className = 'sequence-aligned-strand-spacer';
@@ -2220,6 +2290,8 @@ class SequenceUtils {
       box.style.borderRadius = is5PrimeEnd ? `${RADIUS} 0 0 ${RADIUS}` : '0';
       if (is3PrimeEnd) box.style.borderRightWidth = '0';
     }
+    if (selectDataset) box.setAttribute('role', 'button');
+    markSelectable(box);
     basesElement.appendChild(box);
 
     // One absolutely-positioned cell per base, each exactly charWidth wide and
@@ -2246,6 +2318,10 @@ class SequenceUtils {
       } else {
         direction.style.left = `${(startIndex + visibleLength) * charWidth}px`;
         direction.style.borderLeftColor = accentColor;
+      }
+      if (selectDataset) {
+        direction.style.pointerEvents = 'auto';
+        markSelectable(direction);
       }
       basesElement.appendChild(direction);
     }
