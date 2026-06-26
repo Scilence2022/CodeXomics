@@ -2,202 +2,202 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/ADR-001-tool-base-framework-and-theme-integration/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/AGENTS_AND_SMART_EXECUTION_SYSTEM_DOCUMENTATION/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/CodeXomics_Multi_Agent_System_Technical_Specification/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/DYNAMIC_TOOLS_REGISTRY_ANALYSIS/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/PLUGIN_SYSTEM_COMPREHENSIVE_TECHNICAL_REPORT/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/PLUGIN_SYSTEM_DEEP_ANALYSIS/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/TRACK_SYSTEM_ANALYSIS/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/WORKSPACE_ARCHITECTURE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/WORKSPACE_IMPLEMENTATION_SUMMARY/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/architecture/context-isolation-migration/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/ACTIONS_DOCUMENTATION_INDEX/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/ACTIONS_QUICK_REFERENCE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/ACTIONS_SYSTEM_DIAGRAMS/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/ACTIONS_SYSTEM_DOCUMENTATION/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/AI_ASSISTANT_GUIDELINES/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/DEVELOPER_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/PLUGIN_DEVELOPMENT_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/TESTING_AND_DECOMPOSITION/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/developer-guides/build-instructions/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/llm-context/CHERRY_STUDIO_PROMPT/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/llm-context/MCP_CHERRY_STUDIO_PROMPT/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/llm-context/MCP_SERVER_PROMPT/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/llm-context/guides/MCP_CHERRY_STUDIO_QUICKSTART/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reference/BENCHMARK_METHODS/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reference/BLAST_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reference/MARKETPLACE_TROUBLESHOOTING/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reference/SMART_EXECUTION_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reference/WINDOWS_COMPATIBILITY_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reference/WORKSPACE_MIGRATION_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reference/WORKSPACE_QUICKSTART/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/release-notes/RELEASE_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/release-notes/RELEASE_NOTES_v0.532beta/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/release-notes/RELEASE_NOTES_v0.533beta/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/release-notes/RELEASE_NOTES_v0.722/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reports/CodeXomics-Deep-Analysis-Report/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reports/LLM_Context_Overflow_Protection_e9171c18/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reports/automatic_complex_suite_deep_analysis/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reports/benchmark_tool_coverage_analysis/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reports/overview/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/reports/typescript-migration-analysis/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/AGENTS_COLLABORATION_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/DATABASE_PLUGINS_TESTING_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/FAQ/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/GETTING_STARTED/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/MCP_SERVER_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/PLUGIN_MARKETPLACE_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/PLUGIN_TEST_COPY_PASTE_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/TROUBLESHOOTING_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://scilence2022.github.io/CodeXomics/user-guides/USER_GUIDE/</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
 </urlset>
