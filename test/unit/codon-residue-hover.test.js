@@ -147,41 +147,36 @@ describe('codon <-> residue hover association', () => {
       expect(new Set(found.map(s => s.dataset.displayPosition))).toEqual(new Set(['9', '10', '11']));
     });
 
-    it('applying/clearing the hover classes draws each codon as a single box', () => {
+    it('applying/clearing draws one overlay box per strand row, not per base', () => {
       const marker = markersForBase(container, '10')[0];
       const codon = marker.dataset.codonPositions.split(' '); // ['9','10','11']
 
-      // apply (mirrors applyCodonHover: only the outer bases get start/end caps)
-      const lastIndex = codon.length - 1;
-      codon.forEach((p, index) => {
+      // apply (mirrors applyCodonHover: group the codon's bases by their row and
+      // draw a single overlay per row — one for the main strand, one for complement)
+      const spansByRow = new Map();
+      codon.forEach(p => {
         container.querySelectorAll(`.sequence-bases span[data-display-position="${p}"]`).forEach(span => {
-          span.classList.add('codon-hover-base');
-          if (index === 0) span.classList.add('codon-hover-base-start');
-          if (index === lastIndex) span.classList.add('codon-hover-base-end');
+          const row = span.parentElement;
+          if (!spansByRow.has(row)) spansByRow.set(row, []);
+          spansByRow.get(row).push(span);
         });
+      });
+      spansByRow.forEach((spans, row) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'codon-hover-overlay';
+        row.appendChild(overlay);
       });
       marker.classList.add('codon-hover-residue');
 
-      // 3 positions x 2 strands filled; exactly one start + one end cap per strand
-      expect(container.querySelectorAll('.codon-hover-base')).toHaveLength(6);
-      expect(container.querySelectorAll('.codon-hover-base-start')).toHaveLength(2); // pos 9, both strands
-      expect(container.querySelectorAll('.codon-hover-base-end')).toHaveLength(2); // pos 11, both strands
-      // The interior base (pos 10) must not be capped, so the box has no inner edges
-      container.querySelectorAll('.sequence-bases span[data-display-position="10"]').forEach(span => {
-        expect(span.classList.contains('codon-hover-base')).toBe(true);
-        expect(span.classList.contains('codon-hover-base-start')).toBe(false);
-        expect(span.classList.contains('codon-hover-base-end')).toBe(false);
-      });
+      // One box per codon per strand: 2 overlays (main + complementary), NOT 3 (per base) or 6
+      expect(spansByRow.size).toBe(2);
+      expect(container.querySelectorAll('.codon-hover-overlay')).toHaveLength(2);
       expect(container.querySelectorAll('.codon-hover-residue')).toHaveLength(1);
 
-      // clear (mirrors clearCodonHover: removes base + cap classes)
-      container
-        .querySelectorAll('.codon-hover-base')
-        .forEach(el => el.classList.remove('codon-hover-base', 'codon-hover-base-start', 'codon-hover-base-end'));
+      // clear (mirrors clearCodonHover)
+      container.querySelectorAll('.codon-hover-overlay').forEach(el => el.remove());
       container.querySelectorAll('.codon-hover-residue').forEach(el => el.classList.remove('codon-hover-residue'));
-      expect(container.querySelectorAll('.codon-hover-base')).toHaveLength(0);
-      expect(container.querySelectorAll('.codon-hover-base-start')).toHaveLength(0);
-      expect(container.querySelectorAll('.codon-hover-base-end')).toHaveLength(0);
+      expect(container.querySelectorAll('.codon-hover-overlay')).toHaveLength(0);
       expect(container.querySelectorAll('.codon-hover-residue')).toHaveLength(0);
     });
   });
