@@ -2062,7 +2062,17 @@ class SequenceUtils {
               : (sourcePos1Based - (cds.start + 1)) / 3;
 
           if (!Number.isInteger(aaIndex) || aaIndex < 0 || aaIndex >= proteinSequence.length) continue;
-          marks.push({ index: i, text: proteinSequence[aaIndex], title: this.getFeatureDisplayName(cds) });
+          // The residue is drawn over the middle base of its codon (true for both
+          // strands here), so the codon occupies the three contiguous display
+          // positions centered on the marker. Record them for hover association.
+          const anchorDisplay = lineStartAbs + i;
+          marks.push({
+            index: i,
+            text: proteinSequence[aaIndex],
+            title: this.getFeatureDisplayName(cds),
+            codonPositions: [anchorDisplay - 1, anchorDisplay, anchorDisplay + 1],
+            aa: proteinSequence[aaIndex],
+          });
         }
 
         if (marks.length === 0) return null;
@@ -2369,6 +2379,9 @@ class SequenceUtils {
       marker.style.color = color;
       marker.style.background = typeof background === 'function' ? background(mark.text) : background;
       marker.style.borderColor = borderColor;
+      // Codon <-> residue hover association metadata (used by initializeSequenceSelection)
+      if (mark.codonPositions) marker.dataset.codonPositions = mark.codonPositions.join(' ');
+      if (mark.aa) marker.dataset.aa = mark.aa;
       basesElement.appendChild(marker);
     });
 

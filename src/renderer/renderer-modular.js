@@ -9933,6 +9933,8 @@ class GenomeBrowser {
       sequenceContent.removeEventListener('mousemove', this._sequenceSelectionListeners.mousemove);
       sequenceContent.removeEventListener('mouseup', this._sequenceSelectionListeners.mouseup);
       document.removeEventListener('mouseup', this._sequenceSelectionListeners.docMouseup);
+      sequenceContent.removeEventListener('mouseover', this._sequenceSelectionListeners.mouseover);
+      sequenceContent.removeEventListener('mouseleave', this._sequenceSelectionListeners.mouseleave);
     }
 
     let isSelecting = false;
@@ -9998,12 +10000,48 @@ class GenomeBrowser {
       mouseDownPosition = null;
     };
 
+    // Codon <-> residue hover association: hovering a base highlights the residue
+    // it codes for (and the whole codon); hovering a residue highlights its codon.
+    this.ensureCodonHoverStyles();
+    const mouseoverHandler = e => {
+      if (isSelecting) return; // Don't distract during a drag-selection
+
+      const marker = e.target.closest('.sequence-protein-row .sequence-aligned-marker[data-codon-positions]');
+      if (marker) {
+        this.applyCodonHover(sequenceContent, [marker.dataset.codonPositions.split(' ')], [marker]);
+        return;
+      }
+
+      const base = e.target.closest('.sequence-bases span[data-display-position]');
+      if (base) {
+        const displayPos = base.dataset.displayPosition;
+        // Find every residue whose codon includes this base (may span reading frames / overlapping CDS)
+        const markers = sequenceContent.querySelectorAll(
+          `.sequence-aligned-marker[data-codon-positions~="${displayPos}"]`
+        );
+        if (markers.length) {
+          // One group per residue so each codon can be drawn as a single box
+          const codons = Array.from(markers, m => m.dataset.codonPositions.split(' '));
+          this.applyCodonHover(sequenceContent, codons, markers);
+        } else {
+          this.clearCodonHover(sequenceContent);
+        }
+        return;
+      }
+
+      this.clearCodonHover(sequenceContent);
+    };
+
+    const mouseleaveHandler = () => this.clearCodonHover(sequenceContent);
+
     // Store listeners for cleanup
     this._sequenceSelectionListeners = {
       mousedown: mousedownHandler,
       mousemove: mousemoveHandler,
       mouseup: mouseupHandler,
       docMouseup: docMouseupHandler,
+      mouseover: mouseoverHandler,
+      mouseleave: mouseleaveHandler,
     };
 
     // Add event listeners
@@ -10011,6 +10049,90 @@ class GenomeBrowser {
     sequenceContent.addEventListener('mousemove', mousemoveHandler);
     sequenceContent.addEventListener('mouseup', mouseupHandler);
     document.addEventListener('mouseup', docMouseupHandler);
+    sequenceContent.addEventListener('mouseover', mouseoverHandler);
+    sequenceContent.addEventListener('mouseleave', mouseleaveHandler);
+  }
+
+  /**
+   * Inject the codon/residue hover-highlight styles once.
+   */
+  ensureCodonHoverStyles() {
+    if (document.getElementById('codon-hover-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'codon-hover-styles';
+    style.textContent = `
+      /* The three bases of a codon render as one box: every cell paints the top
+         and bottom edges (plus a 2px fill bridge over the 1px letter-spacing gap),
+         while only the first/last cell paints the left/right edge and rounds its
+         outer corners. box-shadow + border-radius avoid any layout shift. */
+      .sequence-bases span.codon-hover-base {
+        background-color: rgba(41, 128, 185, 0.30) !important;
+        box-shadow:
+          inset 0 1px 0 0 rgba(41, 128, 185, 0.9),
+          inset 0 -1px 0 0 rgba(41, 128, 185, 0.9),
+          2px 0 0 0 rgba(41, 128, 185, 0.30);
+      }
+      .sequence-bases span.codon-hover-base-start {
+        border-top-left-radius: 3px;
+        border-bottom-left-radius: 3px;
+        box-shadow:
+          inset 0 1px 0 0 rgba(41, 128, 185, 0.9),
+          inset 0 -1px 0 0 rgba(41, 128, 185, 0.9),
+          inset 1px 0 0 0 rgba(41, 128, 185, 0.9),
+          2px 0 0 0 rgba(41, 128, 185, 0.30);
+      }
+      .sequence-bases span.codon-hover-base-end {
+        border-top-right-radius: 3px;
+        border-bottom-right-radius: 3px;
+        box-shadow:
+          inset 0 1px 0 0 rgba(41, 128, 185, 0.9),
+          inset 0 -1px 0 0 rgba(41, 128, 185, 0.9),
+          inset -1px 0 0 0 rgba(41, 128, 185, 0.9);
+      }
+      .sequence-aligned-marker.codon-hover-residue {
+        outline: 2px solid rgba(41, 128, 185, 0.95);
+        outline-offset: -1px;
+        box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.35);
+        border-radius: 3px;
+        font-weight: 700;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  /**
+   * Highlight one or more codons (on both strands) and their residue markers.
+   * `codons` is an array of groups, each a list of base display-positions in
+   * left-to-right order. The first/last base of each group is tagged so the CSS
+   * can draw the whole codon as a single box (border only on the outer edges).
+   */
+  applyCodonHover(container, codons, markers) {
+    this.clearCodonHover(container);
+    codons.forEach(codon => {
+      const lastIndex = codon.length - 1;
+      codon.forEach((displayPos, index) => {
+        container.querySelectorAll(`.sequence-bases span[data-display-position="${displayPos}"]`).forEach(span => {
+          span.classList.add('codon-hover-base');
+          if (index === 0) span.classList.add('codon-hover-base-start');
+          if (index === lastIndex) span.classList.add('codon-hover-base-end');
+        });
+      });
+    });
+    markers.forEach(marker => marker.classList.add('codon-hover-residue'));
+    this._codonHoverActive = true;
+  }
+
+  /**
+   * Remove any active codon/residue hover highlight.
+   */
+  clearCodonHover(container) {
+    const root = container || document.getElementById('sequenceContent');
+    if (!root || !this._codonHoverActive) return;
+    root
+      .querySelectorAll('.codon-hover-base')
+      .forEach(el => el.classList.remove('codon-hover-base', 'codon-hover-base-start', 'codon-hover-base-end'));
+    root.querySelectorAll('.codon-hover-residue').forEach(el => el.classList.remove('codon-hover-residue'));
+    this._codonHoverActive = false;
   }
 
   getSequencePosition(baseElement) {
