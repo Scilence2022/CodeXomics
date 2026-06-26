@@ -439,14 +439,14 @@ path.svg-gene-element.selected.border-highlight text {
 }
 
 .sequence-selected {
-  background: rgba(59, 130, 246, 0.3) !important;
+  background: rgba(59, 130, 246, 0.18) !important;
   border-radius: 3px !important;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
 .gene-sequence-selected {
-  background: rgba(59, 130, 246, 0.4) !important;
+  background: rgba(59, 130, 246, 0.25) !important;
 }
 
 .gene-zoom-btn {

@@ -3971,11 +3971,11 @@ class SequenceUtils {
    */
   getBaseColor(base) {
     const colors = {
-      A: '#FF6B6B', // Red
-      T: '#4ECDC4', // Teal
-      G: '#45B7D1', // Blue
-      C: '#96CEB4', // Green
-      N: '#95A5A6', // Gray for unknown
+      A: '#e74c3c', // Red
+      T: '#3498db', // Blue
+      G: '#2ecc71', // Green
+      C: '#f39c12', // Orange
+      N: '#95a5a6', // Gray for unknown
     };
     return colors[base.toUpperCase()] || colors['N'];
   }
