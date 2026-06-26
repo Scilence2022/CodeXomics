@@ -369,11 +369,6 @@
                             <i class="fas fa-users-cog"></i>
                             Multi-Agent Settings
                         </button>
-                        <button class="dropdown-item" id="coScientistManagerBtn">
-                            <i class="fas fa-flask"></i>
-                            Co-Scientist Manager
-                        </button>
-
                         <button class="dropdown-item" id="mcpSettingsBtn">
                             <i class="fas fa-server"></i>
                             External MCP Servers
@@ -4544,7 +4539,7 @@ Supported formats:
                     <button class="tab-button active" data-tab="system">System</button>
                     <button class="tab-button" data-tab="llm">LLM Configuration</button>
                     <button class="tab-button" data-tab="agents">Agent Management</button>
-                    <button class="tab-button" data-tab="co-scientist">Co-Scientist</button>
+
                     <button class="tab-button" data-tab="memory">Memory System</button>
                     <button class="tab-button" data-tab="performance">Performance</button>
                 </div>
@@ -4809,103 +4804,6 @@ Supported formats:
                         </div>
                     </div>
 
-                    <!-- Co-Scientist Tab -->
-                    <div id="co-scientist-tab" class="tab-content">
-                        <div class="form-section">
-                            <h4><i class="fas fa-flask"></i> Co-Scientist System</h4>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="coScientistEnabled" class="setting-checkbox" checked>
-                                    Enable Co-Scientist
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="coScientistPersistSessions" class="setting-checkbox"
-                                        checked>
-                                    Persist research sessions locally
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="coScientistAutoRunCycles" class="setting-checkbox">
-                                    Auto-run initial cycle after session creation
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label for="coScientistDefaultDomain">Default domain:</label>
-                                <select id="coScientistDefaultDomain" class="input-full">
-                                    <option value="biomedicine">Biomedicine</option>
-                                    <option value="genomics">Genomics</option>
-                                    <option value="microbiology">Microbiology</option>
-                                    <option value="protein_biology">Protein Biology</option>
-                                    <option value="drug_discovery">Drug Discovery</option>
-                                    <option value="general_science">General Science</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h4><i class="fas fa-sliders-h"></i> Session Defaults</h4>
-                            <div class="form-group">
-                                <label for="coScientistDefaultCycles">Cycles per run:</label>
-                                <input type="number" id="coScientistDefaultCycles" class="input-full" min="1" max="5"
-                                    value="1">
-                            </div>
-                            <div class="form-group">
-                                <label for="coScientistDefaultGenerateCount">Hypotheses per generation:</label>
-                                <input type="number" id="coScientistDefaultGenerateCount" class="input-full" min="1"
-                                    max="12" value="3">
-                            </div>
-                            <div class="form-group">
-                                <label for="coScientistDefaultEvolutionCount">Evolved hypotheses per cycle:</label>
-                                <input type="number" id="coScientistDefaultEvolutionCount" class="input-full" min="0"
-                                    max="5" value="2">
-                            </div>
-                            <div class="form-group">
-                                <label for="coScientistReviewDepth">Review depth:</label>
-                                <select id="coScientistReviewDepth" class="input-full">
-                                    <option value="quick">Quick</option>
-                                    <option value="standard">Standard</option>
-                                    <option value="recurrent">Recurrent</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="coScientistIncludeEvolution" class="setting-checkbox"
-                                        checked>
-                                    Include EvolutionAgent refinements
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label for="coScientistTopN">Top hypotheses in reports:</label>
-                                <input type="number" id="coScientistTopN" class="input-full" min="1" max="20" value="5">
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h4><i class="fas fa-chart-area"></i> Monitoring</h4>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="coScientistAutoRefresh" class="setting-checkbox" checked>
-                                    Auto-refresh management view
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label for="coScientistRefreshInterval">Refresh interval (seconds):</label>
-                                <input type="number" id="coScientistRefreshInterval" class="input-full" min="5"
-                                    max="300" value="10">
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="coScientistShowActivityLog" class="setting-checkbox"
-                                        checked>
-                                    Include activity log in reports
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Memory System Tab -->
                     <div id="memory-tab" class="tab-content">
                         <div class="form-section">
@@ -5090,223 +4988,6 @@ Supported formats:
         </div>
     </div>
 
-    <!-- Co-Scientist Manager Modal -->
-    <div id="coScientistManagerModal" class="modal">
-        <div class="modal-content co-scientist-manager-modal resizable">
-            <div class="modal-header">
-                <h3><i class="fas fa-flask"></i> Co-Scientist Manager</h3>
-                <div class="modal-controls">
-                    <button class="reset-position-btn" title="Reset Position">
-                        <i class="fas fa-crosshairs"></i>
-                    </button>
-                    <button id="coScientistRefreshBtn" class="reset-position-btn" title="Refresh">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                    <button class="modal-close">&times;</button>
-                </div>
-            </div>
-
-            <div class="modal-body co-scientist-manager-body">
-                <aside class="co-scientist-sidebar">
-                    <div class="co-scientist-sidebar-toolbar">
-                        <span id="coScientistSystemState" class="co-scientist-system-state">Ready</span>
-                        <label class="co-scientist-inline-check">
-                            <input type="checkbox" id="coScientistIncludeArchived">
-                            Archived
-                        </label>
-                    </div>
-                    <div id="coScientistSessionList" class="co-scientist-session-list"></div>
-                    <button class="btn btn-secondary co-scientist-clear-btn" id="coScientistClearArchivedBtn">
-                        <i class="fas fa-broom"></i> Clear Archived
-                    </button>
-                </aside>
-
-                <main class="co-scientist-workspace">
-                    <section class="co-scientist-stat-grid">
-                        <div class="co-scientist-stat">
-                            <span id="coScientistActiveSessions">0</span>
-                            <small>Active</small>
-                        </div>
-                        <div class="co-scientist-stat">
-                            <span id="coScientistPausedSessions">0</span>
-                            <small>Paused</small>
-                        </div>
-                        <div class="co-scientist-stat">
-                            <span id="coScientistArchivedSessions">0</span>
-                            <small>Archived</small>
-                        </div>
-                        <div class="co-scientist-stat">
-                            <span id="coScientistTotalEvidence">0</span>
-                            <small>Evidence</small>
-                        </div>
-                        <div class="co-scientist-stat">
-                            <span id="coScientistTotalHypotheses">0</span>
-                            <small>Hypotheses</small>
-                        </div>
-                        <div class="co-scientist-stat">
-                            <span id="coScientistTotalReviews">0</span>
-                            <small>Reviews</small>
-                        </div>
-                        <div class="co-scientist-stat">
-                            <span id="coScientistTotalMatches">0</span>
-                            <small>Matches</small>
-                        </div>
-                    </section>
-
-                    <section class="co-scientist-create-panel">
-                        <div class="co-scientist-form-grid">
-                            <label>
-                                Research goal
-                                <textarea id="coScientistResearchGoal" rows="2"></textarea>
-                            </label>
-                            <label>
-                                Domain
-                                <select id="coScientistDomain">
-                                    <option value="biomedicine">Biomedicine</option>
-                                    <option value="genomics">Genomics</option>
-                                    <option value="microbiology">Microbiology</option>
-                                    <option value="protein_biology">Protein Biology</option>
-                                    <option value="drug_discovery">Drug Discovery</option>
-                                    <option value="general_science">General Science</option>
-                                </select>
-                            </label>
-                            <label>
-                                Constraints
-                                <textarea id="coScientistConstraints" rows="2"></textarea>
-                            </label>
-                            <label>
-                                Safety notes
-                                <textarea id="coScientistSafetyNotes" rows="2"></textarea>
-                            </label>
-                            <label>
-                                Initial evidence
-                                <textarea id="coScientistInitialEvidence" rows="3"></textarea>
-                            </label>
-                            <label>
-                                Seed ideas
-                                <textarea id="coScientistSeedIdeas" rows="3"></textarea>
-                            </label>
-                        </div>
-                        <div class="co-scientist-action-row">
-                            <button class="btn btn-primary" id="coScientistStartSessionBtn">
-                                <i class="fas fa-plus"></i> New Session
-                            </button>
-                        </div>
-                    </section>
-
-                    <section class="co-scientist-selected-panel">
-                        <div class="co-scientist-selected-header">
-                            <div>
-                                <h4 id="coScientistSessionTitle">No session selected</h4>
-                                <p id="coScientistSessionMeta"></p>
-                                <p id="coScientistSessionMetrics"></p>
-                            </div>
-                            <div class="co-scientist-session-actions">
-                                <button class="btn btn-secondary" id="coScientistPauseResumeBtn">
-                                    <i class="fas fa-pause"></i> Pause
-                                </button>
-                                <button class="btn btn-secondary" id="coScientistArchiveBtn">
-                                    <i class="fas fa-archive"></i> Archive
-                                </button>
-                                <button class="btn btn-danger" id="coScientistDeleteBtn">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="co-scientist-run-grid">
-                            <label>
-                                Cycles
-                                <input type="number" id="coScientistRunCycleCount" min="1" max="5" value="1">
-                            </label>
-                            <label>
-                                Generate
-                                <input type="number" id="coScientistRunGenerateCount" min="1" max="12" value="3">
-                            </label>
-                            <label>
-                                Evolve
-                                <input type="number" id="coScientistRunEvolutionCount" min="0" max="5" value="2">
-                            </label>
-                            <label>
-                                Review
-                                <select id="coScientistRunReviewDepth">
-                                    <option value="quick">Quick</option>
-                                    <option value="standard">Standard</option>
-                                    <option value="recurrent">Recurrent</option>
-                                </select>
-                            </label>
-                            <label>
-                                Top
-                                <input type="number" id="coScientistRunTopN" min="1" max="20" value="5">
-                            </label>
-                            <label class="co-scientist-inline-check">
-                                <input type="checkbox" id="coScientistRunIncludeEvolution" checked>
-                                Evolution
-                            </label>
-                            <button class="btn btn-primary" id="coScientistRunCycleBtn">
-                                <i class="fas fa-play"></i> Run Cycle
-                            </button>
-                            <button class="btn btn-secondary" id="coScientistGenerateBtn">
-                                <i class="fas fa-lightbulb"></i> Generate
-                            </button>
-                        </div>
-
-                        <div class="co-scientist-evidence-row">
-                            <textarea id="coScientistEvidenceInput" rows="2"></textarea>
-                            <select id="coScientistEvidenceType">
-                                <option value="literature">Literature</option>
-                                <option value="dataset">Dataset</option>
-                                <option value="experiment">Experiment</option>
-                                <option value="feedback">Feedback</option>
-                            </select>
-                            <select id="coScientistEvidenceReliability">
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                                <option value="low">Low</option>
-                            </select>
-                            <button class="btn btn-secondary" id="coScientistAddEvidenceBtn">
-                                <i class="fas fa-plus-circle"></i> Add Evidence
-                            </button>
-                        </div>
-                    </section>
-
-                    <section class="co-scientist-report-grid">
-                        <div class="co-scientist-report-panel co-scientist-report-wide">
-                            <h4>Top Hypotheses</h4>
-                            <div id="coScientistTopHypotheses"></div>
-                        </div>
-                        <div class="co-scientist-report-panel">
-                            <h4>Next Actions</h4>
-                            <div id="coScientistNextActions"></div>
-                        </div>
-                        <div class="co-scientist-report-panel">
-                            <h4>Meta Review</h4>
-                            <div id="coScientistMetaReview"></div>
-                        </div>
-                        <div class="co-scientist-report-panel">
-                            <h4>Activity</h4>
-                            <div id="coScientistActivityLog"></div>
-                        </div>
-                    </section>
-                </main>
-            </div>
-
-            <div class="modal-footer">
-                <span id="coScientistStatusText" class="co-scientist-status-text">Ready</span>
-                <button class="btn btn-secondary modal-close">Close</button>
-            </div>
-
-            <div class="resize-handle resize-handle-n"></div>
-            <div class="resize-handle resize-handle-s"></div>
-            <div class="resize-handle resize-handle-e"></div>
-            <div class="resize-handle resize-handle-w"></div>
-            <div class="resize-handle resize-handle-ne"></div>
-            <div class="resize-handle resize-handle-nw"></div>
-            <div class="resize-handle resize-handle-se"></div>
-            <div class="resize-handle resize-handle-sw"></div>
-        </div>
-    </div>
-
     <!-- Scripts -->
     <script src="../../node_modules/d3/dist/d3.min.js"></script>
     <!-- Markdown parser for enhanced ChatBox rendering -->
@@ -5371,10 +5052,6 @@ Supported formats:
     <!-- Annotation Change Tracking (Phase 1 - OpenClaw integration) -->
     <script src="modules/AnnotationChangeTracker.js"></script>
 
-    <!-- Independent Co-Scientist research agent system -->
-    <script src="modules/CoScientistSystem.js"></script>
-    <script src="modules/CoScientistManagerUI.js"></script>
-
     <!-- ChatManager Services (Modularized) -->
     <script src="modules/chat/constants/ToolNames.js"></script>
     <script src="modules/chat/constants/DefaultSettings.js"></script>
@@ -5395,7 +5072,6 @@ Supported formats:
     <script src="modules/chat/services/LLMContextService.js"></script>
     <script src="modules/chat/services/UIService.js"></script>
     <script src="modules/chat/services/TaskService.js"></script>
-    <script src="modules/chat/services/CoScientistService.js"></script>
 
     <!-- Gel Electrophoresis Visualization -->
     <script src="modules/GelElectrophoresisRenderer.js"></script>

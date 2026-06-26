@@ -128,12 +128,6 @@ class ToolExecutionService {
         return await taskService[this._toCamelCase(toolName)](parameters);
       }
 
-      // 8. Independent Co-Scientist research system
-      const coScientistService = this.chatManager.services?.coScientist;
-      if (coScientistService && typeof coScientistService[this._toCamelCase(toolName)] === 'function') {
-        return await coScientistService[this._toCamelCase(toolName)](parameters);
-      }
-
       // --- PRIORITY 3: MULTI-AGENT ROUTING (when enabled) ---
       if (
         this.chatManager.agentSystemEnabled &&

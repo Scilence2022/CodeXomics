@@ -473,26 +473,6 @@ class ToolsRegistryManager {
         'complete task',
         'pending task',
       ],
-      co_scientist: [
-        'co-scientist',
-        'co scientist',
-        'autonomous scientist',
-        'scientific discovery',
-        'research hypothesis',
-        'hypothesis generation',
-        'hypotheses',
-        'hypothesis',
-        'research cycle',
-        'tournament ranking',
-        'meta-review',
-        'experiment planning',
-        'scientist feedback',
-        '自主科学家',
-        '科学发现',
-        '假设生成',
-        '假设排序',
-        '研究循环',
-      ],
     };
 
     const detectedIntents = [];
@@ -900,26 +880,6 @@ class ToolsRegistryManager {
         'complete',
         'pending',
       ],
-      co_scientist: [
-        'co-scientist',
-        'co scientist',
-        'scientific discovery',
-        'autonomous scientist',
-        'research',
-        'hypothesis',
-        'hypotheses',
-        'experiment',
-        'evidence',
-        'tournament',
-        'ranking',
-        'evolution',
-        'meta-review',
-        'feedback',
-        '自主科学家',
-        '科学发现',
-        '假设',
-        '研究循环',
-      ],
     };
 
     return intentKeywordMap[intent] || [];
@@ -1031,32 +991,6 @@ class ToolsRegistryManager {
           } else if (tool.name.includes('current_view') && queryLower.includes('current')) {
             score += 50;
           }
-        }
-
-        if (tool.category === 'co_scientist' && intent.primary === 'co_scientist') {
-          score += 100;
-          const queryLower = intent.query.toLowerCase();
-          if (tool.name.includes('start') && /\b(start|create|new|构建|启动)\b/i.test(queryLower)) {
-            score += 40;
-          } else if (
-            tool.name.includes('evidence') &&
-            /\b(evidence|paper|literature|experiment|feedback|data)\b/i.test(queryLower)
-          ) {
-            score += 40;
-          } else if (
-            tool.name.includes('hypotheses') &&
-            /\b(hypothes|idea|candidate|mechanism|假设)\b/i.test(queryLower)
-          ) {
-            score += 40;
-          } else if (
-            tool.name.includes('cycle') &&
-            /\b(cycle|loop|rank|evolve|tournament|review|循环|排序)\b/i.test(queryLower)
-          ) {
-            score += 40;
-          } else if (tool.name.includes('report') && /\b(report|summary|roadmap|top|报告|总结)\b/i.test(queryLower)) {
-            score += 40;
-          }
-          console.log('🔍 [Dynamic Tools] Co-Scientist tool bonus applied:', tool.name);
         }
 
         // Special bonus for search_features tool when annotation or function keywords are detected

@@ -77,10 +77,10 @@ Important files:
 
 Current registry facts:
 
-- 185 YAML tool schemas across 19 active categories.
-- 149 built-in tools mapped by `BuiltInToolsIntegration`.
-- Active YAML categories: `annotation`, `benchmark`, `co_scientist`, `coordination`, `data_management`, `database`, `external_apis`, `file_loading`, `file_operations`, `navigation`, `pathway`, `plugin_management`, `primer_design`, `protein`, `sequence`, `sequence_editing`, `system`, `task_management`, `utility`.
-- Built-in categories in `builtInToolsMap`: `file_loading`, `navigation`, `sequence`, `system`, `task_management`, `co_scientist`, `database`, `protein`, `data_management`, `external_apis`, `utility`, `sequence_editing`, `file_operations`, `annotation`, `primer_design`, `benchmark`.
+- 179 YAML tool schemas across 18 active categories.
+- 143 built-in tools mapped by `BuiltInToolsIntegration`.
+- Active YAML categories: `annotation`, `benchmark`, `coordination`, `data_management`, `database`, `external_apis`, `file_loading`, `file_operations`, `navigation`, `pathway`, `plugin_management`, `primer_design`, `protein`, `sequence`, `sequence_editing`, `system`, `task_management`, `utility`.
+- Built-in categories in `builtInToolsMap`: `file_loading`, `navigation`, `sequence`, `system`, `task_management`, `database`, `protein`, `data_management`, `external_apis`, `utility`, `sequence_editing`, `file_operations`, `annotation`, `primer_design`, `benchmark`.
 
 Tool classification rules:
 

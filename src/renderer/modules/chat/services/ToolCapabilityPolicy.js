@@ -90,18 +90,6 @@ class ToolCapabilityPolicy {
         policy: 'always_allowed',
       },
 
-      co_scientist: {
-        tools: [
-          'start_co_scientist_session',
-          'list_co_scientist_sessions',
-          'add_co_scientist_evidence',
-          'generate_co_scientist_hypotheses',
-          'run_co_scientist_cycle',
-          'get_co_scientist_report',
-        ],
-        policy: 'always_allowed',
-      },
-
       system_utility: {
         tools: [
           'set_working_directory',
