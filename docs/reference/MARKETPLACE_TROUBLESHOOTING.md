@@ -267,7 +267,7 @@ DEBUG=* npm run marketplace:start
 
 If issues persist:
 
-1. Check `WORKSPACE_IMPLEMENTATION_SUMMARY.md` for detailed architecture
+1. Check the [Workspace Architecture](../architecture/WORKSPACE_ARCHITECTURE.md) guide for detailed architecture
 2. Review `packages/marketplace-server/README.md` for API documentation
 3. Check server logs for error messages
 4. Verify workspace configuration with `npm ls --workspaces`

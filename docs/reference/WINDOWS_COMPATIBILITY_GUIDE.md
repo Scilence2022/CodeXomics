@@ -1,247 +1,247 @@
-# Windows 兼容性和问题解决指南
+# Windows Compatibility and Troubleshooting Guide
 
-## 概述
+## Overview
 
-本指南解决了 CodeXomics 在 Windows 操作系统下的两个主要问题：
+This guide addresses two main issues with CodeXomics on the Windows operating system:
 
-1. **Blast 数据库创建路径问题**
-2. **Protein 3D Structure Viewer WebGL 兼容性问题**
+1. **BLAST database creation path issue**
+2. **Protein 3D Structure Viewer WebGL compatibility issue**
 
-## 🧬 Blast 数据库问题解决方案
+## 🧬 BLAST Database Solution
 
-### 问题描述
+### Problem Description
 
-原先的实现存在以下问题：
+The original implementation had the following problems:
 
-- 使用硬编码的 macOS 路径 `/Users/song/blast/db`
-- 使用 Unix 特定的 `mkdir -p` 命令
-- 没有跨平台路径处理逻辑
+- Used a hard-coded macOS path `/Users/song/blast/db`
+- Used the Unix-specific `mkdir -p` command
+- Had no cross-platform path-handling logic
 
-### 解决方案特性
+### Solution Features
 
-#### 1. 智能路径选择
+#### 1. Smart Path Selection
 
-- **优先级 1**: 当前打开的基因组文件所在目录
-- **优先级 2**: 用户数据目录（按操作系统适配）
+- **Priority 1**: the directory of the currently open genome file
+- **Priority 2**: the user data directory (adapted per operating system)
 
-#### 2. 跨平台路径支持
+#### 2. Cross-Platform Path Support
 
-| 操作系统    | 默认数据库路径                                      |
-| ----------- | --------------------------------------------------- |
-| **Windows** | `%LOCALAPPDATA%\CodeXomics\blast\db`                |
-| **macOS**   | `~/Library/Application Support/CodeXomics/blast/db` |
-| **Linux**   | `~/.local/share/CodeXomics/blast/db`                |
+| Operating system | Default database path                               |
+| ---------------- | --------------------------------------------------- |
+| **Windows**      | `%LOCALAPPDATA%\CodeXomics\blast\db`                |
+| **macOS**        | `~/Library/Application Support/CodeXomics/blast/db` |
+| **Linux**        | `~/.local/share/CodeXomics/blast/db`                |
 
-#### 3. 当前文件目录优先
+#### 3. Current File Directory Takes Priority
 
-- 如果有打开的基因组文件，数据库将在 `文件目录/blast_db` 创建
-- 这样可以保持数据和数据库的关联性
+- If a genome file is open, the database is created at `<file directory>/blast_db`
+- This keeps the data and the database together
 
-### 使用方法
+### How to Use
 
-1. **打开基因组文件**
+1. **Open a genome file**
 
    ```
-   加载任何支持的基因组文件 (.fasta, .gb, .genbank 等)
+   Load any supported genome file (.fasta, .gb, .genbank, etc.)
    ```
 
-2. **创建 Blast 数据库**
-   - 转到 Blast 搜索界面
-   - 选择"Local"服务
-   - 点击"Database Management"
-   - 数据库将自动在当前文件目录创建
+2. **Create a BLAST database**
+   - Go to the BLAST search interface
+   - Select the "Local" service
+   - Click "Database Management"
+   - The database is created automatically in the current file's directory
 
-3. **验证数据库位置**
-   - 数据库文件将显示在基因组文件同一目录的 `blast_db` 子文件夹中
+3. **Verify the database location**
+   - The database files appear in a `blast_db` subfolder in the same directory as the genome file
 
-## 🧪 Protein 3D Structure Viewer 问题解决方案
+## 🧪 Protein 3D Structure Viewer Solution
 
-### 问题描述
+### Problem Description
 
-Windows 下 WebGL 可能受到以下因素影响：
+On Windows, WebGL can be affected by the following factors:
 
-- 图形驱动程序版本
-- 浏览器安全设置
-- 硬件加速设置
-- 杀毒软件限制
+- Graphics driver version
+- Browser security settings
+- Hardware acceleration settings
+- Antivirus software restrictions
 
-### 解决方案特性
+### Solution Features
 
-#### 1. WebGL 兼容性检测
+#### 1. WebGL Compatibility Detection
 
-- 启动时自动检测 WebGL 支持
-- 提供详细的系统信息反馈
-- 识别软件渲染警告
+- Automatically detects WebGL support at startup
+- Provides detailed system-information feedback
+- Identifies software-rendering warnings
 
-#### 2. 优雅降级机制
+#### 2. Graceful Degradation
 
-当 WebGL 不可用时，提供以下替代方案：
+When WebGL is unavailable, the following alternatives are provided:
 
-| 功能                 | 描述                   |
-| -------------------- | ---------------------- |
-| **📁 下载 PDB 文件** | 直接下载结构文件到本地 |
-| **ℹ️ 显示结构信息**  | 展示蛋白质元数据和链接 |
-| **🌐 RCSB PDB 查看** | 在官方网站查看结构     |
+| Feature                      | Description                                           |
+| ---------------------------- | ----------------------------------------------------- |
+| **📁 Download the PDB file** | Download the structure file directly to your computer |
+| **ℹ️ Show structure info**   | Display protein metadata and links                    |
+| **🌐 View on RCSB PDB**      | View the structure on the official website            |
 
-#### 3. 详细错误诊断
+#### 3. Detailed Error Diagnostics
 
-- WebGL 支持状态
-- 图形渲染器信息
-- 浏览器兼容性提示
-- 具体解决建议
+- WebGL support status
+- Graphics renderer information
+- Browser compatibility hints
+- Specific resolution suggestions
 
-### Windows 下的解决步骤
+### Resolution Steps on Windows
 
-#### 1. 更新图形驱动程序
+#### 1. Update the Graphics Driver
 
 ```powershell
-# NVIDIA 用户
-# 访问 https://www.nvidia.com/drivers/
-# 下载并安装最新驱动
+# NVIDIA users
+# Visit https://www.nvidia.com/drivers/
+# Download and install the latest driver
 
-# AMD 用户
-# 访问 https://www.amd.com/support/
-# 下载并安装最新驱动
+# AMD users
+# Visit https://www.amd.com/support/
+# Download and install the latest driver
 
-# Intel 用户
-# 访问 https://www.intel.com/content/www/us/en/support/
-# 下载并安装最新驱动
+# Intel users
+# Visit https://www.intel.com/content/www/us/en/support/
+# Download and install the latest driver
 ```
 
-#### 2. 浏览器设置
+#### 2. Browser Settings
 
 **Chrome/Edge:**
 
-1. 地址栏输入 `chrome://flags/`
-2. 搜索 "webgl"
-3. 启用所有 WebGL 相关选项
+1. Enter `chrome://flags/` in the address bar
+2. Search for "webgl"
+3. Enable all WebGL-related options
 
 **Firefox:**
 
-1. 地址栏输入 `about:config`
-2. 搜索 `webgl.force-enabled`
-3. 设置为 `true`
+1. Enter `about:config` in the address bar
+2. Search for `webgl.force-enabled`
+3. Set it to `true`
 
-#### 3. Windows 硬件加速
+#### 3. Windows Hardware Acceleration
 
-1. **Windows 设置**
-   - 设置 → 系统 → 显示 → 图形设置
-   - 启用"硬件加速 GPU 计划"
+1. **Windows Settings**
+   - Settings → System → Display → Graphics settings
+   - Enable "Hardware-accelerated GPU scheduling"
 
-2. **应用特定设置**
-   - 添加 CodeXomics 应用
-   - 选择"高性能"GPU
+2. **Per-application settings**
+   - Add the CodeXomics application
+   - Choose the "High performance" GPU
 
-## 💡 最佳实践
+## 💡 Best Practices
 
-### Blast 数据库管理
+### BLAST Database Management
 
-1. **保持组织结构**
+1. **Keep an organized structure**
 
    ```
-   项目文件夹/
-   ├── genome.fasta          # 基因组文件
-   ├── annotations.gff       # 注释文件
-   └── blast_db/            # 自动创建的数据库目录
+   project-folder/
+   ├── genome.fasta          # genome file
+   ├── annotations.gff       # annotation file
+   └── blast_db/             # auto-created database directory
        ├── genome.nhr
        ├── genome.nin
        └── genome.nsq
    ```
 
-2. **备份重要数据库**
-   - 大型数据库创建耗时
-   - 定期备份 `blast_db` 目录
+2. **Back up important databases**
+   - Creating large databases is time-consuming
+   - Back up the `blast_db` directory regularly
 
-### Protein 3D Viewer 优化
+### Protein 3D Viewer Optimization
 
-1. **使用最新浏览器**
+1. **Use the latest browser**
    - Chrome 90+ / Edge 90+
    - Firefox 85+
 
-2. **检查系统要求**
-   - 4GB+ 内存推荐
-   - 专用显卡（推荐）
-   - OpenGL 2.1+ 支持
+2. **Check system requirements**
+   - 4 GB+ RAM recommended
+   - Dedicated graphics card (recommended)
+   - OpenGL 2.1+ support
 
-## 🐛 故障排除
+## 🐛 Troubleshooting
 
-### Blast 数据库问题
+### BLAST Database Issues
 
-**问题**: 找不到 makeblastdb 命令
-
-```bash
-解决方案:
-1. 确保 BLAST+ 已正确安装
-2. 检查环境变量 PATH 设置
-3. 使用绝对路径指定 BLAST+ 安装位置
-```
-
-**问题**: 权限拒绝错误
+**Problem**: the `makeblastdb` command is not found
 
 ```bash
-解决方案:
-1. 以管理员权限运行应用
-2. 检查文件夹写入权限
-3. 选择不同的数据库存储位置
+Solution:
+1. Make sure BLAST+ is installed correctly
+2. Check the PATH environment variable
+3. Specify the BLAST+ install location with an absolute path
 ```
 
-### WebGL 问题
+**Problem**: permission-denied error
 
-**问题**: WebGL 不受支持
-
-```
-解决方案:
-1. 更新图形驱动程序
-2. 启用浏览器硬件加速
-3. 检查杀毒软件设置
-4. 使用降级查看选项
+```bash
+Solution:
+1. Run the application with administrator privileges
+2. Check folder write permissions
+3. Choose a different database storage location
 ```
 
-**问题**: 性能缓慢
+### WebGL Issues
+
+**Problem**: WebGL is not supported
 
 ```
-解决方案:
-1. 关闭其他占用 GPU 的应用
-2. 降低浏览器缩放级别
-3. 使用独立显卡（如可用）
+Solution:
+1. Update the graphics driver
+2. Enable browser hardware acceleration
+3. Check antivirus software settings
+4. Use the degraded viewing options
 ```
 
-## 🔧 开发者信息
+**Problem**: slow performance
 
-### 修改的文件
+```
+Solution:
+1. Close other GPU-intensive applications
+2. Lower the browser zoom level
+3. Use a dedicated graphics card (if available)
+```
 
-- `src/renderer/modules/BlastManager.js`: 跨平台路径处理
-- `src/renderer/modules/ProteinStructureViewer.js`: WebGL 兼容性
+## 🔧 Developer Information
 
-### 新增功能
+### Modified Files
 
-- 操作系统检测和路径适配
-- WebGL 支持检测
-- 优雅降级机制
-- 详细错误诊断
+- `src/renderer/modules/BlastManager.js`: cross-platform path handling
+- `src/renderer/modules/ProteinStructureViewer.js`: WebGL compatibility
 
-### API 变更
+### New Features
 
-- `BlastManager.getPlatformDbPath()`: 获取平台特定数据库路径
-- `ProteinStructureViewer.checkWebGLSupport()`: WebGL 支持检测
-- `ProteinStructureViewer.showWebGLErrorDialog()`: 错误处理对话框
+- Operating-system detection and path adaptation
+- WebGL support detection
+- Graceful degradation
+- Detailed error diagnostics
 
-## 📞 技术支持
+### API Changes
 
-如果遇到其他问题：
+- `BlastManager.getPlatformDbPath()`: get the platform-specific database path
+- `ProteinStructureViewer.checkWebGLSupport()`: detect WebGL support
+- `ProteinStructureViewer.showWebGLErrorDialog()`: error-handling dialog
 
-1. **收集系统信息**
-   - 操作系统版本
-   - 浏览器版本
-   - 显卡型号和驱动版本
+## 📞 Support
 
-2. **检查控制台日志**
-   - 按 F12 打开开发者工具
-   - 查看 Console 标签页的错误信息
+If you run into other problems:
 
-3. **提供错误详情**
-   - 具体错误消息
-   - 重现步骤
-   - 系统配置信息
+1. **Collect system information**
+   - Operating system version
+   - Browser version
+   - Graphics card model and driver version
 
-通过这些改进，CodeXomics 现在在 Windows 平台上提供了更好的兼容性和用户体验。
+2. **Check the console log**
+   - Press F12 to open the developer tools
+   - Review the error messages in the Console tab
+
+3. **Provide error details**
+   - The specific error message
+   - Steps to reproduce
+   - System configuration information
+
+With these improvements, CodeXomics now offers better compatibility and a better user experience on the Windows platform.
