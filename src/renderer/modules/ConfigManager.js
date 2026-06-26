@@ -570,8 +570,25 @@ class ConfigManager {
         console.log('UI preferences loaded from localStorage');
       }
 
-      // Load chat history
-      const chatHistory = localStorage.getItem('chatHistory');
+      // Load chat history (namespaced per window so multiple open genome windows
+      // don't overwrite each other's saved history — see getChatHistoryKey()).
+      const chatHistoryKey = this.getChatHistoryKey();
+      let chatHistory = localStorage.getItem(chatHistoryKey);
+      if (!chatHistory && chatHistoryKey !== 'chatHistory') {
+        // One-time migration: the first window after upgrade adopts the legacy
+        // shared history, then consumes the legacy key so other windows start
+        // fresh instead of all loading (and re-saving) the same log.
+        const legacy = localStorage.getItem('chatHistory');
+        if (legacy) {
+          chatHistory = legacy;
+          try {
+            localStorage.setItem(chatHistoryKey, legacy);
+            localStorage.removeItem('chatHistory');
+          } catch (e) {
+            /* non-fatal */
+          }
+        }
+      }
       if (chatHistory) {
         this.config.chat.history = JSON.parse(chatHistory);
         console.log(`Chat history loaded from localStorage: ${this.config.chat.history.length} messages`);
@@ -918,6 +935,72 @@ class ConfigManager {
   }
 
   /**
+   * Resolve this window's stable id (for the lifetime of the window) so chat
+   * history can be namespaced. Reads, in order: the live GenomeBrowser app, the
+   * ?windowId= query param (available synchronously at load), and a global set
+   * by the renderer. Returns null when no window identity is available.
+   */
+  resolveWindowId() {
+    try {
+      if (typeof window !== 'undefined') {
+        if (window.genomeBrowser && window.genomeBrowser.windowId) {
+          return window.genomeBrowser.windowId;
+        }
+        const fromQuery = new URLSearchParams(window.location.search).get('windowId');
+        if (fromQuery) return fromQuery;
+        if (window.__codexomicsWindowId) return window.__codexomicsWindowId;
+      }
+    } catch (e) {
+      /* non-fatal */
+    }
+    return null;
+  }
+
+  /**
+   * localStorage key for this window's chat history. Falls back to the legacy
+   * shared 'chatHistory' key when no window identity is available.
+   */
+  getChatHistoryKey() {
+    const windowId = this.resolveWindowId();
+    return windowId ? `chatHistory::${windowId}` : 'chatHistory';
+  }
+
+  /**
+   * Window ids embed a creation timestamp (win_<counter>_<timestamp>) and change
+   * every launch, so namespaced chat histories from closed windows would
+   * accumulate. Keep this window's key plus the most recent few; drop the rest.
+   */
+  pruneOrphanChatHistories(keep = 10) {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      const currentKey = this.getChatHistoryKey();
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('chatHistory::')) keys.push(k);
+      }
+      if (keys.length <= keep) return;
+      const tsOf = k => {
+        const m = /_(\d+)$/.exec(k);
+        return m ? parseInt(m[1], 10) : 0;
+      };
+      keys
+        .filter(k => k !== currentKey)
+        .sort((a, b) => tsOf(b) - tsOf(a))
+        .slice(keep - 1)
+        .forEach(k => {
+          try {
+            localStorage.removeItem(k);
+          } catch (e) {
+            /* ignore */
+          }
+        });
+    } catch (e) {
+      /* non-fatal */
+    }
+  }
+
+  /**
    * Save configuration to localStorage (fallback)
    */
   saveToLocalStorage() {
@@ -932,9 +1015,10 @@ class ConfigManager {
       // Save UI preferences with validation
       localStorage.setItem('uiPreferences', this.safeStringify(this.config.ui));
 
-      // Save chat history with size validation
+      // Save chat history with size validation (namespaced per window).
       const cleanChatHistory = this.validateAndCleanData(this.config.chat).history;
-      localStorage.setItem('chatHistory', this.safeStringify(cleanChatHistory));
+      localStorage.setItem(this.getChatHistoryKey(), this.safeStringify(cleanChatHistory));
+      this.pruneOrphanChatHistories();
 
       // Save app settings with validation
       localStorage.setItem('appSettings', this.safeStringify(this.config.app));
@@ -971,7 +1055,7 @@ class ConfigManager {
           })
         );
         localStorage.setItem('uiPreferences', JSON.stringify(this.config.ui || {}));
-        localStorage.setItem('chatHistory', JSON.stringify([])); // Clear chat history
+        localStorage.setItem(this.getChatHistoryKey(), JSON.stringify([])); // Clear chat history
         localStorage.setItem('appSettings', JSON.stringify(this.config.app || {}));
         if (this.config.generalSettings) {
           localStorage.setItem('generalSettings', JSON.stringify(this.config.generalSettings));

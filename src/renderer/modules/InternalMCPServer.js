@@ -56,6 +56,24 @@ class InternalMCPServer {
       throw new Error('Genome Studio instance not available');
     }
 
+    // Genome-identity guard: if the client asserted which genome it expects
+    // (expected_genome), fail loudly when this window has a different genome
+    // loaded rather than returning data computed against the wrong genome.
+    if (parameters && parameters.expected_genome) {
+      const expected = String(parameters.expected_genome).trim();
+      const actual = this.genomeStudio.currentGenomeName || null;
+      const matches = actual && String(actual).trim().toLowerCase() === expected.toLowerCase();
+      if (!matches) {
+        throw new Error(
+          `Genome mismatch: this window has '${actual || 'no genome'}' loaded, but the call expected ` +
+            `'${expected}'. Re-target with the correct windowId (call list_genome_windows).`
+        );
+      }
+      // Strip so downstream tool handlers don't receive an unexpected parameter.
+      parameters = { ...parameters };
+      delete parameters.expected_genome;
+    }
+
     console.log(`🔧 [InternalMCPServer] Executing method: ${method}`);
 
     // codexomics_chat is an MCP runtime wrapper, not a ChatManager tool.

@@ -84,6 +84,15 @@ class StandardClaudeMCPServer extends EventEmitter {
     this.internalClient = null;
     this.internalClientId = null;
 
+    // Per-session default-window pins: Map of clientId → windowId. Set by
+    // switch_active_window so an external client's later un-addressed calls
+    // target a chosen window without depending on global OS focus.
+    this.sessionWindowPins = new Map();
+    // Last window explicitly activated via switch_active_window. Used as a
+    // last-resort disambiguator when no windowId is passed, no per-session pin
+    // applies, and no genome window is OS-focused (e.g. background automation).
+    this.activeWindowId = null;
+
     // Multi-window support: Map of windowId → BrowserWindow (for IPC routing)
     // This is also used as a local cache; the authoritative registry is in main.js
     this.windowRegistry = new Map();
@@ -264,6 +273,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           version: '1.0.0',
           description: `CodeXomics MCP Server (${this.mode} mode) with ${tools.length} genomics tools + AI agent capabilities`,
         },
+        instructions: this.getServerInstructions(),
       };
 
       this.serverLog('info', '✅ Initialize response:', JSON.stringify(response, null, 2));
@@ -807,6 +817,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           this.serverLog('info', `🔌 Internal CodeXomics client disconnected (windowId: ${ws.windowId})`);
           this.emit('client-disconnected', { type: 'internal', windowId: ws.windowId });
           this.internalClients.delete(ws.windowId);
+          this.clearSessionWindowPinsForWindow(ws.windowId);
         }
         if (this.internalClient === ws) {
           this.internalClient = null;
@@ -889,6 +900,7 @@ class StandardClaudeMCPServer extends EventEmitter {
               name: 'codexomics',
               version: '1.0.0',
             },
+            instructions: this.getServerInstructions(),
           },
           id,
         };
@@ -1078,6 +1090,7 @@ class StandardClaudeMCPServer extends EventEmitter {
                 version: '1.0.0',
                 description: `CodeXomics MCP Server with ${tools.length} genomics tools`,
               },
+              instructions: this.getServerInstructions(),
             },
             id,
           };
@@ -1267,11 +1280,18 @@ class StandardClaudeMCPServer extends EventEmitter {
     }
 
     // Determine target windowId from parameters (Option C: default focused, optional override)
-    const targetWindowId = parameters?.windowId || null;
+    let targetWindowId = parameters?.windowId || null;
     // Remove windowId from parameters before forwarding to avoid confusing tool handlers
     if (parameters?.windowId) {
       parameters = { ...parameters };
       delete parameters.windowId;
+    }
+
+    // If the client didn't address a window explicitly, fall back to its
+    // per-session pin (set via switch_active_window) before resorting to focus.
+    if (!targetWindowId && clientId) {
+      const pinned = this.getSessionWindowPin(clientId);
+      if (pinned) targetWindowId = pinned;
     }
 
     // Try WebSocket internal client first (multi-window aware)
@@ -1284,9 +1304,10 @@ class StandardClaudeMCPServer extends EventEmitter {
       return await this.executeViaElectronIPC(toolName, parameters, clientId, targetWindowId);
     }
 
-    // Legacy: single mainWindow fallback
+    // Legacy: single mainWindow fallback. Preserve any explicit windowId the
+    // client passed instead of silently dropping it (previously forced to null).
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      return await this.executeViaElectronIPC(toolName, parameters, clientId, null);
+      return await this.executeViaElectronIPC(toolName, parameters, clientId, targetWindowId);
     }
 
     // Try client bridge if available
@@ -1302,28 +1323,22 @@ class StandardClaudeMCPServer extends EventEmitter {
   }
 
   async executeViaInternalClient(toolName, parameters, clientId, targetWindowId) {
-    // Resolve the target WS client
-    let targetClient = null;
-    let resolvedWindowId = targetWindowId;
-
-    if (targetWindowId && this.internalClients.has(targetWindowId)) {
-      // Explicit windowId specified — use that client
-      targetClient = this.internalClients.get(targetWindowId);
-    } else {
-      // Default: find the focused window's client, or fall back to first available
-      targetClient = this.getFocusedWindowClient() || this.internalClient;
-      if (targetClient) {
-        resolvedWindowId = targetClient.windowId || 'default';
-      }
-    }
+    // Resolve the target WS client deterministically. This throws a loud,
+    // actionable error for the dangerous case (multiple genome windows open,
+    // none focused, no explicit windowId) instead of silently picking one.
+    const { client: targetClient, windowId: resolvedWindowId } = this.resolveInternalClientTarget(
+      toolName,
+      targetWindowId
+    );
 
     if (!targetClient || targetClient.readyState !== 1) {
       throw new Error(
         `No active WebSocket client for window '${targetWindowId || 'focused'}'. ` +
-          `Available windows: [${Array.from(this.internalClients.keys()).join(', ')}]`
+          `Available windows: [${this.describeInternalWindows()}]`
       );
     }
 
+    const genomeName = targetClient.genomeName || null;
     const requestId = `mcp_ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Convert snake_case tool name to camelCase method name
@@ -1336,7 +1351,9 @@ class StandardClaudeMCPServer extends EventEmitter {
       }, 30000);
 
       this.pendingRequests.set(requestId, {
-        resolve,
+        // Echo the resolved window/genome on every result so clients can detect
+        // and self-correct if a call landed on a different genome than intended.
+        resolve: result => resolve(this._attachRoutingMeta(result, resolvedWindowId, genomeName)),
         reject,
         timeout,
         toolName,
@@ -1362,38 +1379,15 @@ class StandardClaudeMCPServer extends EventEmitter {
   }
 
   async executeViaElectronIPC(toolName, parameters, clientId, targetWindowId) {
-    // Resolve the target BrowserWindow
-    let targetWindow = null;
-
-    if (targetWindowId && this.windowRegistry.has(targetWindowId)) {
-      const entry = this.windowRegistry.get(targetWindowId);
-      targetWindow = entry.window || entry;
-    } else if (this.windowRegistry.size > 0) {
-      // Default: find the focused window, or fall back to first available
-      for (const [wid, entry] of this.windowRegistry.entries()) {
-        const win = entry.window || entry;
-        if (win && !win.isDestroyed() && win.isFocused()) {
-          targetWindow = win;
-          targetWindowId = wid;
-          break;
-        }
-      }
-      // Fallback to first available window
-      if (!targetWindow) {
-        for (const [wid, entry] of this.windowRegistry.entries()) {
-          const win = entry.window || entry;
-          if (win && !win.isDestroyed()) {
-            targetWindow = win;
-            targetWindowId = wid;
-            break;
-          }
-        }
-      }
-    } else if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      // Legacy fallback
-      targetWindow = this.mainWindow;
-      targetWindowId = 'legacy';
-    }
+    // Resolve the target BrowserWindow deterministically. Like the WS path, this
+    // fails loudly when the target is ambiguous instead of silently picking the
+    // "first available" window (the previous silent wrong-genome hazard).
+    const {
+      window: targetWindow,
+      windowId: resolvedWindowId,
+      genomeName,
+    } = this.resolveElectronTarget(toolName, targetWindowId);
+    targetWindowId = resolvedWindowId;
 
     if (!targetWindow || targetWindow.isDestroyed()) {
       throw new Error(
@@ -1413,7 +1407,8 @@ class StandardClaudeMCPServer extends EventEmitter {
       }, 30000);
 
       this.pendingRequests.set(requestId, {
-        resolve,
+        // Echo the resolved window/genome on every result (see WS path).
+        resolve: result => resolve(this._attachRoutingMeta(result, resolvedWindowId, genomeName)),
         reject,
         timeout,
         toolName,
@@ -1848,13 +1843,236 @@ class StandardClaudeMCPServer extends EventEmitter {
     if (this.internalClients.has(windowId)) {
       this.internalClients.delete(windowId);
     }
+    // Drop any per-session pins that targeted this window.
+    this.clearSessionWindowPinsForWindow(windowId);
     this.serverLog('info', `📋 [MCP Server] Unregistered window: ${windowId} (total: ${this.windowRegistry.size})`);
+  }
+
+  // Tools that are not bound to a specific genome window. For these, an
+  // ambiguous target (multiple windows, none focused) is harmless, so we do not
+  // force the caller to pass a windowId.
+  isWindowAgnosticTool(toolName) {
+    const WINDOW_AGNOSTIC = new Set(['ping', 'list_genome_windows', 'switch_active_window', 'run_on_windows']);
+    return WINDOW_AGNOSTIC.has(toolName);
+  }
+
+  // Live WebSocket clients (readyState OPEN) across all windows.
+  getLiveInternalClients() {
+    return Array.from(this.internalClients.values()).filter(ws => ws && ws.readyState === 1);
+  }
+
+  // Authoritative window registry — the same source list_genome_windows uses, so
+  // focus/targeting decisions stay consistent with what clients are told. In-app
+  // the authoritative registry lives in main.js (mainWindowRegistry); the local
+  // windowRegistry is only a cache and may be empty.
+  getEffectiveWindowRegistry() {
+    return this.mainWindowRegistry || this.windowRegistry;
+  }
+
+  // Strict focused-window lookup: returns the WS client of the focused genome
+  // window, or null. Unlike getFocusedWindowClient() it does NOT fall back to a
+  // legacy/first client, so callers can detect "no genome window is focused".
+  getFocusedInternalClient() {
+    const registry = this.getEffectiveWindowRegistry();
+    for (const [windowId, entry] of registry.entries()) {
+      const win = entry.window || entry;
+      if (win && !win.isDestroyed() && win.isFocused()) {
+        const client = this.internalClients.get(windowId);
+        if (client && client.readyState === 1) {
+          return client;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Human-readable list of connected windows for error messages.
+  describeInternalWindows() {
+    return Array.from(this.internalClients.entries())
+      .map(([wid, ws]) => `${wid}${ws && ws.genomeName ? ` (${ws.genomeName})` : ''}`)
+      .join(', ');
+  }
+
+  // Resolve which WS internal client should receive a tool call.
+  // Returns { client, windowId }. Throws on an unknown explicit windowId or on
+  // an ambiguous default target (the wrong-genome hazard) for genome tools.
+  resolveInternalClientTarget(toolName, targetWindowId) {
+    if (targetWindowId) {
+      if (this.internalClients.has(targetWindowId)) {
+        return { client: this.internalClients.get(targetWindowId), windowId: targetWindowId };
+      }
+      // Explicit but unknown — fail loud rather than silently retargeting.
+      throw new Error(
+        `Requested windowId '${targetWindowId}' is not a connected CodeXomics window. ` +
+          `Available windows: [${this.describeInternalWindows()}]. Call list_genome_windows to refresh.`
+      );
+    }
+
+    // No explicit target: prefer the focused genome window.
+    const focused = this.getFocusedInternalClient();
+    if (focused) {
+      return { client: focused, windowId: focused.windowId || 'default' };
+    }
+
+    // No focused genome window — decide based on how many live clients exist.
+    const live = this.getLiveInternalClients();
+    if (live.length === 1) {
+      return { client: live[0], windowId: live[0].windowId || 'default' };
+    }
+    if (live.length === 0) {
+      if (this.internalClient && this.internalClient.readyState === 1) {
+        return { client: this.internalClient, windowId: this.internalClient.windowId || 'default' };
+      }
+      return { client: null, windowId: targetWindowId || 'focused' };
+    }
+
+    // Multiple live windows, none focused, no windowId given.
+    if (this.isWindowAgnosticTool(toolName)) {
+      return { client: live[0], windowId: live[0].windowId || 'default' };
+    }
+    // Last resort: the window most recently activated via switch_active_window.
+    if (this.activeWindowId && this.internalClients.has(this.activeWindowId)) {
+      const c = this.internalClients.get(this.activeWindowId);
+      if (c && c.readyState === 1) {
+        return { client: c, windowId: this.activeWindowId };
+      }
+    }
+    throw new Error(
+      `Ambiguous target: ${live.length} CodeXomics genome windows are open and none is focused. ` +
+        `Pass an explicit windowId to target a genome (call list_genome_windows to see options), ` +
+        `or call switch_active_window first. Available windows: [${this.describeInternalWindows()}]`
+    );
+  }
+
+  // Resolve which BrowserWindow should receive a tool call via Electron IPC.
+  // Returns { window, windowId, genomeName }. Same ambiguity rules as the WS path.
+  resolveElectronTarget(toolName, targetWindowId) {
+    const registry = this.getEffectiveWindowRegistry();
+    if (targetWindowId) {
+      if (registry.has(targetWindowId)) {
+        const entry = registry.get(targetWindowId);
+        return { window: entry.window || entry, windowId: targetWindowId, genomeName: entry.genomeName || null };
+      }
+      throw new Error(
+        `Requested windowId '${targetWindowId}' is not a registered CodeXomics window. ` +
+          `Available: [${Array.from(registry.keys()).join(', ')}]. Call list_genome_windows to refresh.`
+      );
+    }
+
+    if (registry.size > 0) {
+      // Prefer the focused window.
+      for (const [wid, entry] of registry.entries()) {
+        const win = entry.window || entry;
+        if (win && !win.isDestroyed() && win.isFocused()) {
+          return { window: win, windowId: wid, genomeName: entry.genomeName || null };
+        }
+      }
+      // No focused window — collect live ones.
+      const live = [];
+      for (const [wid, entry] of registry.entries()) {
+        const win = entry.window || entry;
+        if (win && !win.isDestroyed()) live.push([wid, entry, win]);
+      }
+      if (live.length === 1) {
+        const [wid, entry, win] = live[0];
+        return { window: win, windowId: wid, genomeName: entry.genomeName || null };
+      }
+      if (live.length > 1 && !this.isWindowAgnosticTool(toolName)) {
+        // Last resort: the window most recently activated via switch_active_window.
+        if (this.activeWindowId && registry.has(this.activeWindowId)) {
+          const entry = registry.get(this.activeWindowId);
+          const win = entry.window || entry;
+          if (win && !win.isDestroyed()) {
+            return { window: win, windowId: this.activeWindowId, genomeName: entry.genomeName || null };
+          }
+        }
+        const names = live
+          .map(([wid, entry]) => `${wid}${entry.genomeName ? ` (${entry.genomeName})` : ''}`)
+          .join(', ');
+        throw new Error(
+          `Ambiguous target: ${live.length} CodeXomics windows are open and none is focused. ` +
+            `Pass an explicit windowId (call list_genome_windows), or call switch_active_window first. Available: [${names}]`
+        );
+      }
+      if (live.length >= 1) {
+        const [wid, entry, win] = live[0];
+        return { window: win, windowId: wid, genomeName: entry.genomeName || null };
+      }
+    }
+
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      return { window: this.mainWindow, windowId: 'legacy', genomeName: null };
+    }
+    return { window: null, windowId: targetWindowId || 'focused', genomeName: null };
+  }
+
+  // Attach routing metadata to a tool result so MCP clients can verify which
+  // genome window actually answered. Object results get a merged `_meta`;
+  // non-object results are wrapped so the metadata is still visible.
+  _attachRoutingMeta(result, windowId, genomeName) {
+    const meta = { windowId: windowId || null, genomeName: genomeName || null };
+    try {
+      if (result && typeof result === 'object' && !Array.isArray(result)) {
+        const existing = result._meta && typeof result._meta === 'object' ? result._meta : {};
+        return { ...result, _meta: { ...existing, ...meta } };
+      }
+    } catch (e) {
+      // fall through to wrapping
+    }
+    return { _meta: meta, result };
+  }
+
+  // Standing guidance sent to MCP clients at initialize time (MCP `instructions`
+  // field). Tells clients how to target the right genome window deterministically.
+  getServerInstructions() {
+    return [
+      'CodeXomics opens each genome in its own window with fully isolated state. Every tool call is routed to one genome window.',
+      '',
+      'To work reliably when more than one genome may be open:',
+      '1. Call list_genome_windows first. It returns each open window with its windowId, genomeName, and isFocused flag.',
+      '2. Pass windowId on each genome tool call to target a window deterministically. Do not rely on which window is focused.',
+      '3. Optionally also pass expected_genome (the genomeName from list_genome_windows). The call then fails loudly if that window has a different genome loaded, instead of answering from the wrong genome.',
+      '',
+      'If you omit windowId while multiple windows are open and none is focused, the call fails and lists the available windows so you can choose.',
+      'Every tool result includes a _meta object with the windowId and genomeName that actually answered — verify it matches your intent.',
+      'switch_active_window focuses a window and pins it as the default target for your subsequent un-addressed calls, but passing windowId per call is more reliable, especially with concurrent clients.',
+    ].join('\n');
+  }
+
+  // Per-session window pin accessors (see this.sessionWindowPins).
+  setSessionWindowPin(clientId, windowId) {
+    if (!clientId || !windowId) return;
+    this.sessionWindowPins.set(clientId, windowId);
+  }
+
+  getSessionWindowPin(clientId) {
+    if (!clientId) return null;
+    const windowId = this.sessionWindowPins.get(clientId);
+    if (!windowId) return null;
+    // Drop a stale pin if the target window is no longer connected/registered.
+    const stillThere =
+      this.internalClients.has(windowId) ||
+      this.windowRegistry.has(windowId) ||
+      (this.mainWindowRegistry && this.mainWindowRegistry.has(windowId));
+    if (!stillThere) {
+      this.sessionWindowPins.delete(clientId);
+      return null;
+    }
+    return windowId;
+  }
+
+  clearSessionWindowPinsForWindow(windowId) {
+    if (!windowId) return;
+    for (const [clientId, wid] of this.sessionWindowPins.entries()) {
+      if (wid === windowId) this.sessionWindowPins.delete(clientId);
+    }
+    if (this.activeWindowId === windowId) this.activeWindowId = null;
   }
 
   // Multi-window support: Get the WebSocket client for the currently focused window
   getFocusedWindowClient() {
-    // Try to find the focused window in our registry
-    for (const [windowId, entry] of this.windowRegistry.entries()) {
+    // Try to find the focused window in the authoritative registry
+    for (const [windowId, entry] of this.getEffectiveWindowRegistry().entries()) {
       const win = entry.window || entry;
       if (win && !win.isDestroyed() && win.isFocused()) {
         const client = this.internalClients.get(windowId);

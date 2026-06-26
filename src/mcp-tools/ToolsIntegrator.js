@@ -96,7 +96,70 @@ class ToolsIntegrator {
           required: ['windowId'],
         },
       },
+      run_on_windows: {
+        name: 'run_on_windows',
+        description:
+          'Run one read-only genome tool across multiple open CodeXomics windows at once and return the results ' +
+          'labeled by windowId and genomeName. Use this for simultaneous multi-genome analysis/comparison ' +
+          '(e.g. run search_features or get_current_state on every open genome in a single call). Only read-only ' +
+          'tools are allowed; mutating, navigation, and export tools are rejected so you cannot change several ' +
+          'genomes at once. Each window runs independently — one failure does not abort the others.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tool: {
+              type: 'string',
+              description:
+                'The inner read-only tool to run in each window (e.g. "search_features", "get_current_state", "get_gene_details").',
+            },
+            parameters: {
+              type: 'object',
+              description: 'Parameters passed to the inner tool in every window. Do not include windowId here.',
+            },
+            windowIds: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                'Optional. Restrict the fan-out to these windowIds (from list_genome_windows). Defaults to all open windows.',
+            },
+          },
+          required: ['tool'],
+        },
+      },
     };
+  }
+
+  /**
+   * Add optional windowId / expected_genome targeting parameters to a genome
+   * tool's input schema so external MCP clients can deterministically address a
+   * window and assert which genome they expect. Window-management and agent-chat
+   * tools are excluded (they have their own window handling).
+   */
+  _addWindowTargetingParams(tool) {
+    const EXCLUDE = new Set(['list_genome_windows', 'switch_active_window', 'run_on_windows', 'codexomics_chat']);
+    if (!tool || EXCLUDE.has(tool.name)) return tool;
+    const schema = tool.inputSchema;
+    if (!schema || schema.type !== 'object') return tool;
+
+    const props = { ...(schema.properties || {}) };
+    if (!props.windowId) {
+      props.windowId = {
+        type: 'string',
+        description:
+          'Optional. Target a specific CodeXomics genome window by its windowId (from list_genome_windows). ' +
+          'If omitted, the focused window is used; when multiple windows are open and none is focused, the call ' +
+          'fails with the list of available windows so you can disambiguate.',
+      };
+    }
+    if (!props.expected_genome) {
+      props.expected_genome = {
+        type: 'string',
+        description:
+          'Optional. The genome name you expect to be loaded in the target window (from list_genome_windows). ' +
+          'If it does not match, the call fails instead of returning data computed against the wrong genome.',
+      };
+    }
+    return { ...tool, inputSchema: { ...schema, properties: props } };
   }
 
   getAvailableTools() {
@@ -110,10 +173,8 @@ class ToolsIntegrator {
         ...Object.values(this.getWindowManagementTools()),
       ];
       const result = agentTools.map(tool => {
-        if (tool.parameters && !tool.inputSchema) {
-          return { ...tool, inputSchema: tool.parameters };
-        }
-        return tool;
+        const normalized = tool.parameters && !tool.inputSchema ? { ...tool, inputSchema: tool.parameters } : tool;
+        return this._addWindowTargetingParams(normalized);
       });
       console.log(`📋 [Agent Mode] Returning ${result.length} tools (codexomics_chat + window management)`);
       return result;
@@ -125,13 +186,8 @@ class ToolsIntegrator {
     // Convert 'parameters' to 'inputSchema' for MCP SDK compatibility
     console.log(`📋 [Tools Mode] Returning ${tools.length} tools (all)`);
     return tools.map(tool => {
-      if (tool.parameters && !tool.inputSchema) {
-        return {
-          ...tool,
-          inputSchema: tool.parameters,
-        };
-      }
-      return tool;
+      const normalized = tool.parameters && !tool.inputSchema ? { ...tool, inputSchema: tool.parameters } : tool;
+      return this._addWindowTargetingParams(normalized);
     });
   }
 
@@ -170,7 +226,8 @@ class ToolsIntegrator {
     // handle the request.
     const isAgentMode = this.server && this.server.mode === 'agent';
     const isAgentTool = toolName === 'codexomics_chat';
-    const isWindowTool = toolName === 'list_genome_windows' || toolName === 'switch_active_window';
+    const isWindowTool =
+      toolName === 'list_genome_windows' || toolName === 'switch_active_window' || toolName === 'run_on_windows';
 
     if (isAgentMode && !isAgentTool && !isWindowTool) {
       console.log(`🤖 [Agent Mode] Routing '${toolName}' through codexomics_chat`);
@@ -425,7 +482,10 @@ class ToolsIntegrator {
         return this.executeListGenomeWindows();
       }
       if (toolName === 'switch_active_window') {
-        return this.executeSwitchActiveWindow(parameters);
+        return this.executeSwitchActiveWindow(parameters, clientId);
+      }
+      if (toolName === 'run_on_windows') {
+        return await this.executeRunOnWindows(parameters, clientId);
       }
 
       // Data manipulation tools
@@ -778,7 +838,7 @@ class ToolsIntegrator {
   /**
    * Switch focus to a specific genome window (server-side, no client delegation)
    */
-  executeSwitchActiveWindow(parameters) {
+  executeSwitchActiveWindow(parameters, clientId) {
     const { windowId } = parameters;
     if (!windowId) {
       return { success: false, error: 'windowId parameter is required' };
@@ -793,13 +853,20 @@ class ToolsIntegrator {
     if (!entry) {
       // Check if it's connected as internalClient standalone
       if (this.server?.internalClients?.has(windowId)) {
-        // Set as default fallback client
-        this.server.internalClient = this.server.internalClients.get(windowId);
+        // Pin this window for the calling session, and record it as the global
+        // last-activated window (a focus-independent fallback used when the
+        // client doesn't send a stable clientId, e.g. background automation).
+        this.server.setSessionWindowPin?.(clientId, windowId);
+        if (this.server) this.server.activeWindowId = windowId;
+        if (!clientId) {
+          this.server.internalClient = this.server.internalClients.get(windowId);
+        }
         return {
           success: true,
           message: `Activated window '${windowId}' (Standalone mode)`,
           windowId,
           genomeName: 'Connected via CodeXomics',
+          pinned: !!clientId,
         };
       }
 
@@ -820,6 +887,12 @@ class ToolsIntegrator {
       return { success: false, error: `Window '${windowId}' is destroyed` };
     }
 
+    // Pin this window as the default target for the calling session's subsequent
+    // un-addressed calls, so routing no longer depends on OS focus staying put.
+    // Also record it as the global last-activated fallback (focus-independent).
+    this.server.setSessionWindowPin?.(clientId, windowId);
+    if (this.server) this.server.activeWindowId = windowId;
+
     if (typeof this.server?.switchWindowTab === 'function') {
       const result = this.server.switchWindowTab(windowId);
       if (result?.success) {
@@ -828,6 +901,7 @@ class ToolsIntegrator {
           message: `Activated window '${windowId}'`,
           windowId,
           genomeName: entry.genomeName || null,
+          pinned: !!clientId,
         };
       }
     }
@@ -839,6 +913,132 @@ class ToolsIntegrator {
       message: `Focused window '${windowId}'`,
       windowId,
       genomeName: entry.genomeName || null,
+      pinned: !!clientId,
+    };
+  }
+
+  /**
+   * Whether a tool is safe to fan out across multiple genome windows. Only
+   * read-only tools qualify; mutating/navigation/export tools are rejected so a
+   * single fan-out call can never change several genomes at once.
+   */
+  isFanoutSafeTool(name) {
+    if (!name) return false;
+    const EXCLUDE = new Set(['list_genome_windows', 'switch_active_window', 'run_on_windows', 'codexomics_chat']);
+    if (EXCLUDE.has(name)) return false;
+    const MUTATING =
+      /^(add_|create_|delete_|remove_|edit_|update_|set_|save_|write_|modify_|insert_|paste_|copy_|cut_|navigate_|jump_|goto_|go_to_|move_|zoom_|switch_|open_|close_|load_|import_|annotate_|apply_|export_|download_|generate_|design_|run_)/;
+    if (MUTATING.test(name)) return false;
+    const READONLY_PREFIXES = [
+      'get_',
+      'list_',
+      'search_',
+      'find_',
+      'compute_',
+      'calculate_',
+      'translate_',
+      'reverse_',
+      'analyze_',
+      'count_',
+      'fetch_',
+      'view_',
+      'describe_',
+    ];
+    return READONLY_PREFIXES.some(p => name.startsWith(p));
+  }
+
+  /**
+   * Run an async function over items with a bounded number of concurrent
+   * workers, preserving input order in the results.
+   */
+  async _mapWithConcurrency(items, limit, fn) {
+    const results = new Array(items.length);
+    let cursor = 0;
+    const workerCount = Math.max(1, Math.min(limit, items.length));
+    const workers = new Array(workerCount).fill(0).map(async () => {
+      while (true) {
+        const idx = cursor++;
+        if (idx >= items.length) break;
+        results[idx] = await fn(items[idx], idx);
+      }
+    });
+    await Promise.all(workers);
+    return results;
+  }
+
+  /**
+   * Fan a single read-only tool out across multiple open genome windows and
+   * return results labeled by windowId + genomeName. Each window is executed
+   * independently (one failure does not abort the others), with bounded
+   * concurrency. This is the primitive for simultaneous multi-genome analysis.
+   */
+  async executeRunOnWindows(parameters, clientId) {
+    const innerTool = parameters?.tool;
+    if (!innerTool) {
+      return { success: false, error: 'Parameter "tool" is required (the read-only tool to run in each window).' };
+    }
+    if (!this.isFanoutSafeTool(innerTool)) {
+      return {
+        success: false,
+        error:
+          `Tool '${innerTool}' cannot be fanned out across windows. Only read-only tools ` +
+          `(get_/list_/search_/compute_/analyze_/...) are allowed; mutating, navigation, and export tools ` +
+          `are rejected to avoid changing multiple genomes at once.`,
+      };
+    }
+    if (!this.allTools[innerTool]) {
+      return { success: false, error: `Inner tool '${innerTool}' not found.` };
+    }
+    if (!this.server || typeof this.server.executeToolOnClient !== 'function') {
+      return { success: false, error: 'Server not available for fan-out execution.' };
+    }
+
+    // Resolve target windows from the authoritative window list.
+    const all = typeof this.server.listWindows === 'function' ? this.server.listWindows() : [];
+    let targets = all.filter(w => w && !w.isDestroyed);
+
+    const requested = Array.isArray(parameters.windowIds) ? parameters.windowIds : null;
+    if (requested && requested.length) {
+      const wanted = new Set(requested);
+      targets = targets.filter(w => wanted.has(w.windowId));
+      const found = new Set(targets.map(w => w.windowId));
+      const missing = requested.filter(id => !found.has(id));
+      if (missing.length) {
+        return { success: false, error: `Unknown windowId(s): [${missing.join(', ')}]. Call list_genome_windows.` };
+      }
+    }
+    if (!targets.length) {
+      return { success: false, error: 'No open genome windows to run on.' };
+    }
+
+    const innerParams = { ...(parameters.parameters || {}) };
+    delete innerParams.windowId; // set per window below
+
+    const results = await this._mapWithConcurrency(targets, 4, async target => {
+      try {
+        const result = await this.server.executeToolOnClient(
+          innerTool,
+          { ...innerParams, windowId: target.windowId },
+          clientId
+        );
+        return { windowId: target.windowId, genomeName: target.genomeName || null, success: true, result };
+      } catch (error) {
+        return {
+          windowId: target.windowId,
+          genomeName: target.genomeName || null,
+          success: false,
+          error: error.message,
+        };
+      }
+    });
+
+    return {
+      success: true,
+      tool: innerTool,
+      windowCount: results.length,
+      succeeded: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      results,
     };
   }
 }
