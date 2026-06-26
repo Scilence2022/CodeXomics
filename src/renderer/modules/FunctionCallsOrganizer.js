@@ -409,20 +409,6 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      coScientist: {
-        priority: 3,
-        description:
-          'Independent Co-Scientist research sessions, hypothesis tournaments, and scientific feedback loops',
-        functions: [
-          'start_co_scientist_session',
-          'list_co_scientist_sessions',
-          'add_co_scientist_evidence',
-          'generate_co_scientist_hypotheses',
-          'run_co_scientist_cycle',
-          'get_co_scientist_report',
-        ],
-      },
-
       registryDynamic: {
         priority: 3,
         description: 'Dynamically registered tools from the canonical tool registry manifest',
@@ -513,7 +499,6 @@ class FunctionCallsOrganizer {
     if (category === 'coordination') return 'coordination';
     if (category === 'benchmark') return 'benchmarkManagement';
     if (category === 'task_management') return 'browserActions';
-    if (category === 'co_scientist') return 'coScientist';
     return 'registryDynamic';
   }
 

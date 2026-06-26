@@ -244,13 +244,4 @@ const TOOL_NAMES = {
     CLEAR_TASKS: 'clear_tasks',
     DELETE_TASK: 'delete_task',
   },
-
-  CO_SCIENTIST: {
-    START_SESSION: 'start_co_scientist_session',
-    LIST_SESSIONS: 'list_co_scientist_sessions',
-    ADD_EVIDENCE: 'add_co_scientist_evidence',
-    GENERATE_HYPOTHESES: 'generate_co_scientist_hypotheses',
-    RUN_CYCLE: 'run_co_scientist_cycle',
-    GET_REPORT: 'get_co_scientist_report',
-  },
 };

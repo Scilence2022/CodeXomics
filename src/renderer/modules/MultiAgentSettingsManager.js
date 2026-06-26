@@ -283,21 +283,6 @@ class MultiAgentSettingsManager {
       multiAgentAutoScaling: true,
       multiAgentMaxConcurrentTasks: 5,
       multiAgentTaskQueueSize: 100,
-
-      // Co-Scientist settings
-      coScientistEnabled: true,
-      coScientistPersistSessions: true,
-      coScientistDefaultDomain: 'biomedicine',
-      coScientistAutoRunCycles: false,
-      coScientistDefaultCycles: 1,
-      coScientistDefaultGenerateCount: 3,
-      coScientistDefaultEvolutionCount: 2,
-      coScientistReviewDepth: 'standard',
-      coScientistIncludeEvolution: true,
-      coScientistTopN: 5,
-      coScientistAutoRefresh: true,
-      coScientistRefreshInterval: 10,
-      coScientistShowActivityLog: true,
     };
 
     this.currentSettings = { ...this.defaultSettings };
@@ -375,28 +360,11 @@ class MultiAgentSettingsManager {
         window.chatManager.saveAgentSystemSettings();
       }
 
-      this.applyCoScientistSettings();
-
       console.log('Multi-Agent Settings saved and synced:', this.currentSettings);
       return true;
     } catch (error) {
       console.error('Error saving multi-agent settings:', error);
       return false;
-    }
-  }
-
-  applyCoScientistSettings() {
-    try {
-      const system = window.chatManager?.coScientistSystem || window.coScientistSystem;
-      if (system && typeof system.setPersistenceEnabled === 'function') {
-        system.setPersistenceEnabled(this.currentSettings.coScientistPersistSessions !== false);
-      }
-
-      if (window.coScientistManagerUI && typeof window.coScientistManagerUI.applySettings === 'function') {
-        window.coScientistManagerUI.applySettings(this.currentSettings);
-      }
-    } catch (error) {
-      console.warn('Failed to apply Co-Scientist settings:', error);
     }
   }
 
@@ -570,48 +538,6 @@ class MultiAgentSettingsManager {
           syncSetting(id, el.checked);
           this.syncAgentEnabledState();
         });
-      }
-    });
-
-    // Co-Scientist tab
-    const coScientistCheckboxes = [
-      'coScientistEnabled',
-      'coScientistPersistSessions',
-      'coScientistAutoRunCycles',
-      'coScientistIncludeEvolution',
-      'coScientistAutoRefresh',
-      'coScientistShowActivityLog',
-    ];
-    coScientistCheckboxes.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => syncSetting(id, el.checked));
-      }
-    });
-
-    const coScientistInputs = [
-      'coScientistDefaultCycles',
-      'coScientistDefaultGenerateCount',
-      'coScientistDefaultEvolutionCount',
-      'coScientistTopN',
-      'coScientistRefreshInterval',
-    ];
-    coScientistInputs.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => {
-          const parsed = parseInt(el.value, 10);
-          const fallback = parseInt(el.defaultValue, 10);
-          syncSetting(id, Number.isFinite(parsed) ? parsed : fallback);
-        });
-      }
-    });
-
-    const coScientistSelects = ['coScientistDefaultDomain', 'coScientistReviewDepth'];
-    coScientistSelects.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => syncSetting(id, el.value));
       }
     });
 
@@ -841,21 +767,6 @@ class MultiAgentSettingsManager {
     this.setCheckboxValue('multiAgentAutoScaling', this.currentSettings.multiAgentAutoScaling);
     this.setInputValue('multiAgentMaxConcurrentTasks', this.currentSettings.multiAgentMaxConcurrentTasks);
     this.setInputValue('multiAgentTaskQueueSize', this.currentSettings.multiAgentTaskQueueSize);
-
-    // Co-Scientist settings
-    this.setCheckboxValue('coScientistEnabled', this.currentSettings.coScientistEnabled);
-    this.setCheckboxValue('coScientistPersistSessions', this.currentSettings.coScientistPersistSessions);
-    this.setSelectValue('coScientistDefaultDomain', this.currentSettings.coScientistDefaultDomain);
-    this.setCheckboxValue('coScientistAutoRunCycles', this.currentSettings.coScientistAutoRunCycles);
-    this.setInputValue('coScientistDefaultCycles', this.currentSettings.coScientistDefaultCycles);
-    this.setInputValue('coScientistDefaultGenerateCount', this.currentSettings.coScientistDefaultGenerateCount);
-    this.setInputValue('coScientistDefaultEvolutionCount', this.currentSettings.coScientistDefaultEvolutionCount);
-    this.setSelectValue('coScientistReviewDepth', this.currentSettings.coScientistReviewDepth);
-    this.setCheckboxValue('coScientistIncludeEvolution', this.currentSettings.coScientistIncludeEvolution);
-    this.setInputValue('coScientistTopN', this.currentSettings.coScientistTopN);
-    this.setCheckboxValue('coScientistAutoRefresh', this.currentSettings.coScientistAutoRefresh);
-    this.setInputValue('coScientistRefreshInterval', this.currentSettings.coScientistRefreshInterval);
-    this.setCheckboxValue('coScientistShowActivityLog', this.currentSettings.coScientistShowActivityLog);
   }
 
   saveCurrentSettings() {
@@ -907,21 +818,6 @@ class MultiAgentSettingsManager {
       multiAgentAutoScaling: this.getCheckboxValue('multiAgentAutoScaling'),
       multiAgentMaxConcurrentTasks: parseInt(this.getInputValue('multiAgentMaxConcurrentTasks')),
       multiAgentTaskQueueSize: parseInt(this.getInputValue('multiAgentTaskQueueSize')),
-
-      // Co-Scientist settings
-      coScientistEnabled: this.getCheckboxValue('coScientistEnabled'),
-      coScientistPersistSessions: this.getCheckboxValue('coScientistPersistSessions'),
-      coScientistDefaultDomain: this.getSelectValue('coScientistDefaultDomain'),
-      coScientistAutoRunCycles: this.getCheckboxValue('coScientistAutoRunCycles'),
-      coScientistDefaultCycles: parseInt(this.getInputValue('coScientistDefaultCycles')),
-      coScientistDefaultGenerateCount: parseInt(this.getInputValue('coScientistDefaultGenerateCount')),
-      coScientistDefaultEvolutionCount: parseInt(this.getInputValue('coScientistDefaultEvolutionCount')),
-      coScientistReviewDepth: this.getSelectValue('coScientistReviewDepth'),
-      coScientistIncludeEvolution: this.getCheckboxValue('coScientistIncludeEvolution'),
-      coScientistTopN: parseInt(this.getInputValue('coScientistTopN')),
-      coScientistAutoRefresh: this.getCheckboxValue('coScientistAutoRefresh'),
-      coScientistRefreshInterval: parseInt(this.getInputValue('coScientistRefreshInterval')),
-      coScientistShowActivityLog: this.getCheckboxValue('coScientistShowActivityLog'),
     };
 
     // Update current settings

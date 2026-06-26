@@ -8,12 +8,12 @@
     "userRegistry": null
   },
   "counts": {
-    "tools": 185,
-    "appTools": 185,
+    "tools": 179,
+    "appTools": 179,
     "userTools": 0,
-    "uniqueTools": 179,
-    "categories": 19,
-    "builtInTools": 149,
+    "uniqueTools": 173,
+    "categories": 18,
+    "builtInTools": 143,
     "diagnostics": 12
   },
   "categories": {
@@ -21,7 +21,7 @@
       "file_loading": {
         "name": "File Loading Operations",
         "description": "Built-in tools for loading genomic files directly with path specification or file dialogs",
-        "icon": "📁",
+        "icon": "\ud83d\udcc1",
         "priority": 1,
         "color": "#FF6B35",
         "subcategories": [
@@ -37,7 +37,7 @@
       "navigation": {
         "name": "Navigation & State Management",
         "description": "Tools for genome browser navigation, state management, and track control",
-        "icon": "🧭",
+        "icon": "\ud83e\udded",
         "priority": 1,
         "color": "#4CAF50",
         "subcategories": ["browser_navigation", "state_management", "track_control"],
@@ -46,7 +46,7 @@
       "sequence": {
         "name": "Sequence Analysis",
         "description": "Tools for DNA/RNA sequence analysis, motif searching, and basic bioinformatics",
-        "icon": "🧬",
+        "icon": "\ud83e\uddec",
         "priority": 1,
         "color": "#2196F3",
         "subcategories": ["sequence_retrieval", "sequence_analysis", "motif_search", "prediction"],
@@ -55,7 +55,7 @@
       "protein": {
         "name": "Protein Structure",
         "description": "Tools for protein structure analysis, PDB searches, and AlphaFold integration",
-        "icon": "🔬",
+        "icon": "\ud83d\udd2c",
         "priority": 1,
         "color": "#FF9800",
         "subcategories": ["structure_retrieval", "structure_visualization", "alphafold_integration", "pdb_search"],
@@ -64,7 +64,7 @@
       "database": {
         "name": "Database Integration",
         "description": "Tools for accessing biological databases (UniProt, InterPro, etc.)",
-        "icon": "🗄️",
+        "icon": "\ud83d\uddc4\ufe0f",
         "priority": 2,
         "color": "#9C27B0",
         "subcategories": ["uniprot_search", "interpro_analysis", "database_queries", "cross_references"],
@@ -73,7 +73,7 @@
       "data_management": {
         "name": "Data Management",
         "description": "Tools for data annotation, export, and codon usage analysis",
-        "icon": "📊",
+        "icon": "\ud83d\udcca",
         "priority": 2,
         "color": "#607D8B",
         "subcategories": ["annotation_management", "data_export", "codon_analysis", "region_analysis"],
@@ -82,7 +82,7 @@
       "annotation": {
         "name": "Annotation Management",
         "description": "CRUD operations for genome annotations with full-text search and change tracking for AI agent integration",
-        "icon": "🏷️",
+        "icon": "\ud83c\udff7\ufe0f",
         "priority": 1,
         "color": "#8E24AA",
         "subcategories": ["annotation_crud", "annotation_search", "change_tracking", "operon_analysis"],
@@ -91,7 +91,7 @@
       "file_operations": {
         "name": "File Operations",
         "description": "Tools for file input/output operations including data export and file format conversion",
-        "icon": "💾",
+        "icon": "\ud83d\udcbe",
         "priority": 2,
         "color": "#FF6B35",
         "subcategories": ["export", "import", "conversion", "validation"],
@@ -100,7 +100,7 @@
       "pathway": {
         "name": "Pathway & BLAST",
         "description": "Tools for metabolic pathway visualization and BLAST sequence searches",
-        "icon": "🔄",
+        "icon": "\ud83d\udd04",
         "priority": 2,
         "color": "#795548",
         "subcategories": ["pathway_visualization", "blast_search", "metabolic_analysis"],
@@ -109,7 +109,7 @@
       "sequence_editing": {
         "name": "Sequence Editing",
         "description": "Tools for sequence manipulation, editing, and action management",
-        "icon": "✏️",
+        "icon": "\u270f\ufe0f",
         "priority": 1,
         "color": "#FF5722",
         "subcategories": ["sequence_manipulation", "action_management", "clipboard_operations"],
@@ -118,7 +118,7 @@
       "primer_design": {
         "name": "Primer Design & PCR",
         "description": "Tools for designing sequence primers, checking thermodynamic properties (Tm, GC), and mapping binding sites.",
-        "icon": "🧬",
+        "icon": "\ud83e\uddec",
         "priority": 1,
         "color": "#9C27B0",
         "subcategories": ["design", "analysis", "mapping"],
@@ -127,7 +127,7 @@
       "system": {
         "name": "System Management",
         "description": "Tools for system operations, working directory management, and environment setup",
-        "icon": "⚙️",
+        "icon": "\u2699\ufe0f",
         "priority": 1,
         "color": "#795548",
         "subcategories": ["directory_management", "environment_setup", "system_configuration"],
@@ -136,7 +136,7 @@
       "benchmark": {
         "name": "Benchmark Management",
         "description": "Tools for running, controlling, and inspecting LLM benchmark tests",
-        "icon": "📈",
+        "icon": "\ud83d\udcc8",
         "priority": 2,
         "color": "#00ACC1",
         "subcategories": ["benchmark_control", "benchmark_results"],
@@ -145,7 +145,7 @@
       "plugin_management": {
         "name": "Plugin Management",
         "description": "Tools for plugin installation, execution, and development",
-        "icon": "🔌",
+        "icon": "\ud83d\udd0c",
         "priority": 3,
         "color": "#3F51B5",
         "subcategories": ["plugin_installation", "plugin_execution", "plugin_development", "plugin_marketplace"],
@@ -154,7 +154,7 @@
       "coordination": {
         "name": "Multi-Agent Coordination",
         "description": "Tools for coordinating multiple AI agents and workflow management",
-        "icon": "🎯",
+        "icon": "\ud83c\udfaf",
         "priority": 2,
         "color": "#00BCD4",
         "subcategories": ["task_coordination", "workflow_management", "agent_management", "error_recovery"],
@@ -163,7 +163,7 @@
       "external_apis": {
         "name": "External API Integration",
         "description": "Tools for integrating with external biological databases and APIs",
-        "icon": "🌐",
+        "icon": "\ud83c\udf10",
         "priority": 2,
         "color": "#8BC34A",
         "subcategories": ["blast_apis", "uniprot_apis", "alphafold_apis"],
@@ -172,7 +172,7 @@
       "utility": {
         "name": "Utility Tools",
         "description": "General utility tools for file downloads, document viewing, and other helper functions",
-        "icon": "🛠️",
+        "icon": "\ud83d\udee0\ufe0f",
         "priority": 2,
         "color": "#78909C",
         "subcategories": ["file_download", "document_viewer", "helper_functions"],
@@ -181,26 +181,11 @@
       "task_management": {
         "name": "Task Management",
         "description": "Tools for setting, updating, and tracking task lists during complex workflow execution",
-        "icon": "🎯",
+        "icon": "\ud83c\udfaf",
         "priority": 1,
         "color": "#3b82f6",
         "subcategories": ["task_tracking"],
         "tools_count": 5
-      },
-      "co_scientist": {
-        "name": "Co-Scientist",
-        "description": "Independent research agent tools for scientific discovery sessions, hypothesis tournaments, evidence feedback, and research reports",
-        "icon": "🔬",
-        "priority": 2,
-        "color": "#00A6A6",
-        "subcategories": [
-          "research_sessions",
-          "evidence_memory",
-          "hypothesis_generation",
-          "tournament_ranking",
-          "meta_review"
-        ],
-        "tools_count": 6
       }
     }
   },
@@ -2141,696 +2126,6 @@
       }
     },
     {
-      "name": "add_co_scientist_evidence",
-      "version": "1.0.0",
-      "description": "Add literature, dataset, experiment, observation, or scientist feedback evidence to a Co-Scientist session memory.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "add evidence",
-        "literature evidence",
-        "experimental feedback",
-        "lab result",
-        "research memory",
-        "scientist feedback",
-        "paper evidence"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 10000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "description": "Co-Scientist session ID."
-          },
-          "evidence": {
-            "description": "Evidence item, evidence string, or array of evidence items.",
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "object"
-              },
-              {
-                "type": "array"
-              }
-            ]
-          },
-          "evidenceType": {
-            "type": "string",
-            "enum": ["literature", "dataset", "experiment", "observation", "feedback", "protocol", "other"],
-            "description": "Evidence type applied when an item does not provide its own type.",
-            "default": "literature"
-          },
-          "source": {
-            "type": "string",
-            "description": "Citation, file path, database, or human source.",
-            "default": ""
-          },
-          "reliability": {
-            "type": "string",
-            "enum": ["low", "medium", "high"],
-            "description": "Evidence reliability estimate.",
-            "default": "medium"
-          },
-          "direction": {
-            "type": "string",
-            "enum": ["supporting", "contradicting", "neutral", "mixed"],
-            "description": "How the evidence relates to current hypotheses.",
-            "default": "neutral"
-          },
-          "feedback": {
-            "type": "string",
-            "description": "Optional free-form scientist feedback to append to session memory.",
-            "default": ""
-          }
-        },
-        "required": ["sessionId", "evidence"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Add this paper summary as high-confidence evidence to the Co-Scientist session.",
-          "tool_call": "add_co_scientist_evidence(sessionId='cosci_123', evidence='ROCK inhibition increases RPE phagocytosis in vitro.', evidenceType='literature', reliability='high')",
-          "expected_result": "The evidence is added to persistent session memory and becomes available for review/ranking."
-        }
-      ],
-      "relationships": {
-        "depends_on": ["start_co_scientist_session"],
-        "conflicts_with": [],
-        "enhances": ["run_co_scientist_cycle", "generate_co_scientist_hypotheses"],
-        "alternatives": [],
-        "follow_up": ["run_co_scientist_cycle"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "evidence", "feedback", "memory"],
-        "complexity": "moderate",
-        "usage_pattern": "common"
-      },
-      "returns": {
-        "success": "boolean - Whether evidence was added.",
-        "sessionId": "string - Co-Scientist session ID.",
-        "added": "number - Number of evidence records added.",
-        "evidenceCount": "number - Total evidence records in the session."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/add_co_scientist_evidence.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "addCoScientistEvidence"
-      },
-      "builtin": {
-        "name": "add_co_scientist_evidence",
-        "method": "addCoScientistEvidence",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    {
-      "name": "generate_co_scientist_hypotheses",
-      "version": "1.0.0",
-      "description": "Generate or register candidate research hypotheses inside a Co-Scientist session using the Generation agent.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "generate hypotheses",
-        "hypothesis generation",
-        "research hypothesis",
-        "scientific idea",
-        "candidate mechanism",
-        "drug repurposing",
-        "target discovery"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 15000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "description": "Co-Scientist session ID."
-          },
-          "count": {
-            "type": "number",
-            "description": "Number of hypotheses to create when no explicit candidates are supplied.",
-            "default": 3,
-            "minimum": 1,
-            "maximum": 12
-          },
-          "strategy": {
-            "type": "string",
-            "enum": [
-              "generation",
-              "continued_generation",
-              "scientist_seed",
-              "evolution",
-              "analogy",
-              "mechanism_search"
-            ],
-            "description": "Generation strategy label stored in session memory.",
-            "default": "generation"
-          },
-          "focusAreas": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Optional concepts or mechanisms to focus the generation step.",
-            "default": []
-          },
-          "hypotheses": {
-            "type": "array",
-            "description": "Optional explicit hypothesis strings or structured hypothesis objects from the LLM/scientist.",
-            "items": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object"
-                }
-              ]
-            },
-            "default": []
-          }
-        },
-        "required": ["sessionId"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Generate three Co-Scientist hypotheses for this session.",
-          "tool_call": "generate_co_scientist_hypotheses(sessionId='cosci_123', count=3, focusAreas=['RPE phagocytosis', 'ROCK inhibition'])",
-          "expected_result": "Candidate hypotheses are added to the session and queued for reflection and ranking."
-        }
-      ],
-      "relationships": {
-        "depends_on": ["start_co_scientist_session"],
-        "conflicts_with": [],
-        "enhances": ["run_co_scientist_cycle"],
-        "alternatives": ["deep_research"],
-        "follow_up": ["run_co_scientist_cycle"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "hypothesis", "generation"],
-        "complexity": "moderate",
-        "usage_pattern": "common"
-      },
-      "returns": {
-        "success": "boolean - Whether hypotheses were generated.",
-        "generated": "number - Number of hypotheses generated.",
-        "hypotheses": "array - Structured hypothesis records.",
-        "supervisorStats": "object - Updated session statistics."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/generate_co_scientist_hypotheses.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "generateCoScientistHypotheses"
-      },
-      "builtin": {
-        "name": "generate_co_scientist_hypotheses",
-        "method": "generateCoScientistHypotheses",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    {
-      "name": "get_co_scientist_report",
-      "version": "1.0.0",
-      "description": "Get a structured Co-Scientist report with ranked hypotheses, reviews, proximity graph, meta-review guidance, and next actions.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "research report",
-        "hypothesis report",
-        "ranked hypotheses",
-        "top hypotheses",
-        "meta-review",
-        "scientific roadmap"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 10000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "description": "Co-Scientist session ID."
-          },
-          "topN": {
-            "type": "number",
-            "description": "Number of top hypotheses to include.",
-            "default": 5,
-            "minimum": 1,
-            "maximum": 20
-          },
-          "includeEvidence": {
-            "type": "boolean",
-            "description": "Whether to include full evidence records.",
-            "default": false
-          },
-          "includeActivityLog": {
-            "type": "boolean",
-            "description": "Whether to include the full internal agent activity log.",
-            "default": false
-          }
-        },
-        "required": ["sessionId"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Give me the Co-Scientist report for this session.",
-          "tool_call": "get_co_scientist_report(sessionId='cosci_123', topN=5, includeEvidence=true)",
-          "expected_result": "A report of top hypotheses, latest reviews, tournament state, meta-review guidance, and next actions."
-        }
-      ],
-      "relationships": {
-        "depends_on": ["start_co_scientist_session"],
-        "conflicts_with": [],
-        "enhances": [],
-        "alternatives": ["generate_research_report"],
-        "follow_up": ["add_co_scientist_evidence", "run_co_scientist_cycle"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "report", "ranked-hypotheses", "roadmap"],
-        "complexity": "simple",
-        "usage_pattern": "common"
-      },
-      "returns": {
-        "success": "boolean - Whether the report was created.",
-        "sessionId": "string - Co-Scientist session ID.",
-        "report": "object - Structured report."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/get_co_scientist_report.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "getCoScientistReport"
-      },
-      "builtin": {
-        "name": "get_co_scientist_report",
-        "method": "getCoScientistReport",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    {
-      "name": "list_co_scientist_sessions",
-      "version": "1.0.0",
-      "description": "List existing independent Co-Scientist research sessions and their current discovery state.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "list research sessions",
-        "scientific discovery sessions",
-        "hypothesis sessions",
-        "research memory"
-      ],
-      "priority": 2,
-      "execution": {
-        "type": "client",
-        "timeout": 5000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "includeArchived": {
-            "type": "boolean",
-            "description": "Whether archived sessions should be included.",
-            "default": false
-          }
-        },
-        "required": []
-      },
-      "sample_usages": [
-        {
-          "user_query": "Show my Co-Scientist sessions.",
-          "tool_call": "list_co_scientist_sessions(includeArchived=false)",
-          "expected_result": "A list of session summaries including evidence counts, hypothesis counts, and top hypothesis state."
-        }
-      ],
-      "relationships": {
-        "depends_on": [],
-        "conflicts_with": [],
-        "enhances": ["get_co_scientist_report"],
-        "alternatives": [],
-        "follow_up": ["get_co_scientist_report"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "research-session", "state"],
-        "complexity": "simple",
-        "usage_pattern": "occasional"
-      },
-      "returns": {
-        "success": "boolean - Whether sessions were listed.",
-        "count": "number - Number of matching sessions.",
-        "sessions": "array - Session summaries."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/list_co_scientist_sessions.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "listCoScientistSessions"
-      },
-      "builtin": {
-        "name": "list_co_scientist_sessions",
-        "method": "listCoScientistSessions",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    {
-      "name": "run_co_scientist_cycle",
-      "version": "1.0.0",
-      "description": "Run one or more Co-Scientist discovery cycles: generation as needed, reflection, tournament ranking, proximity clustering, evolution, and meta-review.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "run cycle",
-        "scientific discovery loop",
-        "reflect hypotheses",
-        "rank hypotheses",
-        "evolve hypotheses",
-        "tournament",
-        "meta-review",
-        "autonomous scientist"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 30000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "description": "Co-Scientist session ID."
-          },
-          "cycles": {
-            "type": "number",
-            "description": "Number of discovery cycles to run.",
-            "default": 1,
-            "minimum": 1,
-            "maximum": 5
-          },
-          "generateCount": {
-            "type": "number",
-            "description": "Hypotheses to create if the session has none or generateEachCycle is true.",
-            "default": 3,
-            "minimum": 1,
-            "maximum": 12
-          },
-          "generateEachCycle": {
-            "type": "boolean",
-            "description": "Whether to add fresh hypotheses before each cycle.",
-            "default": false
-          },
-          "reviewDepth": {
-            "type": "string",
-            "enum": ["standard", "recurrent"],
-            "description": "Reflection strategy. recurrent revisits already reviewed hypotheses.",
-            "default": "standard"
-          },
-          "includeEvolution": {
-            "type": "boolean",
-            "description": "Whether the Evolution agent should refine top-ranked hypotheses.",
-            "default": true
-          },
-          "evolutionCount": {
-            "type": "number",
-            "description": "Number of top hypotheses to evolve each cycle.",
-            "default": 2,
-            "minimum": 0,
-            "maximum": 5
-          },
-          "maxComparisons": {
-            "type": "number",
-            "description": "Maximum pairwise tournament comparisons in this cycle.",
-            "minimum": 1,
-            "maximum": 300
-          },
-          "topN": {
-            "type": "number",
-            "description": "Number of top hypotheses to include in the returned report.",
-            "default": 5,
-            "minimum": 1,
-            "maximum": 20
-          }
-        },
-        "required": ["sessionId"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Run a Co-Scientist cycle and rank the hypotheses.",
-          "tool_call": "run_co_scientist_cycle(sessionId='cosci_123', cycles=1, includeEvolution=true, evolutionCount=2)",
-          "expected_result": "The session is reviewed, ranked, clustered, evolved, and summarized with top hypotheses."
-        }
-      ],
-      "relationships": {
-        "depends_on": ["start_co_scientist_session"],
-        "conflicts_with": [],
-        "enhances": ["get_co_scientist_report"],
-        "alternatives": ["coordinate_task"],
-        "follow_up": ["get_co_scientist_report", "add_co_scientist_evidence"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "cycle", "ranking", "evolution", "meta-review"],
-        "complexity": "complex",
-        "usage_pattern": "common"
-      },
-      "returns": {
-        "success": "boolean - Whether the cycle completed.",
-        "iterations": "number - Current session iteration count.",
-        "cycleSummaries": "array - Summary of generation, review, ranking, evolution, and meta-review steps.",
-        "report": "object - Co-Scientist report with ranked hypotheses and next actions."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/run_co_scientist_cycle.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "runCoScientistCycle"
-      },
-      "builtin": {
-        "name": "run_co_scientist_cycle",
-        "method": "runCoScientistCycle",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    {
-      "name": "start_co_scientist_session",
-      "version": "1.0.0",
-      "description": "Start an independent Co-Scientist research session for autonomous scientific discovery, hypothesis generation, review, ranking, and experiment planning.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "scientific discovery",
-        "autonomous scientist",
-        "research session",
-        "hypothesis",
-        "experiment planning",
-        "start research",
-        "自主科学家"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 10000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "researchGoal": {
-            "type": "string",
-            "description": "Natural-language scientific research goal for the Co-Scientist session.",
-            "examples": [
-              "Identify testable mechanisms for antimicrobial resistance transfer in phage-related mobile elements."
-            ]
-          },
-          "domain": {
-            "type": "string",
-            "description": "Research domain or discipline.",
-            "default": "biomedicine"
-          },
-          "constraints": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Hard constraints the system should respect while generating and evolving hypotheses.",
-            "default": []
-          },
-          "desiredAttributes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Preferred qualities such as novelty, feasibility, low cost, or assay readiness.",
-            "default": []
-          },
-          "safetyNotes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Safety, ethics, containment, or approval notes that should affect review scores.",
-            "default": []
-          },
-          "seedIdeas": {
-            "type": "array",
-            "description": "Optional scientist-provided seed hypotheses or idea objects.",
-            "items": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object"
-                }
-              ]
-            },
-            "default": []
-          },
-          "initialEvidence": {
-            "type": "array",
-            "description": "Optional initial evidence strings or evidence objects.",
-            "items": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object"
-                }
-              ]
-            },
-            "default": []
-          }
-        },
-        "required": ["researchGoal"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Start a Co-Scientist project to discover drug repurposing hypotheses for AML.",
-          "tool_call": "start_co_scientist_session(researchGoal='Discover testable drug repurposing hypotheses for AML', domain='biomedicine', desiredAttributes=['novel', 'testable'])",
-          "expected_result": "A new Co-Scientist session ID with active discovery agents and persistent session memory."
-        }
-      ],
-      "relationships": {
-        "depends_on": [],
-        "conflicts_with": [],
-        "enhances": ["generate_co_scientist_hypotheses", "run_co_scientist_cycle"],
-        "alternatives": ["coordinate_task", "deep_research"],
-        "follow_up": ["add_co_scientist_evidence", "generate_co_scientist_hypotheses"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "research", "hypothesis", "scientific-discovery"],
-        "complexity": "moderate",
-        "usage_pattern": "occasional"
-      },
-      "returns": {
-        "success": "boolean - Whether the session was created.",
-        "sessionId": "string - Persistent Co-Scientist session identifier.",
-        "session": "object - Session summary.",
-        "agents": "array - Internal Co-Scientist agent roles."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/start_co_scientist_session.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "startCoScientistSession"
-      },
-      "builtin": {
-        "name": "start_co_scientist_session",
-        "method": "startCoScientistSession",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    {
       "name": "assign_task_to_agent",
       "version": "1.0.0",
       "description": "Assign a subtask to a specific agent",
@@ -4266,7 +3561,7 @@
           "user_query": "Show only BLAST hits with >95% identity",
           "tool_call": "blast_filter_results(results=<blast_results>, minIdentity=95)",
           "thought": "User wants highly similar matches only",
-          "expected_result": "Filtered results with identity ≥95%"
+          "expected_result": "Filtered results with identity \u226595%"
         },
         {
           "user_query": "Filter BLAST results to top 10 hits with E-value < 1e-50",
@@ -7416,7 +6711,7 @@
     {
       "name": "interpro_search",
       "version": "1.1.0-deprecated",
-      "description": "⚠️ DEPRECATED: This tool is deprecated. Use 'analyze_interpro_domains' instead. This tool name exists only for backward compatibility and will be removed in future versions.",
+      "description": "\u26a0\ufe0f DEPRECATED: This tool is deprecated. Use 'analyze_interpro_domains' instead. This tool name exists only for backward compatibility and will be removed in future versions.",
       "category": "external_apis",
       "keywords": ["interpro", "search", "protein", "domains", "deprecated"],
       "priority": 5,
@@ -7478,13 +6773,13 @@
         {
           "user_query": "Analyze protein domains using InterPro",
           "tool_call": "analyze_interpro_domains(sequence='MVSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGK', analysis_type='domains')",
-          "thought": "⚠️ DEPRECATED: Use analyze_interpro_domains instead of interpro_search",
+          "thought": "\u26a0\ufe0f DEPRECATED: Use analyze_interpro_domains instead of interpro_search",
           "expected_result": "Domain analysis results from InterPro - Please migrate to analyze_interpro_domains"
         },
         {
           "user_query": "Search InterPro database for kinase domains",
           "tool_call": "search_interpro_entry(search_term='kinase', entry_type='domain', database_source=['Pfam', 'SMART'])",
-          "thought": "⚠️ DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis",
+          "thought": "\u26a0\ufe0f DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis",
           "expected_result": "InterPro search results - Please use the appropriate replacement tool"
         }
       ],
@@ -10876,7 +10171,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' — use search_features for those.",
+            "description": "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' \u2014 use search_features for those.",
             "examples": ["lacZ", "b0062", "araA", "dnaA", "rpoB"]
           },
           "exact_match": {
@@ -11754,7 +11049,7 @@
           },
           "end": {
             "type": "number",
-            "description": "End position in base pairs (1-based). Optional — if omitted or equal to start, a 2kb centered window is used instead.",
+            "description": "End position in base pairs (1-based). Optional \u2014 if omitted or equal to start, a 2kb centered window is used instead.",
             "minimum": 1,
             "examples": [2000, 60000, 1002000]
           },
@@ -11811,13 +11106,13 @@
         {
           "user_query": "Navigate to position 2000000 on U00096",
           "tool_call": "navigate_to_position(chromosome='U00096', start=2000000)",
-          "thought": "User provides start position only — the view will center on 2000000 with ±1kb window (1999000-2001000)",
+          "thought": "User provides start position only \u2014 the view will center on 2000000 with \u00b11kb window (1999000-2001000)",
           "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
         },
         {
           "user_query": "Go to 2000000 on chromosome U00096",
           "tool_call": "navigate_to_position(chromosome='U00096', start=2000000, end=2000000)",
-          "thought": "User provides start=end — this is treated as a single-point request and will center with ±1kb window",
+          "thought": "User provides start=end \u2014 this is treated as a single-point request and will center with \u00b11kb window",
           "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
         }
       ],
@@ -12459,7 +11754,7 @@
     {
       "name": "search_features",
       "version": "1.0.0",
-      "description": "Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name — use find_gene_by_name or jump_to_gene instead.",
+      "description": "Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name \u2014 use find_gene_by_name or jump_to_gene instead.",
       "category": "navigation",
       "keywords": ["search", "features", "genomic", "find", "text search", "annotation", "gene type"],
       "priority": 2,
@@ -12476,7 +11771,7 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use find_gene_by_name for that)",
+            "description": "Search query for annotation text, functional keyword, or feature type (NOT for specific gene names \u2014 use find_gene_by_name for that)",
             "examples": ["ribosomal", "transport", "kinase", "tRNA", "hypothetical protein"]
           },
           "feature_type": {
@@ -15079,7 +14374,7 @@
           },
           "minBindingTm": {
             "type": "number",
-            "description": "Minimum predicted binding Tm in °C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'."
+            "description": "Minimum predicted binding Tm in \u00b0C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'."
           },
           "scoringMode": {
             "type": "string",
@@ -17121,7 +16416,7 @@
     {
       "name": "reverse_complement",
       "version": "1.1.0",
-      "description": "Generate the reverse complement of a DNA sequence. Reverses the sequence order and converts each base to its complement (A↔T, G↔C).",
+      "description": "Generate the reverse complement of a DNA sequence. Reverses the sequence order and converts each base to its complement (A\u2194T, G\u2194C).",
       "category": "sequence",
       "keywords": ["reverse", "complement", "dna", "sequence", "strand", "antisense"],
       "priority": 1,
@@ -17452,7 +16747,7 @@
     },
     {
       "name": "simulate_gel_electrophoresis",
-      "description": "Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel. This is a visualization-only tool — it does NOT perform digestion. Call virtual_digest first and pass its fragmentDetails to this tool.",
+      "description": "Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel. This is a visualization-only tool \u2014 it does NOT perform digestion. Call virtual_digest first and pass its fragmentDetails to this tool.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -17662,7 +16957,7 @@
     {
       "name": "translate_sequence",
       "version": "1.0.0",
-      "description": "Translate DNA sequence to amino acid sequence. This is an alias for translate_dna — prefer using translate_dna instead, which supports additional options like reading frame and genetic code table selection.",
+      "description": "Translate DNA sequence to amino acid sequence. This is an alias for translate_dna \u2014 prefer using translate_dna instead, which supports additional options like reading frame and genetic code table selection.",
       "category": "sequence",
       "keywords": ["translate", "sequence", "protein", "amino", "acid"],
       "priority": 1,
@@ -22146,696 +21441,6 @@
         "source": "builtin_tools_map"
       }
     },
-    "add_co_scientist_evidence": {
-      "name": "add_co_scientist_evidence",
-      "version": "1.0.0",
-      "description": "Add literature, dataset, experiment, observation, or scientist feedback evidence to a Co-Scientist session memory.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "add evidence",
-        "literature evidence",
-        "experimental feedback",
-        "lab result",
-        "research memory",
-        "scientist feedback",
-        "paper evidence"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 10000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "description": "Co-Scientist session ID."
-          },
-          "evidence": {
-            "description": "Evidence item, evidence string, or array of evidence items.",
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "object"
-              },
-              {
-                "type": "array"
-              }
-            ]
-          },
-          "evidenceType": {
-            "type": "string",
-            "enum": ["literature", "dataset", "experiment", "observation", "feedback", "protocol", "other"],
-            "description": "Evidence type applied when an item does not provide its own type.",
-            "default": "literature"
-          },
-          "source": {
-            "type": "string",
-            "description": "Citation, file path, database, or human source.",
-            "default": ""
-          },
-          "reliability": {
-            "type": "string",
-            "enum": ["low", "medium", "high"],
-            "description": "Evidence reliability estimate.",
-            "default": "medium"
-          },
-          "direction": {
-            "type": "string",
-            "enum": ["supporting", "contradicting", "neutral", "mixed"],
-            "description": "How the evidence relates to current hypotheses.",
-            "default": "neutral"
-          },
-          "feedback": {
-            "type": "string",
-            "description": "Optional free-form scientist feedback to append to session memory.",
-            "default": ""
-          }
-        },
-        "required": ["sessionId", "evidence"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Add this paper summary as high-confidence evidence to the Co-Scientist session.",
-          "tool_call": "add_co_scientist_evidence(sessionId='cosci_123', evidence='ROCK inhibition increases RPE phagocytosis in vitro.', evidenceType='literature', reliability='high')",
-          "expected_result": "The evidence is added to persistent session memory and becomes available for review/ranking."
-        }
-      ],
-      "relationships": {
-        "depends_on": ["start_co_scientist_session"],
-        "conflicts_with": [],
-        "enhances": ["run_co_scientist_cycle", "generate_co_scientist_hypotheses"],
-        "alternatives": [],
-        "follow_up": ["run_co_scientist_cycle"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "evidence", "feedback", "memory"],
-        "complexity": "moderate",
-        "usage_pattern": "common"
-      },
-      "returns": {
-        "success": "boolean - Whether evidence was added.",
-        "sessionId": "string - Co-Scientist session ID.",
-        "added": "number - Number of evidence records added.",
-        "evidenceCount": "number - Total evidence records in the session."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/add_co_scientist_evidence.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "addCoScientistEvidence"
-      },
-      "builtin": {
-        "name": "add_co_scientist_evidence",
-        "method": "addCoScientistEvidence",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    "generate_co_scientist_hypotheses": {
-      "name": "generate_co_scientist_hypotheses",
-      "version": "1.0.0",
-      "description": "Generate or register candidate research hypotheses inside a Co-Scientist session using the Generation agent.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "generate hypotheses",
-        "hypothesis generation",
-        "research hypothesis",
-        "scientific idea",
-        "candidate mechanism",
-        "drug repurposing",
-        "target discovery"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 15000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "description": "Co-Scientist session ID."
-          },
-          "count": {
-            "type": "number",
-            "description": "Number of hypotheses to create when no explicit candidates are supplied.",
-            "default": 3,
-            "minimum": 1,
-            "maximum": 12
-          },
-          "strategy": {
-            "type": "string",
-            "enum": [
-              "generation",
-              "continued_generation",
-              "scientist_seed",
-              "evolution",
-              "analogy",
-              "mechanism_search"
-            ],
-            "description": "Generation strategy label stored in session memory.",
-            "default": "generation"
-          },
-          "focusAreas": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Optional concepts or mechanisms to focus the generation step.",
-            "default": []
-          },
-          "hypotheses": {
-            "type": "array",
-            "description": "Optional explicit hypothesis strings or structured hypothesis objects from the LLM/scientist.",
-            "items": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object"
-                }
-              ]
-            },
-            "default": []
-          }
-        },
-        "required": ["sessionId"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Generate three Co-Scientist hypotheses for this session.",
-          "tool_call": "generate_co_scientist_hypotheses(sessionId='cosci_123', count=3, focusAreas=['RPE phagocytosis', 'ROCK inhibition'])",
-          "expected_result": "Candidate hypotheses are added to the session and queued for reflection and ranking."
-        }
-      ],
-      "relationships": {
-        "depends_on": ["start_co_scientist_session"],
-        "conflicts_with": [],
-        "enhances": ["run_co_scientist_cycle"],
-        "alternatives": ["deep_research"],
-        "follow_up": ["run_co_scientist_cycle"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "hypothesis", "generation"],
-        "complexity": "moderate",
-        "usage_pattern": "common"
-      },
-      "returns": {
-        "success": "boolean - Whether hypotheses were generated.",
-        "generated": "number - Number of hypotheses generated.",
-        "hypotheses": "array - Structured hypothesis records.",
-        "supervisorStats": "object - Updated session statistics."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/generate_co_scientist_hypotheses.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "generateCoScientistHypotheses"
-      },
-      "builtin": {
-        "name": "generate_co_scientist_hypotheses",
-        "method": "generateCoScientistHypotheses",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    "get_co_scientist_report": {
-      "name": "get_co_scientist_report",
-      "version": "1.0.0",
-      "description": "Get a structured Co-Scientist report with ranked hypotheses, reviews, proximity graph, meta-review guidance, and next actions.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "research report",
-        "hypothesis report",
-        "ranked hypotheses",
-        "top hypotheses",
-        "meta-review",
-        "scientific roadmap"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 10000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "description": "Co-Scientist session ID."
-          },
-          "topN": {
-            "type": "number",
-            "description": "Number of top hypotheses to include.",
-            "default": 5,
-            "minimum": 1,
-            "maximum": 20
-          },
-          "includeEvidence": {
-            "type": "boolean",
-            "description": "Whether to include full evidence records.",
-            "default": false
-          },
-          "includeActivityLog": {
-            "type": "boolean",
-            "description": "Whether to include the full internal agent activity log.",
-            "default": false
-          }
-        },
-        "required": ["sessionId"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Give me the Co-Scientist report for this session.",
-          "tool_call": "get_co_scientist_report(sessionId='cosci_123', topN=5, includeEvidence=true)",
-          "expected_result": "A report of top hypotheses, latest reviews, tournament state, meta-review guidance, and next actions."
-        }
-      ],
-      "relationships": {
-        "depends_on": ["start_co_scientist_session"],
-        "conflicts_with": [],
-        "enhances": [],
-        "alternatives": ["generate_research_report"],
-        "follow_up": ["add_co_scientist_evidence", "run_co_scientist_cycle"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "report", "ranked-hypotheses", "roadmap"],
-        "complexity": "simple",
-        "usage_pattern": "common"
-      },
-      "returns": {
-        "success": "boolean - Whether the report was created.",
-        "sessionId": "string - Co-Scientist session ID.",
-        "report": "object - Structured report."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/get_co_scientist_report.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "getCoScientistReport"
-      },
-      "builtin": {
-        "name": "get_co_scientist_report",
-        "method": "getCoScientistReport",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    "list_co_scientist_sessions": {
-      "name": "list_co_scientist_sessions",
-      "version": "1.0.0",
-      "description": "List existing independent Co-Scientist research sessions and their current discovery state.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "list research sessions",
-        "scientific discovery sessions",
-        "hypothesis sessions",
-        "research memory"
-      ],
-      "priority": 2,
-      "execution": {
-        "type": "client",
-        "timeout": 5000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "includeArchived": {
-            "type": "boolean",
-            "description": "Whether archived sessions should be included.",
-            "default": false
-          }
-        },
-        "required": []
-      },
-      "sample_usages": [
-        {
-          "user_query": "Show my Co-Scientist sessions.",
-          "tool_call": "list_co_scientist_sessions(includeArchived=false)",
-          "expected_result": "A list of session summaries including evidence counts, hypothesis counts, and top hypothesis state."
-        }
-      ],
-      "relationships": {
-        "depends_on": [],
-        "conflicts_with": [],
-        "enhances": ["get_co_scientist_report"],
-        "alternatives": [],
-        "follow_up": ["get_co_scientist_report"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "research-session", "state"],
-        "complexity": "simple",
-        "usage_pattern": "occasional"
-      },
-      "returns": {
-        "success": "boolean - Whether sessions were listed.",
-        "count": "number - Number of matching sessions.",
-        "sessions": "array - Session summaries."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/list_co_scientist_sessions.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "listCoScientistSessions"
-      },
-      "builtin": {
-        "name": "list_co_scientist_sessions",
-        "method": "listCoScientistSessions",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    "run_co_scientist_cycle": {
-      "name": "run_co_scientist_cycle",
-      "version": "1.0.0",
-      "description": "Run one or more Co-Scientist discovery cycles: generation as needed, reflection, tournament ranking, proximity clustering, evolution, and meta-review.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "run cycle",
-        "scientific discovery loop",
-        "reflect hypotheses",
-        "rank hypotheses",
-        "evolve hypotheses",
-        "tournament",
-        "meta-review",
-        "autonomous scientist"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 30000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "description": "Co-Scientist session ID."
-          },
-          "cycles": {
-            "type": "number",
-            "description": "Number of discovery cycles to run.",
-            "default": 1,
-            "minimum": 1,
-            "maximum": 5
-          },
-          "generateCount": {
-            "type": "number",
-            "description": "Hypotheses to create if the session has none or generateEachCycle is true.",
-            "default": 3,
-            "minimum": 1,
-            "maximum": 12
-          },
-          "generateEachCycle": {
-            "type": "boolean",
-            "description": "Whether to add fresh hypotheses before each cycle.",
-            "default": false
-          },
-          "reviewDepth": {
-            "type": "string",
-            "enum": ["standard", "recurrent"],
-            "description": "Reflection strategy. recurrent revisits already reviewed hypotheses.",
-            "default": "standard"
-          },
-          "includeEvolution": {
-            "type": "boolean",
-            "description": "Whether the Evolution agent should refine top-ranked hypotheses.",
-            "default": true
-          },
-          "evolutionCount": {
-            "type": "number",
-            "description": "Number of top hypotheses to evolve each cycle.",
-            "default": 2,
-            "minimum": 0,
-            "maximum": 5
-          },
-          "maxComparisons": {
-            "type": "number",
-            "description": "Maximum pairwise tournament comparisons in this cycle.",
-            "minimum": 1,
-            "maximum": 300
-          },
-          "topN": {
-            "type": "number",
-            "description": "Number of top hypotheses to include in the returned report.",
-            "default": 5,
-            "minimum": 1,
-            "maximum": 20
-          }
-        },
-        "required": ["sessionId"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Run a Co-Scientist cycle and rank the hypotheses.",
-          "tool_call": "run_co_scientist_cycle(sessionId='cosci_123', cycles=1, includeEvolution=true, evolutionCount=2)",
-          "expected_result": "The session is reviewed, ranked, clustered, evolved, and summarized with top hypotheses."
-        }
-      ],
-      "relationships": {
-        "depends_on": ["start_co_scientist_session"],
-        "conflicts_with": [],
-        "enhances": ["get_co_scientist_report"],
-        "alternatives": ["coordinate_task"],
-        "follow_up": ["get_co_scientist_report", "add_co_scientist_evidence"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "cycle", "ranking", "evolution", "meta-review"],
-        "complexity": "complex",
-        "usage_pattern": "common"
-      },
-      "returns": {
-        "success": "boolean - Whether the cycle completed.",
-        "iterations": "number - Current session iteration count.",
-        "cycleSummaries": "array - Summary of generation, review, ranking, evolution, and meta-review steps.",
-        "report": "object - Co-Scientist report with ranked hypotheses and next actions."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/run_co_scientist_cycle.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "runCoScientistCycle"
-      },
-      "builtin": {
-        "name": "run_co_scientist_cycle",
-        "method": "runCoScientistCycle",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
-    "start_co_scientist_session": {
-      "name": "start_co_scientist_session",
-      "version": "1.0.0",
-      "description": "Start an independent Co-Scientist research session for autonomous scientific discovery, hypothesis generation, review, ranking, and experiment planning.",
-      "category": "co_scientist",
-      "keywords": [
-        "co-scientist",
-        "co scientist",
-        "scientific discovery",
-        "autonomous scientist",
-        "research session",
-        "hypothesis",
-        "experiment planning",
-        "start research",
-        "自主科学家"
-      ],
-      "priority": 1,
-      "execution": {
-        "type": "client",
-        "timeout": 10000,
-        "retries": 0,
-        "requires_auth": false,
-        "requires_data": false,
-        "requires_network": false
-      },
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "researchGoal": {
-            "type": "string",
-            "description": "Natural-language scientific research goal for the Co-Scientist session.",
-            "examples": [
-              "Identify testable mechanisms for antimicrobial resistance transfer in phage-related mobile elements."
-            ]
-          },
-          "domain": {
-            "type": "string",
-            "description": "Research domain or discipline.",
-            "default": "biomedicine"
-          },
-          "constraints": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Hard constraints the system should respect while generating and evolving hypotheses.",
-            "default": []
-          },
-          "desiredAttributes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Preferred qualities such as novelty, feasibility, low cost, or assay readiness.",
-            "default": []
-          },
-          "safetyNotes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Safety, ethics, containment, or approval notes that should affect review scores.",
-            "default": []
-          },
-          "seedIdeas": {
-            "type": "array",
-            "description": "Optional scientist-provided seed hypotheses or idea objects.",
-            "items": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object"
-                }
-              ]
-            },
-            "default": []
-          },
-          "initialEvidence": {
-            "type": "array",
-            "description": "Optional initial evidence strings or evidence objects.",
-            "items": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object"
-                }
-              ]
-            },
-            "default": []
-          }
-        },
-        "required": ["researchGoal"]
-      },
-      "sample_usages": [
-        {
-          "user_query": "Start a Co-Scientist project to discover drug repurposing hypotheses for AML.",
-          "tool_call": "start_co_scientist_session(researchGoal='Discover testable drug repurposing hypotheses for AML', domain='biomedicine', desiredAttributes=['novel', 'testable'])",
-          "expected_result": "A new Co-Scientist session ID with active discovery agents and persistent session memory."
-        }
-      ],
-      "relationships": {
-        "depends_on": [],
-        "conflicts_with": [],
-        "enhances": ["generate_co_scientist_hypotheses", "run_co_scientist_cycle"],
-        "alternatives": ["coordinate_task", "deep_research"],
-        "follow_up": ["add_co_scientist_evidence", "generate_co_scientist_hypotheses"]
-      },
-      "metadata": {
-        "tags": ["co-scientist", "research", "hypothesis", "scientific-discovery"],
-        "complexity": "moderate",
-        "usage_pattern": "occasional"
-      },
-      "returns": {
-        "success": "boolean - Whether the session was created.",
-        "sessionId": "string - Persistent Co-Scientist session identifier.",
-        "session": "object - Session summary.",
-        "agents": "array - Internal Co-Scientist agent roles."
-      },
-      "source": "app_registry",
-      "sourceFile": "co_scientist/start_co_scientist_session.yaml",
-      "isBuiltIn": true,
-      "isExternal": false,
-      "execution_type": "built-in",
-      "implementation": {
-        "type": "built-in",
-        "method": "startCoScientistSession"
-      },
-      "builtin": {
-        "name": "start_co_scientist_session",
-        "method": "startCoScientistSession",
-        "category": "co_scientist",
-        "type": "built-in",
-        "priority": 2,
-        "isBuiltIn": true,
-        "isExternal": false,
-        "source": "builtin_tools_map"
-      }
-    },
     "assign_task_to_agent": {
       "name": "assign_task_to_agent",
       "version": "1.0.0",
@@ -24272,7 +22877,7 @@
           "user_query": "Show only BLAST hits with >95% identity",
           "tool_call": "blast_filter_results(results=<blast_results>, minIdentity=95)",
           "thought": "User wants highly similar matches only",
-          "expected_result": "Filtered results with identity ≥95%"
+          "expected_result": "Filtered results with identity \u226595%"
         },
         {
           "user_query": "Filter BLAST results to top 10 hits with E-value < 1e-50",
@@ -27422,7 +26027,7 @@
     "interpro_search": {
       "name": "interpro_search",
       "version": "1.1.0-deprecated",
-      "description": "⚠️ DEPRECATED: This tool is deprecated. Use 'analyze_interpro_domains' instead. This tool name exists only for backward compatibility and will be removed in future versions.",
+      "description": "\u26a0\ufe0f DEPRECATED: This tool is deprecated. Use 'analyze_interpro_domains' instead. This tool name exists only for backward compatibility and will be removed in future versions.",
       "category": "external_apis",
       "keywords": ["interpro", "search", "protein", "domains", "deprecated"],
       "priority": 5,
@@ -27484,13 +26089,13 @@
         {
           "user_query": "Analyze protein domains using InterPro",
           "tool_call": "analyze_interpro_domains(sequence='MVSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGK', analysis_type='domains')",
-          "thought": "⚠️ DEPRECATED: Use analyze_interpro_domains instead of interpro_search",
+          "thought": "\u26a0\ufe0f DEPRECATED: Use analyze_interpro_domains instead of interpro_search",
           "expected_result": "Domain analysis results from InterPro - Please migrate to analyze_interpro_domains"
         },
         {
           "user_query": "Search InterPro database for kinase domains",
           "tool_call": "search_interpro_entry(search_term='kinase', entry_type='domain', database_source=['Pfam', 'SMART'])",
-          "thought": "⚠️ DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis",
+          "thought": "\u26a0\ufe0f DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis",
           "expected_result": "InterPro search results - Please use the appropriate replacement tool"
         }
       ],
@@ -30426,7 +29031,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' — use search_features for those.",
+            "description": "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' \u2014 use search_features for those.",
             "examples": ["lacZ", "b0062", "araA", "dnaA", "rpoB"]
           },
           "exact_match": {
@@ -31304,7 +29909,7 @@
           },
           "end": {
             "type": "number",
-            "description": "End position in base pairs (1-based). Optional — if omitted or equal to start, a 2kb centered window is used instead.",
+            "description": "End position in base pairs (1-based). Optional \u2014 if omitted or equal to start, a 2kb centered window is used instead.",
             "minimum": 1,
             "examples": [2000, 60000, 1002000]
           },
@@ -31361,13 +29966,13 @@
         {
           "user_query": "Navigate to position 2000000 on U00096",
           "tool_call": "navigate_to_position(chromosome='U00096', start=2000000)",
-          "thought": "User provides start position only — the view will center on 2000000 with ±1kb window (1999000-2001000)",
+          "thought": "User provides start position only \u2014 the view will center on 2000000 with \u00b11kb window (1999000-2001000)",
           "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
         },
         {
           "user_query": "Go to 2000000 on chromosome U00096",
           "tool_call": "navigate_to_position(chromosome='U00096', start=2000000, end=2000000)",
-          "thought": "User provides start=end — this is treated as a single-point request and will center with ±1kb window",
+          "thought": "User provides start=end \u2014 this is treated as a single-point request and will center with \u00b11kb window",
           "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
         }
       ],
@@ -32009,7 +30614,7 @@
     "search_features": {
       "name": "search_features",
       "version": "1.0.0",
-      "description": "Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name — use find_gene_by_name or jump_to_gene instead.",
+      "description": "Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name \u2014 use find_gene_by_name or jump_to_gene instead.",
       "category": "navigation",
       "keywords": ["search", "features", "genomic", "find", "text search", "annotation", "gene type"],
       "priority": 2,
@@ -32026,7 +30631,7 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use find_gene_by_name for that)",
+            "description": "Search query for annotation text, functional keyword, or feature type (NOT for specific gene names \u2014 use find_gene_by_name for that)",
             "examples": ["ribosomal", "transport", "kinase", "tRNA", "hypothetical protein"]
           },
           "feature_type": {
@@ -34629,7 +33234,7 @@
           },
           "minBindingTm": {
             "type": "number",
-            "description": "Minimum predicted binding Tm in °C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'."
+            "description": "Minimum predicted binding Tm in \u00b0C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'."
           },
           "scoringMode": {
             "type": "string",
@@ -36671,7 +35276,7 @@
     "reverse_complement": {
       "name": "reverse_complement",
       "version": "1.1.0",
-      "description": "Generate the reverse complement of a DNA sequence. Reverses the sequence order and converts each base to its complement (A↔T, G↔C).",
+      "description": "Generate the reverse complement of a DNA sequence. Reverses the sequence order and converts each base to its complement (A\u2194T, G\u2194C).",
       "category": "sequence",
       "keywords": ["reverse", "complement", "dna", "sequence", "strand", "antisense"],
       "priority": 1,
@@ -37002,7 +35607,7 @@
     },
     "simulate_gel_electrophoresis": {
       "name": "simulate_gel_electrophoresis",
-      "description": "Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel. This is a visualization-only tool — it does NOT perform digestion. Call virtual_digest first and pass its fragmentDetails to this tool.",
+      "description": "Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel. This is a visualization-only tool \u2014 it does NOT perform digestion. Call virtual_digest first and pass its fragmentDetails to this tool.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -37212,7 +35817,7 @@
     "translate_sequence": {
       "name": "translate_sequence",
       "version": "1.0.0",
-      "description": "Translate DNA sequence to amino acid sequence. This is an alias for translate_dna — prefer using translate_dna instead, which supports additional options like reading frame and genetic code table selection.",
+      "description": "Translate DNA sequence to amino acid sequence. This is an alias for translate_dna \u2014 prefer using translate_dna instead, which supports additional options like reading frame and genetic code table selection.",
       "category": "sequence",
       "keywords": ["translate", "sequence", "protein", "amino", "acid"],
       "priority": 1,
@@ -39972,66 +38577,6 @@
       "source": "builtin_tools_map"
     },
     {
-      "name": "start_co_scientist_session",
-      "method": "startCoScientistSession",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    {
-      "name": "list_co_scientist_sessions",
-      "method": "listCoScientistSessions",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    {
-      "name": "add_co_scientist_evidence",
-      "method": "addCoScientistEvidence",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    {
-      "name": "generate_co_scientist_hypotheses",
-      "method": "generateCoScientistHypotheses",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    {
-      "name": "run_co_scientist_cycle",
-      "method": "runCoScientistCycle",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    {
-      "name": "get_co_scientist_report",
-      "method": "getCoScientistReport",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    {
       "name": "search_uniprot_database",
       "method": "searchUniProtDatabase",
       "category": "database",
@@ -41460,66 +40005,6 @@
       "category": "task_management",
       "type": "built-in",
       "priority": 1,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    "start_co_scientist_session": {
-      "name": "start_co_scientist_session",
-      "method": "startCoScientistSession",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    "list_co_scientist_sessions": {
-      "name": "list_co_scientist_sessions",
-      "method": "listCoScientistSessions",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    "add_co_scientist_evidence": {
-      "name": "add_co_scientist_evidence",
-      "method": "addCoScientistEvidence",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    "generate_co_scientist_hypotheses": {
-      "name": "generate_co_scientist_hypotheses",
-      "method": "generateCoScientistHypotheses",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    "run_co_scientist_cycle": {
-      "name": "run_co_scientist_cycle",
-      "method": "runCoScientistCycle",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
-      "isBuiltIn": true,
-      "isExternal": false,
-      "source": "builtin_tools_map"
-    },
-    "get_co_scientist_report": {
-      "name": "get_co_scientist_report",
-      "method": "getCoScientistReport",
-      "category": "co_scientist",
-      "type": "built-in",
-      "priority": 2,
       "isBuiltIn": true,
       "isExternal": false,
       "source": "builtin_tools_map"

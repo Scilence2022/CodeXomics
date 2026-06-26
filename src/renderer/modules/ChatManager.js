@@ -81,10 +81,6 @@ class ChatManager {
       cacheEnabled: true,
     };
 
-    // Independent Co-Scientist research agent system
-    this.coScientistSystem = null;
-    this.initializeCoScientistSystem();
-
     this.initializePluginFunctionCallsIntegrator();
 
     // Initialize Multi-Agent System
@@ -166,7 +162,6 @@ class ChatManager {
       ['restriction', 'RestrictionDigestService'],
       ['gel', 'GelElectrophoresisService'],
       ['task', 'TaskService'],
-      ['coScientist', 'CoScientistService'],
     ];
 
     for (const [key, className] of serviceDefinitions) {
@@ -484,43 +479,6 @@ class ChatManager {
       setTimeout(initIntegrator, 100);
     } catch (error) {
       // Failed to initialize PluginFunctionCallsIntegrator
-    }
-  }
-
-  /**
-   * Initialize the independent Co-Scientist research system.
-   */
-  initializeCoScientistSystem() {
-    try {
-      const SystemClass =
-        (typeof window !== 'undefined' && window.CoScientistSystem) ||
-        (typeof globalThis !== 'undefined' && globalThis.CoScientistSystem);
-
-      if (typeof SystemClass !== 'function') {
-        console.warn('[ChatManager] CoScientistSystem not available; Co-Scientist tools disabled');
-        return;
-      }
-
-      const coScientistSettings =
-        this.configManager && typeof this.configManager.get === 'function'
-          ? this.configManager.get('multiAgentSettings', {})
-          : {};
-      const coScientistOptions = {
-        app: this.app,
-        chatManager: this,
-      };
-      if (coScientistSettings?.coScientistPersistSessions === false) {
-        coScientistOptions.storage = null;
-      }
-
-      this.coScientistSystem = new SystemClass(coScientistOptions);
-
-      if (typeof window !== 'undefined') {
-        window.coScientistSystem = this.coScientistSystem;
-      }
-    } catch (error) {
-      console.warn('[ChatManager] Failed to initialize CoScientistSystem:', error);
-      this.coScientistSystem = null;
     }
   }
 
