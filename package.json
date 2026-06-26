@@ -1,7 +1,7 @@
 {
   "name": "codexomics",
   "version": "0.722.0",
-  "description": "An AI-powered bioinformatics analysis platform built with Electron",
+  "description": "An AI-native genome browser where conversational agents drive the visualization and run real bioinformatics analyses — BLAST, primer design, protein structures, and more — built with Electron.",
   "main": "src/main.js",
   "homepage": "https://github.com/Scilence2022/CodeXomics",
   "workspaces": [
@@ -295,8 +295,8 @@
       ],
       "icon": "build/icons/",
       "category": "Science",
-      "synopsis": "AI-powered genome analysis studio",
-      "description": "An intelligent and user-friendly genome analysis studio built with Electron, featuring AI-powered search and analysis capabilities. Supports FASTA, GenBank, GFF, BED, VCF, and SAM/BAM files for comprehensive genomic research."
+      "synopsis": "The AI-native genome browser",
+      "description": "An AI-native genome browser built with Electron, where conversational AI agents drive the visualization and run analyses. Supports FASTA, GenBank, GFF, BED, VCF, and SAM/BAM files for comprehensive genomic research."
     },
     "snap": {
       "publish": {

@@ -116,7 +116,7 @@
     "version": "版本",
     "copyright": "版权所有 © 2024 宋礼富",
     "license": "MIT 许可证",
-    "description": "AI 驱动的生物信息学分析平台"
+    "description": "AI 原生基因组浏览器"
   },
   "checkpoint": {
     "title": "检查点",

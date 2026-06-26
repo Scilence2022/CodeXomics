@@ -17,7 +17,7 @@
 
 ## Introduction
 
-CodeXomics is an AI-powered bioinformatics analysis platform that combines traditional genomic analysis tools with cutting-edge multi-agent AI systems. This guide will help you get the most out of CodeXomics.
+CodeXomics is an AI-native genome browser that combines traditional genomic analysis tools with a multi-agent AI assistant you can talk to — one that drives the browser and runs analyses for you. This guide will help you get the most out of CodeXomics.
 
 ### What Can CodeXomics Do?
 

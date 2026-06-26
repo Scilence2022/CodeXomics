@@ -1872,7 +1872,7 @@ function createMenu() {
                     type: 'info',
                     title: `About ${APP_NAME}`,
                     message: VERSION_INFO.appTitle,
-                    detail: 'A modern AI-powered genome analysis studio built with Electron',
+                    detail: 'An AI-native genome browser built with Electron',
                   });
                 },
               },

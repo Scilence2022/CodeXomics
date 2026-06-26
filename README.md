@@ -2,14 +2,16 @@
 
 # CodeXomics
 
-### AI-powered bioinformatics analysis platform
+### The AI-native genome browser
+
+_Talk to your genome — AI agents drive the view and run the analysis._
 
 [![Version](https://img.shields.io/badge/version-v0.722-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-41.7.1-47848f.svg)](https://www.electronjs.org/)
 
-CodeXomics is a cross-platform Electron desktop application for genome visualization, AI-assisted biological analysis, tool execution, plugin development, and Model Context Protocol (MCP) integration.
+CodeXomics is an AI-native genome browser — a cross-platform Electron desktop app where conversational AI agents drive the visualization and run real biological analyses, with built-in tool execution, plugin development, and Model Context Protocol (MCP) integration.
 
 Current source release: `0.722.0` (`v0.722` in the application UI). Published installers on GitHub Releases may lag behind the source release.
 

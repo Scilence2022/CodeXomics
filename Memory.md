@@ -4,7 +4,7 @@ This document preserves project context, architectural decisions, implementation
 
 ## 1. Project Context
 
-CodeXomics is an AI-powered bioinformatics desktop platform built with Electron, Node.js, vanilla JavaScript, vanilla CSS, D3, and specialized bioinformatics libraries. It combines genome visualization, AI-assisted tool execution, MCP integration, plugin infrastructure, and documentation through MkDocs.
+CodeXomics is an AI-native genome browser (a bioinformatics desktop application) built with Electron, Node.js, vanilla JavaScript, vanilla CSS, D3, and specialized bioinformatics libraries. It combines genome visualization, AI-assisted tool execution, MCP integration, plugin infrastructure, and documentation through MkDocs.
 
 Current version sources:
 
