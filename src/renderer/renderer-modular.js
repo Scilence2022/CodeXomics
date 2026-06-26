@@ -10054,71 +10054,96 @@ class GenomeBrowser {
   }
 
   /**
-   * Inject the codon/residue hover-highlight styles once.
+   * Inject (or refresh) the codon/residue hover-highlight styles.
+   *
+   * The codon is drawn as a single overlay <div> sized to span its three base
+   * cells — rather than styling each cell — because sequence-tracks.css gives
+   * every base cell (.base-a/.base-t/...) its own padding, background and
+   * border-radius, which would otherwise fragment the highlight into three
+   * boxes. The style is refreshed (not skipped) so a stale element can't persist.
    */
   ensureCodonHoverStyles() {
-    if (document.getElementById('codon-hover-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'codon-hover-styles';
+    let style = document.getElementById('codon-hover-styles');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'codon-hover-styles';
+      document.head.appendChild(style);
+    }
     style.textContent = `
-      /* The three bases of a codon render as one box: every cell paints the top
-         and bottom edges (plus a 2px fill bridge over the 1px letter-spacing gap),
-         while only the first/last cell paints the left/right edge and rounds its
-         outer corners. box-shadow + border-radius avoid any layout shift. */
-      .sequence-bases span.codon-hover-base {
-        background-color: rgba(41, 128, 185, 0.30) !important;
-        box-shadow:
-          inset 0 1px 0 0 rgba(41, 128, 185, 0.9),
-          inset 0 -1px 0 0 rgba(41, 128, 185, 0.9),
-          2px 0 0 0 rgba(41, 128, 185, 0.30);
-      }
-      .sequence-bases span.codon-hover-base-start {
-        border-top-left-radius: 3px;
-        border-bottom-left-radius: 3px;
-        box-shadow:
-          inset 0 1px 0 0 rgba(41, 128, 185, 0.9),
-          inset 0 -1px 0 0 rgba(41, 128, 185, 0.9),
-          inset 1px 0 0 0 rgba(41, 128, 185, 0.9),
-          2px 0 0 0 rgba(41, 128, 185, 0.30);
-      }
-      .sequence-bases span.codon-hover-base-end {
-        border-top-right-radius: 3px;
-        border-bottom-right-radius: 3px;
-        box-shadow:
-          inset 0 1px 0 0 rgba(41, 128, 185, 0.9),
-          inset 0 -1px 0 0 rgba(41, 128, 185, 0.9),
-          inset -1px 0 0 0 rgba(41, 128, 185, 0.9);
+      .codon-hover-overlay {
+        position: absolute;
+        pointer-events: none;
+        z-index: 3;
+        box-sizing: border-box;
+        border: 1.5px solid rgba(41, 128, 185, 0.95);
+        border-radius: 4px;
+        background: rgba(41, 128, 185, 0.18);
       }
       .sequence-aligned-marker.codon-hover-residue {
         outline: 2px solid rgba(41, 128, 185, 0.95);
         outline-offset: -1px;
         box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.35);
-        border-radius: 3px;
+        border-radius: 4px;
         font-weight: 700;
       }
     `;
-    document.head.appendChild(style);
   }
 
   /**
-   * Highlight one or more codons (on both strands) and their residue markers.
-   * `codons` is an array of groups, each a list of base display-positions in
-   * left-to-right order. The first/last base of each group is tagged so the CSS
-   * can draw the whole codon as a single box (border only on the outer edges).
+   * Highlight one or more codons and their residue markers. `codons` is an array
+   * of groups, each a list of base display-positions. For every group we draw one
+   * overlay box per strand row that holds those bases — so the main and
+   * complementary strands each get a single box, and a codon split across a line
+   * wrap gets one box per line.
    */
   applyCodonHover(container, codons, markers) {
     this.clearCodonHover(container);
+    const overlays = [];
+
     codons.forEach(codon => {
-      const lastIndex = codon.length - 1;
-      codon.forEach((displayPos, index) => {
+      // Group the codon's base cells by the strand row (.sequence-bases) they live in
+      const spansByRow = new Map();
+      codon.forEach(displayPos => {
         container.querySelectorAll(`.sequence-bases span[data-display-position="${displayPos}"]`).forEach(span => {
-          span.classList.add('codon-hover-base');
-          if (index === 0) span.classList.add('codon-hover-base-start');
-          if (index === lastIndex) span.classList.add('codon-hover-base-end');
+          const row = span.parentElement;
+          if (!row) return;
+          if (!spansByRow.has(row)) spansByRow.set(row, []);
+          spansByRow.get(row).push(span);
         });
       });
+
+      spansByRow.forEach((spans, row) => {
+        let left = Infinity;
+        let right = -Infinity;
+        let top = Infinity;
+        let bottom = -Infinity;
+        spans.forEach(span => {
+          left = Math.min(left, span.offsetLeft);
+          right = Math.max(right, span.offsetLeft + span.offsetWidth);
+          top = Math.min(top, span.offsetTop);
+          bottom = Math.max(bottom, span.offsetTop + span.offsetHeight);
+        });
+        if (!Number.isFinite(left)) return;
+
+        // The overlay is absolutely positioned within the row, so the row needs
+        // to be a positioning context.
+        if (window.getComputedStyle(row).position === 'static') {
+          row.style.position = 'relative';
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'codon-hover-overlay';
+        overlay.style.left = `${left}px`;
+        overlay.style.top = `${top - 1}px`;
+        overlay.style.width = `${right - left}px`;
+        overlay.style.height = `${bottom - top + 2}px`;
+        row.appendChild(overlay);
+        overlays.push(overlay);
+      });
     });
+
     markers.forEach(marker => marker.classList.add('codon-hover-residue'));
+    this._codonHoverOverlays = overlays;
     this._codonHoverActive = true;
   }
 
@@ -10127,11 +10152,15 @@ class GenomeBrowser {
    */
   clearCodonHover(container) {
     const root = container || document.getElementById('sequenceContent');
-    if (!root || !this._codonHoverActive) return;
-    root
-      .querySelectorAll('.codon-hover-base')
-      .forEach(el => el.classList.remove('codon-hover-base', 'codon-hover-base-start', 'codon-hover-base-end'));
-    root.querySelectorAll('.codon-hover-residue').forEach(el => el.classList.remove('codon-hover-residue'));
+    if (this._codonHoverOverlays) {
+      this._codonHoverOverlays.forEach(overlay => overlay.remove());
+    }
+    this._codonHoverOverlays = [];
+    if (root) {
+      // Defensive: drop any overlays/marks left behind by an earlier render
+      root.querySelectorAll('.codon-hover-overlay').forEach(overlay => overlay.remove());
+      root.querySelectorAll('.codon-hover-residue').forEach(el => el.classList.remove('codon-hover-residue'));
+    }
     this._codonHoverActive = false;
   }
 
