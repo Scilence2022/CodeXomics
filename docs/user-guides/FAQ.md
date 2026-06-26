@@ -8,7 +8,7 @@ CodeXomics is an AI-native genome browser that provides comprehensive tools for 
 
 ### What's new in v0.722?
 
-Version `0.722.0` is the current source release. It consolidates the platform architecture and adds production-readiness work around:
+Version `v0.722` consolidates the platform architecture and adds production-readiness work around:
 
 - **Dynamic Tool Registry** with 185 YAML tool schemas across 19 active categories
 - **Multi-Agent AI System** with specialized agents for navigation, analysis, data, plugins, external tools, and research
@@ -424,4 +424,4 @@ Absolutely:
 - Browse the **[Documentation](https://github.com/Scilence2022/CodeXomics#readme)** for comprehensive information
 - Contact **support** for personalized assistance
 
-_This FAQ covers CodeXomics 0.722.0 (displayed as v0.722). For the latest information, check the project repository._
+_This FAQ covers CodeXomics v0.722. For the latest information, see the [project repository](https://github.com/Scilence2022/CodeXomics)._

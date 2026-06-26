@@ -1,6 +1,6 @@
 # Getting Started With CodeXomics
 
-This guide gets CodeXomics `0.722.0` running, connected to an AI provider, and ready to inspect genomic data. The application displays this release as `v0.722`.
+This guide gets CodeXomics `0.722.0` running, connected to an AI provider, and ready to inspect genomic data.
 
 ## Requirements
 
@@ -25,7 +25,7 @@ Building from source requires Node.js 20 or 22 and npm 10 or newer. The packaged
 
 Use the [GitHub Releases page](https://github.com/Scilence2022/CodeXomics/releases) and choose the build for your operating system.
 
-Published installers may lag behind the current source release. Check the release title and artifact version before downloading.
+Releases are published periodically, so the newest changes may only be available when you build from source. Check the version shown on a release before downloading.
 
 ### Build From Source
 

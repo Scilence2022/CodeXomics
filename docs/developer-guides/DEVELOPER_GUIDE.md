@@ -9,7 +9,7 @@ This guide summarizes the current CodeXomics development workflow and architectu
 - Git.
 - Platform build tools required by Electron Builder for your operating system.
 
-The `0.722.0` source tree pins Electron `41.7.1` for compatibility with the supported Node.js CI matrix.
+CodeXomics `0.722.0` uses Electron `41.7.1` for compatibility with the supported Node.js CI matrix.
 
 ## Setup
 

@@ -13,7 +13,7 @@ _Talk to your genome — AI agents drive the view and run the analysis._
 
 CodeXomics is an AI-native genome browser — a cross-platform Electron desktop app where conversational AI agents drive the visualization and run real biological analyses, with built-in tool execution, plugin development, and Model Context Protocol (MCP) integration.
 
-Current source release: `0.722.0` (`v0.722` in the application UI). Published installers on GitHub Releases may lag behind the source release.
+Current source release: `0.722.0` (shown as `v0.722` in the app). Build from source to get changes not yet in the published installers.
 
 [Documentation](https://scilence2022.github.io/CodeXomics/) •
 [Getting Started](docs/user-guides/GETTING_STARTED.md) •
