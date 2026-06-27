@@ -16,9 +16,11 @@ class NavigationManager {
       chromosome: null,
       startX: 0,
       startPosition: 0,
+      startRange: 0,
       lastUpdateX: 0,
       cumulativeVisualDeltaX: 0,
       lastCalculatedStart: 0, // Store the last calculated position
+      previewPosition: null,
       canvasTransformsApplied: false, // Track if Canvas transforms were applied during this drag
     };
 
@@ -31,6 +33,16 @@ class NavigationManager {
 
     // Global dragging setting - when enabled, all tracks update during drag
     this.globalDraggingEnabled = false;
+    this.dragUpdateMode = 'deferred';
+    this.updateGeneFeaturesDuringDrag = false;
+
+    this.dragRenderThrottle = {
+      lastUpdateTime: 0,
+      updateInterval: 100,
+      pendingUpdate: false,
+      pendingChromosome: null,
+      pendingSequence: null,
+    };
 
     // Circular browsing mode - when enabled, navigation wraps around sequence boundaries
     this.circularMode = false;
@@ -47,6 +59,7 @@ class NavigationManager {
 
     // Initialize wheel zoom settings from GeneralSettingsManager
     this.initializeWheelZoomSettings();
+    this.initializeDragNavigationSettings();
 
     // Initialize aligned reads redraw timeout
     this.alignedReadsRedrawTimeout = null;
@@ -673,6 +686,20 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
           maxRange: settings.wheelZoomMaxRange,
         });
         console.log('🔍 [WHEEL-ZOOM] Settings initialized from GeneralSettingsManager');
+      }
+    }, 100);
+  }
+
+  /**
+   * Initialize drag navigation settings from GeneralSettingsManager
+   */
+  initializeDragNavigationSettings() {
+    setTimeout(() => {
+      if (window.generalSettingsManager && window.generalSettingsManager.settings) {
+        const settings = window.generalSettingsManager.settings;
+        this.setDragUpdateMode(settings.dragUpdateMode || 'deferred');
+        this.setUpdateGeneFeaturesDuringDrag(settings.updateGeneFeaturesDuringDrag === true);
+        console.log('🔧 [DRAG-NAV] Settings initialized from GeneralSettingsManager');
       }
     }, 100);
   }
@@ -1327,7 +1354,7 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     // Don't update if a splitter is being resized
     if (document.body.hasAttribute('data-splitter-resizing')) return;
 
-    const { element, startX, chromosome, startPosition } = this.dragState;
+    const { element, startX, chromosome, startPosition, startRange } = this.dragState;
     const deltaX = e.clientX - startX;
 
     // Check if we've moved enough to consider this a drag
@@ -1340,7 +1367,7 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
 
     this.dragState.lastUpdateX = e.clientX;
 
-    const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
+    const currentRange = startRange || this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
     const elementWidth = this.getEffectiveWidth(element);
     const sequence = this.genomeBrowser.currentSequence[chromosome];
 
@@ -1367,6 +1394,11 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
 
     // Store the calculated position
     this.dragState.lastCalculatedStart = newStart;
+    this.dragState.previewPosition = { start: newStart, end: newEnd };
+
+    const visualDeltaX = this.circularMode
+      ? (positionChange * elementWidth) / currentRange
+      : ((startPosition - newStart) * elementWidth) / currentRange;
 
     // Debug output for move calculation
     console.log('🔧 [DRAG-MOVE] Movement calculation:');
@@ -1380,16 +1412,25 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     console.log('  - New end:', newEnd, 'bp');
     console.log('  - Movement ratio:', (deltaX / elementWidth).toFixed(4), 'px/px');
     console.log('  - Genome movement:', newStart - startPosition, 'bp');
+    console.log('  - Visual deltaX:', visualDeltaX, 'px');
 
     // Update the visual representation
     this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
 
-    if (this.globalDraggingEnabled) {
-      // Update all tracks during drag when global dragging is enabled
-      this.performGlobalDragUpdate(deltaX, chromosome);
+    if (this.dragUpdateMode === 'realtime' && this.updateGeneFeaturesDuringDrag) {
+      this.scheduleDragRealtimeRender(chromosome, sequence);
     } else {
-      // Only update the current track (default behavior)
-      this.performVisualDragUpdate(deltaX, element);
+      if (this.globalDraggingEnabled) {
+        // Update all tracks during drag when global dragging is enabled
+        this.performGlobalDragUpdate(visualDeltaX, chromosome);
+      } else {
+        // Only update the current track (default behavior)
+        this.performVisualDragUpdate(visualDeltaX, element);
+      }
+
+      if (this.dragUpdateMode === 'realtime') {
+        this.scheduleDragRealtimeRender(chromosome, sequence);
+      }
     }
 
     if (this.genomeBrowser.genomeNavigationBar) {
@@ -1406,7 +1447,7 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
   handleDocumentMouseUp(e) {
     if (!this.dragState.isDragging) return;
 
-    const { element, hasDragged, chromosome, startPosition, startX } = this.dragState;
+    const { element, hasDragged, chromosome, startPosition, startX, startRange } = this.dragState;
 
     console.log('🔧 [DRAG-END] === DRAG ENDING ===');
     console.log('🔧 [DRAG-END] hasDragged:', hasDragged);
@@ -1434,6 +1475,7 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
       clearTimeout(this.globalDragUpdateTimeout);
       this.globalDragUpdateTimeout = null;
     }
+    this.flushPendingDragRealtimeRender();
 
     // Dispatch custom drag end event immediately after resetting state
     document.dispatchEvent(
@@ -1454,6 +1496,7 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
 
     if (!hasDragged) {
       this.dragState.hasDragged = false;
+      this.dragState.previewPosition = null;
       console.log('🔧 [DRAG-END] No significant drag detected, no position change');
       return;
     }
@@ -1462,7 +1505,7 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     // Use the last calculated position as the final position
     const finalNewStart = this.dragState.lastCalculatedStart;
     const sequence = this.genomeBrowser.currentSequence[chromosome];
-    const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
+    const currentRange = startRange || this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
     const finalNewEnd = finalNewStart + currentRange;
 
     // Debug output for final position
@@ -1516,9 +1559,61 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
 
     // Hide drag position feedback with delay
     setTimeout(() => this.hideDragPositionFeedback(), 1000);
+    this.dragState.previewPosition = null;
 
     console.log('🔧 [DRAG-END] Re-render completed');
     console.log('🔧 [DRAG-END] Final position after render:', this.genomeBrowser.currentPosition);
+  }
+
+  scheduleDragRealtimeRender(chromosome, sequence) {
+    const now = performance.now();
+    this.dragRenderThrottle.pendingChromosome = chromosome;
+    this.dragRenderThrottle.pendingSequence = sequence;
+
+    if (now - this.dragRenderThrottle.lastUpdateTime >= this.dragRenderThrottle.updateInterval) {
+      this.renderDragRealtimeUpdate(chromosome, sequence);
+      return;
+    }
+
+    if (this.dragRenderThrottle.pendingUpdate) return;
+
+    this.dragRenderThrottle.pendingUpdate = true;
+    const delay = Math.max(0, this.dragRenderThrottle.updateInterval - (now - this.dragRenderThrottle.lastUpdateTime));
+
+    setTimeout(() => {
+      this.dragRenderThrottle.pendingUpdate = false;
+      if (!this.dragState.isDragging) return;
+
+      const pendingChromosome = this.dragRenderThrottle.pendingChromosome;
+      const pendingSequence = this.dragRenderThrottle.pendingSequence;
+      if (pendingChromosome && pendingSequence) {
+        this.renderDragRealtimeUpdate(pendingChromosome, pendingSequence);
+      }
+    }, delay);
+  }
+
+  flushPendingDragRealtimeRender() {
+    this.dragRenderThrottle.pendingUpdate = false;
+    this.dragRenderThrottle.pendingChromosome = null;
+    this.dragRenderThrottle.pendingSequence = null;
+  }
+
+  renderDragRealtimeUpdate(chromosome, sequence) {
+    this.dragRenderThrottle.lastUpdateTime = performance.now();
+
+    if (!chromosome || !sequence) return;
+
+    try {
+      this.genomeBrowser.updateStatistics(chromosome, sequence);
+
+      if (this.updateGeneFeaturesDuringDrag) {
+        this.genomeBrowser.displayGenomeView(chromosome, sequence);
+      } else if (this.genomeBrowser.sequenceUtils && this.genomeBrowser.visibleTracks?.has('sequence')) {
+        this.genomeBrowser.sequenceUtils.displayEnhancedSequence(chromosome, sequence);
+      }
+    } catch (error) {
+      console.warn('🔧 [DRAG-NAV] Failed to render real-time drag update:', error);
+    }
   }
 
   // Show real-time position feedback during drag
@@ -1545,13 +1640,14 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
       document.body.appendChild(tooltip);
     }
 
-    // Format position with commas for readability
-    const formatPosition = pos => (pos + 1).toLocaleString();
+    // Internal positions use 0-based start and exclusive end; display as 1-based inclusive.
+    const formatStart = pos => (pos + 1).toLocaleString();
+    const formatEnd = pos => pos.toLocaleString();
     const range = end - start;
 
     tooltip.innerHTML = `
             <div><strong>${chromosome}</strong></div>
-            <div>${formatPosition(start)} - ${formatPosition(end)}</div>
+            <div>${formatStart(start)} - ${formatEnd(end)}</div>
             <div>Range: ${range.toLocaleString()} bp</div>
         `;
 
@@ -1628,7 +1724,9 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
         chromosome: chromosome,
         startX: e.clientX,
         startPosition: this.genomeBrowser.currentPosition.start,
+        startRange: this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start,
         lastCalculatedStart: this.genomeBrowser.currentPosition.start,
+        previewPosition: { ...this.genomeBrowser.currentPosition },
         // No Canvas-specific tracking needed with unified container approach
       });
 
@@ -2338,6 +2436,18 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
   setGlobalDragging(enabled) {
     this.globalDraggingEnabled = enabled;
     console.log(`🎯 NavigationManager: Global dragging ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  setDragUpdateMode(mode) {
+    this.dragUpdateMode = mode === 'realtime' ? 'realtime' : 'deferred';
+    console.log(`🔧 [DRAG-NAV] Drag update mode set to: ${this.dragUpdateMode}`);
+  }
+
+  setUpdateGeneFeaturesDuringDrag(enabled) {
+    this.updateGeneFeaturesDuringDrag = enabled === true;
+    console.log(
+      `🔧 [DRAG-NAV] Gene features during drag ${this.updateGeneFeaturesDuringDrag ? 'enabled' : 'disabled'}`
+    );
   }
 
   /**

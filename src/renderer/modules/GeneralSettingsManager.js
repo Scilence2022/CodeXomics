@@ -30,6 +30,8 @@ class GeneralSettingsManager {
       enableFileCache: true,
       cacheSize: 500,
       enableGlobalDragging: true, // Enable dynamic viewport updates for all tracks during dragging
+      dragUpdateMode: 'deferred',
+      updateGeneFeaturesDuringDrag: false,
 
       // Wheel Zoom
       enableWheelZoom: true,
@@ -350,6 +352,14 @@ class GeneralSettingsManager {
       });
     }
 
+    const dragUpdateModeSelect = document.getElementById('dragUpdateMode');
+    if (dragUpdateModeSelect) {
+      dragUpdateModeSelect.addEventListener('change', e => {
+        this.updateSetting('dragUpdateMode', e.target.value);
+        this.applyFeatureSetting('dragUpdateMode', e.target.value);
+      });
+    }
+
     // Wheel zoom settings
     const wheelZoomSensitivityInput = document.getElementById('wheelZoomSensitivity');
     if (wheelZoomSensitivityInput) {
@@ -446,6 +456,7 @@ class GeneralSettingsManager {
       'enableAnimations',
       'enableFileCache',
       'enableGlobalDragging',
+      'updateGeneFeaturesDuringDrag',
       'enableWheelZoom',
       'wheelZoomToCursor',
       'enableLLMIntegration',
@@ -724,6 +735,9 @@ class GeneralSettingsManager {
     const cacheSizeInput = document.getElementById('cacheSize');
     if (cacheSizeInput) cacheSizeInput.value = this.settings.cacheSize;
 
+    const dragUpdateModeSelect = document.getElementById('dragUpdateMode');
+    if (dragUpdateModeSelect) dragUpdateModeSelect.value = this.settings.dragUpdateMode || 'deferred';
+
     // Wheel zoom settings
     const wheelZoomSensitivityInput = document.getElementById('wheelZoomSensitivity');
     if (wheelZoomSensitivityInput) {
@@ -753,6 +767,7 @@ class GeneralSettingsManager {
       'enableAnimations',
       'enableFileCache',
       'enableGlobalDragging',
+      'updateGeneFeaturesDuringDrag',
       'enableWheelZoom',
       'wheelZoomToCursor',
       'enableLLMIntegration',
@@ -883,6 +898,8 @@ class GeneralSettingsManager {
 
     // Apply feature settings
     this.applyFeatureSetting('enableGlobalDragging', this.settings.enableGlobalDragging);
+    this.applyFeatureSetting('dragUpdateMode', this.settings.dragUpdateMode);
+    this.applyFeatureSetting('updateGeneFeaturesDuringDrag', this.settings.updateGeneFeaturesDuringDrag);
   }
 
   /**
@@ -1085,6 +1102,16 @@ class GeneralSettingsManager {
             }
             console.log(`🎯 Updated individual track settings to inherit global dragging: ${enabled}`);
           }
+        }
+        break;
+      case 'dragUpdateMode':
+        if (window.genomeBrowser && window.genomeBrowser.navigationManager) {
+          window.genomeBrowser.navigationManager.setDragUpdateMode(enabled);
+        }
+        break;
+      case 'updateGeneFeaturesDuringDrag':
+        if (window.genomeBrowser && window.genomeBrowser.navigationManager) {
+          window.genomeBrowser.navigationManager.setUpdateGeneFeaturesDuringDrag(enabled);
         }
         break;
       case 'enableWheelZoom':

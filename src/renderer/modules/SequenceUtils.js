@@ -72,6 +72,7 @@ class SequenceUtils {
       pendingRender: null,
       renderThrottle: 100, // ms
       lastRenderTime: 0,
+      source: null,
     };
 
     // Listen for drag events to optimize rendering
@@ -92,11 +93,13 @@ class SequenceUtils {
     // Listen for standard drag events
     document.addEventListener('dragstart', () => {
       this.dragOptimization.isDragging = true;
+      this.dragOptimization.source = 'native';
       console.log('🔧 [SequenceUtils] Drag started - enabling render optimization');
     });
 
     document.addEventListener('dragend', () => {
       this.dragOptimization.isDragging = false;
+      this.dragOptimization.source = null;
       console.log('🔧 [SequenceUtils] Drag ended - disabling render optimization');
 
       // Execute any pending render
@@ -106,12 +109,14 @@ class SequenceUtils {
     // Listen for custom drag events from NavigationManager (more reliable for genome view dragging)
     document.addEventListener('genomeViewDragStart', () => {
       this.dragOptimization.isDragging = true;
+      this.dragOptimization.source = 'genomeView';
       this.dragOptimization.lastRenderTime = Date.now();
       console.log('🔧 [SequenceUtils] Genome view drag started');
     });
 
     document.addEventListener('genomeViewDragEnd', () => {
       this.dragOptimization.isDragging = false;
+      this.dragOptimization.source = null;
       console.log('🔧 [SequenceUtils] Genome view drag ended');
 
       // Execute any pending render with retry mechanism
@@ -123,6 +128,7 @@ class SequenceUtils {
       if (this.dragOptimization.isDragging) {
         console.log('🔧 [SequenceUtils] Force ending drag on mouseup (safety net)');
         this.dragOptimization.isDragging = false;
+        this.dragOptimization.source = null;
         this.executePendingRender('mouseup-fallback');
       }
     });
@@ -135,8 +141,14 @@ class SequenceUtils {
 
         // If dragging for more than 5 seconds, force reset with fallback render
         if (timeSinceDrag > 5000) {
+          if (this.isDeferredGenomeDragActive()) {
+            this.dragOptimization.lastRenderTime = now;
+            return;
+          }
+
           console.warn('⚠️ [SequenceUtils] Force resetting stuck drag state after 5s timeout');
           this.dragOptimization.isDragging = false;
+          this.dragOptimization.source = null;
           this.executePendingRender('timeout-reset');
 
           // Additional fallback if pending render fails
@@ -210,6 +222,7 @@ class SequenceUtils {
    */
   shouldThrottleRender() {
     if (!this.dragOptimization.isDragging) return false;
+    if (this.isRealtimeGenomeDragActive()) return false;
 
     const now = Date.now();
     const timeSinceLastRender = now - this.dragOptimization.lastRenderTime;
@@ -230,6 +243,24 @@ class SequenceUtils {
     this.dragOptimization.lastRenderTime = Date.now();
     renderFunction();
     return true; // Render was executed
+  }
+
+  isDeferredGenomeDragActive() {
+    const navigationManager = this.genomeBrowser?.navigationManager;
+    return (
+      this.dragOptimization.source === 'genomeView' &&
+      navigationManager?.dragState?.isDragging === true &&
+      navigationManager?.dragUpdateMode !== 'realtime'
+    );
+  }
+
+  isRealtimeGenomeDragActive() {
+    const navigationManager = this.genomeBrowser?.navigationManager;
+    return (
+      this.dragOptimization.source === 'genomeView' &&
+      navigationManager?.dragState?.isDragging === true &&
+      navigationManager?.dragUpdateMode === 'realtime'
+    );
   }
 
   /**
@@ -1754,7 +1785,7 @@ class SequenceUtils {
     renderContext = null
   ) {
     // Skip rendering if we're dragging (optimization)
-    if (this.dragOptimization.isDragging) {
+    if (this.dragOptimization.isDragging && !this.isRealtimeGenomeDragActive()) {
       console.log('🔧 [SequenceUtils] Skipping batch render during drag');
       return;
     }
@@ -1784,7 +1815,7 @@ class SequenceUtils {
       // Use requestAnimationFrame to avoid blocking the UI
       requestAnimationFrame(() => {
         // Check again if we're still not dragging before continuing
-        if (!this.dragOptimization.isDragging) {
+        if (!this.dragOptimization.isDragging || this.isRealtimeGenomeDragActive()) {
           this.renderSequenceLinesBatch(
             container,
             linesToRender,

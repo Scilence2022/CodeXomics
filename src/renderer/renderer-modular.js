@@ -473,9 +473,16 @@ class GenomeBrowser {
         await this.generalSettingsManager.init();
         console.log('✅ GeneralSettingsManager initialized successfully');
 
-        // Initialize global dragging setting after settings are loaded
-        this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging !== false;
+        // Initialize drag navigation settings after settings are loaded
+        const generalSettings = this.generalSettingsManager.getSettings();
+        this.globalDraggingEnabled = generalSettings.enableGlobalDragging !== false;
         this.setGlobalDragging(this.globalDraggingEnabled);
+        if (this.navigationManager) {
+          this.navigationManager.setDragUpdateMode(generalSettings.dragUpdateMode || 'deferred');
+          this.navigationManager.setUpdateGeneFeaturesDuringDrag(
+            generalSettings.updateGeneFeaturesDuringDrag === true
+          );
+        }
       };
 
       initSequence().catch(error => {
