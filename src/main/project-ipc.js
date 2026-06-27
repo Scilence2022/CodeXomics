@@ -330,12 +330,12 @@ function registerProjectIpcHandlers(deps) {
         mustExist: true,
       });
 
-      // 检查文件夹是否存在
+      // Check whether the folder exists
       if (!fs.existsSync(safeFolderPath)) {
         return { success: false, error: 'Folder does not exist' };
       }
 
-      // 在资源管理器中打开文件夹
+      // Open the folder in the file explorer
       await shell.openPath(safeFolderPath);
       return { success: true, message: 'Folder opened in explorer' };
     } catch (error) {
@@ -357,14 +357,14 @@ function registerProjectIpcHandlers(deps) {
         return { success: false, error: 'Source file does not exist' };
       }
 
-      // 修正：构建目标路径，不使用额外的data目录
+      // Fix: build the target path without an extra data directory
       const documentsPath = app.getPath('documents');
       const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
       const targetDir = assertAllowedFileAccess(app, path.join(projectsDir, safeProjectName, safeTargetFolderPath), {
         operation: 'move project file destination',
       });
 
-      // 确保目标目录存在
+      // Ensure the target directory exists
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
       }
@@ -372,7 +372,7 @@ function registerProjectIpcHandlers(deps) {
       const fileName = path.basename(safeCurrentPath);
       const targetPath = path.join(targetDir, fileName);
 
-      // 如果目标文件已存在，生成新的文件名
+      // If the target file already exists, generate a new file name
       let finalTargetPath = targetPath;
       let counter = 1;
       while (fs.existsSync(finalTargetPath)) {
@@ -382,7 +382,7 @@ function registerProjectIpcHandlers(deps) {
         counter++;
       }
 
-      // 移动文件
+      // Move the file
       fs.renameSync(safeCurrentPath, finalTargetPath);
 
       console.log(`✅ File moved from ${safeCurrentPath} to ${finalTargetPath}`);
@@ -406,17 +406,17 @@ function registerProjectIpcHandlers(deps) {
         return { success: false, error: 'Source file does not exist' };
       }
 
-      // 获取文件目录和构建新的文件路径
+      // Get the file directory and build the new file path
       const fileDir = path.dirname(safeCurrentPath);
       const newFilePath = path.join(fileDir, safeNewFileName);
 
-      // 检查新文件名是否已存在
+      // Check whether the new file name already exists
       if (fs.existsSync(newFilePath)) {
         return { success: false, error: 'A file with this name already exists' };
       }
 
-      // 验证新文件名是否合法
-      // 重命名文件
+      // Validate that the new file name is legal
+      // Rename the file
       fs.renameSync(safeCurrentPath, newFilePath);
 
       console.log(`✅ File renamed from ${safeCurrentPath} to ${newFilePath}`);
@@ -438,7 +438,7 @@ function registerProjectIpcHandlers(deps) {
   // Handle project file locking
   ipcMain.handle('lockProjectFile', async (event, filePath) => {
     try {
-      // 检查文件是否已被锁定
+      // Check whether the file is already locked
       if (projectFileLocks.has(filePath)) {
         return {
           success: false,
@@ -446,15 +446,15 @@ function registerProjectIpcHandlers(deps) {
         };
       }
 
-      // 尝试以独占方式打开文件进行测试
+      // Try opening the file exclusively as a test
       try {
         const lockId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        // 使用fs.open检查文件是否可以独占访问
+        // Use fs.open to check whether the file can be accessed exclusively
         const fd = fs.openSync(filePath, 'r+');
         fs.closeSync(fd);
 
-        // 创建锁定记录
+        // Create the lock record
         projectFileLocks.set(filePath, {
           lockId: lockId,
           lockedAt: new Date().toISOString(),
@@ -488,7 +488,7 @@ function registerProjectIpcHandlers(deps) {
 
       if (!lockInfo) {
         console.warn(`No lock found for file: ${filePath}`);
-        return { success: true }; // 文件未锁定，视为成功
+        return { success: true }; // file not locked, treat as success
       }
 
       if (lockInfo.lockId !== lockId) {
@@ -499,7 +499,7 @@ function registerProjectIpcHandlers(deps) {
         };
       }
 
-      // 移除锁定记录
+      // Remove the lock record
       projectFileLocks.delete(filePath);
       console.log(`🔓 Project file unlocked: ${filePath} (ID: ${lockId})`);
 
@@ -513,7 +513,7 @@ function registerProjectIpcHandlers(deps) {
     }
   });
 
-  // 应用关闭时清理所有锁定
+  // Clean up all locks when the app closes
   app.on('before-quit', () => {
     console.log('🔓 Cleaning up all file locks before quit...');
     projectFileLocks.clear();
@@ -544,12 +544,12 @@ function registerProjectIpcHandlers(deps) {
         operation: 'create project folder',
       });
 
-      // 确保项目目录存在
+      // Ensure the project directory exists
       if (!fs.existsSync(projectDir)) {
         fs.mkdirSync(projectDir, { recursive: true });
       }
 
-      // 创建新文件夹
+      // Create a new folder
       if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
         console.log(`✅ Created project folder: ${folderPath}`);
@@ -957,10 +957,10 @@ function registerProjectIpcHandlers(deps) {
     try {
       const { dialog } = require('electron');
 
-      // 新结构：默认保存为 Project.GAI
+      // New structure: save as Project.GAI by default
       let defaultFileName = defaultPath;
       if (defaultFileName.endsWith('.prj.GAI') || defaultFileName.endsWith('.xml')) {
-        // 如果是旧格式，转换为新格式
+        // If it's the old format, convert it to the new format
         const dir = path.dirname(defaultFileName);
         defaultFileName = path.join(dir, 'Project.GAI');
       } else if (!defaultFileName.endsWith('Project.GAI')) {
@@ -981,7 +981,7 @@ function registerProjectIpcHandlers(deps) {
       if (!result.canceled && result.filePath) {
         rememberApprovedDialogPaths(result);
         const safeFilePath = assertAllowedFileAccess(app, result.filePath, { operation: 'save project file' });
-        // 确保父目录存在
+        // Ensure the parent directory exists
         const parentDir = path.dirname(safeFilePath);
         if (!fs.existsSync(parentDir)) {
           fs.mkdirSync(parentDir, { recursive: true });
@@ -1002,19 +1002,19 @@ function registerProjectIpcHandlers(deps) {
   // Handle saving project file directly without dialog (for auto-save)
   ipcMain.handle('saveProjectFileDirect', async (event, filePath, content) => {
     try {
-      // 确保文件路径存在
+      // Ensure the file path exists
       if (!filePath) {
         throw new Error('File path is required for direct save');
       }
       const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'save project file directly' });
 
-      // 确保父目录存在
+      // Ensure the parent directory exists
       const parentDir = path.dirname(safeFilePath);
       if (!fs.existsSync(parentDir)) {
         fs.mkdirSync(parentDir, { recursive: true });
       }
 
-      // 直接写入文件，不显示对话框
+      // Write the file directly, without showing a dialog
       fs.writeFileSync(safeFilePath, content, 'utf8');
       console.log(`✅ Project saved directly: ${safeFilePath}`);
       return { success: true, filePath: safeFilePath };
@@ -1190,7 +1190,7 @@ function registerProjectIpcHandlers(deps) {
       const safeProjectName = assertSafeProjectSegment(projectName, 'name');
       const safeFolderPath = assertSafeProjectRelativePath(folderPath, 'folder path');
 
-      // 修正：直接使用项目目录结构，不要额外的data子目录
+      // Fix: use the project directory structure directly, no extra data subdirectory
       const documentsPath = app.getPath('documents');
       const dirResult = await ipcMain.invoke('getProjectDirectoryName');
       const projectsDir = path.join(documentsPath, dirResult.directoryName);
@@ -1201,7 +1201,7 @@ function registerProjectIpcHandlers(deps) {
         operation: 'copy file target folder',
       });
 
-      // 确保目录存在
+      // Ensure the directory exists
       if (!fs.existsSync(projectsDir)) {
         fs.mkdirSync(projectsDir, { recursive: true });
       }
@@ -1212,16 +1212,16 @@ function registerProjectIpcHandlers(deps) {
         fs.mkdirSync(targetFolderDir, { recursive: true });
       }
 
-      // 获取源文件名
+      // Get the source file name
       const fileName = path.basename(safeSourcePath);
       const targetPath = path.join(targetFolderDir, fileName);
 
-      // 检查源文件是否存在
+      // Check whether the source file exists
       if (!fs.existsSync(safeSourcePath)) {
         throw new Error(`Source file does not exist: ${safeSourcePath}`);
       }
 
-      // 复制文件
+      // Copy the file
       fs.copyFileSync(safeSourcePath, targetPath);
 
       console.log(`✅ File copied from ${safeSourcePath} to ${targetPath}`);
@@ -1248,11 +1248,11 @@ function registerProjectIpcHandlers(deps) {
       const safeProjectName = assertSafeProjectSegment(projectName, 'name');
       console.log(`🏗️ Creating project structure: "${safeProjectName}" at "${safeLocation}"`);
 
-      // 新的目录结构：所有文件都在项目目录内
+      // New directory structure: all files live inside the project directory
       const projectDir = path.join(safeLocation, safeProjectName);
-      const projectFilePath = path.join(projectDir, 'Project.GAI'); // 固定文件名
+      const projectFilePath = path.join(projectDir, 'Project.GAI'); // fixed file name
 
-      // 检查项目目录是否已存在
+      // Check whether the project directory already exists
       if (fs.existsSync(projectDir)) {
         return {
           success: false,
@@ -1260,11 +1260,11 @@ function registerProjectIpcHandlers(deps) {
         };
       }
 
-      // 创建项目目录
+      // Create the project directory
       console.log(`📁 Creating project directory: ${projectDir}`);
       fs.mkdirSync(projectDir, { recursive: true });
 
-      // 创建子文件夹结构
+      // Create the subfolder structure
       const subFolders = ['genomes', 'annotations', 'variants', 'reads', 'analysis'];
       console.log(`📂 Creating subdirectories: ${subFolders.join(', ')}`);
 
@@ -1282,7 +1282,7 @@ function registerProjectIpcHandlers(deps) {
       return {
         success: true,
         projectFilePath: projectFilePath,
-        dataFolderPath: projectDir, // 项目目录即为数据目录
+        dataFolderPath: projectDir, // the project directory is the data directory
         projectDir: projectDir,
       };
     } catch (error) {
@@ -1300,17 +1300,17 @@ function registerProjectIpcHandlers(deps) {
       const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'save project to specific file' });
       console.log(`💾 Saving project file to: ${safeFilePath}`);
 
-      // 确保目录存在
+      // Ensure the directory exists
       const dirPath = path.dirname(safeFilePath);
       if (!fs.existsSync(dirPath)) {
         console.log(`📁 Creating directory: ${dirPath}`);
         fs.mkdirSync(dirPath, { recursive: true });
       }
 
-      // 写入文件
+      // Write the file
       fs.writeFileSync(safeFilePath, content, 'utf8');
 
-      // 验证文件是否创建成功
+      // Verify that the file was created successfully
       if (fs.existsSync(safeFilePath)) {
         const stats = fs.statSync(safeFilePath);
         console.log(`✅ Project file saved successfully: ${safeFilePath}`);
@@ -1407,11 +1407,11 @@ function registerProjectIpcHandlers(deps) {
         operation: 'check project exists',
       });
       const safeProjectName = assertSafeProjectSegment(projectName, 'name');
-      // 新结构：检查项目目录内的 Project.GAI 文件
+      // New structure: check the Project.GAI file inside the project directory
       const projectDir = path.join(safeDirectory, safeProjectName);
       const newProjectFilePath = path.join(projectDir, 'Project.GAI');
 
-      // 向后兼容：也检查旧结构
+      // Backward compatibility: also check the old structure
       const oldProjectFilePath = path.join(safeDirectory, `${safeProjectName}.prj.GAI`);
 
       const newFileExists = fs.existsSync(newProjectFilePath);
@@ -1450,22 +1450,22 @@ function registerProjectIpcHandlers(deps) {
         operation: 'copy project target directory',
       });
       const safeProjectName = assertSafeProjectSegment(projectName, 'name');
-      // 新结构：目标项目目录和文件
+      // New structure: target project directory and file
       const targetProjectDir = path.join(safeTargetDirectory, safeProjectName);
       const targetProjectFile = path.join(targetProjectDir, 'Project.GAI');
 
-      // 创建目标项目目录
+      // Create the target project directory
       if (!fs.existsSync(targetProjectDir)) {
         fs.mkdirSync(targetProjectDir, { recursive: true });
       }
 
-      // 复制项目文件到新位置
+      // Copy the project file to the new location
       if (fs.existsSync(safeSourceProjectFile)) {
         fs.copyFileSync(safeSourceProjectFile, targetProjectFile);
         console.log(`✅ Copied project file: ${safeSourceProjectFile} → ${targetProjectFile}`);
       }
 
-      // 复制数据文件夹内容（如果源数据文件夹存在且不同于目标目录）
+      // Copy the data-folder contents (if the source data folder exists and differs from the target directory)
       if (fs.existsSync(safeSourceDataFolder) && safeSourceDataFolder !== targetProjectDir) {
         await copyDirectoryRecursive(safeSourceDataFolder, targetProjectDir);
         console.log(`✅ Copied data folder: ${safeSourceDataFolder} → ${targetProjectDir}`);
@@ -2203,7 +2203,7 @@ function registerProjectIpcHandlers(deps) {
           });
         }
 
-        // 确保输出目录存在
+        // Ensure the output directory exists
         const outputDir = assertAllowedFileAccess(app, path.dirname(finalOutputPath), {
           operation: 'download output directory',
         });
@@ -2211,13 +2211,13 @@ function registerProjectIpcHandlers(deps) {
           fs.mkdirSync(outputDir, { recursive: true });
         }
 
-        // 选择适当的协议
+        // Choose the appropriate protocol
         const client = urlObj.protocol === 'https:' ? https : http;
 
         const file = fs.createWriteStream(finalOutputPath);
 
         const request = client.get(url, response => {
-          // 处理重定向
+          // Handle redirects
           if (response.statusCode === 301 || response.statusCode === 302) {
             const redirectUrl = new URL(response.headers.location, urlObj).toString();
             const redirectUrlObj = new URL(redirectUrl);
@@ -2234,7 +2234,7 @@ function registerProjectIpcHandlers(deps) {
             }
             console.log(`Redirecting to: ${redirectUrl}`);
 
-            // 递归处理重定向
+            // Handle redirects recursively
             const redirectClient = redirectUrlObj.protocol === 'https:' ? https : http;
             const redirectRequest = redirectClient.get(redirectUrl, redirectResponse => {
               if (redirectResponse.statusCode === 200) {
@@ -2287,7 +2287,7 @@ function registerProjectIpcHandlers(deps) {
               } else {
                 file.close();
                 if (fs.existsSync(finalOutputPath)) {
-                  fs.unlinkSync(finalOutputPath); // 删除空文件
+                  fs.unlinkSync(finalOutputPath); // delete the empty file
                 }
                 resolve({
                   success: false,
@@ -2355,7 +2355,7 @@ function registerProjectIpcHandlers(deps) {
           } else {
             file.close();
             if (fs.existsSync(finalOutputPath)) {
-              fs.unlinkSync(finalOutputPath); // 删除空文件
+              fs.unlinkSync(finalOutputPath); // delete the empty file
             }
             resolve({
               success: false,

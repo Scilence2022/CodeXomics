@@ -129,10 +129,10 @@ function openFileInNewMainWindow(filePath) {
   }
 }
 
-// 为 Circos Genome Plotter 创建专门的菜单系统
+// Create a dedicated menu system for the Circos Genome Plotter
 function createCircosPlotterMenu(circosWindow) {
   const template = [
-    // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
+    // Add the CodeXomics brand menu item (macOS only)
     ...(process.platform === 'darwin'
       ? [
           {
@@ -691,7 +691,7 @@ function createCircosPlotterMenu(circosWindow) {
 
 function createToolWindowMenu(toolWindow, toolName) {
   const template = [
-    // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
+    // Add the CodeXomics brand menu item (macOS only)
     ...(process.platform === 'darwin'
       ? [
           {
@@ -1032,20 +1032,20 @@ function createToolWindowMenu(toolWindow, toolName) {
     },
   ];
 
-  // 存储工具窗口的菜单模板
+  // Store the menu template for the tool window
   toolMenuTemplates.set(toolWindow.id, { template, toolName });
 
-  // 创建菜单（不立即设置为应用菜单，等窗口获得焦点时再设置）
+  // Create the menu (don't set it as the app menu immediately; set it when the window gains focus)
   const menu = Menu.buildFromTemplate(template);
 
-  // 设置窗口聚焦时切换菜单
+  // Switch the menu when the window gains focus
   toolWindow.on('focus', () => {
     currentActiveWindow = toolWindow;
     Menu.setApplicationMenu(menu);
     console.log(`Switched to ${toolName} menu`);
   });
 
-  // 窗口失焦时恢复主窗口菜单
+  // Restore the main window menu when the window loses focus
   toolWindow.on('blur', () => {
     if (currentActiveWindow === toolWindow) {
       currentActiveWindow = null;
@@ -1053,7 +1053,7 @@ function createToolWindowMenu(toolWindow, toolName) {
     restoreMainMenuAfterToolWindow(toolName, 'blur');
   });
 
-  // 当窗口关闭时清理
+  // Clean up when the window closes
   toolWindow.on('closed', () => {
     toolMenuTemplates.delete(toolWindow.id);
     if (currentActiveWindow === toolWindow) {
@@ -1062,7 +1062,7 @@ function createToolWindowMenu(toolWindow, toolName) {
     restoreMainMenuAfterToolWindow(toolName, 'close');
   });
 
-  // 如果这是当前活动窗口，立即设置菜单
+  // If this is the currently active window, set the menu immediately
   if (toolWindow.isFocused()) {
     currentActiveWindow = toolWindow;
     Menu.setApplicationMenu(menu);
@@ -1072,7 +1072,7 @@ function createToolWindowMenu(toolWindow, toolName) {
 
 function createMenu() {
   const template = [
-    // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
+    // Add the CodeXomics brand menu item (macOS only)
     ...(process.platform === 'darwin'
       ? [
           {
@@ -1872,7 +1872,7 @@ function createMenu() {
                     type: 'info',
                     title: `About ${APP_NAME}`,
                     message: VERSION_INFO.appTitle,
-                    detail: 'A modern AI-powered genome analysis studio built with Electron',
+                    detail: 'An AI-native genome browser built with Electron',
                   });
                 },
               },

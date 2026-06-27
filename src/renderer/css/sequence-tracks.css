@@ -680,7 +680,7 @@
   margin-bottom: max(
     var(--sequence-line-spacing, 8px),
     var(--min-sequence-line-spacing, 12px)
-  ) !important; /* 最小间隙12px */
+  ) !important; /* minimum gap 12px */
   font-family: 'Courier New', monospace !important;
   font-size: 14px !important;
 }
@@ -692,7 +692,7 @@
   margin-bottom: max(
     var(--sequence-line-spacing, 8px),
     var(--min-sequence-line-spacing, 12px)
-  ) !important; /* 最小间隙12px */
+  ) !important; /* minimum gap 12px */
 }
 
 .sequence-line-group {
@@ -700,7 +700,7 @@
   margin-bottom: max(
     var(--sequence-line-spacing, 8px),
     var(--min-sequence-line-spacing, 12px)
-  ) !important; /* 最小间隙12px */
+  ) !important; /* minimum gap 12px */
 }
 
 .sequence-line-group .sequence-line {
@@ -710,7 +710,7 @@
   margin-bottom: max(
     var(--sequence-line-spacing, 8px),
     var(--min-sequence-line-spacing, 12px)
-  ) !important; /* 最小间隙12px */
+  ) !important; /* minimum gap 12px */
 }
 
 .sequence-toggle-btn.active {
@@ -876,7 +876,7 @@
   margin-bottom: max(
     var(--sequence-line-spacing, 8px),
     var(--min-sequence-line-spacing, 12px)
-  ) !important; /* 最小间隙12px */
+  ) !important; /* minimum gap 12px */
 }
 
 /* Protein sequence section support */
@@ -886,7 +886,7 @@
   margin-bottom: max(
     var(--sequence-line-spacing, 8px),
     var(--min-sequence-line-spacing, 12px)
-  ) !important; /* 最小间隙12px */
+  ) !important; /* minimum gap 12px */
 }
 
 /* Prevent flexbox compression at all levels */
@@ -936,7 +936,7 @@
   margin-bottom: max(
     var(--sequence-line-spacing, 8px),
     var(--min-sequence-line-spacing, 12px)
-  ) !important; /* 最小间隙12px */
+  ) !important; /* minimum gap 12px */
   font-family: 'Courier New', monospace !important;
   font-size: 14px !important;
   box-sizing: border-box !important;

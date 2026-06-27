@@ -1,6 +1,6 @@
 /**
- * DataAgent - 数据智能体
- * 专门处理数据检索和存储相关的函数
+ * DataAgent - data agent
+ * Specializes in data retrieval and storage functions
  */
 class DataAgent extends AgentBase {
   constructor(multiAgentSystem) {
@@ -12,15 +12,15 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 执行具体初始化逻辑
+   * Run the concrete initialization logic
    */
   async performInitialization() {
-    // 确保应用已初始化
+    // Ensure the app is initialized
     if (!this.app) {
       throw new Error('Application reference not available');
     }
 
-    // 获取存储管理器
+    // Get the storage manager
     this.storageManager = this.app.storageManager || null;
     if (!this.storageManager) {
       console.warn('⚠️ DataAgent: StorageManager not available, some tools will rely on ChatManager fallback');
@@ -65,10 +65,10 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 注册工具映射
+   * Register the tool mappings
    */
   registerToolMapping() {
-    // 数据检索工具 - builtInToolsMap-aligned names
+    // Data retrieval tools - builtInToolsMap-aligned names
     this.toolMapping.set('get_sequence', this.getSequenceData.bind(this));
     this.toolMapping.set('get_sequence_data', this.getSequenceData.bind(this)); // legacy alias
     this.toolMapping.set('get_gene_details', this.getGeneData.bind(this));
@@ -77,7 +77,7 @@ class DataAgent extends AgentBase {
     this.toolMapping.set('get_annotation', this.getAnnotationData.bind(this)); // alias
     this.toolMapping.set('get_track_data', this.getTrackData.bind(this));
 
-    // 数据导出工具 - builtInToolsMap-aligned names
+    // Data export tools - builtInToolsMap-aligned names
     this.toolMapping.set('export_data', this.exportSequence.bind(this));
     this.toolMapping.set('export_sequence', this.exportSequence.bind(this));
     this.toolMapping.set('export_region', this.exportRegion.bind(this));
@@ -91,7 +91,7 @@ class DataAgent extends AgentBase {
     this.toolMapping.set('export_protein_fasta', this.exportProteinFasta.bind(this));
     this.toolMapping.set('export_current_view_fasta', this.exportCurrentViewFasta.bind(this));
 
-    // 数据导入工具 - builtInToolsMap-aligned names
+    // Data import tools - builtInToolsMap-aligned names
     this.toolMapping.set('load_genome_file', this.loadGenomeFile.bind(this));
     this.toolMapping.set('load_annotation_file', this.loadAnnotationFile.bind(this));
     this.toolMapping.set('load_variant_file', this.loadVariantFile.bind(this));
@@ -101,7 +101,7 @@ class DataAgent extends AgentBase {
     this.toolMapping.set('import_annotation', this.importAnnotation.bind(this)); // legacy alias
     this.toolMapping.set('import_track_data', this.importTrackData.bind(this)); // legacy alias
 
-    // 数据搜索工具 - builtInToolsMap-aligned names
+    // Data search tools - builtInToolsMap-aligned names
     this.toolMapping.set('get_operons', this.getOperons.bind(this));
     this.toolMapping.set('get_nearby_features', this.getNearbyFeatures.bind(this));
     this.toolMapping.set('find_intergenic_regions', this.findIntergenicRegions.bind(this));
@@ -110,7 +110,7 @@ class DataAgent extends AgentBase {
     this.toolMapping.set('search_annotations', this.searchAnnotations.bind(this));
     this.toolMapping.set('list_annotations', this.listAnnotations.bind(this));
 
-    // 数据统计工具
+    // Data statistics tools
     this.toolMapping.set('get_data_statistics', this.getDataStatistics.bind(this));
     this.toolMapping.set('get_genome_summary', this.getGenomeSummary.bind(this));
 
@@ -125,7 +125,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 获取序列数据
+   * Get sequence data
    */
   async getSequenceData(parameters, strategy) {
     try {
@@ -174,7 +174,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 获取基因数据
+   * Get gene data
    */
   async getGeneData(parameters, strategy) {
     try {
@@ -184,7 +184,7 @@ class DataAgent extends AgentBase {
         throw new Error('Gene name is required');
       }
 
-      // 获取基因信息
+      // Get the gene info
       const geneInfo = await this.app.navigationManager.getGeneInfo(geneName);
       if (!geneInfo) {
         throw new Error(`Gene not found: ${geneName}`);
@@ -200,7 +200,7 @@ class DataAgent extends AgentBase {
         description: geneInfo.description,
       };
 
-      // 如果需要序列
+      // If the sequence is needed
       if (includeSequence) {
         const sequence = await this.app.sequenceUtils.getSequence(geneInfo.chromosome, geneInfo.start, geneInfo.end);
         result.sequence = sequence;
@@ -219,7 +219,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 获取注释数据
+   * Get annotation data
    */
   async getAnnotationData(parameters, strategy) {
     try {
@@ -229,7 +229,7 @@ class DataAgent extends AgentBase {
         throw new Error('Chromosome, start, and end are required');
       }
 
-      // 获取注释数据
+      // Get the annotation data
       const annotations = await this.app.annotationManager.getAnnotations(chromosome, start, end, type);
 
       return {
@@ -254,7 +254,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 获取轨道数据
+   * Get track data
    */
   async getTrackData(parameters, strategy) {
     try {
@@ -268,7 +268,7 @@ class DataAgent extends AgentBase {
         throw new Error('Chromosome, start, and end are required');
       }
 
-      // 获取轨道数据
+      // Get the track data
       const trackData = await this.app.trackRenderer.getTrackData(trackName, chromosome, start, end);
 
       return {
@@ -286,7 +286,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 导出序列
+   * Export a sequence
    */
   async exportSequence(parameters, strategy) {
     try {
@@ -310,7 +310,7 @@ class DataAgent extends AgentBase {
           throw new Error(`Unsupported export format: ${format}`);
       }
 
-      // 保存文件
+      // Save the file
       let savedFile = filename || `${chromosome}_${start}-${end}.${format}`;
       if (this.storageManager) {
         savedFile = await this.storageManager.saveFile(savedFile, content);
@@ -332,7 +332,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 导出区域
+   * Export a region
    */
   async exportRegion(parameters, strategy) {
     try {
@@ -374,7 +374,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 导出基因列表
+   * Export the gene list
    */
   async exportGeneList(parameters, strategy) {
     try {
@@ -420,7 +420,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 导出轨道数据
+   * Export track data
    */
   async exportTrackData(parameters, strategy) {
     try {
@@ -469,28 +469,28 @@ class DataAgent extends AgentBase {
   // === BuiltInToolsMap-aligned export methods ===
 
   /**
-   * 导出FASTA序列
+   * Export FASTA sequences
    */
   async exportFastaSequence(parameters) {
     return await this.exportSequence({ ...parameters, format: 'fasta' });
   }
 
   /**
-   * 导出GenBank格式
+   * Export GenBank format
    */
   async exportGenbankFormat(parameters) {
     return await this.exportSequence({ ...parameters, format: 'genbank' });
   }
 
   /**
-   * 导出GFF注释
+   * Export GFF annotations
    */
   async exportGffAnnotations(parameters) {
     return await this.exportRegion({ ...parameters, format: 'gff', includeAnnotations: true });
   }
 
   /**
-   * 导出BED格式
+   * Export BED format
    */
   async exportBedFormat(parameters) {
     try {
@@ -507,7 +507,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 导出CDS FASTA
+   * Export CDS FASTA
    */
   async exportCdsFasta(parameters) {
     try {
@@ -521,7 +521,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 导出蛋白质FASTA
+   * Export protein FASTA
    */
   async exportProteinFasta(parameters) {
     try {
@@ -534,7 +534,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 导出当前视图FASTA
+   * Export the current view as FASTA
    */
   async exportCurrentViewFasta(parameters) {
     try {
@@ -555,21 +555,21 @@ class DataAgent extends AgentBase {
   // === BuiltInToolsMap-aligned load/import methods ===
 
   /**
-   * 加载基因组文件
+   * Load a genome file
    */
   async loadGenomeFile(parameters) {
     return await this.importSequence({ ...parameters, format: 'auto' });
   }
 
   /**
-   * 加载注释文件
+   * Load an annotation file
    */
   async loadAnnotationFile(parameters) {
     return await this.importAnnotation({ ...parameters, format: 'gff' });
   }
 
   /**
-   * 加载变异文件
+   * Load a variant file
    */
   async loadVariantFile(parameters) {
     try {
@@ -582,7 +582,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 加载reads文件
+   * Load a reads file
    */
   async loadReadsFile(parameters) {
     try {
@@ -595,7 +595,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 加载WIG轨道
+   * Load a WIG track
    */
   async loadWigTracks(parameters) {
     return await this.importTrackData({ ...parameters, format: 'wig' });
@@ -604,7 +604,7 @@ class DataAgent extends AgentBase {
   // === BuiltInToolsMap-aligned retrieval methods ===
 
   /**
-   * 获取操纵子
+   * Get operons
    */
   async getOperons(parameters) {
     try {
@@ -620,7 +620,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 获取附近特征
+   * Get nearby features
    */
   async getNearbyFeatures(parameters) {
     try {
@@ -636,7 +636,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 查找基因间区域
+   * Find intergenic regions
    */
   async findIntergenicRegions(parameters) {
     try {
@@ -655,14 +655,14 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 列出注释
+   * List annotations
    */
   async listAnnotations(parameters) {
     return await this.searchAnnotations(parameters);
   }
 
   /**
-   * 导入序列
+   * Import a sequence
    */
   async importSequence(parameters, strategy) {
     try {
@@ -679,7 +679,7 @@ class DataAgent extends AgentBase {
       const content = await this.storageManager.readFile(filePath);
       const sequences = this.parseSequenceFile(content, format);
 
-      // 存储序列数据
+      // Store the sequence data
       for (const seq of sequences) {
         await this.app.sequenceUtils.storeSequence(seq.chromosome, seq.start, seq.end, seq.sequence);
       }
@@ -698,7 +698,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 导入注释
+   * Import annotations
    */
   async importAnnotation(parameters, strategy) {
     try {
@@ -715,7 +715,7 @@ class DataAgent extends AgentBase {
       const content = await this.storageManager.readFile(filePath);
       const annotations = this.parseAnnotationFile(content, format);
 
-      // 存储注释数据
+      // Store the annotation data
       for (const ann of annotations) {
         await this.app.annotationManager.addAnnotation(ann);
       }
@@ -734,7 +734,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 导入轨道数据
+   * Import track data
    */
   async importTrackData(parameters, strategy) {
     try {
@@ -751,7 +751,7 @@ class DataAgent extends AgentBase {
       const content = await this.storageManager.readFile(filePath);
       const trackData = this.parseTrackFile(content, format);
 
-      // 创建轨道
+      // Create the track
       await this.app.trackRenderer.createTrack(trackName, trackData);
 
       return {
@@ -769,7 +769,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 搜索基因
+   * Search genes
    */
   async searchGenes(parameters, strategy) {
     try {
@@ -804,7 +804,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 搜索序列
+   * Search sequences
    */
   async searchSequences(parameters, strategy) {
     try {
@@ -837,7 +837,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 搜索注释
+   * Search annotations
    */
   async searchAnnotations(parameters, strategy) {
     try {
@@ -871,7 +871,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 获取数据统计
+   * Get data statistics
    */
   async getDataStatistics(parameters, strategy) {
     try {
@@ -899,7 +899,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 获取基因组摘要
+   * Get the genome summary
    */
   async getGenomeSummary(parameters, strategy) {
     try {
@@ -925,7 +925,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 格式化GenBank格式
+   * Format as GenBank
    */
   formatGenBank(chromosome, start, end, sequence) {
     return (
@@ -944,7 +944,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 格式化GFF格式
+   * Format as GFF
    */
   formatGFF(chromosome, start, end, sequence, annotations) {
     let gff = `##gff-version 3\n` + `##sequence-region ${chromosome} ${start} ${end}\n`;
@@ -957,7 +957,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 格式化WIG格式
+   * Format as WIG
    */
   formatWIG(trackName, chromosome, trackData) {
     let wig = `track type=wiggle_0 name="${trackName}"\n` + `fixedStep chrom=${chromosome} start=1 step=1\n`;
@@ -970,7 +970,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 格式化BedGraph格式
+   * Format as BedGraph
    */
   formatBedGraph(trackName, trackData) {
     let bedgraph = `track type=bedGraph name="${trackName}"\n`;
@@ -983,7 +983,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 解析序列文件
+   * Parse a sequence file
    */
   parseSequenceFile(content, format) {
     const sequences = [];
@@ -995,7 +995,7 @@ class DataAgent extends AgentBase {
         const header = match[1];
         const sequence = match[2].replace(/\s/g, '');
 
-        // 解析头部信息
+        // Parse the header info
         const headerMatch = header.match(/([^:]+):(\d+)-(\d+)/);
         if (headerMatch) {
           sequences.push({
@@ -1012,7 +1012,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 解析注释文件
+   * Parse an annotation file
    */
   parseAnnotationFile(content, format) {
     const annotations = [];
@@ -1044,7 +1044,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 解析GFF属性
+   * Parse GFF attributes
    */
   parseGFFAttributes(attributesString) {
     const attributes = {};
@@ -1061,7 +1061,7 @@ class DataAgent extends AgentBase {
   }
 
   /**
-   * 解析轨道文件
+   * Parse a track file
    */
   parseTrackFile(content, format) {
     const trackData = [];
@@ -1170,5 +1170,5 @@ class DataAgent extends AgentBase {
   }
 }
 
-// 导出智能体
+// Export the agent
 window.DataAgent = DataAgent;

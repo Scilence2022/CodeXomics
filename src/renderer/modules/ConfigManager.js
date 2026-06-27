@@ -360,19 +360,19 @@ class ConfigManager {
       version: '1.0.0',
       lastModified: new Date().toISOString(),
 
-      // 存储配置
+      // Storage configuration
       storageConfig: {
         maxConversations: 1000,
         maxHistoryLength: 10000,
         autoSave: true,
-        autoSaveInterval: 5000, // 5秒
+        autoSaveInterval: 5000, // 5 seconds
         enableBackup: true,
-        backupInterval: 86400000, // 24小时
+        backupInterval: 86400000, // 24 hours
         compressionEnabled: true,
         maxFileSize: 50 * 1024 * 1024, // 50MB
       },
 
-      // 历史数据结构
+      // History data structure
       historyData: {
         conversations: [],
         analysisRecords: [],
@@ -389,7 +389,7 @@ class ConfigManager {
         },
       },
 
-      // 分析引擎配置
+      // Analysis engine configuration
       analysisConfig: {
         enableRealTimeAnalysis: true,
         failureDetectionKeywords: [
@@ -421,7 +421,7 @@ class ConfigManager {
         pluginGenerationThreshold: 0.8, // Threshold to trigger plugin generation
       },
 
-      // 插件生成配置
+      // Plugin generation configuration
       pluginGenerationConfig: {
         enabled: true,
         autoGenerate: false, // Manual approval required
@@ -433,17 +433,17 @@ class ConfigManager {
         outputDirectory: 'src/renderer/modules/Plugins/Generated',
       },
 
-      // 用户界面配置
+      // User interface configuration
       uiConfig: {
         showEvolutionPanel: true,
         showAnalysisResults: true,
         showPluginGeneration: true,
         notificationsEnabled: true,
-        autoRefreshInterval: 10000, // 10秒
+        autoRefreshInterval: 10000, // 10 seconds
         maxDisplayItems: 100,
       },
 
-      // 导出配置
+      // Export configuration
       exportConfig: {
         defaultFormat: 'json',
         includeSensitiveData: false,
@@ -665,7 +665,6 @@ class ConfigManager {
       console.error('Error migrating marketplace settings from localStorage:', error);
     }
   }
-
 
   /**
    * Save configuration

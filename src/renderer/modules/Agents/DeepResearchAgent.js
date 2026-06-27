@@ -1,7 +1,7 @@
 /**
- * DeepResearchAgent - 深度研究智能体
- * 专门使用Deep Research MCP Server进行深度研究任务
- * 提供高级研究能力，包括多源信息整合、深度分析和报告生成
+ * DeepResearchAgent - deep-research agent
+ * Specializes in deep-research tasks using the Deep Research MCP server
+ * Provides advanced research capabilities, including multi-source information integration, deep analysis, and report generation
  */
 class DeepResearchAgent extends AgentBase {
   constructor(multiAgentSystem) {
@@ -18,7 +18,7 @@ class DeepResearchAgent extends AgentBase {
     this.researchCache = new Map();
     this.activeResearchSessions = new Map();
 
-    // 研究配置
+    // Research configuration
     this.researchConfig = {
       maxResults: 10,
       enableCitations: true,
@@ -33,23 +33,23 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 执行具体初始化逻辑
+   * Run the concrete initialization logic
    */
   async performInitialization() {
     try {
-      // 确保应用已初始化
+      // Ensure the app is initialized
       if (!this.app) {
         throw new Error('Application reference not available');
       }
 
-      // 获取MCP服务器管理器
+      // Get the MCP server manager
       this.mcpServerManager = this.app.chatManager?.mcpServerManager || null;
       if (!this.mcpServerManager) {
         console.warn(
           '⚠️ DeepResearchAgent: MCP Server Manager not available, deep research tools will rely on ChatManager fallback'
         );
       } else {
-        // 检查Deep Research服务器连接（非阻塞）
+        // Check the Deep Research server connection (non-blocking)
         try {
           await this.verifyDeepResearchConnection();
         } catch (error) {
@@ -57,7 +57,7 @@ class DeepResearchAgent extends AgentBase {
         }
       }
 
-      // 加载研究配置
+      // Load the research configuration
       await this.loadResearchConfig();
 
       console.log(`🔬 DeepResearchAgent: Deep research tools initialized`);
@@ -103,10 +103,10 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 注册工具映射 - ONLY implemented tools
+   * Register the tool mappings - ONLY implemented tools
    */
   registerToolMapping() {
-    // 核心深度研究工具 (IMPLEMENTED)
+    // Core deep-research tools (IMPLEMENTED)
     this.toolMapping.set('deep_research', this.performDeepResearch.bind(this));
     this.toolMapping.set('research_analysis', this.analyzeResearchResults.bind(this));
     this.toolMapping.set('synthesize_information', this.synthesizeInformation.bind(this));
@@ -116,23 +116,23 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 验证Deep Research服务器连接
+   * Validate the Deep Research server connection
    */
   async verifyDeepResearchConnection() {
     try {
-      // 查找Deep Research服务器
+      // Find the Deep Research server
       const deepResearchServer = this.findDeepResearchServer();
       if (!deepResearchServer) {
         throw new Error('Deep Research MCP server not found or not connected');
       }
 
-      // 检查服务器状态
+      // Check the server status
       const isConnected = this.mcpServerManager.activeServers.has(deepResearchServer.id);
       if (!isConnected) {
         throw new Error('Deep Research MCP server is not connected');
       }
 
-      // 检查可用工具
+      // Check the available tools
       const tools = this.mcpServerManager.serverTools.get(deepResearchServer.id) || [];
       if (tools.length === 0) {
         throw new Error('No tools available from Deep Research MCP server');
@@ -147,7 +147,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 查找Deep Research服务器
+   * Find the Deep Research server
    */
   findDeepResearchServer() {
     if (!this.mcpServerManager) return null;
@@ -164,7 +164,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 加载研究配置
+   * Load the research configuration
    */
   async loadResearchConfig() {
     try {
@@ -180,7 +180,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 执行深度研究
+   * Run deep research
    */
   async performDeepResearch(parameters, strategy) {
     try {
@@ -200,7 +200,7 @@ class DeepResearchAgent extends AgentBase {
 
       console.log(`🔬 Starting deep research: "${query}"`);
 
-      // 创建研究会话
+      // Create a research session
       const researchSession = this.createResearchSession(researchId, {
         query,
         language,
@@ -211,7 +211,7 @@ class DeepResearchAgent extends AgentBase {
         startTime: Date.now(),
       });
 
-      // 执行Deep Research MCP工具
+      // Execute the Deep Research MCP tool
       const researchResult = await this.executeDeepResearchTool({
         query,
         language,
@@ -220,15 +220,15 @@ class DeepResearchAgent extends AgentBase {
         enableReferences,
       });
 
-      // 处理研究结果
+      // Process the research results
       const processedResult = await this.processResearchResult(researchResult, researchSession);
 
-      // 更新研究会话
+      // Update the research session
       researchSession.results = processedResult;
       researchSession.status = 'completed';
       researchSession.endTime = Date.now();
 
-      // 缓存结果
+      // Cache the results
       this.cacheResearchResult(researchId, processedResult);
 
       return {
@@ -254,7 +254,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 执行Deep Research MCP工具
+   * Execute the Deep Research MCP tool
    */
   async executeDeepResearchTool(parameters) {
     try {
@@ -263,7 +263,7 @@ class DeepResearchAgent extends AgentBase {
         throw new Error('Deep Research server not available');
       }
 
-      // 执行MCP工具
+      // Execute the MCP tool
       const result = await this.mcpServerManager.executeToolOnServer(
         deepResearchServer.id,
         'deep-research',
@@ -278,7 +278,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 处理研究结果
+   * Process the research results
    */
   async processResearchResult(rawResult, researchSession) {
     try {
@@ -297,7 +297,7 @@ class DeepResearchAgent extends AgentBase {
         },
       };
 
-      // 增强结果分析
+      // Enhanced result analysis
       processedResult.analysis = await this.analyzeResearchContent(processedResult);
 
       return processedResult;
@@ -317,12 +317,12 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 提取来源信息
+   * Extract source information
    */
   extractSources(result) {
     const sources = [];
 
-    // 从不同可能的字段中提取来源
+    // Extract sources from various possible fields
     const possibleSourceFields = ['sources', 'references', 'links', 'urls'];
 
     for (const field of possibleSourceFields) {
@@ -331,7 +331,7 @@ class DeepResearchAgent extends AgentBase {
       }
     }
 
-    // 从内容中提取URL
+    // Extract URLs from the content
     const content = result.content || result.result?.content || JSON.stringify(result);
     const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
     const urls = content.match(urlRegex) || [];
@@ -341,12 +341,12 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 提取引用信息
+   * Extract citation information
    */
   extractCitations(result) {
     const citations = [];
 
-    // 从不同可能的字段中提取引用
+    // Extract citations from various possible fields
     const possibleCitationFields = ['citations', 'references', 'bibliography'];
 
     for (const field of possibleCitationFields) {
@@ -359,12 +359,12 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 提取图片信息
+   * Extract image information
    */
   extractImages(result) {
     const images = [];
 
-    // 从不同可能的字段中提取图片
+    // Extract images from various possible fields
     const possibleImageFields = ['images', 'figures', 'diagrams'];
 
     for (const field of possibleImageFields) {
@@ -377,7 +377,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 分析研究内容
+   * Analyze the research content
    */
   async analyzeResearchContent(result) {
     try {
@@ -403,7 +403,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 分析研究结果
+   * Analyze the research results
    */
   async analyzeResearchResults(parameters, strategy) {
     try {
@@ -444,7 +444,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 综合信息
+   * Synthesize information
    */
   async synthesizeInformation(parameters, strategy) {
     try {
@@ -456,7 +456,7 @@ class DeepResearchAgent extends AgentBase {
 
       console.log(`🔄 Synthesizing information from ${sources.length} sources`);
 
-      // 执行综合研究
+      // Perform the synthesis research
       const synthesisQuery = this.buildSynthesisQuery(sources, focusAreas);
       const synthesisResult = await this.performDeepResearch({
         query: synthesisQuery,
@@ -465,7 +465,7 @@ class DeepResearchAgent extends AgentBase {
         enableReferences: true,
       });
 
-      // 格式化输出
+      // Format the output
       const formattedResult = this.formatSynthesisOutput(synthesisResult, outputFormat);
 
       return {
@@ -488,7 +488,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 生成研究报告
+   * Generate a research report
    */
   async generateResearchReport(parameters, strategy) {
     try {
@@ -510,15 +510,15 @@ class DeepResearchAgent extends AgentBase {
 
       console.log(`📄 Generating ${reportType} research report`);
 
-      // 生成报告内容
+      // Generate the report content
       const reportContent = await this.buildReportContent(researchResult, reportType, format);
 
-      // 添加可视化（如果需要）
+      // Add visualizations (if needed)
       if (includeVisualizations) {
         reportContent.visualizations = await this.generateVisualizations(researchResult);
       }
 
-      // 保存报告
+      // Save the report
       const reportId = this.saveResearchReport(reportContent, format);
 
       return {
@@ -543,7 +543,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 创建研究会话
+   * Create a research session
    */
   createResearchSession(researchId, config) {
     const session = {
@@ -560,7 +560,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 缓存研究结果
+   * Cache the research results
    */
   cacheResearchResult(researchId, result) {
     this.researchCache.set(researchId, {
@@ -571,7 +571,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 获取缓存的研究结果
+   * Get cached research results
    */
   getCachedResearchResult(researchId) {
     const cached = this.researchCache.get(researchId);
@@ -582,14 +582,14 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 生成研究ID
+   * Generate a research ID
    */
   generateResearchId() {
     return `research_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**
-   * 构建综合查询
+   * Build the synthesis query
    */
   buildSynthesisQuery(sources, focusAreas) {
     let query = 'Synthesize and analyze the following information sources: ';
@@ -608,7 +608,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 格式化综合输出
+   * Format the synthesis output
    */
   formatSynthesisOutput(result, format) {
     switch (format) {
@@ -633,7 +633,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 构建报告内容
+   * Build the report content
    */
   async buildReportContent(researchResult, reportType, format) {
     const report = {
@@ -655,7 +655,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 构建报告章节
+   * Build the report sections
    */
   buildReportSections(researchResult, reportType) {
     const sections = [
@@ -691,21 +691,21 @@ class DeepResearchAgent extends AgentBase {
   }
 
   /**
-   * 格式化来源列表
+   * Format the source list
    */
   formatSourcesList(sources) {
     return sources.map((source, index) => `${index + 1}. ${source}`).join('\n');
   }
 
   /**
-   * 格式化引用列表
+   * Format the citation list
    */
   formatCitationsList(citations) {
     return citations.map((citation, index) => `${index + 1}. ${citation}`).join('\n');
   }
 
   /**
-   * 保存研究报告
+   * Save the research report
    */
   saveResearchReport(reportContent, format) {
     const reportId = `report_${Date.now()}`;
@@ -716,7 +716,7 @@ class DeepResearchAgent extends AgentBase {
     return reportId;
   }
 
-  // 辅助方法
+  // Helper methods
   countWords(text) {
     if (!text) return 0;
     return text.split(/\s+/).filter(word => word.length > 0).length;
@@ -724,7 +724,7 @@ class DeepResearchAgent extends AgentBase {
 
   extractKeyTopics(content) {
     if (!content || typeof content !== 'string') return [];
-    // 简单的关键词提取
+    // Simple keyword extraction
     const words = content.toLowerCase().split(/\s+/);
     const wordFreq = {};
     words.forEach(word => {
@@ -741,7 +741,7 @@ class DeepResearchAgent extends AgentBase {
 
   analyzeSentiment(content) {
     if (!content || typeof content !== 'string') return 'neutral';
-    // 简单的情感分析
+    // Simple sentiment analysis
     const positiveWords = ['good', 'excellent', 'positive', 'beneficial', 'effective'];
     const negativeWords = ['bad', 'poor', 'negative', 'harmful', 'ineffective'];
 
@@ -780,7 +780,7 @@ class DeepResearchAgent extends AgentBase {
 
   extractKeyInsights(content) {
     if (!content || typeof content !== 'string') return [];
-    // 简单的关键洞察提取
+    // Simple key-insight extraction
     const sentences = content.split(/[.!?]+/);
     return sentences
       .filter(sentence => sentence.length > 50)
@@ -794,7 +794,7 @@ class DeepResearchAgent extends AgentBase {
 
   extractConclusions(content) {
     if (!content || typeof content !== 'string') return [];
-    // 简单的结论提取
+    // Simple conclusion extraction
     const sentences = content.split(/[.!?]+/);
     return sentences
       .filter(
@@ -808,7 +808,7 @@ class DeepResearchAgent extends AgentBase {
   }
 
   async generateVisualizations(researchResult) {
-    // 可视化生成占位符
+    // Visualization-generation placeholder
     return {
       wordCloud: 'Word cloud visualization',
       topicDistribution: 'Topic distribution chart',
@@ -825,5 +825,5 @@ class DeepResearchAgent extends AgentBase {
   }
 }
 
-// 导出智能体
+// Export the agent
 window.DeepResearchAgent = DeepResearchAgent;

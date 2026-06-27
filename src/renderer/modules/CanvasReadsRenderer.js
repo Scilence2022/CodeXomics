@@ -801,7 +801,7 @@ class CanvasReadsRenderer {
     }
 
     // CRITICAL FIX: Calculate offset using actual sequence length, not theoretical genomic length
-    // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
+    // This fixes the coordinate mismatch that was causing the "extra base on the left" issue
     // Use 0-based coordinates for consistent calculation
     const genomicStart = readStart0Based; // Use 0-based coordinate
     const genomicEnd = readEnd0Based; // Use 0-based exclusive end coordinate

@@ -33,7 +33,7 @@ function generateSVGBackground() {
   <!-- Header text -->
   <text x="330" y="80" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="36" font-weight="bold">CodeXomics</text>
   <text x="330" y="110" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="18">${VERSION_INFO.displayVersion} Beta</text>
-  <text x="330" y="135" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="14">AI-Powered Bioinformatics Platform</text>
+  <text x="330" y="135" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="14">The AI-native genome browser</text>
   
   <!-- Icon Placeholders (Visual guides only) -->
   <rect x="120" y="160" width="120" height="120" rx="20" fill="white" fill-opacity="0.2" stroke="white" stroke-width="2" stroke-dasharray="5,5"/>

@@ -1,6 +1,6 @@
 /**
- * ProjectXMLHandler - 处理Project XML文件格式的模块
- * 支持项目数据的XML序列化和反序列化
+ * ProjectXMLHandler - module that handles the Project XML file format
+ * Supports XML serialization and deserialization of project data
  */
 class ProjectXMLHandler {
   constructor() {
@@ -9,19 +9,19 @@ class ProjectXMLHandler {
   }
 
   /**
-   * 将项目数据转换为XML格式
-   * @param {Object} project - 项目对象
-   * @returns {string} XML字符串
+   * Convert project data to XML format
+   * @param {Object} project - the project object
+   * @returns {string} the XML string
    */
   projectToXML(project) {
     const doc = document.implementation.createDocument(this.xmlNamespace, 'GenomeExplorerProject', null);
     const root = doc.documentElement;
 
-    // 设置XML属性
+    // Set XML attributes
     root.setAttribute('version', this.version);
     root.setAttribute('created', new Date().toISOString());
 
-    // 基本项目信息
+    // Basic project info
     const projectInfo = doc.createElement('ProjectInfo');
     projectInfo.appendChild(this.createTextElement(doc, 'ID', project.id));
     projectInfo.appendChild(this.createTextElement(doc, 'Name', project.name));
@@ -31,7 +31,7 @@ class ProjectXMLHandler {
     projectInfo.appendChild(this.createTextElement(doc, 'Modified', project.modified));
     root.appendChild(projectInfo);
 
-    // 项目设置
+    // Project settings
     const settings = doc.createElement('Settings');
     if (project.settings) {
       if (project.settings.fileFilters) {
@@ -58,7 +58,7 @@ class ProjectXMLHandler {
     }
     root.appendChild(settings);
 
-    // 文件夹结构
+    // Folder structure
     const folders = doc.createElement('Folders');
     if (project.folders) {
       project.folders.forEach(folder => {
@@ -79,13 +79,13 @@ class ProjectXMLHandler {
     }
     root.appendChild(folders);
 
-    // 文件列表
+    // File list
     const files = doc.createElement('Files');
     if (project.files) {
       project.files.forEach(file => {
         const fileEl = doc.createElement('File');
 
-        // 基本文件信息
+        // Basic file info
         fileEl.appendChild(this.createTextElement(doc, 'ID', file.id));
         fileEl.appendChild(this.createTextElement(doc, 'Name', file.name));
         fileEl.appendChild(this.createTextElement(doc, 'Path', file.path));
@@ -94,7 +94,7 @@ class ProjectXMLHandler {
         fileEl.appendChild(this.createTextElement(doc, 'Added', file.added));
         fileEl.appendChild(this.createTextElement(doc, 'Modified', file.modified || ''));
 
-        // 文件夹路径
+        // Folder path
         if (file.folder) {
           const folderPathEl = doc.createElement('FolderPath');
           file.folder.forEach(pathSegment => {
@@ -105,7 +105,7 @@ class ProjectXMLHandler {
           fileEl.appendChild(folderPathEl);
         }
 
-        // 文件元数据
+        // File metadata
         if (file.metadata) {
           const metadataEl = doc.createElement('Metadata');
           Object.entries(file.metadata).forEach(([key, value]) => {
@@ -117,7 +117,7 @@ class ProjectXMLHandler {
           fileEl.appendChild(metadataEl);
         }
 
-        // 文件标签
+        // File tags
         if (file.tags) {
           const tagsEl = doc.createElement('Tags');
           file.tags.forEach(tag => {
@@ -133,7 +133,7 @@ class ProjectXMLHandler {
     }
     root.appendChild(files);
 
-    // 项目元数据和统计信息
+    // Project metadata and statistics
     const metadata = doc.createElement('ProjectMetadata');
     if (project.metadata) {
       metadata.appendChild(
@@ -152,7 +152,7 @@ class ProjectXMLHandler {
       );
       metadata.appendChild(this.createTextElement(doc, 'LastOpened', project.metadata.lastOpened || ''));
 
-      // 文件类型统计
+      // File-type statistics
       if (project.metadata.fileTypeStats) {
         const statsEl = doc.createElement('FileTypeStats');
         Object.entries(project.metadata.fileTypeStats).forEach(([type, count]) => {
@@ -166,7 +166,7 @@ class ProjectXMLHandler {
     }
     root.appendChild(metadata);
 
-    // 项目历史记录
+    // Project history
     const history = doc.createElement('History');
     if (project.history) {
       project.history.forEach(entry => {
@@ -179,27 +179,27 @@ class ProjectXMLHandler {
     }
     root.appendChild(history);
 
-    // 序列化为字符串
+    // Serialize to a string
     const serializer = new XMLSerializer();
     let xmlString = serializer.serializeToString(doc);
 
-    // 格式化XML（添加缩进）
+    // Format the XML (add indentation)
     xmlString = this.formatXML(xmlString);
 
     return xmlString;
   }
 
   /**
-   * 从XML字符串解析项目数据
-   * @param {string} xmlString - XML字符串
-   * @returns {Object} 项目对象
+   * Parse project data from an XML string
+   * @param {string} xmlString - the XML string
+   * @returns {Object} the project object
    */
   xmlToProject(xmlString) {
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(xmlString, 'text/xml');
 
-      // 检查解析错误
+      // Check for parsing errors
       const parseError = doc.querySelector('parsererror');
       if (parseError) {
         throw new Error('XML parsing error: ' + parseError.textContent);
@@ -207,14 +207,14 @@ class ProjectXMLHandler {
 
       const root = doc.documentElement;
 
-      // 验证根元素
+      // Validate the root element
       if (root.tagName !== 'GenomeExplorerProject') {
         throw new Error('Invalid project file: root element must be GenomeExplorerProject');
       }
 
       const project = {};
 
-      // 解析项目基本信息
+      // Parse the basic project info
       const projectInfo = root.querySelector('ProjectInfo');
       if (projectInfo) {
         project.id = this.getElementText(projectInfo, 'ID');
@@ -225,11 +225,11 @@ class ProjectXMLHandler {
         project.modified = this.getElementText(projectInfo, 'Modified');
       }
 
-      // 解析设置
+      // Parse the settings
       const settings = root.querySelector('Settings');
       project.settings = {};
       if (settings) {
-        // 文件过滤器
+        // File filters
         const fileFilters = settings.querySelector('FileFilters');
         if (fileFilters) {
           project.settings.fileFilters = [];
@@ -241,7 +241,7 @@ class ProjectXMLHandler {
           });
         }
 
-        // 自定义注释
+        // Custom annotations
         const customAnnotations = settings.querySelector('CustomAnnotations');
         if (customAnnotations) {
           project.settings.customAnnotations = [];
@@ -254,7 +254,7 @@ class ProjectXMLHandler {
         }
       }
 
-      // 解析文件夹结构
+      // Parse the folder structure
       const folders = root.querySelector('Folders');
       project.folders = [];
       if (folders) {
@@ -276,7 +276,7 @@ class ProjectXMLHandler {
         });
       }
 
-      // 解析文件列表
+      // Parse the file list
       const files = root.querySelector('Files');
       project.files = [];
       if (files) {
@@ -292,7 +292,7 @@ class ProjectXMLHandler {
             folder: [],
           };
 
-          // 解析文件夹路径
+          // Parse the folder path
           const folderPathEl = fileEl.querySelector('FolderPath');
           if (folderPathEl) {
             folderPathEl.querySelectorAll('Segment').forEach(segment => {
@@ -300,7 +300,7 @@ class ProjectXMLHandler {
             });
           }
 
-          // 解析元数据
+          // Parse the metadata
           const metadataEl = fileEl.querySelector('Metadata');
           if (metadataEl) {
             file.metadata = {};
@@ -308,16 +308,16 @@ class ProjectXMLHandler {
               const key = meta.getAttribute('key');
               let value = meta.textContent;
               try {
-                // 尝试解析JSON
+                // Try to parse JSON
                 value = JSON.parse(value);
               } catch (e) {
-                // 保持为字符串
+                // Keep it as a string
               }
               file.metadata[key] = value;
             });
           }
 
-          // 解析标签
+          // Parse the tags
           const tagsEl = fileEl.querySelector('Tags');
           if (tagsEl) {
             file.tags = [];
@@ -330,7 +330,7 @@ class ProjectXMLHandler {
         });
       }
 
-      // 解析项目元数据
+      // Parse the project metadata
       const metadata = root.querySelector('ProjectMetadata');
       project.metadata = {};
       if (metadata) {
@@ -338,7 +338,7 @@ class ProjectXMLHandler {
         project.metadata.totalSize = parseInt(this.getElementText(metadata, 'TotalSize')) || 0;
         project.metadata.lastOpened = this.getElementText(metadata, 'LastOpened');
 
-        // 解析文件类型统计
+        // Parse the file-type statistics
         const statsEl = metadata.querySelector('FileTypeStats');
         if (statsEl) {
           project.metadata.fileTypeStats = {};
@@ -350,7 +350,7 @@ class ProjectXMLHandler {
         }
       }
 
-      // 解析历史记录
+      // Parse the history
       const history = root.querySelector('History');
       project.history = [];
       if (history) {
@@ -371,7 +371,7 @@ class ProjectXMLHandler {
   }
 
   /**
-   * 创建文本元素
+   * Create a text element
    */
   createTextElement(doc, tagName, textContent) {
     const element = doc.createElement(tagName);
@@ -380,7 +380,7 @@ class ProjectXMLHandler {
   }
 
   /**
-   * 获取元素文本内容
+   * Get the text content of an element
    */
   getElementText(parent, tagName) {
     const element = parent.querySelector(tagName);
@@ -388,10 +388,10 @@ class ProjectXMLHandler {
   }
 
   /**
-   * 格式化XML字符串（添加缩进）
+   * Format the XML string (add indentation)
    */
   formatXML(xmlString) {
-    const PADDING = '  '; // 两个空格作为缩进
+    const PADDING = '  '; // two spaces for indentation
     const reg = /(>)(<)(\/*)/g;
     const formatted = xmlString.replace(reg, '$1\r\n$2$3');
     let pad = 0;
@@ -419,18 +419,18 @@ class ProjectXMLHandler {
   }
 
   /**
-   * 验证项目XML文件
+   * Validate the project XML file
    */
   validateProjectXML(xmlString) {
     try {
       const project = this.xmlToProject(xmlString);
 
-      // 基本验证
+      // Basic validation
       if (!project.id || !project.name) {
         return { valid: false, error: 'Project must have ID and name' };
       }
 
-      // 验证文件ID唯一性
+      // Validate that file IDs are unique
       const fileIds = new Set();
       for (const file of project.files || []) {
         if (fileIds.has(file.id)) {
@@ -446,7 +446,7 @@ class ProjectXMLHandler {
   }
 
   /**
-   * 生成项目XML模板
+   * Generate a project XML template
    */
   generateProjectTemplate(name, description = '') {
     const project = {
@@ -487,7 +487,7 @@ class ProjectXMLHandler {
   }
 }
 
-// 确保类在全局范围内可用
+// Ensure the class is available globally
 if (typeof window !== 'undefined') {
   window.ProjectXMLHandler = ProjectXMLHandler;
 }

@@ -2,16 +2,18 @@
 
 # CodeXomics
 
-### AI-powered bioinformatics analysis platform
+### The AI-native genome browser
+
+_Talk to your genome — AI agents drive the view and run the analysis._
 
 [![Version](https://img.shields.io/badge/version-v0.722-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-41.7.1-47848f.svg)](https://www.electronjs.org/)
 
-CodeXomics is a cross-platform Electron desktop application for genome visualization, AI-assisted biological analysis, tool execution, plugin development, and Model Context Protocol (MCP) integration.
+CodeXomics is an AI-native genome browser — a cross-platform Electron desktop app where conversational AI agents drive the visualization and run real biological analyses, with built-in tool execution, plugin development, and Model Context Protocol (MCP) integration.
 
-Current source release: `0.722.0` (`v0.722` in the application UI). Published installers on GitHub Releases may lag behind the source release.
+Current source release: `0.722.0` (shown as `v0.722` in the app). Build from source to get changes not yet in the published installers.
 
 [Documentation](https://scilence2022.github.io/CodeXomics/) •
 [Getting Started](docs/user-guides/GETTING_STARTED.md) •
@@ -32,13 +34,13 @@ Core capabilities:
 - Interactive genome visualization for FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML, and `.prj.GAI` project files.
 - AI ChatBox with multi-provider LLM configuration and dynamic tool injection.
 - Seven specialized runtime agents: `CoordinatorAgent`, `AnalysisAgent`, `DataAgent`, `NavigationAgent`, `ExternalAgent`, `PluginAgent`, and `DeepResearchAgent`.
-- Dynamic YAML tool registry under `tools_registry/` with 185 current tool schemas across 19 active categories.
-- 149 mapped built-in ChatBox tools and 95 MCP tools in tools mode.
+- Dynamic YAML tool registry under `tools_registry/` with 179 current tool schemas across 18 active categories.
+- 143 mapped built-in ChatBox tools and 95 MCP tools in tools mode.
 - MCP server with tools mode and agent mode, HTTP/SSE transport on port `3002`, and WebSocket transport on port `3003`.
 - VS Code-inspired plugin and extension architecture with activation events, contribution registry, command registry, marketplace support, and security validation.
 - High-performance SVG and Canvas genome rendering for genes, sequences, reads, variants, GC tracks, and custom annotation tracks.
 - Local BLAST integration, primer design, protein structure lookup/viewing, pathway tools, benchmark suites, and PubMed/preprint literature lookup.
-- Runtime UI style presets backed by vanilla CSS: default, professional, minimal, pastel, elegant, and midnight.
+- Runtime UI style presets backed by vanilla CSS: default, professional, minimal, pastel, amy, red, elegant, and midnight.
 
 ## Screenshots
 
@@ -198,16 +200,16 @@ Current YAML categories:
 | Category            | YAML tools |
 | ------------------- | ---------: |
 | `navigation`        |         26 |
-| `sequence`          |         17 |
+| `sequence`          |         18 |
 | `coordination`      |         15 |
-| `external_apis`     |         14 |
 | `file_operations`   |         14 |
 | `database`          |         13 |
+| `external_apis`     |         13 |
 | `plugin_management` |         12 |
 | `sequence_editing`  |         11 |
 | `annotation`        |         10 |
 | `benchmark`         |          8 |
-| `data_management`   |          8 |
+| `data_management`   |          7 |
 | `file_loading`      |          7 |
 | `primer_design`     |          6 |
 | `protein`           |          5 |

@@ -3395,14 +3395,14 @@ class GenomeBrowser {
     ipcRenderer.on('open-project-file', (event, filePath) => {
       console.log('📂 Opening project file from main menu:', filePath);
       this.showNotification(`Opening project: ${filePath}`, 'info');
-      // TODO: 实现项目文件打开逻辑
-      // 这里可以调用 ProjectManager 的方法来加载项目
+      // TODO: implement project-file opening logic
+      // Here you can call ProjectManager's methods to load the project
     });
 
     ipcRenderer.on('save-current-project', async () => {
       console.log('💾 Save current project requested');
       try {
-        // 打开项目管理器并触发保存当前项目的操作
+        // Open the project manager and trigger saving the current project
         const projectManagerWindow = await this.openProjectManagerWindow();
         if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
           await projectManagerWindow.projectManagerWindow.saveCurrentProjectAsXML();
@@ -3418,7 +3418,7 @@ class GenomeBrowser {
     ipcRenderer.on('save-project-as', async () => {
       console.log('💾 Save project as requested');
       try {
-        // 打开项目管理器并触发另存为操作
+        // Open the project manager and trigger the Save As operation
         const projectManagerWindow = await this.openProjectManagerWindow();
         if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
           await projectManagerWindow.projectManagerWindow.saveCurrentProjectAsXML();
@@ -3434,7 +3434,7 @@ class GenomeBrowser {
     ipcRenderer.on('export-project-xml', async () => {
       console.log('📤 Export project as XML requested');
       try {
-        // 打开项目管理器并触发XML导出操作
+        // Open the project manager and trigger the XML export operation
         const projectManagerWindow = await this.openProjectManagerWindow();
         if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
           await projectManagerWindow.projectManagerWindow.saveCurrentProjectAsXML();
@@ -4153,7 +4153,7 @@ class GenomeBrowser {
           if (bottomTrack.classList.contains('sequence-track') || bottomTrack.id === 'sequenceDisplaySection') {
             const parent = bottomTrack.parentElement;
             const parentHeight = parent ? parent.offsetHeight : window.innerHeight;
-            // If剩余空间小于10px，恢复flex自适应
+            // If the remaining space is less than 10px, restore flex auto-sizing
             if (
               parentHeight - (topTrack.offsetHeight + splitter.offsetHeight + newBottomHeight) < 10 ||
               newBottomHeight > parentHeight * 0.75
@@ -10958,12 +10958,12 @@ class GenomeBrowser {
 
       this.showNotification('Project Manager window is opening...', 'info');
 
-      // 返回一个promise，等待项目管理器窗口可用
+      // Return a promise that waits for the project manager window to be available
       return new Promise(resolve => {
-        // 这里可以添加监听器等待窗口准备好
+        // A listener could be added here to wait for the window to be ready
         setTimeout(() => {
-          // 模拟返回一个包含窗口实例的对象
-          // 实际使用中，可能需要通过IPC或其他方式获取窗口实例
+          // Simulate returning an object containing the window instance
+          // In real use, the window instance may need to be obtained via IPC or another mechanism
           resolve({
             projectManagerWindow: {
               saveCurrentProjectAsXML: async () => {

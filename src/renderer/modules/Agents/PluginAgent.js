@@ -1,6 +1,6 @@
 /**
- * PluginAgent - 插件智能体
- * 专门管理插件系统相关的函数
+ * PluginAgent - plugin agent
+ * Specializes in managing plugin-system-related functions
  */
 class PluginAgent extends AgentBase {
   constructor(multiAgentSystem) {
@@ -12,15 +12,15 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 执行具体初始化逻辑
+   * Run the concrete initialization logic
    */
   async performInitialization() {
-    // 确保应用已初始化
+    // Ensure the app is initialized
     if (!this.app) {
       throw new Error('Application reference not available');
     }
 
-    // 获取插件管理器
+    // Get the plugin manager
     this.pluginManager = this.app.pluginManager || null;
     if (!this.pluginManager) {
       console.warn('⚠️ PluginAgent: PluginManager not available, some tools will rely on ChatManager fallback');
@@ -64,10 +64,10 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 注册工具映射
+   * Register the tool mappings
    */
   registerToolMapping() {
-    // 插件管理工具
+    // Plugin management tools
     this.toolMapping.set('list_plugins', this.listPlugins.bind(this));
     this.toolMapping.set('get_plugin_info', this.getPluginInfo.bind(this));
     this.toolMapping.set('install_plugin', this.installPlugin.bind(this));
@@ -75,17 +75,17 @@ class PluginAgent extends AgentBase {
     this.toolMapping.set('enable_plugin', this.enablePlugin.bind(this));
     this.toolMapping.set('disable_plugin', this.disablePlugin.bind(this));
 
-    // 插件执行工具
+    // Plugin execution tools
     this.toolMapping.set('execute_plugin', this.executePlugin.bind(this));
     this.toolMapping.set('call_plugin_function', this.callPluginFunction.bind(this));
     this.toolMapping.set('get_plugin_functions', this.getPluginFunctions.bind(this));
 
-    // 插件开发工具
+    // Plugin development tools
     this.toolMapping.set('create_plugin', this.createPlugin.bind(this));
     this.toolMapping.set('validate_plugin', this.validatePlugin.bind(this));
     this.toolMapping.set('test_plugin', this.testPlugin.bind(this));
 
-    // 插件市场工具
+    // Plugin marketplace tools
     this.toolMapping.set('search_plugins', this.searchPlugins.bind(this));
     this.toolMapping.set('get_plugin_marketplace', this.getPluginMarketplace.bind(this));
     this.toolMapping.set('update_plugin', this.updatePlugin.bind(this));
@@ -94,7 +94,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 列出插件
+   * List plugins
    */
   async listPlugins(parameters, strategy) {
     try {
@@ -129,7 +129,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 获取插件信息
+   * Get plugin information
    */
   async getPluginInfo(parameters, strategy) {
     try {
@@ -174,7 +174,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 安装插件
+   * Install a plugin
    */
   async installPlugin(parameters, strategy) {
     try {
@@ -209,7 +209,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 卸载插件
+   * Uninstall a plugin
    */
   async uninstallPlugin(parameters, strategy) {
     try {
@@ -238,7 +238,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 启用插件
+   * Enable a plugin
    */
   async enablePlugin(parameters, strategy) {
     try {
@@ -267,7 +267,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 禁用插件
+   * Disable a plugin
    */
   async disablePlugin(parameters, strategy) {
     try {
@@ -296,7 +296,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 执行插件
+   * Execute a plugin
    */
   async executePlugin(parameters, strategy) {
     try {
@@ -327,14 +327,14 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 调用插件函数
+   * Call a plugin function
    */
   async callPluginFunction(parameters, strategy) {
     return await this.executePlugin(parameters, strategy);
   }
 
   /**
-   * 获取插件函数
+   * Get plugin functions
    */
   async getPluginFunctions(parameters, strategy) {
     try {
@@ -371,7 +371,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 创建插件
+   * Create a plugin
    */
   async createPlugin(parameters, strategy) {
     try {
@@ -414,7 +414,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 验证插件
+   * Validate a plugin
    */
   async validatePlugin(parameters, strategy) {
     try {
@@ -449,7 +449,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 测试插件
+   * Test a plugin
    */
   async testPlugin(parameters, strategy) {
     try {
@@ -484,7 +484,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 搜索插件
+   * Search plugins
    */
   async searchPlugins(parameters, strategy) {
     try {
@@ -524,7 +524,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 获取插件市场
+   * Get the plugin marketplace
    */
   async getPluginMarketplace(parameters, strategy) {
     try {
@@ -564,7 +564,7 @@ class PluginAgent extends AgentBase {
   }
 
   /**
-   * 更新插件
+   * Update a plugin
    */
   async updatePlugin(parameters, strategy) {
     try {
@@ -598,5 +598,5 @@ class PluginAgent extends AgentBase {
   }
 }
 
-// 导出智能体
+// Export the agent
 window.PluginAgent = PluginAgent;

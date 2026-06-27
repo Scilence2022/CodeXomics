@@ -6,7 +6,7 @@
 class ThemeManager {
   constructor(configManager) {
     this.configManager = configManager;
-    this.currentStyle = 'default'; // 'default' (蓝紫色AI风) plus named style presets
+    this.currentStyle = 'default'; // 'default' (blue-purple AI look) plus named style presets
 
     // The early style application (flash-of-default prevention) is handled by
     // the inline <script> in index.html which reads _uiStyleHint from localStorage

@@ -138,7 +138,7 @@
         box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
       }
 
-      /* Toggle Switch 样式 */
+      /* Toggle Switch styles */
       .toggle-switch-container {
         display: flex;
         align-items: center;
@@ -269,9 +269,9 @@
         margin: 0;
       }
 
-      /* 保持与normal模式一致的tree-item样式 */
+      /* Keep tree-item styles consistent with normal mode */
       body.compact-mode .tree-item {
-        /* 移除额外的padding和margin，保持与normal模式一致 */
+        /* Remove extra padding and margin to stay consistent with normal mode */
         display: flex;
         flex-direction: column;
         margin: 2px 0;
@@ -287,7 +287,7 @@
 
       body.compact-mode .tree-item.folder {
         font-size: 13px;
-        /* 移除额外的margin-left，由JS动态控制缩进 */
+        /* Remove extra margin-left; indentation is controlled dynamically by JS */
       }
 
       /* Compact Mode Animations */
@@ -299,7 +299,7 @@
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      /* 内容区域两栏布局 */
+      /* Two-column layout for the content area */
       .content-body {
         display: flex;
         flex: 1;
@@ -312,7 +312,7 @@
         padding: 20px;
       }
 
-      /* 详细信息面板 */
+      /* Details panel */
       .details-panel {
         width: 320px;
         background: var(--pm-glass-bg);
@@ -409,7 +409,7 @@
         text-align: center;
       }
 
-      /* 文件类型分布样式 */
+      /* File-type distribution styles */
       .file-type-item {
         display: flex;
         justify-content: space-between;
@@ -441,7 +441,7 @@
         font-weight: 600;
       }
 
-      /* 活动记录样式 */
+      /* Activity-log styles */
       .activity-item {
         padding: 8px 0;
         font-size: 12px;
@@ -554,7 +554,7 @@
       .sidebar {
         width: 320px;
         flex-shrink: 0;
-        /* 防止侧边栏被压缩 */
+        /* Prevent the sidebar from being compressed */
         background: var(--pm-glass-bg);
         backdrop-filter: blur(20px);
         border-right: 1px solid var(--pm-glass-border);
@@ -596,12 +596,12 @@
         display: flex;
         align-items: center;
         padding: 4px 8px;
-        /* 减少内边距 */
+        /* Reduce the padding */
         cursor: pointer;
         border-radius: 8px;
         transition: all 0.2s ease;
         min-height: 22px;
-        /* 减少最小高度 */
+        /* Reduce the minimum height */
       }
 
       .tree-item-content:hover {
@@ -641,14 +641,14 @@
         width: 16px;
         height: 16px;
         margin-right: 6px;
-        /* 减少右边距 */
+        /* Reduce the right margin */
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 12px;
       }
 
-      /* 新增主图标样式 */
+      /* New main-icon styles */
       .tree-main-icon {
         width: 16px;
         height: 16px;
@@ -725,16 +725,16 @@
         margin-left: 0;
         border-left: 1px solid rgba(var(--pm-accent-rgb), 0.1);
         margin-left: 4px;
-        /* 减少默认子项缩进 */
+        /* Reduce the default child-item indentation */
         padding-left: 2px;
       }
 
-      /* 文件项特殊样式 */
+      /* Special styles for file items */
       .tree-item.file .tree-item-content {
         padding: 3px 8px;
-        /* 减少文件项内边距 */
+        /* Reduce file-item padding */
         min-height: 20px;
-        /* 减少文件项最小高度 */
+        /* Reduce the file-item minimum height */
       }
 
       .tree-item.file.selected > .tree-item-content {
@@ -749,10 +749,10 @@
       .tree-item.file .tree-label {
         font-weight: 400;
         font-size: 12px;
-        /* 减小文件名字体 */
+        /* Reduce the file-name font size */
       }
 
-      /* ===== 紧凑文件树样式 ===== */
+      /* ===== Compact file-tree styles ===== */
       .compact-tree-mode {
         font-size: 12px;
       }
@@ -763,16 +763,16 @@
 
       .compact-tree-mode .tree-item-content {
         padding: 2px 6px;
-        /* 进一步减少紧凑模式内边距 */
+        /* Further reduce padding in compact mode */
         min-height: 18px;
-        /* 进一步减少紧凑模式高度 */
+        /* Further reduce height in compact mode */
       }
 
       .compact-tree-mode .tree-item.file .tree-item-content {
         padding: 2px 6px;
-        /* 紧凑模式文件项内边距 */
+        /* File-item padding in compact mode */
         min-height: 16px;
-        /* 紧凑模式文件项高度 */
+        /* File-item height in compact mode */
       }
 
       .compact-tree-mode .tree-expander {
@@ -786,7 +786,7 @@
         width: 12px;
         height: 12px;
         margin-right: 4px;
-        /* 减少紧凑模式图标间距 */
+        /* Reduce icon spacing in compact mode */
         font-size: 10px;
       }
 
@@ -806,14 +806,14 @@
 
       .compact-tree-mode .tree-label {
         font-size: 11px;
-        /* 减小紧凑模式标签字体 */
+        /* Reduce label font size in compact mode */
         margin-right: 4px;
         line-height: 1.2;
       }
 
       .compact-tree-mode .tree-item.file .tree-label {
         font-size: 10px;
-        /* 进一步减小紧凑模式文件标签字体 */
+        /* Further reduce file-label font size in compact mode */
       }
 
       .compact-tree-mode .tree-file-count {
@@ -841,16 +841,16 @@
 
       .compact-tree-mode .tree-children {
         margin-left: 4px;
-        /* 减少紧凑模式子项缩进 */
+        /* Reduce child-item indentation in compact mode */
         padding-left: 2px;
       }
 
-      /* 紧凑模式下的悬停效果优化 */
+      /* Hover-effect optimization in compact mode */
       .compact-tree-mode .tree-item-content:hover {
         transform: translateX(1px);
       }
 
-      /* 紧凑模式切换按钮 */
+      /* Compact-mode toggle button */
       .tree-view-toggle {
         display: flex;
         align-items: center;
@@ -884,7 +884,7 @@
         transform: translateX(16px);
       }
 
-      /* 统计信息在紧凑模式下的优化 */
+      /* Statistics optimization in compact mode */
       .compact-tree-mode .sidebar-header {
         padding: 12px 16px;
       }
@@ -893,7 +893,7 @@
         font-size: 14px;
       }
 
-      /* 文件夹级别缩进优化 */
+      /* Folder-level indentation optimization */
       .compact-tree-mode .tree-item[style*='margin-left: 20px'] {
         margin-left: 12px !important;
       }
@@ -910,7 +910,7 @@
         margin-left: 48px !important;
       }
 
-      /* 响应式优化 - 超级紧凑模式 */
+      /* Responsive optimization - super-compact mode */
       .ultra-compact-mode {
         font-size: 11px;
       }
@@ -955,7 +955,7 @@
         font-size: 8px;
       }
 
-      /* ===== Header折叠模式样式 ===== */
+      /* ===== Header collapsed-mode styles ===== */
       .header-collapsed {
         display: none !important;
       }
@@ -1042,7 +1042,7 @@
         }
       }
 
-      /* 折叠模式下的sidebar样式优化 */
+      /* Sidebar style optimization in collapsed mode */
       .sidebar-collapsed-mode .sidebar-header {
         padding: 15px 16px;
         background: linear-gradient(
@@ -1057,7 +1057,7 @@
         font-weight: 700;
       }
 
-      /* 状态栏在折叠模式下的调整 */
+      /* Status-bar adjustments in collapsed mode */
       .status-bar-collapsed {
         position: fixed;
         bottom: 0;
@@ -1066,7 +1066,7 @@
         z-index: 999;
       }
 
-      /* 上下文菜单样式 */
+      /* Context-menu styles */
       .context-menu {
         position: fixed;
         background: var(--pm-surface);
@@ -1105,9 +1105,9 @@
         text-align: center;
       }
 
-      /* 简约模式下的文件树优化 - 保持与normal模式一致 */
+      /* File-tree optimization in minimal mode - consistent with normal mode */
       body.compact-mode .tree-item-content {
-        /* 保持与normal模式一致的padding和min-height */
+        /* Keep padding and min-height consistent with normal mode */
         display: flex;
         align-items: center;
         padding: 4px 8px;
@@ -1118,13 +1118,13 @@
       }
 
       body.compact-mode .tree-item.file .tree-item-content {
-        /* 文件项保持与normal模式一致 */
+        /* Keep file items consistent with normal mode */
         padding: 3px 8px;
         min-height: 20px;
       }
 
       body.compact-mode .tree-label {
-        /* 保持与normal模式一致的字体大小 */
+        /* Keep the font size consistent with normal mode */
         flex: 1;
         font-weight: 500;
         overflow: hidden;
@@ -1134,14 +1134,14 @@
       }
 
       body.compact-mode .tree-item.file .tree-label {
-        /* 文件标签保持与normal模式一致 */
+        /* Keep file labels consistent with normal mode */
         font-weight: 400;
         font-size: 12px;
       }
 
       body.compact-mode .tree-file-count,
       body.compact-mode .tree-file-size {
-        /* 保持与normal模式一致的字体大小 */
+        /* Keep the font size consistent with normal mode */
         font-size: 10px;
       }
 
@@ -1390,7 +1390,7 @@
         pointer-events: none;
       }
 
-      /* 可拖拽分隔条样式 */
+      /* Draggable divider styles */
       .sidebar-splitter {
         width: 6px;
         background: linear-gradient(
@@ -1838,7 +1838,7 @@
         z-index: 1;
       }
 
-      /* 保存按钮脉冲动画 */
+      /* Save-button pulse animation */
       @keyframes pulse {
         0% {
           transform: scale(1);
@@ -1856,7 +1856,7 @@
         }
       }
 
-      /* 文件卡片样式增强 */
+      /* File-card style enhancements */
       .file-card {
         background: var(--pm-glass-bg);
         border-radius: 16px;
@@ -1992,7 +1992,7 @@
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
       }
 
-      /* 上下文菜单样式 */
+      /* Context-menu styles */
       .context-menu {
         background: var(--pm-surface);
         border-radius: 12px;
@@ -2045,7 +2045,7 @@
         text-align: center;
       }
 
-      /* 文件预览模态框样式 */
+      /* File-preview modal styles */
       .modal {
         position: fixed;
         top: 0;
@@ -2131,7 +2131,7 @@
         line-height: 1.5;
       }
 
-      /* 空状态样式 */
+      /* Empty-state styles */
       .empty-state {
         text-align: center;
         padding: 60px 40px;
@@ -2156,7 +2156,7 @@
         font-size: 14px;
       }
 
-      /* 响应式文件网格 */
+      /* Responsive file grid */
       .file-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -2209,7 +2209,7 @@
         font-size: 12px;
       }
 
-      /* 按钮样式增强 */
+      /* Button style enhancements */
       .btn-sm {
         padding: 8px 16px;
         font-size: 12px;
@@ -2238,7 +2238,7 @@
         box-shadow: 0 4px 12px rgba(var(--pm-success-rgb), 0.3);
       }
 
-      /* List和Details视图的操作按钮样式 */
+      /* Action-button styles for List and Details views */
       .file-action-btn-small {
         background: var(--pm-glass-bg-light);
         border: none;
@@ -2257,7 +2257,7 @@
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       }
 
-      /* List视图样式 */
+      /* List-view styles */
       .file-list-item {
         display: flex;
         align-items: center;
@@ -2334,7 +2334,7 @@
         opacity: 1;
       }
 
-      /* Details视图（表格）样式 */
+      /* Details-view (table) styles */
       .file-details-table {
         width: 100%;
         min-width: 400px;
@@ -2473,7 +2473,7 @@
         justify-content: center;
       }
 
-      /* 视图容器样式 */
+      /* View-container styles */
       #fileList {
         background: var(--pm-glass-bg);
         border-radius: 12px;
@@ -2502,60 +2502,60 @@
         min-width: 0;
       }
 
-      /* 虚拟滚动优化样式 */
+      /* Virtual-scroll optimization styles */
       .virtual-scroll-container {
         height: 100%;
         overflow-y: auto;
         position: relative;
-        /* 启用硬件加速 */
+        /* Enable hardware acceleration */
         transform: translateZ(0);
         -webkit-transform: translateZ(0);
-        /* 优化滚动性能 */
+        /* Optimize scroll performance */
         -webkit-overflow-scrolling: touch;
         will-change: scroll-position;
       }
 
       .virtual-content-wrapper {
         position: relative;
-        /* 确保正确的层叠上下文 */
+        /* Ensure the correct stacking context */
         z-index: 1;
       }
 
       .virtual-visible-container {
         position: absolute;
         width: 100%;
-        /* 启用硬件加速 */
+        /* Enable hardware acceleration */
         transform: translateZ(0);
         -webkit-transform: translateZ(0);
         will-change: transform;
-        /* 优化布局性能 */
+        /* Optimize layout performance */
         contain: layout style paint;
       }
 
-      /* 文件卡片性能优化 */
+      /* File-card performance optimization */
       .file-card {
-        /* 启用硬件加速 */
+        /* Enable hardware acceleration */
         transform: translateZ(0);
         -webkit-transform: translateZ(0);
-        /* 优化重绘和重排性能 */
+        /* Optimize repaint and reflow performance */
         contain: layout style paint;
-        /* 减少合成层创建 */
+        /* Reduce compositing-layer creation */
         will-change: transform, opacity;
       }
 
       .file-card:hover {
-        /* 确保悬停效果使用硬件加速 */
+        /* Ensure hover effects use hardware acceleration */
         transform: translateY(-6px) scale(1.02) translateZ(0);
         -webkit-transform: translateY(-6px) scale(1.02) translateZ(0);
       }
 
       .file-card.selected {
-        /* 确保选中效果使用硬件加速 */
+        /* Ensure selection effects use hardware acceleration */
         transform: translateY(-4px) translateZ(0);
         -webkit-transform: translateY(-4px) translateZ(0);
       }
 
-      /* 滚动条优化 */
+      /* Scrollbar optimization */
       .virtual-scroll-container::-webkit-scrollbar {
         width: 8px;
       }
@@ -2575,20 +2575,20 @@
         background: rgba(var(--pm-accent-rgb), 0.5);
       }
 
-      /* 性能优化：减少不必要的重绘 */
+      /* Performance optimization: reduce unnecessary repaints */
       .file-grid {
-        /* 使用CSS Grid的性能优化 */
+        /* Performance optimization using CSS Grid */
         contain: layout;
       }
 
-      /* 大型列表模式的文件卡片布局优化 */
+      /* File-card layout optimization for large-list mode */
       .virtual-scroll-container .file-card {
         margin-bottom: 8px;
         height: 120px;
-        /* 固定高度确保虚拟滚动计算正确 */
+        /* Fixed height to ensure correct virtual-scroll calculations */
         min-height: 120px;
         max-height: 120px;
-        /* 优化flexbox性能 */
+        /* Optimize flexbox performance */
         flex-shrink: 0;
       }
 
@@ -2748,7 +2748,7 @@
         </div>
       </div>
 
-      <!-- 添加可拖拽的分隔条 -->
+      <!-- Draggable divider -->
       <div class="sidebar-splitter" id="sidebarSplitter">
         <div class="splitter-handle"></div>
       </div>
@@ -2842,7 +2842,7 @@
             </div>
           </div>
 
-          <!-- 详细信息面板 -->
+          <!-- Details panel -->
           <div class="details-panel" id="detailsPanel" style="display: none">
             <div class="details-header">
               <h4>📊 Details Panel</h4>
@@ -3208,11 +3208,11 @@
     </div>
 
     <script>
-      // 全局项目管理器实例
+      // Global project manager instance
       let projectManager = null;
       let projectManagerWindow = null;
 
-      // 安全的包装函数
+      // Safe wrapper function
       function toggleCompactMode() {
         if (projectManagerWindow && typeof projectManagerWindow.toggleCompactMode === 'function') {
           projectManagerWindow.toggleCompactMode();
@@ -3221,7 +3221,7 @@
         }
       }
 
-      // 窗口关闭时清理资源
+      // Clean up resources when the window closes
       window.addEventListener('beforeunload', async () => {
         if (projectManagerWindow) {
           console.log('🔓 Releasing all file locks before window close...');
@@ -3229,14 +3229,14 @@
         }
       });
 
-      // 初始化
+      // Initialize
       document.addEventListener('DOMContentLoaded', () => {
         console.log('DOM loaded, initializing Project Manager...');
 
-        // 创建 ProjectManagerWindow UI 实例
+        // Create the ProjectManagerWindow UI instance
         projectManagerWindow = new ProjectManagerWindow();
 
-        // 初始化简约模式事件监听器
+        // Initialize the minimal-mode event listeners
         setTimeout(() => {
           const compactToggle = document.getElementById('compactModeToggle');
           if (compactToggle && projectManagerWindow) {
@@ -3251,13 +3251,13 @@
           }
         }, 100);
 
-        // 创建 ProjectManager 核心逻辑实例并集成
+        // Create and integrate the ProjectManager core-logic instance
         if (typeof ProjectManager !== 'undefined') {
           projectManager = new ProjectManager();
-          // 将 ProjectManager 集成到 ProjectManagerWindow
+          // Integrate ProjectManager into ProjectManagerWindow
           projectManagerWindow.projectManager = projectManager;
 
-          // 共享数据和状态
+          // Share data and state
           projectManagerWindow.projects = projectManager.projects;
           projectManagerWindow.currentProject = projectManager.currentProject;
           projectManagerWindow.currentPath = projectManager.currentPath;
@@ -3269,7 +3269,7 @@
           console.warn('⚠️ ProjectManager not available, using fallback UI only');
         }
 
-        // 设置IPC事件监听器
+        // Set up IPC event listeners
         if (window.electronAPI && window.electronAPI.onCreateNewProject) {
           window.electronAPI.onCreateNewProject(() => {
             console.log('📝 Create new project requested from main menu');
@@ -3279,7 +3279,7 @@
           });
         }
 
-        // 监听从菜单加载项目的事件
+        // Listen for the load-project-from-menu event
         if (window.electronAPI && window.electronAPI.onLoadProjectFromMenu) {
           window.electronAPI.onLoadProjectFromMenu(filePath => {
             console.log('📁 Load project requested from main menu:', filePath);
@@ -3548,36 +3548,36 @@
         }
       });
 
-      // 全局点击事件监听器
+      // Global click event listener
       document.addEventListener('click', function (event) {
-        // 隐藏所有上下文菜单
+        // Hide all context menus
         if (!event.target.closest('.context-menu') && !event.target.closest('.tree-action-btn')) {
           projectManagerWindow.hideContextMenus();
         }
       });
 
-      // 阻止上下文菜单的默认右键行为
+      // Prevent the default right-click context-menu behavior
       document.addEventListener('contextmenu', function (event) {
         if (event.target.closest('.sidebar-content')) {
-          // 如果在侧边栏内，允许自定义右键菜单
-          // 具体的处理已在tree-item元素上定义
+          // If inside the sidebar, allow the custom right-click menu
+          // The specific handling is defined on the tree-item elements
         } else {
-          // 其他地方使用默认行为
+          // Use the default behavior elsewhere
         }
       });
 
-      // 键盘快捷键支持
+      // Keyboard-shortcut support
       document.addEventListener('keydown', function (event) {
-        // ESC键关闭模态框和上下文菜单
+        // The ESC key closes modals and context menus
         if (event.key === 'Escape') {
           projectManagerWindow.hideContextMenus();
-          // 关闭所有模态框
+          // Close all modals
           document.querySelectorAll('.modal').forEach(modal => {
             modal.style.display = 'none';
           });
         }
 
-        // Ctrl/Cmd + Shift + N 创建新文件夹
+        // Ctrl/Cmd + Shift + N creates a new folder
         if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'N') {
           event.preventDefault();
           if (projectManagerWindow.currentProject) {
@@ -3771,7 +3771,7 @@
       }
     </script>
 
-    <!-- 依赖脚本 -->
+    <!-- Dependency scripts -->
     <script src="renderer/modules/ProjectManagerWindow.js"></script>
     <script src="renderer/modules/ProjectXMLHandler.js"></script>
     <script src="renderer/modules/ProjectManager.js"></script>

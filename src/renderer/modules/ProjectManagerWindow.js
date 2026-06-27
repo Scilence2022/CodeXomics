@@ -1,6 +1,6 @@
 /**
- * ProjectManagerWindow - 独立项目管理器窗口的核心类
- * 专门为项目管理器窗口设计的功能模块
+ * ProjectManagerWindow - core class for the standalone project manager window
+ * A feature module designed specifically for the project manager window
  */
 class ProjectManagerWindow {
   constructor() {
@@ -58,31 +58,31 @@ class ProjectManagerWindow {
   async initialize() {
     console.log('Initializing Project Manager Window...');
 
-    // 加载项目数据
+    // Load the project data
     await this.loadProjects();
 
-    // 初始化UI
+    // Initialize the UI
     this.setupEventListeners();
     this.renderProjectTree();
     this.updateStatusBar('Ready');
 
-    // 初始化简约模式
+    // Initialize minimal mode
     this.initializeCompactMode();
 
-    // 初始化树视图事件和设置
+    // Initialize tree-view events and settings
     this.initializeTreeViewEvents();
 
-    // 初始化Header事件和设置
+    // Initialize header events and settings
     this.initializeHeaderEvents();
 
-    // 初始化侧边栏分隔器
+    // Initialize the sidebar splitter
     this.initializeSidebarSplitter();
 
     console.log('Project Manager Window initialized successfully');
   }
 
   setupEventListeners() {
-    // 搜索功能
+    // Search feature
     const searchBox = document.getElementById('searchBox');
     if (searchBox) {
       searchBox.addEventListener('input', e => {
@@ -91,7 +91,7 @@ class ProjectManagerWindow {
       });
     }
 
-    // 键盘快捷键
+    // Keyboard shortcuts
     document.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey) {
         switch (e.key) {
@@ -154,7 +154,7 @@ class ProjectManagerWindow {
       }
     });
 
-    // 点击外部关闭模态框
+    // Close the modal when clicking outside
     window.addEventListener('click', e => {
       const modals = document.querySelectorAll('.modal');
       modals.forEach(modal => {
@@ -165,15 +165,14 @@ class ProjectManagerWindow {
     });
   }
 
-  // ====== 项目管理功能 ======
-
+  // ====== Project management features ======
 
   async setDefaultProjectLocation() {
     try {
       if (window.electronAPI && window.electronAPI.getProjectDirectoryName) {
         const result = await window.electronAPI.getProjectDirectoryName();
         if (result.success) {
-          // 使用简单的路径构建，避免在renderer进程中使用require
+          // Use simple path construction to avoid using require in the renderer process
           const documentsPath = navigator.platform.includes('Win')
             ? `${process.env.USERPROFILE || 'C:\\Users\\User'}\\Documents`
             : `${process.env.HOME || '/Users/' + (process.env.USER || 'user')}/Documents`;
@@ -186,7 +185,7 @@ class ProjectManagerWindow {
       }
     } catch (error) {
       console.warn('Failed to set default project location:', error);
-      // 设置一个通用的默认位置
+      // Set a generic default location
       const defaultLocation = navigator.platform.includes('Win')
         ? 'C:\\Users\\User\\Documents\\CodeXomics Projects'
         : '/Users/user/Documents/CodeXomics Projects';
@@ -203,7 +202,7 @@ class ProjectManagerWindow {
         }
       } else {
         console.log('electronAPI selectProjectDirectory not available');
-        // 浏览器环境下的回退方案
+        // Fallback for the browser environment
         const input = document.createElement('input');
         input.type = 'file';
         input.webkitdirectory = true;
@@ -341,8 +340,7 @@ class ProjectManagerWindow {
     }
   }
 
-
-  // ====== UI渲染功能 ======
+  // ====== UI rendering features ======
 
   renderProjectTree() {
     const projectTree = document.getElementById('projectTree');
@@ -366,7 +364,7 @@ class ProjectManagerWindow {
         const isExpanded = this.expandedProjects && this.expandedProjects.has(projectId);
         const hasChildren = project.folders && project.folders.length > 0;
 
-        // 整合图标：展开状态 + 项目图标
+        // Combined icon: expand state + project icon
         let combinedIcon = '🗂️';
         if (hasChildren) {
           combinedIcon = isExpanded ? '📂' : '📁';
@@ -387,7 +385,7 @@ class ProjectManagerWindow {
                         </div>
                 `;
 
-        // 显示项目内容（如果项目被选中和展开）
+        // Show the project content (if the project is selected and expanded)
         if (isActive && isExpanded && project.folders) {
           html += '<div class="tree-children">';
           html += this.renderFolderTree(project.folders, project.files, 1);
@@ -402,12 +400,12 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 渲染文件夹树结构
+   * Render the folder-tree structure
    */
   renderFolderTree(folders, files, level = 0) {
     let html = '';
-    // 根据当前模式决定缩进大小 - 大幅减少缩进
-    let baseIndent = 8; // 减少到8px（约半个图标宽度）
+    // Determine the indentation size based on the current mode - greatly reduced
+    let baseIndent = 8; // reduced to 8px (about half an icon width)
     if (this.ultraCompactMode) {
       baseIndent = 4;
     } else if (this.compactTreeMode) {
@@ -415,23 +413,23 @@ class ProjectManagerWindow {
     }
     const indent = level * baseIndent;
 
-    // 首先渲染文件夹
+    // Render folders first
     folders.forEach(folder => {
       const isCurrentPath = this.arraysEqual(this.currentPath, folder.path);
       const folderId = folder.path.join('/');
       const isExpanded = this.expandedFolders && this.expandedFolders.has(folderId);
 
-      // 获取该文件夹下的文件
+      // Get the files under this folder
       const folderFiles = files.filter(file => file.folder && this.arraysEqual(file.folder, folder.path));
 
-      // 获取该文件夹下的子文件夹
+      // Get the subfolders under this folder
       const subFolders = folders.filter(
         f => f.path.length === folder.path.length + 1 && this.arraysEqual(f.path.slice(0, -1), folder.path)
       );
 
       const hasChildren = folderFiles.length > 0 || subFolders.length > 0;
 
-      // 整合图标：展开状态 + 文件夹图标
+      // Combined icon: expand state + folder icon
       let combinedIcon = folder.icon || '📁';
       if (hasChildren) {
         combinedIcon = isExpanded ? '📂' : '📁';
@@ -454,24 +452,24 @@ class ProjectManagerWindow {
                     </div>
             `;
 
-      // 如果文件夹展开，显示其内容
+      // If the folder is expanded, show its contents
       if (isExpanded && hasChildren) {
         html += '<div class="tree-children">';
 
-        // 显示子文件夹
+        // Show subfolders
         if (subFolders.length > 0) {
           html += this.renderFolderTree(subFolders, files, level + 1);
         }
 
-        // 显示文件
+        // Show files
         folderFiles.forEach(file => {
           const fileType = this.detectFileType(file.name);
           const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: 'var(--pm-text-secondary)' };
           const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
           const fileIndent = (level + 1) * baseIndent;
 
-          // 动态调整文件图标大小
-          let iconSize = '14px'; // 稍微减小图标
+          // Dynamically adjust the file icon size
+          let iconSize = '14px'; // slightly smaller icon
           let fontSize = '7px';
           if (this.ultraCompactMode) {
             iconSize = '10px';
@@ -509,7 +507,7 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 切换项目展开状态
+   * Toggle the project expand state
    */
   toggleProjectExpansion(projectId) {
     if (!this.expandedProjects) {
@@ -526,8 +524,8 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 切换文件夹展开状态
-   * 在Simple Mode下，点击文件夹时自动展开并在目录树中显示文件
+   * Toggle the folder expand state
+   * In Simple Mode, clicking a folder automatically expands it and shows the files in the tree
    */
   toggleFolderExpansion(folderId, folderPath = null) {
     if (!this.expandedFolders) {
@@ -539,7 +537,7 @@ class ProjectManagerWindow {
     } else {
       this.expandedFolders.add(folderId);
 
-      // 在Simple Mode下，展开文件夹时同时导航到该文件夹
+      // In Simple Mode, navigate to the folder when expanding it
       if (this.isCompactMode && folderPath) {
         this.currentPath = folderPath;
         this.renderProjectContent();
@@ -551,7 +549,7 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 选择项目时自动展开
+   * Auto-expand when a project is selected
    */
   selectProject(projectId) {
     this.currentProject = this.projects.get(projectId);
@@ -563,34 +561,34 @@ class ProjectManagerWindow {
       // Add to recent projects
       this.addToRecentProjects(projectId);
 
-      // 自动展开选中的项目
+      // Auto-expand the selected project
       if (!this.expandedProjects) {
         this.expandedProjects = new Set();
       }
       this.expandedProjects.add(projectId);
 
-      // 更新UI
+      // Update the UI
       this.renderProjectContent();
       this.updateActiveTreeItem(projectId);
       this.updateContentTitle();
 
-      // 显示项目内容
+      // Show the project content
       document.getElementById('projectOverview').style.display = 'none';
       document.getElementById('projectContent').style.display = 'block';
 
       this.updateStatusBar(`Opened: ${this.currentProject.name}`);
-      this.saveProjects(); // 保存最后打开时间
+      this.saveProjects(); // save the last-opened time
 
-      // 更新详细信息面板
+      // Update the details panel
       this.updateDetailsPanel();
 
-      // 自动刷新Projects & Workspaces显示
+      // Auto-refresh the Projects & Workspaces display
       this.autoRefreshProjectsAndWorkspaces();
     }
   }
 
   /**
-   * 增强的创建子文件夹功能
+   * Enhanced subfolder-creation feature
    */
   createSubfolderInPath(parentPath = null) {
     if (!this.currentProject) {
@@ -627,7 +625,7 @@ class ProjectManagerWindow {
     this.currentProject.folders.push(folder);
     this.currentProject.modified = new Date().toISOString();
 
-    // 自动展开父文件夹
+    // Auto-expand the parent folder
     if (basePath.length > 0) {
       if (!this.expandedFolders) {
         this.expandedFolders = new Set();
@@ -659,7 +657,7 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 右键菜单相关方法
+   * Context-menu-related methods
    */
   showProjectContextMenu(event, projectId) {
     event.preventDefault();
@@ -676,15 +674,15 @@ class ProjectManagerWindow {
   }
 
   showContextMenu(menu, event) {
-    // 隐藏所有上下文菜单
+    // Hide all context menus
     document.querySelectorAll('.context-menu').forEach(m => (m.style.display = 'none'));
 
-    // 显示指定菜单
+    // Show the specified menu
     menu.style.display = 'block';
     menu.style.left = event.clientX + 10 + 'px';
     menu.style.top = event.clientY + 10 + 'px';
 
-    // 确保菜单在视窗内
+    // Ensure the menu stays within the viewport
     const rect = menu.getBoundingClientRect();
     if (rect.right > window.innerWidth) {
       menu.style.left = event.clientX - rect.width + 'px';
@@ -701,7 +699,7 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 增强的addSubfolder方法
+   * Enhanced addSubfolder method
    */
 
   navigateToFolder(path) {
@@ -797,16 +795,16 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 虚拟滚动渲染大型文件列表
-   * @param {HTMLElement} container - 容器元素
-   * @param {Array} filteredFiles - 过滤后的文件列表
+   * Render a large file list with virtual scrolling
+   * @param {HTMLElement} container - the container element
+   * @param {Array} filteredFiles - the filtered file list
    */
   renderVirtualFileGrid(container, filteredFiles) {
-    // 初始化虚拟滚动属性
+    // Initialize the virtual-scroll properties
     if (!this.virtualScrolling) {
       this.virtualScrolling = {
-        itemHeight: 120, // 每个文件卡片的高度
-        visibleItems: Math.ceil(container.clientHeight / 120) + 5, // 可见项目数量 + 缓冲区
+        itemHeight: 120, // height of each file card
+        visibleItems: Math.ceil(container.clientHeight / 120) + 5, // number of visible items + buffer
         scrollTop: 0,
         startIndex: 0,
         endIndex: 0,
@@ -816,10 +814,10 @@ class ProjectManagerWindow {
 
     this.virtualScrolling.totalItems = filteredFiles.length;
 
-    // 计算可见范围
+    // Calculate the visible range
     this.updateVirtualScrollRange(container);
 
-    // 创建虚拟滚动容器结构
+    // Create the virtual-scroll container structure
     const virtualContainer = document.createElement('div');
     virtualContainer.className = 'virtual-scroll-container';
     virtualContainer.style.cssText = `
@@ -828,7 +826,7 @@ class ProjectManagerWindow {
             position: relative;
         `;
 
-    // 创建内容包装器
+    // Create the content wrapper
     const contentWrapper = document.createElement('div');
     contentWrapper.className = 'virtual-content-wrapper';
     contentWrapper.style.cssText = `
@@ -836,7 +834,7 @@ class ProjectManagerWindow {
             position: relative;
         `;
 
-    // 创建可见项目容器
+    // Create the visible-items container
     const visibleContainer = document.createElement('div');
     visibleContainer.className = 'virtual-visible-container';
     visibleContainer.style.cssText = `
@@ -845,7 +843,7 @@ class ProjectManagerWindow {
             width: 100%;
         `;
 
-    // 渲染可见项目
+    // Render the visible items
     const visibleFiles = filteredFiles.slice(this.virtualScrolling.startIndex, this.virtualScrolling.endIndex);
 
     visibleContainer.innerHTML = visibleFiles
@@ -854,16 +852,16 @@ class ProjectManagerWindow {
       })
       .join('');
 
-    // 组装虚拟滚动结构
+    // Assemble the virtual-scroll structure
     contentWrapper.appendChild(visibleContainer);
     virtualContainer.appendChild(contentWrapper);
 
-    // 添加滚动事件监听器
+    // Add the scroll event listener
     virtualContainer.addEventListener('scroll', e => {
       this.handleVirtualScroll(e, container, filteredFiles);
     });
 
-    // 清空容器并添加虚拟滚动结构
+    // Clear the container and add the virtual-scroll structure
     container.innerHTML = '';
     container.appendChild(virtualContainer);
 
@@ -871,8 +869,8 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 更新虚拟滚动可见范围
-   * @param {HTMLElement} container - 容器元素
+   * Update the virtual-scroll visible range
+   * @param {HTMLElement} container - the container element
    */
   updateVirtualScrollRange(container) {
     const scrollTop = this.virtualScrolling.scrollTop;
@@ -887,15 +885,15 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 处理虚拟滚动事件
-   * @param {Event} e - 滚动事件
-   * @param {HTMLElement} container - 容器元素
-   * @param {Array} filteredFiles - 文件列表
+   * Handle the virtual-scroll event
+   * @param {Event} e - the scroll event
+   * @param {HTMLElement} container - the container element
+   * @param {Array} filteredFiles - the file list
    */
   handleVirtualScroll(e, container, filteredFiles) {
     const scrollTop = e.target.scrollTop;
 
-    // 节流处理，避免过度频繁的重渲染
+    // Throttle to avoid overly frequent re-rendering
     if (Math.abs(scrollTop - this.virtualScrolling.scrollTop) < 10) {
       return;
     }
@@ -905,25 +903,25 @@ class ProjectManagerWindow {
     const oldStartIndex = this.virtualScrolling.startIndex;
     this.updateVirtualScrollRange(container);
 
-    // 只有当可见范围发生显著变化时才重新渲染
+    // Only re-render when the visible range changes significantly
     if (Math.abs(this.virtualScrolling.startIndex - oldStartIndex) >= 3) {
       this.updateVirtualVisibleItems(e.target, filteredFiles);
     }
   }
 
   /**
-   * 更新虚拟滚动可见项目
-   * @param {HTMLElement} scrollContainer - 滚动容器
-   * @param {Array} filteredFiles - 文件列表
+   * Update the virtual-scroll visible items
+   * @param {HTMLElement} scrollContainer - the scroll container
+   * @param {Array} filteredFiles - the file list
    */
   updateVirtualVisibleItems(scrollContainer, filteredFiles) {
     const visibleContainer = scrollContainer.querySelector('.virtual-visible-container');
     if (!visibleContainer) return;
 
-    // 更新容器位置
+    // Update the container position
     visibleContainer.style.top = `${this.virtualScrolling.startIndex * this.virtualScrolling.itemHeight}px`;
 
-    // 渲染新的可见项目
+    // Render the new visible items
     const visibleFiles = filteredFiles.slice(this.virtualScrolling.startIndex, this.virtualScrolling.endIndex);
 
     visibleContainer.innerHTML = visibleFiles
@@ -934,9 +932,9 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 生成文件卡片HTML
-   * @param {Object} file - 文件对象
-   * @returns {string} HTML字符串
+   * Generate the file-card HTML
+   * @param {Object} file - the file object
+   * @returns {string} the HTML string
    */
   generateFileCardHTML(file) {
     const fileType = this.detectFileType(file.name);
@@ -977,7 +975,7 @@ class ProjectManagerWindow {
         `;
   }
 
-  // ====== 文件管理功能 ======
+  // ====== File management features ======
 
   async addFiles() {
     if (!this.currentProject) {
@@ -992,7 +990,7 @@ class ProjectManagerWindow {
           await this.processSelectedFiles(result.filePaths);
         }
       } else {
-        // 浏览器环境的回退方案
+        // Fallback for the browser environment
         const input = document.createElement('input');
         input.type = 'file';
         input.multiple = true;
@@ -1021,7 +1019,7 @@ class ProjectManagerWindow {
             fileInfo = result.info;
           }
         } else {
-          // 从路径提取基本信息
+          // Extract basic info from the path
           const fileName = filePath.split('/').pop() || filePath.split('\\').pop();
           fileInfo = {
             name: fileName,
@@ -1067,7 +1065,7 @@ class ProjectManagerWindow {
       const fileObj = {
         id: this.generateId(),
         name: file.name,
-        path: file.name, // 在浏览器环境中使用文件名作为路径
+        path: file.name, // use the file name as the path in the browser environment
         size: file.size,
         type: this.detectFileType(file.name),
         folder: [...this.currentPath],
@@ -1310,12 +1308,12 @@ class ProjectManagerWindow {
     }
   }
 
-  // ====== 工具方法 ======
+  // ====== Utility methods ======
 
   /**
-   * 获取文件的绝对路径
-   * @param {Object} file - 文件对象
-   * @returns {string} 绝对路径
+   * Get the file's absolute path
+   * @param {Object} file - the file object
+   * @returns {string} the absolute path
    */
   getFileAbsolutePath(file) {
     if (!file || !this.currentProject) {
@@ -1335,30 +1333,30 @@ class ProjectManagerWindow {
       dataFolderPath: this.currentProject.dataFolderPath,
     });
 
-    // 如果文件有绝对路径，直接返回
+    // If the file has an absolute path, return it directly
     if (file.absolutePath) {
       console.log('🔍 getFileAbsolutePath: Using existing absolutePath:', file.absolutePath);
       return file.absolutePath;
     }
 
-    // 如果文件路径已经是绝对路径，直接返回
+    // If the file path is already absolute, return it directly
     if (file.path && (file.path.startsWith('/') || file.path.includes(':\\'))) {
       console.log('🔍 getFileAbsolutePath: Path is already absolute:', file.path);
       return file.path;
     }
 
-    // 如果文件有相对路径，构建绝对路径
+    // If the file has a relative path, build the absolute path
     if (file.path && this.currentProject.dataFolderPath) {
-      // 使用简单的路径拼接，因为renderer进程不能直接使用require('path')
+      // Use simple path concatenation, since the renderer process can't use require('path') directly
       const normalizedRelativePath = file.path.replace(/\\/g, '/');
       let absolutePath;
 
-      // 处理不同操作系统的路径分隔符
+      // Handle path separators for different operating systems
       if (this.currentProject.dataFolderPath.includes('\\')) {
-        // Windows路径
+        // Windows path
         absolutePath = this.currentProject.dataFolderPath + '\\' + normalizedRelativePath.replace(/\//g, '\\');
       } else {
-        // Unix/Linux/Mac路径
+        // Unix/Linux/Mac path
         absolutePath = this.currentProject.dataFolderPath + '/' + normalizedRelativePath;
       }
 
@@ -1366,9 +1364,9 @@ class ProjectManagerWindow {
       return absolutePath;
     }
 
-    // 兜底情况 - 使用动态项目目录名称构建路径
+    // Fallback case - build the path using the dynamic project directory name
     if (file.path && this.currentProject.name) {
-      // 使用简单路径构建避免require('path')
+      // Use simple path construction to avoid require('path')
       const documentsPath = navigator.platform.includes('Win')
         ? `${process.env.USERPROFILE || 'C:\\Users\\User'}\\Documents`
         : `${process.env.HOME || '/Users/' + (process.env.USER || 'user')}/Documents`;
@@ -1390,33 +1388,33 @@ class ProjectManagerWindow {
       return absolutePath;
     }
 
-    // 最后的兜底情况
+    // The final fallback case
     console.log('🔍 getFileAbsolutePath: Using fallback path:', file.path || '');
     return file.path || '';
   }
 
   /**
-   * 获取文件的项目相对路径
-   * @param {Object} file - 文件对象
-   * @returns {string} 项目相对路径
+   * Get the file's project-relative path
+   * @param {Object} file - the file object
+   * @returns {string} the project-relative path
    */
   getFileProjectRelativePath(file) {
     if (!file) return '';
 
-    // 如果已有项目相对路径，直接返回
+    // If there's already a project-relative path, return it directly
     if (file.path && !file.path.startsWith('/') && !file.path.includes(':\\')) {
       return file.path;
     }
 
-    // 如果有绝对路径，转换为相对路径
+    // If there's an absolute path, convert it to a relative path
     if (file.absolutePath && this.currentProject && this.currentProject.dataFolderPath) {
-      // 使用简单的字符串操作替代path.relative
+      // Use simple string operations instead of path.relative
       let relativePath = file.absolutePath;
       const basePath = this.currentProject.dataFolderPath;
 
       if (relativePath.startsWith(basePath)) {
         relativePath = relativePath.substring(basePath.length);
-        // 移除开头的路径分隔符
+        // Remove the leading path separator
         if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
           relativePath = relativePath.substring(1);
         }
@@ -1429,29 +1427,29 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 规范化文件路径存储
-   * @param {Object} file - 文件对象
-   * @returns {Object} 规范化后的文件对象
+   * Normalize file-path storage
+   * @param {Object} file - the file object
+   * @returns {Object} the normalized file object
    */
   normalizeFilePaths(file) {
     if (!file || !this.currentProject) return file;
 
     const normalizedFile = { ...file };
 
-    // 确保有项目相对路径
+    // Ensure there's a project-relative path
     normalizedFile.path = this.getFileProjectRelativePath(file);
 
-    // 如果没有绝对路径，尝试构建
+    // If there's no absolute path, try to build one
     if (!normalizedFile.absolutePath && this.currentProject.dataFolderPath) {
-      // 使用简单的路径拼接替代path.resolve
+      // Use simple path concatenation instead of path.resolve
       const basePath = this.currentProject.dataFolderPath;
       const relativePath = normalizedFile.path;
 
       if (basePath.includes('\\')) {
-        // Windows路径
+        // Windows path
         normalizedFile.absolutePath = basePath + '\\' + relativePath.replace(/\//g, '\\');
       } else {
-        // Unix/Linux/Mac路径
+        // Unix/Linux/Mac path
         normalizedFile.absolutePath = basePath + '/' + relativePath;
       }
     }
@@ -1460,8 +1458,8 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 建立文件关系（如配对的reads文件、注释文件等）
-   * @param {Array} files - 文件数组
+   * Establish file relationships (e.g., paired reads files, annotation files)
+   * @param {Array} files - the file array
    */
   buildFileRelationships(files) {
     if (!files || files.length === 0) return;
@@ -1477,17 +1475,17 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 检测文件关系
-   * @param {Object} file - 目标文件
-   * @param {Array} allFiles - 所有文件
-   * @returns {Array} 相关文件列表
+   * Detect file relationships
+   * @param {Object} file - the target file
+   * @param {Array} allFiles - all files
+   * @returns {Array} the list of related files
    */
   detectFileRelationships(file, allFiles) {
     const relationships = [];
     const fileName = file.name.toLowerCase();
     const baseName = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
 
-    // 检测配对的reads文件 (R1/R2, _1/_2, forward/reverse)
+    // Detect paired reads files (R1/R2, _1/_2, forward/reverse)
     if (fileName.includes('_r1') || fileName.includes('_1') || fileName.includes('forward')) {
       const pairPattern = fileName.replace(/(_r1|_1|forward)/, '(_r2|_2|reverse)');
       const pair = allFiles.find(f =>
@@ -1498,7 +1496,7 @@ class ProjectManagerWindow {
       }
     }
 
-    // 检测注释文件关系 (同名不同扩展名)
+    // Detect annotation-file relationships (same name, different extension)
     const annotationExtensions = ['.gff', '.gff3', '.gtf', '.bed', '.vcf'];
     const genomeExtensions = ['.fasta', '.fa', '.fas', '.gb', '.gbk'];
 
@@ -1513,7 +1511,7 @@ class ProjectManagerWindow {
       });
     }
 
-    // 检测索引文件关系
+    // Detect index-file relationships
     const indexFile = allFiles.find(
       f =>
         f.name.toLowerCase() === fileName + '.fai' ||
@@ -1528,9 +1526,9 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 智能文件分类
-   * @param {Array} files - 文件数组
-   * @returns {Object} 分类结果
+   * Smart file classification
+   * @param {Array} files - the file array
+   * @returns {Object} the classification result
    */
   smartFileClassification(files) {
     const classification = {
@@ -1546,7 +1544,7 @@ class ProjectManagerWindow {
       const fileName = file.name.toLowerCase();
       const fileType = file.type;
 
-      // 基因组文件
+      // Genome files
       if (
         fileType === 'fasta' ||
         fileType === 'genbank' ||
@@ -1555,7 +1553,7 @@ class ProjectManagerWindow {
       ) {
         classification.genomes.push(file);
       }
-      // 注释文件
+      // Annotation files
       else if (
         fileType === 'gff' ||
         fileType === 'bed' ||
@@ -1564,7 +1562,7 @@ class ProjectManagerWindow {
       ) {
         classification.annotations.push(file);
       }
-      // 变异文件
+      // Variant files
       else if (
         fileType === 'vcf' ||
         fileName.includes('variant') ||
@@ -1573,7 +1571,7 @@ class ProjectManagerWindow {
       ) {
         classification.variants.push(file);
       }
-      // 测序数据
+      // Sequencing data
       else if (
         fileType === 'fastq' ||
         fileType === 'bam' ||
@@ -1583,7 +1581,7 @@ class ProjectManagerWindow {
       ) {
         classification.reads.push(file);
       }
-      // 分析结果
+      // Analysis results
       else if (
         fileName.includes('result') ||
         fileName.includes('output') ||
@@ -1592,7 +1590,7 @@ class ProjectManagerWindow {
       ) {
         classification.analysis.push(file);
       }
-      // 其他
+      // Other
       else {
         classification.others.push(file);
       }
@@ -1602,8 +1600,8 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 构建搜索索引
-   * @param {Array} files - 文件数组
+   * Build the search index
+   * @param {Array} files - the file array
    */
   buildSearchIndex(files) {
     this.searchIndex.clear();
@@ -1617,7 +1615,7 @@ class ProjectManagerWindow {
         file.path.toLowerCase(),
       ];
 
-      // 添加元数据搜索项
+      // Add metadata search items
       if (file.metadata) {
         Object.values(file.metadata).forEach(value => {
           if (typeof value === 'string') {
@@ -1636,9 +1634,9 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 高级搜索
-   * @param {string} query - 搜索查询
-   * @returns {Array} 匹配的文件
+   * Advanced search
+   * @param {string} query - the search query
+   * @returns {Array} the matching files
    */
   advancedSearch(query) {
     if (!query || query.trim() === '') return [];
@@ -1647,12 +1645,12 @@ class ProjectManagerWindow {
     const matchingFileIds = new Set();
 
     searchTerms.forEach(term => {
-      // 精确匹配
+      // Exact match
       if (this.searchIndex.has(term)) {
         this.searchIndex.get(term).forEach(fileId => matchingFileIds.add(fileId));
       }
 
-      // 模糊匹配
+      // Fuzzy match
       this.searchIndex.forEach((fileIds, indexTerm) => {
         if (indexTerm.includes(term)) {
           fileIds.forEach(fileId => matchingFileIds.add(fileId));
@@ -1660,7 +1658,7 @@ class ProjectManagerWindow {
       });
     });
 
-    // 返回匹配的文件对象
+    // Return the matching file objects
     return Array.from(matchingFileIds)
       .map(fileId => this.findFileById(fileId))
       .filter(file => file !== null);
@@ -1741,14 +1739,14 @@ class ProjectManagerWindow {
   }
 
   async refreshProjects() {
-    // 如果有当前项目，扫描其目录并添加新文件/文件夹
+    // If there's a current project, scan its directory and add new files/folders
     if (this.currentProject && this.currentProject.location) {
       await this.scanAndAddNewFiles();
       this.renderProjectTree();
       this.renderProjectContent();
       this.showNotification('🔄 Project directory scanned and refreshed', 'success');
     } else {
-      // 如果没有当前项目，则正常加载项目列表
+      // If there's no current project, load the project list normally
       this.loadProjects();
       this.renderProjectTree();
       this.showNotification('📂 Projects list refreshed', 'success');
@@ -1766,7 +1764,7 @@ class ProjectManagerWindow {
     }
   }
 
-  // ====== 数据持久化 ======
+  // ====== Data persistence ======
 
   async saveProjects() {
     try {
@@ -1785,7 +1783,7 @@ class ProjectManagerWindow {
         // Update the menu with recent projects
         await this.updateRecentProjectsMenu();
       } else {
-        // 浏览器环境下保存到localStorage
+        // In a browser environment, save to localStorage
         localStorage.setItem('genomeExplorer_projects', JSON.stringify(projectsData));
       }
 
@@ -1805,7 +1803,7 @@ class ProjectManagerWindow {
           projectsData = JSON.parse(result.data);
         }
       } else {
-        // 浏览器环境下从localStorage加载
+        // In a browser environment, load from localStorage
         const data = localStorage.getItem('genomeExplorer_projects');
         if (data) {
           projectsData = JSON.parse(data);
@@ -1829,16 +1827,16 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 添加到最近项目
+   * Add to recent projects
    */
   addToRecentProjects(projectId) {
     this.recentProjects = this.recentProjects.filter(id => id !== projectId);
     this.recentProjects.unshift(projectId);
-    this.recentProjects = this.recentProjects.slice(0, 10); // 只保留最近10个
+    this.recentProjects = this.recentProjects.slice(0, 10); // keep only the 10 most recent
   }
 
   /**
-   * 清除最近项目
+   * Clear recent projects
    */
   async clearRecentProjects() {
     this.recentProjects = [];
@@ -1848,7 +1846,7 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 更新最近项目菜单
+   * Update the recent-projects menu
    */
   async updateRecentProjectsMenu() {
     try {
@@ -1874,7 +1872,7 @@ class ProjectManagerWindow {
     }
   }
 
-  // ====== 工具函数 ======
+  // ====== Utility functions ======
 
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -1887,7 +1885,7 @@ class ProjectManagerWindow {
 
     const parts = fileName.toLowerCase().split('.');
     if (parts.length < 2) {
-      return 'text'; // 没有扩展名的文件默认为文本文件
+      return 'text'; // files without an extension default to text
     }
 
     const ext = '.' + parts.pop();
@@ -1924,7 +1922,7 @@ class ProjectManagerWindow {
   showNotification(message, type = 'info') {
     console.log(`[${type.toUpperCase()}] ${message}`);
 
-    // 简单的通知实现
+    // Simple notification implementation
     const notification = document.createElement('div');
     notification.style.cssText = `
             position: fixed;
@@ -1951,28 +1949,28 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 自动刷新Projects & Workspaces显示
+   * Auto-refresh the Projects & Workspaces display
    */
   autoRefreshProjectsAndWorkspaces() {
     console.log('🔄 Auto-refreshing Projects & Workspaces...');
 
-    // 刷新项目树视图
+    // Refresh the project tree view
     this.renderProjectTree();
 
-    // 如果当前有选中的项目，也刷新其内容
+    // If a project is currently selected, refresh its content too
     if (this.currentProject) {
       this.renderProjectContent();
     }
 
-    // 更新状态栏
+    // Update the status bar
     const projectCount = this.projects.size;
     const activeProjectName = this.currentProject ? this.currentProject.name : 'None';
     this.updateStatusBar(`Refreshed: ${projectCount} projects | Active: ${activeProjectName}`);
 
-    // 通知用户刷新完成
+    // Notify the user that the refresh is complete
     console.log('✅ Projects & Workspaces refreshed successfully');
 
-    // 3秒后恢复正常状态栏
+    // Restore the normal status bar after 3 seconds
     setTimeout(() => {
       if (this.currentProject) {
         this.updateStatusBar(`Opened: ${this.currentProject.name}`);
@@ -1983,7 +1981,7 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 手动刷新按钮功能
+   * Manual refresh-button feature
    */
   async manualRefreshProjects() {
     await this.loadProjects();
@@ -2048,7 +2046,7 @@ class ProjectManagerWindow {
   }
 
   /**
-   * 扫描项目文件夹并添加新文件和文件夹
+   * Scan the project folder and add new files and folders
    */
   async scanAndAddNewFiles() {
     if (!this.currentProject || !window.electronAPI || !window.electronAPI.scanProjectFolder) {
@@ -2139,7 +2137,7 @@ class ProjectManagerWindow {
           this.buildFileRelationships(this.currentProject.files);
           this.buildSearchIndex(this.currentProject.files);
 
-          // 标记项目为已修改，这样保存按钮就会保存到.prj.GAI文件
+          // Mark the project as modified so the save button saves to the .prj.GAI file
           this.markProjectAsModified();
 
           // Save changes to both localStorage and XML
@@ -2185,7 +2183,7 @@ class ProjectManagerWindow {
     }
   }
 
-  // ====== 菜单系统功能实现 ======
+  // ====== Menu-system feature implementation ======
 
   // ==================== FILE MENU METHODS ====================
 
@@ -2602,7 +2600,6 @@ class ProjectManagerWindow {
   }
 
   // ==================== PROJECT MENU METHODS ====================
-
 
   showProjectStatistics() {
     if (!this.currentProject) {
@@ -3500,14 +3497,14 @@ System Information:
 
           // ... existing code ...
 
-          // 检查是否为新结构（Project.GAI 在项目目录内）
+          // Check whether it's the new structure (Project.GAI inside the project directory)
           if (fileName === 'Project.GAI') {
-            // 新结构：Project.GAI 在项目目录内
+            // New structure: Project.GAI inside the project directory
             const projectDir = filePath.substring(0, filePath.lastIndexOf('/'));
             project.dataFolderPath = projectDir;
             project.location = projectDir.substring(0, projectDir.lastIndexOf('/'));
           } else {
-            // 旧结构：ProjectName.prj.GAI 与项目目录平级
+            // Old structure: ProjectName.prj.GAI alongside the project directory
             const projectDir = filePath.substring(0, filePath.lastIndexOf('/'));
             project.dataFolderPath = `${projectDir}/${project.name}`;
             project.location = projectDir;
@@ -3712,7 +3709,7 @@ Built with ❤️ for the bioinformatics community.
     alert(about);
   }
 
-  // ====== 简约模式管理 ======
+  // ====== Minimal-mode management ======
 
   toggleCompactMode() {
     this.isCompactMode = !this.isCompactMode;
@@ -3723,40 +3720,40 @@ Built with ❤️ for the bioinformatics community.
     const compactToggle = document.getElementById('compactModeToggle');
 
     if (this.isCompactMode) {
-      // 启用简约模式
+      // Enable minimal mode
       body.classList.add('compact-mode');
       headerActions.style.display = 'none';
       headerActionsCompact.style.display = 'flex';
       compactToggle.checked = true;
 
-      // 更新状态栏信息
+      // Update the status-bar info
       this.updateStatusBar('Simple Mode: Showing workspace only');
 
-      // 保存简约模式状态
+      // Save the minimal-mode state
       this.saveCompactModePreference(true);
 
       console.log('🎯 Compact mode enabled - showing workspace only');
     } else {
-      // 禁用简约模式
+      // Disable minimal mode
       body.classList.remove('compact-mode');
       headerActions.style.display = 'flex';
       headerActionsCompact.style.display = 'none';
       compactToggle.checked = false;
 
-      // 恢复正常状态栏信息
+      // Restore the normal status-bar info
       if (this.currentProject) {
         this.updateStatusBar(`Project: ${this.currentProject.name}`);
       } else {
         this.updateStatusBar('Ready');
       }
 
-      // 保存简约模式状态
+      // Save the minimal-mode state
       this.saveCompactModePreference(false);
 
       console.log('🎯 Compact mode disabled - showing full interface');
     }
 
-    // 添加视觉反馈
+    // Add visual feedback
     this.showNotification(this.isCompactMode ? 'Simple Mode enabled' : 'Full interface restored', 'info');
   }
 
@@ -3774,7 +3771,7 @@ Built with ❤️ for the bioinformatics community.
       if (saved !== null) {
         const isCompact = JSON.parse(saved);
         if (isCompact !== this.isCompactMode) {
-          // 延迟应用模式，确保DOM已加载
+          // Delay applying the mode to ensure the DOM is loaded
           setTimeout(() => {
             this.toggleCompactMode();
           }, 100);
@@ -3786,10 +3783,10 @@ Built with ❤️ for the bioinformatics community.
   }
 
   initializeCompactMode() {
-    // 在页面加载时应用保存的简约模式设置
+    // Apply the saved minimal-mode setting on page load
     this.loadCompactModePreference();
 
-    // 确保toggle按钮状态正确
+    // Ensure the toggle button is in the correct state
     setTimeout(() => {
       const compactToggle = document.getElementById('compactModeToggle');
       if (compactToggle) {
@@ -3799,7 +3796,7 @@ Built with ❤️ for the bioinformatics community.
   }
 
   /**
-   * 初始化侧边栏分隔器（Splitter）拖拽功能
+   * Initialize the sidebar splitter drag functionality
    */
   initializeSidebarSplitter() {
     console.log('🔧 Initializing sidebar splitter...');
@@ -3966,12 +3963,12 @@ Built with ❤️ for the bioinformatics community.
   }
 
   /**
-   * 显示增强的子文件夹创建模态框
+   * Show the enhanced subfolder-creation modal
    */
   showCreateSubfolderModal(parentPath = null) {
     const basePath = parentPath || this.currentContextFolderPath || this.currentPath;
 
-    // 更新模态框中的当前路径显示
+    // Update the current-path display in the modal
     const pathDisplay = document.getElementById('currentFolderPath');
     if (pathDisplay) {
       if (basePath && basePath.length > 0) {
@@ -3981,22 +3978,22 @@ Built with ❤️ for the bioinformatics community.
       }
     }
 
-    // 清空表单
+    // Clear the form
     document.getElementById('subfolderName').value = '';
     document.getElementById('subfolderIcon').value = '📁';
     document.getElementById('subfolderDescription').value = '';
 
-    // 显示模态框
+    // Show the modal
     document.getElementById('createSubfolderModal').style.display = 'block';
 
-    // 聚焦到名称输入框
+    // Focus the name input field
     setTimeout(() => {
       document.getElementById('subfolderName').focus();
     }, 100);
   }
 
   /**
-   * 从增强模态框创建子文件夹
+   * Create a subfolder from the enhanced modal
    */
   createSubfolderFromModal() {
     const folderName = document.getElementById('subfolderName').value.trim();
@@ -4033,7 +4030,7 @@ Built with ❤️ for the bioinformatics community.
     this.currentProject.folders.push(folder);
     this.currentProject.modified = new Date().toISOString();
 
-    // 自动展开父文件夹
+    // Auto-expand the parent folder
     if (basePath.length > 0) {
       if (!this.expandedFolders) {
         this.expandedFolders = new Set();
@@ -4066,7 +4063,7 @@ Built with ❤️ for the bioinformatics community.
   }
 
   /**
-   * 改进的addSubfolder方法，使用增强模态框
+   * Improved addSubfolder method that uses the enhanced modal
    */
   addSubfolder() {
     this.hideContextMenus();
@@ -4076,7 +4073,7 @@ Built with ❤️ for the bioinformatics community.
   }
 
   /**
-   * 文件右键菜单
+   * File context menu
    */
   showFileContextMenu(event, fileId) {
     event.preventDefault();
@@ -4091,14 +4088,14 @@ Built with ❤️ for the bioinformatics community.
   }
 
   /**
-   * 预览文件方法
+   * File-preview method
    */
   async previewFile(fileId) {
     const file = this.findFileById(fileId);
     if (!file) return;
 
     try {
-      // 这里可以根据文件类型调用不同的预览方法
+      // Different preview methods can be called here depending on the file type
       const fileType = this.detectFileType(file.name);
 
       if (window.electronAPI && window.electronAPI.openFileInMainWindow) {
@@ -4124,7 +4121,7 @@ Built with ❤️ for the bioinformatics community.
   }
 
   /**
-   * 重命名文件方法
+   * File-rename method
    */
   async renameFile(fileId) {
     const file = this.findFileById(fileId);
@@ -4201,7 +4198,7 @@ Built with ❤️ for the bioinformatics community.
   }
 
   /**
-   * 删除文件方法
+   * File-delete method
    */
   async deleteFile(fileId) {
     const file = this.findFileById(fileId);
@@ -4212,8 +4209,8 @@ Built with ❤️ for the bioinformatics community.
         `Are you sure you want to delete "${file.name}"?\n\nThis will delete both the project record AND the physical file from disk.`
       )
     ) {
-return;
-}
+      return;
+    }
 
     try {
       // Get the absolute path of the file
@@ -4228,10 +4225,10 @@ return;
         }
       }
 
-      // 从项目中移除文件
+      // Remove the file from the project
       this.currentProject.files = this.currentProject.files.filter(f => f.id !== fileId);
 
-      // 从选择列表中移除
+      // Remove it from the selection list
       this.selectedFiles.delete(fileId);
 
       this.currentProject.modified = new Date().toISOString();
@@ -4252,7 +4249,7 @@ return;
   }
 
   /**
-   * 复制文件方法
+   * File-copy method
    */
   async duplicateFile(fileId) {
     const file = this.findFileById(fileId);
@@ -4291,7 +4288,7 @@ return;
   }
 
   /**
-   * 增强的文件夹操作方法
+   * Enhanced folder-operation methods
    */
   renameProject() {
     this.hideContextMenus();
@@ -4321,13 +4318,13 @@ return;
     if (confirm(`Are you sure you want to delete project "${project.name}"? This action cannot be undone.`)) {
       this.projects.delete(this.currentContextProjectId);
 
-      // 如果删除的是当前项目，清空当前项目
+      // If deleting the current project, clear it
       if (this.currentProject && this.currentProject.id === this.currentContextProjectId) {
         this.currentProject = null;
         this.currentPath = [];
         this.selectedFiles.clear();
 
-        // 显示项目概览
+        // Show the project overview
         document.getElementById('projectOverview').style.display = 'block';
         document.getElementById('projectContent').style.display = 'none';
       }
@@ -4404,15 +4401,15 @@ Modified: ${this.formatDate(project.modified)}
   }
 
   /**
-   * 下载XML文件方法
+   * XML-file download method
    */
   downloadXMLFile(xmlContent, filename) {
     try {
       if (window.electronAPI && window.electronAPI.saveProjectFile) {
-        // Electron环境
+        // Electron environment
         window.electronAPI.saveProjectFile(filename, xmlContent);
       } else {
-        // 浏览器环境
+        // Browser environment
         const blob = new Blob([xmlContent], { type: 'application/xml' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -4430,7 +4427,7 @@ Modified: ${this.formatDate(project.modified)}
   }
 
   /**
-   * 文件夹相关的附加方法
+   * Additional folder-related methods
    */
   renameFolder() {
     this.hideContextMenus();
@@ -4458,7 +4455,7 @@ Modified: ${this.formatDate(project.modified)}
 
     if (!folder) return;
 
-    // 检查文件夹是否包含文件
+    // Check whether the folder contains files
     const filesInFolder = this.currentProject.files.filter(
       file => file.folder && this.arraysEqual(file.folder, this.currentContextFolderPath)
     );
@@ -4469,17 +4466,17 @@ Modified: ${this.formatDate(project.modified)}
         : `Are you sure you want to delete folder "${folder.name}"?`;
 
     if (confirm(confirmMessage)) {
-      // 删除文件夹中的所有文件
+      // Delete all files in the folder
       this.currentProject.files = this.currentProject.files.filter(
         file => !file.folder || !this.arraysEqual(file.folder, this.currentContextFolderPath)
       );
 
-      // 删除文件夹
+      // Delete the folder
       this.currentProject.folders = this.currentProject.folders.filter(
         f => !this.arraysEqual(f.path, this.currentContextFolderPath)
       );
 
-      // 如果当前在被删除的文件夹中，回到根目录
+      // If currently inside the deleted folder, return to the root directory
       if (this.arraysEqual(this.currentPath, this.currentContextFolderPath)) {
         this.currentPath = [];
       }
@@ -4496,12 +4493,12 @@ Modified: ${this.formatDate(project.modified)}
     this.hideContextMenus();
     if (!this.currentContextFolderPath || !this.currentProject) return;
 
-    // 临时设置当前路径为文件夹路径，然后调用添加文件
+    // Temporarily set the current path to the folder path, then call add-file
     const originalPath = this.currentPath;
     this.currentPath = this.currentContextFolderPath;
 
     this.addFiles().then(() => {
-      // 恢复原始路径
+      // Restore the original path
       this.currentPath = originalPath;
     });
   }
@@ -4514,12 +4511,12 @@ Modified: ${this.formatDate(project.modified)}
 
     if (!folder) return;
 
-    // 这里可以添加打开系统文件管理器的逻辑
+    // Logic to open the system file manager could be added here
     this.showNotification(`Would open folder "${folder.name}" in file explorer`, 'info');
   }
 
   /**
-   * 文件预览方法 - 显示文件预览弹窗
+   * File-preview method - shows the file-preview popup
    */
   async showFilePreview(fileId) {
     const file = this.findFileById(fileId);
@@ -4528,7 +4525,7 @@ Modified: ${this.formatDate(project.modified)}
     try {
       const fileType = this.detectFileType(file.name);
 
-      // 创建预览模态框
+      // Create the preview modal
       this.createPreviewModal(file, fileType);
 
       this.showNotification(`Previewing: ${file.name}`, 'info');
@@ -4539,16 +4536,16 @@ Modified: ${this.formatDate(project.modified)}
   }
 
   /**
-   * 创建文件预览模态框
+   * Create the file-preview modal
    */
   createPreviewModal(file, fileType) {
-    // 移除现有的预览模态框
+    // Remove any existing preview modal
     const existingModal = document.getElementById('filePreviewModal');
     if (existingModal) {
       existingModal.remove();
     }
 
-    // 创建预览模态框
+    // Create the preview modal
     const modal = document.createElement('div');
     modal.id = 'filePreviewModal';
     modal.style.cssText = `
@@ -4576,7 +4573,7 @@ Modified: ${this.formatDate(project.modified)}
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         `;
 
-    // 模态框头部
+    // Modal header
     const header = document.createElement('div');
     header.style.cssText = `
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -4612,7 +4609,7 @@ Modified: ${this.formatDate(project.modified)}
     header.appendChild(title);
     header.appendChild(closeBtn);
 
-    // 文件信息区域
+    // File-info area
     const infoSection = document.createElement('div');
     infoSection.style.cssText = `
             padding: 20px;
@@ -4629,7 +4626,7 @@ Modified: ${this.formatDate(project.modified)}
             </div>
         `;
 
-    // 预览内容区域
+    // Preview-content area
     const previewContent = document.createElement('div');
     previewContent.style.cssText = `
             padding: 20px;
@@ -4640,10 +4637,10 @@ Modified: ${this.formatDate(project.modified)}
             line-height: 1.4;
         `;
 
-    // 根据文件类型显示不同的预览内容
+    // Show different preview content depending on the file type
     this.generatePreviewContent(file, fileType, previewContent);
 
-    // 按钮区域
+    // Button area
     const buttonSection = document.createElement('div');
     buttonSection.style.cssText = `
             padding: 20px;
@@ -4685,17 +4682,17 @@ Modified: ${this.formatDate(project.modified)}
     buttonSection.appendChild(openInMainBtn);
     buttonSection.appendChild(closeModalBtn);
 
-    // 组装模态框
+    // Assemble the modal
     modalContent.appendChild(header);
     modalContent.appendChild(infoSection);
     modalContent.appendChild(previewContent);
     modalContent.appendChild(buttonSection);
     modal.appendChild(modalContent);
 
-    // 添加到页面
+    // Add to the page
     document.body.appendChild(modal);
 
-    // 点击背景关闭
+    // Close when clicking the background
     modal.onclick = e => {
       if (e.target === modal) {
         modal.remove();
@@ -4704,7 +4701,7 @@ Modified: ${this.formatDate(project.modified)}
   }
 
   /**
-   * 生成预览内容
+   * Generate the preview content
    */
   generatePreviewContent(file, fileType, container) {
     const placeholderContent = {
@@ -4764,7 +4761,7 @@ To view this file, click "Open in Main Window".`;
   }
 
   /**
-   * 切换紧凑树视图模式
+   * Toggle compact tree-view mode
    */
   toggleCompactTreeMode() {
     this.compactTreeMode = !this.compactTreeMode;
@@ -4784,14 +4781,14 @@ To view this file, click "Open in Main Window".`;
       this.showNotification('Normal tree view enabled', 'success');
     }
 
-    // 保存设置到localStorage
+    // Save the setting to localStorage
     this.saveTreeViewPreference();
 
     console.log(`Tree view mode: ${this.compactTreeMode ? 'compact' : 'normal'}`);
   }
 
   /**
-   * 切换超级紧凑模式（双击紧凑模式切换按钮触发）
+   * Toggle super-compact mode (triggered by double-clicking the compact-mode toggle button)
    */
   toggleUltraCompactMode() {
     if (!this.compactTreeMode) {
@@ -4814,7 +4811,7 @@ To view this file, click "Open in Main Window".`;
   }
 
   /**
-   * 保存树视图偏好设置
+   * Save the tree-view preferences
    */
   saveTreeViewPreference() {
     const preferences = {
@@ -4825,7 +4822,7 @@ To view this file, click "Open in Main Window".`;
   }
 
   /**
-   * 加载树视图偏好设置
+   * Load the tree-view preferences
    */
   loadTreeViewPreference() {
     try {
@@ -4835,7 +4832,7 @@ To view this file, click "Open in Main Window".`;
         this.compactTreeMode = preferences.compactTreeMode || false;
         this.ultraCompactMode = preferences.ultraCompactMode || false;
 
-        // 应用设置到UI
+        // Apply the settings to the UI
         const sidebar = document.querySelector('.sidebar-content');
         const compactToggle = document.getElementById('compactTreeToggle');
 
@@ -4856,17 +4853,17 @@ To view this file, click "Open in Main Window".`;
   }
 
   /**
-   * 初始化紧凑模式相关事件监听
+   * Initialize compact-mode event listeners
    */
   initializeTreeViewEvents() {
     const compactToggle = document.getElementById('compactTreeToggle');
     if (compactToggle) {
-      // 双击切换超级紧凑模式
+      // Double-click to toggle super-compact mode
       compactToggle.addEventListener('dblclick', () => {
         this.toggleUltraCompactMode();
       });
 
-      // 添加键盘快捷键支持 (Ctrl+Shift+T)
+      // Add keyboard-shortcut support (Ctrl+Shift+T)
       document.addEventListener('keydown', event => {
         if (event.ctrlKey && event.shiftKey && event.key === 'T') {
           event.preventDefault();
@@ -4875,12 +4872,12 @@ To view this file, click "Open in Main Window".`;
       });
     }
 
-    // 加载保存的设置
+    // Load the saved settings
     this.loadTreeViewPreference();
   }
 
   /**
-   * 切换Header折叠状态
+   * Toggle the header collapsed state
    */
   toggleHeaderCollapse() {
     this.headerCollapsed = !this.headerCollapsed;
@@ -4892,7 +4889,7 @@ To view this file, click "Open in Main Window".`;
     const body = document.body;
 
     if (this.headerCollapsed) {
-      // 折叠header
+      // Collapse the header
       header.classList.add('header-collapsed');
       mainContainer.classList.add('main-container-fullheight');
       statusBar.classList.add('status-bar-collapsed');
@@ -4901,7 +4898,7 @@ To view this file, click "Open in Main Window".`;
       if (toggleButton) {
         toggleButton.classList.add('collapsed');
         toggleButton.title = 'Show header';
-        // 更新SVG图标为向下三角形（展开状态）
+        // Update the SVG icon to a downward triangle (expanded state)
         const svgIcon = toggleButton.querySelector('.btn-icon');
         if (svgIcon) {
           svgIcon.innerHTML = '<path d="M8 11L3 6h10z"/>';
@@ -4910,7 +4907,7 @@ To view this file, click "Open in Main Window".`;
 
       this.showNotification('Header collapsed - sidebar-only mode', 'success');
     } else {
-      // 展开header
+      // Expand the header
       header.classList.remove('header-collapsed');
       mainContainer.classList.remove('main-container-fullheight');
       statusBar.classList.remove('status-bar-collapsed');
@@ -4919,7 +4916,7 @@ To view this file, click "Open in Main Window".`;
       if (toggleButton) {
         toggleButton.classList.remove('collapsed');
         toggleButton.title = 'Hide header';
-        // 更新SVG图标为向上箭头（折叠状态）
+        // Update the SVG icon to an upward arrow (collapsed state)
         const svgIcon = toggleButton.querySelector('.btn-icon');
         if (svgIcon) {
           svgIcon.innerHTML =
@@ -4930,21 +4927,21 @@ To view this file, click "Open in Main Window".`;
       this.showNotification('Header restored - full interface mode', 'success');
     }
 
-    // 保存状态
+    // Save the state
     this.saveHeaderCollapsePreference();
 
     console.log(`Header ${this.headerCollapsed ? 'collapsed' : 'expanded'}`);
   }
 
   /**
-   * 保存Header折叠偏好设置
+   * Save the header-collapse preferences
    */
   saveHeaderCollapsePreference() {
     localStorage.setItem('projectManagerHeaderCollapsed', JSON.stringify(this.headerCollapsed));
   }
 
   /**
-   * 加载Header折叠偏好设置
+   * Load the header-collapse preferences
    */
   loadHeaderCollapsePreference() {
     try {
@@ -4952,9 +4949,9 @@ To view this file, click "Open in Main Window".`;
       if (stored !== null) {
         this.headerCollapsed = JSON.parse(stored);
 
-        // 应用保存的状态
+        // Apply the saved state
         if (this.headerCollapsed) {
-          // 延迟应用状态，确保DOM已加载
+          // Delay applying the state to ensure the DOM is loaded
           setTimeout(() => {
             this.toggleHeaderCollapse();
           }, 100);
@@ -4967,10 +4964,10 @@ To view this file, click "Open in Main Window".`;
   }
 
   /**
-   * 初始化Header相关事件监听
+   * Initialize header-related event listeners
    */
   initializeHeaderEvents() {
-    // 键盘快捷键支持 (Ctrl+Shift+H)
+    // Keyboard-shortcut support (Ctrl+Shift+H)
     document.addEventListener('keydown', event => {
       if (event.ctrlKey && event.shiftKey && event.key === 'H') {
         event.preventDefault();
@@ -4978,7 +4975,7 @@ To view this file, click "Open in Main Window".`;
       }
     });
 
-    // 加载保存的设置
+    // Load the saved settings
     this.loadHeaderCollapsePreference();
     this.loadStatsPanelPreference();
   }
@@ -5080,7 +5077,7 @@ To view this file, click "Open in Main Window".`;
   }
 }
 
-// 确保类在全局范围内可用
+// Ensure the class is available globally
 if (typeof window !== 'undefined') {
   window.ProjectManagerWindow = ProjectManagerWindow;
 }

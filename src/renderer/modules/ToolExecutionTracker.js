@@ -1,17 +1,17 @@
 /**
  * Tool Execution Tracker
- * 集中跟踪和记录所有工具的执行状态，为测试评估提供可靠的数据源
+ * Centrally tracks and records the execution status of all tools, providing a reliable data source for test evaluation
  */
 class ToolExecutionTracker {
   constructor() {
-    // 工具执行记录存储
+    // Tool execution record storage
     this.executionRecords = new Map(); // sessionId -> executionRecord
     this.sessionHistory = new Map(); // sessionId -> [executionRecord, ...]
 
-    // 当前会话ID（与benchmark集成）
+    // Current session ID (integrated with the benchmark)
     this.currentSessionId = null;
 
-    // 执行统计
+    // Execution statistics
     this.globalStats = {
       totalExecutions: 0,
       successfulExecutions: 0,
@@ -23,7 +23,7 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 开始新的执行会话（用于benchmark测试）
+   * Start a new execution session (for benchmark testing)
    */
   startSession(sessionId, metadata = {}) {
     this.currentSessionId = sessionId;
@@ -40,7 +40,7 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 记录工具执行开始
+   * Record the start of a tool execution
    */
   recordExecutionStart(toolName, parameters = {}, context = {}) {
     const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -61,10 +61,10 @@ class ToolExecutionTracker {
       timestamp: new Date().toISOString(),
     };
 
-    // 存储到当前执行记录
+    // Store in the current execution record
     this.executionRecords.set(executionId, record);
 
-    // 添加到会话历史
+    // Add to the session history
     if (this.currentSessionId && this.sessionHistory.has(this.currentSessionId)) {
       this.sessionHistory.get(this.currentSessionId).push(record);
     }
@@ -74,7 +74,7 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 记录工具执行成功
+   * Record a successful tool execution
    */
   recordExecutionSuccess(executionId, result, additionalData = {}) {
     const record = this.executionRecords.get(executionId);
@@ -91,7 +91,7 @@ class ToolExecutionTracker {
     record.status = 'completed';
     record.additionalData = additionalData;
 
-    // 更新全局统计
+    // Update the global statistics
     this.updateGlobalStats(record.toolName, true, record.duration);
 
     console.log(`✅ [ToolExecutionTracker] Execution succeeded: ${record.toolName} (${record.duration}ms)`);
@@ -100,7 +100,7 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 记录工具执行失败
+   * Record a failed tool execution
    */
   recordExecutionFailure(executionId, error, additionalData = {}) {
     const record = this.executionRecords.get(executionId);
@@ -121,7 +121,7 @@ class ToolExecutionTracker {
     record.status = 'failed';
     record.additionalData = additionalData;
 
-    // 更新全局统计
+    // Update the global statistics
     this.updateGlobalStats(record.toolName, false, record.duration);
 
     console.log(`❌ [ToolExecutionTracker] Execution failed: ${record.toolName} - ${error.message || error}`);
@@ -130,7 +130,7 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 获取会话的所有执行记录
+   * Get all execution records for the session
    */
   getSessionExecutions(sessionId = null) {
     const targetSessionId = sessionId || this.currentSessionId;
@@ -158,7 +158,7 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 获取特定工具在当前会话中的执行状态
+   * Get the execution status of a specific tool in the current session
    */
   getToolExecutionStatus(toolName, sessionId = null) {
     const executions = this.getSessionExecutions(sessionId);
@@ -168,7 +168,7 @@ class ToolExecutionTracker {
       return { executed: false, success: null, executions: [] };
     }
 
-    // 获取最后一次执行的状态
+    // Get the status of the last execution
     const lastExecution = toolExecutions[toolExecutions.length - 1];
 
     return {
@@ -182,7 +182,7 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 检查工具是否成功执行
+   * Check whether a tool executed successfully
    */
   isToolExecutedSuccessfully(toolName, parameters = null, sessionId = null) {
     const status = this.getToolExecutionStatus(toolName, sessionId);
@@ -191,7 +191,7 @@ class ToolExecutionTracker {
       return false;
     }
 
-    // 如果提供了参数，检查参数匹配
+    // If parameters are provided, check that they match
     if (parameters !== null) {
       const matchingExecutions = status.executions.filter(
         exec => exec.success && this.parametersMatch(exec.parameters, parameters)
@@ -203,7 +203,7 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 生成会话执行摘要（用于benchmark评估）
+   * Generate a session execution summary (for benchmark evaluation)
    */
   generateSessionSummary(sessionId = null) {
     const executions = this.getSessionExecutions(sessionId);
@@ -223,11 +223,11 @@ class ToolExecutionTracker {
       },
     };
 
-    // 计算成功率
+    // Calculate the success rate
     summary.successRate =
       summary.totalExecutions > 0 ? (summary.successfulExecutions / summary.totalExecutions) * 100 : 0;
 
-    // 生成工具级别摘要
+    // Generate the per-tool summary
     const toolGroups = this.groupBy(executions, 'toolName');
     for (const [toolName, toolExecutions] of toolGroups) {
       summary.toolSummary[toolName] = {
@@ -239,7 +239,7 @@ class ToolExecutionTracker {
       };
     }
 
-    // 计算执行时间统计
+    // Calculate execution-time statistics
     const durations = executions.map(e => e.duration || 0).filter(d => d > 0);
     if (durations.length > 0) {
       summary.executionTimes.average = this.calculateAverage(durations);
@@ -252,7 +252,7 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 结束会话
+   * End the session
    */
   endSession(sessionId = null) {
     const targetSessionId = sessionId || this.currentSessionId;
@@ -263,7 +263,7 @@ class ToolExecutionTracker {
 
     const summary = this.generateSessionSummary(targetSessionId);
 
-    // 清理当前会话ID（如果结束的是当前会话）
+    // Clear the current session ID (if ending the current session)
     if (targetSessionId === this.currentSessionId) {
       this.currentSessionId = null;
       this.currentTestId = null;
@@ -274,10 +274,10 @@ class ToolExecutionTracker {
   }
 
   /**
-   * 清理旧的执行记录（性能优化）
+   * Clean up old execution records (performance optimization)
    */
   cleanup(maxAge = 3600000) {
-    // 默认1小时
+    // Default: 1 hour
     const cutoffTime = Date.now() - maxAge;
     let cleanedCount = 0;
 
@@ -291,11 +291,11 @@ class ToolExecutionTracker {
     console.log(`🧹 [ToolExecutionTracker] Cleaned up ${cleanedCount} old execution records`);
   }
 
-  // === 辅助方法 ===
+  // === Helper methods ===
 
   sanitizeParameters(parameters) {
     try {
-      // 移除可能导致序列化问题的复杂对象
+      // Remove complex objects that could cause serialization problems
       return JSON.parse(JSON.stringify(parameters));
     } catch (error) {
       return { serialization_error: 'Parameters could not be serialized' };
@@ -304,7 +304,7 @@ class ToolExecutionTracker {
 
   sanitizeResult(result) {
     try {
-      // 限制结果大小，避免内存问题
+      // Limit the result size to avoid memory problems
       const serialized = JSON.stringify(result);
       if (serialized.length > 10000) {
         // 10KB limit
@@ -324,7 +324,7 @@ class ToolExecutionTracker {
       this.globalStats.failedExecutions++;
     }
 
-    // 更新工具级别统计
+    // Update the per-tool statistics
     if (!this.globalStats.toolUsageStats.has(toolName)) {
       this.globalStats.toolUsageStats.set(toolName, {
         count: 0,
@@ -369,7 +369,7 @@ class ToolExecutionTracker {
   // === Benchmark Integration API ===
 
   /**
-   * 为benchmark测试提供的专用API
+   * Dedicated API for benchmark testing
    */
   getBenchmarkExecutionData(sessionId, toolName = null) {
     const executions = this.getSessionExecutions(sessionId);
@@ -391,7 +391,7 @@ class ToolExecutionTracker {
   }
 }
 
-// 导出类
+// Export the class
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = ToolExecutionTracker;
 } else {

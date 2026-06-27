@@ -9,7 +9,7 @@ This guide summarizes the current CodeXomics development workflow and architectu
 - Git.
 - Platform build tools required by Electron Builder for your operating system.
 
-The `0.722.0` source tree pins Electron `41.7.1` for compatibility with the supported Node.js CI matrix.
+CodeXomics `0.722.0` uses Electron `41.7.1` for compatibility with the supported Node.js CI matrix.
 
 ## Setup
 
@@ -131,9 +131,9 @@ Important files:
 
 Current registry snapshot:
 
-- 185 YAML tool schemas.
-- 19 active YAML categories.
-- 149 built-in ChatBox tools.
+- 179 YAML tool schemas.
+- 18 active YAML categories.
+- 143 built-in ChatBox tools.
 - 95 MCP tools in tools mode.
 
 ### MCP Server

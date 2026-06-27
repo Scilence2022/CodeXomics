@@ -1,14 +1,16 @@
 # CodeXomics
 
-**AI-powered bioinformatics analysis platform**
+**The AI-native genome browser**
+
+_Talk to your genome — AI agents drive the view and run the analysis._
 
 [![Version](https://img.shields.io/badge/version-0.722.0-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Scilence2022/CodeXomics/blob/main/LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 
-CodeXomics is a cross-platform Electron workspace for genome visualization, AI-assisted biological analysis, plugin development, benchmark testing, and Model Context Protocol (MCP) integration.
+CodeXomics is an AI-native genome browser — a cross-platform Electron workspace where conversational AI agents drive the visualization and run real biological analyses, with plugin development, benchmark testing, and Model Context Protocol (MCP) integration.
 
-The current source release is `0.722.0`, displayed as `v0.722` in the application. Published installers on GitHub Releases may lag behind the source tree.
+The current release is `v0.722`. Download installers from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases), or build from source for the latest changes.
 
 <div class="grid cards" markdown>
 
@@ -40,7 +42,7 @@ The current source release is `0.722.0`, displayed as `v0.722` in the applicatio
 
   ***
 
-  Understand the source tree, tool registry, agents, plugins, and tests.
+  Understand the codebase, tool registry, agents, plugins, and tests.
 
   [:octicons-arrow-right-24: Developer Guide](developer-guides/DEVELOPER_GUIDE.md)
 
@@ -48,16 +50,16 @@ The current source release is `0.722.0`, displayed as `v0.722` in the applicatio
 
 ## Current System Snapshot
 
-| Area                   | Current state                                                                          |
-| ---------------------- | -------------------------------------------------------------------------------------- |
-| Application version    | `0.722.0` (`v0.722` display)                                                           |
-| Runtime baseline       | Node.js 20/22 for source builds; Electron `41.7.1`                                     |
-| Tool registry          | 185 YAML schemas across 19 active categories                                           |
-| Built-in ChatBox tools | 149 mapped local tools                                                                 |
-| MCP tools mode         | 95 tools exposed                                                                       |
-| MCP agent mode         | `codexomics_chat`, `list_genome_windows`, `switch_active_window`                       |
-| Runtime agents         | Coordinator, Analysis, Data, Navigation, External, Plugin, DeepResearch                |
-| UI styling             | Vanilla CSS with default, professional, minimal, pastel, elegant, and midnight presets |
+| Area                   | Current state                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------ |
+| Application version    | `0.722.0` (`v0.722` display)                                                                     |
+| Runtime baseline       | Node.js 20/22 for source builds; Electron `41.7.1`                                               |
+| Tool registry          | 179 YAML schemas across 18 active categories                                                     |
+| Built-in ChatBox tools | 143 mapped local tools                                                                           |
+| MCP tools mode         | 95 tools exposed                                                                                 |
+| MCP agent mode         | `codexomics_chat`, `list_genome_windows`, `switch_active_window`                                 |
+| Runtime agents         | Coordinator, Analysis, Data, Navigation, External, Plugin, DeepResearch                          |
+| UI styling             | Vanilla CSS with default, professional, minimal, pastel, amy, red, elegant, and midnight presets |
 
 ## Core Capabilities
 

@@ -1,6 +1,6 @@
 /**
- * SmartExecutor - 智能function calls执行器
- * 根据功能分类和优先级优化执行策略，提升ChatBox响应速度
+ * SmartExecutor - intelligent function-calls executor
+ * Optimizes the execution strategy by feature category and priority to improve ChatBox response speed
  */
 class SmartExecutor {
   constructor(chatManager) {
@@ -8,12 +8,12 @@ class SmartExecutor {
     this.app = chatManager.app;
     this.organizer = new FunctionCallsOrganizer(chatManager);
 
-    // 执行状态跟踪
+    // Execution state tracking
     this.isExecuting = false;
     this.currentExecution = null;
     this.executionQueue = [];
 
-    // 性能监控
+    // Performance monitoring
     this.executionMetrics = {
       totalExecutions: 0,
       averageTime: 0,
@@ -23,25 +23,25 @@ class SmartExecutor {
   }
 
   /**
-   * 智能执行function calls的主入口方法
-   * @param {string} userMessage - 用户消息
-   * @param {Array|Object} tools - 请求的工具（可以是数组或单个工具对象）
-   * @returns {Object} 执行结果
+   * Main entry point for smart execution of function calls
+   * @param {string} userMessage - the user message
+   * @param {Array|Object} tools - the requested tools (an array or a single tool object)
+   * @returns {Object} the execution result
    */
   async smartExecute(userMessage, tools) {
     const startTime = Date.now();
 
     try {
-      // 标准化tools格式
+      // Normalize the tools format
       const toolRequests = this.normalizeToolRequests(tools);
 
-      // 分析执行策略
+      // Analyze the execution strategy
       const optimization = await this.organizer.optimizeExecution(
         userMessage,
         toolRequests.map(t => t.tool_name)
       );
 
-      // 设置执行状态
+      // Set the execution state
       this.currentExecution = {
         id: `exec_${Date.now()}`,
         userMessage: userMessage,
@@ -53,13 +53,13 @@ class SmartExecutor {
 
       this.isExecuting = true;
 
-      // 根据策略执行
+      // Execute according to the strategy
       const results = await this.executeWithStrategy(toolRequests, optimization.strategy);
 
-      // 更新性能指标
+      // Update the performance metrics
       this.updateMetrics(startTime, results);
 
-      // 生成执行报告
+      // Generate the execution report
       const report = this.generateExecutionReport(results, optimization);
 
       return {
@@ -83,22 +83,22 @@ class SmartExecutor {
   }
 
   /**
-   * 标准化工具请求格式
+   * Normalize the tool-request format
    */
   normalizeToolRequests(tools) {
     if (!Array.isArray(tools)) {
-      // 如果是单个工具对象
+      // If it's a single tool object
       if (typeof tools === 'object' && tools.tool_name) {
         return [tools];
       }
-      // 如果是工具名称字符串
+      // If it's a tool-name string
       if (typeof tools === 'string') {
         return [{ tool_name: tools, parameters: {} }];
       }
       return [];
     }
 
-    // 处理数组格式
+    // Handle the array format
     return tools.map(tool => {
       if (typeof tool === 'string') {
         return { tool_name: tool, parameters: {} };
@@ -108,7 +108,7 @@ class SmartExecutor {
   }
 
   /**
-   * 根据策略执行工具
+   * Execute tools according to the strategy
    */
   async executeWithStrategy(toolRequests, strategy) {
     const results = [];
@@ -148,7 +148,7 @@ class SmartExecutor {
     for (const phase of executionPlan) {
       console.log(`🚀 Executing ${phase.phase} (Priority: ${phase.priority})`);
 
-      // 获取当前阶段的工具请求
+      // Get the tool requests for the current stage
       const phaseTools = this.getPhaseTools(toolRequests, phase.tools);
 
       if (phaseTools.length === 0) continue;
@@ -156,18 +156,18 @@ class SmartExecutor {
       let phaseResults;
 
       if (phase.parallelizable && phaseTools.length > 1) {
-        // 并行执行
+        // Parallel execution
         console.log(`   ⚡ Parallel execution of ${phaseTools.length} tools`);
         phaseResults = await this.executeParallel(phaseTools);
       } else {
-        // 顺序执行
+        // Sequential execution
         console.log(`   📋 Sequential execution of ${phaseTools.length} tools`);
         phaseResults = await this.executeSequential(phaseTools);
       }
 
       results.push(...phaseResults);
 
-      // 对于浏览器行为，立即提供视觉反馈
+      // For browser actions, provide visual feedback immediately
       if (phase.priority === 1) {
         this.provideBrowserFeedback(phaseResults);
       }
@@ -177,7 +177,7 @@ class SmartExecutor {
   }
 
   /**
-   * 获取阶段对应的工具请求
+   * Get the tool requests for a stage
    */
   getPhaseTools(toolRequests, phaseTools) {
     const phaseToolNames = phaseTools.map(t => t.tool);
@@ -185,7 +185,7 @@ class SmartExecutor {
   }
 
   /**
-   * 并行执行工具
+   * Execute tools in parallel
    */
   async executeParallel(tools) {
     const promises = tools.map(tool => this.executeSingleTool(tool));
@@ -202,7 +202,7 @@ class SmartExecutor {
   }
 
   /**
-   * 顺序执行工具
+   * Execute tools sequentially
    */
   async executeSequential(tools) {
     const results = [];
@@ -234,7 +234,7 @@ class SmartExecutor {
   }
 
   /**
-   * 执行单个工具
+   * Execute a single tool
    */
   async executeSingleTool(tool) {
     const category = this.organizer.getFunctionCategory(tool.tool_name);
@@ -250,19 +250,19 @@ class SmartExecutor {
   }
 
   /**
-   * 为浏览器行为提供即时反馈
+   * Provide immediate feedback for browser actions
    */
   provideBrowserFeedback(results) {
     const successfulActions = results.filter(r => r.success);
 
     if (successfulActions.length > 0) {
-      // 显示视觉反馈
+      // Show visual feedback
       this.showQuickFeedback(`✓ ${successfulActions.length} browser action(s) completed`, 'success');
     }
   }
 
   /**
-   * 显示快速反馈
+   * Show quick feedback
    */
   showQuickFeedback(message, type = 'info') {
     if (this.app.showNotification) {
@@ -273,7 +273,7 @@ class SmartExecutor {
   }
 
   /**
-   * 更新性能指标
+   * Update the performance metrics
    */
   updateMetrics(startTime, results) {
     const executionTime = Date.now() - startTime;
@@ -288,7 +288,7 @@ class SmartExecutor {
       (this.executionMetrics.successRate * (this.executionMetrics.totalExecutions - 1) + successRate) /
       this.executionMetrics.totalExecutions;
 
-    // 更新分类性能
+    // Update the per-category performance
     for (const result of results) {
       const category = this.organizer.getFunctionCategory(result.tool);
       if (category) {
@@ -310,7 +310,7 @@ class SmartExecutor {
   }
 
   /**
-   * 生成执行报告
+   * Generate the execution report
    */
   generateExecutionReport(results, optimization) {
     const totalTools = results.length;
@@ -338,7 +338,7 @@ class SmartExecutor {
   }
 
   /**
-   * 生成分类汇总
+   * Generate the category summary
    */
   generateCategorySummary(results) {
     const summary = new Map();
@@ -372,7 +372,7 @@ class SmartExecutor {
   }
 
   /**
-   * 获取执行状态
+   * Get the execution state
    */
   getExecutionStatus() {
     return {
@@ -384,7 +384,7 @@ class SmartExecutor {
   }
 
   /**
-   * 获取性能统计
+   * Get the performance statistics
    */
   getPerformanceStats() {
     return {
@@ -394,7 +394,7 @@ class SmartExecutor {
   }
 
   /**
-   * 重置性能指标
+   * Reset the performance metrics
    */
   resetMetrics() {
     this.executionMetrics = {
@@ -406,13 +406,13 @@ class SmartExecutor {
   }
 
   /**
-   * 获取优化建议
+   * Get optimization suggestions
    */
   getOptimizationSuggestions(userMessage) {
     this.organizer.extractKeywords(userMessage.toLowerCase());
     const suggestions = [];
 
-    // 基于历史性能数据提供建议
+    // Provide suggestions based on historical performance data
     if (this.executionMetrics.totalExecutions > 10) {
       const avgTime = this.executionMetrics.averageTime;
       if (avgTime > 3000) {
@@ -434,7 +434,7 @@ class SmartExecutor {
   }
 }
 
-// 导出类
+// Export the class
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = SmartExecutor;
 } else if (typeof window !== 'undefined') {

@@ -384,73 +384,73 @@ class ShortTermMemory {
 
 #### 2.2.1 System Mode Management Overview
 
-CodeXomics系统采用智能双模式架构，默认运行在非Multi-Agent模式下，确保系统的稳定性和可用性。系统通过`agentSystemEnabled`开关实现模式间的无缝切换。
+The CodeXomics system uses an intelligent dual-mode architecture and runs in non-Multi-Agent mode by default, ensuring system stability and availability. It switches seamlessly between modes through the `agentSystemEnabled` toggle.
 
-#### 2.2.2 ChatManager.js - 模式控制核心
+#### 2.2.2 ChatManager.js — Mode Control Core
 
 ```javascript
-// 模式状态管理
-this.agentSystemEnabled = false; // 默认非Multi-Agent模式
+// Mode state management
+this.agentSystemEnabled = false; // non-Multi-Agent mode by default
 
-// 模式配置获取
+// Read the mode configuration
 const agentSystemEnabled = this.chatBoxSettingsManager.getSetting('agentSystemEnabled', false);
 
-// 执行模式切换
+// Perform the mode switch
 const multiAgentEnabled = this.configManager.get('multiAgentSettings.multiAgentSystemEnabled', false);
 ```
 
-**核心功能：**
+**Core capabilities:**
 
-- **智能模式检测**：自动检测并维护当前运行模式状态
-- **直接工具执行**：当agent系统禁用时，提供直接的工具执行路径
-- **Legacy连接支持**：提供向后兼容的MCP服务器连接方式
-- **优雅降级机制**：在多Agent系统不可用时自动切换到传统模式
+- **Smart mode detection**: automatically detect and maintain the current running mode
+- **Direct tool execution**: provide a direct tool-execution path when the agent system is disabled
+- **Legacy connection support**: provide a backward-compatible way to connect to the MCP server
+- **Graceful degradation**: automatically fall back to traditional mode when the multi-agent system is unavailable
 
-#### 2.2.3 ChatBoxSettingsManager.js - 用户界面设置
+#### 2.2.3 ChatBoxSettingsManager.js — UI Settings
 
 ```javascript
-// 默认设置包含非Multi-Agent模式配置
-agentSystemEnabled: false,           // 禁用多Agent系统
-agentAutoOptimize: true,             // 启用自动优化
-agentShowInfo: true,                 // 显示Agent信息
-agentMemoryEnabled: true,            // Agent内存系统
-agentCacheEnabled: true,             // Agent缓存系统
+// Default settings include the non-Multi-Agent mode configuration
+agentSystemEnabled: false,           // disable the multi-agent system
+agentAutoOptimize: true,             // enable auto-optimization
+agentShowInfo: true,                 // show agent info
+agentMemoryEnabled: true,            // agent memory system
+agentCacheEnabled: true,             // agent cache system
 
-// 模型选择设置（非Multi-Agent模式专用）
-chatboxModelType: 'auto',            // 自动模型选择
-chatboxLLMProvider: 'auto',          // 自动提供商选择
-chatboxLLMModel: 'auto',             // 自动模型选择
-chatboxLLMTemperature: 0.7,          // 响应创造性
-chatboxLLMMaxTokens: 4000,           // 最大令牌数
-chatboxLLMTimeout: 30,               // 请求超时
-chatboxLLMUseSystemPrompt: true,     // 启用系统提示
-chatboxLLMEnableFunctionCalling: true // 启用函数调用
+// Model selection settings (non-Multi-Agent mode only)
+chatboxModelType: 'auto',            // automatic model selection
+chatboxLLMProvider: 'auto',          // automatic provider selection
+chatboxLLMModel: 'auto',             // automatic model selection
+chatboxLLMTemperature: 0.7,          // response creativity
+chatboxLLMMaxTokens: 4000,           // maximum token count
+chatboxLLMTimeout: 30,               // request timeout
+chatboxLLMUseSystemPrompt: true,     // enable the system prompt
+chatboxLLMEnableFunctionCalling: true // enable function calling
 ```
 
-**非Multi-Agent模式特性：**
+**Non-Multi-Agent mode characteristics:**
 
-- **单实例管理**：简化了用户界面配置和会话管理
-- **直接LLM调用**：绕过Agent系统，直接与LLM提供商交互
-- **快速响应**：减少了中间层的处理延迟
-- **资源优化**：降低了系统资源消耗
+- **Single-instance management**: simplifies UI configuration and session management
+- **Direct LLM calls**: bypass the agent system and interact directly with the LLM provider
+- **Fast response**: reduces intermediate-layer processing latency
+- **Resource optimization**: lowers system resource consumption
 
-#### 2.2.4 TrackRenderer.js - Legacy模式回退
+#### 2.2.4 TrackRenderer.js — Legacy Mode Fallback
 
 ```javascript
-// Legacy模式处理逻辑
+// Legacy mode handling logic
 if (vcfFiles.length === 0) {
     // Fallback to legacy mode
     return this.createLegacyVariantTrack(chromosome);
 }
 
-// Legacy变体轨道创建
+// Create the legacy variant track
 createLegacyVariantTrack(chromosome) {
     const { track, trackContent } = this.createTrackBase('variants', chromosome);
 
-    // 检查变体数据可用性
+    // Check whether variant data is available
     if (!this.genomeBrowser.currentVariants ||
         Object.keys(this.genomeBrowser.currentVariants).length === 0) {
-        // 显示无数据消息
+        // Show the no-data message
         const noDataMsg = this.createNoDataMessage(
             'No VCF file loaded. Load a VCF file to see variants.',
             'no-variants-message'
@@ -459,11 +459,11 @@ createLegacyVariantTrack(chromosome) {
         return track;
     }
 
-    // 获取并过滤变体
+    // Fetch and filter variants
     const variants = this.genomeBrowser.currentVariants[chromosome] || [];
     const visibleVariants = this.filterFeaturesByViewport(variants, viewport);
 
-    // 渲染变体元素
+    // Render the variant elements
     if (visibleVariants.length > 0) {
         this.renderVariantElements(trackContent, visibleVariants, viewport);
     }
@@ -472,24 +472,24 @@ createLegacyVariantTrack(chromosome) {
 }
 ```
 
-**Legacy模式特性：**
+**Legacy mode characteristics:**
 
-- **向后兼容**：确保旧版本数据格式的完整支持
-- **稳定渲染**：提供可靠的基因组数据可视化
-- **错误恢复**：在高级功能失败时提供基础功能保障
-- **性能优化**：legacy模式下的渲染性能优化
+- **Backward compatibility**: ensures full support for older data formats
+- **Stable rendering**: provides reliable genomic data visualization
+- **Error recovery**: provides basic functionality when advanced features fail
+- **Performance optimization**: optimized rendering performance in legacy mode
 
-#### 2.2.5 BlastManager.js - 直接命令执行
+#### 2.2.5 BlastManager.js — Direct Command Execution
 
 ```javascript
-// 直接命令执行机制
+// Direct command-execution mechanism
 async checkBlastInstallation() {
     try {
         // First try direct command execution
         const command = 'blastn -version';
         const result = await this.runCommand(command);
 
-        // 解析版本信息
+        // Parse the version information
         const versionMatch = result.match(/blastn: ([\d.]+)/);
         if (versionMatch) {
             const installedVersion = versionMatch[1];
@@ -497,62 +497,62 @@ async checkBlastInstallation() {
             return true;
         }
     } catch (error) {
-        // 启动回退检测机制
+        // Start the fallback detection mechanism
         return await this.tryFallbackBlastDetection();
     }
 }
 
-// 回退检测机制
+// Fallback detection mechanism
 async tryFallbackBlastDetection() {
     const commonPaths = [
-        '/usr/local/bin/blastn',        // Unix系统安装
-        '/usr/bin/blastn',              // 系统安装
+        '/usr/local/bin/blastn',        // Unix system install
+        '/usr/bin/blastn',              // system install
         '/opt/homebrew/bin/blastn',     // Homebrew (Apple Silicon)
-        '/opt/blast+/bin/blastn',       // 自定义安装
-        'C:\\Program Files\\NCBI\\blast+\\bin\\blastn.exe' // Windows默认
+        '/opt/blast+/bin/blastn',       // custom install
+        'C:\\Program Files\\NCBI\\blast+\\bin\\blastn.exe' // Windows default
     ];
 
     for (const blastPath of commonPaths) {
         try {
             const command = `"${blastPath}" -version`;
             const result = await this.runCommand(command);
-            // 处理成功检测...
+            // Handle a successful detection...
         } catch (error) {
-            // 继续尝试下一个路径
+            // Continue trying the next path
             continue;
         }
     }
 }
 ```
 
-**直接执行特性：**
+**Direct execution characteristics:**
 
-- **即时命令执行**：绕过复杂的配置和抽象层
-- **智能路径检测**：自动发现系统中的BLAST+安装
-- **环境变量管理**：自动设置BLASTDB等关键环境变量
-- **错误恢复**：多层次的fallback机制确保可用性
+- **Immediate command execution**: bypasses complex configuration and abstraction layers
+- **Smart path detection**: automatically discovers the BLAST+ installation on the system
+- **Environment variable management**: automatically sets key environment variables such as BLASTDB
+- **Error recovery**: a multi-level fallback mechanism ensures availability
 
-#### 2.2.6 ActionManager.js - 安全执行复制
+#### 2.2.6 ActionManager.js — Safe Execution on a Copy
 
 ```javascript
-// 已弃用的直接执行方法（仅用于兼容）
+// Deprecated direct-execution method (kept only for compatibility)
 executeAction() {
     console.warn('DEPRECATED: Direct action execution without execution copy. ' +
                  'This method modifies data directly and should be avoided. ' +
                  'Use executeActionOnCopy() instead for safe execution.');
-    // 直接数据修改逻辑（已弃用）
+    // Direct data-modification logic (deprecated)
 }
 
-// 推荐的安全执行方法
+// Recommended safe-execution method
 executeActionOnCopy(action) {
     try {
-        // 创建执行副本以保护原始数据
+        // Create an execution copy to protect the original data
         const actionCopy = this.createSafeActionCopy(action);
 
-        // 在副本上执行操作
+        // Run the operation on the copy
         const result = this.executeActionSafely(actionCopy);
 
-        // 应用成功的结果
+        // Apply the successful result
         this.applyActionResult(result);
 
         return result;
@@ -562,7 +562,7 @@ executeActionOnCopy(action) {
     }
 }
 
-// 位置调整逻辑
+// Position-adjustment logic
 adjustPendingActionPositionsOnCopy(actions, modifications) {
     modifications.forEach(mod => {
         const { type, position, length, newContent } = mod;
@@ -574,7 +574,7 @@ adjustPendingActionPositionsOnCopy(actions, modifications) {
                         action.position += newContent.length;
                         break;
                     case 'deletion':
-                        // 标记已删除区域的目标操作
+                        // Adjust target actions in the deleted region
                         if (action.position >= position + length) {
                             action.position -= length;
                         }
@@ -592,12 +592,12 @@ adjustPendingActionPositionsOnCopy(actions, modifications) {
 }
 ```
 
-**安全执行特性：**
+**Safe execution characteristics:**
 
-- **数据保护**：通过副本执行防止原始数据损坏
-- **位置管理**：智能处理操作位置的动态调整
-- **事务性执行**：确保操作的一致性和原子性
-- **错误隔离**：执行失败不影响系统其他部分
+- **Data protection**: executing on a copy prevents corruption of the original data
+- **Position management**: intelligently handles dynamic adjustment of operation positions
+- **Transactional execution**: ensures operation consistency and atomicity
+- **Error isolation**: an execution failure does not affect other parts of the system
 
 ### 2.2 Specialized Agent Modules (7 Agents)
 
@@ -952,51 +952,51 @@ function categorizeUnknownFunction(functionName) {
 
 ### 2.4 Non-Multi-Agent Mode Specialized Components
 
-#### 2.4.1 MicrobeGenomicsFunctions.js - 轻量级基因组学功能包装器
+#### 2.4.1 MicrobeGenomicsFunctions.js — Lightweight Genomics Function Wrapper
 
-**Purpose**: 简化非Multi-Agent模式下的基础基因组学分析操作，提供轻量级的功能入口
+**Purpose**: Simplify basic genomics analysis operations in non-Multi-Agent mode and provide a lightweight entry point to those functions
 
-**核心功能分类**:
+**Core function categories**:
 
-- **导航功能**: 基因组浏览器基本操作
-- **分析功能**: 序列分析和计算生物学
-- **统计功能**: DNA序列统计分析
+- **Navigation functions**: basic genome browser operations
+- **Analysis functions**: sequence analysis and computational biology
+- **Statistics functions**: DNA sequence statistical analysis
 
-**关键方法实现**:
+**Key method implementations**:
 
 ```javascript
-// 导航功能
+// Navigation functions
 navigateTo(position) {
-    // 轻量级导航实现，支持基本位置跳转
+    // Lightweight navigation implementation supporting basic position jumps
     if (this.isUnifiedModuleAvailable()) {
         return this.unifiedModule.navigateTo(position);
     }
-    // 降级到legacy实现
+    // Fall back to the legacy implementation
     return this.legacyNavigateTo(position);
 }
 
 jumpToGene(geneName) {
-    // 快速基因跳转功能
+    // Quick gene-jump feature
     try {
         return this.unifiedModule.jumpToGene(geneName);
     } catch (error) {
-        // 优雅降级处理
+        // Graceful degradation handling
         return this.fallbackGeneSearch(geneName);
     }
 }
 
-// 序列分析功能
+// Sequence analysis functions
 translateDNA(sequence, frame = 0) {
-    // 统一模块检查
+    // Unified module check
     if (this.isUnifiedModuleAvailable()) {
         return this.unifiedModule.translateDNA(sequence, frame);
     }
 
-    // 基础密码子表实现
+    // Basic codon-table implementation
     const standardCodonTable = {
         'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
         'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
-        // ... 完整密码子表
+        // ... full codon table
     };
 
     let protein = '';
@@ -1008,24 +1008,24 @@ translateDNA(sequence, frame = 0) {
 }
 
 findORFs(sequence) {
-    // 6个阅读框的ORF查找
+    // ORF search across 6 reading frames
     const orfs = [];
     const startCodon = 'ATG';
     const stopCodons = ['TAA', 'TAG', 'TGA'];
 
     for (let frame = 0; frame < 3; frame++) {
-        // 正向阅读框
+        // Forward reading frame
         this.scanReadingFrame(sequence, frame, true, orfs);
-        // 反向阅读框
+        // Reverse reading frame
         this.scanReadingFrame(sequence, frame, false, orfs);
     }
 
     return orfs;
 }
 
-// 统计功能
+// Statistics functions
 calculateEntropy(sequence) {
-    // Shannon熵计算
+    // Shannon entropy calculation
     const frequency = {};
     for (let i = 0; i < sequence.length; i++) {
         const base = sequence[i];
@@ -1042,15 +1042,15 @@ calculateEntropy(sequence) {
 }
 
 calculateMeltingTemp(sequence) {
-    // DNA熔解温度估算（简化模型）
+    // DNA melting-temperature estimation (simplified model)
     const gcContent = this.calculateGCContent(sequence);
     const length = sequence.length;
 
-    // Wallace规则 + GC含量修正
+    // Wallace rule + GC-content correction
     let tm = 2 * (sequence.match(/[AT]/g) || []).length +
              4 * (sequence.match(/[GC]/g) || []).length;
 
-    // 长序列修正
+    // Long-sequence correction
     if (length > 14) {
         tm = 64.9 + 41 * (gcContent - 16.4) / length;
     }
@@ -1059,33 +1059,33 @@ calculateMeltingTemp(sequence) {
 }
 ```
 
-**非Multi-Agent模式特性**:
+**Non-Multi-Agent mode characteristics**:
 
-- **轻量级实现**: 避免复杂的代理协调和通信开销
-- **即时响应**: 直接执行操作，减少中间层处理
-- **内存效率**: 单实例模式降低内存占用
-- **稳定可靠**: 降级机制确保基础功能始终可用
+- **Lightweight implementation**: avoids complex agent coordination and communication overhead
+- **Immediate response**: executes operations directly, reducing intermediate-layer processing
+- **Memory efficiency**: single-instance mode lowers memory usage
+- **Stable and reliable**: the degradation mechanism keeps basic functionality always available
 
-#### 2.4.2 BenchmarkManager.js - LLM基准测试管理
+#### 2.4.2 BenchmarkManager.js — LLM Benchmark Management
 
-**Purpose**: 管理和执行LLM提供商性能基准测试，支持多模型评估和比较
+**Purpose**: Manage and run LLM-provider performance benchmarks, with support for multi-model evaluation and comparison
 
-**基准测试套件**:
+**Benchmark suites**:
 
 ```javascript
-// 测试套件初始化
+// Initialize the test suites
 async initializeBenchmark() {
     try {
-        // 加载测试套件
+        // Load the test suites
         this.automaticSimpleSuite = new AutomaticSimpleSuite();
         this.automaticComplexSuite = new AutomaticComplexSuite();
         this.manualSuite = new ManualSuite();
 
-        // 创建框架和UI
+        // Create the framework and UI
         this.framework = new LLMBenchmarkFramework();
         this.benchmarkUI = new BenchmarkUI();
 
-        // 注册套件
+        // Register the suites
         this.framework.registerSuite('automaticSimple', this.automaticSimpleSuite);
         this.framework.registerSuite('automaticComplex', this.automaticComplexSuite);
         this.framework.registerSuite('manual', this.manualSuite);
@@ -1097,67 +1097,67 @@ async initializeBenchmark() {
     }
 }
 
-// 直接执行模式
+// Direct-execution mode
 async runDirectBenchmark(modelConfig) {
-    // 非Multi-Agent模式下的直接基准测试
+    // Direct benchmark in non-Multi-Agent mode
     const testSuite = this.selectOptimalTestSuite(modelConfig);
 
     try {
-        // 直接LLM调用，绕过Agent系统
+        // Direct LLM call, bypassing the agent system
         const result = await this.framework.runDirectTest(modelConfig, testSuite);
 
-        // 即时结果处理
+        // Immediate result handling
         this.handleBenchmarkResult(result);
 
         return result;
     } catch (error) {
-        // 降级到基础测试
+        // Fall back to the basic test
         return this.runFallbackBenchmark(modelConfig);
     }
 }
 ```
 
-**基准测试流程**:
+**Benchmark process**:
 
-- **测试套件选择**: 根据模型类型和配置自动选择最合适的测试套件
-- **直接执行模式**: 在非Multi-Agent模式下提供直接的基准测试执行
-- **实时结果监控**: 实时显示测试进度和结果
-- **性能指标分析**: 多维度性能评估和比较
+- **Test suite selection**: automatically selects the most suitable test suite based on the model type and configuration
+- **Direct-execution mode**: provides direct benchmark execution in non-Multi-Agent mode
+- **Real-time result monitoring**: displays test progress and results in real time
+- **Performance metric analysis**: multi-dimensional performance evaluation and comparison
 
-**关键特性**:
+**Key features**:
 
-- **模型兼容性**: 支持50+个不同模型的性能测试
-- **标准化评估**: 一致的评估标准和指标
-- **性能比较**: 多模型横向对比分析
-- **结果可视化**: 直观的结果展示和报告生成
+- **Model compatibility**: supports performance testing of 50+ different models
+- **Standardized evaluation**: consistent evaluation criteria and metrics
+- **Performance comparison**: side-by-side comparison across multiple models
+- **Result visualization**: intuitive result presentation and report generation
 
-#### 2.4.3 NavigationManager.js - 传统导航管理
+#### 2.4.3 NavigationManager.js — Traditional Navigation Management
 
-**Purpose**: 提供传统的基因组导航功能，兼容早期版本的数据格式
+**Purpose**: Provide traditional genome navigation features that remain compatible with earlier data formats
 
-**Legacy导航支持**:
+**Legacy navigation support**:
 
 ```javascript
-// Legacy轨道处理
+// Legacy track handling
 async loadTrack(trackData) {
     // Fallback for tracks without fileId (legacy reads tracks)
     if (!trackData.fileId) {
         return this.loadLegacyTrack(trackData);
     }
 
-    // 优先使用现代轨道系统
+    // Prefer the modern track system
     return await this.loadModernTrack(trackData);
 }
 
 loadLegacyTrack(trackData) {
-    // 传统轨道数据处理
+    // Traditional track-data handling
     const legacyData = this.parseLegacyFormat(trackData);
     return this.renderLegacyTrack(legacyData);
 }
 
-// 导航状态管理
+// Navigation state management
 getNavigationState() {
-    // 返回当前导航状态
+    // Return the current navigation state
     return {
         chromosome: this.currentChromosome,
         position: this.currentPosition,
@@ -1167,43 +1167,43 @@ getNavigationState() {
 }
 ```
 
-**兼容性特性**:
+**Compatibility characteristics**:
 
-- **格式兼容**: 支持多种旧版本数据格式
-- **数据降级**: 自动处理格式不兼容的情况
-- **性能优化**: 传统模式的性能优化处理
-- **错误恢复**: 导航错误的自动恢复机制
+- **Format compatibility**: supports a variety of older data formats
+- **Data degradation**: automatically handles format-incompatibility cases
+- **Performance optimization**: optimized processing in traditional mode
+- **Error recovery**: automatic recovery from navigation errors
 
-### 2.5 双模式架构优势
+### 2.5 Advantages of the Dual-Mode Architecture
 
-#### 2.5.1 性能对比分析
+#### 2.5.1 Performance Comparison
 
-| 特性           | Multi-Agent模式      | 非Multi-Agent模式    |
-| -------------- | -------------------- | -------------------- |
-| **响应速度**   | 中等（代理协调延迟） | 快速（直接执行）     |
-| **资源消耗**   | 高（多个代理实例）   | 低（单实例）         |
-| **功能复杂度** | 高（智能协作）       | 中（直接操作）       |
-| **错误恢复**   | 强（多层代理保护）   | 基础（直接fallback） |
-| **学习能力**   | 强（记忆系统）       | 弱（无记忆）         |
-| **扩展性**     | 高（模块化代理）     | 中（功能固定）       |
+| Characteristic         | Multi-Agent mode                      | Non-Multi-Agent mode       |
+| ---------------------- | ------------------------------------- | -------------------------- |
+| **Response speed**     | Medium (agent-coordination latency)   | Fast (direct execution)    |
+| **Resource usage**     | High (multiple agent instances)       | Low (single instance)      |
+| **Feature complexity** | High (intelligent collaboration)      | Medium (direct operations) |
+| **Error recovery**     | Strong (multi-layer agent protection) | Basic (direct fallback)    |
+| **Learning ability**   | Strong (memory system)                | Weak (no memory)           |
+| **Extensibility**      | High (modular agents)                 | Medium (fixed feature set) |
 
-#### 2.5.2 使用场景建议
+#### 2.5.2 Recommended Use Cases
 
-**推荐使用Multi-Agent模式的场景**:
+**Scenarios where Multi-Agent mode is recommended**:
 
-- 复杂的多步骤分析工作流
-- 需要智能协作的综合性任务
-- 长期项目研究和知识积累
-- 高精度要求的科学分析
+- Complex multi-step analysis workflows
+- Comprehensive tasks that need intelligent collaboration
+- Long-term project research and knowledge accumulation
+- High-precision scientific analysis
 
-**推荐使用非Multi-Agent模式的场景**:
+**Scenarios where non-Multi-Agent mode is recommended**:
 
-- 快速数据查询和基础分析
-- 资源受限环境下的操作
-- 稳定的生产环境使用
-- 用户培训和演示场景
+- Quick data queries and basic analysis
+- Operation in resource-constrained environments
+- Use in stable production environments
+- User training and demonstration scenarios
 
-#### 2.5.3 模式切换机制
+#### 2.5.3 Mode-Switching Mechanism
 
 ```javascript
 class ModeManager {
@@ -1211,19 +1211,19 @@ class ModeManager {
     const currentMode = this.getCurrentMode();
 
     if (currentMode === targetMode) {
-      return; // 已是目标模式
+      return; // already in the target mode
     }
 
-    // 保存当前状态
+    // Save the current state
     const state = this.captureCurrentState();
 
-    // 优雅关闭当前模式
+    // Gracefully shut down the current mode
     await this.gracefulShutdown(currentMode);
 
-    // 初始化目标模式
+    // Initialize the target mode
     await this.gracefulStartup(targetMode, state);
 
-    // 验证切换成功
+    // Verify the switch succeeded
     if (this.getCurrentMode() === targetMode) {
       console.log(`Successfully switched to ${targetMode} mode`);
       return true;
@@ -1234,18 +1234,18 @@ class ModeManager {
 }
 ```
 
-## 3. 系统架构详细设计
+## 3. Detailed System Architecture Design
 
-### 3.1 核心管理模块详解
+### 3.1 Core Management Modules in Detail
 
-#### 3.1.1 ConfigurationManager.js - 配置管理核心
+#### 3.1.1 ConfigurationManager.js — Configuration Management Core
 
 **Configuration Hierarchy**:
 
-1. **System Defaults** (系统默认配置)
-2. **User Preferences** (用户偏好设置)
-3. **Session Configurations** (会话特定配置)
-4. **Runtime Overrides** (运行时覆盖配置)
+1. **System Defaults** (system default configuration)
+2. **User Preferences** (user preference settings)
+3. **Session Configurations** (session-specific configuration)
+4. **Runtime Overrides** (runtime override configuration)
 
 **Configuration Schema**:
 
@@ -1255,7 +1255,7 @@ const configSchema = {
     type: 'string',
     enum: ['multi-agent', 'single-agent', 'legacy'],
     default: 'single-agent',
-    description: '系统运行模式',
+    description: 'System operating mode',
   },
   agents: {
     enabled: { type: 'boolean', default: false },
@@ -1270,7 +1270,7 @@ const configSchema = {
 };
 ```
 
-#### 3.1.2 MemorySystem.js - 高级内存架构
+#### 3.1.2 MemorySystem.js — Advanced Memory Architecture
 
 **Memory Hierarchy Implementation**:
 
@@ -1279,13 +1279,13 @@ class MultiLayerMemorySystem {
   constructor() {
     this.shortTerm = new ShortTermMemory({
       maxEntries: 1000,
-      ttl: 3600000, // 1小时
+      ttl: 3600000, // 1 hour
       evictionPolicy: 'LRU',
     });
 
     this.mediumTerm = new MediumTermMemory({
       maxEntries: 500,
-      ttl: 86400000, // 24小时
+      ttl: 86400000, // 24 hours
       compressionEnabled: true,
     });
 
@@ -1298,13 +1298,13 @@ class MultiLayerMemorySystem {
 }
 ```
 
-## 4. 技术实现细节
+## 4. Technical Implementation Details
 
-### 4.1 代理间通信机制
+### 4.1 Inter-Agent Communication
 
-#### 4.1.1 事件驱动通信
+#### 4.1.1 Event-Driven Communication
 
-**事件系统架构**:
+**Event system architecture**:
 
 ```javascript
 class AgentCommunicationBus {
@@ -1314,7 +1314,7 @@ class AgentCommunicationBus {
     this.subscriptionManager = new SubscriptionManager();
   }
 
-  // 发布事件
+  // Publish an event
   publish(eventType, data, sourceAgent) {
     const event = {
       id: generateUniqueId(),
@@ -1328,7 +1328,7 @@ class AgentCommunicationBus {
     this.eventEmitter.emit(eventType, event);
   }
 
-  // 订阅事件
+  // Subscribe to an event
   subscribe(eventType, callback, targetAgent) {
     const subscription = {
       eventType,
@@ -1342,11 +1342,11 @@ class AgentCommunicationBus {
 }
 ```
 
-### 4.2 性能监控和优化
+### 4.2 Performance Monitoring and Optimization
 
-#### 4.2.1 实时性能监控
+#### 4.2.1 Real-Time Performance Monitoring
 
-**性能指标收集**:
+**Performance metrics collection**:
 
 ```javascript
 class PerformanceMonitor {

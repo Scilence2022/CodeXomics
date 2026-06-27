@@ -147,7 +147,7 @@ class DNAMarkerDatabase {
         tags: ['classic'],
       },
 
-      // === Takara (宝生物) ===
+      // === Takara (Takara Bio) ===
       {
         id: 'takara_dl2000',
         name: 'Takara DL2000 DNA Marker',

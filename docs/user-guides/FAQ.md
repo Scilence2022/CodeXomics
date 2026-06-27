@@ -4,13 +4,13 @@
 
 ### What is CodeXomics?
 
-CodeXomics is an advanced, AI-powered genome analysis platform that provides comprehensive tools for genomic visualization, analysis, and interpretation. It features an integrated plugin system, natural language AI assistant, and support for multiple genomic data formats.
+CodeXomics is an AI-native genome browser that provides comprehensive tools for genomic visualization, analysis, and interpretation. It features a multi-agent AI assistant you can talk to, an integrated plugin system, and support for multiple genomic data formats.
 
 ### What's new in v0.722?
 
-Version `0.722.0` is the current source release. It consolidates the platform architecture and adds production-readiness work around:
+Version `v0.722` consolidates the platform architecture and adds production-readiness work around:
 
-- **Dynamic Tool Registry** with 185 YAML tool schemas across 19 active categories
+- **Dynamic Tool Registry** with 179 YAML tool schemas across 18 active categories
 - **Multi-Agent AI System** with specialized agents for navigation, analysis, data, plugins, external tools, and research
 - **Dual-mode MCP Server** for direct tool calls or agent-routed prompts
 - **Plugin API 2.0.0** with marketplace infrastructure
@@ -424,4 +424,4 @@ Absolutely:
 - Browse the **[Documentation](https://github.com/Scilence2022/CodeXomics#readme)** for comprehensive information
 - Contact **support** for personalized assistance
 
-_This FAQ covers CodeXomics 0.722.0 (displayed as v0.722). For the latest information, check the project repository._
+_This FAQ covers CodeXomics v0.722. For the latest information, see the [project repository](https://github.com/Scilence2022/CodeXomics)._

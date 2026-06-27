@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you resolve common issues encountered while using **CodeXomics 0.722.0** (displayed as `v0.722`).
+This guide helps you resolve common issues encountered while using **CodeXomics v0.722**.
 
 ## 🚨 Common Installation Issues
 

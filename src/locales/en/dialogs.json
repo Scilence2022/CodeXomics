@@ -116,7 +116,7 @@
     "version": "Version",
     "copyright": "Copyright © 2024 Lifu Song",
     "license": "MIT License",
-    "description": "An AI-powered bioinformatics analysis platform"
+    "description": "An AI-native genome browser"
   },
   "checkpoint": {
     "title": "Checkpoint",

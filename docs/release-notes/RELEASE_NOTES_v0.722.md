@@ -9,7 +9,7 @@
 
 CodeXomics `0.722.0` is a production-readiness release focused on security boundaries, release engineering, automated quality gates, and a more reliable Electron runtime. It also adds a dedicated Primers track and closes tool-registry gaps affecting dynamic prompts and benchmark runs.
 
-The source tree pins Electron `41.7.1` for compatibility with the supported Node.js 20 and 22 CI matrix.
+CodeXomics `0.722.0` uses Electron `41.7.1` for compatibility with the supported Node.js 20 and 22 CI matrix.
 
 ## Security And Reliability
 
@@ -50,4 +50,4 @@ See [Build Instructions](../developer-guides/build-instructions.md) and the root
 
 ## Availability
 
-The repository source identifies itself as `0.722.0`. Published installers on [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases) may lag behind the source release; verify the artifact version before downloading.
+Download installers from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases), or build from source for the latest changes. Releases are published periodically, so verify the version listed on a release before downloading.
