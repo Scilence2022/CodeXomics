@@ -91,6 +91,7 @@ class DataAgent extends AgentBase {
     this.toolMapping.set('export_protein_fasta', this.exportProteinFasta.bind(this));
     this.toolMapping.set('export_current_view_fasta', this.exportCurrentViewFasta.bind(this));
     this.toolMapping.set('capture_screenshot', this.captureScreenshot.bind(this));
+    this.toolMapping.set('open_image_file', this.openImageFile.bind(this));
 
     // Data import tools - builtInToolsMap-aligned names
     this.toolMapping.set('load_genome_file', this.loadGenomeFile.bind(this));
@@ -560,11 +561,50 @@ class DataAgent extends AgentBase {
     if (!this.app?.screenshotManager) {
       throw new Error('Screenshot manager not available');
     }
-    const result = await this.app.screenshotManager.captureScreenshot(parameters);
+    const result = await this.app.screenshotManager.captureScreenshot({
+      ...parameters,
+      aiInitiated: true,
+      source: parameters?.source || 'ai',
+    });
     if (result?.success === false && !result.canceled) {
       throw new Error(result.error || 'Screenshot capture failed');
     }
     return result;
+  }
+
+  async openImageFile(parameters = {}) {
+    if (!window.electronAPI?.openImageFile) {
+      throw new Error('Image viewer IPC bridge is unavailable');
+    }
+    const requestedPath =
+      parameters.filePath ||
+      parameters.file_path ||
+      parameters.path ||
+      parameters.imagePath ||
+      parameters.image_path ||
+      parameters.filename ||
+      parameters.fileName;
+    const chatManager = this.multiAgentSystem?.chatManager;
+    const filePath =
+      requestedPath && typeof chatManager?.resolvePathAgainstWorkingDirectory === 'function'
+        ? chatManager.resolvePathAgainstWorkingDirectory(requestedPath)
+        : requestedPath;
+    const result = await window.electronAPI.openImageFile({
+      ...parameters,
+      filePath,
+      aiInitiated: true,
+      source: parameters?.source || 'ai',
+    });
+    if (!result?.success) {
+      throw new Error(result?.error || 'Failed to open image file');
+    }
+    return {
+      success: true,
+      message: `Opened image file: ${result.filePath}`,
+      filePath: result.filePath,
+      fileName: result.fileName,
+      tool: 'open_image_file',
+    };
   }
 
   // === BuiltInToolsMap-aligned load/import methods ===

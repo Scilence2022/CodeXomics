@@ -29,6 +29,10 @@ class ScreenshotManager {
       const mode = this.normalizeMode(parameters.mode || parameters.captureMode, target);
       const format = this.normalizeFormat(parameters.format || this.inferFormatFromOutputPath(parameters));
       const copyToClipboard = Boolean(parameters.copyToClipboard || parameters.copy_to_clipboard);
+      const autoOpen = Boolean(
+        parameters.autoOpen || parameters.auto_open || parameters.openAfterCapture || parameters.open_after_capture
+      );
+      const aiInitiated = Boolean(parameters.aiInitiated || parameters.ai_initiated || parameters.source === 'ai');
       const requestedTrackType = parameters.trackType || parameters.track_type;
       if (target === 'track' && this.isAllTracksAlias(requestedTrackType)) {
         target = mode === 'visible' ? 'visible_tracks' : 'tracks';
@@ -47,6 +51,8 @@ class ScreenshotManager {
           quality,
           filePath,
           copyToClipboard,
+          autoOpen,
+          aiInitiated,
           defaultFilename,
         });
       }
@@ -62,6 +68,8 @@ class ScreenshotManager {
           quality,
           filePath,
           copyToClipboard,
+          autoOpen,
+          aiInitiated,
           defaultFilename,
         });
       }
@@ -84,6 +92,8 @@ class ScreenshotManager {
         quality,
         filePath,
         copyToClipboard,
+        autoOpen,
+        aiInitiated,
         defaultFilename,
         imageDataUrl,
       });
@@ -348,6 +358,8 @@ class ScreenshotManager {
       quality: options.quality,
       filePath: options.filePath,
       copyToClipboard: options.copyToClipboard,
+      autoOpen: options.autoOpen,
+      aiInitiated: options.aiInitiated,
       defaultFilename: options.defaultFilename,
       title: this.getDialogTitle(options.target),
       save: true,
@@ -365,6 +377,8 @@ class ScreenshotManager {
       quality: options.quality,
       filePath: options.filePath,
       copyToClipboard: options.copyToClipboard,
+      autoOpen: options.autoOpen,
+      aiInitiated: options.aiInitiated,
       defaultFilename: options.defaultFilename,
       title: this.getDialogTitle(options.target),
       save: true,
@@ -403,6 +417,7 @@ class ScreenshotManager {
       width: result.width,
       height: result.height,
       copiedToClipboard: !!result.copiedToClipboard,
+      opened: !!result.opened,
     };
   }
 

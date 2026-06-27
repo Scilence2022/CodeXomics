@@ -19,6 +19,7 @@ describe('General Settings security tab', () => {
     const source = readSource('src/renderer/modules/ConfigManager.js');
 
     expect(source).toContain("securityProfile: 'balanced'");
+    expect(source).toContain('disableAiSecurityRestrictions: false');
     expect(source).toContain('warnBeforeAiFileWrites: true');
     expect(source).toContain('warnBeforeInternetDownloads: true');
     expect(source).toContain('showSecurityNotifications: true');
@@ -31,6 +32,7 @@ describe('General Settings security tab', () => {
     const source = readSource('src/renderer/modules/GeneralSettingsManager.js');
 
     expect(source).toContain('securityProfile');
+    expect(source).toContain('disableAiSecurityRestrictions');
     expect(source).toContain('warnBeforeAiFileWrites');
     expect(source).toContain('warnBeforeInternetDownloads');
     expect(source).toContain('showSecurityNotifications');

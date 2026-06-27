@@ -3746,11 +3746,105 @@ class ChatManager {
     if (!this.app?.screenshotManager) {
       throw new Error('Screenshot manager not available');
     }
-    const result = await this.app.screenshotManager.captureScreenshot(parameters);
+    const screenshotParameters = this.withAiScreenshotDefaults(parameters);
+    const result = await this.app.screenshotManager.captureScreenshot(screenshotParameters);
     if (result?.success === false && !result.canceled) {
       throw new Error(result.error || 'Screenshot capture failed');
     }
     return result;
+  }
+
+  hasScreenshotOutputPath(parameters = {}) {
+    return Boolean(
+      parameters.filePath ||
+      parameters.file_path ||
+      parameters.outputPath ||
+      parameters.output_path ||
+      parameters.savePath ||
+      parameters.save_path ||
+      parameters.filename ||
+      parameters.fileName
+    );
+  }
+
+  withAiScreenshotDefaults(parameters = {}) {
+    const screenshotParameters = {
+      ...parameters,
+      aiInitiated: true,
+      source: parameters.source || 'ai',
+    };
+
+    const hasAutoSaveSetting =
+      screenshotParameters.auto_save !== undefined || screenshotParameters.autoSave !== undefined;
+    const copyOnly = Boolean(screenshotParameters.copyToClipboard || screenshotParameters.copy_to_clipboard);
+    const saveDisabled = screenshotParameters.save === false || screenshotParameters.saveFile === false;
+
+    if (!this.hasScreenshotOutputPath(screenshotParameters) && !hasAutoSaveSetting && !copyOnly && !saveDisabled) {
+      screenshotParameters.auto_save = true;
+    }
+
+    return screenshotParameters;
+  }
+
+  async openImageFile(parameters = {}) {
+    try {
+      const filePath =
+        parameters.filePath ||
+        parameters.file_path ||
+        parameters.path ||
+        parameters.imagePath ||
+        parameters.image_path ||
+        parameters.filename ||
+        parameters.fileName;
+
+      if (!filePath) {
+        throw new Error('Image file path is required');
+      }
+
+      if (!window.electronAPI?.openImageFile) {
+        throw new Error('Image viewer IPC bridge is unavailable');
+      }
+
+      const resolvedFilePath = this.resolvePathAgainstWorkingDirectory(filePath);
+      const result = await window.electronAPI.openImageFile({
+        ...parameters,
+        filePath: resolvedFilePath,
+        aiInitiated: true,
+        source: parameters.source || 'ai',
+      });
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to open image file');
+      }
+
+      return {
+        success: true,
+        message: `Opened image file: ${result.filePath}`,
+        filePath: result.filePath,
+        fileName: result.fileName,
+        tool: 'open_image_file',
+      };
+    } catch (error) {
+      console.error('❌ [ChatManager] Error opening image file:', error);
+      return {
+        success: false,
+        error: error.message,
+        tool: 'open_image_file',
+      };
+    }
+  }
+
+  resolvePathAgainstWorkingDirectory(filePath) {
+    const pathModule = this.getPathModule();
+    if (pathModule && typeof pathModule.isAbsolute === 'function' && pathModule.isAbsolute(filePath)) {
+      return filePath;
+    }
+
+    if (pathModule && typeof pathModule.resolve === 'function') {
+      return pathModule.resolve(this.getCurrentWorkingDirectory(), filePath);
+    }
+
+    return `${this.getCurrentWorkingDirectory().replace(/\/+$/g, '')}/${filePath}`;
   }
 
   /**
@@ -8054,6 +8148,7 @@ TOOL AVAILABILITY:
         'export_bed_format',
         'export_current_view_fasta',
         'capture_screenshot',
+        'open_image_file',
       ],
       'BLAST & SIMILARITY': [
         'blast_search',
@@ -8300,6 +8395,7 @@ ${coreTools}
       export_bed_format: () => this.exportBEDFormat(parameters),
       export_current_view_fasta: () => this.exportCurrentViewFasta(parameters),
       capture_screenshot: () => this.captureScreenshot(parameters),
+      open_image_file: () => this.openImageFile(parameters),
 
       // System tools
       get_chromosome_list: () => this.getChromosomeList(),
@@ -9420,6 +9516,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // Data Export/Import
       'export_data',
       'capture_screenshot',
+      'open_image_file',
       'export_region_features',
       'get_file_info',
       'get_chromosome_list',
@@ -14509,6 +14606,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // Data Agent - data management and export
       export_data: 'Data Agent',
       capture_screenshot: 'Data Agent',
+      open_image_file: 'Data Agent',
       export_region_features: 'Data Agent',
       get_file_info: 'Data Agent',
       get_genome_info: 'Data Agent',

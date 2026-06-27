@@ -700,6 +700,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('open_image_file', {
+      method: 'openImageFile',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('export_data', {
       method: 'exportData',
       category: 'file_operations',
@@ -1702,6 +1709,20 @@ class BuiltInToolsIntegration {
           name: 'capture_screenshot',
           confidence: 0.95,
           reason: 'Screenshot capture keywords detected',
+        });
+      }
+      if (
+        /\b(open|view|show|display|preview)\s+.*?\b(image|screenshot|screen\s+shot|png|jpe?g|gif|webp|bmp|tiff?)\b/i.test(
+          query
+        ) ||
+        /\b(image|screenshot|screen\s+shot|png|jpe?g|gif|webp|bmp|tiff?)\s+.*?\b(open|view|show|display|preview)\b/i.test(
+          query
+        )
+      ) {
+        relevantTools.push({
+          name: 'open_image_file',
+          confidence: 0.9,
+          reason: 'Image viewing keywords detected',
         });
       }
       if (/\b(fasta|fa|sequence\s+file)\b/i.test(query) && !/\b(cds|protein|coding)\b/i.test(query)) {

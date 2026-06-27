@@ -69,6 +69,13 @@ describe('IPC Handlers Module', () => {
   it('should capture screenshots from the requesting renderer webContents', () => {
     expect(content).toContain('getWorkspaceHandleForSender');
     expect(content).toContain('event.sender.capturePage(rect)');
+    expect(content).toContain('resolveIpcFileAccess(savePath, {');
+  });
+
+  it('should expose image opening IPC for saved screenshots', () => {
+    expect(content).toContain("ipcMain.handle('open-image-file'");
+    expect(content).toContain('assertSupportedImagePath');
+    expect(content).toContain('shell.openPath(safeFilePath)');
   });
 
   it('should handle MCP server IPC', () => {

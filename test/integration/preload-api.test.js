@@ -33,6 +33,7 @@ describe('Preload API Structure', () => {
       'showSaveDialog',
       'writeFile',
       'captureScreenshot',
+      'openImageFile',
       'selectProjectDirectory',
       'loadProjectFile',
       'getLocaleData',
@@ -73,6 +74,7 @@ describe('Preload API Structure', () => {
       expect(preloadContent).toContain('approve-working-directory');
       expect(preloadContent).toContain('get-app-paths');
       expect(preloadContent).toContain('screenshot:capture');
+      expect(preloadContent).toContain('open-image-file');
     });
 
     it('should validate on() listener channels', () => {

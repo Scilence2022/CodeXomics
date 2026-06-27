@@ -65,6 +65,7 @@ class GeneralSettingsManager {
 
       // Security
       securityProfile: 'balanced',
+      disableAiSecurityRestrictions: false,
       warnBeforeAiFileWrites: true,
       warnBeforeInternetDownloads: true,
       showSecurityNotifications: true,
@@ -418,6 +419,7 @@ class GeneralSettingsManager {
     }
 
     const securityCheckboxes = [
+      'disableAiSecurityRestrictions',
       'warnBeforeAiFileWrites',
       'warnBeforeInternetDownloads',
       'showSecurityNotifications',
@@ -787,6 +789,7 @@ class GeneralSettingsManager {
     if (securityProfileSelect) securityProfileSelect.value = this.settings.securityProfile || 'balanced';
 
     const securityCheckboxes = [
+      'disableAiSecurityRestrictions',
       'warnBeforeAiFileWrites',
       'warnBeforeInternetDownloads',
       'showSecurityNotifications',
@@ -1143,6 +1146,7 @@ class GeneralSettingsManager {
   applySecuritySettings() {
     const securitySettings = {
       securityProfile: this.settings.securityProfile || 'balanced',
+      disableAiSecurityRestrictions: !!this.settings.disableAiSecurityRestrictions,
       warnBeforeAiFileWrites: !!this.settings.warnBeforeAiFileWrites,
       warnBeforeInternetDownloads: !!this.settings.warnBeforeInternetDownloads,
       showSecurityNotifications: !!this.settings.showSecurityNotifications,
@@ -1153,6 +1157,7 @@ class GeneralSettingsManager {
 
     if (typeof document !== 'undefined' && document.body) {
       document.body.dataset.securityProfile = securitySettings.securityProfile;
+      document.body.dataset.aiSecurityRestrictionsDisabled = String(securitySettings.disableAiSecurityRestrictions);
     }
 
     if (typeof window !== 'undefined') {

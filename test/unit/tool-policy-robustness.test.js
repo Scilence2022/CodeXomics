@@ -226,6 +226,28 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     );
   });
 
+  it('should allow all tool executions when the explicit AI security bypass is enabled', () => {
+    const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+    const policy = new ToolExecutionPolicy({
+      chatManager: {
+        configManager: {
+          get: (key, fallback) => {
+            if (key === 'generalSettings.disableAiSecurityRestrictions') return true;
+            return fallback;
+          },
+        },
+        getToolExecutionKey: (toolName, parameters) => `${toolName}:${JSON.stringify(parameters)}`,
+        getToolExecutionCount: () => 99,
+        getToolExecutionCountByName: () => 99,
+        wasToolExecutedSuccessfully: () => true,
+      },
+    });
+
+    expect(
+      policy.shouldAllowToolExecution({ tool_name: 'unknown_repeat_tool', parameters: { path: '/tmp/a' } }, [])
+    ).toBe(true);
+  });
+
   it('should normalize parameters order-independently (LLMContextService)', () => {
     const service = new LLMContextService({}, {});
     const params1 = { sequence: 'GCAATAT', chromosome: 'chr1' };

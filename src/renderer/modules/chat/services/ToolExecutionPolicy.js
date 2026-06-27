@@ -135,6 +135,12 @@ class ToolExecutionPolicy {
   shouldAllowToolExecution(tool, conversationHistory = [], currentRound, toolResults = []) {
     const toolKey = this.getToolKey(tool);
     const toolName = tool.tool_name;
+
+    if (this.areAiSecurityRestrictionsDisabled()) {
+      console.warn(`[Policy] AI security restrictions disabled; allowing ${toolName}`);
+      return true;
+    }
+
     const { name: applicablePolicyName, policy: applicablePolicy } = this.capabilityPolicy.getPolicyForTool(toolName);
 
     if (applicablePolicyName) {
@@ -160,6 +166,21 @@ class ToolExecutionPolicy {
       toolResults,
       currentRound
     );
+  }
+
+  areAiSecurityRestrictionsDisabled() {
+    const configManager = this.chatManager?.configManager;
+    if (!configManager || typeof configManager.get !== 'function') {
+      return false;
+    }
+
+    const directValue = configManager.get('generalSettings.disableAiSecurityRestrictions', undefined);
+    if (directValue !== undefined) {
+      return directValue === true;
+    }
+
+    const generalSettings = configManager.get('generalSettings', {}) || {};
+    return generalSettings.disableAiSecurityRestrictions === true;
   }
 
   shouldAllowWithinGlobalLimits(toolName, toolKey, applicablePolicyName, conversationHistory) {

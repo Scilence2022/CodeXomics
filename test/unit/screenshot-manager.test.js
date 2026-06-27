@@ -76,4 +76,28 @@ describe('ScreenshotManager', () => {
       })
     );
   });
+
+  it('passes autoOpen and AI initiation flags to native captures', async () => {
+    const manager = createManager();
+    manager.captureNativeScreenshot = vi.fn(async options => ({
+      success: true,
+      target: options.target,
+      mode: options.mode,
+    }));
+
+    const result = await manager.captureScreenshot({
+      target: 'full_application',
+      autoOpen: true,
+      aiInitiated: true,
+      auto_save: true,
+    });
+
+    expect(result.success).toBe(true);
+    expect(manager.captureNativeScreenshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        autoOpen: true,
+        aiInitiated: true,
+      })
+    );
+  });
 });

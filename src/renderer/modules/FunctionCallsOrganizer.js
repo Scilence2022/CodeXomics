@@ -327,6 +327,7 @@ class FunctionCallsOrganizer {
           'export_bed_format',
           'export_current_view_fasta',
           'capture_screenshot',
+          'open_image_file',
         ],
       },
 
