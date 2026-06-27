@@ -3539,6 +3539,23 @@ Supported formats:
                                 <small class="help-text">All tracks update dynamically during drag operations (like
                                     Genes & Features track)</small>
                             </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="dragUpdateGeneFeatures">
+                                    Update All Tracks While Dragging
+                                </label>
+                                <small class="help-text">Re-render every track during a drag so no blank space is left
+                                    behind. Off by default for smoother performance. (Individual tracks can also be
+                                    enabled from their own settings — see each track's gear menu.)</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="dragRealtimeSequenceUpdate">
+                                    Real-time Sequence Update While Dragging
+                                </label>
+                                <small class="help-text">Update the bottom sequence panel continuously during a drag.
+                                    When off (default), it updates once after the drag ends.</small>
+                            </div>
                         </div>
 
                         <div class="settings-section">

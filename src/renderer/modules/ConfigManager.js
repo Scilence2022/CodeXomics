@@ -318,6 +318,8 @@ class ConfigManager {
         enableFileCache: true,
         cacheSize: 500,
         enableGlobalDragging: true,
+        dragUpdateGeneFeatures: false,
+        dragRealtimeSequenceUpdate: false,
         enableWheelZoom: true,
         wheelZoomSensitivity: 0.1,
         wheelZoomToCursor: true,
