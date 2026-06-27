@@ -326,6 +326,7 @@ class FunctionCallsOrganizer {
           'export_gff_annotations',
           'export_bed_format',
           'export_current_view_fasta',
+          'capture_screenshot',
         ],
       },
 

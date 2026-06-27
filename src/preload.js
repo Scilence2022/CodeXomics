@@ -9,6 +9,7 @@ const allowedInvokeChannels = [
   'mcp-server-check-port',
   'broadcast-theme-to-pm',
   'request-current-theme',
+  'screenshot:capture',
   'show-save-dialog',
   'show-open-file-dialog',
   'write-file',
@@ -185,6 +186,8 @@ const allowedListenChannels = [
   'menu-export-bed',
   'menu-export-current-view',
   'menu-export-configure',
+  'menu-capture-full-screenshot',
+  'menu-capture-tracks-screenshot',
   'action-copy-sequence',
   'action-copy-reverse-complement-sequence',
   'action-cut-sequence',
@@ -360,6 +363,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File save dialog for exports
   showSaveDialog: options => ipcRenderer.invoke('show-save-dialog', options),
   writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
+  captureScreenshot: options => ipcRenderer.invoke('screenshot:capture', options),
 
   // Project Manager APIs
   selectProjectDirectory: () => ipcRenderer.invoke('selectProjectDirectory'),

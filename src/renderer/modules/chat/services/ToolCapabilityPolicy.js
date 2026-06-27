@@ -107,6 +107,11 @@ class ToolCapabilityPolicy {
         policy: 'always_allowed',
       },
 
+      screenshot_operations: {
+        tools: ['capture_screenshot'],
+        policy: 'always_allowed',
+      },
+
       sequence_editing_actions: {
         tools: [
           'copy_sequence',

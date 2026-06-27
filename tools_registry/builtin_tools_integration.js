@@ -693,6 +693,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('capture_screenshot', {
+      method: 'captureScreenshot',
+      category: 'file_operations',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('export_data', {
       method: 'exportData',
       category: 'file_operations',
@@ -1685,7 +1692,18 @@ class BuiltInToolsIntegration {
     }
 
     // Check for export patterns
-    if (/\b(export|save|download|write|output)\b/i.test(query)) {
+    if (/\b(export|save|download|write|output|capture|screenshot|snapshot|image)\b/i.test(query)) {
+      if (
+        /\b(screenshot|screen\s+shot|snapshot|capture|image|png|jpeg|jpg)\b/i.test(query) &&
+        (/\b(app|application|interface|window|tracks?|viewer|view|screen)\b/i.test(query) ||
+          /\b(take|capture|save|export)\s+.*?\b(screenshot|screen\s+shot|snapshot|image)\b/i.test(query))
+      ) {
+        relevantTools.push({
+          name: 'capture_screenshot',
+          confidence: 0.95,
+          reason: 'Screenshot capture keywords detected',
+        });
+      }
       if (/\b(fasta|fa|sequence\s+file)\b/i.test(query) && !/\b(cds|protein|coding)\b/i.test(query)) {
         relevantTools.push({
           name: 'export_fasta_sequence',
@@ -1739,7 +1757,7 @@ class BuiltInToolsIntegration {
         });
       }
       // Generic export pattern
-      if (!relevantTools.some(t => t.name.startsWith('export_'))) {
+      if (!relevantTools.some(t => t.name.startsWith('export_') || t.name === 'capture_screenshot')) {
         relevantTools.push({
           name: 'export_fasta_sequence',
           confidence: 0.7,

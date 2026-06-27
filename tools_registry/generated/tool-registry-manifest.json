@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-22T09:48:18.968Z",
-  "registryHash": "f017821baf820b78846b55c1d2b11886f184ee2c1531914e2d9e8bdac4aa95f9",
+  "generatedAt": "2026-06-27T14:49:11.011Z",
+  "registryHash": "bd4871145817dd215a3714756de4eb4eb4f7ceb258feecdd8965aef3110ef13c",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 179,
-    "appTools": 179,
+    "tools": 180,
+    "appTools": 180,
     "userTools": 0,
-    "uniqueTools": 173,
+    "uniqueTools": 174,
     "categories": 18,
-    "builtInTools": 143,
+    "builtInTools": 144,
     "diagnostics": 12
   },
   "categories": {
@@ -21,7 +21,7 @@
       "file_loading": {
         "name": "File Loading Operations",
         "description": "Built-in tools for loading genomic files directly with path specification or file dialogs",
-        "icon": "\ud83d\udcc1",
+        "icon": "📁",
         "priority": 1,
         "color": "#FF6B35",
         "subcategories": [
@@ -37,7 +37,7 @@
       "navigation": {
         "name": "Navigation & State Management",
         "description": "Tools for genome browser navigation, state management, and track control",
-        "icon": "\ud83e\udded",
+        "icon": "🧭",
         "priority": 1,
         "color": "#4CAF50",
         "subcategories": ["browser_navigation", "state_management", "track_control"],
@@ -46,7 +46,7 @@
       "sequence": {
         "name": "Sequence Analysis",
         "description": "Tools for DNA/RNA sequence analysis, motif searching, and basic bioinformatics",
-        "icon": "\ud83e\uddec",
+        "icon": "🧬",
         "priority": 1,
         "color": "#2196F3",
         "subcategories": ["sequence_retrieval", "sequence_analysis", "motif_search", "prediction"],
@@ -55,7 +55,7 @@
       "protein": {
         "name": "Protein Structure",
         "description": "Tools for protein structure analysis, PDB searches, and AlphaFold integration",
-        "icon": "\ud83d\udd2c",
+        "icon": "🔬",
         "priority": 1,
         "color": "#FF9800",
         "subcategories": ["structure_retrieval", "structure_visualization", "alphafold_integration", "pdb_search"],
@@ -64,7 +64,7 @@
       "database": {
         "name": "Database Integration",
         "description": "Tools for accessing biological databases (UniProt, InterPro, etc.)",
-        "icon": "\ud83d\uddc4\ufe0f",
+        "icon": "🗄️",
         "priority": 2,
         "color": "#9C27B0",
         "subcategories": ["uniprot_search", "interpro_analysis", "database_queries", "cross_references"],
@@ -73,7 +73,7 @@
       "data_management": {
         "name": "Data Management",
         "description": "Tools for data annotation, export, and codon usage analysis",
-        "icon": "\ud83d\udcca",
+        "icon": "📊",
         "priority": 2,
         "color": "#607D8B",
         "subcategories": ["annotation_management", "data_export", "codon_analysis", "region_analysis"],
@@ -82,7 +82,7 @@
       "annotation": {
         "name": "Annotation Management",
         "description": "CRUD operations for genome annotations with full-text search and change tracking for AI agent integration",
-        "icon": "\ud83c\udff7\ufe0f",
+        "icon": "🏷️",
         "priority": 1,
         "color": "#8E24AA",
         "subcategories": ["annotation_crud", "annotation_search", "change_tracking", "operon_analysis"],
@@ -91,16 +91,16 @@
       "file_operations": {
         "name": "File Operations",
         "description": "Tools for file input/output operations including data export and file format conversion",
-        "icon": "\ud83d\udcbe",
+        "icon": "💾",
         "priority": 2,
         "color": "#FF6B35",
         "subcategories": ["export", "import", "conversion", "validation"],
-        "tools_count": 7
+        "tools_count": 8
       },
       "pathway": {
         "name": "Pathway & BLAST",
         "description": "Tools for metabolic pathway visualization and BLAST sequence searches",
-        "icon": "\ud83d\udd04",
+        "icon": "🔄",
         "priority": 2,
         "color": "#795548",
         "subcategories": ["pathway_visualization", "blast_search", "metabolic_analysis"],
@@ -109,7 +109,7 @@
       "sequence_editing": {
         "name": "Sequence Editing",
         "description": "Tools for sequence manipulation, editing, and action management",
-        "icon": "\u270f\ufe0f",
+        "icon": "✏️",
         "priority": 1,
         "color": "#FF5722",
         "subcategories": ["sequence_manipulation", "action_management", "clipboard_operations"],
@@ -118,7 +118,7 @@
       "primer_design": {
         "name": "Primer Design & PCR",
         "description": "Tools for designing sequence primers, checking thermodynamic properties (Tm, GC), and mapping binding sites.",
-        "icon": "\ud83e\uddec",
+        "icon": "🧬",
         "priority": 1,
         "color": "#9C27B0",
         "subcategories": ["design", "analysis", "mapping"],
@@ -127,7 +127,7 @@
       "system": {
         "name": "System Management",
         "description": "Tools for system operations, working directory management, and environment setup",
-        "icon": "\u2699\ufe0f",
+        "icon": "⚙️",
         "priority": 1,
         "color": "#795548",
         "subcategories": ["directory_management", "environment_setup", "system_configuration"],
@@ -136,7 +136,7 @@
       "benchmark": {
         "name": "Benchmark Management",
         "description": "Tools for running, controlling, and inspecting LLM benchmark tests",
-        "icon": "\ud83d\udcc8",
+        "icon": "📈",
         "priority": 2,
         "color": "#00ACC1",
         "subcategories": ["benchmark_control", "benchmark_results"],
@@ -145,7 +145,7 @@
       "plugin_management": {
         "name": "Plugin Management",
         "description": "Tools for plugin installation, execution, and development",
-        "icon": "\ud83d\udd0c",
+        "icon": "🔌",
         "priority": 3,
         "color": "#3F51B5",
         "subcategories": ["plugin_installation", "plugin_execution", "plugin_development", "plugin_marketplace"],
@@ -154,7 +154,7 @@
       "coordination": {
         "name": "Multi-Agent Coordination",
         "description": "Tools for coordinating multiple AI agents and workflow management",
-        "icon": "\ud83c\udfaf",
+        "icon": "🎯",
         "priority": 2,
         "color": "#00BCD4",
         "subcategories": ["task_coordination", "workflow_management", "agent_management", "error_recovery"],
@@ -163,7 +163,7 @@
       "external_apis": {
         "name": "External API Integration",
         "description": "Tools for integrating with external biological databases and APIs",
-        "icon": "\ud83c\udf10",
+        "icon": "🌐",
         "priority": 2,
         "color": "#8BC34A",
         "subcategories": ["blast_apis", "uniprot_apis", "alphafold_apis"],
@@ -172,7 +172,7 @@
       "utility": {
         "name": "Utility Tools",
         "description": "General utility tools for file downloads, document viewing, and other helper functions",
-        "icon": "\ud83d\udee0\ufe0f",
+        "icon": "🛠️",
         "priority": 2,
         "color": "#78909C",
         "subcategories": ["file_download", "document_viewer", "helper_functions"],
@@ -181,7 +181,7 @@
       "task_management": {
         "name": "Task Management",
         "description": "Tools for setting, updating, and tracking task lists during complex workflow execution",
-        "icon": "\ud83c\udfaf",
+        "icon": "🎯",
         "priority": 1,
         "color": "#3b82f6",
         "subcategories": ["task_tracking"],
@@ -3561,7 +3561,7 @@
           "user_query": "Show only BLAST hits with >95% identity",
           "tool_call": "blast_filter_results(results=<blast_results>, minIdentity=95)",
           "thought": "User wants highly similar matches only",
-          "expected_result": "Filtered results with identity \u226595%"
+          "expected_result": "Filtered results with identity ≥95%"
         },
         {
           "user_query": "Filter BLAST results to top 10 hits with E-value < 1e-50",
@@ -6711,7 +6711,7 @@
     {
       "name": "interpro_search",
       "version": "1.1.0-deprecated",
-      "description": "\u26a0\ufe0f DEPRECATED: This tool is deprecated. Use 'analyze_interpro_domains' instead. This tool name exists only for backward compatibility and will be removed in future versions.",
+      "description": "⚠️ DEPRECATED: This tool is deprecated. Use 'analyze_interpro_domains' instead. This tool name exists only for backward compatibility and will be removed in future versions.",
       "category": "external_apis",
       "keywords": ["interpro", "search", "protein", "domains", "deprecated"],
       "priority": 5,
@@ -6773,13 +6773,13 @@
         {
           "user_query": "Analyze protein domains using InterPro",
           "tool_call": "analyze_interpro_domains(sequence='MVSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGK', analysis_type='domains')",
-          "thought": "\u26a0\ufe0f DEPRECATED: Use analyze_interpro_domains instead of interpro_search",
+          "thought": "⚠️ DEPRECATED: Use analyze_interpro_domains instead of interpro_search",
           "expected_result": "Domain analysis results from InterPro - Please migrate to analyze_interpro_domains"
         },
         {
           "user_query": "Search InterPro database for kinase domains",
           "tool_call": "search_interpro_entry(search_term='kinase', entry_type='domain', database_source=['Pfam', 'SMART'])",
-          "thought": "\u26a0\ufe0f DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis",
+          "thought": "⚠️ DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis",
           "expected_result": "InterPro search results - Please use the appropriate replacement tool"
         }
       ],
@@ -8108,6 +8108,197 @@
         "name": "load_wig_tracks",
         "method": "loadWigTracks",
         "category": "file_loading",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "capture_screenshot",
+      "version": "1.0.0",
+      "description": "Capture a PNG or JPEG screenshot of the full CodeXomics application interface or rendered genome tracks",
+      "category": "file_operations",
+      "subcategory": "export",
+      "keywords": [
+        "screenshot",
+        "screen shot",
+        "capture",
+        "snapshot",
+        "image",
+        "png",
+        "jpeg",
+        "jpg",
+        "tracks",
+        "application",
+        "interface",
+        "export",
+        "save"
+      ],
+      "priority": 2,
+      "execution": {
+        "type": "client",
+        "timeout": 30000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Screenshot target area",
+            "enum": ["full_application", "tracks", "visible_tracks", "track"],
+            "default": "full_application"
+          },
+          "mode": {
+            "type": "string",
+            "description": "Capture mode for track screenshots. \"full\" composites the full rendered track element; \"visible\" captures the visible viewport rectangle.",
+            "enum": ["full", "visible"],
+            "default": "full"
+          },
+          "trackType": {
+            "type": "string",
+            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast)"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Output file path. Relative paths are resolved against the current working directory. If omitted, CodeXomics opens a save dialog unless auto_save is true.",
+            "examples": ["/Users/user/Desktop/codexomics-tracks.png", "screenshots/current-view.png"]
+          },
+          "filename": {
+            "type": "string",
+            "description": "Alias for filePath"
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "Alias for filePath"
+          },
+          "auto_save": {
+            "type": "boolean",
+            "description": "When true and no explicit file path is provided, save to a default filename in the current working directory instead of opening a save dialog",
+            "default": false
+          },
+          "format": {
+            "type": "string",
+            "description": "Image format",
+            "enum": ["png", "jpeg", "jpg"],
+            "default": "png"
+          },
+          "quality": {
+            "type": "integer",
+            "description": "JPEG quality from 1 to 100. Ignored for PNG.",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 92
+          },
+          "scale": {
+            "type": "number",
+            "description": "Scale factor for full/composited track screenshots. Native visible captures use the window scale.",
+            "minimum": 0.25,
+            "maximum": 4,
+            "default": 1
+          },
+          "background": {
+            "type": "string",
+            "description": "CSS background color for composited track screenshots",
+            "default": "#ffffff"
+          },
+          "maxPixels": {
+            "type": "integer",
+            "description": "Maximum pixel budget for composited track screenshots",
+            "minimum": 1000000,
+            "maximum": 200000000,
+            "default": 64000000
+          },
+          "copyToClipboard": {
+            "type": "boolean",
+            "description": "Also copy the captured image to the system clipboard",
+            "default": false
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Take a screenshot of the full CodeXomics app",
+          "tool_call": "capture_screenshot(target=\"full_application\", filePath=\"/Users/user/Desktop/codexomics-app.png\")",
+          "thought": "User wants the whole visible application interface captured as an image",
+          "expected_result": "PNG file containing the visible CodeXomics application interface"
+        },
+        {
+          "user_query": "Save a screenshot of the genome tracks",
+          "tool_call": "capture_screenshot(target=\"tracks\", mode=\"full\", filePath=\"screenshots/tracks.png\")",
+          "thought": "User wants an image of the rendered genome tracks, including canvas and SVG tracks",
+          "expected_result": "PNG file containing the full rendered tracks area"
+        },
+        {
+          "user_query": "Capture just the reads track as JPEG",
+          "tool_call": "capture_screenshot(target=\"track\", trackType=\"reads\", format=\"jpeg\", quality=90, filePath=\"reads-track.jpg\")",
+          "thought": "User wants a single track screenshot with JPEG output",
+          "expected_result": "JPEG file containing the reads track"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["export_current_view_fasta", "get_track_status", "get_current_state"],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": []
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["file_operations", "export", "screenshot", "image", "dataExport"],
+        "complexity": "moderate",
+        "usage_pattern": "occasional"
+      },
+      "error_handling": {
+        "no_tracks": {
+          "error": "No rendered tracks are available to capture",
+          "solution": "Load a genome or use target=\"full_application\"",
+          "retry": false
+        },
+        "track_not_found": {
+          "error": "Requested track was not found in the current view",
+          "solution": "Use get_track_status to inspect visible tracks, then retry with a valid trackType",
+          "retry": false
+        },
+        "output_denied": {
+          "error": "Output path is outside approved application directories",
+          "solution": "Choose a path through the save dialog or set an approved working directory first",
+          "retry": false
+        },
+        "capture_too_large": {
+          "error": "Screenshot is too large",
+          "solution": "Lower scale, increase maxPixels, or use mode=\"visible\"",
+          "retry": true
+        }
+      },
+      "returns": {
+        "success": "boolean - Whether screenshot capture succeeded",
+        "result": "object - Screenshot result including: - filePath: string - Saved screenshot file path - fileName: string - Saved screenshot file name - fileSize: number - Output file size in bytes - target: string - Captured target - mode: string - Capture mode - format: string - Output image format - width: number - Captured image width in pixels - height: number - Captured image height in pixels - copiedToClipboard: boolean - Whether the image was copied to clipboard",
+        "error": "string - Error message if success is false"
+      },
+      "source": "app_registry",
+      "sourceFile": "file_operations/capture_screenshot.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "captureScreenshot"
+      },
+      "builtin": {
+        "name": "capture_screenshot",
+        "method": "captureScreenshot",
+        "category": "file_operations",
         "type": "built-in",
         "priority": 1,
         "isBuiltIn": true,
@@ -10171,7 +10362,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' \u2014 use search_features for those.",
+            "description": "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' — use search_features for those.",
             "examples": ["lacZ", "b0062", "araA", "dnaA", "rpoB"]
           },
           "exact_match": {
@@ -11049,7 +11240,7 @@
           },
           "end": {
             "type": "number",
-            "description": "End position in base pairs (1-based). Optional \u2014 if omitted or equal to start, a 2kb centered window is used instead.",
+            "description": "End position in base pairs (1-based). Optional — if omitted or equal to start, a 2kb centered window is used instead.",
             "minimum": 1,
             "examples": [2000, 60000, 1002000]
           },
@@ -11106,13 +11297,13 @@
         {
           "user_query": "Navigate to position 2000000 on U00096",
           "tool_call": "navigate_to_position(chromosome='U00096', start=2000000)",
-          "thought": "User provides start position only \u2014 the view will center on 2000000 with \u00b11kb window (1999000-2001000)",
+          "thought": "User provides start position only — the view will center on 2000000 with ±1kb window (1999000-2001000)",
           "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
         },
         {
           "user_query": "Go to 2000000 on chromosome U00096",
           "tool_call": "navigate_to_position(chromosome='U00096', start=2000000, end=2000000)",
-          "thought": "User provides start=end \u2014 this is treated as a single-point request and will center with \u00b11kb window",
+          "thought": "User provides start=end — this is treated as a single-point request and will center with ±1kb window",
           "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
         }
       ],
@@ -11754,7 +11945,7 @@
     {
       "name": "search_features",
       "version": "1.0.0",
-      "description": "Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name \u2014 use find_gene_by_name or jump_to_gene instead.",
+      "description": "Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name — use find_gene_by_name or jump_to_gene instead.",
       "category": "navigation",
       "keywords": ["search", "features", "genomic", "find", "text search", "annotation", "gene type"],
       "priority": 2,
@@ -11771,7 +11962,7 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "Search query for annotation text, functional keyword, or feature type (NOT for specific gene names \u2014 use find_gene_by_name for that)",
+            "description": "Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use find_gene_by_name for that)",
             "examples": ["ribosomal", "transport", "kinase", "tRNA", "hypothetical protein"]
           },
           "feature_type": {
@@ -14374,7 +14565,7 @@
           },
           "minBindingTm": {
             "type": "number",
-            "description": "Minimum predicted binding Tm in \u00b0C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'."
+            "description": "Minimum predicted binding Tm in °C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'."
           },
           "scoringMode": {
             "type": "string",
@@ -16416,7 +16607,7 @@
     {
       "name": "reverse_complement",
       "version": "1.1.0",
-      "description": "Generate the reverse complement of a DNA sequence. Reverses the sequence order and converts each base to its complement (A\u2194T, G\u2194C).",
+      "description": "Generate the reverse complement of a DNA sequence. Reverses the sequence order and converts each base to its complement (A↔T, G↔C).",
       "category": "sequence",
       "keywords": ["reverse", "complement", "dna", "sequence", "strand", "antisense"],
       "priority": 1,
@@ -16747,7 +16938,7 @@
     },
     {
       "name": "simulate_gel_electrophoresis",
-      "description": "Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel. This is a visualization-only tool \u2014 it does NOT perform digestion. Call virtual_digest first and pass its fragmentDetails to this tool.",
+      "description": "Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel. This is a visualization-only tool — it does NOT perform digestion. Call virtual_digest first and pass its fragmentDetails to this tool.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -16957,7 +17148,7 @@
     {
       "name": "translate_sequence",
       "version": "1.0.0",
-      "description": "Translate DNA sequence to amino acid sequence. This is an alias for translate_dna \u2014 prefer using translate_dna instead, which supports additional options like reading frame and genetic code table selection.",
+      "description": "Translate DNA sequence to amino acid sequence. This is an alias for translate_dna — prefer using translate_dna instead, which supports additional options like reading frame and genetic code table selection.",
       "category": "sequence",
       "keywords": ["translate", "sequence", "protein", "amino", "acid"],
       "priority": 1,
@@ -22877,7 +23068,7 @@
           "user_query": "Show only BLAST hits with >95% identity",
           "tool_call": "blast_filter_results(results=<blast_results>, minIdentity=95)",
           "thought": "User wants highly similar matches only",
-          "expected_result": "Filtered results with identity \u226595%"
+          "expected_result": "Filtered results with identity ≥95%"
         },
         {
           "user_query": "Filter BLAST results to top 10 hits with E-value < 1e-50",
@@ -26027,7 +26218,7 @@
     "interpro_search": {
       "name": "interpro_search",
       "version": "1.1.0-deprecated",
-      "description": "\u26a0\ufe0f DEPRECATED: This tool is deprecated. Use 'analyze_interpro_domains' instead. This tool name exists only for backward compatibility and will be removed in future versions.",
+      "description": "⚠️ DEPRECATED: This tool is deprecated. Use 'analyze_interpro_domains' instead. This tool name exists only for backward compatibility and will be removed in future versions.",
       "category": "external_apis",
       "keywords": ["interpro", "search", "protein", "domains", "deprecated"],
       "priority": 5,
@@ -26089,13 +26280,13 @@
         {
           "user_query": "Analyze protein domains using InterPro",
           "tool_call": "analyze_interpro_domains(sequence='MVSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGK', analysis_type='domains')",
-          "thought": "\u26a0\ufe0f DEPRECATED: Use analyze_interpro_domains instead of interpro_search",
+          "thought": "⚠️ DEPRECATED: Use analyze_interpro_domains instead of interpro_search",
           "expected_result": "Domain analysis results from InterPro - Please migrate to analyze_interpro_domains"
         },
         {
           "user_query": "Search InterPro database for kinase domains",
           "tool_call": "search_interpro_entry(search_term='kinase', entry_type='domain', database_source=['Pfam', 'SMART'])",
-          "thought": "\u26a0\ufe0f DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis",
+          "thought": "⚠️ DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis",
           "expected_result": "InterPro search results - Please use the appropriate replacement tool"
         }
       ],
@@ -27424,6 +27615,197 @@
         "name": "load_wig_tracks",
         "method": "loadWigTracks",
         "category": "file_loading",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "capture_screenshot": {
+      "name": "capture_screenshot",
+      "version": "1.0.0",
+      "description": "Capture a PNG or JPEG screenshot of the full CodeXomics application interface or rendered genome tracks",
+      "category": "file_operations",
+      "subcategory": "export",
+      "keywords": [
+        "screenshot",
+        "screen shot",
+        "capture",
+        "snapshot",
+        "image",
+        "png",
+        "jpeg",
+        "jpg",
+        "tracks",
+        "application",
+        "interface",
+        "export",
+        "save"
+      ],
+      "priority": 2,
+      "execution": {
+        "type": "client",
+        "timeout": 30000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Screenshot target area",
+            "enum": ["full_application", "tracks", "visible_tracks", "track"],
+            "default": "full_application"
+          },
+          "mode": {
+            "type": "string",
+            "description": "Capture mode for track screenshots. \"full\" composites the full rendered track element; \"visible\" captures the visible viewport rectangle.",
+            "enum": ["full", "visible"],
+            "default": "full"
+          },
+          "trackType": {
+            "type": "string",
+            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast)"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Output file path. Relative paths are resolved against the current working directory. If omitted, CodeXomics opens a save dialog unless auto_save is true.",
+            "examples": ["/Users/user/Desktop/codexomics-tracks.png", "screenshots/current-view.png"]
+          },
+          "filename": {
+            "type": "string",
+            "description": "Alias for filePath"
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "Alias for filePath"
+          },
+          "auto_save": {
+            "type": "boolean",
+            "description": "When true and no explicit file path is provided, save to a default filename in the current working directory instead of opening a save dialog",
+            "default": false
+          },
+          "format": {
+            "type": "string",
+            "description": "Image format",
+            "enum": ["png", "jpeg", "jpg"],
+            "default": "png"
+          },
+          "quality": {
+            "type": "integer",
+            "description": "JPEG quality from 1 to 100. Ignored for PNG.",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 92
+          },
+          "scale": {
+            "type": "number",
+            "description": "Scale factor for full/composited track screenshots. Native visible captures use the window scale.",
+            "minimum": 0.25,
+            "maximum": 4,
+            "default": 1
+          },
+          "background": {
+            "type": "string",
+            "description": "CSS background color for composited track screenshots",
+            "default": "#ffffff"
+          },
+          "maxPixels": {
+            "type": "integer",
+            "description": "Maximum pixel budget for composited track screenshots",
+            "minimum": 1000000,
+            "maximum": 200000000,
+            "default": 64000000
+          },
+          "copyToClipboard": {
+            "type": "boolean",
+            "description": "Also copy the captured image to the system clipboard",
+            "default": false
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Take a screenshot of the full CodeXomics app",
+          "tool_call": "capture_screenshot(target=\"full_application\", filePath=\"/Users/user/Desktop/codexomics-app.png\")",
+          "thought": "User wants the whole visible application interface captured as an image",
+          "expected_result": "PNG file containing the visible CodeXomics application interface"
+        },
+        {
+          "user_query": "Save a screenshot of the genome tracks",
+          "tool_call": "capture_screenshot(target=\"tracks\", mode=\"full\", filePath=\"screenshots/tracks.png\")",
+          "thought": "User wants an image of the rendered genome tracks, including canvas and SVG tracks",
+          "expected_result": "PNG file containing the full rendered tracks area"
+        },
+        {
+          "user_query": "Capture just the reads track as JPEG",
+          "tool_call": "capture_screenshot(target=\"track\", trackType=\"reads\", format=\"jpeg\", quality=90, filePath=\"reads-track.jpg\")",
+          "thought": "User wants a single track screenshot with JPEG output",
+          "expected_result": "JPEG file containing the reads track"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["export_current_view_fasta", "get_track_status", "get_current_state"],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": []
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["file_operations", "export", "screenshot", "image", "dataExport"],
+        "complexity": "moderate",
+        "usage_pattern": "occasional"
+      },
+      "error_handling": {
+        "no_tracks": {
+          "error": "No rendered tracks are available to capture",
+          "solution": "Load a genome or use target=\"full_application\"",
+          "retry": false
+        },
+        "track_not_found": {
+          "error": "Requested track was not found in the current view",
+          "solution": "Use get_track_status to inspect visible tracks, then retry with a valid trackType",
+          "retry": false
+        },
+        "output_denied": {
+          "error": "Output path is outside approved application directories",
+          "solution": "Choose a path through the save dialog or set an approved working directory first",
+          "retry": false
+        },
+        "capture_too_large": {
+          "error": "Screenshot is too large",
+          "solution": "Lower scale, increase maxPixels, or use mode=\"visible\"",
+          "retry": true
+        }
+      },
+      "returns": {
+        "success": "boolean - Whether screenshot capture succeeded",
+        "result": "object - Screenshot result including: - filePath: string - Saved screenshot file path - fileName: string - Saved screenshot file name - fileSize: number - Output file size in bytes - target: string - Captured target - mode: string - Capture mode - format: string - Output image format - width: number - Captured image width in pixels - height: number - Captured image height in pixels - copiedToClipboard: boolean - Whether the image was copied to clipboard",
+        "error": "string - Error message if success is false"
+      },
+      "source": "app_registry",
+      "sourceFile": "file_operations/capture_screenshot.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "captureScreenshot"
+      },
+      "builtin": {
+        "name": "capture_screenshot",
+        "method": "captureScreenshot",
+        "category": "file_operations",
         "type": "built-in",
         "priority": 1,
         "isBuiltIn": true,
@@ -29031,7 +29413,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' \u2014 use search_features for those.",
+            "description": "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' — use search_features for those.",
             "examples": ["lacZ", "b0062", "araA", "dnaA", "rpoB"]
           },
           "exact_match": {
@@ -29909,7 +30291,7 @@
           },
           "end": {
             "type": "number",
-            "description": "End position in base pairs (1-based). Optional \u2014 if omitted or equal to start, a 2kb centered window is used instead.",
+            "description": "End position in base pairs (1-based). Optional — if omitted or equal to start, a 2kb centered window is used instead.",
             "minimum": 1,
             "examples": [2000, 60000, 1002000]
           },
@@ -29966,13 +30348,13 @@
         {
           "user_query": "Navigate to position 2000000 on U00096",
           "tool_call": "navigate_to_position(chromosome='U00096', start=2000000)",
-          "thought": "User provides start position only \u2014 the view will center on 2000000 with \u00b11kb window (1999000-2001000)",
+          "thought": "User provides start position only — the view will center on 2000000 with ±1kb window (1999000-2001000)",
           "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
         },
         {
           "user_query": "Go to 2000000 on chromosome U00096",
           "tool_call": "navigate_to_position(chromosome='U00096', start=2000000, end=2000000)",
-          "thought": "User provides start=end \u2014 this is treated as a single-point request and will center with \u00b11kb window",
+          "thought": "User provides start=end — this is treated as a single-point request and will center with ±1kb window",
           "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
         }
       ],
@@ -30614,7 +30996,7 @@
     "search_features": {
       "name": "search_features",
       "version": "1.0.0",
-      "description": "Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name \u2014 use find_gene_by_name or jump_to_gene instead.",
+      "description": "Search for genomic features by ANNOTATION TEXT, FUNCTION KEYWORD, or FEATURE TYPE (e.g., find all tRNA, all kinase-related CDS, all transport proteins). This is a BROAD search across all feature types. Do NOT use this to look up a specific gene by its name — use find_gene_by_name or jump_to_gene instead.",
       "category": "navigation",
       "keywords": ["search", "features", "genomic", "find", "text search", "annotation", "gene type"],
       "priority": 2,
@@ -30631,7 +31013,7 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "Search query for annotation text, functional keyword, or feature type (NOT for specific gene names \u2014 use find_gene_by_name for that)",
+            "description": "Search query for annotation text, functional keyword, or feature type (NOT for specific gene names — use find_gene_by_name for that)",
             "examples": ["ribosomal", "transport", "kinase", "tRNA", "hypothetical protein"]
           },
           "feature_type": {
@@ -33234,7 +33616,7 @@
           },
           "minBindingTm": {
             "type": "number",
-            "description": "Minimum predicted binding Tm in \u00b0C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'."
+            "description": "Minimum predicted binding Tm in °C for a site to be reported (default: no minimum). Only applied when scoringMode is 'thermodynamic'."
           },
           "scoringMode": {
             "type": "string",
@@ -35276,7 +35658,7 @@
     "reverse_complement": {
       "name": "reverse_complement",
       "version": "1.1.0",
-      "description": "Generate the reverse complement of a DNA sequence. Reverses the sequence order and converts each base to its complement (A\u2194T, G\u2194C).",
+      "description": "Generate the reverse complement of a DNA sequence. Reverses the sequence order and converts each base to its complement (A↔T, G↔C).",
       "category": "sequence",
       "keywords": ["reverse", "complement", "dna", "sequence", "strand", "antisense"],
       "priority": 1,
@@ -35607,7 +35989,7 @@
     },
     "simulate_gel_electrophoresis": {
       "name": "simulate_gel_electrophoresis",
-      "description": "Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel. This is a visualization-only tool \u2014 it does NOT perform digestion. Call virtual_digest first and pass its fragmentDetails to this tool.",
+      "description": "Simulate agarose gel electrophoresis to visualize restriction digest fragments. Renders DNA bands on a virtual gel. This is a visualization-only tool — it does NOT perform digestion. Call virtual_digest first and pass its fragmentDetails to this tool.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -35817,7 +36199,7 @@
     "translate_sequence": {
       "name": "translate_sequence",
       "version": "1.0.0",
-      "description": "Translate DNA sequence to amino acid sequence. This is an alias for translate_dna \u2014 prefer using translate_dna instead, which supports additional options like reading frame and genetic code table selection.",
+      "description": "Translate DNA sequence to amino acid sequence. This is an alias for translate_dna — prefer using translate_dna instead, which supports additional options like reading frame and genetic code table selection.",
       "category": "sequence",
       "keywords": ["translate", "sequence", "protein", "amino", "acid"],
       "priority": 1,
@@ -39308,6 +39690,16 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "capture_screenshot",
+      "method": "captureScreenshot",
+      "category": "file_operations",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "export_data",
       "method": "exportData",
       "category": "file_operations",
@@ -40733,6 +41125,16 @@
     "export_current_view_fasta": {
       "name": "export_current_view_fasta",
       "method": "exportCurrentViewFasta",
+      "category": "file_operations",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "capture_screenshot": {
+      "name": "capture_screenshot",
+      "method": "captureScreenshot",
       "category": "file_operations",
       "type": "built-in",
       "priority": 1,

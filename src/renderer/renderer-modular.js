@@ -1,4 +1,4 @@
-/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, PrimerBindingService, PrimerLibraryUI, ReadsManager, ResizableModalManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
+/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, PrimerBindingService, PrimerLibraryUI, ReadsManager, ResizableModalManager, ScreenshotManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 (typeof window !== 'undefined' && window.path) || {
@@ -227,6 +227,7 @@ class GenomeBrowser {
     this.uiManager = new UIManager(this);
     this.sequenceUtils = new SequenceUtils(this);
     this.exportManager = new ExportManager(this);
+    this.screenshotManager = new ScreenshotManager(this);
     this.readsManager = new ReadsManager(this); // Initialize reads manager
     this.trackStateManager = new TrackStateManager(this); // Add track state manager
     this.blastManager = new BlastManager(this); // Initialize BLAST manager
@@ -1060,6 +1061,14 @@ class GenomeBrowser {
     document
       .getElementById('exportCurrentViewBtn')
       .addEventListener('click', () => this.exportManager.exportCurrentViewAsFasta());
+    document.getElementById('captureFullScreenshotBtn').addEventListener('click', () => {
+      this.uiManager.closeExportDropdown();
+      this.screenshotManager.captureFullApplicationScreenshot();
+    });
+    document.getElementById('captureTracksScreenshotBtn').addEventListener('click', () => {
+      this.uiManager.closeExportDropdown();
+      this.screenshotManager.captureTracksScreenshot();
+    });
     // Export configuration button with error handling - use setTimeout to ensure DOM is ready
     setTimeout(() => {
       const exportConfigBtn = document.getElementById('exportConfigBtn');
@@ -3546,6 +3555,12 @@ class GenomeBrowser {
     });
     ipcRenderer.on('menu-export-current-view', () => {
       this.exportManager.exportCurrentViewAsFasta();
+    });
+    ipcRenderer.on('menu-capture-full-screenshot', () => {
+      this.screenshotManager.captureFullApplicationScreenshot();
+    });
+    ipcRenderer.on('menu-capture-tracks-screenshot', () => {
+      this.screenshotManager.captureTracksScreenshot();
     });
     ipcRenderer.on('menu-export-configure', () => {
       this.exportManager.showExportConfigDialog();

@@ -15,10 +15,8 @@ describe('Genome window startup guards', () => {
   });
 
   it('makes UIManager initializeHorizontalSplitter available for GenomeBrowser init', () => {
-    const uiManager = new UIManager({});
-
-    expect(typeof uiManager.initializeHorizontalSplitter).toBe('function');
-    expect(() => uiManager.initializeHorizontalSplitter()).not.toThrow();
+    expect(typeof UIManager.prototype.initializeHorizontalSplitter).toBe('function');
+    expect(() => UIManager.prototype.initializeHorizontalSplitter.call({})).not.toThrow();
   });
 
   it('serves default general settings before async initialization completes', () => {
@@ -29,6 +27,7 @@ describe('Genome window startup guards', () => {
   });
 
   it('loads sequence line spacing from the current GenomeBrowser instead of stale globals', () => {
+    vi.useFakeTimers();
     window.genomeBrowser = {
       generalSettingsManager: {
         getSetting: vi.fn(() => {
@@ -37,12 +36,16 @@ describe('Genome window startup guards', () => {
       },
     };
 
-    const sequenceUtils = new SequenceUtils({
-      generalSettingsManager: {
-        getSetting: vi.fn(() => 18),
-      },
-    });
+    try {
+      const sequenceUtils = new SequenceUtils({
+        generalSettingsManager: {
+          getSetting: vi.fn(() => 18),
+        },
+      });
 
-    expect(sequenceUtils.minLineSpacing).toBe(18);
+      expect(sequenceUtils.minLineSpacing).toBe(18);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

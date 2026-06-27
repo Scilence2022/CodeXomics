@@ -1384,6 +1384,18 @@ function createMenu() {
                 sendToCurrentMainWindow('menu-export-current-view');
               },
             },
+            {
+              label: 'Full Application Screenshot...',
+              click: () => {
+                sendToCurrentMainWindow('menu-capture-full-screenshot');
+              },
+            },
+            {
+              label: 'Tracks Screenshot...',
+              click: () => {
+                sendToCurrentMainWindow('menu-capture-tracks-screenshot');
+              },
+            },
             { type: 'separator' },
             {
               label: 'Configure Export...',

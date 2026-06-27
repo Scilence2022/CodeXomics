@@ -884,6 +884,7 @@ class MultiAgentSystem {
         'export_cds_fasta',
         'export_protein_fasta',
         'export_current_view_fasta',
+        'capture_screenshot',
         'load_genome_file',
         'load_annotation_file',
         'load_variant_file',
