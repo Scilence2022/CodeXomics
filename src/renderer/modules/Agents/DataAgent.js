@@ -557,14 +557,14 @@ class DataAgent extends AgentBase {
    * Capture a screenshot through the renderer ScreenshotManager.
    */
   async captureScreenshot(parameters) {
-    try {
-      if (!this.app?.screenshotManager) {
-        throw new Error('Screenshot manager not available');
-      }
-      return await this.app.screenshotManager.captureScreenshot(parameters);
-    } catch (error) {
-      return { success: false, error: error.message };
+    if (!this.app?.screenshotManager) {
+      throw new Error('Screenshot manager not available');
     }
+    const result = await this.app.screenshotManager.captureScreenshot(parameters);
+    if (result?.success === false && !result.canceled) {
+      throw new Error(result.error || 'Screenshot capture failed');
+    }
+    return result;
   }
 
   // === BuiltInToolsMap-aligned load/import methods ===

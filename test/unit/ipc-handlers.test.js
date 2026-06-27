@@ -66,6 +66,11 @@ describe('IPC Handlers Module', () => {
     expect(content).toContain('resolveSidecarPaths');
   });
 
+  it('should capture screenshots from the requesting renderer webContents', () => {
+    expect(content).toContain('getWorkspaceHandleForSender');
+    expect(content).toContain('event.sender.capturePage(rect)');
+  });
+
   it('should handle MCP server IPC', () => {
     expect(content).toContain('mcp-server');
   });

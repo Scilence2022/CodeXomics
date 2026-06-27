@@ -40,7 +40,7 @@ parameters:
       default: 'full'
     trackType:
       type: string
-      description: Track type to capture when target is "track" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast)
+      description: Track type to capture when target is "track" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast). Use "all" to capture all tracks.
     filePath:
       type: string
       description: Output file path. Relative paths are resolved against the current working directory. If omitted, CodeXomics opens a save dialog unless auto_save is true.

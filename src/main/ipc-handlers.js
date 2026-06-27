@@ -627,6 +627,22 @@ function registerIpcHandlers(deps) {
     return image.toPNG();
   };
 
+  const getWorkspaceHandleForSender = event => {
+    if (!event?.sender) return null;
+
+    for (const handle of workspaceHostManager.getAllViewHandles()) {
+      if (!handle || handle.isDestroyed() || handle.webContents !== event.sender) continue;
+      return handle;
+    }
+
+    return null;
+  };
+
+  const resolveScreenshotHostWindow = event =>
+    BrowserWindow.fromWebContents(event.sender) ||
+    getWorkspaceHandleForSender(event)?.getNativeWindow() ||
+    workspaceHostManager.getNativeWindow(getMainGenomeTarget());
+
   const resolveScreenshotSavePath = async (event, options, format) => {
     const explicitPath =
       options.filePath ||
@@ -652,8 +668,7 @@ function registerIpcHandlers(deps) {
       return null;
     }
 
-    const parentWindow =
-      BrowserWindow.fromWebContents(event.sender) || workspaceHostManager.getNativeWindow(getMainGenomeTarget());
+    const parentWindow = resolveScreenshotHostWindow(event);
     const extension = getScreenshotExtension(format);
     const defaultFilename = String(options.defaultFilename || `codexomics-screenshot.${extension}`);
     const result = await dialog.showSaveDialog(parentWindow, {
@@ -690,13 +705,25 @@ function registerIpcHandlers(deps) {
       return image;
     }
 
-    const targetWindow =
-      BrowserWindow.fromWebContents(event.sender) || workspaceHostManager.getNativeWindow(getMainGenomeTarget());
+    const rect = sanitizeScreenshotRect(options.rect);
+    if (
+      event.sender &&
+      typeof event.sender.isDestroyed === 'function' &&
+      !event.sender.isDestroyed() &&
+      typeof event.sender.capturePage === 'function'
+    ) {
+      const image = await event.sender.capturePage(rect);
+      if (!image || image.isEmpty()) {
+        throw new Error('Captured screenshot image is empty');
+      }
+      return image;
+    }
+
+    const targetWindow = resolveScreenshotHostWindow(event);
     if (!targetWindow || targetWindow.isDestroyed()) {
       throw new Error('No active application window is available for screenshot capture');
     }
 
-    const rect = sanitizeScreenshotRect(options.rect);
     return targetWindow.webContents.capturePage(rect);
   };
 
