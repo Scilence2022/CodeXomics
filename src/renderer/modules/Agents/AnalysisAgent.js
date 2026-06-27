@@ -1,7 +1,7 @@
 /* global AgentBase */
 /**
- * AnalysisAgent - 分析智能体
- * 专门处理序列分析和计算相关的函数
+ * AnalysisAgent - analysis agent
+ * Specializes in sequence-analysis and computation functions
  */
 class AnalysisAgent extends AgentBase {
   constructor(multiAgentSystem) {
@@ -18,15 +18,15 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 执行具体初始化逻辑
+   * Run the concrete initialization logic
    */
   async performInitialization() {
-    // 确保应用已初始化
+    // Ensure the app is initialized
     if (!this.app) {
       throw new Error('Application reference not available');
     }
 
-    // 获取序列工具
+    // Get the sequence tools
     this.sequenceUtils = this.app.sequenceUtils || null;
     if (!this.sequenceUtils) {
       console.warn('⚠️ AnalysisAgent: SequenceUtils not available, some tools will rely on ChatManager fallback');
@@ -71,40 +71,40 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 注册工具映射
+   * Register the tool mappings
    */
   registerToolMapping() {
-    // 序列分析工具
+    // Sequence analysis tools
     this.toolMapping.set('get_sequence', this.getSequence.bind(this));
     this.toolMapping.set('translate_sequence', this.translateDNA.bind(this));
     this.toolMapping.set('translate_dna', this.translateDNA.bind(this));
     this.toolMapping.set('reverse_complement', this.reverseComplement.bind(this));
 
-    // GC含量分析
+    // GC content analysis
     this.toolMapping.set('calculate_gc_content', this.calculateGCContent.bind(this));
     this.toolMapping.set('compute_gc', this.computeGC.bind(this));
     this.toolMapping.set('calc_region_gc', this.calcRegionGC.bind(this));
 
-    // 密码子使用分析
+    // Codon usage analysis
     this.toolMapping.set('codon_usage_analysis', this.codonUsageAnalysis.bind(this));
     this.toolMapping.set('analyze_codon_usage', this.analyzeCodonUsage.bind(this));
     this.toolMapping.set('genome_codon_usage_analysis', this.codonUsageAnalysis.bind(this));
 
-    // 高级分析
+    // Advanced analysis
     this.toolMapping.set('calculate_entropy', this.calculateEntropy.bind(this));
     this.toolMapping.set('calculate_melting_temp', this.calculateMeltingTemp.bind(this));
     this.toolMapping.set('calculate_molecular_weight', this.calculateMolecularWeight.bind(this));
 
-    // 预测工具
+    // Prediction tools
     this.toolMapping.set('predict_promoter', this.predictPromoter.bind(this));
     this.toolMapping.set('predict_rbs', this.predictRBS.bind(this));
     this.toolMapping.set('predict_terminator', this.predictTerminator.bind(this));
 
-    // 区域分析
+    // Region analysis
     this.toolMapping.set('compare_regions', this.compareRegions.bind(this));
     this.toolMapping.set('find_similar_sequences', this.findSimilarSequences.bind(this));
 
-    // 限制性酶切
+    // Restriction digestion
     this.toolMapping.set('find_restriction_sites', this.findRestrictionSites.bind(this));
     this.toolMapping.set('virtual_digest', this.virtualDigest.bind(this));
     this.toolMapping.set('list_restriction_enzymes', this.listRestrictionEnzymes.bind(this));
@@ -112,11 +112,11 @@ class AnalysisAgent extends AgentBase {
     this.toolMapping.set('list_dna_markers', this.listDnaMarkers.bind(this));
     this.toolMapping.set('get_dna_marker_info', this.getDnaMarkerInfo.bind(this));
 
-    // 序列模式搜索
+    // Sequence motif search
     this.toolMapping.set('search_pattern', this.searchPattern.bind(this));
     this.toolMapping.set('search_sequence_motif', this.searchPattern.bind(this));
 
-    // 引物设计
+    // Primer design
     this.toolMapping.set('calculate_primer_properties', this.calculatePrimerProperties.bind(this));
     this.toolMapping.set('design_primers', this.designPrimers.bind(this));
     this.toolMapping.set('find_primer_binding_sites', this.findPrimerBindingSites.bind(this));
@@ -131,7 +131,7 @@ class AnalysisAgent extends AgentBase {
     // CDS
     this.toolMapping.set('get_coding_sequence', this.getCodingSequence.bind(this));
 
-    // 上游下游分析
+    // Upstream/downstream analysis
     this.toolMapping.set('get_upstream_region', this.getUpstreamRegion.bind(this));
     this.toolMapping.set('get_downstream_region', this.getDownstreamRegion.bind(this));
 
@@ -139,7 +139,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 获取序列
+   * Get a sequence
    */
   async getSequence(parameters, strategy) {
     try {
@@ -170,7 +170,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 翻译序列
+   * Translate a sequence
    */
   async translateSequence(parameters, strategy) {
     try {
@@ -201,7 +201,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 翻译DNA
+   * Translate DNA
    */
   async translateDNA(parameters, strategy) {
     try {
@@ -238,7 +238,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 反向互补
+   * Reverse complement
    */
   async reverseComplement(parameters, strategy) {
     try {
@@ -269,7 +269,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 计算GC含量
+   * Calculate GC content
    */
   async calculateGCContent(parameters, strategy) {
     try {
@@ -300,14 +300,14 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 计算GC含量（别名）
+   * Calculate GC content (alias)
    */
   async computeGC(parameters, strategy) {
     return await this.calculateGCContent(parameters, strategy);
   }
 
   /**
-   * 计算区域GC含量
+   * Calculate GC content for a region
    */
   async calcRegionGC(parameters, strategy) {
     try {
@@ -326,7 +326,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 密码子使用分析
+   * Codon usage analysis
    */
   async codonUsageAnalysis(parameters, strategy) {
     try {
@@ -356,14 +356,14 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 分析密码子使用（别名）
+   * Analyze codon usage (alias)
    */
   async analyzeCodonUsage(parameters, strategy) {
     return await this.codonUsageAnalysis(parameters, strategy);
   }
 
   /**
-   * 计算熵
+   * Calculate entropy
    */
   async calculateEntropy(parameters, strategy) {
     try {
@@ -394,7 +394,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 计算熔解温度
+   * Calculate melting temperature
    */
   async calculateMeltingTemp(parameters, strategy) {
     try {
@@ -426,7 +426,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 计算分子量
+   * Calculate molecular weight
    */
   async calculateMolecularWeight(parameters, strategy) {
     try {
@@ -463,7 +463,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 预测启动子
+   * Predict promoters
    */
   async predictPromoter(parameters, strategy) {
     try {
@@ -494,7 +494,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 预测核糖体结合位点
+   * Predict ribosome binding sites
    */
   async predictRBS(parameters, strategy) {
     try {
@@ -525,7 +525,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 预测终止子
+   * Predict terminators
    */
   async predictTerminator(parameters, strategy) {
     try {
@@ -556,7 +556,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 比较区域
+   * Compare regions
    */
   async compareRegions(parameters, strategy) {
     try {
@@ -608,7 +608,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 查找相似序列
+   * Find similar sequences
    */
   async findSimilarSequences(parameters, strategy) {
     try {
@@ -641,7 +641,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 查找限制性酶切位点
+   * Find restriction sites
    */
   async findRestrictionSites(parameters, strategy) {
     try {
@@ -728,7 +728,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 搜索序列模式 (search_sequence_motif / search_pattern)
+   * Search sequence motifs (search_sequence_motif / search_pattern)
    */
   async searchPattern(parameters, strategy) {
     try {
@@ -785,7 +785,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 计算引物属性
+   * Calculate primer properties
    */
   async calculatePrimerProperties(parameters, strategy) {
     try {
@@ -944,7 +944,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 获取编码序列
+   * Get the coding sequence
    */
   async getCodingSequence(parameters, strategy) {
     try {
@@ -962,7 +962,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 获取上游区域
+   * Get the upstream region
    */
   async getUpstreamRegion(parameters, strategy) {
     try {
@@ -1000,7 +1000,7 @@ class AnalysisAgent extends AgentBase {
   }
 
   /**
-   * 获取下游区域
+   * Get the downstream region
    */
   async getDownstreamRegion(parameters, strategy) {
     try {
@@ -1038,5 +1038,5 @@ class AnalysisAgent extends AgentBase {
   }
 }
 
-// 导出智能体
+// Export the agent
 window.AnalysisAgent = AnalysisAgent;

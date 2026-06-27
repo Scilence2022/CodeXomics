@@ -5721,7 +5721,7 @@ class TrackRenderer {
     }
 
     // CRITICAL FIX: Calculate offset using actual sequence length (matching Canvas renderer fix)
-    // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
+    // This fixes the coordinate mismatch that was causing the "extra base on the left" issue
     const genomicStart = read.start;
     // Use BAM end coordinate directly (0-based exclusive)
 

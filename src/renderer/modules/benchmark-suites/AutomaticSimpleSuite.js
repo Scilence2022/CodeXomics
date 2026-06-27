@@ -76,7 +76,9 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
   async cleanupExportFiles() {
     const exportedFilesDir = this.buildFilePath('exported_files');
 
-    console.info(`ℹ️ Export cleanup skipped in hardened renderer for ${exportedFilesDir}; filesystem access is main-process only.`);
+    console.info(
+      `ℹ️ Export cleanup skipped in hardened renderer for ${exportedFilesDir}; filesystem access is main-process only.`
+    );
   }
 
   /**
@@ -2429,7 +2431,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
   async setup(context) {
     console.log('🔧 [AutomaticSimpleSuite] Setting up Automatic Simple test suite...');
 
-    // 清理导出文件防止假阳性
+    // Clean up exported files to prevent false positives
     // Clean up export files to prevent false positives
     await this.cleanupExportFiles();
 

@@ -1271,7 +1271,7 @@ class GeneShapeCreators {
     if (isForward) {
       // Forward triangle (pointing right)
       if (isLeftJagged) {
-        // Left edge (截断面) is jagged - vertical jagged line
+        // Left edge (truncation face) is jagged - vertical jagged line
         return `M ${jaggedDepth} 0
                        L 0 ${jaggedStep}
                        L ${jaggedDepth} ${jaggedStep * 2}
@@ -1282,7 +1282,7 @@ class GeneShapeCreators {
                        L ${jaggedDepth} 0
                        Z`;
       } else if (isRightJagged) {
-        // Right edge (截断面) is jagged - vertical jagged line
+        // Right edge (truncation face) is jagged - vertical jagged line
         return `M 0 0
                        L ${width - jaggedDepth} ${jaggedStep}
                        L ${width} 0
@@ -1296,7 +1296,7 @@ class GeneShapeCreators {
     } else {
       // Reverse triangle (pointing left)
       if (isLeftJagged) {
-        // Left edge (截断面) is jagged - vertical jagged line
+        // Left edge (truncation face) is jagged - vertical jagged line
         return `M ${jaggedDepth} 0
                        L 0 ${jaggedStep}
                        L ${jaggedDepth} ${jaggedStep * 2}
@@ -1307,7 +1307,7 @@ class GeneShapeCreators {
                        L ${width} 0
                        Z`;
       } else if (isRightJagged) {
-        // Right edge (截断面) is jagged - vertical jagged line
+        // Right edge (truncation face) is jagged - vertical jagged line
         return `M ${arrowSize} 0
                        L ${width - jaggedDepth} 0
                        L ${width} ${jaggedStep}

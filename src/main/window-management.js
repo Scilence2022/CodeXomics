@@ -260,12 +260,12 @@ function createCircosWindow() {
     // Show window when ready
     circosWindow.once('ready-to-show', () => {
       circosWindow.show();
-      // 为 Circos Plotter 设置专门的菜单系统
+      // Set up a dedicated menu system for the Circos Plotter
       createCircosPlotterMenu(circosWindow);
       currentActiveWindow = circosWindow;
     });
 
-    // Circos窗口获得焦点时切换到Circos菜单
+    // Switch to the Circos menu when the Circos window gains focus
     circosWindow.on('focus', () => {
       if (currentActiveWindow !== circosWindow) {
         currentActiveWindow = circosWindow;
@@ -281,7 +281,7 @@ function createCircosWindow() {
       console.log('Circos Genome Plotter window closed');
       if (currentActiveWindow === circosWindow) {
         currentActiveWindow = null;
-        // 切换回主窗口菜单
+        // Switch back to the main window menu
         if (mainWindow && !mainWindow.isDestroyed()) {
           createMenu();
           console.log('Switched back to main window menu');
@@ -319,7 +319,7 @@ function createKEGGWindow() {
 
     keggWindow.once('ready-to-show', () => {
       keggWindow.show();
-      // 为KEGG工具窗口设置独立菜单
+      // Set up a standalone menu for the KEGG tool window
       createToolWindowMenu(keggWindow, 'KEGG Pathway Analysis');
     });
 
@@ -352,7 +352,7 @@ function createGOWindow() {
 
     goWindow.once('ready-to-show', () => {
       goWindow.show();
-      // 为GO工具窗口设置独立菜单
+      // Set up a standalone menu for the GO tool window
       createToolWindowMenu(goWindow, 'Gene Ontology Analyzer');
     });
 
@@ -385,7 +385,7 @@ function createUniProtWindow() {
 
     uniprotWindow.once('ready-to-show', () => {
       uniprotWindow.show();
-      // 为UniProt工具窗口设置独立菜单
+      // Set up a standalone menu for the UniProt tool window
       createToolWindowMenu(uniprotWindow, 'Search UniProt Database');
     });
 
@@ -418,7 +418,7 @@ function createInterProWindow() {
 
     interproWindow.once('ready-to-show', () => {
       interproWindow.show();
-      // 为InterPro工具窗口设置独立菜单
+      // Set up a standalone menu for the InterPro tool window
       createToolWindowMenu(interproWindow, 'InterPro Domain Analysis');
     });
 
@@ -451,7 +451,7 @@ function createNCBIWindow() {
 
     ncbiWindow.once('ready-to-show', () => {
       ncbiWindow.show();
-      // 为NCBI工具窗口设置独立菜单
+      // Set up a standalone menu for the NCBI tool window
       createToolWindowMenu(ncbiWindow, 'Search NCBI Database');
     });
 
@@ -486,7 +486,7 @@ function createSTRINGWindow() {
 
     stringWindow.once('ready-to-show', () => {
       stringWindow.show();
-      // 为STRING工具窗口设置独立菜单
+      // Set up a standalone menu for the STRING tool window
       createToolWindowMenu(stringWindow, 'STRING Protein Networks');
     });
 
@@ -519,7 +519,7 @@ function createDAVIDWindow() {
 
     davidWindow.once('ready-to-show', () => {
       davidWindow.show();
-      // 为DAVID工具窗口设置独立菜单
+      // Set up a standalone menu for the DAVID tool window
       createToolWindowMenu(davidWindow, 'DAVID Functional Analysis');
     });
 
@@ -552,7 +552,7 @@ function createReactomeWindow() {
 
     reactomeWindow.once('ready-to-show', () => {
       reactomeWindow.show();
-      // 为Reactome工具窗口设置独立菜单
+      // Set up a standalone menu for the Reactome tool window
       createToolWindowMenu(reactomeWindow, 'Reactome Pathway Browser');
     });
 
@@ -585,7 +585,7 @@ function createPDBWindow() {
 
     pdbWindow.once('ready-to-show', () => {
       pdbWindow.show();
-      // 为PDB工具窗口设置独立菜单
+      // Set up a standalone menu for the PDB tool window
       createToolWindowMenu(pdbWindow, 'PDB Structure Viewer');
     });
 
@@ -659,13 +659,13 @@ function createBlastDownloaderWindow() {
     });
 
     blastDownloaderWindow.on('closed', () => {
-      // 清理菜单模板
+      // Clean up the menu template
       toolMenuTemplates.delete(blastDownloaderWindow.id);
 
-      // 如果关闭的是当前活动窗口，恢复主窗口菜单
+      // If closing the currently active window, restore the main window menu
       if (currentActiveWindow === blastDownloaderWindow) {
         currentActiveWindow = null;
-        createMenu(); // 直接调用createMenu()来恢复主窗口菜单
+        createMenu(); // call createMenu() directly to restore the main window menu
       }
       console.log('BLAST+ Downloader window closed');
     });
@@ -1706,7 +1706,7 @@ function getDisplayWorkArea() {
 }
 
 /**
- * 获取主窗口和Project Manager窗口
+ * Get the main window and the Project Manager window
  */
 
 function getMainWindows() {
@@ -1720,7 +1720,7 @@ function getMainWindows() {
 }
 
 /**
- * 最优布局：主窗口右侧75%，Project Manager左侧25%
+ * Optimal layout: main window 75% on the right, Project Manager 25% on the left
  */
 
 function arrangeWindowsOptimal() {
@@ -1735,11 +1735,11 @@ function arrangeWindowsOptimal() {
   const totalWidth = workArea.width;
   const totalHeight = workArea.height;
 
-  // 计算窗口尺寸
+  // Calculate the window dimensions
   const pmWidth = Math.floor(totalWidth * 0.25); // Project Manager 25%
   const mainWidth = totalWidth - pmWidth; // Main Window 75%
 
-  // 设置主窗口位置和大小
+  // Set the main window position and size
   mainWindow.setBounds({
     x: pmWidth,
     y: 0,
@@ -1747,7 +1747,7 @@ function arrangeWindowsOptimal() {
     height: totalHeight,
   });
 
-  // 如果Project Manager存在，设置其位置和大小
+  // If the Project Manager exists, set its position and size
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
       x: 0,
@@ -1756,7 +1756,7 @@ function arrangeWindowsOptimal() {
       height: totalHeight,
     });
   } else {
-    // 如果Project Manager不存在，创建它
+    // If the Project Manager doesn't exist, create it
     const newPMWindow = createProjectManagerWindow();
     if (newPMWindow) {
       newPMWindow.once('ready-to-show', () => {
@@ -1770,14 +1770,14 @@ function arrangeWindowsOptimal() {
     }
   }
 
-  // 聚焦到主窗口
+  // Focus the main window
   mainWindow.focus();
 
   console.log('🎯 Optimal layout applied: Main 75% + Project Manager 25%');
 }
 
 /**
- * 并排布局：50% + 50%
+ * Side-by-side layout: 50% + 50%
  */
 
 function arrangeWindowsSideBySide() {
@@ -1788,7 +1788,7 @@ function arrangeWindowsSideBySide() {
   const workArea = getDisplayWorkArea();
   const halfWidth = Math.floor(workArea.width * 0.5);
 
-  // 主窗口右侧50%
+  // Main window 50% on the right
   mainWindow.setBounds({
     x: halfWidth,
     y: 0,
@@ -1796,7 +1796,7 @@ function arrangeWindowsSideBySide() {
     height: workArea.height,
   });
 
-  // Project Manager左侧50%
+  // Project Manager 50% on the left
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
       x: 0,
@@ -1823,7 +1823,7 @@ function arrangeWindowsSideBySide() {
 }
 
 /**
- * 主窗口聚焦模式：主窗口占85%，Project Manager占15%
+ * Main-window focus mode: main window 85%, Project Manager 15%
  */
 
 function arrangeMainWindowFocus() {
@@ -1856,7 +1856,7 @@ function arrangeMainWindowFocus() {
 }
 
 /**
- * Project Manager聚焦模式：Project Manager占60%，主窗口占40%
+ * Project Manager focus mode: Project Manager 60%, main window 40%
  */
 
 function arrangeProjectManagerFocus() {
@@ -1902,7 +1902,7 @@ function arrangeProjectManagerFocus() {
 }
 
 /**
- * 垂直堆叠布局
+ * Vertical stacked layout
  */
 
 function arrangeWindowsVertical() {
@@ -1913,7 +1913,7 @@ function arrangeWindowsVertical() {
   const workArea = getDisplayWorkArea();
   const halfHeight = Math.floor(workArea.height * 0.5);
 
-  // 主窗口上半部分
+  // Main window, top half
   mainWindow.setBounds({
     x: 0,
     y: 0,
@@ -1921,7 +1921,7 @@ function arrangeWindowsVertical() {
     height: halfHeight,
   });
 
-  // Project Manager下半部分
+  // Project Manager, bottom half
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
       x: 0,
@@ -1948,7 +1948,7 @@ function arrangeWindowsVertical() {
 }
 
 /**
- * 层叠布局
+ * Cascade layout
  */
 
 function arrangeWindowsCascade() {
@@ -1961,7 +1961,7 @@ function arrangeWindowsCascade() {
   const windowHeight = Math.floor(workArea.height * 0.8);
   const offset = 50;
 
-  // 主窗口
+  // Main window
   mainWindow.setBounds({
     x: 0,
     y: 0,
@@ -1969,7 +1969,7 @@ function arrangeWindowsCascade() {
     height: windowHeight,
   });
 
-  // Project Manager偏移位置
+  // Project Manager offset position
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
       x: offset,
@@ -1984,7 +1984,7 @@ function arrangeWindowsCascade() {
 }
 
 /**
- * 重置到默认位置
+ * Reset to the default position
  */
 
 function resetWindowPositions() {

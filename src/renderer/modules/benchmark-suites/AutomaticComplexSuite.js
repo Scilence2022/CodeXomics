@@ -148,7 +148,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
   /**
    * Clean up target export files before tests to prevent false positives
-   * 在测试开始前检测并删除目标导出文件，避免判断错误
+   * Detect and delete the target export file before the test starts to avoid incorrect judgments
    */
   async cleanupExportFiles() {
     const exportedFilesDir = this.buildFilePath('exported_files');
@@ -2688,7 +2688,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   async setup(context) {
     console.log('🔧 [AutomaticComplexSuite] Setting up Automatic Complex test suite...');
 
-    // 清理导出文件防止假阳性
+    // Clean up exported files to prevent false positives
     // Clean up export files to prevent false positives
     await this.cleanupExportFiles();
 

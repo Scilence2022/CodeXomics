@@ -1,23 +1,23 @@
 /**
- * PluginFunctionCallsIntegrator - 插件功能调用集成器
- * 确保插件系统功能可以被ChatBox LLM通过function calling正确调用
+ * PluginFunctionCallsIntegrator - plugin function-call integrator
+ * Ensures plugin-system features can be correctly invoked by the ChatBox LLM via function calling
  */
 class PluginFunctionCallsIntegrator {
   constructor(chatManager, pluginManager) {
     this.chatManager = chatManager;
     this.pluginManager = pluginManager;
 
-    // 插件功能映射表
+    // Plugin function map
     this.pluginFunctionMap = new Map();
 
-    // 初始化插件功能映射
+    // Initialize the plugin function map
     this.initializePluginFunctionMap();
 
     console.log('PluginFunctionCallsIntegrator initialized');
   }
 
   /**
-   * 初始化插件功能映射表
+   * Initialize the plugin function map
    */
   initializePluginFunctionMap() {
     if (!this.pluginManager) {
@@ -45,8 +45,8 @@ class PluginFunctionCallsIntegrator {
   }
 
   /**
-   * 检查是否为插件功能调用
-   * @param {string} toolName - 工具名称
+   * Check whether this is a plugin function call
+   * @param {string} toolName - the tool name
    * @returns {boolean}
    */
   isPluginFunction(toolName) {
@@ -54,10 +54,10 @@ class PluginFunctionCallsIntegrator {
   }
 
   /**
-   * 执行插件功能
-   * @param {string} toolName - 工具名称
-   * @param {Object} parameters - 参数
-   * @returns {Promise<Object>} 执行结果
+   * Execute a plugin function
+   * @param {string} toolName - the tool name
+   * @param {Object} parameters - the parameters
+   * @returns {Promise<Object>} the execution result
    */
   async executePluginFunction(toolName, parameters) {
     if (!this.isPluginFunction(toolName)) {
@@ -71,12 +71,12 @@ class PluginFunctionCallsIntegrator {
       console.log(`Plugin: ${functionInfo.plugin.name} v${functionInfo.plugin.version}`);
       console.log(`Parameters:`, parameters);
 
-      // 通过PluginManager执行功能
+      // Execute the feature through PluginManager
       const result = await this.pluginManager.executeFunctionByName(toolName, parameters);
 
       console.log(`Plugin function ${toolName} executed successfully:`, result);
 
-      // 包装结果以统一格式
+      // Wrap the result in a uniform format
       return {
         success: true,
         result: result,
@@ -92,8 +92,8 @@ class PluginFunctionCallsIntegrator {
   }
 
   /**
-   * 获取所有插件功能的LLM系统信息
-   * @returns {string} 系统信息字符串
+   * Get the LLM system info for all plugin features
+   * @returns {string} the system info string
    */
   getPluginFunctionsSystemInfo() {
     if (this.pluginFunctionMap.size === 0) {
@@ -102,7 +102,7 @@ class PluginFunctionCallsIntegrator {
 
     let info = '';
 
-    // 按插件分组
+    // Group by plugin
     const pluginGroups = new Map();
     for (const [functionName, functionInfo] of this.pluginFunctionMap) {
       const pluginId = functionInfo.pluginId;
@@ -128,7 +128,7 @@ class PluginFunctionCallsIntegrator {
       for (const func of group.functions) {
         info += `- ${func.name}: ${func.description}\\n`;
 
-        // 添加参数信息
+        // Add parameter info
         if (func.parameters && func.parameters.properties) {
           const requiredParams = func.parameters.required || [];
           const paramList = Object.keys(func.parameters.properties)
@@ -142,7 +142,7 @@ class PluginFunctionCallsIntegrator {
     info += '\\nPLUGIN FUNCTION CALLING EXAMPLES:\\n';
     info += '================================\\n';
 
-    // 为每个插件类别提供示例
+    // Provide examples for each plugin category
     const examples = this.generatePluginExamples();
     for (const example of examples) {
       info += `- ${example.description}:\\n`;
@@ -156,13 +156,13 @@ class PluginFunctionCallsIntegrator {
   }
 
   /**
-   * 生成插件功能调用示例
-   * @returns {Array} 示例数组
+   * Generate plugin function-call examples
+   * @returns {Array} the array of examples
    */
   generatePluginExamples() {
     const examples = [];
 
-    // 基因组分析示例
+    // Genome analysis examples
     if (this.pluginFunctionMap.has('genomic-analysis.analyzeGCContent')) {
       examples.push({
         description: 'Analyze GC content in genomic region',
@@ -194,7 +194,7 @@ class PluginFunctionCallsIntegrator {
       });
     }
 
-    // 系统发育分析示例
+    // Phylogenetic analysis examples
     if (this.pluginFunctionMap.has('phylogenetic-analysis.buildPhylogeneticTree')) {
       examples.push({
         description: 'Build phylogenetic tree',
@@ -212,7 +212,7 @@ class PluginFunctionCallsIntegrator {
       });
     }
 
-    // 机器学习分析示例
+    // Machine learning analysis examples
     if (this.pluginFunctionMap.has('ml-analysis.predictGeneFunction')) {
       examples.push({
         description: 'Predict gene function using ML',
@@ -227,7 +227,7 @@ class PluginFunctionCallsIntegrator {
       });
     }
 
-    // 生物网络分析示例
+    // Biological network analysis examples
     if (this.pluginFunctionMap.has('biological-networks.buildProteinInteractionNetwork')) {
       examples.push({
         description: 'Build protein interaction network',
@@ -246,10 +246,10 @@ class PluginFunctionCallsIntegrator {
   }
 
   /**
-   * 验证插件功能参数
-   * @param {string} toolName - 工具名称
-   * @param {Object} parameters - 参数
-   * @returns {boolean} 验证结果
+   * Validate plugin function parameters
+   * @param {string} toolName - the tool name
+   * @param {Object} parameters - the parameters
+   * @returns {boolean} the validation result
    */
   validatePluginFunctionParameters(toolName, parameters) {
     if (!this.isPluginFunction(toolName)) {
@@ -259,7 +259,7 @@ class PluginFunctionCallsIntegrator {
     const functionInfo = this.pluginFunctionMap.get(toolName);
 
     try {
-      // 使用PluginManager的参数验证
+      // Use PluginManager's parameter validation
       this.pluginManager.validateParameters(parameters, functionInfo.parameters);
       return true;
     } catch (error) {
@@ -269,9 +269,9 @@ class PluginFunctionCallsIntegrator {
   }
 
   /**
-   * 获取插件功能分类信息
-   * @param {string} toolName - 工具名称
-   * @returns {Object|null} 分类信息
+   * Get the category info for a plugin feature
+   * @param {string} toolName - the tool name
+   * @returns {Object|null} the category info
    */
   getPluginFunctionCategory(toolName) {
     if (!this.isPluginFunction(toolName)) {
@@ -281,7 +281,7 @@ class PluginFunctionCallsIntegrator {
     const functionInfo = this.pluginFunctionMap.get(toolName);
     const pluginId = functionInfo.pluginId;
 
-    // 根据插件ID确定分类
+    // Determine the category from the plugin ID
     if (pluginId === 'genomic-analysis') {
       return {
         name: 'pluginGenomicAnalysis',
@@ -308,7 +308,7 @@ class PluginFunctionCallsIntegrator {
       };
     }
 
-    // 默认分类
+    // Default category
     return {
       name: 'pluginGeneral',
       priority: 3,
@@ -317,7 +317,7 @@ class PluginFunctionCallsIntegrator {
   }
 
   /**
-   * 刷新插件功能映射（当插件系统更新时调用）
+   * Refresh the plugin function map (called when the plugin system updates)
    */
   refreshPluginFunctionMap() {
     this.pluginFunctionMap.clear();
@@ -326,8 +326,8 @@ class PluginFunctionCallsIntegrator {
   }
 
   /**
-   * 获取插件功能统计信息
-   * @returns {Object} 统计信息
+   * Get plugin feature statistics
+   * @returns {Object} the statistics
    */
   getPluginFunctionStats() {
     const stats = {
@@ -340,10 +340,10 @@ class PluginFunctionCallsIntegrator {
       const pluginId = functionInfo.pluginId;
       const category = this.getPluginFunctionCategory(functionInfo.name);
 
-      // 统计插件数量
+      // Count the plugins
       stats.pluginCounts.set(pluginId, (stats.pluginCounts.get(pluginId) || 0) + 1);
 
-      // 统计分类数量
+      // Count the categories
       if (category) {
         stats.categoryStats.set(category.name, (stats.categoryStats.get(category.name) || 0) + 1);
       }
@@ -357,7 +357,7 @@ class PluginFunctionCallsIntegrator {
   }
 }
 
-// 导出类
+// Export the class
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = PluginFunctionCallsIntegrator;
 }

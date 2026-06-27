@@ -1,6 +1,6 @@
 /**
- * FunctionCallsOrganizer - 组织和优化function calls的执行策略
- * 按照功能类型分类执行，优化ChatBox响应速度和准确性
+ * FunctionCallsOrganizer - organizes and optimizes the execution strategy for function calls
+ * Executes by feature category to optimize ChatBox response speed and accuracy
  * Enhanced with dynamic plugin tools integration
  */
 class FunctionCallsOrganizer {
@@ -12,9 +12,9 @@ class FunctionCallsOrganizer {
     this.dynamicPluginTools = new Map();
     this.dynamicRegistryTools = new Map();
 
-    // 功能分类定义
+    // Feature category definitions
     this.functionCategories = {
-      // 类别1: 浏览器行为类 - 高优先级，立即执行
+      // Category 1: Browser actions - high priority, executed immediately
       browserActions: {
         priority: 1,
         description: 'Browser behavior and visual interface actions',
@@ -61,7 +61,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别2: 数据检索类 - 中等优先级，快速执行
+      // Category 2: Data retrieval - medium priority, fast execution
       dataRetrieval: {
         priority: 2,
         description: 'Data retrieval and basic information queries',
@@ -130,7 +130,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别3: 序列分析类 - 中等优先级，可能需要计算时间
+      // Category 3: Sequence analysis - medium priority, may require compute time
       sequenceAnalysis: {
         priority: 3,
         description: 'Sequence analysis and computational tools',
@@ -150,7 +150,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别4: 高级分析类 - 低优先级，计算密集型
+      // Category 4: Advanced analysis - low priority, compute-intensive
       advancedAnalysis: {
         priority: 4,
         description: 'Advanced analysis and prediction tools',
@@ -171,7 +171,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别5: BLAST搜索类 - 低优先级，网络依赖型
+      // Category 5: BLAST search - low priority, network-dependent
       blastSearch: {
         priority: 5,
         description: 'BLAST searches and similarity analysis',
@@ -199,7 +199,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别6: 数据操作类 - 变动优先级，根据操作类型决定
+      // Category 6: Data operations - variable priority, depends on the operation type
       dataManipulation: {
         priority: 3,
         description: 'Data creation, editing, and export operations',
@@ -233,7 +233,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别7: 蛋白质结构类 - 低优先级，外部依赖型
+      // Category 7: Protein structure - low priority, externally dependent
       proteinStructure: {
         priority: 5,
         description: 'Protein structure visualization and analysis',
@@ -248,7 +248,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别8: 插件系统V2 - 功能插件（快速执行）
+      // Category 8: Plugin system V2 - function plugins (fast execution)
       pluginFunctions: {
         priority: 3,
         description: 'Plugin Manager V2 - Function plugins for analysis',
@@ -269,14 +269,14 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别9: 插件系统V2 - 实用工具插件（高优先级）
+      // Category 9: Plugin system V2 - utility plugins (high priority)
       pluginUtilities: {
         priority: 2,
         description: 'Plugin Manager V2 - Utility plugins for common tasks',
         functions: ['sequence-utils.reverseComplement', 'sequence-utils.translateSequence'],
       },
 
-      // 类别10: 插件系统V2 - 可视化插件（低优先级）
+      // Category 10: Plugin system V2 - visualization plugins (low priority)
       pluginVisualizations: {
         priority: 5,
         description: 'Plugin Manager V2 - Visualization plugins',
@@ -288,7 +288,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别11: 生物网络分析（保持向后兼容）
+      // Category 11: Biological network analysis (kept for backward compatibility)
       pluginNetworkAnalysis: {
         priority: 4,
         description: 'Legacy biological network analysis functions',
@@ -300,7 +300,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别12: 数据库集成类 - 中等优先级，网络依赖型
+      // Category 12: Database integration - medium priority, network-dependent
       databaseIntegration: {
         priority: 3,
         description: 'Database integration and external API access',
@@ -314,7 +314,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别13: 数据导出类 - 中等优先级，文件操作型
+      // Category 13: Data export - medium priority, file-operation-based
       dataExport: {
         priority: 3,
         description: 'Data export and file generation operations',
@@ -329,7 +329,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别14: 插件管理类 - 中等优先级，系统管理型
+      // Category 14: Plugin management - medium priority, system-management-based
       pluginManagement: {
         priority: 3,
         description: 'Plugin management and execution operations',
@@ -348,7 +348,7 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别15: 协调管理类 - 中等优先级，任务协调型
+      // Category 15: Coordination management - medium priority, task-coordination-based
       coordination: {
         priority: 3,
         description: 'Task coordination and workflow management',
@@ -370,14 +370,14 @@ class FunctionCallsOrganizer {
         ],
       },
 
-      // 类别16: 外部API类 - 低优先级，网络依赖型
+      // Category 16: External API - low priority, network-dependent
       externalApis: {
         priority: 5,
         description: 'External API calls and third-party integrations',
         functions: ['blast_sequence', 'uniprot_search', 'alphafold_search', 'alphafold_get_structure'],
       },
 
-      // 类别17: 基准测试管理类 - 中等优先级，UI管理型
+      // Category 17: Benchmark management - medium priority, UI-management-based
       benchmarkManagement: {
         priority: 3,
         description: 'LLM benchmark execution, control, and results management',
@@ -416,12 +416,12 @@ class FunctionCallsOrganizer {
       },
     };
 
-    // 功能映射表
+    // Feature map
     this.functionToCategory = this.buildFunctionMapping();
   }
 
   /**
-   * 构建功能到类别的映射表
+   * Build the feature-to-category map
    */
   buildFunctionMapping() {
     const mapping = new Map();
@@ -503,10 +503,10 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 根据用户请求分析需要的功能类型组合
-   * @param {string} userMessage - 用户消息
-   * @param {Array} requestedTools - 请求的工具列表
-   * @returns {Object} 分析结果
+   * Analyze which combination of feature types a user request needs
+   * @param {string} userMessage - the user message
+   * @param {Array} requestedTools - the list of requested tools
+   * @returns {Object} the analysis result
    */
   analyzeRequestStrategy(userMessage, requestedTools = []) {
     const strategy = {
@@ -516,7 +516,7 @@ class FunctionCallsOrganizer {
       estimatedTime: 0,
     };
 
-    // 分析用户消息中的关键词
+    // Analyze the keywords in the user message
     const messageKeywords = this.extractKeywords(userMessage.toLowerCase());
 
     console.log('📊 [FunctionCallsOrganizer] analyzeRequestStrategy:', {
@@ -525,7 +525,7 @@ class FunctionCallsOrganizer {
       messageKeywords,
     });
 
-    // 分析请求的工具
+    // Analyze the requested tools
     for (const tool of requestedTools) {
       const category = this.functionToCategory.get(tool);
       console.log(`🔍 [FunctionCallsOrganizer] Tool: ${tool}, Category: ${category}`);
@@ -546,13 +546,13 @@ class FunctionCallsOrganizer {
       }
     }
 
-    // 基于关键词推断可能需要的功能类型
+    // Infer the likely feature types from the keywords
     const inferredCategories = this.inferCategoriesFromKeywords(messageKeywords);
     for (const category of inferredCategories) {
       strategy.categories.add(category);
     }
 
-    // 构建执行计划
+    // Build the execution plan
     strategy.executionPlan = this.buildExecutionPlan(strategy.priorityGroups);
     strategy.estimatedTime = this.estimateExecutionTime(strategy.executionPlan);
 
@@ -560,7 +560,7 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 提取消息中的关键词
+   * Extract keywords from the message
    */
   extractKeywords(message) {
     const keywords = {
@@ -599,7 +599,7 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 基于关键词推断功能类别
+   * Infer feature categories from keywords
    */
   inferCategoriesFromKeywords(keywords) {
     const categories = [];
@@ -628,12 +628,12 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 构建执行计划
+   * Build the execution plan
    */
   buildExecutionPlan(priorityGroups) {
     const plan = [];
 
-    // 按优先级排序
+    // Sort by priority
     const sortedPriorities = Array.from(priorityGroups.keys()).sort((a, b) => a - b);
 
     for (const priority of sortedPriorities) {
@@ -651,7 +651,7 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 获取阶段名称
+   * Get the stage name
    */
   getPhaseName(priority) {
     const phases = {
@@ -665,10 +665,10 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 判断是否可以并行执行
+   * Determine whether parallel execution is possible
    */
   isParallelizable(priority, tools = []) {
-    // 浏览器行为通常需要顺序执行
+    // Browser actions usually need to run sequentially
     if (priority === 1) return false;
 
     // File loading tools should be executed sequentially for proper dependency order
@@ -727,27 +727,27 @@ class FunctionCallsOrganizer {
       return false;
     }
 
-    // 其他类型可以并行执行
+    // Other types can run in parallel
     return true;
   }
 
   /**
-   * 估算阶段执行时间（毫秒）
+   * Estimate the stage execution time (milliseconds)
    */
   estimatePhaseTime(priority, toolCount) {
     const baseTime = {
-      1: 100, // 浏览器行为 - 很快
-      2: 200, // 数据检索 - 快
-      3: 500, // 序列分析 - 中等
-      4: 1000, // 高级分析 - 慢
-      5: 2000, // 外部服务 - 很慢
+      1: 100, // browser actions - very fast
+      2: 200, // data retrieval - fast
+      3: 500, // sequence analysis - medium
+      4: 1000, // advanced analysis - slow
+      5: 2000, // external services - very slow
     };
 
     return (baseTime[priority] || 500) * toolCount;
   }
 
   /**
-   * 估算总执行时间
+   * Estimate the total execution time
    */
   estimateExecutionTime(executionPlan) {
     return executionPlan.reduce((total, phase) => {
@@ -756,19 +756,19 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 优化执行策略的主入口方法
-   * @param {string} userMessage - 用户消息
-   * @param {Array} requestedTools - 请求的工具
-   * @returns {Object} 优化的执行策略
+   * Main entry point for optimizing the execution strategy
+   * @param {string} userMessage - the user message
+   * @param {Array} requestedTools - the requested tools
+   * @returns {Object} the optimized execution strategy
    */
   async optimizeExecution(userMessage, requestedTools) {
-    // 分析请求策略
+    // Analyze the request strategy
     const strategy = this.analyzeRequestStrategy(userMessage, requestedTools);
 
-    // 生成执行报告
+    // Generate the execution report
     const report = this.generateExecutionReport(strategy);
 
-    // 返回优化建议
+    // Return optimization suggestions
     return {
       strategy: strategy,
       report: report,
@@ -777,7 +777,7 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 生成执行报告
+   * Generate the execution report
    */
   generateExecutionReport(strategy) {
     return {
@@ -795,12 +795,12 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 生成优化建议
+   * Generate optimization suggestions
    */
   generateRecommendations(strategy) {
     const recommendations = [];
 
-    // 检查是否有浏览器行为需要优先执行
+    // Check whether any browser actions need to run first
     if (strategy.categories.has('browserActions')) {
       recommendations.push({
         type: 'priority',
@@ -808,7 +808,7 @@ class FunctionCallsOrganizer {
       });
     }
 
-    // 检查是否有耗时操作
+    // Check whether there are any time-consuming operations
     if (strategy.categories.has('blastSearch') || strategy.categories.has('advancedAnalysis')) {
       recommendations.push({
         type: 'performance',
@@ -816,7 +816,7 @@ class FunctionCallsOrganizer {
       });
     }
 
-    // 检查是否可以并行执行
+    // Check whether parallel execution is possible
     const parallelPhases = strategy.executionPlan.filter(p => p.parallelizable);
     if (parallelPhases.length > 1) {
       recommendations.push({
@@ -829,17 +829,17 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 按类别获取功能列表
+   * Get the feature list by category
    */
   getFunctionsByCategory(categoryName) {
     return this.functionCategories[categoryName]?.functions || [];
   }
 
   /**
-   * 获取功能的类别信息
+   * Get the category info for a feature
    */
   getFunctionCategory(functionName) {
-    // 首先检查传统功能映射
+    // First check the traditional feature map
     const categoryName = this.functionToCategory.get(functionName);
     if (categoryName) {
       return {
@@ -848,11 +848,11 @@ class FunctionCallsOrganizer {
       };
     }
 
-    // 检查是否为插件功能（包含点号的函数名）
+    // Check whether it's a plugin feature (a function name containing a dot)
     if (functionName.includes('.')) {
       const [pluginId] = functionName.split('.');
 
-      // 根据插件ID确定分类
+      // Determine the category from the plugin ID
       switch (pluginId) {
         case 'genomic-analysis':
           return {
@@ -875,7 +875,7 @@ class FunctionCallsOrganizer {
             ...this.functionCategories.pluginMachineLearning,
           };
         default:
-          // 未知插件，返回默认分类
+          // Unknown plugin, return the default category
           return {
             name: 'pluginGeneral',
             priority: 3,
@@ -889,7 +889,7 @@ class FunctionCallsOrganizer {
   }
 
   /**
-   * 获取所有类别的统计信息
+   * Get statistics for all categories
    */
   getCategoryStatistics() {
     const stats = {};
@@ -1011,7 +1011,7 @@ class FunctionCallsOrganizer {
   }
 }
 
-// 导出类
+// Export the class
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = FunctionCallsOrganizer;
 } else if (typeof window !== 'undefined') {

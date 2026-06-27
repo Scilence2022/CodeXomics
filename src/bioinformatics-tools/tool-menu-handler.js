@@ -1,4 +1,4 @@
-// 工具窗口菜单事件处理器 - 通用版本
+// Tool-window menu event handler - generic version
 class ToolMenuHandler {
   constructor(toolName, toolInstance = null) {
     this.toolName = toolName;
@@ -8,7 +8,7 @@ class ToolMenuHandler {
   }
 
   setupMenuEventListeners() {
-    // 监听主进程发送的菜单事件
+    // Listen for menu events sent by the main process
     if (typeof require !== 'undefined') {
       const { ipcRenderer } = require('electron');
 
@@ -19,7 +19,7 @@ class ToolMenuHandler {
   }
 
   setupKeyboardShortcuts() {
-    // 设置快捷键处理
+    // Set up keyboard-shortcut handling
     document.addEventListener('keydown', event => {
       // Copy: Ctrl+C / Cmd+C
       if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
@@ -32,7 +32,7 @@ class ToolMenuHandler {
       // Paste: Ctrl+V / Cmd+V
       if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
         if (event.target.matches('input, textarea')) {
-          // 让默认粘贴行为发生
+          // Let the default paste behavior happen
           return;
         }
         event.preventDefault();
@@ -187,18 +187,18 @@ class ToolMenuHandler {
     }
   }
 
-  // === 基本编辑功能 ===
+  // === Basic editing functions ===
   copySelectedText() {
     const selection = window.getSelection();
     if (selection.toString()) {
-      // 复制选中文本
+      // Copy the selected text
       if (typeof require !== 'undefined') {
         const { clipboard } = require('electron');
         clipboard.writeText(selection.toString());
         this.showToast('Text copied to clipboard');
       }
     } else {
-      // 如果没有选中文本，复制结果区域的内容
+      // If no text is selected, copy the contents of the result area
       const resultsContainer = this.findResultsContainer();
       if (resultsContainer) {
         const textContent = resultsContainer.innerText || resultsContainer.textContent;
@@ -216,7 +216,7 @@ class ToolMenuHandler {
       const { clipboard } = require('electron');
       const clipboardText = clipboard.readText();
 
-      // 尝试粘贴到主要输入框
+      // Try to paste into the main input box
       const inputElement = this.findMainInputElement();
       if (inputElement && document.activeElement !== inputElement) {
         inputElement.value = clipboardText;
@@ -233,7 +233,7 @@ class ToolMenuHandler {
         const { clipboard } = require('electron');
         clipboard.writeText(selection.toString());
 
-        // 如果是在可编辑元素中，删除选中的文本
+        // If inside an editable element, delete the selected text
         if (document.activeElement.matches('input, textarea')) {
           document.execCommand('delete');
         }
@@ -246,7 +246,7 @@ class ToolMenuHandler {
     if (document.activeElement.matches('input, textarea')) {
       document.activeElement.select();
     } else {
-      // 选择结果区域的所有内容
+      // Select all content in the result area
       const resultsContainer = this.findResultsContainer();
       if (resultsContainer) {
         const range = document.createRange();
@@ -258,9 +258,9 @@ class ToolMenuHandler {
     }
   }
 
-  // === 查找功能 ===
+  // === Find function ===
   showFindDialog() {
-    // 简单的查找对话框
+    // Simple find dialog
     const searchTerm = prompt('Enter text to search for:');
     if (searchTerm) {
       this.currentSearchTerm = searchTerm;
@@ -284,7 +284,7 @@ class ToolMenuHandler {
     }
   }
 
-  // === 文件操作 ===
+  // === File operations ===
   newAnalysis() {
     if (confirm('确定要开始新的分析吗？这将清除当前的输入和结果。')) {
       const inputElement = this.findMainInputElement();
@@ -329,7 +329,7 @@ class ToolMenuHandler {
   }
 
   exportData() {
-    // 尝试导出工具实例的数据
+    // Try to export the tool instance's data
     let dataToExport = null;
 
     if (this.toolInstance && this.toolInstance.currentResults) {
@@ -371,7 +371,7 @@ class ToolMenuHandler {
     }
   }
 
-  // === 分析操作 ===
+  // === Analysis operations ===
   loadSample() {
     if (this.toolInstance && this.toolInstance.loadExample) {
       this.toolInstance.loadExample();
@@ -388,7 +388,7 @@ class ToolMenuHandler {
     } else if (this.toolInstance && this.toolInstance.search) {
       this.toolInstance.search();
     } else {
-      // 尝试点击分析按钮
+      // Try clicking the analyze button
       const analyzeButton = document.querySelector('#analyzeBtn, .analyze-btn, .search-btn, .run-btn');
       if (analyzeButton) {
         analyzeButton.click();
@@ -410,7 +410,7 @@ class ToolMenuHandler {
     if (this.toolInstance && this.toolInstance.clearResults) {
       this.toolInstance.clearResults();
     } else {
-      // 尝试点击清除按钮
+      // Try clicking the clear button
       const clearButton = document.querySelector('#clearBtn, .clear-btn');
       if (clearButton) {
         clearButton.click();
@@ -434,7 +434,7 @@ class ToolMenuHandler {
 
   resetParameters() {
     if (confirm('Are you sure you want to reset all parameters?')) {
-      // 重置所有输入字段到默认值
+      // Reset all input fields to their default values
       const inputs = document.querySelectorAll('input, select, textarea');
       inputs.forEach(input => {
         if (
@@ -456,7 +456,7 @@ class ToolMenuHandler {
     }
   }
 
-  // === 设置和帮助 ===
+  // === Settings and help ===
   showPreferences() {
     alert(`${this.toolName} Preferences
 
@@ -565,9 +565,9 @@ You can:
 请描述您遇到的问题，我们将尽快回复。`);
   }
 
-  // === 辅助方法 ===
+  // === Helper methods ===
   findMainInputElement() {
-    // 尝试找到主要的输入元素
+    // Try to find the main input element
     const candidates = [
       '#geneInput',
       '#dataInput',
@@ -585,12 +585,12 @@ You can:
       if (element) return element;
     }
 
-    // 如果找不到特定的，返回第一个textarea
+    // If a specific one isn't found, return the first textarea
     return document.querySelector('textarea');
   }
 
   findResultsContainer() {
-    // 尝试找到结果容器
+    // Try to find the result container
     const candidates = [
       '#results',
       '#keggResults',
@@ -612,7 +612,7 @@ You can:
   }
 
   showToast(message) {
-    // 创建一个简单的提示消息
+    // Create a simple notification message
     const toast = document.createElement('div');
     toast.style.cssText = `
             position: fixed; top: 20px; right: 20px; 
@@ -636,7 +636,7 @@ You can:
   }
 }
 
-// 导出类以供其他脚本使用
+// Export the class for use by other scripts
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = ToolMenuHandler;
 } else {

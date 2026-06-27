@@ -25,7 +25,7 @@ class ChatManager {
     this.activeRequests = new Map();
     this.pendingMessages = [];
 
-    // 对话状态管理
+    // Conversation state management
     this.conversationState = {
       isProcessing: false,
       currentRequestId: null,
@@ -40,7 +40,7 @@ class ChatManager {
     this.welcomeExamplesManager = null;
     this.initializeChatBoxSettings();
 
-    // 思考过程和工具调用显示 - 现在从设置管理器获取
+    // Thinking process and tool-call display - now read from the settings manager
     this.showThinkingProcess = true;
     this.showAvailableTools = true;
     this.showToolCalls = true;
@@ -88,7 +88,7 @@ class ChatManager {
 
     // Initialize Smart Execution System
     this.smartExecutor = null;
-    this.isSmartExecutionEnabled = true; // 可配置开关
+    this.isSmartExecutionEnabled = true; // configurable toggle
     this.initializeSmartExecutor();
 
     // Removed Conversation Evolution Integration (cleanup completed)
@@ -4612,13 +4612,13 @@ class ChatManager {
       this.exitHistoryBrowsing();
     }
 
-    // 检查是否正在处理中
+    // Check whether processing is in progress
     if (this.conversationState.isProcessing) {
       this.showNotification('Conversation in progress, please wait or click abort button', 'warning');
       return;
     }
 
-    // 初始化对话状态
+    // Initialize the conversation state
     this.startConversation();
 
     // Add user message to chat
@@ -4644,7 +4644,7 @@ class ChatManager {
         console.error('Chat error:', error);
       }
     } finally {
-      // 结束对话状态
+      // End the conversation state
       this.endConversation();
     }
   }
@@ -4660,13 +4660,13 @@ class ChatManager {
 
     const trimmedMessage = message.trim();
 
-    // 检查是否正在处理中
+    // Check whether processing is in progress
     if (this.conversationState.isProcessing) {
       this.showNotification('Conversation in progress, please wait or click abort button', 'warning');
       return;
     }
 
-    // 初始化对话状态
+    // Initialize the conversation state
     this.startConversation();
 
     // Add user message to chat
@@ -4724,7 +4724,7 @@ class ChatManager {
     console.log('=== ChatManager.sendToLLM DEBUG START ===');
     console.log('User message:', message);
 
-    // 设置AbortController
+    // Set up the AbortController
     this.conversationState.abortController = new AbortController();
     console.log('AbortController initialized:', !!this.conversationState.abortController);
 
@@ -4756,7 +4756,7 @@ class ChatManager {
       console.log('🔧 Early completion enabled:', enableEarlyCompletion);
       console.log('🔧 LLM config raw value:', this.configManager.get('llm.functionCallRounds'));
 
-      // 显示详细的思考过程
+      // Show the detailed thinking process
       this.showThinkingProcess &&
         this.addThinkingMessage(
           `🔄 <strong>Starting request processing</strong> (max rounds: ${maxRounds})<br>` +
@@ -4816,12 +4816,12 @@ class ChatManager {
 
       // Iterative function calling loop
       while (currentRound < maxRounds && !taskCompleted) {
-        // 检查是否被中止
+        // Check whether it was aborted
         if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
           throw new Error('AbortError');
         }
 
-        // 防御性检查：如果abortController为null，重新初始化
+        // Defensive check: if abortController is null, re-initialize it
         if (!this.conversationState.abortController) {
           console.warn('AbortController is null during processing, reinitializing...');
           this.conversationState.abortController = new AbortController();
@@ -4830,7 +4830,7 @@ class ChatManager {
         currentRound++;
         console.log(`=== FUNCTION CALL ROUND ${currentRound}/${maxRounds} ===`);
 
-        // 更新思考过程 - 添加更详细的信息
+        // Update the thinking process - add more detailed information
         if (this.showThinkingProcess) {
           this.updateThinkingMessage(`<br><br>🤖 <strong>Round ${currentRound}/${maxRounds}</strong>`);
           this.updateThinkingMessage(`📤 Sending request to LLM...`);
@@ -4845,7 +4845,7 @@ class ChatManager {
           memoryContext
         );
 
-        // 检查响应是否被中止
+        // Check whether the response was aborted
         if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
           throw new Error('AbortError');
         }
@@ -4860,7 +4860,7 @@ class ChatManager {
         console.log('JSON.stringify response:', JSON.stringify(response));
         console.log('========================');
 
-        // 显示LLM的思考过程（如果响应包含思考标签）
+        // Show the LLM's thinking process (if the response contains thinking tags)
         if (this.showThinkingProcess) {
           this.updateThinkingMessage(`✅ Response received (${response ? response.length : 0} chars)`);
           this.displayLLMThinking(response);
@@ -4994,7 +4994,7 @@ class ChatManager {
             this.updateThinkingMessage(`🛠️ Tools to execute: ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
           }
 
-          // 显示工具调用信息
+          // Show the tool-call info
           this.showToolCalls && (await this.addToolCallMessage(toolsToExecute));
 
           try {
@@ -5005,7 +5005,7 @@ class ChatManager {
               this.updateThinkingMessage(`🚀 Starting execution...`);
             }
 
-            // 检查是否被中止
+            // Check whether it was aborted
             if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
               throw new Error('AbortError');
             }
@@ -5120,7 +5120,7 @@ class ChatManager {
               this.lastExecutionData.rounds = currentRound;
             }
 
-            // 显示工具执行结果
+            // Show the tool execution result
             this.showToolCalls && this.addToolResultMessage(toolResults);
 
             // Add the tool calls and results to conversation history for next round
@@ -9490,7 +9490,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   addMessageToChat(message, sender, isError = false) {
     const timestamp = new Date().toISOString();
 
-    // Add to configuration manager for persistence (ChatBox原有功能)
+    // Add to configuration manager for persistence (existing ChatBox feature)
     const messageId = this.configManager.addChatMessage(message, sender, timestamp);
 
     // Add to Evolution data structure for detailed analysis
@@ -13915,8 +13915,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 验证和检查所有可用的tools
-   * @returns {Object} 详细的tools验证报告
+   * Validate and check all available tools
+   * @returns {Object} a detailed tools validation report
    */
   validateAllTools() {
     const report = {
@@ -13931,7 +13931,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const context = this.getCurrentContext();
       const allTools = context.genomeBrowser.availableTools;
 
-      // 统计各类工具数量
+      // Count the number of tools of each type
       report.summary = {
         totalTools: allTools.length,
         localTools: context.genomeBrowser.toolSources.local,
@@ -13939,7 +13939,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         mcpTools: context.genomeBrowser.toolSources.mcp,
       };
 
-      // 检查每个工具的可执行性
+      // Check whether each tool is executable
       const toolCategories = {
         navigation: [],
         search: [],
@@ -13988,7 +13988,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       report.details.categories = toolCategories;
 
-      // 检查MicrobeGenomicsFunctions集成
+      // Check the MicrobeGenomicsFunctions integration
       const microbeTools = [];
       if (window.MicrobeGenomicsFunctions) {
         const microbeFunctions = window.MicrobeGenomicsFunctions.getFunctionCategories();
@@ -14003,7 +14003,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         functions: microbeTools,
       };
 
-      // 检查插件系统
+      // Check the plugin system
       report.details.plugins = {
         integratorAvailable: !!this.pluginFunctionCallsIntegrator,
         managerAvailable: !!this.pluginManager,
@@ -14012,14 +14012,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           : 0,
       };
 
-      // 检查MCP服务器
+      // Check the MCP server
       report.details.mcp = {
         managerAvailable: !!this.mcpServerManager,
         connectedServers: this.mcpServerManager ? this.mcpServerManager.getConnectedServersCount() : 0,
         availableTools: this.mcpServerManager ? this.mcpServerManager.getAllAvailableTools().length : 0,
       };
 
-      // 生成建议
+      // Generate suggestions
       if (report.summary.totalTools < 50) {
         report.recommendations.push('工具数量较少，可能需要检查插件和MCP服务器连接');
       }
@@ -14046,7 +14046,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 开始对话状态管理
+   * Start conversation state management
    */
   startConversation() {
     this.conversationState.isProcessing = true;
@@ -14055,18 +14055,18 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     this.conversationState.processSteps = [];
     this.conversationState.currentStep = 0;
 
-    // 更新UI状态
+    // Update the UI state
     this.updateUIState();
   }
 
   /**
-   * 结束对话状态管理
+   * End conversation state management
    */
   endConversation() {
-    // 在清除状态之前，先保存当前的思考过程
+    // Save the current thinking process before clearing the state
     const currentRequestId = this.conversationState.currentRequestId;
 
-    // 将当前思考过程转换为历史记录
+    // Convert the current thinking process into a history record
     this.finalizeCurrentThinkingProcess(currentRequestId);
 
     this.conversationState.isProcessing = false;
@@ -14076,22 +14076,22 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     this.conversationState.processSteps = [];
     this.conversationState.currentStep = 0;
 
-    // 更新UI状态
+    // Update the UI state
     this.updateUIState();
 
-    // 注意：我们不再自动移除思考过程，而是将其转换为历史记录
+    // Note: we no longer remove the thinking process automatically; we convert it into a history record instead
   }
 
   /**
-   * 将当前思考过程转换为历史记录
+   * Convert the current thinking process into a history record
    */
   finalizeCurrentThinkingProcess(requestId) {
     if (!requestId) return;
 
     const thinkingElement = document.getElementById(`thinkingProcess_${requestId}`);
     if (thinkingElement) {
-      // 移除动画和交互元素，转换为静态历史记录
-      // 更新 message-icon 为完成状态的对号图标
+      // Remove animations and interactive elements, converting to a static history record
+      // Update message-icon to the completed checkmark icon
       const messageIcon = thinkingElement.querySelector('.message-icon i');
       if (messageIcon) {
         messageIcon.classList.remove('fa-spin');
@@ -14099,19 +14099,19 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         messageIcon.classList.add('fa-check-circle');
       }
 
-      // 更新头部文本表示已完成
+      // Update the header text to indicate completion
       const headerText = thinkingElement.querySelector('.thinking-header span');
       if (headerText) {
         headerText.textContent = 'AI Thinking Process (Completed)';
       }
 
-      // 更改样式表示已完成
+      // Change the style to indicate completion
       thinkingElement.classList.add('thinking-completed');
 
-      // 移除ID，避免与新的思考过程冲突
+      // Remove the ID to avoid conflicts with a new thinking process
       thinkingElement.removeAttribute('id');
 
-      // 添加时间戳（如果启用）
+      // Add a timestamp (if enabled)
       if (this.showTimestamps) {
         const timestamp = new Date().toLocaleTimeString();
         const timestampDiv = document.createElement('div');
@@ -14123,23 +14123,23 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 中止当前对话
+   * Abort the current conversation
    */
   abortCurrentConversation() {
     if (this.conversationState.isProcessing && this.conversationState.abortController) {
       this.conversationState.abortController.abort();
       this.showNotification('Conversation aborted', 'warning');
 
-      // 移除输入指示器
+      // Remove the typing indicator
       this.removeTypingIndicator();
 
-      // 结束对话状态
+      // End the conversation state
       this.endConversation();
     }
   }
 
   /**
-   * 更新UI状态
+   * Update the UI state
    */
   updateUIState() {
     const sendBtn = document.getElementById('sendChatBtn');
@@ -14185,12 +14185,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 添加思考过程消息
+   * Add a thinking-process message
    */
   addThinkingMessage(message) {
-    // 检查是否启用思考过程显示
+    // Check whether thinking-process display is enabled
     if (!this.showThinkingProcess) {
-      // 即使不显示，也要为Evolution记录思考过程
+      // Even if not displayed, record the thinking process for Evolution
       this.addToEvolutionData({
         type: 'thinking_process',
         timestamp: new Date().toISOString(),
@@ -14205,7 +14205,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       return;
     }
 
-    // 只移除当前正在进行的思考过程（如果有的话）
+    // Only remove the currently in-progress thinking process (if any)
     const currentRequestId = this.conversationState.currentRequestId || Date.now();
     const existingThinking = document.getElementById(`thinkingProcess_${currentRequestId}`);
     if (existingThinking) {
@@ -14235,14 +14235,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       },
     });
 
-    // 根据设置决定是否自动滚动
+    // Decide whether to auto-scroll based on the settings
     if (this.autoScrollToBottom) {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
   }
 
   /**
-   * 添加多智能体系统激活消息
+   * Add a multi-agent-system activation message
    */
   addMultiAgentActivationMessage() {
     const messagesContainer = document.getElementById('chatMessages');
@@ -14290,7 +14290,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 添加智能体决策消息
+   * Add an agent-decision message
    */
   addAgentDecisionMessage(agentName, toolName, reasoning, parameters = {}) {
     const messagesContainer = document.getElementById('chatMessages');
@@ -14368,7 +14368,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 添加智能体执行结果消息
+   * Add an agent-execution-result message
    */
   addAgentExecutionResult(agentName, toolName, result, executionTime) {
     const messagesContainer = document.getElementById('chatMessages');
@@ -14426,7 +14426,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 获取智能体图标
+   * Get the agent icon
    */
   getAgentIcon(agentName) {
     const agentIcons = {
@@ -14443,7 +14443,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 格式化智能体执行结果
+   * Format the agent execution result
    */
   formatAgentResult(result) {
     if (typeof result === 'string') {
@@ -14456,11 +14456,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 根据工具名称确定负责的智能体
+   * Determine the responsible agent from the tool name
    */
   getAgentForTool(toolName) {
     const toolAgentMap = {
-      // Navigation Agent - 导航和定位相关
+      // Navigation Agent - navigation and positioning
       navigate_to_position: 'Navigation Agent',
       open_new_tab: 'Navigation Agent',
       scroll_left: 'Navigation Agent',
@@ -14477,7 +14477,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       select_gene: 'Navigation Agent',
       select_sequence_region: 'Navigation Agent',
 
-      // Analysis Agent - 数据分析和统计
+      // Analysis Agent - data analysis and statistics
       compare_regions: 'Analysis Agent',
       codon_usage_analysis: 'Analysis Agent',
       analyze_codon_usage: 'Analysis Agent',
@@ -14489,7 +14489,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       predict_terminator: 'Analysis Agent',
       find_similar_sequences: 'Analysis Agent',
 
-      // Data Agent - 数据管理和导出
+      // Data Agent - data management and export
       export_data: 'Data Agent',
       export_region_features: 'Data Agent',
       get_file_info: 'Data Agent',
@@ -14499,7 +14499,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       add_track: 'Data Agent',
       add_variant: 'Data Agent',
 
-      // Sequence Agent - 序列分析
+      // Sequence Agent - sequence analysis
       get_sequence: 'Sequence Agent',
       translate_sequence: 'Sequence Agent',
       translate_dna: 'Sequence Agent',
@@ -14513,14 +14513,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       get_downstream_region: 'Sequence Agent',
       search_sequence_motif: 'Sequence Agent',
 
-      // Protein Agent - 蛋白质相关
+      // Protein Agent - protein-related
       open_protein_viewer: 'Protein Agent',
       fetch_protein_structure: 'Protein Agent',
       search_pdb_structures: 'Protein Agent',
       get_pdb_details: 'Protein Agent',
       amino_acid_composition: 'Protein Agent',
 
-      // Network Agent - 网络和外部数据
+      // Network Agent - network and external data
       blast_search: 'Network Agent',
       blast_sequence_from_region: 'Network Agent',
       get_blast_databases: 'Network Agent',
@@ -14529,7 +14529,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       show_metabolic_pathway: 'Network Agent',
       find_pathway_genes: 'Network Agent',
 
-      // External Agent - 外部工具和API
+      // External Agent - external tools and APIs
       search_features: 'External Agent',
       find_gene_by_name: 'External Agent',
       find_gene: 'External Agent', // legacy alias
@@ -14540,7 +14540,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       get_nearby_features: 'External Agent',
       find_intergenic_regions: 'External Agent',
 
-      // Plugin Agent - 插件功能
+      // Plugin Agent - plugin features
       get_gene_details: 'Plugin Agent',
       get_operons: 'Plugin Agent',
       create_annotation: 'Plugin Agent',
@@ -14557,7 +14557,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 生成智能体决策推理
+   * Generate the agent's decision reasoning
    */
   getAgentReasoning(toolName, parameters) {
     const agentName = this.getAgentForTool(toolName);
@@ -14578,7 +14578,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 更新思考过程消息
+   * Update the thinking-process message
    */
   updateThinkingMessage(message) {
     // Add to Evolution data first (regardless of visibility)
@@ -14594,16 +14594,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       },
     });
 
-    // 检查是否启用思考过程显示
+    // Check whether thinking-process display is enabled
     if (!this.showThinkingProcess) {
       return;
     }
 
-    // 查找当前请求的思考过程消息
+    // Find the thinking-process message for the current request
     const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
     let thinkingDiv = document.getElementById(thinkingId);
 
-    // 如果没有找到，查找任何思考过程消息
+    // If none is found, find any thinking-process message
     if (!thinkingDiv) {
       thinkingDiv = document.querySelector('.thinking-process');
     }
@@ -14628,7 +14628,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       this.addThinkingMessage(message);
     }
 
-    // 根据设置决定是否自动滚动
+    // Decide whether to auto-scroll based on the settings
     const messagesContainer = document.getElementById('chatMessages');
     if (this.autoScrollToBottom) {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -14636,14 +14636,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 显示LLM的思考过程
+   * Show the LLM's thinking process
    */
   displayLLMThinking(response) {
-    // 检查响应中是否包含思考标签
+    // Check whether the response contains thinking tags
     const thinkingMatch = response.match(/<think>([\s\S]*?)<\/think>/);
     if (thinkingMatch) {
       const thinkingContent = thinkingMatch[1].trim();
-      // 格式化思考内容，使其更易读
+      // Format the thinking content to make it more readable
       const formattedThinking = this.formatThinkingContent(thinkingContent);
 
       // Render as a collapsible block using standard HTML details/summary
@@ -14656,7 +14656,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       this.updateThinkingMessage(detailsHtml);
     }
 
-    // 检查是否有工具调用，并显示参数提取过程
+    // Check for tool calls and show the parameter-extraction process
     if (response.includes('tool_name') || response.includes('function_name')) {
       this.updateThinkingMessage(`🔧 Analyzing tool call structure...`);
 
@@ -14687,21 +14687,21 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 格式化思考内容，使其更易读
+   * Format the thinking content to make it more readable
    */
   formatThinkingContent(thinkingContent) {
-    // 清理和格式化思考内容
+    // Clean up and format the thinking content
     let formatted = thinkingContent
-      .replace(/\n\s*\n/g, '\n') // 移除多余的空行
+      .replace(/\n\s*\n/g, '\n') // remove extra blank lines
       .trim();
 
-    // 如果内容很长，进行适当的换行处理
+    // If the content is long, apply appropriate line wrapping
     if (formatted.length > 200) {
-      // 在句号、问号、感叹号后添加换行（如果后面不是换行符）
+      // Add a line break after periods, question marks, and exclamation marks (if not already followed by one)
       formatted = formatted.replace(/([.!?])\s+(?=[A-Z])/g, '$1\n\n');
     }
 
-    // 确保内容以适当的格式结束
+    // Ensure the content ends with appropriate formatting
     if (!formatted.endsWith('.') && !formatted.endsWith('!') && !formatted.endsWith('?')) {
       formatted += '...';
     }
@@ -14710,7 +14710,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 添加工具调用消息
+   * Add a tool-call message
    */
   async addToolCallMessage(toolsToExecute) {
     // Add to Evolution data first (always record tool calls)
@@ -14727,12 +14727,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       },
     });
 
-    // 检查是否启用工具调用显示
+    // Check whether tool-call display is enabled
     if (!this.showToolCalls) {
       return;
     }
 
-    // 为每个工具获取来源信息
+    // Get the source info for each tool
     const toolsWithSource = await Promise.all(
       toolsToExecute.map(async tool => {
         const source = await this.getToolSource(tool.tool_name);
@@ -14744,7 +14744,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       .map(tool => {
         let toolDisplay = `• <strong>${tool.tool_name}</strong>`;
 
-        // 显示智能体信息（如果启用）
+        // Show the agent info (if enabled)
         if (this.agentSystemEnabled && this.agentSystemSettings.showAgentInfo && this.multiAgentSystem) {
           try {
             if (typeof this.multiAgentSystem.getAgentForTool === 'function') {
@@ -14760,13 +14760,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           }
         }
 
-        // 显示来源信息（如果启用）
+        // Show the source info (if enabled)
         if (this.showToolCallSource && tool.source) {
           const sourceColor = this.getSourceColor(tool.source.type);
           toolDisplay += ` <span style="color: ${sourceColor}; font-size: 0.9em;">[${tool.source.display}]</span>`;
         }
 
-        // 显示参数
+        // Show the parameters
         const paramsStr = JSON.stringify(tool.parameters, null, 2);
         toolDisplay += `<br>&nbsp;&nbsp;<em>Parameters:</em> <code style="font-size: 0.8em;">${paramsStr}</code>`;
 
@@ -14778,11 +14778,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 获取工具来源信息
+   * Get the tool source info
    */
   async getToolSource(toolName) {
     try {
-      // 检查是否是MCP服务器工具
+      // Check whether it's an MCP server tool
       const allMCPTools = this.mcpServerManager.getAllAvailableTools();
       const mcpTool = allMCPTools.find(t => t.name === toolName);
 
@@ -14795,7 +14795,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         };
       }
 
-      // 检查是否是插件函数
+      // Check whether it's a plugin function
       if (this.pluginFunctionCallsIntegrator && this.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
         return {
           type: 'plugin',
@@ -14804,7 +14804,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         };
       }
 
-      // 检查是否是内置本地函数 - 使用 FunctionCallsOrganizer 获取完整列表
+      // Check whether it's a built-in local function - use FunctionCallsOrganizer for the full list
       if (this.smartExecutor && this.smartExecutor.organizer) {
         const category = this.smartExecutor.organizer.getFunctionCategory(toolName);
         if (category) {
@@ -14833,7 +14833,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         }
       }
 
-      // 未知工具
+      // Unknown tool
       return {
         type: 'unknown',
         display: 'Unknown Source',
@@ -14850,28 +14850,28 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 获取不同来源类型的颜色
+   * Get the colors for different source types
    */
   getSourceColor(sourceType) {
     const colors = {
-      mcp: '#2196F3', // 蓝色 - MCP服务器
-      plugin: '#FF9800', // 橙色 - 插件
-      local: '#4CAF50', // 绿色 - 内置函数
-      unknown: '#9E9E9E', // 灰色 - 未知
-      error: '#F44336', // 红色 - 错误
+      mcp: '#2196F3', // blue - MCP server
+      plugin: '#FF9800', // orange - plugin
+      local: '#4CAF50', // green - built-in function
+      unknown: '#9E9E9E', // gray - unknown
+      error: '#F44336', // red - error
     };
 
     return colors[sourceType] || colors['unknown'];
   }
 
   /**
-   * 移除思考过程消息（保留原有方法用于特殊情况）
+   * Remove the thinking-process message (the original method is kept for special cases)
    */
   removeThinkingMessages() {
-    // 移除所有思考过程消息
+    // Remove all thinking-process messages
     const thinkingDivs = document.querySelectorAll('.thinking-process');
     thinkingDivs.forEach(thinkingDiv => {
-      // 添加淡出动画
+      // Add a fade-out animation
       thinkingDiv.style.transition = 'opacity 0.5s ease-out';
       thinkingDiv.style.opacity = '0';
 
@@ -14884,7 +14884,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 添加工具执行结果显示
+   * Add the tool-execution-result display
    */
   addToolResultMessage(toolResults) {
     if (!this.services || !this.services.context) {
@@ -15099,29 +15099,29 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 格式化工具结果数据显示
+   * Format the tool-result data display
    */
   formatToolResultData(data) {
     if (!data) return 'No data available';
 
     try {
-      // 如果是字符串，尝试解析为JSON
+      // If it's a string, try to parse it as JSON
       if (typeof data === 'string') {
         try {
           data = JSON.parse(data);
         } catch {
-          // 如果不是JSON，直接显示字符串
+          // If it's not JSON, show the string directly
           return `<pre>${this.escapeHtml(data)}</pre>`;
         }
       }
 
-      // 如果是数组
+      // If it's an array
       if (Array.isArray(data)) {
         if (data.length === 0) {
           return '<em>Empty array</em>';
         }
 
-        // 如果数组元素是对象，创建表格
+        // If the array elements are objects, create a table
         if (typeof data[0] === 'object' && data[0] !== null) {
           return this.formatArrayAsTable(data);
         } else {
@@ -15129,12 +15129,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         }
       }
 
-      // 如果是对象
+      // If it's an object
       if (typeof data === 'object' && data !== null) {
         return this.formatObjectAsKeyValue(data);
       }
 
-      // 其他类型直接显示
+      // Show other types directly
       return `<pre>${String(data)}</pre>`;
     } catch (error) {
       console.warn('Error formatting tool result data:', error);
@@ -15143,7 +15143,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 将数组格式化为表格
+   * Format an array as a table
    */
   formatArrayAsTable(array) {
     if (array.length === 0) return '<em>Empty array</em>';
@@ -15153,17 +15153,17 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     let table = '<table style="width: 100%; border-collapse: collapse; margin: 4px 0;">';
 
-    // 表头
+    // Table header
     table += '<thead><tr>';
     keys.forEach(key => {
       table += `<th style="border: 1px solid #ddd; padding: 4px 8px; background: #f0f0f0; text-align: left;">${this.escapeHtml(key)}</th>`;
     });
     table += '</tr></thead>';
 
-    // 表体
+    // Table body
     table += '<tbody>';
     array.slice(0, 100).forEach(item => {
-      // 限制显示前100行
+      // Limit the display to the first 100 rows
       table += '<tr>';
       keys.forEach(key => {
         const value = item[key];
@@ -15183,7 +15183,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * 将对象格式化为键值对
+   * Format an object as key-value pairs
    */
   formatObjectAsKeyValue(obj) {
     let html = '<div style="font-family: monospace;">';
@@ -15195,7 +15195,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       if (value === null || value === undefined) {
         html += '<em style="color: #999;">null</em>';
       } else if (typeof value === 'object') {
-        // 递归处理嵌套对象，但限制深度
+        // Recursively handle nested objects, but limit the depth
         html += '<br><div style="margin-left: 16px; font-size: 0.9em;">';
         if (Array.isArray(value)) {
           html += `<em>Array(${value.length})</em>: `;
@@ -15213,7 +15213,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         }
         html += '</div>';
       } else if (typeof value === 'string' && value.length > 100) {
-        // 长字符串截断显示
+        // Truncate long strings for display
         html += `<span title="${this.escapeHtml(value)}">${this.escapeHtml(value.substring(0, 100))}...</span>`;
       } else {
         html += this.escapeHtml(String(value));
@@ -15227,7 +15227,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
-   * HTML转义
+   * HTML escaping
    */
   escapeHtml(text) {
     const div = document.createElement('div');

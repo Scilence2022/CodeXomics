@@ -1,6 +1,6 @@
 /**
- * GenomicDataDownloader - 基因组数据下载器
- * 支持从NCBI、EMBL-EBI、DDBJ等公共数据库下载基因组数据
+ * GenomicDataDownloader - genomic data downloader
+ * Supports downloading genomic data from public databases such as NCBI, EMBL-EBI, and DDBJ
  */
 class GenomicDataDownloader {
   constructor() {
@@ -12,7 +12,7 @@ class GenomicDataDownloader {
     this.isDownloading = false;
     this.currentProject = null;
 
-    // API配置
+    // API configuration
     this.apiConfig = {
       'ncbi-unified': {
         name: 'NCBI Databases',
@@ -106,7 +106,7 @@ class GenomicDataDownloader {
   }
 
   setupEventListeners() {
-    // 搜索表单
+    // Search form
     const searchForm = document.getElementById('searchForm');
     if (searchForm) {
       searchForm.addEventListener('submit', e => {
@@ -115,25 +115,25 @@ class GenomicDataDownloader {
       });
     }
 
-    // 清除按钮
+    // Clear button
     const clearBtn = document.getElementById('clearBtn');
     if (clearBtn) {
       clearBtn.addEventListener('click', () => this.clearSearch());
     }
 
-    // 目录选择
+    // Directory selection
     const selectDirBtn = document.getElementById('selectDirBtn');
     if (selectDirBtn) {
       selectDirBtn.addEventListener('click', () => this.selectOutputDirectory());
     }
 
-    // 文件格式选择 - 实时更新类别预览
+    // File-format selection - updates the category preview in real time
     const fileFormatSelect = document.getElementById('fileFormat');
     if (fileFormatSelect) {
       fileFormatSelect.addEventListener('change', () => this.updateCategoryPreviews());
     }
 
-    // 下载按钮
+    // Download button
     const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
     if (downloadSelectedBtn) {
       downloadSelectedBtn.addEventListener('click', () => this.downloadSelected());
@@ -154,13 +154,13 @@ class GenomicDataDownloader {
 
   setupIpcListeners() {
     if (window.electronAPI) {
-      // 监听下载类型设置
+      // Listen for download-type setting changes
       window.electronAPI.onSetDownloadType(downloadType => {
         console.log('📥 Received download type:', downloadType);
         this.setDownloadType(downloadType);
       });
 
-      // 监听当前项目设置
+      // Listen for current-project setting changes
       window.electronAPI.onSetActiveProject(projectInfo => {
         console.log('📥 Received project info:', projectInfo);
         this.setActiveProject(projectInfo);
@@ -174,7 +174,7 @@ class GenomicDataDownloader {
         });
       }
 
-      // 获取当前项目信息
+      // Get the current project info
       this.getCurrentProject();
     }
   }
@@ -353,7 +353,7 @@ class GenomicDataDownloader {
 
     if (config) {
       console.log('✅ Found config for download type:', config.name);
-      // 更新标题和描述
+      // Update the title and description
       const titleElement = document.getElementById('downloadTitle');
       const descElement = document.getElementById('downloadDescription');
       const databaseInfo = document.getElementById('databaseInfo');
@@ -383,7 +383,7 @@ class GenomicDataDownloader {
         databaseInfo.innerHTML = bannerHTML + dbInfoHTML;
       }
 
-      // 设置数据库特定选项
+      // Set database-specific options
       this.setupDatabaseSpecificOptions(downloadType);
 
       console.log(`✅ Set download type to: ${config.name}`);
@@ -571,21 +571,19 @@ class GenomicDataDownloader {
       let results = [];
 
       switch (this.currentDownloadType) {
-        case 'ncbi-unified':
-          // Get the selected database type from the UI
-          {
+        case 'ncbi-unified': // Get the selected database type from the UI
+        {
           const ncbiDb = document.getElementById('ncbiDatabase')?.value || 'nucleotide';
           results = await this.searchNCBIUnified(searchTerm, ncbiDb);
           break;
-          }
+        }
 
-        case 'embl-unified':
-          // Get the selected database type from the UI
-          {
+        case 'embl-unified': // Get the selected database type from the UI
+        {
           const emblDb = document.getElementById('emblDatabase')?.value || 'embl-sequences';
           results = await this.searchEMBLUnified(searchTerm, emblDb);
           break;
-          }
+        }
 
         case 'ncbi-genbank':
         case 'ncbi-refseq':
@@ -656,10 +654,10 @@ class GenomicDataDownloader {
     const config = this.apiConfig[this.currentDownloadType];
     const resultsLimit = document.getElementById('resultsLimit').value;
 
-    // 构建搜索查询
+    // Build the search query
     let query = searchTerm;
 
-    // 添加特定过滤器
+    // Add specific filters
     const organism = document.getElementById('organism')?.value;
     if (organism) {
       query += ` AND "${organism}"[Organism]`;
@@ -698,7 +696,7 @@ class GenomicDataDownloader {
       query = `${searchTerm}[Accession] OR ${searchTerm}[GI] OR txid${searchTerm}[Organism]`;
     }
 
-    // NCBI E-utilities搜索
+    // NCBI E-utilities search
     const searchUrl = `${config.baseUrl}esearch.fcgi?db=${config.searchDb}&term=${encodeURIComponent(query)}&retmax=${resultsLimit}&retmode=json`;
 
     console.log('NCBI Search URL:', searchUrl); // Debug logging
@@ -719,7 +717,7 @@ class GenomicDataDownloader {
       return [];
     }
 
-    // 获取详细信息
+    // Fetch detailed information
     const ids = searchData.esearchresult.idlist.join(',');
     const summaryUrl = `${config.baseUrl}esummary.fcgi?db=${config.searchDb}&id=${ids}&retmode=json`;
 
@@ -756,9 +754,8 @@ class GenomicDataDownloader {
 
     // Database-specific processing
     switch (database) {
-      case 'assembly':
-        // Store FTP paths for proper file downloads
-        {
+      case 'assembly': // Store FTP paths for proper file downloads
+      {
         const ftpPath = summary.ftppath_refseq || summary.ftppath_genbank;
         const assemblyAccession = summary.assemblyaccession || summary.caption || id;
 
@@ -781,7 +778,7 @@ class GenomicDataDownloader {
             ? this.constructAssemblyDownloadUrl(ftpPath, assemblyAccession, 'genbank')
             : baseResult.downloadUrl,
         };
-        }
+      }
 
       case 'genome':
         return {
@@ -943,7 +940,7 @@ class GenomicDataDownloader {
   }
 
   async searchEMBL(searchTerm) {
-    // EMBL-EBI API搜索实现
+    // EMBL-EBI API search implementation
     const url = `https://www.ebi.ac.uk/ena/portal/api/search?result=sequence&query=${encodeURIComponent(searchTerm)}&format=json&limit=${document.getElementById('resultsLimit').value}`;
 
     const response = await fetch(url);
@@ -962,7 +959,7 @@ class GenomicDataDownloader {
   }
 
   async searchEnsembl(searchTerm) {
-    // Ensembl REST API搜索
+    // Ensembl REST API search
     document.getElementById('division')?.value || 'vertebrates';
     const url = `https://rest.ensembl.org/taxonomy/name/${encodeURIComponent(searchTerm)}?content-type=application/json`;
 
@@ -989,7 +986,7 @@ class GenomicDataDownloader {
   }
 
   async searchENA(searchTerm) {
-    // ENA Portal API搜索
+    // ENA Portal API search
     const url = `https://www.ebi.ac.uk/ena/portal/api/search?result=read_run&query=${encodeURIComponent(searchTerm)}&format=json&limit=${document.getElementById('resultsLimit').value}`;
 
     const response = await fetch(url);
@@ -1008,7 +1005,7 @@ class GenomicDataDownloader {
   }
 
   async searchUniProt(searchTerm) {
-    // UniProt REST API搜索
+    // UniProt REST API search
     const reviewed = document.getElementById('reviewed')?.value;
     let query = searchTerm;
 
@@ -1036,7 +1033,7 @@ class GenomicDataDownloader {
   }
 
   async searchKEGG(searchTerm) {
-    // KEGG REST API搜索
+    // KEGG REST API search
     const url = `https://rest.kegg.jp/find/genome/${encodeURIComponent(searchTerm)}`;
 
     const response = await fetch(url);
@@ -1140,7 +1137,6 @@ class GenomicDataDownloader {
   getCategoryPreview(result) {
     const fileFormat = document.getElementById('fileFormat').value;
     const extension = this.getFileExtension(fileFormat);
-
 
     // Simulate the categorization logic from main.js
     const database = result.database;
@@ -1332,7 +1328,7 @@ class GenomicDataDownloader {
     if (!result) return;
 
     try {
-      // 添加CSS样式（如果不存在）
+      // Add CSS styles (if not already present)
       if (!document.querySelector('#modal-styles')) {
         const style = document.createElement('style');
         style.id = 'modal-styles';
@@ -1375,7 +1371,7 @@ class GenomicDataDownloader {
         document.head.appendChild(style);
       }
 
-      // 显示预览模态框
+      // Show the preview modal
       const modal = document.createElement('div');
       modal.className = 'modal';
       modal.innerHTML = `
@@ -1409,7 +1405,7 @@ class GenomicDataDownloader {
 
       document.body.appendChild(modal);
 
-      // 点击外部关闭模态框
+      // Close the modal when clicking outside
       modal.addEventListener('click', e => {
         if (e.target === modal) {
           modal.remove();
@@ -1620,7 +1616,7 @@ class GenomicDataDownloader {
       },
     };
 
-    // 使用Electron的下载API，传递增强的项目信息
+    // Use Electron's download API, passing enhanced project info
     const result = await window.electronAPI.downloadFile(downloadUrl, outputPath, enhancedProjectInfo);
 
     if (!result.success) {
@@ -1712,7 +1708,7 @@ class GenomicDataDownloader {
 
     statusContainer.appendChild(messageElement);
 
-    // 自动移除旧消息
+    // Automatically remove old messages
     setTimeout(() => {
       if (messageElement.parentNode) {
         messageElement.parentNode.removeChild(messageElement);
@@ -1723,7 +1719,7 @@ class GenomicDataDownloader {
   }
 }
 
-// 使GenomicDataDownloader在全局可用
+// Make GenomicDataDownloader available globally
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = GenomicDataDownloader;
 } else {

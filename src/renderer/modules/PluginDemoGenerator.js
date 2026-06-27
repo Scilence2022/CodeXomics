@@ -1,5 +1,5 @@
 /**
- * PluginDemoGenerator - 为不同类型的插件生成专门的演示界面
+ * PluginDemoGenerator - generates specialized demo interfaces for different plugin types
  */
 class PluginDemoGenerator {
   constructor(pluginManager) {
@@ -7,7 +7,7 @@ class PluginDemoGenerator {
   }
 
   /**
-   * 生成网络可视化演示界面
+   * Generate the network-visualization demo interface
    */
   generateNetworkVisualizationDemo(pluginId, pluginData) {
     return `
@@ -86,7 +86,7 @@ class PluginDemoGenerator {
   }
 
   /**
-   * 生成序列分析演示界面
+   * Generate the sequence-analysis demo interface
    */
   generateSequenceAnalysisDemo(pluginId, pluginData) {
     return `
@@ -145,7 +145,7 @@ class PluginDemoGenerator {
   }
 
   /**
-   * 生成系统发育分析演示界面
+   * Generate the phylogenetic-analysis demo interface
    */
   generatePhylogeneticsDemo(pluginId, pluginData) {
     return `
@@ -224,7 +224,7 @@ class PluginDemoGenerator {
   }
 
   /**
-   * 获取演示界面的样式
+   * Get the styles for the demo interface
    */
   getDemoStyles() {
     return `
@@ -423,7 +423,7 @@ class PluginDemoGenerator {
   }
 
   /**
-   * 为插件生成适当的演示界面
+   * Generate an appropriate demo interface for the plugin
    */
   generateDemoInterface(pluginId, pluginData) {
     const category = this.getPluginCategory(pluginId);
@@ -441,7 +441,7 @@ class PluginDemoGenerator {
   }
 
   /**
-   * 生成通用演示界面
+   * Generate a generic demo interface
    */
   generateGenericDemo(pluginId, pluginData) {
     return `
@@ -478,7 +478,7 @@ class PluginDemoGenerator {
   }
 
   /**
-   * 获取插件分类
+   * Get the plugin category
    */
   getPluginCategory(pluginId) {
     const categoryMap = {
@@ -495,7 +495,7 @@ class PluginDemoGenerator {
   }
 }
 
-// 导出
+// Export
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = PluginDemoGenerator;
 }

@@ -1365,10 +1365,10 @@
     <script src="circos-plotter.js"></script>
 
     <script>
-      // 菜单事件监听器
+      // Menu event listeners
       const { ipcRenderer } = require('electron');
 
-      // 监听菜单动作
+      // Listen for menu actions
       ipcRenderer.on('circos-menu-action', (event, action, ...args) => {
         console.log('Menu action received:', action, args);
 
@@ -1382,7 +1382,7 @@
 
           case 'open-project':
             if (window.circosPlotter && args[0]) {
-              // 实现项目加载逻辑
+              // Implement project-loading logic
               console.log('Opening project:', args[0]);
               window.circosPlotter.updateStatus('Opening project...');
             }
@@ -1661,7 +1661,7 @@
         });
       }
 
-      // 页面加载完成后初始化
+      // Initialize after the page finishes loading
       document.addEventListener('DOMContentLoaded', () => {
         console.log('Circos Plotter menu system initialized');
 

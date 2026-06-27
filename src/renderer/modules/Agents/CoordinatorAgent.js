@@ -1,6 +1,6 @@
 /**
- * CoordinatorAgent - 协调智能体
- * 负责协调其他智能体的工作，处理复杂任务分解和结果整合
+ * CoordinatorAgent - coordination agent
+ * Coordinates the work of other agents, handling complex task decomposition and result integration
  */
 class CoordinatorAgent extends AgentBase {
   constructor(multiAgentSystem) {
@@ -18,21 +18,21 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 执行具体初始化逻辑
+   * Run the concrete initialization logic
    */
   async performInitialization() {
-    // 确保应用已初始化
+    // Ensure the app is initialized
     if (!this.app) {
       throw new Error('Application reference not available');
     }
 
-    // 获取记忆系统
+    // Get the memory system
     this.memorySystem = this.app.memorySystem || null;
     if (!this.memorySystem) {
       console.warn('⚠️ CoordinatorAgent: MemorySystem not available, some optimization features will be disabled');
     }
 
-    // 初始化工作流引擎
+    // Initialize the workflow engine
     this.workflowEngine = new WorkflowEngine(this);
 
     console.log(`🎯 CoordinatorAgent: Coordination tools initialized`);
@@ -74,30 +74,30 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 注册工具映射
+   * Register the tool mappings
    */
   registerToolMapping() {
-    // 任务协调工具
+    // Task coordination tools
     this.toolMapping.set('coordinate_task', this.coordinateTask.bind(this));
     this.toolMapping.set('decompose_task', this.decomposeTask.bind(this));
     this.toolMapping.set('integrate_results', this.integrateResults.bind(this));
 
-    // 工作流管理工具
+    // Workflow management tools
     this.toolMapping.set('create_workflow', this.createWorkflow.bind(this));
     this.toolMapping.set('execute_workflow', this.executeWorkflow.bind(this));
     this.toolMapping.set('get_workflow_status', this.getWorkflowStatus.bind(this));
 
-    // 智能体协调工具
+    // Agent coordination tools
     this.toolMapping.set('assign_task_to_agent', this.assignTaskToAgent.bind(this));
     this.toolMapping.set('get_agent_status', this.getAgentStatus.bind(this));
     this.toolMapping.set('balance_load', this.balanceLoad.bind(this));
 
-    // 错误恢复工具
+    // Error recovery tools
     this.toolMapping.set('handle_error', this.handleError.bind(this));
     this.toolMapping.set('retry_failed_task', this.retryFailedTask.bind(this));
     this.toolMapping.set('fallback_strategy', this.fallbackStrategy.bind(this));
 
-    // 性能优化工具
+    // Performance optimization tools
     this.toolMapping.set('optimize_execution', this.optimizeExecution.bind(this));
     this.toolMapping.set('cache_strategy', this.cacheStrategy.bind(this));
     this.toolMapping.set('parallel_execution', this.parallelExecution.bind(this));
@@ -106,7 +106,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 协调任务
+   * Coordinate tasks
    */
   async coordinateTask(parameters, strategy) {
     try {
@@ -116,22 +116,22 @@ class CoordinatorAgent extends AgentBase {
         throw new Error('Task is required');
       }
 
-      // 1. 分析任务
+      // 1. Analyze the task
       const taskAnalysis = await this.analyzeTask(task);
 
-      // 2. 分解任务
+      // 2. Decompose the task
       const subtasks = await this.decomposeTask(taskAnalysis);
 
-      // 3. 分配任务给智能体
+      // 3. Assign tasks to agents
       const assignments = await this.assignSubtasksToAgents(subtasks);
 
-      // 4. 执行任务
+      // 4. Execute the tasks
       const results = await this.executeSubtasks(assignments, timeout);
 
-      // 5. 整合结果
+      // 5. Integrate the results
       const integratedResult = await this.integrateResults(results);
 
-      // 6. 记录到记忆系统
+      // 6. Record to the memory system
       if (this.memorySystem && typeof this.memorySystem.recordToolCall === 'function') {
         try {
           await this.memorySystem.recordToolCall('coordinate_task', parameters, integratedResult, Date.now());
@@ -156,7 +156,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 分解任务
+   * Decompose a task
    */
   async decomposeTask(parameters, strategy) {
     try {
@@ -168,7 +168,7 @@ class CoordinatorAgent extends AgentBase {
 
       const subtasks = [];
 
-      // 基于任务类型分解
+      // Decompose based on the task type
       if (task.type === 'sequence_analysis') {
         subtasks.push(
           { type: 'data_retrieval', agent: 'data', priority: 'high' },
@@ -188,7 +188,7 @@ class CoordinatorAgent extends AgentBase {
           { type: 'result_integration', agent: 'coordinator', priority: 'medium' }
         );
       } else {
-        // 通用任务分解
+        // Generic task decomposition
         subtasks.push(
           { type: 'task_analysis', agent: 'coordinator', priority: 'high' },
           { type: 'execution', agent: 'auto', priority: 'high' },
@@ -213,7 +213,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 整合结果
+   * Integrate the results
    */
   async integrateResults(parameters, strategy) {
     try {
@@ -223,10 +223,10 @@ class CoordinatorAgent extends AgentBase {
         throw new Error('Results array is required');
       }
 
-      // 按优先级排序结果
+      // Sort the results by priority
       results.sort((a, b) => b.priority - a.priority);
 
-      // 整合结果
+      // Integrate the results
       const integratedResult = {
         success: true,
         data: {},
@@ -238,14 +238,14 @@ class CoordinatorAgent extends AgentBase {
         },
       };
 
-      // 合并数据
+      // Merge the data
       results.forEach(result => {
         if (result.success && result.data) {
           Object.assign(integratedResult.data, result.data);
         }
       });
 
-      // 处理错误
+      // Handle errors
       const errors = results.filter(r => !r.success).map(r => r.error);
       if (errors.length > 0) {
         integratedResult.warnings = errors;
@@ -264,7 +264,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 创建工作流
+   * Create a workflow
    */
   async createWorkflow(parameters, strategy) {
     try {
@@ -294,7 +294,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 执行工作流
+   * Execute a workflow
    */
   async executeWorkflow(parameters, strategy) {
     try {
@@ -320,7 +320,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 获取工作流状态
+   * Get the workflow status
    */
   async getWorkflowStatus(parameters, strategy) {
     try {
@@ -345,7 +345,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 分配任务给智能体
+   * Assign tasks to agents
    */
   async assignTaskToAgent(parameters, strategy) {
     try {
@@ -381,7 +381,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 获取智能体状态
+   * Get the agent status
    */
   async getAgentStatus(parameters, strategy) {
     try {
@@ -413,7 +413,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 负载均衡
+   * Load balancing
    */
   async balanceLoad(parameters, strategy) {
     try {
@@ -427,14 +427,14 @@ class CoordinatorAgent extends AgentBase {
         agentStatuses.push({ name, status });
       }
 
-      // 选择负载最低的智能体
+      // Choose the agent with the lowest load
       const availableAgents = agentStatuses.filter(agent => agent.status.isActive);
 
       if (availableAgents.length === 0) {
         throw new Error('No available agents');
       }
 
-      // 基于任务类型和智能体能力选择
+      // Choose based on task type and agent capabilities
       const bestAgent = this.selectBestAgent(taskType, availableAgents);
 
       return {
@@ -452,7 +452,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 处理错误
+   * Handle errors
    */
   async handleError(parameters, strategy) {
     try {
@@ -462,13 +462,13 @@ class CoordinatorAgent extends AgentBase {
         throw new Error('Error details are required');
       }
 
-      // 分析错误类型
+      // Analyze the error type
       const errorAnalysis = this.analyzeError(error, context);
 
-      // 选择恢复策略
+      // Choose a recovery strategy
       const recoveryStrategy = this.selectRecoveryStrategy(errorAnalysis, retryCount);
 
-      // 执行恢复
+      // Perform the recovery
       const recoveryResult = await this.executeRecoveryStrategy(recoveryStrategy, context);
 
       return {
@@ -486,7 +486,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 重试失败任务
+   * Retry a failed task
    */
   async retryFailedTask(parameters, strategy) {
     try {
@@ -523,7 +523,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 回退策略
+   * Fallback strategy
    */
   async fallbackStrategy(parameters, strategy) {
     try {
@@ -533,7 +533,7 @@ class CoordinatorAgent extends AgentBase {
         throw new Error('Primary task and fallback tasks are required');
       }
 
-      // 尝试主要任务
+      // Try the primary task
       try {
         const result = await this.executeTask(primaryTask);
         return {
@@ -542,7 +542,7 @@ class CoordinatorAgent extends AgentBase {
           strategy: 'primary',
         };
       } catch (error) {
-        // 尝试回退任务
+        // Try the fallback task
         for (const fallbackTask of fallbackTasks) {
           try {
             const result = await this.executeTask(fallbackTask);
@@ -568,7 +568,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 优化执行
+   * Optimize execution
    */
   async optimizeExecution(parameters, strategy) {
     try {
@@ -627,7 +627,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 缓存策略
+   * Caching strategy
    */
   async cacheStrategy(parameters, strategy) {
     try {
@@ -637,7 +637,7 @@ class CoordinatorAgent extends AgentBase {
         throw new Error('Task and cache key are required');
       }
 
-      // 检查缓存
+      // Check the cache
       const cachedResult = this.getCachedResult(cacheKey);
       if (cachedResult) {
         return {
@@ -647,10 +647,10 @@ class CoordinatorAgent extends AgentBase {
         };
       }
 
-      // 执行任务
+      // Execute the task
       const result = await this.executeTask(task);
 
-      // 缓存结果
+      // Cache the result
       this.cacheResult(cacheKey, result, ttl);
 
       return {
@@ -667,7 +667,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 并行执行
+   * Parallel execution
    */
   async parallelExecution(parameters, strategy) {
     try {
@@ -677,17 +677,17 @@ class CoordinatorAgent extends AgentBase {
         throw new Error('Tasks array is required');
       }
 
-      // 分组任务
+      // Group the tasks
       const taskGroups = this.groupTasksForParallelExecution(tasks, maxConcurrency);
 
-      // 并行执行
+      // Execute in parallel
       const results = [];
       for (const group of taskGroups) {
         const groupResults = await Promise.allSettled(group.map(task => this.executeTask(task)));
         results.push(...groupResults);
       }
 
-      // 处理结果
+      // Process the results
       const successfulResults = results.filter(r => r.status === 'fulfilled').map(r => r.value);
 
       const failedResults = results.filter(r => r.status === 'rejected').map(r => r.reason);
@@ -709,10 +709,10 @@ class CoordinatorAgent extends AgentBase {
     }
   }
 
-  // 辅助方法
+  // Helper methods
 
   /**
-   * 分析任务
+   * Analyze a task
    */
   async analyzeTask(task) {
     return {
@@ -724,10 +724,10 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 评估复杂度
+   * Assess complexity
    */
   assessComplexity(task) {
-    // 基于任务类型和参数评估复杂度
+    // Assess complexity based on task type and parameters
     const complexityFactors = {
       dataSize: task.parameters?.dataSize || 1,
       operationCount: task.parameters?.operationCount || 1,
@@ -738,7 +738,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 提取需求
+   * Extract requirements
    */
   extractRequirements(task) {
     return {
@@ -749,21 +749,21 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 估算执行时间
+   * Estimate the execution time
    */
   estimateExecutionTime(task) {
-    const baseTime = 1000; // 基础时间1秒
+    const baseTime = 1000; // base time 1 second
     const complexity = this.assessComplexity(task);
     return baseTime * complexity;
   }
 
   /**
-   * 获取依赖关系
+   * Get the dependencies
    */
   getDependencies(subtask, allSubtasks, currentIndex) {
     const dependencies = [];
 
-    // 基于任务类型确定依赖关系
+    // Determine dependencies based on the task type
     if (subtask.type === 'result_processing') {
       dependencies.push('data_retrieval');
     } else if (subtask.type === 'result_integration') {
@@ -774,7 +774,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 分配子任务给智能体
+   * Assign subtasks to agents
    */
   async assignSubtasksToAgents(subtasks) {
     const assignments = [];
@@ -793,7 +793,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 执行子任务
+   * Execute a subtask
    */
   async executeSubtasks(assignments, timeout) {
     const results = [];
@@ -824,10 +824,10 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 选择最佳智能体
+   * Select the best agent
    */
   selectBestAgent(taskType, availableAgents) {
-    // 基于任务类型和智能体能力选择最佳智能体
+    // Select the best agent based on task type and agent capabilities
     const agentCapabilities = {
       data_retrieval: ['DataAgent'],
       sequence_processing: ['AnalysisAgent'],
@@ -845,7 +845,7 @@ class CoordinatorAgent extends AgentBase {
       }
     }
 
-    // 如果没有首选智能体，选择负载最低的
+    // If there's no preferred agent, choose the one with the lowest load
     const leastLoadedAgent = availableAgents.reduce((min, agent) =>
       (agent.status.performanceStats?.totalExecutions || 0) < (min.status.performanceStats?.totalExecutions || 0)
         ? agent
@@ -856,7 +856,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 分析错误
+   * Analyze an error
    */
   analyzeError(error, context) {
     return {
@@ -868,7 +868,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 选择恢复策略
+   * Choose a recovery strategy
    */
   selectRecoveryStrategy(errorAnalysis, retryCount) {
     if (retryCount >= 3) {
@@ -883,7 +883,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 执行恢复策略
+   * Execute a recovery strategy
    */
   async executeRecoveryStrategy(strategy, context) {
     switch (strategy.type) {
@@ -900,7 +900,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 执行任务
+   * Execute a task
    */
   async executeTask(task) {
     // Fix: Use agents Map directly with fallback to getAgent()
@@ -913,7 +913,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 分组任务用于并行执行
+   * Group tasks for parallel execution
    */
   groupTasksForParallelExecution(tasks, maxConcurrency) {
     const groups = [];
@@ -924,14 +924,14 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 延迟函数
+   * Delay function
    */
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
-   * 分类错误
+   * Classify an error
    */
   classifyError(error) {
     if (error.message.includes('timeout')) return 'timeout';
@@ -942,7 +942,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 评估错误严重性
+   * Assess error severity
    */
   assessErrorSeverity(error) {
     if (error.message.includes('critical')) return 'critical';
@@ -952,7 +952,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 检查错误是否可恢复
+   * Check whether an error is recoverable
    */
   isErrorRecoverable(error) {
     const nonRecoverableErrors = ['permission', 'not_found', 'invalid_parameter'];
@@ -961,7 +961,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 获取缓存结果
+   * Get a cached result
    */
   getCachedResult(cacheKey) {
     // Simple cache implementation using the agent's learning data
@@ -973,7 +973,7 @@ class CoordinatorAgent extends AgentBase {
   }
 
   /**
-   * 缓存结果
+   * Cache a result
    */
   cacheResult(cacheKey, result, ttl) {
     this.learningData.set(`cache_${cacheKey}`, {
@@ -985,7 +985,7 @@ class CoordinatorAgent extends AgentBase {
 }
 
 /**
- * 工作流引擎
+ * Workflow engine
  */
 class WorkflowEngine {
   constructor(coordinatorAgent) {
@@ -995,7 +995,7 @@ class WorkflowEngine {
   }
 
   /**
-   * 创建工作流
+   * Create a workflow
    */
   async createWorkflow(name, steps, dependencies) {
     const workflowId = `workflow_${Date.now()}`;
@@ -1013,7 +1013,7 @@ class WorkflowEngine {
   }
 
   /**
-   * 执行工作流
+   * Execute a workflow
    */
   async executeWorkflow(workflowId, parameters) {
     const workflow = this.workflows.get(workflowId);
@@ -1033,10 +1033,10 @@ class WorkflowEngine {
     this.executions.set(executionId, execution);
 
     try {
-      // 按依赖关系排序步骤
+      // Sort the steps by dependency
       const sortedSteps = this.topologicalSort(workflow.steps, workflow.dependencies);
 
-      // 执行步骤
+      // Execute the steps
       for (const step of sortedSteps) {
         const result = await this.executeStep(step, parameters);
         execution.results.push(result);
@@ -1058,7 +1058,7 @@ class WorkflowEngine {
   }
 
   /**
-   * 获取工作流状态
+   * Get the workflow status
    */
   async getWorkflowStatus(workflowId) {
     const workflow = this.workflows.get(workflowId);
@@ -1076,7 +1076,7 @@ class WorkflowEngine {
   }
 
   /**
-   * 执行步骤 - Fix: Route through ChatManager instead of recursive coordinatorAgent.executeFunction
+   * Execute a step - Fix: Route through ChatManager instead of recursive coordinatorAgent.executeFunction
    */
   async executeStep(step, parameters) {
     const stepParameters = { ...parameters, ...step.parameters };
@@ -1102,10 +1102,10 @@ class WorkflowEngine {
   }
 
   /**
-   * 拓扑排序
+   * Topological sort
    */
   topologicalSort(steps, dependencies) {
-    // 简单的拓扑排序实现
+    // Simple topological-sort implementation
     const sorted = [];
     const visited = new Set();
 
@@ -1130,6 +1130,6 @@ class WorkflowEngine {
   }
 }
 
-// 导出智能体
+// Export the agent
 window.CoordinatorAgent = CoordinatorAgent;
 window.WorkflowEngine = WorkflowEngine;

@@ -1,6 +1,6 @@
 /**
- * ProjectManager - 独立项目管理器的核心类
- * 功能包括：项目创建、文件管理、工作空间组织、与主窗口通信
+ * ProjectManager - core class for the standalone project manager
+ * Features include: project creation, file management, workspace organization, and communication with the main window
  */
 class ProjectManager {
   constructor() {
@@ -32,7 +32,7 @@ class ProjectManager {
     this.searchTerm = '';
     this.contextMenuTarget = null;
 
-    // XML处理器
+    // XML handler
     this.xmlHandler = new ProjectXMLHandler();
 
     // Initialize
@@ -45,7 +45,7 @@ class ProjectManager {
   }
 
   /**
-   * 初始化UI组件
+   * Initialize the UI components
    */
   initializeUI() {
     this.renderProjectTree();
@@ -54,10 +54,10 @@ class ProjectManager {
   }
 
   /**
-   * 设置事件监听器
+   * Set up event listeners
    */
   setupEventListeners() {
-    // 搜索框事件
+    // Search-box events
     const searchBox = document.getElementById('searchBox');
     if (searchBox) {
       searchBox.addEventListener('input', e => {
@@ -66,19 +66,19 @@ class ProjectManager {
       });
     }
 
-    // 文件拖拽支持
+    // File drag-and-drop support
     document.addEventListener('dragover', e => e.preventDefault());
     document.addEventListener('drop', e => {
       e.preventDefault();
       this.handleFileDrop(e);
     });
 
-    // 键盘快捷键
+    // Keyboard shortcuts
     document.addEventListener('keydown', e => {
       this.handleKeyboardShortcuts(e);
     });
 
-    // 窗口关闭事件
+    // Window-close event
     if (window.electronAPI && window.electronAPI.onBeforeWindowClose) {
       window.electronAPI.onBeforeWindowClose(() => {
         this.saveProjects();
@@ -86,7 +86,7 @@ class ProjectManager {
       });
     }
 
-    // 使用标准的beforeunload事件作为备用
+    // Use the standard beforeunload event as a fallback
     window.addEventListener('beforeunload', () => {
       this.saveProjects();
       this.saveSettings();
@@ -94,12 +94,12 @@ class ProjectManager {
   }
 
   /**
-   * 创建新项目模态框
+   * New-project modal
    */
   createNewProject() {
     const modal = document.getElementById('newProjectModal');
     if (modal) {
-      // 清空表单
+      // Clear the form
       document.getElementById('projectName').value = '';
       document.getElementById('projectDescription').value = '';
       document.getElementById('projectLocation').value = this.settings.defaultProjectLocation || '';
@@ -108,7 +108,7 @@ class ProjectManager {
   }
 
   /**
-   * 选择项目位置
+   * Select the project location
    */
   async selectProjectLocation() {
     try {
@@ -127,7 +127,7 @@ class ProjectManager {
   }
 
   /**
-   * 创建项目
+   * Create a project
    */
   async createProject() {
     const name = document.getElementById('projectName').value.trim();
@@ -161,7 +161,7 @@ class ProjectManager {
         },
       };
 
-      // 创建项目目录结构
+      // Create the project directory structure
       if (window.electronAPI) {
         const result = await window.electronAPI.createProjectDirectory(location, name);
         if (!result.success) {
@@ -170,18 +170,18 @@ class ProjectManager {
         project.location = result.projectPath;
       }
 
-      // 添加到项目列表
+      // Add to the project list
       this.projects.set(projectId, project);
       this.addToRecentProjects(projectId);
 
-      // 保存项目
+      // Save the project
       await this.saveProjects();
 
-      // 更新UI
+      // Update the UI
       this.renderProjectTree();
       this.selectProject(projectId);
 
-      // 关闭模态框
+      // Close the modal
       this.closeModal('newProjectModal');
 
       this.showNotification(`Project "${name}" created successfully`, 'success');
@@ -193,7 +193,7 @@ class ProjectManager {
   }
 
   /**
-   * 打开现有项目
+   * Open an existing project
    */
   async openProject() {
     try {
@@ -212,7 +212,7 @@ class ProjectManager {
   }
 
   /**
-   * 从文件加载项目（支持JSON和XML格式）
+   * Load a project from a file (supports JSON and XML formats)
    */
   async loadProjectFromFile(filePath) {
     try {
@@ -221,33 +221,33 @@ class ProjectManager {
         if (result.success) {
           let project;
 
-          // 根据文件扩展名或内容判断格式
+          // Determine the format from the file extension or content
           if (
             filePath.endsWith('.xml') ||
             result.content.trim().startsWith('<?xml') ||
             result.content.includes('<GenomeExplorerProject')
           ) {
-            // XML格式
+            // XML format
             const validation = this.xmlHandler.validateProjectXML(result.content);
             if (!validation.valid) {
               throw new Error(`Invalid XML project file: ${validation.error}`);
             }
             project = validation.project;
           } else {
-            // JSON格式（向后兼容）
+            // JSON format (backward compatible)
             project = JSON.parse(result.content);
 
-            // 验证项目数据
+            // Validate the project data
             if (!project.id || !project.name) {
               throw new Error('Invalid project file format');
             }
           }
 
-          // 更新最后打开时间
+          // Update the last-opened time
           if (!project.metadata) project.metadata = {};
           project.metadata.lastOpened = new Date().toISOString();
 
-          // 保存文件路径以便后续保存
+          // Save the file path for later saving
           project.filePath = filePath;
           // Also set the appropriate path properties for XML save operations
           if (filePath.endsWith('.GAI') || filePath.endsWith('.xml')) {
@@ -277,32 +277,32 @@ class ProjectManager {
   }
 
   /**
-   * 选择项目
+   * Select a project
    */
   selectProject(projectId) {
     this.currentProject = this.projects.get(projectId);
     this.currentPath = [];
 
     if (this.currentProject) {
-      // 更新UI
+      // Update the UI
       this.renderProjectContent();
       this.updateActiveTreeItem(projectId);
       this.updateContentTitle();
       this.updateProjectStats();
 
-      // 显示项目内容区域
+      // Show the project content area
       document.getElementById('projectOverview').style.display = 'none';
       document.getElementById('projectContent').style.display = 'block';
 
       this.updateStatusBar(`Opened project: ${this.currentProject.name}`);
 
-      // 通知全局项目状态更新
+      // Notify the global project-state update
       this.notifyProjectChange(this.currentProject);
     }
   }
 
   /**
-   * 通知项目状态变化
+   * Notify a project-state change
    */
   async notifyProjectChange(project) {
     if (window.electronAPI && window.electronAPI.setActiveProject) {
@@ -324,7 +324,7 @@ class ProjectManager {
   }
 
   /**
-   * 渲染项目树
+   * Render the project tree
    */
   renderProjectTree() {
     const projectTree = document.getElementById('projectTree');
@@ -346,7 +346,7 @@ class ProjectManager {
                     </div>
                 `;
 
-        // 显示项目文件夹（如果项目被选中）
+        // Show the project folders (if the project is selected)
         if (isActive) {
           html += this.renderProjectFolders(project);
         }
@@ -357,12 +357,12 @@ class ProjectManager {
   }
 
   /**
-   * 渲染项目文件夹结构
+   * Render the project folder structure
    */
   renderProjectFolders(project) {
     let html = '';
 
-    // 默认文件夹
+    // Default folders
     const defaultFolders = [
       { name: 'Genomes', icon: '🧬', path: ['genomes'] },
       { name: 'Annotations', icon: '📋', path: ['annotations'] },
@@ -387,7 +387,7 @@ class ProjectManager {
   }
 
   /**
-   * 导航到文件夹
+   * Navigate to a folder
    */
   navigateToFolder(path) {
     this.currentPath = path;
@@ -397,7 +397,7 @@ class ProjectManager {
   }
 
   /**
-   * 渲染项目内容
+   * Render the project content
    */
   renderProjectContent() {
     if (!this.currentProject) return;
@@ -407,7 +407,7 @@ class ProjectManager {
   }
 
   /**
-   * 渲染文件网格
+   * Render the file grid
    */
   renderFileGrid() {
     const fileGrid = document.getElementById('fileGrid');
@@ -461,12 +461,12 @@ class ProjectManager {
   }
 
   /**
-   * 获取当前文件夹的文件
+   * Get the files in the current folder
    */
   getCurrentFolderFiles() {
     if (!this.currentProject) return [];
 
-    // 根据当前路径筛选文件
+    // Filter files by the current path
     return this.currentProject.files.filter(file => {
       if (this.currentPath.length === 0) return true;
       return file.folder && this.arraysEqual(file.folder, this.currentPath);
@@ -474,7 +474,7 @@ class ProjectManager {
   }
 
   /**
-   * 过滤文件
+   * Filter files
    */
   filterFiles(files) {
     if (!this.searchTerm) return files;
@@ -487,7 +487,7 @@ class ProjectManager {
   }
 
   /**
-   * 添加文件到项目
+   * Add a file to the project
    */
   async addFiles() {
     if (!this.currentProject) {
@@ -509,7 +509,7 @@ class ProjectManager {
   }
 
   /**
-   * 处理选择的文件
+   * Handle the selected files
    */
   async processSelectedFiles(filePaths) {
     try {
@@ -551,7 +551,7 @@ class ProjectManager {
   }
 
   /**
-   * 创建文件夹
+   * Create a folder
    */
   createFolder() {
     if (!this.currentProject) {
@@ -612,18 +612,18 @@ class ProjectManager {
   }
 
   /**
-   * 选择文件
+   * Select a file
    */
   selectFile(fileId, ctrlKey = false) {
     if (ctrlKey) {
-      // 多选模式
+      // Multi-select mode
       if (this.selectedFiles.has(fileId)) {
         this.selectedFiles.delete(fileId);
       } else {
         this.selectedFiles.add(fileId);
       }
     } else {
-      // 单选模式
+      // Single-select mode
       this.selectedFiles.clear();
       this.selectedFiles.add(fileId);
     }
@@ -632,7 +632,7 @@ class ProjectManager {
   }
 
   /**
-   * 更新文件卡片选择状态
+   * Update the file-card selection state
    */
   updateFileCardSelection() {
     const fileCards = document.querySelectorAll('.file-card');
@@ -647,7 +647,7 @@ class ProjectManager {
   }
 
   /**
-   * 打开文件在主窗口
+   * Open a file in the main window
    */
   async openFileInMainWindow(fileId) {
     const file = this.findFileById(fileId);
@@ -655,11 +655,11 @@ class ProjectManager {
 
     try {
       if (window.electronAPI) {
-        // 检查主窗口状态
+        // Check the main-window state
         const mainWindowStatus = await window.electronAPI.checkMainWindowStatus();
 
         if (mainWindowStatus.hasOpenFile) {
-          // 主窗口已有文件，创建新窗口
+          // The main window already has a file; create a new window
           const result = await window.electronAPI.createNewMainWindow(file.path);
           if (result.success) {
             this.showNotification(`Opened "${file.name}" in new window`, 'success');
@@ -667,7 +667,7 @@ class ProjectManager {
             throw new Error(result.error);
           }
         } else {
-          // 主窗口没有文件，在当前主窗口打开
+          // The main window has no file; open it in the current main window
           const result = await window.electronAPI.openFileInMainWindow(file.path);
           if (result.success) {
             this.showNotification(`Opened "${file.name}" in GenomeExplorer`, 'success');
@@ -683,7 +683,7 @@ class ProjectManager {
   }
 
   /**
-   * 显示文件上下文菜单
+   * Show the file context menu
    */
   showFileContextMenu(event, fileId) {
     event.preventDefault();
@@ -721,7 +721,7 @@ class ProjectManager {
   }
 
   /**
-   * 处理上下文菜单动作
+   * Handle context-menu actions
    */
   async handleContextMenuAction(action) {
     if (!this.contextMenuTarget) return;
@@ -729,7 +729,7 @@ class ProjectManager {
     const file = this.findFileById(this.contextMenuTarget);
     if (!file) return;
 
-    // 隐藏上下文菜单
+    // Hide the context menu
     const contextMenu = document.getElementById('contextMenu');
     if (contextMenu) contextMenu.style.display = 'none';
 
@@ -755,7 +755,7 @@ class ProjectManager {
   }
 
   /**
-   * 重命名文件
+   * Rename a file
    */
   renameFile(file) {
     const newName = prompt('Enter new name:', file.name);
@@ -770,7 +770,7 @@ class ProjectManager {
   }
 
   /**
-   * 从项目中移除文件
+   * Remove a file from the project
    */
   removeFileFromProject(fileId) {
     if (!confirm('Are you sure you want to remove this file from the project?')) return;
@@ -787,7 +787,7 @@ class ProjectManager {
   }
 
   /**
-   * 更新项目统计
+   * Update the project statistics
    */
   updateProjectStats() {
     const statsElement = document.getElementById('projectStats');
@@ -821,7 +821,7 @@ class ProjectManager {
   }
 
   /**
-   * 获取文件类型统计
+   * Get the file-type statistics
    */
   getFileTypeStats() {
     const stats = {};
@@ -833,7 +833,7 @@ class ProjectManager {
   }
 
   /**
-   * 更新内容标题
+   * Update the content title
    */
   updateContentTitle() {
     const titleElement = document.getElementById('contentTitle');
@@ -848,7 +848,7 @@ class ProjectManager {
   }
 
   /**
-   * 更新状态栏
+   * Update the status bar
    */
   updateStatusBar(message = 'Ready') {
     const statusText = document.getElementById('statusText');
@@ -868,7 +868,7 @@ class ProjectManager {
   }
 
   /**
-   * 处理键盘快捷键
+   * Handle keyboard shortcuts
    */
   handleKeyboardShortcuts(event) {
     if (event.ctrlKey || event.metaKey) {
@@ -898,7 +898,7 @@ class ProjectManager {
   }
 
   /**
-   * 选择所有文件
+   * Select all files
    */
   selectAllFiles() {
     this.selectedFiles.clear();
@@ -909,7 +909,7 @@ class ProjectManager {
   }
 
   /**
-   * 删除选中的文件
+   * Delete the selected files
    */
   deleteSelectedFiles() {
     if (this.selectedFiles.size === 0) return;
@@ -931,17 +931,17 @@ class ProjectManager {
   }
 
   /**
-   * 刷新项目
+   * Refresh the project
    */
   async refreshProjects() {
-    // 如果有当前项目，扫描其目录并添加新文件/文件夹
+    // If there's a current project, scan its directory and add new files/folders
     if (this.currentProject && this.currentProject.location) {
       await this.scanAndAddNewFiles();
       this.renderProjectTree();
       this.renderProjectContent();
       this.showNotification('🔄 Project directory scanned and refreshed', 'success');
     } else {
-      // 如果没有当前项目，则正常加载项目列表
+      // If there's no current project, load the project list normally
       await this.loadProjects();
       this.renderProjectTree();
       this.showNotification('📂 Projects list refreshed', 'success');
@@ -949,7 +949,7 @@ class ProjectManager {
   }
 
   /**
-   * 扫描项目文件夹并添加新文件
+   * Scan the project folder and add new files
    */
   async scanAndAddNewFiles() {
     if (!this.currentProject || !window.electronAPI || !window.electronAPI.scanProjectFolder) {
@@ -1031,7 +1031,7 @@ class ProjectManager {
           this.currentProject.modified = new Date().toISOString();
           this.projects.set(this.currentProject.id, this.currentProject);
 
-          // 标记项目为已修改，这样保存按钮就会保存到.prj.GAI文件
+          // Mark the project as modified so the save button saves to the .prj.GAI file
           this.markProjectAsModified();
 
           // Save changes to both localStorage and XML
@@ -1096,15 +1096,15 @@ class ProjectManager {
   }
 
   /**
-   * 显示设置
+   * Show settings
    */
   showSettings() {
-    // TODO: 实现设置界面
+    // TODO: implement the settings interface
     this.showNotification('Settings feature coming soon', 'info');
   }
 
   /**
-   * 关闭模态框
+   * Close the modal
    */
   closeModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -1113,24 +1113,24 @@ class ProjectManager {
     }
   }
 
-  // ====== 工具方法 ======
+  // ====== Utility methods ======
 
   /**
-   * 生成项目ID
+   * Generate a project ID
    */
   generateProjectId() {
     return 'project_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 
   /**
-   * 生成文件ID
+   * Generate a file ID
    */
   generateFileId() {
     return 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 
   /**
-   * 检测文件类型
+   * Detect the file type
    */
   detectFileType(fileName) {
     const ext = fileName.toLowerCase().split('.').pop();
@@ -1143,7 +1143,7 @@ class ProjectManager {
   }
 
   /**
-   * 格式化文件大小
+   * Format the file size
    */
   formatFileSize(bytes) {
     if (bytes === 0) return '0 B';
@@ -1153,7 +1153,7 @@ class ProjectManager {
   }
 
   /**
-   * 格式化日期
+   * Format the date
    */
   formatDate(dateString) {
     const date = new Date(dateString);
@@ -1161,14 +1161,14 @@ class ProjectManager {
   }
 
   /**
-   * 数组比较
+   * Compare arrays
    */
   arraysEqual(a, b) {
     return a.length === b.length && a.every((val, i) => val === b[i]);
   }
 
   /**
-   * 根据ID查找文件
+   * Find a file by ID
    */
   findFileById(fileId) {
     if (!this.currentProject) return null;
@@ -1176,7 +1176,7 @@ class ProjectManager {
   }
 
   /**
-   * 复制到剪贴板
+   * Copy to the clipboard
    */
   copyToClipboard(text) {
     if (navigator.clipboard) {
@@ -1186,28 +1186,28 @@ class ProjectManager {
   }
 
   /**
-   * 显示通知
+   * Show a notification
    */
   showNotification(message, type = 'info') {
     console.log(`[${type.toUpperCase()}] ${message}`);
 
-    // TODO: 实现更好的通知系统
+    // TODO: implement a better notification system
     if (type === 'error') {
       alert(`Error: ${message}`);
     }
   }
 
   /**
-   * 添加到最近项目
+   * Add to recent projects
    */
   addToRecentProjects(projectId) {
     this.recentProjects = this.recentProjects.filter(id => id !== projectId);
     this.recentProjects.unshift(projectId);
-    this.recentProjects = this.recentProjects.slice(0, 10); // 只保留最近10个
+    this.recentProjects = this.recentProjects.slice(0, 10); // keep only the 10 most recent
   }
 
   /**
-   * 清除最近项目
+   * Clear recent projects
    */
   async clearRecentProjects() {
     this.recentProjects = [];
@@ -1217,7 +1217,7 @@ class ProjectManager {
   }
 
   /**
-   * 更新最近项目菜单
+   * Update the recent-projects menu
    */
   async updateRecentProjectsMenu() {
     try {
@@ -1244,7 +1244,7 @@ class ProjectManager {
   }
 
   /**
-   * 更新活动树项目
+   * Update the active tree item
    */
   updateActiveTreeItem(projectId = null) {
     const treeItems = document.querySelectorAll('.tree-item');
@@ -1259,7 +1259,7 @@ class ProjectManager {
   }
 
   /**
-   * 设置搜索功能
+   * Set up the search feature
    */
   setupSearchFunctionality() {
     const searchBox = document.getElementById('searchBox');
@@ -1271,14 +1271,14 @@ class ProjectManager {
   }
 
   /**
-   * 过滤并渲染文件
+   * Filter and render files
    */
   filterAndRenderFiles() {
     this.renderFileGrid();
   }
 
   /**
-   * 处理文件拖拽
+   * Handle file drag-and-drop
    */
   handleFileDrop(event) {
     if (!this.currentProject) {
@@ -1295,15 +1295,15 @@ class ProjectManager {
   }
 
   /**
-   * 预览文件
+   * Preview a file
    */
   previewFile(file) {
-    // TODO: 实现文件预览功能
+    // TODO: implement the file-preview feature
     this.showNotification(`Preview for ${file.name} coming soon`, 'info');
   }
 
   /**
-   * 保存项目数据
+   * Save the project data
    */
   async saveProjects() {
     try {
@@ -1322,7 +1322,7 @@ class ProjectManager {
         // Update the menu with recent projects
         await this.updateRecentProjectsMenu();
       } else {
-        // 浏览器环境下保存到localStorage
+        // In a browser environment, save to localStorage
         localStorage.setItem('genomeExplorer_projects', JSON.stringify(projectsData));
       }
 
@@ -1334,7 +1334,7 @@ class ProjectManager {
   }
 
   /**
-   * 导出项目为XML格式
+   * Export the project as XML
    */
   async exportProjectAsXML(projectId) {
     try {
@@ -1343,10 +1343,10 @@ class ProjectManager {
         throw new Error('Project not found');
       }
 
-      // 生成XML内容
+      // Generate the XML content
       const xmlContent = this.xmlHandler.projectToXML(project);
 
-      // 创建下载
+      // Create the download
       if (window.electronAPI) {
         const fileName = `${project.name.replace(/[^\w\s-]/g, '')}_project.xml`;
         const result = await window.electronAPI.saveFile(fileName, xmlContent);
@@ -1356,7 +1356,7 @@ class ProjectManager {
           throw new Error(result.error);
         }
       } else {
-        // 浏览器环境下载
+        // Browser-environment download
         const blob = new Blob([xmlContent], { type: 'application/xml' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1375,7 +1375,7 @@ class ProjectManager {
   }
 
   /**
-   * 保存单个项目为XML文件
+   * Save a single project as an XML file
    */
   async saveProjectAsXML(projectId) {
     try {
@@ -1384,11 +1384,11 @@ class ProjectManager {
         throw new Error('Project not found');
       }
 
-      // 生成XML内容
+      // Generate the XML content
       const xmlContent = this.xmlHandler.projectToXML(project);
 
       if (window.electronAPI && window.electronAPI.saveProjectToSpecificFile) {
-        // 直接保存到项目文件路径，不弹出对话框
+        // Save directly to the project file path, without a dialog
         const filePath = project.projectFilePath || project.xmlFilePath;
         if (filePath) {
           const result = await window.electronAPI.saveProjectToSpecificFile(filePath, xmlContent);
@@ -1408,7 +1408,7 @@ class ProjectManager {
             return;
           }
 
-          // 如果没有现有路径且项目不是刚加载的，使用saveProjectFile（会弹出对话框）
+          // If there's no existing path and the project wasn't just loaded, use saveProjectFile (which shows a dialog)
           const defaultPath = `${project.name}.prj.GAI`;
           const result = await window.electronAPI.saveProjectFile(defaultPath, xmlContent);
           if (result.success) {
@@ -1430,7 +1430,7 @@ class ProjectManager {
   }
 
   /**
-   * 保存当前项目
+   * Save the current project
    */
   async saveCurrentProject() {
     if (!this.currentProject) {
@@ -1439,19 +1439,19 @@ class ProjectManager {
     }
 
     try {
-      // 更新项目修改时间
+      // Update the project's modification time
       this.currentProject.modified = new Date().toISOString();
 
-      // 确保项目数据是最新的
+      // Ensure the project data is up to date
       this.projects.set(this.currentProject.id, this.currentProject);
 
-      // 保存到localStorage
+      // Save to localStorage
       await this.saveProjects();
 
-      // 保存到XML文件
+      // Save to an XML file
       await this.saveProjectAsXML(this.currentProject.id);
 
-      // 标记项目为已保存
+      // Mark the project as saved
       this.markProjectAsSaved();
 
       this.showNotification(`✅ Project "${this.currentProject.name}" saved successfully`, 'success');
@@ -1463,7 +1463,7 @@ class ProjectManager {
   }
 
   /**
-   * 加载项目数据
+   * Load the project data
    */
   async loadProjects() {
     try {
@@ -1475,7 +1475,7 @@ class ProjectManager {
           projectsData = JSON.parse(result.data);
         }
       } else {
-        // 浏览器环境下从localStorage加载
+        // In a browser environment, load from localStorage
         const data = localStorage.getItem('genomeExplorer_projects');
         if (data) {
           projectsData = JSON.parse(data);
@@ -1499,7 +1499,7 @@ class ProjectManager {
   }
 
   /**
-   * 保存设置
+   * Save settings
    */
   async saveSettings() {
     try {
@@ -1517,7 +1517,7 @@ class ProjectManager {
   }
 
   /**
-   * 加载设置
+   * Load settings
    */
   async loadSettings() {
     try {
@@ -1543,10 +1543,10 @@ class ProjectManager {
     }
   }
 
-  // ====== 项目状态管理方法 ======
+  // ====== Project state-management methods ======
 
   /**
-   * 标记项目为已修改
+   * Mark the project as modified
    */
   markProjectAsModified() {
     if (!this.currentProject) return;
@@ -1559,25 +1559,25 @@ class ProjectManager {
     this.currentProject.hasUnsavedChanges = true;
     this.currentProject.modified = new Date().toISOString();
 
-    // 保存到本地存储
+    // Save to local storage
     this.projects.set(this.currentProject.id, this.currentProject);
     this.saveProjects();
 
-    // 更新保存按钮状态
+    // Update the save-button state
     this.updateSaveButtonState();
 
     console.log('📝 Project marked as modified (changes buffered)');
   }
 
   /**
-   * 标记项目为已保存
+   * Mark the project as saved
    */
   markProjectAsSaved() {
     if (!this.currentProject) return;
 
     this.currentProject.hasUnsavedChanges = false;
 
-    // 保存到本地存储
+    // Save to local storage
     this.projects.set(this.currentProject.id, this.currentProject);
     this.saveProjects();
 
@@ -1587,7 +1587,7 @@ class ProjectManager {
   }
 
   /**
-   * 更新保存按钮状态
+   * Update the save-button state
    */
   updateSaveButtonState() {
     const saveBtn =
@@ -1605,7 +1605,7 @@ class ProjectManager {
       saveBtn.innerHTML = saveBtn.innerHTML.includes('💾') ? '💾 Save *' : 'Save *';
       saveBtn.title = 'Save project - You have unsaved changes';
 
-      // 添加脉冲动画
+      // Add a pulse animation
       saveBtn.style.animation = 'pulse 2s infinite';
     } else {
       saveBtn.style.background = 'var(--pm-save-saved-gradient)';
@@ -1617,7 +1617,7 @@ class ProjectManager {
   }
 }
 
-// 确保在全局范围内可用
+// Ensure it's available globally
 if (typeof window !== 'undefined') {
   window.ProjectManager = ProjectManager;
 }

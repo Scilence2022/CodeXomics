@@ -1,15 +1,10 @@
 /**
- * ExternalAgent - 外部智能体
- * 专门处理外部API调用相关的函数
+ * ExternalAgent - external agent
+ * Specializes in handling external API call functions
  */
 class ExternalAgent extends AgentBase {
   constructor(multiAgentSystem) {
-    super(multiAgentSystem, 'external', [
-      'external_api',
-      'blast_search',
-      'uniprot_search',
-      'alphafold_search',
-    ]);
+    super(multiAgentSystem, 'external', ['external_api', 'blast_search', 'uniprot_search', 'alphafold_search']);
 
     this.app = multiAgentSystem.app;
     this.configManager = multiAgentSystem.configManager;
@@ -17,15 +12,15 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * 执行具体初始化逻辑
+   * Run the concrete initialization logic
    */
   async performInitialization() {
-    // 确保应用已初始化
+    // Ensure the app is initialized
     if (!this.app) {
       throw new Error('Application reference not available');
     }
 
-    // 获取API管理器
+    // Get the API manager
     this.apiManager = this.app.apiManager || null;
     if (!this.apiManager) {
       console.warn('⚠️ ExternalAgent: APIManager not available, some tools will rely on ChatManager fallback');
@@ -70,10 +65,10 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * 注册工具映射
+   * Register the tool mappings
    */
   registerToolMapping() {
-    // BLAST搜索工具 - builtInToolsMap-aligned names
+    // BLAST search tools - builtInToolsMap-aligned names
     this.toolMapping.set('blast_search', this.blastSearch.bind(this));
     this.toolMapping.set('blast_search_online', this.blastSearch.bind(this));
     this.toolMapping.set('blast_search_local', this.blastSearch.bind(this));
@@ -108,7 +103,7 @@ class ExternalAgent extends AgentBase {
       this._delegateToChatManager.bind(this, 'blastGetInstallationStatus')
     );
 
-    // UniProt搜索工具 - builtInToolsMap-aligned names
+    // UniProt search tools - builtInToolsMap-aligned names
     this.toolMapping.set('search_uniprot_database', this.uniprotSearch.bind(this));
     this.toolMapping.set('uniprot_search', this.uniprotSearch.bind(this)); // legacy alias
     this.toolMapping.set('advanced_uniprot_search', this.advancedUniprotSearch.bind(this));
@@ -116,25 +111,25 @@ class ExternalAgent extends AgentBase {
     this.toolMapping.set('uniprot_get_protein', this.uniprotGetProtein.bind(this)); // legacy alias
     this.toolMapping.set('uniprot_get_annotation', this.uniprotGetAnnotation.bind(this));
 
-    // AlphaFold搜索工具 - builtInToolsMap-aligned names
+    // AlphaFold search tools - builtInToolsMap-aligned names
     this.toolMapping.set('fetch_alphafold_structure', this.alphafoldGetStructure.bind(this));
     this.toolMapping.set('search_alphafold_structures', this.alphafoldSearch.bind(this));
     this.toolMapping.set('alphafold_search', this.alphafoldSearch.bind(this)); // legacy alias
     this.toolMapping.set('alphafold_get_structure', this.alphafoldGetStructure.bind(this)); // legacy alias
     this.toolMapping.set('search_alphafold_by_sequence', this.alphafoldSearchBySequence.bind(this));
 
-    // PDB搜索工具 - builtInToolsMap-aligned names
+    // PDB search tools - builtInToolsMap-aligned names
     this.toolMapping.set('search_pdb_structures', this.searchPdbStructures.bind(this));
     this.toolMapping.set('fetch_protein_structure', this.fetchProteinStructure.bind(this));
 
-    // InterPro搜索工具 - builtInToolsMap-aligned names
+    // InterPro search tools - builtInToolsMap-aligned names
     this.toolMapping.set('analyze_interpro_domains', this.interproSearch.bind(this));
     this.toolMapping.set('search_interpro_entry', this.interproSearch.bind(this)); // alias
     this.toolMapping.set('get_interpro_entry_details', this.interproGetDomain.bind(this));
     this.toolMapping.set('interpro_search', this.interproSearch.bind(this)); // legacy alias
     this.toolMapping.set('interpro_get_domain', this.interproGetDomain.bind(this)); // legacy alias
 
-    // KEGG搜索工具
+    // KEGG search tools
     this.toolMapping.set('kegg_search', this.keggSearch.bind(this));
     this.toolMapping.set('kegg_get_pathway', this.keggGetPathway.bind(this));
 
@@ -157,7 +152,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * BLAST搜索
+   * BLAST search
    */
   async blastSearch(parameters, strategy) {
     try {
@@ -196,14 +191,14 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * BLAST序列搜索
+   * BLAST sequence search
    */
   async blastSequence(parameters, strategy) {
     return await this.blastSearch(parameters, strategy);
   }
 
   /**
-   * BLAST蛋白质搜索
+   * BLAST protein search
    */
   async blastProtein(parameters, strategy) {
     const { protein, ...otherParams } = parameters;
@@ -211,7 +206,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * UniProt搜索
+   * UniProt search
    */
   async uniprotSearch(parameters, strategy) {
     try {
@@ -249,14 +244,14 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * 高级UniProt搜索
+   * Advanced UniProt search
    */
   async advancedUniprotSearch(parameters, strategy) {
     return await this.uniprotSearch(parameters, strategy);
   }
 
   /**
-   * 获取UniProt蛋白质信息
+   * Get UniProt protein information
    */
   async uniprotGetProtein(parameters, strategy) {
     try {
@@ -294,7 +289,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * 获取UniProt注释信息
+   * Get UniProt annotation information
    */
   async uniprotGetAnnotation(parameters, strategy) {
     try {
@@ -329,7 +324,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * AlphaFold搜索
+   * AlphaFold search
    */
   async alphafoldSearch(parameters, strategy) {
     try {
@@ -366,14 +361,14 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * AlphaFold按序列搜索
+   * AlphaFold search by sequence
    */
   async alphafoldSearchBySequence(parameters, strategy) {
     return await this.alphafoldSearch(parameters, strategy);
   }
 
   /**
-   * 获取AlphaFold结构
+   * Get the AlphaFold structure
    */
   async alphafoldGetStructure(parameters, strategy) {
     try {
@@ -407,7 +402,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * 搜索PDB结构
+   * Search PDB structures
    */
   async searchPdbStructures(parameters, strategy) {
     try {
@@ -422,7 +417,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * 获取蛋白质结构
+   * Get the protein structure
    */
   async fetchProteinStructure(parameters, strategy) {
     try {
@@ -437,7 +432,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * InterPro搜索
+   * InterPro search
    */
   async interproSearch(parameters, strategy) {
     try {
@@ -474,7 +469,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * 获取InterPro域信息
+   * Get InterPro domain information
    */
   async interproGetDomain(parameters, strategy) {
     try {
@@ -510,7 +505,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * KEGG搜索
+   * KEGG search
    */
   async keggSearch(parameters, strategy) {
     try {
@@ -548,7 +543,7 @@ class ExternalAgent extends AgentBase {
   }
 
   /**
-   * 获取KEGG通路信息
+   * Get KEGG pathway information
    */
   async keggGetPathway(parameters, strategy) {
     try {
@@ -585,5 +580,5 @@ class ExternalAgent extends AgentBase {
   }
 }
 
-// 导出智能体
+// Export the agent
 window.ExternalAgent = ExternalAgent;
