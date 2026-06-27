@@ -476,6 +476,13 @@ class GenomeBrowser {
         // Initialize global dragging setting after settings are loaded
         this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging !== false;
         this.setGlobalDragging(this.globalDraggingEnabled);
+
+        // Initialize drag update behavior (both default OFF)
+        if (this.navigationManager) {
+          const loaded = this.generalSettingsManager.getSettings();
+          this.navigationManager.setDragUpdateGeneFeatures(loaded.dragUpdateGeneFeatures === true);
+          this.navigationManager.setDragRealtimeSequenceUpdate(loaded.dragRealtimeSequenceUpdate === true);
+        }
       };
 
       initSequence().catch(error => {

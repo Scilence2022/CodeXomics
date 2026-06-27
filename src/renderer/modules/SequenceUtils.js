@@ -127,25 +127,35 @@ class SequenceUtils {
       }
     });
 
-    // Periodic check to ensure drag state doesn't get stuck with enhanced recovery
+    // Periodic check to recover from a *stuck* drag state (e.g. a mouseup that
+    // was never delivered). This must NOT fire during a legitimately long drag,
+    // otherwise the bottom sequence would auto-update while the user is still
+    // holding the mouse - which is exactly the behavior we want to avoid in the
+    // default "unified" mode. So we only recover when the genome view is no
+    // longer actively being dragged.
     setInterval(() => {
-      if (this.dragOptimization.isDragging) {
-        const now = Date.now();
-        const timeSinceDrag = now - this.dragOptimization.lastRenderTime;
+      if (!this.dragOptimization.isDragging) return;
 
-        // If dragging for more than 5 seconds, force reset with fallback render
-        if (timeSinceDrag > 5000) {
-          console.warn('⚠️ [SequenceUtils] Force resetting stuck drag state after 5s timeout');
-          this.dragOptimization.isDragging = false;
-          this.executePendingRender('timeout-reset');
+      // Still actively dragging (mouse held down)? Leave it alone - the view is
+      // updated when the drag ends.
+      const navDragging = window.genomeBrowser?.navigationManager?.dragState?.isDragging;
+      if (navDragging) return;
 
-          // Additional fallback if pending render fails
-          setTimeout(() => {
-            if (!this.dragOptimization.pendingRender) {
-              this.forceSequenceRerender();
-            }
-          }, 100);
-        }
+      const now = Date.now();
+      const timeSinceDrag = now - this.dragOptimization.lastRenderTime;
+
+      // No active drag but our flag is still set after a long pause => stuck.
+      if (timeSinceDrag > 5000) {
+        console.warn('⚠️ [SequenceUtils] Recovering stuck drag-optimization state after 5s with no active drag');
+        this.dragOptimization.isDragging = false;
+        this.executePendingRender('timeout-reset');
+
+        // Additional fallback if pending render fails
+        setTimeout(() => {
+          if (!this.dragOptimization.pendingRender) {
+            this.forceSequenceRerender();
+          }
+        }, 100);
       }
     }, 1000);
   }
@@ -683,6 +693,17 @@ class SequenceUtils {
 
   // Sequence display methods
   displayEnhancedSequence(chromosome, sequence) {
+    // During an active genome-view drag in "unified" mode (the default), leave
+    // the bottom sequence panel exactly as-is. It is re-rendered once when the
+    // drag ends (NavigationManager calls displayGenomeView on mouseup, at which
+    // point isDragging is already false). This is what makes the panel update
+    // only after release instead of jumping mid-drag. Real-time mode falls
+    // through and renders (throttled) on every move.
+    const nav = this.genomeBrowser.navigationManager;
+    if (nav && nav.dragState && nav.dragState.isDragging && nav.dragRealtimeSequenceUpdate !== true) {
+      return;
+    }
+
     const start = this.genomeBrowser.currentPosition.start;
     const end = this.genomeBrowser.currentPosition.end;
 

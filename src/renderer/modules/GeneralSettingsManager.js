@@ -30,6 +30,8 @@ class GeneralSettingsManager {
       enableFileCache: true,
       cacheSize: 500,
       enableGlobalDragging: true, // Enable dynamic viewport updates for all tracks during dragging
+      dragUpdateGeneFeatures: false, // Re-render gene features live during drag (avoids trailing blank space); off by default for performance
+      dragRealtimeSequenceUpdate: false, // Update bottom sequence panel live during drag (real-time) vs only after release (unified, default)
 
       // Wheel Zoom
       enableWheelZoom: true,
@@ -446,6 +448,8 @@ class GeneralSettingsManager {
       'enableAnimations',
       'enableFileCache',
       'enableGlobalDragging',
+      'dragUpdateGeneFeatures',
+      'dragRealtimeSequenceUpdate',
       'enableWheelZoom',
       'wheelZoomToCursor',
       'enableLLMIntegration',
@@ -753,6 +757,8 @@ class GeneralSettingsManager {
       'enableAnimations',
       'enableFileCache',
       'enableGlobalDragging',
+      'dragUpdateGeneFeatures',
+      'dragRealtimeSequenceUpdate',
       'enableWheelZoom',
       'wheelZoomToCursor',
       'enableLLMIntegration',
@@ -883,6 +889,8 @@ class GeneralSettingsManager {
 
     // Apply feature settings
     this.applyFeatureSetting('enableGlobalDragging', this.settings.enableGlobalDragging);
+    this.applyFeatureSetting('dragUpdateGeneFeatures', this.settings.dragUpdateGeneFeatures);
+    this.applyFeatureSetting('dragRealtimeSequenceUpdate', this.settings.dragRealtimeSequenceUpdate);
   }
 
   /**
@@ -1085,6 +1093,18 @@ class GeneralSettingsManager {
             }
             console.log(`🎯 Updated individual track settings to inherit global dragging: ${enabled}`);
           }
+        }
+        break;
+      case 'dragUpdateGeneFeatures':
+        // Live gene-feature re-rendering during drag
+        if (window.genomeBrowser?.navigationManager?.setDragUpdateGeneFeatures) {
+          window.genomeBrowser.navigationManager.setDragUpdateGeneFeatures(enabled);
+        }
+        break;
+      case 'dragRealtimeSequenceUpdate':
+        // Real-time vs unified bottom-sequence update during drag
+        if (window.genomeBrowser?.navigationManager?.setDragRealtimeSequenceUpdate) {
+          window.genomeBrowser.navigationManager.setDragRealtimeSequenceUpdate(enabled);
         }
         break;
       case 'enableWheelZoom':

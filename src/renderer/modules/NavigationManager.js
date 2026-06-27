@@ -19,7 +19,20 @@ class NavigationManager {
       lastUpdateX: 0,
       cumulativeVisualDeltaX: 0,
       lastCalculatedStart: 0, // Store the last calculated position
+      // Effective track width (px-per-base reference) captured once at drag
+      // start. Reused for every move and for the final commit so the live
+      // visual offset and the rendered position share one conversion factor.
+      elementWidth: 0,
+      dynamicUpdate: false, // Whether tracks re-render live during this drag (per global/per-track setting)
       canvasTransformsApplied: false, // Track if Canvas transforms were applied during this drag
+    };
+
+    // Throttle for full/sequence re-renders performed *during* a drag when the
+    // real-time update options are enabled (defaults keep these off).
+    this.dragRenderThrottle = {
+      lastViewRenderTime: 0,
+      lastSequenceRenderTime: 0,
+      intervalMs: 80, // ~12fps cap for the heavy in-drag re-renders
     };
 
     // Ruler update throttling
@@ -31,6 +44,15 @@ class NavigationManager {
 
     // Global dragging setting - when enabled, all tracks update during drag
     this.globalDraggingEnabled = false;
+
+    // Drag update behavior (both default OFF for best performance):
+    //  - dragUpdateGeneFeatures: re-render genome tracks live during a drag so
+    //    gene features fill in instead of leaving blank space on the trailing
+    //    edge (otherwise only a lightweight CSS transform is applied).
+    //  - dragRealtimeSequenceUpdate: re-render the bottom sequence panel live
+    //    during a drag (otherwise it updates once, when the drag ends).
+    this.dragUpdateGeneFeatures = false;
+    this.dragRealtimeSequenceUpdate = false;
 
     // Circular browsing mode - when enabled, navigation wraps around sequence boundaries
     this.circularMode = false;
@@ -226,8 +248,8 @@ class NavigationManager {
 
     if (gb.genomeNavigationBar) gb.genomeNavigationBar.update();
     if (gb.tabManager) {
-gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validatedEnd, { source: 'navigation' });
-}
+      gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validatedEnd, { source: 'navigation' });
+    }
 
     return { success: true, chromosome, start: validatedStart, end: validatedEnd };
   }
@@ -340,7 +362,8 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     // If range hasn't changed significantly, skip update
     if (Math.abs(newRange - currentRange) < 1) return;
 
-    let newStart; let newEnd;
+    let newStart;
+    let newEnd;
 
     if (this.wheelZoomConfig.zoomToCursor) {
       // Calculate cursor position within the genome browser
@@ -761,7 +784,8 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     }
 
     const sequence = this.genomeBrowser.currentSequence[currentChr];
-    let start; let end;
+    let start;
+    let end;
 
     // Parse different formats: "1000", "1000-2000", "chr1:1000-2000"
     if (input.includes(':')) {
@@ -1181,8 +1205,7 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     const sequenceContent = document.getElementById('sequenceContent');
     if (sequenceContent) {
       const sequenceView = sequenceContent.querySelector('.detailed-sequence-view');
-      const scrollContainer =
-        sequenceContent.querySelector('.detailed-sequence-view.virtualized') || sequenceContent;
+      const scrollContainer = sequenceContent.querySelector('.detailed-sequence-view.virtualized') || sequenceContent;
       const isVirtualized = scrollContainer.classList?.contains('virtualized');
       // Calculate the line number where the match is located
       const currentPos = this.genomeBrowser.currentPosition;
@@ -1341,12 +1364,16 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     this.dragState.lastUpdateX = e.clientX;
 
     const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-    const elementWidth = this.getEffectiveWidth(element);
+    // Use the width captured at drag start so the px->base conversion and the
+    // visual offset stay consistent even if a live re-render replaces the
+    // dragged element mid-drag (which would make a re-measure return 0).
+    const elementWidth = this.dragState.elementWidth || this.getEffectiveWidth(element);
     const sequence = this.genomeBrowser.currentSequence[chromosome];
 
     const positionChange = Math.round((deltaX * currentRange) / elementWidth);
 
-    let newStart; let newEnd;
+    let newStart;
+    let newEnd;
 
     if (this.circularMode) {
       // Circular mode: wrap positions around using modulo arithmetic
@@ -1368,28 +1395,44 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     // Store the calculated position
     this.dragState.lastCalculatedStart = newStart;
 
-    // Debug output for move calculation
-    console.log('🔧 [DRAG-MOVE] Movement calculation:');
-    console.log('  - Mouse deltaX:', deltaX, 'px');
-    console.log('  - Element width:', elementWidth, 'px');
-    console.log('  - Current range:', currentRange, 'bp');
-    console.log('  - Start position:', startPosition, 'bp');
-    console.log('  - Position change:', positionChange, 'bp');
-    console.log('  - Raw new start (before bounds):', startPosition - positionChange, 'bp');
-    console.log('  - Bounded new start:', newStart, 'bp');
-    console.log('  - New end:', newEnd, 'bp');
-    console.log('  - Movement ratio:', (deltaX / elementWidth).toFixed(4), 'px/px');
-    console.log('  - Genome movement:', newStart - startPosition, 'bp');
-
-    // Update the visual representation
+    // Update the position model that every track/ruler reads from
     this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
 
-    if (this.globalDraggingEnabled) {
+    // Drive the live visual offset as a PERCENTAGE of each track's own width,
+    // snapped to the committed integer-base position. This is what makes the
+    // drag preview match the final render exactly. A CSS `translateX(p%)` is
+    // resolved against the element's OWN width - the very same width the
+    // renderer maps the genomic range across - so the preview and the committed
+    // view stay aligned even when our px-based width measurement is slightly off
+    // (vertical scrollbar, border, inset, etc.). A px transform built from a
+    // mismatched width is what made the view overshoot during the drag and
+    // visibly snap back on release (drag left -> lands right, drag right ->
+    // lands left). Using (startPosition - newStart)/range as the fraction makes
+    // the preview reflect whole-base navigation, identical to the re-render.
+    const shiftPercent = this.circularMode
+      ? (deltaX / elementWidth) * 100
+      : ((startPosition - newStart) / currentRange) * 100;
+
+    if (this.dragState.dynamicUpdate) {
+      // Re-render the genome tracks live so gene features / reads (and other
+      // tracks) stay filled in instead of leaving blank space behind the drag.
+      // Enabled by the global setting or by a per-track "update while dragging"
+      // toggle (genes / reads). Computed once at drag start.
+      this.requestDragViewRender(chromosome, sequence);
+    } else if (this.globalDraggingEnabled) {
       // Update all tracks during drag when global dragging is enabled
-      this.performGlobalDragUpdate(deltaX, chromosome);
+      this.performGlobalDragUpdate(shiftPercent, chromosome);
     } else {
       // Only update the current track (default behavior)
-      this.performVisualDragUpdate(deltaX, element);
+      this.performVisualDragUpdate(shiftPercent, element);
+    }
+
+    // Optionally refresh the bottom sequence panel live. When a full track
+    // re-render is already happening (dynamic update) the bottom panel is
+    // refreshed through displayGenomeView, so this only needs to fire for the
+    // lighter transform path.
+    if (!this.dragState.dynamicUpdate && this.dragRealtimeSequenceUpdate) {
+      this.requestDragSequenceRender(chromosome, sequence);
     }
 
     if (this.genomeBrowser.genomeNavigationBar) {
@@ -1401,6 +1444,31 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
 
     // Show real-time position feedback during drag
     this.showDragPositionFeedback(newStart, newEnd, chromosome);
+  }
+
+  /**
+   * Throttled full genome-view re-render used during a drag when
+   * `dragUpdateGeneFeatures` is enabled. The drag-end handler always performs a
+   * final authoritative render, so dropping intermediate frames here is safe.
+   */
+  requestDragViewRender(chromosome, sequence) {
+    const now = performance.now();
+    if (now - this.dragRenderThrottle.lastViewRenderTime < this.dragRenderThrottle.intervalMs) return;
+    this.dragRenderThrottle.lastViewRenderTime = now;
+    this.genomeBrowser.displayGenomeView(chromosome, sequence);
+  }
+
+  /**
+   * Throttled bottom-sequence re-render used during a drag when
+   * `dragRealtimeSequenceUpdate` is enabled without full track re-rendering.
+   */
+  requestDragSequenceRender(chromosome, sequence) {
+    const now = performance.now();
+    if (now - this.dragRenderThrottle.lastSequenceRenderTime < this.dragRenderThrottle.intervalMs) return;
+    this.dragRenderThrottle.lastSequenceRenderTime = now;
+    if (this.genomeBrowser.sequenceUtils) {
+      this.genomeBrowser.sequenceUtils.displayEnhancedSequence(chromosome, sequence);
+    }
   }
 
   handleDocumentMouseUp(e) {
@@ -1474,9 +1542,10 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     console.log('  - Current range:', currentRange, 'bp');
     console.log('  - Sequence length:', sequence.length, 'bp');
 
-    // Verify consistency with drag movement
+    // Verify consistency with drag movement (use the width captured at drag
+    // start; the element may have been replaced by a live re-render)
     const totalMouseDelta = e.clientX - startX;
-    const elementWidth = this.getEffectiveWidth(element);
+    const elementWidth = this.dragState.elementWidth || this.getEffectiveWidth(element);
     const expectedPositionChange = Math.round((totalMouseDelta * currentRange) / elementWidth);
     const expectedNewStart = Math.max(
       0,
@@ -1545,13 +1614,17 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
       document.body.appendChild(tooltip);
     }
 
-    // Format position with commas for readability
-    const formatPosition = pos => (pos + 1).toLocaleString();
+    // Format position with commas for readability. `start` is a 0-based
+    // inclusive index and `end` is 0-based exclusive, so the 1-based inclusive
+    // display range is (start + 1)..end - matching the bottom sequence title,
+    // the tab title and the position input. (end + 1) was off by one base.
     const range = end - start;
+    const displayStart = (start + 1).toLocaleString();
+    const displayEnd = end.toLocaleString();
 
     tooltip.innerHTML = `
             <div><strong>${chromosome}</strong></div>
-            <div>${formatPosition(start)} - ${formatPosition(end)}</div>
+            <div>${displayStart} - ${displayEnd}</div>
             <div>Range: ${range.toLocaleString()} bp</div>
         `;
 
@@ -1629,8 +1702,17 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
         startX: e.clientX,
         startPosition: this.genomeBrowser.currentPosition.start,
         lastCalculatedStart: this.genomeBrowser.currentPosition.start,
+        // Capture the px-per-base reference once; reused for the whole drag
+        elementWidth: this.getEffectiveWidth(element),
+        // Decide once whether tracks should re-render live during this drag
+        // (global setting OR a per-track "update while dragging" toggle).
+        dynamicUpdate: this.isDynamicDragUpdateEnabled(),
         // No Canvas-specific tracking needed with unified container approach
       });
+
+      // Reset in-drag render throttles so the first eligible frame renders
+      this.dragRenderThrottle.lastViewRenderTime = 0;
+      this.dragRenderThrottle.lastSequenceRenderTime = 0;
 
       element.style.cursor = 'grabbing';
       element.classList.add('dragging');
@@ -1720,83 +1802,65 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
   getEffectiveWidth(element) {
     if (!element) return 800;
 
-    let width = 0;
-    let method = 'none';
+    // Resolve the track-content wrapper for this draggable element.
+    const trackContent = element.classList?.contains('track-content')
+      ? element
+      : element.querySelector?.('.track-content') || element;
 
-    // Find the track-content element first (this is what SVG uses as containerWidth)
-    let trackContent = null;
-    if (element.classList.contains('track-content')) {
-      trackContent = element;
-    } else {
-      trackContent = element.querySelector('.track-content');
-    }
+    // Measure the ACTUAL drawing surface, not the track-content border box.
+    // Each track maps the genomic range across the width of an inner surface
+    // that is sized to the *content* box (SVG width:100%, fixed-width reads
+    // canvas, etc.). The track-content border box additionally includes borders
+    // and any inner scrollbar (e.g. the scrollable reads container), so
+    // converting the mouse delta with it over-counts the available width. This
+    // mainly affects the px->base "feel" now that the visual transform is
+    // percentage-based, but keeping it accurate also keeps the committed
+    // position matching the mouse 1:1.
+    const surfaceSelectors = [
+      '.unified-gene-container', // genes & features (SVG/Canvas live inside this)
+      '.genes-svg-container',
+      '.reads-svg-container',
+      '.gc-svg-container',
+      '.variant-svg-container',
+      '.detailed-ruler-container',
+      'canvas',
+      'svg',
+    ];
 
-    // Use the SAME width calculation method as SVG containerWidth in TrackRenderer
-    if (trackContent) {
-      trackContent.style.width = '100%'; // Force layout calculation like in renderGeneElementsSVG
-      width = trackContent.getBoundingClientRect().width || trackContent.offsetWidth;
-      method = 'track-content.getBoundingClientRect (matching SVG)';
-    }
-
-    // Fallback methods if track-content not found
-    if (!width) {
-      const svg = element.querySelector('.genes-svg-container svg');
-      if (svg) {
-        const viewBox = svg.getAttribute('viewBox');
-        if (viewBox) {
-          const viewBoxParts = viewBox.split(' ');
-          if (viewBoxParts.length >= 3) {
-            width = parseFloat(viewBoxParts[2]); // Extract width from viewBox
-            method = 'svg.viewBox.width (exact match)';
-          }
-        }
-
-        if (!width) {
-          width = svg.getBoundingClientRect().width;
-          method = 'svg.boundingClientRect';
+    for (const selector of surfaceSelectors) {
+      const surface = trackContent.matches?.(selector) ? trackContent : trackContent.querySelector?.(selector);
+      if (surface) {
+        const surfaceWidth = surface.getBoundingClientRect().width;
+        if (surfaceWidth > 1) {
+          return surfaceWidth;
         }
       }
     }
 
-    if (!width) {
-      width = element.offsetWidth;
-      method = 'element.offsetWidth';
-    }
-
-    const finalWidth = width || 800; // Fallback to 800 if all else fails
-
-    // Additional debug info to compare with SVG containerWidth
-    if (trackContent) {
-      const svgContainer = trackContent.querySelector('.genes-svg-container');
-      if (svgContainer) {
-        const svgViewBox = svgContainer.getAttribute('viewBox');
-        console.log('🔧 [DRAG-WIDTH] Effective width:', finalWidth, 'px (method:', method + ')');
-        console.log('🔧 [DRAG-WIDTH] SVG viewBox for comparison:', svgViewBox);
-
-        if (svgViewBox) {
-          const svgWidth = parseFloat(svgViewBox.split(' ')[2]);
-          console.log('🔧 [DRAG-WIDTH] SVG containerWidth (should match):', svgWidth, 'px');
-          console.log(
-            '🔧 [DRAG-WIDTH] Width consistency:',
-            Math.abs(finalWidth - svgWidth) < 1 ? '✅ CONSISTENT' : '❌ MISMATCH'
-          );
-        }
+    // Fallback: the track-content CONTENT box. clientWidth excludes the border
+    // and any vertical scrollbar on the track-content itself, which is closer to
+    // the true drawing width than getBoundingClientRect (the border box).
+    if (trackContent && trackContent.nodeType === 1) {
+      trackContent.style.width = '100%'; // Force layout calculation
+      const contentWidth = trackContent.clientWidth || trackContent.getBoundingClientRect().width;
+      if (contentWidth > 1) {
+        return contentWidth;
       }
-    } else {
-      console.log('🔧 [DRAG-WIDTH] Effective width:', finalWidth, 'px (method:', method + ')');
     }
 
-    return finalWidth;
+    return element.clientWidth || element.offsetWidth || 800;
   }
 
   /**
    * Perform lightweight visual updates during dragging
    * Uses unified container approach for consistent movement
    */
-  performVisualDragUpdate(deltaX, element) {
-    // Use unified container approach for all rendering modes
-    // No special Canvas transforms needed - let Canvas follow container movement
-    console.log('🔧 [VISUAL-DRAG] Using unified container movement for all rendering modes');
+  performVisualDragUpdate(shiftPercent, element) {
+    // Percentage transforms keep the preview aligned with the eventual render
+    // regardless of the exact track width (see handleDocumentMouseMove). SVG
+    // transform attributes can't take percentages, so the legacy SVG-element
+    // path uses a pixel value derived from the width captured at drag start.
+    const svgDeltaX = (shiftPercent / 100) * (this.dragState.elementWidth || this.getEffectiveWidth(element));
 
     // Check if this is a reads track and handle it directly
     const readsTrackElement = element.closest('.reads-track');
@@ -1809,16 +1873,9 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
         }
 
         const baseTransform = trackContent.dataset.baseTransform || '';
-        if (baseTransform) {
-          trackContent.style.transform = `${baseTransform} translateX(${deltaX}px)`;
-        } else {
-          trackContent.style.transform = `translateX(${deltaX}px)`;
-        }
-
-        console.log('🔧 [DRAG-VISUAL] Reads track container update:');
-        console.log('  - deltaX applied:', deltaX, 'px');
-        console.log('  - Base transform:', baseTransform || 'none');
-        console.log('  - Final transform:', trackContent.style.transform);
+        trackContent.style.transform = baseTransform
+          ? `${baseTransform} translateX(${shiftPercent}%)`
+          : `translateX(${shiftPercent}%)`;
         return; // Early return for reads track
       }
     }
@@ -1829,28 +1886,12 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     if (unifiedContainer) {
       // Apply transform to the unified container only
       const baseTransform = unifiedContainer.dataset.baseTransform || '';
-
-      if (baseTransform) {
-        unifiedContainer.style.transform = `${baseTransform} translateX(${deltaX}px)`;
-      } else {
-        unifiedContainer.style.transform = `translateX(${deltaX}px)`;
-      }
-
-      // Debug output for unified visual updates
-      console.log('🔧 [DRAG-VISUAL] Unified container update:');
-      console.log('  - deltaX applied:', deltaX, 'px');
-      console.log('  - Base transform:', baseTransform || 'none');
-      console.log('  - Final transform:', unifiedContainer.style.transform);
+      unifiedContainer.style.transform = baseTransform
+        ? `${baseTransform} translateX(${shiftPercent}%)`
+        : `translateX(${shiftPercent}%)`;
     } else {
       // Fallback to individual element updates
       const allElements = document.querySelectorAll('[data-base-transform]');
-
-      console.log('🔧 [DRAG-VISUAL] Fallback individual element update:');
-      console.log('  - deltaX applied:', deltaX, 'px');
-      console.log('  - Elements to update:', allElements.length);
-
-      let htmlElementsUpdated = 0;
-      let svgElementsUpdated = 0;
 
       allElements.forEach(el => {
         const baseTransform = el.dataset.baseTransform || '';
@@ -1858,27 +1899,18 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
         const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
 
         if (isHTMLElement) {
-          // HTML elements: use style.transform
-          if (baseTransform) {
-            el.style.transform = `${baseTransform} translateX(${deltaX}px)`;
-          } else {
-            el.style.transform = `translateX(${deltaX}px)`;
-          }
-          htmlElementsUpdated++;
+          // HTML elements: use style.transform (percentage of own width)
+          el.style.transform = baseTransform
+            ? `${baseTransform} translateX(${shiftPercent}%)`
+            : `translateX(${shiftPercent}%)`;
         } else if (isSVGElement) {
-          // SVG elements: only use transform attribute, never style.transform
-          if (baseTransform) {
-            el.setAttribute('transform', `${baseTransform} translate(${deltaX}, 0)`);
-          } else {
-            el.setAttribute('transform', `translate(${deltaX}, 0)`);
-          }
-          svgElementsUpdated++;
+          // SVG elements: only use transform attribute (user units, px-derived)
+          el.setAttribute(
+            'transform',
+            baseTransform ? `${baseTransform} translate(${svgDeltaX}, 0)` : `translate(${svgDeltaX}, 0)`
+          );
         }
       });
-
-      console.log('🔧 [DRAG-VISUAL] Update summary:');
-      console.log('  - HTML elements updated:', htmlElementsUpdated);
-      console.log('  - SVG elements updated:', svgElementsUpdated);
     }
 
     // Add visual feedback class
@@ -1886,31 +1918,25 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
   }
 
   // Perform global drag update - applies visual transforms to all tracks (no redraw during drag)
-  performGlobalDragUpdate(deltaX, chromosome) {
-    console.log('🌍 [GLOBAL-DRAG] Applying visual transforms to all tracks with deltaX:', deltaX, 'px');
-
-    // Use unified container approach for all rendering modes
-    // No special Canvas transforms needed - let Canvas follow container movement
-    console.log('🔧 [GLOBAL-DRAG] Using unified container movement for all rendering modes');
+  performGlobalDragUpdate(shiftPercent, chromosome) {
+    // Apply a width-relative shift to every track. HTML containers use a CSS
+    // percentage (resolved against their own width = the render width, so the
+    // preview matches the committed view). SVG elements don't honor percentage
+    // translations reliably, so they get a pixel value derived from their own
+    // measured width - which is equivalent and equally width-independent.
+    const pxFor = el => (shiftPercent / 100) * (el.getBoundingClientRect().width || this.dragState.elementWidth || 0);
 
     // Handle genes & features track specially to match single-track behavior
     const unifiedContainer = document.querySelector('.unified-gene-container');
-    let tracksUpdated = 0;
 
     if (unifiedContainer) {
       // For genes & features, use the same logic as performVisualDragUpdate
       this.cacheTrackTransform(unifiedContainer);
       const baseTransform = unifiedContainer.dataset.baseTransform || '';
-
-      if (baseTransform) {
-        unifiedContainer.style.transform = `${baseTransform} translateX(${deltaX}px)`;
-      } else {
-        unifiedContainer.style.transform = `translateX(${deltaX}px)`;
-      }
-
+      unifiedContainer.style.transform = baseTransform
+        ? `${baseTransform} translateX(${shiftPercent}%)`
+        : `translateX(${shiftPercent}%)`;
       unifiedContainer.classList.add('visual-dragging');
-      tracksUpdated++;
-      console.log('🌍 [GLOBAL-DRAG] Applied unified container transform for genes & features');
     } else {
       // Fallback: handle genes & features elements individually
       const geneElements = document.querySelectorAll('[data-base-transform]');
@@ -1920,26 +1946,16 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
         const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
 
         if (isHTMLElement) {
-          // HTML elements: use style.transform
-          if (baseTransform) {
-            el.style.transform = `${baseTransform} translateX(${deltaX}px)`;
-          } else {
-            el.style.transform = `translateX(${deltaX}px)`;
-          }
+          el.style.transform = baseTransform
+            ? `${baseTransform} translateX(${shiftPercent}%)`
+            : `translateX(${shiftPercent}%)`;
           el.classList.add('visual-dragging');
-          tracksUpdated++;
         } else if (isSVGElement) {
-          // SVG elements: use SVG transform attribute (same as single-track mode)
-          if (baseTransform) {
-            el.setAttribute('transform', `${baseTransform} translate(${deltaX}, 0)`);
-          } else {
-            el.setAttribute('transform', `translate(${deltaX}, 0)`);
-          }
+          const d = pxFor(el);
+          el.setAttribute('transform', baseTransform ? `${baseTransform} translate(${d}, 0)` : `translate(${d}, 0)`);
           el.classList.add('visual-dragging');
-          tracksUpdated++;
         }
       });
-      console.log('🌍 [GLOBAL-DRAG] Applied individual transforms for genes & features elements');
     }
 
     // Handle all other tracks (non-genes) with regular track-content approach
@@ -1960,36 +1976,25 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
       // Cache the original transform if not already cached
       this.cacheTrackTransform(trackContent);
 
-      // Apply visual transform to the track content
+      // track-content is an HTML div -> percentage of its own width
       const baseTransform = trackContent.dataset.baseTransform || '';
-      if (baseTransform) {
-        trackContent.style.transform = `${baseTransform} translateX(${deltaX}px)`;
-      } else {
-        trackContent.style.transform = `translateX(${deltaX}px)`;
-      }
-
-      // Add visual feedback class
+      trackContent.style.transform = baseTransform
+        ? `${baseTransform} translateX(${shiftPercent}%)`
+        : `translateX(${shiftPercent}%)`;
       trackContent.classList.add('visual-dragging');
-      tracksUpdated++;
     });
 
-    // Handle other specialized SVG containers (but not genes-svg-container)
+    // Handle other specialized SVG containers (but not genes-svg-container).
+    // These are <svg> elements, so use a px value from their own width.
     const otherSvgContainers = document.querySelectorAll('.gc-svg-container, .variant-svg-container');
     otherSvgContainers.forEach(svgContainer => {
       this.cacheTrackTransform(svgContainer);
 
       const baseTransform = svgContainer.dataset.baseTransform || '';
-      if (baseTransform) {
-        svgContainer.style.transform = `${baseTransform} translateX(${deltaX}px)`;
-      } else {
-        svgContainer.style.transform = `translateX(${deltaX}px)`;
-      }
-
+      const d = pxFor(svgContainer);
+      svgContainer.style.transform = baseTransform ? `${baseTransform} translateX(${d}px)` : `translateX(${d}px)`;
       svgContainer.classList.add('visual-dragging');
-      tracksUpdated++;
     });
-
-    console.log('🌍 [GLOBAL-DRAG] Visual transforms applied to', tracksUpdated, 'track elements');
   }
 
   // Cache transform for a single track element
@@ -2340,6 +2345,41 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
     console.log(`🎯 NavigationManager: Global dragging ${enabled ? 'enabled' : 'disabled'}`);
   }
 
+  // Re-render gene features (and other tracks) live during a drag instead of
+  // only applying a CSS transform. Eliminates trailing blank space at the cost
+  // of extra rendering. Default OFF.
+  setDragUpdateGeneFeatures(enabled) {
+    this.dragUpdateGeneFeatures = enabled === true;
+    console.log(
+      `🧬 NavigationManager: Update gene features during drag ${this.dragUpdateGeneFeatures ? 'enabled' : 'disabled'}`
+    );
+  }
+
+  // Update the bottom sequence panel live during a drag (real-time) versus only
+  // once the drag ends (unified). Default OFF (unified).
+  setDragRealtimeSequenceUpdate(enabled) {
+    this.dragRealtimeSequenceUpdate = enabled === true;
+    console.log(
+      `🔤 NavigationManager: Real-time sequence update during drag ${this.dragRealtimeSequenceUpdate ? 'enabled' : 'disabled'}`
+    );
+  }
+
+  // Decide whether tracks should re-render live during a drag. True when the
+  // global setting is on, or when a per-track "update while dragging" toggle is
+  // enabled for the genes or reads track (read from their saved track settings).
+  isDynamicDragUpdateEnabled() {
+    if (this.dragUpdateGeneFeatures) return true;
+    const trackRenderer = this.genomeBrowser.trackRenderer;
+    if (!trackRenderer || typeof trackRenderer.getTrackSettings !== 'function') return false;
+    try {
+      if (trackRenderer.getTrackSettings('genes')?.dynamicUpdateOnDrag === true) return true;
+      if (trackRenderer.getTrackSettings('reads')?.dynamicUpdateOnDrag === true) return true;
+    } catch (err) {
+      console.warn('⚠️ [NavigationManager] Could not read per-track dynamic drag settings:', err);
+    }
+    return false;
+  }
+
   /**
    * Get current search settings
    */
@@ -2592,7 +2632,10 @@ gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validated
   initializeModalDragResize(modal, modalContent) {
     let isDragging = false;
     let isResizing = false;
-    let startX; let startY; let startWidth; let startHeight;
+    let startX;
+    let startY;
+    let startWidth;
+    let startHeight;
 
     // Drag functionality
     const header = modalContent.querySelector('.modal-header');
