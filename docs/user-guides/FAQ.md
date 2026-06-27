@@ -10,7 +10,7 @@ CodeXomics is an AI-native genome browser that provides comprehensive tools for 
 
 Version `v0.722` consolidates the platform architecture and adds production-readiness work around:
 
-- **Dynamic Tool Registry** with 185 YAML tool schemas across 19 active categories
+- **Dynamic Tool Registry** with 179 YAML tool schemas across 18 active categories
 - **Multi-Agent AI System** with specialized agents for navigation, analysis, data, plugins, external tools, and research
 - **Dual-mode MCP Server** for direct tool calls or agent-routed prompts
 - **Plugin API 2.0.0** with marketplace infrastructure
