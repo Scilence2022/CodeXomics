@@ -1,0 +1,154 @@
+name: capture_screenshot
+version: 1.0.0
+description: Capture a PNG or JPEG screenshot of the full CodeXomics application interface or rendered genome tracks
+category: file_operations
+subcategory: export
+keywords:
+  - screenshot
+  - screen shot
+  - capture
+  - snapshot
+  - image
+  - png
+  - jpeg
+  - jpg
+  - tracks
+  - application
+  - interface
+  - export
+  - save
+priority: 2
+execution:
+  type: client
+  timeout: 30000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    target:
+      type: string
+      description: Screenshot target area
+      enum: ['full_application', 'tracks', 'visible_tracks', 'track']
+      default: 'full_application'
+    mode:
+      type: string
+      description: Capture mode for track screenshots. "full" composites the full rendered track element; "visible" captures the visible viewport rectangle.
+      enum: ['full', 'visible']
+      default: 'full'
+    trackType:
+      type: string
+      description: Track type to capture when target is "track" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast)
+    filePath:
+      type: string
+      description: Output file path. Relative paths are resolved against the current working directory. If omitted, CodeXomics opens a save dialog unless auto_save is true.
+      examples:
+        - '/Users/user/Desktop/codexomics-tracks.png'
+        - 'screenshots/current-view.png'
+    filename:
+      type: string
+      description: Alias for filePath
+    outputPath:
+      type: string
+      description: Alias for filePath
+    auto_save:
+      type: boolean
+      description: When true and no explicit file path is provided, save to a default filename in the current working directory instead of opening a save dialog
+      default: false
+    format:
+      type: string
+      description: Image format
+      enum: ['png', 'jpeg', 'jpg']
+      default: 'png'
+    quality:
+      type: integer
+      description: JPEG quality from 1 to 100. Ignored for PNG.
+      minimum: 1
+      maximum: 100
+      default: 92
+    scale:
+      type: number
+      description: Scale factor for full/composited track screenshots. Native visible captures use the window scale.
+      minimum: 0.25
+      maximum: 4
+      default: 1
+    background:
+      type: string
+      description: CSS background color for composited track screenshots
+      default: '#ffffff'
+    maxPixels:
+      type: integer
+      description: Maximum pixel budget for composited track screenshots
+      minimum: 1000000
+      maximum: 200000000
+      default: 64000000
+    copyToClipboard:
+      type: boolean
+      description: Also copy the captured image to the system clipboard
+      default: false
+  required: []
+sample_usages:
+  - user_query: Take a screenshot of the full CodeXomics app
+    tool_call: capture_screenshot(target="full_application", filePath="/Users/user/Desktop/codexomics-app.png")
+    thought: User wants the whole visible application interface captured as an image
+    expected_result: PNG file containing the visible CodeXomics application interface
+  - user_query: Save a screenshot of the genome tracks
+    tool_call: capture_screenshot(target="tracks", mode="full", filePath="screenshots/tracks.png")
+    thought: User wants an image of the rendered genome tracks, including canvas and SVG tracks
+    expected_result: PNG file containing the full rendered tracks area
+  - user_query: Capture just the reads track as JPEG
+    tool_call: capture_screenshot(target="track", trackType="reads", format="jpeg", quality=90, filePath="reads-track.jpg")
+    thought: User wants a single track screenshot with JPEG output
+    expected_result: JPEG file containing the reads track
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['export_current_view_fasta', 'get_track_status', 'get_current_state']
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - export
+    - screenshot
+    - image
+    - dataExport
+  complexity: moderate
+  usage_pattern: occasional
+error_handling:
+  no_tracks:
+    error: 'No rendered tracks are available to capture'
+    solution: 'Load a genome or use target="full_application"'
+    retry: false
+  track_not_found:
+    error: 'Requested track was not found in the current view'
+    solution: 'Use get_track_status to inspect visible tracks, then retry with a valid trackType'
+    retry: false
+  output_denied:
+    error: 'Output path is outside approved application directories'
+    solution: 'Choose a path through the save dialog or set an approved working directory first'
+    retry: false
+  capture_too_large:
+    error: 'Screenshot is too large'
+    solution: 'Lower scale, increase maxPixels, or use mode="visible"'
+    retry: true
+returns:
+  success: 'boolean - Whether screenshot capture succeeded'
+  result: 'object - Screenshot result including:
+    - filePath: string - Saved screenshot file path
+    - fileName: string - Saved screenshot file name
+    - fileSize: number - Output file size in bytes
+    - target: string - Captured target
+    - mode: string - Capture mode
+    - format: string - Output image format
+    - width: number - Captured image width in pixels
+    - height: number - Captured image height in pixels
+    - copiedToClipboard: boolean - Whether the image was copied to clipboard'
+  error: 'string - Error message if success is false'

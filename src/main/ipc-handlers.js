@@ -9,7 +9,7 @@
  * @module ipc-handlers
  */
 
-const { ipcMain, app, dialog, BrowserWindow } = require('electron');
+const { ipcMain, app, dialog, BrowserWindow, nativeImage, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -585,6 +585,119 @@ function registerIpcHandlers(deps) {
     }
 
     return { safeGenomePath, sidecarPath, fallbackDir, fallbackPath };
+  };
+
+  const sanitizeScreenshotFormat = format => {
+    const normalized = String(format || 'png')
+      .trim()
+      .toLowerCase();
+    if (['jpg', 'jpeg'].includes(normalized)) return 'jpeg';
+    return 'png';
+  };
+
+  const getScreenshotExtension = format => (format === 'jpeg' ? 'jpg' : 'png');
+
+  const sanitizeScreenshotRect = rect => {
+    if (!rect || typeof rect !== 'object') return undefined;
+
+    const x = Math.max(0, Math.floor(Number(rect.x) || 0));
+    const y = Math.max(0, Math.floor(Number(rect.y) || 0));
+    const width = Math.max(1, Math.ceil(Number(rect.width) || 0));
+    const height = Math.max(1, Math.ceil(Number(rect.height) || 0));
+
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
+      return undefined;
+    }
+
+    return { x, y, width, height };
+  };
+
+  const getScreenshotBuffer = (image, format, quality) => {
+    if (!image || image.isEmpty()) {
+      throw new Error('Captured screenshot image is empty');
+    }
+
+    if (format === 'jpeg') {
+      const normalizedQuality = Number.isFinite(Number(quality))
+        ? Math.max(1, Math.min(Math.trunc(Number(quality)), 100))
+        : 92;
+      return image.toJPEG(normalizedQuality);
+    }
+
+    return image.toPNG();
+  };
+
+  const resolveScreenshotSavePath = async (event, options, format) => {
+    const explicitPath =
+      options.filePath ||
+      options.file_path ||
+      options.outputPath ||
+      options.output_path ||
+      options.savePath ||
+      options.save_path ||
+      options.filename ||
+      options.fileName ||
+      null;
+
+    if (explicitPath) {
+      const safeFilePath = assertAllowedFileAccess(app, String(explicitPath), { operation: 'write screenshot' });
+      const parsed = path.parse(safeFilePath);
+      if (!parsed.ext) {
+        return `${safeFilePath}.${getScreenshotExtension(format)}`;
+      }
+      return safeFilePath;
+    }
+
+    if (options.save === false || options.saveFile === false) {
+      return null;
+    }
+
+    const parentWindow =
+      BrowserWindow.fromWebContents(event.sender) || workspaceHostManager.getNativeWindow(getMainGenomeTarget());
+    const extension = getScreenshotExtension(format);
+    const defaultFilename = String(options.defaultFilename || `codexomics-screenshot.${extension}`);
+    const result = await dialog.showSaveDialog(parentWindow, {
+      title: options.title || 'Save Screenshot',
+      defaultPath: defaultFilename,
+      filters: [
+        format === 'jpeg'
+          ? { name: 'JPEG Image', extensions: ['jpg', 'jpeg'] }
+          : { name: 'PNG Image', extensions: ['png'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    });
+
+    rememberApprovedDialogPaths(result, {
+      source: 'user-save-dialog',
+      capabilities: [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.WRITE],
+      operation: 'save-screenshot',
+    });
+
+    return result.canceled ? null : result.filePath;
+  };
+
+  const createScreenshotImage = async (event, options) => {
+    if (options.imageDataUrl || options.imageDataURL) {
+      const dataUrl = String(options.imageDataUrl || options.imageDataURL);
+      if (!/^data:image\/(png|jpeg|jpg);base64,/i.test(dataUrl)) {
+        throw new Error('Screenshot image data must be a PNG or JPEG data URL');
+      }
+
+      const image = nativeImage.createFromDataURL(dataUrl);
+      if (image.isEmpty()) {
+        throw new Error('Renderer-composited screenshot image is empty');
+      }
+      return image;
+    }
+
+    const targetWindow =
+      BrowserWindow.fromWebContents(event.sender) || workspaceHostManager.getNativeWindow(getMainGenomeTarget());
+    if (!targetWindow || targetWindow.isDestroyed()) {
+      throw new Error('No active application window is available for screenshot capture');
+    }
+
+    const rect = sanitizeScreenshotRect(options.rect);
+    return targetWindow.webContents.capturePage(rect);
   };
 
   const toolRegistryService = deps.toolRegistryService || new ToolRegistryService({ app });
@@ -1555,6 +1668,54 @@ function registerIpcHandlers(deps) {
     } catch (error) {
       console.error('Error showing open file dialog:', error);
       return { success: false, canceled: false, filePaths: [], error: error.message };
+    }
+  });
+
+  ipcMain.handle('screenshot:capture', async (event, options = {}) => {
+    try {
+      const format = sanitizeScreenshotFormat(options.format);
+      const image = await createScreenshotImage(event, options);
+      const buffer = getScreenshotBuffer(image, format, options.quality);
+      const imageSize = image.getSize();
+
+      let copiedToClipboard = false;
+      if (options.copyToClipboard || options.copy_to_clipboard) {
+        clipboard.writeImage(image);
+        copiedToClipboard = true;
+      }
+
+      let filePath = null;
+      let fileSize = 0;
+      const savePath = await resolveScreenshotSavePath(event, options, format);
+      if (savePath) {
+        const safeFilePath = assertAllowedFileAccess(app, savePath, { operation: 'write screenshot' });
+        const directory = path.dirname(safeFilePath);
+        await fs.promises.mkdir(directory, { recursive: true });
+        await fs.promises.writeFile(safeFilePath, buffer);
+        const stats = await fs.promises.stat(safeFilePath);
+        filePath = safeFilePath;
+        fileSize = stats.size;
+      }
+
+      if (!filePath && !copiedToClipboard) {
+        return { success: false, canceled: true, error: 'Screenshot capture was canceled' };
+      }
+
+      return {
+        success: true,
+        filePath,
+        fileName: filePath ? path.basename(filePath) : null,
+        fileSize,
+        format,
+        width: imageSize.width,
+        height: imageSize.height,
+        copiedToClipboard,
+        target: options.target || 'full_application',
+        mode: options.mode || null,
+      };
+    } catch (error) {
+      console.error('Error capturing screenshot:', error);
+      return { success: false, error: error.message };
     }
   });
 

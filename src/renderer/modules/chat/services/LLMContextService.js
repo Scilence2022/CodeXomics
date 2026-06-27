@@ -55,6 +55,11 @@ class LLMContextService {
       case 'export_data':
         return `💾 Exported ${result.format.toUpperCase()} data successfully. File has been downloaded.`;
 
+      case 'capture_screenshot':
+        return result.filePath
+          ? `💾 Captured ${result.target || 'application'} screenshot to ${result.filePath}`
+          : `💾 Captured ${result.target || 'application'} screenshot`;
+
       case 'get_gene_details':
         if (result.found) {
           return `🧬 Found ${result.count} gene(s) matching "${result.geneName}": ${result.genes
@@ -728,6 +733,7 @@ class LLMContextService {
       'switch_to_tab',
       'create_annotation',
       'export_data',
+      'capture_screenshot',
       // Track control operations - complete actions that don't need follow-up
       'toggle_track',
       'toggle_annotation_track',
@@ -766,6 +772,7 @@ class LLMContextService {
         'switch_to_tab',
         'create_annotation',
         'export_data',
+        'capture_screenshot',
         // Track control operations
         'toggle_track',
         'toggle_annotation_track',
@@ -1014,6 +1021,11 @@ ${result.result.message || 'The requested tab is now active.'}`;
         return result.result?.success
           ? `✅ Data exported successfully: ${result.result.filePath || result.result.message || 'Export completed'}`
           : 'Data export completed with potential issues.';
+
+      case 'capture_screenshot':
+        return result.result?.success
+          ? `✅ Screenshot captured successfully: ${result.result.filePath || result.result.message || 'Capture completed'}`
+          : 'Screenshot capture completed with potential issues.';
 
       case 'load_genome_file':
         if (result.result && result.result.success) {
@@ -1707,6 +1719,7 @@ Annotation & Data:
   - create_annotation: Add new annotations
   - toggle_track: Show/hide data tracks
   - export_data: Export in various formats
+  - capture_screenshot: Save a full application or genome tracks screenshot
   - get_genome_info: Get genome metadata
 
 Track Settings:

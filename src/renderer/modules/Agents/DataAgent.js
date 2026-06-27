@@ -90,6 +90,7 @@ class DataAgent extends AgentBase {
     this.toolMapping.set('export_cds_fasta', this.exportCdsFasta.bind(this));
     this.toolMapping.set('export_protein_fasta', this.exportProteinFasta.bind(this));
     this.toolMapping.set('export_current_view_fasta', this.exportCurrentViewFasta.bind(this));
+    this.toolMapping.set('capture_screenshot', this.captureScreenshot.bind(this));
 
     // Data import tools - builtInToolsMap-aligned names
     this.toolMapping.set('load_genome_file', this.loadGenomeFile.bind(this));
@@ -547,6 +548,20 @@ class DataAgent extends AgentBase {
         end: state.end,
         format: 'fasta',
       });
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Capture a screenshot through the renderer ScreenshotManager.
+   */
+  async captureScreenshot(parameters) {
+    try {
+      if (!this.app?.screenshotManager) {
+        throw new Error('Screenshot manager not available');
+      }
+      return await this.app.screenshotManager.captureScreenshot(parameters);
     } catch (error) {
       return { success: false, error: error.message };
     }

@@ -1,0 +1,551 @@
+/**
+ * ScreenshotManager - Captures application and genome track screenshots.
+ */
+class ScreenshotManager {
+  constructor(genomeBrowser) {
+    this.genomeBrowser = genomeBrowser;
+    this.defaultMaxPixels = 64000000;
+  }
+
+  async captureFullApplicationScreenshot(parameters = {}) {
+    return this.captureScreenshot({
+      ...parameters,
+      target: 'full_application',
+      mode: 'visible',
+    });
+  }
+
+  async captureTracksScreenshot(parameters = {}) {
+    return this.captureScreenshot({
+      ...parameters,
+      target: parameters.target || 'tracks',
+      mode: parameters.mode || parameters.captureMode || 'full',
+    });
+  }
+
+  async captureScreenshot(parameters = {}) {
+    try {
+      const target = this.normalizeTarget(parameters.target || parameters.scope || parameters.area);
+      const mode = this.normalizeMode(parameters.mode || parameters.captureMode, target);
+      const format = this.normalizeFormat(parameters.format || this.inferFormatFromOutputPath(parameters));
+      const copyToClipboard = Boolean(parameters.copyToClipboard || parameters.copy_to_clipboard);
+      const defaultFilename = this.buildDefaultFilename(target, mode, format, parameters);
+      const filePath = this.resolveOutputPath(parameters, defaultFilename);
+      const quality = this.normalizeQuality(parameters.quality);
+
+      await this.waitForPaint();
+
+      if (target === 'full_application') {
+        return await this.captureNativeScreenshot({
+          target,
+          mode,
+          format,
+          quality,
+          filePath,
+          copyToClipboard,
+          defaultFilename,
+        });
+      }
+
+      if (target === 'visible_tracks') {
+        const element = this.getTracksElement();
+        const rect = this.getVisibleCaptureRect(element);
+        return await this.captureNativeScreenshot({
+          target,
+          mode,
+          rect,
+          format,
+          quality,
+          filePath,
+          copyToClipboard,
+          defaultFilename,
+        });
+      }
+
+      const element =
+        target === 'track'
+          ? this.getTrackElement(parameters.trackType || parameters.track_type)
+          : this.getTracksElement();
+      const imageDataUrl = await this.renderElementToDataUrl(element, {
+        target,
+        mode,
+        format,
+        quality,
+        scale: parameters.scale || parameters.scaleFactor || parameters.resolutionScale,
+        background: parameters.background || parameters.backgroundColor || parameters.background_color,
+        maxPixels: parameters.maxPixels || parameters.max_pixels,
+      });
+
+      return await this.saveRenderedScreenshot({
+        target,
+        mode,
+        format,
+        quality,
+        filePath,
+        copyToClipboard,
+        defaultFilename,
+        imageDataUrl,
+      });
+    } catch (error) {
+      console.error('[ScreenshotManager] Screenshot capture failed:', error);
+      if (error.message === 'Screenshot capture was canceled') {
+        return {
+          success: false,
+          canceled: true,
+          error: error.message,
+          tool: 'capture_screenshot',
+        };
+      }
+      this.showNotification(`Screenshot failed: ${error.message}`, 'error');
+      return {
+        success: false,
+        error: error.message,
+        tool: 'capture_screenshot',
+      };
+    }
+  }
+
+  normalizeTarget(target) {
+    const normalized = String(target || 'full_application')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+
+    if (['app', 'application', 'full_app', 'full_application', 'interface', 'window'].includes(normalized)) {
+      return 'full_application';
+    }
+
+    if (['visible_tracks', 'visible_track', 'current_view', 'visible_view', 'viewer'].includes(normalized)) {
+      return 'visible_tracks';
+    }
+
+    if (['track', 'single_track', 'selected_track'].includes(normalized)) {
+      return 'track';
+    }
+
+    return 'tracks';
+  }
+
+  normalizeMode(mode, target) {
+    if (target === 'full_application') return 'visible';
+    const normalized = String(mode || 'full')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+    return ['visible', 'viewport'].includes(normalized) ? 'visible' : 'full';
+  }
+
+  normalizeFormat(format) {
+    const normalized = String(format || 'png')
+      .trim()
+      .toLowerCase();
+    return ['jpg', 'jpeg'].includes(normalized) ? 'jpeg' : 'png';
+  }
+
+  inferFormatFromOutputPath(parameters = {}) {
+    const requestedPath =
+      parameters.filePath ||
+      parameters.file_path ||
+      parameters.outputPath ||
+      parameters.output_path ||
+      parameters.savePath ||
+      parameters.save_path ||
+      parameters.filename ||
+      parameters.fileName ||
+      '';
+    const extension = String(requestedPath).split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg'].includes(extension) ? 'jpeg' : 'png';
+  }
+
+  normalizeQuality(quality) {
+    const numericQuality = Number(quality);
+    if (!Number.isFinite(numericQuality)) return 92;
+    return Math.max(1, Math.min(Math.trunc(numericQuality), 100));
+  }
+
+  getExtension(format) {
+    return format === 'jpeg' ? 'jpg' : 'png';
+  }
+
+  getPathModule() {
+    if (typeof window !== 'undefined' && window.path) {
+      return window.path;
+    }
+    return {
+      isAbsolute: filePath => /^([A-Za-z]:[\\/]|\/)/.test(String(filePath || '')),
+      resolve: (...parts) => parts.filter(Boolean).join('/').replace(/\/+/g, '/'),
+    };
+  }
+
+  getCurrentWorkingDirectory() {
+    if (this.genomeBrowser?.chatManager?.currentWorkingDirectory) {
+      return this.genomeBrowser.chatManager.currentWorkingDirectory;
+    }
+    if (typeof window !== 'undefined' && window.chatManager?.currentWorkingDirectory) {
+      return window.chatManager.currentWorkingDirectory;
+    }
+    return '/';
+  }
+
+  resolveOutputPath(parameters, defaultFilename) {
+    const requestedPath =
+      parameters.filePath ||
+      parameters.file_path ||
+      parameters.outputPath ||
+      parameters.output_path ||
+      parameters.savePath ||
+      parameters.save_path ||
+      parameters.filename ||
+      parameters.fileName ||
+      null;
+
+    if (!requestedPath && !(parameters.auto_save || parameters.autoSave)) {
+      return null;
+    }
+
+    const pathToResolve = String(requestedPath || defaultFilename);
+    const pathModule = this.getPathModule();
+    if (pathModule && typeof pathModule.isAbsolute === 'function' && pathModule.isAbsolute(pathToResolve)) {
+      return pathToResolve;
+    }
+
+    if (pathModule && typeof pathModule.resolve === 'function') {
+      return pathModule.resolve(this.getCurrentWorkingDirectory(), pathToResolve);
+    }
+
+    return `${this.getCurrentWorkingDirectory().replace(/\/+$/g, '')}/${pathToResolve}`;
+  }
+
+  buildDefaultFilename(target, mode, format, parameters = {}) {
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+$/, '').replace('T', '-');
+    const extension = this.getExtension(format);
+    const regionPart = this.getRegionFilenamePart();
+    const targetPart = target === 'full_application' ? 'full-application' : target.replace(/_/g, '-');
+    const modePart = target === 'full_application' ? '' : `-${mode}`;
+    const trackPart =
+      target === 'track' && (parameters.trackType || parameters.track_type)
+        ? `-${this.sanitizeFilenamePart(parameters.trackType || parameters.track_type)}`
+        : '';
+    return `codexomics-${targetPart}${modePart}${trackPart}-${regionPart}-${timestamp}.${extension}`;
+  }
+
+  getRegionFilenamePart() {
+    const chromosome =
+      this.genomeBrowser?.currentChromosome || document.getElementById('chromosomeSelect')?.value || 'view';
+    const position = this.genomeBrowser?.currentPosition || {};
+    if (Number.isFinite(position.start) && Number.isFinite(position.end)) {
+      return this.sanitizeFilenamePart(`${chromosome}-${position.start + 1}-${position.end}`);
+    }
+    return this.sanitizeFilenamePart(chromosome);
+  }
+
+  sanitizeFilenamePart(value) {
+    return (
+      String(value || 'view')
+        .replace(/[^A-Za-z0-9_.-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80) || 'view'
+    );
+  }
+
+  getTracksElement() {
+    const element = document.getElementById('genomeViewer');
+    if (!element) {
+      throw new Error('Genome viewer element was not found');
+    }
+    if (!element.children || element.children.length === 0) {
+      throw new Error('No rendered tracks are available to capture');
+    }
+    return element;
+  }
+
+  getTrackElement(trackType) {
+    if (!trackType) {
+      throw new Error('trackType is required when target is "track"');
+    }
+
+    const normalized = String(trackType).trim();
+    const escaped = this.escapeCssIdentifier(normalized);
+    const className = this.getTrackClassName(normalized);
+    const selectors = [
+      `[data-track-type="${escaped}"]`,
+      className ? `.${className}` : null,
+      `.${escaped}-track`,
+    ].filter(Boolean);
+
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      if (element) return element;
+    }
+
+    throw new Error(`Track "${trackType}" was not found in the current view`);
+  }
+
+  getTrackClassName(trackType) {
+    const normalized = String(trackType || '').trim();
+    const config = this.genomeBrowser?.trackRenderer?.trackConfig?.[normalized];
+    if (config?.className) return config.className;
+
+    const fallback = {
+      genes: 'gene-track',
+      gene: 'gene-track',
+      gc: 'gc-track',
+      sequence: 'sequence-track',
+      reads: 'reads-track',
+      variants: 'variant-track',
+      wig: 'wig-track',
+      wigTracks: 'wig-track',
+      primers: 'primer-track',
+      proteins: 'protein-track',
+      actions: 'actions-track',
+      blast: 'blast-track',
+    };
+    return fallback[normalized] || fallback[normalized.toLowerCase()] || null;
+  }
+
+  escapeCssIdentifier(value) {
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+      return CSS.escape(value);
+    }
+    return String(value).replace(/["\\]/g, '\\$&');
+  }
+
+  getVisibleCaptureRect(element) {
+    const rect = element.getBoundingClientRect();
+    const left = Math.max(0, Math.floor(rect.left));
+    const top = Math.max(0, Math.floor(rect.top));
+    const right = Math.min(window.innerWidth, Math.ceil(rect.right));
+    const bottom = Math.min(window.innerHeight, Math.ceil(rect.bottom));
+    const width = right - left;
+    const height = bottom - top;
+
+    if (width < 1 || height < 1) {
+      throw new Error('Target screenshot area is outside the visible window');
+    }
+
+    return { x: left, y: top, width, height };
+  }
+
+  async captureNativeScreenshot(options) {
+    const result = await this.invokeCapture({
+      target: options.target,
+      mode: options.mode,
+      rect: options.rect,
+      format: options.format,
+      quality: options.quality,
+      filePath: options.filePath,
+      copyToClipboard: options.copyToClipboard,
+      defaultFilename: options.defaultFilename,
+      title: this.getDialogTitle(options.target),
+      save: true,
+    });
+
+    return this.formatResult(result, options.target, options.mode);
+  }
+
+  async saveRenderedScreenshot(options) {
+    const result = await this.invokeCapture({
+      target: options.target,
+      mode: options.mode,
+      imageDataUrl: options.imageDataUrl,
+      format: options.format,
+      quality: options.quality,
+      filePath: options.filePath,
+      copyToClipboard: options.copyToClipboard,
+      defaultFilename: options.defaultFilename,
+      title: this.getDialogTitle(options.target),
+      save: true,
+    });
+
+    return this.formatResult(result, options.target, options.mode);
+  }
+
+  async invokeCapture(options) {
+    if (!window.electronAPI?.captureScreenshot) {
+      throw new Error('electronAPI.captureScreenshot is unavailable');
+    }
+    const result = await window.electronAPI.captureScreenshot(options);
+    if (!result?.success) {
+      if (result?.canceled) {
+        throw new Error('Screenshot capture was canceled');
+      }
+      throw new Error(result?.error || 'Screenshot capture failed');
+    }
+    return result;
+  }
+
+  formatResult(result, target, mode) {
+    const destination = result.filePath ? `Saved screenshot to ${result.filePath}` : 'Screenshot copied to clipboard';
+    this.showNotification(destination, 'success');
+    return {
+      success: true,
+      tool: 'capture_screenshot',
+      message: destination,
+      target,
+      mode,
+      filePath: result.filePath || null,
+      fileName: result.fileName || null,
+      fileSize: result.fileSize || 0,
+      format: result.format || 'png',
+      width: result.width,
+      height: result.height,
+      copiedToClipboard: !!result.copiedToClipboard,
+    };
+  }
+
+  getDialogTitle(target) {
+    if (target === 'full_application') return 'Save Full Application Screenshot';
+    if (target === 'track') return 'Save Track Screenshot';
+    return 'Save Tracks Screenshot';
+  }
+
+  async renderElementToDataUrl(element, options) {
+    const rect = element.getBoundingClientRect();
+    const width = Math.max(1, Math.ceil(options.mode === 'full' ? element.scrollWidth || rect.width : rect.width));
+    const height = Math.max(1, Math.ceil(options.mode === 'full' ? element.scrollHeight || rect.height : rect.height));
+    const scale = this.normalizeScale(options.scale);
+    const maxPixels = this.normalizeMaxPixels(options.maxPixels);
+    const totalPixels = width * height * scale * scale;
+
+    if (totalPixels > maxPixels) {
+      throw new Error(
+        `Screenshot is too large (${Math.round(totalPixels).toLocaleString()} pixels). Lower scale or capture visible tracks only.`
+      );
+    }
+
+    const clone = element.cloneNode(true);
+    this.replaceCanvasWithImages(element, clone);
+    this.inlineComputedStyles(element, clone);
+    clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+    clone.style.width = `${width}px`;
+    clone.style.height = `${height}px`;
+    clone.style.minHeight = `${height}px`;
+    clone.style.overflow = options.mode === 'full' ? 'visible' : 'hidden';
+    clone.style.margin = '0';
+
+    const background = options.background || this.getElementBackground(element, options.format);
+    const serialized = new XMLSerializer().serializeToString(clone);
+    const svgMarkup = [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+      `<foreignObject x="0" y="0" width="${width}" height="${height}">`,
+      serialized,
+      '</foreignObject>',
+      '</svg>',
+    ].join('');
+
+    const svgBlob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    try {
+      const image = await this.loadImage(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(width * scale);
+      canvas.height = Math.ceil(height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(image, 0, 0, width, height);
+      return canvas.toDataURL(
+        `image/${options.format}`,
+        options.format === 'jpeg' ? this.normalizeQuality(options.quality) / 100 : undefined
+      );
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  normalizeScale(scale) {
+    const numericScale = Number(scale);
+    if (!Number.isFinite(numericScale)) return 1;
+    return Math.max(0.25, Math.min(numericScale, 4));
+  }
+
+  normalizeMaxPixels(maxPixels) {
+    const numericPixels = Number(maxPixels);
+    if (!Number.isFinite(numericPixels) || numericPixels <= 0) {
+      return this.defaultMaxPixels;
+    }
+    return Math.max(1000000, Math.min(Math.trunc(numericPixels), 200000000));
+  }
+
+  replaceCanvasWithImages(sourceElement, cloneElement) {
+    const sourceCanvases = sourceElement.querySelectorAll('canvas');
+    const cloneCanvases = cloneElement.querySelectorAll('canvas');
+    sourceCanvases.forEach((sourceCanvas, index) => {
+      const cloneCanvas = cloneCanvases[index];
+      if (!cloneCanvas) return;
+
+      try {
+        const image = document.createElement('img');
+        image.src = sourceCanvas.toDataURL('image/png');
+        image.width = sourceCanvas.clientWidth || sourceCanvas.width;
+        image.height = sourceCanvas.clientHeight || sourceCanvas.height;
+        image.style.cssText = cloneCanvas.getAttribute('style') || '';
+        image.style.width = sourceCanvas.style.width || `${image.width}px`;
+        image.style.height = sourceCanvas.style.height || `${image.height}px`;
+        image.style.display = sourceCanvas.style.display || 'block';
+        cloneCanvas.replaceWith(image);
+      } catch (error) {
+        console.warn('[ScreenshotManager] Could not copy canvas into screenshot:', error);
+      }
+    });
+  }
+
+  inlineComputedStyles(sourceElement, cloneElement) {
+    const sourceNodes = [sourceElement, ...sourceElement.querySelectorAll('*')];
+    const cloneNodes = [cloneElement, ...cloneElement.querySelectorAll('*')];
+    const count = Math.min(sourceNodes.length, cloneNodes.length);
+
+    for (let index = 0; index < count; index += 1) {
+      const sourceNode = sourceNodes[index];
+      const cloneNode = cloneNodes[index];
+      const computed = window.getComputedStyle(sourceNode);
+      let cssText = '';
+      for (const property of computed) {
+        cssText += `${property}:${computed.getPropertyValue(property)};`;
+      }
+      cloneNode.setAttribute('style', `${cssText}${cloneNode.getAttribute('style') || ''}`);
+
+      if (sourceNode instanceof HTMLInputElement || sourceNode instanceof HTMLTextAreaElement) {
+        cloneNode.setAttribute('value', sourceNode.value);
+      }
+      if (sourceNode instanceof HTMLSelectElement && cloneNode instanceof HTMLSelectElement) {
+        cloneNode.value = sourceNode.value;
+      }
+    }
+  }
+
+  getElementBackground(element, format) {
+    if (format === 'jpeg') return '#ffffff';
+    const computed = window.getComputedStyle(element);
+    const backgroundColor = computed.backgroundColor || '#ffffff';
+    return backgroundColor === 'rgba(0, 0, 0, 0)' || backgroundColor === 'transparent' ? '#ffffff' : backgroundColor;
+  }
+
+  loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Unable to render screenshot image'));
+      image.src = url;
+    });
+  }
+
+  waitForPaint() {
+    return new Promise(resolve => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
+  }
+
+  showNotification(message, type = 'info') {
+    if (typeof this.genomeBrowser?.showNotification === 'function') {
+      this.genomeBrowser.showNotification(message, type);
+    }
+  }
+}
+
+window.ScreenshotManager = ScreenshotManager;
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ScreenshotManager;
+}

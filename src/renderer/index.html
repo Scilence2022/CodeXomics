@@ -438,42 +438,51 @@
                 </div>
 
                 <div class="file-menu-container">
-                    <button id="exportFileBtn" class="btn btn-secondary dropdown-toggle" disabled>
+                    <button id="exportFileBtn" class="btn btn-secondary dropdown-toggle">
                         <i class="fas fa-download"></i>
                         Export As
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="dropdown-menu" id="exportDropdownMenu">
-                        <button class="dropdown-item" id="exportFastaBtn">
+                        <button class="dropdown-item" id="exportFastaBtn" disabled>
                             <i class="fas fa-dna"></i>
                             FASTA Sequence
                         </button>
-                        <button class="dropdown-item" id="exportGenbankBtn">
+                        <button class="dropdown-item" id="exportGenbankBtn" disabled>
                             <i class="fas fa-file-alt"></i>
                             GenBank Format
                         </button>
                         <div class="dropdown-divider"></div>
-                        <button class="dropdown-item" id="exportCDSFastaBtn">
+                        <button class="dropdown-item" id="exportCDSFastaBtn" disabled>
                             <i class="fas fa-code"></i>
                             CDS FASTA
                         </button>
-                        <button class="dropdown-item" id="exportProteinFastaBtn">
+                        <button class="dropdown-item" id="exportProteinFastaBtn" disabled>
                             <i class="fas fa-shapes"></i>
                             Protein FASTA
                         </button>
                         <div class="dropdown-divider"></div>
-                        <button class="dropdown-item" id="exportGFFBtn">
+                        <button class="dropdown-item" id="exportGFFBtn" disabled>
                             <i class="fas fa-tags"></i>
                             GFF Annotations
                         </button>
-                        <button class="dropdown-item" id="exportBEDBtn">
+                        <button class="dropdown-item" id="exportBEDBtn" disabled>
                             <i class="fas fa-bed"></i>
                             BED Format
                         </button>
                         <div class="dropdown-divider"></div>
-                        <button class="dropdown-item" id="exportCurrentViewBtn">
+                        <button class="dropdown-item" id="exportCurrentViewBtn" disabled>
                             <i class="fas fa-eye"></i>
                             Current View (FASTA)
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="captureFullScreenshotBtn">
+                            <i class="fas fa-camera"></i>
+                            Full Application Screenshot
+                        </button>
+                        <button class="dropdown-item" id="captureTracksScreenshotBtn">
+                            <i class="fas fa-image"></i>
+                            Tracks Screenshot
                         </button>
                         <div class="dropdown-divider"></div>
                         <button class="dropdown-item" id="exportConfigBtn"
@@ -5036,6 +5045,7 @@ Supported formats:
     <!-- VSCodeSequenceEditor.js and SequenceEditor.js removed - only using view mode -->
     <script src="modules/SequenceUtils.js"></script>
     <script src="modules/ExportManager.js"></script>
+    <script src="modules/ScreenshotManager.js"></script>
     <script src="modules/LLMConfigManager.js"></script>
     <script src="modules/MultiAgentSettingsManager.js"></script>
     <script src="modules/ThemeManager.js"></script>

@@ -3740,6 +3740,16 @@ class ChatManager {
   }
 
   /**
+   * Capture the application interface or rendered genome tracks as an image.
+   */
+  async captureScreenshot(parameters = {}) {
+    if (!this.app?.screenshotManager) {
+      throw new Error('Screenshot manager not available');
+    }
+    return this.app.screenshotManager.captureScreenshot(parameters);
+  }
+
+  /**
    * Helper method to show save dialog for export operations
    * Uses Electron's native save dialog for file selection
    */
@@ -8039,6 +8049,7 @@ TOOL AVAILABILITY:
         'export_gff_annotations',
         'export_bed_format',
         'export_current_view_fasta',
+        'capture_screenshot',
       ],
       'BLAST & SIMILARITY': [
         'blast_search',
@@ -8284,6 +8295,7 @@ ${coreTools}
       export_gff_annotations: () => this.exportGFFAnnotations(parameters),
       export_bed_format: () => this.exportBEDFormat(parameters),
       export_current_view_fasta: () => this.exportCurrentViewFasta(parameters),
+      capture_screenshot: () => this.captureScreenshot(parameters),
 
       // System tools
       get_chromosome_list: () => this.getChromosomeList(),
@@ -9403,6 +9415,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // Data Export/Import
       'export_data',
+      'capture_screenshot',
       'export_region_features',
       'get_file_info',
       'get_chromosome_list',
@@ -14491,6 +14504,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
       // Data Agent - data management and export
       export_data: 'Data Agent',
+      capture_screenshot: 'Data Agent',
       export_region_features: 'Data Agent',
       get_file_info: 'Data Agent',
       get_genome_info: 'Data Agent',

@@ -931,8 +931,23 @@ class ExportManager {
     const hasData = this.genomeBrowser.currentSequence && Object.keys(this.genomeBrowser.currentSequence).length > 0;
 
     if (exportBtn) {
-      exportBtn.disabled = !hasData;
+      exportBtn.disabled = false;
     }
+
+    [
+      'exportFastaBtn',
+      'exportGenbankBtn',
+      'exportCDSFastaBtn',
+      'exportProteinFastaBtn',
+      'exportGFFBtn',
+      'exportBEDBtn',
+      'exportCurrentViewBtn',
+    ].forEach(buttonId => {
+      const button = document.getElementById(buttonId);
+      if (button) {
+        button.disabled = !hasData;
+      }
+    });
   }
 }
 
