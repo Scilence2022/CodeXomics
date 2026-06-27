@@ -9,7 +9,7 @@
  * @module ipc-handlers
  */
 
-const { ipcMain, app, dialog, BrowserWindow, nativeImage, clipboard } = require('electron');
+const { ipcMain, app, dialog, BrowserWindow, nativeImage, clipboard, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -272,6 +272,64 @@ function writeJsonFile(filePath, data) {
     );
   }
   fs.writeFileSync(filePath, payload, 'utf8');
+}
+
+function readGeneralSettingsIfPresent() {
+  try {
+    return readConfigFileIfPresent(getConfigStoragePaths().generalSettings) || {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function areAiSecurityRestrictionsDisabled() {
+  return readGeneralSettingsIfPresent().disableAiSecurityRestrictions === true;
+}
+
+function isAiInitiatedRequest(options = {}) {
+  return options.aiInitiated === true || options.ai_initiated === true || options.source === 'ai';
+}
+
+function resolveIpcFileAccess(targetPath, options = {}) {
+  if (isAiInitiatedRequest(options) && areAiSecurityRestrictionsDisabled()) {
+    if (!targetPath || typeof targetPath !== 'string') {
+      throw new Error(`File ${options.operation || 'access'} requires a valid path`);
+    }
+
+    const resolvedPath = path.resolve(targetPath);
+    if (options.mustExist && !fs.existsSync(resolvedPath)) {
+      throw new Error(`File does not exist: ${resolvedPath}`);
+    }
+
+    return resolvedPath;
+  }
+
+  return assertAllowedFileAccess(app, targetPath, options);
+}
+
+function getRequestedImagePath(options = {}) {
+  if (typeof options === 'string') {
+    return options;
+  }
+
+  return (
+    options.filePath ||
+    options.file_path ||
+    options.path ||
+    options.imagePath ||
+    options.image_path ||
+    options.filename ||
+    options.fileName ||
+    null
+  );
+}
+
+function assertSupportedImagePath(filePath) {
+  const extension = path.extname(String(filePath || '')).toLowerCase();
+  const supportedExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tif', '.tiff']);
+  if (!supportedExtensions.has(extension)) {
+    throw new Error(`Unsupported image file type: ${extension || 'none'}`);
+  }
 }
 
 function resolveBlastExecutable(appInstance, commandToken, configuredBlastPath) {
@@ -656,7 +714,12 @@ function registerIpcHandlers(deps) {
       null;
 
     if (explicitPath) {
-      const safeFilePath = assertAllowedFileAccess(app, String(explicitPath), { operation: 'write screenshot' });
+      const safeFilePath = resolveIpcFileAccess(String(explicitPath), {
+        operation: 'write screenshot',
+        aiInitiated: options.aiInitiated,
+        ai_initiated: options.ai_initiated,
+        source: options.source,
+      });
       const parsed = path.parse(safeFilePath);
       if (!parsed.ext) {
         return `${safeFilePath}.${getScreenshotExtension(format)}`;
@@ -1715,13 +1778,30 @@ function registerIpcHandlers(deps) {
       let fileSize = 0;
       const savePath = await resolveScreenshotSavePath(event, options, format);
       if (savePath) {
-        const safeFilePath = assertAllowedFileAccess(app, savePath, { operation: 'write screenshot' });
+        const safeFilePath = resolveIpcFileAccess(savePath, {
+          operation: 'write screenshot',
+          aiInitiated: options.aiInitiated,
+          ai_initiated: options.ai_initiated,
+          source: options.source,
+        });
         const directory = path.dirname(safeFilePath);
         await fs.promises.mkdir(directory, { recursive: true });
         await fs.promises.writeFile(safeFilePath, buffer);
         const stats = await fs.promises.stat(safeFilePath);
         filePath = safeFilePath;
         fileSize = stats.size;
+      }
+
+      let opened = false;
+      if (
+        filePath &&
+        (options.autoOpen || options.auto_open || options.openAfterCapture || options.open_after_capture)
+      ) {
+        const openError = await shell.openPath(filePath);
+        if (openError) {
+          throw new Error(openError);
+        }
+        opened = true;
       }
 
       if (!filePath && !copiedToClipboard) {
@@ -1737,11 +1817,44 @@ function registerIpcHandlers(deps) {
         width: imageSize.width,
         height: imageSize.height,
         copiedToClipboard,
+        opened,
         target: options.target || 'full_application',
         mode: options.mode || null,
       };
     } catch (error) {
       console.error('Error capturing screenshot:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('open-image-file', async (event, options = {}) => {
+    try {
+      const requestedPath = getRequestedImagePath(options);
+      if (!requestedPath) {
+        throw new Error('Image file path is required');
+      }
+
+      const safeFilePath = resolveIpcFileAccess(String(requestedPath), {
+        operation: 'open image',
+        mustExist: true,
+        aiInitiated: options.aiInitiated,
+        ai_initiated: options.ai_initiated,
+        source: options.source,
+      });
+      assertSupportedImagePath(safeFilePath);
+
+      const openError = await shell.openPath(safeFilePath);
+      if (openError) {
+        throw new Error(openError);
+      }
+
+      return {
+        success: true,
+        filePath: safeFilePath,
+        fileName: path.basename(safeFilePath),
+      };
+    } catch (error) {
+      console.error('Error opening image file:', error);
       return { success: false, error: error.message };
     }
   });

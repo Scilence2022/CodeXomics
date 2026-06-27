@@ -43,10 +43,10 @@ parameters:
       description: Track type to capture when target is "track" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast). Use "all" to capture all tracks.
     filePath:
       type: string
-      description: Output file path. Relative paths are resolved against the current working directory. If omitted, CodeXomics opens a save dialog unless auto_save is true.
+      description: Output file path. Relative paths are resolved against the current working directory. For AI calls, omit this path to save an auto-generated file in the current working directory.
       examples:
-        - '/Users/user/Desktop/codexomics-tracks.png'
         - 'screenshots/current-view.png'
+        - 'codexomics-tracks.png'
     filename:
       type: string
       description: Alias for filePath
@@ -55,7 +55,11 @@ parameters:
       description: Alias for filePath
     auto_save:
       type: boolean
-      description: When true and no explicit file path is provided, save to a default filename in the current working directory instead of opening a save dialog
+      description: When true and no explicit file path is provided, save to a default filename in the current working directory instead of opening a save dialog. AI-triggered screenshot calls default this to true.
+      default: false
+    autoOpen:
+      type: boolean
+      description: Open the saved screenshot in the system image viewer after capture
       default: false
     format:
       type: string
@@ -91,9 +95,9 @@ parameters:
   required: []
 sample_usages:
   - user_query: Take a screenshot of the full CodeXomics app
-    tool_call: capture_screenshot(target="full_application", filePath="/Users/user/Desktop/codexomics-app.png")
+    tool_call: capture_screenshot(target="full_application")
     thought: User wants the whole visible application interface captured as an image
-    expected_result: PNG file containing the visible CodeXomics application interface
+    expected_result: PNG file containing the visible CodeXomics application interface saved in the current working directory
   - user_query: Save a screenshot of the genome tracks
     tool_call: capture_screenshot(target="tracks", mode="full", filePath="screenshots/tracks.png")
     thought: User wants an image of the rendered genome tracks, including canvas and SVG tracks
@@ -102,6 +106,10 @@ sample_usages:
     tool_call: capture_screenshot(target="track", trackType="reads", format="jpeg", quality=90, filePath="reads-track.jpg")
     thought: User wants a single track screenshot with JPEG output
     expected_result: JPEG file containing the reads track
+  - user_query: Take a screenshot and open it
+    tool_call: capture_screenshot(target="full_application", autoOpen=true)
+    thought: User wants the screenshot saved and displayed immediately
+    expected_result: PNG file saved in the current working directory and opened in the system image viewer
 relationships:
   depends_on: []
   conflicts_with: []
@@ -133,7 +141,7 @@ error_handling:
     retry: false
   output_denied:
     error: 'Output path is outside approved application directories'
-    solution: 'Choose a path through the save dialog or set an approved working directory first'
+    solution: 'Use the current working directory, choose a path through the save dialog, set an approved working directory, or enable the explicit AI security bypass for trusted workflows'
     retry: false
   capture_too_large:
     error: 'Screenshot is too large'

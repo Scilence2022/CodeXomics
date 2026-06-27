@@ -10,6 +10,7 @@ const allowedInvokeChannels = [
   'broadcast-theme-to-pm',
   'request-current-theme',
   'screenshot:capture',
+  'open-image-file',
   'show-save-dialog',
   'show-open-file-dialog',
   'write-file',
@@ -364,6 +365,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showSaveDialog: options => ipcRenderer.invoke('show-save-dialog', options),
   writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
   captureScreenshot: options => ipcRenderer.invoke('screenshot:capture', options),
+  openImageFile: options => ipcRenderer.invoke('open-image-file', options),
 
   // Project Manager APIs
   selectProjectDirectory: () => ipcRenderer.invoke('selectProjectDirectory'),

@@ -343,6 +343,7 @@ class ConfigManager {
         chopchopUrl: 'https://chopchop.cbu.uib.no/',
         progenFixerUrl: 'https://progenfixer.biodesign.ac.cn',
         securityProfile: 'balanced',
+        disableAiSecurityRestrictions: false,
         warnBeforeAiFileWrites: true,
         warnBeforeInternetDownloads: true,
         showSecurityNotifications: true,

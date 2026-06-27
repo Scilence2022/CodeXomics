@@ -116,6 +116,7 @@ const TOOL_NAMES = {
     EXPORT_CURRENT_VIEW_FASTA: 'export_current_view_fasta',
     EXPORT_REGION_FEATURES: 'export_region_features',
     CAPTURE_SCREENSHOT: 'capture_screenshot',
+    OPEN_IMAGE_FILE: 'open_image_file',
   },
 
   // === Annotation CRUD Tools ===

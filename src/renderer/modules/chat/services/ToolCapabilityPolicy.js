@@ -95,6 +95,7 @@ class ToolCapabilityPolicy {
           'set_working_directory',
           'utility_download_internet_file',
           'utility_toggle_settings_modal',
+          'open_image_file',
           'open_benchmark',
           'start_benchmark',
           'stop_benchmark',

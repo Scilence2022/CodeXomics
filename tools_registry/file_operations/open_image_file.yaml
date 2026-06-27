@@ -1,0 +1,87 @@
+name: open_image_file
+version: 1.0.0
+description: Open a local image file in the system image viewer
+category: file_operations
+subcategory: viewer
+keywords:
+  - open image
+  - view image
+  - show image
+  - preview image
+  - screenshot
+  - png
+  - jpeg
+  - jpg
+  - gif
+  - webp
+  - bmp
+  - tiff
+priority: 2
+execution:
+  type: client
+  timeout: 10000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: Local image path to open. Relative paths are resolved by the caller before execution.
+      examples:
+        - 'screenshots/current-view.png'
+        - 'codexomics-full-application.png'
+    filename:
+      type: string
+      description: Alias for filePath
+    imagePath:
+      type: string
+      description: Alias for filePath
+  required:
+    - filePath
+sample_usages:
+  - user_query: Open the screenshot I just captured
+    tool_call: open_image_file(filePath="screenshots/current-view.png")
+    thought: User wants to inspect a saved screenshot in the system image viewer
+    expected_result: Image opens in the default system viewer
+  - user_query: Preview codexomics-full-application.png
+    tool_call: open_image_file(filePath="codexomics-full-application.png")
+    thought: User wants to view a local PNG file
+    expected_result: PNG opens in the default system viewer
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['capture_screenshot']
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - image
+    - viewer
+    - screenshot
+  complexity: simple
+  usage_pattern: occasional
+error_handling:
+  missing_path:
+    error: 'Image file path is required'
+    solution: 'Provide filePath, filename, or imagePath'
+    retry: false
+  unsupported_type:
+    error: 'Unsupported image file type'
+    solution: 'Use PNG, JPEG, GIF, WebP, BMP, or TIFF'
+    retry: false
+  output_denied:
+    error: 'Image path is outside approved application directories'
+    solution: 'Use an approved path, open an image saved by CodeXomics, or enable the explicit AI security bypass for trusted workflows'
+    retry: false
+response:
+  success: 'boolean - Whether the image was opened successfully'
+  result: 'object - Open image result including filePath and fileName'

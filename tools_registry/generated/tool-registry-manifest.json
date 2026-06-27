@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-27T15:26:56.320Z",
-  "registryHash": "eeaea8d5f06582fe202a193afe47b81d045ad81b72b173a3b1d88b74e54aac1c",
+  "generatedAt": "2026-06-27T21:37:29.312Z",
+  "registryHash": "b4997151389eb17a1e0d43e0967ff649bee3be92d5803811a018e8077d5dc2e8",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 180,
-    "appTools": 180,
+    "tools": 181,
+    "appTools": 181,
     "userTools": 0,
-    "uniqueTools": 174,
+    "uniqueTools": 175,
     "categories": 18,
-    "builtInTools": 144,
+    "builtInTools": 145,
     "diagnostics": 12
   },
   "categories": {
@@ -95,7 +95,7 @@
         "priority": 2,
         "color": "#FF6B35",
         "subcategories": ["export", "import", "conversion", "validation"],
-        "tools_count": 8
+        "tools_count": 9
       },
       "pathway": {
         "name": "Pathway & BLAST",
@@ -8166,8 +8166,8 @@
           },
           "filePath": {
             "type": "string",
-            "description": "Output file path. Relative paths are resolved against the current working directory. If omitted, CodeXomics opens a save dialog unless auto_save is true.",
-            "examples": ["/Users/user/Desktop/codexomics-tracks.png", "screenshots/current-view.png"]
+            "description": "Output file path. Relative paths are resolved against the current working directory. For AI calls, omit this path to save an auto-generated file in the current working directory.",
+            "examples": ["screenshots/current-view.png", "codexomics-tracks.png"]
           },
           "filename": {
             "type": "string",
@@ -8179,7 +8179,12 @@
           },
           "auto_save": {
             "type": "boolean",
-            "description": "When true and no explicit file path is provided, save to a default filename in the current working directory instead of opening a save dialog",
+            "description": "When true and no explicit file path is provided, save to a default filename in the current working directory instead of opening a save dialog. AI-triggered screenshot calls default this to true.",
+            "default": false
+          },
+          "autoOpen": {
+            "type": "boolean",
+            "description": "Open the saved screenshot in the system image viewer after capture",
             "default": false
           },
           "format": {
@@ -8225,9 +8230,9 @@
       "sample_usages": [
         {
           "user_query": "Take a screenshot of the full CodeXomics app",
-          "tool_call": "capture_screenshot(target=\"full_application\", filePath=\"/Users/user/Desktop/codexomics-app.png\")",
+          "tool_call": "capture_screenshot(target=\"full_application\")",
           "thought": "User wants the whole visible application interface captured as an image",
-          "expected_result": "PNG file containing the visible CodeXomics application interface"
+          "expected_result": "PNG file containing the visible CodeXomics application interface saved in the current working directory"
         },
         {
           "user_query": "Save a screenshot of the genome tracks",
@@ -8240,6 +8245,12 @@
           "tool_call": "capture_screenshot(target=\"track\", trackType=\"reads\", format=\"jpeg\", quality=90, filePath=\"reads-track.jpg\")",
           "thought": "User wants a single track screenshot with JPEG output",
           "expected_result": "JPEG file containing the reads track"
+        },
+        {
+          "user_query": "Take a screenshot and open it",
+          "tool_call": "capture_screenshot(target=\"full_application\", autoOpen=true)",
+          "thought": "User wants the screenshot saved and displayed immediately",
+          "expected_result": "PNG file saved in the current working directory and opened in the system image viewer"
         }
       ],
       "relationships": {
@@ -8272,7 +8283,7 @@
         },
         "output_denied": {
           "error": "Output path is outside approved application directories",
-          "solution": "Choose a path through the save dialog or set an approved working directory first",
+          "solution": "Use the current working directory, choose a path through the save dialog, set an approved working directory, or enable the explicit AI security bypass for trusted workflows",
           "retry": false
         },
         "capture_too_large": {
@@ -10060,6 +10071,126 @@
         "name": "load_wig_tracks",
         "method": "loadWigTracks",
         "category": "file_loading",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "open_image_file",
+      "version": "1.0.0",
+      "description": "Open a local image file in the system image viewer",
+      "category": "file_operations",
+      "subcategory": "viewer",
+      "keywords": [
+        "open image",
+        "view image",
+        "show image",
+        "preview image",
+        "screenshot",
+        "png",
+        "jpeg",
+        "jpg",
+        "gif",
+        "webp",
+        "bmp",
+        "tiff"
+      ],
+      "priority": 2,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "filePath": {
+            "type": "string",
+            "description": "Local image path to open. Relative paths are resolved by the caller before execution.",
+            "examples": ["screenshots/current-view.png", "codexomics-full-application.png"]
+          },
+          "filename": {
+            "type": "string",
+            "description": "Alias for filePath"
+          },
+          "imagePath": {
+            "type": "string",
+            "description": "Alias for filePath"
+          }
+        },
+        "required": ["filePath"]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the screenshot I just captured",
+          "tool_call": "open_image_file(filePath=\"screenshots/current-view.png\")",
+          "thought": "User wants to inspect a saved screenshot in the system image viewer",
+          "expected_result": "Image opens in the default system viewer"
+        },
+        {
+          "user_query": "Preview codexomics-full-application.png",
+          "tool_call": "open_image_file(filePath=\"codexomics-full-application.png\")",
+          "thought": "User wants to view a local PNG file",
+          "expected_result": "PNG opens in the default system viewer"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["capture_screenshot"],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": []
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["file_operations", "image", "viewer", "screenshot"],
+        "complexity": "simple",
+        "usage_pattern": "occasional"
+      },
+      "error_handling": {
+        "missing_path": {
+          "error": "Image file path is required",
+          "solution": "Provide filePath, filename, or imagePath",
+          "retry": false
+        },
+        "unsupported_type": {
+          "error": "Unsupported image file type",
+          "solution": "Use PNG, JPEG, GIF, WebP, BMP, or TIFF",
+          "retry": false
+        },
+        "output_denied": {
+          "error": "Image path is outside approved application directories",
+          "solution": "Use an approved path, open an image saved by CodeXomics, or enable the explicit AI security bypass for trusted workflows",
+          "retry": false
+        }
+      },
+      "response": {
+        "success": "boolean - Whether the image was opened successfully",
+        "result": "object - Open image result including filePath and fileName"
+      },
+      "source": "app_registry",
+      "sourceFile": "file_operations/open_image_file.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "openImageFile"
+      },
+      "builtin": {
+        "name": "open_image_file",
+        "method": "openImageFile",
+        "category": "file_operations",
         "type": "built-in",
         "priority": 1,
         "isBuiltIn": true,
@@ -27673,8 +27804,8 @@
           },
           "filePath": {
             "type": "string",
-            "description": "Output file path. Relative paths are resolved against the current working directory. If omitted, CodeXomics opens a save dialog unless auto_save is true.",
-            "examples": ["/Users/user/Desktop/codexomics-tracks.png", "screenshots/current-view.png"]
+            "description": "Output file path. Relative paths are resolved against the current working directory. For AI calls, omit this path to save an auto-generated file in the current working directory.",
+            "examples": ["screenshots/current-view.png", "codexomics-tracks.png"]
           },
           "filename": {
             "type": "string",
@@ -27686,7 +27817,12 @@
           },
           "auto_save": {
             "type": "boolean",
-            "description": "When true and no explicit file path is provided, save to a default filename in the current working directory instead of opening a save dialog",
+            "description": "When true and no explicit file path is provided, save to a default filename in the current working directory instead of opening a save dialog. AI-triggered screenshot calls default this to true.",
+            "default": false
+          },
+          "autoOpen": {
+            "type": "boolean",
+            "description": "Open the saved screenshot in the system image viewer after capture",
             "default": false
           },
           "format": {
@@ -27732,9 +27868,9 @@
       "sample_usages": [
         {
           "user_query": "Take a screenshot of the full CodeXomics app",
-          "tool_call": "capture_screenshot(target=\"full_application\", filePath=\"/Users/user/Desktop/codexomics-app.png\")",
+          "tool_call": "capture_screenshot(target=\"full_application\")",
           "thought": "User wants the whole visible application interface captured as an image",
-          "expected_result": "PNG file containing the visible CodeXomics application interface"
+          "expected_result": "PNG file containing the visible CodeXomics application interface saved in the current working directory"
         },
         {
           "user_query": "Save a screenshot of the genome tracks",
@@ -27747,6 +27883,12 @@
           "tool_call": "capture_screenshot(target=\"track\", trackType=\"reads\", format=\"jpeg\", quality=90, filePath=\"reads-track.jpg\")",
           "thought": "User wants a single track screenshot with JPEG output",
           "expected_result": "JPEG file containing the reads track"
+        },
+        {
+          "user_query": "Take a screenshot and open it",
+          "tool_call": "capture_screenshot(target=\"full_application\", autoOpen=true)",
+          "thought": "User wants the screenshot saved and displayed immediately",
+          "expected_result": "PNG file saved in the current working directory and opened in the system image viewer"
         }
       ],
       "relationships": {
@@ -27779,7 +27921,7 @@
         },
         "output_denied": {
           "error": "Output path is outside approved application directories",
-          "solution": "Choose a path through the save dialog or set an approved working directory first",
+          "solution": "Use the current working directory, choose a path through the save dialog, set an approved working directory, or enable the explicit AI security bypass for trusted workflows",
           "retry": false
         },
         "capture_too_large": {
@@ -29110,6 +29252,126 @@
       "builtin": {
         "name": "export_protein_fasta",
         "method": "exportProteinFasta",
+        "category": "file_operations",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "open_image_file": {
+      "name": "open_image_file",
+      "version": "1.0.0",
+      "description": "Open a local image file in the system image viewer",
+      "category": "file_operations",
+      "subcategory": "viewer",
+      "keywords": [
+        "open image",
+        "view image",
+        "show image",
+        "preview image",
+        "screenshot",
+        "png",
+        "jpeg",
+        "jpg",
+        "gif",
+        "webp",
+        "bmp",
+        "tiff"
+      ],
+      "priority": 2,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "filePath": {
+            "type": "string",
+            "description": "Local image path to open. Relative paths are resolved by the caller before execution.",
+            "examples": ["screenshots/current-view.png", "codexomics-full-application.png"]
+          },
+          "filename": {
+            "type": "string",
+            "description": "Alias for filePath"
+          },
+          "imagePath": {
+            "type": "string",
+            "description": "Alias for filePath"
+          }
+        },
+        "required": ["filePath"]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the screenshot I just captured",
+          "tool_call": "open_image_file(filePath=\"screenshots/current-view.png\")",
+          "thought": "User wants to inspect a saved screenshot in the system image viewer",
+          "expected_result": "Image opens in the default system viewer"
+        },
+        {
+          "user_query": "Preview codexomics-full-application.png",
+          "tool_call": "open_image_file(filePath=\"codexomics-full-application.png\")",
+          "thought": "User wants to view a local PNG file",
+          "expected_result": "PNG opens in the default system viewer"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["capture_screenshot"],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": []
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["file_operations", "image", "viewer", "screenshot"],
+        "complexity": "simple",
+        "usage_pattern": "occasional"
+      },
+      "error_handling": {
+        "missing_path": {
+          "error": "Image file path is required",
+          "solution": "Provide filePath, filename, or imagePath",
+          "retry": false
+        },
+        "unsupported_type": {
+          "error": "Unsupported image file type",
+          "solution": "Use PNG, JPEG, GIF, WebP, BMP, or TIFF",
+          "retry": false
+        },
+        "output_denied": {
+          "error": "Image path is outside approved application directories",
+          "solution": "Use an approved path, open an image saved by CodeXomics, or enable the explicit AI security bypass for trusted workflows",
+          "retry": false
+        }
+      },
+      "response": {
+        "success": "boolean - Whether the image was opened successfully",
+        "result": "object - Open image result including filePath and fileName"
+      },
+      "source": "app_registry",
+      "sourceFile": "file_operations/open_image_file.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "openImageFile"
+      },
+      "builtin": {
+        "name": "open_image_file",
+        "method": "openImageFile",
         "category": "file_operations",
         "type": "built-in",
         "priority": 1,
@@ -39700,6 +39962,16 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "open_image_file",
+      "method": "openImageFile",
+      "category": "file_operations",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "export_data",
       "method": "exportData",
       "category": "file_operations",
@@ -41135,6 +41407,16 @@
     "capture_screenshot": {
       "name": "capture_screenshot",
       "method": "captureScreenshot",
+      "category": "file_operations",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "open_image_file": {
+      "name": "open_image_file",
+      "method": "openImageFile",
       "category": "file_operations",
       "type": "built-in",
       "priority": 1,
