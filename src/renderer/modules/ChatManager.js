@@ -3746,7 +3746,11 @@ class ChatManager {
     if (!this.app?.screenshotManager) {
       throw new Error('Screenshot manager not available');
     }
-    return this.app.screenshotManager.captureScreenshot(parameters);
+    const result = await this.app.screenshotManager.captureScreenshot(parameters);
+    if (result?.success === false && !result.canceled) {
+      throw new Error(result.error || 'Screenshot capture failed');
+    }
+    return result;
   }
 
   /**

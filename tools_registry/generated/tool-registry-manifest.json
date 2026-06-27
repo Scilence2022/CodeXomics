@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-27T14:49:11.011Z",
-  "registryHash": "bd4871145817dd215a3714756de4eb4eb4f7ceb258feecdd8965aef3110ef13c",
+  "generatedAt": "2026-06-27T15:26:56.320Z",
+  "registryHash": "eeaea8d5f06582fe202a193afe47b81d045ad81b72b173a3b1d88b74e54aac1c",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -8162,7 +8162,7 @@
           },
           "trackType": {
             "type": "string",
-            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast)"
+            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast). Use \"all\" to capture all tracks."
           },
           "filePath": {
             "type": "string",
@@ -27669,7 +27669,7 @@
           },
           "trackType": {
             "type": "string",
-            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast)"
+            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast). Use \"all\" to capture all tracks."
           },
           "filePath": {
             "type": "string",

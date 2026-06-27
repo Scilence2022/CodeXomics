@@ -25,10 +25,14 @@ class ScreenshotManager {
 
   async captureScreenshot(parameters = {}) {
     try {
-      const target = this.normalizeTarget(parameters.target || parameters.scope || parameters.area);
+      let target = this.normalizeTarget(parameters.target || parameters.scope || parameters.area);
       const mode = this.normalizeMode(parameters.mode || parameters.captureMode, target);
       const format = this.normalizeFormat(parameters.format || this.inferFormatFromOutputPath(parameters));
       const copyToClipboard = Boolean(parameters.copyToClipboard || parameters.copy_to_clipboard);
+      const requestedTrackType = parameters.trackType || parameters.track_type;
+      if (target === 'track' && this.isAllTracksAlias(requestedTrackType)) {
+        target = mode === 'visible' ? 'visible_tracks' : 'tracks';
+      }
       const defaultFilename = this.buildDefaultFilename(target, mode, format, parameters);
       const filePath = this.resolveOutputPath(parameters, defaultFilename);
       const quality = this.normalizeQuality(parameters.quality);
@@ -62,10 +66,7 @@ class ScreenshotManager {
         });
       }
 
-      const element =
-        target === 'track'
-          ? this.getTrackElement(parameters.trackType || parameters.track_type)
-          : this.getTracksElement();
+      const element = target === 'track' ? this.getTrackElement(requestedTrackType) : this.getTracksElement();
       const imageDataUrl = await this.renderElementToDataUrl(element, {
         target,
         mode,
@@ -119,11 +120,23 @@ class ScreenshotManager {
       return 'visible_tracks';
     }
 
+    if (['all', 'all_tracks', 'tracks_all', 'track_all', 'tracks'].includes(normalized)) {
+      return 'tracks';
+    }
+
     if (['track', 'single_track', 'selected_track'].includes(normalized)) {
       return 'track';
     }
 
     return 'tracks';
+  }
+
+  isAllTracksAlias(trackType) {
+    const normalized = String(trackType || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+    return ['all', 'all_tracks', 'tracks', 'visible_tracks', '*'].includes(normalized);
   }
 
   normalizeMode(mode, target) {
