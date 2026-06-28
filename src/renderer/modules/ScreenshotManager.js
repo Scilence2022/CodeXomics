@@ -25,7 +25,7 @@ class ScreenshotManager {
 
   async captureScreenshot(parameters = {}) {
     try {
-      let target = this.normalizeTarget(parameters.target || parameters.scope || parameters.area);
+      const target = this.normalizeTarget(parameters.target || parameters.scope || parameters.area);
       const mode = this.normalizeMode(parameters.mode || parameters.captureMode, target);
       const format = this.normalizeFormat(parameters.format || this.inferFormatFromOutputPath(parameters));
       const copyToClipboard = Boolean(parameters.copyToClipboard || parameters.copy_to_clipboard);
@@ -34,12 +34,23 @@ class ScreenshotManager {
       );
       const aiInitiated = Boolean(parameters.aiInitiated || parameters.ai_initiated || parameters.source === 'ai');
       const requestedTrackType = parameters.trackType || parameters.track_type;
+      const quality = this.normalizeQuality(parameters.quality);
       if (target === 'track' && this.isAllTracksAlias(requestedTrackType)) {
-        target = mode === 'visible' ? 'visible_tracks' : 'tracks';
+        return await this.captureEachTrackScreenshot(this.withMultiTrackScreenshotDefaults(parameters), {
+          target,
+          mode,
+          format,
+          quality,
+          scale: parameters.scale || parameters.scaleFactor || parameters.resolutionScale,
+          background: parameters.background || parameters.backgroundColor || parameters.background_color,
+          maxPixels: parameters.maxPixels || parameters.max_pixels,
+          copyToClipboard,
+          autoOpen,
+          aiInitiated,
+        });
       }
       const defaultFilename = this.buildDefaultFilename(target, mode, format, parameters);
       const filePath = this.resolveOutputPath(parameters, defaultFilename);
-      const quality = this.normalizeQuality(parameters.quality);
 
       await this.waitForPaint();
 
@@ -75,17 +86,7 @@ class ScreenshotManager {
       }
 
       const element = target === 'track' ? this.getTrackElement(requestedTrackType) : this.getTracksElement();
-      const imageDataUrl = await this.renderElementToDataUrl(element, {
-        target,
-        mode,
-        format,
-        quality,
-        scale: parameters.scale || parameters.scaleFactor || parameters.resolutionScale,
-        background: parameters.background || parameters.backgroundColor || parameters.background_color,
-        maxPixels: parameters.maxPixels || parameters.max_pixels,
-      });
-
-      return await this.saveRenderedScreenshot({
+      return await this.captureElementScreenshot(element, {
         target,
         mode,
         format,
@@ -95,7 +96,9 @@ class ScreenshotManager {
         autoOpen,
         aiInitiated,
         defaultFilename,
-        imageDataUrl,
+        scale: parameters.scale || parameters.scaleFactor || parameters.resolutionScale,
+        background: parameters.background || parameters.backgroundColor || parameters.background_color,
+        maxPixels: parameters.maxPixels || parameters.max_pixels,
       });
     } catch (error) {
       console.error('[ScreenshotManager] Screenshot capture failed:', error);
@@ -211,16 +214,7 @@ class ScreenshotManager {
   }
 
   resolveOutputPath(parameters, defaultFilename) {
-    const requestedPath =
-      parameters.filePath ||
-      parameters.file_path ||
-      parameters.outputPath ||
-      parameters.output_path ||
-      parameters.savePath ||
-      parameters.save_path ||
-      parameters.filename ||
-      parameters.fileName ||
-      null;
+    const requestedPath = this.getRequestedOutputPath(parameters);
 
     if (!requestedPath && !(parameters.auto_save || parameters.autoSave)) {
       return null;
@@ -237,6 +231,38 @@ class ScreenshotManager {
     }
 
     return `${this.getCurrentWorkingDirectory().replace(/\/+$/g, '')}/${pathToResolve}`;
+  }
+
+  getRequestedOutputPath(parameters = {}) {
+    return (
+      parameters.filePath ||
+      parameters.file_path ||
+      parameters.outputPath ||
+      parameters.output_path ||
+      parameters.savePath ||
+      parameters.save_path ||
+      parameters.filename ||
+      parameters.fileName ||
+      null
+    );
+  }
+
+  hasOutputPath(parameters = {}) {
+    return Boolean(this.getRequestedOutputPath(parameters));
+  }
+
+  withMultiTrackScreenshotDefaults(parameters = {}) {
+    const screenshotParameters = { ...parameters };
+    const hasAutoSaveSetting =
+      screenshotParameters.auto_save !== undefined || screenshotParameters.autoSave !== undefined;
+    const copyOnly = Boolean(screenshotParameters.copyToClipboard || screenshotParameters.copy_to_clipboard);
+    const saveDisabled = screenshotParameters.save === false || screenshotParameters.saveFile === false;
+
+    if (!this.hasOutputPath(screenshotParameters) && !hasAutoSaveSetting && !copyOnly && !saveDisabled) {
+      screenshotParameters.auto_save = true;
+    }
+
+    return screenshotParameters;
   }
 
   buildDefaultFilename(target, mode, format, parameters = {}) {
@@ -287,7 +313,13 @@ class ScreenshotManager {
       throw new Error('trackType is required when target is "track"');
     }
 
-    const normalized = String(trackType).trim();
+    const normalized = this.resolveTrackTypeAlias(trackType);
+
+    if (normalized === 'sequence') {
+      const sequenceElement = this.getBottomSequenceTrackElement();
+      if (sequenceElement) return sequenceElement;
+    }
+
     const escaped = this.escapeCssIdentifier(normalized);
     const className = this.getTrackClassName(normalized);
     const selectors = [
@@ -304,6 +336,90 @@ class ScreenshotManager {
     throw new Error(`Track "${trackType}" was not found in the current view`);
   }
 
+  resolveTrackTypeAlias(trackType) {
+    const raw = String(trackType || '').trim();
+    const compact = raw.toLowerCase().replace(/[\s_-]+/g, '');
+    const aliases = {
+      bottomsequence: 'sequence',
+      bottomsequencepanel: 'sequence',
+      sequencetrack: 'sequence',
+      sequenceline: 'sequenceLine',
+      singlelinesequence: 'sequenceLine',
+      singlelinesequencetrack: 'sequenceLine',
+      gccontent: 'gc',
+      gcskew: 'gc',
+      wig: 'wigTracks',
+      wigtrack: 'wigTracks',
+      wigtracks: 'wigTracks',
+    };
+
+    return aliases[compact] || raw;
+  }
+
+  getBottomSequenceTrackElement() {
+    const sequenceSection = document.getElementById('sequenceDisplaySection');
+    if (sequenceSection && this.isElementVisible(sequenceSection)) {
+      return sequenceSection;
+    }
+    return null;
+  }
+
+  getCapturableTrackElements() {
+    const tracksElement = document.getElementById('genomeViewer');
+    const browserContainer = tracksElement?.querySelector('.genome-browser-container') || tracksElement;
+    const descriptors = [];
+    const seen = new Set();
+
+    const addTrack = (type, element, label = null) => {
+      if (!type || !element || seen.has(element) || !this.isElementVisible(element)) return;
+      seen.add(element);
+      descriptors.push({
+        type,
+        label: label || this.getTrackLabel(element) || type,
+        element,
+      });
+    };
+
+    if (browserContainer) {
+      Array.from(browserContainer.children || []).forEach(child => {
+        if (child?.dataset?.trackType) {
+          addTrack(child.dataset.trackType, child);
+        }
+      });
+
+      if (descriptors.length === 0) {
+        browserContainer.querySelectorAll('[data-track-type]').forEach(element => {
+          addTrack(element.dataset.trackType, element);
+        });
+      }
+    }
+
+    const bottomSequenceElement = this.getBottomSequenceTrackElement();
+    if (bottomSequenceElement) {
+      addTrack('sequence', bottomSequenceElement, 'Bottom Sequence Panel');
+    }
+
+    return descriptors;
+  }
+
+  getTrackLabel(element) {
+    return (
+      element.querySelector('.track-title')?.textContent?.trim() ||
+      element.querySelector('.sequence-header h4')?.textContent?.trim() ||
+      null
+    );
+  }
+
+  isElementVisible(element) {
+    if (!element) return false;
+    const computed = window.getComputedStyle(element);
+    if (computed.display === 'none' || computed.visibility === 'hidden' || computed.opacity === '0') {
+      return false;
+    }
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
   getTrackClassName(trackType) {
     const normalized = String(trackType || '').trim();
     const config = this.genomeBrowser?.trackRenderer?.trackConfig?.[normalized];
@@ -314,6 +430,8 @@ class ScreenshotManager {
       gene: 'gene-track',
       gc: 'gc-track',
       sequence: 'sequence-track',
+      sequenceLine: 'sequence-line-track',
+      sequenceline: 'sequence-line-track',
       reads: 'reads-track',
       variants: 'variant-track',
       wig: 'wig-track',
@@ -365,7 +483,7 @@ class ScreenshotManager {
       save: true,
     });
 
-    return this.formatResult(result, options.target, options.mode);
+    return this.formatResult(result, options.target, options.mode, { notify: options.notify });
   }
 
   async saveRenderedScreenshot(options) {
@@ -384,7 +502,7 @@ class ScreenshotManager {
       save: true,
     });
 
-    return this.formatResult(result, options.target, options.mode);
+    return this.formatResult(result, options.target, options.mode, { notify: options.notify });
   }
 
   async invokeCapture(options) {
@@ -401,9 +519,11 @@ class ScreenshotManager {
     return result;
   }
 
-  formatResult(result, target, mode) {
+  formatResult(result, target, mode, options = {}) {
     const destination = result.filePath ? `Saved screenshot to ${result.filePath}` : 'Screenshot copied to clipboard';
-    this.showNotification(destination, 'success');
+    if (options.notify !== false) {
+      this.showNotification(destination, 'success');
+    }
     return {
       success: true,
       tool: 'capture_screenshot',
@@ -442,7 +562,10 @@ class ScreenshotManager {
     }
 
     const clone = element.cloneNode(true);
-    this.replaceCanvasWithImages(element, clone);
+    const canvasCopyResult = this.replaceCanvasWithImages(element, clone);
+    if (canvasCopyResult.failed > 0) {
+      throw new Error('Could not copy canvas into screenshot');
+    }
     this.inlineComputedStyles(element, clone);
     clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
     clone.style.width = `${width}px`;
@@ -482,6 +605,223 @@ class ScreenshotManager {
     }
   }
 
+  async captureEachTrackScreenshot(parameters, options) {
+    await this.waitForPaint();
+
+    const tracks = this.getCapturableTrackElements();
+    if (tracks.length === 0) {
+      throw new Error('No rendered tracks are available to capture');
+    }
+
+    const originalScrollState = this.captureScrollState();
+    const capturedTracks = [];
+    const failedTracks = [];
+
+    try {
+      for (const track of tracks) {
+        const trackParameters = { ...parameters, trackType: track.type };
+        const defaultFilename = this.buildDefaultFilename('track', options.mode, options.format, trackParameters);
+        const filePath = this.resolveTrackOutputPath(parameters, track.type, options.format, defaultFilename);
+
+        try {
+          const result = await this.captureElementScreenshot(track.element, {
+            ...options,
+            target: 'track',
+            filePath,
+            defaultFilename,
+            notify: false,
+          });
+
+          capturedTracks.push({
+            ...result,
+            trackType: track.type,
+            trackLabel: track.label,
+          });
+        } catch (error) {
+          console.warn(`[ScreenshotManager] Failed to capture ${track.type} track:`, error);
+          failedTracks.push({
+            trackType: track.type,
+            trackLabel: track.label,
+            error: error.message,
+          });
+        }
+      }
+    } finally {
+      this.restoreScrollState(originalScrollState);
+    }
+
+    if (capturedTracks.length === 0) {
+      const errorDetails = failedTracks.map(track => `${track.trackType}: ${track.error}`).join('; ');
+      throw new Error(`Failed to capture any tracks${errorDetails ? ` (${errorDetails})` : ''}`);
+    }
+
+    const filePaths = capturedTracks.map(track => track.filePath).filter(Boolean);
+    const message =
+      failedTracks.length > 0
+        ? `Saved ${capturedTracks.length} track screenshot(s); ${failedTracks.length} track(s) failed`
+        : `Saved ${capturedTracks.length} track screenshot(s)`;
+
+    this.showNotification(message, failedTracks.length > 0 ? 'warning' : 'success');
+
+    return {
+      success: true,
+      partial: failedTracks.length > 0,
+      tool: 'capture_screenshot',
+      message,
+      target: 'track',
+      trackType: 'all',
+      mode: options.mode,
+      format: options.format,
+      filePaths,
+      tracks: capturedTracks,
+      failures: failedTracks,
+      filePath: filePaths[0] || null,
+      fileName: capturedTracks[0]?.fileName || null,
+      fileSize: capturedTracks.reduce((total, track) => total + (track.fileSize || 0), 0),
+      copiedToClipboard: capturedTracks.some(track => track.copiedToClipboard),
+      opened: capturedTracks.some(track => track.opened),
+    };
+  }
+
+  async captureElementScreenshot(element, options) {
+    if (options.mode === 'visible') {
+      this.scrollElementIntoCaptureView(element);
+      await this.waitForPaint();
+      return this.captureNativeScreenshot({
+        ...options,
+        rect: this.getVisibleCaptureRect(element),
+      });
+    }
+
+    try {
+      const imageDataUrl = await this.renderElementToDataUrl(element, {
+        target: options.target,
+        mode: options.mode,
+        format: options.format,
+        quality: options.quality,
+        scale: options.scale,
+        background: options.background,
+        maxPixels: options.maxPixels,
+      });
+
+      return await this.saveRenderedScreenshot({
+        ...options,
+        imageDataUrl,
+      });
+    } catch (error) {
+      if (!this.shouldFallbackToNativeCapture(error)) {
+        throw error;
+      }
+
+      console.warn('[ScreenshotManager] Full track composition failed; using native visible capture:', error);
+      this.scrollElementIntoCaptureView(element);
+      await this.waitForPaint();
+      return this.captureNativeScreenshot({
+        ...options,
+        rect: this.getVisibleCaptureRect(element),
+        fallback: 'native_visible',
+      });
+    }
+  }
+
+  shouldFallbackToNativeCapture(error) {
+    const message = String(error?.message || error || '').toLowerCase();
+    return (
+      message.includes('tainted canvas') ||
+      message.includes('tainted canvases') ||
+      message.includes('may not be exported') ||
+      message.includes('could not copy canvas') ||
+      message.includes('unable to render screenshot image')
+    );
+  }
+
+  resolveTrackOutputPath(parameters, trackType, format, defaultFilename) {
+    const requestedPath = this.getRequestedOutputPath(parameters);
+    if (!requestedPath) {
+      return this.resolveOutputPath(parameters, defaultFilename);
+    }
+
+    const resolvedPath = this.resolveOutputPath({ ...parameters, filePath: requestedPath }, defaultFilename);
+    if (!resolvedPath) return null;
+
+    const pathModule = this.getPathModule();
+    const extension = this.getExtension(format);
+    const suffix = this.sanitizeFilenamePart(trackType);
+    const existingExtension =
+      pathModule && typeof pathModule.extname === 'function'
+        ? pathModule.extname(resolvedPath)
+        : this.getPathExtension(resolvedPath);
+
+    if (existingExtension) {
+      const directory =
+        pathModule && typeof pathModule.dirname === 'function'
+          ? pathModule.dirname(resolvedPath)
+          : this.getPathDirectory(resolvedPath);
+      const baseName =
+        pathModule && typeof pathModule.basename === 'function'
+          ? pathModule.basename(resolvedPath).slice(0, -existingExtension.length)
+          : this.getPathBasename(resolvedPath).slice(0, -existingExtension.length);
+      const filename = `${baseName}-${suffix}${existingExtension}`;
+      return pathModule && typeof pathModule.join === 'function'
+        ? pathModule.join(directory, filename)
+        : `${directory.replace(/\/+$/g, '')}/${filename}`;
+    }
+
+    return `${resolvedPath}-${suffix}.${extension}`;
+  }
+
+  getPathExtension(filePath) {
+    const basename = this.getPathBasename(filePath);
+    const index = basename.lastIndexOf('.');
+    return index > 0 ? basename.slice(index) : '';
+  }
+
+  getPathDirectory(filePath) {
+    const normalized = String(filePath || '').replace(/\\/g, '/');
+    const index = normalized.lastIndexOf('/');
+    return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
+  }
+
+  getPathBasename(filePath) {
+    return (
+      String(filePath || '')
+        .replace(/\\/g, '/')
+        .split('/')
+        .filter(Boolean)
+        .pop() || ''
+    );
+  }
+
+  scrollElementIntoCaptureView(element) {
+    if (typeof element?.scrollIntoView === 'function') {
+      element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }
+
+  captureScrollState() {
+    const scrollElements = [
+      document.scrollingElement || document.documentElement,
+      document.getElementById('genomeViewerSection'),
+      document.getElementById('genomeViewer'),
+      document.getElementById('sequenceContent'),
+    ].filter(Boolean);
+
+    return scrollElements.map(element => ({
+      element,
+      left: element.scrollLeft,
+      top: element.scrollTop,
+    }));
+  }
+
+  restoreScrollState(scrollState = []) {
+    scrollState.forEach(({ element, left, top }) => {
+      if (element) {
+        element.scrollLeft = left;
+        element.scrollTop = top;
+      }
+    });
+  }
+
   normalizeScale(scale) {
     const numericScale = Number(scale);
     if (!Number.isFinite(numericScale)) return 1;
@@ -499,6 +839,8 @@ class ScreenshotManager {
   replaceCanvasWithImages(sourceElement, cloneElement) {
     const sourceCanvases = sourceElement.querySelectorAll('canvas');
     const cloneCanvases = cloneElement.querySelectorAll('canvas');
+    const result = { copied: 0, failed: 0 };
+
     sourceCanvases.forEach((sourceCanvas, index) => {
       const cloneCanvas = cloneCanvases[index];
       if (!cloneCanvas) return;
@@ -513,10 +855,14 @@ class ScreenshotManager {
         image.style.height = sourceCanvas.style.height || `${image.height}px`;
         image.style.display = sourceCanvas.style.display || 'block';
         cloneCanvas.replaceWith(image);
+        result.copied += 1;
       } catch (error) {
+        result.failed += 1;
         console.warn('[ScreenshotManager] Could not copy canvas into screenshot:', error);
       }
     });
+
+    return result;
   }
 
   inlineComputedStyles(sourceElement, cloneElement) {
