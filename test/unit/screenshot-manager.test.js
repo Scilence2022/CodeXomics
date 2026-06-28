@@ -122,6 +122,53 @@ describe('ScreenshotManager', () => {
     );
   });
 
+  it('waits for reads rendering before selecting the capture element', async () => {
+    const manager = createManager();
+    document.body.innerHTML = `
+      <div class="reads-track">
+        <div class="track-header"><span class="track-title">Sample reads</span></div>
+        <div class="track-content"></div>
+      </div>
+    `;
+
+    const trackContent = document.querySelector('.track-content');
+    let paintCalls = 0;
+    manager.waitForPaint = vi.fn(async () => {
+      paintCalls += 1;
+      if (paintCalls === 2) {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'reads-canvas';
+        canvas.width = 700;
+        canvas.height = 140;
+        setRect(canvas, { left: 50, top: 90, right: 750, bottom: 230, width: 700, height: 140 });
+        trackContent.appendChild(canvas);
+      }
+    });
+    manager.renderElementToDataUrl = vi.fn().mockResolvedValue('data:image/png;base64,AAAA');
+    manager.saveRenderedScreenshot = vi.fn(async options => ({
+      success: true,
+      target: options.target,
+      mode: options.mode,
+      filePath: options.filePath,
+    }));
+
+    const result = await manager.captureScreenshot({
+      target: 'track',
+      trackType: 'reads',
+      renderWaitMs: 500,
+      auto_save: true,
+    });
+
+    expect(result.success).toBe(true);
+    expect(manager.renderElementToDataUrl).toHaveBeenCalledWith(
+      document.querySelector('.reads-canvas'),
+      expect.objectContaining({
+        target: 'track',
+        mode: 'full',
+      })
+    );
+  });
+
   it('adds per-track suffixes when capturing all tracks to an explicit path', async () => {
     const manager = createManager();
     const genesTrack = document.createElement('div');
