@@ -85,7 +85,10 @@ class ScreenshotManager {
         });
       }
 
-      const element = target === 'track' ? this.getTrackElement(requestedTrackType) : this.getTracksElement();
+      const element =
+        target === 'track'
+          ? await this.getTrackElementForCapture(requestedTrackType, parameters)
+          : this.getTracksElement();
       return await this.captureElementScreenshot(element, {
         target,
         mode,
@@ -336,6 +339,35 @@ class ScreenshotManager {
     throw new Error(`Track "${trackType}" was not found in the current view`);
   }
 
+  async getTrackElementForCapture(trackType, parameters = {}) {
+    const normalized = this.resolveTrackTypeAlias(trackType);
+    const element = this.getTrackElement(trackType);
+
+    if (normalized !== 'reads') {
+      return element;
+    }
+
+    const readsTrack = this.getTrackContainerElement(normalized) || element.closest?.('.reads-track') || element;
+    return await this.waitForReadsTrackCaptureElement(readsTrack, parameters);
+  }
+
+  getTrackContainerElement(trackType) {
+    const normalized = this.resolveTrackTypeAlias(trackType);
+    const escaped = this.escapeCssIdentifier(normalized);
+    const className = this.getTrackClassName(normalized);
+    const selectors =
+      normalized === 'reads'
+        ? [className ? `.${className}` : null, `[data-track-type="${escaped}"]`, `.${escaped}-track`]
+        : [`[data-track-type="${escaped}"]`, className ? `.${className}` : null, `.${escaped}-track`];
+
+    for (const selector of selectors.filter(Boolean)) {
+      const element = document.querySelector(selector);
+      if (element) return element;
+    }
+
+    return null;
+  }
+
   resolveTrackTypeAlias(trackType) {
     const raw = String(trackType || '').trim();
     const compact = raw.toLowerCase().replace(/[\s_-]+/g, '');
@@ -375,13 +407,15 @@ class ScreenshotManager {
       const captureElement = this.getPreferredTrackCaptureElement(type, element);
       const normalizedType = this.resolveTrackTypeAlias(type);
       const isCapturable =
-        normalizedType === 'reads' ? this.isDrawableElement(captureElement) : this.isElementVisible(captureElement);
+        normalizedType === 'reads'
+          ? this.isElementVisible(element) || this.isDrawableElement(captureElement)
+          : this.isElementVisible(captureElement);
       if (!isCapturable) return;
       seen.add(element);
       descriptors.push({
         type,
         label: label || this.getTrackLabel(element) || type,
-        element: captureElement,
+        element: normalizedType === 'reads' ? element : captureElement,
       });
     };
 
@@ -456,21 +490,111 @@ class ScreenshotManager {
       '.reads-content-viewport canvas',
       '.reads-svg-container',
       '.reads-content-viewport svg',
-      '.reads-canvas-container',
-      '.reads-scroll-container',
+      '.coverage-visualization',
+      '.reference-sequence-visualization',
       '.track-content canvas',
       '.track-content svg',
-      '.track-content',
     ];
 
     for (const selector of selectors) {
       const candidate = readsTrack.matches?.(selector) ? readsTrack : readsTrack.querySelector(selector);
+      this.prepareReadsCaptureElement(candidate);
       if (candidate && this.isDrawableElement(candidate)) {
         return candidate;
       }
     }
 
+    const trackContent = readsTrack.matches?.('.track-content')
+      ? readsTrack
+      : readsTrack.querySelector('.track-content');
+    if (this.hasMeaningfulReadsContent(trackContent)) {
+      return trackContent;
+    }
+
     return null;
+  }
+
+  async waitForReadsTrackCaptureElement(readsTrack, parameters = {}) {
+    const attempts = this.getReadsTrackRenderWaitAttempts(parameters);
+
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const drawingElement = this.getReadsTrackDrawingElement(readsTrack);
+      if (drawingElement && this.isDrawableElement(drawingElement)) {
+        return drawingElement;
+      }
+
+      await this.waitForPaint();
+    }
+
+    const fallbackContent = readsTrack.querySelector?.('.track-content');
+    if (this.hasMeaningfulReadsContent(fallbackContent)) {
+      return fallbackContent;
+    }
+
+    throw new Error('Reads track rendering is not ready for screenshot capture');
+  }
+
+  getReadsTrackRenderWaitAttempts(parameters = {}) {
+    const requestedMs =
+      parameters.renderWaitMs ||
+      parameters.render_wait_ms ||
+      parameters.renderTimeoutMs ||
+      parameters.render_timeout_ms ||
+      5000;
+    const timeoutMs = Math.max(250, Math.min(Number(requestedMs) || 5000, 15000));
+    return Math.max(3, Math.ceil(timeoutMs / 50));
+  }
+
+  hasMeaningfulReadsContent(element) {
+    if (!element || !this.isDrawableElement(element)) return false;
+    return Boolean(
+      element.querySelector?.(
+        [
+          '.reads-canvas',
+          '.reads-svg-container',
+          '.reads-content-viewport canvas',
+          '.reads-content-viewport svg',
+          '.coverage-visualization',
+          '.reference-sequence-visualization',
+          '.no-reads-message',
+          '.reads-error-message',
+          '.reads-track-stats',
+          '.reads-stats',
+        ].join(', ')
+      )
+    );
+  }
+
+  prepareReadsCaptureElement(element) {
+    if (typeof HTMLCanvasElement === 'undefined' || !(element instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    const renderer = this.findCanvasRendererForCanvas(element);
+    if (!renderer) return;
+
+    try {
+      if (typeof renderer.setupCanvas === 'function') {
+        renderer.setupCanvas();
+      }
+      if (typeof renderer.render === 'function') {
+        renderer.render();
+      }
+    } catch (error) {
+      console.warn('[ScreenshotManager] Failed to prepare reads canvas for screenshot:', error);
+    }
+  }
+
+  findCanvasRendererForCanvas(canvas) {
+    const renderers = [];
+    if (this.genomeBrowser?.trackRenderer?.canvasRenderers) {
+      renderers.push(...this.genomeBrowser.trackRenderer.canvasRenderers.values());
+    }
+    if (typeof window !== 'undefined' && Array.isArray(window.canvasReadsRenderers)) {
+      renderers.push(...window.canvasReadsRenderers);
+    }
+
+    return renderers.find(renderer => renderer?.canvas === canvas) || null;
   }
 
   isDrawableElement(element) {
@@ -699,6 +823,8 @@ class ScreenshotManager {
   }
 
   renderCanvasToDataUrl(sourceCanvas, options) {
+    this.prepareReadsCaptureElement(sourceCanvas);
+
     if (!sourceCanvas.width || !sourceCanvas.height) {
       throw new Error('Canvas screenshot source is empty');
     }
@@ -743,7 +869,11 @@ class ScreenshotManager {
         const filePath = this.resolveTrackOutputPath(parameters, track.type, options.format, defaultFilename);
 
         try {
-          const result = await this.captureElementScreenshot(track.element, {
+          const captureElement =
+            this.resolveTrackTypeAlias(track.type) === 'reads'
+              ? await this.waitForReadsTrackCaptureElement(track.element, parameters)
+              : track.element;
+          const result = await this.captureElementScreenshot(captureElement, {
             ...options,
             target: 'track',
             filePath,
