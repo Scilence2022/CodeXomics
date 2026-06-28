@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-27T21:37:29.312Z",
-  "registryHash": "b4997151389eb17a1e0d43e0967ff649bee3be92d5803811a018e8077d5dc2e8",
+  "generatedAt": "2026-06-28T01:20:36.885Z",
+  "registryHash": "338ad19414b4210a246767d137fcb4504d3015e570269d4b844e813ffcb65d4b",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -8162,7 +8162,7 @@
           },
           "trackType": {
             "type": "string",
-            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast). Use \"all\" to capture all tracks."
+            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, sequenceLine, variants, wigTracks, primers, proteins, actions, blast). Use \"all\" to save one separate screenshot for each visible track, including the bottom sequence panel when visible. Use target \"tracks\" for one combined tracks image."
           },
           "filePath": {
             "type": "string",
@@ -8235,10 +8235,16 @@
           "expected_result": "PNG file containing the visible CodeXomics application interface saved in the current working directory"
         },
         {
-          "user_query": "Save a screenshot of the genome tracks",
+          "user_query": "Save one combined screenshot of the genome tracks",
           "tool_call": "capture_screenshot(target=\"tracks\", mode=\"full\", filePath=\"screenshots/tracks.png\")",
           "thought": "User wants an image of the rendered genome tracks, including canvas and SVG tracks",
           "expected_result": "PNG file containing the full rendered tracks area"
+        },
+        {
+          "user_query": "Take a screenshot of every track separately",
+          "tool_call": "capture_screenshot(target=\"track\", trackType=\"all\", mode=\"full\", filePath=\"screenshots/tracks.png\")",
+          "thought": "User wants separate image files for each visible genome track, not one combined image",
+          "expected_result": "PNG files saved next to the requested path with per-track suffixes, including the bottom sequence panel if visible"
         },
         {
           "user_query": "Capture just the reads track as JPEG",
@@ -27800,7 +27806,7 @@
           },
           "trackType": {
             "type": "string",
-            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, variants, wigTracks, primers, proteins, actions, blast). Use \"all\" to capture all tracks."
+            "description": "Track type to capture when target is \"track\" (for example genes, reads, gc, sequence, sequenceLine, variants, wigTracks, primers, proteins, actions, blast). Use \"all\" to save one separate screenshot for each visible track, including the bottom sequence panel when visible. Use target \"tracks\" for one combined tracks image."
           },
           "filePath": {
             "type": "string",
@@ -27873,10 +27879,16 @@
           "expected_result": "PNG file containing the visible CodeXomics application interface saved in the current working directory"
         },
         {
-          "user_query": "Save a screenshot of the genome tracks",
+          "user_query": "Save one combined screenshot of the genome tracks",
           "tool_call": "capture_screenshot(target=\"tracks\", mode=\"full\", filePath=\"screenshots/tracks.png\")",
           "thought": "User wants an image of the rendered genome tracks, including canvas and SVG tracks",
           "expected_result": "PNG file containing the full rendered tracks area"
+        },
+        {
+          "user_query": "Take a screenshot of every track separately",
+          "tool_call": "capture_screenshot(target=\"track\", trackType=\"all\", mode=\"full\", filePath=\"screenshots/tracks.png\")",
+          "thought": "User wants separate image files for each visible genome track, not one combined image",
+          "expected_result": "PNG files saved next to the requested path with per-track suffixes, including the bottom sequence panel if visible"
         },
         {
           "user_query": "Capture just the reads track as JPEG",
