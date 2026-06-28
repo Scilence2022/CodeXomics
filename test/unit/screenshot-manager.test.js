@@ -26,6 +26,10 @@ describe('ScreenshotManager', () => {
       <div id="genomeViewer">
         <div class="genome-browser-container">
           <div class="gene-track" data-track-type="genes"><span class="track-title">Genes</span></div>
+          <div class="reads-track">
+            <div class="track-header"><span class="track-title">Sample reads</span></div>
+            <div class="track-content"><canvas class="reads-canvas" width="600" height="120"></canvas></div>
+          </div>
         </div>
       </div>
       <div id="sequenceDisplaySection" style="display: flex;">
@@ -34,8 +38,10 @@ describe('ScreenshotManager', () => {
       </div>
     `;
     const genesTrack = document.querySelector('[data-track-type="genes"]');
+    const readsCanvas = document.querySelector('.reads-canvas');
     const sequencePanel = document.getElementById('sequenceDisplaySection');
     setRect(genesTrack, { left: 10, top: 20, right: 210, bottom: 120, width: 200, height: 100 });
+    setRect(readsCanvas, { left: 30, top: 150, right: 630, bottom: 270, width: 600, height: 120 });
     setRect(sequencePanel, { left: 15, top: 300, right: 515, bottom: 500, width: 500, height: 200 });
 
     manager.captureNativeScreenshot = vi.fn(async options => ({
@@ -54,8 +60,8 @@ describe('ScreenshotManager', () => {
 
     expect(result.success).toBe(true);
     expect(result.trackType).toBe('all');
-    expect(result.tracks.map(track => track.trackType)).toEqual(['genes', 'sequence']);
-    expect(manager.captureNativeScreenshot).toHaveBeenCalledTimes(2);
+    expect(result.tracks.map(track => track.trackType)).toEqual(['genes', 'reads', 'sequence']);
+    expect(manager.captureNativeScreenshot).toHaveBeenCalledTimes(3);
     expect(manager.captureNativeScreenshot).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -69,7 +75,49 @@ describe('ScreenshotManager', () => {
       expect.objectContaining({
         target: 'track',
         mode: 'visible',
+        rect: { x: 30, y: 150, width: 600, height: 120 },
+      })
+    );
+    expect(manager.captureNativeScreenshot).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        target: 'track',
+        mode: 'visible',
         rect: { x: 15, y: 300, width: 500, height: 200 },
+      })
+    );
+  });
+
+  it('captures the reads drawing element instead of the reads track header', async () => {
+    const manager = createManager();
+    document.body.innerHTML = `
+      <div class="reads-track">
+        <div class="track-header"><span class="track-title">Sample reads</span></div>
+        <div class="track-content"><canvas class="reads-canvas" width="800" height="180"></canvas></div>
+      </div>
+    `;
+    const readsCanvas = document.querySelector('.reads-canvas');
+    setRect(readsCanvas, { left: 40, top: 80, right: 840, bottom: 260, width: 800, height: 180 });
+    manager.renderElementToDataUrl = vi.fn().mockResolvedValue('data:image/png;base64,AAAA');
+    manager.saveRenderedScreenshot = vi.fn(async options => ({
+      success: true,
+      target: options.target,
+      mode: options.mode,
+      filePath: options.filePath,
+    }));
+
+    const result = await manager.captureScreenshot({
+      target: 'track',
+      trackType: 'reads',
+      auto_save: true,
+    });
+
+    expect(result.success).toBe(true);
+    expect(manager.renderElementToDataUrl).toHaveBeenCalledWith(
+      readsCanvas,
+      expect.objectContaining({
+        target: 'track',
+        mode: 'full',
       })
     );
   });
