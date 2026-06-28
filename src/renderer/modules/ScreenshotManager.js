@@ -330,7 +330,7 @@ class ScreenshotManager {
 
     for (const selector of selectors) {
       const element = document.querySelector(selector);
-      if (element) return element;
+      if (element) return this.getPreferredTrackCaptureElement(normalized, element);
     }
 
     throw new Error(`Track "${trackType}" was not found in the current view`);
@@ -371,20 +371,34 @@ class ScreenshotManager {
     const seen = new Set();
 
     const addTrack = (type, element, label = null) => {
-      if (!type || !element || seen.has(element) || !this.isElementVisible(element)) return;
+      if (!type || !element || seen.has(element)) return;
+      const captureElement = this.getPreferredTrackCaptureElement(type, element);
+      const normalizedType = this.resolveTrackTypeAlias(type);
+      const isCapturable =
+        normalizedType === 'reads' ? this.isDrawableElement(captureElement) : this.isElementVisible(captureElement);
+      if (!isCapturable) return;
       seen.add(element);
       descriptors.push({
         type,
         label: label || this.getTrackLabel(element) || type,
-        element,
+        element: captureElement,
       });
     };
 
     if (browserContainer) {
       Array.from(browserContainer.children || []).forEach(child => {
-        if (child?.dataset?.trackType) {
-          addTrack(child.dataset.trackType, child);
+        const trackType = this.getTrackTypeFromElement(child);
+        if (trackType) {
+          addTrack(trackType, child);
+          return;
         }
+
+        child.querySelectorAll('[data-track-type], .reads-track').forEach(trackElement => {
+          const nestedTrackType = this.getTrackTypeFromElement(trackElement);
+          if (nestedTrackType) {
+            addTrack(nestedTrackType, trackElement);
+          }
+        });
       });
 
       if (descriptors.length === 0) {
@@ -400,6 +414,81 @@ class ScreenshotManager {
     }
 
     return descriptors;
+  }
+
+  getTrackTypeFromElement(element) {
+    if (!element) return null;
+    if (element.dataset?.trackType) return element.dataset.trackType;
+
+    const classMap = {
+      'gene-track': 'genes',
+      'gc-track': 'gc',
+      'variant-track': 'variants',
+      'reads-track': 'reads',
+      'wig-track': 'wigTracks',
+      'protein-track': 'proteins',
+      'primer-track': 'primers',
+      'sequence-line-track': 'sequenceLine',
+      'actions-track': 'actions',
+      'blast-track': 'blast',
+    };
+
+    for (const [className, trackType] of Object.entries(classMap)) {
+      if (element.classList?.contains(className)) {
+        return trackType;
+      }
+    }
+
+    return null;
+  }
+
+  getPreferredTrackCaptureElement(trackType, element) {
+    const normalized = this.resolveTrackTypeAlias(trackType);
+    if (normalized === 'reads') {
+      return this.getReadsTrackDrawingElement(element) || element;
+    }
+    return element;
+  }
+
+  getReadsTrackDrawingElement(readsTrack) {
+    const selectors = [
+      '.reads-canvas',
+      '.reads-content-viewport canvas',
+      '.reads-svg-container',
+      '.reads-content-viewport svg',
+      '.reads-canvas-container',
+      '.reads-scroll-container',
+      '.track-content canvas',
+      '.track-content svg',
+      '.track-content',
+    ];
+
+    for (const selector of selectors) {
+      const candidate = readsTrack.matches?.(selector) ? readsTrack : readsTrack.querySelector(selector);
+      if (candidate && this.isDrawableElement(candidate)) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  isDrawableElement(element) {
+    if (!element) return false;
+
+    const rect = element.getBoundingClientRect();
+    const hasLayoutSize = rect.width > 0 && rect.height > 0;
+    const hasCanvasSize =
+      typeof HTMLCanvasElement !== 'undefined' &&
+      element instanceof HTMLCanvasElement &&
+      Number(element.width) > 0 &&
+      Number(element.height) > 0;
+    if (!hasLayoutSize && !hasCanvasSize) {
+      return false;
+    }
+
+    const computed = window.getComputedStyle(element);
+    return computed.display !== 'none' && computed.visibility !== 'hidden';
   }
 
   getTrackLabel(element) {
@@ -548,6 +637,10 @@ class ScreenshotManager {
   }
 
   async renderElementToDataUrl(element, options) {
+    if (typeof HTMLCanvasElement !== 'undefined' && element instanceof HTMLCanvasElement) {
+      return this.renderCanvasToDataUrl(element, options);
+    }
+
     const rect = element.getBoundingClientRect();
     const width = Math.max(1, Math.ceil(options.mode === 'full' ? element.scrollWidth || rect.width : rect.width));
     const height = Math.max(1, Math.ceil(options.mode === 'full' ? element.scrollHeight || rect.height : rect.height));
@@ -603,6 +696,32 @@ class ScreenshotManager {
     } finally {
       URL.revokeObjectURL(url);
     }
+  }
+
+  renderCanvasToDataUrl(sourceCanvas, options) {
+    if (!sourceCanvas.width || !sourceCanvas.height) {
+      throw new Error('Canvas screenshot source is empty');
+    }
+
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = sourceCanvas.width;
+    outputCanvas.height = sourceCanvas.height;
+    const ctx = outputCanvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas screenshot rendering context is unavailable');
+    }
+
+    if (options.format === 'jpeg') {
+      ctx.fillStyle = options.background || '#ffffff';
+      ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+    }
+
+    ctx.drawImage(sourceCanvas, 0, 0);
+
+    return outputCanvas.toDataURL(
+      `image/${options.format}`,
+      options.format === 'jpeg' ? this.normalizeQuality(options.quality) / 100 : undefined
+    );
   }
 
   async captureEachTrackScreenshot(parameters, options) {
