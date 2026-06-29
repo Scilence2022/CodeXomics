@@ -33,7 +33,7 @@ When adding or changing an AI-callable tool, update all relevant surfaces:
 | YAML registry schemas      |   180 |
 | Active registry categories |    18 |
 | Built-in ChatBox tools     |   143 |
-| MCP tools mode             |    95 |
+| MCP tools mode             |    96 |
 | MCP agent mode             |     3 |
 
 MCP agent mode intentionally exposes only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.

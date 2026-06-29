@@ -653,7 +653,34 @@ function registerIpcHandlers(deps) {
     return 'png';
   };
 
+  const DEFAULT_SCREENSHOT_MAX_IMAGE_BYTES = 16 * 1024 * 1024;
+  const ABSOLUTE_SCREENSHOT_MAX_IMAGE_BYTES = 64 * 1024 * 1024;
+
   const getScreenshotExtension = format => (format === 'jpeg' ? 'jpg' : 'png');
+  const getScreenshotMimeType = format => (format === 'jpeg' ? 'image/jpeg' : 'image/png');
+
+  const shouldReturnScreenshotImageData = options =>
+    Boolean(
+      options.returnImageData ||
+      options.return_image_data ||
+      options.includeImageData ||
+      options.include_image_data ||
+      options.embedImage ||
+      options.embed_image
+    );
+
+  const normalizeScreenshotMaxImageBytes = options => {
+    const requested =
+      options.maxImageBytes ||
+      options.max_image_bytes ||
+      options.maxReturnedImageBytes ||
+      options.max_returned_image_bytes;
+    const numeric = Number(requested);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return DEFAULT_SCREENSHOT_MAX_IMAGE_BYTES;
+    }
+    return Math.min(Math.trunc(numeric), ABSOLUTE_SCREENSHOT_MAX_IMAGE_BYTES);
+  };
 
   const sanitizeScreenshotRect = rect => {
     if (!rect || typeof rect !== 'object') return undefined;
@@ -1764,9 +1791,19 @@ function registerIpcHandlers(deps) {
   ipcMain.handle('screenshot:capture', async (event, options = {}) => {
     try {
       const format = sanitizeScreenshotFormat(options.format);
+      const returnImageData = shouldReturnScreenshotImageData(options);
       const image = await createScreenshotImage(event, options);
       const buffer = getScreenshotBuffer(image, format, options.quality);
       const imageSize = image.getSize();
+      const imageSizeBytes = buffer.length;
+      const maxImageBytes = normalizeScreenshotMaxImageBytes(options);
+
+      if (returnImageData && imageSizeBytes > maxImageBytes) {
+        throw new Error(
+          `Screenshot image is too large to return (${imageSizeBytes.toLocaleString()} bytes; maxImageBytes ${maxImageBytes.toLocaleString()}). ` +
+            `Save to a file or increase maxImageBytes up to ${ABSOLUTE_SCREENSHOT_MAX_IMAGE_BYTES.toLocaleString()}.`
+        );
+      }
 
       let copiedToClipboard = false;
       if (options.copyToClipboard || options.copy_to_clipboard) {
@@ -1804,7 +1841,7 @@ function registerIpcHandlers(deps) {
         opened = true;
       }
 
-      if (!filePath && !copiedToClipboard) {
+      if (!filePath && !copiedToClipboard && !returnImageData) {
         return { success: false, canceled: true, error: 'Screenshot capture was canceled' };
       }
 
@@ -1814,8 +1851,13 @@ function registerIpcHandlers(deps) {
         fileName: filePath ? path.basename(filePath) : null,
         fileSize,
         format,
+        mimeType: getScreenshotMimeType(format),
         width: imageSize.width,
         height: imageSize.height,
+        imageSizeBytes,
+        imageData: returnImageData ? buffer.toString('base64') : undefined,
+        imageDataEncoding: returnImageData ? 'base64' : undefined,
+        maxImageBytes: returnImageData ? maxImageBytes : undefined,
         copiedToClipboard,
         opened,
         target: options.target || 'full_application',

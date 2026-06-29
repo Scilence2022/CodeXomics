@@ -134,7 +134,7 @@ Current registry snapshot:
 - 179 YAML tool schemas.
 - 18 active YAML categories.
 - 143 built-in ChatBox tools.
-- 95 MCP tools in tools mode.
+- 96 MCP tools in tools mode.
 
 ### MCP Server
 

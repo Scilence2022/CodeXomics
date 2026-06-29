@@ -35,6 +35,8 @@ class ScreenshotManager {
       const aiInitiated = Boolean(parameters.aiInitiated || parameters.ai_initiated || parameters.source === 'ai');
       const requestedTrackType = parameters.trackType || parameters.track_type;
       const quality = this.normalizeQuality(parameters.quality);
+      const returnImageData = this.shouldReturnImageData(parameters);
+      const maxImageBytes = parameters.maxImageBytes || parameters.max_image_bytes;
       if (target === 'track' && this.isAllTracksAlias(requestedTrackType)) {
         return await this.captureEachTrackScreenshot(this.withMultiTrackScreenshotDefaults(parameters), {
           target,
@@ -47,10 +49,13 @@ class ScreenshotManager {
           copyToClipboard,
           autoOpen,
           aiInitiated,
+          returnImageData,
+          maxImageBytes,
         });
       }
       const defaultFilename = this.buildDefaultFilename(target, mode, format, parameters);
       const filePath = this.resolveOutputPath(parameters, defaultFilename);
+      const save = this.shouldSaveScreenshot(parameters, filePath, returnImageData);
 
       await this.waitForPaint();
 
@@ -65,6 +70,9 @@ class ScreenshotManager {
           autoOpen,
           aiInitiated,
           defaultFilename,
+          returnImageData,
+          maxImageBytes,
+          save,
         });
       }
 
@@ -82,6 +90,9 @@ class ScreenshotManager {
           autoOpen,
           aiInitiated,
           defaultFilename,
+          returnImageData,
+          maxImageBytes,
+          save,
         });
       }
 
@@ -99,6 +110,9 @@ class ScreenshotManager {
         autoOpen,
         aiInitiated,
         defaultFilename,
+        returnImageData,
+        maxImageBytes,
+        save,
         scale: parameters.scale || parameters.scaleFactor || parameters.resolutionScale,
         background: parameters.background || parameters.backgroundColor || parameters.background_color,
         maxPixels: parameters.maxPixels || parameters.max_pixels,
@@ -254,14 +268,42 @@ class ScreenshotManager {
     return Boolean(this.getRequestedOutputPath(parameters));
   }
 
+  shouldReturnImageData(parameters = {}) {
+    return Boolean(
+      parameters.returnImageData ||
+      parameters.return_image_data ||
+      parameters.includeImageData ||
+      parameters.include_image_data ||
+      parameters.embedImage ||
+      parameters.embed_image
+    );
+  }
+
+  shouldSaveScreenshot(parameters = {}, filePath = null, returnImageData = false) {
+    if (parameters.save === false || parameters.saveFile === false) {
+      return false;
+    }
+    if (filePath) {
+      return true;
+    }
+    return !returnImageData;
+  }
+
   withMultiTrackScreenshotDefaults(parameters = {}) {
     const screenshotParameters = { ...parameters };
     const hasAutoSaveSetting =
       screenshotParameters.auto_save !== undefined || screenshotParameters.autoSave !== undefined;
     const copyOnly = Boolean(screenshotParameters.copyToClipboard || screenshotParameters.copy_to_clipboard);
     const saveDisabled = screenshotParameters.save === false || screenshotParameters.saveFile === false;
+    const returnsImageData = this.shouldReturnImageData(screenshotParameters);
 
-    if (!this.hasOutputPath(screenshotParameters) && !hasAutoSaveSetting && !copyOnly && !saveDisabled) {
+    if (
+      !this.hasOutputPath(screenshotParameters) &&
+      !hasAutoSaveSetting &&
+      !copyOnly &&
+      !saveDisabled &&
+      !returnsImageData
+    ) {
       screenshotParameters.auto_save = true;
     }
 
@@ -691,9 +733,11 @@ class ScreenshotManager {
       copyToClipboard: options.copyToClipboard,
       autoOpen: options.autoOpen,
       aiInitiated: options.aiInitiated,
+      returnImageData: options.returnImageData,
+      maxImageBytes: options.maxImageBytes,
       defaultFilename: options.defaultFilename,
       title: this.getDialogTitle(options.target),
-      save: true,
+      save: options.save !== undefined ? options.save : true,
     });
 
     return this.formatResult(result, options.target, options.mode, { notify: options.notify });
@@ -710,9 +754,11 @@ class ScreenshotManager {
       copyToClipboard: options.copyToClipboard,
       autoOpen: options.autoOpen,
       aiInitiated: options.aiInitiated,
+      returnImageData: options.returnImageData,
+      maxImageBytes: options.maxImageBytes,
       defaultFilename: options.defaultFilename,
       title: this.getDialogTitle(options.target),
-      save: true,
+      save: options.save !== undefined ? options.save : true,
     });
 
     return this.formatResult(result, options.target, options.mode, { notify: options.notify });
@@ -733,7 +779,7 @@ class ScreenshotManager {
   }
 
   formatResult(result, target, mode, options = {}) {
-    const destination = result.filePath ? `Saved screenshot to ${result.filePath}` : 'Screenshot copied to clipboard';
+    const destination = this.getScreenshotResultMessage(result);
     if (options.notify !== false) {
       this.showNotification(destination, 'success');
     }
@@ -747,11 +793,29 @@ class ScreenshotManager {
       fileName: result.fileName || null,
       fileSize: result.fileSize || 0,
       format: result.format || 'png',
+      mimeType: result.mimeType || (result.format === 'jpeg' ? 'image/jpeg' : 'image/png'),
       width: result.width,
       height: result.height,
+      imageSizeBytes: result.imageSizeBytes || 0,
+      imageData: result.imageData || undefined,
+      imageDataEncoding: result.imageDataEncoding || undefined,
+      maxImageBytes: result.maxImageBytes || undefined,
       copiedToClipboard: !!result.copiedToClipboard,
       opened: !!result.opened,
     };
+  }
+
+  getScreenshotResultMessage(result = {}) {
+    if (result.filePath) {
+      return `Saved screenshot to ${result.filePath}`;
+    }
+    if (result.copiedToClipboard) {
+      return 'Screenshot copied to clipboard';
+    }
+    if (result.imageData) {
+      return 'Captured screenshot image data';
+    }
+    return 'Screenshot captured';
   }
 
   getDialogTitle(target) {
@@ -867,6 +931,7 @@ class ScreenshotManager {
         const trackParameters = { ...parameters, trackType: track.type };
         const defaultFilename = this.buildDefaultFilename('track', options.mode, options.format, trackParameters);
         const filePath = this.resolveTrackOutputPath(parameters, track.type, options.format, defaultFilename);
+        const save = this.shouldSaveScreenshot(parameters, filePath, options.returnImageData);
 
         try {
           const captureElement =
@@ -878,6 +943,7 @@ class ScreenshotManager {
             target: 'track',
             filePath,
             defaultFilename,
+            save,
             notify: false,
           });
 
@@ -905,10 +971,12 @@ class ScreenshotManager {
     }
 
     const filePaths = capturedTracks.map(track => track.filePath).filter(Boolean);
+    const action = filePaths.length > 0 ? 'Saved' : 'Captured';
+    const subject = filePaths.length > 0 ? 'track screenshot(s)' : 'track screenshot image data';
     const message =
       failedTracks.length > 0
-        ? `Saved ${capturedTracks.length} track screenshot(s); ${failedTracks.length} track(s) failed`
-        : `Saved ${capturedTracks.length} track screenshot(s)`;
+        ? `${action} ${capturedTracks.length} ${subject}; ${failedTracks.length} track(s) failed`
+        : `${action} ${capturedTracks.length} ${subject}`;
 
     this.showNotification(message, failedTracks.length > 0 ? 'warning' : 'success');
 
@@ -927,6 +995,7 @@ class ScreenshotManager {
       filePath: filePaths[0] || null,
       fileName: capturedTracks[0]?.fileName || null,
       fileSize: capturedTracks.reduce((total, track) => total + (track.fileSize || 0), 0),
+      imageSizeBytes: capturedTracks.reduce((total, track) => total + (track.imageSizeBytes || 0), 0),
       copiedToClipboard: capturedTracks.some(track => track.copiedToClipboard),
       opened: capturedTracks.some(track => track.opened),
     };

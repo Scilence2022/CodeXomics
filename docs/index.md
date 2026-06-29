@@ -56,7 +56,7 @@ The current release is `v0.722`. Download installers from [GitHub Releases](http
 | Runtime baseline       | Node.js 20/22 for source builds; Electron `41.7.1`                                               |
 | Tool registry          | 179 YAML schemas across 18 active categories                                                     |
 | Built-in ChatBox tools | 143 mapped local tools                                                                           |
-| MCP tools mode         | 95 tools exposed                                                                                 |
+| MCP tools mode         | 96 tools exposed                                                                                 |
 | MCP agent mode         | `codexomics_chat`, `list_genome_windows`, `switch_active_window`                                 |
 | Runtime agents         | Coordinator, Analysis, Data, Navigation, External, Plugin, DeepResearch                          |
 | UI styling             | Vanilla CSS with default, professional, minimal, pastel, amy, red, elegant, and midnight presets |

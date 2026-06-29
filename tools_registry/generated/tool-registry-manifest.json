@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-28T01:20:36.885Z",
-  "registryHash": "338ad19414b4210a246767d137fcb4504d3015e570269d4b844e813ffcb65d4b",
+  "generatedAt": "2026-06-29T08:06:48.406Z",
+  "registryHash": "af3906690afa77a2b91c6680f47ad4f3fd41d1646e4c025b383499ecb73fdc43",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -8187,6 +8187,23 @@
             "description": "Open the saved screenshot in the system image viewer after capture",
             "default": false
           },
+          "save": {
+            "type": "boolean",
+            "description": "Whether to save the screenshot to disk. Set false with returnImageData=true to return only MCP image content.",
+            "default": true
+          },
+          "returnImageData": {
+            "type": "boolean",
+            "description": "Return the screenshot image as base64 image data. MCP clients receive this as standard image content.",
+            "default": false
+          },
+          "maxImageBytes": {
+            "type": "integer",
+            "description": "Maximum PNG/JPEG byte size allowed when returnImageData=true. Defaults to 16777216 and is capped at 67108864.",
+            "minimum": 1,
+            "maximum": 67108864,
+            "default": 16777216
+          },
           "format": {
             "type": "string",
             "description": "Image format",
@@ -8253,6 +8270,12 @@
           "expected_result": "JPEG file containing the reads track"
         },
         {
+          "user_query": "Return a screenshot directly through MCP without saving a file",
+          "tool_call": "capture_screenshot(target=\"tracks\", mode=\"visible\", returnImageData=true, save=false, maxImageBytes=16777216)",
+          "thought": "Remote MCP client needs image bytes because local file paths are not accessible across machines",
+          "expected_result": "MCP image content containing the PNG screenshot plus text metadata"
+        },
+        {
           "user_query": "Take a screenshot and open it",
           "tool_call": "capture_screenshot(target=\"full_application\", autoOpen=true)",
           "thought": "User wants the screenshot saved and displayed immediately",
@@ -8300,7 +8323,7 @@
       },
       "returns": {
         "success": "boolean - Whether screenshot capture succeeded",
-        "result": "object - Screenshot result including: - filePath: string - Saved screenshot file path - fileName: string - Saved screenshot file name - fileSize: number - Output file size in bytes - target: string - Captured target - mode: string - Capture mode - format: string - Output image format - width: number - Captured image width in pixels - height: number - Captured image height in pixels - copiedToClipboard: boolean - Whether the image was copied to clipboard",
+        "result": "object - Screenshot result including: - filePath: string - Saved screenshot file path - fileName: string - Saved screenshot file name - fileSize: number - Output file size in bytes - imageData: string - Optional base64 image data when returnImageData=true - mimeType: string - Image MIME type when image data is returned - imageSizeBytes: number - PNG/JPEG byte size - target: string - Captured target - mode: string - Capture mode - format: string - Output image format - width: number - Captured image width in pixels - height: number - Captured image height in pixels - copiedToClipboard: boolean - Whether the image was copied to clipboard",
         "error": "string - Error message if success is false"
       },
       "source": "app_registry",
@@ -27831,6 +27854,23 @@
             "description": "Open the saved screenshot in the system image viewer after capture",
             "default": false
           },
+          "save": {
+            "type": "boolean",
+            "description": "Whether to save the screenshot to disk. Set false with returnImageData=true to return only MCP image content.",
+            "default": true
+          },
+          "returnImageData": {
+            "type": "boolean",
+            "description": "Return the screenshot image as base64 image data. MCP clients receive this as standard image content.",
+            "default": false
+          },
+          "maxImageBytes": {
+            "type": "integer",
+            "description": "Maximum PNG/JPEG byte size allowed when returnImageData=true. Defaults to 16777216 and is capped at 67108864.",
+            "minimum": 1,
+            "maximum": 67108864,
+            "default": 16777216
+          },
           "format": {
             "type": "string",
             "description": "Image format",
@@ -27897,6 +27937,12 @@
           "expected_result": "JPEG file containing the reads track"
         },
         {
+          "user_query": "Return a screenshot directly through MCP without saving a file",
+          "tool_call": "capture_screenshot(target=\"tracks\", mode=\"visible\", returnImageData=true, save=false, maxImageBytes=16777216)",
+          "thought": "Remote MCP client needs image bytes because local file paths are not accessible across machines",
+          "expected_result": "MCP image content containing the PNG screenshot plus text metadata"
+        },
+        {
           "user_query": "Take a screenshot and open it",
           "tool_call": "capture_screenshot(target=\"full_application\", autoOpen=true)",
           "thought": "User wants the screenshot saved and displayed immediately",
@@ -27944,7 +27990,7 @@
       },
       "returns": {
         "success": "boolean - Whether screenshot capture succeeded",
-        "result": "object - Screenshot result including: - filePath: string - Saved screenshot file path - fileName: string - Saved screenshot file name - fileSize: number - Output file size in bytes - target: string - Captured target - mode: string - Capture mode - format: string - Output image format - width: number - Captured image width in pixels - height: number - Captured image height in pixels - copiedToClipboard: boolean - Whether the image was copied to clipboard",
+        "result": "object - Screenshot result including: - filePath: string - Saved screenshot file path - fileName: string - Saved screenshot file name - fileSize: number - Output file size in bytes - imageData: string - Optional base64 image data when returnImageData=true - mimeType: string - Image MIME type when image data is returned - imageSizeBytes: number - PNG/JPEG byte size - target: string - Captured target - mode: string - Capture mode - format: string - Output image format - width: number - Captured image width in pixels - height: number - Captured image height in pixels - copiedToClipboard: boolean - Whether the image was copied to clipboard",
         "error": "string - Error message if success is false"
       },
       "source": "app_registry",

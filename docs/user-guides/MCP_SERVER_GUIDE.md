@@ -6,7 +6,7 @@ The CodeXomics Model Context Protocol (MCP) server lets external AI clients insp
 
 | Mode       | How it behaves                                                                     | Exposed tools                                                    |
 | ---------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Tools mode | External clients call specific CodeXomics tools directly.                          | 95 tools                                                         |
+| Tools mode | External clients call specific CodeXomics tools directly.                          | 96 tools                                                         |
 | Agent mode | External clients send natural-language prompts to the in-app ChatBox LLM pipeline. | `codexomics_chat`, `list_genome_windows`, `switch_active_window` |
 
 Tools mode is the default. Agent mode is useful when you want CodeXomics to choose and sequence tools internally.
