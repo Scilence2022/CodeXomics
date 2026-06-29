@@ -59,6 +59,7 @@ class ToolCategoryManager {
       'open_new_tab',
       'switch_tab',
       'close_tab',
+      'capture_screenshot',
 
       // Sequence operations (require genome data access)
       'get_coding_sequence',

@@ -35,7 +35,7 @@ Core capabilities:
 - AI ChatBox with multi-provider LLM configuration and dynamic tool injection.
 - Seven specialized runtime agents: `CoordinatorAgent`, `AnalysisAgent`, `DataAgent`, `NavigationAgent`, `ExternalAgent`, `PluginAgent`, and `DeepResearchAgent`.
 - Dynamic YAML tool registry under `tools_registry/` with 179 current tool schemas across 18 active categories.
-- 143 mapped built-in ChatBox tools and 95 MCP tools in tools mode.
+- 143 mapped built-in ChatBox tools and 96 MCP tools in tools mode.
 - MCP server with tools mode and agent mode, HTTP/SSE transport on port `3002`, and WebSocket transport on port `3003`.
 - VS Code-inspired plugin and extension architecture with activation events, contribution registry, command registry, marketplace support, and security validation.
 - High-performance SVG and Canvas genome rendering for genes, sequences, reads, variants, GC tracks, and custom annotation tracks.

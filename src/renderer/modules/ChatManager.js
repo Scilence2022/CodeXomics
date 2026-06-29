@@ -3778,8 +3778,22 @@ class ChatManager {
       screenshotParameters.auto_save !== undefined || screenshotParameters.autoSave !== undefined;
     const copyOnly = Boolean(screenshotParameters.copyToClipboard || screenshotParameters.copy_to_clipboard);
     const saveDisabled = screenshotParameters.save === false || screenshotParameters.saveFile === false;
+    const returnsImageData = Boolean(
+      screenshotParameters.returnImageData ||
+      screenshotParameters.return_image_data ||
+      screenshotParameters.includeImageData ||
+      screenshotParameters.include_image_data ||
+      screenshotParameters.embedImage ||
+      screenshotParameters.embed_image
+    );
 
-    if (!this.hasScreenshotOutputPath(screenshotParameters) && !hasAutoSaveSetting && !copyOnly && !saveDisabled) {
+    if (
+      !this.hasScreenshotOutputPath(screenshotParameters) &&
+      !hasAutoSaveSetting &&
+      !copyOnly &&
+      !saveDisabled &&
+      !returnsImageData
+    ) {
       screenshotParameters.auto_save = true;
     }
 

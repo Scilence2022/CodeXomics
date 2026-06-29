@@ -147,6 +147,102 @@ class FileTools {
           },
         },
       },
+
+      capture_screenshot: {
+        name: 'capture_screenshot',
+        description:
+          'Capture a PNG or JPEG screenshot of the full CodeXomics application interface or rendered genome tracks',
+        parameters: {
+          type: 'object',
+          properties: {
+            target: {
+              type: 'string',
+              enum: ['full_application', 'tracks', 'visible_tracks', 'track'],
+              description: 'Screenshot target area',
+              default: 'full_application',
+            },
+            mode: {
+              type: 'string',
+              enum: ['full', 'visible'],
+              description:
+                'Capture mode for track screenshots. "full" composites the full rendered track element; "visible" captures the visible viewport rectangle.',
+              default: 'full',
+            },
+            trackType: {
+              type: 'string',
+              description:
+                'Track type to capture when target is "track". Use "all" to return one screenshot per visible track.',
+            },
+            filePath: {
+              type: 'string',
+              description:
+                'Optional output file path. Relative paths are resolved against the current working directory.',
+            },
+            auto_save: {
+              type: 'boolean',
+              description: 'Save to an auto-generated filename when no explicit file path is provided',
+              default: false,
+            },
+            save: {
+              type: 'boolean',
+              description:
+                'Whether to save the screenshot to disk. Set false with returnImageData=true to return only MCP image content.',
+              default: true,
+            },
+            returnImageData: {
+              type: 'boolean',
+              description:
+                'Return the screenshot image as MCP image content using base64 data in addition to metadata.',
+              default: false,
+            },
+            maxImageBytes: {
+              type: 'integer',
+              description:
+                'Maximum PNG/JPEG byte size allowed when returnImageData=true. Defaults to 16777216 and is capped at 67108864.',
+              minimum: 1,
+              maximum: 67108864,
+              default: 16777216,
+            },
+            format: {
+              type: 'string',
+              enum: ['png', 'jpeg', 'jpg'],
+              description: 'Image format',
+              default: 'png',
+            },
+            quality: {
+              type: 'integer',
+              description: 'JPEG quality from 1 to 100. Ignored for PNG.',
+              minimum: 1,
+              maximum: 100,
+              default: 92,
+            },
+            scale: {
+              type: 'number',
+              description: 'Scale factor for full/composited track screenshots',
+              minimum: 0.25,
+              maximum: 4,
+              default: 1,
+            },
+            background: {
+              type: 'string',
+              description: 'CSS background color for composited track screenshots',
+              default: '#ffffff',
+            },
+            maxPixels: {
+              type: 'integer',
+              description: 'Maximum pixel budget for composited track screenshots',
+              minimum: 1000000,
+              maximum: 200000000,
+              default: 64000000,
+            },
+            copyToClipboard: {
+              type: 'boolean',
+              description: 'Also copy the captured image to the system clipboard',
+              default: false,
+            },
+          },
+        },
+      },
     };
   }
 

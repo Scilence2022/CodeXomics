@@ -158,7 +158,7 @@ Tool modules:
 
 Modes:
 
-- Tools mode exposes 95 tools.
+- Tools mode exposes 96 tools.
 - Agent mode exposes 3 tools: `codexomics_chat`, `list_genome_windows`, `switch_active_window`.
 - Mode priority: CLI argument, `CODEXOMICS_MCP_MODE`, `authConfig.mode`, then default `tools`.
 - Agent mode uses the same ChatBox `sendToLLM()` pipeline as in-app user input.

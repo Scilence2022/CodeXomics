@@ -270,4 +270,47 @@ describe('ScreenshotManager', () => {
       })
     );
   });
+
+  it('returns image data without forcing a file save', async () => {
+    const manager = createManager();
+    const previousElectronAPI = window.electronAPI;
+    window.electronAPI = {
+      captureScreenshot: vi.fn(async options => ({
+        success: true,
+        target: options.target,
+        mode: options.mode,
+        format: 'png',
+        mimeType: 'image/png',
+        width: 320,
+        height: 200,
+        imageSizeBytes: 4,
+        imageData: 'AAAA',
+        imageDataEncoding: 'base64',
+        maxImageBytes: options.maxImageBytes,
+      })),
+    };
+
+    try {
+      const result = await manager.captureScreenshot({
+        target: 'full_application',
+        returnImageData: true,
+        maxImageBytes: 12345,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.imageData).toBe('AAAA');
+      expect(result.mimeType).toBe('image/png');
+      expect(window.electronAPI.captureScreenshot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          target: 'full_application',
+          returnImageData: true,
+          maxImageBytes: 12345,
+          filePath: null,
+          save: false,
+        })
+      );
+    } finally {
+      window.electronAPI = previousElectronAPI;
+    }
+  });
 });

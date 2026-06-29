@@ -4,9 +4,11 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'node:module';
 
 const MCP_TOOLS_DIR = path.join(process.cwd(), 'src/mcp-tools');
 const MCP_SERVER_PATH = path.join(process.cwd(), 'src/mcp-server.js');
+const require = createRequire(import.meta.url);
 
 describe('MCP Server Structure', () => {
   let mcpContent;
@@ -35,6 +37,38 @@ describe('MCP Server Structure', () => {
 
   it('should reference ToolsIntegrator', () => {
     expect(mcpContent).toContain('ToolsIntegrator');
+  });
+
+  it('should format screenshot image data as MCP image content', async () => {
+    const MCPServer = require(MCP_SERVER_PATH);
+    const server = new MCPServer(0, 0, null, { requireAuth: false });
+
+    try {
+      const content = server.formatToolResultContent('capture_screenshot', {
+        success: true,
+        result: {
+          success: true,
+          tool: 'capture_screenshot',
+          format: 'png',
+          mimeType: 'image/png',
+          width: 2,
+          height: 1,
+          imageData: 'AAAA',
+          imageDataEncoding: 'base64',
+        },
+      });
+
+      expect(content).toHaveLength(2);
+      expect(content[0].type).toBe('text');
+      expect(JSON.parse(content[0].text).result.imageData).toContain('omitted');
+      expect(content[1]).toEqual({
+        type: 'image',
+        data: 'AAAA',
+        mimeType: 'image/png',
+      });
+    } finally {
+      await server.stop();
+    }
   });
 });
 

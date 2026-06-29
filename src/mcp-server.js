@@ -38,6 +38,9 @@ const AuthenticationManager = require('./mcp-tools/AuthenticationManager.js');
 const ToolCategoryManager = require('./mcp-tools/ToolCategoryManager.js');
 const ConnectionHealthMonitor = require('./mcp-tools/ConnectionHealthMonitor.js');
 
+const DEFAULT_MCP_JSON_PAYLOAD_LIMIT = '96mb';
+const DEFAULT_WS_MAX_PAYLOAD_BYTES = 96 * 1024 * 1024;
+
 class StandardClaudeMCPServer extends EventEmitter {
   constructor(httpPort = 3002, wsPort = 3003, mainWindow = null, authConfig = {}) {
     super(); // Initialize EventEmitter
@@ -148,6 +151,85 @@ class StandardClaudeMCPServer extends EventEmitter {
     this.emit('log', { level, message, data, timestamp: Date.now() });
   }
 
+  formatToolResultContent(toolName, result) {
+    const content = [
+      {
+        type: 'text',
+        text: JSON.stringify(this.redactImageData(result), null, 2),
+      },
+    ];
+
+    if (toolName === 'capture_screenshot') {
+      content.push(...this.extractScreenshotImageContent(result));
+    }
+
+    return content;
+  }
+
+  extractScreenshotImageContent(result) {
+    const payloads = [];
+    const seen = new Set();
+
+    const collect = value => {
+      if (!value || typeof value !== 'object' || seen.has(value)) return;
+      seen.add(value);
+
+      if (typeof value.imageData === 'string' && value.imageData.length > 0) {
+        payloads.push(value);
+      }
+
+      if (value.result && typeof value.result === 'object') {
+        collect(value.result);
+      }
+
+      if (Array.isArray(value.tracks)) {
+        value.tracks.forEach(track => collect(track));
+      }
+    };
+
+    collect(result);
+
+    return payloads.map(payload => ({
+      type: 'image',
+      data: payload.imageData,
+      mimeType: payload.mimeType || this.getMimeTypeFromScreenshotFormat(payload.format),
+    }));
+  }
+
+  getMimeTypeFromScreenshotFormat(format) {
+    const normalized = String(format || 'png').toLowerCase();
+    return normalized === 'jpeg' || normalized === 'jpg' ? 'image/jpeg' : 'image/png';
+  }
+
+  redactImageData(value, seen = new WeakSet()) {
+    if (value === null || typeof value !== 'object') {
+      return value;
+    }
+
+    if (seen.has(value)) {
+      return '[circular]';
+    }
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+      return value.map(item => this.redactImageData(item, seen));
+    }
+
+    const result = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (key === 'imageData' || key === 'imageDataUrl' || key === 'imageDataURL') {
+        result[key] = typeof child === 'string' ? `[base64 image data omitted: ${child.length} chars]` : '[omitted]';
+        continue;
+      }
+      if (key === 'data' && value.type === 'image' && typeof child === 'string') {
+        result[key] = `[base64 image data omitted: ${child.length} chars]`;
+        continue;
+      }
+      result[key] = this.redactImageData(child, seen);
+    }
+    return result;
+  }
+
   setupMCPServer() {
     this.serverLog('info', '🔧 Setting up MCP Server handlers');
 
@@ -247,12 +329,7 @@ class StandardClaudeMCPServer extends EventEmitter {
         }
 
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
+          content: this.formatToolResultContent(toolName, result),
         };
       } catch (error) {
         this.serverLog('error', `❌ Tool ${toolName} execution failed:`, error);
@@ -305,7 +382,7 @@ class StandardClaudeMCPServer extends EventEmitter {
       })
     );
 
-    this.app.use(express.json());
+    this.app.use(express.json({ limit: DEFAULT_MCP_JSON_PAYLOAD_LIMIT }));
 
     // Authentication middleware for protected endpoints
     this.authMiddleware = (req, res, next) => {
@@ -462,7 +539,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     this.wsServer = new WebSocket.Server({
       port: this.wsPort,
       perMessageDeflate: false,
-      maxPayload: 1024 * 1024, // 1MB max payload
+      maxPayload: DEFAULT_WS_MAX_PAYLOAD_BYTES,
     });
 
     this.wsServer.on('connection', (ws, req) => {
@@ -835,12 +912,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           return {
             jsonrpc: '2.0',
             result: {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(result, null, 2),
-                },
-              ],
+              content: this.formatToolResultContent(params.name, result),
             },
             id,
           };
@@ -1052,12 +1124,7 @@ class StandardClaudeMCPServer extends EventEmitter {
             response = {
               jsonrpc: '2.0',
               result: {
-                content: [
-                  {
-                    type: 'text',
-                    text: JSON.stringify(result, null, 2),
-                  },
-                ],
+                content: this.formatToolResultContent(toolName, result),
               },
               id,
             };
@@ -1107,7 +1174,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           break;
       }
 
-      this.serverLog('info', '✅ Sending response:', JSON.stringify(response, null, 2));
+      this.serverLog('info', '✅ Sending response:', JSON.stringify(this.redactImageData(response), null, 2));
       this.serverLog('info', '📡 Response headers being sent:', res.getHeaders());
 
       // Ensure response is sent properly
