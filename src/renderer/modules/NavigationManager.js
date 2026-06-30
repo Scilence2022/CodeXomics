@@ -1867,8 +1867,11 @@ class NavigationManager {
     if (readsTrackElement) {
       const trackContent = readsTrackElement.querySelector('.track-content');
       if (trackContent) {
-        // Cache original transform if not already cached
-        if (!trackContent.dataset.baseTransform) {
+        // Cache original transform if not already cached. Guard on
+        // `=== undefined` (not truthiness): a cached '' is a valid base, and
+        // treating it as uncached would re-cache this frame's translateX next
+        // frame and compound the offset (see cacheTrackTransform).
+        if (trackContent.dataset.baseTransform === undefined) {
           trackContent.dataset.baseTransform = trackContent.style.transform || '';
         }
 
@@ -1997,9 +2000,16 @@ class NavigationManager {
     });
   }
 
-  // Cache transform for a single track element
+  // Cache transform for a single track element.
+  // Guard on `=== undefined`, NOT truthiness: the base transform is almost
+  // always the empty string (freshly-rendered containers have no transform).
+  // A `!element.dataset.baseTransform` check treats that cached '' as "not yet
+  // cached", so the SECOND drag frame re-caches the FIRST frame's translateX as
+  // the base — and every later frame then stacks the live shift on top of it.
+  // That compounding made the view overshoot in the drag direction during the
+  // drag and snap back on release (drag left -> sits left, then jumps right).
   cacheTrackTransform(element) {
-    if (!element.dataset.baseTransform) {
+    if (element.dataset.baseTransform === undefined) {
       const originalTransform = element.style.transform || '';
       element.dataset.baseTransform = originalTransform;
       console.log('🔧 [CACHE] Cached transform for element:', element.className, 'Transform:', originalTransform);

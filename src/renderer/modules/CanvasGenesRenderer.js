@@ -228,8 +228,17 @@ class CanvasGenesRenderer {
    * Render a single gene element
    */
   renderGene(gene, rowIndex, strokeWidth) {
-    // Calculate dimensions and position
-    const geneStart = Math.max(gene.start, this.viewport.start);
+    // Calculate dimensions and position.
+    // Gene coordinates are 1-based (GFF/GenBank), while the viewport and the
+    // base/sequence/ruler rendering treat positions as 0-based array indices.
+    // Subtract 1 from the start so the gene's left edge aligns with the left
+    // edge of its first base cell — matching the SVG renderer
+    // (createSVGGeneElement), the HTML positioner (setGeneElementPosition) and
+    // the secondary coordinate ruler. Without this, canvas-rendered genes sit
+    // one base to the right of (and one base narrower than) the secondary scale
+    // and the sequence track. The end needs no adjustment: a 1-based inclusive
+    // end maps to the same value as a 0-based exclusive end.
+    const geneStart = Math.max(gene.start - 1, this.viewport.start);
     const geneEnd = Math.min(gene.end, this.viewport.end);
 
     const leftPercent = (geneStart - this.viewport.start) / (this.viewport.end - this.viewport.start);
