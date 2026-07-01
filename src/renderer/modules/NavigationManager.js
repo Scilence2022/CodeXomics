@@ -583,6 +583,12 @@ class NavigationManager {
       });
 
       console.log('🔍 [WHEEL-ZOOM] Updated non-reads tracks immediately');
+
+      // Reposition persistent highlights for the new viewport. This partial
+      // redraw path (used on wheel/trackpad zoom when a reads track is present)
+      // bypasses displayGenomeView, so highlights would otherwise keep stale
+      // positions until the next full render.
+      this.genomeBrowser.highlightManager?.renderHighlights();
     } catch (error) {
       console.error('🔍 [WHEEL-ZOOM] Error updating non-reads tracks:', error);
       // Fallback to full redraw if partial update fails

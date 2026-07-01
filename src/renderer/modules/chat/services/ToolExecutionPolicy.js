@@ -113,6 +113,9 @@ class ToolExecutionPolicy {
       'toggle_annotation_track',
       'set_track_settings',
       'set_all_track_settings',
+      'highlight_region',
+      'remove_highlight',
+      'clear_highlights',
     ];
 
     for (let i = lastExecIdx + 1; i < conversationHistory.length; i++) {

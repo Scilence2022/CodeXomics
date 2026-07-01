@@ -1,0 +1,65 @@
+name: list_highlights
+version: 1.0.0
+description: >-
+  List all positional highlights currently shown for the active tab, including each highlight's
+  id, chromosome, start/end coordinates (1-based inclusive), length, label, and color. Use this
+  to review what is highlighted or to obtain an id before calling remove_highlight.
+category: navigation
+keywords:
+  - list
+  - show
+  - highlights
+  - highlighted
+  - regions
+  - get
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: List all highlighted regions
+    tool_call: list_highlights()
+    thought: User wants to see the current highlights
+    expected_result: Returns an array of highlights with ids, coordinates, labels, and colors
+  - user_query: What regions are highlighted?
+    tool_call: list_highlights()
+    thought: User asks which regions are currently marked
+    expected_result: A summary and list of all current highlights
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['highlight_region', 'remove_highlight']
+  alternatives: []
+  prerequisites: []
+  follow_up: ['remove_highlight', 'clear_highlights']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - highlight
+    - query
+  complexity: simple
+  usage_pattern: moderate
+  recommendation: 'Call before remove_highlight to obtain the id of the highlight to remove'
+error_handling:
+  no_highlights: 'Returns an empty list with count 0 when nothing is highlighted'
+returns:
+  success: boolean - Always true
+  count: number - Number of highlights
+  highlights: array - The highlights (id, chromosome, start, end, label, color)
+  message: string - Status message

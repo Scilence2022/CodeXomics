@@ -27,7 +27,7 @@ categories:
       - 'browser_navigation'
       - 'state_management'
       - 'track_control'
-    tools_count: 8
+    tools_count: 12
 
   sequence:
     name: 'Sequence Analysis'

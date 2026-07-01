@@ -51,6 +51,9 @@ class FunctionCallsOrganizer {
           'pan_right',
           'select_gene',
           'select_sequence_region',
+          'highlight_region',
+          'remove_highlight',
+          'clear_highlights',
           'view_markdown_file',
           'list_available_tools',
           'add_task',
@@ -75,6 +78,7 @@ class FunctionCallsOrganizer {
           'search_by_position',
           'get_nearby_features',
           'get_operons',
+          'list_highlights',
           'get_file_info',
           'get_genome_info', // CRITICAL FIX: Added missing tool
           'search_pattern',

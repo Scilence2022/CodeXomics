@@ -502,6 +502,9 @@ class TabManager {
       navigationHistory: [],
       historyIndex: -1,
 
+      // Positional region highlights (independent per tab, session-only)
+      highlights: [],
+
       // Chat and AI state (start fresh for each tab)
       chatHistory: [],
       selectedGene: null,
@@ -704,6 +707,11 @@ class TabManager {
       tabState.selectedGene = this.genomeBrowser.selectedGene;
       tabState.selectedRead = this.genomeBrowser.selectedRead;
 
+      // Save positional region highlights (unique per tab, session-only)
+      tabState.highlights = Array.isArray(this.genomeBrowser.highlights)
+        ? this.genomeBrowser.highlights.map(h => ({ ...h }))
+        : [];
+
       // Save sidebar panel states (unique per tab)
       this.saveSidebarPanelStates(tabState);
 
@@ -793,6 +801,12 @@ class TabManager {
       // Restore selected items (unique per tab)
       this.genomeBrowser.selectedGene = tabState.selectedGene;
       this.genomeBrowser.selectedRead = tabState.selectedRead;
+
+      // Restore positional region highlights (unique per tab, session-only).
+      // The subsequent refreshCurrentView() repaints them via displayGenomeView.
+      this.genomeBrowser.highlights = Array.isArray(tabState.highlights)
+        ? tabState.highlights.map(h => ({ ...h }))
+        : [];
 
       // Synchronize UI checkboxes with the restored visibility state
       if (this.genomeBrowser.updateTrackVisibilityUI) {

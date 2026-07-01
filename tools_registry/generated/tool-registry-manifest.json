@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-29T08:06:48.406Z",
-  "registryHash": "af3906690afa77a2b91c6680f47ad4f3fd41d1646e4c025b383499ecb73fdc43",
+  "generatedAt": "2026-07-01T13:15:41.225Z",
+  "registryHash": "00b1a596e025549a698775bf10cc24a7561f8f27d089b92e6f8b8ccc5d2e5b2b",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 181,
-    "appTools": 181,
+    "tools": 185,
+    "appTools": 185,
     "userTools": 0,
-    "uniqueTools": 175,
+    "uniqueTools": 179,
     "categories": 18,
-    "builtInTools": 145,
+    "builtInTools": 149,
     "diagnostics": 12
   },
   "categories": {
@@ -41,7 +41,7 @@
         "priority": 1,
         "color": "#4CAF50",
         "subcategories": ["browser_navigation", "state_management", "track_control"],
-        "tools_count": 8
+        "tools_count": 12
       },
       "sequence": {
         "name": "Sequence Analysis",
@@ -10304,6 +10304,93 @@
       }
     },
     {
+      "name": "clear_highlights",
+      "version": "1.0.0",
+      "description": "Remove ALL positional highlights from the active tab at once. Use when the user asks to \"clear highlights\", \"remove all highlights\", or \"reset the highlights\". To remove a single highlight, use remove_highlight instead.",
+      "category": "navigation",
+      "keywords": ["clear", "remove all", "reset", "highlights", "highlighted", "regions"],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 15000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Clear all highlights",
+          "tool_call": "clear_highlights()",
+          "thought": "User wants to remove every highlight at once",
+          "expected_result": "All highlights are removed from the view"
+        },
+        {
+          "user_query": "Remove all the highlighted regions",
+          "tool_call": "clear_highlights()",
+          "thought": "User wants a clean view with no highlights",
+          "expected_result": "The highlight overlay is emptied"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": [],
+        "alternatives": ["remove_highlight"],
+        "prerequisites": [],
+        "follow_up": ["list_highlights"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["navigation", "highlight", "annotation"],
+        "complexity": "simple",
+        "usage_pattern": "moderate",
+        "recommendation": "Use to reset all highlights; use remove_highlight to remove a single one"
+      },
+      "error_handling": {
+        "no_highlights": "Returns success=true with cleared 0 when there is nothing to clear"
+      },
+      "returns": {
+        "success": "boolean - Always true",
+        "message": "string - Status message",
+        "cleared": "number - How many highlights were removed",
+        "count": "number - Remaining highlights (always 0)"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/clear_highlights.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "clearHighlights"
+      },
+      "builtin": {
+        "name": "clear_highlights",
+        "method": "clearHighlights",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
       "name": "close_tab",
       "description": "Close a specific tab in the browser interface by tab ID, name, or index position. If no parameters are provided, the tool will close the currently active tab page. Cannot close the last remaining tab.",
       "version": "1.0.0",
@@ -11270,6 +11357,123 @@
       }
     },
     {
+      "name": "highlight_region",
+      "version": "1.0.0",
+      "description": "Add a persistent visual highlight (a colored box) over a genomic region, spanning the full height of the ruler and tracks. Unlike select_sequence_region (which sets a single active selection for copy/extract), this supports MULTIPLE and OVERLAPPING highlights that stay visible while panning and zooming. Use when the user asks to \"highlight\", \"mark\", or \"box\" a region so it stands out. Each call adds one more highlight; use clear_highlights to remove them all or remove_highlight to remove one.",
+      "category": "navigation",
+      "keywords": ["highlight", "mark", "box", "outline", "annotate", "region", "range", "emphasize", "flag"],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 15000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": true,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome name (optional, defaults to current chromosome)"
+          },
+          "start": {
+            "type": "number",
+            "description": "Start position of the region to highlight (1-based, inclusive)",
+            "minimum": 1
+          },
+          "end": {
+            "type": "number",
+            "description": "End position of the region to highlight (1-based, inclusive)",
+            "minimum": 1
+          },
+          "label": {
+            "type": "string",
+            "description": "Optional short label shown on the highlight and in the highlights list"
+          },
+          "color": {
+            "type": "string",
+            "description": "Optional CSS hex color for this highlight (e.g. \"#f59e0b\"). If omitted, a distinct color is auto-assigned from a palette so multiple highlights stay distinguishable."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": ["start", "end"]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Highlight the region from 1000 to 5000",
+          "tool_call": "highlight_region(start=1000, end=5000)",
+          "thought": "User wants a persistent visual box over a genomic interval",
+          "expected_result": "A highlight box is drawn over 1000-5000 and stays visible while navigating"
+        },
+        {
+          "user_query": "Mark region 200-800 on chromosome 1 in green and label it \"operon A\"",
+          "tool_call": "highlight_region(start=200, end=800, chromosome='1', color='#10b981', label='operon A')",
+          "thought": "User wants a colored, labeled highlight on a specific chromosome",
+          "expected_result": "A green \"operon A\" highlight covers 200-800 on chromosome 1"
+        },
+        {
+          "user_query": "Also highlight 4000-4500",
+          "tool_call": "highlight_region(start=4000, end=4500)",
+          "thought": "User is adding another highlight; multiple highlights are supported",
+          "expected_result": "A second highlight is added without removing the first"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["navigate_to_position", "list_highlights"],
+        "alternatives": ["select_sequence_region"],
+        "prerequisites": [],
+        "follow_up": ["list_highlights", "remove_highlight", "clear_highlights"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["navigation", "highlight", "annotation", "visualization"],
+        "complexity": "simple",
+        "usage_pattern": "moderate",
+        "recommendation": "Use to visually mark one or more regions of interest; repeat to add more highlights"
+      },
+      "error_handling": {
+        "invalid_coordinates": "Returns error if start or end are not valid numbers",
+        "no_genome_loaded": "Highlights are drawn once a genome is loaded and the region is in view",
+        "chromosome_not_found": "Returns error if specified chromosome does not exist in the loaded genome"
+      },
+      "returns": {
+        "success": "boolean - Whether the highlight was added",
+        "message": "string - Status message",
+        "highlight": "object - The stored highlight (id, chromosome, start, end, label, color)",
+        "count": "number - Total number of highlights after adding"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/highlight_region.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "highlightRegion"
+      },
+      "builtin": {
+        "name": "highlight_region",
+        "method": "highlightRegion",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
       "name": "jump_to_gene",
       "version": "1.0.0",
       "description": "Jump directly to a gene location by gene name or locus tag. This is the PRIMARY tool for navigating to genes when you know the gene name.",
@@ -11361,6 +11565,93 @@
       "builtin": {
         "name": "jump_to_gene",
         "method": "jumpToGene",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "list_highlights",
+      "version": "1.0.0",
+      "description": "List all positional highlights currently shown for the active tab, including each highlight's id, chromosome, start/end coordinates (1-based inclusive), length, label, and color. Use this to review what is highlighted or to obtain an id before calling remove_highlight.",
+      "category": "navigation",
+      "keywords": ["list", "show", "highlights", "highlighted", "regions", "get"],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 15000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "List all highlighted regions",
+          "tool_call": "list_highlights()",
+          "thought": "User wants to see the current highlights",
+          "expected_result": "Returns an array of highlights with ids, coordinates, labels, and colors"
+        },
+        {
+          "user_query": "What regions are highlighted?",
+          "tool_call": "list_highlights()",
+          "thought": "User asks which regions are currently marked",
+          "expected_result": "A summary and list of all current highlights"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["highlight_region", "remove_highlight"],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": ["remove_highlight", "clear_highlights"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["navigation", "highlight", "query"],
+        "complexity": "simple",
+        "usage_pattern": "moderate",
+        "recommendation": "Call before remove_highlight to obtain the id of the highlight to remove"
+      },
+      "error_handling": {
+        "no_highlights": "Returns an empty list with count 0 when nothing is highlighted"
+      },
+      "returns": {
+        "success": "boolean - Always true",
+        "count": "number - Number of highlights",
+        "highlights": "array - The highlights (id, chromosome, start, end, label, color)",
+        "message": "string - Status message"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/list_highlights.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listHighlights"
+      },
+      "builtin": {
+        "name": "list_highlights",
+        "method": "listHighlights",
         "category": "navigation",
         "type": "built-in",
         "priority": 1,
@@ -11880,6 +12171,115 @@
       "builtin": {
         "name": "pan_right",
         "method": "panRight",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "remove_highlight",
+      "version": "1.0.0",
+      "description": "Remove a single positional highlight previously added by highlight_region. Identify the highlight either by its id (from list_highlights) or by its exact 1-based start and end coordinates. To remove every highlight at once, use clear_highlights instead.",
+      "category": "navigation",
+      "keywords": ["remove", "delete", "unhighlight", "highlight", "region", "clear"],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 15000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The id of the highlight to remove (from list_highlights). Preferred."
+          },
+          "start": {
+            "type": "number",
+            "description": "Start position of the highlight to remove (1-based). Used with end if no id is given.",
+            "minimum": 1
+          },
+          "end": {
+            "type": "number",
+            "description": "End position of the highlight to remove (1-based). Used with start if no id is given.",
+            "minimum": 1
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "anyOf": [
+          {
+            "required": ["id"]
+          },
+          {
+            "required": ["start", "end"]
+          }
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Remove the highlight on 1000-5000",
+          "tool_call": "remove_highlight(start=1000, end=5000)",
+          "thought": "User identifies the highlight by its coordinates",
+          "expected_result": "The highlight covering 1000-5000 is removed"
+        },
+        {
+          "user_query": "Delete highlight hl_1717000000000_2",
+          "tool_call": "remove_highlight(id='hl_1717000000000_2')",
+          "thought": "User identifies the highlight by its id from the list",
+          "expected_result": "The highlight with that id is removed"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["list_highlights"],
+        "alternatives": ["clear_highlights"],
+        "prerequisites": ["highlight_region"],
+        "follow_up": ["list_highlights"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["navigation", "highlight", "annotation"],
+        "complexity": "simple",
+        "usage_pattern": "moderate",
+        "recommendation": "Use list_highlights first to find the id, or pass the exact start/end coordinates"
+      },
+      "error_handling": {
+        "missing_selector": "Returns error if neither an id nor both start and end are provided",
+        "no_match": "Returns success=false with a message if no highlight matches the selector"
+      },
+      "returns": {
+        "success": "boolean - Whether a matching highlight was removed",
+        "message": "string - Status message",
+        "removed": "array - The highlight(s) that were removed",
+        "count": "number - Total number of highlights remaining"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/remove_highlight.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "removeHighlight"
+      },
+      "builtin": {
+        "name": "remove_highlight",
+        "method": "removeHighlight",
         "category": "navigation",
         "type": "built-in",
         "priority": 1,
@@ -29514,6 +29914,93 @@
         "source": "builtin_tools_map"
       }
     },
+    "clear_highlights": {
+      "name": "clear_highlights",
+      "version": "1.0.0",
+      "description": "Remove ALL positional highlights from the active tab at once. Use when the user asks to \"clear highlights\", \"remove all highlights\", or \"reset the highlights\". To remove a single highlight, use remove_highlight instead.",
+      "category": "navigation",
+      "keywords": ["clear", "remove all", "reset", "highlights", "highlighted", "regions"],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 15000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Clear all highlights",
+          "tool_call": "clear_highlights()",
+          "thought": "User wants to remove every highlight at once",
+          "expected_result": "All highlights are removed from the view"
+        },
+        {
+          "user_query": "Remove all the highlighted regions",
+          "tool_call": "clear_highlights()",
+          "thought": "User wants a clean view with no highlights",
+          "expected_result": "The highlight overlay is emptied"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": [],
+        "alternatives": ["remove_highlight"],
+        "prerequisites": [],
+        "follow_up": ["list_highlights"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["navigation", "highlight", "annotation"],
+        "complexity": "simple",
+        "usage_pattern": "moderate",
+        "recommendation": "Use to reset all highlights; use remove_highlight to remove a single one"
+      },
+      "error_handling": {
+        "no_highlights": "Returns success=true with cleared 0 when there is nothing to clear"
+      },
+      "returns": {
+        "success": "boolean - Always true",
+        "message": "string - Status message",
+        "cleared": "number - How many highlights were removed",
+        "count": "number - Remaining highlights (always 0)"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/clear_highlights.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "clearHighlights"
+      },
+      "builtin": {
+        "name": "clear_highlights",
+        "method": "clearHighlights",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "close_tab": {
       "name": "close_tab",
       "description": "Close a specific tab in the browser interface by tab ID, name, or index position. If no parameters are provided, the tool will close the currently active tab page. Cannot close the last remaining tab.",
@@ -30480,6 +30967,123 @@
         "source": "builtin_tools_map"
       }
     },
+    "highlight_region": {
+      "name": "highlight_region",
+      "version": "1.0.0",
+      "description": "Add a persistent visual highlight (a colored box) over a genomic region, spanning the full height of the ruler and tracks. Unlike select_sequence_region (which sets a single active selection for copy/extract), this supports MULTIPLE and OVERLAPPING highlights that stay visible while panning and zooming. Use when the user asks to \"highlight\", \"mark\", or \"box\" a region so it stands out. Each call adds one more highlight; use clear_highlights to remove them all or remove_highlight to remove one.",
+      "category": "navigation",
+      "keywords": ["highlight", "mark", "box", "outline", "annotate", "region", "range", "emphasize", "flag"],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 15000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": true,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome name (optional, defaults to current chromosome)"
+          },
+          "start": {
+            "type": "number",
+            "description": "Start position of the region to highlight (1-based, inclusive)",
+            "minimum": 1
+          },
+          "end": {
+            "type": "number",
+            "description": "End position of the region to highlight (1-based, inclusive)",
+            "minimum": 1
+          },
+          "label": {
+            "type": "string",
+            "description": "Optional short label shown on the highlight and in the highlights list"
+          },
+          "color": {
+            "type": "string",
+            "description": "Optional CSS hex color for this highlight (e.g. \"#f59e0b\"). If omitted, a distinct color is auto-assigned from a palette so multiple highlights stay distinguishable."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": ["start", "end"]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Highlight the region from 1000 to 5000",
+          "tool_call": "highlight_region(start=1000, end=5000)",
+          "thought": "User wants a persistent visual box over a genomic interval",
+          "expected_result": "A highlight box is drawn over 1000-5000 and stays visible while navigating"
+        },
+        {
+          "user_query": "Mark region 200-800 on chromosome 1 in green and label it \"operon A\"",
+          "tool_call": "highlight_region(start=200, end=800, chromosome='1', color='#10b981', label='operon A')",
+          "thought": "User wants a colored, labeled highlight on a specific chromosome",
+          "expected_result": "A green \"operon A\" highlight covers 200-800 on chromosome 1"
+        },
+        {
+          "user_query": "Also highlight 4000-4500",
+          "tool_call": "highlight_region(start=4000, end=4500)",
+          "thought": "User is adding another highlight; multiple highlights are supported",
+          "expected_result": "A second highlight is added without removing the first"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["navigate_to_position", "list_highlights"],
+        "alternatives": ["select_sequence_region"],
+        "prerequisites": [],
+        "follow_up": ["list_highlights", "remove_highlight", "clear_highlights"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["navigation", "highlight", "annotation", "visualization"],
+        "complexity": "simple",
+        "usage_pattern": "moderate",
+        "recommendation": "Use to visually mark one or more regions of interest; repeat to add more highlights"
+      },
+      "error_handling": {
+        "invalid_coordinates": "Returns error if start or end are not valid numbers",
+        "no_genome_loaded": "Highlights are drawn once a genome is loaded and the region is in view",
+        "chromosome_not_found": "Returns error if specified chromosome does not exist in the loaded genome"
+      },
+      "returns": {
+        "success": "boolean - Whether the highlight was added",
+        "message": "string - Status message",
+        "highlight": "object - The stored highlight (id, chromosome, start, end, label, color)",
+        "count": "number - Total number of highlights after adding"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/highlight_region.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "highlightRegion"
+      },
+      "builtin": {
+        "name": "highlight_region",
+        "method": "highlightRegion",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "jump_to_gene": {
       "name": "jump_to_gene",
       "version": "1.0.0",
@@ -30572,6 +31176,93 @@
       "builtin": {
         "name": "jump_to_gene",
         "method": "jumpToGene",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "list_highlights": {
+      "name": "list_highlights",
+      "version": "1.0.0",
+      "description": "List all positional highlights currently shown for the active tab, including each highlight's id, chromosome, start/end coordinates (1-based inclusive), length, label, and color. Use this to review what is highlighted or to obtain an id before calling remove_highlight.",
+      "category": "navigation",
+      "keywords": ["list", "show", "highlights", "highlighted", "regions", "get"],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 15000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "List all highlighted regions",
+          "tool_call": "list_highlights()",
+          "thought": "User wants to see the current highlights",
+          "expected_result": "Returns an array of highlights with ids, coordinates, labels, and colors"
+        },
+        {
+          "user_query": "What regions are highlighted?",
+          "tool_call": "list_highlights()",
+          "thought": "User asks which regions are currently marked",
+          "expected_result": "A summary and list of all current highlights"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["highlight_region", "remove_highlight"],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": ["remove_highlight", "clear_highlights"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["navigation", "highlight", "query"],
+        "complexity": "simple",
+        "usage_pattern": "moderate",
+        "recommendation": "Call before remove_highlight to obtain the id of the highlight to remove"
+      },
+      "error_handling": {
+        "no_highlights": "Returns an empty list with count 0 when nothing is highlighted"
+      },
+      "returns": {
+        "success": "boolean - Always true",
+        "count": "number - Number of highlights",
+        "highlights": "array - The highlights (id, chromosome, start, end, label, color)",
+        "message": "string - Status message"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/list_highlights.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listHighlights"
+      },
+      "builtin": {
+        "name": "list_highlights",
+        "method": "listHighlights",
         "category": "navigation",
         "type": "built-in",
         "priority": 1,
@@ -31091,6 +31782,115 @@
       "builtin": {
         "name": "pan_right",
         "method": "panRight",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "remove_highlight": {
+      "name": "remove_highlight",
+      "version": "1.0.0",
+      "description": "Remove a single positional highlight previously added by highlight_region. Identify the highlight either by its id (from list_highlights) or by its exact 1-based start and end coordinates. To remove every highlight at once, use clear_highlights instead.",
+      "category": "navigation",
+      "keywords": ["remove", "delete", "unhighlight", "highlight", "region", "clear"],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 15000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The id of the highlight to remove (from list_highlights). Preferred."
+          },
+          "start": {
+            "type": "number",
+            "description": "Start position of the highlight to remove (1-based). Used with end if no id is given.",
+            "minimum": 1
+          },
+          "end": {
+            "type": "number",
+            "description": "End position of the highlight to remove (1-based). Used with start if no id is given.",
+            "minimum": 1
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "anyOf": [
+          {
+            "required": ["id"]
+          },
+          {
+            "required": ["start", "end"]
+          }
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Remove the highlight on 1000-5000",
+          "tool_call": "remove_highlight(start=1000, end=5000)",
+          "thought": "User identifies the highlight by its coordinates",
+          "expected_result": "The highlight covering 1000-5000 is removed"
+        },
+        {
+          "user_query": "Delete highlight hl_1717000000000_2",
+          "tool_call": "remove_highlight(id='hl_1717000000000_2')",
+          "thought": "User identifies the highlight by its id from the list",
+          "expected_result": "The highlight with that id is removed"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["list_highlights"],
+        "alternatives": ["clear_highlights"],
+        "prerequisites": ["highlight_region"],
+        "follow_up": ["list_highlights"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["navigation", "highlight", "annotation"],
+        "complexity": "simple",
+        "usage_pattern": "moderate",
+        "recommendation": "Use list_highlights first to find the id, or pass the exact start/end coordinates"
+      },
+      "error_handling": {
+        "missing_selector": "Returns error if neither an id nor both start and end are provided",
+        "no_match": "Returns success=false with a message if no highlight matches the selector"
+      },
+      "returns": {
+        "success": "boolean - Whether a matching highlight was removed",
+        "message": "string - Status message",
+        "removed": "array - The highlight(s) that were removed",
+        "count": "number - Total number of highlights remaining"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/remove_highlight.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "removeHighlight"
+      },
+      "builtin": {
+        "name": "remove_highlight",
+        "method": "removeHighlight",
         "category": "navigation",
         "type": "built-in",
         "priority": 1,
@@ -39729,6 +40529,46 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "highlight_region",
+      "method": "highlightRegion",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "remove_highlight",
+      "method": "removeHighlight",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "list_highlights",
+      "method": "listHighlights",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "clear_highlights",
+      "method": "clearHighlights",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "save_view_state",
       "method": "saveViewState",
       "category": "navigation",
@@ -41174,6 +42014,46 @@
     "select_sequence_region": {
       "name": "select_sequence_region",
       "method": "selectSequenceRegion",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "highlight_region": {
+      "name": "highlight_region",
+      "method": "highlightRegion",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "remove_highlight": {
+      "name": "remove_highlight",
+      "method": "removeHighlight",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "list_highlights": {
+      "name": "list_highlights",
+      "method": "listHighlights",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "clear_highlights": {
+      "name": "clear_highlights",
+      "method": "clearHighlights",
       "category": "navigation",
       "type": "built-in",
       "priority": 1,
