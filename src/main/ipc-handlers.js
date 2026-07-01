@@ -26,6 +26,7 @@ const {
   getDefaultWritableRoots,
   getUserPluginRoots,
   assertAllowedFileAccess,
+  grantReadOnlyFileLoadPath,
   assertPluginPath,
   safePluginJoin,
   safeExtractAdmZip,
@@ -35,6 +36,14 @@ const { ToolRegistryService } = require('./tool-registry-service');
 
 let BamReaderClass = null;
 const BLAST_EXECUTABLES = new Set(['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx']);
+const FILE_LOAD_TOOLS = new Set([
+  'load_genome_file',
+  'load_annotation_file',
+  'load_variant_file',
+  'load_reads_file',
+  'load_wig_tracks',
+  'load_operon_file',
+]);
 const LOCALE_NAMESPACES = new Set(['common', 'menu', 'dialogs', 'notifications', 'tracks']);
 const LOCALE_CODE_PATTERN = /^[A-Za-z]{2}(?:-[A-Za-z0-9]+)?$/;
 const CONFIG_FILES = Object.freeze({
@@ -2200,6 +2209,24 @@ function registerIpcHandlers(deps) {
           path: safeFilePath,
         },
       };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('authorize-file-load', async (event, filePath, toolName) => {
+    try {
+      if (!FILE_LOAD_TOOLS.has(toolName)) {
+        throw new Error(`Unsupported file-loading tool: ${toolName || 'unknown'}`);
+      }
+
+      const safeFilePath = grantReadOnlyFileLoadPath(filePath, {
+        source: 'ai-file-load-tool',
+        reason: `Explicit read-only file load requested by ${toolName}`,
+        operation: toolName,
+      });
+
+      return { success: true, filePath: safeFilePath };
     } catch (error) {
       return { success: false, error: error.message };
     }

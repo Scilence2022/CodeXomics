@@ -159,6 +159,43 @@ describe('security-utils', () => {
     ).toThrow(/Blocked execute configured BLAST binary/);
   });
 
+  it('grants explicit file loads exact-path read access only', () => {
+    const loadPath = path.join(rootDir, 'external-data', 'genome.fasta');
+    const siblingPath = path.join(rootDir, 'external-data', 'private.txt');
+    fs.mkdirSync(path.dirname(loadPath), { recursive: true });
+    fs.writeFileSync(loadPath, '>sample\nATGC\n');
+    fs.writeFileSync(siblingPath, 'private');
+
+    expect(securityUtils.grantReadOnlyFileLoadPath(loadPath)).toBe(path.resolve(loadPath));
+    expect(
+      securityUtils.assertAllowedFileAccess(app, loadPath, {
+        operation: 'read file',
+        mustExist: true,
+      })
+    ).toBe(path.resolve(loadPath));
+    expect(() =>
+      securityUtils.assertAllowedFileAccess(app, loadPath, {
+        operation: 'write file',
+      })
+    ).toThrow(/Blocked write file/);
+    expect(() =>
+      securityUtils.assertAllowedFileAccess(app, siblingPath, {
+        operation: 'read file',
+        mustExist: true,
+      })
+    ).toThrow(/Blocked read file/);
+  });
+
+  it('rejects directories and missing paths as file-load grants', () => {
+    const directoryPath = path.join(rootDir, 'external-data');
+    fs.mkdirSync(directoryPath, { recursive: true });
+
+    expect(() => securityUtils.grantReadOnlyFileLoadPath(directoryPath)).toThrow(/regular file/);
+    expect(() => securityUtils.grantReadOnlyFileLoadPath(path.join(directoryPath, 'missing.fa'))).toThrow(
+      /File does not exist/
+    );
+  });
+
   it('clears PermissionBroker grants when the legacy approved path set is cleared', () => {
     const approvedDir = path.join(rootDir, 'approved-to-clear');
     const child = path.join(approvedDir, 'child.txt');

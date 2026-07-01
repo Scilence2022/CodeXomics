@@ -17,6 +17,7 @@ const allowedInvokeChannels = [
   'read-file',
   'read-file-stream',
   'get-file-info',
+  'authorize-file-load',
   'getFileInfo',
   'get-app-paths',
   'checkFileExists',
@@ -357,6 +358,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectAndLoadFile: () => ipcRenderer.invoke('select-and-load-file'),
   showOpenFileDialog: options => ipcRenderer.invoke('show-open-file-dialog', options),
   getSelectedFileInfo: filePath => ipcRenderer.invoke('get-file-info', filePath),
+  authorizeFileLoad: (filePath, toolName) => ipcRenderer.invoke('authorize-file-load', filePath, toolName),
 
   // Directory selection for benchmark
   showDirectoryDialog: options => ipcRenderer.invoke('show-directory-dialog', options),
