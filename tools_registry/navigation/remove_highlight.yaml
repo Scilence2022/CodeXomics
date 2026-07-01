@@ -1,0 +1,79 @@
+name: remove_highlight
+version: 1.0.0
+description: >-
+  Remove a single positional highlight previously added by highlight_region. Identify the
+  highlight either by its id (from list_highlights) or by its exact 1-based start and end
+  coordinates. To remove every highlight at once, use clear_highlights instead.
+category: navigation
+keywords:
+  - remove
+  - delete
+  - unhighlight
+  - highlight
+  - region
+  - clear
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    id:
+      type: string
+      description: The id of the highlight to remove (from list_highlights). Preferred.
+    start:
+      type: number
+      description: Start position of the highlight to remove (1-based). Used with end if no id is given.
+      minimum: 1
+    end:
+      type: number
+      description: End position of the highlight to remove (1-based). Used with start if no id is given.
+      minimum: 1
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  anyOf:
+    - required: ['id']
+    - required: ['start', 'end']
+sample_usages:
+  - user_query: Remove the highlight on 1000-5000
+    tool_call: remove_highlight(start=1000, end=5000)
+    thought: User identifies the highlight by its coordinates
+    expected_result: The highlight covering 1000-5000 is removed
+  - user_query: Delete highlight hl_1717000000000_2
+    tool_call: remove_highlight(id='hl_1717000000000_2')
+    thought: User identifies the highlight by its id from the list
+    expected_result: The highlight with that id is removed
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['list_highlights']
+  alternatives: ['clear_highlights']
+  prerequisites: ['highlight_region']
+  follow_up: ['list_highlights']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - highlight
+    - annotation
+  complexity: simple
+  usage_pattern: moderate
+  recommendation: 'Use list_highlights first to find the id, or pass the exact start/end coordinates'
+error_handling:
+  missing_selector: 'Returns error if neither an id nor both start and end are provided'
+  no_match: 'Returns success=false with a message if no highlight matches the selector'
+returns:
+  success: boolean - Whether a matching highlight was removed
+  message: string - Status message
+  removed: array - The highlight(s) that were removed
+  count: number - Total number of highlights remaining

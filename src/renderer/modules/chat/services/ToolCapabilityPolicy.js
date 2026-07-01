@@ -140,6 +140,19 @@ class ToolCapabilityPolicy {
         policy: 'parameter_based',
       },
 
+      // Persistent positional highlights. parameter_based lets repeated and
+      // overlapping highlight_region / remove_highlight calls through (each call
+      // has different coordinates), which is required for multi-region highlighting.
+      highlight_operations: {
+        tools: ['highlight_region', 'remove_highlight'],
+        policy: 'parameter_based',
+      },
+
+      highlight_maintenance: {
+        tools: ['clear_highlights'],
+        policy: 'once_per_round',
+      },
+
       search: {
         tools: ['find_gene_by_name', 'search_features', 'search_sequence_motif'],
         policy: 'parameter_based',
@@ -202,6 +215,7 @@ class ToolCapabilityPolicy {
           'list_annotations',
           'search_annotations',
           'get_operons',
+          'list_highlights',
         ],
         policy: 'parameter_based',
       },

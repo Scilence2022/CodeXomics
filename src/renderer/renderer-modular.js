@@ -1,4 +1,4 @@
-/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, PrimerBindingService, PrimerLibraryUI, ReadsManager, ResizableModalManager, ScreenshotManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
+/* global ActionManager, AdvancedSearchManager, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, HighlightManager, HighlightRegionsUI, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, PrimerBindingService, PrimerLibraryUI, ReadsManager, ResizableModalManager, ScreenshotManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 (typeof window !== 'undefined' && window.path) || {
@@ -223,6 +223,16 @@ class GenomeBrowser {
     this.fileManager = new FileManager(this);
     this.trackRenderer = new TrackRenderer(this);
     this.navigationManager = new NavigationManager(this);
+    // Positional region highlights: a persistent, per-tab overlay layer that is
+    // independent of the single-slot sequence selection (see HighlightManager).
+    if (typeof HighlightManager !== 'undefined') {
+      this.highlightManager = new HighlightManager(this);
+      window.highlightManager = this.highlightManager;
+    }
+    if (typeof HighlightRegionsUI !== 'undefined') {
+      this.highlightsUI = new HighlightRegionsUI(this);
+      window.highlightsUI = this.highlightsUI;
+    }
     this.genomeNavigationBar = new GenomeNavigationBar(this);
     this.uiManager = new UIManager(this);
     this.sequenceUtils = new SequenceUtils(this);
@@ -268,6 +278,7 @@ class GenomeBrowser {
     this.userDefinedFeatures = {};
     this.nextFeatureId = 1;
     this.sequenceSelection = { start: null, end: null, active: false };
+    this.highlights = []; // Positional region highlights (per-tab, session-only)
 
     // Track visibility state
     this.trackVisibility = {
@@ -4098,6 +4109,11 @@ class GenomeBrowser {
       // Dynamically populate/update the sidebar tracks based on actual loaded tracks
       this.populateSidebarTracks();
       this.updateTrackVisibilityUI();
+
+      // Repaint persistent positional highlights over the freshly-built track
+      // stack. displayGenomeView is the single redraw funnel, so this keeps
+      // highlights aligned across every pan / zoom / navigate.
+      this.highlightManager?.renderHighlights();
     } finally {
       // Always clear the rendering flag
       this._isRenderingView = false;
@@ -9455,6 +9471,10 @@ class GenomeBrowser {
     document.getElementById('primerTrackBtn')?.addEventListener('click', e => {
       e.stopPropagation();
       this.togglePrimersDropdown();
+    });
+
+    document.getElementById('highlightsBtn')?.addEventListener('click', () => {
+      this.highlightsUI?.open();
     });
 
     document.getElementById('openPrimerLibraryBtn')?.addEventListener('click', () => {

@@ -743,6 +743,11 @@ class LLMContextService {
       'pan_left',
       'scroll_right',
       'scroll_left',
+      // Highlight operations - complete actions that don't need follow-up
+      'highlight_region',
+      'remove_highlight',
+      'clear_highlights',
+      'list_highlights',
       // State information operations - complete actions that don't need follow-up
       'get_genome_info',
       'get_current_state',

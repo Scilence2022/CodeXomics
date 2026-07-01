@@ -493,6 +493,35 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // Positional region highlights (persistent boxes; distinct from selection)
+    this.builtInToolsMap.set('highlight_region', {
+      method: 'highlightRegion',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('remove_highlight', {
+      method: 'removeHighlight',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('list_highlights', {
+      method: 'listHighlights',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('clear_highlights', {
+      method: 'clearHighlights',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('save_view_state', {
       method: 'saveViewState',
       category: 'navigation',
@@ -1427,17 +1456,70 @@ class BuiltInToolsIntegration {
       });
     }
 
-    // Check for sequence region selection patterns
-    // Matches: "select region 1000-5000", "select the sequence from position X to Y", "highlight region"
+    // Check for sequence region selection patterns (for copy/extract/analysis).
+    // "highlight" is intentionally excluded here — it routes to highlight_region,
+    // the persistent-mark tool (see below).
+    // Matches: "select region 1000-5000", "select the sequence from position X to Y"
     if (
-      /\b(select|highlight|choose)\s+.*?\b(region|range|sequence\s+region|interval|area)\b/i.test(query) ||
-      /\b(select|highlight)\s+.*?\b(position|coordinates?)\s+.*?\b(to|until|through|-)\b/i.test(query) ||
-      /\bregion\s+(selection|selected|highlighted|active)\b/i.test(query)
+      /\b(select|choose|pick)\s+.*?\b(region|range|sequence\s+region|interval|area)\b/i.test(query) ||
+      /\b(select|choose)\s+.*?\b(position|coordinates?)\s+.*?\b(to|until|through|-)\b/i.test(query) ||
+      /\bregion\s+(selection|selected|active)\b/i.test(query)
     ) {
       relevantTools.push({
         name: 'select_sequence_region',
         confidence: 0.9,
         reason: 'Sequence region selection keywords detected',
+      });
+    }
+
+    // Check for persistent region-highlight patterns (draw a colored box over a
+    // range; supports multiple/overlapping regions). Distinct from selection.
+    // Matches: "highlight region 1000-2000", "mark the region 500-800",
+    // "put a box on 10kb-12kb", "highlight from X to Y"
+    if (
+      /\b(highlight|mark|box|outline|annotate)\s+.*?\b(region|range|interval|area|position|coordinates?|from)\b/i.test(
+        query
+      ) ||
+      /\b(highlight|mark)\s+\d/i.test(query) ||
+      /\b(add|create|draw|put)\s+.*?\bhighlight\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'highlight_region',
+        confidence: 0.92,
+        reason: 'Persistent region-highlight keywords detected',
+      });
+    }
+
+    // Remove a single highlight.
+    // Matches: "remove the highlight ...", "unhighlight region ...", "delete highlight"
+    if (
+      /\b(remove|delete|clear|unhighlight|un-highlight)\s+.*?\bhighlight(s|ed)?\b/i.test(query) ||
+      /\bunhighlight\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'remove_highlight',
+        confidence: 0.85,
+        reason: 'Remove-highlight keywords detected',
+      });
+    }
+
+    // List highlights.
+    // Matches: "list highlights", "show all highlighted regions", "what regions are highlighted"
+    if (/\b(list|show|get|what)\s+.*?\bhighlight(s|ed)?\b/i.test(query) || /\bhighlighted\s+regions?\b/i.test(query)) {
+      relevantTools.push({
+        name: 'list_highlights',
+        confidence: 0.85,
+        reason: 'List-highlights keywords detected',
+      });
+    }
+
+    // Clear all highlights.
+    // Matches: "clear all highlights", "remove all highlights", "clear the highlights"
+    if (/\b(clear|remove|delete|reset)\s+(all\s+)?highlight(s|ed)?\b/i.test(query)) {
+      relevantTools.push({
+        name: 'clear_highlights',
+        confidence: 0.86,
+        reason: 'Clear-all-highlights keywords detected',
       });
     }
 

@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/sidebar.css">
     <link rel="stylesheet" href="css/primers.css">
+    <link rel="stylesheet" href="css/highlights.css">
     <link rel="stylesheet" href="css/genome-browser.css">
     <link rel="stylesheet" href="css/gene-tracks.css">
     <link rel="stylesheet" href="css/sequence-tracks.css">
@@ -836,6 +837,13 @@
                         </button>
                     </div>
                 </div>
+            </div>
+
+            <div class="toolbar-section">
+                <button id="highlightsBtn" class="btn btn-sm toggle-btn" title="Highlighted Regions">
+                    <i class="fas fa-highlighter"></i>
+                    <span>Highlights</span>
+                </button>
             </div>
         </div>
 
@@ -5064,6 +5072,8 @@ Supported formats:
     <script src="modules/PrimerBindingService.js"></script>
     <script src="modules/PrimerManager.js"></script>
     <script src="modules/PrimerLibraryUI.js"></script>
+    <script src="modules/HighlightManager.js"></script>
+    <script src="modules/HighlightRegionsUI.js"></script>
     <script src="modules/ExternalToolsManager.js"></script>
     <script src="modules/MCPServerManager.js"></script>
 

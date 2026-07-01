@@ -170,6 +170,68 @@ class NavigationTools {
         },
       },
 
+      highlight_region: {
+        name: 'highlight_region',
+        description:
+          'Add a persistent visual highlight (a colored box) over a genomic region, spanning the ruler and tracks. Unlike select_sequence_region, this supports MULTIPLE and OVERLAPPING highlights that persist while panning/zooming. Each call adds one highlight.',
+        parameters: {
+          type: 'object',
+          properties: {
+            chromosome: { type: 'string', description: 'Chromosome name (optional, defaults to current chromosome)' },
+            start: { type: 'number', description: 'Start position of the region to highlight (1-based, inclusive)' },
+            end: { type: 'number', description: 'End position of the region to highlight (1-based, inclusive)' },
+            label: { type: 'string', description: 'Optional short label shown on the highlight and in the list' },
+            color: {
+              type: 'string',
+              description: 'Optional CSS hex color (e.g. "#f59e0b"); auto-assigned from a palette if omitted',
+            },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+          required: ['start', 'end'],
+        },
+      },
+
+      remove_highlight: {
+        name: 'remove_highlight',
+        description:
+          'Remove a single positional highlight added by highlight_region. Identify it by id (from list_highlights) or by exact 1-based start and end coordinates.',
+        parameters: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'The id of the highlight to remove (from list_highlights)' },
+            start: {
+              type: 'number',
+              description: 'Start position of the highlight to remove (1-based), used with end',
+            },
+            end: { type: 'number', description: 'End position of the highlight to remove (1-based), used with start' },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+        },
+      },
+
+      list_highlights: {
+        name: 'list_highlights',
+        description:
+          'List all positional highlights for the active tab, including each highlight id, chromosome, 1-based start/end, length, label, and color.',
+        parameters: {
+          type: 'object',
+          properties: {
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+        },
+      },
+
+      clear_highlights: {
+        name: 'clear_highlights',
+        description: 'Remove ALL positional highlights from the active tab at once.',
+        parameters: {
+          type: 'object',
+          properties: {
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+        },
+      },
+
       get_genome_info: {
         name: 'get_genome_info',
         description: 'Get comprehensive information about the loaded genome',

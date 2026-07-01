@@ -8352,6 +8352,10 @@ ${coreTools}
       zoom_to_gene: () => this.zoomToGene(parameters),
       select_gene: () => this.selectGene(parameters),
       select_sequence_region: () => this.selectSequenceRegion(parameters),
+      highlight_region: () => this.highlightRegion(parameters),
+      remove_highlight: () => this.removeHighlight(parameters),
+      list_highlights: () => this.listHighlights(parameters),
+      clear_highlights: () => this.clearHighlights(parameters),
       get_nearby_features: () => this.getNearbyFeatures(parameters),
       find_intergenic_regions: () => this.findIntergenicRegions(parameters),
 
@@ -11183,12 +11187,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       geneName: `Region ${regionStart}-${regionEnd}`,
     };
 
-    // Highlight the sequence in the view
-    if (typeof this.app.highlightSequenceRegion === 'function') {
+    // Repaint the sequence selection overlay. The legacy this.app.highlightSequenceRegion
+    // hook was never implemented (silent no-op); use the HighlightManager render pass,
+    // which redraws any persistent highlights over the current view.
+    if (this.app.highlightManager && typeof this.app.highlightManager.renderHighlights === 'function') {
       try {
-        this.app.highlightSequenceRegion(regionStart, regionEnd);
+        this.app.highlightManager.renderHighlights();
       } catch (e) {
-        console.warn('Could not highlight sequence region:', e.message);
+        console.warn('Could not repaint highlights:', e.message);
       }
     }
 
@@ -11218,6 +11224,102 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         end: regionEnd,
         length: selectionLength,
       },
+    };
+  }
+
+  /**
+   * Add a persistent positional highlight (a colored box over a genomic range).
+   * Supports multiple and overlapping highlights. Coordinates are 1-based inclusive.
+   */
+  highlightRegion(params = {}) {
+    if (!this.app || !this.app.highlightManager) {
+      throw new Error('Highlight manager not available');
+    }
+    const { start, end, chromosome, label, color } = params;
+    if (start === undefined || end === undefined) {
+      throw new Error('Start and end positions are required');
+    }
+    const s = parseInt(start, 10);
+    const e = parseInt(end, 10);
+    if (isNaN(s) || isNaN(e)) {
+      throw new Error('Start and end positions must be valid numbers');
+    }
+
+    const targetChromosome = chromosome || this.app.currentChromosome;
+    if (this.app.currentSequence && targetChromosome && !this.app.currentSequence[targetChromosome]) {
+      throw new Error(`Chromosome "${targetChromosome}" not found in loaded genome`);
+    }
+
+    const highlight = this.app.highlightManager.addHighlight({
+      chromosome: targetChromosome,
+      start: s,
+      end: e,
+      label: label ? String(label) : '',
+      color: color || undefined,
+      createdBy: 'ai',
+    });
+
+    const length = highlight.end - highlight.start + 1;
+    return {
+      success: true,
+      message: `Highlighted ${highlight.chromosome || ''}:${highlight.start}-${highlight.end} (${length} bp)`,
+      highlight,
+      count: this.app.highlightManager.listHighlights().length,
+    };
+  }
+
+  /**
+   * Remove a single highlight by id, or by exact 1-based start/end match.
+   */
+  removeHighlight(params = {}) {
+    if (!this.app || !this.app.highlightManager) {
+      throw new Error('Highlight manager not available');
+    }
+    const { id, start, end } = params;
+    if (id === undefined && (start === undefined || end === undefined)) {
+      throw new Error('Provide a highlight id, or both start and end, to remove');
+    }
+
+    const selector = id !== undefined ? { id } : { start: parseInt(start, 10), end: parseInt(end, 10) };
+    const removed = this.app.highlightManager.removeHighlight(selector);
+
+    return {
+      success: removed.length > 0,
+      message: removed.length > 0 ? `Removed ${removed.length} highlight(s)` : 'No matching highlight found',
+      removed,
+      count: this.app.highlightManager.listHighlights().length,
+    };
+  }
+
+  /**
+   * List all persistent highlights for the current tab.
+   */
+  listHighlights() {
+    if (!this.app || !this.app.highlightManager) {
+      throw new Error('Highlight manager not available');
+    }
+    const highlights = this.app.highlightManager.listHighlights();
+    return {
+      success: true,
+      count: highlights.length,
+      highlights,
+      message: highlights.length > 0 ? `${highlights.length} highlighted region(s)` : 'No highlighted regions',
+    };
+  }
+
+  /**
+   * Remove every persistent highlight for the current tab.
+   */
+  clearHighlights() {
+    if (!this.app || !this.app.highlightManager) {
+      throw new Error('Highlight manager not available');
+    }
+    const count = this.app.highlightManager.clearHighlights();
+    return {
+      success: true,
+      message: count > 0 ? `Cleared ${count} highlight(s)` : 'No highlights to clear',
+      cleared: count,
+      count: 0,
     };
   }
 

@@ -1,0 +1,65 @@
+name: clear_highlights
+version: 1.0.0
+description: >-
+  Remove ALL positional highlights from the active tab at once. Use when the user asks to
+  "clear highlights", "remove all highlights", or "reset the highlights". To remove a single
+  highlight, use remove_highlight instead.
+category: navigation
+keywords:
+  - clear
+  - remove all
+  - reset
+  - highlights
+  - highlighted
+  - regions
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Clear all highlights
+    tool_call: clear_highlights()
+    thought: User wants to remove every highlight at once
+    expected_result: All highlights are removed from the view
+  - user_query: Remove all the highlighted regions
+    tool_call: clear_highlights()
+    thought: User wants a clean view with no highlights
+    expected_result: The highlight overlay is emptied
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: ['remove_highlight']
+  prerequisites: []
+  follow_up: ['list_highlights']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - highlight
+    - annotation
+  complexity: simple
+  usage_pattern: moderate
+  recommendation: 'Use to reset all highlights; use remove_highlight to remove a single one'
+error_handling:
+  no_highlights: 'Returns success=true with cleared 0 when there is nothing to clear'
+returns:
+  success: boolean - Always true
+  message: string - Status message
+  cleared: number - How many highlights were removed
+  count: number - Remaining highlights (always 0)
