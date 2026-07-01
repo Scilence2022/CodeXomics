@@ -343,6 +343,32 @@ function assertAllowedFileAccess(app, targetPath, options = {}) {
   return resolvedPath;
 }
 
+function grantReadOnlyFileLoadPath(targetPath, options = {}) {
+  if (!targetPath || typeof targetPath !== 'string') {
+    throw new Error('File load requires a valid path');
+  }
+
+  const resolvedPath = path.resolve(targetPath);
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(`File does not exist: ${resolvedPath}`);
+  }
+
+  const stats = fs.statSync(resolvedPath);
+  if (!stats.isFile()) {
+    throw new Error(`File load requires a regular file: ${resolvedPath}`);
+  }
+
+  permissionBroker.grantPath(resolvedPath, {
+    source: options.source || 'file-load-tool',
+    reason: options.reason || 'Read-only access for an explicit file-loading request',
+    capabilities: [FILE_CAPABILITIES.READ],
+    recursive: false,
+    operation: options.operation || 'load file',
+  });
+
+  return resolvedPath;
+}
+
 function sanitizePluginId(pluginId) {
   if (typeof pluginId !== 'string' || !/^[A-Za-z0-9._-]+$/.test(pluginId)) {
     throw new Error('Invalid plugin id');
@@ -425,6 +451,7 @@ module.exports = {
   assertInsideRoot,
   getDefaultWritableRoots,
   assertAllowedFileAccess,
+  grantReadOnlyFileLoadPath,
   sanitizePluginId,
   getUserPluginRoots,
   assertPluginPath,

@@ -33,12 +33,21 @@ class FileOperationService {
     }
   }
 
-  async validateFilePath(filePath, label = 'File') {
+  async validateFilePath(filePath, label = 'File', toolName) {
     if (!filePath) {
       throw new Error(`${label} path is required`);
     }
 
-    if (typeof window !== 'undefined' && window.electronAPI?.getSelectedFileInfo) {
+    if (
+      typeof window !== 'undefined' &&
+      window.electronAPI?.authorizeFileLoad &&
+      window.electronAPI?.getSelectedFileInfo
+    ) {
+      const authorizationResult = await window.electronAPI.authorizeFileLoad(filePath, toolName);
+      if (!authorizationResult?.success) {
+        throw new Error(authorizationResult?.error || `${label} could not be authorized: ${filePath}`);
+      }
+
       const infoResult = await window.electronAPI.getSelectedFileInfo(filePath);
       if (!infoResult?.success) {
         throw new Error(infoResult?.error || `${label} not found: ${filePath}`);
@@ -50,7 +59,7 @@ class FileOperationService {
     }
 
     if (typeof window !== 'undefined') {
-      throw new Error('electronAPI.getSelectedFileInfo is unavailable in the hardened renderer');
+      throw new Error('Read-only file-load authorization is unavailable in the hardened renderer');
     }
 
     return { success: true };
@@ -67,7 +76,7 @@ class FileOperationService {
           throw new Error('FileManager not available');
         }
 
-        await this.validateFilePath(filePath, 'Genome file');
+        await this.validateFilePath(filePath, 'Genome file', 'load_genome_file');
 
         await this.app.fileManager.loadFile(filePath);
 
@@ -136,7 +145,7 @@ class FileOperationService {
           throw new Error('FileManager not available');
         }
 
-        await this.validateFilePath(filePath, 'Annotation file');
+        await this.validateFilePath(filePath, 'Annotation file', 'load_annotation_file');
 
         // Load annotation file passing merge options
         await this.app.fileManager.loadFile(filePath, options);
@@ -620,7 +629,7 @@ class FileOperationService {
       const { showFileDialog = false } = parameters;
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        await this.validateFilePath(filePath, 'Variant file');
+        await this.validateFilePath(filePath, 'Variant file', 'load_variant_file');
         await this.app.fileManager.loadFile(filePath);
         return {
           success: true,
@@ -651,7 +660,7 @@ class FileOperationService {
       const { showFileDialog = false } = parameters;
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        await this.validateFilePath(filePath, 'Reads file');
+        await this.validateFilePath(filePath, 'Reads file', 'load_reads_file');
         await this.app.fileManager.loadFile(filePath);
         return { success: true, message: `Successfully loaded reads file: ${filePath}`, filePath, fileType: 'reads' };
       } else {
@@ -679,7 +688,7 @@ class FileOperationService {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         const pathsArray = Array.isArray(filePaths) ? filePaths : [filePaths];
         for (const wigPath of pathsArray) {
-          await this.validateFilePath(wigPath, 'WIG track file');
+          await this.validateFilePath(wigPath, 'WIG track file', 'load_wig_tracks');
         }
         if (pathsArray.length > 1) await this.app.fileManager.loadMultipleWIGFiles(pathsArray);
         else await this.app.fileManager.loadFile(pathsArray[0]);
@@ -714,7 +723,7 @@ class FileOperationService {
       const { showFileDialog = false, format = 'auto' } = parameters;
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        await this.validateFilePath(filePath, 'Operon file');
+        await this.validateFilePath(filePath, 'Operon file', 'load_operon_file');
         await this.app.fileManager.loadOperonFile(filePath);
         return {
           success: true,
