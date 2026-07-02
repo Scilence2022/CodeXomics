@@ -183,7 +183,6 @@ class UIManager {
     const sidebar = document.getElementById('sidebar');
     const splitter = document.getElementById('sidebarSplitter');
     const mainContent = document.querySelector('.main-content');
-    const splitterToggleBtn = document.getElementById('splitterToggleBtn');
 
     // Get all sidebar sections
     const allPanels = document.querySelectorAll('.sidebar-section');
@@ -195,12 +194,8 @@ class UIManager {
       if (splitter) splitter.classList.add('collapsed');
       mainContent.classList.add('sidebar-collapsed');
 
-      // Update splitter toggle button
-      if (splitterToggleBtn) {
-        splitterToggleBtn.classList.add('collapsed');
-        splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-        splitterToggleBtn.title = 'Show Sidebar';
-      }
+      // Keep both sidebar controls synchronized with the collapsed state
+      this.updateToggleButtonStates();
 
       // Trigger resize event
       window.dispatchEvent(new Event('resize'));
@@ -211,7 +206,6 @@ class UIManager {
     const sidebar = document.getElementById('sidebar');
     const splitter = document.getElementById('sidebarSplitter');
     const mainContent = document.querySelector('.main-content');
-    const splitterToggleBtn = document.getElementById('splitterToggleBtn');
 
     // Check if sidebar is actually hidden (either by class or by width)
     const isHidden = sidebar.classList.contains('collapsed') || sidebar.offsetWidth === 0;
@@ -231,12 +225,8 @@ class UIManager {
         sidebar.style.flex = 'none';
       }
 
-      // Update splitter toggle button
-      if (splitterToggleBtn) {
-        splitterToggleBtn.classList.remove('collapsed');
-        splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-        splitterToggleBtn.title = 'Hide Sidebar';
-      }
+      // Keep both sidebar controls synchronized with the visible state
+      this.updateToggleButtonStates();
 
       // Trigger resize event
       window.dispatchEvent(new Event('resize'));
