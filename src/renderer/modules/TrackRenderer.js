@@ -13851,7 +13851,10 @@ This action cannot be undone.`;
     const trackContent = readsTrack.querySelector('.track-content');
     if (!trackContent) return;
 
-    const svgContainer = trackContent.querySelector('svg');
+    // Coverage is also an SVG and appears before the reads SVG. Target the
+    // reads layer explicitly so resize handling does not replace coverage's
+    // normalized 0-100 viewBox with a pixel-width viewBox.
+    const svgContainer = trackContent.querySelector('.reads-svg-container');
     if (svgContainer) {
       // Force layout recalculation
       trackContent.style.width = '100%';
