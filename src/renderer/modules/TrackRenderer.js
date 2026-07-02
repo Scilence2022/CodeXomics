@@ -15033,7 +15033,6 @@ This action cannot be undone.`;
     const mismatchColorGroup = bodyElement.querySelector('#readsMismatchColorGroup');
     const sequenceFontSizeGroup = bodyElement.querySelector('#readsSequenceFontSizeGroup');
     const sequenceHeightGroup = bodyElement.querySelector('#readsSequenceHeightGroup');
-    const highlightMismatchesGroup = bodyElement.querySelector('#readsHighlightMismatchesGroup');
 
     // Force sequences toggle - define first so it can be used by main toggle
     const forceSequenceCheckbox = bodyElement.querySelector('#readsForceSequences');
