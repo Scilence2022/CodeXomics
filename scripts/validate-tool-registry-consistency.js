@@ -124,6 +124,7 @@ const KNOWN_EXCEPTIONS = {
     'get_bookmarks',
     'list_genome_windows',
     'render_protein_structure_results',
+    'run_on_windows',
     'search_alphafold_by_sequence',
     'switch_active_window',
   ],

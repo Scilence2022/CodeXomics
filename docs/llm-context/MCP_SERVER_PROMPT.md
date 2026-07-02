@@ -20,7 +20,41 @@ You are an AI assistant with access to CodeXomics, an AI-native genome browser f
 }
 ```
 
+## Working With Multiple Genomes (Windows)
+
+CodeXomics opens each genome in its own window with **fully isolated state**. Every tool call is routed to one genome window, so when more than one genome may be open you must target the right one:
+
+1. **Discover first.** Call `list_genome_windows` to see every open window with its `windowId`, `genomeName`, and `isFocused` flag.
+2. **Address every call.** Pass `windowId` on each genome tool call to target a window deterministically. Do not rely on which window happens to be focused — focus is a single global and changes underneath you.
+3. **Assert the genome (optional but recommended).** Also pass `expected_genome` (the `genomeName` from `list_genome_windows`). If that window now has a different genome loaded, the call **fails loudly** instead of returning data from the wrong genome.
+4. **Verify the answer.** Every tool result carries a `_meta` object with the `windowId` and `genomeName` that actually answered. Check it matches your intent.
+
+If you omit `windowId` while multiple windows are open and none is focused, the call fails and lists the available windows so you can choose. `switch_active_window` focuses a window and pins it as your session's default target, but passing `windowId` per call is more reliable — especially for concurrent clients.
+
+### Simultaneous multi-genome analysis
+
+Use `run_on_windows` to run one **read-only** tool across several open genomes in a single call and get results labeled by `windowId` + `genomeName`:
+
+```json
+{
+  "tool": "run_on_windows",
+  "arguments": {
+    "tool": "search_features",
+    "parameters": { "query": "dnaA" },
+    "windowIds": ["win_1", "win_2"]
+  }
+}
+```
+
+Omit `windowIds` to fan out to all open windows. Each window runs independently — one failure does not abort the others. Only read-only tools are accepted; mutating, navigation, and export tools are rejected so a single call can never change multiple genomes at once.
+
 ## Available Tool Categories
+
+### 0. Multi-Window / Multi-Genome
+
+- `list_genome_windows` - List open genome windows with their `windowId`, `genomeName`, and focus state
+- `switch_active_window` - Focus a window and pin it as this session's default target
+- `run_on_windows` - Run one read-only tool across multiple windows and return labeled results
 
 ### 1. Navigation & State Management
 
