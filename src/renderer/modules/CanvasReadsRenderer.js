@@ -335,8 +335,12 @@ class CanvasReadsRenderer {
     const base = this.options.readHeight;
     if (!this.options.showSequences) return base;
     const pixelsPerBp = this.getPixelsPerBp();
-    // Only grow once bases are wide enough that letters are actually drawn.
-    if (pixelsPerBp < 3) return base;
+    // Grow the row only once base letters are actually shown, using the SAME
+    // unified threshold as the letters-vs-blocks decision (shouldShowSequences
+    // / CanvasSequenceRenderer). Keep this value in sync with
+    // TrackRenderer.SEQUENCE_LETTER_MIN_PX_PER_BP (8).
+    const showLetters = this.options.forceSequences || pixelsPerBp >= 8;
+    if (!showLetters) return base;
     return Math.max(base, this.getReadSequenceFontSize(pixelsPerBp) + 4);
   }
 

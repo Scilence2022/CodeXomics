@@ -3817,24 +3817,19 @@ class TrackRenderer {
         trackContent.appendChild(noReadsMsg);
         trackContent.style.height = '80px'; // Default height for empty track
       } else {
-        // Create coverage visualization if enabled (respect toggle state)
+        // Coverage and reference are rendered as fixed DOM bands at the top of
+        // the track for BOTH canvas and SVG modes, so they render identically
+        // and stay pinned above the (scrollable) reads. The canvas reads
+        // renderer draws only reads - it no longer draws these internally.
         const showCoverage = settings.showCoverage !== false && this.elementVisibilityStates.readsCoverage;
         let coverageHeight = 0;
-
-        // Only create SVG coverage if NOT using canvas mode (CanvasReadsRenderer handles its own coverage)
         const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
 
-        if (showCoverage && !isCanvasMode) {
+        if (showCoverage) {
           coverageHeight = parseInt(settings.coverageHeight) || 50;
           this.createCoverageVisualization(trackContent, visibleReads, viewport, coverageHeight, settings);
-        } else if (showCoverage && isCanvasMode) {
-          // For Canvas mode, we don't create SVG but we might need to know the height for calculations if we were mixing,
-          // but since Canvas handles everything, we can treat external coverage height as 0
-          // and let CanvasReadsRenderer handle the layout internally.
-          coverageHeight = 0;
         }
 
-        // Create fixed reference visualization above reads (respect toggle state)
         let referenceHeight = 0;
         const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
         if (showReference) {
@@ -3845,70 +3840,22 @@ class TrackRenderer {
         // Arrange reads into non-overlapping rows
         const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
 
-        const readHeight = settings.readHeight || 14;
-        const rowSpacing = settings.readSpacing || 2;
-        // Adjust top padding based on fixed elements above (coverage + reference)
-        const topPadding = showCoverage || referenceHeight > 0 ? coverageHeight + referenceHeight + 2 : 10;
-        const bottomPadding = 10;
+        const layout = this.computeReadsTrackLayout(readRows, settings, {
+          showCoverage,
+          coverageHeight,
+          showReference,
+          referenceHeight,
+          isCanvasMode,
+        });
 
-        // Total height above reads (coverage + reference + spacing)
-        const totalTopHeight = coverageHeight + referenceHeight;
-
-        // Check if vertical scrolling is enabled and needed (disabled by default to match original Canvas behavior)
-        const enableVerticalScroll =
-          settings.enableVerticalScroll === true && readRows.length > (settings.maxVisibleRows || 10);
-
-        if (enableVerticalScroll) {
-          // Create scrollable reads track with all rows
-          this.createScrollableReadsTrack(
-            trackContent,
-            readRows,
-            viewport,
-            readHeight,
-            rowSpacing,
-            topPadding,
-            bottomPadding,
-            settings
-          );
+        if (layout.useScroll) {
+          // More rows than fit the configured height - use the scrollable
+          // /virtualized view automatically.
+          this.createScrollableReadsTrack(trackContent, readRows, viewport, layout, settings);
         } else {
-          // Use traditional limited rows approach
-          const maxRows = settings.maxRows || 20;
-          const limitedReadRows = readRows.slice(0, maxRows);
+          trackContent.style.height = `${layout.trackHeight}px`;
+
           const renderingMode = settings.renderingMode || 'canvas';
-
-          // Calculate adaptive track height including reference sequence
-          let trackHeight;
-          if (renderingMode === 'canvas') {
-            // For Canvas mode, we calculate height based on internal canvas layout
-            // coverage (55) + reference (25) + reads
-            let canvasTopSpace = 5;
-            if (showCoverage) canvasTopSpace += 55;
-            if (showReference) canvasTopSpace += 25;
-            trackHeight = canvasTopSpace + limitedReadRows.length * (readHeight + rowSpacing) + bottomPadding;
-          } else {
-            // For SVG mode, we account for separate DOM elements
-            trackHeight =
-              totalTopHeight +
-              topPadding +
-              limitedReadRows.length * (readHeight + rowSpacing) -
-              rowSpacing +
-              bottomPadding;
-          }
-
-          trackHeight = Math.max(trackHeight, settings.height || 150);
-          trackContent.style.height = `${trackHeight}px`;
-
-          // Render reads using Canvas or SVG based on settings
-          console.log(
-            `🔧 [DEBUG] [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`
-          );
-          console.log(`🔧 [DEBUG] [TrackRenderer] Full settings object:`, settings);
-
-          if (renderingMode === 'canvas') {
-            console.log(`🎨 [DEBUG] [TrackRenderer] Switching to Canvas rendering mode`);
-          } else {
-            console.log(`🖼️ [DEBUG] [TrackRenderer] Switching to SVG rendering mode`);
-          }
 
           if (this.elementVisibilityStates.readsReads) {
             if (renderingMode === 'canvas') {
@@ -3921,12 +3868,12 @@ class TrackRenderer {
               // Use Canvas rendering for high performance
               this.renderReadsElementsCanvas(
                 trackContent,
-                limitedReadRows,
+                readRows,
                 viewport,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
+                layout.readHeight,
+                layout.rowSpacing,
+                layout.topPadding,
+                layout.trackHeight,
                 settings,
                 referenceSequence
               );
@@ -3935,14 +3882,14 @@ class TrackRenderer {
               // Pass just topPadding - reads SVG will be positioned after coverage automatically
               this.renderReadsElementsSVG(
                 trackContent,
-                limitedReadRows,
+                readRows,
                 viewport.start,
                 viewport.end,
                 viewport.end - viewport.start,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
+                layout.readHeight,
+                layout.rowSpacing,
+                layout.topPadding,
+                layout.trackHeight,
                 settings
               );
             }
@@ -3951,26 +3898,10 @@ class TrackRenderer {
 
         // Add reads statistics with cache info and sampling info
         const stats = this.genomeBrowser.readsManager.getCacheStats();
-        let statsText;
-
-        if (enableVerticalScroll) {
-          // Scrollable mode statistics
-          const totalReadsCount = readRows.reduce((sum, row) => sum + row.length, 0);
-          const maxVisibleRows = settings.maxVisibleRows || 10;
-          statsText = `${totalReadsCount} reads in ${readRows.length} rows (${Math.min(maxVisibleRows, readRows.length)} visible, scrollable)`;
-        } else {
-          // Traditional mode statistics
-          const maxRows = settings.maxRows || 20;
-          const limitedReadRows = readRows.slice(0, maxRows);
-          const hiddenRowsCount = Math.max(0, readRows.length - limitedReadRows.length);
-          const visibleReadsCount = limitedReadRows.reduce((sum, row) => sum + row.length, 0);
-
-          statsText = `${visibleReadsCount} reads in ${limitedReadRows.length} rows`;
-          if (hiddenRowsCount > 0) {
-            const hiddenReadsTotal = readRows.slice(maxRows).reduce((sum, row) => sum + row.length, 0);
-            statsText += ` (${hiddenReadsTotal} hidden)`;
-          }
-        }
+        const totalReadsCount = readRows.reduce((sum, row) => sum + row.length, 0);
+        let statsText = layout.useScroll
+          ? `${totalReadsCount} reads in ${readRows.length} rows (${Math.min(layout.visibleRows, readRows.length)} visible, scrollable)`
+          : `${totalReadsCount} reads in ${readRows.length} rows`;
 
         // Add sampling information if available and enabled
         if (settings.showSamplingInfo !== false) {
@@ -4137,104 +4068,48 @@ class TrackRenderer {
         this.trackSettings = this.trackSettings || {};
         this.trackSettings['reads'] = settings;
 
-        // Create coverage visualization if enabled (respect toggle state)
+        // Coverage and reference are fixed DOM bands at the top for both modes
+        // (the canvas reads renderer draws only reads).
         const showCoverage = settings.showCoverage !== false && this.elementVisibilityStates.readsCoverage;
         let coverageHeight = 0;
-
-        // Only create SVG coverage if NOT using canvas mode
         const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
 
-        if (showCoverage && !isCanvasMode) {
+        if (showCoverage) {
           coverageHeight = parseInt(settings.coverageHeight) || 50;
           this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
         }
 
-        // Create reference visualization (respect toggle state)
         let referenceHeight = 0;
-        // Only create separate reference visualization if NOT using canvas mode
-        // CanvasReadsRenderer handles its own reference sequence rendering to ensure proper stacking
-        if (!isCanvasMode) {
-          const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
-          if (showReference) {
-            referenceHeight = parseInt(settings.referenceHeight) || 25;
-            this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
-          }
-        } else if (settings.showReference !== false && this.elementVisibilityStates.readsReference) {
-          // In Canvas mode, we acknowledge the reference exists but don't draw it separately
-          // We set referenceHeight to 0 here because the canvas renderer manages its own internal offsets
-          // and we don't want to push the canvas container down by this amount in the DOM layout
-          referenceHeight = 0;
+        const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
+        if (showReference) {
+          referenceHeight = parseInt(settings.referenceHeight) || 25;
+          this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
         }
 
         // Arrange sampled reads into rows (use sampledReads for display, reads for coverage above)
         const readRows = this.arrangeReadsInRows(sampledReads, viewport.start, viewport.end);
 
-        // Calculate rendering parameters
-        const readHeight = settings.readHeight || 4;
-        const rowSpacing = settings.readSpacing || 2;
-        // Adjust top padding based on fixed elements above (coverage + reference)
-        const topPadding = showCoverage || referenceHeight > 0 ? coverageHeight + referenceHeight + 2 : 0;
-        const bottomPadding = 0;
-
-        // Check if we should use scrollable mode (disabled by default to match original Canvas behavior)
-        const forceScrollable = settings.forceScrollable === true && readRows.length > (settings.maxRows || 20);
-        console.log('🔧 [DEBUG] [createSingleReadsTrack] Scrollable check:', {
-          forceScrollable: settings.forceScrollable,
-          readRowsLength: readRows.length,
-          maxRows: settings.maxRows || 20,
-          result: forceScrollable,
+        const layout = this.computeReadsTrackLayout(readRows, settings, {
+          showCoverage,
+          coverageHeight,
+          showReference,
+          referenceHeight,
+          isCanvasMode,
+          defaultTopPadding: 0,
+          defaultBottomPadding: 0,
         });
 
-        if (forceScrollable) {
-          // Use new scrollable track system for performance
-          this.createScrollableReadsTrack(
-            trackContent,
-            readRows,
-            viewport,
-            readHeight,
-            rowSpacing,
-            topPadding,
-            bottomPadding,
-            settings
-          );
+        if (layout.useScroll) {
+          // More rows than fit the configured height - use the scrollable
+          // /virtualized view automatically.
+          this.createScrollableReadsTrack(trackContent, readRows, viewport, layout, settings);
         } else {
-          // Use traditional limited rows approach
-          console.log('🔧 [DEBUG] [createSingleReadsTrack] Using traditional limited rows approach');
-          const maxRows = settings.maxRows || 20;
-          const limitedReadRows = readRows.slice(0, maxRows);
-          console.log('🔧 [DEBUG] [createSingleReadsTrack] Limited rows created, count:', limitedReadRows.length);
+          trackContent.style.height = `${layout.trackHeight}px`;
 
-          // Calculate adaptive track height including reference sequence
-          let trackHeight;
-          if (isCanvasMode) {
-            let canvasTopSpace = 5;
-            if (showCoverage) canvasTopSpace += 55;
-            const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
-            if (showReference) canvasTopSpace += 25;
-            trackHeight = canvasTopSpace + limitedReadRows.length * (readHeight + rowSpacing) + bottomPadding;
-          } else {
-            trackHeight =
-              coverageHeight +
-              referenceHeight +
-              topPadding +
-              limitedReadRows.length * (readHeight + rowSpacing) -
-              rowSpacing +
-              bottomPadding;
-          }
-          trackHeight = Math.max(trackHeight, settings.height || 150);
-          trackContent.style.height = `${trackHeight}px`;
-
-          // Render reads using Canvas or SVG based on settings
           const renderingMode = settings.renderingMode || 'canvas';
-          console.log(
-            `🔧 [DEBUG] [createSingleReadsTrack] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`
-          );
-          console.log(`🔧 [DEBUG] [createSingleReadsTrack] Full settings object:`, settings);
 
           if (this.elementVisibilityStates.readsReads) {
             if (renderingMode === 'canvas') {
-              console.log(`🎨 [DEBUG] [createSingleReadsTrackContent] Switching to Canvas rendering mode`);
-
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
                 settings.showReference !== false
@@ -4244,27 +4119,27 @@ class TrackRenderer {
               // Use Canvas rendering for high performance
               this.renderReadsElementsCanvas(
                 trackContent,
-                limitedReadRows,
+                readRows,
                 viewport,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
+                layout.readHeight,
+                layout.rowSpacing,
+                layout.topPadding,
+                layout.trackHeight,
                 settings,
                 referenceSequence
               );
             } else {
-              // ... SVG rendering ...
+              // Create SVG-based read visualization
               this.renderReadsElementsSVG(
                 trackContent,
-                limitedReadRows,
+                readRows,
                 viewport.start,
                 viewport.end,
                 viewport.end - viewport.start,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
+                layout.readHeight,
+                layout.rowSpacing,
+                layout.topPadding,
+                layout.trackHeight,
                 settings
               );
             }
@@ -4413,84 +4288,47 @@ class TrackRenderer {
         this.trackSettings = this.trackSettings || {};
         this.trackSettings['reads'] = settings;
 
-        let coverageHeight = 0;
-        let referenceHeight = 0;
-
-        // Create coverage visualization if enabled (respect toggle state)
+        // Coverage and reference are fixed DOM bands at the top for both modes
+        // (the canvas reads renderer draws only reads).
         const showCoverage = settings.showCoverage !== false && this.elementVisibilityStates.readsCoverage;
         const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
+        let coverageHeight = 0;
 
-        if (showCoverage && !isCanvasMode) {
+        if (showCoverage) {
           coverageHeight = parseInt(settings.coverageHeight) || 50;
           this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
         }
 
-        // Create reference visualization (respect toggle state)
-        // Create reference visualization (respect toggle state)
         const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
-
-        // Only create separate reference visualization if NOT using canvas mode
-        if (showReference && !isCanvasMode) {
+        let referenceHeight = 0;
+        if (showReference) {
           referenceHeight = parseInt(settings.referenceHeight) || 25;
           this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
-        } else if (showReference && isCanvasMode) {
-          // For Canvas mode, the renderer handles reference internally
-          referenceHeight = 0;
         }
 
         // Arrange sampled reads in rows (use sampledReads for display, reads for coverage above)
         const readRows = this.arrangeReadsInRows(sampledReads, viewport.start, viewport.end);
 
-        // Calculate track height and spacing
-        const readHeight = parseInt(settings.readHeight) || 8;
-        const rowSpacing = parseInt(settings.rowSpacing) || 2;
+        const layout = this.computeReadsTrackLayout(readRows, settings, {
+          showCoverage,
+          coverageHeight,
+          showReference,
+          referenceHeight,
+          isCanvasMode,
+        });
 
-        const topPadding =
-          showCoverage || referenceHeight > 0
-            ? coverageHeight + referenceHeight + 2
-            : parseInt(settings.topPadding) || 10;
-        const bottomPadding = parseInt(settings.bottomPadding) || 10;
-
-        // Total height above reads (coverage + reference)
-        const totalTopHeight = coverageHeight + referenceHeight;
-
-        let trackHeight;
-        if (isCanvasMode) {
-          let canvasTopSpace = 5;
-          if (showCoverage) canvasTopSpace += 55;
-          if (showReference) canvasTopSpace += 25;
-          trackHeight = canvasTopSpace + readRows.length * (readHeight + rowSpacing) + bottomPadding;
+        if (layout.useScroll) {
+          // More rows than fit the configured height - use the scrollable
+          // /virtualized view automatically.
+          this.createScrollableReadsTrack(trackContent, readRows, viewport, layout, settings);
         } else {
-          trackHeight = totalTopHeight + topPadding + readRows.length * (readHeight + rowSpacing) + bottomPadding;
-        }
+          trackContent.style.height = `${layout.trackHeight}px`;
 
-        trackContent.style.height = `${trackHeight}px`;
-
-        // Check if vertical scrolling is needed
-        const maxVisibleRows = parseInt(settings.maxVisibleRows) || 50;
-        const enableVerticalScroll = settings.enableVerticalScroll === true;
-
-        if (enableVerticalScroll && readRows.length > maxVisibleRows) {
-          this.createScrollableReadsTrack(
-            trackContent,
-            readRows,
-            viewport,
-            readHeight,
-            rowSpacing,
-            topPadding,
-            bottomPadding,
-            settings
-          );
-        } else {
-          // Render all reads normally
           const renderingMode = settings.renderingMode || 'canvas';
-          console.log(`🔧 [DEBUG] [createMultiReadsTrack] Selected rendering mode: ${renderingMode}`);
 
           // Only render reads if toggle is on
           if (this.elementVisibilityStates.readsReads) {
             if (renderingMode === 'canvas') {
-              console.log(`🎨 [DEBUG] [createMultiReadsTrack] Switching to Canvas rendering mode`);
-
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
                 settings.showReference !== false
@@ -4501,25 +4339,24 @@ class TrackRenderer {
                 trackContent,
                 readRows,
                 viewport,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
+                layout.readHeight,
+                layout.rowSpacing,
+                layout.topPadding,
+                layout.trackHeight,
                 settings,
                 referenceSequence
               );
             } else {
-              console.log(`🔧 [DEBUG] [createMultiReadsTrack] Calling renderReadsElementsSVG`);
               this.renderReadsElementsSVG(
                 trackContent,
                 readRows,
                 viewport.start,
                 viewport.end,
                 viewport.end - viewport.start,
-                readHeight,
-                rowSpacing,
-                topPadding,
-                trackHeight,
+                layout.readHeight,
+                layout.rowSpacing,
+                layout.topPadding,
+                layout.trackHeight,
                 settings
               );
             }
@@ -4558,315 +4395,319 @@ class TrackRenderer {
   }
 
   /**
+   * Install (once per TrackRenderer instance) a single pair of document-level
+   * mousemove/mouseup listeners shared by every reads-track vertical drag
+   * (scrollbar thumb and direct content dragging), gated by one active-drag
+   * slot - mirrors NavigationManager's dragState.isDragging pattern. Without
+   * this, re-creating the scrollable track on every pan/zoom used to add a
+   * fresh pair of document listeners that were never removed, leaking one
+   * pair per render.
+   */
+  ensureReadsScrollDragHandlers() {
+    if (this._readsScrollDragInit) return;
+    this._readsScrollDragInit = true;
+    this._readsScrollDrag = null; // { onMove(clientY), onEnd() } | null
+
+    document.addEventListener('mousemove', e => {
+      if (this._readsScrollDrag) this._readsScrollDrag.onMove(e.clientY);
+    });
+    document.addEventListener('mouseup', () => {
+      if (this._readsScrollDrag) {
+        const drag = this._readsScrollDrag;
+        this._readsScrollDrag = null;
+        drag.onEnd();
+      }
+    });
+  }
+
+  /**
    * Create scrollable reads track with vertical scrolling capability
    */
-  createScrollableReadsTrack(
-    trackContent,
-    readRows,
-    viewport,
-    readHeight,
-    rowSpacing,
-    topPadding,
-    bottomPadding,
-    settings
-  ) {
-    const maxVisibleRows = settings.maxVisibleRows || 10;
-    // Standard scrollbar width
+  createScrollableReadsTrack(trackContent, readRows, viewport, layout, settings) {
+    this.ensureReadsScrollDragHandlers();
 
-    // Calculate dimensions
+    const { readHeight, rowSpacing, topPadding, bottomPadding, trackHeight } = layout;
     const rowHeight = readHeight + rowSpacing;
-    const totalContentHeight = topPadding + readRows.length * rowHeight - rowSpacing + bottomPadding;
-    const visibleHeight = Math.min(
-      totalContentHeight,
-      topPadding + maxVisibleRows * rowHeight - rowSpacing + bottomPadding
-    );
-    const trackHeight = Math.max(visibleHeight, settings.height || 150);
 
-    // Set track content height
+    // The track container is exactly the configured height. Coverage/reference
+    // bands are already pinned at the top of trackContent (created by the
+    // caller); the reads scroll in the space below them, which stretches to
+    // the bottom of the container and therefore adapts to the container's
+    // actual height (e.g. after a splitter resize).
     trackContent.style.height = `${trackHeight}px`;
     trackContent.style.position = 'relative';
     trackContent.style.overflow = 'hidden';
 
-    // Create scrollable container - extend to full width for alignment with other tracks
+    // Full height of all rows (the scrollable content). Bands are NOT included
+    // here - they live outside the scroll viewport.
+    const contentHeight = Math.max(0, readRows.length * rowHeight - rowSpacing) + bottomPadding;
+
+    // Scroll viewport: everything below the fixed bands, stretched to the
+    // container bottom so it tracks the real container height.
     const scrollContainer = document.createElement('div');
     scrollContainer.className = 'reads-scroll-container';
     scrollContainer.style.cssText = `
             position: absolute;
-            top: 0;
+            top: ${topPadding}px;
             left: 0;
             right: 0;
             bottom: 0;
             overflow: hidden;
+            cursor: grab;
         `;
 
-    // Create content viewport
     const contentViewport = document.createElement('div');
     contentViewport.className = 'reads-content-viewport';
     contentViewport.style.cssText = `
             position: relative;
             width: 100%;
-            height: ${totalContentHeight}px;
+            height: ${contentHeight}px;
             transform: translateY(0px);
             will-change: transform;
         `;
 
-    // Create vertical scrollbar
-    const scrollbar = this.createVerticalScrollbar(trackHeight, totalContentHeight, contentViewport, scrollContainer);
-
-    // Store scroll state
-    let currentScrollTop = 0;
-    let visibleRowStart = 0;
-    let visibleRowEnd = Math.min(readRows.length, maxVisibleRows + 2); // +2 for buffer
-
-    // Initial render of visible rows - start from top to eliminate gap
+    // Render ALL rows once at y=0; scrolling is a cheap transform, not a
+    // per-scroll re-render. Bands are outside this viewport, so no top offset.
     this.renderVisibleRows(
       contentViewport,
       readRows,
       viewport,
       readHeight,
       rowSpacing,
-      topPadding,
-      visibleRowStart,
-      visibleRowEnd,
+      0,
+      0,
+      readRows.length,
       settings
     );
 
-    // Handle scrolling
-    const handleScroll = scrollTop => {
-      currentScrollTop = scrollTop;
-
-      // Calculate which rows should be visible
-      const firstVisibleRow = Math.max(0, Math.floor((scrollTop - topPadding) / rowHeight));
-      const lastVisibleRow = Math.min(readRows.length, firstVisibleRow + maxVisibleRows + 4); // +4 for buffer
-
-      // Only re-render if visible range changed significantly
-      if (Math.abs(firstVisibleRow - visibleRowStart) > 2 || Math.abs(lastVisibleRow - visibleRowEnd) > 2) {
-        visibleRowStart = firstVisibleRow;
-        visibleRowEnd = lastVisibleRow;
-
-        // Clear and re-render visible rows
-        contentViewport.innerHTML = '';
-        this.renderVisibleRows(
-          contentViewport,
-          readRows,
-          viewport,
-          readHeight,
-          rowSpacing,
-          topPadding,
-          visibleRowStart,
-          visibleRowEnd,
-          settings
-        );
-      }
-
-      // Update viewport position
-      contentViewport.style.transform = `translateY(${-scrollTop}px)`;
-    };
-
-    // Store scroll handler for external access
-    scrollContainer._handleScroll = handleScroll;
-    scrollContainer._scrollState = {
-      totalRows: readRows.length,
-      visibleRows: maxVisibleRows,
-      currentScrollTop: () => currentScrollTop,
-      scrollToRow: rowIndex => {
-        const targetScrollTop = Math.max(
-          0,
-          Math.min(totalContentHeight - visibleHeight, topPadding + rowIndex * rowHeight)
-        );
-        handleScroll(targetScrollTop);
-        scrollbar._updateScrollPosition(targetScrollTop);
-      },
-    };
-
     scrollContainer.appendChild(contentViewport);
+
+    // The scrollbar owns the scroll state and measures the live viewport
+    // height, so scrolling stays correct across container/splitter resizes.
+    const scrollbar = this.createVerticalScrollbar({
+      scrollContainer,
+      contentViewport,
+      contentHeight,
+      initialViewportHeight: Math.max(0, trackHeight - topPadding),
+      top: topPadding,
+      trackContent,
+    });
+
+    // Direct click-and-drag panning on the rows themselves, not just the
+    // scrollbar thumb. stopPropagation keeps this from also bubbling into the
+    // horizontal genome-pan drag that NavigationManager.makeDraggable attaches
+    // to the whole track-content element.
+    scrollContainer.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+
+      const dragStartY = e.clientY;
+      const dragStartScrollTop = scrollbar._getScrollTop();
+      const DRAG_THRESHOLD = 4;
+      let dragged = false;
+
+      this._readsScrollDrag = {
+        onMove: clientY => {
+          const deltaY = clientY - dragStartY;
+          if (!dragged && Math.abs(deltaY) > DRAG_THRESHOLD) {
+            dragged = true;
+            scrollContainer.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+            scrollbar._show();
+          }
+          if (dragged) scrollbar._scrollTo(dragStartScrollTop - deltaY);
+        },
+        onEnd: () => {
+          if (!dragged) return;
+          scrollContainer.style.cursor = 'grab';
+          document.body.style.userSelect = '';
+          scrollbar._scheduleHide();
+          // Suppress the click a drag would otherwise fire on release, so
+          // dragging across a read doesn't also pop open its tooltip.
+          scrollContainer.addEventListener(
+            'click',
+            clickEvent => {
+              clickEvent.stopPropagation();
+              clickEvent.preventDefault();
+            },
+            { capture: true, once: true }
+          );
+        },
+      };
+    });
+
     trackContent.appendChild(scrollContainer);
     trackContent.appendChild(scrollbar);
-
-    // Set initial scroll position to eliminate gap with coverage track
-    if (topPadding > 0) {
-      const initialScrollTop = topPadding;
-      handleScroll(initialScrollTop);
-      if (scrollbar._updateScrollPosition) {
-        scrollbar._updateScrollPosition(initialScrollTop);
-      }
-    }
-
-    console.log(
-      `📜 [ScrollableReads] Created scrollable track: ${readRows.length} total rows, ${maxVisibleRows} visible, ${totalContentHeight}px total height`
-    );
   }
 
   /**
-   * Create vertical scrollbar for reads track
+   * Create an overlay vertical scrollbar for the reads track.
+   *
+   * It floats over the right edge and reserves NO horizontal space: the
+   * container is transparent to pointer events (only the thumb is
+   * interactive) so the reads content spans the full track width exactly
+   * like every other track - this is what fixes the "scrollbar takes up
+   * space / right edge misaligns" problem. The thumb is thin and translucent
+   * and auto-hides when the track is not hovered or recently scrolled.
    */
-  createVerticalScrollbar(trackHeight, contentHeight, contentViewport, scrollContainer) {
-    const scrollbarWidth = 16;
+  createVerticalScrollbar({
+    scrollContainer,
+    contentViewport,
+    contentHeight,
+    initialViewportHeight,
+    top,
+    trackContent,
+  }) {
+    const scrollbarWidth = 10;
 
-    // Scrollbar container - positioned above content with higher z-index
+    // Transparent, non-space-reserving overlay aligned with the reads area
+    // (below the fixed bands). pointer-events:none so it never occludes reads;
+    // only the thumb re-enables pointers.
     const scrollbar = document.createElement('div');
     scrollbar.className = 'reads-vertical-scrollbar';
     scrollbar.style.cssText = `
             position: absolute;
-            top: 0;
+            top: ${top}px;
             right: 0;
+            bottom: 0;
             width: ${scrollbarWidth}px;
-            height: ${trackHeight}px;
-            background-color: rgba(240, 240, 240, 0.9);
-            border-left: 1px solid #ddd;
-            cursor: default;
+            background: transparent;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease-out;
             z-index: 100;
         `;
 
-    // Scrollbar thumb
+    // Slim translucent thumb
     const thumb = document.createElement('div');
     thumb.className = 'scrollbar-thumb';
-    const thumbHeight = Math.max(20, (trackHeight / contentHeight) * trackHeight);
     thumb.style.cssText = `
             position: absolute;
             top: 0;
-            left: 2px;
-            right: 2px;
-            height: ${thumbHeight}px;
-            background-color: #888;
-            border-radius: 6px;
+            right: 1px;
+            width: ${scrollbarWidth - 3}px;
+            background-color: rgba(100, 100, 100, 0.55);
+            border-radius: 4px;
             cursor: pointer;
+            pointer-events: auto;
             transition: background-color 0.2s;
         `;
-
-    // Thumb hover effect
     thumb.addEventListener('mouseenter', () => {
-      thumb.style.backgroundColor = '#555';
+      thumb.style.backgroundColor = 'rgba(80, 80, 80, 0.85)';
     });
     thumb.addEventListener('mouseleave', () => {
-      thumb.style.backgroundColor = '#888';
+      thumb.style.backgroundColor = 'rgba(100, 100, 100, 0.55)';
     });
 
-    // Scrolling logic
-    let isDragging = false;
-    let dragStartY = 0;
-    let dragStartScrollTop = 0;
+    // Scroll + geometry state. viewportHeight is tracked live (ResizeObserver)
+    // so splitter/preserved-height changes keep the scroll math correct.
+    let viewportHeight = Math.max(0, initialViewportHeight);
+    let scrollTop = 0;
+    const maxScroll = () => Math.max(0, contentHeight - viewportHeight);
+    const thumbHeightPx = () => Math.max(20, (viewportHeight / Math.max(1, contentHeight)) * viewportHeight);
 
-    const updateScrollPosition = scrollTop => {
-      const maxScrollTop = contentHeight - trackHeight;
-      const clampedScrollTop = Math.max(0, Math.min(maxScrollTop, scrollTop));
-      const thumbTop = (clampedScrollTop / maxScrollTop) * (trackHeight - thumbHeight);
-      thumb.style.top = `${thumbTop}px`;
-
-      if (scrollContainer._handleScroll) {
-        scrollContainer._handleScroll(clampedScrollTop);
-      }
-    };
-
-    // Mouse down on thumb
-    thumb.addEventListener('mousedown', e => {
-      e.preventDefault();
-      isDragging = true;
-      dragStartY = e.clientY;
-      dragStartScrollTop = parseFloat(thumb.style.top) || 0;
-      document.body.style.userSelect = 'none';
-    });
-
-    // Mouse move (document level)
-    document.addEventListener('mousemove', e => {
-      if (!isDragging) return;
-
-      const deltaY = e.clientY - dragStartY;
-      const maxScrollTop = contentHeight - trackHeight;
-      const scrollRatio = deltaY / (trackHeight - thumbHeight);
-      const newScrollTop = dragStartScrollTop + scrollRatio * maxScrollTop;
-
-      updateScrollPosition(newScrollTop);
-    });
-
-    // Mouse up (document level)
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        document.body.style.userSelect = '';
-      }
-    });
-
-    // Click on scrollbar track
-    scrollbar.addEventListener('click', e => {
-      if (e.target === scrollbar) {
-        const rect = scrollbar.getBoundingClientRect();
-        const clickY = e.clientY - rect.top;
-        const maxScrollTop = contentHeight - trackHeight;
-        const newScrollTop = (clickY / trackHeight) * maxScrollTop;
-        updateScrollPosition(newScrollTop);
-      }
-    });
-
-    // Mouse wheel scrolling on scroll container
-    scrollContainer.addEventListener('wheel', e => {
-      // Check if wheel zoom is enabled in NavigationManager
-      const isWheelZoomEnabled = window.genomeBrowser?.navigationManager?.wheelZoomConfig?.enabled;
-
-      // Calculate if this track needs vertical scrolling
-      const maxScrollTop = contentHeight - trackHeight;
-      const needsVerticalScrolling = maxScrollTop > 0;
-
-      console.log('🔍 [TrackRenderer] Wheel event in scrollable reads track:', {
-        zoomEnabled: isWheelZoomEnabled,
-        needsScrolling: needsVerticalScrolling,
-        hasModifier: e.ctrlKey || e.metaKey,
-        deltaY: e.deltaY,
-      });
-
-      // Priority 1: Modifier keys (Ctrl/Cmd) always trigger zoom, never scroll
-      if (e.ctrlKey || e.metaKey) {
-        console.log('🔍 [TrackRenderer] Modifier key detected, delegating to NavigationManager for zoom');
-        return; // Let NavigationManager handle zoom (it will preventDefault)
-      }
-
-      // Priority 2: If no vertical scrolling is needed, delegate to zoom
-      if (!needsVerticalScrolling) {
-        console.log('🔍 [TrackRenderer] No scrolling needed, delegating to NavigationManager for zoom');
-        return; // Let NavigationManager handle zoom
-      }
-
-      // Priority 3: If zoom is disabled, always handle scrolling when needed
-      if (!isWheelZoomEnabled && needsVerticalScrolling) {
-        e.preventDefault();
-        const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
-        const scrollDelta = e.deltaY * 2;
-        updateScrollPosition(currentScrollTop + scrollDelta);
-        console.log('🔍 [TrackRenderer] Zoom disabled, handling vertical scroll');
+    const applyThumb = () => {
+      const max = maxScroll();
+      if (max <= 0) {
+        thumb.style.display = 'none';
         return;
       }
+      thumb.style.display = 'block';
+      const thumbHeight = thumbHeightPx();
+      const thumbTravel = viewportHeight - thumbHeight;
+      thumb.style.height = `${thumbHeight}px`;
+      thumb.style.top = `${(scrollTop / max) * thumbTravel}px`;
+    };
 
-      // Priority 4: Both zoom and scroll are available - use smart boundary detection
-      if (isWheelZoomEnabled && needsVerticalScrolling) {
-        const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
-        const scrollBuffer = Math.max(20, trackHeight * 0.1); // Dynamic buffer based on track height
-        const isNearTop = currentScrollTop <= scrollBuffer;
-        const isNearBottom = currentScrollTop >= maxScrollTop - scrollBuffer;
+    const scrollTo = value => {
+      scrollTop = Math.max(0, Math.min(maxScroll(), value));
+      contentViewport.style.transform = `translateY(${-scrollTop}px)`;
+      applyThumb();
+    };
 
-        // At boundaries, prefer zoom. In middle, prefer scroll.
-        if (isNearTop || isNearBottom) {
-          console.log('🔍 [TrackRenderer] Near scroll boundary, delegating to NavigationManager for zoom');
-          return; // Let NavigationManager handle zoom
-        } else {
-          // Handle scrolling in the middle range
-          e.preventDefault();
-          const scrollDelta = e.deltaY * 2;
-          updateScrollPosition(currentScrollTop + scrollDelta);
-          console.log('🔍 [TrackRenderer] Handling vertical scroll in middle range');
-          return;
-        }
+    // Auto-hide reveal
+    let hideTimer = null;
+    let hovered = false;
+    const show = () => {
+      if (maxScroll() > 0) scrollbar.style.opacity = '1';
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
       }
+    };
+    const scheduleHide = () => {
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        if (!hovered && !this._readsScrollDrag) scrollbar.style.opacity = '0';
+      }, 700);
+    };
+    if (trackContent) {
+      trackContent.addEventListener('mouseenter', () => {
+        hovered = true;
+        show();
+      });
+      trackContent.addEventListener('mouseleave', () => {
+        hovered = false;
+        scheduleHide();
+      });
+    }
 
-      // Default: Let NavigationManager handle zoom
-      console.log('🔍 [TrackRenderer] Default case, delegating to NavigationManager');
+    // Thumb drag - shares the single document-level drag slot installed by
+    // ensureReadsScrollDragHandlers (no per-render listeners).
+    thumb.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const dragStartY = e.clientY;
+      const startScrollTop = scrollTop;
+      document.body.style.userSelect = 'none';
+      show();
+
+      this._readsScrollDrag = {
+        onMove: clientY => {
+          const deltaY = clientY - dragStartY;
+          const thumbTravel = viewportHeight - thumbHeightPx();
+          const scrollDelta = thumbTravel > 0 ? (deltaY / thumbTravel) * maxScroll() : 0;
+          scrollTo(startScrollTop + scrollDelta);
+        },
+        onEnd: () => {
+          document.body.style.userSelect = '';
+          scheduleHide();
+        },
+      };
     });
 
-    // Store update function for external use
-    scrollbar._updateScrollPosition = updateScrollPosition;
+    // Mouse wheel: plain wheel scrolls the rows when there's overflow,
+    // Ctrl/Cmd+wheel always delegates to zoom.
+    scrollContainer.addEventListener('wheel', e => {
+      if (e.ctrlKey || e.metaKey) return;
+      if (maxScroll() <= 0) return;
+      e.preventDefault();
+      scrollTo(scrollTop + e.deltaY * 2);
+      show();
+      scheduleHide();
+    });
 
-    // Initialize scrollbar position to top (scrollTop = 0)
-    updateScrollPosition(0);
+    // Keep geometry correct when the container (and thus the viewport) is
+    // resized - e.g. via the track splitter, or the preserved-height restore
+    // that runs after this element is built.
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => {
+        const h = scrollContainer.clientHeight;
+        if (h > 0 && Math.abs(h - viewportHeight) >= 1) {
+          viewportHeight = h;
+          scrollTo(scrollTop); // reclamp + reposition thumb for the new height
+        }
+      });
+      ro.observe(scrollContainer);
+    }
 
+    // API for the content-drag handler and external callers
+    scrollbar._scrollTo = scrollTo;
+    scrollbar._getScrollTop = () => scrollTop;
+    scrollbar._show = show;
+    scrollbar._scheduleHide = scheduleHide;
+
+    applyThumb();
     scrollbar.appendChild(thumb);
     return scrollbar;
   }
@@ -4999,7 +4840,13 @@ class TrackRenderer {
   }
 
   /**
-   * Render visible rows using Canvas for high performance
+   * Render visible rows using Canvas for high performance.
+   *
+   * Delegates to the same full-featured CanvasReadsRenderer engine (and the
+   * same option shape) as renderReadsElementsCanvas, instead of the old
+   * simplified draw-a-rect-per-read duplicate - so scrollable Canvas mode
+   * renders identically (colors, mismatch highlighting, sequence letters) to
+   * non-scrollable Canvas mode.
    */
   renderVisibleRowsCanvas(
     container,
@@ -5013,92 +4860,62 @@ class TrackRenderer {
     settings,
     containerWidth
   ) {
-    console.log(`🎨 [ScrollableReads] Rendering rows ${startRow}-${endRow - 1} with Canvas`);
+    const visibleRows = readRows.slice(startRow, endRow);
+    const canvasHeight = visibleRows.length * (readHeight + rowSpacing);
 
-    const visibleRowCount = endRow - startRow;
-    const canvasHeight = visibleRowCount * (readHeight + rowSpacing);
-
-    // Create canvas element
-    const canvas = document.createElement('canvas');
-    canvas.style.cssText = `
+    // Outer wrapper controls absolute positioning within the scroll viewport;
+    // CanvasReadsRenderer takes full ownership of its own container's style
+    // (position: relative/height: auto), so it gets a separate inner div
+    // rather than this positioned wrapper.
+    const wrapper = document.createElement('div');
+    wrapper.className = 'reads-canvas-container scrollable';
+    wrapper.style.cssText = `
+            position: absolute;
+            top: ${topPadding + startRow * (readHeight + rowSpacing)}px;
+            left: 0;
             width: 100%;
             height: ${canvasHeight}px;
-            display: block;
-            image-rendering: crisp-edges;
-            image-rendering: pixelated;
+            overflow: hidden;
         `;
 
-    // Set up canvas with device pixel ratio
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    canvas.width = containerWidth * devicePixelRatio;
-    canvas.height = canvasHeight * devicePixelRatio;
+    const innerContainer = document.createElement('div');
+    wrapper.appendChild(innerContainer);
 
-    const ctx = canvas.getContext('2d', { alpha: true });
-    ctx.scale(devicePixelRatio, devicePixelRatio);
-
-    // Clear canvas
-    ctx.clearRect(0, 0, containerWidth, canvasHeight);
-
-    // Get visible rows to render
-    const visibleRows = readRows.slice(startRow, endRow);
-
-    // Render each visible row
-    visibleRows.forEach((rowReads, rowIndex) => {
-      const y = rowIndex * (readHeight + rowSpacing);
-
-      this.renderReadRowCanvas(ctx, rowReads, viewport, y, readHeight, settings, containerWidth);
-    });
-
-    // Add canvas to container
-    container.appendChild(canvas);
-
-    console.log(`🎨 [ScrollableReads] Rendered rows ${startRow}-${endRow - 1} (${endRow - startRow} rows) in Canvas`);
-  }
-
-  /**
-   * Render a single row of reads on Canvas
-   */
-  renderReadRowCanvas(ctx, rowReads, viewport, y, readHeight, settings, containerWidth) {
-    const viewportRange = viewport.end - viewport.start;
-
-    // Base colors for reads
-    const baseColors = {
-      forward: settings.forwardColor || '#00b894',
-      reverse: settings.reverseColor || '#f39c12',
-      paired: settings.pairedColor || '#6c5ce7',
+    const canvasOptions = {
+      readHeight,
+      rowSpacing,
+      topPadding: 0,
+      bottomPadding: 0,
+      showSequences: settings.showSequences || false,
+      forceSequences: settings.forceSequences || false,
+      showReference: false, // Reference is a fixed element above the scroll viewport
+      showCoverage: false, // Coverage is a fixed element above the scroll viewport
+      autoFontSize: settings.autoFontSize !== false,
+      minFontSize: 8,
+      maxFontSize: 14,
+      referenceFontSize: settings.referenceFontSize || 12,
+      sequenceFontSize: settings.sequenceFontSize || 6,
+      qualityColoring: settings.showQualityColors || false,
+      strandColoring: !settings.showQualityColors,
+      mismatchHighlight: settings.highlightMismatches !== false,
+      showMutations: settings.showMutations || false,
+      backgroundColor: 'transparent',
+      forwardColor: settings.forwardColor || '#00b894',
+      reverseColor: settings.reverseColor || '#f39c12',
+      pairedColor: settings.pairedColor || '#6c5ce7',
+      mismatchColor: settings.mismatchColor || '#ff6b6b',
+      opacity: settings.opacity || 0.9,
+      minWidth: settings.minWidth || 2,
     };
 
-    rowReads.forEach(read => {
-      // Calculate read position and dimensions
-      const readStart = Math.max(read.start, viewport.start);
-      const readEnd = Math.min(read.end || read.start + read.sequence.length, viewport.end);
+    if (typeof CanvasReadsRenderer === 'undefined') {
+      console.warn('⚠️ [ScrollableReads] CanvasReadsRenderer not available, skipping Canvas row render');
+      return;
+    }
 
-      if (readEnd <= readStart) return; // Read not visible
-
-      // Calculate screen coordinates
-      const x = ((readStart - viewport.start) / viewportRange) * containerWidth;
-      const width = ((readEnd - readStart) / viewportRange) * containerWidth;
-
-      // Skip reads that are too narrow to see
-      if (width < 1) return;
-
-      // Determine read color
-      let readColor = baseColors.forward;
-      if (read.strand === '-') {
-        readColor = baseColors.reverse;
-      } else if (read.isPaired) {
-        readColor = baseColors.paired;
-      }
-
-      // Draw read rectangle
-      ctx.fillStyle = readColor;
-      ctx.fillRect(x, y, width, readHeight);
-
-      // Draw read border
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(x, y, width, readHeight);
-    });
+    const canvasRenderer = new CanvasReadsRenderer(innerContainer, visibleRows, viewport, canvasOptions);
+    container.appendChild(wrapper);
+    canvasRenderer.render();
   }
 
   // New method to arrange reads into non-overlapping rows
@@ -5163,6 +4980,50 @@ class TrackRenderer {
   // Helper method to check if two reads overlap
   readsOverlap(read1, read2) {
     return !(read1.end < read2.start || read2.end < read1.start);
+  }
+
+  /**
+   * Shared reads-track row/height layout math, used by every reads-track
+   * creation path (legacy, single-file, content-only re-render) so they
+   * can't independently diverge on read height, row spacing, or the
+   * scroll-trigger rule the way they used to.
+   *
+   * `defaultTopPadding`/`defaultBottomPadding` let each call site keep its
+   * own fallback for the "no coverage/reference above" case, since the
+   * content-only re-render path is nested inside an already-padded wrapper
+   * while the full track-creation paths are not.
+   *
+   * The configured track height (`settings.height`) is authoritative: the
+   * track is exactly that tall and the number of read rows shown is derived
+   * from it, so the rendered content always fills - and scrolls within - the
+   * height the user configured. Vertical scrolling is automatic: whenever
+   * more rows exist than fit in that height, the scrollable/virtualized view
+   * is used.
+   */
+  computeReadsTrackLayout(readRows, settings, opts) {
+    const { showCoverage, coverageHeight, referenceHeight, defaultTopPadding = 10, defaultBottomPadding = 10 } = opts;
+
+    const readHeight = parseInt(settings.readHeight) || 4;
+    const rowSpacing = parseInt(settings.readSpacing) || 2;
+    const rowHeight = readHeight + rowSpacing;
+
+    // Coverage + reference are fixed DOM bands at the top in both modes, so the
+    // space above the rows is the same regardless of renderingMode.
+    const totalTopHeight = coverageHeight + referenceHeight;
+    const topPadding = showCoverage || referenceHeight > 0 ? totalTopHeight + 2 : defaultTopPadding;
+    const bottomPadding = defaultBottomPadding;
+
+    // The track is exactly the configured height (clamped to a usable floor).
+    const trackHeight = Math.max(60, parseInt(settings.height) || 150);
+
+    // How many whole read rows fit in the reads area (the configured height
+    // minus the fixed bands) - this is what makes the visualized content adapt
+    // to the track's actual height, and decides when scrolling is needed.
+    const availableForRows = trackHeight - topPadding - bottomPadding;
+    const visibleRows = Math.max(1, Math.floor((availableForRows + rowSpacing) / rowHeight));
+    const useScroll = readRows.length > visibleRows;
+
+    return { readHeight, rowSpacing, topPadding, bottomPadding, trackHeight, visibleRows, useScroll };
   }
 
   /**
@@ -5377,15 +5238,19 @@ class TrackRenderer {
             z-index: 49;
         `;
 
-    // Prepare Canvas renderer options from settings
+    // Prepare Canvas renderer options from settings.
+    // Coverage and reference are drawn as fixed DOM bands above this canvas
+    // (createCoverageVisualization / createReferenceVisualization), so the
+    // canvas itself renders reads only - showCoverage/showReference are forced
+    // off to avoid drawing them twice.
     const canvasOptions = {
       readHeight: readHeight,
       rowSpacing: rowSpacing,
       topPadding: 5, // Minimal padding inside canvas - container is already positioned correctly
       bottomPadding: settings.bottomPadding || 10,
       showSequences: settings.showSequences || false,
-      showReference: settings.showReference !== false,
-      referenceSequence: referenceSequence, // Pass the fetched sequence data
+      forceSequences: settings.forceSequences || false,
+      showReference: false,
       autoFontSize: settings.autoFontSize !== false,
       minFontSize: 8,
       maxFontSize: 14,
@@ -5397,7 +5262,7 @@ class TrackRenderer {
       strandColoring: !settings.showQualityColors, // Use strand coloring when not using quality
       mismatchHighlight: settings.highlightMismatches !== false,
       showMutations: settings.showMutations || false,
-      showCoverage: settings.showCoverage !== false,
+      showCoverage: false,
       coverageHeight: settings.coverageHeight || 50,
       coverageColor: settings.coverageColor || '#4a90e2',
       backgroundColor: 'transparent',
@@ -5598,6 +5463,30 @@ class TrackRenderer {
       }
     }
 
+    // Highlight mismatches with a solid block, matching Canvas's
+    // renderMismatches - visible at every zoom level, not just when
+    // sequence letters are being drawn.
+    if (settings.highlightMismatches !== false && read.mismatches && read.sequence) {
+      const mismatchColor = settings.mismatchColor || '#ff6b6b';
+      read.mismatches.forEach(mismatch => {
+        const mismatchPos = mismatch.pos - read.start;
+        if (mismatchPos >= 0 && mismatchPos < read.sequence.length) {
+          const mismatchX = (mismatchPos / read.sequence.length) * elementWidth;
+          const mismatchWidth = Math.max(2, elementWidth / read.sequence.length);
+
+          const mismatchRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          mismatchRect.setAttribute('class', 'svg-read-mismatch');
+          mismatchRect.setAttribute('x', mismatchX);
+          mismatchRect.setAttribute('y', -1);
+          mismatchRect.setAttribute('width', mismatchWidth);
+          mismatchRect.setAttribute('height', readHeight + 2);
+          mismatchRect.setAttribute('fill', mismatchColor);
+          mismatchRect.setAttribute('pointer-events', 'none');
+          readGroup.appendChild(mismatchRect);
+        }
+      });
+    }
+
     // Add interaction handlers (work for both shapes and sequences)
     this.addSVGReadInteraction(readGroup, read, rowIndex);
 
@@ -5670,14 +5559,7 @@ class TrackRenderer {
     }
 
     if (shouldRenderText && visibleSequence && visibleSequence.length > 0) {
-      const referenceSequence = settings.showMismatches ? this.getReferenceSequence(readStart, readEnd) : null;
-      const sequenceText = this.createSVGSequenceText(
-        visibleSequence,
-        elementWidth,
-        readHeight,
-        effectiveSettings,
-        referenceSequence
-      );
+      const sequenceText = this.createSVGSequenceText(visibleSequence, elementWidth, readHeight, effectiveSettings);
       if (sequenceText) {
         sequenceGroup.appendChild(sequenceText);
 
@@ -5799,70 +5681,36 @@ class TrackRenderer {
   }
 
   /**
-   * Create SVG text element for sequence with optional mismatch highlighting
+   * Create SVG text element for sequence bases.
+   *
+   * Mismatch highlighting is handled separately by createSVGReadElement's
+   * solid mismatch-block (matching Canvas's renderMismatches), so this only
+   * ever renders plain per-base-colored letters - it no longer recolors
+   * mismatched characters itself.
    */
-  createSVGSequenceText(sequence, width, height, settings = {}, referenceSequence = null) {
+  createSVGSequenceText(sequence, width, height, settings = {}) {
     const fontSize = settings.sequenceFontSize || 10;
     const fontFamily = settings.sequenceFontFamily || 'monospace';
-    const mismatchColor = settings.mismatchColor || '#dc3545';
     const baseColors = this.getDNABaseColors(settings);
 
     // Create group for the sequence (no background like reference)
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     group.setAttribute('class', 'svg-sequence-text');
 
-    if (referenceSequence && settings.showMismatches && referenceSequence.length === sequence.length) {
-      // Create individual character elements with mismatch highlighting
-      const charWidth = width / sequence.length;
+    const charWidth = width / sequence.length;
 
-      for (let i = 0; i < sequence.length; i++) {
-        const char = sequence[i];
-        const refChar = referenceSequence[i];
-        const isMismatch = char.toUpperCase() !== refChar.toUpperCase();
-
-        // Create subtle mismatch background (circle instead of rectangle)
-        if (isMismatch) {
-          const mismatchBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          mismatchBg.setAttribute('cx', i * charWidth + charWidth / 2);
-          mismatchBg.setAttribute('cy', height / 2);
-          mismatchBg.setAttribute('r', Math.min(charWidth, height) / 3);
-          mismatchBg.setAttribute('fill', 'rgba(220, 53, 69, 0.2)');
-          group.appendChild(mismatchBg);
-        }
-
-        // Create character text with base colors or mismatch color
-        const charText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        charText.setAttribute('x', i * charWidth + charWidth / 2);
-        charText.setAttribute('y', height / 2 + fontSize / 3);
-        charText.setAttribute('font-family', fontFamily);
-        charText.setAttribute('font-size', fontSize);
-        charText.setAttribute(
-          'fill',
-          isMismatch ? mismatchColor : baseColors[char.toUpperCase()] || baseColors.default
-        );
-        charText.setAttribute('font-weight', isMismatch ? 'bold' : 'normal');
-        charText.setAttribute('text-anchor', 'middle');
-        charText.setAttribute('dominant-baseline', 'middle');
-        charText.textContent = char.toUpperCase();
-        group.appendChild(charText);
-      }
-    } else {
-      // Create individual colored bases for consistent appearance with reference
-      const charWidth = width / sequence.length;
-
-      sequence.split('').forEach((char, index) => {
-        const charText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        charText.setAttribute('x', index * charWidth + charWidth / 2);
-        charText.setAttribute('y', height / 2 + fontSize / 3);
-        charText.setAttribute('font-family', fontFamily);
-        charText.setAttribute('font-size', fontSize);
-        charText.setAttribute('fill', baseColors[char.toUpperCase()] || baseColors.default);
-        charText.setAttribute('text-anchor', 'middle');
-        charText.setAttribute('dominant-baseline', 'middle');
-        charText.textContent = char.toUpperCase();
-        group.appendChild(charText);
-      });
-    }
+    sequence.split('').forEach((char, index) => {
+      const charText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      charText.setAttribute('x', index * charWidth + charWidth / 2);
+      charText.setAttribute('y', height / 2 + fontSize / 3);
+      charText.setAttribute('font-family', fontFamily);
+      charText.setAttribute('font-size', fontSize);
+      charText.setAttribute('fill', baseColors[char.toUpperCase()] || baseColors.default);
+      charText.setAttribute('text-anchor', 'middle');
+      charText.setAttribute('dominant-baseline', 'middle');
+      charText.textContent = char.toUpperCase();
+      group.appendChild(charText);
+    });
 
     return group;
   }
@@ -6041,99 +5889,71 @@ class TrackRenderer {
   }
 
   /**
-   * Create SVG shape for read
+   * Read fill color - mirrors CanvasReadsRenderer.getReadColor exactly,
+   * including its readColors table (same SAM-flag bits, same single
+   * low-quality threshold, same forward/reverse-paired fallback colors, same
+   * precedence order) so Canvas and SVG modes render identical colors for
+   * the same read.
    */
-  createSVGReadShape(read, width, height, settings = {}) {
-    const isForward = read.strand === '+';
-    const showQualityColors = settings.showQualityColors || false;
-    const showDirectionArrows = settings.showDirectionArrows !== false; // Default to true
+  getReadFillColor(read, settings = {}) {
+    const forwardColor = settings.forwardColor || '#00b894';
+    const reverseColor = settings.reverseColor || '#f39c12';
+    // CanvasReadsRenderer.readColors gives forward-paired/reverse-paired
+    // distinct fallback colors, but both are overridden by the same
+    // settings.pairedColor when set - matched here exactly.
+    const forwardPairedColor = settings.pairedColor || '#34A853';
+    const reversePairedColor = settings.pairedColor || '#FBBC05';
+    const lowQualityColor = '#F4B400';
+    const duplicateColor = '#9C27B0';
+    const secondaryColor = '#607D8B';
 
-    // Determine fill color based on settings
-    let fillColor;
-    let strokeColor;
+    const qualityColoring = settings.showQualityColors || false;
+    const strandColoring = !qualityColoring;
 
-    if (showQualityColors && read.mappingQuality !== undefined) {
-      // Color by mapping quality
-      const quality = read.mappingQuality;
-      if (quality >= 30) {
-        fillColor = settings.forwardColor || '#00b894'; // High quality - green
-        strokeColor = settings.borderColor || '#2d3436';
-      } else if (quality >= 10) {
-        fillColor = settings.pairedColor || '#6c5ce7'; // Medium quality - purple
-        strokeColor = settings.borderColor || '#2d3436';
-      } else {
-        fillColor = settings.reverseColor || '#f39c12'; // Low quality - orange
-        strokeColor = settings.borderColor || '#2d3436';
-      }
-    } else {
-      // Color by strand
-      if (isForward) {
-        fillColor = settings.forwardColor || '#00b894';
-      } else {
-        fillColor = settings.reverseColor || '#f39c12';
-      }
-      strokeColor = settings.borderColor || '#2d3436';
+    if (qualityColoring && read.mapq !== undefined && read.mapq < 20) {
+      return lowQualityColor;
     }
 
+    if (read.flag !== undefined) {
+      const isReverse = (read.flag & 0x10) !== 0;
+      const isPaired = (read.flag & 0x1) !== 0;
+      const isDuplicate = (read.flag & 0x400) !== 0;
+      const isSecondary = (read.flag & 0x100) !== 0;
+
+      if (isDuplicate) return duplicateColor;
+      if (isSecondary) return secondaryColor;
+
+      if (strandColoring) {
+        if (isPaired) return isReverse ? reversePairedColor : forwardPairedColor;
+        return isReverse ? reverseColor : forwardColor;
+      }
+    }
+
+    return read.strand === '-' ? reverseColor : forwardColor;
+  }
+
+  createSVGReadShape(read, width, height, settings = {}) {
+    const fillColor = this.getReadFillColor(read, settings);
+    let strokeColor = settings.borderColor || '#2d3436';
     let borderWidth = settings.borderWidth || 1;
+    let fill = fillColor;
 
     if (read.isMultiMapping) {
       strokeColor = fillColor;
-      fillColor = 'transparent';
+      fill = 'transparent';
       borderWidth = Math.max(1, borderWidth);
     }
 
-    if (width < 10) {
-      // Simple rectangle for very small reads
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('x', '0');
-      rect.setAttribute('y', '0');
-      rect.setAttribute('width', width);
-      rect.setAttribute('height', height);
-      rect.setAttribute('fill', fillColor);
-      rect.setAttribute('stroke', strokeColor);
-      rect.setAttribute('stroke-width', borderWidth);
-      rect.setAttribute('rx', '1');
-      return rect;
-    } else {
-      // Slightly rounded rectangle with optional directional indicator
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('x', '0');
-      rect.setAttribute('y', '0');
-      rect.setAttribute('width', width);
-      rect.setAttribute('height', height);
-      rect.setAttribute('fill', fillColor);
-      rect.setAttribute('stroke', strokeColor);
-      rect.setAttribute('stroke-width', borderWidth);
-      rect.setAttribute('rx', '2');
-
-      // Add small directional arrow if enabled and there's space
-      if (showDirectionArrows && width > 15) {
-        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        const arrowSize = Math.min(height * 0.3, 3);
-        const arrowX = isForward ? width - arrowSize - 2 : 2;
-        const arrowY = height / 2;
-
-        let points;
-        if (isForward) {
-          points = `${arrowX},${arrowY - arrowSize} ${arrowX + arrowSize},${arrowY} ${arrowX},${arrowY + arrowSize}`;
-        } else {
-          points = `${arrowX + arrowSize},${arrowY - arrowSize} ${arrowX},${arrowY} ${arrowX + arrowSize},${arrowY + arrowSize}`;
-        }
-
-        arrow.setAttribute('points', points);
-        arrow.setAttribute('fill', 'rgba(255,255,255,0.8)');
-        arrow.setAttribute('pointer-events', 'none');
-
-        // Group the rectangle and arrow
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.appendChild(rect);
-        g.appendChild(arrow);
-        return g;
-      }
-
-      return rect;
-    }
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', '0');
+    rect.setAttribute('y', '0');
+    rect.setAttribute('width', width);
+    rect.setAttribute('height', height);
+    rect.setAttribute('fill', fill);
+    rect.setAttribute('stroke', strokeColor);
+    rect.setAttribute('stroke-width', borderWidth);
+    rect.setAttribute('rx', width < 10 ? '1' : '2');
+    return rect;
   }
 
   /**
@@ -6258,41 +6078,20 @@ class TrackRenderer {
    * Calculate if sequences should be displayed based on zoom level
    */
   shouldShowSequences(start, end, containerWidth, settings = {}) {
-    // Use Canvas-style simple logic: check if reads will be wide enough to display sequences clearly
+    // SINGLE unified base-letter zoom rule for the reads track: show base
+    // letters iff forceSequences OR each base is at least
+    // SEQUENCE_LETTER_MIN_PX_PER_BP pixels wide (legible, non-overlapping);
+    // below that both the reads and the reference band render solid color
+    // blocks. The reference band applies the identical rule via
+    // CanvasSequenceRenderer (same threshold / force / allowed flags), so the
+    // two switch between letters and blocks at the exact same zoom.
+    if (settings.forceSequences) return true;
+
     const range = end - start;
-    const basesPerPixel = range / containerWidth;
+    if (range <= 0 || !containerWidth) return false;
 
-    // Check for force mode first
-    if (settings.forceSequences) {
-      // Removed excessive logging - only log in debug mode
-      if (window.DEBUG_MODE) {
-        console.log(`🔍 [TrackRenderer] Force sequence display - always show`);
-      }
-      return true;
-    }
-
-    // Use Canvas-style threshold: calculate average read width
-    // Assume average read length of 150bp (typical Illumina read)
-    const averageReadLength = 150;
-    const averageReadWidthPixels = (averageReadLength / range) * containerWidth;
-
-    // Show sequences if average read width > 50px (same as Canvas logic)
-    const shouldShow = averageReadWidthPixels > 50;
-
-    // Removed excessive logging - only log in debug mode
-    if (window.DEBUG_MODE) {
-      console.log(`🔍 [TrackRenderer] Canvas-style sequence display check:`, {
-        range: range,
-        containerWidth: containerWidth,
-        basesPerPixel: basesPerPixel.toFixed(3),
-        averageReadLength: averageReadLength,
-        averageReadWidthPixels: averageReadWidthPixels.toFixed(1),
-        threshold: 50,
-        shouldShow: shouldShow,
-      });
-    }
-
-    return shouldShow;
+    const pixelsPerBp = containerWidth / range;
+    return pixelsPerBp >= TrackRenderer.SEQUENCE_LETTER_MIN_PX_PER_BP;
   }
 
   /**
@@ -11717,26 +11516,9 @@ This action cannot be undone.`;
                                 <div class="help-text">Vertical spacing between read rows.</div>
                             </div>
                             <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="readsEnableVerticalScroll" ${settings.enableVerticalScroll === true ? 'checked' : ''}>
-                                    Enable vertical scrolling
-                                </label>
-                                <div class="help-text">Enable vertical scrolling when reads exceed the maximum visible rows. When disabled, excess reads are simply hidden.</div>
-                            </div>
-                            <div class="form-group" id="readsMaxVisibleRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'block' : 'none'}">
-                                <label for="readsMaxVisibleRows">Maximum visible rows (scrollable):</label>
-                                <input type="number" id="readsMaxVisibleRows" class="form-input" min="5" max="30" value="${settings.maxVisibleRows || 10}">
-                                <div class="help-text">Maximum number of read rows visible at once when scrolling is enabled. Additional rows can be accessed by scrolling.</div>
-                            </div>
-                            <div class="form-group" id="readsMaxRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'none' : 'block'}">
-                                <label for="readsMaxRows">Maximum visible rows:</label>
-                                <input type="number" id="readsMaxRows" class="form-input" min="5" max="50" value="${settings.maxRows || 20}">
-                                <div class="help-text">Maximum number of read rows to display. Additional reads will be hidden to improve performance.</div>
-                            </div>
-                            <div class="form-group">
                                 <label for="readsTrackHeight">Track Height (px):</label>
                                 <input type="number" id="readsTrackHeight" class="form-input" min="100" max="500" value="${settings.height || 150}">
-                                <div class="help-text">Total height of the reads track container.</div>
+                                <div class="help-text">Total height of the reads track. Reads fill this height; when a region has more rows than fit, the track scrolls vertically (drag the rows, use the scrollbar, or the mouse wheel).</div>
                             </div>
                         </div>
 
@@ -11840,14 +11622,14 @@ This action cannot be undone.`;
                                 <input type="number" id="readsSequenceHeight" class="form-input" min="10" max="30" value="${settings.sequenceHeight || 14}">
                                 <div class="help-text">Height of each sequence text line. Should be slightly larger than font size.</div>
                             </div>
-                            <div class="form-group" id="readsHighlightMismatchesGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                            <div class="form-group" id="readsHighlightMismatchesGroup">
                                 <label>
                                     <input type="checkbox" id="readsHighlightMismatches" ${settings.highlightMismatches !== false ? 'checked' : ''}>
                                     Highlight mismatches
                                 </label>
-                                <div class="help-text">Highlight bases that differ from the reference sequence.</div>
+                                <div class="help-text">Highlight bases that differ from the reference sequence, at every zoom level.</div>
                             </div>
-                            <div class="form-group" id="readsMismatchColorGroup" style="display: ${settings.showSequences && settings.highlightMismatches !== false ? 'block' : 'none'}">
+                            <div class="form-group" id="readsMismatchColorGroup" style="display: ${settings.highlightMismatches !== false ? 'block' : 'none'}">
                                 <label for="readsMismatchColor">Mismatch highlight color:</label>
                                 <input type="color" id="readsMismatchColor" value="${settings.mismatchColor || '#ff6b6b'}">
                                 <div class="help-text">Color used to highlight mismatched bases.</div>
@@ -11934,13 +11716,6 @@ This action cannot be undone.`;
 
                         <div class="settings-section">
                             <h4>Advanced Options</h4>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="readsShowDirectionArrows" ${settings.showDirectionArrows ? 'checked' : ''}>
-                                    Show direction arrows
-                                </label>
-                                <div class="help-text">Display small arrows indicating read direction for reads that are wide enough.</div>
-                            </div>
 
                             <div class="form-group">
                                 <label>
@@ -12255,14 +12030,12 @@ This action cannot be undone.`;
       reads: {
         readHeight: 4,
         readSpacing: 2,
-        maxRows: 20,
         forwardColor: '#00b894',
         reverseColor: '#f39c12',
         pairedColor: '#6c5ce7',
         borderColor: '#ffffff',
         borderWidth: 0,
         opacity: 0.9,
-        showDirectionArrows: true,
         showQualityColors: false,
         ignoreChromosome: false,
         minWidth: 2,
@@ -12299,7 +12072,6 @@ This action cannot be undone.`;
         sequenceFontSize: 6,
         sequenceHeight: 6,
         highlightMismatches: true,
-        showMismatches: true,
         mismatchColor: '#ff6b6b',
         sequenceFontFamily: 'monospace',
       },
@@ -12959,20 +12731,12 @@ This action cannot be undone.`;
 
         settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 4;
         settings.readSpacing = parseInt(modal.querySelector('#readsSpacing').value) || 2;
-        // Vertical scrolling settings
-        settings.enableVerticalScroll = modal.querySelector('#readsEnableVerticalScroll').checked;
-        if (settings.enableVerticalScroll) {
-          settings.maxVisibleRows = parseInt(modal.querySelector('#readsMaxVisibleRows').value) || 10;
-        } else {
-          settings.maxRows = parseInt(modal.querySelector('#readsMaxRows').value) || 20;
-        }
         settings.forwardColor = modal.querySelector('#readsForwardColor').value;
         settings.reverseColor = modal.querySelector('#readsReverseColor').value;
         settings.pairedColor = modal.querySelector('#readsPairedColor').value;
         settings.borderColor = modal.querySelector('#readsBorderColor').value;
         settings.borderWidth = parseFloat(modal.querySelector('#readsBorderWidth').value) || 0;
         settings.opacity = parseFloat(modal.querySelector('#readsOpacity').value) || 0.9;
-        settings.showDirectionArrows = modal.querySelector('#readsShowDirectionArrows').checked;
         settings.showQualityColors = modal.querySelector('#readsShowQualityColors').checked;
         settings.showMutations = modal.querySelector('#readsShowMutations').checked;
         settings.ignoreChromosome = modal.querySelector('#readsIgnoreChromosome').checked;
@@ -13008,7 +12772,6 @@ This action cannot be undone.`;
         settings.sequenceFontSize = parseInt(modal.querySelector('#readsSequenceFontSize').value) || 10;
         settings.sequenceHeight = parseInt(modal.querySelector('#readsSequenceHeight').value) || 14;
         settings.highlightMismatches = modal.querySelector('#readsHighlightMismatches').checked;
-        settings.showMismatches = modal.querySelector('#readsHighlightMismatches').checked; // Alias for compatibility
         settings.mismatchColor = modal.querySelector('#readsMismatchColor').value;
         break;
       }
@@ -13547,9 +13310,44 @@ This action cannot be undone.`;
       this.genomeBrowser.tabManager.onTrackSettingsChanged();
     }
 
+    // The full redraw below re-derives each track's height from settings, but
+    // displayGenomeView() also captures the CURRENT live DOM height of every
+    // track just before tearing it down and restores that same value onto the
+    // freshly-created track right after - a manual splitter/resize-handle drag
+    // stays sticky across pans/zooms. That restore step runs unconditionally,
+    // so it would silently overwrite a track-height SETTING the user just
+    // applied with whatever height happened to be live a moment ago. Update
+    // the live DOM height (and the persisted size used when nothing is
+    // captured live) to the new setting first, so the redraw's restore step
+    // carries the new value forward instead of the stale one.
+    if (trackType === 'reads' && settings.height) {
+      this.applyExplicitTrackHeight('reads', `${parseInt(settings.height)}px`, fileId);
+    }
+
     // Trigger the same complete redraw that drag-end uses for consistency
     console.log('Calling complete view redraw after applying settings (same as drag-end)...');
     this.refreshViewAfterSettingsChange(true); // Force full redraw for consistency
+  }
+
+  /**
+   * Make an explicit, settings-driven track height win over the generic
+   * live-DOM height preservation that runs on every full redraw (see
+   * applySettingsToTrack above). Updates both the currently-rendered
+   * track-content element(s) and the persisted/tab-specific saved size, so
+   * every path that could restore a stale height instead restores this one.
+   */
+  applyExplicitTrackHeight(trackType, heightCss, fileId = null) {
+    const selector = fileId
+      ? `.${trackType}-track[data-file-id="${fileId}"] .track-content`
+      : `.${trackType}-track:not([data-file-id]) .track-content`;
+
+    document.querySelectorAll(selector).forEach(trackContent => {
+      trackContent.style.height = heightCss;
+    });
+
+    if (this.genomeBrowser.trackStateManager) {
+      this.genomeBrowser.trackStateManager.saveTrackSize(trackType, heightCss);
+    }
   }
 
   // VSCodeSequenceEditor settings method removed - only using view mode
@@ -14333,7 +14131,13 @@ This action cannot be undone.`;
       console.warn(`🔍 [createReferenceVisualization] No reference sequence available, skipping (clean view)`);
       return 0; // Return 0 height
     } else {
-      // Use the same high-quality renderer as Single-line sequence track
+      // The reference band switches between letters and color blocks using the
+      // SAME unified rule as the reads (see shouldShowSequences /
+      // CanvasSequenceRenderer.render): letters iff forceSequences OR a base is
+      // wide enough, gated by showSequences. Those flags are stable (not
+      // zoom-dependent), so we pass them through and let CanvasSequenceRenderer
+      // apply the per-base-width test from its own measured width at render
+      // time - which keeps it in lockstep with the reads across resizes.
       const referenceDisplay = this.createReferenceSequenceDisplay(
         referenceSequence,
         viewport,
@@ -14349,7 +14153,12 @@ This action cannot be undone.`;
   }
 
   /**
-   * Create reference sequence display using Single-line sequence track renderer
+   * Create reference sequence display using the shared CanvasSequenceRenderer.
+   *
+   * Passes the reads track's own sequence-display flags (showSequences ->
+   * lettersAllowed, forceSequences -> forceLetters) plus the unified per-base
+   * width threshold, so the reference band flips between letters and color
+   * blocks at the exact same zoom as the reads themselves.
    */
   createReferenceSequenceDisplay(subsequence, viewport, referenceHeight, settings) {
     console.log(
@@ -14388,6 +14197,11 @@ This action cannot be undone.`;
       minHeight: referenceHeight,
       maxHeight: referenceHeight,
       padding: 1, // Minimal padding for reference
+      // Unified letters-vs-blocks behavior, mirroring the reads' own toggles so
+      // the reference band and the reads switch at the same zoom.
+      lettersAllowed: settings.showSequences !== false,
+      forceLetters: settings.forceSequences || false,
+      letterMinPxPerBase: TrackRenderer.SEQUENCE_LETTER_MIN_PX_PER_BP,
     };
 
     try {
@@ -15212,22 +15026,6 @@ This action cannot be undone.`;
       toggleReferenceSettings(); // Initial state
     }
 
-    // Vertical scrolling toggle
-    const verticalScrollCheckbox = bodyElement.querySelector('#readsEnableVerticalScroll');
-    const maxVisibleRowsGroup = bodyElement.querySelector('#readsMaxVisibleRowsGroup');
-    const maxRowsGroup = bodyElement.querySelector('#readsMaxRowsGroup');
-
-    if (verticalScrollCheckbox && maxVisibleRowsGroup && maxRowsGroup) {
-      const toggleScrollSettings = () => {
-        const isChecked = verticalScrollCheckbox.checked;
-        maxVisibleRowsGroup.style.display = isChecked ? 'block' : 'none';
-        maxRowsGroup.style.display = isChecked ? 'none' : 'block';
-      };
-
-      verticalScrollCheckbox.addEventListener('change', toggleScrollSettings);
-      toggleScrollSettings(); // Initial state
-    }
-
     // Sequence display toggle
     const sequenceCheckbox = bodyElement.querySelector('#readsShowSequences');
     const forceSequencesGroup = bodyElement.querySelector('#readsForceSequencesGroup');
@@ -15238,7 +15036,6 @@ This action cannot be undone.`;
     const mismatchColorGroup = bodyElement.querySelector('#readsMismatchColorGroup');
     const sequenceFontSizeGroup = bodyElement.querySelector('#readsSequenceFontSizeGroup');
     const sequenceHeightGroup = bodyElement.querySelector('#readsSequenceHeightGroup');
-    const highlightMismatchesGroup = bodyElement.querySelector('#readsHighlightMismatchesGroup');
 
     // Force sequences toggle - define first so it can be used by main toggle
     const forceSequenceCheckbox = bodyElement.querySelector('#readsForceSequences');
@@ -15275,12 +15072,9 @@ This action cannot be undone.`;
         if (sequenceFontGroup) sequenceFontGroup.style.display = isChecked ? 'block' : 'none';
         if (sequenceFontSizeGroup) sequenceFontSizeGroup.style.display = isChecked ? 'block' : 'none';
         if (sequenceHeightGroup) sequenceHeightGroup.style.display = isChecked ? 'block' : 'none';
-        if (highlightMismatchesGroup) highlightMismatchesGroup.style.display = isChecked ? 'block' : 'none';
-        if (mismatchColorGroup) {
-          const highlightCheckbox = bodyElement.querySelector('#readsHighlightMismatches');
-          const isHighlightChecked = highlightCheckbox ? highlightCheckbox.checked : true;
-          mismatchColorGroup.style.display = isChecked && isHighlightChecked ? 'block' : 'none';
-        }
+        // Mismatch highlighting is independent of sequence display (visible
+        // at every zoom level, matching Canvas), so its controls stay
+        // visible regardless of the sequence-display toggle.
 
         // Update force sequences dependent controls
         updateForceSequenceSettings();
@@ -15311,9 +15105,7 @@ This action cannot be undone.`;
     const highlightMismatchesCheckbox = bodyElement.querySelector('#readsHighlightMismatches');
     if (highlightMismatchesCheckbox && mismatchColorGroup) {
       const toggleMismatchColorSettings = () => {
-        const isChecked = highlightMismatchesCheckbox.checked;
-        const sequenceEnabled = sequenceCheckbox ? sequenceCheckbox.checked : false;
-        mismatchColorGroup.style.display = isChecked && sequenceEnabled ? 'block' : 'none';
+        mismatchColorGroup.style.display = highlightMismatchesCheckbox.checked ? 'block' : 'none';
       };
 
       highlightMismatchesCheckbox.addEventListener('change', toggleMismatchColorSettings);
@@ -16005,6 +15797,15 @@ This action cannot be undone.`;
     this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
   }
 }
+
+// Unified base-letter zoom threshold (CSS pixels per base pair): at/above this
+// a monospace base letter is legible and non-overlapping, below it sequences
+// collapse to solid color blocks. This single value governs BOTH the aligned
+// reads and their reference band (via shouldShowSequences and, in lockstep,
+// CanvasSequenceRenderer's letterMinPxPerBase / CanvasReadsRenderer's row
+// growth), so the two never switch between letters and blocks at different
+// zooms. Keep the fallbacks in those two renderers equal to this.
+TrackRenderer.SEQUENCE_LETTER_MIN_PX_PER_BP = 8;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
