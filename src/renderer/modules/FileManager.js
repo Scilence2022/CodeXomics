@@ -6,6 +6,7 @@ class FileManager {
   constructor(genomeBrowser) {
     this.genomeBrowser = genomeBrowser;
     this.currentFile = null;
+    this.autoWorkingDirectory = null;
   }
 
   getPathModule() {
@@ -13,7 +14,12 @@ class FileManager {
       return window.path;
     }
     return {
-      dirname: filePath => String(filePath || '').replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '/',
+      dirname: filePath =>
+        String(filePath || '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .slice(0, -1)
+          .join('/') || '/',
       basename: filePath =>
         String(filePath || '')
           .replace(/\\/g, '/')
@@ -570,6 +576,7 @@ class FileManager {
     console.log('🔍 FileManager.loadFile() called with path:', filePath);
     this.genomeBrowser.showLoading(true);
     this.genomeBrowser.updateStatus('Loading file...');
+    this.autoWorkingDirectory = null;
 
     try {
       // Clear loaded operons when loading a new genome file
@@ -642,7 +649,12 @@ class FileManager {
       // Update UI
       this.genomeBrowser.updateFileInfo();
       this.genomeBrowser.hideWelcomeScreen();
-      this.genomeBrowser.updateStatus('File loaded successfully');
+      if (this.autoWorkingDirectory) {
+        const path = this.getPathModule();
+        this.genomeBrowser.updateStatus(`Working directory set to: ${path.basename(this.autoWorkingDirectory)}`);
+      } else {
+        this.genomeBrowser.updateStatus('File loaded successfully');
+      }
 
       // Auto-enable tracks for the loaded file type
       this.autoEnableTracksForFileType(extension);
@@ -888,6 +900,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
       if (this.genomeBrowser?.chatManager) {
         try {
           await this.genomeBrowser.chatManager.setWorkingDirectory({ directory_path: fileDir });
+          this.autoWorkingDirectory = fileDir;
           console.log('✅ Working directory set successfully');
         } catch (error) {
           console.warn('⚠️ Failed to set working directory:', error);
@@ -933,13 +946,6 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
       this.genomeBrowser.tabManager.onGenomeLoaded(sequences, this.currentFile?.path);
     }
 
-    // Show notification about working directory
-    if (this.currentFile?.path) {
-      const path = this.getPathModule();
-      const fileDir = path.dirname(this.currentFile.path);
-      this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
-    }
-
     // Select first chromosome by default
     const firstChr = Object.keys(sequences)[0];
     if (firstChr) {
@@ -967,6 +973,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
       if (this.genomeBrowser?.chatManager) {
         try {
           await this.genomeBrowser.chatManager.setWorkingDirectory({ directory_path: fileDir });
+          this.autoWorkingDirectory = fileDir;
           console.log('✅ Working directory set successfully');
         } catch (error) {
           console.warn('⚠️ Failed to set working directory:', error);
@@ -1231,13 +1238,6 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     // Update all tabs with loaded genome data
     if (this.genomeBrowser.tabManager) {
       this.genomeBrowser.tabManager.onGenomeLoaded(sequences, this.currentFile?.path);
-    }
-
-    // Show notification about working directory
-    if (this.currentFile?.path) {
-      const path = this.getPathModule();
-      const fileDir = path.dirname(this.currentFile.path);
-      this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
     }
 
     // Select first chromosome by default

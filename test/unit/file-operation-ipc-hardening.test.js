@@ -22,6 +22,11 @@ describe('file operation IPC hardening', () => {
     const source = fs.readFileSync(FILE_MANAGER, 'utf8');
 
     expect(source).toContain('getPathModule()');
+    expect(source).toContain('this.autoWorkingDirectory = fileDir');
+    expect(source).toContain(
+      'this.genomeBrowser.updateStatus(`Working directory set to: ${path.basename(this.autoWorkingDirectory)}`)'
+    );
+    expect(source).not.toContain('this.genomeBrowser.showNotification(`Working directory set to:');
     expect(source).not.toMatch(/\brequire\(['"]path['"]\)/);
     expect(source).not.toMatch(/\brequire\(['"]fs['"]\)/);
   });
