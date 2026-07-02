@@ -1788,7 +1788,7 @@ Data Management:
 
 Track Settings:
   {"tool_name": "get_track_settings", "parameters": {"track_type": "genes"}}
-  {"tool_name": "set_track_settings", "parameters": {"track_type": "reads", "settings": {"readHeight": 8, "showMismatches": true}}}
+  {"tool_name": "set_track_settings", "parameters": {"track_type": "reads", "settings": {"readHeight": 8, "highlightMismatches": true}}}
   {"tool_name": "get_all_track_settings", "parameters": {}}
   {"tool_name": "reset_track_settings", "parameters": {"track_type": "all"}}
   {"tool_name": "get_track_settings_schema", "parameters": {}}

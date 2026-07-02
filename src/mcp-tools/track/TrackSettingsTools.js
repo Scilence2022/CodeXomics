@@ -288,21 +288,6 @@ class TrackSettingsTools {
           referenceFontFamily: { type: 'string', default: 'monospace', description: 'Reference sequence font family' },
           readHeight: { type: 'number', min: 2, max: 30, default: 4, description: 'Height of each read in pixels' },
           readSpacing: { type: 'number', min: 1, max: 10, default: 2, description: 'Spacing between reads in pixels' },
-          enableVerticalScroll: { type: 'boolean', default: false, description: 'Enable vertical scrolling' },
-          maxVisibleRows: {
-            type: 'number',
-            min: 5,
-            max: 30,
-            default: 10,
-            description: 'Maximum visible rows when scrolling is enabled',
-          },
-          maxRows: {
-            type: 'number',
-            min: 5,
-            max: 50,
-            default: 20,
-            description: 'Maximum visible rows when scrolling is disabled',
-          },
           forwardColor: {
             type: 'string',
             format: 'color',
@@ -319,7 +304,6 @@ class TrackSettingsTools {
           borderColor: { type: 'string', format: 'color', default: '#ffffff', description: 'Border color for reads' },
           borderWidth: { type: 'number', min: 0, max: 3, default: 0, description: 'Border width in pixels' },
           opacity: { type: 'number', min: 0.1, max: 1, default: 0.9, description: 'Read opacity (0-1)' },
-          showDirectionArrows: { type: 'boolean', default: true, description: 'Show direction arrows' },
           showQualityColors: { type: 'boolean', default: false, description: 'Color reads by mapping quality' },
           showMutations: { type: 'boolean', default: false, description: 'Show mutations' },
           minMappingQuality: {
@@ -375,11 +359,6 @@ class TrackSettingsTools {
             description: 'Sequence text height in pixels',
           },
           highlightMismatches: { type: 'boolean', default: true, description: 'Highlight mismatches' },
-          showMismatches: {
-            type: 'boolean',
-            default: true,
-            description: 'Show mismatches (alias for highlightMismatches)',
-          },
           mismatchColor: {
             type: 'string',
             format: 'color',

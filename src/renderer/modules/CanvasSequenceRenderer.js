@@ -17,6 +17,13 @@ class CanvasSequenceRenderer {
       minHeight: 20,
       maxHeight: 50,
       padding: 2,
+      // Base-letter vs color-block display (see render()):
+      // - lettersAllowed: master toggle (mirrors the reads' showSequences)
+      // - forceLetters: always draw letters regardless of zoom
+      // - letterMinPxPerBase: unified zoom threshold shared with the reads track
+      lettersAllowed: true,
+      forceLetters: false,
+      letterMinPxPerBase: 8,
       // Protein translation options
       showProteinTranslation: false,
       proteinTranslationMode: 'all_frames', // 'all_frames', 'cds_only'
@@ -431,7 +438,8 @@ class CanvasSequenceRenderer {
     }
 
     // Calculate layout positions
-    let dnaY; let proteinStartY;
+    let dnaY;
+    let proteinStartY;
     if (this.options.showProteinTranslation) {
       // DNA sequence at top, proteins below
       dnaY = this.options.padding + this.charHeight / 2;
@@ -444,20 +452,52 @@ class CanvasSequenceRenderer {
     // Render highlighted backgrounds first
     this.renderHighlights(startX, effectiveCharWidth, dnaY, this.charHeight);
 
-    // Render DNA sequence
-    for (let i = 0; i < this.sequence.length; i++) {
-      const base = this.sequence[i];
-      const x = startX + i * effectiveCharWidth + effectiveCharWidth / 2;
+    // Render DNA sequence as letters, or as solid per-base color blocks once
+    // zoomed out far enough that a letter is no longer legible.
+    //
+    // This is the SINGLE unified base-letter rule, shared with the aligned
+    // reads track: letters iff `forceLetters || pixelsPerBase >= threshold`,
+    // gated by `lettersAllowed` (the reads track's showSequences toggle). It's
+    // computed here from THIS canvas's own measured width at render time, and
+    // the reads track applies the identical rule to its own canvas
+    // (TrackRenderer.shouldShowSequences, same threshold), so the reference
+    // band and the reads flip between letters and blocks at the exact same
+    // zoom - and stay in sync across resizes, since both recompute on render.
+    const pixelsPerBase = this.sequence.length > 0 ? availableWidth / this.sequence.length : 0;
+    const letterMinPxPerBase = this.options.letterMinPxPerBase || 8;
+    const lettersAllowed = this.options.lettersAllowed !== false; // default: allowed
+    const showLetters = lettersAllowed && (this.options.forceLetters || pixelsPerBase >= letterMinPxPerBase);
 
-      // Skip if outside visible area (basic culling)
-      if (x > this.canvasWidth + 10) break;
-      if (x < -10) continue;
+    if (showLetters) {
+      for (let i = 0; i < this.sequence.length; i++) {
+        const base = this.sequence[i];
+        const x = startX + i * effectiveCharWidth + effectiveCharWidth / 2;
 
-      // Set color for base
-      this.ctx.fillStyle = this.baseColors[base] || this.baseColors['N'];
+        // Skip if outside visible area (basic culling)
+        if (x > this.canvasWidth + 10) break;
+        if (x < -10) continue;
 
-      // Render character
-      this.ctx.fillText(base, x, dnaY);
+        // Set color for base
+        this.ctx.fillStyle = this.baseColors[base] || this.baseColors['N'];
+
+        // Render character
+        this.ctx.fillText(base, x, dnaY);
+      }
+    } else {
+      const blockTop = dnaY - this.charHeight / 2;
+      const blockWidth = Math.max(effectiveCharWidth, 0.5);
+
+      for (let i = 0; i < this.sequence.length; i++) {
+        const base = this.sequence[i];
+        const x = startX + i * effectiveCharWidth;
+
+        // Skip if outside visible area (basic culling)
+        if (x > this.canvasWidth + 10) break;
+        if (x + blockWidth < -10) continue;
+
+        this.ctx.fillStyle = this.baseColors[base] || this.baseColors['N'];
+        this.ctx.fillRect(x, blockTop, blockWidth, this.charHeight);
+      }
     }
 
     // Render protein translations if enabled
