@@ -538,7 +538,7 @@ class GenomeNavigationBar {
     const scale = width / this.sequenceLength;
 
     const startX = start * scale;
-    const endX = end * scale;
+    const endX = (end + 1) * scale;
     const selectionWidth = endX - startX;
 
     // Draw selection background
@@ -891,8 +891,8 @@ class GenomeNavigationBar {
 
     if (x < 0 || x > width) return null;
 
-    const position = Math.round((x / width) * this.sequenceLength);
-    return Math.max(0, Math.min(this.sequenceLength, position));
+    const position = Math.floor((x / width) * this.sequenceLength);
+    return Math.max(0, Math.min(this.sequenceLength - 1, position));
   }
 
   showTooltip(e, startPos, endPos = null) {
@@ -905,12 +905,14 @@ class GenomeNavigationBar {
 
     if (endPos !== null) {
       // Show range tooltip with special styling
-      const rangeSize = Math.round(endPos - startPos);
-      this.tooltip.textContent = `Range: ${Math.round(startPos).toLocaleString()}-${Math.round(endPos).toLocaleString()} bp (${rangeSize.toLocaleString()} bp)`;
+      const rangeStart = Math.min(startPos, endPos);
+      const rangeEnd = Math.max(startPos, endPos);
+      const rangeSize = Math.round(rangeEnd - rangeStart + 1);
+      this.tooltip.textContent = `Range: ${Math.round(rangeStart + 1).toLocaleString()}-${Math.round(rangeEnd + 1).toLocaleString()} bp (${rangeSize.toLocaleString()} bp)`;
       this.tooltip.classList.add('range-tooltip');
     } else {
       // Show position tooltip
-      this.tooltip.textContent = `Position: ${startPos.toLocaleString()} bp`;
+      this.tooltip.textContent = `Position: ${(startPos + 1).toLocaleString()} bp`;
       this.tooltip.classList.remove('range-tooltip');
     }
   }
@@ -924,7 +926,7 @@ class GenomeNavigationBar {
     this.tooltip.style.display = 'block';
 
     const rangeSize = Math.round(endPos - startPos);
-    this.tooltip.textContent = `Range: ${Math.round(startPos).toLocaleString()}-${Math.round(endPos).toLocaleString()} bp (${rangeSize.toLocaleString()} bp)`;
+    this.tooltip.textContent = `Range: ${Math.round(startPos + 1).toLocaleString()}-${Math.round(endPos).toLocaleString()} bp (${rangeSize.toLocaleString()} bp)`;
     this.tooltip.classList.add('range-tooltip');
   }
 
@@ -1078,37 +1080,36 @@ class GenomeNavigationBar {
     // Clear any existing selection
     this.genomeBrowser.clearSequenceSelection();
 
-    // Set the sequence selection
-    this.genomeBrowser.currentSequenceSelection = {
+    const selectionStart = Math.min(startPos, endPos) + 1;
+    const selectionEnd = Math.max(startPos, endPos) + 1;
+    const selection = {
       chromosome: this.currentChromosome,
-      start: startPos,
-      end: endPos,
-      coordinateSystem: 'zero-based-inclusive',
-    };
-
-    // Update sequence selection state
-    this.genomeBrowser.sequenceSelection = {
-      start: startPos,
-      end: endPos,
+      start: selectionStart,
+      end: selectionEnd,
       active: true,
+      coordinateSystem: 'one-based-inclusive',
       source: 'ruler',
+      length: selectionEnd - selectionStart + 1,
+      wrapsOrigin: false,
+      segments: [{ start: selectionStart, end: selectionEnd }],
     };
+    this.genomeBrowser.currentSequenceSelection = selection;
+    this.genomeBrowser.sequenceSelection = { ...selection };
 
     // Highlight the selected region in Genes & Features track
-    this.highlightSelectedRegion(startPos, endPos);
+    this.highlightSelectedRegion(selectionStart, selectionEnd);
 
     // Update copy button state
     this.genomeBrowser.updateCopyButtonState();
 
     // Show notification
     this.genomeBrowser.showNotification(
-      `Sequence selected: ${this.currentChromosome}:${startPos}-${endPos} (${endPos - startPos + 1} bp)`,
+      `Sequence selected: ${this.currentChromosome}:${selectionStart}-${selectionEnd} (${selection.length} bp)`,
       'success'
     );
 
     // Update status bar with selection information
-    const selectionLength = endPos - startPos + 1;
-    const statusMessage = `🔵 Sequence Selected: ${this.currentChromosome}:${startPos.toLocaleString()}-${endPos.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
+    const statusMessage = `🔵 Sequence Selected: ${this.currentChromosome}:${selectionStart.toLocaleString()}-${selectionEnd.toLocaleString()} (${selection.length.toLocaleString()} bp)`;
 
     if (this.genomeBrowser.uiManager) {
       this.genomeBrowser.uiManager.updateStatus(statusMessage);
@@ -1159,7 +1160,7 @@ class GenomeNavigationBar {
    * Show selection tooltip
    */
   showSelectionTooltip(e, startPos, endPos) {
-    if (!startPos || !endPos) return;
+    if (startPos === null || endPos === null) return;
 
     const rect = this.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -1171,8 +1172,8 @@ class GenomeNavigationBar {
 
     this.tooltip.innerHTML = `
             <div style="font-weight: bold; margin-bottom: 4px;">Sequence Selection</div>
-            <div>Start: ${start.toLocaleString()}</div>
-            <div>End: ${end.toLocaleString()}</div>
+            <div>Start: ${(start + 1).toLocaleString()}</div>
+            <div>End: ${(end + 1).toLocaleString()}</div>
             <div>Length: ${length.toLocaleString()} bp</div>
         `;
 

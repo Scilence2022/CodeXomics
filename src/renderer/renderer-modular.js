@@ -9655,23 +9655,45 @@ class GenomeBrowser {
     this.populateChromosomeSelectForFeature(chromosomeSelect);
 
     // Handle sequence selection
-    if (this.currentSequenceSelection) {
-      const { chromosome, start, end } = this.currentSequenceSelection;
+    if (this.currentSequenceSelection && !this.currentSequenceSelection.wrapsOrigin) {
+      const { chromosome } = this.currentSequenceSelection;
+      const offset = this.currentSequenceSelection.coordinateSystem === 'zero-based-inclusive' ? 1 : 0;
+      const start = Math.min(this.currentSequenceSelection.start, this.currentSequenceSelection.end) + offset;
+      const end = Math.max(this.currentSequenceSelection.start, this.currentSequenceSelection.end) + offset;
       document.getElementById('featureChromosome').value = chromosome;
       document.getElementById('featureStart').value = start;
       document.getElementById('featureEnd').value = end;
       document.getElementById('selectionText').textContent =
         `Using selected region: ${chromosome}:${start}-${end} (${end - start + 1} bp)`;
       selectionInfo.style.display = 'block';
+    } else if (this.currentSequenceSelection?.wrapsOrigin) {
+      document.getElementById('featureChromosome').value = this.currentSequenceSelection.chromosome;
+      document.getElementById('featureStart').value = '';
+      document.getElementById('featureEnd').value = '';
+      document.getElementById('selectionText').textContent =
+        'Cross-origin selections cannot be used to prefill a single feature interval.';
+      selectionInfo.style.display = 'block';
     } else {
       // Use current view if no selection
       const currentChr = document.getElementById('chromosomeSelect')?.value;
       if (currentChr) {
+        const sequenceLength = this.currentSequence?.[currentChr]?.length || 0;
+        const wrapsOrigin =
+          sequenceLength > 0 &&
+          (Number(this.currentPosition.start) >= sequenceLength || Number(this.currentPosition.end) > sequenceLength);
         document.getElementById('featureChromosome').value = currentChr;
-        document.getElementById('featureStart').value = this.currentPosition.start + 1;
-        document.getElementById('featureEnd').value = this.currentPosition.end;
+        document.getElementById('featureStart').value = wrapsOrigin ? '' : this.currentPosition.start + 1;
+        document.getElementById('featureEnd').value = wrapsOrigin ? '' : this.currentPosition.end;
+        if (wrapsOrigin) {
+          document.getElementById('selectionText').textContent =
+            'A cross-origin circular view cannot prefill one feature interval.';
+          selectionInfo.style.display = 'block';
+        } else {
+          selectionInfo.style.display = 'none';
+        }
+      } else {
+        selectionInfo.style.display = 'none';
       }
-      selectionInfo.style.display = 'none';
     }
 
     // Clear previous values
@@ -10211,9 +10233,11 @@ class GenomeBrowser {
     if (datasetPosition !== undefined) {
       const sourcePosition = parseInt(datasetPosition, 10);
       if (!Number.isNaN(sourcePosition)) {
+        const displayPosition = parseInt(baseElement.dataset.displayPosition, 10);
         return {
           chromosome: document.getElementById('chromosomeSelect')?.value,
           position: sourcePosition + 1,
+          displayPosition: Number.isNaN(displayPosition) ? sourcePosition : displayPosition,
           element: baseElement,
         };
       }
@@ -10233,6 +10257,7 @@ class GenomeBrowser {
     return {
       chromosome: document.getElementById('chromosomeSelect')?.value,
       position: lineStartPos + baseIndex,
+      displayPosition: lineStartPos + baseIndex - 1,
       element: baseElement,
     };
   }
@@ -10242,14 +10267,14 @@ class GenomeBrowser {
 
     this.clearSequenceSelection();
 
-    const startPos = Math.min(start.position, end.position);
-    const endPos = Math.max(start.position, end.position);
+    const displayStart = Math.min(start.displayPosition, end.displayPosition);
+    const displayEnd = Math.max(start.displayPosition, end.displayPosition);
 
     // Use the same styling as gene selection for consistency
     const sequenceBases = document.querySelectorAll('.sequence-bases span');
     sequenceBases.forEach(baseElement => {
       const pos = this.getSequencePosition(baseElement);
-      if (pos && pos.position >= startPos && pos.position <= endPos) {
+      if (pos && pos.displayPosition >= displayStart && pos.displayPosition <= displayEnd) {
         baseElement.classList.add('sequence-selected');
         baseElement.classList.add('gene-sequence-selected'); // Use same styling as gene selection
       }
@@ -10262,22 +10287,43 @@ class GenomeBrowser {
   finalizeSequenceSelection(start, end) {
     if (!start || !end) return;
 
-    const startPos = Math.min(start.position, end.position);
-    const endPos = Math.max(start.position, end.position);
+    const selection =
+      this.trackRenderer?.createManualSelectionFromDisplayRange &&
+      Number.isFinite(start.displayPosition) &&
+      Number.isFinite(end.displayPosition)
+        ? this.trackRenderer.createManualSelectionFromDisplayRange(
+            start.displayPosition,
+            end.displayPosition,
+            'sequence-track',
+            start.chromosome
+          )
+        : {
+            chromosome: start.chromosome,
+            start: Math.min(start.position, end.position),
+            end: Math.max(start.position, end.position),
+            active: true,
+            coordinateSystem: 'one-based-inclusive',
+            source: 'sequence-track',
+            length: Math.abs(end.position - start.position) + 1,
+            wrapsOrigin: false,
+            segments: [
+              {
+                start: Math.min(start.position, end.position),
+                end: Math.max(start.position, end.position),
+              },
+            ],
+          };
 
-    this.currentSequenceSelection = {
-      chromosome: start.chromosome,
-      start: startPos,
-      end: endPos,
-      coordinateSystem: 'one-based-inclusive',
-    };
+    this.currentSequenceSelection = selection;
 
     // Update copy button state when manual selection is made
     this.updateCopyButtonState();
 
     // Update status bar with selection information
-    const selectionLength = endPos - startPos + 1;
-    const statusMessage = `🔵 Sequence Track Selection: ${start.chromosome}:${startPos.toLocaleString()}-${endPos.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
+    const rangeLabel = selection.segments
+      .map(segment => `${segment.start.toLocaleString()}-${segment.end.toLocaleString()}`)
+      .join(' / ');
+    const statusMessage = `🔵 Sequence Track Selection: ${selection.chromosome}:${rangeLabel} (${selection.length.toLocaleString()} bp)`;
 
     if (this.uiManager) {
       this.uiManager.updateStatus(statusMessage);
@@ -10297,7 +10343,7 @@ class GenomeBrowser {
       }
     }
 
-    console.log(`Selected sequence: ${start.chromosome}:${startPos}-${endPos} (${endPos - startPos + 1} bp)`);
+    console.log(`Selected sequence: ${selection.chromosome}:${rangeLabel} (${selection.length} bp)`);
   }
 
   clearSequenceSelection() {

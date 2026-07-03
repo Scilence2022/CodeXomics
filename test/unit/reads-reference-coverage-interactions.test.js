@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import TrackRenderer from '../../src/renderer/modules/TrackRenderer.js';
+import PrimerLibraryUI from '../../src/renderer/modules/PrimerLibraryUI.js';
 
 describe('Aligned reads reference and coverage interactions', () => {
   afterEach(() => {
@@ -48,9 +49,14 @@ describe('Aligned reads reference and coverage interactions', () => {
 
     expect(genomeBrowser.currentSequenceSelection).toEqual({
       chromosome: 'chr1',
-      start: 110,
-      end: 175,
-      coordinateSystem: 'zero-based-inclusive',
+      start: 111,
+      end: 176,
+      active: true,
+      coordinateSystem: 'one-based-inclusive',
+      source: 'aligned-reads-reference',
+      length: 66,
+      wrapsOrigin: false,
+      segments: [{ start: 111, end: 176 }],
     });
     expect(genomeBrowser.sequenceSelection.source).toBe('aligned-reads-reference');
     expect(genomeBrowser.updateCopyButtonState).toHaveBeenCalled();
@@ -96,8 +102,56 @@ describe('Aligned reads reference and coverage interactions', () => {
 
     const tooltip = coverage.querySelector('.coverage-tooltip');
     expect(tooltip.style.display).toBe('block');
-    expect(tooltip.textContent).toContain('Position: 5');
+    expect(tooltip.textContent).toContain('Position: 6');
     expect(tooltip.textContent).toContain('Coverage: 1x');
+  });
+
+  it('represents a circular cross-origin reference selection as ordered one-based segments', () => {
+    const genomeBrowser = createGenomeBrowser();
+    genomeBrowser.currentSequence = { chr1: 'A'.repeat(100) };
+    genomeBrowser.navigationManager = { circularMode: true };
+    const renderer = new TrackRenderer(genomeBrowser);
+
+    const selection = renderer.createManualSelectionFromDisplayRange(95, 104, 'aligned-reads-reference', 'chr1');
+
+    expect(selection).toEqual({
+      chromosome: 'chr1',
+      start: 96,
+      end: 5,
+      active: true,
+      coordinateSystem: 'one-based-inclusive',
+      source: 'aligned-reads-reference',
+      length: 10,
+      wrapsOrigin: true,
+      segments: [
+        { start: 96, end: 100 },
+        { start: 1, end: 5 },
+      ],
+    });
+  });
+
+  it('prefills primer sequence from canonical and legacy manual selections without shifting bases', () => {
+    const genomeBrowser = {
+      currentChromosome: 'chr1',
+      currentSequence: { chr1: 'AACCGGTT' },
+      currentSequenceSelection: {
+        chromosome: 'chr1',
+        start: 3,
+        end: 6,
+        coordinateSystem: 'one-based-inclusive',
+      },
+    };
+    const primerLibrary = new PrimerLibraryUI(genomeBrowser);
+
+    expect(primerLibrary._selectionSequence()).toBe('CCGG');
+
+    genomeBrowser.currentSequenceSelection = {
+      chromosome: 'chr1',
+      start: 2,
+      end: 5,
+      coordinateSystem: 'zero-based-inclusive',
+    };
+    expect(primerLibrary._selectionSequence()).toBe('CCGG');
   });
 
   it('styles track data tooltips with theme variables', () => {

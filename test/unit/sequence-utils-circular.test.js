@@ -64,6 +64,49 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(utils.getLineDisplayLabel(100, 'chr1')).toBe('1');
   });
 
+  it('copies a one-based manual selection across the circular origin in segment order', async () => {
+    utils.genomeBrowser.currentSequenceSelection = {
+      chromosome: 'chr1',
+      start: 96,
+      end: 5,
+      active: true,
+      coordinateSystem: 'one-based-inclusive',
+      source: 'aligned-reads-reference',
+      length: 10,
+      wrapsOrigin: true,
+      segments: [
+        { start: 96, end: 100 },
+        { start: 1, end: 5 },
+      ],
+    };
+
+    await utils.copySequence();
+
+    expect(clipboardWriteTextSpy).toHaveBeenCalledWith('TTTTTAAAAA');
+  });
+
+  it('restores both visual segments of a cross-origin manual selection', () => {
+    const sequence = utils.genomeBrowser.currentSequence.chr1;
+    const subsequence = utils.getViewportSequence(sequence, 95, 105, 'chr1');
+    const lineElement = utils.renderSequenceLine(subsequence, 95, 'chr1', [], [], 10, {}, new Map());
+    document.getElementById('sequenceContent').appendChild(lineElement);
+
+    utils.restoreManualSelection({
+      chromosome: 'chr1',
+      start: 96,
+      end: 5,
+      active: true,
+      coordinateSystem: 'one-based-inclusive',
+      wrapsOrigin: true,
+      segments: [
+        { start: 96, end: 100 },
+        { start: 1, end: 5 },
+      ],
+    });
+
+    expect(document.querySelectorAll('.sequence-selected')).toHaveLength(10);
+  });
+
   it('renders wrapped bases with source positions for clicks and selection restore', () => {
     const annotations = utils.genomeBrowser.currentAnnotations.chr1;
     const subsequence = utils.getViewportSequence(utils.genomeBrowser.currentSequence.chr1, 95, 105, 'chr1');

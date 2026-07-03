@@ -3228,6 +3228,11 @@ class SequenceUtils {
 
   createFastaHeader(selectionInfo) {
     const chromosome = selectionInfo.chromosome || this.genomeBrowser.currentChromosome || 'sequence';
+    if (selectionInfo.segments?.length > 1) {
+      const range = selectionInfo.segments.map(segment => `${segment.start}-${segment.end}`).join('/');
+      return `>${selectionInfo.name || `${chromosome}:${range}`}`;
+    }
+
     const startValue = parseInt(selectionInfo.start, 10);
     const endValue = parseInt(selectionInfo.end, 10);
     const isZeroBased = selectionInfo.coordinateSystem === 'zero-based-inclusive';
@@ -3238,22 +3243,44 @@ class SequenceUtils {
   }
 
   getManualSelectionSourceRange(selection) {
-    if (!selection) return null;
+    const segments = this.getManualSelectionSourceSegments(selection);
+    return segments.length === 1 ? segments[0] : null;
+  }
+
+  getManualSelectionSourceSegments(selection) {
+    if (!selection) return [];
+
+    if (Array.isArray(selection.segments) && selection.segments.length > 0) {
+      const offset = selection.coordinateSystem === 'zero-based-inclusive' ? 0 : 1;
+      return selection.segments
+        .map(segment => {
+          const start = parseInt(segment.start, 10);
+          const end = parseInt(segment.end, 10);
+          if (Number.isNaN(start) || Number.isNaN(end)) return null;
+          return {
+            start: Math.max(0, Math.min(start, end) - offset),
+            end: Math.max(0, Math.max(start, end) - offset),
+          };
+        })
+        .filter(Boolean);
+    }
 
     const rawStart = parseInt(selection.start, 10);
     const rawEnd = parseInt(selection.end, 10);
-    if (Number.isNaN(rawStart) || Number.isNaN(rawEnd)) return null;
+    if (Number.isNaN(rawStart) || Number.isNaN(rawEnd)) return [];
 
     const start = Math.min(rawStart, rawEnd);
     const end = Math.max(rawStart, rawEnd);
     if (selection.coordinateSystem === 'zero-based-inclusive') {
-      return { start, end };
+      return [{ start, end }];
     }
 
-    return {
-      start: Math.max(0, start - 1),
-      end: Math.max(0, end - 1),
-    };
+    return [
+      {
+        start: Math.max(0, start - 1),
+        end: Math.max(0, end - 1),
+      },
+    ];
   }
 
   getCopySequenceOptions(eventOrOptions = {}) {
@@ -3320,11 +3347,9 @@ class SequenceUtils {
       // Priority 2: Check if there's a manual sequence selection (drag selection)
       const manualSelection = this.genomeBrowser.currentSequenceSelection;
       console.log('Manual selection:', manualSelection);
-      const manualRange = this.getManualSelectionSourceRange(manualSelection);
-      if (!manualRange) return;
-      const startIdx = manualRange.start;
-      const endIdx = manualRange.end + 1; // Include end position
-      textToCopy = sequence.substring(startIdx, endIdx);
+      const manualSegments = this.getManualSelectionSourceSegments(manualSelection);
+      if (!manualSegments.length) return;
+      textToCopy = manualSegments.map(segment => sequence.substring(segment.start, segment.end + 1)).join('');
       textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
       console.log('Extracted sequence:', textToCopy);
       copyMessage = this.formatSequenceCopyMessage('selected sequence', textToCopy.length, 'bp', copyOptions);
@@ -3383,12 +3408,13 @@ class SequenceUtils {
       };
     } else if (copySource === 'manual') {
       const manualSelection = this.genomeBrowser.currentSequenceSelection;
-      const manualRange = this.getManualSelectionSourceRange(manualSelection);
       selectionInfo = {
         chromosome: currentChr,
-        start: manualRange.start,
-        end: manualRange.end,
-        coordinateSystem: 'zero-based-inclusive',
+        start: manualSelection.start,
+        end: manualSelection.end,
+        coordinateSystem: manualSelection.coordinateSystem || 'one-based-inclusive',
+        segments: manualSelection.segments,
+        wrapsOrigin: manualSelection.wrapsOrigin,
         name: null,
       };
     } else {
@@ -4346,7 +4372,7 @@ class SequenceUtils {
    * Restore manual text selection visual highlighting after sequence re-render
    */
   restoreManualSelection(selectionInfo) {
-    if (!selectionInfo || !selectionInfo.active) {
+    if (!selectionInfo || selectionInfo.active === false) {
       console.log('🔧 [SequenceUtils] No active manual selection to restore');
       return;
     }
@@ -4359,10 +4385,24 @@ class SequenceUtils {
       return;
     }
 
-    // Find the DOM nodes for the selection range
-    const sourceRange = this.getManualSelectionSourceRange(selectionInfo);
-    if (!sourceRange) return;
+    const sourceSegments = this.getManualSelectionSourceSegments(selectionInfo);
+    if (!sourceSegments.length) return;
 
+    if (sourceSegments.length > 1) {
+      sequenceContainer.querySelectorAll('.sequence-bases span[data-position]').forEach(baseElement => {
+        const sourcePosition = parseInt(baseElement.dataset.position, 10);
+        if (
+          !Number.isNaN(sourcePosition) &&
+          sourceSegments.some(segment => sourcePosition >= segment.start && sourcePosition <= segment.end)
+        ) {
+          baseElement.classList.add('sequence-selected', 'gene-sequence-selected');
+        }
+      });
+      return;
+    }
+
+    // Find the DOM nodes for the selection range
+    const sourceRange = sourceSegments[0];
     const startResult = this.findNodeAtGenomicPosition(sourceRange.start, sequenceContainer);
     const endResult = this.findNodeAtGenomicPosition(sourceRange.end, sequenceContainer);
 

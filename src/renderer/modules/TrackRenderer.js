@@ -536,6 +536,44 @@ class TrackRenderer {
   }
 
   /**
+   * Convert a selected display-space interval into the public 1-based,
+   * inclusive selection model used by features, actions, and UI forms.
+   */
+  createManualSelectionFromDisplayRange(start, end, source, chromosome = null) {
+    const selectedChromosome = chromosome || this.genomeBrowser.currentChromosome;
+    const displayStart = Math.min(start, end);
+    const displayEnd = Math.max(start, end);
+    const sequenceLength = this.getSequenceLength(selectedChromosome);
+    const circular = this.isCircularModeEnabled() && sequenceLength > 0;
+
+    const sourceSegments = circular
+      ? this.getViewportSegments({ start: displayStart, end: displayEnd + 1 }, selectedChromosome)
+      : [{ sourceStart: displayStart, sourceEnd: displayEnd + 1 }];
+    const segments = sourceSegments.map(segment => ({
+      start: segment.sourceStart + 1,
+      end: segment.sourceEnd,
+    }));
+    const selectionLength = segments.reduce((sum, segment) => sum + segment.end - segment.start + 1, 0);
+
+    return {
+      chromosome: selectedChromosome,
+      start: segments[0].start,
+      end: segments[segments.length - 1].end,
+      active: true,
+      coordinateSystem: 'one-based-inclusive',
+      source,
+      length: selectionLength,
+      wrapsOrigin: segments.length > 1,
+      segments,
+    };
+  }
+
+  formatManualSelectionRange(selection) {
+    const segments = selection.segments?.length ? selection.segments : [{ start: selection.start, end: selection.end }];
+    return segments.map(segment => `${segment.start.toLocaleString()}-${segment.end.toLocaleString()}`).join(' / ');
+  }
+
+  /**
    * Split a display viewport into source-coordinate intervals. For a circular
    * viewport such as 950-1050 on a 1000 bp sequence, this returns
    * 950-1000 and 0-50 while preserving their display-space offsets.
@@ -6986,9 +7024,9 @@ class TrackRenderer {
           this.isCircularModeEnabled() && sequenceLength > 0
             ? this.normalizeCircularPosition(position, sequenceLength)
             : position;
-        const absolutePos = normalizePosition(viewStart + detail.position);
-        const windowStart = normalizePosition(viewStart + detail.windowStart);
-        const windowEnd = normalizePosition(viewStart + detail.windowEnd);
+        const absolutePos = normalizePosition(viewStart + detail.position) + 1;
+        const windowStart = normalizePosition(viewStart + detail.windowStart) + 1;
+        const windowEnd = normalizePosition(viewStart + detail.windowEnd - 1) + 1;
 
         tooltip.innerHTML = `
                     <div class="track-data-tooltip__title">Position: ${Math.round(absolutePos).toLocaleString()}</div>
@@ -10276,9 +10314,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     if (!container || !container.classList.contains('selecting')) return;
 
     const rect = e.target.getBoundingClientRect();
-    const x = e.clientX - rect.left;
     const viewport = this.getCurrentViewport();
-    const startPos = Math.round(viewport.start + (x / rect.width) * (viewport.end - viewport.start));
+    const range = viewport.end - viewport.start;
+    const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+    const startPos = viewport.start + Math.min(Math.floor((x / rect.width) * range), range - 1);
 
     this.secondaryRulerSelection = {
       start: startPos,
@@ -10297,9 +10336,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     if (!this.secondaryRulerSelection || !this.secondaryRulerSelection.isSelecting) return;
 
     const rect = e.target.getBoundingClientRect();
-    const x = e.clientX - rect.left;
     const viewport = this.getCurrentViewport();
-    const currentPos = Math.round(viewport.start + (x / rect.width) * (viewport.end - viewport.start));
+    const range = viewport.end - viewport.start;
+    const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+    const currentPos = viewport.start + Math.min(Math.floor((x / rect.width) * range), range - 1);
 
     this.secondaryRulerSelection.end = currentPos;
     this.updateSecondaryRulerSelectionIndicator();
@@ -10317,9 +10357,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     const start = Math.min(this.secondaryRulerSelection.start, this.secondaryRulerSelection.end);
     const end = Math.max(this.secondaryRulerSelection.start, this.secondaryRulerSelection.end);
 
-    if (start !== end) {
-      this.applySecondaryRulerSelection(start, end);
-    }
+    this.applySecondaryRulerSelection(start, end);
   }
 
   /**
@@ -10366,7 +10404,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     const end = Math.max(this.secondaryRulerSelection.start, this.secondaryRulerSelection.end);
 
     const startX = ((start - viewport.start) / (viewport.end - viewport.start)) * rect.width;
-    const endX = ((end - viewport.start) / (viewport.end - viewport.start)) * rect.width;
+    const endX = ((end - viewport.start + 1) / (viewport.end - viewport.start)) * rect.width;
 
     indicator.style.left = `${startX}px`;
     indicator.style.width = `${endX - startX}px`;
@@ -10379,37 +10417,26 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     // Clear any existing selection
     this.genomeBrowser.clearSequenceSelection();
 
-    // Set the sequence selection
-    this.genomeBrowser.currentSequenceSelection = {
-      chromosome: this.genomeBrowser.currentChromosome,
-      start: start,
-      end: end,
-      coordinateSystem: 'zero-based-inclusive',
-    };
-
-    // Update sequence selection state
-    this.genomeBrowser.sequenceSelection = {
-      start: start,
-      end: end,
-      active: true,
-      source: 'secondary-ruler',
-    };
+    const selection = this.createManualSelectionFromDisplayRange(start, end, 'secondary-ruler');
+    this.genomeBrowser.currentSequenceSelection = selection;
+    this.genomeBrowser.sequenceSelection = { ...selection };
 
     // Highlight the selected region in Genes & Features track
-    this.highlightSelectedRegion(start, end);
+    this.highlightSelectedRegion(selection.start, selection.end, selection.segments);
 
     // Update copy button state
     this.genomeBrowser.updateCopyButtonState();
 
+    const rangeLabel = this.formatManualSelectionRange(selection);
+
     // Show notification
     this.genomeBrowser.showNotification(
-      `Sequence selected: ${this.genomeBrowser.currentChromosome}:${start}-${end} (${end - start + 1} bp)`,
+      `Sequence selected: ${selection.chromosome}:${rangeLabel} (${selection.length} bp)`,
       'success'
     );
 
     // Update status bar with selection information
-    const selectionLength = end - start + 1;
-    const statusMessage = `🔴 Secondary Ruler Selection: ${this.genomeBrowser.currentChromosome}:${start.toLocaleString()}-${end.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
+    const statusMessage = `🔴 Secondary Ruler Selection: ${selection.chromosome}:${rangeLabel} (${selection.length.toLocaleString()} bp)`;
 
     if (this.genomeBrowser.uiManager) {
       this.genomeBrowser.uiManager.updateStatus(statusMessage);
@@ -10429,7 +10456,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       }
     }
 
-    console.log(`Secondary ruler selection applied: ${start}-${end}`);
+    console.log(`Secondary ruler selection applied: ${rangeLabel}`);
   }
 
   /**
@@ -10454,12 +10481,15 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
   /**
    * Highlight selected region in Genes & Features track
    */
-  highlightSelectedRegion(start, end) {
+  highlightSelectedRegion(start, end, segments = null) {
     // Find features that overlap with the selection
     const chromosome = this.genomeBrowser.currentChromosome;
     if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
       const annotations = this.genomeBrowser.currentAnnotations[chromosome];
-      const overlappingFeatures = annotations.filter(feature => feature.start <= end && feature.end >= start);
+      const selectionSegments = segments?.length ? segments : [{ start, end }];
+      const overlappingFeatures = annotations.filter(feature =>
+        selectionSegments.some(segment => feature.start <= segment.end && feature.end >= segment.start)
+      );
 
       // Clear previous highlights
       document.querySelectorAll('.feature-highlighted').forEach(el => {
@@ -14093,12 +14123,20 @@ This action cannot be undone.`;
       const binStart = Math.floor(viewport.start + index * binSize);
       const binEnd = Math.max(binStart, Math.min(viewport.end - 1, Math.ceil(binStart + binSize) - 1));
       const position = Math.min(viewport.end - 1, Math.floor(viewport.start + ratio * range));
+      const sequenceLength = this.getSequenceLength();
+      const toDisplayPosition = sourcePosition => {
+        const normalized =
+          this.isCircularModeEnabled() && sequenceLength > 0
+            ? this.normalizeCircularPosition(sourcePosition, sequenceLength)
+            : sourcePosition;
+        return normalized + 1;
+      };
 
       tooltip.innerHTML = `
-                <div class="track-data-tooltip__title">Position: ${position.toLocaleString()}</div>
+                <div class="track-data-tooltip__title">Position: ${toDisplayPosition(position).toLocaleString()}</div>
                 <div><span class="track-data-tooltip__label">Coverage:</span> ${coverageData[index]}x</div>
                 <div class="track-data-tooltip__meta">
-                    Bin: ${binStart.toLocaleString()}-${binEnd.toLocaleString()}<br>
+                    Bin: ${toDisplayPosition(binStart).toLocaleString()}-${toDisplayPosition(binEnd).toLocaleString()}<br>
                     Max: ${maxCoverage}x · Avg: ${avgCoverage}x
                 </div>
             `;
@@ -14261,34 +14299,24 @@ This action cannot be undone.`;
    * Publish a reads-reference selection through the shared sequence selection state.
    */
   applyReferenceSequenceSelection(start, end, options = {}) {
-    const chromosome = this.genomeBrowser.currentChromosome;
-
     if (options.clearExisting !== false) {
       this.genomeBrowser.clearSequenceSelection();
     }
-    this.genomeBrowser.currentSequenceSelection = {
-      chromosome,
-      start,
-      end,
-      coordinateSystem: 'zero-based-inclusive',
-    };
-    this.genomeBrowser.sequenceSelection = {
-      start,
-      end,
-      active: true,
-      source: 'aligned-reads-reference',
-    };
 
-    this.highlightSelectedRegion(start, end);
+    const selection = this.createManualSelectionFromDisplayRange(start, end, 'aligned-reads-reference');
+    this.genomeBrowser.currentSequenceSelection = selection;
+    this.genomeBrowser.sequenceSelection = { ...selection };
+
+    this.highlightSelectedRegion(selection.start, selection.end, selection.segments);
     this.genomeBrowser.updateCopyButtonState();
 
-    const selectionLength = end - start + 1;
+    const rangeLabel = this.formatManualSelectionRange(selection);
     this.genomeBrowser.showNotification(
-      `Reference selected: ${chromosome}:${start}-${end} (${selectionLength} bp)`,
+      `Reference selected: ${selection.chromosome}:${rangeLabel} (${selection.length} bp)`,
       'success'
     );
 
-    const statusMessage = `🔵 Aligned Reads Reference Selection: ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
+    const statusMessage = `🔵 Aligned Reads Reference Selection: ${selection.chromosome}:${rangeLabel} (${selection.length.toLocaleString()} bp)`;
     if (this.genomeBrowser.uiManager) {
       this.genomeBrowser.uiManager.updateStatus(statusMessage);
     } else {
@@ -14431,13 +14459,13 @@ This action cannot be undone.`;
         `;
 
     // Add tooltip with position info
-    // FIX: Remove +1 offset - index is already 0-based within the subsequence
+    // Source positions are 0-based; user-facing coordinates are 1-based.
     const circularSequenceLength = this.getSequenceLength();
     const position =
       this.isCircularModeEnabled() && circularSequenceLength > 0
         ? this.normalizeCircularPosition(viewport.start + index, circularSequenceLength)
         : viewport.start + index;
-    baseElement.title = `Position: ${position}, Base: ${base}`;
+    baseElement.title = `Position: ${position + 1}, Base: ${base}`;
 
     return baseElement;
   }

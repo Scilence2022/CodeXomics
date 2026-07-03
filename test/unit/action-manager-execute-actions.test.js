@@ -654,3 +654,41 @@ describe('ActionManager execute_actions sequencing', () => {
     );
   });
 });
+
+describe('ActionManager manual selection coordinates', () => {
+  it('returns canonical one-based coordinates unchanged', () => {
+    const { genomeBrowser, manager } = createManager('AACCGGTT');
+    genomeBrowser.currentSequenceSelection = {
+      chromosome: 'chr1',
+      start: 3,
+      end: 6,
+      coordinateSystem: 'one-based-inclusive',
+    };
+
+    expect(manager.getActiveSelection()).toEqual(
+      expect.objectContaining({
+        start: 3,
+        end: 6,
+        wrapsOrigin: false,
+      })
+    );
+  });
+
+  it('converts legacy zero-based coordinates exactly once', () => {
+    const { genomeBrowser, manager } = createManager('AACCGGTT');
+    genomeBrowser.currentSequenceSelection = {
+      chromosome: 'chr1',
+      start: 2,
+      end: 5,
+      coordinateSystem: 'zero-based-inclusive',
+    };
+
+    expect(manager.getActiveSelection()).toEqual(
+      expect.objectContaining({
+        start: 3,
+        end: 6,
+        wrapsOrigin: false,
+      })
+    );
+  });
+});
