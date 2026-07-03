@@ -14,7 +14,7 @@
  *
  * The fix guards on `=== undefined`, so '' is a valid cached base.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import NavigationManager from '../../src/renderer/modules/NavigationManager.js';
 
 function countTranslate(transform) {
@@ -107,6 +107,31 @@ describe('NavigationManager drag transform caching', () => {
 
       expect(countTranslate(content.style.transform)).toBe(1);
       expect(content.style.transform).toBe('translateX(-12.15%)');
+    });
+  });
+
+  describe('drag viewport overlays', () => {
+    it('repositions highlights in the same update as the detailed rulers', () => {
+      const nm = makeNM();
+      const setupCanvas = vi.fn();
+      const renderHighlights = vi.fn();
+      const ruler = document.createElement('div');
+      ruler.className = 'detailed-ruler-container';
+      ruler._setupCanvas = setupCanvas;
+      document.body.appendChild(ruler);
+
+      nm.genomeBrowser = { highlightManager: { renderHighlights } };
+      nm.dragState.isDragging = true;
+      nm.rulerUpdateThrottle = {
+        lastUpdateTime: 0,
+        updateInterval: 16,
+        pendingUpdate: false,
+      };
+
+      nm.updateDetailedRulers(true);
+
+      expect(setupCanvas).toHaveBeenCalledOnce();
+      expect(renderHighlights).toHaveBeenCalledOnce();
     });
   });
 });

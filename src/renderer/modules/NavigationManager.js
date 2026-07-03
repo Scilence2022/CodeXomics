@@ -1652,7 +1652,7 @@ class NavigationManager {
     }
   }
 
-  // Update all detailed rulers to reflect the new position (with throttling)
+  // Update viewport overlays to reflect the new position (with throttling)
   updateDetailedRulers(forceUpdate = false) {
     const now = performance.now();
 
@@ -1688,6 +1688,12 @@ class NavigationManager {
         console.warn('🔧 [RULER-UPDATE] No _setupCanvas function found for detailed ruler', index + 1);
       }
     });
+
+    // Positional highlights are a separate overlay rather than children of the
+    // track containers that receive the live drag transform. Repaint them from
+    // the current viewport in the same throttled frame as the rulers so their
+    // genomic positions follow the drag without requiring a full track redraw.
+    this.genomeBrowser.highlightManager?.renderHighlights();
   }
 
   // Draggable functionality for tracks
