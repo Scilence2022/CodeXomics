@@ -6959,22 +6959,7 @@ class TrackRenderer {
 
   addSVGGCTooltip(container, svg, data, viewStart, windowSize) {
     const tooltip = document.createElement('div');
-    tooltip.className = 'gc-tooltip';
-    tooltip.style.cssText = `
-            position: absolute;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            line-height: 1.4;
-            pointer-events: none;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            max-width: 200px;
-            white-space: nowrap;
-        `;
+    tooltip.className = 'gc-tooltip track-data-tooltip';
     container.appendChild(tooltip);
 
     svg.addEventListener('mousemove', e => {
@@ -7006,11 +6991,11 @@ class TrackRenderer {
         const windowEnd = normalizePosition(viewStart + detail.windowEnd);
 
         tooltip.innerHTML = `
-                    <div style="font-weight: 600; margin-bottom: 4px; color: #ffc107;">Position: ${Math.round(absolutePos).toLocaleString()}</div>
-                    <div style="color: #28a745;">GC Content: ${detail.gcPercent.toFixed(2)}%</div>
-                    <div style="color: #495057;">GC Skew: ${detail.gcSkew.toFixed(4)}</div>
-                    <div style="color: #17a2b8;">AT Skew: ${detail.atSkew.toFixed(4)}</div>
-                    <div style="margin-top: 4px; color: #6c757d; font-size: 10px;">
+                    <div class="track-data-tooltip__title">Position: ${Math.round(absolutePos).toLocaleString()}</div>
+                    <div><span class="track-data-tooltip__label">GC Content:</span> ${detail.gcPercent.toFixed(2)}%</div>
+                    <div><span class="track-data-tooltip__label">GC Skew:</span> ${detail.gcSkew.toFixed(4)}</div>
+                    <div><span class="track-data-tooltip__label">AT Skew:</span> ${detail.atSkew.toFixed(4)}</div>
+                    <div class="track-data-tooltip__meta">
                         Window: ${windowStart.toLocaleString()}-${windowEnd.toLocaleString()}<br>
                         G:${detail.gCount} C:${detail.cCount} A:${detail.aCount} T:${detail.tCount}
                     </div>
@@ -14082,7 +14067,59 @@ This action cannot be undone.`;
     statsDiv.textContent = `Max: ${maxCoverage}x | Avg: ${avgCoverage}x`;
     coverageContainer.appendChild(statsDiv);
 
+    this.addCoverageTooltip(coverageContainer, svg, coverageData, viewport, maxCoverage, avgCoverage);
     trackContent.appendChild(coverageContainer);
+  }
+
+  /**
+   * Add position-specific hover information to the aligned-reads coverage band.
+   */
+  addCoverageTooltip(container, svg, coverageData, viewport, maxCoverage, avgCoverage) {
+    if (!coverageData.length) return;
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'coverage-tooltip track-data-tooltip';
+    container.appendChild(tooltip);
+
+    svg.addEventListener('mousemove', e => {
+      const rect = svg.getBoundingClientRect();
+      if (rect.width <= 0) return;
+
+      const relativeX = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+      const ratio = relativeX / rect.width;
+      const index = Math.min(Math.floor(ratio * coverageData.length), coverageData.length - 1);
+      const range = viewport.end - viewport.start;
+      const binSize = range / coverageData.length;
+      const binStart = Math.floor(viewport.start + index * binSize);
+      const binEnd = Math.max(binStart, Math.min(viewport.end - 1, Math.ceil(binStart + binSize) - 1));
+      const position = Math.min(viewport.end - 1, Math.floor(viewport.start + ratio * range));
+
+      tooltip.innerHTML = `
+                <div class="track-data-tooltip__title">Position: ${position.toLocaleString()}</div>
+                <div><span class="track-data-tooltip__label">Coverage:</span> ${coverageData[index]}x</div>
+                <div class="track-data-tooltip__meta">
+                    Bin: ${binStart.toLocaleString()}-${binEnd.toLocaleString()}<br>
+                    Max: ${maxCoverage}x · Avg: ${avgCoverage}x
+                </div>
+            `;
+      tooltip.style.display = 'block';
+
+      const containerRect = container.getBoundingClientRect();
+      const tooltipWidth = tooltip.offsetWidth || 190;
+      const tooltipHeight = tooltip.offsetHeight || 70;
+      const tooltipX = Math.min(Math.max(relativeX + 10, 8), Math.max(8, containerRect.width - tooltipWidth - 8));
+      const tooltipY = Math.max(
+        6,
+        Math.min(e.clientY - containerRect.top - tooltipHeight - 8, containerRect.height - tooltipHeight - 6)
+      );
+
+      tooltip.style.left = `${tooltipX}px`;
+      tooltip.style.top = `${tooltipY}px`;
+    });
+
+    svg.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
   }
 
   /**
@@ -14147,9 +14184,117 @@ This action cannot be undone.`;
       referenceContainer.appendChild(referenceDisplay);
     }
 
+    this.setupReferenceSequenceSelection(referenceContainer, viewport);
     trackContent.appendChild(referenceContainer);
 
     return referenceHeight;
+  }
+
+  /**
+   * Allow direct drag selection of a partial sequence in the reads reference band.
+   */
+  setupReferenceSequenceSelection(referenceContainer, viewport) {
+    const range = viewport.end - viewport.start;
+    if (range <= 0) return;
+
+    referenceContainer.classList.add('reference-sequence-selectable');
+    referenceContainer.title = 'Drag to select part of the reference sequence';
+
+    const getPosition = clientX => {
+      const rect = referenceContainer.getBoundingClientRect();
+      if (rect.width <= 0) return viewport.start;
+
+      const relativeX = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+      const offset = Math.min(Math.floor((relativeX / rect.width) * range), range - 1);
+      return viewport.start + offset;
+    };
+
+    const updateIndicator = (indicator, start, end) => {
+      const selectionStart = Math.min(start, end);
+      const selectionEnd = Math.max(start, end);
+      const left = ((selectionStart - viewport.start) / range) * 100;
+      const right = ((selectionEnd - viewport.start + 1) / range) * 100;
+
+      indicator.style.left = `${left}%`;
+      indicator.style.width = `${Math.max(0, right - left)}%`;
+    };
+
+    referenceContainer.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      this.genomeBrowser.clearSequenceSelection();
+
+      const indicator = document.createElement('div');
+      indicator.className = 'reads-reference-selection';
+      referenceContainer.appendChild(indicator);
+
+      const selectionStart = getPosition(e.clientX);
+      let selectionEnd = selectionStart;
+      updateIndicator(indicator, selectionStart, selectionEnd);
+
+      const handleMouseMove = moveEvent => {
+        selectionEnd = getPosition(moveEvent.clientX);
+        updateIndicator(indicator, selectionStart, selectionEnd);
+      };
+
+      const handleMouseUp = upEvent => {
+        selectionEnd = getPosition(upEvent.clientX);
+        updateIndicator(indicator, selectionStart, selectionEnd);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        this.applyReferenceSequenceSelection(
+          Math.min(selectionStart, selectionEnd),
+          Math.max(selectionStart, selectionEnd),
+          { clearExisting: false }
+        );
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    });
+  }
+
+  /**
+   * Publish a reads-reference selection through the shared sequence selection state.
+   */
+  applyReferenceSequenceSelection(start, end, options = {}) {
+    const chromosome = this.genomeBrowser.currentChromosome;
+
+    if (options.clearExisting !== false) {
+      this.genomeBrowser.clearSequenceSelection();
+    }
+    this.genomeBrowser.currentSequenceSelection = {
+      chromosome,
+      start,
+      end,
+      coordinateSystem: 'zero-based-inclusive',
+    };
+    this.genomeBrowser.sequenceSelection = {
+      start,
+      end,
+      active: true,
+      source: 'aligned-reads-reference',
+    };
+
+    this.highlightSelectedRegion(start, end);
+    this.genomeBrowser.updateCopyButtonState();
+
+    const selectionLength = end - start + 1;
+    this.genomeBrowser.showNotification(
+      `Reference selected: ${chromosome}:${start}-${end} (${selectionLength} bp)`,
+      'success'
+    );
+
+    const statusMessage = `🔵 Aligned Reads Reference Selection: ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
+    if (this.genomeBrowser.uiManager) {
+      this.genomeBrowser.uiManager.updateStatus(statusMessage);
+    } else {
+      const statusElement = document.getElementById('statusText');
+      if (statusElement) statusElement.textContent = statusMessage;
+    }
   }
 
   /**
