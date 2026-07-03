@@ -1490,19 +1490,53 @@
   z-index: 100;
 }
 
-.gc-tooltip {
+.track-data-tooltip {
   position: absolute;
-  background: rgba(0, 0, 0, 0.85);
-  color: white;
-  padding: 6px 8px;
-  border-radius: 4px;
+  display: none;
+  max-width: 220px;
+  padding: 8px 10px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   font-size: 11px;
+  line-height: 1.45;
   pointer-events: none;
   z-index: 1000;
-  display: none;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.track-data-tooltip__title {
+  margin-bottom: 4px;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.track-data-tooltip__label {
+  color: var(--text-secondary);
+}
+
+.track-data-tooltip__meta {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.reference-sequence-selectable {
+  cursor: crosshair;
+  user-select: none;
+}
+
+.reads-reference-selection {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  pointer-events: none;
+  background: rgba(var(--primary-rgb), 0.2);
+  border-right: 1px solid var(--primary-color);
+  border-left: 1px solid var(--primary-color);
 }
 
 .gc-content-visualization {

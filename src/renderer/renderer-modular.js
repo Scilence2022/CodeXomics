@@ -10310,6 +10310,7 @@ class GenomeBrowser {
       element.classList.remove('sequence-selected');
       element.classList.remove('gene-sequence-selected');
     });
+    document.querySelectorAll('.reads-reference-selection').forEach(element => element.remove());
 
     // Hide selection info in modal
     const selectionInfo = document.getElementById('sequenceSelectionInfo');
