@@ -31,6 +31,9 @@ class HighlightRegionsUI {
     }
     this.ensureModal();
     this.refresh();
+    if (this._getSelectedRange()) {
+      this._fillFromCurrentView();
+    }
     document.getElementById(this.modalId)?.classList.add('show');
     if (window.modalDragManager && typeof window.modalDragManager.makeDraggable === 'function') {
       window.modalDragManager.makeDraggable(`#${this.modalId}`);
@@ -221,13 +224,10 @@ class HighlightRegionsUI {
     if (!modal) return;
 
     // Prefer an active sequence selection (1-based inclusive), else the viewport.
-    let start;
-    let end;
-    const sel = this.gb?.sequenceSelection;
-    if (sel && sel.active && Number.isFinite(sel.start) && Number.isFinite(sel.end)) {
-      start = Math.min(sel.start, sel.end);
-      end = Math.max(sel.start, sel.end);
-    } else {
+    const selection = this._getSelectedRange();
+    let start = selection?.start;
+    let end = selection?.end;
+    if (!selection) {
       const pos = this.gb?.currentPosition || { start: 0, end: 0 };
       start = (Number(pos.start) || 0) + 1; // 0-based -> 1-based inclusive
       end = Number(pos.end) || start;
@@ -237,6 +237,26 @@ class HighlightRegionsUI {
     const endEl = modal.querySelector('[data-role="hl-end"]');
     if (startEl) startEl.value = String(start);
     if (endEl) endEl.value = String(end);
+  }
+
+  _getSelectedRange() {
+    // Manual sequence-track selections are stored separately from gene/ruler
+    // selections. Prefer the manual selection because it is the latest
+    // explicit range chosen by the user.
+    const manual = this.gb?.currentSequenceSelection;
+    const active = this.gb?.sequenceSelection;
+    const candidates = [manual, active?.active ? active : null];
+    for (const selection of candidates) {
+      if (!selection) continue;
+      const rawStart = Number.parseInt(selection.start, 10);
+      const rawEnd = Number.parseInt(selection.end, 10);
+      if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd)) continue;
+      return {
+        start: Math.min(rawStart, rawEnd),
+        end: Math.max(rawStart, rawEnd),
+      };
+    }
+    return null;
   }
 
   _clearAll() {
