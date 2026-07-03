@@ -1835,7 +1835,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'track_settings',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Get settings for all tracks currently displayed.',
+        instruction: 'Get settings for all tracks.',
         expectedResult: {
           tool_name: 'get_all_track_settings',
           parameters: {},

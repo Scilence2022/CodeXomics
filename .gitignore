@@ -200,6 +200,8 @@ sample-files/
 .cursor/
 .codeartsdoer/
 .arts/
+.codearts/
+.codex/
 
 # =============================================================================
 # Project Specific
