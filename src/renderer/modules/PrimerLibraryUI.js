@@ -843,10 +843,12 @@ class PrimerLibraryUI {
       let chr;
       let start;
       let end;
+      let segments;
       if (manual && Number.isFinite(Number.parseInt(manual.start, 10))) {
         chr = manual.chromosome || this.currentChromosome;
         start = Number.parseInt(manual.start, 10);
         end = Number.parseInt(manual.end, 10);
+        segments = manual.segments;
       } else if (gene && gene.active) {
         chr = gene.chromosome || this.currentChromosome;
         start = Number.parseInt(gene.start, 10);
@@ -856,6 +858,18 @@ class PrimerLibraryUI {
       }
       const seq = this.gb?.currentSequence?.[chr];
       if (!seq || !Number.isFinite(start) || !Number.isFinite(end)) return '';
+      if (Array.isArray(segments) && segments.length > 0) {
+        const offset = manual?.coordinateSystem === 'zero-based-inclusive' ? 0 : 1;
+        return segments
+          .map(segment =>
+            seq.substring(Math.max(0, segment.start - offset), Math.min(seq.length, segment.end + 1 - offset))
+          )
+          .join('')
+          .toUpperCase();
+      }
+      if (manual?.coordinateSystem === 'zero-based-inclusive') {
+        return seq.substring(Math.max(0, Math.min(start, end)), Math.min(seq.length, Math.max(start, end) + 1));
+      }
       const lo = Math.max(0, Math.min(start, end) - 1);
       const hi = Math.min(seq.length, Math.max(start, end));
       return seq.substring(lo, hi).toUpperCase();

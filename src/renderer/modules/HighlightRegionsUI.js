@@ -229,6 +229,11 @@ class HighlightRegionsUI {
     let end = selection?.end;
     if (!selection) {
       const pos = this.gb?.currentPosition || { start: 0, end: 0 };
+      const sequenceLength = this.gb?.currentSequence?.[this.currentChromosome]?.length || 0;
+      if (sequenceLength > 0 && (Number(pos.start) >= sequenceLength || Number(pos.end) > sequenceLength)) {
+        this._notify('A cross-origin circular view cannot prefill one linear highlight interval', 'warn');
+        return;
+      }
       start = (Number(pos.start) || 0) + 1; // 0-based -> 1-based inclusive
       end = Number(pos.end) || start;
     }
@@ -248,12 +253,14 @@ class HighlightRegionsUI {
     const candidates = [manual, active?.active ? active : null];
     for (const selection of candidates) {
       if (!selection) continue;
+      if (selection.wrapsOrigin || selection.segments?.length > 1) continue;
       const rawStart = Number.parseInt(selection.start, 10);
       const rawEnd = Number.parseInt(selection.end, 10);
       if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd)) continue;
+      const offset = selection.coordinateSystem === 'zero-based-inclusive' ? 1 : 0;
       return {
-        start: Math.min(rawStart, rawEnd),
-        end: Math.max(rawStart, rawEnd),
+        start: Math.min(rawStart, rawEnd) + offset,
+        end: Math.max(rawStart, rawEnd) + offset,
       };
     }
     return null;

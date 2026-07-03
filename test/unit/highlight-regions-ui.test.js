@@ -39,6 +39,24 @@ describe('HighlightRegionsUI selection prefilling', () => {
     expect(document.querySelector('[data-role="hl-end"]').value).toBe('42');
   });
 
+  it('converts legacy zero-based manual selections before prefilling', () => {
+    const ui = new HighlightRegionsUI(
+      makeGenomeBrowser({
+        currentSequenceSelection: {
+          chromosome: 'chr1',
+          start: 0,
+          end: 9,
+          coordinateSystem: 'zero-based-inclusive',
+        },
+      })
+    );
+
+    ui.open();
+
+    expect(document.querySelector('[data-role="hl-start"]').value).toBe('1');
+    expect(document.querySelector('[data-role="hl-end"]').value).toBe('10');
+  });
+
   it('prefills an active gene or ruler selection when opened', () => {
     const ui = new HighlightRegionsUI(
       makeGenomeBrowser({

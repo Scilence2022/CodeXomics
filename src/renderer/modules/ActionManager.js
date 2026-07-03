@@ -812,6 +812,8 @@ class ActionManager {
     const selectionInfo = this.getActiveSelection();
     console.log('🔍 [ActionManager] Selection info:', selectionInfo);
     if (selectionInfo && selectionInfo.hasSelection) {
+      if (!this.requireLinearSelection(selectionInfo, 'Copy action')) return;
+
       // Immediately get sequence and set clipboard for copy
       const sequence = await this.getSequenceForRegion(
         selectionInfo.chromosome,
@@ -877,6 +879,8 @@ class ActionManager {
     // Try to create action directly from current selections
     const selectionInfo = this.getActiveSelection();
     if (selectionInfo && selectionInfo.hasSelection) {
+      if (!this.requireLinearSelection(selectionInfo, 'Cut')) return;
+
       // Immediately get sequence and set clipboard for cut
       const sequence = await this.getSequenceForRegion(
         selectionInfo.chromosome,
@@ -936,6 +940,8 @@ class ActionManager {
     console.log('🔍 [ActionManager] Selection info:', selectionInfo);
 
     if (selectionInfo && selectionInfo.hasSelection) {
+      if (!this.requireLinearSelection(selectionInfo, 'Paste/replace')) return;
+
       // If selection exists, create PASTE action for replace
       const target = `${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}`;
       const metadata = {
@@ -1056,6 +1062,8 @@ class ActionManager {
     // Try to create action directly from current selections
     const selectionInfo = this.getActiveSelection();
     if (selectionInfo && selectionInfo.hasSelection) {
+      if (!this.requireLinearSelection(selectionInfo, 'Replace')) return;
+
       // Show modal to input replacement sequence
       this.showSequenceReplaceModal(selectionInfo);
     } else {
@@ -1070,6 +1078,8 @@ class ActionManager {
     // Try to create action directly from current selections
     const selectionInfo = this.getActiveSelection();
     if (selectionInfo && selectionInfo.hasSelection) {
+      if (!this.requireLinearSelection(selectionInfo, 'Delete')) return;
+
       this.createActionFromSelection('delete', selectionInfo);
     } else {
       this.showSequenceSelectionModal('delete');
@@ -1126,6 +1136,8 @@ class ActionManager {
         chromosome: selection.chromosome,
         start,
         end,
+        segments: selection.segments,
+        wrapsOrigin: Boolean(selection.wrapsOrigin || selection.segments?.length > 1),
         strand: '+', // Default for manual selections
         source: 'manual',
         name: `Manual Selection (${selection.chromosome}:${start}-${end})`,
@@ -1168,6 +1180,16 @@ class ActionManager {
       hasSelection: false,
       source: 'none',
     };
+  }
+
+  requireLinearSelection(selectionInfo, operation) {
+    if (!selectionInfo?.wrapsOrigin) return true;
+
+    this.genomeBrowser.showNotification(
+      `${operation} does not support a selection that crosses the circular origin. Use the simple Copy command or select one linear segment.`,
+      'warning'
+    );
+    return false;
   }
 
   /**
@@ -1226,6 +1248,11 @@ class ActionManager {
   showSequenceSelectionModal(operation) {
     this.currentOperation = operation;
 
+    if (this.genomeBrowser.currentSequenceSelection?.wrapsOrigin) {
+      this.requireLinearSelection({ wrapsOrigin: true }, operation.charAt(0).toUpperCase() + operation.slice(1));
+      return;
+    }
+
     // Populate chromosome dropdown
     this.populateChromosomeSelect();
 
@@ -1237,10 +1264,10 @@ class ActionManager {
 
     // Priority 1: Check if there's a manual sequence selection
     if (this.genomeBrowser.currentSequenceSelection) {
-      const selection = this.genomeBrowser.currentSequenceSelection;
+      const selection = this.getActiveSelection();
       defaultChromosome = selection.chromosome;
-      defaultStart = parseInt(selection.start) || 1;
-      defaultEnd = parseInt(selection.end) || defaultStart + 1000;
+      defaultStart = selection.start;
+      defaultEnd = selection.end;
       selectionSource = 'manual';
 
       console.log('Using manual sequence selection for action:', {
@@ -1287,8 +1314,18 @@ class ActionManager {
     } else if (this.genomeBrowser.currentChromosome) {
       // Priority 4: Fall back to current genome view
       defaultChromosome = this.genomeBrowser.currentChromosome;
-      defaultStart = this.genomeBrowser.currentPosition?.start || 1;
-      defaultEnd = this.genomeBrowser.currentPosition?.end || defaultStart + 1000;
+      const sequenceLength = this.genomeBrowser.currentSequence?.[defaultChromosome]?.length || 0;
+      const viewStart = Number(this.genomeBrowser.currentPosition?.start) || 0;
+      const viewEnd = Number(this.genomeBrowser.currentPosition?.end) || 0;
+      if (sequenceLength > 0 && (viewStart >= sequenceLength || viewEnd > sequenceLength)) {
+        this.genomeBrowser.showNotification(
+          'A cross-origin circular view cannot prefill one linear action interval.',
+          'warning'
+        );
+        return;
+      }
+      defaultStart = viewStart + 1;
+      defaultEnd = viewEnd || defaultStart + 999;
       selectionSource = 'viewport';
 
       console.log('Using current view for action (no selection):', {
