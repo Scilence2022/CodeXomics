@@ -145,7 +145,7 @@ categories:
 
   system:
     name: 'System Management'
-    description: 'Tools for system operations, working directory management, and environment setup'
+    description: 'Tools for system operations, interface controls, working directory management, and environment setup'
     icon: '⚙️'
     priority: 1
     color: '#795548'
@@ -153,7 +153,8 @@ categories:
       - 'directory_management'
       - 'environment_setup'
       - 'system_configuration'
-    tools_count: 2
+      - 'interface_controls'
+    tools_count: 8
 
   benchmark:
     name: 'Benchmark Management'

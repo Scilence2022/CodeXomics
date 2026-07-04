@@ -128,14 +128,10 @@ class TabManager {
     if (this.toggleBannerButton && this.headerElement) {
       // Apply saved state on load
       if (this.bannerCollapsed) {
-        this.headerElement.classList.add('collapsed');
-        this.toggleBannerButton.classList.add('banner-collapsed');
+        this.setBannerCollapsed(true);
       }
       this.toggleBannerButton.addEventListener('click', () => {
-        this.bannerCollapsed = !this.bannerCollapsed;
-        this.headerElement.classList.toggle('collapsed', this.bannerCollapsed);
-        this.toggleBannerButton.classList.toggle('banner-collapsed', this.bannerCollapsed);
-        localStorage.setItem('bannerCollapsed', this.bannerCollapsed);
+        this.setBannerCollapsed(!this.bannerCollapsed);
       });
     }
 
@@ -170,6 +166,19 @@ class TabManager {
         }
       }
     });
+  }
+
+  setBannerCollapsed(collapsed) {
+    if (!this.headerElement || !this.toggleBannerButton) {
+      return false;
+    }
+
+    this.bannerCollapsed = !!collapsed;
+    this.headerElement.classList.toggle('collapsed', this.bannerCollapsed);
+    this.toggleBannerButton.classList.toggle('banner-collapsed', this.bannerCollapsed);
+    localStorage.setItem('bannerCollapsed', String(this.bannerCollapsed));
+    window.dispatchEvent(new Event('resize'));
+    return true;
   }
 
   /**

@@ -387,6 +387,12 @@ class ToolsIntegrator {
             return await this.utilityTools.view_markdown_file(parameters, clientId);
           case 'toggle_settings_modal':
             return await this.utilityTools.toggle_settings_modal(parameters, clientId);
+          case 'toggle_chatbox':
+            return await this.utilityTools.toggle_chatbox(parameters, clientId);
+          case 'toggle_sidebar':
+            return await this.utilityTools.toggle_sidebar(parameters, clientId);
+          case 'toggle_top_banner':
+            return await this.utilityTools.toggle_top_banner(parameters, clientId);
           default:
             return await this.utilityTools.executeClientTool(toolName, parameters, clientId);
         }

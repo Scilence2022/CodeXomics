@@ -237,18 +237,31 @@ class UIManager {
   // fromCheckbox: true when triggered by the mac-toggle checkbox change event
   toggleSidebar(fromCheckbox = false) {
     const sidebar = document.getElementById('sidebar');
-    const splitter = document.getElementById('sidebarSplitter');
-    const mainContent = document.querySelector('.main-content');
     const toggleCheckbox = document.getElementById('toggleSidebar');
+
+    if (!sidebar) {
+      return false;
+    }
 
     const isCurrentlyVisible = !sidebar.classList.contains('collapsed') && sidebar.offsetWidth > 0;
 
     // Determine desired state:
     // - From checkbox: use checkbox.checked (already toggled by browser)
     // - Otherwise: toggle the current state
-    const shouldShow = fromCheckbox ? toggleCheckbox.checked : !isCurrentlyVisible;
+    const shouldShow = fromCheckbox && toggleCheckbox ? toggleCheckbox.checked : !isCurrentlyVisible;
+    return this.setSidebarCollapsed(!shouldShow);
+  }
 
-    if (shouldShow) {
+  setSidebarCollapsed(collapsed) {
+    const sidebar = document.getElementById('sidebar');
+    const splitter = document.getElementById('sidebarSplitter');
+    const mainContent = document.querySelector('.main-content');
+
+    if (!sidebar || !mainContent) {
+      return false;
+    }
+
+    if (!collapsed) {
       // Show sidebar
       sidebar.classList.remove('collapsed');
       if (splitter) splitter.classList.remove('collapsed');
@@ -267,9 +280,9 @@ class UIManager {
       mainContent.classList.add('sidebar-collapsed');
 
       // Store current width before hiding
-      if (sidebar.style.width) {
+      if (sidebar.style.width && sidebar.style.width !== '0px') {
         sidebar.dataset.previousWidth = sidebar.style.width;
-      } else {
+      } else if (!sidebar.dataset.previousWidth) {
         sidebar.dataset.previousWidth = '280px'; // default width
       }
 
@@ -284,6 +297,7 @@ class UIManager {
 
     // Trigger a resize event to ensure proper layout adjustment
     window.dispatchEvent(new Event('resize'));
+    return true;
   }
 
   toggleSidebarFromSplitter() {

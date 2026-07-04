@@ -1,0 +1,42 @@
+name: 'toggle_sidebar'
+version: '1.0.0'
+description: 'Expand, collapse, or toggle the main genome browser Sidebar while keeping its toolbar and splitter controls synchronized.'
+category: 'system'
+keywords:
+  - 'sidebar'
+  - 'side bar'
+  - 'show sidebar'
+  - 'hide sidebar'
+  - 'expand sidebar'
+  - 'collapse sidebar'
+  - 'toggle sidebar'
+priority: 1
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: 'object'
+  properties:
+    action:
+      type: 'string'
+      description: "Use 'expand' to show the Sidebar, 'collapse' to hide it, or 'toggle' to switch its current state."
+      enum: ['expand', 'collapse', 'toggle']
+      default: 'toggle'
+  required: []
+sample_usages:
+  - user_query: 'Expand the Sidebar'
+    tool_call: "toggle_sidebar(action='expand')"
+    thought: 'The user wants the main Sidebar expanded'
+    expected_result: 'The Sidebar is expanded'
+  - user_query: 'Collapse the Sidebar'
+    tool_call: "toggle_sidebar(action='collapse')"
+    thought: 'The user wants the main Sidebar collapsed'
+    expected_result: 'The Sidebar is collapsed'
+returns:
+  success: 'boolean - Whether the Sidebar state was updated'
+  message: 'string - Status message describing the result'
+  new_state: "string - Either 'expanded' or 'collapsed'"

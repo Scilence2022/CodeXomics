@@ -210,6 +210,9 @@ const TOOL_NAMES = {
     LIST_AVAILABLE_TOOLS: 'list_available_tools',
     SWITCH_UI_STYLE: 'switch_ui_style',
     TOGGLE_SETTINGS_MODAL: 'toggle_settings_modal',
+    TOGGLE_CHATBOX: 'toggle_chatbox',
+    TOGGLE_SIDEBAR: 'toggle_sidebar',
+    TOGGLE_TOP_BANNER: 'toggle_top_banner',
   },
 
   // === Track Settings Tools ===

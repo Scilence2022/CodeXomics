@@ -8206,6 +8206,9 @@ TOOL AVAILABILITY:
         'list_available_tools',
         'download_internet_file',
         'toggle_settings_modal',
+        'toggle_chatbox',
+        'toggle_sidebar',
+        'toggle_top_banner',
       ],
     };
 
@@ -8424,6 +8427,9 @@ ${coreTools}
       download_internet_file: () => this.downloadInternetFile(parameters),
       utility_download_internet_file: () => this.downloadInternetFile(parameters),
       utility_toggle_settings_modal: () => this.toggleSettingsModal(parameters),
+      utility_toggle_chatbox: () => this.toggleChatBox(parameters),
+      utility_toggle_sidebar: () => this.toggleSidebar(parameters),
+      utility_toggle_top_banner: () => this.toggleTopBanner(parameters),
 
       // Action system tools (if available)
       copy_sequence: () => this.executeActionTool('copy_sequence', parameters),
@@ -8478,6 +8484,9 @@ ${coreTools}
 
       // Settings modal tools
       toggle_settings_modal: () => this.toggleSettingsModal(parameters),
+      toggle_chatbox: () => this.toggleChatBox(parameters),
+      toggle_sidebar: () => this.toggleSidebar(parameters),
+      toggle_top_banner: () => this.toggleTopBanner(parameters),
 
       // Benchmark tools
       open_benchmark: () => this.openBenchmark(parameters),
@@ -8946,6 +8955,111 @@ ${coreTools}
         modal_name: modalName,
       };
     }
+  }
+
+  /**
+   * Show, hide, or toggle the ChatBox panel.
+   */
+  async toggleChatBox(parameters = {}) {
+    const { action = 'toggle' } = parameters;
+    const chatPanel = document.getElementById('llmChatPanel');
+
+    if (!chatPanel) {
+      return { success: false, error: 'ChatBox panel is not available' };
+    }
+
+    if (!['show', 'hide', 'toggle'].includes(action)) {
+      return { success: false, error: `Invalid action: '${action}'. Use 'show', 'hide', or 'toggle'.` };
+    }
+
+    const isVisible = chatPanel.style.display !== 'none';
+    const shouldShow = action === 'show' || (action === 'toggle' && !isVisible);
+
+    if (shouldShow) {
+      this.showChatBox();
+    } else {
+      this.hideChatBox();
+    }
+
+    return {
+      success: true,
+      message: `ChatBox ${shouldShow ? 'shown' : 'hidden'}`,
+      new_state: shouldShow ? 'shown' : 'hidden',
+    };
+  }
+
+  /**
+   * Expand, collapse, or toggle the genome browser Sidebar.
+   */
+  async toggleSidebar(parameters = {}) {
+    const { action = 'toggle' } = parameters;
+    const normalizedActions = {
+      expand: false,
+      show: false,
+      collapse: true,
+      hide: true,
+    };
+
+    if (!['expand', 'collapse', 'show', 'hide', 'toggle'].includes(action)) {
+      return {
+        success: false,
+        error: `Invalid action: '${action}'. Use 'expand', 'collapse', or 'toggle'.`,
+      };
+    }
+
+    const uiManager = this.app?.uiManager || window.genomeBrowser?.uiManager;
+    const sidebar = document.getElementById('sidebar');
+    if (!uiManager || typeof uiManager.setSidebarCollapsed !== 'function' || !sidebar) {
+      return { success: false, error: 'Sidebar controls are not available' };
+    }
+
+    const isCollapsed = sidebar.classList.contains('collapsed') || sidebar.offsetWidth === 0;
+    const shouldCollapse = action === 'toggle' ? !isCollapsed : normalizedActions[action];
+    if (!uiManager.setSidebarCollapsed(shouldCollapse)) {
+      return { success: false, error: 'Sidebar state could not be updated' };
+    }
+
+    return {
+      success: true,
+      message: `Sidebar ${shouldCollapse ? 'collapsed' : 'expanded'}`,
+      new_state: shouldCollapse ? 'collapsed' : 'expanded',
+    };
+  }
+
+  /**
+   * Expand, collapse, or toggle the top banner.
+   */
+  async toggleTopBanner(parameters = {}) {
+    const { action = 'toggle' } = parameters;
+    const normalizedActions = {
+      expand: false,
+      show: false,
+      collapse: true,
+      hide: true,
+    };
+
+    if (!['expand', 'collapse', 'show', 'hide', 'toggle'].includes(action)) {
+      return {
+        success: false,
+        error: `Invalid action: '${action}'. Use 'expand', 'collapse', or 'toggle'.`,
+      };
+    }
+
+    const tabManager = this.app?.tabManager || window.genomeBrowser?.tabManager;
+    if (!tabManager || typeof tabManager.setBannerCollapsed !== 'function') {
+      return { success: false, error: 'Top banner controls are not available' };
+    }
+
+    const shouldCollapse = action === 'toggle' ? !tabManager.bannerCollapsed : normalizedActions[action];
+    if (!tabManager.setBannerCollapsed(shouldCollapse)) {
+      return { success: false, error: 'Top banner state could not be updated' };
+    }
+
+    return {
+      success: true,
+      message: `Top banner ${shouldCollapse ? 'collapsed' : 'expanded'}`,
+      new_state: shouldCollapse ? 'collapsed' : 'expanded',
+    };
   }
 
   /**
@@ -9576,6 +9690,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'list_available_tools',
       'download_internet_file',
       'toggle_settings_modal',
+      'toggle_chatbox',
+      'toggle_sidebar',
+      'toggle_top_banner',
     ];
 
     // Add plugin functions if available

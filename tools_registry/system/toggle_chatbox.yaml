@@ -1,0 +1,42 @@
+name: 'toggle_chatbox'
+version: '1.0.0'
+description: 'Show, hide, or toggle the main ChatBox panel. Use this for the ChatBox itself, not the ChatBox settings modal.'
+category: 'system'
+keywords:
+  - 'chatbox'
+  - 'chat box'
+  - 'show chatbox'
+  - 'hide chatbox'
+  - 'open chatbox'
+  - 'close chatbox'
+  - 'toggle chatbox'
+priority: 1
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: 'object'
+  properties:
+    action:
+      type: 'string'
+      description: "Use 'show' to reveal the ChatBox, 'hide' to conceal it, or 'toggle' to switch its current visibility."
+      enum: ['show', 'hide', 'toggle']
+      default: 'toggle'
+  required: []
+sample_usages:
+  - user_query: 'Show the ChatBox'
+    tool_call: "toggle_chatbox(action='show')"
+    thought: 'The user wants the main ChatBox panel to be visible'
+    expected_result: 'The ChatBox is shown'
+  - user_query: 'Hide the ChatBox'
+    tool_call: "toggle_chatbox(action='hide')"
+    thought: 'The user wants the main ChatBox panel hidden'
+    expected_result: 'The ChatBox is hidden'
+returns:
+  success: 'boolean - Whether the ChatBox state was updated'
+  message: 'string - Status message describing the result'
+  new_state: "string - Either 'shown' or 'hidden'"

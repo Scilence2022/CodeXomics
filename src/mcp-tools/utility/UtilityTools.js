@@ -95,6 +95,58 @@ class UtilityTools {
           required: ['modal_name'],
         },
       },
+
+      toggle_chatbox: {
+        name: 'toggle_chatbox',
+        description:
+          'Show, hide, or toggle the main ChatBox panel. This controls the ChatBox itself, not its settings modal.',
+        parameters: {
+          type: 'object',
+          properties: {
+            action: {
+              type: 'string',
+              description: "Use 'show', 'hide', or 'toggle' (default).",
+              enum: ['show', 'hide', 'toggle'],
+              default: 'toggle',
+            },
+          },
+          required: [],
+        },
+      },
+
+      toggle_sidebar: {
+        name: 'toggle_sidebar',
+        description: 'Expand, collapse, or toggle the main genome browser Sidebar.',
+        parameters: {
+          type: 'object',
+          properties: {
+            action: {
+              type: 'string',
+              description: "Use 'expand', 'collapse', or 'toggle' (default).",
+              enum: ['expand', 'collapse', 'toggle'],
+              default: 'toggle',
+            },
+          },
+          required: [],
+        },
+      },
+
+      toggle_top_banner: {
+        name: 'toggle_top_banner',
+        description: 'Expand, collapse, or toggle the top banner area.',
+        parameters: {
+          type: 'object',
+          properties: {
+            action: {
+              type: 'string',
+              description: "Use 'expand', 'collapse', or 'toggle' (default).",
+              enum: ['expand', 'collapse', 'toggle'],
+              default: 'toggle',
+            },
+          },
+          required: [],
+        },
+      },
     };
   }
 
@@ -128,6 +180,18 @@ class UtilityTools {
 
   async toggle_settings_modal(params, clientId) {
     return await this.executeClientTool('toggle_settings_modal', params, clientId);
+  }
+
+  async toggle_chatbox(params, clientId) {
+    return await this.executeClientTool('toggle_chatbox', params, clientId);
+  }
+
+  async toggle_sidebar(params, clientId) {
+    return await this.executeClientTool('toggle_sidebar', params, clientId);
+  }
+
+  async toggle_top_banner(params, clientId) {
+    return await this.executeClientTool('toggle_top_banner', params, clientId);
   }
 }
 

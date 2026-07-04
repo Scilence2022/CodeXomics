@@ -1,0 +1,42 @@
+name: 'toggle_top_banner'
+version: '1.0.0'
+description: 'Expand, collapse, or toggle the top banner area and persist the resulting banner state.'
+category: 'system'
+keywords:
+  - 'banner'
+  - 'top banner'
+  - 'show banner'
+  - 'hide banner'
+  - 'expand banner'
+  - 'collapse banner'
+  - 'toggle banner'
+priority: 1
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: 'object'
+  properties:
+    action:
+      type: 'string'
+      description: "Use 'expand' to show the top banner, 'collapse' to hide it, or 'toggle' to switch its current state."
+      enum: ['expand', 'collapse', 'toggle']
+      default: 'toggle'
+  required: []
+sample_usages:
+  - user_query: 'Expand the top banner'
+    tool_call: "toggle_top_banner(action='expand')"
+    thought: 'The user wants the top banner expanded'
+    expected_result: 'The top banner is expanded'
+  - user_query: 'Toggle the banner'
+    tool_call: "toggle_top_banner(action='toggle')"
+    thought: 'The user wants to switch the current top banner state'
+    expected_result: 'The top banner switches between expanded and collapsed'
+returns:
+  success: 'boolean - Whether the top banner state was updated'
+  message: 'string - Status message describing the result'
+  new_state: "string - Either 'expanded' or 'collapsed'"
