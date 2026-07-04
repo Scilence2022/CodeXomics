@@ -5,6 +5,10 @@ import path from 'path';
 const CHAT_MANAGER_PATH = path.join(process.cwd(), 'src/renderer/modules/ChatManager.js');
 const RENDERER_PATH = path.join(process.cwd(), 'src/renderer/renderer-modular.js');
 const CONFIG_MANAGER_PATH = path.join(process.cwd(), 'src/renderer/modules/ConfigManager.js');
+const CHATBOX_LAYOUT_PATH = path.join(
+  process.cwd(),
+  'src/renderer/css/legacy/03-gene-annotation-actions.css'
+);
 
 describe('ChatBox visibility startup behavior', () => {
   it('creates the ChatBox in a visible state on startup', () => {
@@ -60,5 +64,15 @@ describe('ChatBox visibility startup behavior', () => {
     expect(content).toContain('File-based configuration unavailable, falling back to localStorage');
     expect(content).toContain('File-based configuration save unavailable, falling back to localStorage');
     expect(content).toContain('return false;');
+  });
+
+  it('keeps only the compact composer controls visible when minimized', () => {
+    const content = fs.readFileSync(CHATBOX_LAYOUT_PATH, 'utf-8');
+
+    expect(content).toContain('.chat-panel.minimized .chat-input-container {');
+    expect(content).toContain('display: block !important;');
+    expect(content).toContain('.chat-panel.minimized .chat-input-options,');
+    expect(content).toContain('.chat-panel.minimized .chat-actions,');
+    expect(content).toContain('.chat-panel.minimized .chat-abort-btn {');
   });
 });
