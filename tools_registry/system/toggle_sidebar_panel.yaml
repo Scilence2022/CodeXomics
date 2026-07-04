@@ -1,0 +1,64 @@
+name: 'toggle_sidebar_panel'
+version: '1.0.0'
+description: 'Show, hide, or toggle an individual panel in the genome browser Sidebar.'
+category: 'system'
+keywords:
+  - 'sidebar panel'
+  - 'sidebar section'
+  - 'gene details panel'
+  - 'primer details panel'
+  - 'read details panel'
+  - 'variant details panel'
+  - 'search results panel'
+  - 'operons panel'
+  - 'tracks panel'
+  - 'features panel'
+  - 'file info panel'
+  - 'navigation panel'
+  - 'statistics panel'
+priority: 1
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: 'object'
+  properties:
+    panel_name:
+      type: 'string'
+      description: 'The Sidebar panel to control.'
+      enum:
+        - 'gene_details'
+        - 'primer_details'
+        - 'read_details'
+        - 'variant_details'
+        - 'search_results'
+        - 'operons'
+        - 'tracks'
+        - 'features'
+        - 'file_info'
+        - 'navigation'
+        - 'statistics'
+    action:
+      type: 'string'
+      description: "Use 'show' to reveal the panel, 'hide' to conceal it, or 'toggle' to switch its current visibility."
+      enum: ['show', 'hide', 'toggle']
+      default: 'toggle'
+  required: ['panel_name']
+sample_usages:
+  - user_query: 'Show the tracks panel in the Sidebar'
+    tool_call: "toggle_sidebar_panel(panel_name='tracks', action='show')"
+    thought: 'The user wants the Sidebar tracks panel visible'
+    expected_result: 'The tracks panel is shown and the Sidebar is expanded if needed'
+  - user_query: 'Hide the statistics panel'
+    tool_call: "toggle_sidebar_panel(panel_name='statistics', action='hide')"
+    thought: 'The user wants the Sidebar statistics panel hidden'
+    expected_result: 'The statistics panel is hidden'
+returns:
+  success: 'boolean - Whether the panel visibility was updated'
+  message: 'string - Status message describing the result'
+  panel_name: 'string - The normalized panel name'
+  new_state: "string - Either 'shown' or 'hidden'"

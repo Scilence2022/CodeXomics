@@ -1,0 +1,40 @@
+name: 'set_chatbox_minimized'
+version: '1.0.0'
+description: 'Minimize, restore, or toggle the minimized state of the ChatBox window.'
+category: 'system'
+keywords:
+  - 'minimize chatbox'
+  - 'restore chatbox'
+  - 'maximize chatbox'
+  - 'expand chatbox window'
+  - 'chatbox minimized'
+priority: 1
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: 'object'
+  properties:
+    action:
+      type: 'string'
+      description: "Use 'minimize' to compact the ChatBox, 'restore' to expand it, or 'toggle' to switch its current state."
+      enum: ['minimize', 'restore', 'toggle']
+      default: 'toggle'
+  required: []
+sample_usages:
+  - user_query: 'Minimize the ChatBox'
+    tool_call: "set_chatbox_minimized(action='minimize')"
+    thought: 'The user wants the ChatBox compacted'
+    expected_result: 'The ChatBox is minimized'
+  - user_query: 'Restore the ChatBox window'
+    tool_call: "set_chatbox_minimized(action='restore')"
+    thought: 'The user wants the minimized ChatBox expanded again'
+    expected_result: 'The ChatBox is restored'
+returns:
+  success: 'boolean - Whether the minimized state was updated'
+  message: 'string - Status message describing the result'
+  new_state: "string - Either 'minimized' or 'restored'"

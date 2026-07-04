@@ -389,8 +389,14 @@ class ToolsIntegrator {
             return await this.utilityTools.toggle_settings_modal(parameters, clientId);
           case 'toggle_chatbox':
             return await this.utilityTools.toggle_chatbox(parameters, clientId);
+          case 'set_chatbox_layout':
+            return await this.utilityTools.set_chatbox_layout(parameters, clientId);
+          case 'set_chatbox_minimized':
+            return await this.utilityTools.set_chatbox_minimized(parameters, clientId);
           case 'toggle_sidebar':
             return await this.utilityTools.toggle_sidebar(parameters, clientId);
+          case 'toggle_sidebar_panel':
+            return await this.utilityTools.toggle_sidebar_panel(parameters, clientId);
           case 'toggle_top_banner':
             return await this.utilityTools.toggle_top_banner(parameters, clientId);
           default:

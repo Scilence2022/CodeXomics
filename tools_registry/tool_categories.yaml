@@ -154,7 +154,7 @@ categories:
       - 'environment_setup'
       - 'system_configuration'
       - 'interface_controls'
-    tools_count: 8
+    tools_count: 11
 
   benchmark:
     name: 'Benchmark Management'
