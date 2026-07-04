@@ -3884,6 +3884,8 @@ class TrackRenderer {
           showReference,
           referenceHeight,
           isCanvasMode,
+          viewport,
+          containerWidth: this.getReadsTrackRenderableWidth(trackContent),
         });
 
         if (layout.useScroll) {
@@ -4133,6 +4135,8 @@ class TrackRenderer {
           showReference,
           referenceHeight,
           isCanvasMode,
+          viewport,
+          containerWidth: this.getReadsTrackRenderableWidth(trackContent),
           defaultTopPadding: 0,
           defaultBottomPadding: 0,
         });
@@ -4353,6 +4357,8 @@ class TrackRenderer {
           showReference,
           referenceHeight,
           isCanvasMode,
+          viewport,
+          containerWidth: this.getReadsTrackRenderableWidth(trackContent),
         });
 
         if (layout.useScroll) {
@@ -4515,7 +4521,8 @@ class TrackRenderer {
       0,
       0,
       readRows.length,
-      settings
+      settings,
+      layout.containerWidth
     );
 
     scrollContainer.appendChild(contentViewport);
@@ -4753,9 +4760,21 @@ class TrackRenderer {
   /**
    * Render only visible rows for performance
    */
-  renderVisibleRows(container, readRows, viewport, readHeight, rowSpacing, topPadding, startRow, endRow, settings) {
-    // Force layout calculation to get accurate width
-    const containerWidth = container.parentElement?.getBoundingClientRect().width || 800;
+  renderVisibleRows(
+    container,
+    readRows,
+    viewport,
+    readHeight,
+    rowSpacing,
+    topPadding,
+    startRow,
+    endRow,
+    settings,
+    layoutWidth = 0
+  ) {
+    // The content viewport is not attached yet on the initial render, so use
+    // the width captured during layout before falling back to DOM measurement.
+    const containerWidth = layoutWidth || container.parentElement?.getBoundingClientRect().width || 800;
 
     // Check rendering mode - support Canvas in scrollable reads
     const renderingMode = settings.renderingMode || 'canvas';
@@ -5021,6 +5040,51 @@ class TrackRenderer {
   }
 
   /**
+   * Resolve the width used by both reads layout and sequence rendering. Full
+   * track rebuilds calculate layout before the new track is attached, so the
+   * window/sidebar fallback mirrors CanvasReadsRenderer's deferred setup.
+   */
+  getReadsTrackRenderableWidth(trackContent) {
+    const widthCandidates = [
+      trackContent?.getBoundingClientRect?.().width,
+      trackContent?.offsetWidth,
+      trackContent?.parentElement?.getBoundingClientRect?.().width,
+    ];
+    const measuredWidth = widthCandidates.find(width => Number.isFinite(width) && width > 100);
+    if (measuredWidth) return measuredWidth;
+
+    if (typeof window !== 'undefined') {
+      const sidebar =
+        typeof document !== 'undefined' ? document.querySelector('.sidebar, #sidebar, .side-panel') : null;
+      const sidebarWidth = sidebar?.offsetWidth || 300;
+      const availableWidth = window.innerWidth - sidebarWidth - 40;
+      if (availableWidth > 100) return availableWidth;
+    }
+
+    return 800;
+  }
+
+  /**
+   * Match CanvasReadsRenderer's effective row height when sequence letters are
+   * visible. The configured readHeight describes zoomed-out rectangles, while
+   * sequence rows grow to fit the rendered font.
+   */
+  getEffectiveReadsRowHeight(settings, viewport, containerWidth, isCanvasMode) {
+    const readHeight = parseInt(settings.readHeight) || 4;
+    if (!isCanvasMode || !settings.showSequences || !viewport) return readHeight;
+    if (!this.shouldShowSequences(viewport.start, viewport.end, containerWidth, settings)) return readHeight;
+
+    const range = viewport.end - viewport.start;
+    const pixelsPerBp = range > 0 ? containerWidth / range : 0;
+    const sequenceFontSize =
+      settings.autoFontSize === false
+        ? parseFloat(settings.sequenceFontSize) || 6
+        : Math.max(8, Math.min(parseFloat(settings.referenceFontSize) || 12, Math.floor(pixelsPerBp * 0.8)));
+
+    return Math.max(readHeight, sequenceFontSize + 4);
+  }
+
+  /**
    * Shared reads-track row/height layout math, used by every reads-track
    * creation path (legacy, single-file, content-only re-render) so they
    * can't independently diverge on read height, row spacing, or the
@@ -5039,9 +5103,18 @@ class TrackRenderer {
    * is used.
    */
   computeReadsTrackLayout(readRows, settings, opts) {
-    const { showCoverage, coverageHeight, referenceHeight, defaultTopPadding = 10, defaultBottomPadding = 10 } = opts;
+    const {
+      showCoverage,
+      coverageHeight,
+      referenceHeight,
+      isCanvasMode = false,
+      viewport = null,
+      containerWidth = 800,
+      defaultTopPadding = 10,
+      defaultBottomPadding = 10,
+    } = opts;
 
-    const readHeight = parseInt(settings.readHeight) || 4;
+    const readHeight = this.getEffectiveReadsRowHeight(settings, viewport, containerWidth, isCanvasMode);
     const rowSpacing = parseInt(settings.readSpacing) || 2;
     const rowHeight = readHeight + rowSpacing;
 
@@ -5061,7 +5134,7 @@ class TrackRenderer {
     const visibleRows = Math.max(1, Math.floor((availableForRows + rowSpacing) / rowHeight));
     const useScroll = readRows.length > visibleRows;
 
-    return { readHeight, rowSpacing, topPadding, bottomPadding, trackHeight, visibleRows, useScroll };
+    return { readHeight, rowSpacing, topPadding, bottomPadding, trackHeight, visibleRows, useScroll, containerWidth };
   }
 
   /**
