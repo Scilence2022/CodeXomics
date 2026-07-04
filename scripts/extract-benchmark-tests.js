@@ -15,7 +15,7 @@ const suiteFiles = [
   'src/renderer/modules/benchmark-suites/ManualComplexSuite.js',
 ];
 
-const baseDir = '/Users/song/Github-Repos/CodeXomics';
+const baseDir = path.resolve(__dirname, '..');
 
 function extractTestsFromFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');

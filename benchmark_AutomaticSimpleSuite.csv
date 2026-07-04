@@ -70,6 +70,12 @@ system,load_auto_08,Get Chromosome List,List all chromosomes (contigs) in the cu
 system,settings_auto_04,Toggle Settings Modal,Open the settings modal.
 system,settings_auto_05,Switch UI Style Theme,Switch the application UI visual style to the Professional theme.
 system,settings_auto_06,Switch to Midnight Dark Mode,Change the application appearance to the midnight style and enable dark mode.
+system,ui_control_auto_01,Show ChatBox Panel,Show the main ChatBox panel.
+system,ui_control_auto_02,Set ChatBox Floating Layout,Set the ChatBox layout to floating mode.
+system,ui_control_auto_03,Restore ChatBox Window,Restore the ChatBox window if it is minimized.
+system,ui_control_auto_04,Expand Sidebar,Expand the main genome browser Sidebar.
+system,ui_control_auto_05,Show Tracks Sidebar Panel,Show the tracks panel in the Sidebar.
+system,ui_control_auto_06,Expand Top Banner,Expand the top banner area.
 system_setup,sys_auto_01,Set Working Directory,Set working directory to: “${this.getDefaultDirectory()}”
 track_control,track_auto_01,Get Track Status,Get the current visibility status of all tracks using get_track_status.
 track_control,track_auto_02,Toggle GC Content Track OFF,Toggle off the GC content track visibility.
