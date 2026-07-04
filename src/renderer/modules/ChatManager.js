@@ -251,14 +251,15 @@ class ChatManager {
     if (!manager) return;
 
     const categories = manager.getAll();
+    const escapeAttr = value => this.escapeHtml(String(value || '')).replace(/"/g, '&quot;');
 
     container.innerHTML = categories
       .map(
         cat => `
-      <div class="welcome-card ${cat.cssClass || 'welcome-card-search'}">
+      <div class="welcome-card ${escapeAttr(cat.cssClass || 'welcome-card-search')}">
         <div class="welcome-card-header">
-          <span class="welcome-card-icon">${cat.icon || '💬'}</span>
-          <span class="welcome-card-title">${cat.title || ''}</span>
+          <span class="welcome-card-icon">${this.escapeHtml(cat.icon || '💬')}</span>
+          <span class="welcome-card-title">${this.escapeHtml(cat.title || '')}</span>
         </div>
         <div class="welcome-card-examples">
           ${(cat.examples || [])
@@ -266,7 +267,7 @@ class ChatManager {
               // Handle both legacy string format and new object format gracefully
               const promptStr = typeof ex === 'string' ? ex : ex.prompt || '';
               const titleStr = typeof ex === 'string' ? ex : ex.title || promptStr;
-              return `<button class="welcome-example-btn" data-prompt="${promptStr.replace(/"/g, '&quot;')}">${titleStr}</button>`;
+              return `<button class="welcome-example-btn" data-prompt="${escapeAttr(promptStr)}"><span>${this.escapeHtml(titleStr)}</span></button>`;
             })
             .join('')}
         </div>
