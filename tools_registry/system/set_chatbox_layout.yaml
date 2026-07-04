@@ -1,0 +1,42 @@
+name: 'set_chatbox_layout'
+version: '1.0.0'
+description: 'Dock the ChatBox in the right-side layout, return it to floating mode, or toggle between those layouts.'
+category: 'system'
+keywords:
+  - 'dock chatbox'
+  - 'undock chatbox'
+  - 'float chatbox'
+  - 'floating chatbox'
+  - 'docked chatbox'
+  - 'chatbox layout'
+  - 'chatbox mode'
+priority: 1
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: 'object'
+  properties:
+    mode:
+      type: 'string'
+      description: "Use 'docked' to attach the ChatBox to the right side, 'floating' to restore the movable window, or 'toggle' to switch layouts."
+      enum: ['docked', 'floating', 'toggle']
+      default: 'toggle'
+  required: []
+sample_usages:
+  - user_query: 'Dock the ChatBox'
+    tool_call: "set_chatbox_layout(mode='docked')"
+    thought: 'The user wants the ChatBox attached to the right-side layout'
+    expected_result: 'The ChatBox is docked'
+  - user_query: 'Make the ChatBox floating'
+    tool_call: "set_chatbox_layout(mode='floating')"
+    thought: 'The user wants the ChatBox returned to its movable floating layout'
+    expected_result: 'The ChatBox is floating'
+returns:
+  success: 'boolean - Whether the ChatBox layout was updated'
+  message: 'string - Status message describing the result'
+  new_state: "string - Either 'docked' or 'floating'"

@@ -64,6 +64,75 @@ describe('UI control tools', () => {
     expect(document.getElementById('chatDockSplitter').style.display).toBe('flex');
   });
 
+  it('docks, floats, and toggles the ChatBox layout while preserving hidden visibility', async () => {
+    document.body.innerHTML = `
+      <div id="app">
+        <section id="llmChatPanel" style="display: none; left: 12px; top: 18px; width: 420px; height: 560px"></section>
+      </div>
+      <div id="chatDockSplitter" style="display: none"></div>
+      <aside id="chatDockContainer" style="display: none"></aside>
+      <button id="dockChatBtn"></button>
+      <button id="resetChatPositionBtn"></button>
+    `;
+    const manager = Object.create(ChatManager.prototype);
+    manager.isDocked = false;
+    const store = new Map();
+    manager.configManager = {
+      get: vi.fn((key, fallback) => (store.has(key) ? store.get(key) : fallback)),
+      set: vi.fn((key, value) => store.set(key, value)),
+    };
+    manager.getDefaultChatPosition = vi.fn(() => ({ x: 24, y: 32 }));
+    manager.hideDockIndicator = vi.fn();
+    manager.hideUndockIndicator = vi.fn();
+    manager.setupDockSplitterDragging = vi.fn();
+    manager.notifyDockLayoutChanged = vi.fn();
+
+    await expect(manager.setChatBoxLayout({ mode: 'docked' })).resolves.toMatchObject({
+      success: true,
+      new_state: 'docked',
+      visible: false,
+    });
+    expect(manager.isDocked).toBe(true);
+    expect(document.getElementById('llmChatPanel').style.display).toBe('none');
+    expect(document.getElementById('chatDockContainer').style.display).toBe('none');
+
+    await expect(manager.setChatBoxLayout({ mode: 'floating' })).resolves.toMatchObject({
+      success: true,
+      new_state: 'floating',
+      visible: false,
+    });
+    expect(manager.isDocked).toBe(false);
+    expect(document.getElementById('app').contains(document.getElementById('llmChatPanel'))).toBe(true);
+  });
+
+  it('minimizes and restores the ChatBox idempotently', async () => {
+    document.body.innerHTML = `
+      <section id="llmChatPanel" style="display: flex"></section>
+      <button id="minimizeChatBtn" title="Minimize window"><i class="fas fa-minus"></i></button>
+    `;
+    const manager = Object.create(ChatManager.prototype);
+
+    await expect(manager.setChatBoxMinimized({ action: 'minimize' })).resolves.toMatchObject({
+      success: true,
+      new_state: 'minimized',
+    });
+    await manager.setChatBoxMinimized({ action: 'minimize' });
+    expect(document.getElementById('llmChatPanel').classList.contains('minimized')).toBe(true);
+    expect(document.querySelector('#minimizeChatBtn i').className).toBe('fas fa-window-maximize');
+
+    await expect(manager.setChatBoxMinimized({ action: 'restore' })).resolves.toMatchObject({
+      success: true,
+      new_state: 'restored',
+    });
+    expect(document.getElementById('llmChatPanel').classList.contains('minimized')).toBe(false);
+    expect(document.querySelector('#minimizeChatBtn i').className).toBe('fas fa-minus');
+
+    await expect(manager.setChatBoxMinimized({ action: 'maximize' })).resolves.toMatchObject({
+      success: true,
+      new_state: 'restored',
+    });
+  });
+
   it('expands and collapses the Sidebar without losing its saved width', async () => {
     document.body.innerHTML = `
       <main class="main-content"></main>
@@ -97,6 +166,49 @@ describe('UI control tools', () => {
     expect(document.getElementById('toggleSidebar').checked).toBe(true);
   });
 
+  it('shows, hides, and toggles individual Sidebar panels', async () => {
+    document.body.innerHTML = `
+      <main class="main-content sidebar-collapsed"></main>
+      <aside id="sidebar" class="collapsed" style="width: 0px; min-width: 0px; overflow: hidden">
+        <section class="sidebar-section" id="tracksSection" style="display: none"></section>
+        <section class="sidebar-section" id="featuresSection" style="display: block"></section>
+      </aside>
+      <div id="sidebarSplitter" class="collapsed"></div>
+      <button id="splitterToggleBtn"></button>
+      <input id="toggleSidebar" type="checkbox">
+    `;
+    const sidebar = document.getElementById('sidebar');
+    Object.defineProperty(sidebar, 'offsetWidth', {
+      configurable: true,
+      get: () => (sidebar.classList.contains('collapsed') ? 0 : parseInt(sidebar.style.width, 10) || 0),
+    });
+    const uiManager = new UIManager({ tabManager: { updateCurrentTabSidebarPanel: vi.fn() } });
+    const manager = Object.create(ChatManager.prototype);
+    manager.app = { uiManager };
+
+    await expect(manager.toggleSidebarPanel({ panel_name: 'tracks', action: 'open' })).resolves.toMatchObject({
+      success: true,
+      panel_name: 'tracks',
+      new_state: 'shown',
+    });
+    expect(document.getElementById('tracksSection').style.display).toBe('block');
+    expect(sidebar.classList.contains('collapsed')).toBe(false);
+
+    await expect(manager.toggleSidebarPanel({ panel_name: 'tracks', action: 'close' })).resolves.toMatchObject({
+      success: true,
+      panel_name: 'tracks',
+      new_state: 'hidden',
+    });
+    expect(document.getElementById('tracksSection').style.display).toBe('none');
+
+    await expect(manager.toggleSidebarPanel({ panel_name: 'features', action: 'toggle' })).resolves.toMatchObject({
+      success: true,
+      panel_name: 'features',
+      new_state: 'hidden',
+    });
+    expect(document.getElementById('featuresSection').style.display).toBe('none');
+  });
+
   it('uses TabManager state to toggle the top banner', async () => {
     const tabManager = {
       bannerCollapsed: false,
@@ -125,7 +237,14 @@ describe('UI control tools', () => {
     const integration = new BuiltInToolsIntegration();
     const utilityTools = new UtilityTools({}).getTools();
     const policy = new ToolCapabilityPolicy();
-    const toolNames = ['toggle_chatbox', 'toggle_sidebar', 'toggle_top_banner'];
+    const toolNames = [
+      'toggle_chatbox',
+      'set_chatbox_layout',
+      'set_chatbox_minimized',
+      'toggle_sidebar',
+      'toggle_sidebar_panel',
+      'toggle_top_banner',
+    ];
 
     for (const toolName of toolNames) {
       expect(integration.builtInToolsMap.has(toolName)).toBe(true);
@@ -136,9 +255,18 @@ describe('UI control tools', () => {
     expect(integration.analyzeBuiltInToolRelevance('Please hide the ChatBox').map(tool => tool.name)).toContain(
       'toggle_chatbox'
     );
+    expect(integration.analyzeBuiltInToolRelevance('Dock the ChatBox').map(tool => tool.name)).toContain(
+      'set_chatbox_layout'
+    );
+    expect(integration.analyzeBuiltInToolRelevance('Minimize the ChatBox').map(tool => tool.name)).toContain(
+      'set_chatbox_minimized'
+    );
     expect(integration.analyzeBuiltInToolRelevance('Collapse the main sidebar').map(tool => tool.name)).toContain(
       'toggle_sidebar'
     );
+    expect(
+      integration.analyzeBuiltInToolRelevance('Show the tracks panel in the sidebar').map(tool => tool.name)
+    ).toContain('toggle_sidebar_panel');
     expect(integration.analyzeBuiltInToolRelevance('Toggle the top banner').map(tool => tool.name)).toContain(
       'toggle_top_banner'
     );

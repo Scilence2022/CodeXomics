@@ -211,7 +211,10 @@ const TOOL_NAMES = {
     SWITCH_UI_STYLE: 'switch_ui_style',
     TOGGLE_SETTINGS_MODAL: 'toggle_settings_modal',
     TOGGLE_CHATBOX: 'toggle_chatbox',
+    SET_CHATBOX_LAYOUT: 'set_chatbox_layout',
+    SET_CHATBOX_MINIMIZED: 'set_chatbox_minimized',
     TOGGLE_SIDEBAR: 'toggle_sidebar',
+    TOGGLE_SIDEBAR_PANEL: 'toggle_sidebar_panel',
     TOGGLE_TOP_BANNER: 'toggle_top_banner',
   },
 

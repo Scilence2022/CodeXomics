@@ -114,6 +114,40 @@ class UtilityTools {
         },
       },
 
+      set_chatbox_layout: {
+        name: 'set_chatbox_layout',
+        description: 'Dock the ChatBox to the right-side layout, return it to floating mode, or toggle layouts.',
+        parameters: {
+          type: 'object',
+          properties: {
+            mode: {
+              type: 'string',
+              description: "Use 'docked', 'floating', or 'toggle' (default).",
+              enum: ['docked', 'floating', 'toggle'],
+              default: 'toggle',
+            },
+          },
+          required: [],
+        },
+      },
+
+      set_chatbox_minimized: {
+        name: 'set_chatbox_minimized',
+        description: 'Minimize, restore, or toggle the minimized state of the ChatBox window.',
+        parameters: {
+          type: 'object',
+          properties: {
+            action: {
+              type: 'string',
+              description: "Use 'minimize', 'restore', or 'toggle' (default).",
+              enum: ['minimize', 'restore', 'toggle'],
+              default: 'toggle',
+            },
+          },
+          required: [],
+        },
+      },
+
       toggle_sidebar: {
         name: 'toggle_sidebar',
         description: 'Expand, collapse, or toggle the main genome browser Sidebar.',
@@ -128,6 +162,40 @@ class UtilityTools {
             },
           },
           required: [],
+        },
+      },
+
+      toggle_sidebar_panel: {
+        name: 'toggle_sidebar_panel',
+        description: 'Show, hide, or toggle an individual panel in the genome browser Sidebar.',
+        parameters: {
+          type: 'object',
+          properties: {
+            panel_name: {
+              type: 'string',
+              description: 'The Sidebar panel to control.',
+              enum: [
+                'gene_details',
+                'primer_details',
+                'read_details',
+                'variant_details',
+                'search_results',
+                'operons',
+                'tracks',
+                'features',
+                'file_info',
+                'navigation',
+                'statistics',
+              ],
+            },
+            action: {
+              type: 'string',
+              description: "Use 'show', 'hide', or 'toggle' (default).",
+              enum: ['show', 'hide', 'toggle'],
+              default: 'toggle',
+            },
+          },
+          required: ['panel_name'],
         },
       },
 
@@ -186,8 +254,20 @@ class UtilityTools {
     return await this.executeClientTool('toggle_chatbox', params, clientId);
   }
 
+  async set_chatbox_layout(params, clientId) {
+    return await this.executeClientTool('set_chatbox_layout', params, clientId);
+  }
+
+  async set_chatbox_minimized(params, clientId) {
+    return await this.executeClientTool('set_chatbox_minimized', params, clientId);
+  }
+
   async toggle_sidebar(params, clientId) {
     return await this.executeClientTool('toggle_sidebar', params, clientId);
+  }
+
+  async toggle_sidebar_panel(params, clientId) {
+    return await this.executeClientTool('toggle_sidebar_panel', params, clientId);
   }
 
   async toggle_top_banner(params, clientId) {

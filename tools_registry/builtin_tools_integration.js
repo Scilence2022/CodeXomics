@@ -1034,8 +1034,29 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('set_chatbox_layout', {
+      method: 'setChatBoxLayout',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('set_chatbox_minimized', {
+      method: 'setChatBoxMinimized',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('toggle_sidebar', {
       method: 'toggleSidebar',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('toggle_sidebar_panel', {
+      method: 'toggleSidebarPanel',
       category: 'system',
       type: 'built-in',
       priority: 1,
@@ -2027,6 +2048,30 @@ class BuiltInToolsIntegration {
     }
 
     if (
+      /\b(dock|undock|float)\s+.*?\bchat\s*box\b/i.test(query) ||
+      /\bchat\s*box\b.*?\b(dock|undock|float|floating|docked)\b/i.test(query) ||
+      /\bchat\s*box\s+(layout|mode)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'set_chatbox_layout',
+        confidence: 0.98,
+        reason: 'ChatBox docked/floating layout keywords detected',
+      });
+    }
+
+    if (
+      /\b(minimize|maximize|restore)\s+.*?\bchat\s*box\b/i.test(query) ||
+      /\bchat\s*box\b.*?\b(minimize|minimized|maximize|restore)\b/i.test(query) ||
+      /\bexpand\s+.*?\bchat\s*box\s+(window|panel)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'set_chatbox_minimized',
+        confidence: 0.98,
+        reason: 'ChatBox minimize/restore keywords detected',
+      });
+    }
+
+    if (
       /\b(show|hide|expand|collapse|toggle|open|close)\s+.*?\bsidebar\b/i.test(query) ||
       /\bsidebar\b.*?\b(show|hide|expand|collapse|toggle|open|close)\b/i.test(query)
     ) {
@@ -2034,6 +2079,24 @@ class BuiltInToolsIntegration {
         name: 'toggle_sidebar',
         confidence: 0.95,
         reason: 'Sidebar visibility keywords detected',
+      });
+    }
+
+    if (
+      /\b(show|hide|open|close|toggle)\s+.*?\b(gene\s+details|primer\s+details|read\s+details|variant\s+details|search\s+results|operons?|tracks?|features?|file\s+info|navigation|statistics)\s+(panel|section)\b/i.test(
+        query
+      ) ||
+      /\b(gene\s+details|primer\s+details|read\s+details|variant\s+details|search\s+results|operons?|tracks?|features?|file\s+info|navigation|statistics)\s+(panel|section)\b.*?\b(show|hide|open|close|toggle)\b/i.test(
+        query
+      ) ||
+      /\bsidebar\b.*?\b(gene\s+details|primer\s+details|read\s+details|variant\s+details|search\s+results|operons?|tracks?|features?|file\s+info|navigation|statistics)\b/i.test(
+        query
+      )
+    ) {
+      relevantTools.push({
+        name: 'toggle_sidebar_panel',
+        confidence: 0.98,
+        reason: 'Individual Sidebar panel visibility keywords detected',
       });
     }
 

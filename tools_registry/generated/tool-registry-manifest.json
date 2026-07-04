@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-04T12:55:19.616Z",
-  "registryHash": "f631e713d97f88132bfe162090e63534e3bb175956e39a2253b9f4c0461dcbfa",
+  "generatedAt": "2026-07-04T17:26:54.367Z",
+  "registryHash": "cf0d97158862962bc6ccdc03cf5f255bb556026bf160423a7ba925e6b5ea2bce",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 188,
-    "appTools": 188,
+    "tools": 191,
+    "appTools": 191,
     "userTools": 0,
-    "uniqueTools": 182,
+    "uniqueTools": 185,
     "categories": 18,
-    "builtInTools": 152,
+    "builtInTools": 155,
     "diagnostics": 12
   },
   "categories": {
@@ -131,7 +131,7 @@
         "priority": 1,
         "color": "#795548",
         "subcategories": ["directory_management", "environment_setup", "system_configuration", "interface_controls"],
-        "tools_count": 8
+        "tools_count": 11
       },
       "benchmark": {
         "name": "Benchmark Management",
@@ -19208,6 +19208,152 @@
       }
     },
     {
+      "name": "set_chatbox_layout",
+      "version": "1.0.0",
+      "description": "Dock the ChatBox in the right-side layout, return it to floating mode, or toggle between those layouts.",
+      "category": "system",
+      "keywords": [
+        "dock chatbox",
+        "undock chatbox",
+        "float chatbox",
+        "floating chatbox",
+        "docked chatbox",
+        "chatbox layout",
+        "chatbox mode"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Use 'docked' to attach the ChatBox to the right side, 'floating' to restore the movable window, or 'toggle' to switch layouts.",
+            "enum": ["docked", "floating", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Dock the ChatBox",
+          "tool_call": "set_chatbox_layout(mode='docked')",
+          "thought": "The user wants the ChatBox attached to the right-side layout",
+          "expected_result": "The ChatBox is docked"
+        },
+        {
+          "user_query": "Make the ChatBox floating",
+          "tool_call": "set_chatbox_layout(mode='floating')",
+          "thought": "The user wants the ChatBox returned to its movable floating layout",
+          "expected_result": "The ChatBox is floating"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the ChatBox layout was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'docked' or 'floating'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/set_chatbox_layout.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "setChatBoxLayout"
+      },
+      "builtin": {
+        "name": "set_chatbox_layout",
+        "method": "setChatBoxLayout",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "set_chatbox_minimized",
+      "version": "1.0.0",
+      "description": "Minimize, restore, or toggle the minimized state of the ChatBox window.",
+      "category": "system",
+      "keywords": [
+        "minimize chatbox",
+        "restore chatbox",
+        "maximize chatbox",
+        "expand chatbox window",
+        "chatbox minimized"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'minimize' to compact the ChatBox, 'restore' to expand it, or 'toggle' to switch its current state.",
+            "enum": ["minimize", "restore", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Minimize the ChatBox",
+          "tool_call": "set_chatbox_minimized(action='minimize')",
+          "thought": "The user wants the ChatBox compacted",
+          "expected_result": "The ChatBox is minimized"
+        },
+        {
+          "user_query": "Restore the ChatBox window",
+          "tool_call": "set_chatbox_minimized(action='restore')",
+          "thought": "The user wants the minimized ChatBox expanded again",
+          "expected_result": "The ChatBox is restored"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the minimized state was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'minimized' or 'restored'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/set_chatbox_minimized.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "setChatBoxMinimized"
+      },
+      "builtin": {
+        "name": "set_chatbox_minimized",
+        "method": "setChatBoxMinimized",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
       "name": "set_working_directory",
       "description": "Set the current working directory for the application. All file operations (load, export, save) will use this directory as the base path. Use this when the user specifies a directory path for data files.",
       "version": "1.1.0",
@@ -19833,6 +19979,104 @@
       "builtin": {
         "name": "toggle_sidebar",
         "method": "toggleSidebar",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "toggle_sidebar_panel",
+      "version": "1.0.0",
+      "description": "Show, hide, or toggle an individual panel in the genome browser Sidebar.",
+      "category": "system",
+      "keywords": [
+        "sidebar panel",
+        "sidebar section",
+        "gene details panel",
+        "primer details panel",
+        "read details panel",
+        "variant details panel",
+        "search results panel",
+        "operons panel",
+        "tracks panel",
+        "features panel",
+        "file info panel",
+        "navigation panel",
+        "statistics panel"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "panel_name": {
+            "type": "string",
+            "description": "The Sidebar panel to control.",
+            "enum": [
+              "gene_details",
+              "primer_details",
+              "read_details",
+              "variant_details",
+              "search_results",
+              "operons",
+              "tracks",
+              "features",
+              "file_info",
+              "navigation",
+              "statistics"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "description": "Use 'show' to reveal the panel, 'hide' to conceal it, or 'toggle' to switch its current visibility.",
+            "enum": ["show", "hide", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": ["panel_name"]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Show the tracks panel in the Sidebar",
+          "tool_call": "toggle_sidebar_panel(panel_name='tracks', action='show')",
+          "thought": "The user wants the Sidebar tracks panel visible",
+          "expected_result": "The tracks panel is shown and the Sidebar is expanded if needed"
+        },
+        {
+          "user_query": "Hide the statistics panel",
+          "tool_call": "toggle_sidebar_panel(panel_name='statistics', action='hide')",
+          "thought": "The user wants the Sidebar statistics panel hidden",
+          "expected_result": "The statistics panel is hidden"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the panel visibility was updated",
+        "message": "string - Status message describing the result",
+        "panel_name": "string - The normalized panel name",
+        "new_state": "string - Either 'shown' or 'hidden'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_sidebar_panel.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleSidebarPanel"
+      },
+      "builtin": {
+        "name": "toggle_sidebar_panel",
+        "method": "toggleSidebarPanel",
         "category": "system",
         "type": "built-in",
         "priority": 1,
@@ -39040,6 +39284,152 @@
         "source": "builtin_tools_map"
       }
     },
+    "set_chatbox_layout": {
+      "name": "set_chatbox_layout",
+      "version": "1.0.0",
+      "description": "Dock the ChatBox in the right-side layout, return it to floating mode, or toggle between those layouts.",
+      "category": "system",
+      "keywords": [
+        "dock chatbox",
+        "undock chatbox",
+        "float chatbox",
+        "floating chatbox",
+        "docked chatbox",
+        "chatbox layout",
+        "chatbox mode"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Use 'docked' to attach the ChatBox to the right side, 'floating' to restore the movable window, or 'toggle' to switch layouts.",
+            "enum": ["docked", "floating", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Dock the ChatBox",
+          "tool_call": "set_chatbox_layout(mode='docked')",
+          "thought": "The user wants the ChatBox attached to the right-side layout",
+          "expected_result": "The ChatBox is docked"
+        },
+        {
+          "user_query": "Make the ChatBox floating",
+          "tool_call": "set_chatbox_layout(mode='floating')",
+          "thought": "The user wants the ChatBox returned to its movable floating layout",
+          "expected_result": "The ChatBox is floating"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the ChatBox layout was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'docked' or 'floating'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/set_chatbox_layout.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "setChatBoxLayout"
+      },
+      "builtin": {
+        "name": "set_chatbox_layout",
+        "method": "setChatBoxLayout",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "set_chatbox_minimized": {
+      "name": "set_chatbox_minimized",
+      "version": "1.0.0",
+      "description": "Minimize, restore, or toggle the minimized state of the ChatBox window.",
+      "category": "system",
+      "keywords": [
+        "minimize chatbox",
+        "restore chatbox",
+        "maximize chatbox",
+        "expand chatbox window",
+        "chatbox minimized"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'minimize' to compact the ChatBox, 'restore' to expand it, or 'toggle' to switch its current state.",
+            "enum": ["minimize", "restore", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Minimize the ChatBox",
+          "tool_call": "set_chatbox_minimized(action='minimize')",
+          "thought": "The user wants the ChatBox compacted",
+          "expected_result": "The ChatBox is minimized"
+        },
+        {
+          "user_query": "Restore the ChatBox window",
+          "tool_call": "set_chatbox_minimized(action='restore')",
+          "thought": "The user wants the minimized ChatBox expanded again",
+          "expected_result": "The ChatBox is restored"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the minimized state was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'minimized' or 'restored'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/set_chatbox_minimized.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "setChatBoxMinimized"
+      },
+      "builtin": {
+        "name": "set_chatbox_minimized",
+        "method": "setChatBoxMinimized",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "set_working_directory": {
       "name": "set_working_directory",
       "description": "Set the current working directory for the application. All file operations (load, export, save) will use this directory as the base path. Use this when the user specifies a directory path for data files.",
@@ -39666,6 +40056,104 @@
       "builtin": {
         "name": "toggle_sidebar",
         "method": "toggleSidebar",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "toggle_sidebar_panel": {
+      "name": "toggle_sidebar_panel",
+      "version": "1.0.0",
+      "description": "Show, hide, or toggle an individual panel in the genome browser Sidebar.",
+      "category": "system",
+      "keywords": [
+        "sidebar panel",
+        "sidebar section",
+        "gene details panel",
+        "primer details panel",
+        "read details panel",
+        "variant details panel",
+        "search results panel",
+        "operons panel",
+        "tracks panel",
+        "features panel",
+        "file info panel",
+        "navigation panel",
+        "statistics panel"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "panel_name": {
+            "type": "string",
+            "description": "The Sidebar panel to control.",
+            "enum": [
+              "gene_details",
+              "primer_details",
+              "read_details",
+              "variant_details",
+              "search_results",
+              "operons",
+              "tracks",
+              "features",
+              "file_info",
+              "navigation",
+              "statistics"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "description": "Use 'show' to reveal the panel, 'hide' to conceal it, or 'toggle' to switch its current visibility.",
+            "enum": ["show", "hide", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": ["panel_name"]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Show the tracks panel in the Sidebar",
+          "tool_call": "toggle_sidebar_panel(panel_name='tracks', action='show')",
+          "thought": "The user wants the Sidebar tracks panel visible",
+          "expected_result": "The tracks panel is shown and the Sidebar is expanded if needed"
+        },
+        {
+          "user_query": "Hide the statistics panel",
+          "tool_call": "toggle_sidebar_panel(panel_name='statistics', action='hide')",
+          "thought": "The user wants the Sidebar statistics panel hidden",
+          "expected_result": "The statistics panel is hidden"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the panel visibility was updated",
+        "message": "string - Status message describing the result",
+        "panel_name": "string - The normalized panel name",
+        "new_state": "string - Either 'shown' or 'hidden'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_sidebar_panel.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleSidebarPanel"
+      },
+      "builtin": {
+        "name": "toggle_sidebar_panel",
+        "method": "toggleSidebarPanel",
         "category": "system",
         "type": "built-in",
         "priority": 1,
@@ -41724,8 +42212,38 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "set_chatbox_layout",
+      "method": "setChatBoxLayout",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "set_chatbox_minimized",
+      "method": "setChatBoxMinimized",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "toggle_sidebar",
       "method": "toggleSidebar",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "toggle_sidebar_panel",
+      "method": "toggleSidebarPanel",
       "category": "system",
       "type": "built-in",
       "priority": 1,
@@ -43246,9 +43764,39 @@
       "isExternal": false,
       "source": "builtin_tools_map"
     },
+    "set_chatbox_layout": {
+      "name": "set_chatbox_layout",
+      "method": "setChatBoxLayout",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "set_chatbox_minimized": {
+      "name": "set_chatbox_minimized",
+      "method": "setChatBoxMinimized",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
     "toggle_sidebar": {
       "name": "toggle_sidebar",
       "method": "toggleSidebar",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "toggle_sidebar_panel": {
+      "name": "toggle_sidebar_panel",
+      "method": "toggleSidebarPanel",
       "category": "system",
       "type": "built-in",
       "priority": 1,

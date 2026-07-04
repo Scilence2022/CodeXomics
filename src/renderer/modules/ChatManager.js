@@ -8212,7 +8212,10 @@ TOOL AVAILABILITY:
         'download_internet_file',
         'toggle_settings_modal',
         'toggle_chatbox',
+        'set_chatbox_layout',
+        'set_chatbox_minimized',
         'toggle_sidebar',
+        'toggle_sidebar_panel',
         'toggle_top_banner',
       ],
     };
@@ -8433,7 +8436,10 @@ ${coreTools}
       utility_download_internet_file: () => this.downloadInternetFile(parameters),
       utility_toggle_settings_modal: () => this.toggleSettingsModal(parameters),
       utility_toggle_chatbox: () => this.toggleChatBox(parameters),
+      utility_set_chatbox_layout: () => this.setChatBoxLayout(parameters),
+      utility_set_chatbox_minimized: () => this.setChatBoxMinimized(parameters),
       utility_toggle_sidebar: () => this.toggleSidebar(parameters),
+      utility_toggle_sidebar_panel: () => this.toggleSidebarPanel(parameters),
       utility_toggle_top_banner: () => this.toggleTopBanner(parameters),
 
       // Action system tools (if available)
@@ -8490,7 +8496,10 @@ ${coreTools}
       // Settings modal tools
       toggle_settings_modal: () => this.toggleSettingsModal(parameters),
       toggle_chatbox: () => this.toggleChatBox(parameters),
+      set_chatbox_layout: () => this.setChatBoxLayout(parameters),
+      set_chatbox_minimized: () => this.setChatBoxMinimized(parameters),
       toggle_sidebar: () => this.toggleSidebar(parameters),
+      toggle_sidebar_panel: () => this.toggleSidebarPanel(parameters),
       toggle_top_banner: () => this.toggleTopBanner(parameters),
 
       // Benchmark tools
@@ -8994,6 +9003,107 @@ ${coreTools}
   }
 
   /**
+   * Dock, float, or toggle the ChatBox layout.
+   */
+  async setChatBoxLayout(parameters = {}) {
+    const { mode = 'toggle' } = parameters;
+    const normalizedMode = String(mode).toLowerCase();
+    const modeAliases = {
+      dock: 'docked',
+      docked: 'docked',
+      undock: 'floating',
+      undocked: 'floating',
+      float: 'floating',
+      floating: 'floating',
+      toggle: 'toggle',
+    };
+    const effectiveMode = modeAliases[normalizedMode];
+
+    if (!effectiveMode) {
+      return { success: false, error: `Invalid mode: '${mode}'. Use 'docked', 'floating', or 'toggle'.` };
+    }
+
+    const chatPanel = document.getElementById('llmChatPanel');
+    const dockContainer = document.getElementById('chatDockContainer');
+    const dockSplitter = document.getElementById('chatDockSplitter');
+    const appDiv = document.getElementById('app');
+
+    if (!chatPanel) {
+      return { success: false, error: 'ChatBox panel is not available' };
+    }
+
+    if (!dockContainer || !dockSplitter || !appDiv) {
+      return { success: false, error: 'ChatBox dock layout controls are not available' };
+    }
+
+    const wasVisible = chatPanel.style.display !== 'none';
+    const isDocked = this.isDocked || chatPanel.classList.contains('docked');
+    const shouldDock = effectiveMode === 'toggle' ? !isDocked : effectiveMode === 'docked';
+
+    if (shouldDock !== isDocked) {
+      if (shouldDock) {
+        this.dockChat();
+      } else {
+        this.undockChat();
+      }
+
+      if (!wasVisible) {
+        this.setChatVisibility(false);
+      }
+    }
+
+    const newState = shouldDock ? 'docked' : 'floating';
+    return {
+      success: true,
+      message: `ChatBox layout set to ${newState}`,
+      new_state: newState,
+      minimized: chatPanel.classList.contains('minimized'),
+      visible: wasVisible,
+    };
+  }
+
+  /**
+   * Minimize, restore, or toggle the ChatBox compact state.
+   */
+  async setChatBoxMinimized(parameters = {}) {
+    const { action = 'toggle' } = parameters;
+    const normalizedAction = String(action).toLowerCase();
+    const actionAliases = {
+      minimize: 'minimize',
+      minimized: 'minimize',
+      restore: 'restore',
+      maximize: 'restore',
+      expand: 'restore',
+      unminimize: 'restore',
+      toggle: 'toggle',
+    };
+    const effectiveAction = actionAliases[normalizedAction];
+
+    if (!effectiveAction) {
+      return { success: false, error: `Invalid action: '${action}'. Use 'minimize', 'restore', or 'toggle'.` };
+    }
+
+    const chatPanel = document.getElementById('llmChatPanel');
+    if (!chatPanel) {
+      return { success: false, error: 'ChatBox panel is not available' };
+    }
+
+    const isMinimized = chatPanel.classList.contains('minimized');
+    const shouldMinimize = effectiveAction === 'toggle' ? !isMinimized : effectiveAction === 'minimize';
+
+    if (shouldMinimize !== isMinimized) {
+      this.toggleChatMinimize();
+    }
+
+    const newState = shouldMinimize ? 'minimized' : 'restored';
+    return {
+      success: true,
+      message: `ChatBox ${newState}`,
+      new_state: newState,
+    };
+  }
+
+  /**
    * Expand, collapse, or toggle the genome browser Sidebar.
    */
   async toggleSidebar(parameters = {}) {
@@ -9028,6 +9138,90 @@ ${coreTools}
       success: true,
       message: `Sidebar ${shouldCollapse ? 'collapsed' : 'expanded'}`,
       new_state: shouldCollapse ? 'collapsed' : 'expanded',
+    };
+  }
+
+  /**
+   * Show, hide, or toggle a specific Sidebar panel.
+   */
+  async toggleSidebarPanel(parameters = {}) {
+    const { panel_name: panelName, action = 'toggle' } = parameters;
+    const normalizedAction = String(action).toLowerCase();
+    const actionAliases = {
+      show: 'show',
+      open: 'show',
+      hide: 'hide',
+      close: 'hide',
+      toggle: 'toggle',
+    };
+    const effectiveAction = actionAliases[normalizedAction];
+    const panelKey = String(panelName || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+    const panelMap = {
+      gene_details: { id: 'geneDetailsSection', label: 'gene details' },
+      primer_details: { id: 'primerDetailsSection', label: 'primer details' },
+      read_details: { id: 'readDetailsSection', label: 'read details' },
+      variant_details: { id: 'variantDetailsSection', label: 'variant details' },
+      search_results: { id: 'searchResultsSection', label: 'search results' },
+      operon: { id: 'operonsSection', label: 'operons', normalized: 'operons' },
+      operons: { id: 'operonsSection', label: 'operons' },
+      tracks: { id: 'tracksSection', label: 'tracks' },
+      track: { id: 'tracksSection', label: 'tracks', normalized: 'tracks' },
+      features: { id: 'featuresSection', label: 'features' },
+      feature: { id: 'featuresSection', label: 'features', normalized: 'features' },
+      file_info: { id: 'fileInfoSection', label: 'file info' },
+      navigation: { id: 'navigationSection', label: 'navigation' },
+      statistics: { id: 'statisticsSection', label: 'statistics' },
+      stats: { id: 'statisticsSection', label: 'statistics', normalized: 'statistics' },
+    };
+
+    if (!panelMap[panelKey]) {
+      return {
+        success: false,
+        error:
+          "Invalid panel_name. Use one of: 'gene_details', 'primer_details', 'read_details', 'variant_details', 'search_results', 'operons', 'tracks', 'features', 'file_info', 'navigation', 'statistics'.",
+      };
+    }
+
+    if (!effectiveAction) {
+      return { success: false, error: `Invalid action: '${action}'. Use 'show', 'hide', or 'toggle'.` };
+    }
+
+    const uiManager = this.app?.uiManager || window.genomeBrowser?.uiManager;
+    if (!uiManager || typeof uiManager.showPanel !== 'function' || typeof uiManager.closePanel !== 'function') {
+      return { success: false, error: 'Sidebar panel controls are not available' };
+    }
+
+    const entry = panelMap[panelKey];
+    const panel = document.getElementById(entry.id);
+    if (!panel) {
+      return { success: false, error: `Sidebar panel '${entry.label}' is not available` };
+    }
+
+    const computedDisplay =
+      typeof window !== 'undefined' && window.getComputedStyle
+        ? window.getComputedStyle(panel).display
+        : panel.style.display;
+    const isVisible = !panel.hidden && panel.style.display !== 'none' && computedDisplay !== 'none';
+    const shouldShow = effectiveAction === 'toggle' ? !isVisible : effectiveAction === 'show';
+
+    if (shouldShow !== isVisible) {
+      if (shouldShow) {
+        uiManager.showPanel(entry.id);
+      } else {
+        uiManager.closePanel(entry.id);
+      }
+    }
+
+    const canonicalName = entry.normalized || panelKey;
+    return {
+      success: true,
+      message: `Sidebar ${entry.label} panel ${shouldShow ? 'shown' : 'hidden'}`,
+      panel_name: canonicalName,
+      panel_id: entry.id,
+      new_state: shouldShow ? 'shown' : 'hidden',
     };
   }
 
@@ -9696,7 +9890,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'download_internet_file',
       'toggle_settings_modal',
       'toggle_chatbox',
+      'set_chatbox_layout',
+      'set_chatbox_minimized',
       'toggle_sidebar',
+      'toggle_sidebar_panel',
       'toggle_top_banner',
     ];
 
