@@ -4448,21 +4448,27 @@ class ChatManager {
     const chatPanel = document.getElementById('llmChatPanel');
     if (chatPanel) {
       const isVisible = chatPanel.style.display !== 'none';
-      chatPanel.style.display = isVisible ? 'none' : 'flex';
-
-      // Also toggle dock container/splitter if docked
-      if (this.isDocked) {
-        const dockContainer = document.getElementById('chatDockContainer');
-        const dockSplitter = document.getElementById('chatDockSplitter');
-        if (dockContainer) dockContainer.style.display = isVisible ? 'none' : 'flex';
-        if (dockSplitter) dockSplitter.style.display = isVisible ? 'none' : 'flex';
-      }
-
-      // Save visibility state
-      this.configManager.set('chat.visible', !isVisible);
-      this.notifyDockLayoutChanged('visibility');
+      this.setChatVisibility(!isVisible);
       console.log('ChatBox visibility toggled:', isVisible ? 'hidden' : 'visible');
     }
+  }
+
+  setChatVisibility(visible) {
+    const chatPanel = document.getElementById('llmChatPanel');
+    if (!chatPanel) return;
+
+    chatPanel.style.display = visible ? 'flex' : 'none';
+
+    const isDocked = this.isDocked || chatPanel.classList.contains('docked');
+    if (isDocked) {
+      const dockContainer = document.getElementById('chatDockContainer');
+      const dockSplitter = document.getElementById('chatDockSplitter');
+      if (dockContainer) dockContainer.style.display = visible ? 'flex' : 'none';
+      if (dockSplitter) dockSplitter.style.display = visible ? 'flex' : 'none';
+      this.notifyDockLayoutChanged('visibility');
+    }
+
+    this.configManager.set('chat.visible', visible);
   }
 
   /**
@@ -4673,9 +4679,8 @@ class ChatManager {
   showChatBox() {
     const chatPanel = document.getElementById('llmChatPanel');
     if (chatPanel) {
-      chatPanel.style.display = 'flex';
+      this.setChatVisibility(true);
       this.ensureChatPanelInViewport(chatPanel);
-      this.configManager.set('chat.visible', true);
       console.log('ChatBox forced to visible');
     }
   }
@@ -4686,8 +4691,7 @@ class ChatManager {
   hideChatBox() {
     const chatPanel = document.getElementById('llmChatPanel');
     if (chatPanel) {
-      chatPanel.style.display = 'none';
-      this.configManager.set('chat.visible', false);
+      this.setChatVisibility(false);
       console.log('ChatBox hidden');
     }
   }

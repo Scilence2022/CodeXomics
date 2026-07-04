@@ -37,6 +37,33 @@ describe('UI control tools', () => {
     expect(document.getElementById('llmChatPanel').style.display).toBe('flex');
   });
 
+  it('releases the docked ChatBox layout space when hidden', async () => {
+    document.body.innerHTML = `
+      <div id="chatDockSplitter" style="display: flex"></div>
+      <aside id="chatDockContainer" style="display: flex">
+        <section id="llmChatPanel" class="docked" style="display: flex"></section>
+      </aside>
+    `;
+    const manager = Object.create(ChatManager.prototype);
+    manager.isDocked = true;
+    manager.configManager = { set: vi.fn() };
+    manager.ensureChatPanelInViewport = vi.fn();
+    manager.notifyDockLayoutChanged = vi.fn();
+
+    await manager.toggleChatBox({ action: 'hide' });
+
+    expect(document.getElementById('llmChatPanel').style.display).toBe('none');
+    expect(document.getElementById('chatDockContainer').style.display).toBe('none');
+    expect(document.getElementById('chatDockSplitter').style.display).toBe('none');
+    expect(manager.notifyDockLayoutChanged).toHaveBeenCalledWith('visibility');
+
+    await manager.toggleChatBox({ action: 'show' });
+
+    expect(document.getElementById('llmChatPanel').style.display).toBe('flex');
+    expect(document.getElementById('chatDockContainer').style.display).toBe('flex');
+    expect(document.getElementById('chatDockSplitter').style.display).toBe('flex');
+  });
+
   it('expands and collapses the Sidebar without losing its saved width', async () => {
     document.body.innerHTML = `
       <main class="main-content"></main>
