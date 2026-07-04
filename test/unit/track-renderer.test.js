@@ -179,6 +179,90 @@ describe('Track Settings Resolution', () => {
   });
 });
 
+describe('Aligned reads vertical scrolling layout', () => {
+  function makeRows(count) {
+    return Array.from({ length: count }, () => []);
+  }
+
+  function computeLayout(settings, rows = 4) {
+    const renderer = Object.create(TrackRenderer.prototype);
+    return renderer.computeReadsTrackLayout(makeRows(rows), settings, {
+      showCoverage: true,
+      coverageHeight: 50,
+      referenceHeight: 25,
+      isCanvasMode: true,
+      viewport: { start: 0, end: 100 },
+      containerWidth: 1000,
+    });
+  }
+
+  it('uses the compact rectangle height when sequence letters are hidden', () => {
+    const layout = computeLayout({
+      height: 150,
+      readHeight: 4,
+      readSpacing: 2,
+      showSequences: false,
+    });
+
+    expect(layout.readHeight).toBe(4);
+    expect(layout.visibleRows).toBe(10);
+    expect(layout.useScroll).toBe(false);
+  });
+
+  it('triggers scrolling from the taller effective row height when sequence letters are displayed', () => {
+    const layout = computeLayout({
+      height: 150,
+      readHeight: 4,
+      readSpacing: 2,
+      showSequences: true,
+      autoFontSize: true,
+      referenceFontSize: 12,
+    });
+
+    expect(layout.readHeight).toBe(12);
+    expect(layout.visibleRows).toBe(4);
+    expect(layout.useScroll).toBe(false);
+
+    const overflowingLayout = computeLayout(
+      {
+        height: 150,
+        readHeight: 4,
+        readSpacing: 2,
+        showSequences: true,
+        autoFontSize: true,
+        referenceFontSize: 12,
+      },
+      5
+    );
+
+    expect(overflowingLayout.useScroll).toBe(true);
+  });
+
+  it('keeps compact rows when sequence display is enabled but below the letter zoom threshold', () => {
+    const renderer = Object.create(TrackRenderer.prototype);
+    const layout = renderer.computeReadsTrackLayout(
+      makeRows(5),
+      {
+        height: 150,
+        readHeight: 4,
+        readSpacing: 2,
+        showSequences: true,
+      },
+      {
+        showCoverage: true,
+        coverageHeight: 50,
+        referenceHeight: 25,
+        isCanvasMode: true,
+        viewport: { start: 0, end: 10000 },
+        containerWidth: 1000,
+      }
+    );
+
+    expect(layout.readHeight).toBe(4);
+    expect(layout.useScroll).toBe(false);
+  });
+});
+
 describe('Track Settings Tabs', () => {
   const CSS_PATH = path.join(process.cwd(), 'src/renderer/css/sequence-tracks.css');
 
@@ -449,7 +533,7 @@ describe('Post-Extraction Consistency', () => {
   it('should be smaller after GeneShapeCreators extraction', () => {
     const content = fs.readFileSync(TR_PATH, 'utf-8');
     const lines = content.split('\n').length;
-    expect(lines).toBeLessThan(16050); // includes dedicated primer binding renderer and existing track subsystems
+    expect(lines).toBeLessThan(16100); // includes primer binding and reads layout logic
   });
 
   it('should still reference GeneShapeCreators module', () => {
