@@ -983,13 +983,28 @@ path.svg-gene-element.selected.border-highlight text {
 }
 
 .chat-panel.minimized {
-  height: 60px !important;
-  min-height: 60px !important;
+  height: 116px !important;
+  min-height: 116px !important;
 }
 
 .chat-panel.minimized .chat-messages,
-.chat-panel.minimized .chat-input-container {
+.chat-panel.minimized .chat-input-options,
+.chat-panel.minimized .chat-actions,
+.chat-panel.minimized .chat-abort-btn {
   display: none !important;
+}
+
+.chat-panel.minimized .chat-input-container {
+  display: block !important;
+  padding: 8px 12px;
+}
+
+.chat-panel.minimized .chat-input-wrapper {
+  align-items: center;
+}
+
+.chat-panel.minimized #chatInput {
+  max-height: 40px;
 }
 
 .chat-panel.minimized .resize-handle {
@@ -1003,4 +1018,3 @@ path.svg-gene-element.selected.border-highlight text {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   /* Ensure smooth position transitions */
 }
-
