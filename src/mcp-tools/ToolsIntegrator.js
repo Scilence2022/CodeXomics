@@ -962,9 +962,8 @@ class ToolsIntegrator {
     let cursor = 0;
     const workerCount = Math.max(1, Math.min(limit, items.length));
     const workers = new Array(workerCount).fill(0).map(async () => {
-      while (true) {
+      while (cursor < items.length) {
         const idx = cursor++;
-        if (idx >= items.length) break;
         results[idx] = await fn(items[idx], idx);
       }
     });
