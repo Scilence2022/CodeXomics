@@ -1027,6 +1027,27 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('toggle_chatbox', {
+      method: 'toggleChatBox',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('toggle_sidebar', {
+      method: 'toggleSidebar',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('toggle_top_banner', {
+      method: 'toggleTopBanner',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('switch_ui_style', {
       method: 'switchUiStyle',
       category: 'system',
@@ -1990,6 +2011,40 @@ class BuiltInToolsIntegration {
         name: 'toggle_settings_modal',
         confidence: 0.9,
         reason: 'Settings modal open/close/toggle keywords detected',
+      });
+    }
+
+    // Check for primary interface visibility and collapse/expand controls
+    if (
+      /\b(show|hide|open|close|toggle)\s+.*?\bchat\s*box\b(?!\s+settings)/i.test(query) ||
+      /\bchat\s*box\b(?!\s+settings).*?\b(show|hide|open|close|toggle)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'toggle_chatbox',
+        confidence: 0.95,
+        reason: 'ChatBox visibility keywords detected',
+      });
+    }
+
+    if (
+      /\b(show|hide|expand|collapse|toggle|open|close)\s+.*?\bsidebar\b/i.test(query) ||
+      /\bsidebar\b.*?\b(show|hide|expand|collapse|toggle|open|close)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'toggle_sidebar',
+        confidence: 0.95,
+        reason: 'Sidebar visibility keywords detected',
+      });
+    }
+
+    if (
+      /\b(show|hide|expand|collapse|toggle|open|close)\s+.*?\b(top\s+)?banner\b/i.test(query) ||
+      /\b(top\s+)?banner\b.*?\b(show|hide|expand|collapse|toggle|open|close)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'toggle_top_banner',
+        confidence: 0.95,
+        reason: 'Top banner visibility keywords detected',
       });
     }
 

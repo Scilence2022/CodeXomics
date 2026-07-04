@@ -387,6 +387,12 @@ class ToolsIntegrator {
             return await this.utilityTools.view_markdown_file(parameters, clientId);
           case 'toggle_settings_modal':
             return await this.utilityTools.toggle_settings_modal(parameters, clientId);
+          case 'toggle_chatbox':
+            return await this.utilityTools.toggle_chatbox(parameters, clientId);
+          case 'toggle_sidebar':
+            return await this.utilityTools.toggle_sidebar(parameters, clientId);
+          case 'toggle_top_banner':
+            return await this.utilityTools.toggle_top_banner(parameters, clientId);
           default:
             return await this.utilityTools.executeClientTool(toolName, parameters, clientId);
         }
@@ -956,9 +962,8 @@ class ToolsIntegrator {
     let cursor = 0;
     const workerCount = Math.max(1, Math.min(limit, items.length));
     const workers = new Array(workerCount).fill(0).map(async () => {
-      while (true) {
+      while (cursor < items.length) {
         const idx = cursor++;
-        if (idx >= items.length) break;
         results[idx] = await fn(items[idx], idx);
       }
     });

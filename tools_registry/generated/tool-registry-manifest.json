@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-01T13:15:41.225Z",
-  "registryHash": "00b1a596e025549a698775bf10cc24a7561f8f27d089b92e6f8b8ccc5d2e5b2b",
+  "generatedAt": "2026-07-04T12:55:19.616Z",
+  "registryHash": "f631e713d97f88132bfe162090e63534e3bb175956e39a2253b9f4c0461dcbfa",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 185,
-    "appTools": 185,
+    "tools": 188,
+    "appTools": 188,
     "userTools": 0,
-    "uniqueTools": 179,
+    "uniqueTools": 182,
     "categories": 18,
-    "builtInTools": 149,
+    "builtInTools": 152,
     "diagnostics": 12
   },
   "categories": {
@@ -126,12 +126,12 @@
       },
       "system": {
         "name": "System Management",
-        "description": "Tools for system operations, working directory management, and environment setup",
+        "description": "Tools for system operations, interface controls, working directory management, and environment setup",
         "icon": "⚙️",
         "priority": 1,
         "color": "#795548",
-        "subcategories": ["directory_management", "environment_setup", "system_configuration"],
-        "tools_count": 2
+        "subcategories": ["directory_management", "environment_setup", "system_configuration", "interface_controls"],
+        "tools_count": 8
       },
       "benchmark": {
         "name": "Benchmark Management",
@@ -19544,6 +19544,80 @@
       }
     },
     {
+      "name": "toggle_chatbox",
+      "version": "1.0.0",
+      "description": "Show, hide, or toggle the main ChatBox panel. Use this for the ChatBox itself, not the ChatBox settings modal.",
+      "category": "system",
+      "keywords": [
+        "chatbox",
+        "chat box",
+        "show chatbox",
+        "hide chatbox",
+        "open chatbox",
+        "close chatbox",
+        "toggle chatbox"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'show' to reveal the ChatBox, 'hide' to conceal it, or 'toggle' to switch its current visibility.",
+            "enum": ["show", "hide", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Show the ChatBox",
+          "tool_call": "toggle_chatbox(action='show')",
+          "thought": "The user wants the main ChatBox panel to be visible",
+          "expected_result": "The ChatBox is shown"
+        },
+        {
+          "user_query": "Hide the ChatBox",
+          "tool_call": "toggle_chatbox(action='hide')",
+          "thought": "The user wants the main ChatBox panel hidden",
+          "expected_result": "The ChatBox is hidden"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the ChatBox state was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'shown' or 'hidden'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_chatbox.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleChatBox"
+      },
+      "builtin": {
+        "name": "toggle_chatbox",
+        "method": "toggleChatBox",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
       "name": "toggle_settings_modal",
       "version": "1.0.0",
       "description": "Open or close application settings modals/panels. Use this when users ask to open, close, show, hide, or toggle any settings interface such as LLM configuration, ChatBox settings, General settings, Track settings, MCP server settings, Multi-Agent settings, etc.",
@@ -19685,6 +19759,154 @@
       "builtin": {
         "name": "toggle_settings_modal",
         "method": "toggleSettingsModal",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "toggle_sidebar",
+      "version": "1.0.0",
+      "description": "Expand, collapse, or toggle the main genome browser Sidebar while keeping its toolbar and splitter controls synchronized.",
+      "category": "system",
+      "keywords": [
+        "sidebar",
+        "side bar",
+        "show sidebar",
+        "hide sidebar",
+        "expand sidebar",
+        "collapse sidebar",
+        "toggle sidebar"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'expand' to show the Sidebar, 'collapse' to hide it, or 'toggle' to switch its current state.",
+            "enum": ["expand", "collapse", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Expand the Sidebar",
+          "tool_call": "toggle_sidebar(action='expand')",
+          "thought": "The user wants the main Sidebar expanded",
+          "expected_result": "The Sidebar is expanded"
+        },
+        {
+          "user_query": "Collapse the Sidebar",
+          "tool_call": "toggle_sidebar(action='collapse')",
+          "thought": "The user wants the main Sidebar collapsed",
+          "expected_result": "The Sidebar is collapsed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the Sidebar state was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'expanded' or 'collapsed'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_sidebar.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleSidebar"
+      },
+      "builtin": {
+        "name": "toggle_sidebar",
+        "method": "toggleSidebar",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "toggle_top_banner",
+      "version": "1.0.0",
+      "description": "Expand, collapse, or toggle the top banner area and persist the resulting banner state.",
+      "category": "system",
+      "keywords": [
+        "banner",
+        "top banner",
+        "show banner",
+        "hide banner",
+        "expand banner",
+        "collapse banner",
+        "toggle banner"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'expand' to show the top banner, 'collapse' to hide it, or 'toggle' to switch its current state.",
+            "enum": ["expand", "collapse", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Expand the top banner",
+          "tool_call": "toggle_top_banner(action='expand')",
+          "thought": "The user wants the top banner expanded",
+          "expected_result": "The top banner is expanded"
+        },
+        {
+          "user_query": "Toggle the banner",
+          "tool_call": "toggle_top_banner(action='toggle')",
+          "thought": "The user wants to switch the current top banner state",
+          "expected_result": "The top banner switches between expanded and collapsed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the top banner state was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'expanded' or 'collapsed'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_top_banner.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleTopBanner"
+      },
+      "builtin": {
+        "name": "toggle_top_banner",
+        "method": "toggleTopBanner",
         "category": "system",
         "type": "built-in",
         "priority": 1,
@@ -39154,6 +39376,80 @@
         "source": "builtin_tools_map"
       }
     },
+    "toggle_chatbox": {
+      "name": "toggle_chatbox",
+      "version": "1.0.0",
+      "description": "Show, hide, or toggle the main ChatBox panel. Use this for the ChatBox itself, not the ChatBox settings modal.",
+      "category": "system",
+      "keywords": [
+        "chatbox",
+        "chat box",
+        "show chatbox",
+        "hide chatbox",
+        "open chatbox",
+        "close chatbox",
+        "toggle chatbox"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'show' to reveal the ChatBox, 'hide' to conceal it, or 'toggle' to switch its current visibility.",
+            "enum": ["show", "hide", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Show the ChatBox",
+          "tool_call": "toggle_chatbox(action='show')",
+          "thought": "The user wants the main ChatBox panel to be visible",
+          "expected_result": "The ChatBox is shown"
+        },
+        {
+          "user_query": "Hide the ChatBox",
+          "tool_call": "toggle_chatbox(action='hide')",
+          "thought": "The user wants the main ChatBox panel hidden",
+          "expected_result": "The ChatBox is hidden"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the ChatBox state was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'shown' or 'hidden'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_chatbox.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleChatBox"
+      },
+      "builtin": {
+        "name": "toggle_chatbox",
+        "method": "toggleChatBox",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "toggle_settings_modal": {
       "name": "toggle_settings_modal",
       "version": "1.0.0",
@@ -39296,6 +39592,154 @@
       "builtin": {
         "name": "toggle_settings_modal",
         "method": "toggleSettingsModal",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "toggle_sidebar": {
+      "name": "toggle_sidebar",
+      "version": "1.0.0",
+      "description": "Expand, collapse, or toggle the main genome browser Sidebar while keeping its toolbar and splitter controls synchronized.",
+      "category": "system",
+      "keywords": [
+        "sidebar",
+        "side bar",
+        "show sidebar",
+        "hide sidebar",
+        "expand sidebar",
+        "collapse sidebar",
+        "toggle sidebar"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'expand' to show the Sidebar, 'collapse' to hide it, or 'toggle' to switch its current state.",
+            "enum": ["expand", "collapse", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Expand the Sidebar",
+          "tool_call": "toggle_sidebar(action='expand')",
+          "thought": "The user wants the main Sidebar expanded",
+          "expected_result": "The Sidebar is expanded"
+        },
+        {
+          "user_query": "Collapse the Sidebar",
+          "tool_call": "toggle_sidebar(action='collapse')",
+          "thought": "The user wants the main Sidebar collapsed",
+          "expected_result": "The Sidebar is collapsed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the Sidebar state was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'expanded' or 'collapsed'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_sidebar.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleSidebar"
+      },
+      "builtin": {
+        "name": "toggle_sidebar",
+        "method": "toggleSidebar",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "toggle_top_banner": {
+      "name": "toggle_top_banner",
+      "version": "1.0.0",
+      "description": "Expand, collapse, or toggle the top banner area and persist the resulting banner state.",
+      "category": "system",
+      "keywords": [
+        "banner",
+        "top banner",
+        "show banner",
+        "hide banner",
+        "expand banner",
+        "collapse banner",
+        "toggle banner"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 1,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'expand' to show the top banner, 'collapse' to hide it, or 'toggle' to switch its current state.",
+            "enum": ["expand", "collapse", "toggle"],
+            "default": "toggle"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Expand the top banner",
+          "tool_call": "toggle_top_banner(action='expand')",
+          "thought": "The user wants the top banner expanded",
+          "expected_result": "The top banner is expanded"
+        },
+        {
+          "user_query": "Toggle the banner",
+          "tool_call": "toggle_top_banner(action='toggle')",
+          "thought": "The user wants to switch the current top banner state",
+          "expected_result": "The top banner switches between expanded and collapsed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the top banner state was updated",
+        "message": "string - Status message describing the result",
+        "new_state": "string - Either 'expanded' or 'collapsed'"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_top_banner.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleTopBanner"
+      },
+      "builtin": {
+        "name": "toggle_top_banner",
+        "method": "toggleTopBanner",
         "category": "system",
         "type": "built-in",
         "priority": 1,
@@ -41270,6 +41714,36 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "toggle_chatbox",
+      "method": "toggleChatBox",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "toggle_sidebar",
+      "method": "toggleSidebar",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "toggle_top_banner",
+      "method": "toggleTopBanner",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "switch_ui_style",
       "method": "switchUiStyle",
       "category": "system",
@@ -42755,6 +43229,36 @@
     "toggle_settings_modal": {
       "name": "toggle_settings_modal",
       "method": "toggleSettingsModal",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "toggle_chatbox": {
+      "name": "toggle_chatbox",
+      "method": "toggleChatBox",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "toggle_sidebar": {
+      "name": "toggle_sidebar",
+      "method": "toggleSidebar",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "toggle_top_banner": {
+      "name": "toggle_top_banner",
+      "method": "toggleTopBanner",
       "category": "system",
       "type": "built-in",
       "priority": 1,
