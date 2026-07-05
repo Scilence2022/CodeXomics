@@ -45,6 +45,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       // BLAST
       blast_create_database: [/blast.*database/i, /database.*created/i, /ecoli_db/i],
+      blast_validate_database: [/validate.*database/i, /database.*valid/i],
+      blast_delete_database: [/delete.*database/i, /database.*deleted/i],
+      blast_detect_sequence_type: [/sequence.*type/i, /detected.*dna/i],
+      blast_filter_results: [/filter.*blast/i, /filtered.*results/i],
+      blast_export_results: [/export.*blast/i, /blast.*exported/i],
       blast_list_databases: [/list.*databases/i, /available.*databases/i],
       blast_search_online: [/online blast/i, /blastn/i, /ncbi blast/i],
       blast_search_local: [/local blast/i, /blast.*local/i],
@@ -56,9 +61,22 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       save_primer: [/add.*primer/i, /save.*primer/i, /primer.*added/i, /primer.*saved/i],
       list_primers: [/list.*primer/i, /primer.*listed/i, /primer annotations/i],
       delete_primers: [/clear.*primer/i, /primer.*cleared/i, /remove.*primer/i, /delete.*primer/i],
+      add_task: [/add.*task/i, /task.*added/i],
+      list_tasks: [/list.*tasks/i, /tasks.*listed/i],
+      update_task: [/update.*task/i, /task.*updated/i],
+      delete_task: [/delete.*task/i, /task.*deleted/i],
+      clear_tasks: [/clear.*tasks/i, /tasks.*cleared/i],
       jump_to_gene: [/jump.*gene/i, /navigate.*gene/i, /go to.*gene/i, /jumped to/i],
       zoom_to_gene: [/zoom.*gene/i, /zoomed to/i, /zoom.*lysc/i],
       navigate_to_position: [/navigate.*position/i, /navigated to/i, /jump.*position/i],
+      highlight_region: [/highlight.*region/i, /region.*highlighted/i],
+      list_highlights: [/list.*highlight/i, /highlight.*listed/i],
+      remove_highlight: [/remove.*highlight/i, /highlight.*removed/i],
+      clear_highlights: [/clear.*highlight/i, /highlight.*cleared/i],
+      save_view_state: [/save.*view/i, /view.*saved/i],
+      bookmark_position: [/bookmark.*position/i, /bookmarked/i],
+      capture_screenshot: [/capture.*screenshot/i, /screenshot.*saved/i],
+      open_image_file: [/open.*image/i, /image.*opened/i],
 
       // Protein & Structure
       get_uniprot_entry: [/uniprot entry/i, /p04637/i, /p53/i],
@@ -85,6 +103,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       // Annotations
       create_annotation: [/annotation.*created/i, /created.*annotation/i, /new.*annotation/i, /regulatory_region_a/i],
       update_annotation: [/annotation.*updated/i, /updated.*annotation/i, /description.*updated/i],
+      bulk_update_annotations: [/bulk.*annotation/i, /annotations.*updated/i],
+      get_annotation_history: [/annotation.*history/i, /change history/i],
       list_annotations: [/list.*annotations/i, /annotations.*listed/i, /show.*annotations/i],
     };
     this.tests = this.initializeTests();
@@ -168,6 +188,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     return [
       'file_auto_01',
       'nav_auto_01',
+      'nav_auto_complex_02',
       'analysis_auto_01',
       'analysis_auto_02',
       'analysis_auto_complex_03',
@@ -177,18 +198,23 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       'gel_auto_03',
       'gel_auto_workflow_02',
       'annotation_auto_complex_01',
+      'annotation_auto_complex_02',
       'track_auto_complex_01',
+      'task_auto_complex_01',
       'primer_auto_01',
       'primer_auto_complex_01',
       'primer_auto_complex_02',
       'export_auto_complex_01',
       'export_auto_complex_02',
+      'file_auto_complex_02',
       'ui_auto_01',
       'ui_auto_complex_02',
       'protein_auto_complex_01',
       'protein_auto_complex_02',
       'blast_auto_complex_01',
       'blast_auto_complex_02',
+      'blast_auto_complex_03',
+      'blast_auto_complex_04',
     ];
   }
 
@@ -263,6 +289,58 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         maxScore: 10,
         bonusScore: 2,
         timeout: 60000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
+        id: 'nav_auto_complex_02',
+        name: 'Highlight, Bookmark, and Save View Workflow',
+        type: 'workflow',
+        category: 'navigation',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction:
+          'Navigate to 110000-112000, highlight that region with label benchmark_focus, list highlights, remove that highlight, clear all remaining highlights, save the current view as "benchmark smoke view", and bookmark 120000-121000 as "benchmark bookmark".',
+        expectedResult: {
+          tool_sequence: [
+            'navigate_to_position',
+            'highlight_region',
+            'list_highlights',
+            'remove_highlight',
+            'clear_highlights',
+            'save_view_state',
+            'bookmark_position',
+          ],
+          parameters: [
+            {
+              chromosome: '<current_chromosome>',
+              start: 110000,
+              end: 112000,
+            },
+            {
+              start: 110000,
+              end: 112000,
+              label: 'benchmark_focus',
+            },
+            {},
+            {
+              start: 110000,
+              end: 112000,
+            },
+            {},
+            {
+              name: 'benchmark smoke view',
+            },
+            {
+              name: 'benchmark bookmark',
+              start: 120000,
+              end: 121000,
+            },
+          ],
+        },
+        maxScore: 20,
+        bonusScore: 4,
+        timeout: 120000,
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
@@ -355,6 +433,34 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           ],
         },
         maxScore: 12,
+        bonusScore: 2,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
+        id: 'file_auto_complex_02',
+        name: 'Screenshot Capture and Preview Workflow',
+        type: 'workflow',
+        category: 'file_operations',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: `Capture a visible tracks screenshot to ${this.buildFilePath('exported_files/benchmark_tracks_review.png')}, then open that image file for review.`,
+        expectedResult: {
+          tool_sequence: ['capture_screenshot', 'open_image_file'],
+          parameters: [
+            {
+              target: 'tracks',
+              mode: 'visible',
+              filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
+              format: 'png',
+            },
+            {
+              filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
+            },
+          ],
+        },
+        maxScore: 10,
         bonusScore: 2,
         timeout: 90000,
         evaluator: this.evaluateWorkflowCall.bind(this),
@@ -665,6 +771,51 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       },
 
       {
+        id: 'annotation_auto_complex_02',
+        name: 'Bulk Annotation Update and History Workflow',
+        type: 'workflow',
+        category: 'annotations',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction:
+          "Create a temporary CDS annotation named 'benchmark_bulk_gene' at 160000-160900, bulk update that annotation to set its description to 'Bulk benchmark annotation', get its annotation history, and then list annotations in that region.",
+        expectedResult: {
+          tool_sequence: ['create_annotation', 'bulk_update_annotations', 'get_annotation_history', 'list_annotations'],
+          parameters: [
+            {
+              name: 'benchmark_bulk_gene',
+              start: 160000,
+              end: 160900,
+              type: 'CDS',
+            },
+            {
+              updates: [
+                {
+                  identifier: 'benchmark_bulk_gene',
+                  updates: {
+                    description: 'Bulk benchmark annotation',
+                  },
+                },
+              ],
+            },
+            {
+              identifier: 'benchmark_bulk_gene',
+              limit: 10,
+            },
+            {
+              chromosome: '<current_chromosome>',
+              start: 160000,
+              end: 160900,
+            },
+          ],
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
         id: 'track_auto_complex_01',
         name: 'Track Control and Status Check',
         type: 'workflow',
@@ -684,6 +835,46 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               track_name: 'Variants',
               visible: false,
+            },
+            {},
+          ],
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 90000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
+        id: 'task_auto_complex_01',
+        name: 'Task Checklist Lifecycle Workflow',
+        type: 'workflow',
+        category: 'task_management',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction:
+          'Clear existing checklist tasks, add a task titled "Benchmark complex task" as in_progress with progress 10, list in-progress tasks, update that task to completed with progress 100, delete that task, and list all tasks again.',
+        expectedResult: {
+          tool_sequence: ['clear_tasks', 'add_task', 'list_tasks', 'update_task', 'delete_task', 'list_tasks'],
+          parameters: [
+            {
+              confirm: true,
+            },
+            {
+              title: 'Benchmark complex task',
+              status: 'in_progress',
+              progress: 10,
+            },
+            {
+              status: 'in_progress',
+            },
+            {
+              id: '{add_task.id}',
+              status: 'completed',
+              progress: 100,
+            },
+            {
+              id: '{add_task.id}',
             },
             {},
           ],
@@ -787,6 +978,89 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         maxScore: 15,
         bonusScore: 3,
         timeout: 120000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
+        id: 'blast_auto_complex_03',
+        name: 'BLAST Database Create Validate Delete Workflow',
+        type: 'workflow',
+        category: 'blast',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: `Export the current visible genomic region to ${this.buildFilePath('exported_files/benchmark_blast_input.fasta')}, create a nucleotide BLAST database named benchmark_view_nucl from that FASTA file, validate the database, list databases, and then delete benchmark_view_nucl with confirmation.`,
+        expectedResult: {
+          tool_sequence: [
+            'export_current_view_fasta',
+            'blast_create_database',
+            'blast_validate_database',
+            'blast_list_databases',
+            'blast_delete_database',
+          ],
+          parameters: [
+            {
+              filePath: this.buildFilePath('exported_files/benchmark_blast_input.fasta'),
+              includeCoordinates: true,
+            },
+            {
+              inputFile: this.buildFilePath('exported_files/benchmark_blast_input.fasta'),
+              dbName: 'benchmark_view_nucl',
+              dbType: 'nucl',
+            },
+            {
+              dbName: 'benchmark_view_nucl',
+            },
+            {
+              includeLocal: true,
+            },
+            {
+              dbName: 'benchmark_view_nucl',
+              confirm: true,
+            },
+          ],
+        },
+        maxScore: 20,
+        bonusScore: 4,
+        timeout: 180000,
+        evaluator: this.evaluateWorkflowCall.bind(this),
+      },
+
+      {
+        id: 'blast_auto_complex_04',
+        name: 'BLAST Search Filter and Export Workflow',
+        type: 'workflow',
+        category: 'blast',
+        complexity: 'complex',
+        evaluation: 'automatic',
+        instruction: `Detect the type of sequence ATGAAAGCGCTGAAAGCGCTG, run blast_search against nt with blastn and max 5 targets, filter the BLAST results to hits with at least 90 percent identity and at most 5 hits, then export the BLAST results as CSV to ${this.buildFilePath('exported_files/benchmark_blast_results.csv')}.`,
+        expectedResult: {
+          tool_sequence: ['blast_detect_sequence_type', 'blast_search', 'blast_filter_results', 'blast_export_results'],
+          parameters: [
+            {
+              sequence: 'ATGAAAGCGCTGAAAGCGCTG',
+            },
+            {
+              sequence: 'ATGAAAGCGCTGAAAGCGCTG',
+              blastType: 'blastn',
+              database: 'nt',
+              maxTargets: 5,
+            },
+            {
+              results: '{blast_search.results}',
+              minIdentity: 90,
+              maxHits: 5,
+            },
+            {
+              searchId: '{blast_search.searchId}',
+              format: 'csv',
+              outputPath: this.buildFilePath('exported_files/benchmark_blast_results.csv'),
+            },
+          ],
+        },
+        maxScore: 15,
+        bonusScore: 3,
+        timeout: 180000,
+        earlyReturn: true,
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 

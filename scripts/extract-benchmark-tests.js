@@ -37,16 +37,19 @@ function extractTestsFromFile(filePath) {
     const name = nameMatch[1];
     const category = categoryMatch[1];
 
-    // Extract instruction - handle both backticks and single quotes
+    // Extract instruction from template literals, single-quoted, or double-quoted strings.
     let instruction = '';
-    const instructionMatch = block.match(/instruction:\s*`([^`]+)`/);
-    if (instructionMatch) {
-      instruction = instructionMatch[1];
-    } else {
-      // Try single-quoted instruction (may span multiple lines)
-      const singleQuoteMatch = block.match(/instruction:\s*'([^']+)'/);
-      if (singleQuoteMatch) {
-        instruction = singleQuoteMatch[1];
+    const instructionPatterns = [
+      /instruction:\s*`([\s\S]*?)`/,
+      /instruction:\s*'((?:\\.|[^'\\])*)'/,
+      /instruction:\s*"((?:\\.|[^"\\])*)"/,
+    ];
+
+    for (const pattern of instructionPatterns) {
+      const match = block.match(pattern);
+      if (match) {
+        instruction = match[1].replace(/\\(["'`\\])/g, '$1');
+        break;
       }
     }
 
