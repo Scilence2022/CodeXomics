@@ -173,10 +173,13 @@ class PrimerLibraryUI {
     const seq = primer.sequence
       ? `${this._esc(primer.sequence.slice(0, 28))}${primer.sequence.length > 28 ? '…' : ''}`
       : '<em>no sequence</em>';
+    const phosphateBadge = primer.fivePrimePhosphate
+      ? '<span class="primer-phosphate-badge" title="5&#39; phosphorylated">5P</span>'
+      : '';
     return `
       <tr data-primer-id="${this._esc(primer.id)}">
         <td class="primer-lib-name">${this._esc(primer.name)}</td>
-        <td class="primer-lib-seq" title="${this._esc(primer.sequence || '')}">${seq}</td>
+        <td class="primer-lib-seq" title="${this._esc(primer.sequence || '')}">${phosphateBadge}${seq}</td>
         <td>${len || '—'}</td>
         <td>${tm}</td>
         <td>${gc}</td>
@@ -492,6 +495,7 @@ class PrimerLibraryUI {
     const onSeqInput = () => this._refreshEditPreview();
     modal.querySelector('[data-role="f-seq"]').addEventListener('input', onSeqInput);
     modal.querySelector('[data-role="f-tail"]').addEventListener('input', onSeqInput);
+    modal.querySelector('[data-role="f-phos"]').addEventListener('change', onSeqInput);
   }
 
   /** Recompute the live stats badge, sequence rendering, and binding preview. */
@@ -500,8 +504,9 @@ class PrimerLibraryUI {
     if (!modal) return;
     const sequence = this.manager.normalizeSequence(modal.querySelector('[data-role="f-seq"]').value);
     const tail = this.manager.normalizeSequence(modal.querySelector('[data-role="f-tail"]').value);
+    const fivePrimePhosphate = modal.querySelector('[data-role="f-phos"]')?.checked === true;
 
-    this._renderSeqView(modal.querySelector('[data-role="seq-bases"]'), sequence, tail);
+    this._renderSeqView(modal.querySelector('[data-role="seq-bases"]'), sequence, tail, fivePrimePhosphate);
     this._renderEditStats(modal.querySelector('[data-role="edit-stats"]'), sequence);
 
     // Debounce the (potentially heavier) binding scan.
@@ -509,7 +514,7 @@ class PrimerLibraryUI {
     this._previewTimer = setTimeout(() => this._renderBindingPreview(sequence, tail), 180);
   }
 
-  _renderSeqView(host, sequence, tail) {
+  _renderSeqView(host, sequence, tail, fivePrimePhosphate = false) {
     if (!host) return;
     if (!sequence) {
       host.innerHTML = '<span class="primer-seq-empty">enter a sequence…</span>';
@@ -520,6 +525,7 @@ class PrimerLibraryUI {
     const tailPart = sequence.slice(0, tailLen);
     const bodyPart = sequence.slice(tailLen);
     host.innerHTML =
+      (fivePrimePhosphate ? '<span class="primer-phosphate-badge primer-phosphate-badge-seq">5P</span>' : '') +
       (tailPart ? `<span class="primer-seq-tail">${this._esc(tailPart)}</span>` : '') +
       `<span class="primer-seq-body">${this._esc(bodyPart)}</span>`;
   }

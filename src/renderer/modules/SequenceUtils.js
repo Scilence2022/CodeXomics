@@ -2213,9 +2213,12 @@ class SequenceUtils {
         const is3PrimeEnd = isReverse ? visibleStart === start : visibleEnd === end;
         const is5PrimeEnd = isReverse ? visibleEnd === end : visibleStart === start;
         const accentColor = primer.color || (isReverse ? '#0d9488' : '#7c3aed');
+        const isFivePrimePhosphate = primer.fivePrimePhosphate === true;
 
         return this.createPrimerBindingRow({
-          className: `sequence-primer-row ${isReverse ? 'reverse' : 'forward'}`,
+          className: `sequence-primer-row ${isReverse ? 'reverse' : 'forward'}${
+            isFivePrimePhosphate ? ' phosphorylated' : ''
+          }`,
           label: this.truncateLabel(this.getFeatureDisplayName(primer), 12),
           charWidth,
           lineLength,
@@ -2225,12 +2228,15 @@ class SequenceUtils {
           isReverse,
           strandLabelWidth: this.strandLabelWidth,
           accentColor,
+          isFivePrimePhosphate,
           // Letters are a darkened blend of the accent so they stay legible on the
           // light tinted fill regardless of a custom primer colour.
           letterColor: `color-mix(in srgb, ${accentColor} 60%, #0f172a)`,
           is3PrimeEnd,
           is5PrimeEnd,
-          title: `${this.getFeatureDisplayName(primer)} primer ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})`,
+          title: `${this.getFeatureDisplayName(primer)} primer ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})${
+            isFivePrimePhosphate ? " · 5' phosphorylated" : ''
+          }`,
           // Identity for the delegated click handler that opens the primer details
           // sidebar. Encoded as data attributes (not a listener) so the value
           // survives the renderCache's cloneNode reuse, mirroring gene indicators.
@@ -2257,6 +2263,7 @@ class SequenceUtils {
     isReverse,
     strandLabelWidth = 20,
     accentColor,
+    isFivePrimePhosphate = false,
     letterColor,
     is3PrimeEnd = true,
     is5PrimeEnd = true,
@@ -2324,6 +2331,21 @@ class SequenceUtils {
     if (selectDataset) box.setAttribute('role', 'button');
     markSelectable(box);
     basesElement.appendChild(box);
+
+    if (isFivePrimePhosphate && is5PrimeEnd) {
+      const phosphate = document.createElement('span');
+      phosphate.className = `sequence-primer-phosphate ${isReverse ? 'reverse' : 'forward'}`;
+      phosphate.textContent = '5P';
+      phosphate.title = "5' phosphorylated";
+      const phosphateLeft = isReverse ? (startIndex + visibleLength) * charWidth - 18 : startIndex * charWidth - 2;
+      phosphate.style.left = `${Math.max(0, phosphateLeft)}px`;
+      phosphate.style.borderColor = accentColor;
+      if (selectDataset) {
+        phosphate.style.pointerEvents = 'auto';
+        markSelectable(phosphate);
+      }
+      basesElement.appendChild(phosphate);
+    }
 
     // One absolutely-positioned cell per base, each exactly charWidth wide and
     // anchored at its genome column so primer letters sit directly above/below the

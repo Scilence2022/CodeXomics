@@ -1207,6 +1207,7 @@ class TrackRenderer {
     // Predicted sites are computed in real time; pinned sites are manual/asserted
     // placements. They are rendered with distinct emphasis.
     const isPredicted = primer.origin === 'predicted';
+    const isPhosphorylated = primer.fivePrimePhosphate === true;
     const oligoSequence = this.getPrimerOligoSequence(primer);
     const genomeSequence = this.getPrimerGenomeBindingSequence(primer);
     const mismatchSummary = this.getPrimerMismatchSummary(oligoSequence, genomeSequence);
@@ -1216,7 +1217,9 @@ class TrackRenderer {
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     group.setAttribute(
       'class',
-      `primer-binding-element${isReverse ? ' reverse' : ' forward'}${isPredicted ? ' predicted' : ' pinned'}`
+      `primer-binding-element${isReverse ? ' reverse' : ' forward'}${isPredicted ? ' predicted' : ' pinned'}${
+        isPhosphorylated ? ' phosphorylated' : ''
+      }`
     );
     group.style.cursor = 'pointer';
     if (isPredicted) group.style.opacity = '0.72';
@@ -1259,6 +1262,19 @@ class TrackRenderer {
       });
     }
 
+    if (isPhosphorylated) {
+      const fivePrimeVisible = isReverse ? visibleEnd === primer.end : visibleStart === primer.start;
+      if (fivePrimeVisible) {
+        const flag = this.createPrimerPhosphateFlag({
+          x: isReverse ? x + width : x,
+          y: y - 19,
+          isReverse,
+          containerWidth,
+        });
+        group.appendChild(flag);
+      }
+    }
+
     if (width > 28) {
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       label.setAttribute('x', String(x + width / 2));
@@ -1283,6 +1299,7 @@ class TrackRenderer {
         ? `Mismatches vs genome: ${mismatchSummary.count} at ${mismatchSummary.positions.map(pos => pos + 1).join(', ')}`
         : 'Mismatches vs genome: none detected';
     const originLine = isPredicted ? 'Source: predicted (real-time)' : 'Source: pinned (manual)';
+    const phosphateLine = isPhosphorylated ? "5' modification: phosphorylated" : '';
     const scoreLine = Number.isFinite(primer.bindingScore)
       ? `Binding score: ${primer.bindingScore}${Number.isFinite(primer.tm) ? ` · Tm ${primer.tm}°C` : ''}`
       : '';
@@ -1292,6 +1309,7 @@ class TrackRenderer {
       originLine,
       sequenceLine,
       genomeLine,
+      phosphateLine,
       mismatchLine,
       scoreLine,
     ]
@@ -1306,6 +1324,51 @@ class TrackRenderer {
     return group;
   }
 
+  createPrimerPhosphateFlag({ x, y, isReverse, containerWidth }) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const flagWidth = 22;
+    const flagHeight = 14;
+    const flagX = Math.max(1, Math.min(containerWidth - flagWidth - 1, isReverse ? x - flagWidth + 2 : x - 2));
+
+    const flag = document.createElementNS(ns, 'g');
+    flag.setAttribute('class', 'primer-phosphate-flag');
+
+    const connector = document.createElementNS(ns, 'line');
+    connector.setAttribute('x1', String(x));
+    connector.setAttribute('x2', String(flagX + flagWidth / 2));
+    connector.setAttribute('y1', String(y + flagHeight + 3));
+    connector.setAttribute('y2', String(y + flagHeight));
+    connector.setAttribute('stroke', '#0891b2');
+    connector.setAttribute('stroke-width', '1.4');
+    connector.setAttribute('vector-effect', 'non-scaling-stroke');
+    flag.appendChild(connector);
+
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', String(flagX));
+    rect.setAttribute('y', String(y));
+    rect.setAttribute('width', String(flagWidth));
+    rect.setAttribute('height', String(flagHeight));
+    rect.setAttribute('rx', '4');
+    rect.setAttribute('fill', '#0891b2');
+    rect.setAttribute('stroke', '#ecfeff');
+    rect.setAttribute('stroke-width', '1');
+    rect.setAttribute('vector-effect', 'non-scaling-stroke');
+    flag.appendChild(rect);
+
+    const text = document.createElementNS(ns, 'text');
+    text.setAttribute('x', String(flagX + flagWidth / 2));
+    text.setAttribute('y', String(y + 10));
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('font-size', '9');
+    text.setAttribute('font-weight', '700');
+    text.setAttribute('fill', '#ffffff');
+    text.setAttribute('font-family', 'Arial, sans-serif');
+    text.textContent = '5P';
+    flag.appendChild(text);
+
+    return flag;
+  }
+
   addPrimerTrackLegend(trackContent, visiblePrimers, layout) {
     const mismatchCount = visiblePrimers.reduce((count, primer) => {
       const oligoSequence = this.getPrimerOligoSequence(primer);
@@ -1315,6 +1378,7 @@ class TrackRenderer {
 
     const predictedCount = visiblePrimers.filter(primer => primer.origin === 'predicted').length;
     const pinnedCount = visiblePrimers.length - predictedCount;
+    const phosphateCount = visiblePrimers.filter(primer => primer.fivePrimePhosphate === true).length;
 
     const legend = document.createElement('div');
     legend.className = 'primer-track-legend';
@@ -1329,6 +1393,9 @@ class TrackRenderer {
     }
     if (mismatchCount > 0) {
       parts.push(`${mismatchCount} with genome differences`);
+    }
+    if (phosphateCount > 0) {
+      parts.push(`${phosphateCount} 5P`);
     }
     legend.textContent = parts.join(' · ');
     trackContent.appendChild(legend);

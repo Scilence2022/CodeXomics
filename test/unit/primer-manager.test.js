@@ -101,14 +101,17 @@ describe('PrimerManager', () => {
     await manager.loadPrimers();
 
     const csv =
-      'name,sequence,fivePrimeTail,tags,notes\nF1,ATGCGCTATC,,cloning|qPCR,first primer\nR1,GATAGCGCAT,,,second';
+      'name,sequence,fivePrimeTail,fivePrimePhosphate,tags,notes\nF1,ATGCGCTATC,,true,cloning|qPCR,first primer\nR1,GATAGCGCAT,,false,,second';
     const imported = await manager.importFromCSV(csv);
     expect(imported).toBe(2);
     expect(manager.primers.size).toBe(2);
+    expect(manager.listPrimers().find(primer => primer.name === 'F1')?.fivePrimePhosphate).toBe(true);
 
     const exported = manager.exportToCSV();
+    expect(exported).toContain('fivePrimePhosphate');
     expect(exported).toContain('F1');
     expect(exported).toContain('ATGCGCTATC');
+    expect(exported).toContain('true');
     expect(exported).toContain('cloning|qPCR');
   });
 
@@ -178,5 +181,23 @@ describe('PrimerManager', () => {
     expect(genomeBrowser.currentAnnotations.chr1).toHaveLength(1);
     expect(genomeBrowser.currentAnnotations.chr1[0].type).toBe('gene');
     expect(genomeBrowser.userDefinedFeatures.chr1.some(f => f.type === 'primer')).toBe(false);
+  });
+
+  it("passes 5' phosphorylation through renderable primer binding sites", async () => {
+    const genomeBrowser = createGenomeBrowser();
+    const sidecar = createSidecar();
+    const manager = new PrimerManager(genomeBrowser, null, sidecar);
+    await manager.loadPrimers();
+
+    await manager.addPrimer({
+      name: 'P1',
+      sequence: 'ATGCGCTATC',
+      fivePrimePhosphate: true,
+      bindingSites: [{ chromosome: 'chr1', start: 3, end: 12, strand: '+' }],
+    });
+
+    const [renderable] = manager.getRenderableBindingSites('chr1');
+    expect(renderable.fivePrimePhosphate).toBe(true);
+    expect(renderable.qualifiers.five_prime_phosphate).toBe(true);
   });
 });

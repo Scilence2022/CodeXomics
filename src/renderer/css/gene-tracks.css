@@ -315,6 +315,10 @@ svg {
   stroke: #4f46e5;
 }
 
+.primer-phosphate-flag {
+  pointer-events: none;
+}
+
 .primer-track-legend {
   position: absolute;
   left: 10px;
