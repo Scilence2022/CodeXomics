@@ -104,6 +104,31 @@ beforeEach(() => {
 });
 
 describe('ActionManager execute_actions sequencing', () => {
+  it('binds the sequence header copy button only once when action buttons are absent at startup', () => {
+    document.body.innerHTML = '<button id="copySequenceHeaderBtn">Copy</button>';
+    const copySequence = vi.fn();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    new ActionManager({
+      currentSequence: {},
+      currentAnnotations: {},
+      currentVariants: {},
+      currentReads: {},
+      sequenceUtils: { copySequence },
+    });
+
+    const clickEvent = new window.Event('click', { bubbles: true, cancelable: true });
+    clickEvent.preventDefault = preventDefault;
+    clickEvent.stopPropagation = stopPropagation;
+    document.getElementById('copySequenceHeaderBtn').dispatchEvent(clickEvent);
+
+    expect(copySequence).toHaveBeenCalledTimes(1);
+    expect(copySequence).toHaveBeenCalledWith(clickEvent);
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
   it('routes file writes and dialogs through preload IPC in the hardened renderer', () => {
     const source = fs.readFileSync(path.join(repoRoot, 'src/renderer/modules/ActionManager.js'), 'utf8');
 
