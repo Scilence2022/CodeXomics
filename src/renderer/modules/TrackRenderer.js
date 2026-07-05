@@ -379,6 +379,19 @@ class TrackRenderer {
     // The ruler selection-mode toggle now lives on the standalone coordinate
     // ruler bar itself — see createCoordinateRulerBar.
 
+    // Base composition button — reads tracks only (single, multi-BAM, legacy).
+    if (trackType === 'reads') {
+      const baseCompBtn = document.createElement('button');
+      baseCompBtn.className = 'track-btn track-base-composition-btn';
+      baseCompBtn.innerHTML = '<i class="fas fa-chart-column"></i>';
+      baseCompBtn.title = 'Base composition at selected position';
+      baseCompBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        this.genomeBrowser.baseCompositionAnalyzer?.open({ fileId, chromosome: this.genomeBrowser.currentChromosome });
+      });
+      buttonsContainer.appendChild(baseCompBtn);
+    }
+
     // Settings button
     const settingsBtn = document.createElement('button');
     settingsBtn.className = 'track-btn track-settings-btn';
@@ -7739,12 +7752,11 @@ class TrackRenderer {
         });
       }
 
-      // Force immediate update by invalidating cache if possible or just calling update
-      // Using requestAnimationFrame to ensure the click event propagates first
-      if (this.genomeBrowser && typeof this.genomeBrowser.updateCurrentView === 'function') {
-        requestAnimationFrame(() => {
-          this.genomeBrowser.updateCurrentView();
-        });
+      // Re-render reads track(s) so coverage/reference bands reflect the toggle (old genomeBrowser.updateCurrentView() never existed → silent no-op).
+      const gb = this.genomeBrowser;
+      if (gb && gb.navigationManager?.updateAlignedReadsTrackOnly) {
+        const chr = gb.currentChromosome;
+        requestAnimationFrame(() => gb.navigationManager.updateAlignedReadsTrackOnly(chr, gb.currentSequence?.[chr]));
       }
     });
 
