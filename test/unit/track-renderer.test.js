@@ -533,7 +533,9 @@ describe('Post-Extraction Consistency', () => {
   it('should be smaller after GeneShapeCreators extraction', () => {
     const content = fs.readFileSync(TR_PATH, 'utf-8');
     const lines = content.split('\n').length;
-    expect(lines).toBeLessThan(16100); // includes primer binding and reads layout logic
+    // Includes primer binding, reads layout logic, and the sequence track
+    // line-height/spacing settings (moved out of the header into this panel).
+    expect(lines).toBeLessThan(16160);
   });
 
   it('should still reference GeneShapeCreators module', () => {

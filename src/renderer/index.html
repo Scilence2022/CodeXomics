@@ -1151,31 +1151,35 @@
                 <div class="sequence-display-section" id="sequenceDisplaySection" style="display: none;">
                     <div id="sequenceDisplay" class="sequence-display">
                         <div class="sequence-header">
-                            <h4 id="sequenceTitle">Sequence View</h4>
+                            <h4 id="sequenceTitle" class="sequence-title">Sequence View</h4>
                             <div class="sequence-controls">
-                                <button id="toggleProteinSequenceBtn" class="btn btn-sm sequence-toggle-btn" title="Show Protein Sequence">
+                                <button id="toggleProteinSequenceBtn" class="track-btn sequence-header-btn" title="Show the translated protein sequence aligned beneath each visible CDS">
                                     <i class="fas fa-dna"></i>
-                                    Protein
+                                    <span>Protein</span>
                                 </button>
-                                <button id="togglePrimerSequenceBtn" class="btn btn-sm sequence-toggle-btn" title="Show Primers">
+                                <button id="togglePrimerSequenceBtn" class="track-btn sequence-header-btn" title="Show primer binding footprints aligned with the DNA sequence">
                                     <i class="fas fa-vial"></i>
-                                    Primers
+                                    <span>Primers</span>
                                 </button>
-                                <button id="toggleComplementaryStrandBtn" class="btn btn-sm sequence-toggle-btn" title="Show Complementary Strand">
+                                <button id="toggleComplementaryStrandBtn" class="track-btn sequence-header-btn" title="Show the reverse-complement strand below the forward sequence">
                                     <i class="fas fa-align-justify"></i>
-                                    Complementary
+                                    <span>Complementary</span>
                                 </button>
-                                <button id="toggleSequenceCopyFormatBtn" class="btn btn-sm sequence-toggle-btn" title="Copy Clean Sequence">
+                                <button id="toggleSequenceCopyFormatBtn" class="track-btn sequence-header-btn" title="Toggle whether Copy exports a clean sequence or FASTA with a header">
                                     <i class="fas fa-file-alt"></i>
-                                    Clean
+                                    <span>Clean</span>
                                 </button>
-                                <button id="sequenceSettingsBtn" class="btn btn-sm" title="Sequence Settings">
+                                <button id="sequenceSettingsBtn" class="track-btn sequence-header-btn" title="Open sequence track settings (colors, indicators, line height &amp; spacing)">
                                     <i class="fas fa-cog"></i>
-                                    Settings
+                                    <span>Settings</span>
                                 </button>
-                                <button id="copySequenceHeaderBtn" class="btn btn-sm">
+                                <button id="copySequenceHeaderBtn" class="track-btn sequence-header-btn" title="Copy the sequence currently in view to the clipboard">
                                     <i class="fas fa-copy"></i>
-                                    Copy
+                                    <span>Copy</span>
+                                </button>
+                                <button id="toggleSequenceCollapseBtn" class="track-btn sequence-header-btn sequence-collapse-btn" title="Collapse the sequence track (keep only the header visible)">
+                                    <i class="fas fa-chevron-down"></i>
+                                    <span>Collapse</span>
                                 </button>
                             </div>
                         </div>

@@ -1223,6 +1223,9 @@ class GenomeBrowser {
     document.getElementById('toggleSequenceCopyFormatBtn')?.addEventListener('click', () => {
       this.sequenceUtils.toggleSequenceCopyFormat();
     });
+    document.getElementById('toggleSequenceCollapseBtn')?.addEventListener('click', () => {
+      this.sequenceUtils.toggleSequenceTrackCollapse();
+    });
 
     // Add click event for selected sequences (both gene and manual)
     document.addEventListener('click', e => {

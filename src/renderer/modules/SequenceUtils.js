@@ -731,7 +731,8 @@ class SequenceUtils {
 
     // Only using view mode - no edit mode functionality
 
-    this.addSequenceDisplayControls();
+    // Line height / spacing controls now live in the sequence track Settings
+    // panel (Indicators tab), so no dynamic header selectors are injected here.
     this.syncSequenceHeaderToggleButtons(this.getSequenceTrackSettings());
 
     // Update CSS variables for line height
@@ -815,8 +816,10 @@ class SequenceUtils {
     const windowSize = viewEnd - viewStart;
     const sequenceLength = this.getSequenceLength(chromosome);
 
+    // Header shows positional coordinates only — the chromosome/sequence name is
+    // intentionally omitted here (it is already shown in the genome navigation bar).
     if (!this.isCircularModeEnabled() || sequenceLength <= 0) {
-      return `${chromosome}:${viewStart + 1}-${viewEnd} (${windowSize} bp)`;
+      return `${viewStart + 1}-${viewEnd} (${windowSize} bp)`;
     }
 
     const segments = this.genomeBrowser.trackRenderer?.getViewportSegments
@@ -824,7 +827,7 @@ class SequenceUtils {
       : this.getViewportDisplaySegments(viewStart, viewEnd, sequenceLength);
     const segmentLabels = segments.map(segment => `${segment.sourceStart + 1}-${segment.sourceEnd}`);
 
-    return `${chromosome}:${segmentLabels.join(' / ')} (${windowSize} bp)`;
+    return `${segmentLabels.join(' / ')} (${windowSize} bp)`;
   }
 
   getLineDisplayLabel(lineStartPos, chromosome = null) {
@@ -910,14 +913,6 @@ class SequenceUtils {
     return segments;
   }
 
-  /**
-   * Add sequence display controls for View Mode
-   */
-  addSequenceDisplayControls() {
-    const sequenceControls = document.querySelector('.sequence-controls') || this.createSequenceControlsContainer();
-    this.addLineHeightSelector(sequenceControls);
-  }
-
   toggleSequenceTrackSetting(settingKey) {
     const trackRenderer = this.genomeBrowser.trackRenderer;
     if (!trackRenderer?.getTrackSettings || !trackRenderer?.saveTrackSettings) return;
@@ -963,15 +958,20 @@ class SequenceUtils {
     toggleButton(
       'toggleProteinSequenceBtn',
       settings.showProteinSequence,
-      'Hide Protein Sequence',
-      'Show Protein Sequence'
+      'Hide the protein translation shown beneath each visible CDS',
+      'Show the translated protein sequence aligned beneath each visible CDS'
     );
-    toggleButton('togglePrimerSequenceBtn', settings.showPrimers, 'Hide Primers', 'Show Primers');
+    toggleButton(
+      'togglePrimerSequenceBtn',
+      settings.showPrimers,
+      'Hide primer binding footprints beneath the sequence',
+      'Show primer binding footprints aligned with the DNA sequence'
+    );
     toggleButton(
       'toggleComplementaryStrandBtn',
       settings.showComplementary,
-      'Hide Complementary Strand',
-      'Show Complementary Strand'
+      'Hide the reverse-complement strand',
+      'Show the reverse-complement strand below the forward sequence'
     );
 
     const copyFormatButton = document.getElementById('toggleSequenceCopyFormatBtn');
@@ -979,10 +979,12 @@ class SequenceUtils {
       const copyAsFasta = settings.copyFormat === 'fasta';
       copyFormatButton.classList.toggle('active', copyAsFasta);
       copyFormatButton.setAttribute('aria-pressed', copyAsFasta.toString());
-      copyFormatButton.title = copyAsFasta ? 'Copy FASTA Format' : 'Copy Clean Sequence';
-      const label = copyFormatButton.querySelector('i')?.nextSibling;
+      copyFormatButton.title = copyAsFasta
+        ? 'Copy format: FASTA (includes a header line). Click to switch to a clean sequence.'
+        : 'Copy format: clean sequence (bases only). Click to switch to FASTA.';
+      const label = copyFormatButton.querySelector('span');
       if (label) {
-        label.textContent = copyAsFasta ? ' FASTA' : ' Clean';
+        label.textContent = copyAsFasta ? 'FASTA' : 'Clean';
       }
     }
   }
@@ -992,6 +994,11 @@ class SequenceUtils {
    */
   updateSequenceLineHeightCSS() {
     const root = document.documentElement;
+
+    // Line height / spacing are configured in the sequence track Settings panel
+    // (Indicators tab). Pull the persisted values so every render path — panel
+    // apply, navigation, resize — reflects the current setting.
+    this.syncLineMetricsFromSettings();
 
     // Remove existing properties first
     root.style.removeProperty('--sequence-line-height');
@@ -1024,182 +1031,89 @@ class SequenceUtils {
   }
 
   /**
-   * Add line height selector to sequence controls
+   * Pull line height / spacing from the persisted sequence track settings into
+   * the live instance fields. These are edited in the Settings panel (Indicators
+   * tab); this keeps every render path in sync with the saved values.
    */
-  addLineHeightSelector(sequenceControls) {
-    // Check if selector already exists
-    if (document.getElementById('sequenceLineHeightSelector')) {
-      return;
+  syncLineMetricsFromSettings() {
+    const settings = this.getSequenceTrackSettings();
+    const lineHeight = Number(settings.lineHeight);
+    if (Number.isFinite(lineHeight) && lineHeight > 0) {
+      this.lineHeight = lineHeight;
     }
-
-    const lineHeightContainer = document.createElement('div');
-    lineHeightContainer.className = 'sequence-line-height-container';
-    lineHeightContainer.style.cssText = `
-            display: inline-flex;
-            align-items: center;
-            margin-left: 10px;
-            gap: 8px;
-        `;
-
-    const label = document.createElement('label');
-    label.textContent = 'Line Height:';
-    label.style.cssText = `
-            font-size: 12px;
-            color: #6c757d;
-            font-weight: 500;
-        `;
-
-    const selector = document.createElement('select');
-    selector.id = 'sequenceLineHeightSelector';
-    selector.className = 'sequence-line-height-select';
-    selector.style.cssText = `
-            padding: 4px 8px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 12px;
-            background-color: white;
-            color: #495057;
-            cursor: pointer;
-            min-width: 80px;
-        `;
-
-    const heightOptions = [
-      { value: 20, text: 'Compact' },
-      { value: 24, text: 'Normal' },
-      { value: 28, text: 'Comfortable' },
-      { value: 32, text: 'Spacious' },
-      { value: 36, text: 'Extra Large' },
-    ];
-
-    heightOptions.forEach(option => {
-      const optionElement = document.createElement('option');
-      optionElement.value = option.value;
-      optionElement.textContent = option.text;
-      optionElement.selected = option.value === this.lineHeight;
-      selector.appendChild(optionElement);
-    });
-
-    selector.addEventListener('change', e => {
-      this.lineHeight = parseInt(e.target.value);
-
-      // Update CSS variables for new line height
-      this.updateSequenceLineHeightCSS();
-
-      // Clear render cache to force re-render with new line height
-      this.clearRenderCache();
-
-      // Re-render the sequence with new line height
-      const chromosome = this.genomeBrowser.currentChromosome;
-      const sequenceData = this.genomeBrowser.currentSequence;
-      if (chromosome && sequenceData && sequenceData[chromosome]) {
-        const sequence = sequenceData[chromosome];
-        this.displayEnhancedSequence(chromosome, sequence);
-      }
-    });
-
-    lineHeightContainer.appendChild(label);
-    lineHeightContainer.appendChild(selector);
-
-    // Add line spacing selector
-    this.addLineSpacingSelector(lineHeightContainer);
-
-    sequenceControls.appendChild(lineHeightContainer);
+    const lineSpacing = Number(settings.lineSpacing);
+    if (Number.isFinite(lineSpacing) && lineSpacing >= 0) {
+      this.lineSpacing = lineSpacing;
+    }
   }
 
   /**
-   * Add line spacing selector to line height container
+   * Collapse/expand the bottom sequence track. When collapsed only the header
+   * bar remains visible; the content area and resize splitter are hidden and the
+   * genome viewer expands to fill the reclaimed space. Toggling again restores
+   * the previous panel/genome sizes.
    */
-  addLineSpacingSelector(lineHeightContainer) {
-    // Check if selector already exists
-    if (document.getElementById('sequenceLineSpacingSelector')) {
-      return;
-    }
+  toggleSequenceTrackCollapse(forceState) {
+    const display = document.getElementById('sequenceDisplay');
+    const section = document.getElementById('sequenceDisplaySection');
+    const splitter = document.getElementById('splitter');
+    const genomeSection = document.getElementById('genomeViewerSection');
+    const button = document.getElementById('toggleSequenceCollapseBtn');
+    if (!display || !section) return;
 
-    const spacingLabel = document.createElement('label');
-    spacingLabel.textContent = 'Spacing:';
-    spacingLabel.style.cssText = `
-            font-size: 12px;
-            color: #6c757d;
-            font-weight: 500;
-            margin-left: 15px;
-        `;
+    const shouldCollapse = typeof forceState === 'boolean' ? forceState : !display.classList.contains('collapsed');
 
-    const spacingSelector = document.createElement('select');
-    spacingSelector.id = 'sequenceLineSpacingSelector';
-    spacingSelector.className = 'sequence-line-spacing-select';
-    spacingSelector.style.cssText = `
-            padding: 4px 8px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 12px;
-            background-color: white;
-            color: #495057;
-            cursor: pointer;
-            min-width: 70px;
-        `;
+    if (shouldCollapse) {
+      // Remember the live layout so we can restore it on expand.
+      this._collapsedLayout = {
+        sectionFlex: section.style.flex,
+        sectionHeight: section.style.height,
+        sectionMinHeight: section.style.minHeight,
+        sectionMaxHeight: section.style.maxHeight,
+        genomeFlex: genomeSection ? genomeSection.style.flex : '',
+        genomeHeight: genomeSection ? genomeSection.style.height : '',
+        genomeMaxHeight: genomeSection ? genomeSection.style.maxHeight : '',
+      };
 
-    const spacingOptions = [
-      { value: 2, text: 'Tight' },
-      { value: 4, text: 'Close' },
-      { value: 6, text: 'Normal' },
-      { value: 8, text: 'Relaxed' },
-      { value: 12, text: 'Loose' },
-      { value: 16, text: 'Wide' },
-    ];
-
-    spacingOptions.forEach(option => {
-      const optionElement = document.createElement('option');
-      optionElement.value = option.value;
-      optionElement.textContent = option.text;
-      optionElement.selected = option.value === this.lineSpacing;
-      spacingSelector.appendChild(optionElement);
-    });
-
-    spacingSelector.addEventListener('change', e => {
-      this.lineSpacing = parseInt(e.target.value);
-
-      // Update CSS variables for new line spacing
-      this.updateSequenceLineHeightCSS();
-
-      // Clear render cache to force re-render with new line spacing
-      this.clearRenderCache();
-
-      // Re-render the sequence with new line spacing
-      const chromosome = this.genomeBrowser.currentChromosome;
-      const sequenceData = this.genomeBrowser.currentSequence;
-      if (chromosome && sequenceData && sequenceData[chromosome]) {
-        const sequence = sequenceData[chromosome];
-        this.displayEnhancedSequence(chromosome, sequence);
+      display.classList.add('collapsed');
+      section.style.flex = '0 0 auto';
+      section.style.height = 'auto';
+      section.style.minHeight = '0';
+      section.style.maxHeight = 'none';
+      if (splitter) splitter.style.display = 'none';
+      if (genomeSection) {
+        genomeSection.style.flex = '1';
+        genomeSection.style.height = 'auto';
+        genomeSection.style.maxHeight = 'none';
       }
-    });
-
-    lineHeightContainer.appendChild(spacingLabel);
-    lineHeightContainer.appendChild(spacingSelector);
-  }
-
-  /**
-   * Create or get sequence controls container
-   */
-  createSequenceControlsContainer() {
-    let sequenceControls = document.querySelector('.sequence-controls');
-    if (!sequenceControls) {
-      sequenceControls = document.createElement('div');
-      sequenceControls.className = 'sequence-controls';
-      sequenceControls.style.cssText = `
-                display: flex;
-                align-items: center;
-                padding: 8px 15px;
-                background-color: #f8f9fa;
-                border-bottom: 1px solid #dee2e6;
-                gap: 10px;
-            `;
-
-      const sequenceDisplay = document.getElementById('sequenceDisplay');
-      if (sequenceDisplay) {
-        sequenceDisplay.insertBefore(sequenceControls, sequenceDisplay.firstChild);
+    } else {
+      display.classList.remove('collapsed');
+      const saved = this._collapsedLayout || {};
+      section.style.flex = saved.sectionFlex || '';
+      section.style.height = saved.sectionHeight || '';
+      section.style.minHeight = saved.sectionMinHeight || '';
+      section.style.maxHeight = saved.sectionMaxHeight || '';
+      if (splitter) splitter.style.display = 'flex';
+      if (genomeSection) {
+        genomeSection.style.flex = saved.genomeFlex || '';
+        genomeSection.style.height = saved.genomeHeight || '';
+        genomeSection.style.maxHeight = saved.genomeMaxHeight || '';
       }
     }
-    return sequenceControls;
+
+    if (button) {
+      const icon = button.querySelector('i');
+      const label = button.querySelector('span');
+      if (icon) icon.className = shouldCollapse ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+      if (label) label.textContent = shouldCollapse ? 'Expand' : 'Collapse';
+      button.setAttribute('aria-expanded', (!shouldCollapse).toString());
+      button.title = shouldCollapse
+        ? 'Expand the sequence track to show the sequence content again'
+        : 'Collapse the sequence track (keep only the header visible)';
+    }
+
+    // Let dependent layouts (canvas widths, virtual scroll) recompute.
+    window.dispatchEvent(new Event('resize'));
   }
 
   /**
