@@ -249,10 +249,10 @@ class UIManager {
     // - From checkbox: use checkbox.checked (already toggled by browser)
     // - Otherwise: toggle the current state
     const shouldShow = fromCheckbox && toggleCheckbox ? toggleCheckbox.checked : !isCurrentlyVisible;
-    return this.setSidebarCollapsed(!shouldShow);
+    return this.setSidebarCollapsed(!shouldShow, { persist: true });
   }
 
-  setSidebarCollapsed(collapsed) {
+  setSidebarCollapsed(collapsed, options = {}) {
     const sidebar = document.getElementById('sidebar');
     const splitter = document.getElementById('sidebarSplitter');
     const mainContent = document.querySelector('.main-content');
@@ -295,6 +295,10 @@ class UIManager {
     // Update all toggle button states
     this.updateToggleButtonStates();
 
+    if (options.persist) {
+      this.persistSidebarVisibility(!collapsed);
+    }
+
     // Trigger a resize event to ensure proper layout adjustment
     window.dispatchEvent(new Event('resize'));
     return true;
@@ -302,6 +306,30 @@ class UIManager {
 
   toggleSidebarFromSplitter() {
     this.toggleSidebar();
+  }
+
+  async applySavedSidebarVisibility() {
+    const configManager = this.genomeBrowser?.configManager;
+    if (configManager?.waitForInitialization) {
+      await configManager.waitForInitialization();
+    } else if (configManager?.waitForInit) {
+      await configManager.waitForInit();
+    }
+
+    const hasConfiguredSidebarVisibility = configManager?.get
+      ? configManager.get('ui.sidebarVisibilityConfigured', false)
+      : false;
+    const sidebarVisible =
+      hasConfiguredSidebarVisibility && configManager?.get ? configManager.get('ui.sidebarVisible', false) : false;
+    this.setSidebarCollapsed(sidebarVisible !== true, { persist: false });
+  }
+
+  persistSidebarVisibility(visible) {
+    const configManager = this.genomeBrowser?.configManager;
+    if (configManager?.set) {
+      configManager.set('ui.sidebarVisible', visible);
+      configManager.set('ui.sidebarVisibilityConfigured', true);
+    }
   }
 
   toggleFeatureFilters() {

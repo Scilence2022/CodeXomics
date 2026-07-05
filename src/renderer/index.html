@@ -517,7 +517,7 @@
             <div class="toolbar-section">
                 <label>Sidebar:</label>
                 <label class="mac-toggle">
-                    <input type="checkbox" id="toggleSidebar" checked>
+                    <input type="checkbox" id="toggleSidebar">
                     <span class="mac-toggle-slider"></span>
                 </label>
             </div>
@@ -848,9 +848,9 @@
         </div>
 
         <!-- Main Content -->
-        <main class="main-content" id="mainContent">
+        <main class="main-content sidebar-collapsed" id="mainContent">
             <!-- Sidebar -->
-            <aside class="sidebar" id="sidebar">
+            <aside class="sidebar collapsed" id="sidebar">
                 <div class="sidebar-section" id="geneDetailsSection" style="display: none;">
                     <div class="section-header">
                         <h3>Gene Details</h3>
@@ -1078,10 +1078,10 @@
             </aside>
 
             <!-- Vertical Splitter for Sidebar Resizing & Toggle -->
-            <div class="sidebar-splitter" id="sidebarSplitter">
+            <div class="sidebar-splitter collapsed" id="sidebarSplitter">
                 <div class="sidebar-splitter-handle">⋮</div>
-                <button class="splitter-toggle-btn" id="splitterToggleBtn" title="Toggle Sidebar">
-                    <i class="fas fa-chevron-left"></i>
+                <button class="splitter-toggle-btn" id="splitterToggleBtn" title="Show Sidebar">
+                    <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
 
