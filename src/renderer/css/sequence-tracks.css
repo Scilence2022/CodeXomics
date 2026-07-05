@@ -748,7 +748,8 @@
 }
 
 /* Collapsed sequence track: keep only the header bar, hide the content. */
-.sequence-display.collapsed .sequence-content {
+.sequence-display.collapsed .sequence-content,
+.sequence-display-section.collapsed #sequenceContent {
   display: none !important;
 }
 
