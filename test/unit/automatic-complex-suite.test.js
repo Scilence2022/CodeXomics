@@ -58,11 +58,12 @@ describe('AutomaticComplexSuite', () => {
       const tests = suite.getTests();
       const testIds = tests.map(t => t.id);
 
-      // Total of 23 tests expected
-      expect(tests.length).toBe(23);
+      // Total of 29 tests expected
+      expect(tests.length).toBe(29);
       expect(testIds).toEqual([
         'file_auto_01',
         'nav_auto_01',
+        'nav_auto_complex_02',
         'analysis_auto_01',
         'analysis_auto_02',
         'analysis_auto_complex_03',
@@ -72,18 +73,23 @@ describe('AutomaticComplexSuite', () => {
         'gel_auto_03',
         'gel_auto_workflow_02',
         'annotation_auto_complex_01',
+        'annotation_auto_complex_02',
         'track_auto_complex_01',
+        'task_auto_complex_01',
         'primer_auto_01',
         'primer_auto_complex_01',
         'primer_auto_complex_02',
         'export_auto_complex_01',
         'export_auto_complex_02',
+        'file_auto_complex_02',
         'ui_auto_01',
         'ui_auto_complex_02',
         'protein_auto_complex_01',
         'protein_auto_complex_02',
         'blast_auto_complex_01',
         'blast_auto_complex_02',
+        'blast_auto_complex_03',
+        'blast_auto_complex_04',
       ]);
 
       // Verify the new complex test cases exist
@@ -98,6 +104,12 @@ describe('AutomaticComplexSuite', () => {
       expect(testIds).toContain('primer_auto_complex_02');
       expect(testIds).toContain('protein_auto_complex_02');
       expect(testIds).toContain('analysis_auto_complex_05');
+      expect(testIds).toContain('nav_auto_complex_02');
+      expect(testIds).toContain('annotation_auto_complex_02');
+      expect(testIds).toContain('task_auto_complex_01');
+      expect(testIds).toContain('file_auto_complex_02');
+      expect(testIds).toContain('blast_auto_complex_03');
+      expect(testIds).toContain('blast_auto_complex_04');
 
       // Verify details of one new test case
       const annotationTest = tests.find(t => t.id === 'annotation_auto_complex_01');
@@ -129,6 +141,25 @@ describe('AutomaticComplexSuite', () => {
         dna: '{get_sequence.sequence}',
         readingFrame: 1,
       });
+
+      const taskLifecycleTest = tests.find(t => t.id === 'task_auto_complex_01');
+      expect(taskLifecycleTest.expectedResult.tool_sequence).toEqual([
+        'clear_tasks',
+        'add_task',
+        'list_tasks',
+        'update_task',
+        'delete_task',
+        'list_tasks',
+      ]);
+
+      const blastLifecycleTest = tests.find(t => t.id === 'blast_auto_complex_03');
+      expect(blastLifecycleTest.expectedResult.tool_sequence).toEqual([
+        'export_current_view_fasta',
+        'blast_create_database',
+        'blast_validate_database',
+        'blast_list_databases',
+        'blast_delete_database',
+      ]);
     });
 
     it('should resolve default directory fallback and build paths correctly', () => {
