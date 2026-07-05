@@ -10447,12 +10447,15 @@ class GenomeBrowser {
       if (sequenceDisplaySection) {
         sequenceDisplaySection.style.display = 'flex';
 
+        const sequenceDisplay = document.getElementById('sequenceDisplay');
+        const isCollapsed =
+          sequenceDisplaySection.classList.contains('collapsed') || sequenceDisplay?.classList.contains('collapsed');
         const panelHeight = this.getBottomSequencePanelHeight();
 
         // Set proper layout properties to ensure it reaches the bottom
-        sequenceDisplaySection.style.height = `${panelHeight}px`;
-        sequenceDisplaySection.style.minHeight = '50px';
-        sequenceDisplaySection.style.maxHeight = '60vh';
+        sequenceDisplaySection.style.height = isCollapsed ? 'auto' : `${panelHeight}px`;
+        sequenceDisplaySection.style.minHeight = isCollapsed ? '0' : '50px';
+        sequenceDisplaySection.style.maxHeight = isCollapsed ? 'none' : '60vh';
         sequenceDisplaySection.style.flex = '0 0 auto'; // Don't grow automatically
         sequenceDisplaySection.style.position = 'relative';
         sequenceDisplaySection.style.bottom = '0';
@@ -10461,7 +10464,10 @@ class GenomeBrowser {
       }
 
       if (splitter) {
-        splitter.style.display = 'flex';
+        const sequenceDisplay = document.getElementById('sequenceDisplay');
+        const isCollapsed =
+          sequenceDisplaySection?.classList.contains('collapsed') || sequenceDisplay?.classList.contains('collapsed');
+        splitter.style.display = isCollapsed ? 'none' : 'flex';
       }
 
       // Adjust genome viewer to make room for bottom panel and ensure proper ordering

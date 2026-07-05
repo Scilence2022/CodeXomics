@@ -715,9 +715,12 @@ class SequenceUtils {
 
     // Show sequence display section and splitter if not already visible
     const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
+    const sequenceDisplay = document.getElementById('sequenceDisplay');
+    const isSequenceCollapsed =
+      sequenceDisplaySection?.classList.contains('collapsed') || sequenceDisplay?.classList.contains('collapsed');
     if (sequenceDisplaySection.style.display === 'none') {
       sequenceDisplaySection.style.display = 'flex';
-      document.getElementById('splitter').style.display = 'flex';
+      document.getElementById('splitter').style.display = isSequenceCollapsed ? 'none' : 'flex';
 
       // Ensure proper initial layout balance
       const genomeViewerSection = document.getElementById('genomeViewerSection');
@@ -727,7 +730,9 @@ class SequenceUtils {
         genomeViewerSection.style.maxHeight = '70%';
       }
     }
-    document.getElementById('sequenceDisplay').style.display = 'flex'; // Ensure content area is visible
+    if (sequenceDisplay) {
+      sequenceDisplay.style.display = 'flex'; // Ensure the header/content wrapper is visible
+    }
 
     // Only using view mode - no edit mode functionality
 
@@ -1076,6 +1081,7 @@ class SequenceUtils {
       };
 
       display.classList.add('collapsed');
+      section.classList.add('collapsed');
       section.style.flex = '0 0 auto';
       section.style.height = 'auto';
       section.style.minHeight = '0';
@@ -1088,6 +1094,7 @@ class SequenceUtils {
       }
     } else {
       display.classList.remove('collapsed');
+      section.classList.remove('collapsed');
       const saved = this._collapsedLayout || {};
       section.style.flex = saved.sectionFlex || '';
       section.style.height = saved.sectionHeight || '';
@@ -1279,7 +1286,7 @@ class SequenceUtils {
     // Reset overflow and height - they will be set properly in render methods
     container.style.removeProperty('overflow');
     container.style.removeProperty('height');
-    container.className = '';
+    container.className = 'sequence-content';
 
     const subsequence = this.getViewportSequence(fullSequence, viewStart, viewEnd, chromosome);
     const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
