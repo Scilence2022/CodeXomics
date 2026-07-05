@@ -66,6 +66,22 @@ describe('codon <-> residue hover association', () => {
     ]);
   });
 
+  it('renders protein rows for lowercase CDS annotations', () => {
+    const lowercaseCds = { ...FWD, type: 'cds' };
+
+    const index = utils.buildLineFeatureIndex([lowercaseCds], 0, 45, 45, 'chr1', {
+      showProteinSequence: true,
+    });
+    expect(index[0].cds).toEqual([lowercaseCds]);
+
+    const rows = utils.createAlignedProteinRows(45, 0, 'chr1', [lowercaseCds], 10, index[0].cds, null);
+    expect(rows).toHaveLength(1);
+    expect(markersOf(rows[0]).map(marker => marker.text)).toEqual(['M', 'K', 'P']);
+
+    const fallbackRows = utils.createAlignedProteinRows(45, 0, 'chr1', [lowercaseCds], 10, null, null);
+    expect(fallbackRows).toHaveLength(1);
+  });
+
   it('tags reverse-strand residues with their codon display positions', () => {
     const rows = utils.createAlignedProteinRows(45, 0, 'chr1', [REV], 10, [REV], null);
     expect(rows).toHaveLength(1);

@@ -1449,8 +1449,19 @@ class SequenceUtils {
 
     const lookup = new Map();
     const lookupPriorities = new Map();
-    const typeOrder = { CDS: 1, mRNA: 2, tRNA: 2, rRNA: 2, promoter: 3, terminator: 3, regulatory: 3, gene: 4 };
-    const relevantAnnotations = annotations.filter(f => this.genomeBrowser.shouldShowGeneType(f.type));
+    const typeOrder = {
+      CDS: 1,
+      cds: 1,
+      protein_coding: 1,
+      mRNA: 2,
+      tRNA: 2,
+      rRNA: 2,
+      promoter: 3,
+      terminator: 3,
+      regulatory: 3,
+      gene: 4,
+    };
+    const relevantAnnotations = annotations.filter(f => this.shouldShowAnnotationType(f));
 
     relevantAnnotations.forEach(annotation => {
       const priority = typeOrder[annotation.type] || 5;
@@ -1545,7 +1556,7 @@ class SequenceUtils {
           const lineFeatures = index[lineIndex];
           lineFeatures.indicators.push(segment);
 
-          if (annotation.type === 'CDS' && settings.showProteinSequence) {
+          if (this.isProteinCodingFeature(annotation) && settings.showProteinSequence) {
             if (!lineFeatures.cds.includes(annotation)) {
               lineFeatures.cds.push(annotation);
             }
@@ -1580,11 +1591,11 @@ class SequenceUtils {
   }
 
   shouldRenderAnnotationInSequence(annotation, settings = {}) {
-    if (!annotation || !this.genomeBrowser.shouldShowGeneType(annotation.type)) return false;
+    if (!annotation || !this.shouldShowAnnotationType(annotation)) return false;
 
     const geneType = (annotation.type || '').toLowerCase();
     if (geneType === 'primer' || geneType === 'primer_bind' || geneType === 'primer_binding') return false;
-    if (geneType === 'cds' && settings.showCDS === false) return false;
+    if (this.isProteinCodingFeature(annotation) && settings.showCDS === false) return false;
     if (['trna', 'rrna', 'mrna'].includes(geneType) && settings.showRNA === false) return false;
     if (geneType === 'promoter' && settings.showPromoter === false) return false;
     if (geneType === 'terminator' && settings.showTerminator === false) return false;
@@ -1592,6 +1603,18 @@ class SequenceUtils {
     if (geneType === 'source' && settings.showSource === false) return false;
 
     return true;
+  }
+
+  shouldShowAnnotationType(annotation) {
+    if (!annotation) return false;
+    if (this.genomeBrowser.shouldShowGeneType?.(annotation.type)) return true;
+    return this.isProteinCodingFeature(annotation) && this.genomeBrowser.shouldShowGeneType?.('CDS') !== false;
+  }
+
+  isProteinCodingFeature(feature) {
+    const type = String(feature?.type || '').toLowerCase();
+    if (type === 'cds' || type === 'protein_coding' || type === 'coding_sequence') return true;
+    return Boolean(this.genomeBrowser.getQualifierValue?.(feature?.qualifiers, 'translation'));
   }
 
   applySequenceSpacingVariables(sequenceSettings = {}) {
@@ -1983,8 +2006,8 @@ class SequenceUtils {
     const cdsFeatures =
       indexedCdsFeatures ||
       annotations.filter(feature => {
-        if (feature.type !== 'CDS') return false;
-        if (!this.genomeBrowser.shouldShowGeneType('CDS')) return false;
+        if (!this.isProteinCodingFeature(feature)) return false;
+        if (!this.shouldShowAnnotationType(feature)) return false;
         return this.featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome);
       });
     const context = renderContext || this.createRenderContext(chromosome);
