@@ -315,6 +315,17 @@ svg {
   stroke: #4f46e5;
 }
 
+.primer-phosphate-flag {
+  fill: #0891b2;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: #ecfeff;
+  stroke-width: 3px;
+}
+
 .primer-track-legend {
   position: absolute;
   left: 10px;

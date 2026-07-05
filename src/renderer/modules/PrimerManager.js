@@ -316,6 +316,7 @@ class PrimerManager {
       existing.sequence = existing.sequence || primer.sequence;
       existing.notes = existing.notes || primer.notes;
       existing.description = existing.notes;
+      existing.fivePrimePhosphate = existing.fivePrimePhosphate || primer.fivePrimePhosphate;
       if (primer.tags?.length) {
         existing.tags = Array.from(new Set([...(existing.tags || []), ...primer.tags]));
       }
@@ -597,6 +598,7 @@ class PrimerManager {
       strand: site.strand,
       color: primer.color,
       description: primer.description || primer.notes,
+      fivePrimePhosphate: primer.fivePrimePhosphate || false,
       mismatches: site.mismatches || [],
       bindingScore: site.bindingScore,
       tm: site.tm,
@@ -608,6 +610,7 @@ class PrimerManager {
         label: primer.name,
         sequence: primer.sequence,
         binding_sequence: site.bindingSequence,
+        five_prime_phosphate: primer.fivePrimePhosphate || false,
         note: primer.description || primer.notes,
       },
     };
@@ -806,15 +809,22 @@ class PrimerManager {
 
   // --- Import / export (Phase 4) ------------------------------------------
 
-  /** Serialize all oligos to a CSV string (name,sequence,tags,notes). */
+  /** Serialize all oligos to a CSV string. */
   exportToCSV() {
     const escape = value => {
       const str = String(value ?? '');
       return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
     };
-    const header = 'name,sequence,fivePrimeTail,tags,notes';
+    const header = 'name,sequence,fivePrimeTail,fivePrimePhosphate,tags,notes';
     const rows = this.listPrimers().map(primer =>
-      [primer.name, primer.sequence, primer.fivePrimeTail || '', (primer.tags || []).join('|'), primer.notes || '']
+      [
+        primer.name,
+        primer.sequence,
+        primer.fivePrimeTail || '',
+        primer.fivePrimePhosphate ? 'true' : 'false',
+        (primer.tags || []).join('|'),
+        primer.notes || '',
+      ]
         .map(escape)
         .join(',')
     );
@@ -881,12 +891,14 @@ class PrimerManager {
       const sequence = hasHeader && col('sequence') >= 0 ? cols[col('sequence')] : cols[1];
       if (!sequence) continue;
       const tailIdx = hasHeader ? col('fiveprimetail') : -1;
+      const phosphateIdx = hasHeader ? col('fiveprimephosphate') : -1;
       const tagsIdx = hasHeader ? col('tags') : -1;
       const notesIdx = hasHeader ? col('notes') : -1;
       await this.addPrimer({
         name: name || undefined,
         sequence,
         fivePrimeTail: tailIdx >= 0 ? cols[tailIdx] : '',
+        fivePrimePhosphate: phosphateIdx >= 0 ? this.parseBoolean(cols[phosphateIdx]) : false,
         tags:
           tagsIdx >= 0 && cols[tagsIdx]
             ? cols[tagsIdx]
@@ -900,6 +912,10 @@ class PrimerManager {
       imported++;
     }
     return imported;
+  }
+
+  parseBoolean(value) {
+    return /^(true|1|yes|y|phosphorylated|5p)$/i.test(String(value || '').trim());
   }
 
   /**

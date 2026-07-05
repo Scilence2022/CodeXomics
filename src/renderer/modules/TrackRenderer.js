@@ -1207,6 +1207,7 @@ class TrackRenderer {
     // Predicted sites are computed in real time; pinned sites are manual/asserted
     // placements. They are rendered with distinct emphasis.
     const isPredicted = primer.origin === 'predicted';
+    const isPhosphorylated = primer.fivePrimePhosphate === true;
     const oligoSequence = this.getPrimerOligoSequence(primer);
     const genomeSequence = this.getPrimerGenomeBindingSequence(primer);
     const mismatchSummary = this.getPrimerMismatchSummary(oligoSequence, genomeSequence);
@@ -1216,7 +1217,9 @@ class TrackRenderer {
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     group.setAttribute(
       'class',
-      `primer-binding-element${isReverse ? ' reverse' : ' forward'}${isPredicted ? ' predicted' : ' pinned'}`
+      `primer-binding-element${isReverse ? ' reverse' : ' forward'}${isPredicted ? ' predicted' : ' pinned'}${
+        isPhosphorylated ? ' phosphorylated' : ''
+      }`
     );
     group.style.cursor = 'pointer';
     if (isPredicted) group.style.opacity = '0.72';
@@ -1259,6 +1262,22 @@ class TrackRenderer {
       });
     }
 
+    if (isPhosphorylated) {
+      const fivePrimeVisible = isReverse ? visibleEnd === primer.end : visibleStart === primer.start;
+      if (fivePrimeVisible) {
+        const flag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        flag.setAttribute('class', 'primer-phosphate-flag');
+        flag.setAttribute(
+          'x',
+          String(Math.max(10, Math.min(containerWidth - 10, isReverse ? x + width - 10 : x + 10)))
+        );
+        flag.setAttribute('y', String(y - 8));
+        flag.setAttribute('text-anchor', 'middle');
+        flag.textContent = '5P';
+        group.appendChild(flag);
+      }
+    }
+
     if (width > 28) {
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       label.setAttribute('x', String(x + width / 2));
@@ -1283,6 +1302,7 @@ class TrackRenderer {
         ? `Mismatches vs genome: ${mismatchSummary.count} at ${mismatchSummary.positions.map(pos => pos + 1).join(', ')}`
         : 'Mismatches vs genome: none detected';
     const originLine = isPredicted ? 'Source: predicted (real-time)' : 'Source: pinned (manual)';
+    const phosphateLine = isPhosphorylated ? "5' modification: phosphorylated" : '';
     const scoreLine = Number.isFinite(primer.bindingScore)
       ? `Binding score: ${primer.bindingScore}${Number.isFinite(primer.tm) ? ` · Tm ${primer.tm}°C` : ''}`
       : '';
@@ -1292,6 +1312,7 @@ class TrackRenderer {
       originLine,
       sequenceLine,
       genomeLine,
+      phosphateLine,
       mismatchLine,
       scoreLine,
     ]
@@ -1315,6 +1336,7 @@ class TrackRenderer {
 
     const predictedCount = visiblePrimers.filter(primer => primer.origin === 'predicted').length;
     const pinnedCount = visiblePrimers.length - predictedCount;
+    const phosphateCount = visiblePrimers.filter(primer => primer.fivePrimePhosphate === true).length;
 
     const legend = document.createElement('div');
     legend.className = 'primer-track-legend';
@@ -1329,6 +1351,9 @@ class TrackRenderer {
     }
     if (mismatchCount > 0) {
       parts.push(`${mismatchCount} with genome differences`);
+    }
+    if (phosphateCount > 0) {
+      parts.push(`${phosphateCount} 5P`);
     }
     legend.textContent = parts.join(' · ');
     trackContent.appendChild(legend);
