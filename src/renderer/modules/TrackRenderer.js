@@ -1265,12 +1265,15 @@ class TrackRenderer {
     if (isPhosphorylated) {
       const fivePrimeVisible = isReverse ? visibleEnd === primer.end : visibleStart === primer.start;
       if (fivePrimeVisible) {
-        const flag = this.createPrimerPhosphateFlag({
-          x: isReverse ? x + width : x,
-          y: y - 19,
-          isReverse,
-          containerWidth,
-        });
+        const flag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        flag.setAttribute('class', 'primer-phosphate-flag');
+        flag.setAttribute(
+          'x',
+          String(Math.max(10, Math.min(containerWidth - 10, isReverse ? x + width - 10 : x + 10)))
+        );
+        flag.setAttribute('y', String(y - 8));
+        flag.setAttribute('text-anchor', 'middle');
+        flag.textContent = '5P';
         group.appendChild(flag);
       }
     }
@@ -1322,51 +1325,6 @@ class TrackRenderer {
     });
 
     return group;
-  }
-
-  createPrimerPhosphateFlag({ x, y, isReverse, containerWidth }) {
-    const ns = 'http://www.w3.org/2000/svg';
-    const flagWidth = 22;
-    const flagHeight = 14;
-    const flagX = Math.max(1, Math.min(containerWidth - flagWidth - 1, isReverse ? x - flagWidth + 2 : x - 2));
-
-    const flag = document.createElementNS(ns, 'g');
-    flag.setAttribute('class', 'primer-phosphate-flag');
-
-    const connector = document.createElementNS(ns, 'line');
-    connector.setAttribute('x1', String(x));
-    connector.setAttribute('x2', String(flagX + flagWidth / 2));
-    connector.setAttribute('y1', String(y + flagHeight + 3));
-    connector.setAttribute('y2', String(y + flagHeight));
-    connector.setAttribute('stroke', '#0891b2');
-    connector.setAttribute('stroke-width', '1.4');
-    connector.setAttribute('vector-effect', 'non-scaling-stroke');
-    flag.appendChild(connector);
-
-    const rect = document.createElementNS(ns, 'rect');
-    rect.setAttribute('x', String(flagX));
-    rect.setAttribute('y', String(y));
-    rect.setAttribute('width', String(flagWidth));
-    rect.setAttribute('height', String(flagHeight));
-    rect.setAttribute('rx', '4');
-    rect.setAttribute('fill', '#0891b2');
-    rect.setAttribute('stroke', '#ecfeff');
-    rect.setAttribute('stroke-width', '1');
-    rect.setAttribute('vector-effect', 'non-scaling-stroke');
-    flag.appendChild(rect);
-
-    const text = document.createElementNS(ns, 'text');
-    text.setAttribute('x', String(flagX + flagWidth / 2));
-    text.setAttribute('y', String(y + 10));
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('font-size', '9');
-    text.setAttribute('font-weight', '700');
-    text.setAttribute('fill', '#ffffff');
-    text.setAttribute('font-family', 'Arial, sans-serif');
-    text.textContent = '5P';
-    flag.appendChild(text);
-
-    return flag;
   }
 
   addPrimerTrackLegend(trackContent, visiblePrimers, layout) {
