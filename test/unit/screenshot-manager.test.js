@@ -193,14 +193,14 @@ describe('ScreenshotManager', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.filePaths).toEqual(['/screenshots/tracks-genes.png', '/screenshots/tracks-sequence.png']);
+    expect(result.filePaths).toEqual(['screenshots/tracks-genes.png', 'screenshots/tracks-sequence.png']);
     expect(manager.captureElementScreenshot).toHaveBeenNthCalledWith(
       1,
       genesTrack,
       expect.objectContaining({
         target: 'track',
         mode: 'full',
-        filePath: '/screenshots/tracks-genes.png',
+        filePath: 'screenshots/tracks-genes.png',
       })
     );
     expect(manager.captureElementScreenshot).toHaveBeenNthCalledWith(
@@ -209,9 +209,30 @@ describe('ScreenshotManager', () => {
       expect.objectContaining({
         target: 'track',
         mode: 'full',
-        filePath: '/screenshots/tracks-sequence.png',
+        filePath: 'screenshots/tracks-sequence.png',
       })
     );
+  });
+
+  it('keeps auto-save default screenshot names relative when the renderer has no writable cwd', async () => {
+    const manager = createManager();
+    manager.captureNativeScreenshot = vi.fn(async options => ({
+      success: true,
+      target: options.target,
+      mode: options.mode,
+      filePath: options.filePath,
+    }));
+
+    const result = await manager.captureScreenshot({
+      target: 'full_application',
+      auto_save: true,
+      aiInitiated: true,
+    });
+
+    expect(result.success).toBe(true);
+    const captureOptions = manager.captureNativeScreenshot.mock.calls[0][0];
+    expect(captureOptions.filePath).toMatch(/^codexomics-full-application-chr1-1-100-\d{8}-\d{6}\.png$/);
+    expect(captureOptions.filePath).not.toMatch(/^(?:\/|[A-Za-z]:[\\/])/);
   });
 
   it('falls back to native visible capture when full track composition is blocked', async () => {

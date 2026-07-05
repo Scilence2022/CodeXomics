@@ -668,6 +668,56 @@ function registerIpcHandlers(deps) {
   const getScreenshotExtension = format => (format === 'jpeg' ? 'jpg' : 'png');
   const getScreenshotMimeType = format => (format === 'jpeg' ? 'image/jpeg' : 'image/png');
 
+  const getDefaultScreenshotDirectory = () => {
+    for (const appPathName of ['downloads', 'documents', 'userData', 'temp']) {
+      try {
+        const basePath = app.getPath(appPathName);
+        if (basePath) {
+          return path.join(basePath, 'CodeXomics Screenshots');
+        }
+      } catch (_) {
+        // Try the next writable Electron app path.
+      }
+    }
+    return path.resolve('CodeXomics Screenshots');
+  };
+
+  const hasScreenshotImageExtension = filePath => /\.(?:png|jpe?g)$/i.test(String(filePath || ''));
+
+  const withScreenshotExtension = (filePath, format) => {
+    if (path.parse(filePath).ext) {
+      return filePath;
+    }
+    return `${filePath}.${getScreenshotExtension(format)}`;
+  };
+
+  const isAbsoluteFilePath = filePath => /^(?:\/|[A-Za-z]:[\\/])/.test(String(filePath || '').trim());
+
+  const resolveRelativeScreenshotPath = requestedPath => {
+    const defaultDirectory = getDefaultScreenshotDirectory();
+    const normalizedRelativePath = String(requestedPath || '')
+      .trim()
+      .replace(/[\\/]+/g, path.sep);
+    const resolvedPath = path.resolve(defaultDirectory, normalizedRelativePath);
+    if (!isSubPathSafe(defaultDirectory, resolvedPath)) {
+      throw new Error('Screenshot path must stay inside the default screenshots directory');
+    }
+    return resolvedPath;
+  };
+
+  const isRootLevelGeneratedScreenshotPath = requestedPath => {
+    const trimmedPath = String(requestedPath || '').trim();
+    if (!isAbsoluteFilePath(trimmedPath) || !hasScreenshotImageExtension(trimmedPath)) {
+      return false;
+    }
+    const parsedPath = path.parse(path.resolve(trimmedPath));
+    return parsedPath.dir === parsedPath.root && /^codexomics-/i.test(parsedPath.base);
+  };
+
+  const shouldRedirectGeneratedRootScreenshot = (requestedPath, options = {}) =>
+    (options.auto_save || options.autoSave || isAiInitiatedRequest(options)) &&
+    isRootLevelGeneratedScreenshotPath(requestedPath);
+
   const shouldReturnScreenshotImageData = options =>
     Boolean(
       options.returnImageData ||
@@ -750,21 +800,32 @@ function registerIpcHandlers(deps) {
       null;
 
     if (explicitPath) {
-      const safeFilePath = resolveIpcFileAccess(String(explicitPath), {
+      const requestedPath = String(explicitPath).trim();
+      const candidatePath = isAbsoluteFilePath(requestedPath)
+        ? shouldRedirectGeneratedRootScreenshot(requestedPath, options)
+          ? path.join(getDefaultScreenshotDirectory(), path.basename(requestedPath))
+          : requestedPath
+        : resolveRelativeScreenshotPath(requestedPath);
+      const safeFilePath = resolveIpcFileAccess(candidatePath, {
         operation: 'write screenshot',
         aiInitiated: options.aiInitiated,
         ai_initiated: options.ai_initiated,
         source: options.source,
       });
-      const parsed = path.parse(safeFilePath);
-      if (!parsed.ext) {
-        return `${safeFilePath}.${getScreenshotExtension(format)}`;
-      }
-      return safeFilePath;
+      return withScreenshotExtension(safeFilePath, format);
     }
 
     if (options.save === false || options.saveFile === false) {
       return null;
+    }
+
+    if (options.auto_save || options.autoSave) {
+      const extension = getScreenshotExtension(format);
+      const defaultFilename = String(options.defaultFilename || `codexomics-screenshot.${extension}`);
+      return withScreenshotExtension(
+        path.join(getDefaultScreenshotDirectory(), path.basename(defaultFilename)),
+        format
+      );
     }
 
     const parentWindow = resolveScreenshotHostWindow(event);
