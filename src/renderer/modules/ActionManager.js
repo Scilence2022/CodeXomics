@@ -573,8 +573,11 @@ class ActionManager {
         console.log('✅ Copy sequence action listener added (Actions dropdown)');
       }
       if (copyHeaderBtn) {
-        copyHeaderBtn.addEventListener('click', event => this.handleSimpleSequenceCopy(event));
-        console.log('✅ Copy sequence header button listener added (Sequence track)');
+        if (copyHeaderBtn.dataset.actionManagerCopyListenerAttached !== 'true') {
+          copyHeaderBtn.addEventListener('click', event => this.handleSimpleSequenceCopy(event));
+          copyHeaderBtn.dataset.actionManagerCopyListenerAttached = 'true';
+          console.log('✅ Copy sequence header button listener added (Sequence track)');
+        }
       }
       if (cutBtn) {
         cutBtn.addEventListener('click', () => this.handleCutSequence());
@@ -617,6 +620,7 @@ class ActionManager {
       // Check if at least one button exists before retrying
       if (
         !document.getElementById('copySequenceBtn') &&
+        !document.getElementById('copySequenceHeaderBtn') &&
         !document.getElementById('cutSequenceBtn') &&
         !document.getElementById('pasteSequenceBtn') &&
         !document.getElementById('deleteSequenceBtn')
@@ -863,6 +867,8 @@ class ActionManager {
    */
   handleSimpleSequenceCopy(event = null) {
     console.log('🔖 [ActionManager] Simple sequence copy - delegating to SequenceUtils');
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
 
     // Delegate to SequenceUtils for simple clipboard copy
     if (this.genomeBrowser && this.genomeBrowser.sequenceUtils) {
