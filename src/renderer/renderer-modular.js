@@ -415,6 +415,9 @@ class GenomeBrowser {
     // Step 1: Setup basic event listeners
     console.log('📝 Setting up event listeners...');
     this.setupEventListeners();
+    this.uiManager.applySavedSidebarVisibility?.().catch(error => {
+      console.error('❌ Failed to apply saved sidebar visibility:', error);
+    });
 
     // Step 2: Setup feature filters
     console.log('🔧 Setting up feature filter listeners...');
