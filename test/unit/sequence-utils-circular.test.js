@@ -60,7 +60,8 @@ describe('SequenceUtils circular bottom sequence track', () => {
     const sequence = utils.genomeBrowser.currentSequence.chr1;
 
     expect(utils.getViewportSequence(sequence, 95, 105, 'chr1')).toBe('TTTTTAAAAA');
-    expect(utils.formatSequenceRange('chr1', 95, 105)).toBe('chr1:96-100 / 1-5 (10 bp)');
+    // The header shows positional coordinates only — the chromosome name is omitted.
+    expect(utils.formatSequenceRange('chr1', 95, 105)).toBe('96-100 / 1-5 (10 bp)');
     expect(utils.getLineDisplayLabel(100, 'chr1')).toBe('1');
   });
 

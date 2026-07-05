@@ -719,6 +719,39 @@
   color: #075985;
 }
 
+/* ------------------------------------------------------------------
+ * Sequence track header buttons
+ * Reuse the .track-btn look from the other track headers, but keep the
+ * text labels (Protein / Primers / …) so the buttons stay self-describing.
+ * .track-btn forces a fixed 24x24 icon-only box, so widen it back out and
+ * lay out icon + label side by side here.
+ * ------------------------------------------------------------------ */
+.sequence-header-btn {
+  width: auto;
+  height: 26px;
+  padding: 0 10px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sequence-header-btn i {
+  font-size: 11px;
+}
+
+.sequence-header-btn.active {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+  color: #075985;
+}
+
+/* Collapsed sequence track: keep only the header bar, hide the content. */
+.sequence-display.collapsed .sequence-content {
+  display: none !important;
+}
+
 .sequence-aligned-row {
   display: flex;
   align-items: center;

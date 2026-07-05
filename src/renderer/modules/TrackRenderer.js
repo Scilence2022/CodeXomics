@@ -12086,6 +12086,8 @@ This action cannot be undone.`;
         showPrimers: false,
         showComplementary: false,
         copyFormat: 'clean',
+        lineHeight: 28, // Vertical height of each sequence line (px)
+        lineSpacing: 8, // Vertical gap between sequence lines (px)
         showStartMarkers: false,
         arrowSize: 12,
       },
@@ -12922,6 +12924,15 @@ This action cannot be undone.`;
         const copyFormatEl = modal.querySelector('#sequenceCopyFormat');
         if (copyFormatEl) settings.copyFormat = copyFormatEl.value === 'fasta' ? 'fasta' : 'clean';
 
+        const lineHeightEl = modal.querySelector('#sequenceLineHeight');
+        if (lineHeightEl) settings.lineHeight = parseInt(lineHeightEl.value) || 28;
+
+        const lineSpacingEl = modal.querySelector('#sequenceLineSpacing');
+        if (lineSpacingEl) {
+          const parsedSpacing = parseInt(lineSpacingEl.value);
+          settings.lineSpacing = Number.isFinite(parsedSpacing) ? parsedSpacing : 8;
+        }
+
         const indicatorHeightEl = modal.querySelector('#sequenceIndicatorHeight');
         if (indicatorHeightEl) settings.indicatorHeight = parseInt(indicatorHeightEl.value) || 8;
 
@@ -13379,6 +13390,17 @@ This action cannot be undone.`;
       if (settings.cursorColor) {
         this.genomeBrowser.sequenceUtils.setCursorColor(settings.cursorColor);
       }
+
+      // Apply line height / spacing (moved here from the header controls). Push
+      // the new values into SequenceUtils and refresh its CSS variables so the
+      // full redraw below renders with the updated line metrics.
+      const seqUtils = this.genomeBrowser.sequenceUtils;
+      if (Number(settings.lineHeight) > 0) seqUtils.lineHeight = Number(settings.lineHeight);
+      if (Number.isFinite(Number(settings.lineSpacing)) && Number(settings.lineSpacing) >= 0) {
+        seqUtils.lineSpacing = Number(settings.lineSpacing);
+      }
+      seqUtils.clearRenderCache?.();
+      seqUtils.updateSequenceLineHeightCSS?.();
 
       this.genomeBrowser.sequenceUtils.syncSequenceHeaderToggleButtons(settings);
 
@@ -13955,6 +13977,33 @@ This action cannot be undone.`;
                             </div>
                         </div>
                         
+                        <div class="settings-section">
+                            <h4>Line Layout</h4>
+                            <div class="form-group">
+                                <label for="sequenceLineHeight">Line height:</label>
+                                <select id="sequenceLineHeight" class="form-select">
+                                    <option value="20">Compact (20px)</option>
+                                    <option value="24">Normal (24px)</option>
+                                    <option value="28">Comfortable (28px)</option>
+                                    <option value="32">Spacious (32px)</option>
+                                    <option value="36">Extra Large (36px)</option>
+                                </select>
+                                <div class="help-text">Vertical height of each sequence line.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sequenceLineSpacing">Line spacing:</label>
+                                <select id="sequenceLineSpacing" class="form-select">
+                                    <option value="2">Tight (2px)</option>
+                                    <option value="4">Close (4px)</option>
+                                    <option value="6">Normal (6px)</option>
+                                    <option value="8">Relaxed (8px)</option>
+                                    <option value="12">Loose (12px)</option>
+                                    <option value="16">Wide (16px)</option>
+                                </select>
+                                <div class="help-text">Vertical gap between adjacent sequence lines.</div>
+                            </div>
+                        </div>
+
                         <div class="settings-section">
                             <h4>Gene Markers</h4>
                             <div class="form-group">
@@ -15459,6 +15508,14 @@ This action cannot be undone.`;
   setupSequenceSettingsEventListeners(bodyElement) {
     const tabButtons = bodyElement.querySelectorAll('.sequence-settings-tabs .tab-button');
     const tabPanels = bodyElement.querySelectorAll('.sequence-settings-tabs .tab-content');
+
+    // Reflect the current line height / spacing in the selects (static options).
+    const seqSettings = this.getTrackSettings('sequence') || {};
+    const seqUtils = this.genomeBrowser?.sequenceUtils;
+    const lineHeightSelect = bodyElement.querySelector('#sequenceLineHeight');
+    if (lineHeightSelect) lineHeightSelect.value = String(seqSettings.lineHeight ?? seqUtils?.lineHeight ?? 28);
+    const lineSpacingSelect = bodyElement.querySelector('#sequenceLineSpacing');
+    if (lineSpacingSelect) lineSpacingSelect.value = String(seqSettings.lineSpacing ?? seqUtils?.lineSpacing ?? 8);
 
     tabButtons.forEach(button => {
       button.addEventListener('click', e => {
