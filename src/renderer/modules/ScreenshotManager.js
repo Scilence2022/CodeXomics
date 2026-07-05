@@ -238,16 +238,33 @@ class ScreenshotManager {
     }
 
     const pathToResolve = String(requestedPath || defaultFilename);
+    if (!requestedPath && (parameters.auto_save || parameters.autoSave)) {
+      return pathToResolve;
+    }
+
     const pathModule = this.getPathModule();
     if (pathModule && typeof pathModule.isAbsolute === 'function' && pathModule.isAbsolute(pathToResolve)) {
       return pathToResolve;
     }
 
-    if (pathModule && typeof pathModule.resolve === 'function') {
-      return pathModule.resolve(this.getCurrentWorkingDirectory(), pathToResolve);
+    const currentWorkingDirectory = this.getCurrentWorkingDirectory();
+    if (this.isFallbackWorkingDirectory(currentWorkingDirectory)) {
+      return pathToResolve;
     }
 
-    return `${this.getCurrentWorkingDirectory().replace(/\/+$/g, '')}/${pathToResolve}`;
+    if (pathModule && typeof pathModule.resolve === 'function') {
+      return pathModule.resolve(currentWorkingDirectory, pathToResolve);
+    }
+
+    return `${currentWorkingDirectory.replace(/\/+$/g, '')}/${pathToResolve}`;
+  }
+
+  isFallbackWorkingDirectory(directory) {
+    const normalized = String(directory || '')
+      .trim()
+      .replace(/\\/g, '/')
+      .replace(/\/+$/g, '');
+    return !normalized || normalized === '.';
   }
 
   getRequestedOutputPath(parameters = {}) {

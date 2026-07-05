@@ -72,6 +72,13 @@ describe('IPC Handlers Module', () => {
     expect(content).toContain('resolveIpcFileAccess(savePath, {');
   });
 
+  it('should save AI auto-screenshots under a writable default directory', () => {
+    expect(content).toContain('getDefaultScreenshotDirectory');
+    expect(content).toContain("path.join(basePath, 'CodeXomics Screenshots')");
+    expect(content).toContain('resolveRelativeScreenshotPath');
+    expect(content).toContain('shouldRedirectGeneratedRootScreenshot');
+  });
+
   it('should expose image opening IPC for saved screenshots', () => {
     expect(content).toContain("ipcMain.handle('open-image-file'");
     expect(content).toContain('assertSupportedImagePath');
