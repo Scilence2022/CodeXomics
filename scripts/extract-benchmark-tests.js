@@ -16,6 +16,7 @@ const suiteFiles = [
 ];
 
 const baseDir = path.resolve(__dirname, '..');
+const outputDir = path.join(baseDir, 'docs/reference/benchmark-suites');
 
 function extractTestsFromFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
@@ -74,6 +75,7 @@ function escapeCSVField(field) {
 
 function main() {
   console.log('Extracting tests from benchmark suite files...\n');
+  fs.mkdirSync(outputDir, { recursive: true });
 
   const summary = [];
 
@@ -117,10 +119,10 @@ function main() {
 
       // Write CSV file - use suite file name as base
       const suiteFileName = path.basename(suiteFile, '.js');
-      const outputPath = path.join(baseDir, `benchmark_${suiteFileName}.csv`);
+      const outputPath = path.join(outputDir, `benchmark_${suiteFileName}.csv`);
       fs.writeFileSync(outputPath, csvLines.join('\n'), 'utf-8');
 
-      console.log(`  ✅ Output: benchmark_${suiteFileName}.csv`);
+      console.log(`  ✅ Output: ${path.relative(baseDir, outputPath)}`);
       console.log(`  📊 Categories: ${sortedCategories.length}\n`);
 
       summary.push({
@@ -144,7 +146,7 @@ function main() {
     console.log(`\n${item.file}:`);
     console.log(`  Tests: ${item.tests}`);
     console.log(`  Categories: ${item.categories}`);
-    console.log(`  File: ${path.basename(item.outputPath)}`);
+    console.log(`  File: ${path.relative(baseDir, item.outputPath)}`);
     totalTests += item.tests;
   }
 
