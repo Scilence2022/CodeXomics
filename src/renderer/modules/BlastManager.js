@@ -636,9 +636,25 @@ class BlastManager {
         throw new Error('Database not found');
       }
 
-      // Delete database files
-      const dbPath = this.config.localDatabases.get(dbName).path;
-      await this.runCommand(`rm -f ${dbPath}/${dbName}.*`);
+      const path = this.getPathModule();
+      const dbInfo = this.config.localDatabases.get(dbName);
+      const dbBasePath = dbInfo.dbPath || path.join(dbInfo.path, dbInfo.name || dbName);
+      const dbType = dbInfo.type === 'blastp' || dbInfo.type === 'prot' ? 'prot' : 'nucl';
+      const extensions =
+        dbType === 'prot'
+          ? ['.pdb', '.phr', '.pin', '.pog', '.pos', '.pot', '.psq', '.ptf', '.pto']
+          : ['.ndb', '.nhr', '.nin', '.nog', '.nos', '.not', '.nsq', '.ntf', '.nto'];
+
+      if (typeof window === 'undefined' || !window.electronAPI?.deletePhysicalFile) {
+        throw new Error('Main-process file delete API is unavailable');
+      }
+
+      for (const ext of extensions) {
+        const deleteResult = await window.electronAPI.deletePhysicalFile(dbBasePath + ext);
+        if (deleteResult && deleteResult.success === false) {
+          console.warn(`BlastManager: Could not delete database file ${dbBasePath + ext}: ${deleteResult.error}`);
+        }
+      }
 
       // Remove from local databases map
       this.config.localDatabases.delete(dbName);
