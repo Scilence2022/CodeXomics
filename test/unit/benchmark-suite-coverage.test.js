@@ -29,6 +29,14 @@ const BUILTIN_TOOL_EXEMPTIONS = {
   batch_blast_search: 'Legacy alias of blast_search_batch; both share the blastSearchBatch method.',
   blast_search_batch:
     'Batch BLAST network orchestration; single-call BLAST behavior is covered by blast_search (blast_auto_03). Dropped from the automatic simple suite to avoid slow, network-dependent duplicate runs.',
+  // MCP agent-mode window management tools dropped from the automatic simple suite.
+  list_genome_windows:
+    'MCP agent-mode window-management tool; has no evaluable single-window behavior in the standard automatic benchmark flow.',
+  switch_active_window:
+    'MCP agent-mode window-management tool; the removed test relied on a placeholder windowId and was not evaluable in the standard automatic benchmark flow.',
+  // Specialized track toggle dropped from the automatic simple suite.
+  toggle_annotation_track:
+    'Specialized annotation-track toggle; the generic toggle_track pattern stays covered by the track_auto_* tests.',
 };
 
 function loadSuites() {
