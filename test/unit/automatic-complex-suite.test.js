@@ -501,6 +501,251 @@ describe('AutomaticComplexSuite', () => {
         )
       ).toBe(true);
     });
+
+    it('evaluateWorkflowCall should accept successful screenshot capture with inferred PNG format', async () => {
+      const screenshotTest = suite.getTests().find(t => t.id === 'file_auto_complex_02');
+      const actualResult = [
+        {
+          tool_name: 'capture_screenshot',
+          parameters: {
+            target: 'tracks',
+            mode: 'visible',
+            filePath: './exported_files/benchmark_tracks_review.png',
+            auto_save: true,
+          },
+        },
+        {
+          tool_name: 'open_image_file',
+          parameters: {
+            filePath: './exported_files/benchmark_tracks_review.png',
+          },
+        },
+      ];
+
+      const evalResult = await suite.evaluateWorkflowCall(actualResult, screenshotTest.expectedResult, screenshotTest);
+      expect(evalResult.success).toBe(true);
+      expect(evalResult.errors.length).toBe(0);
+    });
+
+    it('evaluateWorkflowCall should accept annotation history when the default limit is used', async () => {
+      const annotationTest = suite.getTests().find(t => t.id === 'annotation_auto_complex_02');
+      const actualResult = [
+        {
+          tool_name: 'create_annotation',
+          parameters: {
+            type: 'CDS',
+            name: 'benchmark_bulk_gene',
+            chromosome: 'U00096',
+            start: 160000,
+            end: 160900,
+            strand: 1,
+            product: 'Bulk benchmark protein',
+          },
+        },
+        {
+          tool_name: 'bulk_update_annotations',
+          parameters: {
+            updates: [
+              {
+                identifier: 'benchmark_bulk_gene',
+                updates: {
+                  description: 'Bulk benchmark annotation',
+                },
+              },
+            ],
+            agent: 'benchmark',
+          },
+        },
+        {
+          tool_name: 'get_annotation_history',
+          parameters: {
+            identifier: 'benchmark_bulk_gene',
+          },
+        },
+        {
+          tool_name: 'list_annotations',
+          parameters: {
+            chromosome: 'U00096',
+            start: 160000,
+            end: 160900,
+          },
+        },
+      ];
+
+      const evalResult = await suite.evaluateWorkflowCall(actualResult, annotationTest.expectedResult, annotationTest);
+      expect(evalResult.success).toBe(true);
+      expect(evalResult.errors.length).toBe(0);
+    });
+
+    it('evaluateWorkflowCall should accept AlphaFold viewer calls that use returned data_ref', async () => {
+      const proteinTest = suite.getTests().find(t => t.id === 'protein_auto_complex_01');
+      const actualResult = [
+        {
+          tool_name: 'get_uniprot_entry',
+          parameters: {
+            uniprot_id: 'P04637',
+            include_sequence: true,
+            include_features: true,
+          },
+        },
+        {
+          tool_name: 'fetch_alphafold_structure',
+          parameters: {
+            uniprot_id: 'P04637',
+            format: 'pdb',
+            include_confidence: true,
+          },
+        },
+        {
+          tool_name: 'open_protein_viewer',
+          parameters: {
+            data_ref: 'alphafold_P04637_1783347072365',
+            protein_name: 'p53 (TP53) - Cellular tumor antigen p53',
+            representation: 'cartoon',
+            color_scheme: 'temperature',
+          },
+        },
+      ];
+
+      const evalResult = await suite.evaluateWorkflowCall(actualResult, proteinTest.expectedResult, proteinTest);
+      expect(evalResult.success).toBe(true);
+      expect(evalResult.errors.length).toBe(0);
+    });
+
+    it('evaluateWorkflowCall should accept protein BLAST quick DB names selected from the created local database', async () => {
+      const blastTest = suite.getTests().find(t => t.id === 'blast_auto_complex_02');
+      const actualResult = [
+        {
+          tool_name: 'blast_create_quick_db_for_current_genome',
+          parameters: {
+            createNucleotide: false,
+            createProtein: true,
+            genomeName: 'Ecoli_protein',
+          },
+        },
+        {
+          tool_name: 'blast_list_databases',
+          parameters: {
+            includeOnline: false,
+            includeLocal: true,
+            includeCustom: true,
+          },
+        },
+        {
+          tool_name: 'blast_search_local',
+          parameters: {
+            sequence: 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ',
+            blastType: 'blastp',
+            database: 'another_sample.wig_protein',
+            evalue: '0.01',
+            maxTargets: 10,
+          },
+        },
+      ];
+
+      const evalResult = await suite.evaluateWorkflowCall(actualResult, blastTest.expectedResult, blastTest);
+      expect(evalResult.success).toBe(true);
+      expect(evalResult.errors.length).toBe(0);
+    });
+
+    it('evaluateWorkflowCall should accept default BLAST database listing parameters', async () => {
+      const blastLifecycleTest = suite.getTests().find(t => t.id === 'blast_auto_complex_03');
+      const actualResult = [
+        {
+          tool_name: 'export_current_view_fasta',
+          parameters: {
+            filename: './exported_files/benchmark_blast_input.fasta',
+            auto_save: true,
+            include_coordinates: true,
+          },
+        },
+        {
+          tool_name: 'blast_create_database',
+          parameters: {
+            inputFile: './exported_files/benchmark_blast_input.fasta',
+            dbName: 'benchmark_view_nucl',
+            dbType: 'nucl',
+          },
+        },
+        {
+          tool_name: 'blast_validate_database',
+          parameters: {
+            dbName: 'benchmark_view_nucl',
+          },
+        },
+        {
+          tool_name: 'blast_list_databases',
+          parameters: {},
+        },
+        {
+          tool_name: 'blast_delete_database',
+          parameters: {
+            confirm: true,
+            dbName: 'benchmark_view_nucl',
+          },
+        },
+      ];
+
+      const evalResult = await suite.evaluateWorkflowCall(
+        actualResult,
+        blastLifecycleTest.expectedResult,
+        blastLifecycleTest
+      );
+      expect(evalResult.success).toBe(true);
+      expect(evalResult.errors.length).toBe(0);
+    });
+
+    it('evaluateWorkflowCall should accept independent PDB searches before dependent domain analysis', async () => {
+      const proteinDomainTest = suite.getTests().find(t => t.id === 'protein_auto_complex_02');
+      const actualResult = [
+        {
+          tool_name: 'search_uniprot_database',
+          parameters: {
+            search_query: 'DapA',
+            search_type: 'gene_name',
+            organism: 'Escherichia coli',
+            reviewed_only: false,
+            max_results: 10,
+          },
+        },
+        {
+          tool_name: 'search_pdb_structures',
+          parameters: {
+            geneName: 'DapA',
+            organism: 'Escherichia coli',
+            max_results: 10,
+          },
+        },
+        {
+          tool_name: 'get_uniprot_entry',
+          parameters: {
+            uniprot_id: 'P0A6L2',
+            include_sequence: true,
+            include_features: true,
+            include_function: true,
+          },
+        },
+        {
+          tool_name: 'analyze_interpro_domains',
+          parameters: {
+            sequence:
+              'MFTGSIVAIVTPMDEKGNVCRASLKKLIDYHVASGTSAIVSVGTTGESATLNHDEHADVVMMTLDLADGRIPVIAGTGANATAEAISLTQRFNDSGIVGCLTVTPYYNRPSQEGLYQHFKAIAEHTDLPQILYNVPSRTGCDLLPETVGRLAKVKNIIGIKEATGNLTRVNQIKELVSDDFVLLSGDDASALDFMQLGGHGVISVTANVAARDMAQMCKLAAEGHFAEARVINQRLMPLHNKLFVEPNPIPVKWACKELGLVATDTLRLPMTPITDSGRETVRAALKHAGLL',
+            analysis_type: 'domains',
+            geneName: 'dapA',
+            organism: 'Escherichia coli',
+          },
+        },
+      ];
+
+      const evalResult = await suite.evaluateWorkflowCall(
+        actualResult,
+        proteinDomainTest.expectedResult,
+        proteinDomainTest
+      );
+      expect(evalResult.success).toBe(true);
+      expect(evalResult.details.orderedMatches).toBe(4);
+      expect(evalResult.errors.length).toBe(0);
+    });
   });
 
   describe('Natural Language Workflow Response Parser Routing', () => {

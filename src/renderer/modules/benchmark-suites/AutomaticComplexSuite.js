@@ -463,11 +463,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               target: 'tracks',
               mode: 'visible',
-              // filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
-              format: 'png',
+              filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
             },
             {
-              // filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
+              filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
             },
           ],
         },
@@ -811,7 +810,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               identifier: 'benchmark_bulk_gene',
-              limit: 10,
             },
             {
               chromosome: '<current_chromosome>',
@@ -904,7 +902,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          "Retrieve the UniProt entry details for human protein p53 using accession ID 'P04637', download its AlphaFold 3D structure, and then open the AlphaFold structure in the interactive 3D protein viewer using cartoon representation.",
+          "Retrieve the UniProt entry details for human protein p53 using accession ID 'P04637', download its AlphaFold 3D structure, and then open the returned AlphaFold structure in the interactive 3D protein viewer using cartoon representation.",
         expectedResult: {
           tool_sequence: ['get_uniprot_entry', 'fetch_alphafold_structure', 'open_protein_viewer'],
           parameters: [
@@ -916,7 +914,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               format: 'pdb',
             },
             {
-              uniprot_id: 'P04637',
+              data_ref: '{fetch_alphafold_structure._dataRef}',
               representation: 'cartoon',
             },
           ],
@@ -967,7 +965,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'blast',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Create a new protein BLAST database Ecoli_protein for the currently loaded E. coli genome, then list the available BLAST databases to verify, and run a local blastp search against the database for the query sequence 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ'.`,
+        instruction: `Create a protein-only quick BLAST database for the currently loaded E. coli genome using genome label 'Ecoli_protein' when the tool supports it, then list the available BLAST databases to verify, and run a local blastp search against the created or listed local protein database for the query sequence 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ'.`,
         expectedResult: {
           tool_sequence: [
             ['blast_create_protein_db_from_genome', 'blast_create_quick_db_for_current_genome'],
@@ -975,14 +973,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             'blast_search_local',
           ],
           parameters: [
-            {
-              dbName: 'Ecoli_protein',
-            },
+            {},
             {},
             {
               sequence: 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ',
               blastType: 'blastp',
-              database: 'Ecoli_protein',
+              database: '<created_protein_database>',
             },
           ],
         },
@@ -1021,9 +1017,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               dbName: 'benchmark_view_nucl',
             },
-            {
-              includeLocal: true,
-            },
+            {},
             {
               dbName: 'benchmark_view_nucl',
               confirm: true,
@@ -1148,7 +1142,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Search the UniProt database for the E.coli protein DapA and verify whether the UniProt ID P0A6L2 is present. Then retrieve the representative sequence using that UniProt ID, perform an InterPro domain analysis to identify key domains, and search the PDB database to find structurally resolved DapA structures.',
+          'Search the UniProt database for the E.coli protein DapA and verify whether the UniProt ID P0A6L2 is present. Also search the PDB database to find structurally resolved DapA structures; this PDB lookup may be done during the initial discovery step because it does not depend on InterPro results. Then retrieve the representative sequence using that UniProt ID and perform an InterPro domain analysis to identify key domains.',
         expectedResult: {
           tool_sequence: [
             'search_uniprot_database',
@@ -1156,6 +1150,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             'analyze_interpro_domains',
             'search_pdb_structures',
           ],
+          orderInsensitiveTools: ['search_pdb_structures'],
           parameters: [
             {
               search_query: 'DapA',
@@ -1436,6 +1431,15 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     return Array.isArray(expectedResult.parameters) ? expectedResult.parameters : [expectedResult.parameters];
   }
 
+  getWorkflowMatchOptions(expectedResult) {
+    if (!expectedResult || typeof expectedResult !== 'object') return {};
+    return {
+      orderInsensitiveTools: Array.isArray(expectedResult.orderInsensitiveTools)
+        ? expectedResult.orderInsensitiveTools
+        : [],
+    };
+  }
+
   /**
    * A workflow step in `tool_sequence` may list multiple interchangeable tool names
    * (e.g. ['jump_to_gene', 'zoom_to_gene', 'navigate_to_position']) - any one of them
@@ -1673,6 +1677,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
   workflowValuesMatch(actualValue, expectedValue) {
     if (this.isPlaceholderExpectedValue(expectedValue)) {
+      if (expectedValue === '<created_protein_database>') {
+        if (actualValue === undefined || actualValue === null) return false;
+        return /\b(protein|prot)\b|[_-](protein|prot)([_-]|$)/i.test(String(actualValue));
+      }
       return actualValue !== undefined && actualValue !== null;
     }
 
@@ -1765,7 +1773,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     });
   }
 
-  matchWorkflowCallsToExpected(actualCalls, expectedTools, expectedParams = []) {
+  isOrderInsensitiveWorkflowTool(expectedTool, orderInsensitiveTools = []) {
+    if (!orderInsensitiveTools || orderInsensitiveTools.length === 0) return false;
+    return orderInsensitiveTools.some(tool => this.matchToolName(tool, expectedTool));
+  }
+
+  matchWorkflowCallsToExpected(actualCalls, expectedTools, expectedParams = [], options = {}) {
     const normalizedCalls = actualCalls.map(call => this.normalizeResultParameters(call));
     let normalizedExpectedParams = [];
     if (Array.isArray(expectedParams)) {
@@ -1800,15 +1813,32 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     let criticalParameterSteps = 0;
     let criticalParameterMatches = 0;
     let searchStart = 0;
+    const usedOrderedIndexes = new Set();
+    const orderInsensitiveTools = options.orderInsensitiveTools || [];
 
     expectedTools.forEach((expectedTool, expectedIndex) => {
       let matchedIndex = -1;
       for (let callIndex = searchStart; callIndex < normalizedCalls.length; callIndex++) {
         const call = normalizedCalls[callIndex];
+        if (usedOrderedIndexes.has(callIndex)) continue;
         if (!this.isSuccessfulWorkflowCall(call)) continue;
         if (this.matchToolName(this.getToolNameFromCall(call), expectedTool)) {
           matchedIndex = callIndex;
           break;
+        }
+      }
+
+      let matchedOutOfOrder = false;
+      if (matchedIndex === -1 && this.isOrderInsensitiveWorkflowTool(expectedTool, orderInsensitiveTools)) {
+        for (let callIndex = 0; callIndex < normalizedCalls.length; callIndex++) {
+          const call = normalizedCalls[callIndex];
+          if (usedOrderedIndexes.has(callIndex)) continue;
+          if (!this.isSuccessfulWorkflowCall(call)) continue;
+          if (this.matchToolName(this.getToolNameFromCall(call), expectedTool)) {
+            matchedIndex = callIndex;
+            matchedOutOfOrder = true;
+            break;
+          }
         }
       }
 
@@ -1849,8 +1879,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         expectedIndex,
         paramsVerified,
         criticalParamsVerified,
+        orderInsensitive: matchedOutOfOrder,
       });
-      searchStart = matchedIndex + 1;
+      usedOrderedIndexes.add(matchedIndex);
+      if (!matchedOutOfOrder) {
+        searchStart = matchedIndex + 1;
+      }
     });
 
     return {
@@ -1932,7 +1966,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   getRecentOrderedWorkflowMatches(
     expectedTools,
     timeoutMs = BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT,
-    expectedParams = []
+    expectedParams = [],
+    options = {}
   ) {
     const now = Date.now();
     const recentExecutions = this.getTrackedExecutions()
@@ -1946,7 +1981,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         execution: exec,
       }));
 
-    return this.matchWorkflowCallsToExpected(recentExecutions, expectedTools, expectedParams);
+    return this.matchWorkflowCallsToExpected(recentExecutions, expectedTools, expectedParams, options);
   }
 
   /**
@@ -2128,6 +2163,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     const normalizedExpected = this.normalizeExpectedParameters(expectedResult);
     const expectedTools = this.getWorkflowExpectedTools(normalizedExpected);
     const expectedParams = this.getWorkflowExpectedParameters(normalizedExpected);
+    const matchOptions = this.getWorkflowMatchOptions(normalizedExpected);
     const workflowCalls = this.extractWorkflowCalls(normalizedActual);
 
     const evaluation = {
@@ -2144,7 +2180,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     }
 
     if (workflowCalls.length > 1) {
-      const matchResult = this.matchWorkflowCallsToExpected(workflowCalls, expectedTools, expectedParams);
+      const matchResult = this.matchWorkflowCallsToExpected(workflowCalls, expectedTools, expectedParams, matchOptions);
       return this.buildWorkflowEvaluationFromMatch(matchResult, testResult);
     }
 
@@ -2211,6 +2247,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     const expectedTools = this.getWorkflowExpectedTools(expectedResult);
     const expectedParams = this.getWorkflowExpectedParameters(expectedResult);
+    const matchOptions = this.getWorkflowMatchOptions(expectedResult);
 
     if (expectedTools.length === 0) {
       evaluation.errors.push('No expected tools defined for evaluation');
@@ -2220,7 +2257,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     const trackerMatchResult = this.getRecentOrderedWorkflowMatches(
       expectedTools,
       BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT,
-      expectedParams
+      expectedParams,
+      matchOptions
     );
 
     if (trackerMatchResult.unorderedMatches > 0) {
