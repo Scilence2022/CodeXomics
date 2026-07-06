@@ -6347,6 +6347,17 @@ class GenomeBrowser {
       generalTabHtml = renderTabEmptyState('No general annotation qualifiers available.');
     }
 
+    // ---------------- GO Tab ----------------
+    const goTabHtml = functionAttributesHtml || renderTabEmptyState('No GO annotations available for this gene.');
+
+    // ---------------- EC Tab ----------------
+    const ecTabHtml =
+      ecAttributesHtml || renderTabEmptyState('No Enzyme Commission annotations available for this gene.');
+
+    // ---------------- Pathways Tab ----------------
+    const pathwaysTabHtml =
+      pathwayAttributesHtml || renderTabEmptyState('No pathway, KEGG, or KO annotations available for this gene.');
+
     // ---------------- Sequence Tab ----------------
     let sequenceTabHtml = '';
     if (fullSequence) {
@@ -6407,9 +6418,9 @@ class GenomeBrowser {
 
     const geneTabs = [
       { id: 'general', label: 'General', content: generalTabHtml },
-      ...(functionAttributesHtml ? [{ id: 'go', label: 'GO', content: functionAttributesHtml }] : []),
-      ...(ecAttributesHtml ? [{ id: 'ec', label: 'EC', content: ecAttributesHtml }] : []),
-      ...(pathwayAttributesHtml ? [{ id: 'pathways', label: 'Pathways', content: pathwayAttributesHtml }] : []),
+      { id: 'go', label: 'GO', content: goTabHtml },
+      { id: 'ec', label: 'EC', content: ecTabHtml },
+      { id: 'pathways', label: 'Pathways', content: pathwaysTabHtml },
       { id: 'sequence', label: 'Sequence', content: sequenceTabHtml },
       { id: 'notes', label: 'Notes', content: notesTabHtml },
       { id: 'resources', label: 'Resources', content: resourcesTabHtml },
