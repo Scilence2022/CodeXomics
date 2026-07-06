@@ -5,6 +5,7 @@ import vm from 'vm';
 
 const ROOT = process.cwd();
 const SUITE_DIR = path.join(ROOT, 'src/renderer/modules/benchmark-suites');
+const BENCHMARK_CSV_DIR = path.join(ROOT, 'docs/reference/benchmark-suites');
 const SUITE_FILES = [
   'BenchmarkEvaluatorBase.js',
   'AutomaticSimpleSuite.js',
@@ -149,7 +150,7 @@ describe('benchmark suite coverage', () => {
         .getTests()
         .map(test => test.id)
         .sort();
-      const csvIds = parseCsvIds(path.join(ROOT, csvFile)).sort();
+      const csvIds = parseCsvIds(path.join(BENCHMARK_CSV_DIR, csvFile)).sort();
 
       expect(csvIds, `${csvFile} IDs`).toEqual(suiteIds);
     }
