@@ -15,14 +15,9 @@ benchmark,bench_auto_01,Open Benchmark Interface,Open the benchmark interface wi
 benchmark,bench_auto_02,Get Benchmark Status,Get the current benchmark system status.
 blast,blast_auto_01,BLAST Get Installation Status,Check if BLAST is installed and available on the system.
 blast,blast_auto_02,List BLAST Databases,List all available BLAST databases.
-blast,blast_auto_03,Get BLAST Databases Alias,Get the available BLAST databases using get_blast_databases.
-blast,blast_auto_04,Detect BLAST Sequence Type,"Detect whether sequence ATGCGATCGATCG is DNA, RNA, or protein."
-blast,blast_auto_05,Create BLAST Database Quick,Create a BLAST database from the current genome.
-blast,blast_auto_06,Online BLAST Search,Run a BLAST nucleotide search for sequence ATGAAAGCGCTGAAAGCGCTG against the nt database with max 5 targets.
-blast,blast_auto_07,BLAST Current Region,Run BLAST for the current genomic region from 100000 to 100400 against the nt database using blast_sequence_from_region.
-blast,blast_auto_08,Batch BLAST Alias,Run batch_blast_search for two short DNA sequences against nt using blastn with max 5 targets.
-blast,blast_auto_09,Advanced BLAST Alias,Run advanced_blast_search for sequence ATGAAAGCGCTGAAAGCGCTG using blastn against nt with min identity 95 and max e-value 1e-5.
-blast,blast_auto_10,Batch BLAST Canonical,Run blast_search_batch for sequences ATGCGATCGATCG and GGATCCGAATTC using blastn against nt.
+blast,blast_auto_03,Create BLAST Database Quick,Create a BLAST database from the current genome.
+blast,blast_auto_04,Online BLAST Search,Run a BLAST nucleotide search for sequence ATGAAAGCGCTGAAAGCGCTG against the nt database with max 5 targets.
+blast,blast_auto_05,BLAST Current Region,Run BLAST for the current genomic region from 100000 to 100400 against the nt database using blast_sequence_from_region.
 data_loading,load_auto_01,Load Genome File Path,Load genome file ${this.buildFilePath('ECOLI.gbk')}
 data_loading,load_auto_02,Load BED Annotation File,Load BED annotation file ${this.buildFilePath('CHOPCHOP-Design.bed')}
 data_loading,load_auto_03,Load Aligned Reads File,Load aligned reads file ${this.buildFilePath('1655_C10.sorted.bam')}
@@ -68,7 +63,7 @@ navigation,nav_auto_16,Remove Highlight by Coordinates,Remove the highlight span
 navigation,nav_auto_17,Clear Highlights,Clear all highlighted regions from the active tab.
 navigation,nav_auto_18,Save View State,"Save the current genome browser view state as ""benchmark smoke view""."
 navigation,nav_auto_19,Restore View State,"Restore the saved genome browser view state named ""benchmark smoke view""."
-navigation,nav_auto_20,Bookmark Position,"Bookmark the region 120000 to 121000 as ""benchmark bookmark""."
+navigation,nav_auto_20,Bookmark Position,"Bookmark the region 120000 to 121000 as ""Test bookmark""."
 navigation,nav_auto_24,Get Bookmarks,List all saved bookmarks and saved view states.
 navigation,nav_auto_21,List Genome Windows,List all open genome browser windows.
 navigation,nav_auto_22,Switch Active Window,Switch focus to the active genome browser window using switch_active_window with the current window id.
@@ -82,9 +77,8 @@ restriction,seq_auto_08,List DNA Markers,List DNA markers from Takara.
 restriction,seq_auto_09,Get DNA Marker Info,Get detailed band information for the Takara DL2000 DNA marker.
 restriction,restrict_auto_01,Virtual Digest,Perform a virtual restriction digest with EcoRI and HindIII enzymes using sequence ACGGACAAATTGACCTCCCTTCGTCAGTACACCACCGTAGTGGCCGACACTGGGGACATCGCGGCAATGAAGCTGTATCAACCGCAGGATGCCACAACCAACCCTTCTCTCATTCTTAACGCAGCGCAGATTCCGGAATACCGTAAGTTGATTGATGATGCTGTCGCCTGGGCGAAACAGCAGAGCAACGATCGCGCGCAGCAGATCGTGGACGCGACCGACAAACTGGCAGTAAATATTGGTCTGGAAATCCTGAAACTGGTTCCGGGCCGTATCTCAACTGAAGTTGATGCGCGTCTTTCCTATGACACCGAAGCGTCAATTGCGAAAGCAAAACGCCTGATCAAACTCTACAACGATGCTGGTATTAGCAACGATCGTATTCTGATCAAACTGGCTTCTACCTGGCAGGGTATCCGTGCTGCAGAACAGCTGGAAAAAGAAGGCATCAACTGTAACCTGACCCTGCTGTTCTCCTTCGCTCAGGCTCGTGCTTGTGCGGAAGCGGGCGTGTTCCTGATCTCGCCGTTTGTTGGCCGTATTCTTGACTGGTACAAAGCGAATACCGATAAGAAAGAGTACGCTCCGGCAGAAGATCCGGGCGTGGTTTCTGTATCTGAAATCTACCAGTACTACAAAGAGCACGGTTATGAAACCGTGGTTATGGGCGCAAGCTTCCGTAACATCGGCGAAATTCTGGAACTGGCAGGCTGCGACCGTCTGACCATCGCACCGGCACTGCTGAAAGAGCTGGCGGAGAGCGAAGGGGCTATCGAACGTAAACTGTCTTACACCGGCGAAGTGAAAGCGCGTCCGGCGCGTATCACTGAGTCCGAGTTCCTGTGGCAGCACAACCAGGATCCAATGGCAGTAGATAAACTGGCGGAAGGTATCCGTAAGTTTGCTATTGACCAGGAAAAACTGGAAAAAATGATCGGCGATCTGCTGTAA
 search,search_auto_01,Search Gene lacZ,Search for the gene lacZ by name.
-search,search_auto_01b,Find Gene Alias,Find the lacZ gene using the legacy find_gene alias.
 search,search_auto_02,Search DNA Polymerase,"Search for ""DNA Polymerase"" genes."
-search,search_auto_03,Search Locus Tag b0344,Find the gene with locus tag b0344.
+search,search_auto_03,Search Locus Tag b0344,Find gene with locus tag b0344.
 search,search_auto_04,Search Sequence Motif TATAAA,Search for TATA box motif (TATAAA) in the current genomic region on both strands.
 sequence,seq_auto_01,Get Genomic Sequence,Get the DNA sequence from position 100000 to 101000 on the current chromosome.
 sequence,seq_auto_02,Get Coding Sequence for Gene,Get the coding sequence for gene lacZ.

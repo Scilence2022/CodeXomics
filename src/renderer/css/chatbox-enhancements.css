@@ -706,10 +706,11 @@
 /* ==========================================================================
    Tasks Panel Styles
    ========================================================================== */
-.chat-tasks-panel {
+.tasks-panel {
   background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  padding: 10px 14px;
+  border-bottom: none;
+  border-left: none;
+  padding: 0;
   display: flex;
   flex-direction: column;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -717,6 +718,8 @@
   font-size: 13px;
   z-index: 10;
   box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
 }
 
 .tasks-panel-header {
@@ -725,6 +728,10 @@
   align-items: center;
   cursor: pointer;
   user-select: none;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  box-sizing: border-box;
 }
 
 .tasks-summary {
@@ -797,10 +804,12 @@
 }
 
 .tasks-list-container {
-  margin-top: 10px;
-  max-height: 220px;
+  margin-top: 0;
+  max-height: none;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 10px 14px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;

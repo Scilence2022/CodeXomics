@@ -217,14 +217,17 @@ class TaskService {
     // Ensure container exists
     this.ensureUIContainer();
 
-    const tasksPanel = document.getElementById('chatTasksPanel');
+    const tasksDock = document.getElementById('tasksDockContainer');
+    const tasksPanel = document.getElementById('tasksPanel');
     if (!tasksPanel) return;
 
     if (this.tasks.length === 0) {
       tasksPanel.style.display = 'none';
+      this._setTasksDockVisible(tasksDock, false);
       return;
     }
 
+    this._setTasksDockVisible(tasksDock, true);
     tasksPanel.style.display = 'flex';
 
     // Calculate overall stats
@@ -407,14 +410,14 @@ class TaskService {
    */
   ensureUIContainer() {
     if (typeof document === 'undefined') return;
-    if (document.getElementById('chatTasksPanel')) return;
+    if (document.getElementById('tasksPanel')) return;
 
-    const chatMessages = document.getElementById('chatMessages');
-    if (!chatMessages) return;
+    const tasksDock = this._ensureTasksDockContainer();
+    if (!tasksDock) return;
 
     const tasksPanel = document.createElement('div');
-    tasksPanel.id = 'chatTasksPanel';
-    tasksPanel.className = 'chat-tasks-panel';
+    tasksPanel.id = 'tasksPanel';
+    tasksPanel.className = 'tasks-panel';
     tasksPanel.style.display = 'none';
 
     tasksPanel.innerHTML = `
@@ -456,8 +459,7 @@ class TaskService {
       </div>
     `;
 
-    // Insert directly above the chatMessages block
-    chatMessages.parentNode.insertBefore(tasksPanel, chatMessages);
+    tasksDock.appendChild(tasksPanel);
 
     // Expand/collapse click listener on header
     const header = tasksPanel.querySelector('.tasks-panel-header');
@@ -510,6 +512,45 @@ class TaskService {
         e.stopPropagation();
         this.clearTasks();
       });
+    }
+  }
+
+  /**
+   * Ensure the independent Tasks dock exists outside the ChatBox DOM.
+   */
+  _ensureTasksDockContainer() {
+    let tasksDock = document.getElementById('tasksDockContainer');
+    if (tasksDock) return tasksDock;
+
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return null;
+
+    tasksDock = document.createElement('div');
+    tasksDock.id = 'tasksDockContainer';
+    tasksDock.className = 'tasks-dock-container';
+    tasksDock.style.display = 'none';
+
+    const chatDockSplitter = document.getElementById('chatDockSplitter');
+    mainContent.insertBefore(tasksDock, chatDockSplitter || null);
+
+    return tasksDock;
+  }
+
+  /**
+   * Show/hide the Tasks dock and notify canvas-based viewers when layout changes.
+   */
+  _setTasksDockVisible(tasksDock, visible) {
+    if (!tasksDock) return;
+
+    const nextDisplay = visible ? 'flex' : 'none';
+    if (tasksDock.style.display === nextDisplay) return;
+
+    tasksDock.style.display = nextDisplay;
+
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 50);
     }
   }
 
