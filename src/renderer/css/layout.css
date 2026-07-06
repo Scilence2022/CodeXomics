@@ -175,6 +175,19 @@
   max-height: 50px;
 }
 
+/* Tasks Dock Container - independent right side panel for workflow tasks */
+.tasks-dock-container {
+  width: var(--tasks-dock-width, 320px);
+  min-width: 260px;
+  max-width: 34vw;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-secondary, #f8f9fa);
+  border-left: 1px solid var(--border-color, #e9ecef);
+}
+
 /* Chat Dock Container - Right side panel when ChatBox is docked */
 .chat-dock-container {
   width: var(--chat-dock-width, 400px);
@@ -614,6 +627,11 @@
     right: 15px;
     bottom: 15px;
   }
+
+  .tasks-dock-container {
+    width: 280px;
+    max-width: 38vw;
+  }
 }
 
 @media (max-width: 768px) {
@@ -639,6 +657,11 @@
     right: 10px;
     bottom: 10px;
     max-height: 400px;
+  }
+
+  .tasks-dock-container {
+    width: min(320px, 80vw);
+    max-width: 80vw;
   }
 
   .modal-content {
