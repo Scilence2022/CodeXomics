@@ -242,6 +242,7 @@ class ToolCapabilityPolicy {
       external_api: {
         tools: [
           'blast_search',
+          'blast_sequence_from_region',
           'fetch_protein_structure',
           'get_uniprot_entry',
           'search_uniprot_database',

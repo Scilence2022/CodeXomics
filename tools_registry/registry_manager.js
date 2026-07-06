@@ -1142,6 +1142,18 @@ class ToolsRegistryManager {
           console.log('🔍 [Dynamic Tools] Navigation tool bonus applied for "go" query:', tool.name);
         }
 
+        // Special bonus for BLAST directly against a loaded genomic region.
+        if (
+          tool.name === 'blast_sequence_from_region' &&
+          (/\bblast_sequence_from_region\b/i.test(intent.query) ||
+            (/\bblast\b/i.test(intent.query) &&
+              /\b(region|range|coordinates?|current\s+region|genomic\s+region|chromosome)\b/i.test(intent.query) &&
+              /\b(start|end|from|to|\d+)\b/i.test(intent.query)))
+        ) {
+          score += 120;
+          console.log('🔍 [Dynamic Tools] Region BLAST bonus applied:', tool.name);
+        }
+
         // Special bonus for "copy" operations with sequence editing tools
         if (tool.name === 'copy_sequence' && intent.query.toLowerCase().includes('copy')) {
           score += 100; // Very high bonus for copy_sequence when "copy" is in query

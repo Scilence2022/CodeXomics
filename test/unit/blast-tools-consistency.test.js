@@ -278,6 +278,14 @@ describe('BLAST Tool Registry Consistency', () => {
     });
   });
 
+  describe('ToolCapabilityPolicy BLAST entries', () => {
+    const content = readFile('src/renderer/modules/chat/services/ToolCapabilityPolicy.js');
+
+    it('should explicitly rate-limit region BLAST as an external API tool', () => {
+      expect(content).toMatch(/external_api:\s*\{[\s\S]*'blast_sequence_from_region'/);
+    });
+  });
+
   describe('YAML tool definitions', () => {
     it('should have YAML definitions for all primary BLAST tools', () => {
       const registryFiles = [];
@@ -303,6 +311,9 @@ describe('BLAST Tool Registry Consistency', () => {
       for (const tool of BLAST_PRIMARY_TOOLS) {
         expect(yamlToolNames, `Missing YAML definition for '${tool}'`).toContain(tool);
       }
+      expect(yamlToolNames, "Missing YAML definition for 'blast_sequence_from_region'").toContain(
+        'blast_sequence_from_region'
+      );
     });
   });
 });

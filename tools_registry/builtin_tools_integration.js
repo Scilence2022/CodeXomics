@@ -361,14 +361,14 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
-    // BLAST legacy aliases (map to same methods as primary entries)
     this.builtInToolsMap.set('blast_sequence_from_region', {
       method: 'blastSequenceFromRegion',
       category: 'external_apis',
       type: 'built-in',
-      priority: 2,
+      priority: 1,
     });
 
+    // BLAST legacy aliases (map to same methods as primary entries)
     this.builtInToolsMap.set('batch_blast_search', {
       method: 'blastSearchBatch',
       category: 'external_apis',
@@ -2533,7 +2533,17 @@ class BuiltInToolsIntegration {
 
     // Check for BLAST patterns
     if (/\b(blast|alignment|align|sequence\s+search|homology)\b/i.test(query)) {
-      if (/\b(online|web|remote|internet|ncbi)\b/i.test(query)) {
+      if (
+        /\bblast_sequence_from_region\b/i.test(query) ||
+        (/\b(region|range|coordinates?|current\s+region|genomic\s+region|chromosome)\b/i.test(query) &&
+          /\b(start|end|from|to|\d+)\b/i.test(query))
+      ) {
+        relevantTools.push({
+          name: 'blast_sequence_from_region',
+          confidence: 0.98,
+          reason: 'BLAST genomic region keywords detected',
+        });
+      } else if (/\b(online|web|remote|internet|ncbi)\b/i.test(query)) {
         relevantTools.push({
           name: 'blast_search_online',
           confidence: 0.95,

@@ -218,6 +218,16 @@ class DynamicToolsSnapshotAdapter {
     if (tool.execution?.requires_data && context.hasData === false) score -= 1.5;
     if (tool.execution?.requires_network && context.hasNetwork === false) score -= 1.5;
 
+    if (
+      toolName === 'blast_sequence_from_region' &&
+      (text.includes('blast_sequence_from_region') ||
+        (/\bblast\b/.test(text) &&
+          /\b(region|range|coordinates?|current region|genomic region|chromosome)\b/.test(text) &&
+          /\b(start|end|from|to|\d+)\b/.test(text)))
+    ) {
+      score += 10;
+    }
+
     // Built-in status and registry priority are ranking preferences, not relevance
     // evidence. Applying them to unmatched tools makes every built-in exceed the
     // selection threshold, so unrelated prompts receive the full registry.
