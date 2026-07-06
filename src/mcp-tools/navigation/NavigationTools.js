@@ -393,6 +393,36 @@ class NavigationTools {
         },
       },
 
+      restore_view_state: {
+        name: 'restore_view_state',
+        description:
+          'Restore a saved genome browser view state by ID or name, including position, visible tracks, track settings, and active tab when available.',
+        parameters: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Unique ID of the saved view state to restore' },
+            name: { type: 'string', description: 'Name of the saved view state to restore' },
+            restoreTrackVisibility: {
+              type: 'boolean',
+              description: 'Whether to restore track visibility',
+              default: true,
+            },
+            restoreTrackSettings: {
+              type: 'boolean',
+              description: 'Whether to restore per-track display settings',
+              default: true,
+            },
+            restoreActiveTab: {
+              type: 'boolean',
+              description: 'Whether to switch to the saved active tab if it still exists',
+              default: true,
+            },
+            clientId: { type: 'string', description: 'Browser client ID' },
+          },
+          anyOf: [{ required: ['id'] }, { required: ['name'] }],
+        },
+      },
+
       bookmark_position: {
         name: 'bookmark_position',
         description: 'Bookmark the current genomic position for quick navigation later.',

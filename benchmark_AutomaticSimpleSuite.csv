@@ -67,9 +67,10 @@ navigation,nav_auto_15,List Highlights,List all highlighted genomic regions.
 navigation,nav_auto_16,Remove Highlight by Coordinates,Remove the highlight spanning 110000 to 112000.
 navigation,nav_auto_17,Clear Highlights,Clear all highlighted regions from the active tab.
 navigation,nav_auto_18,Save View State,"Save the current genome browser view state as ""benchmark smoke view""."
-navigation,nav_auto_19,Bookmark Position,"Bookmark the region 120000 to 121000 as ""benchmark bookmark""."
-navigation,nav_auto_20,List Genome Windows,List all open genome browser windows.
-navigation,nav_auto_21,Switch Active Window,Switch focus to the active genome browser window using switch_active_window with the current window id.
+navigation,nav_auto_19,Restore View State,"Restore the saved genome browser view state named ""benchmark smoke view""."
+navigation,nav_auto_20,Bookmark Position,"Bookmark the region 120000 to 121000 as ""benchmark bookmark""."
+navigation,nav_auto_21,List Genome Windows,List all open genome browser windows.
+navigation,nav_auto_22,Switch Active Window,Switch focus to the active genome browser window using switch_active_window with the current window id.
 primer_design,primer_auto_01,Calculate Primer Properties,Calculate properties for primer sequence ATGAAAGCGCTGAAAGCGCTGAAAG.
 primer_design,primer_auto_03,Find Primer Binding Sites,Find binding sites for primer GCAATATGTCTCTGTGTGGAT on the current genome.
 primer_design,primer_auto_04,List Primers,List primers and their binding sites for the current chromosome using list_primers.
@@ -137,7 +138,7 @@ track_control,track_auto_18,Toggle WIG Track OFF,Toggle off the WIG track visibi
 track_control,track_auto_19,Toggle WIG Track ON,Toggle on the WIG track visibility.
 track_control,track_auto_20,Toggle BLAST Track ON,Toggle on the BLAST track visibility.
 track_control,track_auto_21,Toggle BLAST Track OFF,Toggle off the BLAST track visibility.
-track_control,nav_auto_22,Toggle Annotation Track,Show the annotations track using toggle_annotation_track.
+track_control,nav_auto_23,Toggle Annotation Track,Show the annotations track using toggle_annotation_track.
 track_settings,settings_auto_01,Get Track Settings,Get the current track display settings.
 track_settings,settings_auto_02,Get All Track Settings,Get settings for all tracks.
 track_settings,settings_auto_03,Get Track Settings Schema,Get the schema for track settings configuration.

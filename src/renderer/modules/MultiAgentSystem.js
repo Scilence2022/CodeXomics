@@ -812,6 +812,7 @@ class MultiAgentSystem {
         'bookmark_position',
         'get_bookmarks',
         'save_view_state',
+        'restore_view_state',
         'navigate_to',
         'search_features',
         'find_gene_by_name',

@@ -240,6 +240,7 @@ class LLMContextService {
         return (
           `Bookmarks ${result.chromosome !== 'all' ? `for ${result.chromosome}` : ''}:\n` +
           `• Total bookmarks: ${result.totalBookmarks}\n` +
+          `• Total saved views: ${result.totalViewStates || 0}\n` +
           `• Showing: ${result.filteredBookmarks}\n` +
           (result.bookmarks.length > 0
             ? `• Bookmarks:\n${result.bookmarks
@@ -248,7 +249,15 @@ class LLMContextService {
                     `  - ${b.name}: ${b.chromosome}:${b.start}-${b.end} (${new Date(b.created).toLocaleDateString()})`
                 )
                 .join('\n')}`
-            : '• No bookmarks found')
+            : '• No bookmarks found') +
+          (result.viewStates?.length > 0
+            ? `\n• Saved views:\n${result.viewStates
+                .map(
+                  state =>
+                    `  - ${state.name}: ${state.chromosome}:${state.position?.start}-${state.position?.end} (${new Date(state.created).toLocaleDateString()})`
+                )
+                .join('\n')}`
+            : '\n• No saved views found')
         );
 
       case 'save_view_state':
@@ -260,6 +269,17 @@ class LLMContextService {
           `• Track settings: ${Object.keys(result.viewState.trackSettings || {}).length > 0 ? 'captured' : 'none'}\n` +
           `• Active tab: ${result.viewState.activeTabId || 'default'}\n` +
           `• Created: ${new Date(result.viewState.created).toLocaleString()}`
+        );
+
+      case 'restore_view_state':
+        return (
+          `✓ ${result.message}\n` +
+          `• State ID: ${result.viewState.id}\n` +
+          `• Position: ${result.viewState.chromosome}:${result.viewState.position?.start}-${result.viewState.position?.end}\n` +
+          `• Track visibility restored: ${result.restored?.trackVisibility?.length || 0} tracks\n` +
+          `• Track settings restored: ${result.restored?.trackSettings?.length || 0} tracks\n` +
+          `• Active tab: ${result.restored?.tab || result.viewState.activeTabId || 'unchanged'}\n` +
+          (result.warnings?.length ? `• Warnings: ${result.warnings.join('; ')}` : '• Warnings: none')
         );
 
       case 'compare_regions':
@@ -1700,6 +1720,7 @@ Navigation & State:
   - jump_to_gene: Navigate to specific gene
   - zoom_in/zoom_out: Adjust view zoom level
   - scroll_left/scroll_right: Pan the view
+  - save_view_state/restore_view_state: Save or restore named browser view snapshots
 
 Search & Discovery:
   - search_features: Search for features by text
