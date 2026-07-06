@@ -22,6 +22,13 @@ const BUILTIN_TOOL_EXEMPTIONS = {
   resume_benchmark: 'Requires a paused benchmark run and mutates benchmark lifecycle state.',
   get_benchmark_results: 'Requires benchmark history and is covered by report/statistics unit tests.',
   export_benchmark_results: 'Requires completed benchmark results and is covered by report/export unit tests.',
+  // Legacy aliases whose canonical counterparts are covered elsewhere.
+  find_gene: 'Legacy alias of find_gene_by_name; canonical coverage lives in search_auto_01.',
+  get_blast_databases: 'Legacy alias of blast_list_databases; canonical coverage lives in blast_auto_02.',
+  advanced_blast_search: 'Legacy alias of blast_search_online; canonical coverage lives in ManualSuite.',
+  batch_blast_search: 'Legacy alias of blast_search_batch; both share the blastSearchBatch method.',
+  blast_search_batch:
+    'Batch BLAST network orchestration; single-call BLAST behavior is covered by blast_search (blast_auto_03). Dropped from the automatic simple suite to avoid slow, network-dependent duplicate runs.',
 };
 
 function loadSuites() {
