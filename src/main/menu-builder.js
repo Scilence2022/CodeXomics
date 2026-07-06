@@ -81,6 +81,49 @@ function toggleCurrentGenomeDevTools() {
   }
 }
 
+function getCurrentGenomeEditWebContents() {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+
+  if (isMainGenomeWindow(focusedWindow)) {
+    const activeViewId = focusedWindow.windowId || workspaceHostManager.getActiveWindowIdForHost(focusedWindow);
+    const activeHandle = activeViewId ? workspaceHostManager.getViewHandle(activeViewId) : null;
+    if (activeHandle?.webContents && !activeHandle.webContents.isDestroyed()) {
+      return activeHandle.webContents;
+    }
+    if (focusedWindow.webContents && !focusedWindow.webContents.isDestroyed()) {
+      return focusedWindow.webContents;
+    }
+  }
+
+  const currentMainWindow =
+    (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) ||
+    (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null) ||
+    currentActiveWindow;
+
+  if (currentMainWindow?.webContents && !currentMainWindow.webContents.isDestroyed()) {
+    return currentMainWindow.webContents;
+  }
+
+  const nativeWindow = workspaceHostManager.getNativeWindow(currentMainWindow);
+  const activeViewId = workspaceHostManager.getActiveWindowIdForHost(nativeWindow);
+  const activeHandle = activeViewId ? workspaceHostManager.getViewHandle(activeViewId) : null;
+  if (activeHandle?.webContents && !activeHandle.webContents.isDestroyed()) {
+    return activeHandle.webContents;
+  }
+
+  return null;
+}
+
+function executeCurrentGenomeEditCommand(command) {
+  const targetWebContents = getCurrentGenomeEditWebContents();
+  if (!targetWebContents || typeof targetWebContents[command] !== 'function') {
+    return false;
+  }
+
+  targetWebContents[command]();
+  return true;
+}
+
 function restoreMainMenuAfterToolWindow(toolName, reason) {
   setTimeout(() => {
     const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -1443,7 +1486,9 @@ function createMenu() {
           label: 'Paste',
           accelerator: 'CmdOrCtrl+V',
           click: () => {
-            sendToCurrentMainWindow('menu-paste');
+            if (!executeCurrentGenomeEditCommand('paste')) {
+              sendToCurrentMainWindow('menu-paste');
+            }
           },
         },
         { type: 'separator' },

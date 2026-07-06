@@ -11262,12 +11262,18 @@ class GenomeBrowser {
             const start = activeElement.selectionStart;
             const end = activeElement.selectionEnd;
             const currentValue = activeElement.value;
-            const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
-            activeElement.value = newValue;
+            const supportsTextSelection = typeof start === 'number' && typeof end === 'number';
 
-            // Set cursor position after pasted text
-            const newCursorPosition = start + text.length;
-            activeElement.setSelectionRange(newCursorPosition, newCursorPosition);
+            if (supportsTextSelection) {
+              const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+              activeElement.value = newValue;
+
+              // Set cursor position after pasted text
+              const newCursorPosition = start + text.length;
+              activeElement.setSelectionRange(newCursorPosition, newCursorPosition);
+            } else {
+              activeElement.value = text.trim();
+            }
 
             // Trigger input event for any listeners
             activeElement.dispatchEvent(new Event('input', { bubbles: true }));

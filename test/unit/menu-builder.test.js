@@ -105,6 +105,26 @@ describe('Menu Builder Module', () => {
     expect(rendererContent).toContain('window.actionManager.handleInsertSequence(true)');
   });
 
+  it('Edit paste should use native Electron paste before renderer clipboard fallback', () => {
+    const editMenuStart = content.indexOf("label: 'Search && Edit'");
+    const pasteMenuStart = content.indexOf("label: 'Paste'", editMenuStart);
+    const pasteMenuEnd = content.indexOf("label: 'Select All'", pasteMenuStart);
+    const pasteMenu = content.slice(pasteMenuStart, pasteMenuEnd);
+
+    expect(content).toContain('function executeCurrentGenomeEditCommand(command)');
+    expect(pasteMenu).toContain("executeCurrentGenomeEditCommand('paste')");
+    expect(pasteMenu).toContain("sendToCurrentMainWindow('menu-paste')");
+  });
+
+  it('renderer paste fallback should support inputs without text selection APIs', () => {
+    const pasteHandlerStart = rendererContent.indexOf('\n  handleMenuPaste()');
+    const pasteHandlerEnd = rendererContent.indexOf('handleMenuSelectAll()', pasteHandlerStart);
+    const pasteHandler = rendererContent.slice(pasteHandlerStart, pasteHandlerEnd);
+
+    expect(pasteHandler).toContain('supportsTextSelection');
+    expect(pasteHandler).toContain('activeElement.value = text.trim();');
+  });
+
   it('createCircosPlotterMenu should accept circosWindow param', () => {
     const match = content.match(/function createCircosPlotterMenu\(\s*circosWindow/);
     expect(match).not.toBeNull();
