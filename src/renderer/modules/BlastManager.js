@@ -16,6 +16,7 @@ class BlastManager {
     this.rateLimitWindow = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
     this.maxSubmissionsPerDay = 100; // NCBI recommended limit
     this.minSubmissionInterval = 10000; // 10 seconds between submissions
+    this.minNCBIPollInterval = 60000; // NCBI asks clients not to poll one RID more than once a minute
 
     // Get ConfigManager instance from app
     this.configManager = app.configManager || null;
@@ -28,6 +29,9 @@ class BlastManager {
       ncbiBaseUrl: 'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi',
       maxWaitTime: 300000, // 5 minutes max wait
       pollInterval: 5000, // Check every 5 seconds
+      ncbiPollInterval: 60000,
+      ncbiTool: 'CodeXomics',
+      ncbiEmail: savedBlastConfig?.ncbiEmail || null,
       supportedFormats: ['fasta', 'fa', 'fas', 'txt'],
       // Local BLAST configuration
       localBlastPath: this.getPlatformBlastPath(), // Platform-specific BLAST+ path
@@ -3862,15 +3866,18 @@ class BlastManager {
       console.log('Executing NCBI BLAST with parameters:', params);
 
       // Step 1: Submit BLAST job to NCBI with retry logic
-      const jobId = await this.submitNCBIBlastJobWithRetry(params, retryCount);
+      const submittedJob = await this.submitNCBIBlastJobWithRetry(params, retryCount);
+      const jobId = typeof submittedJob === 'string' ? submittedJob : submittedJob.rid;
       console.log('BLAST job submitted with ID:', jobId);
 
       // Step 2: Poll for job completion
-      const results = await this.pollNCBIBlastResults(jobId, params);
+      const results = await this.pollNCBIBlastResults(submittedJob, params);
 
       // Mark as real results
       results.isRealResults = true;
       results.rawOutput = results.rawXML || 'Raw XML output available';
+      results.searchId = jobId;
+      results.jobId = jobId;
 
       // Store results for track rendering
       this.searchResults = results;
@@ -4019,6 +4026,104 @@ class BlastManager {
     return debugInfo;
   }
 
+  appendNCBIContactParams(params) {
+    const toolName = this.config?.ncbiTool || 'CodeXomics';
+    if (toolName) {
+      params.append('TOOL', toolName);
+    }
+
+    const email = this.config?.ncbiEmail;
+    if (email) {
+      params.append('EMAIL', email);
+    }
+  }
+
+  appendNCBIFilterParam(formData, params) {
+    if (params.lowComplexity === undefined || params.lowComplexity === null) {
+      return;
+    }
+
+    formData.append('FILTER', params.lowComplexity ? 'L' : 'F');
+  }
+
+  parseNCBIBlastSubmission(responseText) {
+    const text = String(responseText || '');
+    const ridPatterns = [
+      /\bRID\s*=\s*([A-Z0-9-]+)/i,
+      /name=["']RID["'][^>]*value=["']([^"']+)["']/i,
+      /[?&]RID=([^&"'<>\\\s]+)/i,
+    ];
+    const rtoePatterns = [
+      /\bRTOE\s*=\s*(\d+)/i,
+      /name=["']RTOE["'][^>]*value=["'](\d+)["']/i,
+      /[?&]RTOE=(\d+)/i,
+    ];
+
+    const ridMatch = ridPatterns.map(pattern => text.match(pattern)).find(Boolean);
+    const rtoeMatch = rtoePatterns.map(pattern => text.match(pattern)).find(Boolean);
+    const rid = ridMatch ? ridMatch[1].trim() : null;
+    const rtoe = rtoeMatch ? Number.parseInt(rtoeMatch[1], 10) : null;
+
+    return {
+      rid,
+      rtoe: Number.isFinite(rtoe) && rtoe >= 0 ? rtoe : null,
+    };
+  }
+
+  parseNCBIStatusResponse(statusText) {
+    const text = String(statusText || '');
+    const statusMatch = text.match(/\bStatus\s*=\s*([A-Z]+)/i);
+    const hitsMatch = text.match(/\bThereAreHits\s*=\s*(yes|no|true|false|0|1)/i);
+
+    return {
+      status: statusMatch ? statusMatch[1].toUpperCase() : null,
+      hasHits: hitsMatch ? /^(yes|true|1)$/i.test(hitsMatch[1]) : null,
+      error: this.extractNCBIErrorMessage(text),
+    };
+  }
+
+  extractNCBIErrorMessage(responseText) {
+    const text = String(responseText || '');
+    const plainText = text
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const patterns = [
+      /\b(?:error|message)\s*[:=]\s*([^.;]+[.;]?)/i,
+      /\bMessage\s+ID#[^:]*:\s*([^.;]+[.;]?)/i,
+      /\b(Invalid\s+(?:database|program|query)[^.;]*[.;]?)/i,
+      /\b(Query\s+too\s+long[^.;]*[.;]?)/i,
+      /\b(No\s+valid\s+letters\s+to\s+be\s+searched[^.;]*[.;]?)/i,
+    ];
+
+    const match = patterns.map(pattern => plainText.match(pattern)).find(Boolean);
+    return match ? match[1].trim() : null;
+  }
+
+  buildNCBIGetUrl(params) {
+    const baseUrl = this.config?.ncbiBaseUrl || 'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi';
+    const query = new URLSearchParams(params);
+    this.appendNCBIContactParams(query);
+    return `${baseUrl}?${query.toString()}`;
+  }
+
+  getNCBIPollInterval() {
+    const configuredInterval = Number(this.config?.ncbiPollInterval || this.minNCBIPollInterval || 60000);
+    return Math.max(configuredInterval, this.minNCBIPollInterval || 60000);
+  }
+
+  async waitForNCBIPollDelay(delayMs) {
+    if (delayMs <= 0) return;
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+
   async submitNCBIBlastJob(params) {
     // Check rate limits before submission
     this.checkRateLimit();
@@ -4037,50 +4142,39 @@ class BlastManager {
       throw new Error('Sequence too short (minimum 10 characters)');
     }
 
-    // Prepare form data with all required parameters
+    const blastType = String(params.blastType).toLowerCase();
+    const maxTargets = Number.parseInt(params.maxTargets || '100', 10);
+
+    // Prepare form data with URL API supported parameters.
     const formData = new URLSearchParams();
     formData.append('CMD', 'Put');
-    formData.append('PROGRAM', params.blastType.toUpperCase());
+    formData.append('PROGRAM', blastType);
     formData.append('DATABASE', params.database);
     formData.append('QUERY', cleanSequence);
     formData.append('EXPECT', params.evalue || '10');
-    formData.append('HITLIST_SIZE', params.maxTargets || '100');
-    formData.append('FORMAT_TYPE', 'XML');
-    formData.append('SERVICE', 'plain');
+    formData.append('HITLIST_SIZE', Number.isFinite(maxTargets) && maxTargets > 0 ? String(maxTargets) : '100');
+    this.appendNCBIContactParams(formData);
 
     // Add program-specific parameters
-    if (params.blastType === 'blastn') {
-      formData.append('WORD_SIZE', params.wordSize || '11');
-      formData.append('FILTER', params.lowComplexity ? 'L' : 'F');
-    } else if (params.blastType === 'blastp') {
-      formData.append('MATRIX_NAME', params.matrix || 'BLOSUM62');
-      formData.append('GAPCOSTS', `${params.gapOpen || 11} ${params.gapExtend || 1}`);
-      formData.append('FILTER', params.lowComplexity ? 'L' : 'F');
-    } else if (params.blastType === 'blastx') {
-      formData.append('MATRIX_NAME', params.matrix || 'BLOSUM62');
-      formData.append('GAPCOSTS', `${params.gapOpen || 11} ${params.gapExtend || 1}`);
-      formData.append('FILTER', params.lowComplexity ? 'L' : 'F');
-    } else if (params.blastType === 'tblastn') {
-      formData.append('MATRIX_NAME', params.matrix || 'BLOSUM62');
-      formData.append('GAPCOSTS', `${params.gapOpen || 11} ${params.gapExtend || 1}`);
-      formData.append('FILTER', params.lowComplexity ? 'L' : 'F');
+    if (blastType === 'blastn') {
+      if (params.wordSize) {
+        formData.append('WORD_SIZE', params.wordSize);
+      }
+      this.appendNCBIFilterParam(formData, params);
+    } else if (blastType === 'blastp' || blastType === 'blastx' || blastType === 'tblastn' || blastType === 'tblastx') {
+      formData.append('MATRIX', params.matrix || 'BLOSUM62');
+      if (blastType !== 'tblastx') {
+        formData.append('GAPCOSTS', `${params.gapOpen || 11} ${params.gapExtend || 1}`);
+      }
+      this.appendNCBIFilterParam(formData, params);
     }
 
-    // Add additional required parameters
-    formData.append('QUERY_BELIEVE_DEFLINE', 'yes');
-    formData.append('I_THRESH', '0.005');
-    formData.append('DESCRIPTIONS', '100');
-    formData.append('ALIGNMENTS', '100');
-    formData.append('ALIGNMENT_VIEW', 'Pairwise');
-    formData.append('NUM_OVERVIEW', '100');
-    formData.append('MAX_NUM_SEQ', '100');
-
     console.log('Submitting BLAST job with parameters:', {
-      program: params.blastType.toUpperCase(),
+      program: blastType,
       database: params.database,
       sequenceLength: cleanSequence.length,
       evalue: params.evalue || '10',
-      maxTargets: params.maxTargets || '100',
+      maxTargets: formData.get('HITLIST_SIZE'),
     });
 
     try {
@@ -4088,12 +4182,7 @@ class BlastManager {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'GenomeExplorer/1.0.0 (https://github.com/genomeexplorer)',
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate',
-          Connection: 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
+          Accept: 'text/plain, text/html, application/xml;q=0.9, */*;q=0.8',
         },
         body: formData.toString(),
       });
@@ -4108,37 +4197,22 @@ class BlastManager {
       // Log debug information
       this.logBlastDebugInfo(params, responseText);
 
-      // Check for various RID patterns in the response
-      let ridMatch = responseText.match(/RID = ([A-Z0-9]+)/);
-      if (!ridMatch) {
-        // Try alternative RID patterns
-        ridMatch = responseText.match(/RID=([A-Z0-9]+)/);
-      }
-      if (!ridMatch) {
-        // Try case-insensitive pattern
-        ridMatch = responseText.match(/rid\s*=\s*([A-Z0-9]+)/i);
-      }
-      if (!ridMatch) {
-        // Look for RID in any format
-        ridMatch = responseText.match(/([A-Z0-9]{10,})/);
-      }
-
-      if (!ridMatch) {
+      const submittedJob = this.parseNCBIBlastSubmission(responseText);
+      if (!submittedJob.rid) {
         // Enhanced error reporting
         this.logBlastDebugInfo(params, responseText);
 
         // Check if response contains error messages
-        if (responseText.includes('error') || responseText.includes('Error')) {
-          const errorMatch = responseText.match(/error[^<]*>([^<]+)</i);
-          if (errorMatch) {
-            throw new Error(`NCBI BLAST error: ${errorMatch[1]}`);
-          }
+        const ncbiError = this.extractNCBIErrorMessage(responseText);
+        if (ncbiError) {
+          throw new Error(`NCBI BLAST error: ${ncbiError}`);
         }
 
         // Check if response is HTML (indicates a web page instead of API response)
         if (responseText.includes('<!DOCTYPE html') || responseText.includes('<html')) {
           throw new Error(
-            'Received HTML response instead of API response. This may indicate server issues or incorrect request format. Please check NCBI BLAST service status.'
+            'Received HTML response instead of API response. This may indicate server issues or incorrect request ' +
+              'format. Please check NCBI BLAST service status.'
           );
         }
 
@@ -4158,17 +4232,18 @@ class BlastManager {
         }
 
         throw new Error(
-          `Failed to submit BLAST job - no RID returned. This may be due to server issues, invalid parameters, or rate limiting. Response preview: ${responseText.substring(0, 500)}`
+          'Failed to submit BLAST job - no RID returned. This may be due to server issues, invalid parameters, ' +
+            `or rate limiting. Response preview: ${responseText.substring(0, 500)}`
         );
       }
 
-      const rid = ridMatch[1];
+      const rid = submittedJob.rid;
       console.log('BLAST job submitted successfully with RID:', rid);
 
       // Update submission tracking
       this.updateSubmissionTracking();
 
-      return rid;
+      return submittedJob;
     } catch (error) {
       console.error('BLAST submission error:', error);
       this.logBlastDebugInfo(params, null, error);
@@ -4176,51 +4251,98 @@ class BlastManager {
     }
   }
 
-  async pollNCBIBlastResults(jobId, params, maxAttempts = 60) {
-    const baseUrl = 'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi';
+  async pollNCBIBlastResults(job, params, maxAttempts = null) {
+    const jobId = typeof job === 'string' ? job : job?.rid;
+    if (!jobId) {
+      throw new Error('Cannot poll NCBI BLAST results without a valid RID');
+    }
+
+    const pollInterval = this.getNCBIPollInterval();
+    const maxWaitTime = Number(this.config?.maxWaitTime || 300000);
+    const effectiveMaxAttempts =
+      maxAttempts === null || maxAttempts === undefined
+        ? Math.max(1, Math.ceil(maxWaitTime / pollInterval))
+        : maxAttempts;
+    const initialDelaySeconds = typeof job === 'object' && Number.isFinite(job.rtoe) ? job.rtoe : 0;
+    const initialDelayMs = Math.max(0, initialDelaySeconds * 1000);
     let attempts = 0;
 
-    while (attempts < maxAttempts) {
+    if (initialDelayMs > 0) {
+      this.updateSearchProgress(
+        `NCBI BLAST job submitted. Waiting ${initialDelaySeconds} seconds before first status check...`
+      );
+      await this.waitForNCBIPollDelay(initialDelayMs);
+    }
+
+    while (attempts < effectiveMaxAttempts) {
       attempts++;
 
       // Check job status
-      const statusUrl = `${baseUrl}?CMD=Get&FORMAT_OBJECT=SearchInfo&RID=${jobId}`;
+      const statusUrl = this.buildNCBIGetUrl({
+        CMD: 'Get',
+        FORMAT_OBJECT: 'SearchInfo',
+        RID: jobId,
+      });
       const statusResponse = await fetch(statusUrl);
 
       if (!statusResponse.ok) {
-        throw new Error(`Status check failed: ${statusResponse.status}`);
+        throw new Error(`Status check failed for NCBI BLAST RID ${jobId}: ${statusResponse.status}`);
       }
 
       const statusText = await statusResponse.text();
+      const searchInfo = this.parseNCBIStatusResponse(statusText);
 
-      if (statusText.includes('Status=WAITING')) {
-        console.log(`BLAST job ${jobId} still running... (attempt ${attempts}/${maxAttempts})`);
-        this.updateSearchProgress(`Waiting for NCBI BLAST results... (${attempts}/${maxAttempts})`);
-        await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+      if (searchInfo.error && searchInfo.status !== 'READY') {
+        throw new Error(`NCBI BLAST status error for RID ${jobId}: ${searchInfo.error}`);
+      }
+
+      if (searchInfo.status === 'WAITING') {
+        console.log(`BLAST job ${jobId} still running... (attempt ${attempts}/${effectiveMaxAttempts})`);
+        this.updateSearchProgress(`Waiting for NCBI BLAST results... (${attempts}/${effectiveMaxAttempts})`);
+        if (attempts >= effectiveMaxAttempts) {
+          break;
+        }
+        await this.waitForNCBIPollDelay(pollInterval);
         continue;
       }
 
-      if (statusText.includes('Status=FAILED')) {
-        throw new Error('BLAST job failed on NCBI server');
+      if (searchInfo.status === 'FAILED') {
+        throw new Error(`BLAST job ${jobId} failed on NCBI server`);
       }
 
-      if (statusText.includes('Status=UNKNOWN')) {
-        throw new Error('BLAST job status unknown - may have expired');
+      if (searchInfo.status === 'UNKNOWN') {
+        throw new Error(
+          `BLAST job status UNKNOWN for RID ${jobId}. The RID may be invalid, expired, or rejected by NCBI.`
+        );
       }
 
-      if (statusText.includes('Status=READY')) {
+      if (searchInfo.status === 'READY') {
         // Job completed, retrieve results
-        const resultsUrl = `${baseUrl}?CMD=Get&FORMAT_TYPE=XML&RID=${jobId}`;
+        const maxTargets = Number.parseInt(params.maxTargets || '100', 10);
+        const resultParams = {
+          CMD: 'Get',
+          FORMAT_TYPE: 'XML',
+          RID: jobId,
+        };
+        if (Number.isFinite(maxTargets) && maxTargets > 0) {
+          resultParams.DESCRIPTIONS = String(maxTargets);
+          resultParams.ALIGNMENTS = String(maxTargets);
+        }
+
+        const resultsUrl = this.buildNCBIGetUrl(resultParams);
         const resultsResponse = await fetch(resultsUrl);
 
         if (!resultsResponse.ok) {
-          throw new Error(`Results retrieval failed: ${resultsResponse.status}`);
+          throw new Error(`Results retrieval failed for NCBI BLAST RID ${jobId}: ${resultsResponse.status}`);
         }
 
         const resultsXml = await resultsResponse.text();
 
         // Also get text format for raw output
-        const textResultsUrl = `${baseUrl}?CMD=Get&FORMAT_TYPE=Text&RID=${jobId}`;
+        const textResultsUrl = this.buildNCBIGetUrl({
+          ...resultParams,
+          FORMAT_TYPE: 'Text',
+        });
         const textResultsResponse = await fetch(textResultsUrl);
         const textResults = textResultsResponse.ok ? await textResultsResponse.text() : 'Text format not available';
 
@@ -4232,9 +4354,14 @@ class BlastManager {
 
         return parsedResults;
       }
+
+      const responsePreview = statusText.replace(/\s+/g, ' ').trim().substring(0, 300);
+      throw new Error(`Unable to determine NCBI BLAST status for RID ${jobId}. Response preview: ${responsePreview}`);
     }
 
-    throw new Error(`BLAST job timed out after ${maxAttempts} attempts - results may still be processing`);
+    throw new Error(
+      `BLAST job ${jobId} timed out after ${effectiveMaxAttempts} status checks - results may still be processing`
+    );
   }
 
   parseNCBIBlastXML(xmlString, params) {
