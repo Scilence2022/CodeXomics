@@ -677,25 +677,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
-        id: 'search_auto_01b',
-        name: 'Find Gene Alias',
-        type: 'function_call',
-        category: 'search',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Find the lacZ gene using the legacy find_gene alias.',
-        expectedResult: {
-          tool_name: 'find_gene',
-          parameters: {
-            name: 'lacZ',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 30000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
         id: 'search_auto_02',
         name: 'Search DNA Polymerase',
         type: 'function_call',
@@ -722,7 +703,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'search',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Find the gene with locus tag b0344.',
+        instruction: 'Find gene with locus tag b0344.',
         expectedResult: {
           tool_name: 'find_gene_by_name',
           parameters: {
@@ -2155,47 +2136,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 15000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
       {
         id: 'blast_auto_03',
-        name: 'Get BLAST Databases Alias',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Get the available BLAST databases using get_blast_databases.',
-        expectedResult: {
-          tool_name: 'get_blast_databases',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 15000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-
-      {
-        id: 'blast_auto_04',
-        name: 'Detect BLAST Sequence Type',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Detect whether sequence ATGCGATCGATCG is DNA, RNA, or protein.',
-        expectedResult: {
-          tool_name: 'blast_detect_sequence_type',
-          parameters: {
-            sequence: 'ATGCGATCGATCG',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 15000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-
-      {
-        id: 'blast_auto_05',
         name: 'Create BLAST Database Quick',
         type: 'function_call',
         category: 'blast',
@@ -2214,7 +2156,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
 
       {
-        id: 'blast_auto_06',
+        id: 'blast_auto_04',
         name: 'Online BLAST Search',
         type: 'function_call',
         category: 'blast',
@@ -2239,7 +2181,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
 
       {
-        id: 'blast_auto_07',
+        id: 'blast_auto_05',
         name: 'BLAST Current Region',
         type: 'function_call',
         category: 'blast',
@@ -2263,82 +2205,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         earlyReturn: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-
-      {
-        id: 'blast_auto_08',
-        name: 'Batch BLAST Alias',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Run batch_blast_search for two short DNA sequences against nt using blastn with max 5 targets.',
-        expectedResult: {
-          tool_name: 'batch_blast_search',
-          parameters: {
-            sequences: ['ATGCGATCGATCG', 'GGATCCGAATTC'],
-            blastType: 'blastn',
-            database: 'nt',
-            maxTargets: 5,
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 180000,
-        earlyReturn: true,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-
-      {
-        id: 'blast_auto_09',
-        name: 'Advanced BLAST Alias',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction:
-          'Run advanced_blast_search for sequence ATGAAAGCGCTGAAAGCGCTG using blastn against nt with min identity 95 and max e-value 1e-5.',
-        expectedResult: {
-          tool_name: 'advanced_blast_search',
-          parameters: {
-            sequence: 'ATGAAAGCGCTGAAAGCGCTG',
-            blastType: 'blastn',
-            database: 'nt',
-            filters: {
-              minIdentity: 95,
-              maxEvalue: '1e-5',
-            },
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 180000,
-        earlyReturn: true,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-
-      {
-        id: 'blast_auto_10',
-        name: 'Batch BLAST Canonical',
-        type: 'function_call',
-        category: 'blast',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Run blast_search_batch for sequences ATGCGATCGATCG and GGATCCGAATTC using blastn against nt.',
-        expectedResult: {
-          tool_name: 'blast_search_batch',
-          parameters: {
-            sequences: ['ATGCGATCGATCG', 'GGATCCGAATTC'],
-            blastType: 'blastn',
-            database: 'nt',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 180000,
-        earlyReturn: true,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-
       // PRIMER DESIGN TASKS - Automatic + Simple
       {
         id: 'primer_auto_01',
@@ -2637,11 +2503,11 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'navigation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Bookmark the region 120000 to 121000 as "benchmark bookmark".',
+        instruction: 'Bookmark the region 120000 to 121000 as "Test bookmark".',
         expectedResult: {
           tool_name: 'bookmark_position',
           parameters: {
-            name: 'benchmark bookmark',
+            name: 'Test bookmark',
             start: 120000,
             end: 121000,
           },
