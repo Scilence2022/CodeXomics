@@ -28,6 +28,7 @@ const TOOL_NAMES = {
     BOOKMARK_POSITION: 'bookmark_position',
     GET_BOOKMARKS: 'get_bookmarks',
     SAVE_VIEW_STATE: 'save_view_state',
+    RESTORE_VIEW_STATE: 'restore_view_state',
   },
 
   // === Search Tools ===

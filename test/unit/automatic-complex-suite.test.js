@@ -111,6 +111,19 @@ describe('AutomaticComplexSuite', () => {
       expect(testIds).toContain('blast_auto_complex_03');
       expect(testIds).toContain('blast_auto_complex_04');
 
+      const viewRestoreWorkflow = tests.find(t => t.id === 'nav_auto_complex_02');
+      expect(viewRestoreWorkflow.expectedResult.tool_sequence).toEqual([
+        'navigate_to_position',
+        'highlight_region',
+        'list_highlights',
+        'remove_highlight',
+        'clear_highlights',
+        'save_view_state',
+        'navigate_to_position',
+        'restore_view_state',
+        'bookmark_position',
+      ]);
+
       // Verify details of one new test case
       const annotationTest = tests.find(t => t.id === 'annotation_auto_complex_01');
       expect(annotationTest.type).toBe('workflow');

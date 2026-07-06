@@ -107,6 +107,7 @@ class ToolExecutionPolicy {
       'zoom_out',
       'switch_to_tab',
       'open_new_tab',
+      'restore_view_state',
       'load_genome_file',
       'load_annotation_file',
       'toggle_track',

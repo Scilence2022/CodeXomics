@@ -31,6 +31,7 @@ class FunctionCallsOrganizer {
           'bookmark_position',
           'get_bookmarks',
           'save_view_state',
+          'restore_view_state',
           'navigate_to',
           'jump_to_gene',
           'get_current_region',

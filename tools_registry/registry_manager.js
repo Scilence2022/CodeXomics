@@ -443,6 +443,11 @@ class ToolsRegistryManager {
         'navigate to',
         'highlight',
         'mark',
+        'restore',
+        'saved view',
+        'view state',
+        'restore view',
+        'load view',
       ],
       zoom: [
         'zoom',
@@ -902,6 +907,11 @@ class ToolsRegistryManager {
         'mark',
         'highlighted region',
         'clear highlights',
+        'restore',
+        'saved view',
+        'view state',
+        'restore view',
+        'load view',
       ],
       zoom: [
         'zoom',

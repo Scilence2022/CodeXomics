@@ -74,6 +74,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       remove_highlight: [/remove.*highlight/i, /highlight.*removed/i],
       clear_highlights: [/clear.*highlight/i, /highlight.*cleared/i],
       save_view_state: [/save.*view/i, /view.*saved/i],
+      restore_view_state: [/restore.*view/i, /view.*restored/i, /load.*saved.*view/i],
       bookmark_position: [/bookmark.*position/i, /bookmarked/i],
       capture_screenshot: [/capture.*screenshot/i, /screenshot.*saved/i],
       open_image_file: [/open.*image/i, /image.*opened/i],
@@ -294,13 +295,13 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       {
         id: 'nav_auto_complex_02',
-        name: 'Highlight, Bookmark, and Save View Workflow',
+        name: 'Highlight, Save, Restore, and Bookmark View Workflow',
         type: 'workflow',
         category: 'navigation',
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Navigate to 110000-112000, highlight that region with label benchmark_focus, list highlights, remove that highlight, clear all remaining highlights, save the current view as "benchmark smoke view", and bookmark 120000-121000 as "benchmark bookmark".',
+          'Navigate to 110000-112000, highlight that region with label benchmark_focus, list highlights, remove that highlight, clear all remaining highlights, save the current view as "benchmark smoke view", navigate away to 130000-131000, restore the saved view named "benchmark smoke view", and bookmark 120000-121000 as "benchmark bookmark".',
         expectedResult: {
           tool_sequence: [
             'navigate_to_position',
@@ -309,6 +310,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             'remove_highlight',
             'clear_highlights',
             'save_view_state',
+            'navigate_to_position',
+            'restore_view_state',
             'bookmark_position',
           ],
           parameters: [
@@ -328,6 +331,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               end: 112000,
             },
             {},
+            {
+              name: 'benchmark smoke view',
+            },
+            {
+              chromosome: '<current_chromosome>',
+              start: 130000,
+              end: 131000,
+            },
             {
               name: 'benchmark smoke view',
             },

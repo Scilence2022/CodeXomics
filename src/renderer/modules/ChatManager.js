@@ -1455,6 +1455,8 @@ class ChatManager {
           'zoom_in',
           'zoom_out',
           'get_current_state',
+          'save_view_state',
+          'restore_view_state',
         ],
       },
       sequence: {
@@ -8119,6 +8121,8 @@ TOOL AVAILABILITY:
         'open_new_tab',
         'zoom_in',
         'zoom_out',
+        'save_view_state',
+        'restore_view_state',
       ],
       'SYSTEM STATUS': [
         'get_genome_info',
@@ -8343,6 +8347,7 @@ ${coreTools}
       find_gene_by_name: () => this.executeMicrobeFunction('searchGeneByName', parameters),
       find_gene: () => this.executeMicrobeFunction('searchGeneByName', parameters), // legacy alias
       save_view_state: () => this.saveViewState(parameters),
+      restore_view_state: () => this.restoreViewState(parameters),
       bookmark_position: () => this.bookmarkPosition(parameters),
 
       // Sequence tools
@@ -9435,7 +9440,7 @@ AVAILABLE TOOLS SUMMARY:
 - MCP Tools: ${context.genomeBrowser.toolSources.mcp}
 
 KEY TOOLS BY CATEGORY:
-Navigation & State: navigate_to_position, get_current_state, jump_to_gene, zoom_to_gene, select_gene, select_sequence_region, open_new_tab
+Navigation & State: navigate_to_position, get_current_state, jump_to_gene, zoom_to_gene, select_gene, select_sequence_region, open_new_tab, save_view_state, restore_view_state
 Search & Discovery: search_features, find_gene_by_name, search_sequence_motif
 Sequence Analysis: get_sequence, translate_dna, compute_gc, reverse_complement  
 Advanced Analysis: predict_promoter, find_restriction_sites
@@ -9791,6 +9796,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'bookmark_position',
       'get_bookmarks',
       'save_view_state',
+      'restore_view_state',
 
       // Search & Discovery
       'search_features',
@@ -12144,17 +12150,26 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   getBookmarks(params) {
     const { chromosome } = params;
     const bookmarks = this.configManager.get('bookmarks', []);
+    const viewStates = this.getAllStoredViewStates();
 
     let filteredBookmarks = bookmarks;
     if (chromosome) {
       filteredBookmarks = bookmarks.filter(b => b.chromosome === chromosome);
     }
 
+    let filteredViewStates = viewStates;
+    if (chromosome) {
+      filteredViewStates = viewStates.filter(state => state.chromosome === chromosome);
+    }
+
     return {
       totalBookmarks: bookmarks.length,
       filteredBookmarks: filteredBookmarks.length,
+      totalViewStates: viewStates.length,
+      filteredViewStates: filteredViewStates.length,
       chromosome: chromosome || 'all',
       bookmarks: filteredBookmarks,
+      viewStates: filteredViewStates,
     };
   }
 
@@ -12211,6 +12226,238 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       viewState: viewState,
       message: `Saved view state "${name}"`,
     };
+  }
+
+  async restoreViewState(params = {}) {
+    const { id, name } = params;
+    const restoreTrackVisibility = this.coerceViewStateBoolean(
+      params.restoreTrackVisibility ?? params.restoreTracks ?? params.applyTrackVisibility,
+      true
+    );
+    const restoreTrackSettings = this.coerceViewStateBoolean(
+      params.restoreTrackSettings ?? params.applyTrackSettings,
+      true
+    );
+    const restoreActiveTab = this.coerceViewStateBoolean(params.restoreActiveTab ?? params.switchTab, true);
+
+    if (!id && !name) {
+      throw new Error('restore_view_state requires either id or name');
+    }
+
+    const { viewState, matchCount } = this.findSavedViewState({ id, name });
+    if (!viewState) {
+      const identifier = id ? `id "${id}"` : `name "${name}"`;
+      throw new Error(`Saved view state with ${identifier} not found`);
+    }
+
+    const position = viewState.position || {};
+    if (!viewState.chromosome || position.start === undefined || position.end === undefined) {
+      throw new Error(`Saved view state "${viewState.name || viewState.id}" does not contain a restorable position`);
+    }
+
+    const warnings = [];
+    const restored = {
+      tab: null,
+      position: null,
+      trackVisibility: [],
+      trackSettings: [],
+    };
+
+    if (restoreActiveTab && viewState.activeTabId) {
+      try {
+        const tabResult = await this.switchToTab({ tab_id: viewState.activeTabId });
+        restored.tab = tabResult.tab_id || viewState.activeTabId;
+      } catch (error) {
+        warnings.push(`Active tab ${viewState.activeTabId} could not be restored: ${error.message}`);
+      }
+    }
+
+    const navigationResult = await this.navigateToPosition({
+      chromosome: viewState.chromosome,
+      start: position.start,
+      end: position.end,
+    });
+    restored.position = {
+      chromosome: viewState.chromosome,
+      start: position.start,
+      end: position.end,
+      navigationResult,
+    };
+
+    if (restoreTrackVisibility && Array.isArray(viewState.visibleTracks)) {
+      const visibilityResult = await this.restoreViewStateTrackVisibility(viewState.visibleTracks);
+      restored.trackVisibility = visibilityResult.restored;
+      warnings.push(...visibilityResult.warnings);
+    }
+
+    if (restoreTrackSettings && viewState.trackSettings && typeof viewState.trackSettings === 'object') {
+      const settingsResult = this.restoreViewStateTrackSettings(viewState.trackSettings);
+      restored.trackSettings = settingsResult.restored;
+      warnings.push(...settingsResult.warnings);
+    }
+
+    return {
+      success: true,
+      viewState,
+      restored,
+      warnings,
+      matchCount,
+      message: `Restored view state "${viewState.name || viewState.id}"`,
+    };
+  }
+
+  getAllStoredViewStates() {
+    const states = [];
+    const seen = new Set();
+    const appendStates = candidateStates => {
+      if (!Array.isArray(candidateStates)) return;
+
+      for (const state of candidateStates) {
+        if (!state || typeof state !== 'object') continue;
+        const key = state.id || `${state.name || 'unnamed'}:${state.created || states.length}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        states.push(state);
+      }
+    };
+
+    try {
+      appendStates(this.configManager?.get('viewStates', []));
+    } catch (error) {
+      console.warn('Failed to read view states from configManager:', error);
+    }
+
+    appendStates(this.getStoredViewStates());
+    return states;
+  }
+
+  findSavedViewState({ id, name }) {
+    const viewStates = this.getAllStoredViewStates();
+    let matches = [];
+
+    if (id) {
+      matches = viewStates.filter(state => state.id === id);
+    } else if (name) {
+      matches = viewStates.filter(state => state.name === name);
+      if (matches.length === 0) {
+        const normalizedName = String(name).trim().toLowerCase();
+        matches = viewStates.filter(state => String(state.name || '').trim().toLowerCase() === normalizedName);
+      }
+    }
+
+    matches.sort((a, b) => {
+      const timeA = Date.parse(a.created || 0) || 0;
+      const timeB = Date.parse(b.created || 0) || 0;
+      return timeB - timeA;
+    });
+
+    return {
+      viewState: matches[0] || null,
+      matchCount: matches.length,
+    };
+  }
+
+  coerceViewStateBoolean(value, defaultValue) {
+    if (value === undefined || value === null) return defaultValue;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      const normalizedValue = value.trim().toLowerCase();
+      if (['true', 'yes', 'y', '1', 'on', 'enable', 'enabled'].includes(normalizedValue)) return true;
+      if (['false', 'no', 'n', '0', 'off', 'disable', 'disabled'].includes(normalizedValue)) return false;
+    }
+    return Boolean(value);
+  }
+
+  normalizeViewStateTrackName(trackName) {
+    const normalized = String(trackName || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+    const aliases = {
+      gc_content: 'gc',
+      gccontent: 'gc',
+      wig: 'wigTracks',
+      wig_tracks: 'wigTracks',
+      wigtracks: 'wigTracks',
+      blast_results: 'blast',
+      primer: 'primers',
+      protein: 'proteins',
+    };
+    return aliases[normalized] || normalized;
+  }
+
+  getRestorableViewStateTrackNames() {
+    return ['genes', 'gc', 'variants', 'reads', 'proteins', 'primers', 'wigTracks', 'sequence', 'actions', 'blast'];
+  }
+
+  async restoreViewStateTrackVisibility(savedVisibleTracks) {
+    const warnings = [];
+    const restored = [];
+    const targetVisibleTracks = new Set(
+      savedVisibleTracks.map(track => this.normalizeViewStateTrackName(track)).filter(Boolean)
+    );
+
+    const candidateTracks = new Set([
+      ...this.getRestorableViewStateTrackNames(),
+      ...Array.from(targetVisibleTracks),
+      ...this.getVisibleTracks().map(track => this.normalizeViewStateTrackName(track)),
+    ]);
+
+    for (const trackName of candidateTracks) {
+      const normalizedTrackName = this.normalizeViewStateTrackName(trackName);
+      if (!normalizedTrackName) continue;
+
+      try {
+        const result = await this.toggleTrack({
+          track_name: normalizedTrackName,
+          visible: targetVisibleTracks.has(normalizedTrackName),
+        });
+        restored.push({
+          track: normalizedTrackName,
+          visible: result.visible,
+          noChangeNeeded: result.noChangeNeeded === true,
+        });
+      } catch (error) {
+        warnings.push(`Track visibility for ${normalizedTrackName} could not be restored: ${error.message}`);
+      }
+    }
+
+    return { restored, warnings };
+  }
+
+  restoreViewStateTrackSettings(trackSettings) {
+    const warnings = [];
+    const restored = [];
+    const browserWindow = typeof window !== 'undefined' ? window : null;
+    const genomeBrowser = this.app?.genomeBrowser || this.genomeBrowser || browserWindow?.genomeBrowser;
+    const trackRenderer = genomeBrowser?.trackRenderer;
+
+    if (!trackRenderer || typeof trackRenderer.applySettingsToTrack !== 'function') {
+      return {
+        restored,
+        warnings: ['Track settings could not be restored because TrackRenderer is unavailable'],
+      };
+    }
+
+    for (const [trackType, settings] of Object.entries(trackSettings)) {
+      if (!settings || typeof settings !== 'object') continue;
+
+      try {
+        const currentSettings =
+          typeof trackRenderer.getTrackSettings === 'function' ? trackRenderer.getTrackSettings(trackType) : {};
+        const mergedSettings = { ...(currentSettings || {}), ...settings };
+
+        if (typeof trackRenderer.saveTrackSettings === 'function') {
+          trackRenderer.saveTrackSettings(trackType, mergedSettings);
+        }
+        trackRenderer.applySettingsToTrack(trackType, mergedSettings);
+        restored.push(trackType);
+      } catch (error) {
+        warnings.push(`Track settings for ${trackType} could not be restored: ${error.message}`);
+      }
+    }
+
+    return { restored, warnings };
   }
 
   getStoredViewStates() {
@@ -15020,6 +15267,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       bookmark_position: 'Navigation Agent',
       get_bookmarks: 'Navigation Agent',
       save_view_state: 'Navigation Agent',
+      restore_view_state: 'Navigation Agent',
       get_current_state: 'Navigation Agent',
       get_current_region: 'Navigation Agent',
       jump_to_gene: 'Navigation Agent',

@@ -58,6 +58,7 @@ describe('AutomaticSimpleSuite', () => {
       // Verify the new style switching test cases exist
       expect(testIds).toContain('settings_auto_05');
       expect(testIds).toContain('settings_auto_06');
+      expect(testIds).toContain('nav_auto_19');
 
       // Verify details of settings_auto_05 (Switch UI Style Theme)
       const test05 = tests.find(t => t.id === 'settings_auto_05');
@@ -77,6 +78,11 @@ describe('AutomaticSimpleSuite', () => {
       expect(test06.expectedResult.tool_name).toBe('switch_ui_style');
       expect(test06.expectedResult.parameters.style_name).toBe('midnight');
       expect(test06.expectedResult.parameters).not.toHaveProperty('dark_mode');
+
+      const restoreViewStateTest = tests.find(t => t.id === 'nav_auto_19');
+      expect(restoreViewStateTest.name).toBe('Restore View State');
+      expect(restoreViewStateTest.expectedResult.tool_name).toBe('restore_view_state');
+      expect(restoreViewStateTest.expectedResult.parameters.name).toBe('benchmark smoke view');
     });
 
     it('should resolve default directory fallback and build paths correctly', () => {

@@ -76,7 +76,7 @@ class ToolCapabilityPolicy {
       },
 
       position_navigation: {
-        tools: ['navigate_to_position'],
+        tools: ['navigate_to_position', 'restore_view_state'],
         policy: 'parameter_based',
       },
 

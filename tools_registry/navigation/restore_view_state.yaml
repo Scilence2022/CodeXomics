@@ -1,0 +1,97 @@
+name: restore_view_state
+version: 1.0.0
+description: 'Restore a saved genome browser view state by ID or name, including chromosome position, visible tracks, track settings, and active tab when available.'
+category: navigation
+keywords:
+  - restore
+  - load
+  - reopen
+  - saved view
+  - view state
+  - workspace
+  - snapshot
+  - layout
+  - position
+  - tracks
+priority: 1
+execution:
+  type: client
+  timeout: 5000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    id:
+      type: string
+      description: 'Unique ID of the saved view state to restore'
+    name:
+      type: string
+      description: 'Name of the saved view state to restore. If multiple saved states share a name, the newest match is restored.'
+      examples: ['benchmark smoke view', 'GC analysis region', 'variant inspection window']
+    restoreTrackVisibility:
+      type: boolean
+      description: 'Whether to restore track visibility from the saved state'
+      default: true
+    restoreTrackSettings:
+      type: boolean
+      description: 'Whether to restore per-track display settings from the saved state'
+      default: true
+    restoreActiveTab:
+      type: boolean
+      description: 'Whether to switch back to the saved active tab when it still exists'
+      default: true
+    clientId:
+      type: string
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  anyOf:
+    - required: ['id']
+    - required: ['name']
+sample_usages:
+  - user_query: 'Restore my saved view named benchmark smoke view'
+    tool_call: "restore_view_state(name='benchmark smoke view')"
+    thought: 'User wants to return to a previously saved genome browser view by name'
+    expected_result: 'Browser navigates to the saved chromosome and position and restores track layout where possible'
+
+  - user_query: 'Load the saved GC analysis workspace'
+    tool_call: "restore_view_state(name='GC analysis region')"
+    thought: 'User wants to load a saved workspace-style view state'
+    expected_result: 'Saved view state is restored with position, tracks, settings, and active tab metadata'
+
+  - user_query: 'Restore view state abc123 but do not change track settings'
+    tool_call: "restore_view_state(id='abc123', restoreTrackSettings=false)"
+    thought: 'User wants to restore the saved position but leave current visual track settings unchanged'
+    expected_result: 'Browser navigates to the saved position without applying saved track settings'
+relationships:
+  depends_on: ['save_view_state']
+  conflicts_with: []
+  enhances: ['navigate_to_position', 'get_bookmarks']
+  alternatives: ['navigate_to_position']
+  prerequisites: ['save_view_state']
+  follow_up: ['get_current_state', 'get_track_status']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - state
+    - persistence
+    - layout
+  complexity: simple
+  usage_pattern: occasional
+error_handling:
+  missing_identifier: 'Returns error if neither id nor name is provided'
+  not_found: 'Returns error if no saved view state matches the requested id or name'
+  invalid_state: 'Returns error if the saved state does not contain a restorable chromosome and position'
+  partial_restore: 'Returns success with warnings if optional tab, track visibility, or track settings cannot be restored'
+returns:
+  success: 'boolean - Whether restore was successful'
+  viewState: 'object - The restored saved view state object'
+  restored: 'object - Details about position, tab, track visibility, and track settings restored'
+  warnings: 'array - Non-fatal restore warnings'
+  message: 'string - Human-readable confirmation message'

@@ -582,6 +582,7 @@ class ToolsIntegrator {
       jump_to_gene: p => `Jump to gene ${p.geneName}`,
       find_gene_by_name: p => `Search for gene named "${p.name}"`,
       find_gene: p => `Search for gene named "${p.name}"`,
+      restore_view_state: p => `Restore saved genome browser view state ${p.id ? `with ID ${p.id}` : `named "${p.name}"`}`,
     };
 
     const template = promptTemplates[toolName];
@@ -768,6 +769,12 @@ class ToolsIntegrator {
           chromosome: 'chr1',
           start: 1000,
           end: 2000,
+        },
+      },
+      restore_view_state: {
+        description: 'Restore a saved genome browser view state',
+        example: {
+          name: 'benchmark smoke view',
         },
       },
       compute_gc: {
