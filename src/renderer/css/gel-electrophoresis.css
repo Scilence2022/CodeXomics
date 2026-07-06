@@ -18,6 +18,17 @@
   max-height: 90vh;
 }
 
+#gelElectrophoresisModal .gel-results-content.is-collapsed {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none;
+}
+
+#gelElectrophoresisModal .gel-results-content.is-collapsed .gel-results-body,
+#gelElectrophoresisModal .gel-results-content.is-collapsed .resize-handle {
+  display: none !important;
+}
+
 #gelElectrophoresisModal .modal-header {
   cursor: move;
   user-select: none;

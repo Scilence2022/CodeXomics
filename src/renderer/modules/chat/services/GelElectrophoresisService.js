@@ -263,6 +263,11 @@ class GelElectrophoresisService {
   _showGelVisualization(result) {
     this._ensureDraggableResizable();
 
+    const modal = document.getElementById('gelElectrophoresisModal');
+    if (modal) {
+      this._setGelModalCollapsed(modal, false);
+    }
+
     const GelRendererClass = typeof window !== 'undefined' && window.GelRenderer ? window.GelRenderer : null;
 
     if (GelRendererClass) {
@@ -271,7 +276,6 @@ class GelElectrophoresisService {
       return;
     }
 
-    const modal = document.getElementById('gelElectrophoresisModal');
     if (modal) {
       const container = document.getElementById('gelResultsContainer');
       if (container) {
@@ -312,20 +316,66 @@ class GelElectrophoresisService {
 
     const collapseBtn = modal.querySelector('.modal-collapse');
     if (collapseBtn) {
+      collapseBtn.setAttribute('aria-expanded', 'true');
       collapseBtn.addEventListener('click', () => {
-        const body = modal.querySelector('.modal-body');
-        const icon = collapseBtn.querySelector('i');
-        if (body) {
-          const isCollapsed = body.style.display === 'none';
-          body.style.display = isCollapsed ? '' : 'none';
-          if (icon) {
-            icon.className = isCollapsed ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-          }
-        }
+        const content = modal.querySelector('.modal-content');
+        this._setGelModalCollapsed(modal, !content?.classList.contains('is-collapsed'));
       });
     }
 
     this._dragResizeInitialized = true;
+  }
+
+  _setGelModalCollapsed(modal, shouldCollapse) {
+    const content = modal?.querySelector('.modal-content');
+    const body = modal?.querySelector('.modal-body');
+    const collapseBtn = modal?.querySelector('.modal-collapse');
+    const icon = collapseBtn?.querySelector('i');
+
+    if (!content || !body) return;
+
+    if (shouldCollapse) {
+      if (!content.classList.contains('is-collapsed')) {
+        if (content.style.height) {
+          content.setAttribute('data-expanded-height', content.style.height);
+        } else {
+          content.removeAttribute('data-expanded-height');
+        }
+
+        if (content.style.minHeight) {
+          content.setAttribute('data-expanded-min-height', content.style.minHeight);
+        } else {
+          content.removeAttribute('data-expanded-min-height');
+        }
+      }
+
+      body.hidden = true;
+      content.classList.add('is-collapsed');
+      collapseBtn?.setAttribute('aria-expanded', 'false');
+      if (icon) {
+        icon.className = 'fas fa-chevron-down';
+      }
+      return;
+    }
+
+    body.hidden = false;
+    body.style.display = '';
+    content.classList.remove('is-collapsed');
+
+    if (content.hasAttribute('data-expanded-height')) {
+      content.style.height = content.getAttribute('data-expanded-height') || '';
+      content.removeAttribute('data-expanded-height');
+    }
+
+    if (content.hasAttribute('data-expanded-min-height')) {
+      content.style.minHeight = content.getAttribute('data-expanded-min-height') || '';
+      content.removeAttribute('data-expanded-min-height');
+    }
+
+    collapseBtn?.setAttribute('aria-expanded', 'true');
+    if (icon) {
+      icon.className = 'fas fa-chevron-up';
+    }
   }
 
   _renderFallbackHTML(container, result) {
