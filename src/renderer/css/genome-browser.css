@@ -51,10 +51,6 @@
   position: relative;
 }
 
-.toolbar-action-group {
-  gap: 25px;
-}
-
 .toolbar-section label {
   font-weight: 600;
   color: #495057;
