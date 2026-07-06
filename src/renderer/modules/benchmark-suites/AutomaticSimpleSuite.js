@@ -2613,6 +2613,25 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
       {
         id: 'nav_auto_19',
+        name: 'Restore View State',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Restore the saved genome browser view state named "benchmark smoke view".',
+        expectedResult: {
+          tool_name: 'restore_view_state',
+          parameters: {
+            name: 'benchmark smoke view',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 15000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'nav_auto_20',
         name: 'Bookmark Position',
         type: 'function_call',
         category: 'navigation',
@@ -2633,7 +2652,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
-        id: 'nav_auto_20',
+        id: 'nav_auto_21',
         name: 'List Genome Windows',
         type: 'function_call',
         category: 'navigation',
@@ -2650,7 +2669,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
-        id: 'nav_auto_21',
+        id: 'nav_auto_22',
         name: 'Switch Active Window',
         type: 'function_call',
         category: 'navigation',
@@ -2670,7 +2689,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
-        id: 'nav_auto_22',
+        id: 'nav_auto_23',
         name: 'Toggle Annotation Track',
         type: 'function_call',
         category: 'track_control',

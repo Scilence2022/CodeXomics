@@ -177,6 +177,15 @@ class NavigationAgent extends AgentBase {
         },
       },
       {
+        functionName: 'restore_view_state',
+        description: 'Restore saved view configuration',
+        priority: 'high',
+        estimatedTime: 150,
+        validateParameters: params => {
+          if (!params.id && !params.name) throw new Error('id or name parameter required');
+        },
+      },
+      {
         functionName: 'navigate_to',
         description: 'Navigate to specified location',
         priority: 'high',
@@ -376,6 +385,9 @@ class NavigationAgent extends AgentBase {
 
         case 'save_view_state':
           return await this.executeSaveViewState(parameters, app);
+
+        case 'restore_view_state':
+          return await this.executeRestoreViewState(parameters, app);
 
         case 'navigate_to':
           return await this.executeNavigateTo(parameters, app);
@@ -753,6 +765,69 @@ class NavigationAgent extends AgentBase {
       success: true,
       viewState,
       message: `Saved view state "${name}"`,
+    };
+  }
+
+  /**
+   * Execute restore view state
+   */
+  async executeRestoreViewState(parameters, app) {
+    const chatManager = this.multiAgentSystem?.chatManager;
+    if (chatManager && typeof chatManager.restoreViewState === 'function') {
+      try {
+        return await chatManager.restoreViewState(parameters);
+      } catch (error) {
+        console.warn('NavigationAgent: ChatManager.restoreViewState failed, falling back to local implementation', error);
+      }
+    }
+
+    const { id, name } = parameters;
+    if (!id && !name) {
+      throw new Error('restore_view_state requires either id or name');
+    }
+
+    let matches = this.getStoredViewStates().filter(state => {
+      if (id) return state.id === id;
+      return String(state.name || '').trim().toLowerCase() === String(name).trim().toLowerCase();
+    });
+
+    matches = matches.sort((a, b) => {
+      const timeA = Date.parse(a.created || 0) || 0;
+      const timeB = Date.parse(b.created || 0) || 0;
+      return timeB - timeA;
+    });
+
+    const viewState = matches[0];
+    if (!viewState) {
+      const identifier = id ? `id "${id}"` : `name "${name}"`;
+      throw new Error(`Saved view state with ${identifier} not found`);
+    }
+
+    if (!viewState.chromosome || !viewState.position?.start || !viewState.position?.end) {
+      throw new Error(`Saved view state "${viewState.name || viewState.id}" does not contain a restorable position`);
+    }
+
+    const navigationResult = await this.executeNavigateToPosition(
+      {
+        chromosome: viewState.chromosome,
+        start: viewState.position.start,
+        end: viewState.position.end,
+      },
+      app
+    );
+
+    return {
+      success: true,
+      viewState,
+      restored: {
+        position: navigationResult,
+        trackVisibility: [],
+        trackSettings: [],
+        tab: null,
+      },
+      warnings: ['Only position was restored because ChatManager was unavailable'],
+      matchCount: matches.length,
+      message: `Restored view state "${viewState.name || viewState.id}"`,
     };
   }
 

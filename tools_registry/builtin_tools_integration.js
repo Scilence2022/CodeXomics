@@ -529,6 +529,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('restore_view_state', {
+      method: 'restoreViewState',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('bookmark_position', {
       method: 'bookmarkPosition',
       category: 'navigation',
@@ -1723,6 +1730,19 @@ class BuiltInToolsIntegration {
       /\b(save|store)\s+.*?\b(bookmark|view)\b/i.test(query)
     ) {
       relevantTools.push({ name: 'save_view_state', confidence: 0.9, reason: 'Save view state keywords detected' });
+    }
+
+    if (
+      /\b(restore|load|reopen|return\s+to|go\s+back\s+to)\s+.*?\b(saved\s+view|view\s+state|workspace|snapshot|layout)\b/i.test(
+        query
+      ) ||
+      /\b(saved\s+view|view\s+state|workspace|snapshot|layout)\s+.*?\b(restore|load|reopen)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'restore_view_state',
+        confidence: 0.9,
+        reason: 'Restore view state keywords detected',
+      });
     }
 
     if (
