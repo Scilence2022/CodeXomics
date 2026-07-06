@@ -1,8 +1,8 @@
 name: save_view_state
 version: 1.1.0
-description: 'Save the current genome browser view state including chromosome, position, visible tracks, track settings, and active tab. The saved state can be restored later by name.'
+description: 'Save the current genome browser view state including chromosome, position, visible tracks, track settings, and active tab. Use this for workspace/layout snapshots that can be restored later by name; use bookmark_position for simple coordinate region bookmarks.'
 category: navigation
-keywords: ['save', 'view', 'state', 'bookmark', 'snapshot', 'workspace', 'layout', 'preserve', 'position', 'tracks']
+keywords: ['save', 'view', 'state', 'snapshot', 'workspace', 'layout', 'preserve', 'tracks']
 priority: 1
 execution:
   type: client
@@ -58,7 +58,7 @@ metadata:
     - navigation
     - state
     - persistence
-    - bookmark
+    - workspace
   complexity: simple
   usage_pattern: occasional
 error_handling:

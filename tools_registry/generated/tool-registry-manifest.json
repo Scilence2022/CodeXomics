@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-06T00:47:42.953Z",
-  "registryHash": "a15f7bbc0bc6567f07878475f3e9ec62a4520c0eccf6a8cd7135da3cd152f362",
+  "generatedAt": "2026-07-06T04:20:37.665Z",
+  "registryHash": "503d68ded73e02e0e7273a1cf0ca4a15e614f47b73385eb9b60be0a903869979",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 192,
-    "appTools": 192,
+    "tools": 194,
+    "appTools": 194,
     "userTools": 0,
-    "uniqueTools": 186,
+    "uniqueTools": 188,
     "categories": 18,
-    "builtInTools": 156,
+    "builtInTools": 157,
     "diagnostics": 12
   },
   "categories": {
@@ -45,7 +45,7 @@
           "state_management",
           "track_control"
         ],
-        "tools_count": 12
+        "tools_count": 33
       },
       "sequence": {
         "name": "Sequence Analysis",
@@ -12380,6 +12380,150 @@
       }
     },
     {
+      "name": "bookmark_position",
+      "version": "1.0.0",
+      "description": "Save a named genomic position or region bookmark for quick navigation later. Use this when the user asks to bookmark, pin, flag, or save a specific coordinate range. This stores only the genomic interval, not track visibility or full workspace layout.",
+      "category": "navigation",
+      "keywords": [
+        "bookmark",
+        "pin",
+        "flag",
+        "save region",
+        "save position",
+        "mark position",
+        "mark region",
+        "region bookmark",
+        "coordinate bookmark"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": true,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "User-facing bookmark name"
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome name. Defaults to the current chromosome."
+          },
+          "start": {
+            "type": "number",
+            "description": "Start position of the bookmarked region (1-based, inclusive). Defaults to the current view start.",
+            "minimum": 1
+          },
+          "end": {
+            "type": "number",
+            "description": "End position of the bookmarked region (1-based, inclusive). Defaults to the current view end.",
+            "minimum": 1
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes for the bookmark",
+            "default": ""
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Bookmark the region 120000 to 121000 as \"Test bookmark\"",
+          "tool_call": "bookmark_position(name='Test bookmark', start=120000, end=121000)",
+          "thought": "User wants to save a named genomic interval for later navigation",
+          "expected_result": "A region bookmark named \"Test bookmark\" is saved for 120000-121000"
+        },
+        {
+          "user_query": "Pin the current view as \"promoter candidate\"",
+          "tool_call": "bookmark_position(name='promoter candidate')",
+          "thought": "User wants to save the current visible interval as a bookmark",
+          "expected_result": "The current chromosome and visible range are saved as a bookmark"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [
+          "save_view_state"
+        ],
+        "enhances": [
+          "navigate_to_position",
+          "get_bookmarks"
+        ],
+        "alternatives": [
+          "save_view_state"
+        ],
+        "prerequisites": [],
+        "follow_up": [
+          "get_bookmarks",
+          "toggle_sidebar_panel"
+        ]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": [
+          "navigation",
+          "bookmark",
+          "region",
+          "persistence"
+        ],
+        "complexity": "simple",
+        "usage_pattern": "occasional",
+        "recommendation": "Use for coordinate bookmarks; use save_view_state only when full track/layout restoration is requested"
+      },
+      "error_handling": {
+        "no_name": "Returns error if name is missing",
+        "no_coordinates": "Returns error if no explicit coordinates are provided and no current view is available",
+        "no_genome": "Returns error if no chromosome can be resolved"
+      },
+      "returns": {
+        "success": "boolean - Whether the bookmark was saved",
+        "bookmark": "object - The saved bookmark object",
+        "bookmark.id": "string - Unique identifier",
+        "bookmark.name": "string - User-provided name",
+        "bookmark.chromosome": "string - Chromosome name",
+        "bookmark.start": "number - Start coordinate",
+        "bookmark.end": "number - End coordinate",
+        "bookmark.created": "string - ISO 8601 timestamp",
+        "message": "string - Human-readable confirmation message"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/bookmark_position.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "bookmarkPosition"
+      },
+      "builtin": {
+        "name": "bookmark_position",
+        "method": "bookmarkPosition",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
       "name": "clear_highlights",
       "version": "1.0.0",
       "description": "Remove ALL positional highlights from the active tab at once. Use when the user asks to \"clear highlights\", \"remove all highlights\", or \"reset the highlights\". To remove a single highlight, use remove_highlight instead.",
@@ -12914,6 +13058,120 @@
       "builtin": {
         "name": "get_all_track_settings",
         "method": "getAllTrackSettings",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "get_bookmarks",
+      "version": "1.0.0",
+      "description": "List saved genomic region bookmarks and saved view states, optionally filtered by chromosome.",
+      "category": "navigation",
+      "keywords": [
+        "bookmarks",
+        "list bookmarks",
+        "show bookmarks",
+        "saved views",
+        "view states",
+        "saved regions",
+        "pinned regions"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Optional chromosome filter"
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Show all bookmarks",
+          "tool_call": "get_bookmarks()",
+          "thought": "User wants to see saved bookmarks and saved views",
+          "expected_result": "All region bookmarks and saved view states are returned"
+        },
+        {
+          "user_query": "List bookmarks on chr1",
+          "tool_call": "get_bookmarks(chromosome='chr1')",
+          "thought": "User wants bookmarks filtered by chromosome",
+          "expected_result": "Only chr1 bookmarks and saved views are returned"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": [
+          "bookmark_position",
+          "restore_view_state",
+          "navigate_to_position"
+        ],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": [
+          "navigate_to_position",
+          "restore_view_state",
+          "toggle_sidebar_panel"
+        ]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": [
+          "navigation",
+          "bookmark",
+          "state",
+          "list"
+        ],
+        "complexity": "simple",
+        "usage_pattern": "occasional"
+      },
+      "error_handling": {
+        "storage_error": "Returns an empty list if bookmark storage is unavailable"
+      },
+      "returns": {
+        "totalBookmarks": "number - Total number of region bookmarks",
+        "filteredBookmarks": "number - Number of bookmarks after filtering",
+        "totalViewStates": "number - Total number of saved view states",
+        "filteredViewStates": "number - Number of saved view states after filtering",
+        "chromosome": "string - Applied chromosome filter or \"all\"",
+        "bookmarks": "array - Region bookmarks",
+        "viewStates": "array - Saved browser view states"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/get_bookmarks.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "getBookmarks"
+      },
+      "builtin": {
+        "name": "get_bookmarks",
+        "method": "getBookmarks",
         "category": "navigation",
         "type": "built-in",
         "priority": 1,
@@ -15001,18 +15259,16 @@
     {
       "name": "save_view_state",
       "version": "1.1.0",
-      "description": "Save the current genome browser view state including chromosome, position, visible tracks, track settings, and active tab. The saved state can be restored later by name.",
+      "description": "Save the current genome browser view state including chromosome, position, visible tracks, track settings, and active tab. Use this for workspace/layout snapshots that can be restored later by name; use bookmark_position for simple coordinate region bookmarks.",
       "category": "navigation",
       "keywords": [
         "save",
         "view",
         "state",
-        "bookmark",
         "snapshot",
         "workspace",
         "layout",
         "preserve",
-        "position",
         "tracks"
       ],
       "priority": 1,
@@ -15098,7 +15354,7 @@
           "navigation",
           "state",
           "persistence",
-          "bookmark"
+          "workspace"
         ],
         "complexity": "simple",
         "usage_pattern": "occasional"
@@ -24068,6 +24324,7 @@
         "read details panel",
         "variant details panel",
         "search results panel",
+        "bookmarks panel",
         "operons panel",
         "tracks panel",
         "features panel",
@@ -24096,6 +24353,7 @@
               "read_details",
               "variant_details",
               "search_results",
+              "bookmarks",
               "operons",
               "tracks",
               "features",
@@ -24131,6 +24389,12 @@
           "tool_call": "toggle_sidebar_panel(panel_name='statistics', action='hide')",
           "thought": "The user wants the Sidebar statistics panel hidden",
           "expected_result": "The statistics panel is hidden"
+        },
+        {
+          "user_query": "Show the bookmarks panel",
+          "tool_call": "toggle_sidebar_panel(panel_name='bookmarks', action='show')",
+          "thought": "The user wants the saved bookmarks visible",
+          "expected_result": "The bookmarks panel is shown and the Sidebar is expanded if needed"
         }
       ],
       "returns": {
@@ -36517,6 +36781,150 @@
         "source": "builtin_tools_map"
       }
     },
+    "bookmark_position": {
+      "name": "bookmark_position",
+      "version": "1.0.0",
+      "description": "Save a named genomic position or region bookmark for quick navigation later. Use this when the user asks to bookmark, pin, flag, or save a specific coordinate range. This stores only the genomic interval, not track visibility or full workspace layout.",
+      "category": "navigation",
+      "keywords": [
+        "bookmark",
+        "pin",
+        "flag",
+        "save region",
+        "save position",
+        "mark position",
+        "mark region",
+        "region bookmark",
+        "coordinate bookmark"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": true,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "User-facing bookmark name"
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome name. Defaults to the current chromosome."
+          },
+          "start": {
+            "type": "number",
+            "description": "Start position of the bookmarked region (1-based, inclusive). Defaults to the current view start.",
+            "minimum": 1
+          },
+          "end": {
+            "type": "number",
+            "description": "End position of the bookmarked region (1-based, inclusive). Defaults to the current view end.",
+            "minimum": 1
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes for the bookmark",
+            "default": ""
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Bookmark the region 120000 to 121000 as \"Test bookmark\"",
+          "tool_call": "bookmark_position(name='Test bookmark', start=120000, end=121000)",
+          "thought": "User wants to save a named genomic interval for later navigation",
+          "expected_result": "A region bookmark named \"Test bookmark\" is saved for 120000-121000"
+        },
+        {
+          "user_query": "Pin the current view as \"promoter candidate\"",
+          "tool_call": "bookmark_position(name='promoter candidate')",
+          "thought": "User wants to save the current visible interval as a bookmark",
+          "expected_result": "The current chromosome and visible range are saved as a bookmark"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [
+          "save_view_state"
+        ],
+        "enhances": [
+          "navigate_to_position",
+          "get_bookmarks"
+        ],
+        "alternatives": [
+          "save_view_state"
+        ],
+        "prerequisites": [],
+        "follow_up": [
+          "get_bookmarks",
+          "toggle_sidebar_panel"
+        ]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": [
+          "navigation",
+          "bookmark",
+          "region",
+          "persistence"
+        ],
+        "complexity": "simple",
+        "usage_pattern": "occasional",
+        "recommendation": "Use for coordinate bookmarks; use save_view_state only when full track/layout restoration is requested"
+      },
+      "error_handling": {
+        "no_name": "Returns error if name is missing",
+        "no_coordinates": "Returns error if no explicit coordinates are provided and no current view is available",
+        "no_genome": "Returns error if no chromosome can be resolved"
+      },
+      "returns": {
+        "success": "boolean - Whether the bookmark was saved",
+        "bookmark": "object - The saved bookmark object",
+        "bookmark.id": "string - Unique identifier",
+        "bookmark.name": "string - User-provided name",
+        "bookmark.chromosome": "string - Chromosome name",
+        "bookmark.start": "number - Start coordinate",
+        "bookmark.end": "number - End coordinate",
+        "bookmark.created": "string - ISO 8601 timestamp",
+        "message": "string - Human-readable confirmation message"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/bookmark_position.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "bookmarkPosition"
+      },
+      "builtin": {
+        "name": "bookmark_position",
+        "method": "bookmarkPosition",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "clear_highlights": {
       "name": "clear_highlights",
       "version": "1.0.0",
@@ -37052,6 +37460,120 @@
       "builtin": {
         "name": "get_all_track_settings",
         "method": "getAllTrackSettings",
+        "category": "navigation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "get_bookmarks": {
+      "name": "get_bookmarks",
+      "version": "1.0.0",
+      "description": "List saved genomic region bookmarks and saved view states, optionally filtered by chromosome.",
+      "category": "navigation",
+      "keywords": [
+        "bookmarks",
+        "list bookmarks",
+        "show bookmarks",
+        "saved views",
+        "view states",
+        "saved regions",
+        "pinned regions"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Optional chromosome filter"
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Show all bookmarks",
+          "tool_call": "get_bookmarks()",
+          "thought": "User wants to see saved bookmarks and saved views",
+          "expected_result": "All region bookmarks and saved view states are returned"
+        },
+        {
+          "user_query": "List bookmarks on chr1",
+          "tool_call": "get_bookmarks(chromosome='chr1')",
+          "thought": "User wants bookmarks filtered by chromosome",
+          "expected_result": "Only chr1 bookmarks and saved views are returned"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": [
+          "bookmark_position",
+          "restore_view_state",
+          "navigate_to_position"
+        ],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": [
+          "navigate_to_position",
+          "restore_view_state",
+          "toggle_sidebar_panel"
+        ]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": [
+          "navigation",
+          "bookmark",
+          "state",
+          "list"
+        ],
+        "complexity": "simple",
+        "usage_pattern": "occasional"
+      },
+      "error_handling": {
+        "storage_error": "Returns an empty list if bookmark storage is unavailable"
+      },
+      "returns": {
+        "totalBookmarks": "number - Total number of region bookmarks",
+        "filteredBookmarks": "number - Number of bookmarks after filtering",
+        "totalViewStates": "number - Total number of saved view states",
+        "filteredViewStates": "number - Number of saved view states after filtering",
+        "chromosome": "string - Applied chromosome filter or \"all\"",
+        "bookmarks": "array - Region bookmarks",
+        "viewStates": "array - Saved browser view states"
+      },
+      "source": "app_registry",
+      "sourceFile": "navigation/get_bookmarks.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "getBookmarks"
+      },
+      "builtin": {
+        "name": "get_bookmarks",
+        "method": "getBookmarks",
         "category": "navigation",
         "type": "built-in",
         "priority": 1,
@@ -39139,18 +39661,16 @@
     "save_view_state": {
       "name": "save_view_state",
       "version": "1.1.0",
-      "description": "Save the current genome browser view state including chromosome, position, visible tracks, track settings, and active tab. The saved state can be restored later by name.",
+      "description": "Save the current genome browser view state including chromosome, position, visible tracks, track settings, and active tab. Use this for workspace/layout snapshots that can be restored later by name; use bookmark_position for simple coordinate region bookmarks.",
       "category": "navigation",
       "keywords": [
         "save",
         "view",
         "state",
-        "bookmark",
         "snapshot",
         "workspace",
         "layout",
         "preserve",
-        "position",
         "tracks"
       ],
       "priority": 1,
@@ -39236,7 +39756,7 @@
           "navigation",
           "state",
           "persistence",
-          "bookmark"
+          "workspace"
         ],
         "complexity": "simple",
         "usage_pattern": "occasional"
@@ -48206,6 +48726,7 @@
         "read details panel",
         "variant details panel",
         "search results panel",
+        "bookmarks panel",
         "operons panel",
         "tracks panel",
         "features panel",
@@ -48234,6 +48755,7 @@
               "read_details",
               "variant_details",
               "search_results",
+              "bookmarks",
               "operons",
               "tracks",
               "features",
@@ -48269,6 +48791,12 @@
           "tool_call": "toggle_sidebar_panel(panel_name='statistics', action='hide')",
           "thought": "The user wants the Sidebar statistics panel hidden",
           "expected_result": "The statistics panel is hidden"
+        },
+        {
+          "user_query": "Show the bookmarks panel",
+          "tool_call": "toggle_sidebar_panel(panel_name='bookmarks', action='show')",
+          "thought": "The user wants the saved bookmarks visible",
+          "expected_result": "The bookmarks panel is shown and the Sidebar is expanded if needed"
         }
       ],
       "returns": {
@@ -49781,6 +50309,16 @@
     {
       "name": "bookmark_position",
       "method": "bookmarkPosition",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "get_bookmarks",
+      "method": "getBookmarks",
       "category": "navigation",
       "type": "built-in",
       "priority": 1,
@@ -51344,6 +51882,16 @@
     "bookmark_position": {
       "name": "bookmark_position",
       "method": "bookmarkPosition",
+      "category": "navigation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "get_bookmarks": {
+      "name": "get_bookmarks",
+      "method": "getBookmarks",
       "category": "navigation",
       "type": "built-in",
       "priority": 1,

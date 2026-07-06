@@ -1,0 +1,96 @@
+name: bookmark_position
+version: 1.0.0
+description: >-
+  Save a named genomic position or region bookmark for quick navigation later.
+  Use this when the user asks to bookmark, pin, flag, or save a specific
+  coordinate range. This stores only the genomic interval, not track visibility
+  or full workspace layout.
+category: navigation
+keywords:
+  - bookmark
+  - pin
+  - flag
+  - save region
+  - save position
+  - mark position
+  - mark region
+  - region bookmark
+  - coordinate bookmark
+priority: 1
+execution:
+  type: client
+  timeout: 5000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    name:
+      type: string
+      description: User-facing bookmark name
+    chromosome:
+      type: string
+      description: Chromosome name. Defaults to the current chromosome.
+    start:
+      type: number
+      description: Start position of the bookmarked region (1-based, inclusive). Defaults to the current view start.
+      minimum: 1
+    end:
+      type: number
+      description: End position of the bookmarked region (1-based, inclusive). Defaults to the current view end.
+      minimum: 1
+    notes:
+      type: string
+      description: Optional notes for the bookmark
+      default: ''
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - name
+sample_usages:
+  - user_query: Bookmark the region 120000 to 121000 as "Test bookmark"
+    tool_call: bookmark_position(name='Test bookmark', start=120000, end=121000)
+    thought: User wants to save a named genomic interval for later navigation
+    expected_result: A region bookmark named "Test bookmark" is saved for 120000-121000
+  - user_query: Pin the current view as "promoter candidate"
+    tool_call: bookmark_position(name='promoter candidate')
+    thought: User wants to save the current visible interval as a bookmark
+    expected_result: The current chromosome and visible range are saved as a bookmark
+relationships:
+  depends_on: []
+  conflicts_with: ['save_view_state']
+  enhances: ['navigate_to_position', 'get_bookmarks']
+  alternatives: ['save_view_state']
+  prerequisites: []
+  follow_up: ['get_bookmarks', 'toggle_sidebar_panel']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - bookmark
+    - region
+    - persistence
+  complexity: simple
+  usage_pattern: occasional
+  recommendation: 'Use for coordinate bookmarks; use save_view_state only when full track/layout restoration is requested'
+error_handling:
+  no_name: Returns error if name is missing
+  no_coordinates: Returns error if no explicit coordinates are provided and no current view is available
+  no_genome: Returns error if no chromosome can be resolved
+returns:
+  success: boolean - Whether the bookmark was saved
+  bookmark: object - The saved bookmark object
+  bookmark.id: string - Unique identifier
+  bookmark.name: string - User-provided name
+  bookmark.chromosome: string - Chromosome name
+  bookmark.start: number - Start coordinate
+  bookmark.end: number - End coordinate
+  bookmark.created: string - ISO 8601 timestamp
+  message: string - Human-readable confirmation message

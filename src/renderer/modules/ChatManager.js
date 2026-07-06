@@ -8349,6 +8349,7 @@ ${coreTools}
       save_view_state: () => this.saveViewState(parameters),
       restore_view_state: () => this.restoreViewState(parameters),
       bookmark_position: () => this.bookmarkPosition(parameters),
+      get_bookmarks: () => this.getBookmarks(parameters),
 
       // Sequence tools
       get_sequence: () => this.getSequence(parameters),
@@ -9170,6 +9171,8 @@ ${coreTools}
       read_details: { id: 'readDetailsSection', label: 'read details' },
       variant_details: { id: 'variantDetailsSection', label: 'variant details' },
       search_results: { id: 'searchResultsSection', label: 'search results' },
+      bookmarks: { id: 'bookmarksSection', label: 'bookmarks' },
+      bookmark: { id: 'bookmarksSection', label: 'bookmarks', normalized: 'bookmarks' },
       operon: { id: 'operonsSection', label: 'operons', normalized: 'operons' },
       operons: { id: 'operonsSection', label: 'operons' },
       tracks: { id: 'tracksSection', label: 'tracks' },
@@ -9186,7 +9189,7 @@ ${coreTools}
       return {
         success: false,
         error:
-          "Invalid panel_name. Use one of: 'gene_details', 'primer_details', 'read_details', 'variant_details', 'search_results', 'operons', 'tracks', 'features', 'file_info', 'navigation', 'statistics'.",
+          "Invalid panel_name. Use one of: 'gene_details', 'primer_details', 'read_details', 'variant_details', 'search_results', 'bookmarks', 'operons', 'tracks', 'features', 'file_info', 'navigation', 'statistics'.",
       };
     }
 
@@ -9214,6 +9217,9 @@ ${coreTools}
 
     if (shouldShow !== isVisible) {
       if (shouldShow) {
+        if (entry.id === 'bookmarksSection') {
+          this.app?.bookmarkPanelUI?.refresh?.();
+        }
         uiManager.showPanel(entry.id);
       } else {
         uiManager.closePanel(entry.id);
@@ -12117,8 +12123,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const { name, chromosome, start, end, notes = '' } = params;
 
     const chr = chromosome || this.app.currentChromosome;
-    const bookmarkStart = start || this.app.currentPosition?.start;
-    const bookmarkEnd = end || this.app.currentPosition?.end;
+    const currentPosition = this.toExternalGenomePosition(this.app.currentPosition);
+    const bookmarkStart = start ?? currentPosition?.start;
+    const bookmarkEnd = end ?? currentPosition?.end;
 
     if (!chr || bookmarkStart === undefined || bookmarkEnd === undefined) {
       throw new Error('Invalid bookmark parameters');
@@ -12137,8 +12144,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Store in configuration
     const bookmarks = this.configManager.get('bookmarks', []);
     bookmarks.push(bookmark);
-    this.configManager.set('bookmarks', bookmarks);
+    await this.configManager.set('bookmarks', bookmarks);
     await this.configManager.save();
+    this.app?.bookmarkPanelUI?.refreshIfOpen?.();
 
     return {
       success: true,
@@ -12220,6 +12228,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     await this.configManager.save();
 
     this.setStoredViewStates(savedStates);
+    this.app?.bookmarkPanelUI?.refreshIfOpen?.();
 
     return {
       success: true,
@@ -12341,7 +12350,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       matches = viewStates.filter(state => state.name === name);
       if (matches.length === 0) {
         const normalizedName = String(name).trim().toLowerCase();
-        matches = viewStates.filter(state => String(state.name || '').trim().toLowerCase() === normalizedName);
+        matches = viewStates.filter(
+          state =>
+            String(state.name || '')
+              .trim()
+              .toLowerCase() === normalizedName
+        );
       }
     }
 

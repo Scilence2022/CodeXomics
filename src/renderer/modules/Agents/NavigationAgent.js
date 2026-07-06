@@ -700,17 +700,38 @@ class NavigationAgent extends AgentBase {
    * Execute bookmark position
    */
   async executeBookmarkPosition(parameters, app) {
-    const { name } = parameters;
+    const chatManager = this.multiAgentSystem?.chatManager;
+    if (chatManager && typeof chatManager.bookmarkPosition === 'function') {
+      try {
+        return await chatManager.bookmarkPosition(parameters);
+      } catch (error) {
+        console.warn(
+          'NavigationAgent: ChatManager.bookmarkPosition failed, falling back to local implementation',
+          error
+        );
+      }
+    }
+
+    const { name, chromosome, start, end, notes = '' } = parameters;
     const currentState = await this.executeGetCurrentState(app);
+    const currentPosition = currentState.currentPosition || currentState.position || currentState;
+    const bookmarkChromosome =
+      chromosome || currentState.currentChromosome || currentState.chromosome || app?.genomeBrowser?.currentChromosome;
+    const bookmarkStart = start ?? currentPosition?.start;
+    const bookmarkEnd = end ?? currentPosition?.end;
+
+    if (!name || !bookmarkChromosome || bookmarkStart === undefined || bookmarkEnd === undefined) {
+      throw new Error('Invalid bookmark parameters');
+    }
 
     const bookmark = {
+      id: Date.now() + Math.random().toString(36).substr(2, 9),
       name,
-      timestamp: Date.now(),
-      position: {
-        chromosome: currentState.chromosome,
-        start: currentState.start,
-        end: currentState.end,
-      },
+      chromosome: bookmarkChromosome,
+      start: bookmarkStart,
+      end: bookmarkEnd,
+      notes,
+      created: new Date().toISOString(),
     };
 
     // Store bookmark (could be in localStorage or app state)
@@ -777,7 +798,10 @@ class NavigationAgent extends AgentBase {
       try {
         return await chatManager.restoreViewState(parameters);
       } catch (error) {
-        console.warn('NavigationAgent: ChatManager.restoreViewState failed, falling back to local implementation', error);
+        console.warn(
+          'NavigationAgent: ChatManager.restoreViewState failed, falling back to local implementation',
+          error
+        );
       }
     }
 
@@ -788,7 +812,11 @@ class NavigationAgent extends AgentBase {
 
     let matches = this.getStoredViewStates().filter(state => {
       if (id) return state.id === id;
-      return String(state.name || '').trim().toLowerCase() === String(name).trim().toLowerCase();
+      return (
+        String(state.name || '')
+          .trim()
+          .toLowerCase() === String(name).trim().toLowerCase()
+      );
     });
 
     matches = matches.sort((a, b) => {

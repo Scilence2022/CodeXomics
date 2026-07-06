@@ -5,6 +5,33 @@ const require = createRequire(import.meta.url);
 const ChatManager = require('../../src/renderer/modules/ChatManager.js');
 
 describe('ChatManager restore_view_state', () => {
+  it('stores current-view bookmarks using external one-based coordinates', async () => {
+    const manager = Object.create(ChatManager.prototype);
+    const savedValues = {};
+    manager.app = {
+      currentChromosome: 'chr1',
+      currentPosition: { start: 119999, end: 121000 },
+      bookmarkPanelUI: { refreshIfOpen: vi.fn() },
+    };
+    manager.configManager = {
+      get: vi.fn((path, fallback) => (path === 'bookmarks' ? [] : fallback)),
+      set: vi.fn(async (path, value) => {
+        savedValues[path] = value;
+      }),
+      save: vi.fn(async () => {}),
+    };
+
+    const result = await manager.bookmarkPosition({ name: 'Test bookmark' });
+
+    expect(result.success).toBe(true);
+    expect(result.bookmark.chromosome).toBe('chr1');
+    expect(result.bookmark.start).toBe(120000);
+    expect(result.bookmark.end).toBe(121000);
+    expect(savedValues.bookmarks).toHaveLength(1);
+    expect(manager.configManager.save).toHaveBeenCalled();
+    expect(manager.app.bookmarkPanelUI.refreshIfOpen).toHaveBeenCalled();
+  });
+
   it('restores the newest saved view state matching a name', async () => {
     const manager = Object.create(ChatManager.prototype);
     const olderState = {

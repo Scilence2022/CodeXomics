@@ -543,6 +543,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('get_bookmarks', {
+      method: 'getBookmarks',
+      category: 'navigation',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Sequence Tools
     this.builtInToolsMap.set('translate_sequence', {
       method: 'executeMicrobeFunction_translateDNA',
@@ -1724,10 +1731,11 @@ class BuiltInToolsIntegration {
       }
     }
 
-    // Check for save view state / bookmark patterns
+    // Check for save view state and bookmark patterns.
     if (
-      /\b(save|store|preserve|snapshot|capture)\s+.*?\b(view|state|position|workspace|layout)\b/i.test(query) ||
-      /\b(save|store)\s+.*?\b(bookmark|view)\b/i.test(query)
+      /\b(save|store|preserve|snapshot|capture)\s+.*?\b(view|state|workspace|layout|tracks?|configuration)\b/i.test(
+        query
+      )
     ) {
       relevantTools.push({ name: 'save_view_state', confidence: 0.9, reason: 'Save view state keywords detected' });
     }
@@ -1747,6 +1755,7 @@ class BuiltInToolsIntegration {
 
     if (
       /\b(bookmark|mark|pin|flag)\s+.*?\b(position|location|region|spot)\b/i.test(query) ||
+      /\b(save|store)\s+.*?\b(position|location|region|coordinates?|bookmarks?)\b/i.test(query) ||
       /\b(add|create|make)\s+.*?\bbookmarks?\b/i.test(query)
     ) {
       relevantTools.push({ name: 'bookmark_position', confidence: 0.9, reason: 'Bookmark position keywords detected' });

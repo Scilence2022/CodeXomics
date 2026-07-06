@@ -80,6 +80,11 @@ class ToolCapabilityPolicy {
         policy: 'parameter_based',
       },
 
+      bookmark_operations: {
+        tools: ['bookmark_position', 'save_view_state'],
+        policy: 'parameter_based',
+      },
+
       scroll_operations: {
         tools: ['scroll_left', 'scroll_right', 'pan_left', 'pan_right'],
         policy: 'always_allowed',
@@ -229,6 +234,7 @@ class ToolCapabilityPolicy {
           'search_annotations',
           'get_operons',
           'list_highlights',
+          'get_bookmarks',
         ],
         policy: 'parameter_based',
       },

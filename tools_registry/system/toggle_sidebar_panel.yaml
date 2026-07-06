@@ -10,6 +10,7 @@ keywords:
   - 'read details panel'
   - 'variant details panel'
   - 'search results panel'
+  - 'bookmarks panel'
   - 'operons panel'
   - 'tracks panel'
   - 'features panel'
@@ -36,6 +37,7 @@ parameters:
         - 'read_details'
         - 'variant_details'
         - 'search_results'
+        - 'bookmarks'
         - 'operons'
         - 'tracks'
         - 'features'
@@ -57,6 +59,10 @@ sample_usages:
     tool_call: "toggle_sidebar_panel(panel_name='statistics', action='hide')"
     thought: 'The user wants the Sidebar statistics panel hidden'
     expected_result: 'The statistics panel is hidden'
+  - user_query: 'Show the bookmarks panel'
+    tool_call: "toggle_sidebar_panel(panel_name='bookmarks', action='show')"
+    thought: 'The user wants the saved bookmarks visible'
+    expected_result: 'The bookmarks panel is shown and the Sidebar is expanded if needed'
 returns:
   success: 'boolean - Whether the panel visibility was updated'
   message: 'string - Status message describing the result'

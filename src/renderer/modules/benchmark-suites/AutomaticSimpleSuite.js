@@ -2652,6 +2652,23 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
+        id: 'nav_auto_24',
+        name: 'Get Bookmarks',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'List all saved bookmarks and saved view states.',
+        expectedResult: {
+          tool_name: 'get_bookmarks',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 15000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
         id: 'nav_auto_21',
         name: 'List Genome Windows',
         type: 'function_call',

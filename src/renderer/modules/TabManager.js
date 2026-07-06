@@ -2724,6 +2724,7 @@ class TabManager {
         readDetailsSection: { visible: false, content: null },
         variantDetailsSection: { visible: false, content: null },
         searchResultsSection: { visible: false, content: null },
+        bookmarksSection: { visible: false, content: null },
       };
     }
 
@@ -2734,6 +2735,7 @@ class TabManager {
       'readDetailsSection',
       'variantDetailsSection',
       'searchResultsSection',
+      'bookmarksSection',
     ];
     requiredPanels.forEach(panelId => {
       if (!tabState.sidebarPanels[panelId]) {
@@ -2786,6 +2788,15 @@ class TabManager {
       }
     }
 
+    // Save bookmarks panel state
+    const bookmarksPanel = document.getElementById('bookmarksSection');
+    if (bookmarksPanel && tabState.sidebarPanels.bookmarksSection) {
+      tabState.sidebarPanels.bookmarksSection.visible = bookmarksPanel.style.display !== 'none';
+      if (tabState.sidebarPanels.bookmarksSection.visible) {
+        tabState.sidebarPanels.bookmarksSection.content = bookmarksPanel.innerHTML;
+      }
+    }
+
     console.log(`Saved sidebar panel states for tab: ${tabState.id}`);
   }
 
@@ -2801,6 +2812,7 @@ class TabManager {
         readDetailsSection: { visible: false, content: null },
         variantDetailsSection: { visible: false, content: null },
         searchResultsSection: { visible: false, content: null },
+        bookmarksSection: { visible: false, content: null },
       };
     }
 
@@ -2811,6 +2823,7 @@ class TabManager {
       'readDetailsSection',
       'variantDetailsSection',
       'searchResultsSection',
+      'bookmarksSection',
     ];
     requiredPanels.forEach(panelId => {
       if (!tabState.sidebarPanels[panelId]) {
@@ -2886,6 +2899,20 @@ class TabManager {
       }
     }
 
+    // Restore bookmarks panel
+    const bookmarksPanel = document.getElementById('bookmarksSection');
+    if (bookmarksPanel && tabState.sidebarPanels.bookmarksSection) {
+      if (tabState.sidebarPanels.bookmarksSection.visible) {
+        if (tabState.sidebarPanels.bookmarksSection.content) {
+          bookmarksPanel.innerHTML = tabState.sidebarPanels.bookmarksSection.content;
+        }
+        bookmarksPanel.style.display = 'block';
+        this.genomeBrowser?.bookmarkPanelUI?.refresh?.();
+      } else {
+        bookmarksPanel.style.display = 'none';
+      }
+    }
+
     // Update sidebar visibility based on panel states
     this.updateSidebarVisibilityForTab(tabState);
 
@@ -2925,6 +2952,7 @@ class TabManager {
         readDetailsSection: { visible: false, content: null },
         variantDetailsSection: { visible: false, content: null },
         searchResultsSection: { visible: false, content: null },
+        bookmarksSection: { visible: false, content: null },
       };
     }
 

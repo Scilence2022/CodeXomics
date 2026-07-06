@@ -1720,6 +1720,7 @@ Navigation & State:
   - jump_to_gene: Navigate to specific gene
   - zoom_in/zoom_out: Adjust view zoom level
   - scroll_left/scroll_right: Pan the view
+  - bookmark_position/get_bookmarks: Save or list coordinate region bookmarks
   - save_view_state/restore_view_state: Save or restore named browser view snapshots
 
 Search & Discovery:
