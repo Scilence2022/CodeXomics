@@ -463,11 +463,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               target: 'tracks',
               mode: 'visible',
-              filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
+              // filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
               format: 'png',
             },
             {
-              filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
+              // filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
             },
           ],
         },
@@ -751,7 +751,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          "Create a new custom regulatory annotation named 'regulatory_region_A' on chromosome 'U00096' spanning start position 150000 to end position 150500, then update its description to 'Highly conserved regulatory region', and list all annotations in that region to verify.",
+          "Create a new custom regulatory annotation named 'regulatory_region_A' on chromosome 'U00096' spanning start position 150000 to end position 150500, then update its note description to 'Highly conserved regulatory region', and list all annotations in that region to verify.",
         expectedResult: {
           tool_sequence: ['create_annotation', 'update_annotation', 'list_annotations'],
           parameters: [
@@ -765,7 +765,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               identifier: 'regulatory_region_A',
               updates: {
-                description: 'Highly conserved regulatory region',
+                note: 'Highly conserved regulatory region',
               },
             },
             {

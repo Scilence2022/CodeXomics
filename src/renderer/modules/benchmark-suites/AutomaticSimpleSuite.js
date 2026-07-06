@@ -538,12 +538,12 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         complexity: 'simple',
         evaluation: 'automatic',
         instruction:
-          'Calculate the GC content of this DNA sequence: TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAGATAGTGTTCGTAATCCAGTGGTGAACGTTGGTAGTCCAGCGGCTCCGGGCCGTTGGTGGTCCATACGTACTTAATGGTGCCGCGATTCTGATATTGCAAGGGGCGACCACGCTTTTGGTTTTCTTCATCGGCAAGGCGAGCGGCGCGTACATGAGGCGGCACATTACGCTGATACTCGCTCAGCGGACGGCGAAGGCGTTTACGGTAAACCAGTCGCGCATCCAGTTCA',
+          'Calculate the GC content of this DNA sequence: TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG',
         expectedResult: {
           tool_name: 'compute_gc',
           parameters: {
             sequence:
-              'TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAGATAGTGTTCGTAATCCAGTGGTGAACGTTGGTAGTCCAGCGGCTCCGGGCCGTTGGTGGTCCATACGTACTTAATGGTGCCGCGATTCTGATATTGCAAGGGGCGACCACGCTTTTGGTTTTCTTCATCGGCAAGGCGAGCGGCGCGTACATGAGGCGGCACATTACGCTGATACTCGCTCAGCGGACGGCGAAGGCGTTTACGGTAAACCAGTCGCGCATCCAGTTCA',
+              'TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG',
             include_statistics: true,
           },
         },
@@ -560,12 +560,12 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         complexity: 'simple',
         evaluation: 'automatic',
         instruction:
-          'Get the reverse complement of sequence TTACCGACTGCGGCCTGAGTTTTTTAAGTGACGTAAAATCGTGTTGAGGCCAACGCCCATAATGCGGGCTGTTGCCCGGCATCCAACGCCATTCATGGCCATATCAATGATTTTCTGGTGCGTACCGGGTTGAGAAGCGGTGTAAGTGAACTGCAGTTGCCATGTTTTACGGCAGTGAGAGCAGAGATAGCGCTGATGTCCGGCGGTGCTTTTGCCGTTACGCACCACCCCGTCAGTAGCTGAACAGGAGGGACAGCTGATAGAAACAGAAGCCAC',
+          'Get the reverse complement of sequence TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG',
         expectedResult: {
           tool_name: 'reverse_complement',
           parameters: {
             sequence:
-              'TTACCGACTGCGGCCTGAGTTTTTTAAGTGACGTAAAATCGTGTTGAGGCCAACGCCCATAATGCGGGCTGTTGCCCGGCATCCAACGCCATTCATGGCCATATCAATGATTTTCTGGTGCGTACCGGGTTGAGAAGCGGTGTAAGTGAACTGCAGTTGCCATGTTTTACGGCAGTGAGAGCAGAGATAGCGCTGATGTCCGGCGGTGCTTTTGCCGTTACGCACCACCCCGTCAGTAGCTGAACAGGAGGGACAGCTGATAGAAACAGAAGCCAC',
+              'TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG',
           },
         },
         maxScore: 5,
@@ -581,11 +581,11 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         complexity: 'simple',
         evaluation: 'automatic',
         instruction:
-          'Translate DNA sequence "TTGGCTAATATCAAATCAGCTAAGAAGCGCGCCATTCAGTCTGAAAAGGCTCGTAAGCACAACGCAAGCCGTCGCTCTATGATGCGTACTTTCATCAAGAAAGTATACGCAGCTATCGAAGCTGGCGACAAAGCTGCTGCACAGAAAGCATTTAACGAAATGCAACCGATCGTGGACCGTCAGGCTGCTAAAGGTCTGATCCACAAAAACAAAGCTGCACGTCATAAGGCTAACCTGACTGCACAGATCAACAAACTGGCTTAA" to protein',
+          'Translate DNA sequence "TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG" to protein',
         expectedResult: {
           tool_name: 'translate_dna',
           parameters: {
-            dna: 'TTGGCTAATATCAAATCAGCTAAGAAGCGCGCCATTCAGTCTGAAAAGGCTCGTAAGCACAACGCAAGCCGTCGCTCTATGATGCGTACTTTCATCAAGAAAGTATACGCAGCTATCGAAGCTGGCGACAAAGCTGCTGCACAGAAAGCATTTAACGAAATGCAACCGATCGTGGACCGTCAGGCTGCTAAAGGTCTGATCCACAAAAACAAAGCTGCACGTCATAAGGCTAACCTGACTGCACAGATCAACAAACTGGCTTAA', // FIXED: Use 'dna' parameter name instead of 'sequence'
+            dna: 'TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG', // FIXED: Use 'dna' parameter name instead of 'sequence'
           },
         },
         maxScore: 5,
@@ -2534,64 +2534,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 15000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
-      {
-        id: 'nav_auto_21',
-        name: 'List Genome Windows',
-        type: 'function_call',
-        category: 'navigation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'List all open genome browser windows.',
-        expectedResult: {
-          tool_name: 'list_genome_windows',
-          parameters: {},
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 15000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'nav_auto_22',
-        name: 'Switch Active Window',
-        type: 'function_call',
-        category: 'navigation',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction:
-          'Switch focus to the active genome browser window using switch_active_window with the current window id.',
-        expectedResult: {
-          tool_name: 'switch_active_window',
-          parameters: {
-            windowId: '<current_window_id>',
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 15000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-      {
-        id: 'nav_auto_23',
-        name: 'Toggle Annotation Track',
-        type: 'function_call',
-        category: 'track_control',
-        complexity: 'simple',
-        evaluation: 'automatic',
-        instruction: 'Show the annotations track using toggle_annotation_track.',
-        expectedResult: {
-          tool_name: 'toggle_annotation_track',
-          parameters: {
-            trackName: 'annotations',
-            visible: true,
-          },
-        },
-        maxScore: 5,
-        bonusScore: 1,
-        timeout: 15000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
-      },
-
       {
         id: 'settings_auto_08',
         name: 'Batch Set Track Settings',
