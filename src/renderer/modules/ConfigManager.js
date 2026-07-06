@@ -732,6 +732,13 @@ class ConfigManager {
   }
 
   /**
+   * Backward-compatible alias used by older managers.
+   */
+  async save() {
+    return this.saveConfig();
+  }
+
+  /**
    * Whether the hardened renderer has direct filesystem access.
    *
    * In the context-isolated app this is intentionally false, and configuration

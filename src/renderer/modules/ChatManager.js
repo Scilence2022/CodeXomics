@@ -12201,7 +12201,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const savedStates = this.configManager.get('viewStates', []);
     savedStates.push(viewState);
-    this.configManager.set('viewStates', savedStates);
+    await this.configManager.set('viewStates', savedStates);
     await this.configManager.save();
 
     this.setStoredViewStates(savedStates);
