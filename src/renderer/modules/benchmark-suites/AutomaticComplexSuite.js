@@ -301,7 +301,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Navigate to 110000-112000, highlight that region with label benchmark_focus, list highlights, remove that highlight, clear all remaining highlights, save the current view as "benchmark smoke view", navigate away to 130000-131000, restore the saved view named "benchmark smoke view", and bookmark 120000-121000 as "benchmark bookmark".',
+          'Navigate to 110000-112000, highlight that region with label benchmark_focus, list highlights, remove that highlight, clear all remaining highlights, save the current view as "benchmark smoke view", navigate away to 130000-131000, restore the saved view named "benchmark smoke view", and bookmark 120000-121000 as "Test bookmark".',
         expectedResult: {
           tool_sequence: [
             'navigate_to_position',
@@ -343,7 +343,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               name: 'benchmark smoke view',
             },
             {
-              name: 'benchmark bookmark',
+              name: 'Test bookmark',
               start: 120000,
               end: 121000,
             },
