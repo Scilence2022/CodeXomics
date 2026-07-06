@@ -134,6 +134,17 @@ class BlastFunctionTools {
         maxTargets,
       });
 
+      if (results?.isError) {
+        return {
+          success: false,
+          error: results.errorMessage || 'NCBI BLAST failed',
+          source: 'NCBI Online',
+          results: results,
+          parameters: { sequence, blastType, database, evalue, maxTargets },
+          timestamp: new Date().toISOString(),
+        };
+      }
+
       return {
         success: true,
         source: 'NCBI Online',
