@@ -111,6 +111,81 @@ describe('GelElectrophoresisService - listMarkers', () => {
   });
 });
 
+describe('GelElectrophoresisService - modal collapse state', () => {
+  let service;
+
+  beforeAll(() => {
+    const DNAMarkerDatabase = loadDNAMarkerDatabase();
+    global.window = { DNAMarkerDatabase };
+    service = createService();
+  });
+
+  it('should collapse without leaving resized blank space and restore explicit size', () => {
+    const icon = { className: 'fas fa-chevron-up' };
+    const collapseBtn = {
+      attrs: {},
+      querySelector: selector => (selector === 'i' ? icon : null),
+      setAttribute(name, value) {
+        this.attrs[name] = value;
+      },
+    };
+    const body = { hidden: false, style: { display: '' } };
+    const content = {
+      style: { height: '640px', minHeight: '' },
+      attrs: {},
+      classList: {
+        values: new Set(),
+        add(name) {
+          this.values.add(name);
+        },
+        remove(name) {
+          this.values.delete(name);
+        },
+        contains(name) {
+          return this.values.has(name);
+        },
+      },
+      setAttribute(name, value) {
+        this.attrs[name] = value;
+      },
+      getAttribute(name) {
+        return this.attrs[name];
+      },
+      hasAttribute(name) {
+        return Object.prototype.hasOwnProperty.call(this.attrs, name);
+      },
+      removeAttribute(name) {
+        delete this.attrs[name];
+      },
+    };
+    const modal = {
+      querySelector(selector) {
+        if (selector === '.modal-content') return content;
+        if (selector === '.modal-body') return body;
+        if (selector === '.modal-collapse') return collapseBtn;
+        return null;
+      },
+    };
+
+    service._setGelModalCollapsed(modal, true);
+
+    expect(content.classList.contains('is-collapsed')).toBe(true);
+    expect(content.getAttribute('data-expanded-height')).toBe('640px');
+    expect(body.hidden).toBe(true);
+    expect(collapseBtn.attrs['aria-expanded']).toBe('false');
+    expect(icon.className).toBe('fas fa-chevron-down');
+
+    service._setGelModalCollapsed(modal, false);
+
+    expect(content.classList.contains('is-collapsed')).toBe(false);
+    expect(content.style.height).toBe('640px');
+    expect(content.hasAttribute('data-expanded-height')).toBe(false);
+    expect(body.hidden).toBe(false);
+    expect(collapseBtn.attrs['aria-expanded']).toBe('true');
+    expect(icon.className).toBe('fas fa-chevron-up');
+  });
+});
+
 describe('GelElectrophoresisService - getMarkerInfo', () => {
   let service;
   beforeAll(() => {
