@@ -2827,52 +2827,66 @@ function registerIpcHandlers(deps) {
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
-      --bg-color: #1e1e1e;
-      --text-color: #d4d4d4;
-      --heading-color: #569cd6;
-      --link-color: #4ec9b0;
-      --code-bg: #2d2d2d;
-      --border-color: #3c3c3c;
+      --primary-color: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-rgb: 59, 130, 246;
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #f1f5f9;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --border-color: #e5e7eb;
+      --border-hover: #d1d5db;
+      --header-gradient: linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #667eea 80%);
+      --focus-ring: rgba(59, 130, 246, 0.3);
+      --selection-bg: #3b82f6;
+      --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
       line-height: 1.6;
-      padding: 40px;
+      padding: 68px 40px 40px;
       max-width: 900px;
       margin: 0 auto;
+      min-height: 100vh;
+      box-shadow: var(--shadow-md);
     }
-    h1, h2, h3, h4, h5, h6 { color: var(--heading-color); margin: 1.5em 0 0.5em; }
-    h1 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+    ::selection { background: var(--selection-bg); color: white; }
+    h1, h2, h3, h4, h5, h6 { color: var(--text-primary); margin: 1.5em 0 0.5em; }
+    h1 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.3em; }
     h2 { font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
-    a { color: var(--link-color); text-decoration: none; }
+    a { color: var(--primary-color); text-decoration: none; }
     a:hover { text-decoration: underline; }
     code {
-      background-color: var(--code-bg);
+      background-color: var(--bg-tertiary);
       padding: 0.2em 0.4em;
-      border-radius: 3px;
+      border-radius: 4px;
       font-family: 'Fira Code', 'Consolas', monospace;
     }
     pre {
-      background-color: var(--code-bg);
+      background-color: var(--bg-secondary);
       padding: 16px;
-      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
       overflow-x: auto;
       margin: 1em 0;
     }
     pre code { background: none; padding: 0; }
     blockquote {
-      border-left: 4px solid var(--link-color);
+      border-left: 4px solid var(--primary-color);
       padding-left: 16px;
       margin: 1em 0;
-      color: #999;
+      color: var(--text-secondary);
+      background: rgba(var(--primary-rgb), 0.08);
     }
     ul, ol { padding-left: 2em; margin: 1em 0; }
     table { border-collapse: collapse; width: 100%; margin: 1em 0; }
     th, td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
-    th { background-color: var(--code-bg); }
+    th { background-color: var(--bg-tertiary); }
     img { max-width: 100%; height: auto; }
     hr { border: none; border-top: 1px solid var(--border-color); margin: 2em 0; }
     #content { padding-bottom: 40px; }
@@ -2881,16 +2895,15 @@ function registerIpcHandlers(deps) {
       top: 0;
       left: 0;
       right: 0;
-      background: var(--code-bg);
-      padding: 8px 20px;
-      border-bottom: 1px solid var(--border-color);
+      background: var(--header-gradient);
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       display: flex;
       justify-content: space-between;
       align-items: center;
       z-index: 100;
     }
-    .toolbar-title { font-weight: 500; color: var(--heading-color); }
-    body { padding-top: 60px; }
+    .toolbar-title { font-weight: 500; color: white; }
   </style>
 </head>
 <body>
