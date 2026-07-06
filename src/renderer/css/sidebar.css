@@ -93,6 +93,119 @@
   font-size: 14px;
 }
 
+/* Bookmark Panel */
+.bookmarks-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bookmarks-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bookmarks-toolbar .btn {
+  min-height: 30px;
+}
+
+.bookmark-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bookmark-group-title {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bookmark-list {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.bookmark-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bookmark-item:last-child {
+  border-bottom: none;
+}
+
+.bookmark-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.bookmark-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.bookmark-title {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.bookmark-position {
+  margin-top: 4px;
+  color: var(--primary-color);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.bookmark-notes,
+.bookmark-created,
+.bookmarks-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.bookmark-notes {
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+.bookmark-created {
+  margin-top: 5px;
+}
+
+.bookmarks-empty {
+  margin: 0;
+  padding: 8px 0;
+  font-style: italic;
+}
+
+.bookmark-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.bookmark-actions .btn-xs {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+}
+
 /* Statistics Display */
 .stats {
   display: flex;

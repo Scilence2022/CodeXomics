@@ -1,0 +1,69 @@
+name: get_bookmarks
+version: 1.0.0
+description: 'List saved genomic region bookmarks and saved view states, optionally filtered by chromosome.'
+category: navigation
+keywords:
+  - bookmarks
+  - list bookmarks
+  - show bookmarks
+  - saved views
+  - view states
+  - saved regions
+  - pinned regions
+priority: 1
+execution:
+  type: client
+  timeout: 5000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Optional chromosome filter
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Show all bookmarks
+    tool_call: get_bookmarks()
+    thought: User wants to see saved bookmarks and saved views
+    expected_result: All region bookmarks and saved view states are returned
+  - user_query: List bookmarks on chr1
+    tool_call: get_bookmarks(chromosome='chr1')
+    thought: User wants bookmarks filtered by chromosome
+    expected_result: Only chr1 bookmarks and saved views are returned
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['bookmark_position', 'restore_view_state', 'navigate_to_position']
+  alternatives: []
+  prerequisites: []
+  follow_up: ['navigate_to_position', 'restore_view_state', 'toggle_sidebar_panel']
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - bookmark
+    - state
+    - list
+  complexity: simple
+  usage_pattern: occasional
+error_handling:
+  storage_error: Returns an empty list if bookmark storage is unavailable
+returns:
+  totalBookmarks: number - Total number of region bookmarks
+  filteredBookmarks: number - Number of bookmarks after filtering
+  totalViewStates: number - Total number of saved view states
+  filteredViewStates: number - Number of saved view states after filtering
+  chromosome: string - Applied chromosome filter or "all"
+  bookmarks: array - Region bookmarks
+  viewStates: array - Saved browser view states

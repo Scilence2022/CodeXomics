@@ -196,7 +196,14 @@ class CheckpointManager {
    * Capture panel states
    */
   capturePanelStates() {
-    const panels = ['fileInfoSection', 'navigationSection', 'statisticsSection', 'tracksSection', 'featuresSection'];
+    const panels = [
+      'fileInfoSection',
+      'navigationSection',
+      'statisticsSection',
+      'tracksSection',
+      'featuresSection',
+      'bookmarksSection',
+    ];
 
     const states = {};
     panels.forEach(panelId => {

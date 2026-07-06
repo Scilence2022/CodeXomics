@@ -18,7 +18,6 @@ const KNOWN_EXCEPTIONS = {
     'advanced_blast_search',
     'batch_blast_search',
     'blast_sequence_from_region',
-    'bookmark_position',
     'find_gene',
     'find_intergenic_regions',
     'get_blast_databases',
@@ -36,7 +35,6 @@ const KNOWN_EXCEPTIONS = {
     'batch_blast_search',
     'batch_create_annotations',
     'blast_sequence_from_region',
-    'bookmark_position',
     'calculate_gc_content',
     'calculate_melting_temp',
     'check_genomics_environment',
@@ -47,7 +45,6 @@ const KNOWN_EXCEPTIONS = {
     'find_orfs',
     'find_similar_sequences',
     'get_blast_databases',
-    'get_bookmarks',
     'get_current_region',
     'get_current_region_details',
     'get_file_info',
@@ -79,7 +76,6 @@ const KNOWN_EXCEPTIONS = {
     'batch_blast_search',
     'batch_create_annotations',
     'blast_sequence_from_region',
-    'bookmark_position',
     'calculate_gc_content',
     'calculate_melting_temp',
     'compare_regions',
@@ -88,7 +84,6 @@ const KNOWN_EXCEPTIONS = {
     'find_intergenic_regions',
     'find_similar_sequences',
     'get_blast_databases',
-    'get_bookmarks',
     'get_current_region',
     'get_file_info',
     'get_pdb_details',
@@ -102,26 +97,10 @@ const KNOWN_EXCEPTIONS = {
     'search_intergenic_regions',
     'search_motif',
   ],
-  llmPolicyMissingRegistry: [
-    'delete_feature',
-    'focus_on_gene',
-    'get_current_region',
-    'get_file_info',
-    'get_visible_tracks',
-    'jump_to_feature',
-    'refresh_view',
-    'scroll_left',
-    'scroll_right',
-    'set_view_mode',
-    'show_hide_features',
-    'switch_tab',
-    'toggle_annotation_track',
-  ],
+  llmPolicyMissingRegistry: [],
   mcpMissingRegistry: [
-    'bookmark_position',
     'codexomics_chat',
     'find_gene',
-    'get_bookmarks',
     'list_genome_windows',
     'render_protein_structure_results',
     'run_on_windows',
@@ -274,20 +253,8 @@ async function validateToolRegistryConsistency() {
     });
   }
 
-  pushComparison(
-    report,
-    'builtInToolsMap',
-    builtInNames,
-    registryNames,
-    'builtInToolsMapMissingRegistry'
-  );
-  pushComparison(
-    report,
-    'ToolNames.js',
-    collectToolNamesConstants(),
-    validNames,
-    'toolNamesMissingRegistry'
-  );
+  pushComparison(report, 'builtInToolsMap', builtInNames, registryNames, 'builtInToolsMapMissingRegistry');
+  pushComparison(report, 'ToolNames.js', collectToolNamesConstants(), validNames, 'toolNamesMissingRegistry');
   pushComparison(
     report,
     'FunctionCallsOrganizer.js',
@@ -302,13 +269,7 @@ async function validateToolRegistryConsistency() {
     validNames,
     'llmPolicyMissingRegistry'
   );
-  pushComparison(
-    report,
-    'src/mcp-tools schemas',
-    collectMcpToolNames(),
-    registryNames,
-    'mcpMissingRegistry'
-  );
+  pushComparison(report, 'src/mcp-tools schemas', collectMcpToolNames(), registryNames, 'mcpMissingRegistry');
 
   report.success = report.errors.length === 0;
   return report;

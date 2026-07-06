@@ -1,4 +1,4 @@
-/* global ActionManager, AdvancedSearchManager, BaseCompositionAnalyzer, BenchmarkManager, BlastManager, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, HighlightManager, HighlightRegionsUI, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, PrimerBindingService, PrimerLibraryUI, ReadsManager, ResizableModalManager, ScreenshotManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
+/* global ActionManager, AdvancedSearchManager, BaseCompositionAnalyzer, BenchmarkManager, BlastManager, BookmarkPanelUI, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, HighlightManager, HighlightRegionsUI, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, PrimerBindingService, PrimerLibraryUI, ReadsManager, ResizableModalManager, ScreenshotManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 (typeof window !== 'undefined' && window.path) || {
@@ -232,6 +232,10 @@ class GenomeBrowser {
     if (typeof HighlightRegionsUI !== 'undefined') {
       this.highlightsUI = new HighlightRegionsUI(this);
       window.highlightsUI = this.highlightsUI;
+    }
+    if (typeof BookmarkPanelUI !== 'undefined') {
+      this.bookmarkPanelUI = new BookmarkPanelUI(this);
+      window.bookmarkPanelUI = this.bookmarkPanelUI;
     }
     this.genomeNavigationBar = new GenomeNavigationBar(this);
     this.uiManager = new UIManager(this);
@@ -9484,6 +9488,10 @@ class GenomeBrowser {
 
     document.getElementById('highlightsBtn')?.addEventListener('click', () => {
       this.highlightsUI?.open();
+    });
+
+    document.getElementById('bookmarksBtn')?.addEventListener('click', () => {
+      this.bookmarkPanelUI?.open();
     });
 
     document.getElementById('openPrimerLibraryBtn')?.addEventListener('click', () => {

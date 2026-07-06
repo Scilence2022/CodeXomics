@@ -425,7 +425,7 @@ class NavigationTools {
 
       bookmark_position: {
         name: 'bookmark_position',
-        description: 'Bookmark the current genomic position for quick navigation later.',
+        description: 'Bookmark the current or specified genomic position/region for quick navigation later.',
         parameters: {
           type: 'object',
           properties: {

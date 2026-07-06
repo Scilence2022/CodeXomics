@@ -840,6 +840,10 @@
             </div>
 
             <div class="toolbar-section">
+                <button id="bookmarksBtn" class="btn btn-sm toggle-btn" title="Bookmarks">
+                    <i class="fas fa-bookmark"></i>
+                    <span>Bookmarks</span>
+                </button>
                 <button id="highlightsBtn" class="btn btn-sm toggle-btn" title="Highlighted Regions">
                     <i class="fas fa-highlighter"></i>
                     <span>Highlights</span>
@@ -932,6 +936,18 @@
                     </div>
                     <div id="searchResultsList" class="search-results-list">
                         <p class="no-results">No search results</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="bookmarksSection" style="display: none;">
+                    <div class="section-header">
+                        <h3>Bookmarks</h3>
+                        <button class="close-panel-btn" data-panel="bookmarksSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="bookmarksContent" class="bookmarks-panel">
+                        <p class="bookmarks-empty">No bookmarks saved</p>
                     </div>
                 </div>
 
@@ -5081,6 +5097,7 @@ Supported formats:
     <script src="modules/PrimerLibraryUI.js"></script>
     <script src="modules/HighlightManager.js"></script>
     <script src="modules/HighlightRegionsUI.js"></script>
+    <script src="modules/BookmarkPanelUI.js"></script>
     <script src="modules/ExternalToolsManager.js"></script>
     <script src="modules/MCPServerManager.js"></script>
 

@@ -64,6 +64,7 @@ navigation,nav_auto_17,Clear Highlights,Clear all highlighted regions from the a
 navigation,nav_auto_18,Save View State,"Save the current genome browser view state as ""benchmark smoke view""."
 navigation,nav_auto_19,Restore View State,"Restore the saved genome browser view state named ""benchmark smoke view""."
 navigation,nav_auto_20,Bookmark Position,"Bookmark the region 120000 to 121000 as ""Test bookmark""."
+navigation,nav_auto_24,Get Bookmarks,List all saved bookmarks and saved view states.
 navigation,nav_auto_21,List Genome Windows,List all open genome browser windows.
 navigation,nav_auto_22,Switch Active Window,Switch focus to the active genome browser window using switch_active_window with the current window id.
 primer_design,primer_auto_01,Calculate Primer Properties,Calculate properties for primer sequence ATGAAAGCGCTGAAAGCGCTGAAAG.
