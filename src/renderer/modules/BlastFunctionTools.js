@@ -474,40 +474,54 @@ class BlastFunctionTools {
    * Delete a BLAST database
    */
   async deleteBlastDatabase(params) {
-    const { database } = params;
+    const database = params.database || params.dbName;
 
     if (!database) {
-      throw new Error('database parameter is required');
+      throw new Error('dbName parameter is required');
+    }
+
+    if (params.confirm !== true) {
+      return {
+        success: false,
+        error: 'confirm must be true to delete a BLAST database',
+        database: database,
+        dbName: database,
+        timestamp: new Date().toISOString(),
+      };
     }
 
     try {
-      // Only custom databases can be deleted
-      let deleted = false;
+      const customDbId = this.findCustomDatabaseId(database);
+      if (customDbId && typeof this.blastManager.deleteCustomDatabase === 'function') {
+        await this.blastManager.deleteCustomDatabase(customDbId);
 
-      for (const [id, db] of this.blastManager.customDatabases) {
-        if (db.name === database || `custom_${id}` === database) {
-          this.blastManager.customDatabases.delete(id);
-          deleted = true;
-          break;
-        }
+        return {
+          success: true,
+          database: database,
+          dbName: database,
+          message: `Database "${database}" deleted successfully`,
+          timestamp: new Date().toISOString(),
+        };
       }
 
-      if (!deleted) {
-        throw new Error(`Database "${database}" not found or cannot be deleted (only custom databases can be deleted)`);
-      }
+      const localDbName = this.findLocalDatabaseName(database);
+      if (localDbName && typeof this.blastManager.deleteLocalDatabase === 'function') {
+        await this.blastManager.deleteLocalDatabase(localDbName);
 
-      // Update UI if available
-      if (this.blastManager.updateExistingLocalDatabases) {
-        this.blastManager.updateExistingLocalDatabases();
-      }
-      if (this.blastManager.updateDatabaseOptions) {
-        this.blastManager.updateDatabaseOptions();
+        return {
+          success: true,
+          database: database,
+          dbName: database,
+          message: `Database "${database}" deleted successfully`,
+          timestamp: new Date().toISOString(),
+        };
       }
 
       return {
-        success: true,
+        success: false,
+        error: `Database "${database}" not found`,
         database: database,
-        message: `Database "${database}" deleted successfully`,
+        dbName: database,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
@@ -515,6 +529,7 @@ class BlastFunctionTools {
         success: false,
         error: error.message,
         database: database,
+        dbName: database,
         timestamp: new Date().toISOString(),
       };
     }
@@ -718,14 +733,25 @@ class BlastFunctionTools {
       filteredHits = filteredHits.slice(0, maxHits);
     }
 
+    const filteredResults = {
+      ...results,
+      hits: filteredHits,
+      filtered: true,
+      originalHitCount: results.hits.length,
+      filters: { minIdentity, maxEvalue, minCoverage, maxHits },
+      timestamp: new Date().toISOString(),
+    };
+
+    if (this.blastManager) {
+      this.blastManager.searchResults = filteredResults;
+      this.blastManager.currentResults = filteredResults;
+    }
+
     return {
       success: true,
       originalHits: results.hits.length,
       filteredHits: filteredHits.length,
-      results: {
-        ...results,
-        hits: filteredHits,
-      },
+      results: filteredResults,
       filters: { minIdentity, maxEvalue, minCoverage, maxHits },
       timestamp: new Date().toISOString(),
     };
@@ -819,30 +845,38 @@ class BlastFunctionTools {
    * Validate BLAST database exists and is accessible
    */
   async validateDatabase(params) {
-    const { database, blastType } = params;
+    const database = params.database || params.dbName;
 
     if (!database) {
-      throw new Error('database parameter is required');
+      throw new Error('dbName parameter is required');
     }
 
     try {
+      const blastType = params.blastType || this.getBlastTypeForDatabase(database, params.dbType);
       const databasePath = this.blastManager.resolveDatabasePath(database);
-      const isValid = await this.blastManager.validateDatabase(databasePath, blastType || 'blastn');
+      const isValid = await this.blastManager.validateDatabase(databasePath, blastType);
 
       return {
         success: true,
         database: database,
+        dbName: database,
         databasePath: databasePath,
+        valid: isValid,
         isValid: isValid,
         blastType: blastType,
+        issues: isValid ? [] : [`Database "${database}" was not found or failed BLAST validation`],
+        message: isValid ? `BLAST database "${database}" is valid` : `BLAST database "${database}" is not valid`,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
       return {
         success: false,
         database: database,
+        dbName: database,
         error: error.message,
+        valid: false,
         isValid: false,
+        issues: [error.message],
         timestamp: new Date().toISOString(),
       };
     }
@@ -909,6 +943,52 @@ class BlastFunctionTools {
     }
     metrics.totalExecutionTime += executionTime;
     metrics.averageExecutionTime = metrics.totalExecutionTime / metrics.totalExecutions;
+  }
+
+  findCustomDatabaseId(database) {
+    if (!this.blastManager?.customDatabases) return null;
+    if (this.blastManager.customDatabases.has(database)) return database;
+
+    for (const [id, db] of this.blastManager.customDatabases.entries()) {
+      if (db?.name === database || db?.dbName === database) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  findLocalDatabaseName(database) {
+    if (!this.blastManager?.config?.localDatabases) return null;
+    if (this.blastManager.config.localDatabases.has(database)) return database;
+
+    for (const [name, db] of this.blastManager.config.localDatabases.entries()) {
+      if (db?.name === database || db?.dbName === database) {
+        return name;
+      }
+    }
+    return null;
+  }
+
+  getBlastTypeForDatabase(database, dbType) {
+    if (dbType) return this.normalizeDatabaseBlastType(dbType);
+
+    const localDbName = this.findLocalDatabaseName(database);
+    const localDb = localDbName ? this.blastManager.config.localDatabases.get(localDbName) : null;
+    if (localDb?.type) return this.normalizeDatabaseBlastType(localDb.type);
+
+    const customDbId = this.findCustomDatabaseId(database);
+    const customDb = customDbId ? this.blastManager.customDatabases.get(customDbId) : null;
+    if (customDb?.type) return this.normalizeDatabaseBlastType(customDb.type);
+
+    return 'blastn';
+  }
+
+  normalizeDatabaseBlastType(type) {
+    const normalized = String(type || '').toLowerCase();
+    if (normalized === 'prot' || normalized === 'protein' || normalized === 'blastp' || normalized === 'blastx') {
+      return 'blastp';
+    }
+    return 'blastn';
   }
 
   /**

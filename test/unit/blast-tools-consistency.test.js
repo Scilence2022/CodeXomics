@@ -197,6 +197,12 @@ describe('BLAST Tool Registry Consistency', () => {
         "this.blastManager.refreshDatabaseUi({ service: 'local', blastType: preferredBlastType })"
       );
     });
+
+    it('should delete local BLAST database files through main-process file IPC', () => {
+      expect(content).toContain('window.electronAPI.deletePhysicalFile');
+      expect(content).toContain("['.ndb', '.nhr', '.nin', '.nog', '.nos', '.not', '.nsq', '.ntf', '.nto']");
+      expect(content).not.toContain('rm -f');
+    });
   });
 
   describe('FunctionCallsOrganizer BLAST entries', () => {
