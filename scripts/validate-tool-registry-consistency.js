@@ -17,7 +17,6 @@ const KNOWN_EXCEPTIONS = {
   builtInToolsMapMissingRegistry: [
     'advanced_blast_search',
     'batch_blast_search',
-    'blast_sequence_from_region',
     'find_gene',
     'find_intergenic_regions',
     'get_blast_databases',
@@ -34,7 +33,6 @@ const KNOWN_EXCEPTIONS = {
     'analyze_codon_usage',
     'batch_blast_search',
     'batch_create_annotations',
-    'blast_sequence_from_region',
     'calculate_gc_content',
     'calculate_melting_temp',
     'check_genomics_environment',
@@ -75,7 +73,6 @@ const KNOWN_EXCEPTIONS = {
     'analyze_codon_usage',
     'batch_blast_search',
     'batch_create_annotations',
-    'blast_sequence_from_region',
     'calculate_gc_content',
     'calculate_melting_temp',
     'compare_regions',

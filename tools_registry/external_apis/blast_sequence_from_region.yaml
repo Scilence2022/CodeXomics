@@ -1,0 +1,137 @@
+name: blast_sequence_from_region
+version: 1.0.0
+description: Run BLAST on a sequence extracted directly from a loaded genome chromosome region.
+category: external_apis
+keywords:
+  - blast
+  - blast_sequence_from_region
+  - region blast
+  - genomic region
+  - current region
+  - chromosome region
+  - coordinates
+  - sequence
+  - ncbi
+  - nt
+  - database
+priority: 1
+execution:
+  type: built-in
+  timeout: 300000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: true
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Chromosome, contig, or replicon identifier. Use the current chromosome from context when the user says current region.
+      examples:
+        - U00096
+        - NC_000913.3
+        - chr1
+    start:
+      type: integer
+      description: One-based start coordinate of the genomic region to extract.
+      minimum: 1
+    end:
+      type: integer
+      description: One-based inclusive end coordinate of the genomic region to extract.
+      minimum: 1
+    blastType:
+      type: string
+      description: BLAST program to use for the extracted region.
+      enum:
+        - blastn
+        - blastp
+        - blastx
+        - tblastn
+        - tblastx
+      default: blastn
+    database:
+      type: string
+      description: Target BLAST database.
+      enum:
+        - nt
+        - nr
+        - refseq_rna
+        - refseq_genomic
+        - refseq_protein
+        - swissprot
+        - pdb
+        - est
+      default: nt
+    evalue:
+      type: string
+      description: E-value threshold for reporting matches.
+      default: '0.01'
+    maxTargets:
+      type: integer
+      description: Maximum number of target sequences to return.
+      default: 50
+      minimum: 1
+      maximum: 1000
+    service:
+      type: string
+      description: BLAST service to use. Online routes to NCBI; local routes to a local BLAST+ database.
+      enum:
+        - online
+        - ncbi
+        - remote
+        - local
+        - blast+
+      default: online
+  required:
+    - chromosome
+    - start
+    - end
+    - database
+sample_usages:
+  - user_query: Run BLAST for the current genomic region from 100000 to 100400 against the nt database using blast_sequence_from_region.
+    tool_call: "blast_sequence_from_region(chromosome='U00096', start=100000, end=100400, blastType='blastn', database='nt')"
+    thought: User wants BLAST to extract the current genome region itself instead of first calling get_sequence.
+    expected_result: NCBI BLAST results for the extracted chromosome region.
+  - user_query: BLAST chromosome NC_000913.3 coordinates 3423681 to 3424651 against refseq_genomic.
+    tool_call: "blast_sequence_from_region(chromosome='NC_000913.3', start=3423681, end=3424651, blastType='blastn', database='refseq_genomic')"
+    thought: User provided a chromosome range and target database for direct region BLAST.
+    expected_result: BLASTn results for the specified genomic interval.
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances:
+    - blast_search_online
+  alternatives:
+    - get_sequence
+    - blast_search_online
+    - blast_search_local
+  prerequisites:
+    - load_genome_file
+  follow_up:
+    - blast_filter_results
+    - blast_export_results
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - blast
+    - region
+    - genomic coordinates
+    - ncbi
+    - online
+  complexity: moderate
+  usage_pattern: common
+error_handling:
+  missing_genome: Returns error if no loaded genome sequence is available for the chromosome.
+  invalid_region: Returns error if chromosome, start, or end is missing or invalid.
+  network_error: Returns error if the selected online BLAST service is unavailable.
+returns:
+  success: boolean - Whether the BLAST search completed successfully.
+  source: string - BLAST backend used.
+  searchId: string - Unique search identifier when available.
+  results: object - BLAST search results with hits and alignments.
+  parameters: object - Search parameters used.
+  timestamp: string - Search completion timestamp.
