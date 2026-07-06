@@ -6201,9 +6201,10 @@ class GenomeBrowser {
       }
     }
 
-    // Parse qualifiers to separate General, Function and Resources attributes
+    // Parse qualifiers to separate General, GO, EC, Pathways and Resources attributes
     let generalAttributesHtml = '';
     let functionAttributesHtml = '';
+    let ecAttributesHtml = '';
     let pathwayAttributesHtml = '';
     let resourceAttributesHtml = '';
 
@@ -6231,6 +6232,14 @@ class GenomeBrowser {
                         </div>
                     `;
           const lowerKey = key.toLowerCase();
+          const normalizedKey = lowerKey.replace(/[\s-]+/g, '_');
+          const looksLikeEcValue = /\b(?:EC[:\s]*)?\d{1,2}\.\d{1,3}\.\d{1,3}\.(?:\d{1,3}|-)\b/i.test(String(val));
+          const isEcQualifier =
+            normalizedKey === 'ec' ||
+            normalizedKey === 'ec_number' ||
+            normalizedKey === 'ec_numbers' ||
+            normalizedKey.includes('enzyme_commission') ||
+            (normalizedKey.includes('ec') && looksLikeEcValue);
           if (
             lowerKey.startsWith('go_') ||
             lowerKey.startsWith('go ') ||
@@ -6239,7 +6248,9 @@ class GenomeBrowser {
             key === 'GO Process'
           ) {
             functionAttributesHtml += attrHtml;
-          } else if (lowerKey === 'ec_number' || lowerKey === 'ko' || lowerKey === 'kegg' || lowerKey === 'pathway') {
+          } else if (isEcQualifier) {
+            ecAttributesHtml += attrHtml;
+          } else if (lowerKey === 'ko' || lowerKey === 'kegg' || lowerKey === 'pathway') {
             pathwayAttributesHtml += attrHtml;
           } else if (lowerKey === 'db_xref') {
             resourceAttributesHtml += attrHtml;
@@ -6255,6 +6266,9 @@ class GenomeBrowser {
     }
     if (functionAttributesHtml) {
       functionAttributesHtml = `<div class="gene-attributes"><h4>GO Annotations</h4>${functionAttributesHtml}</div>`;
+    }
+    if (ecAttributesHtml) {
+      ecAttributesHtml = `<div class="gene-attributes"><h4>Enzyme Commission</h4>${ecAttributesHtml}</div>`;
     }
     if (pathwayAttributesHtml) {
       pathwayAttributesHtml = `<div class="gene-attributes"><h4>Pathway Annotations</h4>${pathwayAttributesHtml}</div>`;
@@ -6321,64 +6335,44 @@ class GenomeBrowser {
       ? this.geneAttachmentsManager.getGeneIdentifier(gene)
       : gene.qualifiers?.locus_tag || gene.qualifiers?.gene || `${gene.type}_${gene.start}_${gene.end}`;
 
-    // Begin Tabs implementation
-    html += `
-        <div class="gene-tabs-container">
-            <div class="gene-tabs-header">
-                <button class="gene-tab-btn active" data-tab="general">General</button>
-                <button class="gene-tab-btn" data-tab="go">GO</button>
-                <button class="gene-tab-btn" data-tab="pathways">Pathways</button>
-                <button class="gene-tab-btn" data-tab="sequence">Sequence</button>
-                <button class="gene-tab-btn" data-tab="notes">Notes</button>
-                <button class="gene-tab-btn" data-tab="resources">Resources</button>
-            </div>
-    `;
+    const renderTabEmptyState = message => `<div class="gene-tab-empty">${message}</div>`;
 
     // ---------------- General Tab ----------------
-    html += `<div class="gene-tab-content active" id="tab-general">`;
-    html += generalAttributesHtml;
-
-    // Appending Literature to General Tab
     const citationList = this.generateUnifiedCitationList();
+    let generalTabHtml = generalAttributesHtml;
     if (citationList) {
-      html += citationList;
+      generalTabHtml += citationList;
     }
-    html += `</div>`; // End General Tab
-
-    // ---------------- GO Tab ----------------
-    html += `<div class="gene-tab-content" id="tab-go">`;
-    html += functionAttributesHtml;
-    html += `</div>`; // End GO Tab
-
-    // ---------------- Pathways Tab ----------------
-    html += `<div class="gene-tab-content" id="tab-pathways">`;
-    html += pathwayAttributesHtml;
-    html += `</div>`; // End Pathways Tab
+    if (!generalTabHtml) {
+      generalTabHtml = renderTabEmptyState('No general annotation qualifiers available.');
+    }
 
     // ---------------- Sequence Tab ----------------
-    html += `<div class="gene-tab-content" id="tab-sequence">`;
+    let sequenceTabHtml = '';
     if (fullSequence) {
-      html += this.createSequencesSection(gene, fullSequence, geneName, currentChr);
+      sequenceTabHtml += this.createSequencesSection(gene, fullSequence, geneName, currentChr);
+    } else {
+      sequenceTabHtml += renderTabEmptyState('Sequence data is not available for this chromosome.');
     }
-    html += `<div class="gene-actions">
+    sequenceTabHtml += `<div class="gene-actions">
                 <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyCDSSequence()">
                     <i class="fas fa-copy"></i> Copy CDS Sequence
                 </button>`;
     if (geneType === 'CDS' || (gene.qualifiers && this.getQualifierValue(gene.qualifiers, 'translation'))) {
-      html += `
+      sequenceTabHtml += `
                 <button class="btn gene-copy-translation-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneTranslation()">
                     <i class="fas fa-copy"></i> Copy Translation
                 </button>
             `;
     }
-    html += `</div></div>`; // End Sequence Tab
+    sequenceTabHtml += `</div>`;
 
     // ---------------- Notes Tab ----------------
-    html += `<div class="gene-tab-content" id="tab-notes">`;
+    let notesTabHtml = '';
     if (this.geneNotesManager) {
-      html += this.geneNotesManager.renderNotesSection(geneId);
+      notesTabHtml += this.geneNotesManager.renderNotesSection(geneId);
     } else {
-      html += `
+      notesTabHtml += `
                 <div class="gene-notes-section">
                     <div class="gene-notes-header">
                         <h4><i class="fas fa-sticky-note"></i> Notes</h4>
@@ -6389,14 +6383,13 @@ class GenomeBrowser {
                 </div>
             `;
     }
-    html += `</div>`; // End Notes Tab
 
     // ---------------- Resources Tab ----------------
-    html += `<div class="gene-tab-content" id="tab-resources">`;
+    let resourcesTabHtml = '';
     if (this.geneAttachmentsManager) {
-      html += this.geneAttachmentsManager.renderAttachmentsSection(geneId);
+      resourcesTabHtml += this.geneAttachmentsManager.renderAttachmentsSection(geneId);
     } else {
-      html += `
+      resourcesTabHtml += `
                 <div class="gene-attachments">
                     <div class="gene-attachments-header">
                         <h4><i class="fas fa-paperclip"></i> Attachments</h4>
@@ -6410,10 +6403,38 @@ class GenomeBrowser {
                 </div>
             `;
     }
-    html += resourceAttributesHtml;
-    html += `</div>`; // End Resources Tab
+    resourcesTabHtml += resourceAttributesHtml;
 
-    html += `</div></div>`; // Close gene-tabs-container and gene-details-info
+    const geneTabs = [
+      { id: 'general', label: 'General', content: generalTabHtml },
+      ...(functionAttributesHtml ? [{ id: 'go', label: 'GO', content: functionAttributesHtml }] : []),
+      ...(ecAttributesHtml ? [{ id: 'ec', label: 'EC', content: ecAttributesHtml }] : []),
+      ...(pathwayAttributesHtml ? [{ id: 'pathways', label: 'Pathways', content: pathwayAttributesHtml }] : []),
+      { id: 'sequence', label: 'Sequence', content: sequenceTabHtml },
+      { id: 'notes', label: 'Notes', content: notesTabHtml },
+      { id: 'resources', label: 'Resources', content: resourcesTabHtml },
+    ];
+
+    // Begin Tabs implementation
+    html += `
+        <div class="gene-tabs-container">
+            <div class="gene-tabs-header">
+                ${geneTabs
+                  .map(
+                    (tab, index) =>
+                      `<button class="gene-tab-btn${index === 0 ? ' active' : ''}" data-tab="${tab.id}">${tab.label}</button>`
+                  )
+                  .join('')}
+            </div>
+            ${geneTabs
+              .map(
+                (tab, index) =>
+                  `<div class="gene-tab-content${index === 0 ? ' active' : ''}" id="tab-${tab.id}">${tab.content}</div>`
+              )
+              .join('')}
+        `;
+
+    html += `</div>`; // Close gene-tabs-container
 
     geneDetailsContent.innerHTML = html;
 

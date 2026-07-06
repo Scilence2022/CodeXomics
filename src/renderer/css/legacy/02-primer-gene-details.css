@@ -357,13 +357,14 @@
 
 .gene-tabs-header {
   display: flex;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 12px;
-  overflow-x: auto;
-  gap: 4px;
+  overflow-x: visible;
+  gap: 4px 6px;
 }
 
-/* Hide scrollbar for the tab header but allow scrolling */
+/* Keep the wrapped tab header visually clean in narrow sidebars. */
 .gene-tabs-header::-webkit-scrollbar {
   display: none;
 }
@@ -381,6 +382,7 @@
   font-weight: 500;
   font-size: 13px;
   border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
@@ -402,6 +404,16 @@
 
 .gene-tab-content.active {
   display: block;
+}
+
+.gene-tab-empty {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
 }
 
 .gene-basic-info {
@@ -1321,4 +1333,3 @@ sup {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
