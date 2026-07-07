@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-06T16:36:29.363Z",
-  "registryHash": "2d9db721d9f9b6d931361e633ab7a5db69a63dedbbeac682663bec03e66e1a6c",
+  "generatedAt": "2026-07-07T06:16:39.701Z",
+  "registryHash": "dffc9812f3ea67c5f3efc874a80f64440d4b41c08c6f9ec48a6e6ce817eeb8f5",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -14173,12 +14173,12 @@
           },
           "start": {
             "type": "number",
-            "description": "Start position of the region to highlight (1-based, inclusive)",
+            "description": "Start position of the region to highlight (1-based, inclusive). If end is omitted, this single position is highlighted.",
             "minimum": 1
           },
           "end": {
             "type": "number",
-            "description": "End position of the region to highlight (1-based, inclusive)",
+            "description": "End position of the region to highlight (1-based, inclusive). If start is omitted, this single position is highlighted.",
             "minimum": 1
           },
           "label": {
@@ -14195,9 +14195,17 @@
             "default": "default"
           }
         },
-        "required": [
-          "start",
-          "end"
+        "anyOf": [
+          {
+            "required": [
+              "start"
+            ]
+          },
+          {
+            "required": [
+              "end"
+            ]
+          }
         ]
       },
       "sample_usages": [
@@ -14218,6 +14226,12 @@
           "tool_call": "highlight_region(start=4000, end=4500)",
           "thought": "User is adding another highlight; multiple highlights are supported",
           "expected_result": "A second highlight is added without removing the first"
+        },
+        {
+          "user_query": "Highlight position 311163",
+          "tool_call": "highlight_region(start=311163)",
+          "thought": "User wants to mark one exact base position",
+          "expected_result": "A 1 bp highlight is drawn at position 311163"
         }
       ],
       "relationships": {
@@ -14253,7 +14267,7 @@
         "recommendation": "Use to visually mark one or more regions of interest; repeat to add more highlights"
       },
       "error_handling": {
-        "invalid_coordinates": "Returns error if start or end are not valid numbers",
+        "invalid_coordinates": "Returns error if the supplied start or end is not a valid number",
         "no_genome_loaded": "Highlights are drawn once a genome is loaded and the region is in view",
         "chromosome_not_found": "Returns error if specified chromosome does not exist in the loaded genome"
       },
@@ -38864,12 +38878,12 @@
           },
           "start": {
             "type": "number",
-            "description": "Start position of the region to highlight (1-based, inclusive)",
+            "description": "Start position of the region to highlight (1-based, inclusive). If end is omitted, this single position is highlighted.",
             "minimum": 1
           },
           "end": {
             "type": "number",
-            "description": "End position of the region to highlight (1-based, inclusive)",
+            "description": "End position of the region to highlight (1-based, inclusive). If start is omitted, this single position is highlighted.",
             "minimum": 1
           },
           "label": {
@@ -38886,9 +38900,17 @@
             "default": "default"
           }
         },
-        "required": [
-          "start",
-          "end"
+        "anyOf": [
+          {
+            "required": [
+              "start"
+            ]
+          },
+          {
+            "required": [
+              "end"
+            ]
+          }
         ]
       },
       "sample_usages": [
@@ -38909,6 +38931,12 @@
           "tool_call": "highlight_region(start=4000, end=4500)",
           "thought": "User is adding another highlight; multiple highlights are supported",
           "expected_result": "A second highlight is added without removing the first"
+        },
+        {
+          "user_query": "Highlight position 311163",
+          "tool_call": "highlight_region(start=311163)",
+          "thought": "User wants to mark one exact base position",
+          "expected_result": "A 1 bp highlight is drawn at position 311163"
         }
       ],
       "relationships": {
@@ -38944,7 +38972,7 @@
         "recommendation": "Use to visually mark one or more regions of interest; repeat to add more highlights"
       },
       "error_handling": {
-        "invalid_coordinates": "Returns error if start or end are not valid numbers",
+        "invalid_coordinates": "Returns error if the supplied start or end is not a valid number",
         "no_genome_loaded": "Highlights are drawn once a genome is loaded and the region is in view",
         "chromosome_not_found": "Returns error if specified chromosome does not exist in the loaded genome"
       },

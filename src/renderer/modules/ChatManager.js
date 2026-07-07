@@ -11580,13 +11580,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       throw new Error('Highlight manager not available');
     }
     const { start, end, chromosome, label, color } = params;
-    if (start === undefined || end === undefined) {
-      throw new Error('Start and end positions are required');
+    if (start === undefined && end === undefined) {
+      throw new Error('Start or end position is required');
     }
-    const s = parseInt(start, 10);
-    const e = parseInt(end, 10);
-    if (isNaN(s) || isNaN(e)) {
-      throw new Error('Start and end positions must be valid numbers');
+    const s = start !== undefined ? parseInt(start, 10) : undefined;
+    const e = end !== undefined ? parseInt(end, 10) : undefined;
+    if ((start !== undefined && isNaN(s)) || (end !== undefined && isNaN(e))) {
+      throw new Error('Highlight position must be a valid number');
     }
 
     const targetChromosome = chromosome || this.app.currentChromosome;

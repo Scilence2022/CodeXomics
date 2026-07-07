@@ -61,6 +61,16 @@ describe('HighlightManager CRUD + normalization', () => {
     expect(clamped.start).toBe(1); // start clamped to >= 1
   });
 
+  it('treats a single start or end coordinate as a 1 bp highlight', () => {
+    const startOnly = mgr.addHighlight({ start: 311163 });
+    expect(startOnly.start).toBe(311163);
+    expect(startOnly.end).toBe(311163);
+
+    const endOnly = mgr.addHighlight({ end: 25 });
+    expect(endOnly.start).toBe(25);
+    expect(endOnly.end).toBe(25);
+  });
+
   it('supports multiple and overlapping highlights', () => {
     mgr.addHighlight({ start: 1000, end: 1030 });
     mgr.addHighlight({ start: 1010, end: 1040 }); // overlaps the first

@@ -47,15 +47,22 @@ class HighlightManager {
 
   /**
    * Add a highlight region. Coordinates are 1-based inclusive; they are
-   * normalized so start <= end and start >= 1.
-   * @param {{id?:string, chromosome?:string, start:number, end:number, label?:string, color?:string, createdBy?:string}} region
+   * normalized so start <= end and start >= 1. If only one coordinate is
+   * supplied, it becomes a 1 bp highlight at that position.
+   * @param {{id?:string, chromosome?:string, start?:number, end?:number, label?:string, color?:string, createdBy?:string}} region
    * @returns {object} the stored highlight
    */
   addHighlight(region = {}) {
-    const rawStart = Number(region.start);
-    const rawEnd = Number(region.end);
+    const hasStart = region.start !== undefined && region.start !== null && region.start !== '';
+    const hasEnd = region.end !== undefined && region.end !== null && region.end !== '';
+    if (!hasStart && !hasEnd) {
+      throw new Error('Highlight requires at least one numeric position');
+    }
+
+    const rawStart = hasStart ? Number(region.start) : Number(region.end);
+    const rawEnd = hasEnd ? Number(region.end) : Number(region.start);
     if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd)) {
-      throw new Error('Highlight requires numeric start and end positions');
+      throw new Error('Highlight position must be a valid numeric value');
     }
 
     const start = Math.max(1, Math.round(Math.min(rawStart, rawEnd)));
