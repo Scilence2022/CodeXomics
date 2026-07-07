@@ -8416,6 +8416,7 @@ ${coreTools}
       list_annotations: () => this.listAnnotations(parameters),
       get_annotation: () => this.getAnnotation(parameters),
       update_annotation: () => this.updateAnnotation(parameters),
+      merge_gene_research_report: () => this.mergeGeneResearchReport(parameters),
       delete_annotation: () => this.deleteAnnotation(parameters),
       search_annotations: () => this.searchAnnotations(parameters),
       bulk_update_annotations: () => this.bulkUpdateAnnotations(parameters),
@@ -12621,6 +12622,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   async updateAnnotation(params) {
     return this.services.annotation.updateAnnotation(params);
+  }
+
+  async mergeGeneResearchReport(params) {
+    return this.services.annotation.mergeGeneResearchReport(params);
   }
 
   async searchAnnotations(params) {

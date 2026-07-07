@@ -903,6 +903,7 @@ class MultiAgentSystem {
         'get_genome_summary',
         'create_annotation',
         'update_annotation',
+        'merge_gene_research_report',
         'delete_annotation',
         'bulk_update_annotations',
         'get_annotation_history',

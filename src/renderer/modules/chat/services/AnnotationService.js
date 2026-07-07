@@ -69,6 +69,7 @@ class AnnotationService {
    * Find annotation by identifier (gene name, locus tag, or protein ID)
    */
   _findAnnotation(identifier, chromosome) {
+    const targetIdentifier = Array.isArray(identifier) ? identifier[0] : identifier;
     const chromosomes = chromosome ? [chromosome] : Object.keys(this.app.currentAnnotations);
 
     for (const chr of chromosomes) {
@@ -84,10 +85,10 @@ class AnnotationService {
         const proteinId = Array.isArray(qualifiers.protein_id) ? qualifiers.protein_id[0] : qualifiers.protein_id || '';
 
         if (
-          identifier === annotation.id ||
-          identifier === geneName ||
-          identifier === locusTag ||
-          identifier === proteinId
+          targetIdentifier === annotation.id ||
+          targetIdentifier === geneName ||
+          targetIdentifier === locusTag ||
+          targetIdentifier === proteinId
         ) {
           return {
             chromosome: chr,
@@ -196,6 +197,278 @@ class AnnotationService {
     };
   }
 
+  _normalizeQualifierValues(value, options = {}) {
+    if (value === undefined || value === null) return [];
+    const splitSemicolon = options.splitSemicolon !== false;
+    const values = Array.isArray(value) ? value : [value];
+    return values
+      .flatMap(item => {
+        const stringValue = String(item);
+        const parts = splitSemicolon ? stringValue.split(/\n|;(?=\s*[A-Za-z0-9_:-])/) : [stringValue];
+        return parts.map(part => part.trim());
+      })
+      .filter(Boolean);
+  }
+
+  _dedupeValues(values) {
+    const seen = new Set();
+    const result = [];
+    for (const value of values) {
+      const stringValue = String(value || '').trim();
+      if (!stringValue) continue;
+      const key = stringValue.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(stringValue);
+    }
+    return result;
+  }
+
+  _mergeQualifierValue(existingValue, additions, options = {}) {
+    const merged = this._dedupeValues([
+      ...this._normalizeQualifierValues(existingValue, options),
+      ...this._normalizeQualifierValues(additions, options),
+    ]);
+    if (merged.length === 0) return null;
+    return merged.length === 1 ? merged[0] : merged;
+  }
+
+  _stripMarkdown(text) {
+    return String(text || '')
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/[#>*_~|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  _parseReportPayload(reportLike) {
+    if (!reportLike) return null;
+    if (typeof reportLike === 'object') return reportLike;
+    if (typeof reportLike !== 'string') return null;
+
+    const trimmed = reportLike.trim();
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return null;
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return null;
+    }
+  }
+
+  _extractReportText(reportLike) {
+    if (!reportLike) return '';
+    if (typeof reportLike === 'string') {
+      const trimmed = reportLike.trim();
+      if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return reportLike;
+      try {
+        return this._extractReportText(JSON.parse(trimmed));
+      } catch {
+        return reportLike;
+      }
+    }
+    if (typeof reportLike !== 'object') return String(reportLike);
+    return (
+      reportLike.finalReport ||
+      reportLike.result?.finalReport ||
+      reportLike.report?.content ||
+      reportLike.result?.report?.content ||
+      reportLike.report ||
+      reportLike.content ||
+      reportLike.text ||
+      ''
+    );
+  }
+
+  _extractEvidenceReferences(reportText, sources = []) {
+    const evidence = [];
+    const text = String(reportText || '');
+    const add = value => {
+      const clean = String(value || '').trim().replace(/[),.;\]]+$/, '');
+      if (clean) evidence.push(clean);
+    };
+
+    for (const match of text.matchAll(/\bPMID[:\s]*(\d{6,10})\b/gi)) {
+      add(`PMID:${match[1]}`);
+    }
+    for (const match of text.matchAll(/\b(?:DOI[:\s]*)?(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)\b/gi)) {
+      add(`DOI:${match[1]}`);
+    }
+    for (const match of text.matchAll(/https?:\/\/[^\s<>)\]]+/gi)) {
+      add(match[0]);
+    }
+
+    for (const source of Array.isArray(sources) ? sources : []) {
+      if (!source) continue;
+      if (typeof source === 'string') {
+        add(source);
+        continue;
+      }
+      if (source.pmid) add(`PMID:${source.pmid}`);
+      if (source.doi) add(`DOI:${source.doi}`);
+      if (source.url) add(source.url);
+      if (source.formattedCitation) add(source.formattedCitation);
+      else if (source.title && source.url) add(`${source.title} - ${source.url}`);
+    }
+
+    return this._dedupeValues(evidence).slice(0, 30);
+  }
+
+  _extractAnnotationTerms(reportText) {
+    const text = String(reportText || '');
+    return {
+      ecNumbers: this._dedupeValues(
+        Array.from(text.matchAll(/\bEC[:\s]*(\d{1,2}\.\d{1,3}\.\d{1,3}\.(?:\d{1,3}|-))\b/gi)).map(match => match[1])
+      ),
+      goTerms: this._dedupeValues(Array.from(text.matchAll(/\bGO:\d{7}\b/gi)).map(match => match[0].toUpperCase())),
+      koTerms: this._dedupeValues(Array.from(text.matchAll(/\bK\d{5}\b/g)).map(match => match[0])),
+      pathwayTerms: this._dedupeValues(
+        Array.from(text.matchAll(/\b(?:KEGG|Reactome|MetaCyc|BioCyc)[:\s]+([A-Za-z0-9_.:-]+)\b/gi)).map(
+          match => match[0]
+        )
+      ),
+    };
+  }
+
+  _extractResearchSummary(reportText, maxLength = 900) {
+    const text = String(reportText || '');
+    const sectionMatch = text.match(
+      /(?:key research findings|main findings|functional summary|function(?:al)? annotation|research overview)[\s\S]{0,2500}/i
+    );
+    const sourceText = sectionMatch ? sectionMatch[0] : text;
+    const paragraphs = sourceText
+      .split(/\n{2,}/)
+      .map(part => this._stripMarkdown(part))
+      .filter(part => part && !/^references?$/i.test(part) && part.length > 40);
+    const summary = paragraphs[0] || this._stripMarkdown(sourceText);
+    return summary.length > maxLength ? `${summary.slice(0, maxLength - 3).trim()}...` : summary;
+  }
+
+  _isPlaceholderProduct(product) {
+    return !product || /^(unknown|hypothetical|uncharacteri[sz]ed|putative protein|predicted protein)/i.test(String(product));
+  }
+
+  _normalizeAnnotationProposal(rawProposal, reportText, sources, params = {}) {
+    const proposal = rawProposal && typeof rawProposal === 'object' ? rawProposal : {};
+    const proposedUpdates = proposal.updates && typeof proposal.updates === 'object' ? { ...proposal.updates } : {};
+    const terms = this._extractAnnotationTerms(reportText);
+    const evidence = this._dedupeValues([
+      ...this._normalizeQualifierValues(proposal.evidence),
+      ...this._normalizeQualifierValues(proposal.sources),
+      ...this._extractEvidenceReferences(reportText, sources),
+    ]);
+    const summary = proposal.summary || proposedUpdates.function_research_summary || this._extractResearchSummary(reportText);
+
+    return {
+      identifier: proposal.identifier || proposal.target?.identifier || params.identifier || params.geneName || params.locusTag,
+      summary,
+      product: proposal.product || proposedUpdates.product || null,
+      confidence: proposal.confidence ?? params.confidence ?? null,
+      evidence,
+      reportUrl: proposal.reportUrl || proposal.download?.reportUrl || params.reportUrl || params.download?.reportUrl,
+      detailsUrl: proposal.detailsUrl || proposal.download?.detailsUrl || params.detailsUrl || params.download?.detailsUrl,
+      updates: proposedUpdates,
+      ecNumbers: this._dedupeValues([
+        ...this._normalizeQualifierValues(proposal.ecNumbers),
+        ...this._normalizeQualifierValues(proposedUpdates.EC_number),
+        ...this._normalizeQualifierValues(proposedUpdates.ec_number),
+        ...terms.ecNumbers,
+      ]),
+      goTerms: this._dedupeValues([
+        ...this._normalizeQualifierValues(proposal.goTerms),
+        ...this._normalizeQualifierValues(proposedUpdates.go_terms),
+        ...this._normalizeQualifierValues(proposedUpdates.GO_terms),
+        ...terms.goTerms,
+      ]),
+      koTerms: this._dedupeValues([
+        ...this._normalizeQualifierValues(proposal.koTerms),
+        ...this._normalizeQualifierValues(proposedUpdates.ko),
+        ...this._normalizeQualifierValues(proposedUpdates.KO),
+        ...terms.koTerms,
+      ]),
+      pathwayTerms: this._dedupeValues([
+        ...this._normalizeQualifierValues(proposal.pathwayTerms),
+        ...this._normalizeQualifierValues(proposedUpdates.pathway),
+        ...terms.pathwayTerms,
+      ]),
+      dbXrefs: this._dedupeValues([
+        ...this._normalizeQualifierValues(proposal.dbXrefs),
+        ...this._normalizeQualifierValues(proposedUpdates.db_xref),
+        ...evidence.filter(ref => /^(PMID|DOI):/i.test(ref)),
+      ]),
+    };
+  }
+
+  _buildDeepResearchUpdates(annotation, proposal, params = {}) {
+    const qualifiers = annotation.qualifiers || {};
+    const updates = {};
+    const now = new Date().toISOString();
+    const summary = this._stripMarkdown(proposal.summary || '').trim();
+    const evidencePreview = proposal.evidence.slice(0, 8).join('; ');
+    const noteParts = [];
+
+    if (summary) {
+      updates.function_research_summary = summary;
+      noteParts.push(`Deep Gene Research (${now.slice(0, 10)}): ${summary}`);
+    }
+    if (evidencePreview) {
+      noteParts.push(`Evidence: ${evidencePreview}`);
+    }
+
+    const proposedProduct = proposal.updates.product || proposal.product;
+    if (proposedProduct && (params.overwriteProduct === true || this._isPlaceholderProduct(qualifiers.product))) {
+      updates.product = proposedProduct;
+    }
+
+    if (noteParts.length > 0) {
+      const mergedNote = this._mergeQualifierValue(qualifiers.note, noteParts.join(' '), { splitSemicolon: false });
+      if (mergedNote) updates.note = mergedNote;
+    }
+
+    if (proposal.ecNumbers.length > 0) {
+      updates.EC_number = this._mergeQualifierValue(qualifiers.EC_number || qualifiers.ec_number, proposal.ecNumbers);
+    }
+    if (proposal.goTerms.length > 0) {
+      updates.go_terms = this._mergeQualifierValue(qualifiers.go_terms || qualifiers.GO_terms, proposal.goTerms);
+    }
+    if (proposal.koTerms.length > 0) {
+      updates.ko = this._mergeQualifierValue(qualifiers.ko || qualifiers.KO, proposal.koTerms);
+    }
+    if (proposal.pathwayTerms.length > 0) {
+      updates.pathway = this._mergeQualifierValue(qualifiers.pathway, proposal.pathwayTerms);
+    }
+    if (proposal.dbXrefs.length > 0) {
+      updates.db_xref = this._mergeQualifierValue(qualifiers.db_xref, proposal.dbXrefs);
+    }
+
+    const inference = `Deep Gene Research annotation merge; evidence=${proposal.evidence.length}; confidence=${
+      proposal.confidence ?? 'not_specified'
+    }`;
+    updates.inference = this._mergeQualifierValue(qualifiers.inference, inference);
+    updates.codexomics_research_updated_at = now;
+    if (proposal.confidence !== null && proposal.confidence !== undefined) {
+      updates.codexomics_research_confidence = String(proposal.confidence);
+    }
+    if (proposal.reportUrl) updates.codexomics_research_report = proposal.reportUrl;
+    if (proposal.detailsUrl) updates.codexomics_research_details = proposal.detailsUrl;
+    if (proposal.evidence.length > 0) {
+      updates.codexomics_research_evidence = proposal.evidence;
+    }
+
+    for (const [field, value] of Object.entries(proposal.updates || {})) {
+      if (value === undefined || value === null || value === '') continue;
+      if (updates[field] !== undefined) continue;
+      if (field === 'product' && params.overwriteProduct !== true && !this._isPlaceholderProduct(qualifiers.product)) {
+        continue;
+      }
+      updates[field] = Array.isArray(value) ? this._mergeQualifierValue(qualifiers[field], value) : value;
+    }
+
+    return updates;
+  }
+
   // 2. ANNOTATION MODIFICATION
   async updateAnnotation(params) {
     const identifier =
@@ -282,6 +555,87 @@ class AnnotationService {
         qualifiers: found.annotation.qualifiers,
       },
       message: `Updated ${Object.keys(updates).length} field(s) on ${annotationsToUpdate.length} annotation(s) for "${identifier}"`,
+    };
+  }
+
+  async mergeGeneResearchReport(params = {}) {
+    if (!this.app.currentAnnotations) {
+      throw new Error('No annotations loaded');
+    }
+
+    const selectedGene = this.app.selectedGene?.gene;
+    const identifier =
+      params.identifier ||
+      params.annotationId ||
+      params.gene ||
+      params.gene_name ||
+      params.geneName ||
+      params.locus_tag ||
+      params.locusTag ||
+      selectedGene?.qualifiers?.locus_tag ||
+      selectedGene?.qualifiers?.gene;
+    const chromosome = params.chromosome || params.chrom || params.chr || this.app.currentChromosome;
+
+    if (!identifier) {
+      throw new Error('merge_gene_research_report requires an annotation identifier or a selected gene');
+    }
+
+    const found = this._findAnnotation(identifier, chromosome);
+    if (!found) {
+      throw new Error(`Annotation "${identifier}" not found`);
+    }
+
+    const rawReport = params.report || params.researchReport || params.result || params.finalReport;
+    const reportPayload = this._parseReportPayload(rawReport);
+    const reportText = this._extractReportText(rawReport);
+    const annotationProposal =
+      params.annotationProposal ||
+      params.proposal ||
+      reportPayload?.annotationProposal ||
+      reportPayload?.result?.annotationProposal;
+    const sources = params.sources || params.references || reportPayload?.sources || reportPayload?.result?.sources || [];
+    const proposal = this._normalizeAnnotationProposal(
+      annotationProposal,
+      reportText,
+      sources,
+      { ...params, identifier }
+    );
+    const proposedUpdates = this._buildDeepResearchUpdates(found.annotation, proposal, params);
+    const apply = params.apply !== false && params.dryRun !== true;
+
+    if (!apply) {
+      return {
+        success: true,
+        applied: false,
+        annotationId: identifier,
+        chromosome: found.chromosome,
+        proposedUpdates,
+        evidence: proposal.evidence,
+        message: `Prepared ${Object.keys(proposedUpdates).length} Deep Gene Research annotation update(s) for "${identifier}"`,
+      };
+    }
+
+    const updateResult = await this.updateAnnotation({
+      identifier,
+      chromosome: found.chromosome,
+      updates: proposedUpdates,
+      agent: params.agent || 'deep-gene-research',
+      evidence: proposal.evidence,
+    });
+
+    if (this.app.selectedGene?.gene === found.annotation && typeof this.app.populateGeneDetails === 'function') {
+      this.app.populateGeneDetails(found.annotation, this.app.selectedGene.operonInfo);
+    }
+
+    return {
+      ...updateResult,
+      applied: true,
+      proposedUpdates,
+      evidence: proposal.evidence,
+      confidence: proposal.confidence,
+      reportUrl: proposal.reportUrl,
+      detailsUrl: proposal.detailsUrl,
+      message: `Merged Deep Gene Research report into "${identifier}" with ${Object.keys(proposedUpdates).length} field update(s)`,
     };
   }
 

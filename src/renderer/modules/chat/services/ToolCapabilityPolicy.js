@@ -61,6 +61,7 @@ class ToolCapabilityPolicy {
           'switch_tab',
           'create_annotation',
           'update_annotation',
+          'merge_gene_research_report',
           'delete_annotation',
           'bulk_update_annotations',
           'get_annotation_history',

@@ -821,6 +821,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('merge_gene_research_report', {
+      method: 'mergeGeneResearchReport',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('delete_annotation', {
       method: 'deleteAnnotation',
       category: 'annotation',
@@ -2347,6 +2354,21 @@ class BuiltInToolsIntegration {
           reason: 'Annotation update keywords detected',
         });
       }
+    }
+
+    if (
+      /\b(merge|apply|integrate|import|update)\s+.*?\b(deep\s+gene\s+research|gene\s+research|research\s+report)\b/i.test(
+        query
+      ) ||
+      /\b(deep\s+gene\s+research|gene\s+research|research\s+report)\s+.*?\b(merge|apply|integrate|update)\b/i.test(
+        query
+      )
+    ) {
+      relevantTools.push({
+        name: 'merge_gene_research_report',
+        confidence: 0.95,
+        reason: 'Deep Gene Research report merge/update keywords detected',
+      });
     }
 
     if (
