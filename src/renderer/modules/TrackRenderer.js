@@ -4478,12 +4478,11 @@ class TrackRenderer {
 
   /**
    * Install (once per TrackRenderer instance) a single pair of document-level
-   * mousemove/mouseup listeners shared by every reads-track vertical drag
-   * (scrollbar thumb and direct content dragging), gated by one active-drag
-   * slot - mirrors NavigationManager's dragState.isDragging pattern. Without
-   * this, re-creating the scrollable track on every pan/zoom used to add a
-   * fresh pair of document listeners that were never removed, leaking one
-   * pair per render.
+   * mousemove/mouseup listeners shared by every reads-track scrollbar-thumb
+   * drag, gated by one active-drag slot - mirrors NavigationManager's
+   * dragState.isDragging pattern. Without this, re-creating the scrollable
+   * track on every pan/zoom used to add a fresh pair of document listeners
+   * that were never removed, leaking one pair per render.
    */
   ensureReadsScrollDragHandlers() {
     if (this._readsScrollDragInit) return;
@@ -4574,49 +4573,6 @@ class TrackRenderer {
       initialViewportHeight: Math.max(0, trackHeight - topPadding),
       top: topPadding,
       trackContent,
-    });
-
-    // Direct click-and-drag panning on the rows themselves, not just the
-    // scrollbar thumb. stopPropagation keeps this from also bubbling into the
-    // horizontal genome-pan drag that NavigationManager.makeDraggable attaches
-    // to the whole track-content element.
-    scrollContainer.addEventListener('mousedown', e => {
-      if (e.button !== 0) return;
-      e.stopPropagation();
-
-      const dragStartY = e.clientY;
-      const dragStartScrollTop = scrollbar._getScrollTop();
-      const DRAG_THRESHOLD = 4;
-      let dragged = false;
-
-      this._readsScrollDrag = {
-        onMove: clientY => {
-          const deltaY = clientY - dragStartY;
-          if (!dragged && Math.abs(deltaY) > DRAG_THRESHOLD) {
-            dragged = true;
-            scrollContainer.style.cursor = 'grabbing';
-            document.body.style.userSelect = 'none';
-            scrollbar._show();
-          }
-          if (dragged) scrollbar._scrollTo(dragStartScrollTop - deltaY);
-        },
-        onEnd: () => {
-          if (!dragged) return;
-          scrollContainer.style.cursor = 'grab';
-          document.body.style.userSelect = '';
-          scrollbar._scheduleHide();
-          // Suppress the click a drag would otherwise fire on release, so
-          // dragging across a read doesn't also pop open its tooltip.
-          scrollContainer.addEventListener(
-            'click',
-            clickEvent => {
-              clickEvent.stopPropagation();
-              clickEvent.preventDefault();
-            },
-            { capture: true, once: true }
-          );
-        },
-      };
     });
 
     trackContent.appendChild(scrollContainer);
@@ -11643,7 +11599,7 @@ This action cannot be undone.`;
                             <div class="form-group">
                                 <label for="readsTrackHeight">Track Height (px):</label>
                                 <input type="number" id="readsTrackHeight" class="form-input" min="100" max="500" value="${settings.height || 150}">
-                                <div class="help-text">Total height of the reads track. Reads fill this height; when a region has more rows than fit, the track scrolls vertically (drag the rows, use the scrollbar, or the mouse wheel).</div>
+                                <div class="help-text">Total height of the reads track. Reads fill this height; when a region has more rows than fit, use the mouse wheel or scrollbar to scroll vertically.</div>
                             </div>
                         </div>
 

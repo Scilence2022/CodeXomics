@@ -261,6 +261,40 @@ describe('Aligned reads vertical scrolling layout', () => {
     expect(layout.readHeight).toBe(4);
     expect(layout.useScroll).toBe(false);
   });
+
+  it('uses wheel for vertical reads scrolling while leaving mousedown available for genome panning', () => {
+    global.document = jsdomDocument;
+    const renderer = Object.create(TrackRenderer.prototype);
+    renderer.renderVisibleRows = vi.fn();
+    const trackContent = document.createElement('div');
+    const trackMouseDown = vi.fn();
+    trackContent.addEventListener('mousedown', trackMouseDown);
+    document.body.appendChild(trackContent);
+
+    renderer.createScrollableReadsTrack(
+      trackContent,
+      makeRows(20),
+      { start: 0, end: 100 },
+      {
+        readHeight: 4,
+        rowSpacing: 2,
+        topPadding: 0,
+        bottomPadding: 10,
+        trackHeight: 60,
+        containerWidth: 800,
+      },
+      { renderingMode: 'svg' }
+    );
+
+    const scrollContainer = trackContent.querySelector('.reads-scroll-container');
+    const contentViewport = trackContent.querySelector('.reads-content-viewport');
+
+    scrollContainer.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 10 }));
+    expect(contentViewport.style.transform).toBe('translateY(-20px)');
+
+    scrollContainer.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: 100, clientY: 20 }));
+    expect(trackMouseDown).toHaveBeenCalledOnce();
+  });
 });
 
 describe('Track Settings Tabs', () => {
