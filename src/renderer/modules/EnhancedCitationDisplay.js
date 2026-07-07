@@ -466,8 +466,8 @@ class EnhancedCitationDisplay {
                             </button>
                             <button class="view-mode-btn ${this.displayMode === 'detailed' ? 'active' : ''}" 
                                     onclick="window.enhancedCitationDisplay.setDisplayMode('detailed')" 
-                                    title="Show detailed information">
-                                Detailed
+                                    title="Show article abstract">
+                                Abstract
                             </button>
                         </div>
                         <button class="refresh-btn" 
