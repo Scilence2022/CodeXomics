@@ -106,6 +106,23 @@ describe('Aligned reads reference and coverage interactions', () => {
     expect(tooltip.textContent).toContain('Coverage: 1x');
   });
 
+  it('keeps the coverage hover panel above the reference and reads layers', () => {
+    const renderer = new TrackRenderer(createGenomeBrowser());
+    const trackContent = document.createElement('div');
+    document.body.appendChild(trackContent);
+
+    vi.spyOn(renderer, 'getReferenceSequence').mockReturnValue('ACGTACGTACGT');
+    renderer.createCoverageVisualization(trackContent, [{ start: 0, end: 11 }], { start: 0, end: 12 }, 50, {});
+    renderer.createReferenceVisualization(trackContent, { start: 0, end: 12 }, 20, {});
+
+    const coverage = trackContent.querySelector('.coverage-visualization');
+    const reference = trackContent.querySelector('.reference-sequence-visualization');
+
+    expect(coverage.style.overflow).toBe('visible');
+    expect(Number(coverage.style.zIndex)).toBeGreaterThan(Number(reference.style.zIndex));
+    expect(Number(coverage.style.zIndex)).toBeGreaterThan(49);
+  });
+
   it('represents a circular cross-origin reference selection as ordered one-based segments', () => {
     const genomeBrowser = createGenomeBrowser();
     genomeBrowser.currentSequence = { chr1: 'A'.repeat(100) };
