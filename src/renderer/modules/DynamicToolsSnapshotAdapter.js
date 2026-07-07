@@ -51,6 +51,7 @@ class DynamicToolsSnapshotAdapter {
       categoriesLoaded: this.snapshot.counts.categories || 0,
       builtInToolsLoaded: this.snapshot.counts.builtInTools || this.builtInTools.builtInToolsMap.size,
       pluginToolsLoaded: 0,
+      mcpToolsLoaded: 0,
       registryHash: this.snapshot.registryHash,
       diagnostics: this.snapshot.diagnostics,
     };
@@ -181,6 +182,153 @@ class DynamicToolsSnapshotAdapter {
     return this.pluginToolsCache;
   }
 
+  normalizeToolSchema(tool) {
+    return (
+      tool?.parameters ||
+      tool?.inputSchema ||
+      tool?.input_schema ||
+      tool?.schema || {
+        type: 'object',
+        properties: {},
+        required: [],
+      }
+    );
+  }
+
+  normalizeMcpTool(tool) {
+    const name = this.getToolName(tool) || String(tool?.tool_name || tool?.id || '');
+    if (!name) return null;
+
+    const serverName = tool.serverName || tool.server_name || 'MCP Server';
+    const serverCategory = tool.serverCategory || tool.server_category || tool.category || 'general';
+    const category = String(serverCategory).startsWith('mcp_') ? serverCategory : `mcp_${serverCategory}`;
+    const schema = this.normalizeToolSchema(tool);
+    const keywordParts = [
+      name,
+      name.replace(/[_-]+/g, ' '),
+      serverName,
+      serverCategory,
+      ...(Array.isArray(tool.keywords) ? tool.keywords : []),
+    ]
+      .map(value => String(value || '').trim())
+      .filter(Boolean);
+
+    return {
+      ...tool,
+      name,
+      description: tool.description || `${serverName} MCP tool`,
+      category,
+      source: 'mcp',
+      execution_type: 'mcp',
+      parameters: schema,
+      inputSchema: schema,
+      serverId: tool.serverId || tool.server_id,
+      serverName,
+      serverCategory,
+      priority: Number.isFinite(tool.priority) ? tool.priority : 1,
+      keywords: [...new Set(keywordParts)],
+    };
+  }
+
+  collectMcpTools() {
+    const manager = this.chatManager?.mcpServerManager;
+    if (!manager || typeof manager.getAllAvailableTools !== 'function') {
+      this.integrationStatus.mcpToolsLoaded = 0;
+      return [];
+    }
+
+    try {
+      const tools = manager
+        .getAllAvailableTools()
+        .map(tool => this.normalizeMcpTool(tool))
+        .filter(Boolean);
+      const toolsWithFallbacks = this.mergeToolsByName([...tools, ...this.collectKnownMcpFallbackTools(tools)]);
+      this.integrationStatus.mcpToolsLoaded = toolsWithFallbacks.length;
+      return toolsWithFallbacks;
+    } catch (error) {
+      console.warn('[DynamicToolsSnapshotAdapter] Failed to collect MCP tools:', error.message);
+      const fallbackTools = this.collectKnownMcpFallbackTools();
+      this.integrationStatus.mcpToolsLoaded = fallbackTools.length;
+      return fallbackTools;
+    }
+  }
+
+  collectKnownMcpFallbackTools(existingTools = []) {
+    const manager = this.chatManager?.mcpServerManager;
+    if (!manager) return [];
+
+    const existingNames = new Set(existingTools.map(tool => this.getToolName(tool)).filter(Boolean));
+    const existingServerIds = new Set(
+      existingTools.map(tool => String(tool?.serverId || tool?.server_id || '')).filter(Boolean)
+    );
+    const fallbackDefinitions = {
+      'deep-gene-research': {
+        name: 'deep-gene-research',
+        description:
+          'Perform Deep Gene Research for a gene and return research task status, final report URLs, detailed research data, and annotation proposals.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            gene_name: {
+              type: 'string',
+              description: 'Gene symbol, locus tag, or identifier to research.',
+            },
+            organism: {
+              type: 'string',
+              description: 'Organism name, for example Escherichia coli.',
+            },
+            include_annotation_proposal: {
+              type: 'boolean',
+              description: 'Whether to request a conservative CodeXomics annotationProposal.',
+              default: true,
+            },
+          },
+          required: ['gene_name'],
+        },
+      },
+    };
+
+    const serverStatuses =
+      typeof manager.getServerStatus === 'function'
+        ? manager.getServerStatus()
+        : Array.from(manager.activeServers || []).map(serverId => ({
+            id: serverId,
+            connected: true,
+            ...(manager.servers?.get(serverId) || {}),
+          }));
+
+    return serverStatuses
+      .filter(
+        server =>
+          server?.connected &&
+          fallbackDefinitions[server.id] &&
+          !existingNames.has(server.id) &&
+          !existingServerIds.has(server.id)
+      )
+      .map(server =>
+        this.normalizeMcpTool({
+          ...fallbackDefinitions[server.id],
+          serverId: server.id,
+          serverName: server.name || fallbackDefinitions[server.id].name,
+          serverCategory: server.category || 'research',
+          protocol: server.protocol || 'streamable-http',
+        })
+      )
+      .filter(Boolean);
+  }
+
+  mergeToolsByName(tools) {
+    const merged = [];
+    const seen = new Set();
+    for (const tool of tools) {
+      const name = this.getToolName(tool);
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      merged.push(tool);
+    }
+    return merged;
+  }
+
   scoreTool(tool, query, context = {}) {
     const text = String(query || '').toLowerCase();
     const fields = [tool.name, tool.description, tool.category, ...(Array.isArray(tool.keywords) ? tool.keywords : [])]
@@ -196,7 +344,10 @@ class DynamicToolsSnapshotAdapter {
     const toolName = String(tool.name || '').toLowerCase();
     if (text.includes(toolName)) score += 8;
 
-    const nameParts = toolName.split('_').filter(part => part.length > 2);
+    const normalizedToolName = toolName.replace(/[^a-z0-9]+/g, ' ').trim();
+    if (normalizedToolName && text.includes(normalizedToolName)) score += 6;
+
+    const nameParts = toolName.split(/[^a-z0-9]+/).filter(part => part.length > 2);
     if (nameParts.length > 0 && nameParts.every(part => text.includes(part))) {
       score += 4;
     }
@@ -241,7 +392,7 @@ class DynamicToolsSnapshotAdapter {
 
   selectRelevantTools(query, context = {}, limit = Infinity) {
     const allowCoordination = this.isAgentSystemEnabled(context);
-    const validTools = this.snapshot.tools.filter(tool => {
+    const validTools = this.mergeToolsByName([...this.snapshot.tools, ...this.collectMcpTools()]).filter(tool => {
       if (!tool || !tool.name) return false;
       if (tool.category === 'coordination' && !allowCoordination) return false;
       return true;
@@ -330,7 +481,10 @@ class DynamicToolsSnapshotAdapter {
   buildPrompt(tools, context = {}) {
     const builtInTools = tools.filter(tool => tool.isBuiltIn || this.builtInTools.builtInToolsMap.has(tool.name));
     const pluginTools = tools.filter(tool => tool.source === 'plugin');
-    const extendedTools = tools.filter(tool => !builtInTools.includes(tool) && tool.source !== 'plugin');
+    const mcpTools = tools.filter(tool => tool.source === 'mcp');
+    const extendedTools = tools.filter(
+      tool => !builtInTools.includes(tool) && tool.source !== 'plugin' && tool.source !== 'mcp'
+    );
     const genomeContext = context.genomeBrowser || {};
     const visibleTracks = Array.isArray(genomeContext.visibleTracks) ? genomeContext.visibleTracks.join(', ') : 'None';
     const loadedFiles = Array.isArray(genomeContext.loadedFiles) ? genomeContext.loadedFiles.length : 0;
@@ -362,6 +516,18 @@ class DynamicToolsSnapshotAdapter {
             .join('\n')}`
         : '';
 
+    const mcpDescriptions =
+      mcpTools.length > 0
+        ? `\n## MCP Server Tools\n\n${mcpTools
+            .map(
+              tool =>
+                `- **${tool.name}** (${tool.serverName || 'MCP Server'}): ${
+                  tool.description || 'MCP server tool'
+                }\n  Parameters: ${this.formatParameterList(tool)}`
+            )
+            .join('\n')}`
+        : '';
+
     const currentPosition = genomeContext.currentPosition
       ? `${genomeContext.currentPosition.start}-${genomeContext.currentPosition.end}`
       : 'None';
@@ -373,7 +539,8 @@ class DynamicToolsSnapshotAdapter {
       `${tools.length} tools available`,
       `(${builtInTools.length} directly available,`,
       `${extendedTools.length} extended,`,
-      `${pluginTools.length} plugin)`,
+      `${pluginTools.length} plugin,`,
+      `${mcpTools.length} MCP)`,
     ].join(' ');
 
     return `# CodeXomics - Enhanced Dynamic Tools System
@@ -402,6 +569,7 @@ These tools provide additional registry capabilities and may require network acc
 
 ${extendedDescriptions}
 ${pluginDescriptions}
+${mcpDescriptions}
 
 ## Tool Usage Examples
 
@@ -414,6 +582,7 @@ ${this.formatSampleUsages(tools)}
 3. Combine multiple JSON tool calls when the user asks for sequential operations.
 4. Check tool results before continuing dependent steps.
 5. Consider current genome state, loaded data, network status, and authentication.
+6. Use MCP Server Tools when a connected MCP server exposes the requested external capability.
 
 ## Response Format
 
@@ -432,6 +601,7 @@ For multiple sequential tool calls, respond with multiple JSON objects, each in 
 - Database Tools: query biological databases.
 - Editing Tools: mutate sequence data through ActionManager-backed actions.
 - Plugin Tools: invoke installed plugin functions with plugin-id.function-name.
+- MCP Server Tools: invoke tools discovered from connected MCP servers by exact tool name.
 `;
   }
 
@@ -491,15 +661,17 @@ For multiple sequential tool calls, respond with multiple JSON objects, each in 
   }
 
   async getAllTools() {
-    return this.snapshot.tools;
+    return this.mergeToolsByName([...this.snapshot.tools, ...this.collectMcpTools(), ...this.collectPluginTools()]);
   }
 
   async getToolsByCategory(categoryName) {
-    return this.snapshot.tools.filter(tool => tool.category === categoryName && tool.name);
+    const tools = await this.getAllTools();
+    return tools.filter(tool => tool.category === categoryName && tool.name);
   }
 
   async searchTools(keywords, limit = 10) {
-    return this.snapshot.tools
+    const tools = await this.getAllTools();
+    return tools
       .map(tool => ({ tool, score: this.scoreTool(tool, keywords, {}) }))
       .filter(entry => entry.score > 0.6)
       .sort((a, b) => b.score - a.score)
@@ -508,12 +680,17 @@ For multiple sequential tool calls, respond with multiple JSON objects, each in 
   }
 
   async getRegistryStats() {
+    const allTools = await this.getAllTools();
+    const mcpTools = this.collectMcpTools();
+    const pluginTools = this.collectPluginTools();
     return {
-      total_tools: this.snapshot.counts.tools || this.snapshot.tools.length,
+      total_tools: allTools.length,
       total_categories: this.snapshot.counts.categories || 0,
       builtin_tools: this.builtInTools.builtInToolsMap.size,
+      plugin_tools: pluginTools.length,
+      mcp_tools: mcpTools.length,
       user_tools: this.snapshot.counts.userTools || 0,
-      unique_tools: this.snapshot.counts.uniqueTools || this.toolsByName.size,
+      unique_tools: allTools.length,
       diagnostics: this.snapshot.diagnostics,
       registry_hash: this.snapshot.registryHash,
       categories: Object.entries(this.snapshot.categories.categories || {}).map(([name, info]) => ({
@@ -564,8 +741,11 @@ For multiple sequential tool calls, respond with multiple JSON objects, each in 
       builtInToolsIncluded: selectedTools.filter(
         tool => tool.isBuiltIn || this.builtInTools.builtInToolsMap.has(tool.name)
       ).length,
-      registryToolsIncluded: selectedTools.filter(tool => !tool.isBuiltIn && tool.source !== 'plugin').length,
+      registryToolsIncluded: selectedTools.filter(
+        tool => !tool.isBuiltIn && tool.source !== 'plugin' && tool.source !== 'mcp'
+      ).length,
       pluginToolsIncluded: selectedTools.filter(tool => tool.source === 'plugin').length,
+      mcpToolsIncluded: selectedTools.filter(tool => tool.source === 'mcp').length,
       generationTime: Date.now(),
       registryHash: this.snapshot.registryHash,
     };
@@ -573,7 +753,8 @@ For multiple sequential tool calls, respond with multiple JSON objects, each in 
 
   async generateNonDynamicSystemPrompt(context = {}) {
     const allowCoordination = this.isAgentSystemEnabled(context);
-    const tools = this.snapshot.tools.filter(tool => allowCoordination || tool.category !== 'coordination');
+    const allTools = await this.getAllTools();
+    const tools = allTools.filter(tool => allowCoordination || tool.category !== 'coordination');
     return {
       systemPrompt: this.buildPrompt(tools, context),
       toolsUsed: tools.map(tool => tool.name),
