@@ -262,6 +262,45 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         manualVerification:
           'Please verify: 1) Search returns CDS annotations correctly, 2) Results are relevant and complete.',
       },
+      {
+        id: 'annot_manual_03',
+        name: 'Merge Deep Gene Research Report',
+        type: 'function_call',
+        category: 'annotation',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction:
+          'Merge a Deep Gene Research annotation proposal for the lacZ gene with conservative product, note, GO, EC, KO, and source evidence updates.',
+        expectedResult: {
+          tool_name: 'merge_gene_research_report',
+          parameters: {
+            identifier: 'lacZ',
+            annotationProposal: {
+              updates: {
+                product: 'beta-galactosidase',
+                note: 'Deep Gene Research-supported lactose metabolism annotation.',
+              },
+              evidence: [
+                {
+                  source: 'Deep Gene Research benchmark fixture',
+                  note: 'Manual benchmark evidence for annotation merge behavior.',
+                },
+              ],
+              confidence: 'medium',
+              goTerms: ['GO:0004565'],
+              ecNumbers: ['3.2.1.23'],
+              koTerms: ['K01190'],
+            },
+            dry_run: true,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification:
+          'Please verify: 1) merge_gene_research_report is called for lacZ, 2) dry_run preview includes conservative annotation updates and evidence.',
+      },
 
       // TRACK CONTROL TASKS - Manual + Simple
       {

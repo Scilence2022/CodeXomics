@@ -1581,7 +1581,12 @@ class ChatManager {
       // actually hands to the LLM, rather than the full static registry — otherwise
       // this panel always reports the same total no matter what the user asked.
       const userQuery = this.getLastUserQuery();
-      const context = this.getCurrentContext ? this.getCurrentContext() : null;
+      let context = null;
+      if (typeof this.getCurrentContextForDynamicTools === 'function') {
+        context = this.getCurrentContextForDynamicTools();
+      } else if (this.getCurrentContext) {
+        context = this.getCurrentContext();
+      }
       const toolsResult = await this.listAvailableTools({ format: 'summary', userQuery, context });
 
       // Even when enumeration fails, surface a brief note so the panel never goes
@@ -6069,6 +6074,7 @@ class ChatManager {
       selectedBuiltInToolCount: promptData?.builtInToolsIncluded || 0,
       selectedRegistryToolCount: promptData?.registryToolsIncluded || 0,
       selectedPluginToolCount: promptData?.pluginToolsIncluded || 0,
+      selectedMcpToolCount: promptData?.mcpToolsIncluded || 0,
       selectedTools,
       selectedToolsByCategory,
       promptLength: prompt.length,
@@ -6212,6 +6218,7 @@ class ChatManager {
         '🔧 Directly Available Tools',
         '🔧 Directly Available Tools (Built-in)',
         'Built-in Tools',
+        'MCP Server Tools',
       ],
       toolExamples: ['Tool Usage Examples', '📚 Tool Usage Examples'],
       toolGuidelines: ['Tool Selection Guidelines', '🎯 Enhanced Tool Selection Guidelines', 'Tool Usage Guidelines'],
@@ -6252,7 +6259,11 @@ class ChatManager {
       }
       // Also collect Extended Tools and Plugin sections
       for (const [header, content] of Object.entries(sections)) {
-        if (header.includes('Extended Tools') || header.includes('🌐 Extended Tools')) {
+        if (
+          header.includes('Extended Tools') ||
+          header.includes('🌐 Extended Tools') ||
+          header.includes('MCP Server Tools')
+        ) {
           toolParts.push(content);
         }
       }
@@ -6284,7 +6295,8 @@ class ChatManager {
     if (
       normalizedHeader.includes('built-in') ||
       normalizedHeader.includes('directly available') ||
-      normalizedHeader.includes('extended tools')
+      normalizedHeader.includes('extended tools') ||
+      normalizedHeader.includes('mcp server tools')
     ) {
       return 'dynamicTools';
     }
