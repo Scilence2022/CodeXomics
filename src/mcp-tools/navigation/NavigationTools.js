@@ -178,8 +178,16 @@ class NavigationTools {
           type: 'object',
           properties: {
             chromosome: { type: 'string', description: 'Chromosome name (optional, defaults to current chromosome)' },
-            start: { type: 'number', description: 'Start position of the region to highlight (1-based, inclusive)' },
-            end: { type: 'number', description: 'End position of the region to highlight (1-based, inclusive)' },
+            start: {
+              type: 'number',
+              description:
+                'Start position of the region to highlight (1-based, inclusive). If end is omitted, this single position is highlighted.',
+            },
+            end: {
+              type: 'number',
+              description:
+                'End position of the region to highlight (1-based, inclusive). If start is omitted, this single position is highlighted.',
+            },
             label: { type: 'string', description: 'Optional short label shown on the highlight and in the list' },
             color: {
               type: 'string',
@@ -187,7 +195,7 @@ class NavigationTools {
             },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
-          required: ['start', 'end'],
+          anyOf: [{ required: ['start'] }, { required: ['end'] }],
         },
       },
 

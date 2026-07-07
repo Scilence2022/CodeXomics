@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -91,5 +91,57 @@ describe('HighlightRegionsUI selection prefilling', () => {
 
     expect(document.querySelector('[data-role="hl-start"]').value).toBe('');
     expect(document.querySelector('[data-role="hl-end"]').value).toBe('');
+  });
+
+  it('adds a highlight when only the start position is entered', () => {
+    const addHighlight = vi.fn();
+    const ui = new HighlightRegionsUI(
+      makeGenomeBrowser({
+        highlightManager: {
+          addHighlight,
+          listHighlights: () => [],
+          palette: ['#f59e0b'],
+        },
+      })
+    );
+
+    ui.open();
+    document.querySelector('[data-role="hl-start"]').value = '311163';
+    ui._addFromForm();
+
+    expect(addHighlight).toHaveBeenCalledWith(
+      expect.objectContaining({
+        start: 311163,
+        end: undefined,
+        chromosome: 'chr1',
+        createdBy: 'gui',
+      })
+    );
+  });
+
+  it('adds a highlight when only the end position is entered', () => {
+    const addHighlight = vi.fn();
+    const ui = new HighlightRegionsUI(
+      makeGenomeBrowser({
+        highlightManager: {
+          addHighlight,
+          listHighlights: () => [],
+          palette: ['#f59e0b'],
+        },
+      })
+    );
+
+    ui.open();
+    document.querySelector('[data-role="hl-end"]').value = '311163';
+    ui._addFromForm();
+
+    expect(addHighlight).toHaveBeenCalledWith(
+      expect.objectContaining({
+        start: undefined,
+        end: 311163,
+        chromosome: 'chr1',
+        createdBy: 'gui',
+      })
+    );
   });
 });

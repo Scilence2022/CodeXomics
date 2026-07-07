@@ -195,10 +195,16 @@ class HighlightRegionsUI {
     const labelEl = modal.querySelector('[data-role="hl-label"]');
     const colorEl = modal.querySelector('[data-role="hl-color"]');
 
-    const start = parseInt(startEl?.value, 10);
-    const end = parseInt(endEl?.value, 10);
-    if (!Number.isFinite(start) || !Number.isFinite(end)) {
-      this._notify('Enter numeric start and end positions', 'warn');
+    const startValue = startEl?.value?.trim() || '';
+    const endValue = endEl?.value?.trim() || '';
+    if (!startValue && !endValue) {
+      this._notify('Enter a numeric start or end position', 'warn');
+      return;
+    }
+    const start = startValue ? parseInt(startValue, 10) : undefined;
+    const end = endValue ? parseInt(endValue, 10) : undefined;
+    if ((startValue && !Number.isFinite(start)) || (endValue && !Number.isFinite(end))) {
+      this._notify('Highlight position must be a valid number', 'warn');
       return;
     }
 
