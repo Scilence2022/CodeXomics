@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-06T09:57:56.084Z",
-  "registryHash": "42fac48f0968eec4843c5d4b20ebcb82e4a6fb09a10b26a7c1516b77d126004f",
+  "generatedAt": "2026-07-06T16:36:29.363Z",
+  "registryHash": "2d9db721d9f9b6d931361e633ab7a5db69a63dedbbeac682663bec03e66e1a6c",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 195,
-    "appTools": 195,
+    "tools": 196,
+    "appTools": 196,
     "userTools": 0,
-    "uniqueTools": 189,
+    "uniqueTools": 190,
     "categories": 18,
-    "builtInTools": 157,
+    "builtInTools": 158,
     "diagnostics": 12
   },
   "categories": {
@@ -115,7 +115,7 @@
           "change_tracking",
           "operon_analysis"
         ],
-        "tools_count": 10
+        "tools_count": 11
       },
       "file_operations": {
         "name": "File Operations",
@@ -1280,6 +1280,106 @@
       "builtin": {
         "name": "list_annotations",
         "method": "listAnnotations",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "merge_gene_research_report",
+      "version": "1.0.0",
+      "description": "Merge a Deep Gene Research report or structured proposal into an existing genome annotation with evidence tracking",
+      "category": "annotation",
+      "subcategory": "annotation_crud",
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "The locus_tag, gene name, or protein_id identifying the annotation to update. If omitted, uses the selected gene when available."
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome name (optional)."
+          },
+          "annotationProposal": {
+            "type": "object",
+            "description": "Structured Deep Gene Research proposal with updates, evidence, confidence, summary, reportUrl, detailsUrl, ecNumbers, goTerms, koTerms, pathwayTerms, and dbXrefs."
+          },
+          "report": {
+            "type": "string",
+            "description": "Raw Deep Gene Research markdown/text report used for fallback extraction of summary, citations, EC, GO, KO, and pathway references."
+          },
+          "sources": {
+            "type": "array",
+            "description": "Literature/source objects or strings from Deep Gene Research.",
+            "items": {}
+          },
+          "reportUrl": {
+            "type": "string",
+            "description": "Downloadable final report URL to store on the annotation."
+          },
+          "detailsUrl": {
+            "type": "string",
+            "description": "Downloadable workflow/details URL to store on the annotation."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Return proposed updates without applying them.",
+            "default": false
+          },
+          "overwriteProduct": {
+            "type": "boolean",
+            "description": "Replace an existing non-placeholder product annotation when true.",
+            "default": false
+          },
+          "agent": {
+            "type": "string",
+            "description": "Identity recorded in the annotation change history.",
+            "default": "deep-gene-research"
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support.",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "metadata": {
+        "added_in": "deep_gene_research_integration",
+        "integration": "deep-gene-research",
+        "priority": "high",
+        "tags": [
+          "annotation",
+          "research",
+          "evidence",
+          "deep-gene-research",
+          "change-tracking"
+        ]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/merge_gene_research_report.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "mergeGeneResearchReport"
+      },
+      "priority": 1,
+      "keywords": [],
+      "sample_usages": [],
+      "builtin": {
+        "name": "merge_gene_research_report",
+        "method": "mergeGeneResearchReport",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -26397,6 +26497,106 @@
         "source": "builtin_tools_map"
       }
     },
+    "merge_gene_research_report": {
+      "name": "merge_gene_research_report",
+      "version": "1.0.0",
+      "description": "Merge a Deep Gene Research report or structured proposal into an existing genome annotation with evidence tracking",
+      "category": "annotation",
+      "subcategory": "annotation_crud",
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "The locus_tag, gene name, or protein_id identifying the annotation to update. If omitted, uses the selected gene when available."
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome name (optional)."
+          },
+          "annotationProposal": {
+            "type": "object",
+            "description": "Structured Deep Gene Research proposal with updates, evidence, confidence, summary, reportUrl, detailsUrl, ecNumbers, goTerms, koTerms, pathwayTerms, and dbXrefs."
+          },
+          "report": {
+            "type": "string",
+            "description": "Raw Deep Gene Research markdown/text report used for fallback extraction of summary, citations, EC, GO, KO, and pathway references."
+          },
+          "sources": {
+            "type": "array",
+            "description": "Literature/source objects or strings from Deep Gene Research.",
+            "items": {}
+          },
+          "reportUrl": {
+            "type": "string",
+            "description": "Downloadable final report URL to store on the annotation."
+          },
+          "detailsUrl": {
+            "type": "string",
+            "description": "Downloadable workflow/details URL to store on the annotation."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Return proposed updates without applying them.",
+            "default": false
+          },
+          "overwriteProduct": {
+            "type": "boolean",
+            "description": "Replace an existing non-placeholder product annotation when true.",
+            "default": false
+          },
+          "agent": {
+            "type": "string",
+            "description": "Identity recorded in the annotation change history.",
+            "default": "deep-gene-research"
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support.",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "metadata": {
+        "added_in": "deep_gene_research_integration",
+        "integration": "deep-gene-research",
+        "priority": "high",
+        "tags": [
+          "annotation",
+          "research",
+          "evidence",
+          "deep-gene-research",
+          "change-tracking"
+        ]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/merge_gene_research_report.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "mergeGeneResearchReport"
+      },
+      "priority": 1,
+      "keywords": [],
+      "sample_usages": [],
+      "builtin": {
+        "name": "merge_gene_research_report",
+        "method": "mergeGeneResearchReport",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "search_annotations": {
       "name": "search_annotations",
       "version": "1.0.0",
@@ -51086,6 +51286,16 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "merge_gene_research_report",
+      "method": "mergeGeneResearchReport",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "delete_annotation",
       "method": "deleteAnnotation",
       "category": "annotation",
@@ -52651,6 +52861,16 @@
     "update_annotation": {
       "name": "update_annotation",
       "method": "updateAnnotation",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "merge_gene_research_report": {
+      "name": "merge_gene_research_report",
+      "method": "mergeGeneResearchReport",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,

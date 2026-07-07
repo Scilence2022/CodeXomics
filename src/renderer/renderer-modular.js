@@ -376,7 +376,7 @@ class GenomeBrowser {
     // Gene Details sidebar settings
     this.geneDetailSettings = {
       deepGeneResearchPrompt:
-        'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata). If the Deep Gene Research tool is not available, please remind me to connect the Deep Gene Research Server.',
+        'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata), and include a CodeXomics annotationProposal with conservative updates, literature evidence, confidence, EC/GO/KO/pathway terms, and source references for merging into the selected gene. If the Deep Gene Research tool is not available, please remind me to connect the Deep Gene Research Server.',
     };
 
     this.init();
@@ -6481,7 +6481,8 @@ class GenomeBrowser {
       if (
         !api ||
         typeof api.checkGeneResearchReport !== 'function' ||
-        typeof api.openGeneResearchReport !== 'function'
+        typeof api.openGeneResearchReport !== 'function' ||
+        typeof api.readGeneResearchReport !== 'function'
       ) {
         return;
       }
@@ -6520,8 +6521,88 @@ class GenomeBrowser {
       };
 
       container.appendChild(btn);
+
+      const mergeBtn = document.createElement('button');
+      mergeBtn.className = 'btn gene-action-btn gene-research-report-merge-btn';
+      mergeBtn.style.backgroundColor = '#e8f5e9';
+      mergeBtn.style.color = '#1b5e20';
+      mergeBtn.style.borderColor = '#a5d6a7';
+      mergeBtn.style.marginBottom = '8px';
+      mergeBtn.style.width = '100%';
+      mergeBtn.style.fontWeight = '600';
+      mergeBtn.innerHTML = '<i class="fas fa-code-merge"></i> Merge Research Report';
+      mergeBtn.title = `Merge report evidence into ${geneName || 'selected gene'} annotation`;
+
+      mergeBtn.onclick = async () => {
+        await this.mergeDeepGeneResearchReport(geneName || 'Unknown');
+      };
+
+      container.appendChild(mergeBtn);
     } catch (error) {
       console.warn('Unable to check gene research report:', error.message || error);
+    }
+  }
+
+  async mergeDeepGeneResearchReport(geneName) {
+    try {
+      const api = window.electronAPI;
+      if (!api || typeof api.readGeneResearchReport !== 'function') {
+        notify('Gene research report reader is not available.', 'error');
+        return;
+      }
+      if (!this.chatManager || typeof this.chatManager.executeToolByName !== 'function') {
+        notify('ChatManager tool execution is not available.', 'error');
+        return;
+      }
+
+      const readResult = await api.readGeneResearchReport(geneName || 'Unknown');
+      if (!readResult || !readResult.success) {
+        notify(readResult?.error || 'Failed to read gene research report.', 'error');
+        return;
+      }
+
+      const normalizeIdentifier = value => (Array.isArray(value) ? value[0] : value);
+      const selectedQualifiers = this.selectedGene?.gene?.qualifiers || {};
+      const identifier =
+        normalizeIdentifier(selectedQualifiers.locus_tag) || normalizeIdentifier(selectedQualifiers.gene) || geneName;
+      let parsedReport = null;
+      if (typeof readResult.report === 'string') {
+        const trimmedReport = readResult.report.trim();
+        if (trimmedReport.startsWith('{') || trimmedReport.startsWith('[')) {
+          try {
+            parsedReport = JSON.parse(trimmedReport);
+          } catch {
+            parsedReport = null;
+          }
+        }
+      }
+
+      const reportPayload = parsedReport?.result || parsedReport;
+      const result = await this.chatManager.executeToolByName(
+        'merge_gene_research_report',
+        {
+          identifier,
+          geneName,
+          chromosome: this.currentChromosome,
+          annotationProposal: reportPayload?.annotationProposal,
+          report: reportPayload || readResult.report,
+          sources: reportPayload?.sources,
+          reportUrl: readResult.fileName ? `reports/${readResult.fileName}` : undefined,
+          agent: 'deep-gene-research',
+        },
+        { bypassAgent: true }
+      );
+
+      if (!result || result.success === false) {
+        notify(result?.error || 'Failed to merge gene research report.', 'error');
+        return;
+      }
+
+      const updatedCount = result.updatedFields?.length || Object.keys(result.proposedUpdates || {}).length;
+      notify(`Merged Deep Gene Research report into ${identifier} (${updatedCount} field updates).`, 'success');
+    } catch (error) {
+      console.error('Failed to merge Deep Gene Research report:', error);
+      notify(`Failed to merge gene research report: ${error.message}`, 'error');
     }
   }
 
@@ -8312,7 +8393,7 @@ class GenomeBrowser {
     // Get the configurable prompt template and replace placeholders
     const promptTemplate =
       this.geneDetailSettings.deepGeneResearchPrompt ||
-      'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata). If the Deep Gene Research tool is not available, please remind me to connect the Deep Gene Research Server.';
+      'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata), and include a CodeXomics annotationProposal with conservative updates, literature evidence, confidence, EC/GO/KO/pathway terms, and source references for merging into the selected gene. If the Deep Gene Research tool is not available, please remind me to connect the Deep Gene Research Server.';
 
     const prompt = promptTemplate.replace(/\{geneName\}/g, geneName).replace(/\{organism\}/g, organism);
 

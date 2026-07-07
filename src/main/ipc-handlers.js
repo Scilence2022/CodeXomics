@@ -1149,6 +1149,24 @@ function registerIpcHandlers(deps) {
     }
   });
 
+  ipcMain.handle('read-gene-research-report', async (event, geneSymbol) => {
+    try {
+      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol);
+
+      if (!fs.existsSync(reportPath)) {
+        return { success: false, error: 'Gene research report does not exist' };
+      }
+
+      return {
+        success: true,
+        fileName,
+        report: fs.readFileSync(reportPath, 'utf8'),
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('open-gene-research-report', async (event, geneSymbol) => {
     try {
       const { reportPath } = resolveGeneResearchReportPath(geneSymbol);

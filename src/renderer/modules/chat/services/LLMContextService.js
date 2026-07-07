@@ -1042,6 +1042,11 @@ ${result.result.message || 'The requested tab is now active.'}`;
           ? `✅ Annotation created successfully: ${result.result.message || 'New annotation added'}`
           : 'Annotation creation completed with potential issues.';
 
+      case 'merge_gene_research_report':
+        return result.result?.success
+          ? `✅ Deep Gene Research report merged: ${result.result.message || 'Annotation updated'}`
+          : 'Deep Gene Research report merge completed with potential issues.';
+
       case 'export_data':
         return result.result?.success
           ? `✅ Data exported successfully: ${result.result.filePath || result.result.message || 'Export completed'}`

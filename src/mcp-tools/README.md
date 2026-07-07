@@ -171,6 +171,7 @@ Tools for accessing biological databases:
 Tools for data annotation, export, and analysis:
 
 - `create_annotation` - Create annotations
+- `merge_gene_research_report` - Merge Deep Gene Research reports into gene annotations
 - `export_data` - Export data
 - `codon_usage_analysis` - Analyze codon usage
 

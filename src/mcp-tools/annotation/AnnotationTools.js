@@ -128,6 +128,70 @@ class AnnotationTools {
         },
       },
 
+      merge_gene_research_report: {
+        name: 'merge_gene_research_report',
+        description:
+          'Merge a Deep Gene Research report or structured annotation proposal into an existing gene annotation. Conservatively updates product, note, GO terms, EC number, KO/pathway fields, db_xref, and CodeXomics research metadata while recording literature evidence in the annotation change history.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            identifier: {
+              type: 'string',
+              description:
+                'The locus_tag, gene name, or protein_id identifying the annotation to update. If omitted, CodeXomics may use the currently selected gene.',
+            },
+            chromosome: {
+              type: 'string',
+              description: 'Chromosome name (optional, searches all if omitted).',
+            },
+            annotationProposal: {
+              type: 'object',
+              description:
+                'Structured proposal from Deep Gene Research. Expected fields include updates, evidence, confidence, summary, reportUrl, detailsUrl, ecNumbers, goTerms, koTerms, pathwayTerms, and dbXrefs.',
+            },
+            report: {
+              type: 'string',
+              description:
+                'Raw Deep Gene Research markdown/text report. Used to extract summary, citations, EC numbers, GO terms, KO terms, and pathway references when annotationProposal is absent or incomplete.',
+            },
+            sources: {
+              type: 'array',
+              description: 'Literature/source objects or strings from Deep Gene Research.',
+              items: {},
+            },
+            reportUrl: {
+              type: 'string',
+              description: 'Optional downloadable final report URL to store on the annotation.',
+            },
+            detailsUrl: {
+              type: 'string',
+              description: 'Optional downloadable workflow/details URL to store on the annotation.',
+            },
+            dryRun: {
+              type: 'boolean',
+              description: 'If true, return proposed updates without applying them.',
+              default: false,
+            },
+            overwriteProduct: {
+              type: 'boolean',
+              description:
+                'If true, allow product replacement even when the existing product is not a placeholder. Defaults to false.',
+              default: false,
+            },
+            agent: {
+              type: 'string',
+              description: 'Identity recorded in the annotation change history.',
+              default: 'deep-gene-research',
+            },
+            clientId: {
+              type: 'string',
+              description: 'Browser client ID for multi-window support',
+            },
+          },
+          required: [],
+        },
+      },
+
       delete_annotation: {
         name: 'delete_annotation',
         description:

@@ -132,6 +132,7 @@ const TOOL_NAMES = {
     LIST_ANNOTATIONS: 'list_annotations',
     GET_ANNOTATION: 'get_annotation',
     UPDATE_ANNOTATION: 'update_annotation',
+    MERGE_GENE_RESEARCH_REPORT: 'merge_gene_research_report',
     SEARCH_ANNOTATIONS: 'search_annotations',
     BULK_UPDATE_ANNOTATIONS: 'bulk_update_annotations',
     GET_ANNOTATION_HISTORY: 'get_annotation_history',

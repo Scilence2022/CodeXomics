@@ -119,6 +119,7 @@ class DataAgent extends AgentBase {
     // Annotation CRUD tools
     this.toolMapping.set('create_annotation', this.createAnnotation.bind(this));
     this.toolMapping.set('update_annotation', this.updateAnnotation.bind(this));
+    this.toolMapping.set('merge_gene_research_report', this.mergeGeneResearchReport.bind(this));
     this.toolMapping.set('delete_annotation', this.deleteAnnotation.bind(this));
     this.toolMapping.set('bulk_update_annotations', this.bulkUpdateAnnotations.bind(this));
     this.toolMapping.set('get_annotation_history', this.getAnnotationHistory.bind(this));
@@ -1186,6 +1187,18 @@ class DataAgent extends AgentBase {
       });
     }
     throw new Error('update_annotation requires ChatManager execution');
+  }
+
+  /**
+   * Merge a Deep Gene Research report into an annotation
+   */
+  async mergeGeneResearchReport(parameters) {
+    if (this.multiAgentSystem.chatManager) {
+      return await this.multiAgentSystem.chatManager.executeToolByName('merge_gene_research_report', parameters, {
+        bypassAgent: true,
+      });
+    }
+    throw new Error('merge_gene_research_report requires ChatManager execution');
   }
 
   /**
