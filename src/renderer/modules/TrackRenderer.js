@@ -14162,7 +14162,8 @@ This action cannot be undone.`;
             background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
             border-bottom: 1px solid #dee2e6;
             margin-bottom: 0;
-            z-index: 1;
+            overflow: visible;
+            z-index: 120;
         `;
 
     // Create SVG for coverage visualization
