@@ -132,6 +132,7 @@ class HighlightRegionsUI {
   _rowHtml(h) {
     const len = h.end - h.start + 1;
     const color = h.color || '#f59e0b';
+    const label = h.label || this._coordinateLabel(h);
     return `
       <tr data-highlight-id="${this._esc(h.id)}">
         <td><span class="highlight-regions-swatch" style="background:${this._esc(color)}"></span></td>
@@ -139,7 +140,7 @@ class HighlightRegionsUI {
         <td>${Number(h.start).toLocaleString()}</td>
         <td>${Number(h.end).toLocaleString()}</td>
         <td>${len.toLocaleString()} bp</td>
-        <td>${h.label ? this._esc(h.label) : '—'}</td>
+        <td>${this._esc(label)}</td>
         <td class="highlight-regions-actions">
           <button class="btn btn-xs" data-action="locate" title="Go to this region"><i class="fas fa-crosshairs"></i></button>
           <button class="btn btn-xs btn-danger" data-action="remove" title="Remove highlight"><i class="fas fa-trash"></i></button>
@@ -311,6 +312,12 @@ class HighlightRegionsUI {
     } else if (type === 'error') {
       alert(message);
     }
+  }
+
+  _coordinateLabel(h) {
+    const start = String(h.start);
+    const end = String(h.end);
+    return h.start === h.end ? start : `${start}-${end}`;
   }
 
   _esc(value) {
