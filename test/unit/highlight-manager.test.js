@@ -23,7 +23,14 @@ function installDom(containerRect, axisRect) {
   global.document = {
     querySelectorAll: () => [],
     querySelector: sel => (sel === '.genome-browser-container' ? container : null),
-    createElement: () => ({ style: {}, dataset: {}, appendChild() {} }),
+    createElement: () => ({
+      style: {},
+      dataset: {},
+      children: [],
+      appendChild(node) {
+        this.children.push(node);
+      },
+    }),
   };
   return appended;
 }
@@ -168,5 +175,26 @@ describe('HighlightManager rendering (1-based -> pixel mapping)', () => {
     const mgr = makeManager({ start: 0, end: 1000000 }, 'chr1');
     mgr.addHighlight({ start: 500, end: 500 });
     expect(parseFloat(appended[0].style.width)).toBeGreaterThanOrEqual(2);
+  });
+
+  it('renders coordinate text when no label is supplied', () => {
+    const appended = installDom({ left: 0, width: 1000 }, { left: 0, width: 1000 });
+    const mgr = makeManager({ start: 1000, end: 1050 }, 'chr1');
+    mgr.addHighlight({ start: 1010, end: 1020 });
+    expect(appended[0].children[0].textContent).toBe('1010-1020');
+  });
+
+  it('renders a single coordinate without a dash for 1 bp highlights', () => {
+    const appended = installDom({ left: 0, width: 1000 }, { left: 0, width: 1000 });
+    const mgr = makeManager({ start: 0, end: 1000 }, 'chr1');
+    mgr.addHighlight({ start: 2, end: 2 });
+    expect(appended[0].children[0].textContent).toBe('2');
+  });
+
+  it('preserves explicit label text in the rendered chip', () => {
+    const appended = installDom({ left: 0, width: 1000 }, { left: 0, width: 1000 });
+    const mgr = makeManager({ start: 1000, end: 1050 }, 'chr1');
+    mgr.addHighlight({ start: 1010, end: 1020, label: 'promoter' });
+    expect(appended[0].children[0].textContent).toBe('promoter');
   });
 });

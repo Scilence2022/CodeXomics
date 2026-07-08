@@ -188,13 +188,11 @@ class HighlightManager {
       box.style.borderRightColor = color;
       box.title = this._tooltip(h);
 
-      if (h.label) {
-        const chip = document.createElement('span');
-        chip.className = 'highlight-region-label';
-        chip.textContent = h.label; // textContent auto-escapes
-        chip.style.background = color;
-        box.appendChild(chip);
-      }
+      const chip = document.createElement('span');
+      chip.className = 'highlight-region-label';
+      chip.textContent = h.label || this._coordinateLabel(h); // textContent auto-escapes
+      chip.style.background = color;
+      box.appendChild(chip);
 
       container.appendChild(box);
     });
@@ -219,9 +217,15 @@ class HighlightManager {
 
   _tooltip(h) {
     const chr = h.chromosome ? `${h.chromosome}:` : '';
-    const label = h.label ? `${h.label} — ` : '';
+    const label = `${h.label || this._coordinateLabel(h)} — `;
     const len = h.end - h.start + 1;
     return `${label}${chr}${h.start.toLocaleString()}-${h.end.toLocaleString()} (${len.toLocaleString()} bp)`;
+  }
+
+  _coordinateLabel(h) {
+    const start = String(h.start);
+    const end = String(h.end);
+    return h.start === h.end ? start : `${start}-${end}`;
   }
 }
 

@@ -144,4 +144,33 @@ describe('HighlightRegionsUI selection prefilling', () => {
       })
     );
   });
+
+  it('renders coordinate text in the Label column when label is empty', () => {
+    const ui = new HighlightRegionsUI(makeGenomeBrowser());
+    const html = ui._rowHtml({ id: 'hl_1', chromosome: 'chr1', start: 100, end: 120, label: '', color: '#f59e0b' });
+
+    expect(html).toContain('<td>100-120</td>');
+  });
+
+  it('renders a single coordinate in the Label column for 1 bp highlights', () => {
+    const ui = new HighlightRegionsUI(makeGenomeBrowser());
+    const html = ui._rowHtml({ id: 'hl_1', chromosome: 'chr1', start: 2, end: 2, label: '', color: '#f59e0b' });
+
+    expect(html).toContain('<td>2</td>');
+    expect(html).not.toContain('<td>2-2</td>');
+  });
+
+  it('preserves explicit label text in the Label column', () => {
+    const ui = new HighlightRegionsUI(makeGenomeBrowser());
+    const html = ui._rowHtml({
+      id: 'hl_1',
+      chromosome: 'chr1',
+      start: 100,
+      end: 120,
+      label: 'promoter',
+      color: '#f59e0b',
+    });
+
+    expect(html).toContain('<td>promoter</td>');
+  });
 });
