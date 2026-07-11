@@ -1,6 +1,6 @@
 name: merge_gene_research_report
 version: 1.0.0
-description: Merge a Deep Gene Research report or structured proposal into an existing genome annotation with evidence tracking
+description: Create a reviewable ChangeSet from a Deep Gene Research report or structured proposal. It never applies an annotation mutation directly.
 category: annotation
 subcategory: annotation_crud
 
@@ -35,8 +35,8 @@ parameters:
       description: Downloadable workflow/details URL to store on the annotation.
     dryRun:
       type: boolean
-      description: Return proposed updates without applying them.
-      default: false
+      description: Compatibility option. The tool always returns a ChangeSet preview without applying it.
+      default: true
     overwriteProduct:
       type: boolean
       description: Replace an existing non-placeholder product annotation when true.

@@ -386,7 +386,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     // Basic middleware
     this.app.use(
       cors({
-        origin: '*',
+        origin: process.env.CODEXOMICS_MCP_ALLOWED_ORIGIN || 'http://localhost',
         methods: ['GET', 'POST', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Cache-Control', 'Authorization'],
       })
@@ -419,7 +419,8 @@ class StandardClaudeMCPServer extends EventEmitter {
     this.app.use((req, res, next) => {
       this.serverLog('info', `📥 ${req.method} ${req.path}`);
       if (req.method === 'POST') {
-        this.serverLog('info', `📦 POST Headers:`, req.headers);
+        const { authorization: _authorization, cookie: _cookie, ...safeHeaders } = req.headers;
+        this.serverLog('info', `📦 POST Headers:`, safeHeaders);
       }
       next();
     });
@@ -497,7 +498,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
 
     // Root endpoint for other MCP clients
-    this.app.get('/', (req, res) => {
+    this.app.get('/', this.authMiddleware, (req, res) => {
       this.handleSSEConnection(req, res);
     });
 
@@ -548,6 +549,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     // Create WebSocket server
     this.wsServer = new WebSocket.Server({
       port: this.wsPort,
+      host: process.env.CODEXOMICS_MCP_BIND_HOST || '127.0.0.1',
       perMessageDeflate: false,
       maxPayload: DEFAULT_WS_MAX_PAYLOAD_BYTES,
     });
@@ -1609,7 +1611,8 @@ class StandardClaudeMCPServer extends EventEmitter {
 
     try {
       await new Promise((resolve, reject) => {
-        this.httpServer = this.app.listen(this.httpPort, error => {
+        const bindHost = process.env.CODEXOMICS_MCP_BIND_HOST || '127.0.0.1';
+        this.httpServer = this.app.listen(this.httpPort, bindHost, error => {
           if (error) {
             if (error.code === 'EADDRINUSE') {
               reject(new Error(`HTTP port ${this.httpPort} is already in use`));

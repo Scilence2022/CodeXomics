@@ -1,0 +1,25 @@
+name: request_annotation_approval
+version: 2.0.0
+description: Record a human curator approval and obtain a short-lived capability for applying a reviewed ChangeSet.
+category: annotation
+subcategory: autonomous_curation
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    changeSetId:
+      type: string
+    approver:
+      type: string
+    expiresInMinutes:
+      type: number
+      default: 30
+    clientId:
+      type: string
+  required: [changeSetId, approver]
+metadata:
+  added_in: autonomous_annotation_v2
+  priority: high
+  tags: [annotation, approval, review]

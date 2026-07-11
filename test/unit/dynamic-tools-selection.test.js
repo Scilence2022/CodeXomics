@@ -166,6 +166,7 @@ describe('DynamicToolsSnapshotAdapter relevance selection', () => {
 
     expect(deepGeneTool).toBeTruthy();
     expect(deepGeneTool.source).toBe('mcp');
-    expect(deepGeneTool.parameters.properties.gene_name).toBeTruthy();
+    expect(deepGeneTool.parameters.properties.geneSymbol).toBeTruthy();
+    expect(deepGeneTool.parameters.properties.organism).toBeTruthy();
   });
 });

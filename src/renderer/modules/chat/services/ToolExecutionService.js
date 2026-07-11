@@ -88,6 +88,13 @@ class ToolExecutionService {
         return await annotationService[this._toCamelCase(toolName)](parameters);
       }
 
+      // 2.5. Deterministic DGR -> ChangeSet workflow. This is intentionally
+      // separate from free-form agent routing so task state is resumable.
+      const annotationWorkflowService = this.chatManager.services?.annotationWorkflow;
+      if (annotationWorkflowService && typeof annotationWorkflowService[this._toCamelCase(toolName)] === 'function') {
+        return await annotationWorkflowService[this._toCamelCase(toolName)](parameters);
+      }
+
       // 3. BLAST Services
       const blastService = this.chatManager.services?.blast || new window.BlastService(this.app, this.chatManager);
       if (typeof blastService[this._toCamelCase(toolName)] === 'function') {

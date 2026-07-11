@@ -1,0 +1,29 @@
+name: resolve_annotation_target
+version: 2.0.0
+description: Resolve a genome annotation to a stable feature target with a feature hash and current annotation revision before autonomous research.
+category: annotation
+subcategory: autonomous_curation
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    identifier:
+      type: string
+      description: locus_tag, gene name, protein_id, or feature identifier.
+    chromosome:
+      type: string
+      description: Chromosome or replicon when the identifier is ambiguous.
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support.
+  required:
+    - identifier
+
+metadata:
+  added_in: autonomous_annotation_v2
+  priority: high
+  tags: [annotation, target, revision, autonomous-curation]

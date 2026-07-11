@@ -36,6 +36,10 @@ class MCPServerManager {
 
   // Load server configurations from storage
   loadServerConfigurations() {
+    const dgrMcpToken =
+      typeof process !== 'undefined' && process.env
+        ? process.env.DGR_MCP_TOKEN || process.env.ACCESS_PASSWORD || ''
+        : '';
     const defaultServers = new Map([
       // ['genome-studio', {
       //     id: 'genome-studio',
@@ -68,6 +72,7 @@ class MCPServerManager {
           timeout: 600,
           headers: {
             'Content-Type': 'application/json',
+            ...(dgrMcpToken ? { Authorization: `Bearer ${dgrMcpToken}` } : {}),
           },
         },
       ],
@@ -1069,7 +1074,6 @@ class MCPServerManager {
 
         const requestId = this.generateRequestId();
 
-
         ws.send(
           JSON.stringify({
             jsonrpc: '2.0',
@@ -1107,6 +1111,30 @@ class MCPServerManager {
       // Default to WebSocket for unknown protocols
       return await this.executeWebSocketTool(serverId, toolName, parameters);
     }
+  }
+
+  /**
+   * MCP servers commonly put structured JSON in content[0].text. Normalise it
+   * at the transport boundary so callers do not have to guess envelope shapes
+   * or accidentally render a queued task as a final report.
+   */
+  unwrapMcpToolResult(value) {
+    const candidate = value?.result || value?.data || value?.response || value;
+    if (candidate?.content && Array.isArray(candidate.content)) {
+      const text = candidate.content
+        .filter(item => item?.type === 'text' && item.text)
+        .map(item => item.text)
+        .join('\n');
+      if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+        try {
+          return JSON.parse(text);
+        } catch (error) {
+          console.warn('[MCPServerManager] Could not parse structured MCP text result:', error.message);
+        }
+      }
+      return text || candidate;
+    }
+    return candidate;
   }
 
   // Execute tool on SSE-based MCP server
@@ -1429,15 +1457,7 @@ class MCPServerManager {
         }
 
         // Handle different response formats
-        if (result.result) {
-          return result.result;
-        } else if (result.data) {
-          return result.data;
-        } else if (result.response) {
-          return result.response;
-        } else {
-          return result;
-        }
+        return this.unwrapMcpToolResult(result);
       } catch (jsonError) {
         console.log(`⚠️ Response parsing failed:`, jsonError.message);
         // Try to get whatever response text we can
@@ -1465,6 +1485,10 @@ class MCPServerManager {
     }
 
     const server = this.servers.get(serverId);
+
+    if (serverId === 'deep-gene-research') {
+      return this.unwrapMcpToolResult(await this.executeToolOnServer(serverId, 'get-task-status', { taskId }));
+    }
 
     try {
       console.log(`🔍 Checking status for task ${taskId} on server ${serverId}`);
@@ -1568,6 +1592,11 @@ class MCPServerManager {
     }
 
     const server = this.servers.get(serverId);
+
+    if (serverId === 'deep-gene-research') {
+      const status = this.unwrapMcpToolResult(await this.executeToolOnServer(serverId, 'get-task-status', { taskId }));
+      return status.result || status;
+    }
 
     try {
       console.log(`📥 Getting results for task ${taskId} on server ${serverId}`);

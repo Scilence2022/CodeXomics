@@ -6,11 +6,53 @@ class AnnotationService {
   constructor(app, chatManager) {
     this.app = app;
     this.chatManager = chatManager;
+    this.changeSetService =
+      typeof window.AnnotationChangeSetService === 'function'
+        ? new window.AnnotationChangeSetService(app, chatManager, this)
+        : null;
   }
 
   // Helper method extracted from ChatManager
   _getChangeTracker() {
     return this.chatManager._getChangeTracker();
+  }
+
+  _getChangeSetService() {
+    if (!this.changeSetService && typeof window.AnnotationChangeSetService === 'function') {
+      this.changeSetService = new window.AnnotationChangeSetService(this.app, this.chatManager, this);
+    }
+    if (!this.changeSetService) {
+      throw new Error('Annotation ChangeSet service is unavailable');
+    }
+    return this.changeSetService;
+  }
+
+  async resolveAnnotationTarget(params) {
+    return this._getChangeSetService().resolveAnnotationTarget(params);
+  }
+
+  async createAnnotationChangeset(params) {
+    return this._getChangeSetService().createAnnotationChangeset(params);
+  }
+
+  async getAnnotationChangeset(params) {
+    return this._getChangeSetService().getAnnotationChangeset(params);
+  }
+
+  async requestAnnotationApproval(params) {
+    return this._getChangeSetService().requestAnnotationApproval(params);
+  }
+
+  async applyAnnotationChangeset(params) {
+    return this._getChangeSetService().applyAnnotationChangeset(params);
+  }
+
+  async rollbackAnnotationChangeset(params) {
+    return this._getChangeSetService().rollbackAnnotationChangeset(params);
+  }
+
+  async getAnnotationAudit(params) {
+    return this._getChangeSetService().getAnnotationAudit(params);
   }
 
   // 1. ANNOTATION SEARCH AND RETRIEVAL
@@ -286,7 +328,9 @@ class AnnotationService {
     const evidence = [];
     const text = String(reportText || '');
     const add = value => {
-      const clean = String(value || '').trim().replace(/[),.;\]]+$/, '');
+      const clean = String(value || '')
+        .trim()
+        .replace(/[),.;\]]+$/, '');
       if (clean) evidence.push(clean);
     };
 
@@ -347,7 +391,9 @@ class AnnotationService {
   }
 
   _isPlaceholderProduct(product) {
-    return !product || /^(unknown|hypothetical|uncharacteri[sz]ed|putative protein|predicted protein)/i.test(String(product));
+    return (
+      !product || /^(unknown|hypothetical|uncharacteri[sz]ed|putative protein|predicted protein)/i.test(String(product))
+    );
   }
 
   _normalizeAnnotationProposal(rawProposal, reportText, sources, params = {}) {
@@ -359,16 +405,19 @@ class AnnotationService {
       ...this._normalizeQualifierValues(proposal.sources),
       ...this._extractEvidenceReferences(reportText, sources),
     ]);
-    const summary = proposal.summary || proposedUpdates.function_research_summary || this._extractResearchSummary(reportText);
+    const summary =
+      proposal.summary || proposedUpdates.function_research_summary || this._extractResearchSummary(reportText);
 
     return {
-      identifier: proposal.identifier || proposal.target?.identifier || params.identifier || params.geneName || params.locusTag,
+      identifier:
+        proposal.identifier || proposal.target?.identifier || params.identifier || params.geneName || params.locusTag,
       summary,
       product: proposal.product || proposedUpdates.product || null,
       confidence: proposal.confidence ?? params.confidence ?? null,
       evidence,
       reportUrl: proposal.reportUrl || proposal.download?.reportUrl || params.reportUrl || params.download?.reportUrl,
-      detailsUrl: proposal.detailsUrl || proposal.download?.detailsUrl || params.detailsUrl || params.download?.detailsUrl,
+      detailsUrl:
+        proposal.detailsUrl || proposal.download?.detailsUrl || params.detailsUrl || params.download?.detailsUrl,
       updates: proposedUpdates,
       ecNumbers: this._dedupeValues([
         ...this._normalizeQualifierValues(proposal.ecNumbers),
@@ -471,90 +520,18 @@ class AnnotationService {
 
   // 2. ANNOTATION MODIFICATION
   async updateAnnotation(params) {
-    const identifier =
-      params.identifier ||
-      params.annotationId ||
-      params.gene ||
-      params.gene_name ||
-      params.geneName ||
-      params.locus_tag ||
-      params.locusTag;
-    const { chromosome, updates, agent = 'mcp-agent', evidence = [] } = params;
-
-    if (!this.app.currentAnnotations) {
-      throw new Error('No annotations loaded');
+    const changeSet = await this.createAnnotationChangeset({
+      ...params,
+      annotationProposal: { updates: params.updates || {}, evidence: params.evidence || [] },
+      principal: params.principal || params.agent || 'mcp-agent',
+    });
+    if (params.approvalToken && params.changeSetId) {
+      return this.applyAnnotationChangeset({ changeSetId: params.changeSetId, approvalToken: params.approvalToken });
     }
-
-    const found = this._findAnnotation(identifier, chromosome);
-    if (!found) {
-      throw new Error(`Annotation "${identifier}" not found`);
-    }
-
-    // Get the locus_tag and gene name from the found annotation to match other features
-    const targetLocusTag = Array.isArray(found.annotation.qualifiers?.locus_tag)
-      ? found.annotation.qualifiers.locus_tag[0]
-      : found.annotation.qualifiers?.locus_tag || '';
-    const targetGeneName = Array.isArray(found.annotation.qualifiers?.gene)
-      ? found.annotation.qualifiers.gene[0]
-      : found.annotation.qualifiers?.gene || '';
-
-    // Find all annotations with the same locus_tag or gene name
-    const annotationsToUpdate = [];
-    const chromosomesToCheck = chromosome ? [chromosome] : Object.keys(this.app.currentAnnotations);
-
-    for (const chr of chromosomesToCheck) {
-      const annotations = this.app.currentAnnotations[chr];
-      if (!annotations) continue;
-
-      for (const annotation of annotations) {
-        const qualifiers = annotation.qualifiers || {};
-        const geneName = Array.isArray(qualifiers.gene) ? qualifiers.gene[0] : qualifiers.gene || '';
-        const locusTag = Array.isArray(qualifiers.locus_tag) ? qualifiers.locus_tag[0] : qualifiers.locus_tag || '';
-
-        // Match by locus_tag or gene name
-        if ((targetLocusTag && locusTag === targetLocusTag) || (targetGeneName && geneName === targetGeneName)) {
-          annotationsToUpdate.push({ chromosome: chr, annotation });
-        }
-      }
-    }
-
-    // Update all matching annotations
-    for (const { annotation } of annotationsToUpdate) {
-      const oldValues = {};
-
-      // Capture old values and apply updates
-      for (const [field, newValue] of Object.entries(updates)) {
-        if (field === 'start' || field === 'end' || field === 'strand' || field === 'type') {
-          // Top-level fields
-          oldValues[field] = annotation[field];
-          annotation[field] = newValue;
-        } else {
-          // Qualifier fields
-          if (!annotation.qualifiers) annotation.qualifiers = {};
-          oldValues[field] = annotation.qualifiers[field] || null;
-          annotation.qualifiers[field] = newValue;
-        }
-      }
-
-      // Record changes for each annotation
-      const tracker = this._getChangeTracker();
-      tracker.recordMultiFieldUpdate(identifier, found.chromosome, updates, oldValues, agent, 'mcp', evidence);
-    }
-
     return {
-      success: true,
-      annotationId: identifier,
-      chromosome: found.chromosome,
-      updatedFields: Object.keys(updates),
-      updatedAnnotation: {
-        id: found.annotation.id,
-        type: found.annotation.type,
-        start: found.annotation.start,
-        end: found.annotation.end,
-        strand: found.annotation.strand,
-        qualifiers: found.annotation.qualifiers,
-      },
-      message: `Updated ${Object.keys(updates).length} field(s) on ${annotationsToUpdate.length} annotation(s) for "${identifier}"`,
+      ...changeSet,
+      message:
+        'Direct annotation mutation is disabled for autonomous callers. Review and approve the returned ChangeSet before applying it.',
     };
   }
 
@@ -593,85 +570,70 @@ class AnnotationService {
       params.proposal ||
       reportPayload?.annotationProposal ||
       reportPayload?.result?.annotationProposal;
-    const sources = params.sources || params.references || reportPayload?.sources || reportPayload?.result?.sources || [];
-    const proposal = this._normalizeAnnotationProposal(
-      annotationProposal,
-      reportText,
-      sources,
-      { ...params, identifier }
-    );
+    const sources =
+      params.sources || params.references || reportPayload?.sources || reportPayload?.result?.sources || [];
+    const proposal = this._normalizeAnnotationProposal(annotationProposal, reportText, sources, {
+      ...params,
+      identifier,
+    });
     const proposedUpdates = this._buildDeepResearchUpdates(found.annotation, proposal, params);
-    const apply = params.apply !== false && params.dryRun !== true;
-
-    if (!apply) {
-      return {
-        success: true,
-        applied: false,
-        annotationId: identifier,
-        chromosome: found.chromosome,
-        proposedUpdates,
-        evidence: proposal.evidence,
-        message: `Prepared ${Object.keys(proposedUpdates).length} Deep Gene Research annotation update(s) for "${identifier}"`,
-      };
-    }
-
-    const updateResult = await this.updateAnnotation({
+    const changeSetResult = await this.createAnnotationChangeset({
       identifier,
       chromosome: found.chromosome,
-      updates: proposedUpdates,
-      agent: params.agent || 'deep-gene-research',
+      baseRevision: params.baseRevision,
+      annotationProposal: {
+        schema: 'codexomics.annotation-change-set.v2',
+        target: params.annotationProposal?.target || params.proposal?.target,
+        updates: proposedUpdates,
+        evidence: proposal.evidence,
+        confidence: proposal.confidence,
+        reportUrl: proposal.reportUrl,
+        detailsUrl: proposal.detailsUrl,
+      },
       evidence: proposal.evidence,
+      manifestHash: params.manifestHash,
+      researchRun: params.researchRun || params.researchRunId,
+      idempotencyKey: params.idempotencyKey,
+      principal: params.principal || params.agent || 'deep-gene-research',
     });
-
-    if (this.app.selectedGene?.gene === found.annotation && typeof this.app.populateGeneDetails === 'function') {
-      this.app.populateGeneDetails(found.annotation, this.app.selectedGene.operonInfo);
-    }
-
     return {
-      ...updateResult,
-      applied: true,
+      ...changeSetResult,
+      annotationId: identifier,
+      chromosome: found.chromosome,
       proposedUpdates,
       evidence: proposal.evidence,
       confidence: proposal.confidence,
       reportUrl: proposal.reportUrl,
       detailsUrl: proposal.detailsUrl,
-      message: `Merged Deep Gene Research report into "${identifier}" with ${Object.keys(proposedUpdates).length} field update(s)`,
+      message: `Prepared a reviewable Deep Gene Research ChangeSet for "${identifier}". It has not been applied.`,
     };
   }
 
   async bulkUpdateAnnotations(params) {
-    const { updates: updatesList, agent = 'mcp-agent', evidence = [] } = params;
-
-    if (!this.app.currentAnnotations) {
-      throw new Error('No annotations loaded');
-    }
-
+    const updatesList = Array.isArray(params.updates) ? params.updates : [];
+    if (updatesList.length === 0) throw new Error('bulk_update_annotations requires a non-empty updates list');
     const results = [];
     const errors = [];
-
     for (const item of updatesList) {
       try {
-        await this.updateAnnotation({
-          identifier: item.identifier,
-          chromosome: item.chromosome,
-          updates: item.updates,
-          agent,
-          evidence,
-        });
-        results.push({ identifier: item.identifier, success: true });
+        results.push(
+          await this.createAnnotationChangeset({
+            ...item,
+            annotationProposal: { updates: item.updates || {}, evidence: params.evidence || [] },
+            principal: params.principal || params.agent || 'mcp-agent',
+          })
+        );
       } catch (error) {
         errors.push({ identifier: item.identifier, error: error.message });
       }
     }
-
     return {
       success: errors.length === 0,
+      applied: false,
       totalRequested: updatesList.length,
-      successCount: results.length,
-      errorCount: errors.length,
-      results,
+      changeSets: results,
       errors,
-      message: `Updated ${results.length}/${updatesList.length} annotations`,
+      message: 'Created independent reviewable ChangeSets; no bulk annotation changes were applied.',
     };
   }
 
@@ -701,6 +663,11 @@ class AnnotationService {
 
   // 3. ANNOTATION CRUD
   async editAnnotation(params) {
+    if (params.manualCuratorApproval !== true) {
+      throw new Error(
+        'Raw annotation editing is not available through the autonomous annotation API. Create a constrained ChangeSet instead.'
+      );
+    }
     const { annotationId, updates } = params;
 
     if (!this.app.currentAnnotations) {
@@ -762,6 +729,11 @@ class AnnotationService {
   }
 
   async deleteAnnotation(params) {
+    if (params.manualCuratorApproval !== true) {
+      throw new Error(
+        'Feature deletion is a structural genome operation and is not available through the autonomous annotation API. Use the manual genome editor and export a reviewed revision.'
+      );
+    }
     // Support both 'annotationId' (ChatBox) and 'identifier' (MCP) parameter names
     const annotationId = params.annotationId || params.identifier;
     const agent = params.agent || 'chatbox';
@@ -816,6 +788,11 @@ class AnnotationService {
   }
 
   async batchCreateAnnotations(params) {
+    if (params.manualCuratorApproval !== true) {
+      throw new Error(
+        'Feature creation is a structural genome operation and is not available through the autonomous annotation API. Use the manual genome editor and export a reviewed revision.'
+      );
+    }
     const { annotations, chromosome } = params;
 
     const chr = chromosome || this.app.currentChromosome;

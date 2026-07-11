@@ -1,0 +1,30 @@
+name: start_annotation_research
+version: 2.0.0
+description: Start a resumable Deep Gene Research job bound to an exact CodeXomics feature target; it never writes annotations directly.
+category: annotation
+subcategory: autonomous_curation
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    identifier: { type: string }
+    chromosome: { type: string }
+    organism: { type: string, description: Explicit scientific organism name. }
+    geneSymbol: { type: string }
+    researchFocus:
+      type: array
+      items: { type: string }
+    specificAspects:
+      type: array
+      items: { type: string }
+    userPrompt: { type: string }
+    idempotencyKey: { type: string }
+    correlationId: { type: string }
+    clientId: { type: string }
+  required: [identifier, organism]
+metadata:
+  added_in: autonomous_annotation_v2
+  priority: high
+  tags: [annotation, research, dgr, workflow]

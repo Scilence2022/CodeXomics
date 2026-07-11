@@ -828,6 +828,26 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    for (const [name, method] of Object.entries({
+      resolve_annotation_target: 'resolveAnnotationTarget',
+      create_annotation_changeset: 'createAnnotationChangeset',
+      get_annotation_changeset: 'getAnnotationChangeset',
+      request_annotation_approval: 'requestAnnotationApproval',
+      apply_annotation_changeset: 'applyAnnotationChangeset',
+      rollback_annotation_changeset: 'rollbackAnnotationChangeset',
+      get_annotation_audit: 'getAnnotationAudit',
+      start_annotation_research: 'startAnnotationResearch',
+      get_annotation_research_workflow: 'getAnnotationResearchWorkflow',
+      cancel_annotation_research: 'cancelAnnotationResearch',
+    })) {
+      this.builtInToolsMap.set(name, {
+        method,
+        category: 'annotation',
+        type: 'built-in',
+        priority: 1,
+      });
+    }
+
     this.builtInToolsMap.set('delete_annotation', {
       method: 'deleteAnnotation',
       category: 'annotation',
@@ -2368,6 +2388,22 @@ class BuiltInToolsIntegration {
         name: 'merge_gene_research_report',
         confidence: 0.95,
         reason: 'Deep Gene Research report merge/update keywords detected',
+      });
+    }
+
+    if (/\b(review|preview|propose|proposal|changeset|change\s+set)\b.*?\b(annotation|gene|research)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'create_annotation_changeset',
+        confidence: 0.95,
+        reason: 'Annotation proposal/change-set keywords detected',
+      });
+    }
+
+    if (/\b(approve|approval|commit|apply)\b.*?\b(changeset|change\s+set|annotation\s+proposal)\b/i.test(query)) {
+      relevantTools.push({
+        name: 'request_annotation_approval',
+        confidence: 0.9,
+        reason: 'Annotation approval keywords detected',
       });
     }
 

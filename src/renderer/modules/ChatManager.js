@@ -156,6 +156,7 @@ class ChatManager {
       ['protein', 'ProteinService'],
       ['blast', 'BlastService'],
       ['annotation', 'AnnotationService'],
+      ['annotationWorkflow', 'AnnotationResearchWorkflowService'],
       ['intent', 'IntentParserService'],
       ['context', 'LLMContextService'],
       ['ui', 'UIService'],
@@ -5855,6 +5856,7 @@ class ChatManager {
         const deepGenePrompt = prompts.find(
           p =>
             p.name === 'Deep Gene Research Assistant' ||
+            p.name === 'deep-gene-research-agent' ||
             p.name === 'deep-gene-research-assistant' ||
             p.name === 'deep_gene_research_assistant'
         );
@@ -7820,7 +7822,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         this.updateTaskMessage(taskInfo, statusResult);
 
         // If task is completed or failed, stop polling
-        if (taskInfo.status === 'completed' || taskInfo.status === 'failed') {
+        if (['completed', 'failed', 'cancelled'].includes(taskInfo.status)) {
           this.stopTaskPolling(taskInfo.taskId);
 
           // If completed, get the final results

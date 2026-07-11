@@ -78,8 +78,13 @@ async function startUnifiedMCPServer() {
       };
     }
 
-    // Create Unified Claude MCP server with configurable ports
-    unifiedMCPServer = new UnifiedMCPServer(settings.httpPort, settings.wsPort, getMainGenomeTarget());
+    // Local bypass is opt-in. External agents must use a configured bearer key
+    // so their principal can later be scoped to read/propose/commit actions.
+    unifiedMCPServer = new UnifiedMCPServer(settings.httpPort, settings.wsPort, getMainGenomeTarget(), {
+      requireAuth: true,
+      enableLocalBypass: process.env.CODEXOMICS_MCP_ENABLE_LOCAL_BYPASS === 'true',
+      masterKey: process.env.CODEXOMICS_MCP_MASTER_KEY || process.env.MCP_MASTER_KEY || null,
+    });
 
     // Forward server log events to the Manager window
     unifiedMCPServer.on('log', logEntry => {

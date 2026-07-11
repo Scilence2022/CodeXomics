@@ -105,6 +105,7 @@ nav:
       - Plugin Development: developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md
       - Build Instructions: developer-guides/build-instructions.md
       - Testing And Decomposition: developer-guides/TESTING_AND_DECOMPOSITION.md
+      - Autonomous Annotation Workflow: developer-guides/AUTONOMOUS_ANNOTATION.md
       - Actions System:
           - Documentation: developer-guides/ACTIONS_SYSTEM_DOCUMENTATION.md
           - Quick Reference: developer-guides/ACTIONS_QUICK_REFERENCE.md
